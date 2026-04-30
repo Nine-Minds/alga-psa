@@ -51,6 +51,11 @@ const knexMock: any = vi.fn((table: string) => {
     }
     return next;
   }
+  if (table === 'tenant_workflow_schedule') {
+    const builder = createBuilder({ rowsResult: [] }) as any;
+    builder.then = (resolve: (rows: unknown[]) => unknown, reject?: (error: unknown) => unknown) => Promise.resolve([]).then(resolve, reject);
+    return builder;
+  }
   throw new Error(`Unexpected table ${table}`);
 });
 knexMock.raw = vi.fn((sql: string) => sql);

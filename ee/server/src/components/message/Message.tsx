@@ -3,6 +3,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import Image from 'next/image';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import Feedback from '../feedback/Feedback';
 
 import './message.css';
@@ -119,6 +120,7 @@ export const Message: React.FC<MessageProps> = ({
   onRetry,
   onEdit,
 }) => {
+  const { t } = useTranslation('msp/chat');
   const transformMessage = (value: any) => {
     if (value == null) {
       return '';
@@ -139,11 +141,15 @@ export const Message: React.FC<MessageProps> = ({
   const isUserMessage = role === 'user';
   const isFunctionMarker = role === 'function-call' && functionCallMeta;
   const isNotice = role === 'notice';
-  const authorLabel = isAssistantMessage ? 'Alga' : isUserMessage ? 'You' : 'System';
-  const statusLabel = isFunction ? 'Drafting response…' : null;
-  const interruptionLabel = isAssistantMessage && status === 'interrupted' ? 'Interrupted' : null;
+  const authorLabel = isAssistantMessage
+    ? t('message.authorAlga')
+    : isUserMessage
+      ? t('message.authorYou')
+      : t('message.authorSystem');
+  const statusLabel = isFunction ? t('message.draftingResponse') : null;
+  const interruptionLabel = isAssistantMessage && status === 'interrupted' ? t('message.interrupted') : null;
   const interruptionDetail =
-    interruptionLabel && (statusDetail?.trim().length ? statusDetail : 'Connection interrupted — showing partial response.');
+    interruptionLabel && (statusDetail?.trim().length ? statusDetail : t('message.interruptionDetail'));
 
   if (isFunctionMarker && functionCallMeta) {
     const previewRaw = functionCallMeta.preview?.trim();
@@ -152,12 +158,12 @@ export const Message: React.FC<MessageProps> = ({
     const notice = functionCallMeta.notice?.trim();
     const statusLabel =
       functionCallMeta.status === 'success'
-        ? 'Function executed'
+        ? t('message.functionStatus.success')
         : functionCallMeta.status === 'declined'
-          ? 'Function declined'
+          ? t('message.functionStatus.declined')
           : functionCallMeta.status === 'pending'
-            ? 'Function queued'
-            : 'Function error';
+            ? t('message.functionStatus.pending')
+            : t('message.functionStatus.error');
 
     return (
       <div className="message-wrapper">
@@ -224,7 +230,7 @@ export const Message: React.FC<MessageProps> = ({
         <div className={classNames('message-body', isUserMessage && 'message-body--user')}>
           {isAssistantMessage ? (
             <div className="message-avatar message-avatar--assistant">
-              <Image src="/avatar-purple-no-shadow.svg" alt="Alga avatar" width={32} height={32} />
+              <Image src="/avatar-purple-no-shadow.svg" alt={t('message.avatarAlt')} width={32} height={32} />
             </div>
           ) : null}
 
@@ -251,8 +257,8 @@ export const Message: React.FC<MessageProps> = ({
                       type="button"
                       className="message-action-button"
                       onClick={onEdit}
-                      aria-label="Edit this message"
-                      title="Edit this message"
+                      aria-label={t('message.editAriaLabel')}
+                      title={t('message.editTooltip')}
                     >
                       <svg viewBox="0 0 20 20" aria-hidden="true">
                         <path
@@ -284,8 +290,8 @@ export const Message: React.FC<MessageProps> = ({
                       type="button"
                       className="message-action-button"
                       onClick={onRetry}
-                      aria-label="Regenerate from this message"
-                      title="Regenerate from this message"
+                      aria-label={t('message.regenerateAriaLabel')}
+                      title={t('message.regenerateTooltip')}
                     >
                       <svg viewBox="0 0 20 20" aria-hidden="true">
                         <path
@@ -335,7 +341,7 @@ export const Message: React.FC<MessageProps> = ({
 
             {reasoningContent ? (
               <details className="message-reasoning">
-                <summary>Show assistant reasoning</summary>
+                <summary>{t('message.showAssistantReasoning')}</summary>
                 <div className="message-reasoning__content">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}

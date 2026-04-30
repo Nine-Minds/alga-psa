@@ -295,7 +295,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   if (loading) {
     return (
       <Card className="p-6">
-        <Text size="2">Loading user details...</Text>
+        <Text size="2">{t('userDetails.loading')}</Text>
       </Card>
     );
   }

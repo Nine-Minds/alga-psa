@@ -1101,5 +1101,31 @@
       "childrenDescription": "Ticket figli raggruppati in questo ticket master"
     }
   },
-  "invalidTicketData": "Dati del ticket non validi"
+  "invalidTicketData": "Dati del ticket non validi",
+  "timeEntries": {
+    "title": "Tempo registrato",
+    "loading": "Caricamento delle voci di tempo…",
+    "loadError": "Impossibile caricare le voci di tempo",
+    "empty": "Nessun tempo è stato ancora registrato su questo ticket.",
+    "myEntries": "Le mie voci",
+    "otherTeam": "Altri membri del team",
+    "othersAnonymized": "{{count}} voci di altri membri del team ({{duration}})",
+    "noService": "Nessun servizio",
+    "unknownUser": "Utente sconosciuto",
+    "statusDraft": "Bozza",
+    "statusSubmitted": "Inviato",
+    "statusApproved": "Approvato",
+    "statusChangesRequested": "Modifiche richieste",
+    "statusUnknown": "Sconosciuto",
+    "edit": "Modifica registrazione tempo",
+    "delete": "Elimina registrazione tempo",
+    "deleteConfirmTitle": "Eliminare la registrazione tempo?",
+    "deleteConfirmMessage": "Questa registrazione tempo verrà eliminata definitivamente. Questa azione non può essere annullata.",
+    "deleteConfirmAction": "Elimina",
+    "duration": {
+      "hr": "h",
+      "hrs": "h",
+      "min": "min"
+    }
+  }
 }

@@ -58,6 +58,11 @@ async function main() {
     'packages/event-bus',
     'packages/validation',
     'packages/db',
+    // shared/workflow/runtime/actions/businessOperations/crm.ts imports
+    // @alga-psa/authorization/{kernel,bundles/service}; the smoke test
+    // resolves these from packages/authorization/dist at runtime, so build
+    // it before shared.
+    'packages/authorization',
   ]) {
     buildWorkspaceIfScriptExists(relPath);
   }

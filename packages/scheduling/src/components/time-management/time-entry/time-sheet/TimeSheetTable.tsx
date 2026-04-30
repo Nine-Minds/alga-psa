@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Trash, Plus, Check, X, ClipboardList, ArrowRight } from 'lucide-react';
@@ -87,6 +88,7 @@ export function TimeSheetTable({
     onQuickAddSubmit,
     onDateNavigatorChange
 }: TimeSheetTableProps): React.JSX.Element {
+    const { t } = useTranslation('msp/time-entry');
     const [selectedWorkItemToDelete, setSelectedWorkItemToDelete] = useState<string | null>(null);
     const [hoveredCell, setHoveredCell] = useState<{ workItemId: string; date: string } | null>(null);
 
@@ -376,17 +378,17 @@ export function TimeSheetTable({
                                             <ClipboardList className="w-8 h-8 text-gray-400" />
                                         </div>
                                         <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                            No work items on your time sheet
+                                            {t('timeSheetTable.empty.title', { defaultValue: 'No work items on your time sheet' })}
                                         </h3>
                                         <p className="text-gray-500 text-sm mb-4">
-                                            Add a new work item to get started tracking your time for this week.
+                                            {t('timeSheetTable.empty.description', { defaultValue: 'Add a new work item to get started tracking your time for this week.' })}
                                         </p>
                                         <Button
                                             id="get-started-button"
                                             variant="link"
                                             onClick={() => onAddWorkItem()}
                                         >
-                                            Get Started
+                                            {t('timeSheetTable.empty.getStarted', { defaultValue: 'Get Started' })}
                                             <ArrowRight className="w-4 h-4 ml-1" />
                                         </Button>
                                     </div>

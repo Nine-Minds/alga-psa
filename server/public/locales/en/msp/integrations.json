@@ -345,6 +345,322 @@
         }
       }
     },
+    "entra": {
+      "settings": {
+        "actions": {
+          "disconnect": "Disconnect",
+          "reconnect": "Reconnect",
+          "reconnecting": "Reconnecting…",
+          "refresh": "Refresh",
+          "resetFieldSync": "Reset",
+          "reviewMappings": "Review Mappings",
+          "reviewRemap": "Review / Remap",
+          "hideReviewRemap": "Hide Review / Remap",
+          "runDiscovery": "Run Discovery",
+          "runDiscoveryAgain": "Run Discovery Again",
+          "runDiscoveryRunning": "Running Discovery…",
+          "runInitialSync": "Run Initial Sync",
+          "runInitialSyncRunning": "Starting Initial Sync…",
+          "saveFieldSync": "Save Field Sync Controls",
+          "savingFieldSync": "Saving…",
+          "syncAll": "Sync All Tenants Now",
+          "syncAllStarting": "Starting…"
+        },
+        "badges": {
+          "enterprise": "Enterprise",
+          "reviewBeforeInitialSync": "Review Before Initial Sync"
+        },
+        "connection": {
+          "connectingSuffix": " (Connecting...)",
+          "details": "Connection Details",
+          "directCredentialSourceLabel": "Credential Source:",
+          "directTenantDefault": "common (multi-tenant)",
+          "directTenantLabel": "Microsoft Tenant:",
+          "cippServerLabel": "CIPP Server:",
+          "notAvailable": "Not available",
+          "notConfigured": "Not configured",
+          "notConnectedStatus": "not_connected",
+          "optionsTitle": "Connection Options",
+          "promptDetails": "Connect Entra to populate provider details."
+        },
+        "currentStep": {
+          "connect": {
+            "guidance": "Select a connection option to continue onboarding.",
+            "title": "Step 1: Connect"
+          },
+          "connectionsBelow": "Connection options appear below.",
+          "discover": {
+            "guidance": "Run discovery to load managed Entra tenants before mapping.",
+            "title": "Step 2: Discover"
+          },
+          "label": "Current Step",
+          "map": {
+            "guidance": "Confirm or adjust tenant mappings to unlock initial sync.",
+            "title": "Step 3: Map"
+          },
+          "sync": {
+            "guidance": "Start the first sync run for confirmed mappings.",
+            "title": "Step 4: Initial Sync"
+          }
+        },
+        "description": "Configure partner-level Entra access, discover managed tenants, map them to clients, and run sync workflows.",
+        "disabled": {
+          "description": "Entra integration UI is currently disabled for this tenant.",
+          "title": "Microsoft Entra Integration"
+        },
+        "discovery": {
+          "completed": "Discovery completed. {{count}} tenants discovered.",
+          "completedOne": "Discovery completed. {{count}} tenant discovered.",
+          "failed": "Failed to run tenant discovery."
+        },
+        "errors": {
+          "loadStatus": "Failed to load Entra connection status.",
+          "unknown": "Unknown error"
+        },
+        "fieldSync": {
+          "description": "Choose which Entra profile fields may overwrite local contact fields during sync.",
+          "feedback": {
+            "saveFailed": "Failed to save field sync controls.",
+            "saved": "Field sync controls saved."
+          },
+          "options": {
+            "displayName": {
+              "description": "Allow Entra display name to overwrite contact full name on linked contacts.",
+              "label": "Display Name"
+            },
+            "email": {
+              "description": "Allow Entra email/UPN to overwrite contact email on linked contacts.",
+              "label": "Email"
+            },
+            "phone": {
+              "description": "Allow Entra phone values to overwrite contact phone number on linked contacts.",
+              "label": "Phone"
+            },
+            "role": {
+              "description": "Allow Entra job title to overwrite contact role on linked contacts.",
+              "label": "Role"
+            },
+            "upn": {
+              "description": "Allow Entra UPN to overwrite the stored Entra principal name on linked contacts.",
+              "label": "UPN"
+            }
+          },
+          "title": "Field Sync Controls"
+        },
+        "guidedStep": {
+          "current": "current",
+          "complete": "complete",
+          "locked": "locked",
+          "stepLabel": "Step {{number}}",
+          "thisIsCurrent": "This is your current onboarding step."
+        },
+        "initialSync": {
+          "failed": "Failed to start initial Entra sync.",
+          "started": "Initial sync started. Run ID: {{runId}}",
+          "startedNoId": "Initial sync start request accepted."
+        },
+        "maintenance": {
+          "description": "Initial setup is complete. Focus here on sync operations, health checks, and maintenance reviews.",
+          "healthDescription": "Review connection health, run maintenance operations, and monitor sync activity.",
+          "healthTitle": "Health Summary",
+          "title": "Ongoing Operations Mode"
+        },
+        "mapping": {
+          "description": "Review suggested matches, choose the correct client for each tenant, and confirm mappings before initial sync.",
+          "needsReviewLabel": "Needs Review:",
+          "savedLabel": "Saved:",
+          "selectedLabel": "Selected:",
+          "skippedLabel": "Skipped:",
+          "stepLabel": "Step 3",
+          "title": "Map Tenants to Clients"
+        },
+        "onboarding": {
+          "description": "Complete each onboarding step in order: connect, discover, map, then run your first sync.",
+          "title": "Setup Mode"
+        },
+        "ongoing": {
+          "description": "Use these controls for manual sync operations after onboarding steps are complete.",
+          "title": "Ongoing Operations"
+        },
+        "overview": {
+          "connectionLabel": "Connection:",
+          "connectionTypeLabel": "Connection Type:",
+          "label": "Overview",
+          "mappedTenantsLabel": "Mapped Tenants:",
+          "nextSyncIntervalEvery": "Every {{minutes}} minutes",
+          "nextSyncIntervalLabel": "Next Sync Interval:"
+        },
+        "skipped": {
+          "empty": "No tenants are currently marked as skipped.",
+          "noPrimaryDomain": "No primary domain",
+          "remap": "Remap",
+          "title": "Skipped Tenants"
+        },
+        "status": {
+          "connectionHealth": "Connection Health",
+          "label": "Status"
+        },
+        "syncAll": {
+          "failed": "Failed to start full Entra sync.",
+          "started": "Sync started. Run ID: {{runId}}",
+          "startedNoId": "Sync start request accepted."
+        },
+        "title": "Microsoft Entra Integration",
+        "validation": {
+          "label": "Validation & Discovery",
+          "lastDiscoveryLabel": "Last Discovery:",
+          "lastValidatedLabel": "Last Validated:",
+          "neverFormatted": "Never",
+          "noneValidationError": "None",
+          "validationErrorLabel": "Validation Error:"
+        },
+        "wizard": {
+          "connect": {
+            "description": "Authorize Direct Microsoft partner auth to link this Entra tenant.",
+            "title": "Connect"
+          },
+          "discover": {
+            "description": "Load and persist managed Entra tenants for this MSP tenant.",
+            "title": "Discover Tenants"
+          },
+          "map": {
+            "description": "Review auto-match suggestions and confirm mappings.",
+            "title": "Map Tenants to Clients"
+          },
+          "sync": {
+            "description": "Start the first sync run for confirmed mappings.",
+            "title": "Initial Sync"
+          }
+        }
+      },
+      "tenantMapping": {
+        "actions": {
+          "confirmSelected": "Confirm Selected Mappings",
+          "confirming": "Confirming…",
+          "import": "Import as new client",
+          "importing": "Importing…",
+          "preselectExact": "Preselect Exact Matches",
+          "refresh": "Refresh Preview",
+          "skip": "Skip",
+          "skipped": "Skipped"
+        },
+        "columns": {
+          "actions": "Actions",
+          "confidence": "Confidence",
+          "entraTenant": "Entra Tenant",
+          "primaryDomain": "Primary Domain",
+          "selectClient": "Select Client",
+          "status": "Status",
+          "suggestedClient": "Suggested Client"
+        },
+        "empty": "No discovered tenants available for mapping preview.",
+        "errors": {
+          "confirmFailed": "Failed to confirm selected mappings.",
+          "importFailed": "Failed to import tenant as client.",
+          "loadFailed": "Failed to load tenant mapping preview.",
+          "selectAtLeastOne": "Select at least one client to confirm a mapping.",
+          "skipFailed": "Failed to skip this tenant mapping."
+        },
+        "feedback": {
+          "confirmed": "Confirmed {{count}} mappings.",
+          "confirmedOne": "Confirmed {{count}} mapping."
+        },
+        "noSuggestion": "No suggestion",
+        "picker": {
+          "placeholder": "Select client...",
+          "unknownClient": "Unknown client"
+        },
+        "reasons": {
+          "exactDomain": "Exact domain",
+          "fuzzyName": "Fuzzy name",
+          "secondaryDomain": "Secondary domain"
+        },
+        "states": {
+          "autoMatched": "Auto-matched",
+          "imported": "Imported",
+          "needsReview": "Needs review",
+          "skipped": "Skipped",
+          "unmatched": "Unmatched"
+        },
+        "title": "Tenant Mapping Preview"
+      },
+      "cippDialog": {
+        "actions": {
+          "cancel": "Cancel",
+          "connect": "Connect",
+          "connecting": "Connecting..."
+        },
+        "description": "Enter your CIPP instance URL and an API token to allow Alga to discover and sync Entra data.",
+        "errors": {
+          "missingFields": "Both Base URL and API Token are required.",
+          "unknown": "An unknown error occurred."
+        },
+        "fields": {
+          "apiToken": "API Token",
+          "apiTokenPlaceholder": "Enter token...",
+          "baseUrl": "CIPP Base URL",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+        },
+        "title": "Connect CIPP"
+      },
+      "reconciliation": {
+        "actions": {
+          "refresh": "Refresh",
+          "resolveExisting": "Resolve to Existing",
+          "resolveNew": "Resolve to New"
+        },
+        "candidate": {
+          "fallback": "candidate",
+          "label": "Candidate contacts: {{count}}"
+        },
+        "contactPicker": {
+          "label": "Existing Contact",
+          "placeholder": "Select existing contact..."
+        },
+        "errors": {
+          "enterContactId": "Enter a contact ID to resolve to existing contact.",
+          "loadQueue": "Failed to load reconciliation queue.",
+          "resolveFailed": "Failed to resolve queue item."
+        },
+        "empty": "No ambiguous matches are waiting for review.",
+        "loading": "Loading queue…",
+        "noEmailIdentity": "No email identity",
+        "queuedAt": "{{identity}} · queued {{time}}",
+        "scopedToMappedClient": "Existing contact options are limited to this mapped client.",
+        "success": {
+          "resolvedExisting": "Resolved queue item {{queueItemId}} to existing contact {{contactNameId}}.",
+          "resolvedNew": "Resolved queue item {{queueItemId}} by creating contact {{contactNameId}}."
+        },
+        "title": "Ambiguous Match Queue"
+      },
+      "syncHistory": {
+        "actions": {
+          "hideDetails": "Hide details",
+          "refresh": "Refresh",
+          "viewDetails": "View details"
+        },
+        "details": {
+          "noResults": "No tenant results recorded.",
+          "stats": "created {{created}}, linked {{linked}}, updated {{updated}}, ambiguous {{ambiguous}}, inactivated {{inactivated}}",
+          "tenantHeader": "Tenant {{tenant}} · {{status}}",
+          "unknownTenant": "unknown"
+        },
+        "empty": "No sync runs found yet.",
+        "errors": {
+          "loadDetailFailed": "Failed to load run detail.",
+          "loadFailed": "Failed to load sync history.",
+          "loadRunFailed": "Failed to load run {{runId}}."
+        },
+        "loading": "Loading sync history…",
+        "run": {
+          "header": "{{runType}} · {{status}}",
+          "inProgress": "In progress",
+          "tenants": "Tenants: {{processed}}/{{total}} · Success: {{success}} · Failed: {{failed}}",
+          "timing": "Started {{started}} · Completed {{completed}}"
+        },
+        "title": "Recent Sync Runs"
+      }
+    },
     "google": {
       "settings": {
         "actions": {
@@ -685,6 +1001,26 @@
           "disconnectUnexpected": "An unexpected error occurred while disconnecting.",
           "orgSyncFailed": "Organization sync failed.",
           "deviceSyncFailed": "Device sync failed."
+        },
+        "compliance": {
+          "actions": {
+            "retry": "Retry",
+            "syncing": "Syncing...",
+            "syncPatches": "Sync Patches",
+            "syncSoftware": "Sync Software"
+          },
+          "description": "RMM-managed device health overview",
+          "loading": "Loading compliance data...",
+          "metrics": {
+            "devicesOffline": "Devices Offline",
+            "devicesOnline": "Devices Online",
+            "devicesWithAlerts": "Devices With Alerts",
+            "patchesFailed": "Patches Failed",
+            "patchesPending": "Patches Pending"
+          },
+          "noData": "No compliance data available",
+          "summaryError": "Failed to load compliance summary",
+          "title": "Fleet Compliance"
         }
       },
       "setup": {
@@ -834,7 +1170,72 @@
         }
       },
       "tanium": {
-        "loading": "Loading Tanium integration settings..."
+        "loading": "Loading Tanium integration settings...",
+        "actions": {
+          "discoverScopes": "Discover Scopes",
+          "disconnect": "Disconnect",
+          "runInventorySync": "Run Inventory Sync",
+          "saveConfiguration": "Save Configuration",
+          "testConnection": "Test Connection"
+        },
+        "connection": {
+          "connectedAt": "Connected at: {{time}}",
+          "description": "Configure Tanium Gateway credentials and verify tenant-scoped access.",
+          "never": "Never",
+          "syncLabel": "Sync: {{status}}",
+          "syncLabelWithError": "Sync: {{status}} ({{error}})",
+          "title": "Tanium Connection"
+        },
+        "errors": {
+          "loadMappings": "Failed to load Tanium mappings.",
+          "loadSettings": "Failed to load Tanium settings.",
+          "loadState": "Failed to load Tanium integration state.",
+          "saveConfiguration": "Failed to save Tanium configuration.",
+          "testConnectionFailed": "Tanium connection test failed.",
+          "disconnectFailed": "Failed to disconnect Tanium integration.",
+          "scopeDiscoveryFailed": "Scope discovery failed.",
+          "inventorySyncFailed": "Inventory sync failed.",
+          "updateMappingFailed": "Failed to update mapping."
+        },
+        "fields": {
+          "apiToken": "API Token {{state}}",
+          "apiTokenPlaceholderExisting": "Leave blank to keep existing token",
+          "apiTokenPlaceholderNew": "Paste Tanium API token",
+          "apiTokenStateRequired": "(required)",
+          "apiTokenStateSaved": "(saved)",
+          "assetApiUrl": "Asset API URL (optional)",
+          "assetApiUrlPlaceholder": "https://example.cloud.tanium.com/plugin/products/asset",
+          "assetFallbackLabel": "Enable Asset API fallback for aged-out endpoint coverage",
+          "gatewayUrl": "Gateway URL",
+          "gatewayUrlPlaceholder": "https://example.cloud.tanium.com"
+        },
+        "mappings": {
+          "autoSync": "Auto Sync",
+          "autoSyncDisabled": "Disabled",
+          "autoSyncEnabled": "Enabled",
+          "externalScope": "External Scope",
+          "loading": "Loading mappings...",
+          "mappedClient": "Mapped Client",
+          "noScopes": "No Tanium scopes discovered yet.",
+          "scopeIdLabel": "ID: {{id}}",
+          "unmapped": "Unmapped"
+        },
+        "status": {
+          "connected": "Connected",
+          "disconnected": "Disconnected",
+          "label": "Status: "
+        },
+        "success": {
+          "configurationSaved": "Tanium configuration saved.",
+          "connectionTestSucceeded": "Tanium connection test succeeded.",
+          "disconnected": "Tanium integration disconnected.",
+          "inventorySyncCompleted": "Inventory sync completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}",
+          "scopeDiscoveryCompleted": "Scope discovery completed. Processed: {{processed}}, Created: {{created}}, Updated: {{updated}}"
+        },
+        "sync": {
+          "description": "Discover scopes from Tanium computer groups, map them to clients, then run inventory sync.",
+          "title": "Tanium Sync"
+        }
       }
     },
     "sso": {
@@ -1342,5 +1743,8 @@
         "publishableKeyFormat": "Publishable key should start with pk_"
       }
     }
+  },
+  "ninjaone": {
+    "selectCompany": "Select company"
   }
 }

@@ -445,21 +445,22 @@
           "step2": {
             "title": "2. Créer une Application Access Policy",
             "intro": "La création de réunions en mode application uniquement doit être explicitement autorisée pour le compte organisateur.",
-            "note": "Attendez 5 à 10 minutes pour la propagation de la stratégie avant de cliquer sur Vérifier."
+            "note": "Attendez jusqu'à 30 minutes pour la propagation de la stratégie avant de cliquer sur Vérifier."
           }
         }
       },
       "organizer": {
         "title": "Organisateur de la réunion",
-        "label": "Organisateur de réunion par défaut (UPN ou ID utilisateur Microsoft)",
-        "help": "Les rendez-vous approuvés créent des réunions Teams au nom de cet utilisateur Microsoft. Un UPN tel que scheduling@acme.com est généralement le choix le plus sûr.",
-        "placeholder": "scheduling@acme.com"
+        "label": "ID d'objet utilisateur Microsoft de l'organisateur de réunion par défaut",
+        "help": "Les rendez-vous approuvés créent des réunions Teams au nom de cet utilisateur Microsoft. Utilisez l'ID d'objet Entra ; les UPN peuvent renvoyer 404 depuis Microsoft Graph onlineMeetings.",
+        "placeholder": "00000000-0000-0000-0000-000000000000"
       },
       "actions": {
         "save": "Enregistrer",
         "saving": "Enregistrement...",
         "verify": "Vérifier",
-        "verifying": "Vérification..."
+        "verifying": "Vérification...",
+        "openRunbook": "Ouvrir le runbook de configuration"
       },
       "feedback": {
         "saveSuccess": "Organisateur de réunion Teams enregistré",

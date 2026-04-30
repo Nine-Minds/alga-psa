@@ -1,0 +1,149 @@
+{
+  "sidebar": {
+    "title": "Chat",
+    "subtitleHistory": "Recente AI-sessies van de huidige gebruiker",
+    "subtitleDefault": "Chat met AI en beheer opgeslagen sessies",
+    "showHistory": "Chatgeschiedenis weergeven",
+    "hideHistory": "Chatgeschiedenis verbergen",
+    "showHistoryTooltip": "Geschiedenis weergeven",
+    "hideHistoryTooltip": "Geschiedenis verbergen",
+    "startNewChat": "Nieuwe chat starten",
+    "hideSidebar": "Chat-zijbalk verbergen",
+    "hideSidebarTooltip": "Chat verbergen",
+    "introMessage": "Chat met AI - Stel een vraag!",
+    "loadingChatConversation": "Chatgesprek laden",
+    "history": {
+      "searchResults": "Zoekresultaten",
+      "recentChats": "Recente chats",
+      "loading": "Laden…",
+      "searchAriaLabel": "Chatgeschiedenis doorzoeken",
+      "searchPlaceholder": "Opgeslagen chats doorzoeken",
+      "typeAtLeastNChars": "Typ minimaal {{count}} tekens om opgeslagen chats te doorzoeken.",
+      "emptyInitial": "Opgeslagen chats verschijnen hier nadat u een bericht heeft verzonden.",
+      "emptySearch": "Geen overeenkomende chats gevonden.",
+      "untitled": "Naamloze chat",
+      "noMessagesYet": "Nog geen berichten",
+      "loadingConversation": "Gesprek laden…",
+      "chatActionsFor": "Chatacties voor {{title}}",
+      "rename": "Hernoemen",
+      "delete": "Verwijderen",
+      "unableToLoadRecent": "Kan recente chats niet laden.",
+      "unableToLoadSearch": "Kan zoekresultaten niet laden."
+    },
+    "timestamp": {
+      "recently": "Onlangs",
+      "justNow": "Zojuist",
+      "minutesAgo": "{{count}} m geleden",
+      "hoursAgo": "{{count}} u geleden",
+      "daysAgo": "{{count}} d geleden"
+    },
+    "newChatConfirm": {
+      "title": "Een nieuwe chat starten?",
+      "message": "Uw huidige chat wordt uit de zijbalk gewist. Opgeslagen berichten blijven in de chatgeschiedenis.",
+      "confirmLabel": "Nieuwe chat starten",
+      "cancelLabel": "Huidige chat behouden"
+    },
+    "deleteConfirm": {
+      "title": "Deze chat verwijderen?",
+      "messageWithTitle": "\"{{title}}\" uit uw AI-geschiedenis verwijderen? Dit kan niet ongedaan worden gemaakt.",
+      "fallbackTitle": "deze chat",
+      "confirmLabel": "Chat verwijderen",
+      "cancelLabel": "Annuleren"
+    },
+    "rename": {
+      "dialogTitle": "Chat hernoemen",
+      "inputLabel": "Chattitel",
+      "inputPlaceholder": "Voer chattitel in",
+      "cancel": "Annuleren",
+      "save": "Opslaan"
+    }
+  },
+  "chat": {
+    "greeting": "Ik ben Alga! Uw favoriete AI-assistent. Stel mij een vraag.",
+    "avatarAlt": "Alga",
+    "defaultFunctionName": "Functieaanroep",
+    "resultTruncated": "Resultaat was te groot en is afgekapt.",
+    "inputPlaceholder": "Stuur een bericht",
+    "inputPlaceholderGenerating": "Tekst genereren...",
+    "inputAriaLabel": "Bericht aan Alga",
+    "thinking": "Aan het nadenken...",
+    "hintMultiline": "Multiline-modus: Enter voegt een nieuwe regel toe. Ctrl+Enter of ⌘+Enter verzendt.",
+    "hintSingleLine": "Druk op Enter om te verzenden. Shift+Enter schakelt over naar multiline-modus.",
+    "editingNotice": "Het geselecteerde bericht wordt bewerkt. Bij het verzenden wordt dat bericht vervangen en wordt de thread vanaf daar opnieuw gegenereerd.",
+    "cancelEdit": "Bewerken annuleren",
+    "stop": "STOP",
+    "send": "VERZENDEN",
+    "viewDetails": "Details bekijken",
+    "viewFullValue": "Volledige waarde bekijken",
+    "parameters": "Parameters",
+    "plan": "Plan",
+    "playbooks": "Playbooks",
+    "validation": {
+      "dialogTitle": "Bericht vereist",
+      "ok": "OK",
+      "enterMessage": "Voer een bericht in voordat u verzendt."
+    },
+    "errors": {
+      "userNotIdentified": "Kan bericht niet verzenden: gebruiker niet geïdentificeerd.",
+      "unableToSave": "Kan dit bericht niet opslaan, doorgaan zonder persistentie voorlopig.",
+      "requestFailedStatus": "Aanvraag mislukt met status {{status}}",
+      "unexpectedResponse": "Onverwachte reactie van de assistent.",
+      "unexpectedError": "Er is een onverwachte fout opgetreden.",
+      "generationError": "Er is een fout opgetreden bij het genereren van de reactie.",
+      "connectionInterrupted": "Verbinding onderbroken — gedeeltelijke reactie wordt weergegeven.",
+      "connectionInterruptedWithReason": "Verbinding onderbroken — {{reason}}"
+    },
+    "function": {
+      "approveAriaLabel": "Functieaanroep goedkeuren",
+      "declineAriaLabel": "Functieaanroep weigeren",
+      "approve": "Goedkeuren",
+      "approving": "Goedkeuren…",
+      "deny": "Weigeren",
+      "processing": "Verwerken…",
+      "autoApproveLabel": "Toekomstige {{method}}-aanvragen automatisch goedkeuren",
+      "executingRequest": "Aanvraag uitvoeren…",
+      "continuingWithoutCall": "Doorgaan zonder de functie aan te roepen…",
+      "autoApprovalEnabled": "Automatische goedkeuring ingeschakeld voor {{method}}-aanvragen.",
+      "reviewAndApprove": "Beoordeel en keur goed wanneer u klaar bent.",
+      "completedNoDetails": "De actie is voltooid zonder aanvullende details.",
+      "emDash": "—"
+    }
+  },
+  "quickAsk": {
+    "title": "Snel vragen",
+    "yoloLabel": "YOLO",
+    "yoloAriaLabel": "YOLO-modus (HTTP-acties automatisch goedkeuren)",
+    "openInSidebar": "Openen in zijbalk",
+    "close": "Sluiten",
+    "ask": "Vragen",
+    "inputPlaceholder": "Stel een snelle vraag…",
+    "inputAriaLabel": "Snel vragen-invoer",
+    "followUpNotice": "Stel hieronder vervolgvragen. Deze chat wordt opgeslagen zoals een chat in de zijbalk.",
+    "startingSession": "Sessie starten…",
+    "session": "Sessie: {{chatId}}",
+    "hint": "Esc om te sluiten • Enter om te vragen • Shift+Enter voor nieuwe regel • {{modifier}}+↑ om opnieuw te openen"
+  },
+  "message": {
+    "authorAlga": "Alga",
+    "authorYou": "U",
+    "authorSystem": "Systeem",
+    "avatarAlt": "Alga-avatar",
+    "draftingResponse": "Reactie opstellen…",
+    "interrupted": "Onderbroken",
+    "interruptionDetail": "Verbinding onderbroken — gedeeltelijke reactie wordt weergegeven.",
+    "showAssistantReasoning": "Redenering van assistent weergeven",
+    "editAriaLabel": "Dit bericht bewerken",
+    "editTooltip": "Dit bericht bewerken",
+    "regenerateAriaLabel": "Vanaf dit bericht opnieuw genereren",
+    "regenerateTooltip": "Vanaf dit bericht opnieuw genereren",
+    "functionStatus": {
+      "success": "Functie uitgevoerd",
+      "declined": "Functie geweigerd",
+      "pending": "Functie in wachtrij",
+      "error": "Functiefout"
+    }
+  },
+  "mention": {
+    "noResultsFound": "Geen resultaten gevonden"
+  }
+}

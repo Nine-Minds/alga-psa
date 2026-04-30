@@ -1,5 +1,5 @@
 import { Context } from '@temporalio/activity';
-import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { getAdminConnection, retryOnAdminReadOnly } from '@alga-psa/db/admin.js';
 import { hashPassword } from '@alga-psa/core/encryption';
 import { generateTemporaryPassword as generatePassword } from './email-activities.js';
 import { sendWelcomeEmail as sendEmail } from './email-activities.js';
@@ -72,15 +72,20 @@ export async function updateUserPassword(
   const log = logger();
   log.info('Updating user password', { userId, tenantId });
 
-  const knex = await getAdminConnection();
   const hashedPassword = await hashPassword(password);
 
-  await knex('users')
-    .where({ user_id: userId, tenant: tenantId })
-    .update({
-      hashed_password: hashedPassword,
-      updated_at: knex.fn.now(),
-    });
+  await retryOnAdminReadOnly(
+    async () => {
+      const knex = await getAdminConnection();
+      await knex('users')
+        .where({ user_id: userId, tenant: tenantId })
+        .update({
+          hashed_password: hashedPassword,
+          updated_at: knex.fn.now(),
+        });
+    },
+    { logLabel: 'updateUserPassword' }
+  );
 
   log.info('Password updated successfully', { userId });
 }
@@ -128,22 +133,27 @@ export async function logAuditEvent(input: AuditEventInput): Promise<void> {
     resourceType: input.resourceType
   });
 
-  const knex = await getAdminConnection();
   const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID!;
 
-  // Log to extension_audit_logs table (unified table for all extension actions)
-  await knex('extension_audit_logs').insert({
-    tenant: MASTER_BILLING_TENANT_ID,  // Extension actions logged under master tenant
-    event_type: `tenant.${input.action.toLowerCase().replace(/_/g, '.')}`,
-    user_id: input.triggeredBy,
-    user_email: input.triggeredByEmail,
-    resource_type: input.resourceType,
-    resource_id: input.resourceId,
-    details: JSON.stringify({
-      ...input.details,
-      targetTenantId: input.tenantId,
-    }),
-  });
+  await retryOnAdminReadOnly(
+    async () => {
+      const knex = await getAdminConnection();
+      // Log to extension_audit_logs table (unified table for all extension actions)
+      await knex('extension_audit_logs').insert({
+        tenant: MASTER_BILLING_TENANT_ID,  // Extension actions logged under master tenant
+        event_type: `tenant.${input.action.toLowerCase().replace(/_/g, '.')}`,
+        user_id: input.triggeredBy,
+        user_email: input.triggeredByEmail,
+        resource_type: input.resourceType,
+        resource_id: input.resourceId,
+        details: JSON.stringify({
+          ...input.details,
+          targetTenantId: input.tenantId,
+        }),
+      });
+    },
+    { logLabel: 'logAuditEvent' }
+  );
 
   log.info('Audit event logged successfully', { action: input.action });
 }

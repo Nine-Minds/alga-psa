@@ -51,20 +51,20 @@ import { ADD_ONS, ADD_ON_LABELS, TIER_LABELS, TIER_FEATURE_MAP, TIER_FEATURES } 
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useFormatAddOnDescription } from '@alga-psa/ui/hooks/useAddOnEnumOptions';
 
-// Feature display names for the tier features list
-const FEATURE_DISPLAY_NAMES: Record<TIER_FEATURES, string> = {
-  [TIER_FEATURES.INTEGRATIONS]: 'Integrations — connect calendar, Teams, Entra, and other external services',
-  [TIER_FEATURES.EXTENSIONS]: 'Extensions — install and manage marketplace extensions for your workspace',
-  [TIER_FEATURES.MANAGED_EMAIL]: 'Managed Email — configure hosted email delivery from Alga PSA',
-  [TIER_FEATURES.SSO]: 'Single Sign-On — configure SSO and OAuth identity providers for your team',
-  [TIER_FEATURES.ADVANCED_ASSETS]: 'Advanced Assets — unlock RMM-linked asset discovery and richer asset controls',
-  [TIER_FEATURES.CLIENT_PORTAL_ADMIN]: 'Client Portal Admin — manage advanced client portal branding and administration',
-  [TIER_FEATURES.WORKFLOW_DESIGNER]: 'Workflow Designer — build and maintain custom workflow automations',
-  [TIER_FEATURES.MOBILE_ACCESS]: 'Mobile Access — sign in from the Alga PSA mobile app',
-  [TIER_FEATURES.ENTRA_SYNC]: 'Microsoft Entra Sync — auto-discover tenants and sync contacts from Entra ID',
-  [TIER_FEATURES.CIPP]: 'CIPP Integration — connect your CIPP instance for multi-tenant Entra management',
-  [TIER_FEATURES.TEAMS_INTEGRATION]: 'Microsoft Teams — meetings integration and Teams bot for ticket notifications',
-  [TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]: 'Advanced Authorization Bundles — create and manage premium ABAC narrowing bundles',
+// Keys into msp/account:features — used to look up translated display names
+const FEATURE_TRANSLATION_KEYS: Record<TIER_FEATURES, string> = {
+  [TIER_FEATURES.INTEGRATIONS]: 'features.integrations',
+  [TIER_FEATURES.EXTENSIONS]: 'features.extensions',
+  [TIER_FEATURES.MANAGED_EMAIL]: 'features.managedEmail',
+  [TIER_FEATURES.SSO]: 'features.sso',
+  [TIER_FEATURES.ADVANCED_ASSETS]: 'features.advancedAssets',
+  [TIER_FEATURES.CLIENT_PORTAL_ADMIN]: 'features.clientPortalAdmin',
+  [TIER_FEATURES.WORKFLOW_DESIGNER]: 'features.workflowDesigner',
+  [TIER_FEATURES.MOBILE_ACCESS]: 'features.mobileAccess',
+  [TIER_FEATURES.ENTRA_SYNC]: 'features.entraSync',
+  [TIER_FEATURES.CIPP]: 'features.cipp',
+  [TIER_FEATURES.TEAMS_INTEGRATION]: 'features.teamsIntegration',
+  [TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]: 'features.advancedAuthorizationBundles',
 };
 
 export default function AccountManagement() {
@@ -133,9 +133,9 @@ export default function AccountManagement() {
   const router = useRouter();
 
   const formatDate = (value?: string | Date | null) => {
-    if (!value) return 'N/A';
+    if (!value) return t('common.notAvailable');
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString();
+    return Number.isNaN(date.getTime()) ? t('common.notAvailable') : date.toLocaleDateString();
   };
 
   const toggleSection = (section: keyof typeof expandedSections) => {
@@ -754,7 +754,7 @@ export default function AccountManagement() {
   if (loading) {
     return (
       <Card className="p-6">
-        <div>Loading account information...</div>
+        <div>{t('common.loadingAccountInfo')}</div>
       </Card>
     );
   }
@@ -776,16 +776,14 @@ export default function AccountManagement() {
           <AlertDescription>
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1">
-                <p className="font-semibold">Your upgrade is pending</p>
+                <p className="font-semibold">{t('iapBanner.upgradePendingTitle')}</p>
                 <p className="text-sm">
-                  Apple will continue billing you for Solo until {formatDate(iapContext.iap.expiresAt)}.
-                  After that, your upgraded subscription will take over automatically.
+                  {t('iapBanner.upgradePendingBody', { date: formatDate(iapContext.iap.expiresAt) })}
                   {iapContext.iap.autoRenewStatus && (
                     <>
                       {' '}
-                      <strong>Auto-renew is currently ON on your Apple subscription</strong> —
-                      please disable it in iOS Settings → Apple ID → Subscriptions → Alga PSA,
-                      otherwise Apple will charge you again and the upgrade will be delayed.
+                      <strong>{t('iapBanner.autoRenewWarningStrong')}</strong> —
+                      {' '}{t('iapBanner.autoRenewWarningBody')}
                     </>
                   )}
                 </p>
@@ -797,7 +795,7 @@ export default function AccountManagement() {
                 onClick={() => setShowCancelIapTransitionConfirm(true)}
                 disabled={cancelingIapTransition}
               >
-                Cancel upgrade
+                {t('iapBanner.cancelUpgrade')}
               </Button>
             </div>
           </AlertDescription>
@@ -809,9 +807,7 @@ export default function AccountManagement() {
         <Alert variant="info">
           <AlertDescription>
             <p className="text-sm">
-              Your subscription is managed by Apple. Current billing period ends {formatDate(iapContext.iap.expiresAt)}.
-              You can upgrade to a larger plan at any time — we'll align the new billing to your Apple period so you
-              never pay for both at once.
+              {t('iapBanner.appleManagedBody', { date: formatDate(iapContext.iap.expiresAt) })}
             </p>
           </AlertDescription>
         </Alert>
@@ -828,7 +824,7 @@ export default function AccountManagement() {
             <p className="text-2xl font-bold">
               {licenseInfo?.active_licenses}/{licenseInfo?.total_licenses ?? '∞'}
             </p>
-            <p className="text-sm text-muted-foreground">Licenses Used</p>
+            <p className="text-sm text-muted-foreground">{t('summary.licensesUsed')}</p>
           </div>
         </Card>
 
@@ -840,7 +836,7 @@ export default function AccountManagement() {
           <div className="space-y-1">
             <p className="text-2xl font-bold">${monthlyTotal.toFixed(2)}</p>
             <p className="text-sm text-muted-foreground">
-              {subscriptionInfo?.billing_interval === 'year' ? 'Per Year' : 'Per Month'}
+              {subscriptionInfo?.billing_interval === 'year' ? t('summary.perYear') : t('summary.perMonth')}
             </p>
           </div>
         </Card>
@@ -851,8 +847,8 @@ export default function AccountManagement() {
             <CheckCircle className="h-5 w-5 text-muted-foreground" />
           </div>
           <div className="space-y-1">
-            <p className="text-2xl font-bold capitalize">{subscriptionInfo?.status || 'Unknown'}</p>
-            <p className="text-sm text-muted-foreground">Status</p>
+            <p className="text-2xl font-bold capitalize">{subscriptionInfo?.status || t('common.unknown')}</p>
+            <p className="text-sm text-muted-foreground">{t('summary.status')}</p>
           </div>
         </Card>
 
@@ -864,10 +860,10 @@ export default function AccountManagement() {
           <div className="space-y-1">
             <p className="text-2xl font-bold">
               {subscriptionInfo?.next_billing_date
-                ? new Date(subscriptionInfo.next_billing_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                : 'N/A'}
+                ? new Date(subscriptionInfo.next_billing_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                : t('common.notAvailable')}
             </p>
-            <p className="text-sm text-muted-foreground">Next Billing</p>
+            <p className="text-sm text-muted-foreground">{t('summary.nextBilling')}</p>
           </div>
         </Card>
       </div>
@@ -877,9 +873,9 @@ export default function AccountManagement() {
         <Alert variant="destructive">
           <AlertDescription className="flex items-center justify-between">
             <div>
-              <p className="font-semibold">Payment Failed</p>
+              <p className="font-semibold">{t('paymentFailure.title')}</p>
               <p className="text-sm">
-                Your last payment was unsuccessful. Please update your payment method to avoid service interruption.
+                {t('paymentFailure.body')}
               </p>
             </div>
             <Button
@@ -888,7 +884,7 @@ export default function AccountManagement() {
               size="sm"
               onClick={handleUpdatePaymentMethod}
             >
-              Update Payment Method
+              {t('paymentFailure.updatePaymentMethod')}
             </Button>
           </AlertDescription>
         </Alert>
@@ -901,10 +897,13 @@ export default function AccountManagement() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Clock className="h-5 w-5 text-blue-600" />
-                <CardTitle>Premium Trial</CardTitle>
+                <CardTitle>{t('premiumTrial.title')}</CardTitle>
               </div>
               <Badge variant={premiumTrialDaysLeft <= 3 ? 'error' : 'default'}>
-                {premiumTrialDaysLeft} {premiumTrialDaysLeft === 1 ? 'day' : 'days'} remaining
+                {t('common.daysRemaining', {
+                  count: premiumTrialDaysLeft,
+                  unit: premiumTrialDaysLeft === 1 ? t('common.dayOne') : t('common.dayOther'),
+                })}
               </Badge>
             </div>
           </CardHeader>
@@ -912,8 +911,8 @@ export default function AccountManagement() {
             {/* Progress bar */}
             <div className="space-y-2">
               <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Trial started</span>
-                <span>Trial ends {new Date(premiumTrialEndDate).toLocaleDateString()}</span>
+                <span>{t('premiumTrial.trialStarted')}</span>
+                <span>{t('premiumTrial.trialEnds', { date: new Date(premiumTrialEndDate).toLocaleDateString() })}</span>
               </div>
               <div className="w-full bg-muted rounded-full h-2">
                 <div
@@ -931,21 +930,22 @@ export default function AccountManagement() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <CheckCircle className="h-4 w-4 text-green-600" />
-                    <p className="text-sm font-medium">Premium confirmed</p>
+                    <p className="text-sm font-medium">{t('premiumTrial.premiumConfirmed')}</p>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Premium billing is scheduled to start on {premiumTrialEffectiveDate ? new Date(premiumTrialEffectiveDate).toLocaleDateString() : 'your next billing date'}.
-                    You&apos;ll continue on Pro pricing until then.
+                    {t('premiumTrial.premiumConfirmedBody', {
+                      date: premiumTrialEffectiveDate
+                        ? new Date(premiumTrialEffectiveDate).toLocaleDateString()
+                        : t('premiumTrial.nextBillingDateFallback'),
+                    })}
                   </p>
                 </div>
               ) : (
                 <>
                   <div>
-                    <p className="text-sm font-medium">Premium features are active</p>
+                    <p className="text-sm font-medium">{t('premiumTrial.premiumFeaturesActive')}</p>
                     <p className="text-sm text-muted-foreground">
-                      Your billing has not changed — you&apos;re still on Pro pricing.
-                      To keep Premium after the trial, you must confirm the switch before {new Date(premiumTrialEndDate).toLocaleDateString()}.
-                      If you don&apos;t confirm, you&apos;ll automatically return to Pro.
+                      {t('premiumTrial.keepPremiumBody', { date: new Date(premiumTrialEndDate).toLocaleDateString() })}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -955,7 +955,7 @@ export default function AccountManagement() {
                       onClick={handleConfirmPremiumClick}
                       disabled={loadingConfirmPreview}
                     >
-                      {loadingConfirmPreview ? 'Loading pricing...' : 'Confirm Switch to Premium'}
+                      {loadingConfirmPreview ? t('common.loadingPricing') : t('premiumTrial.confirmSwitch')}
                     </Button>
                     <Button
                       id="cancel-premium-trial-btn"
@@ -964,7 +964,7 @@ export default function AccountManagement() {
                       onClick={handleRevertPremiumTrial}
                       disabled={revertingTrial}
                     >
-                      {revertingTrial ? 'Reverting...' : 'End Trial & Return to Pro'}
+                      {revertingTrial ? t('premiumTrial.reverting') : t('premiumTrial.endTrialReturnPro')}
                     </Button>
                   </div>
                 </>
@@ -980,18 +980,21 @@ export default function AccountManagement() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Clock className="h-5 w-5 text-blue-600" />
-                <CardTitle>Pro Trial</CardTitle>
+                <CardTitle>{t('soloProTrial.title')}</CardTitle>
               </div>
               <Badge variant={soloProTrialDaysLeft <= 3 ? 'error' : 'default'}>
-                {soloProTrialDaysLeft} {soloProTrialDaysLeft === 1 ? 'day' : 'days'} remaining
+                {t('common.daysRemaining', {
+                  count: soloProTrialDaysLeft,
+                  unit: soloProTrialDaysLeft === 1 ? t('common.dayOne') : t('common.dayOther'),
+                })}
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Trial active</span>
-                <span>Trial ends {new Date(soloProTrialEndDate).toLocaleDateString()}</span>
+                <span>{t('soloProTrial.trialActive')}</span>
+                <span>{t('soloProTrial.trialEnds', { date: new Date(soloProTrialEndDate).toLocaleDateString() })}</span>
               </div>
               <div className="w-full bg-muted rounded-full h-2">
                 <div
@@ -1005,14 +1008,14 @@ export default function AccountManagement() {
 
             <div className="rounded-lg border p-3 bg-muted/50 space-y-3">
               <div>
-                <p className="text-sm font-medium">Pro features are active</p>
+                <p className="text-sm font-medium">{t('soloProTrial.proFeaturesActive')}</p>
                 <p className="text-sm text-muted-foreground">
-                  You&apos;re still billed on Solo during this trial. Upgrade to paid Pro before {new Date(soloProTrialEndDate).toLocaleDateString()} to keep Pro access after the trial expires.
+                  {t('soloProTrial.billingBody', { date: new Date(soloProTrialEndDate).toLocaleDateString() })}
                 </p>
               </div>
               <div className="flex gap-2">
                 <Button id="convert-solo-trial-to-pro-btn" size="sm" onClick={() => handleUpgradeClick('pro')} disabled={upgrading || loadingPreview}>
-                  {loadingPreview ? 'Loading pricing...' : 'Switch to Paid Pro'}
+                  {loadingPreview ? t('common.loadingPricing') : t('soloProTrial.switchToPaidPro')}
                 </Button>
               </div>
             </div>
@@ -1027,10 +1030,13 @@ export default function AccountManagement() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Clock className="h-5 w-5 text-blue-600" />
-                <CardTitle>Trial Status</CardTitle>
+                <CardTitle>{t('trialStatus.title')}</CardTitle>
               </div>
               <Badge variant={trialDaysLeft <= 3 ? 'error' : 'default'}>
-                {trialDaysLeft} {trialDaysLeft === 1 ? 'day' : 'days'} remaining
+                {t('common.daysRemaining', {
+                  count: trialDaysLeft,
+                  unit: trialDaysLeft === 1 ? t('common.dayOne') : t('common.dayOther'),
+                })}
               </Badge>
             </div>
           </CardHeader>
@@ -1038,8 +1044,8 @@ export default function AccountManagement() {
             {/* Progress bar */}
             <div className="space-y-2">
               <div className="flex justify-between text-sm text-muted-foreground">
-                <span>Trial started</span>
-                <span>Trial ends {new Date(trialEndDate).toLocaleDateString()}</span>
+                <span>{t('premiumTrial.trialStarted')}</span>
+                <span>{t('premiumTrial.trialEnds', { date: new Date(trialEndDate).toLocaleDateString() })}</span>
               </div>
               <div className="w-full bg-muted rounded-full h-2">
                 <div
@@ -1054,10 +1060,9 @@ export default function AccountManagement() {
             {/* Trial CTA */}
             <div className="rounded-lg border p-3 bg-muted/50">
               <div>
-                <p className="text-sm font-medium">Pro Trial</p>
+                <p className="text-sm font-medium">{t('trialStatus.proTrial')}</p>
                 <p className="text-sm text-muted-foreground">
-                  Your card will be charged on {new Date(trialEndDate).toLocaleDateString()}.
-                  Cancel anytime before then.
+                  {t('trialStatus.cardChargeBody', { date: new Date(trialEndDate).toLocaleDateString() })}
                 </p>
               </div>
             </div>
@@ -1074,7 +1079,7 @@ export default function AccountManagement() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Shield className="h-5 w-5" />
-              <CardTitle>Plan & Tier</CardTitle>
+              <CardTitle>{t('planTier.sectionTitle')}</CardTitle>
             </div>
             {expandedSections.tierInfo ? (
               <ChevronUp className="h-5 w-5 text-muted-foreground" />
@@ -1089,9 +1094,9 @@ export default function AccountManagement() {
             <div className="rounded-lg border p-4 bg-muted/50">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-lg font-semibold">Current Tier</h3>
+                  <h3 className="text-lg font-semibold">{t('planTier.currentTier')}</h3>
                   <p className="text-sm text-muted-foreground">
-                    Your subscription tier determines which features are available
+                    {t('planTier.tierDescription')}
                   </p>
                 </div>
                 <Badge
@@ -1107,7 +1112,7 @@ export default function AccountManagement() {
               {isSolo && (
                 <div className="mb-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-3">
                   <p className="text-sm text-blue-900 dark:text-blue-200">
-                    Your Solo plan includes core PSA features and mobile access. Upgrade to Pro for advanced workflow design, Teams integration, and team collaboration.
+                    {t('planTier.soloNotice')}
                   </p>
                 </div>
               )}
@@ -1115,27 +1120,27 @@ export default function AccountManagement() {
               {isMisconfigured && (
                 <Alert variant="destructive" className="mb-4">
                   <AlertDescription>
-                    Your plan is not configured correctly. Please contact support.
+                    {t('planTier.misconfigured')}
                   </AlertDescription>
                 </Alert>
               )}
 
               {/* Features available in current tier */}
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Features included in your tier:</Label>
+                <Label className="text-sm font-medium">{t('planTier.featuresIncluded')}</Label>
                 <ul className="grid grid-cols-2 gap-2">
                   {displayedTierFeatures.map((feature) => (
                     <li key={feature} className="flex items-center space-x-2 text-sm">
                       <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span>{FEATURE_DISPLAY_NAMES[feature]}</span>
+                      <span>{t(FEATURE_TRANSLATION_KEYS[feature])}</span>
                     </li>
                   ))}
                 </ul>
                 {displayedTierFeatures.length === 0 && (
                   <p className="text-sm text-muted-foreground">
                     {isSolo
-                      ? 'Core PSA tools and mobile access are active on Solo. Upgrade to Pro to unlock advanced workflow design and Teams integration.'
-                      : 'Your Pro plan includes all standard features.'}
+                      ? t('planTier.emptyFeaturesSolo')
+                      : t('planTier.emptyFeaturesPro')}
                   </p>
                 )}
               </div>
@@ -1147,23 +1152,22 @@ export default function AccountManagement() {
                   <div className="rounded-lg border border-primary/30 bg-primary/5 p-4 flex flex-col">
                     <div className="flex items-center gap-2 mb-2">
                       <Zap className="h-5 w-5 text-primary" />
-                      <h4 className="font-semibold text-lg">Pro</h4>
+                      <h4 className="font-semibold text-lg">{t('planTier.proCardTitle')}</h4>
                     </div>
                     <p className="text-sm text-muted-foreground mb-3">
-                      Everything in Solo, plus team collaboration and powerful integrations.
+                      {t('planTier.proCardDescription')}
                     </p>
                     <ul className="space-y-1.5 text-sm mb-4 flex-1">
-                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>Multi-user with per-seat licensing</span></li>
-                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>Calendar sync (Google &amp; Microsoft)</span></li>
-                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>Extensions marketplace</span></li>
-                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>SSO &amp; managed email domains</span></li>
-                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>RMM / NinjaOne integration</span></li>
-                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>Visual workflow designer</span></li>
-                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>Mobile app access</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>{t('planTier.proFeatureMultiUser')}</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>{t('planTier.proFeatureCalendarSync')}</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>{t('planTier.proFeatureExtensions')}</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>{t('planTier.proFeatureSso')}</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>{t('planTier.proFeatureRmm')}</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>{t('planTier.proFeatureMobile')}</span></li>
                     </ul>
                     <Button id="upgrade-to-pro-btn" onClick={() => handleUpgradeClick('pro')} disabled={upgrading || loadingPreview} className="w-full">
                       <Rocket className="mr-2 h-4 w-4" />
-                      {loadingPreview ? 'Loading...' : 'Upgrade to Pro'}
+                      {loadingPreview ? t('common.loading') : t('planTier.upgradeToPro')}
                     </Button>
                   </div>
 
@@ -1171,20 +1175,20 @@ export default function AccountManagement() {
                   <div className="rounded-lg border border-amber-300/50 dark:border-amber-700/50 bg-amber-50/50 dark:bg-amber-900/10 p-4 flex flex-col">
                     <div className="flex items-center gap-2 mb-2">
                       <Star className="h-5 w-5 text-amber-500" />
-                      <h4 className="font-semibold text-lg">Premium</h4>
+                      <h4 className="font-semibold text-lg">{t('planTier.premiumCardTitle')}</h4>
                     </div>
                     <p className="text-sm text-muted-foreground mb-3">
-                      Everything in Pro, plus enterprise integrations for larger teams.
+                      {t('planTier.premiumCardDescription')}
                     </p>
                     <ul className="space-y-1.5 text-sm mb-4 flex-1">
-                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>All Pro features included</span></li>
-                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" /><span>Microsoft Entra Sync</span></li>
-                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" /><span>CIPP multi-tenant management</span></li>
-                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" /><span>Microsoft Teams integration</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" /><span>{t('planTier.premiumFeatureAllPro')}</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" /><span>{t('planTier.premiumFeatureEntra')}</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" /><span>{t('planTier.premiumFeatureCipp')}</span></li>
+                      <li className="flex items-start gap-2"><CheckCircle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" /><span>{t('planTier.premiumFeatureTeams')}</span></li>
                     </ul>
                     <Button id="upgrade-to-premium-btn" variant="outline" onClick={() => handleUpgradeClick('premium')} disabled={upgrading || loadingPreview} className="w-full">
                       <Star className="mr-2 h-4 w-4" />
-                      {loadingPreview ? 'Loading...' : 'Upgrade to Premium'}
+                      {loadingPreview ? t('common.loading') : t('planTier.upgradeToPremium')}
                     </Button>
                   </div>
                 </div>
@@ -1192,16 +1196,16 @@ export default function AccountManagement() {
 
               {canStartSoloProTrial && (
                 <div className="mt-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
-                  <h4 className="font-semibold mb-1">Try Pro free</h4>
+                  <h4 className="font-semibold mb-1">{t('planTier.tryProFreeTitle')}</h4>
                   <p className="text-sm text-muted-foreground mb-3">
-                    Explore Pro features for 30 days while staying on your current Solo billing. When the trial ends, you&apos;ll return to Solo unless you upgrade.
+                    {t('planTier.tryProFreeBody')}
                   </p>
                   <Button
                     id="start-solo-pro-trial-btn"
                     size="sm"
                     onClick={() => setShowSoloProTrialConfirm(true)}
                   >
-                    Try Pro free
+                    {t('planTier.tryProFreeButton')}
                   </Button>
                 </div>
               )}
@@ -1213,15 +1217,15 @@ export default function AccountManagement() {
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <Star className="h-5 w-5 text-amber-500" />
-                        <h4 className="font-semibold">Upgrade to Premium</h4>
+                        <h4 className="font-semibold">{t('planTier.upgradeToPremiumTitle')}</h4>
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        Add Microsoft Entra Sync, CIPP multi-tenant management, and Teams integration.
+                        {t('planTier.upgradeToPremiumBody')}
                       </p>
                     </div>
                     <Button id="upgrade-to-premium-btn" onClick={() => handleUpgradeClick('premium')} disabled={upgrading || loadingPreview}>
                       <Star className="mr-2 h-4 w-4" />
-                      {loadingPreview ? 'Loading...' : 'Upgrade'}
+                      {loadingPreview ? t('common.loading') : t('planTier.upgradeShortLabel')}
                     </Button>
                   </div>
                 </div>
@@ -1230,12 +1234,12 @@ export default function AccountManagement() {
               {/* Downgrade options */}
               {isPremium && tierUpgradeFlowEnabled && (
                 <div className="mt-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 space-y-3">
-                  <h4 className="font-semibold">Change Plan</h4>
+                  <h4 className="font-semibold">{t('planTier.changePlan')}</h4>
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-sm font-medium">Downgrade to Pro</p>
+                      <p className="text-sm font-medium">{t('planTier.downgradeToProTitle')}</p>
                       <p className="text-sm text-muted-foreground">
-                        Keep multi-user, integrations, and extensions. Lose Entra Sync, CIPP, and Teams.
+                        {t('planTier.downgradeToProBody')}
                       </p>
                     </div>
                     <Button
@@ -1245,19 +1249,19 @@ export default function AccountManagement() {
                       onClick={() => handleUpgradeClick('pro')}
                       disabled={upgrading || loadingPreview}
                     >
-                      {loadingPreview ? 'Loading...' : 'Switch to Pro'}
+                      {loadingPreview ? t('common.loading') : t('planTier.switchToPro')}
                     </Button>
                   </div>
                   <div className="flex items-center justify-between gap-4 pt-2 border-t border-amber-200 dark:border-amber-800">
                     <div>
-                      <p className="text-sm font-medium">Downgrade to Solo</p>
+                      <p className="text-sm font-medium">{t('planTier.downgradeToSoloTitle')}</p>
                       {hasExtraUsersForDowngrade ? (
                         <p className="text-sm text-muted-foreground">
-                          Solo is limited to 1 user. You currently have {licenseInfo?.active_licenses} active users — remove extra users first.
+                          {t('planTier.downgradeToSoloLimitedBody', { count: licenseInfo?.active_licenses ?? 0 })}
                         </p>
                       ) : (
                         <p className="text-sm text-muted-foreground">
-                          Switch to the flat-rate single-user plan with core PSA features only.
+                          {t('planTier.downgradeToSoloBody')}
                         </p>
                       )}
                     </div>
@@ -1268,7 +1272,7 @@ export default function AccountManagement() {
                       onClick={() => setShowDowngradeConfirm(true)}
                       disabled={downgrading || hasExtraUsersForDowngrade}
                     >
-                      {downgrading ? 'Downgrading...' : 'Switch to Solo'}
+                      {downgrading ? t('planTier.downgrading') : t('planTier.switchToSolo')}
                     </Button>
                   </div>
                 </div>
@@ -1278,14 +1282,14 @@ export default function AccountManagement() {
                 <div className="mt-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
                   <div className="flex items-center justify-between gap-4">
                     <div>
-                      <h4 className="font-semibold">Downgrade to Solo</h4>
+                      <h4 className="font-semibold">{t('planTier.downgradeToSoloTitle')}</h4>
                       {hasExtraUsersForDowngrade ? (
                         <p className="text-sm text-muted-foreground">
-                          Solo is limited to 1 user. You currently have {licenseInfo?.active_licenses} active users — remove extra users before downgrading.
+                          {t('planTier.downgradeToSoloAltLimitedBody', { count: licenseInfo?.active_licenses ?? 0 })}
                         </p>
                       ) : (
                         <p className="text-sm text-muted-foreground">
-                          Switch to the flat-rate single-user plan and keep core PSA features.
+                          {t('planTier.downgradeToSoloAltBody')}
                         </p>
                       )}
                     </div>
@@ -1295,7 +1299,7 @@ export default function AccountManagement() {
                       onClick={() => setShowDowngradeConfirm(true)}
                       disabled={downgrading || hasExtraUsersForDowngrade}
                     >
-                      {downgrading ? 'Downgrading...' : 'Downgrade'}
+                      {downgrading ? t('planTier.downgrading') : t('planTier.downgrade')}
                     </Button>
                   </div>
                 </div>
@@ -1305,38 +1309,36 @@ export default function AccountManagement() {
               {/* Hide if already on a Premium trial (they manage it from the trial card above) */}
               {isPro && !isTrialing && !isPremiumTrial && (
                 <div className="mt-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
-                  <h4 className="font-semibold mb-1">Try Premium Free for 30 Days</h4>
+                  <h4 className="font-semibold mb-1">{t('planTier.tryPremiumTitle')}</h4>
                   <p className="text-sm text-muted-foreground mb-3">
-                    Start a 30-day Premium trial to explore advanced features.
-                    Your billing stays the same during the trial — no charge until you explicitly confirm the switch.
+                    {t('planTier.tryPremiumSelfServiceBody')}
                   </p>
                   <Button
                     id="start-premium-trial-btn"
                     size="sm"
                     onClick={() => setShowTrialConfirm(true)}
                   >
-                    Start 30-Day Premium Trial
+                    {t('planTier.startPremiumTrial')}
                   </Button>
                 </div>
               )}
               {isPro && isTrialing && !isPremiumTrial && (
                 <div className="mt-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
-                  <h4 className="font-semibold mb-1">Try Premium Free for 30 Days</h4>
+                  <h4 className="font-semibold mb-1">{t('planTier.tryPremiumTitle')}</h4>
                   <p className="text-sm text-muted-foreground mb-3">
-                    Request a 30-day Premium trial to explore advanced features.
-                    Your current Pro subscription continues — no interruption.
+                    {t('planTier.tryPremiumRequestBody')}
                   </p>
                   {trialRequestSent ? (
                     <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
                       <CheckCircle className="h-4 w-4" />
-                      <span>Request sent! We&apos;ll review it shortly.</span>
+                      <span>{t('planTier.requestSent')}</span>
                     </div>
                   ) : (
                     <div className="space-y-2">
                       <textarea
                         className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         rows={3}
-                        placeholder="Tell us what you'd like to explore with Premium (optional but helps us prioritize)..."
+                        placeholder={t('planTier.requestPlaceholder')}
                         value={trialRequestMessage}
                         onChange={(e) => setTrialRequestMessage(e.target.value)}
                         disabled={sendingTrialRequest}
@@ -1347,7 +1349,7 @@ export default function AccountManagement() {
                         onClick={handleSendTrialRequest}
                         disabled={sendingTrialRequest}
                       >
-                        {sendingTrialRequest ? 'Sending...' : 'Request Premium Trial'}
+                        {sendingTrialRequest ? t('planTier.sending') : t('planTier.requestPremiumTrial')}
                       </Button>
                     </div>
                   )}
@@ -1366,21 +1368,21 @@ export default function AccountManagement() {
               <CardDescription>{formatAddOnDescription(ADD_ONS.AI_ASSISTANT)}</CardDescription>
             </div>
             <Badge variant={hasAiAssistant ? 'success' : 'default-muted'}>
-              {hasAiAssistant ? 'Active' : 'Available'}
+              {hasAiAssistant ? t('aiAssistant.statusActive') : t('aiAssistant.statusAvailable')}
             </Badge>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            AI Assistant is a separate paid add-on for Solo, Pro, and Premium tenants.
+            {t('aiAssistant.description')}
           </p>
           {hasAiAssistant ? (
             <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h4 className="font-semibold">AI Assistant (active)</h4>
+                  <h4 className="font-semibold">{t('aiAssistant.activeTitle')}</h4>
                   <p className="text-sm text-muted-foreground">
-                    AI chat, document assistance, and other AI-powered workflows are currently enabled for this tenant.
+                    {t('aiAssistant.activeBody')}
                   </p>
                 </div>
                 <Button
@@ -1389,25 +1391,24 @@ export default function AccountManagement() {
                   onClick={() => setShowCancelAiConfirm(true)}
                   disabled={cancelingAi}
                 >
-                  {cancelingAi ? 'Cancelling...' : 'Cancel AI Assistant'}
+                  {cancelingAi ? t('aiAssistant.cancelling') : t('aiAssistant.cancel')}
                 </Button>
               </div>
             </div>
           ) : isIapTenant ? (
             <div className="rounded-lg border border-muted bg-muted/30 p-4">
-              <h4 className="font-semibold">Add-ons not available</h4>
+              <h4 className="font-semibold">{t('aiAssistant.iapUnavailableTitle')}</h4>
               <p className="text-sm text-muted-foreground mt-1">
-                Add-ons like AI Assistant are not available while your subscription is managed by Apple.
-                To add features beyond the Apple catalog, upgrade to a web-managed plan first.
+                {t('aiAssistant.iapUnavailableBody')}
               </p>
             </div>
           ) : (
             <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h4 className="font-semibold">Add AI Assistant</h4>
+                  <h4 className="font-semibold">{t('aiAssistant.addTitle')}</h4>
                   <p className="text-sm text-muted-foreground">
-                    Start a separate AI subscription without changing your core PSA tier.
+                    {t('aiAssistant.addBody')}
                   </p>
                 </div>
                 <Button
@@ -1415,7 +1416,7 @@ export default function AccountManagement() {
                   onClick={handlePurchaseAiAssistant}
                   disabled={purchasingAi}
                 >
-                  {purchasingAi ? 'Starting checkout...' : 'Add AI Assistant'}
+                  {purchasingAi ? t('aiAssistant.startingCheckout') : t('aiAssistant.addButton')}
                 </Button>
               </div>
             </div>
@@ -1428,26 +1429,30 @@ export default function AccountManagement() {
         <Alert variant="info">
           <AlertDescription>
             <p className="font-semibold mb-2">
-              Scheduled License Change
+              {t('scheduledChanges.title')}
             </p>
             <p className="text-sm mb-2">
-              Your license count will change from <strong>{scheduledChanges.current_quantity}</strong> to{' '}
-              <strong>{scheduledChanges.scheduled_quantity}</strong> on{' '}
-              <strong>{new Date(scheduledChanges.effective_date).toLocaleDateString()}</strong>.
+              <span dangerouslySetInnerHTML={{
+                __html: t('scheduledChanges.body', {
+                  current: scheduledChanges.current_quantity,
+                  scheduled: scheduledChanges.scheduled_quantity,
+                  date: new Date(scheduledChanges.effective_date).toLocaleDateString(),
+                }),
+              }} />
             </p>
             <div className="text-sm space-y-1">
               <div className="flex justify-between">
-                <span>Current monthly cost:</span>
+                <span>{t('scheduledChanges.currentMonthlyCost')}</span>
                 <span className="font-medium">${scheduledChanges.current_monthly_cost.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span>New monthly cost:</span>
+                <span>{t('scheduledChanges.newMonthlyCost')}</span>
                 <span className="font-medium">
                   ${scheduledChanges.scheduled_monthly_cost.toFixed(2)}
                 </span>
               </div>
               <div className="flex justify-between pt-1 border-t border-border">
-                <span className="font-semibold">Monthly savings:</span>
+                <span className="font-semibold">{t('scheduledChanges.monthlySavings')}</span>
                 <span className="font-semibold">
                   ${scheduledChanges.monthly_savings.toFixed(2)}
                 </span>
@@ -1462,14 +1467,14 @@ export default function AccountManagement() {
         <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h4 className="font-semibold">Need more users?</h4>
+              <h4 className="font-semibold">{t('primaryActions.needMoreUsersTitle')}</h4>
               <p className="text-sm text-muted-foreground">
-                Solo is a single-user plan. Upgrade to Pro to add team members and manage licenses.
+                {t('primaryActions.needMoreUsersBody')}
               </p>
             </div>
             <Button id="upgrade-to-pro-licenses-btn" onClick={() => handleUpgradeClick('pro')} disabled={upgrading || loadingPreview}>
               <Rocket className="mr-2 h-4 w-4" />
-              {loadingPreview ? 'Loading...' : 'Upgrade to Pro'}
+              {loadingPreview ? t('common.loading') : t('planTier.upgradeToPro')}
             </Button>
           </div>
         </div>
@@ -1477,7 +1482,7 @@ export default function AccountManagement() {
         <div className="flex space-x-2">
           <Button id="buy-more-licenses-btn" onClick={handleBuyMoreLicenses}>
             <Rocket className="mr-2 h-4 w-4" />
-            Add Licenses
+            {t('primaryActions.addLicenses')}
           </Button>
           <Button
             id="reduce-licenses-btn"
@@ -1485,7 +1490,7 @@ export default function AccountManagement() {
             onClick={handleReduceLicenses}
           >
             <MinusCircle className="mr-2 h-4 w-4" />
-            Remove Licenses
+            {t('primaryActions.removeLicenses')}
           </Button>
         </div>
       )}
@@ -1499,7 +1504,7 @@ export default function AccountManagement() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <User className="h-5 w-5" />
-              <CardTitle>License Details</CardTitle>
+              <CardTitle>{t('licenseDetails.sectionTitle')}</CardTitle>
             </div>
             {expandedSections.licenseDetails ? (
               <ChevronUp className="h-5 w-5 text-muted-foreground" />
@@ -1514,28 +1519,28 @@ export default function AccountManagement() {
           <div className="rounded-lg border p-4 bg-muted/50">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-lg font-semibold">Current Plan</h3>
+                <h3 className="text-lg font-semibold">{t('licenseDetails.currentPlan')}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {licenseInfo?.plan_name} Plan
+                  {t('licenseDetails.planLabel', { plan: licenseInfo?.plan_name })}
                 </p>
               </div>
               <Badge variant="success">
-                Active
+                {t('common.active')}
               </Badge>
             </div>
 
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label className="text-sm text-muted-foreground">Total Licenses</Label>
-                <p className="text-2xl font-bold">{licenseInfo?.total_licenses ?? 'Unlimited'}</p>
+                <Label className="text-sm text-muted-foreground">{t('licenseDetails.totalLicenses')}</Label>
+                <p className="text-2xl font-bold">{licenseInfo?.total_licenses ?? t('licenseDetails.unlimited')}</p>
               </div>
               <div>
-                <Label className="text-sm text-muted-foreground">Active Users</Label>
+                <Label className="text-sm text-muted-foreground">{t('licenseDetails.activeUsers')}</Label>
                 <p className="text-2xl font-bold text-green-600">{licenseInfo?.active_licenses}</p>
               </div>
               <div>
-                <Label className="text-sm text-muted-foreground">Available</Label>
-                <p className="text-2xl font-bold text-blue-600">{licenseInfo?.available_licenses ?? 'Unlimited'}</p>
+                <Label className="text-sm text-muted-foreground">{t('licenseDetails.available')}</Label>
+                <p className="text-2xl font-bold text-blue-600">{licenseInfo?.available_licenses ?? t('licenseDetails.unlimited')}</p>
               </div>
             </div>
           </div>
@@ -1543,15 +1548,15 @@ export default function AccountManagement() {
           {/* Pricing Info */}
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <Label>Price per License</Label>
-              <span className="font-semibold">${licenseInfo?.price_per_license?.toFixed(2)}/month</span>
+              <Label>{t('licenseDetails.pricePerLicense')}</Label>
+              <span className="font-semibold">{t('licenseDetails.pricePerMonth', { amount: licenseInfo?.price_per_license?.toFixed(2) ?? '0.00' })}</span>
             </div>
             <div className="flex justify-between items-center pt-2 border-t">
-              <Label className="font-semibold">Current Monthly Total</Label>
+              <Label className="font-semibold">{t('licenseDetails.currentMonthlyTotal')}</Label>
               <span className="text-xl font-bold">
                 {licenseInfo?.total_licenses !== null
                   ? `$${((licenseInfo?.total_licenses || 0) * (licenseInfo?.price_per_license || 0)).toFixed(2)}`
-                  : 'Contact Sales'
+                  : t('licenseDetails.contactSales')
                 }
               </span>
             </div>
@@ -1569,7 +1574,7 @@ export default function AccountManagement() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <CreditCard className="h-5 w-5" />
-              <CardTitle>Payment Information</CardTitle>
+              <CardTitle>{t('paymentInfo.sectionTitle')}</CardTitle>
             </div>
             {expandedSections.paymentInfo ? (
               <ChevronUp className="h-5 w-5 text-muted-foreground" />
@@ -1582,7 +1587,7 @@ export default function AccountManagement() {
           <CardContent className="space-y-6">
           {/* Current Payment Method */}
           <div className="rounded-lg border p-4">
-            <h3 className="text-sm font-semibold mb-4">Current Payment Method</h3>
+            <h3 className="text-sm font-semibold mb-4">{t('paymentInfo.currentPaymentMethod')}</h3>
 
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-4">
@@ -1594,7 +1599,7 @@ export default function AccountManagement() {
                     {paymentInfo?.card_brand} •••• {paymentInfo?.card_last4}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Expires {paymentInfo?.card_exp_month}/{paymentInfo?.card_exp_year}
+                    {t('paymentInfo.expires', { month: paymentInfo?.card_exp_month, year: paymentInfo?.card_exp_year })}
                   </p>
                 </div>
               </div>
@@ -1602,7 +1607,7 @@ export default function AccountManagement() {
 
             <div className="space-y-2">
               <div className="flex justify-between">
-                <Label>Billing Email</Label>
+                <Label>{t('paymentInfo.billingEmail')}</Label>
                 <span className="text-sm">{paymentInfo?.billing_email}</span>
               </div>
             </div>
@@ -1611,7 +1616,7 @@ export default function AccountManagement() {
           {/* Actions */}
           <div className="flex space-x-2">
             <Button id="update-payment-method-btn" onClick={handleUpdatePaymentMethod}>
-              Update Payment Method
+              {t('paymentInfo.updatePaymentMethod')}
             </Button>
           </div>
           </CardContent>
@@ -1627,7 +1632,7 @@ export default function AccountManagement() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Calendar className="h-5 w-5" />
-              <CardTitle>Subscription Details</CardTitle>
+              <CardTitle>{t('subscriptionDetails.sectionTitle')}</CardTitle>
             </div>
             {expandedSections.subscriptionDetails ? (
               <ChevronUp className="h-5 w-5 text-muted-foreground" />
@@ -1641,18 +1646,18 @@ export default function AccountManagement() {
           {/* Subscription Status */}
           <div className="rounded-lg border p-4 bg-muted/50">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Subscription Status</h3>
+              <h3 className="text-lg font-semibold">{t('subscriptionDetails.subscriptionStatus')}</h3>
               <Badge variant={subscriptionInfo?.status === 'active' ? 'success' : 'default-muted'}>
-                {subscriptionInfo?.status ? subscriptionInfo.status.charAt(0).toUpperCase() + subscriptionInfo.status.slice(1) : 'Unknown'}
+                {subscriptionInfo?.status ? subscriptionInfo.status.charAt(0).toUpperCase() + subscriptionInfo.status.slice(1) : t('common.unknown')}
               </Badge>
             </div>
 
             <div className="space-y-3">
               <div className="flex justify-between">
-                <Label className="text-muted-foreground">Billing Cycle</Label>
+                <Label className="text-muted-foreground">{t('subscriptionDetails.billingCycle')}</Label>
                 <div className="flex items-center gap-2">
                   <Badge variant="outline">
-                    {subscriptionInfo?.billing_interval === 'year' ? 'Annual' : 'Monthly'}
+                    {subscriptionInfo?.billing_interval === 'year' ? t('subscriptionDetails.annual') : t('subscriptionDetails.monthly')}
                   </Badge>
                   <Button
                     id="switch-billing-interval-btn"
@@ -1664,33 +1669,35 @@ export default function AccountManagement() {
                   >
                     <ArrowRightLeft className="mr-1 h-3 w-3" />
                     {loadingIntervalPreview
-                      ? 'Loading...'
-                      : `Switch to ${subscriptionInfo?.billing_interval === 'year' ? 'Monthly' : 'Annual'}`}
+                      ? t('common.loading')
+                      : subscriptionInfo?.billing_interval === 'year'
+                        ? t('subscriptionDetails.switchToMonthly')
+                        : t('subscriptionDetails.switchToAnnual')}
                   </Button>
                 </div>
               </div>
               <div className="flex justify-between">
-                <Label className="text-muted-foreground">Current Period</Label>
+                <Label className="text-muted-foreground">{t('subscriptionDetails.currentPeriod')}</Label>
                 <span className="text-sm font-medium">
                   {subscriptionInfo?.current_period_start && subscriptionInfo?.current_period_end
                     ? `${formatDate(subscriptionInfo.current_period_start)} - ${formatDate(subscriptionInfo.current_period_end)}`
-                    : 'N/A'}
+                    : t('common.notAvailable')}
                 </span>
               </div>
               <div className="flex justify-between">
-                <Label className="text-muted-foreground">Next Billing Date</Label>
+                <Label className="text-muted-foreground">{t('subscriptionDetails.nextBillingDate')}</Label>
                 <span className="text-sm font-medium">
                   {formatDate(subscriptionInfo?.next_billing_date)}
                 </span>
               </div>
               <div className="flex justify-between pt-2 border-t">
                 <Label className="font-semibold">
-                  {subscriptionInfo?.billing_interval === 'year' ? 'Annual' : 'Monthly'} Amount
+                  {subscriptionInfo?.billing_interval === 'year' ? t('subscriptionDetails.annualAmount') : t('subscriptionDetails.monthlyAmount')}
                 </Label>
                 <span className="text-lg font-bold">
                   {typeof subscriptionInfo?.monthly_amount === 'number'
                     ? `$${subscriptionInfo.monthly_amount.toFixed(2)}`
-                    : 'N/A'}
+                    : t('common.notAvailable')}
                 </span>
               </div>
             </div>
@@ -1708,7 +1715,7 @@ export default function AccountManagement() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <CreditCard className="h-5 w-5" />
-              <CardTitle>Recent Invoices</CardTitle>
+              <CardTitle>{t('invoices.sectionTitle')}</CardTitle>
             </div>
             {expandedSections.invoices ? (
               <ChevronUp className="h-5 w-5 text-muted-foreground" />
@@ -1727,8 +1734,8 @@ export default function AccountManagement() {
                       <p className="font-medium">{invoice.period_label}</p>
                       <p className="text-xs text-muted-foreground">
                         {invoice.paid_at
-                          ? `Paid on ${new Date(invoice.paid_at).toLocaleDateString()}`
-                          : `Status: ${invoice.status}`}
+                          ? t('invoices.paidOn', { date: new Date(invoice.paid_at).toLocaleDateString() })
+                          : t('invoices.statusLine', { status: invoice.status })}
                       </p>
                     </div>
                     <div className="text-right">
@@ -1741,7 +1748,7 @@ export default function AccountManagement() {
                           className="h-auto p-0 text-xs"
                           onClick={() => window.open(invoice.invoice_pdf_url!, '_blank')}
                         >
-                          View PDF
+                          {t('invoices.viewPdf')}
                         </Button>
                       )}
                     </div>
@@ -1749,7 +1756,7 @@ export default function AccountManagement() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No invoices found</p>
+              <p className="text-sm text-muted-foreground">{t('invoices.noInvoices')}</p>
             )}
           </CardContent>
         )}
@@ -1758,14 +1765,14 @@ export default function AccountManagement() {
       {/* Danger Zone */}
       <Card className="border-destructive/50">
         <CardHeader>
-          <CardTitle className="text-destructive">Danger Zone</CardTitle>
+          <CardTitle className="text-destructive">{t('dangerZone.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Canceling your subscription will disable access for all users at the end of the current billing period.
+            {t('dangerZone.body')}
           </p>
           <Button id="cancel-subscription-btn" variant="destructive" onClick={handleCancelSubscription}>
-            Cancel Subscription
+            {t('dangerZone.cancelSubscription')}
           </Button>
         </CardContent>
       </Card>
@@ -1793,19 +1800,19 @@ export default function AccountManagement() {
           setShowAiCheckout(false);
           setAiCheckoutClientSecret(null);
         }}
-        title="Add AI Assistant"
+        title={t('aiCheckoutDialog.title')}
       >
         {aiCheckoutClientSecret && aiStripePromise ? (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Complete your AI Assistant purchase below. This add-on is billed separately from your main tier subscription.
+              {t('aiCheckoutDialog.body')}
             </p>
             <EmbeddedCheckoutProvider stripe={aiStripePromise} options={{ clientSecret: aiCheckoutClientSecret }}>
               <EmbeddedCheckout />
             </EmbeddedCheckoutProvider>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Preparing checkout...</p>
+          <p className="text-sm text-muted-foreground">{t('common.preparingCheckout')}</p>
         )}
       </Dialog>
 
@@ -1816,28 +1823,24 @@ export default function AccountManagement() {
           setShowIapAutoRenewModal(false);
           setIapAutoRenewExpiresAt(null);
         }}
-        title="Disable auto-renew on your Apple subscription first"
+        title={t('iapAutoRenewDialog.title')}
       >
         <div className="space-y-4">
           <p className="text-sm">
-            Your subscription is currently managed by Apple, with auto-renew enabled. To upgrade
-            to {TIER_LABELS[iapUpgradeTargetTier]}, you need to disable auto-renew on the Apple
-            side first so Apple doesn't charge you again after your current period ends.
+            {t('iapAutoRenewDialog.body', { tier: TIER_LABELS[iapUpgradeTargetTier] })}
           </p>
           <div className="rounded-lg bg-muted p-4 text-sm space-y-2">
-            <p className="font-semibold">How to disable auto-renew:</p>
+            <p className="font-semibold">{t('iapAutoRenewDialog.howToTitle')}</p>
             <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
-              <li>Open <strong>Settings</strong> on your iPhone or iPad</li>
-              <li>Tap your name at the top, then <strong>Subscriptions</strong></li>
-              <li>Tap <strong>Alga PSA</strong></li>
-              <li>Tap <strong>Cancel Subscription</strong> — this disables auto-renew but keeps your access until {iapAutoRenewExpiresAt ? formatDate(iapAutoRenewExpiresAt) : 'your current period ends'}</li>
-              <li>Return to this page and click Continue below</li>
+              <li><span dangerouslySetInnerHTML={{ __html: t('iapAutoRenewDialog.step1') }} /></li>
+              <li><span dangerouslySetInnerHTML={{ __html: t('iapAutoRenewDialog.step2') }} /></li>
+              <li><span dangerouslySetInnerHTML={{ __html: t('iapAutoRenewDialog.step3') }} /></li>
+              <li><span dangerouslySetInnerHTML={{ __html: t('iapAutoRenewDialog.step4', { date: iapAutoRenewExpiresAt ? formatDate(iapAutoRenewExpiresAt) : t('iapAutoRenewDialog.currentPeriodFallback') }) }} /></li>
+              <li>{t('iapAutoRenewDialog.step5')}</li>
             </ol>
           </div>
           <p className="text-sm text-muted-foreground">
-            Don't worry — your Solo access continues through the end of your current Apple billing period,
-            and you'll get {TIER_LABELS[iapUpgradeTargetTier]} features immediately after you complete the card setup on the next screen.
-            Your card won't be charged until Apple's billing period ends.
+            {t('iapAutoRenewDialog.reassurance', { tier: TIER_LABELS[iapUpgradeTargetTier] })}
           </p>
           <div className="flex justify-end gap-2 pt-2">
             <Button
@@ -1848,14 +1851,14 @@ export default function AccountManagement() {
                 setIapAutoRenewExpiresAt(null);
               }}
             >
-              Not now
+              {t('iapAutoRenewDialog.notNow')}
             </Button>
             <Button
               id="iap-autorenew-continue-btn"
               onClick={handleRetryIapUpgradeAfterAutoRenewOff}
               disabled={startingIapUpgrade}
             >
-              {startingIapUpgrade ? 'Checking...' : "I've disabled auto-renew, continue"}
+              {startingIapUpgrade ? t('iapAutoRenewDialog.checking') : t('iapAutoRenewDialog.continueButton')}
             </Button>
           </div>
         </div>
@@ -1868,14 +1871,12 @@ export default function AccountManagement() {
           setShowIapCheckout(false);
           setIapCheckoutClientSecret(null);
         }}
-        title={`Upgrade to ${TIER_LABELS[iapUpgradeTargetTier]}`}
+        title={t('iapCheckoutDialog.title', { tier: TIER_LABELS[iapUpgradeTargetTier] })}
       >
         {iapCheckoutClientSecret && iapStripePromise ? (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Enter your card details below. Your card will <strong>not</strong> be charged until your
-              current Apple billing period ends — Stripe will wait until then before starting
-              {' '}{TIER_LABELS[iapUpgradeTargetTier]} billing.
+              <span dangerouslySetInnerHTML={{ __html: t('iapCheckoutDialog.body', { tier: TIER_LABELS[iapUpgradeTargetTier] }) }} />
             </p>
             <EmbeddedCheckoutProvider
               stripe={iapStripePromise}
@@ -1885,7 +1886,7 @@ export default function AccountManagement() {
             </EmbeddedCheckoutProvider>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Preparing checkout...</p>
+          <p className="text-sm text-muted-foreground">{t('common.preparingCheckout')}</p>
         )}
       </Dialog>
 
@@ -1895,18 +1896,13 @@ export default function AccountManagement() {
         isOpen={showCancelIapTransitionConfirm}
         onClose={() => setShowCancelIapTransitionConfirm(false)}
         onConfirm={handleCancelIapTransition}
-        title="Cancel your pending upgrade?"
-        confirmLabel={cancelingIapTransition ? 'Cancelling...' : 'Yes, cancel upgrade'}
+        title={t('cancelIapTransitionDialog.title')}
+        confirmLabel={cancelingIapTransition ? t('cancelIapTransitionDialog.cancelling') : t('cancelIapTransitionDialog.confirmLabel')}
         isConfirming={cancelingIapTransition}
         message={
           <div className="space-y-2 text-sm">
-            <p>
-              This will cancel your pending upgrade and return you to Apple-managed Solo. Your card
-              won't be charged, and Apple will continue its normal billing cycle.
-            </p>
-            <p className="text-muted-foreground">
-              If you want to continue the upgrade later, you can start it again any time.
-            </p>
+            <p>{t('cancelIapTransitionDialog.body1')}</p>
+            <p className="text-muted-foreground">{t('cancelIapTransitionDialog.body2')}</p>
           </div>
         }
       />
@@ -1917,60 +1913,60 @@ export default function AccountManagement() {
         isOpen={showIntervalSwitch}
         onClose={() => setShowIntervalSwitch(false)}
         onConfirm={handleConfirmIntervalSwitch}
-        title={`Switch to ${intervalPreview?.currentInterval === 'month' ? 'Annual' : 'Monthly'} Billing`}
-        confirmLabel={switchingInterval ? 'Switching...' : 'Confirm Switch'}
+        title={intervalPreview?.currentInterval === 'month' ? t('intervalSwitchDialog.titleAnnual') : t('intervalSwitchDialog.titleMonthly')}
+        confirmLabel={switchingInterval ? t('intervalSwitchDialog.switching') : t('intervalSwitchDialog.confirm')}
         isConfirming={switchingInterval}
         message={
           intervalPreview ? (
             <div className="space-y-4">
               {intervalPreview.currentInterval === 'month' ? (
                 <>
-                  <p>Switch to annual billing and save on your subscription.</p>
+                  <p>{t('intervalSwitchDialog.toAnnualIntro')}</p>
                   <div className="rounded-lg border p-4 space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Current monthly total</span>
-                      <span>${intervalPreview.currentTotal?.toFixed(2)}/mo</span>
+                      <span className="text-muted-foreground">{t('intervalSwitchDialog.currentMonthlyTotal')}</span>
+                      <span>${intervalPreview.currentTotal?.toFixed(2)}{t('intervalSwitchDialog.perMonthSuffix')}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Annual total</span>
-                      <span>${intervalPreview.newTotal?.toFixed(2)}/yr</span>
+                      <span className="text-muted-foreground">{t('intervalSwitchDialog.annualTotal')}</span>
+                      <span>${intervalPreview.newTotal?.toFixed(2)}{t('intervalSwitchDialog.perYearSuffix')}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Equivalent monthly</span>
-                      <span>${((intervalPreview.newTotal || 0) / 12).toFixed(2)}/mo</span>
+                      <span className="text-muted-foreground">{t('intervalSwitchDialog.equivalentMonthly')}</span>
+                      <span>${((intervalPreview.newTotal || 0) / 12).toFixed(2)}{t('intervalSwitchDialog.perMonthSuffix')}</span>
                     </div>
                     {intervalPreview.savingsPercent !== undefined && intervalPreview.savingsPercent > 0 && (
                       <div className="flex justify-between font-semibold pt-2 border-t text-green-600">
-                        <span>You save</span>
-                        <span>~{intervalPreview.savingsPercent}%</span>
+                        <span>{t('intervalSwitchDialog.youSave')}</span>
+                        <span>{t('intervalSwitchDialog.savingsPercent', { percent: intervalPreview.savingsPercent })}</span>
                       </div>
                     )}
                   </div>
                 </>
               ) : (
                 <>
-                  <p>Switch back to monthly billing.</p>
+                  <p>{t('intervalSwitchDialog.toMonthlyIntro')}</p>
                   <div className="rounded-lg border p-4 space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Current annual total</span>
-                      <span>${intervalPreview.currentTotal?.toFixed(2)}/yr</span>
+                      <span className="text-muted-foreground">{t('intervalSwitchDialog.currentAnnualTotal')}</span>
+                      <span>${intervalPreview.currentTotal?.toFixed(2)}{t('intervalSwitchDialog.perYearSuffix')}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">New monthly total</span>
-                      <span>${intervalPreview.newTotal?.toFixed(2)}/mo</span>
+                      <span className="text-muted-foreground">{t('intervalSwitchDialog.newMonthlyTotal')}</span>
+                      <span>${intervalPreview.newTotal?.toFixed(2)}{t('intervalSwitchDialog.perMonthSuffix')}</span>
                     </div>
                   </div>
                 </>
               )}
               <p className="text-sm text-muted-foreground">
-                This change takes effect at the end of your current billing period
+                {t('intervalSwitchDialog.effectiveNote')}
                 {intervalPreview.effectiveDate
-                  ? ` (${new Date(intervalPreview.effectiveDate).toLocaleDateString()})`
+                  ? t('intervalSwitchDialog.effectiveDateSuffix', { date: new Date(intervalPreview.effectiveDate).toLocaleDateString() })
                   : ''}.
               </p>
             </div>
           ) : (
-            'Loading pricing details...'
+            t('common.loadingPricingDetails')
           )
         }
       />
@@ -1980,14 +1976,14 @@ export default function AccountManagement() {
         isOpen={showCancelAiConfirm}
         onClose={() => setShowCancelAiConfirm(false)}
         onConfirm={handleCancelAiAssistant}
-        title="Cancel AI Assistant"
-        confirmLabel={cancelingAi ? 'Cancelling...' : 'Confirm Cancel'}
+        title={t('cancelAiDialog.title')}
+        confirmLabel={cancelingAi ? t('cancelAiDialog.cancelling') : t('cancelAiDialog.confirm')}
         isConfirming={cancelingAi}
         message={
           <div className="space-y-3">
-            <p>You are about to cancel the <strong>AI Assistant</strong> add-on.</p>
+            <p><span dangerouslySetInnerHTML={{ __html: t('cancelAiDialog.body1') }} /></p>
             <p className="text-sm text-muted-foreground">
-              AI chat, document assistance, and other add-on-only AI features will be disabled once the add-on is removed from your subscription.
+              {t('cancelAiDialog.body2')}
             </p>
           </div>
         }
@@ -1998,53 +1994,57 @@ export default function AccountManagement() {
         isOpen={showUpgradeConfirm}
         onClose={() => setShowUpgradeConfirm(false)}
         onConfirm={handleConfirmUpgrade}
-        title={`Upgrade to ${TIER_LABELS[upgradeTargetTier]}`}
-        confirmLabel={upgrading ? 'Upgrading...' : 'Confirm Upgrade'}
+        title={t('upgradeDialog.title', { tier: TIER_LABELS[upgradeTargetTier] })}
+        confirmLabel={upgrading ? t('upgradeDialog.upgrading') : t('upgradeDialog.confirm')}
         isConfirming={upgrading}
         message={
           upgradePreview ? (
             <div className="space-y-4">
               <p>
-                You are about to upgrade to the <strong>{TIER_LABELS[upgradeTargetTier]}</strong> plan.
+                <span dangerouslySetInnerHTML={{ __html: t('upgradeDialog.intro', { tier: TIER_LABELS[upgradeTargetTier] }) }} />
               </p>
 
               <div className="rounded-lg border p-4 space-y-2">
                 {(upgradePreview.currentMonthly ?? 0) > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Current monthly total</span>
+                    <span className="text-muted-foreground">{t('upgradeDialog.currentMonthlyTotal')}</span>
                     <span>${upgradePreview.currentMonthly?.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{TIER_LABELS[upgradeTargetTier]} base fee</span>
-                  <span>${upgradePreview.newBasePrice?.toFixed(2)}/mo</span>
+                  <span className="text-muted-foreground">{t('upgradeDialog.baseFee', { tier: TIER_LABELS[upgradeTargetTier] })}</span>
+                  <span>${upgradePreview.newBasePrice?.toFixed(2)}{t('upgradeDialog.perMonthSuffix')}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Per-user fee ({upgradePreview.userCount} users)</span>
-                  <span>${upgradePreview.newUserPrice?.toFixed(2)} × {upgradePreview.userCount} = ${((upgradePreview.newUserPrice || 0) * (upgradePreview.userCount || 0)).toFixed(2)}/mo</span>
+                  <span className="text-muted-foreground">{t('upgradeDialog.perUserFee', { count: upgradePreview.userCount })}</span>
+                  <span>{t('upgradeDialog.perUserFeeValue', {
+                    unit: upgradePreview.newUserPrice?.toFixed(2),
+                    count: upgradePreview.userCount,
+                    total: ((upgradePreview.newUserPrice || 0) * (upgradePreview.userCount || 0)).toFixed(2),
+                  })}</span>
                 </div>
                 <div className="flex justify-between font-semibold pt-2 border-t">
-                  <span>New monthly total</span>
-                  <span>${upgradePreview.newMonthly?.toFixed(2)}/mo</span>
+                  <span>{t('upgradeDialog.newMonthlyTotal')}</span>
+                  <span>${upgradePreview.newMonthly?.toFixed(2)}{t('upgradeDialog.perMonthSuffix')}</span>
                 </div>
               </div>
 
               {upgradePreview.prorationAmount !== undefined && upgradePreview.prorationAmount > 0 && (
                 <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3">
                   <p className="text-sm text-amber-800 dark:text-amber-200">
-                    A prorated charge of <strong>${upgradePreview.prorationAmount.toFixed(2)}</strong> will be billed now for the remainder of the current billing period.
+                    <span dangerouslySetInnerHTML={{ __html: t('upgradeDialog.prorationNotice', { amount: upgradePreview.prorationAmount.toFixed(2) }) }} />
                   </p>
                 </div>
               )}
 
               <p className="text-sm text-muted-foreground">
                 {(upgradePreview.currentMonthly ?? 0) > 0
-                  ? 'Your existing subscription will be updated and your payment method will be charged. This change takes effect immediately.'
-                  : 'A new subscription will be created. This change takes effect immediately.'}
+                  ? t('upgradeDialog.updateNote')
+                  : t('upgradeDialog.newSubNote')}
               </p>
             </div>
           ) : (
-            'Loading pricing details...'
+            t('common.loadingPricingDetails')
           )
         }
       />
@@ -2054,28 +2054,28 @@ export default function AccountManagement() {
         isOpen={showDowngradeConfirm}
         onClose={() => setShowDowngradeConfirm(false)}
         onConfirm={handleConfirmDowngrade}
-        title="Downgrade to Solo"
-        confirmLabel={downgrading ? 'Downgrading...' : 'Confirm Downgrade'}
+        title={t('downgradeDialog.title')}
+        confirmLabel={downgrading ? t('downgradeDialog.downgrading') : t('downgradeDialog.confirm')}
         isConfirming={downgrading}
         message={
           <div className="space-y-4">
-            <p>You are about to downgrade to the <strong>Solo</strong> plan.</p>
+            <p><span dangerouslySetInnerHTML={{ __html: t('downgradeDialog.intro') }} /></p>
             <div className="rounded-lg border p-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Current active users</span>
+                <span className="text-muted-foreground">{t('downgradeDialog.currentActiveUsers')}</span>
                 <span>{licenseInfo?.active_licenses ?? 0}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Target tier</span>
-                <span>Solo</span>
+                <span className="text-muted-foreground">{t('downgradeDialog.targetTier')}</span>
+                <span>{t('downgradeDialog.targetSolo')}</span>
               </div>
               <div className="flex justify-between text-sm pt-2 border-t">
-                <span className="text-muted-foreground">What changes</span>
-                <span>Flat-rate billing, 1-user limit</span>
+                <span className="text-muted-foreground">{t('downgradeDialog.whatChanges')}</span>
+                <span>{t('downgradeDialog.flatRate')}</span>
               </div>
             </div>
             <p className="text-sm text-muted-foreground">
-              Integrations, managed email, workflow design, and mobile access will no longer be available after the downgrade.
+              {t('downgradeDialog.footer')}
             </p>
           </div>
         }
@@ -2086,33 +2086,31 @@ export default function AccountManagement() {
         isOpen={showTrialConfirm}
         onClose={() => setShowTrialConfirm(false)}
         onConfirm={handleStartSelfServiceTrial}
-        title="Start 30-Day Premium Trial"
-        confirmLabel={startingSelfServiceTrial ? 'Starting...' : 'Start Premium Trial'}
+        title={t('premiumTrialDialog.title')}
+        confirmLabel={startingSelfServiceTrial ? t('premiumTrialDialog.starting') : t('premiumTrialDialog.confirm')}
         isConfirming={startingSelfServiceTrial}
         message={
           <div className="space-y-4">
-            <p>You are about to start a <strong>30-day free trial</strong> of the Premium plan.</p>
+            <p><span dangerouslySetInnerHTML={{ __html: t('premiumTrialDialog.intro') }} /></p>
 
             <div className="rounded-lg border p-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Trial period</span>
-                <span>30 days</span>
+                <span className="text-muted-foreground">{t('premiumTrialDialog.trialPeriod')}</span>
+                <span>{t('premiumTrialDialog.thirtyDays')}</span>
               </div>
               <div className="flex justify-between text-sm pt-2 border-t">
-                <span className="text-muted-foreground">Billing during trial</span>
-                <span>No change — stays at Pro pricing</span>
+                <span className="text-muted-foreground">{t('premiumTrialDialog.billingDuringTrial')}</span>
+                <span>{t('premiumTrialDialog.billingDuringTrialValue')}</span>
               </div>
               <div className="flex justify-between text-sm pt-2 border-t">
-                <span className="text-muted-foreground">After trial ends</span>
-                <span>Reverts to Pro unless you confirm</span>
+                <span className="text-muted-foreground">{t('premiumTrialDialog.afterTrialEnds')}</span>
+                <span>{t('premiumTrialDialog.afterTrialEndsValue')}</span>
               </div>
             </div>
 
             <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20 p-3">
               <p className="text-sm text-blue-800 dark:text-blue-200">
-                During the trial you&apos;ll have full access to Premium features while continuing to pay your current Pro price.
-                Before the trial ends, you&apos;ll see the exact Premium pricing and can choose to confirm the switch.
-                If you don&apos;t confirm, you&apos;ll automatically go back to Pro — no surprise charges.
+                {t('premiumTrialDialog.infoBox')}
               </p>
             </div>
           </div>
@@ -2124,31 +2122,31 @@ export default function AccountManagement() {
         isOpen={showSoloProTrialConfirm}
         onClose={() => setShowSoloProTrialConfirm(false)}
         onConfirm={handleStartSoloProTrial}
-        title="Start 30-Day Pro Trial"
-        confirmLabel={startingSoloProTrial ? 'Starting...' : 'Start Pro Trial'}
+        title={t('soloProTrialDialog.title')}
+        confirmLabel={startingSoloProTrial ? t('soloProTrialDialog.starting') : t('soloProTrialDialog.confirm')}
         isConfirming={startingSoloProTrial}
         message={
           <div className="space-y-4">
-            <p>You are about to start a <strong>30-day free trial</strong> of Pro features.</p>
+            <p><span dangerouslySetInnerHTML={{ __html: t('soloProTrialDialog.intro') }} /></p>
 
             <div className="rounded-lg border p-4 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Trial period</span>
-                <span>30 days</span>
+                <span className="text-muted-foreground">{t('soloProTrialDialog.trialPeriod')}</span>
+                <span>{t('soloProTrialDialog.thirtyDays')}</span>
               </div>
               <div className="flex justify-between text-sm pt-2 border-t">
-                <span className="text-muted-foreground">Billing during trial</span>
-                <span>No change — stays at Solo pricing</span>
+                <span className="text-muted-foreground">{t('soloProTrialDialog.billingDuringTrial')}</span>
+                <span>{t('soloProTrialDialog.billingDuringTrialValue')}</span>
               </div>
               <div className="flex justify-between text-sm pt-2 border-t">
-                <span className="text-muted-foreground">After trial ends</span>
-                <span>Returns to Solo unless you upgrade</span>
+                <span className="text-muted-foreground">{t('soloProTrialDialog.afterTrialEnds')}</span>
+                <span>{t('soloProTrialDialog.afterTrialEndsValue')}</span>
               </div>
             </div>
 
             <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20 p-3">
               <p className="text-sm text-blue-800 dark:text-blue-200">
-                Pro-only features unlock immediately. This trial is only available after your initial Solo trial has ended.
+                {t('soloProTrialDialog.infoBox')}
               </p>
             </div>
           </div>
@@ -2161,38 +2159,37 @@ export default function AccountManagement() {
         isOpen={showConfirmPremiumDialog}
         onClose={() => setShowConfirmPremiumDialog(false)}
         onConfirm={handleConfirmPremiumTrial}
-        title="Confirm Switch to Premium"
-        confirmLabel={confirmingPremium ? 'Switching...' : 'Confirm & Switch to Premium'}
+        title={t('confirmPremiumDialog.title')}
+        confirmLabel={confirmingPremium ? t('confirmPremiumDialog.switching') : t('confirmPremiumDialog.confirm')}
         isConfirming={confirmingPremium}
         message={
           confirmPremiumPreview ? (
             <div className="space-y-4">
-              <p>You&apos;re confirming the switch from Pro to Premium. Here&apos;s what you&apos;ll be charged going forward:</p>
+              <p>{t('confirmPremiumDialog.intro')}</p>
 
               <div className="rounded-lg border p-4 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Base fee</span>
-                  <span>${((confirmPremiumPreview.newBasePrice || 0) / 100).toFixed(2)}/mo</span>
+                  <span className="text-muted-foreground">{t('confirmPremiumDialog.baseFee')}</span>
+                  <span>${((confirmPremiumPreview.newBasePrice || 0) / 100).toFixed(2)}{t('confirmPremiumDialog.perMonthSuffix')}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Per user ({confirmPremiumPreview.userCount} users)</span>
-                  <span>${((confirmPremiumPreview.newUserPrice || 0) / 100).toFixed(2)}/user/mo</span>
+                  <span className="text-muted-foreground">{t('confirmPremiumDialog.perUserCount', { count: confirmPremiumPreview.userCount })}</span>
+                  <span>{t('confirmPremiumDialog.perUserRate', { amount: ((confirmPremiumPreview.newUserPrice || 0) / 100).toFixed(2) })}</span>
                 </div>
                 <div className="flex justify-between text-sm font-semibold pt-2 border-t">
-                  <span>New monthly total</span>
-                  <span>${((confirmPremiumPreview.newMonthly || 0) / 100).toFixed(2)}/mo</span>
+                  <span>{t('confirmPremiumDialog.newMonthlyTotal')}</span>
+                  <span>${((confirmPremiumPreview.newMonthly || 0) / 100).toFixed(2)}{t('confirmPremiumDialog.perMonthSuffix')}</span>
                 </div>
               </div>
 
               <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20 p-3">
                 <p className="text-sm text-blue-800 dark:text-blue-200">
-                  Premium billing will start at the end of your current pay period.
-                  You&apos;ll continue paying your current Pro price until then.
+                  {t('confirmPremiumDialog.infoBox')}
                 </p>
               </div>
             </div>
           ) : (
-            'Loading pricing details...'
+            t('common.loadingPricingDetails')
           )
         }
       />

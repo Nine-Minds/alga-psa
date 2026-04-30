@@ -1,0 +1,282 @@
+[
+  {
+    "id": "F001",
+    "description": "Register scheduling.find_entry v1 as a non-side-effectful workflow action with descriptive input/output schemas.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Proposed action contracts"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Implement scheduling.find_entry tenant-scoped lookup with assigned_user_ids and normalized schedule entry output.",
+    "implemented": true,
+    "prdRefs": [
+      "scheduling.find_entry v1",
+      "Permissions / Security"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Apply private-entry redaction policy in scheduling.find_entry according to the confirmed visibility rule.",
+    "implemented": true,
+    "prdRefs": [
+      "scheduling.find_entry v1",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Register scheduling.search_entries v1 as a non-side-effectful workflow action with bounded search inputs and normalized list output.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "scheduling.search_entries v1"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Implement scheduling.search_entries filters for time window, assigned users, work item, status, text query, and limit.",
+    "implemented": true,
+    "prdRefs": [
+      "scheduling.search_entries v1"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Require user_schedule:read for read-side scheduling actions using the workflow run actor and tenant transaction helper.",
+    "implemented": true,
+    "prdRefs": [
+      "Permissions / Security"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Register scheduling.reschedule v1 as a side-effectful workflow action with engine-provided idempotency.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "scheduling.reschedule v1"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Implement reschedule input validation for entry id, ISO start/end, start-before-end, conflict mode, recurrence scope, reason, and note.",
+    "implemented": true,
+    "prdRefs": [
+      "scheduling.reschedule v1",
+      "Error Handling"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Implement reusable conflict detection for assigned users that excludes the target entry/series and ignores canceled/completed/no-show entries.",
+    "implemented": true,
+    "prdRefs": [
+      "scheduling.reschedule v1",
+      "Risks and Constraints"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Implement reschedule conflict_mode=fail returning a standard CONFLICT workflow action error with safe conflict details.",
+    "implemented": true,
+    "prdRefs": [
+      "scheduling.reschedule v1",
+      "Error Handling"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Implement reschedule conflict_mode=shift preserving duration and moving to the earliest non-conflicting slot after detected conflicts.",
+    "implemented": true,
+    "prdRefs": [
+      "scheduling.reschedule v1"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Implement reschedule conflict_mode=override and create unresolved schedule_conflicts records for overlapping entries.",
+    "implemented": true,
+    "prdRefs": [
+      "scheduling.reschedule v1",
+      "Data Model / API / Integration Notes"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Apply reschedule recurrence_scope using existing single/future/all recurrence semantics where possible.",
+    "implemented": true,
+    "prdRefs": [
+      "scheduling.reschedule v1",
+      "Current source baseline"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Emit APPOINTMENT_RESCHEDULED for appointment-like reschedule mutations and return previous/new time output fields.",
+    "implemented": true,
+    "prdRefs": [
+      "scheduling.reschedule v1",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Register scheduling.reassign v1 as a side-effectful workflow action with assignment mode and no-op controls.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "scheduling.reassign v1"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Implement technician eligibility validation for reassign using active/internal user checks and the confirmed Technician-role rule.",
+    "implemented": true,
+    "prdRefs": [
+      "scheduling.reassign v1",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Implement reassign mode=replace and mode=add against schedule_entry_assignees with unique assigned_user_ids.",
+    "implemented": true,
+    "prdRefs": [
+      "scheduling.reassign v1"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Implement reassign no_op_if_already_assigned behavior that returns changed=false and suppresses assignment events when effective assignments are unchanged.",
+    "implemented": true,
+    "prdRefs": [
+      "scheduling.reassign v1"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Apply reassign recurrence_scope using existing recurrence update semantics where possible.",
+    "implemented": true,
+    "prdRefs": [
+      "scheduling.reassign v1",
+      "Current source baseline"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Emit APPOINTMENT_ASSIGNED according to the confirmed single- or multi-assignee event policy and return previous/new assignee outputs.",
+    "implemented": true,
+    "prdRefs": [
+      "scheduling.reassign v1",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Register scheduling.cancel v1 as a side-effectful workflow action with recurrence scope, reason, and note inputs.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "scheduling.cancel v1"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Implement cancel by marking the selected entry or recurrence scope canceled without deleting the schedule entry row/series.",
+    "implemented": true,
+    "prdRefs": [
+      "scheduling.cancel v1"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Emit APPOINTMENT_CANCELED for appointment-like canceled entries and include optional reason.",
+    "implemented": true,
+    "prdRefs": [
+      "scheduling.cancel v1",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Register scheduling.complete v1 as a side-effectful workflow action with optional outcome/note inputs.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "scheduling.complete v1"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Implement complete by marking the selected entry or recurrence scope completed and returning completion metadata.",
+    "implemented": true,
+    "prdRefs": [
+      "scheduling.complete v1"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Emit APPOINTMENT_COMPLETED for appointment-like completed entries and include optional outcome.",
+    "implemented": true,
+    "prdRefs": [
+      "scheduling.complete v1",
+      "Goals"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Write workflow run audit records for each write action with action id/version, entry id, actor, recurrence scope, changed data, and reason/note metadata.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / API / Integration Notes",
+      "Acceptance Criteria / Definition of Done"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Standardize scheduling action errors through throwActionError for validation, not found, permission, conflict, transient, and internal failures.",
+    "implemented": true,
+    "prdRefs": [
+      "Error Handling"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Ensure all new scheduling action ids appear in the workflow designer Scheduling group without additional catalog wiring.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Rollout / Migration Notes"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Document final decisions for multi-assignee event behavior, cancel permission, event-publish failure behavior, private-entry visibility, and assign_user event scope in the plan scratchpad before implementation is marked complete.",
+    "implemented": true,
+    "prdRefs": [
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Update shared workflow action actor resolution to respect tenant-owned workflow_definitions when resolving the workflow run actor for permission checks.",
+    "implemented": true,
+    "prdRefs": [
+      "Data Model / API / Integration Notes",
+      "Permissions / Security"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Mirror the newer Client workflow action test/metadata patterns for scheduling actions, including picker metadata conversion checks, runtime catalog grouping, and best-effort lazy workflow event publication.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Data Model / API / Integration Notes",
+      "Error Handling"
+    ]
+  }
+]

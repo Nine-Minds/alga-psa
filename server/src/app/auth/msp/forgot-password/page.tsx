@@ -9,12 +9,14 @@ import { recoverPassword } from '@alga-psa/auth/actions';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import toast from 'react-hot-toast';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type FormData = {
   email: string;
 };
 
 const MspForgotPassword: React.FC = () => {
+  const { t } = useTranslation('msp/auth');
   const [formData, setFormData] = useState<FormData>({
     email: '',
   });
@@ -27,7 +29,7 @@ const MspForgotPassword: React.FC = () => {
     
     // Always show success message for security - don't reveal if email exists
     await recoverPassword(formData.email, 'msp');
-    toast.success('If an account exists with this email, a password reset link has been sent.');
+    toast.success(t('forgotPassword.resetLinkSent', 'If an account exists with this email, a password reset link has been sent.'));
     router.push(`/auth/check-email?email=${formData.email}&type=forgot_password&portal=msp`);
   };
 
@@ -46,20 +48,20 @@ const MspForgotPassword: React.FC = () => {
           <div className="inline-block align-middle content-center">
             <Image
               src="/images/avatar-purple-background.png"
-              alt="AlgaPSA Logo"
+              alt={t('forgotPassword.logoAlt', 'AlgaPSA Logo')}
               width={60}
               height={60}
               className="rounded-full"
             />
           </div>
-          <h2 className="mt-6 text-2xl font-bold text-[rgb(var(--color-text-900))]">Forgot password?</h2>
-          <p className="mt-2 text-sm text-[rgb(var(--color-text-600))]">No worries, we&apos;ll send you reset instructions.</p>
+          <h2 className="mt-6 text-2xl font-bold text-[rgb(var(--color-text-900))]">{t('forgotPassword.title', 'Forgot password?')}</h2>
+          <p className="mt-2 text-sm text-[rgb(var(--color-text-600))]">{t('forgotPassword.subtitle', "No worries, we'll send you reset instructions.")}</p>
         </div>
         <Form.Root className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <Form.Field name="email">
             <div className="flex flex-col gap-2">
               <Label.Root className="text-sm font-medium text-[rgb(var(--color-text-700))]" htmlFor="email">
-                Email
+                {t('forgotPassword.emailLabel', 'Email')}
               </Label.Root>
               <Form.Control asChild>
                 <Input
@@ -68,7 +70,7 @@ const MspForgotPassword: React.FC = () => {
                   type="email"
                   required
                   className="w-full px-3 py-2 placeholder-[rgb(var(--color-text-400))] border border-[rgb(var(--color-border-300))] rounded-md shadow-sm appearance-none focus:outline-none focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))] sm:text-sm"
-                  placeholder="Enter your email"
+                  placeholder={t('forgotPassword.emailPlaceholder', 'Enter your email')}
                   value={formData.email}
                   onChange={handleInputChange}
                 />
@@ -83,14 +85,14 @@ const MspForgotPassword: React.FC = () => {
                 type="submit"
                 className="w-full"
               >
-                Send Reset Link
+                {t('forgotPassword.sendResetButton', 'Send Reset Link')}
               </Button>
             </Form.Submit>
           </div>
         </Form.Root>
         <div className="text-center">
           <Link href="/auth/msp/signin" className="text-sm font-medium text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-400))]">
-            ← Back to log in
+            {t('forgotPassword.backToLogin', '← Back to log in')}
           </Link>
         </div>
       </div>

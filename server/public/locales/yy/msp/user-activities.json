@@ -395,6 +395,7 @@
       "tickets": "55555",
       "tasks": "55555",
       "priority": "55555",
+      "search": "55555",
       "dueDate": "55555",
       "showClosed": "55555"
     },
@@ -409,7 +410,8 @@
       "allStatuses": "55555",
       "allProjects": "55555",
       "allPriorities": "55555",
-      "selectPriority": "55555"
+      "selectPriority": "55555",
+      "search": "55555"
     },
     "actions": {
       "reset": "55555"

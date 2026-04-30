@@ -19,7 +19,13 @@
     "importExport": "55555",
     "email": "55555",
     "integrations": "55555",
-    "extensions": "55555"
+    "extensions": "55555",
+    "ticketingSettings": "55555",
+    "loadingTicketing": "55555",
+    "teamManagement": "55555",
+    "loadingTeam": "55555",
+    "loadingExperimental": "55555",
+    "loadingInteractions": "55555"
   },
   "unsavedChanges": {
     "title": "55555",
@@ -304,7 +310,8 @@
         "passwordChangeFailed": "55555",
         "passwordChangeError": "55555"
       }
-    }
+    },
+    "loading": "55555"
   },
   "teams": {
     "title": "55555",
@@ -610,7 +617,40 @@
         "priorityMatrixTitle": "55555",
         "impactDescription": "55555",
         "urgencyDescription": "55555",
-        "priorityDescription": "55555"
+        "priorityDescription": "55555",
+        "categories": {
+          "serviceRequest": "55555"
+        },
+        "priorityMatrix": {
+          "urgencyHeaderLine1": {
+            "high": "55555",
+            "mediumHigh": "55555",
+            "medium": "55555",
+            "mediumLow": "55555",
+            "low": "55555"
+          },
+          "urgencyHeaderLine2": {
+            "high": "55555",
+            "mediumHigh": "55555",
+            "medium": "55555",
+            "mediumLow": "55555",
+            "low": "55555"
+          },
+          "impact": {
+            "high": "55555",
+            "mediumHigh": "55555",
+            "medium": "55555",
+            "mediumLow": "55555",
+            "low": "55555"
+          },
+          "priority": {
+            "critical": "55555",
+            "high": "55555",
+            "medium": "55555",
+            "low": "55555",
+            "planning": "55555"
+          }
+        }
       },
       "messages": {
         "success": {
@@ -842,7 +882,8 @@
           "saveFailed": "55555 {{action}} 55555"
         }
       }
-    }
+    },
+    "openMenu": "55555"
   },
   "clientPortal": {
     "branding": {
@@ -927,7 +968,70 @@
         "forgotPassword": "55555",
         "mspStaffLogin": "55555"
       }
-    }
+    },
+    "domain": {
+      "title": "55555",
+      "description": "55555",
+      "currentStatus": "55555",
+      "noDomainConfigured": "55555",
+      "defaultStatusMessage": "55555",
+      "lastChecked": "55555 {{value}} 55555",
+      "updatingDomainPrefix": "55555",
+      "updatingDomainSuffix": "55555",
+      "editInstructions": "55555",
+      "actions": {
+        "refresh": "55555",
+        "refreshing": "55555",
+        "retry": "55555",
+        "retrying": "55555",
+        "removeDomain": "55555",
+        "saveDomain": "55555",
+        "updateDomain": "55555",
+        "submitting": "55555",
+        "cancelEdit": "55555"
+      },
+      "form": {
+        "label": "55555",
+        "helpTextPrefix": "55555",
+        "helpTextSuffix": "55555",
+        "placeholder": "55555"
+      },
+      "checklist": {
+        "title": "55555",
+        "step1Prefix": "55555",
+        "step1Suffix": "55555",
+        "step2": "55555",
+        "step3": "55555",
+        "canonicalHostFallback": "55555"
+      },
+      "badges": {
+        "pending_dns": "55555",
+        "verifying_dns": "55555",
+        "dns_failed": "55555",
+        "pending_certificate": "55555",
+        "certificate_issuing": "55555",
+        "certificate_failed": "55555",
+        "deploying": "55555",
+        "active": "55555",
+        "disabled": "55555",
+        "unknown": "55555"
+      },
+      "messages": {
+        "requestSubmitted": "55555",
+        "retryQueued": "55555",
+        "removalRequested": "55555",
+        "enterDomainFirst": "55555",
+        "confirmRemove": "55555",
+        "loadFailed": "55555",
+        "registerFailed": "55555",
+        "refreshFailed": "55555",
+        "retryFailed": "55555",
+        "disableFailed": "55555"
+      }
+    },
+    "yourCompanyName": "55555",
+    "brandingPreviewMode": "55555",
+    "brandingUpdated": "55555"
   },
   "mspLanguage": {
     "title": "55555",
@@ -958,7 +1062,21 @@
       "telemetry": "55555"
     },
     "internalTabs": {
+      "categories": "55555",
+      "categoriesTypes": "55555"
+    },
+    "loading": {
+      "settings": "55555",
+      "templates": "55555",
       "categories": "55555"
+    },
+    "unsaved": {
+      "title": "55555",
+      "message": "55555"
+    },
+    "tenantDescription": {
+      "email": "55555",
+      "internal": "55555"
     },
     "sections": {
       "globalSettings": {
@@ -1193,7 +1311,8 @@
         "loadJobDetails": "55555",
         "refreshHistory": "55555"
       }
-    }
+    },
+    "selectJobHint": "55555"
   },
   "email": {
     "title": "55555",
@@ -1238,6 +1357,107 @@
       "apiKeys": "55555",
       "sso": "55555",
       "sessions": "55555"
+    },
+    "ssoBulk": {
+      "loading": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "autoLink": {
+        "title": "55555",
+        "description": "55555",
+        "body": "55555",
+        "toggleLabel": "55555",
+        "disabledInfo": "55555"
+      },
+      "bulk": {
+        "title": "55555",
+        "description": "55555",
+        "noProviders": "55555"
+      },
+      "errors": {
+        "loadProviders": "55555",
+        "updatePreferences": "55555"
+      },
+      "form": {
+        "title": "55555",
+        "description": "55555",
+        "providerLabel": "55555",
+        "notConfigured": "55555",
+        "providerNotConfiguredAlert": "55555",
+        "actionLabel": "55555",
+        "linkSelected": "55555",
+        "unlinkSelected": "55555",
+        "actionPlaceholder": "55555",
+        "actionDescription": "55555",
+        "searchLabel": "55555",
+        "searchPlaceholder": "55555",
+        "noneSelected": "55555",
+        "selected_one": "55555 {{count}} 55555",
+        "selected_other": "55555 {{count}} 55555",
+        "clearSelection": "55555",
+        "loadingUsers": "55555",
+        "noMatch": "55555",
+        "noUsers": "55555",
+        "clientPortalComing": "55555",
+        "loadUsersFailed": "55555",
+        "actions": {
+          "previewLink": "55555",
+          "previewUnlink": "55555",
+          "link": "55555",
+          "unlink": "55555",
+          "preparingPreview": "55555",
+          "linking": "55555",
+          "unlinking": "55555",
+          "bulkLabel": "55555 {{location}} 55555"
+        },
+        "table": {
+          "email": "55555",
+          "id": "55555",
+          "name": "55555",
+          "status": "55555",
+          "active": "55555",
+          "inactive": "55555",
+          "linkedProviders": "55555",
+          "unlinked": "55555",
+          "lastLogin": "55555"
+        },
+        "toast": {
+          "providerRequiredTitle": "55555",
+          "providerRequiredDescription": "55555",
+          "noUsersTitle": "55555",
+          "noUsersDescription": "55555",
+          "failedTitle": "55555",
+          "failedDescription": "55555",
+          "linkCompleteTitle": "55555",
+          "unlinkCompleteTitle": "55555",
+          "previewReadyTitle": "55555",
+          "linkedCount": "55555 {{count}} 55555 {{provider}} 55555",
+          "unlinkedCount": "55555 {{count}} 55555 {{provider}} 55555",
+          "previewUnlink_one": "55555 {{count}} 55555",
+          "previewUnlink_other": "55555 {{count}} 55555",
+          "previewLink": "55555"
+        },
+        "results": {
+          "completeTitle": "55555",
+          "previewTitle": "55555",
+          "noneMatched": "55555",
+          "processed_one": "55555 {{count}} 55555",
+          "processed_other": "55555 {{count}} 55555",
+          "candidatesSelected": "55555 {{count}} 55555",
+          "unlinked": "55555",
+          "wouldUnlink": "55555",
+          "linked": "55555",
+          "wouldLink": "55555",
+          "alreadyUnlinked": "55555",
+          "alreadyLinked": "55555",
+          "skippedInactive": "55555"
+        },
+        "providerNames": {
+          "google": "55555",
+          "microsoft": "55555"
+        }
+      }
     },
     "userRoles": {
       "title": "55555",
@@ -1528,5 +1748,9 @@
     "inheritOption": "55555 {{language}} 55555",
     "unsetHint": "55555",
     "updated": "55555 {{language}} 55555"
+  },
+  "language": {
+    "selectLanguage": "55555",
+    "languagesUpdated": "55555"
   }
 }

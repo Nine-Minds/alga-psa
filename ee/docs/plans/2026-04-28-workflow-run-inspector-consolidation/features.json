@@ -1,0 +1,50 @@
+[
+  {
+    "id": "F001",
+    "description": "Replace the Runs tab inline under-table details card with a right-side drawer for quick run triage.",
+    "implemented": true,
+    "prdRefs": ["UX notes", "Acceptance criteria"]
+  },
+  {
+    "id": "F002",
+    "description": "Keep run ID links navigating to the full-page run route for shareable deep investigation.",
+    "implemented": true,
+    "prdRefs": ["Target users and flows", "UX notes"]
+  },
+  {
+    "id": "F003",
+    "description": "Add Previous and Next drawer navigation across the currently loaded Runs table rows.",
+    "implemented": true,
+    "prdRefs": ["Target users and flows", "Acceptance criteria"]
+  },
+  {
+    "id": "F004",
+    "description": "Add an Open full page action in the drawer for the selected run.",
+    "implemented": true,
+    "prdRefs": ["UX notes", "Acceptance criteria"]
+  },
+  {
+    "id": "F005",
+    "description": "Use WorkflowRunDetails as the canonical run inspector for drawer detail/action/log/audit content.",
+    "implemented": true,
+    "prdRefs": ["Integration notes", "Acceptance criteria"]
+  },
+  {
+    "id": "F006",
+    "description": "Refactor RunStudioShell so the full-page route composes studio-only graph context with the canonical run inspector instead of maintaining a separate detail system.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Integration notes"]
+  },
+  {
+    "id": "F007",
+    "description": "Preserve existing full-page graph/pipeline visualization for deep investigation.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Non-goals"]
+  },
+  {
+    "id": "F008",
+    "description": "Ensure all new drawer/navigation controls have unique kebab-case IDs.",
+    "implemented": true,
+    "prdRefs": ["Acceptance criteria"]
+  }
+]

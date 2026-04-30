@@ -15,6 +15,8 @@ export default defineConfig({
       { find: /^@alga-psa\/types\/(.*)$/, replacement: path.resolve(__dirname, '../packages/types/src/$1') },
       { find: /^@alga-psa\/auth$/, replacement: path.resolve(__dirname, '../packages/auth/src/index.ts') },
       { find: /^@alga-psa\/auth\/(.*)$/, replacement: path.resolve(__dirname, '../packages/auth/src/$1') },
+      { find: /^@alga-psa\/authorization$/, replacement: path.resolve(__dirname, '../packages/authorization/src/index.ts') },
+      { find: /^@alga-psa\/authorization\/(.*)$/, replacement: path.resolve(__dirname, '../packages/authorization/src/$1') },
       { find: /^@alga-psa\/validation$/, replacement: path.resolve(__dirname, '../packages/validation/src/index.ts') },
       { find: /^@alga-psa\/validation\/(.*)$/, replacement: path.resolve(__dirname, '../packages/validation/src/$1') },
       { find: /^@alga-psa\/event-schemas$/, replacement: path.resolve(__dirname, '../packages/event-schemas/src/index.ts') },
@@ -37,6 +39,14 @@ export default defineConfig({
         find: /^@alga-psa\/db\/connection$/,
         replacement: path.resolve(__dirname, '../packages/db/src/lib/connection.ts'),
       },
+      {
+        find: /^@alga-psa\/db\/workDate$/,
+        replacement: path.resolve(__dirname, '../packages/db/src/lib/workDate.ts'),
+      },
+      {
+        find: /^@alga-psa\/db\/(.*)$/,
+        replacement: path.resolve(__dirname, '../packages/db/src/$1'),
+      },
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../packages/core/src/index.ts') },
       {
         find: /^@alga-psa\/core\/logger$/,
@@ -45,6 +55,10 @@ export default defineConfig({
       {
         find: /^@alga-psa\/core\/secrets$/,
         replacement: path.resolve(__dirname, '../packages/core/src/lib/secrets/index.ts'),
+      },
+      {
+        find: /^@alga-psa\/core\/(.*)$/,
+        replacement: path.resolve(__dirname, '../packages/core/src/$1'),
       },
       {
         find: /^@shared\/workflow\/secrets$/,
@@ -61,6 +75,10 @@ export default defineConfig({
       {
         find: /^@shared\/workflow\/streams\/(.*)$/,
         replacement: path.resolve(__dirname, './workflow/streams/$1'),
+      },
+      {
+        find: /^@shared\/(.*)$/,
+        replacement: path.resolve(__dirname, './$1'),
       },
     ],
   },

@@ -547,7 +547,9 @@
     },
     "checkEmail": {
       "resendSuccess": "E-Mail gesendet! Bitte überprüfe deinen Posteingang.",
-      "resendFailed": "E-Mail konnte nicht erneut gesendet werden. Bitte versuche es erneut."
+      "resendFailed": "E-Mail konnte nicht erneut gesendet werden. Bitte versuche es erneut.",
+      "whatsNext": "Was kommt als Nächstes?",
+      "didntReceive": "E-Mail nicht erhalten?"
     }
   },
   "share": {
@@ -561,7 +563,9 @@
       "linkNotAvailable": "Link nicht verfügbar",
       "linkExpired": "Dieser Freigabelink ist abgelaufen.",
       "downloadLimitReached": "Die Download-Grenze wurde erreicht."
-    }
+    },
+    "downloadStarted": "Download erfolgreich gestartet!",
+    "enterPassword": "Passwort eingeben"
   },
   "tickets": {
     "responseSource": {
@@ -1029,5 +1033,49 @@
       "Pacific": "Pazifik",
       "Etc": "Sonstige"
     }
+  },
+  "pages": {
+    "errors": {
+      "somethingWentWrong": "Etwas ist schiefgelaufen!",
+      "genericError": "Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.",
+      "notFoundTitle": "404 – Seite nicht gefunden",
+      "notFoundDescription": "Die gesuchte Seite existiert nicht.",
+      "userNotAuthenticated": "Benutzer nicht authentifiziert",
+      "userNotAuthenticatedError": "Fehler: Benutzer nicht authentifiziert",
+      "missingRunId": "Ausführungs-ID fehlt.",
+      "teamLeadAccessRequired": "Teamleiter-Zugriff erforderlich",
+      "teamsTabUnavailable": "Teams-Tab nicht verfügbar",
+      "teamsSignInUnavailable": "Teams-Anmeldung nicht verfügbar",
+      "assetNotFound": "Asset nicht gefunden",
+      "contactNotFound": "Kontakt nicht gefunden",
+      "templateNotFound": "Vorlage nicht gefunden",
+      "contactLoadError": "Fehler beim Laden des Kontakts",
+      "unknownError": "Unbekannter Fehler aufgetreten",
+      "templateNotFoundDetail": "Die gesuchte Vorlage existiert nicht oder wurde gelöscht.",
+      "teamLeadAccessDetail": "Um Zeiterfassungen für Ihre Teammitglieder zu genehmigen, müssen Sie ein Teamleiter sein.",
+      "teamsTabEnableHint": "Bitten Sie einen PSA-Administrator, die Teams-Integration für diesen Mandanten zu aktivieren, bevor Sie den Tab erneut öffnen."
+    },
+    "actions": {
+      "tryAgain": "Erneut versuchen",
+      "goToTeamSettings": "Zu Team-Einstellungen",
+      "selectDateRange": "Datumsbereich auswählen"
+    },
+    "loading": {
+      "billingDashboard": "Abrechnungs-Dashboard wird geladen...",
+      "onboarding": "Onboarding wird geladen...",
+      "extension": "Erweiterung wird geladen...",
+      "extensionSettings": "Erweiterungseinstellungen werden geladen...",
+      "ssoSettings": "SSO-Einstellungen werden geladen..."
+    },
+    "titles": {
+      "emailLogs": "E-Mail-Protokolle",
+      "editAsset": "Asset bearbeiten",
+      "slaSettings": "SLA-Einstellungen",
+      "documentEditor": "Dokumenten-Editor",
+      "accountManagement": "Kontoverwaltung"
+    }
+  },
+  "feedback": {
+    "providePlaceholder": "Bitte geben Sie Feedback"
   }
 }

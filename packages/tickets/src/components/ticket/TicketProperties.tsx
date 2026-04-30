@@ -34,6 +34,7 @@ import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings
 import type { TicketWatchListEntry } from '@shared/lib/tickets/watchList';
 import TicketMaterialsCard from './TicketMaterialsCard';
 import TicketWatchListCard from './TicketWatchListCard';
+import TicketTimeEntries from './TicketTimeEntries';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { useDrawer } from '@alga-psa/ui';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -96,6 +97,9 @@ interface TicketPropertiesProps {
   renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
   onRemoveTeamAssignment?: (mode: 'remove_all' | 'keep_all' | 'selective', keepUserIds?: string[]) => Promise<void>;
   onAssignTeam?: (teamId: string) => Promise<void>;
+  timeEntriesRefreshKey?: number;
+  onEditTimeEntry?: (entry: { entry_id: string }) => void;
+  onDeleteTimeEntry?: (entry: { entry_id: string; user_name: string | null }) => void;
 }
 
 // Helper function to format location display
@@ -178,6 +182,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   renderIntervalManagement,
   onRemoveTeamAssignment,
   onAssignTeam,
+  timeEntriesRefreshKey = 0,
+  onEditTimeEntry,
+  onDeleteTimeEntry,
 }) => {
   const { openDrawer } = useDrawer();
   const { renderQuickAddContact } = useQuickAddClient();
@@ -453,6 +460,18 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
           </Button>
+
+          {ticket.ticket_id && userId && (
+            <TicketTimeEntries
+              id={id}
+              ticketId={ticket.ticket_id}
+              currentUserId={userId}
+              dateTimeFormat={dateTimeFormat}
+              refreshKey={timeEntriesRefreshKey}
+              onEditEntry={onEditTimeEntry}
+              onDeleteEntry={onDeleteTimeEntry}
+            />
+          )}
 
           {/* Interval Management Section */}
           {liveTicketTimerEnabled && ticket.ticket_id && userId && renderIntervalManagement && (
@@ -985,14 +1004,16 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                       return fullName || t('properties.unknownAgent', 'Unknown Agent');
                     })()}
                   </span>
-                  <div className="flex items-center text-xs text-gray-500 mt-1">
-                    <Clock className="w-3 h-3 mr-1" />
-                    <span>
-                      {t('properties.scheduled', 'Scheduled: {{time}}', {
-                        time: formatMinutesAsHoursAndMinutes(getAgentScheduledHours(ticket.assigned_to!)),
-                      })}
-                    </span>
-                  </div>
+                  {getAgentScheduledHours(ticket.assigned_to!) > 0 && (
+                    <div className="flex items-center text-xs text-gray-500 mt-1">
+                      <Clock className="w-3 h-3 mr-1" />
+                      <span>
+                        {t('properties.scheduled', 'Scheduled: {{time}}', {
+                          time: formatMinutesAsHoursAndMinutes(getAgentScheduledHours(ticket.assigned_to!)),
+                        })}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             ) : (

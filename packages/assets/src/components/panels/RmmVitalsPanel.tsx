@@ -1,14 +1,16 @@
 import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { RefreshCw, WifiOff } from 'lucide-react';
-import type { Asset, RmmCachedData } from '@alga-psa/types';
+import type { Asset, AssetFact, RmmCachedData } from '@alga-psa/types';
 import { StatusBadge } from '../shared/StatusBadge';
 import { formatRelativeDateTime } from '@alga-psa/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface RmmVitalsPanelProps {
   asset: Asset;
+  assetFacts: AssetFact[] | undefined;
   data: RmmCachedData | null | undefined;
   isLoading: boolean;
   onRefresh: () => void;
@@ -26,6 +28,7 @@ const VitalRow = ({ label, value }: { label: string, value: React.ReactNode }) =
 
 export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
   asset,
+  assetFacts,
   data,
   isLoading,
   onRefresh,
@@ -72,6 +75,28 @@ export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
     : null;
 
   const effectiveData = data ?? fallbackManagedData;
+  const taniumCriticalityFact = assetFacts?.find((fact) =>
+    fact.provider === 'tanium' &&
+    fact.namespace === 'tanium' &&
+    fact.fact_key === 'criticality' &&
+    fact.is_available
+  );
+  const criticalityLabel = taniumCriticalityFact?.value_text?.trim() || null;
+
+  const criticalityBadgeVariant = (() => {
+    switch (criticalityLabel?.toLowerCase()) {
+      case 'critical':
+        return 'error' as const;
+      case 'high':
+        return 'warning' as const;
+      case 'medium':
+        return 'secondary' as const;
+      case 'low':
+        return 'default' as const;
+      default:
+        return 'outline' as const;
+    }
+  })();
 
   if (!effectiveData) {
     return (
@@ -160,6 +185,17 @@ export const RmmVitalsPanel: React.FC<RmmVitalsPanelProps> = ({
               wan: effectiveData.wan_ip || t('common.states.na', { defaultValue: 'N/A' })
             })}
           />
+
+          {taniumCriticalityFact && (
+            <VitalRow
+              label={t('rmmVitalsPanel.fields.taniumCriticality', { defaultValue: 'Tanium Criticality' })}
+              value={
+                <Badge variant={criticalityBadgeVariant} className="capitalize">
+                  {criticalityLabel || (taniumCriticalityFact.value_number != null ? String(taniumCriticalityFact.value_number) : 'Unknown')}
+                </Badge>
+              }
+            />
+          )}
         </div>
       </CardContent>
     </Card>

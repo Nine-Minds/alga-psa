@@ -105,7 +105,9 @@
     },
     "checkEmail": {
       "resendSuccess": "E-mail inviata! Controlla la tua casella di posta.",
-      "resendFailed": "Impossibile inviare nuovamente l'e-mail. Riprova."
+      "resendFailed": "Impossibile inviare nuovamente l'e-mail. Riprova.",
+      "whatsNext": "Cosa fare ora?",
+      "didntReceive": "Non hai ricevuto l'e-mail?"
     }
   },
   "share": {
@@ -119,7 +121,9 @@
       "linkNotAvailable": "Link non disponibile",
       "linkExpired": "Questo link di condivisione è scaduto.",
       "downloadLimitReached": "Il limite di download è stato raggiunto."
-    }
+    },
+    "downloadStarted": "Download avviato con successo!",
+    "enterPassword": "Inserisci password"
   },
   "tickets": {
     "responseSource": {
@@ -1029,5 +1033,49 @@
       "Pacific": "Pacifico",
       "Etc": "Altro"
     }
+  },
+  "pages": {
+    "errors": {
+      "somethingWentWrong": "Qualcosa è andato storto!",
+      "genericError": "Si è verificato un errore. Riprova più tardi.",
+      "notFoundTitle": "404 - Pagina non trovata",
+      "notFoundDescription": "La pagina che stai cercando non esiste.",
+      "userNotAuthenticated": "Utente non autenticato",
+      "userNotAuthenticatedError": "Errore: Utente non autenticato",
+      "missingRunId": "ID esecuzione mancante.",
+      "teamLeadAccessRequired": "Accesso team lead richiesto",
+      "teamsTabUnavailable": "Scheda Teams non disponibile",
+      "teamsSignInUnavailable": "Accesso Teams non disponibile",
+      "assetNotFound": "Asset non trovato",
+      "contactNotFound": "Contatto non trovato",
+      "templateNotFound": "Modello non trovato",
+      "contactLoadError": "Errore durante il caricamento del contatto",
+      "unknownError": "Si è verificato un errore sconosciuto",
+      "templateNotFoundDetail": "Il modello che stai cercando non esiste o è stato eliminato.",
+      "teamLeadAccessDetail": "Per approvare i fogli di presenza dei membri del tuo team, devi essere un team lead.",
+      "teamsTabEnableHint": "Chiedi a un amministratore PSA di abilitare l'integrazione Teams per questo tenant prima di riaprire la scheda."
+    },
+    "actions": {
+      "tryAgain": "Riprova",
+      "goToTeamSettings": "Vai alle impostazioni del team",
+      "selectDateRange": "Seleziona intervallo di date"
+    },
+    "loading": {
+      "billingDashboard": "Caricamento dashboard di fatturazione...",
+      "onboarding": "Caricamento onboarding...",
+      "extension": "Caricamento estensione...",
+      "extensionSettings": "Caricamento impostazioni estensione...",
+      "ssoSettings": "Caricamento impostazioni SSO..."
+    },
+    "titles": {
+      "emailLogs": "Log email",
+      "editAsset": "Modifica asset",
+      "slaSettings": "Impostazioni SLA",
+      "documentEditor": "Editor documenti",
+      "accountManagement": "Gestione account"
+    }
+  },
+  "feedback": {
+    "providePlaceholder": "Per favore fornisci un feedback"
   }
 }

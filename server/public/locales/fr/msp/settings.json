@@ -19,7 +19,13 @@
     "importExport": "Import/Export",
     "email": "E-mail",
     "integrations": "Intégrations",
-    "extensions": "Extensions"
+    "extensions": "Extensions",
+    "ticketingSettings": "Paramètres de ticketing",
+    "loadingTicketing": "Chargement de la configuration de ticketing...",
+    "teamManagement": "Gestion d'équipe",
+    "loadingTeam": "Chargement de la configuration de l'équipe...",
+    "loadingExperimental": "Chargement de la configuration des fonctionnalités expérimentales...",
+    "loadingInteractions": "Chargement des paramètres d'interaction..."
   },
   "unsavedChanges": {
     "title": "Modifications non enregistrées",
@@ -304,7 +310,8 @@
         "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
         "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire"
       }
-    }
+    },
+    "loading": "Chargement des détails de l'utilisateur..."
   },
   "teams": {
     "title": "Gestion des équipes",
@@ -610,7 +617,40 @@
         "priorityMatrixTitle": "Matrice de priorité",
         "impactDescription": "Les niveaux d'impact définissent la portée du problème",
         "urgencyDescription": "Les niveaux d'urgence définissent la rapidité de résolution nécessaire",
-        "priorityDescription": "La priorité est calculée à partir de l'impact et de l'urgence"
+        "priorityDescription": "La priorité est calculée à partir de l'impact et de l'urgence",
+        "categories": {
+          "serviceRequest": "Demande de service"
+        },
+        "priorityMatrix": {
+          "urgencyHeaderLine1": {
+            "high": "Élevée",
+            "mediumHigh": "Moyenne-Élevée",
+            "medium": "Moyenne",
+            "mediumLow": "Moyenne-Faible",
+            "low": "Faible"
+          },
+          "urgencyHeaderLine2": {
+            "high": "Urgence (1)",
+            "mediumHigh": "Urgence (2)",
+            "medium": "Urgence (3)",
+            "mediumLow": "Urgence (4)",
+            "low": "Urgence (5)"
+          },
+          "impact": {
+            "high": "Impact élevé (1)",
+            "mediumHigh": "Impact moyen-élevé (2)",
+            "medium": "Impact moyen (3)",
+            "mediumLow": "Impact moyen-faible (4)",
+            "low": "Impact faible (5)"
+          },
+          "priority": {
+            "critical": "Critique (1)",
+            "high": "Élevée (2)",
+            "medium": "Moyenne (3)",
+            "low": "Faible (4)",
+            "planning": "Planification (5)"
+          }
+        }
       },
       "messages": {
         "success": {
@@ -842,7 +882,8 @@
           "saveFailed": "Échec de l'opération « {{action}} » sur le type d'interaction. Veuillez réessayer."
         }
       }
-    }
+    },
+    "openMenu": "Ouvrir le menu"
   },
   "clientPortal": {
     "branding": {
@@ -927,7 +968,70 @@
         "forgotPassword": "Mot de passe oublié ?",
         "mspStaffLogin": "Personnel MSP ? Connectez-vous ici →"
       }
-    }
+    },
+    "domain": {
+      "title": "Domaine personnalisé",
+      "description": "Configurez un nom d'hôte personnalisé pour votre portail client. Nous provisionnerons automatiquement les certificats TLS une fois le DNS vérifié.",
+      "currentStatus": "Statut actuel",
+      "noDomainConfigured": "Aucun domaine personnalisé configuré",
+      "defaultStatusMessage": "Aucun domaine personnalisé enregistré pour le moment.",
+      "lastChecked": "Dernière vérification : {{value}}",
+      "updatingDomainPrefix": "Mise à jour du domaine vers ",
+      "updatingDomainSuffix": ". Le provisionnement redémarrera après la mise à jour.",
+      "editInstructions": "Pour changer votre domaine, modifiez la valeur ci-dessous et soumettez pour lancer un nouveau provisionnement.",
+      "actions": {
+        "refresh": "Actualiser",
+        "refreshing": "Actualisation...",
+        "retry": "Réessayer",
+        "retrying": "Nouvelle tentative…",
+        "removeDomain": "Supprimer le domaine",
+        "saveDomain": "Enregistrer le domaine",
+        "updateDomain": "Mettre à jour le domaine",
+        "submitting": "Envoi…",
+        "cancelEdit": "Annuler la modification"
+      },
+      "form": {
+        "label": "Domaine personnalisé",
+        "helpTextPrefix": "Ajoutez un enregistrement CNAME pointant vers ",
+        "helpTextSuffix": " avant de soumettre.",
+        "placeholder": "portail.exemple.com"
+      },
+      "checklist": {
+        "title": "Liste de vérification de configuration",
+        "step1Prefix": "Créez un enregistrement CNAME pour l'hôte de votre choix pointant vers ",
+        "step1Suffix": ".",
+        "step2": "Cliquez sur \"Enregistrer le domaine\" pour déclencher la vérification DNS et le provisionnement du certificat.",
+        "step3": "Utilisez le bouton Actualiser pour suivre la progression du provisionnement. Nous enverrons un email à vos administrateurs si le provisionnement échoue.",
+        "canonicalHostFallback": "hôte canonique"
+      },
+      "badges": {
+        "pending_dns": "DNS en attente",
+        "verifying_dns": "Vérification du DNS",
+        "dns_failed": "Échec du DNS",
+        "pending_certificate": "Certificat en attente",
+        "certificate_issuing": "Émission du certificat",
+        "certificate_failed": "Échec du certificat",
+        "deploying": "Déploiement en cours",
+        "active": "Actif",
+        "disabled": "Désactivé",
+        "unknown": "Inconnu"
+      },
+      "messages": {
+        "requestSubmitted": "Demande de domaine personnalisé soumise.",
+        "retryQueued": "Nouvelle tentative en file d'attente. Vérifiez le statut dans quelques instants.",
+        "removalRequested": "Suppression du domaine personnalisé demandée.",
+        "enterDomainFirst": "Saisissez un domaine avant de soumettre.",
+        "confirmRemove": "Supprimer le domaine personnalisé actuel ? Le trafic sera redirigé vers l'adresse hébergée par défaut.",
+        "loadFailed": "Impossible de charger le statut du domaine du portail.",
+        "registerFailed": "Échec de l'enregistrement du domaine personnalisé.",
+        "refreshFailed": "Échec de l'actualisation du statut du domaine.",
+        "retryFailed": "Échec de la nouvelle tentative.",
+        "disableFailed": "Échec de la désactivation du domaine personnalisé."
+      }
+    },
+    "yourCompanyName": "Nom de votre entreprise",
+    "brandingPreviewMode": "Mode de thème d'aperçu de la marque",
+    "brandingUpdated": "Paramètres de marque mis à jour"
   },
   "mspLanguage": {
     "title": "Langue de l’organisation",
@@ -958,7 +1062,21 @@
       "telemetry": "Télémétrie"
     },
     "internalTabs": {
-      "categories": "Catégories"
+      "categories": "Catégories",
+      "categoriesTypes": "Catégories et types"
+    },
+    "loading": {
+      "settings": "Chargement des paramètres...",
+      "templates": "Chargement des modèles...",
+      "categories": "Chargement des catégories..."
+    },
+    "unsaved": {
+      "title": "Modifications non enregistrées",
+      "message": "Vous avez des paramètres de notification non enregistrés. Êtes-vous sûr de vouloir quitter ? Vos modifications seront perdues."
+    },
+    "tenantDescription": {
+      "email": "Configurez les paramètres de notification par e-mail à l'échelle du locataire",
+      "internal": "Configurez les paramètres de notification interne à l'échelle du locataire"
     },
     "sections": {
       "globalSettings": {
@@ -1193,7 +1311,8 @@
         "loadJobDetails": "Échec du chargement des détails de la tâche",
         "refreshHistory": "Échec de l'actualisation de l'historique d'importation"
       }
-    }
+    },
+    "selectJobHint": "Sélectionnez un travail d'importation pour inspecter ses résultats."
   },
   "email": {
     "title": "Configuration des courriels",
@@ -1238,6 +1357,107 @@
       "apiKeys": "Chargement de la configuration des clés API...",
       "sso": "Chargement des outils de gestion SSO...",
       "sessions": "Chargement des sessions actives..."
+    },
+    "ssoBulk": {
+      "loading": {
+        "title": "SSO",
+        "description": "Chargement des outils d'attribution SSO en masse..."
+      },
+      "autoLink": {
+        "title": "Configurer automatiquement le SSO pour les nouveaux utilisateurs internes",
+        "description": "Activez cette option pour provisionner immédiatement chaque nouveau compte du personnel avec votre fournisseur SSO d'entreprise, afin qu'ils n'aient jamais besoin d'une connexion par mot de passe.",
+        "body": "Lorsque cette option est activée, les utilisateurs MSP nouvellement ajoutés peuvent se connecter avec Google ou Microsoft en utilisant leur adresse e-mail professionnelle. Ils n'auront pas à lier manuellement leur compte.",
+        "toggleLabel": "Activer la correspondance SSO automatique",
+        "disabledInfo": "Activez cette option pour permettre au personnel nouveau et existant d'éviter le flux « Connecter SSO » lorsque leur e-mail correspond déjà à un fournisseur configuré. Nous enregistrerons toujours chaque liaison automatique."
+      },
+      "bulk": {
+        "title": "Attribution SSO en masse",
+        "description": "Sélectionnez les utilisateurs internes dans la liste ci-dessous et liez-les à un fournisseur Google ou Microsoft configuré. Utilisez l'aperçu pour vérifier l'impact avant l'exécution.",
+        "noProviders": "Aucun fournisseur SSO n'est encore configuré. Ajoutez des identifiants OAuth pour continuer avec les attributions en masse."
+      },
+      "errors": {
+        "loadProviders": "Impossible de charger la configuration du fournisseur SSO.",
+        "updatePreferences": "Impossible de mettre à jour les préférences SSO."
+      },
+      "form": {
+        "title": "Choisir un fournisseur et sélectionner les utilisateurs",
+        "description": "Choisissez le fournisseur SSO configuré pour votre personnel, puis recherchez et sélectionnez les utilisateurs à lier.",
+        "providerLabel": "Fournisseur",
+        "notConfigured": "Non configuré",
+        "providerNotConfiguredAlert": "Fournissez des identifiants OAuth pour ce fournisseur avant de lier des comptes.",
+        "actionLabel": "Action",
+        "linkSelected": "Lier les utilisateurs sélectionnés",
+        "unlinkSelected": "Délier les utilisateurs sélectionnés",
+        "actionPlaceholder": "Sélectionner une action SSO en masse",
+        "actionDescription": "La liaison ajoute le fournisseur à chaque utilisateur sélectionné. La déliaison supprime le fournisseur afin que l'utilisateur revienne à la connexion par mot de passe/TOTP jusqu'à ce qu'il se relie.",
+        "searchLabel": "Rechercher des utilisateurs internes",
+        "searchPlaceholder": "Rechercher par e-mail ou par nom",
+        "noneSelected": "Aucun utilisateur sélectionné pour le moment.",
+        "selected_one": "{{count}} utilisateur sélectionné.",
+        "selected_other": "{{count}} utilisateurs sélectionnés.",
+        "clearSelection": "Effacer la sélection",
+        "loadingUsers": "Chargement des utilisateurs...",
+        "noMatch": "Aucun utilisateur ne correspond à cette recherche.",
+        "noUsers": "Aucun utilisateur interne trouvé.",
+        "clientPortalComing": "Les attributions en masse pour le portail client arrivent bientôt. Pour l'instant, cet outil ne s'applique qu'aux utilisateurs MSP internes.",
+        "loadUsersFailed": "Impossible de charger les utilisateurs assignables.",
+        "actions": {
+          "previewLink": "Aperçu de l'attribution",
+          "previewUnlink": "Aperçu de la déliaison",
+          "link": "Lier les comptes",
+          "unlink": "Délier les comptes",
+          "preparingPreview": "Préparation de l'aperçu…",
+          "linking": "Liaison des comptes…",
+          "unlinking": "Déliaison des comptes…",
+          "bulkLabel": "Actions SSO en masse {{location}}"
+        },
+        "table": {
+          "email": "Email",
+          "id": "ID",
+          "name": "Nom",
+          "status": "Statut",
+          "active": "Actif",
+          "inactive": "Inactif",
+          "linkedProviders": "Fournisseurs liés",
+          "unlinked": "Non lié",
+          "lastLogin": "Dernière connexion"
+        },
+        "toast": {
+          "providerRequiredTitle": "Fournisseur requis",
+          "providerRequiredDescription": "Sélectionnez un fournisseur configuré avant de continuer.",
+          "noUsersTitle": "Aucun utilisateur sélectionné",
+          "noUsersDescription": "Sélectionnez au moins un utilisateur dans le tableau.",
+          "failedTitle": "Échec de l'attribution en masse",
+          "failedDescription": "Impossible de traiter l'attribution SSO en masse.",
+          "linkCompleteTitle": "Liaison terminée",
+          "unlinkCompleteTitle": "Déliaison terminée",
+          "previewReadyTitle": "Aperçu prêt",
+          "linkedCount": "{{count}} comptes liés via {{provider}}.",
+          "unlinkedCount": "{{count}} comptes déliés via {{provider}}.",
+          "previewUnlink_one": "Aperçu prêt. Nous délierons {{count}} utilisateur sélectionné.",
+          "previewUnlink_other": "Aperçu prêt. Nous délierons {{count}} utilisateurs sélectionnés.",
+          "previewLink": "Aperçu prêt. Vérifiez le résumé avant de lier les comptes."
+        },
+        "results": {
+          "completeTitle": "Attribution terminée",
+          "previewTitle": "Résultats de l'aperçu",
+          "noneMatched": "Aucun des utilisateurs sélectionnés ne correspond aux filtres actuels.",
+          "processed_one": "{{count}} utilisateur traité.",
+          "processed_other": "{{count}} utilisateurs traités.",
+          "candidatesSelected": "{{count}} sélectionnés",
+          "unlinked": "Non liés",
+          "wouldUnlink": "Seraient déliés",
+          "linked": "Liés",
+          "wouldLink": "Seraient liés",
+          "alreadyUnlinked": "Déjà déliés",
+          "alreadyLinked": "Déjà liés",
+          "skippedInactive": "Ignorés (inactifs)"
+        },
+        "providerNames": {
+          "google": "Google Workspace",
+          "microsoft": "Microsoft 365"
+        }
+      }
     },
     "userRoles": {
       "title": "Attribuer des rôles aux utilisateurs",
@@ -1528,5 +1748,9 @@
     "inheritOption": "Utiliser la valeur par défaut de l'organisation ({{language}})",
     "unsetHint": "Pour supprimer le remplacement du portail client, modifiez la valeur par défaut de l'organisation dans Paramètres → Langue.",
     "updated": "Langue par défaut du portail client mise à jour sur {{language}}"
+  },
+  "language": {
+    "selectLanguage": "Sélectionner une langue",
+    "languagesUpdated": "Langues disponibles mises à jour"
   }
 }

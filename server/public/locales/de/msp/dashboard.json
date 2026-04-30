@@ -87,7 +87,8 @@
     },
     "hidden": {
       "title": "Ausgeblendete Setup-Karten ({{count}})",
-      "subtitle": "Stellen Sie eine Karte wieder her, wenn Sie sie später benötigen."
+      "subtitle": "Stellen Sie eine Karte wieder her, wenn Sie sie später benötigen.",
+      "titleCombined": "Ausgeblendete Karten ({{count}})"
     },
     "checklist": {
       "title": "Onboarding-Checkliste",
@@ -158,5 +159,25 @@
     "morning": "Guten Morgen",
     "afternoon": "Guten Tag",
     "evening": "Guten Abend"
+  },
+  "mspDashboard": "MSP-Dashboard",
+  "mobileApp": {
+    "title": "Lade die AlgaPSA Mobile App herunter",
+    "description": "Scanne einen QR-Code mit deinem Smartphone, um die AlgaPSA Mobile App herunterzuladen.",
+    "appStore": "App Store (iOS)",
+    "playStore": "Google Play (Android)",
+    "appStoreQrAlt": "QR-Code zur AlgaPSA App im Apple App Store",
+    "playStoreQrAlt": "QR-Code zur AlgaPSA App bei Google Play",
+    "hide": "Ausblenden",
+    "hiding": "Wird ausgeblendet...",
+    "dismissAria": "Mobile-App-Karte ausblenden",
+    "dismissError": "Karte konnte nicht ausgeblendet werden.",
+    "restore": "Hol dir die AlgaPSA Mobile App",
+    "restoring": "Wird wiederhergestellt...",
+    "restoreError": "Karte konnte nicht wiederhergestellt werden.",
+    "hidden": {
+      "title": "Ausgeblendete Mobile-App-Karte",
+      "subtitle": "Stelle sie wieder her, wenn du sie später benötigst."
+    }
   }
 }

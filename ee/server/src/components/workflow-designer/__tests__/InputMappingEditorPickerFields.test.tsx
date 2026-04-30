@@ -403,6 +403,28 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   getUserAvatarUrlsBatchAction: vi.fn().mockResolvedValue({}),
 }));
 
+vi.mock('@alga-psa/projects/actions/projectActions', () => ({
+  getProjectsWithPhases: vi.fn().mockResolvedValue([
+    {
+      project_id: 'project-1',
+      project_name: 'Implementation',
+      phases: [
+        {
+          phase_id: 'phase-1',
+          phase_name: 'Plan',
+          statuses: [{ mapping_id: 'status-map-1', name: 'Open' }],
+        },
+      ],
+    },
+  ]),
+}));
+
+vi.mock('@alga-psa/projects/actions/projectTaskActions', () => ({
+  getProjectTaskData: vi.fn().mockResolvedValue({
+    tasks: [{ task_id: 'task-1', task_name: 'Kickoff', phase_id: 'phase-1' }],
+  }),
+}));
+
 vi.mock('@alga-psa/tickets/actions', () => ({
   getTicketById: vi.fn().mockImplementation(async (ticketId: string) => {
     if (ticketId === 'ticket-1') {
@@ -624,6 +646,55 @@ describe('InputMappingEditor picker-backed fields', () => {
           .selectedOptions
       ).map((option) => option.value)
     ).toEqual(['user-1', 'user-2']);
+  });
+
+  it('renders editor-metadata user picker arrays with the multi-user picker instead of a primitive list', async () => {
+    await act(async () => {
+      render(
+        <InputMappingEditor
+          value={{
+            assigned_user_ids: ['user-2'],
+          }}
+          onChange={vi.fn()}
+          targetFields={[
+            {
+              name: 'assigned_user_ids',
+              type: 'array',
+              editor: {
+                kind: 'picker',
+                inline: { mode: 'picker-summary' },
+                fixedValueHint: 'Search users',
+                allowsDynamicReference: true,
+                picker: {
+                  resource: 'user',
+                },
+              },
+              constraints: {
+                itemType: 'string',
+              },
+            },
+          ]}
+          fieldOptions={[]}
+          stepId="step-array-editor-picker"
+          positionsHandlers={positionsHandlers}
+        />
+      );
+    });
+
+    expect(
+      document.getElementById('mapping-step-array-editor-picker-assigned_user_ids-literal-picker-container')
+    ).toBeInTheDocument();
+    expect(
+      document.getElementById('mapping-step-array-editor-picker-assigned_user_ids-literal-list')
+    ).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        Array.from(
+          (screen.getByTestId('mapping-step-array-editor-picker-assigned_user_ids-literal-picker') as HTMLSelectElement)
+            .selectedOptions
+        ).map((option) => option.value)
+      ).toEqual(['user-2'])
+    );
   });
 
   it('T167/T168/T191/T192/T193/T194/T195/T196/T197/T198/T199/T309: picker-backed fields can switch to reference and back to fixed without losing picker UI', async () => {
@@ -1020,6 +1091,70 @@ describe('InputMappingEditor picker-backed fields', () => {
     expect(
       screen.getByTestId('mapping-step-ticket-status-by-ticket-status_id-literal-picker')
     ).toHaveValue('status-1');
+  });
+
+  it('T024: project-related fixed pickers render and stay dependency-disabled until project/phase fixed values are selected', async () => {
+    render(
+      <InputMappingEditor
+        value={{
+          project_id: '',
+          phase_id: '',
+          task_id: '',
+          status_mapping_id: '',
+        }}
+        onChange={vi.fn()}
+        targetFields={[
+          {
+            name: 'project_id',
+            type: 'string',
+            picker: {
+              kind: 'project',
+              allowsDynamicReference: true,
+            },
+          },
+          {
+            name: 'phase_id',
+            type: 'string',
+            picker: {
+              kind: 'project-phase',
+              dependencies: ['project_id'],
+              allowsDynamicReference: true,
+            },
+          },
+          {
+            name: 'task_id',
+            type: 'string',
+            picker: {
+              kind: 'project-task',
+              dependencies: ['project_id', 'phase_id'],
+              allowsDynamicReference: true,
+            },
+          },
+          {
+            name: 'status_mapping_id',
+            type: 'string',
+            picker: {
+              kind: 'project-task-status',
+              dependencies: ['project_id', 'phase_id'],
+              allowsDynamicReference: true,
+            },
+          },
+        ]}
+        fieldOptions={[]}
+        stepId="step-project-picker-dependencies"
+        positionsHandlers={positionsHandlers}
+      />
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('mapping-step-project-picker-dependencies-project_id-literal-picker')).toBeEnabled()
+    );
+    expect(screen.getByTestId('mapping-step-project-picker-dependencies-phase_id-literal-picker')).toBeDisabled();
+    expect(screen.getByTestId('mapping-step-project-picker-dependencies-task_id-literal-picker')).toBeDisabled();
+    expect(screen.getByTestId('mapping-step-project-picker-dependencies-status_mapping_id-literal-picker')).toBeDisabled();
+    expect(screen.getByText('Choose a fixed Project first to load phase options.')).toBeVisible();
+    expect(screen.getByText('Choose a fixed Project first to load task options.')).toBeVisible();
+    expect(screen.getByText('Choose a fixed Project first to load status options.')).toBeVisible();
   });
 
   it('T210/T211/T212/T213/T218/T219/T312: dynamic upstream references keep dependent fixed pickers disabled while still allowing a switch back to Reference mode', async () => {

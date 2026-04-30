@@ -75,6 +75,11 @@ async function setupWorkflowTest(activitiesOverrides: Record<string, any> = {}) 
       statusUpdates.push(input);
     },
     recordSlaAuditLog: async () => {},
+    completeIfTicketClosed: async () => ({
+      closed: false,
+      responseMet: null,
+      resolutionMet: null,
+    }),
     ...activitiesOverrides,
   };
 
@@ -270,6 +275,11 @@ describe('slaTicketWorkflow integration', () => {
       checkAndEscalate: async () => {},
       updateSlaStatus: async () => {},
       recordSlaAuditLog: async () => {},
+      completeIfTicketClosed: async () => ({
+        closed: false,
+        responseMet: null,
+        resolutionMet: null,
+      }),
     };
 
     const worker1 = await Worker.create({

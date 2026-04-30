@@ -1,10 +1,10 @@
 import {
   type AuthorizationEvaluationInput,
   type AuthorizationKernel,
-  createAuthorizationKernel,
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
 } from '@alga-psa/authorization/kernel';
+import { createAuthorizationKernelWithDefaultRbac } from '@alga-psa/authorization/adapters/rbac';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 
 async function resolveBundleNarrowingRules(input: AuthorizationEvaluationInput) {
@@ -27,7 +27,7 @@ async function resolveBundleNarrowingRules(input: AuthorizationEvaluationInput) 
 }
 
 export function createEnterpriseAuthorizationKernel(): AuthorizationKernel {
-  return createAuthorizationKernel({
+  return createAuthorizationKernelWithDefaultRbac({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
     bundleProvider: new BundleAuthorizationKernelProvider({
       resolveRules: resolveBundleNarrowingRules,

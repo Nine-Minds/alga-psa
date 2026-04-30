@@ -31,12 +31,12 @@ export const exportWorkflowBundleV1Action = withAuth(async (user, { tenant }, in
   const parsed = WorkflowIdInput.parse(input);
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
-  return exportWorkflowBundleV1ForWorkflowId(knex, parsed.workflowId);
+  return exportWorkflowBundleV1ForWorkflowId(knex, tenant, parsed.workflowId);
 });
 
 export const importWorkflowBundleV1Action = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = z.object({ bundle: z.unknown(), force: z.boolean().optional() }).parse(input);
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
-  return importWorkflowBundleV1(knex, parsed.bundle, { force: parsed.force, actorUserId: user.user_id });
+  return importWorkflowBundleV1(knex, tenant, parsed.bundle, { force: parsed.force, actorUserId: user.user_id });
 });

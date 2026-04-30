@@ -22,7 +22,7 @@ import {
   useFormatWorkflowEventStatus,
   useWorkflowEventStatusOptions,
 } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
-import WorkflowRunDetails from './WorkflowRunDetails';
+import WorkflowRunDetailsPanel from '../workflow-run-studio/WorkflowRunDetailsPanel';
 
 type WorkflowEventRecord = {
   event_id: string;
@@ -562,7 +562,7 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
           </Card>
 
           {selectedRunId && (
-            <WorkflowRunDetails
+            <WorkflowRunDetailsPanel
               runId={selectedRunId}
               canAdmin={canAdmin}
               onClose={handleRunDetailsClose}

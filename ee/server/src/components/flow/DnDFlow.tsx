@@ -43,6 +43,7 @@ import {
   Template,
   ConditionType
 } from '../../services/flow/types/workflowTypes';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface WorkflowNode {
   id: string;
@@ -239,7 +240,8 @@ export function convertWorkflowVersionResponseToWorkflow(workflowVersionResponse
 }
 
 const DnDFlow: React.FC<DndFlowProps> = ({ initialWorkflowVersion }) => {
-  const initialWorkflow = initialWorkflowVersion ? 
+  const { t } = useTranslation('msp/workflows');
+  const initialWorkflow = initialWorkflowVersion ?
     convertWorkflowVersionResponseToWorkflow(initialWorkflowVersion) : undefined;
 
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
@@ -479,7 +481,7 @@ const DnDFlow: React.FC<DndFlowProps> = ({ initialWorkflowVersion }) => {
   return (
     <div className="dndflow">
       <div className="banner-row">
-        <h1>Workflow Designer</h1>
+        <h1>{t('flow.designer.title')}</h1>
       </div>
       <div className="topbar-row">
         <TopBar

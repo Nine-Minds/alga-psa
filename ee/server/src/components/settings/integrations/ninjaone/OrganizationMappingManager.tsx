@@ -21,6 +21,7 @@ import {
 import { getAllClients } from '@alga-psa/clients/actions';
 import { RmmOrganizationMapping } from '../../../../interfaces/rmm.interfaces';
 import type { IClient } from '@alga-psa/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface OrganizationMappingManagerProps {
   onMappingChanged?: () => void;
@@ -35,6 +36,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
   onMappingChanged,
   refreshKey,
 }) => {
+  const { t } = useTranslation('msp/integrations');
   const [mappings, setMappings] = useState<RmmOrganizationMapping[]>([]);
   const [companies, setCompanies] = useState<IClient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -295,7 +297,7 @@ const OrganizationMappingManager: React.FC<OrganizationMappingManagerProps> = ({
                             onFilterStateChange={() => {}}
                             clientTypeFilter="company"
                             onClientTypeFilterChange={() => {}}
-                            placeholder="Select company"
+                            placeholder={t('ninjaone.selectCompany')}
                             fitContent={true}
                             className="w-full"
                           />

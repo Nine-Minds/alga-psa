@@ -11,7 +11,7 @@ import { toast } from 'react-hot-toast';
 import { mapWorkflowServerError } from './workflowServerErrors';
 import { listWorkflowDeadLetterRunsAction } from '@alga-psa/workflows/actions';
 import { useFormatWorkflowRunStatus } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
-import WorkflowRunDetails from './WorkflowRunDetails';
+import WorkflowRunDetailsPanel from '../workflow-run-studio/WorkflowRunDetailsPanel';
 
 type DeadLetterRun = {
   run_id: string;
@@ -187,7 +187,7 @@ const WorkflowDeadLetterQueue: React.FC<WorkflowDeadLetterQueueProps> = ({ isAct
 
       {selectedRun && (
         <div className="w-[480px] shrink-0 overflow-auto">
-          <WorkflowRunDetails
+          <WorkflowRunDetailsPanel
             runId={selectedRun.run_id}
             workflowName={selectedRun.workflow_name ?? undefined}
             canAdmin={canAdmin}

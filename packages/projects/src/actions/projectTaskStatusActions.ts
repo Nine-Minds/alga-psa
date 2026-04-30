@@ -72,19 +72,15 @@ function toProjectAuthorizationRecord(project: {
   project_id?: string | null;
   client_id?: string | null;
   assigned_to?: string | null;
-  assigned_team_id?: string | null;
 }): AuthorizationRecord {
   const assignedUserIds =
     typeof project.assigned_to === 'string' && project.assigned_to.length > 0 ? [project.assigned_to] : [];
-  const teamIds =
-    typeof project.assigned_team_id === 'string' && project.assigned_team_id.length > 0 ? [project.assigned_team_id] : [];
 
   return {
     id: project.project_id ?? null,
     ownerUserId: project.assigned_to ?? null,
     assignedUserIds,
     clientId: project.client_id ?? null,
-    teamIds,
   };
 }
 

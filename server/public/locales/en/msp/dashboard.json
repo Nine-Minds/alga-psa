@@ -43,6 +43,25 @@
     "description": "Explore deployment runbooks and best practices in the knowledge base.",
     "cta": "Visit resources"
   },
+  "mobileApp": {
+    "title": "Download AlgaPSA Mobile app",
+    "description": "Scan a QR code with your phone to download the AlgaPSA mobile app.",
+    "appStore": "App Store (iOS)",
+    "playStore": "Google Play (Android)",
+    "appStoreQrAlt": "QR code linking to the AlgaPSA app on the Apple App Store",
+    "playStoreQrAlt": "QR code linking to the AlgaPSA app on Google Play",
+    "hide": "Hide",
+    "hiding": "Hiding...",
+    "dismissAria": "Hide mobile app card",
+    "dismissError": "Failed to hide the card.",
+    "restore": "Get AlgaPSA Mobile app",
+    "restoring": "Restoring...",
+    "restoreError": "Failed to restore the card.",
+    "hidden": {
+      "title": "Hidden mobile app card",
+      "subtitle": "Restore it if you need it later."
+    }
+  },
   "onboarding": {
     "completeTitle": "Onboarding complete",
     "incompleteTitle": "Complete your setup",
@@ -92,7 +111,8 @@
     },
     "hidden": {
       "title": "Hidden setup cards ({{count}})",
-      "subtitle": "Restore any card if you need it later."
+      "subtitle": "Restore any card if you need it later.",
+      "titleCombined": "Hidden cards ({{count}})"
     },
     "checklist": {
       "title": "Onboarding checklist",
@@ -158,5 +178,6 @@
       "dismissFailed": "Failed to dismiss onboarding step.",
       "restoreFailed": "Failed to restore onboarding step."
     }
-  }
+  },
+  "mspDashboard": "MSP Dashboard"
 }

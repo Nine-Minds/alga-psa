@@ -1,0 +1,184 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: registering client actions produces existing `clients.find`/`clients.search` plus all eight new `clients.*` action ids with expected labels and side-effect/idempotency metadata",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F003",
+      "F005",
+      "F007",
+      "F010",
+      "F012",
+      "F015",
+      "F017",
+      "F023"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: workflow designer catalog groups the new `clients.*` actions under the built-in Client group without catalog seed changes",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F003",
+      "F005",
+      "F007",
+      "F010",
+      "F012",
+      "F015",
+      "F017",
+      "F023"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: new client action schemas expose picker metadata for client fields and relationship picker metadata for contact/location fields where supported",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F015",
+      "F017",
+      "F019"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB-backed integration: `clients.create` creates a tenant-scoped client, returns a usable summary, applies initial tags, and rejects retries without an idempotency key according to action idempotency policy",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F010",
+      "F011",
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB-backed integration: `clients.update` applies a non-empty patch, returns changed fields, and rejects cross-tenant or missing clients as not found",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004",
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB-backed integration: `clients.delete` requires `confirm: true`, deletes a dependency-free non-default client, and refuses a default client or client with blocking dependencies",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F021"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "DB-backed integration: `clients.duplicate` copies safe core fields and tags by default, copies locations only when requested, and does not copy contacts, notes, tickets, interactions, billing records, portal users, or external mappings",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F008",
+      "F009",
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "DB-backed integration: `clients.add_tag` creates missing tag definitions, adds missing mappings, and no-ops existing mappings without duplicate rows",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011",
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "DB-backed integration: `clients.assign_to_ticket` updates a ticket's client, preserves omitted contact/location fields, supports explicit null clears, and returns previous/new client/contact/location ids",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F020",
+      "F021"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "DB-backed integration: `clients.assign_to_ticket` rejects contact/location ids that do not belong to the selected client",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F021"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "DB-backed integration: `clients.add_note` creates a client notes document when missing, updates the existing notes path when present, and returns the document id",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F016",
+      "F020",
+      "F021",
+      "F022"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "DB-backed integration: `clients.add_interaction` logs an interaction linked to a client, resolves default status, validates optional contact/ticket relationships, and returns the interaction summary",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F018",
+      "F020",
+      "F021",
+      "F022"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Permission unit/integration: each mutating client action fails with `PERMISSION_DENIED` when the workflow actor lacks the required permission",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F004",
+      "F005",
+      "F008",
+      "F010",
+      "F013",
+      "F016",
+      "F018",
+      "F021"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Runtime smoke: an `action.call` workflow can call one representative new Client action, save its output via `saveAs`, and use the saved output in a downstream expression",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F023",
+      "F024"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "DB-backed integration: `clients.archive` sets a client inactive, applies associated contact/client-user deactivation semantics, and no-ops successfully when the client is already inactive",
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F027",
+      "F020",
+      "F021"
+    ]
+  }
+]

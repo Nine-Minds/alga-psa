@@ -195,5 +195,41 @@
         "default": "Notice"
       }
     }
+  },
+  "connectSso": {
+    "verify": {
+      "title": "Secure your account with SSO",
+      "description": "Link Azure AD or Google Workspace to reuse organizational policies and skip local two-factor prompts.",
+      "signedInAs": "Signed in as",
+      "currentPassword": "Current password",
+      "twoFactorCode": "Two-factor code",
+      "twoFactorPlaceholder": "123456",
+      "verifyCredentials": "Verify Credentials",
+      "verifying": "Verifying...",
+      "reset": "Reset",
+      "linkedSuccess": "Provider linked successfully.",
+      "credentialsVerified": "Credentials verified. Choose a provider below to finish linking your account.",
+      "verifyFailed": "Unable to verify credentials.",
+      "verifyBeforeProvider": "Verify your password (and two-factor code if required) before connecting a provider."
+    },
+    "providers": {
+      "title": "Connect a provider",
+      "description": "Choose a provider to finish the SSO link. You'll be redirected through the provider's login flow.",
+      "noneConfigured": "No SSO providers are configured for this environment. Ask your administrator to configure Google or Microsoft credentials.",
+      "notConfigured": "Not configured",
+      "branding": {
+        "google": "Continue with Google",
+        "microsoft": "Continue with Microsoft",
+        "default": "Continue"
+      }
+    },
+    "linked": {
+      "title": "Linked accounts",
+      "description": "We'll refresh the link the next time you sign in through a connected provider.",
+      "empty": "No SSO providers linked yet. Complete the steps above to connect one.",
+      "linkedAt": "Linked {{date}}",
+      "lastUsed": "Last used {{date}}",
+      "notUsedYet": "Not used yet"
+    }
   }
 }

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "F001",
+    "description": "Microsoft email credential resolution falls back to hosted app-level credentials when no explicit Email binding exists.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Desired Behavior #2"]
+  },
+  {
+    "id": "F002",
+    "description": "Ready explicit Email Microsoft profile bindings continue to take precedence over hosted app-level credentials.",
+    "implemented": true,
+    "prdRefs": ["Desired Behavior #1"]
+  },
+  {
+    "id": "F003",
+    "description": "Invalid explicit Email bindings fail closed instead of silently falling back to hosted app-level credentials.",
+    "implemented": true,
+    "prdRefs": ["Desired Behavior #3"]
+  },
+  {
+    "id": "F004",
+    "description": "OAuth initiation, callback, and token refresh continue to resolve Microsoft email credentials through the shared resolver.",
+    "implemented": true,
+    "prdRefs": ["Desired Behavior #4"]
+  }
+]

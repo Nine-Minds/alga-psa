@@ -1,4 +1,4 @@
-import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { getAdminConnection, retryOnAdminReadOnly } from '@alga-psa/db/admin.js';
 import { computeDomain as sharedComputeDomain } from '@alga-psa/shared/extensions/domain.js';
 import type { Knex } from 'knex';
 import { KubeConfig, CustomObjectsApi } from '@kubernetes/client-node';
@@ -73,10 +73,15 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
         if (newDomain.length <= 63) {
           // Attempt DB update so EE server reflects new domain
           try {
-            const knex: Knex = await getAdminConnection();
-            await knex('tenant_extension_install')
-              .where({ runner_domain: domainName })
-              .update({ runner_domain: newDomain, updated_at: knex.fn.now() });
+            await retryOnAdminReadOnly(
+              async () => {
+                const knex: Knex = await getAdminConnection();
+                await knex('tenant_extension_install')
+                  .where({ runner_domain: domainName })
+                  .update({ runner_domain: newDomain, updated_at: knex.fn.now() });
+              },
+              { logLabel: 'extension-domain:updateRunnerDomain' }
+            );
           } catch {
             // best-effort; continue even if DB update fails
           }
@@ -271,9 +276,6 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
 }
 
 export async function updateInstallStatus(input: UpdateInstallStatusInput): Promise<{ updated: boolean }> {
-  const knex: Knex = await getAdminConnection();
-  const now = knex.fn.now();
-
   if (!input.installId && !input.runnerDomain) {
     throw new Error('installId or runnerDomain required');
   }
@@ -290,23 +292,31 @@ export async function updateInstallStatus(input: UpdateInstallStatusInput): Prom
     runnerDomainToSet = ref.name;
   }
 
-  const update: any = {
-    runner_status: JSON.stringify(patch.runner_status),
-    runner_ref: input.runnerRef ? JSON.stringify(input.runnerRef) : null,
-    updated_at: now,
-  };
-  if (runnerDomainToSet) {
-    update.runner_domain = runnerDomainToSet;
-  }
+  return retryOnAdminReadOnly(
+    async () => {
+      const knex: Knex = await getAdminConnection();
+      const now = knex.fn.now();
 
-  let q = knex('tenant_extension_install').update(update);
+      const update: any = {
+        runner_status: JSON.stringify(patch.runner_status),
+        runner_ref: input.runnerRef ? JSON.stringify(input.runnerRef) : null,
+        updated_at: now,
+      };
+      if (runnerDomainToSet) {
+        update.runner_domain = runnerDomainToSet;
+      }
 
-  if (input.installId) {
-    q = q.where({ id: input.installId });
-  } else if (input.runnerDomain) {
-    q = q.where({ runner_domain: input.runnerDomain });
-  }
+      let q = knex('tenant_extension_install').update(update);
 
-  const count = await q;
-  return { updated: (Array.isArray(count) ? count.length : Number(count)) > 0 };
+      if (input.installId) {
+        q = q.where({ id: input.installId });
+      } else if (input.runnerDomain) {
+        q = q.where({ runner_domain: input.runnerDomain });
+      }
+
+      const count = await q;
+      return { updated: (Array.isArray(count) ? count.length : Number(count)) > 0 };
+    },
+    { logLabel: 'updateInstallStatus' }
+  );
 }

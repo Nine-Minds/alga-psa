@@ -3,6 +3,7 @@
  */
 
 import fs from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import i18next, { TFunction } from 'i18next';
 import { cache } from 'react';
@@ -17,18 +18,35 @@ import {
 import { getConnection } from '@alga-psa/db/tenant';
 
 /**
- * Resolves the absolute path to the locales directory.
+ * Resolve the absolute path to the locales directory.
  *
- * Server components run with `process.cwd()` pointing at the Next.js app root
- * (the `server/` package in this repo). Locale JSON lives under
- * `<cwd>/public/locales/<lng>/<ns>.json`. We avoid HTTP fetch loaders so that
- * SSR doesn't depend on the dev port — historically `i18next-http-backend`
- * defaulted to `localhost:3000`, which silently failed when the dev server
- * was on a different port and surfaced as raw translation keys in the UI.
+ * Server components can run with `process.cwd()` pointing at different roots
+ * depending on whether the dev server starts from `server/`, `ee/server/`, or
+ * the monorepo root. We avoid HTTP fetch loaders so SSR doesn't depend on the
+ * dev port — historically `i18next-http-backend` defaulted to `localhost:3000`,
+ * which silently failed when the dev server ran on a different port and
+ * surfaced as raw translation keys in the UI.
+ *
+ * Env overrides (in priority order): `I18N_LOCALES_DIR`, `ALGA_LOCALES_DIR`.
  */
 function getLocalesDir(): string {
-  const override = process.env.ALGA_LOCALES_DIR;
+  const override = process.env.I18N_LOCALES_DIR || process.env.ALGA_LOCALES_DIR;
   if (override) return override;
+
+  const candidates = [
+    path.resolve(process.cwd(), 'public/locales'),            // server/ as cwd
+    path.resolve(process.cwd(), '../server/public/locales'),  // ee/server/ as cwd
+    path.resolve(process.cwd(), 'server/public/locales'),     // monorepo root as cwd
+  ];
+
+  for (const dir of candidates) {
+    try {
+      if (existsSync(dir)) return dir;
+    } catch {
+      // ignore and try next candidate
+    }
+  }
+
   return path.resolve(process.cwd(), 'public/locales');
 }
 

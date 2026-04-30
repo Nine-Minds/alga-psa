@@ -1,6 +1,6 @@
 import useSWR from 'swr';
 import { useState, useCallback } from 'react';
-import { getAsset, getAssetSummaryMetrics } from '@alga-psa/assets/actions/assetActions';
+import { getAsset, getAssetSummaryMetrics, getAvailableAssetFacts } from '@alga-psa/assets/actions/assetActions';
 import { getAssetRmmData, refreshAssetRmmData } from '@alga-psa/assets/actions/rmmActions';
 import { toast } from 'react-hot-toast';
 
@@ -24,6 +24,11 @@ export function useAssetDetail(assetId: string) {
     isLoading: rmmLoading,
     mutate: mutateRmmData,
   } = useSWR(assetId ? ['asset', assetId, 'rmm'] : null, ([_, id]) => getAssetRmmData(id));
+  const {
+    data: assetFacts,
+    error: assetFactsError,
+    isLoading: assetFactsLoading,
+  } = useSWR(assetId ? ['asset', assetId, 'facts'] : null, ([_, id]) => getAvailableAssetFacts(id));
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -56,13 +61,15 @@ export function useAssetDetail(assetId: string) {
     asset,
     metrics,
     rmmData,
-    isLoading: assetLoading || metricsLoading || rmmLoading,
+    assetFacts,
+    isLoading: assetLoading || metricsLoading || rmmLoading || assetFactsLoading,
     isRefreshing,
     refreshRmmData,
     errors: {
       asset: assetError,
       metrics: metricsError,
       rmm: rmmError,
+      facts: assetFactsError,
     },
     mutateAsset,
   };

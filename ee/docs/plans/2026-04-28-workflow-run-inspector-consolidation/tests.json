@@ -1,0 +1,26 @@
+[
+  {
+    "id": "T001",
+    "description": "Typecheck the server workspace after consolidating the run inspector surfaces.",
+    "implemented": true,
+    "featureIds": ["F001", "F003", "F004", "F005", "F006", "F008"]
+  },
+  {
+    "id": "T002",
+    "description": "Manual smoke: from Workflow Control Panel > Runs, open a run in the drawer, move previous/next through loaded rows, and close the drawer without losing table filters.",
+    "implemented": true,
+    "featureIds": ["F001", "F003"]
+  },
+  {
+    "id": "T003",
+    "description": "Manual smoke: verify the drawer Open full page action and run ID link both reach /msp/workflows/runs/[runId].",
+    "implemented": true,
+    "featureIds": ["F002", "F004"]
+  },
+  {
+    "id": "T004",
+    "description": "Manual smoke: verify the full-page run route still shows graph/pipeline context and the canonical detail inspector content/actions.",
+    "implemented": true,
+    "featureIds": ["F005", "F006", "F007"]
+  }
+]

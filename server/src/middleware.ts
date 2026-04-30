@@ -61,6 +61,7 @@ const apiKeySkipPaths = [
   '/api/documents/view/',
   '/api/email/webhooks/',
   '/api/calendar/webhooks/',
+  '/api/calendar/appointment/',
   '/api/email/oauth/',
   '/api/teams/auth/',
   '/api/teams/bot/',
@@ -82,8 +83,11 @@ const apiKeySkipPaths = [
   '/api/integrations/entra/',
   // AI chat endpoints are session-authenticated (MSP UI)
   '/api/chat/',
-  // Workflow bundle import/export is session-authenticated (developer + future UI tooling)
+  // Workflow definition/run APIs are session-authenticated for MSP workflow UI tooling.
+  '/api/workflow-definitions',
   '/api/workflow-definitions/',
+  '/api/workflow-runs',
+  '/api/workflow-runs/',
   // Internal MSP UI endpoints (session-authenticated)
   '/api/accounting/csv/',
   '/api/accounting/exports/',

@@ -18,7 +18,12 @@ import {
   type TicketClosedEvent,
   type TicketCommentAddedEvent
 } from '@alga-psa/event-schemas';
-import { createTenantKnex, runWithTenant, withTransaction } from '@alga-psa/db';
+import {
+  createTenantKnex,
+  runWithTenant,
+  withTransaction,
+  withTenantTransactionRetryReadOnly
+} from '@alga-psa/db';
 import {
   startSlaForTicket,
   recordFirstResponse,
@@ -230,46 +235,61 @@ async function handleTicketUpdatedEvent(event: unknown): Promise<void> {
  * Handle ticket closed event - record resolution
  */
 async function handleTicketClosedEvent(event: unknown): Promise<void> {
+  const validated = EventSchemas.TICKET_CLOSED.parse(event) as TicketClosedEvent;
+  const { tenantId, ticketId, userId } = validated.payload;
+
+  logger.info('[SlaSubscriber] Handling TICKET_CLOSED', { tenantId, ticketId });
+
   try {
-    const validated = EventSchemas.TICKET_CLOSED.parse(event) as TicketClosedEvent;
-    const { tenantId, ticketId, userId } = validated.payload;
+    await withTenantTransactionRetryReadOnly(tenantId, async (trx: Knex.Transaction) => {
+      // Get the closed_at time from the ticket
+      const ticket = await trx('tickets')
+        .where({ tenant: tenantId, ticket_id: ticketId })
+        .select('closed_at')
+        .first();
 
-    logger.info('[SlaSubscriber] Handling TICKET_CLOSED', { tenantId, ticketId });
+      const closedAt = ticket?.closed_at ? new Date(ticket.closed_at) : new Date();
 
-    await runWithTenant(tenantId, async () => {
-      const { knex } = await createTenantKnex();
+      const result = await recordResolution(
+        trx,
+        tenantId,
+        ticketId,
+        closedAt,
+        userId
+      );
 
-      await withTransaction(knex, async (trx: Knex.Transaction) => {
-        // Get the closed_at time from the ticket
-        const ticket = await trx('tickets')
-          .where({ tenant: tenantId, ticket_id: ticketId })
-          .select('closed_at')
-          .first();
-
-        const closedAt = ticket?.closed_at ? new Date(ticket.closed_at) : new Date();
-
-        const result = await recordResolution(
-          trx,
+      if (result.success && result.met !== null) {
+        logger.info('[SlaSubscriber] Recorded ticket resolution', {
           tenantId,
           ticketId,
-          closedAt,
-          userId
-        );
+          met: result.met,
+          resolvedAt: result.recorded_at.toISOString()
+        });
+        return;
+      }
 
-        if (result.success && result.met !== null) {
-          logger.info('[SlaSubscriber] Recorded ticket resolution', {
-            tenantId,
-            ticketId,
-            met: result.met,
-            resolvedAt: result.recorded_at.toISOString()
-          });
-        }
+      if (result.success && result.met === null) {
+        logger.info('[SlaSubscriber] TICKET_CLOSED handled but no SLA tracked', {
+          tenantId,
+          ticketId
+        });
+        return;
+      }
+
+      logger.error('[SlaSubscriber] recordResolution returned failure', {
+        tenantId,
+        ticketId,
+        error: result.error
       });
+      throw new Error(result.error || 'recordResolution failed');
     });
   } catch (error) {
     logger.error('[SlaSubscriber] Failed to handle TICKET_CLOSED event', {
+      tenantId,
+      ticketId,
       error: error instanceof Error ? error.message : 'Unknown error'
     });
+    throw error;
   }
 }
 

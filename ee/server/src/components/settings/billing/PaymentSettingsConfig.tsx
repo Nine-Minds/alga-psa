@@ -11,6 +11,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -39,15 +40,17 @@ const PaymentLinkExpirationSelector: React.FC<PaymentLinkExpirationSelectorProps
   onChange,
   disabled = false,
 }) => {
+  const { t } = useTranslation('msp/billing-settings');
+
   // Predefined expiration options in hours
   const expirationOptions = useMemo(() => [
-    { hours: 24, label: '1 day' },
-    { hours: 48, label: '2 days' },
-    { hours: 72, label: '3 days' },
-    { hours: 168, label: '7 days' },
-    { hours: 336, label: '14 days' },
-    { hours: 720, label: '30 days' },
-  ], []);
+    { hours: 24, label: t('payment.expiration.daysSingular', { count: 1 }) },
+    { hours: 48, label: t('payment.expiration.daysPlural', { count: 2 }) },
+    { hours: 72, label: t('payment.expiration.daysPlural', { count: 3 }) },
+    { hours: 168, label: t('payment.expiration.daysPlural', { count: 7 }) },
+    { hours: 336, label: t('payment.expiration.daysPlural', { count: 14 }) },
+    { hours: 720, label: t('payment.expiration.daysPlural', { count: 30 }) },
+  ], [t]);
 
   // Check if current value matches a predefined option
   const currentOption = expirationOptions.find(opt => opt.hours === value);
@@ -56,13 +59,17 @@ const PaymentLinkExpirationSelector: React.FC<PaymentLinkExpirationSelectorProps
   // Format hours to a readable string
   const formatHours = (hours: number): string => {
     if (hours < 24) {
-      return `${hours} hour${hours !== 1 ? 's' : ''}`;
+      return hours === 1
+        ? t('payment.expiration.hoursSingular', { count: hours })
+        : t('payment.expiration.hoursPlural', { count: hours });
     }
     const days = hours / 24;
     if (days === Math.floor(days)) {
-      return `${days} day${days !== 1 ? 's' : ''}`;
+      return days === 1
+        ? t('payment.expiration.daysSingular', { count: days })
+        : t('payment.expiration.daysPlural', { count: days });
     }
-    return `${days.toFixed(1)} days`;
+    return t('payment.expiration.daysDecimal', { count: Number(days.toFixed(1)) });
   };
 
   // Create select options
@@ -71,8 +78,8 @@ const PaymentLinkExpirationSelector: React.FC<PaymentLinkExpirationSelectorProps
       value: opt.hours.toString(),
       label: opt.label,
     })),
-    { value: 'custom', label: 'Custom...' },
-  ], [expirationOptions]);
+    { value: 'custom', label: t('payment.expiration.custom') },
+  ], [expirationOptions, t]);
 
   const [showCustomInput, setShowCustomInput] = useState(isCustom);
   const [customHours, setCustomHours] = useState(isCustom ? value : 168);
@@ -99,7 +106,7 @@ const PaymentLinkExpirationSelector: React.FC<PaymentLinkExpirationSelectorProps
         options={selectOptions}
         value={isCustom ? 'custom' : value.toString()}
         onValueChange={handleSelectChange}
-        placeholder="Select expiration time"
+        placeholder={t('payment.expiration.selectPlaceholder')}
         disabled={disabled}
         className="w-full max-w-xs"
       />
@@ -119,14 +126,14 @@ const PaymentLinkExpirationSelector: React.FC<PaymentLinkExpirationSelectorProps
             disabled={disabled}
           />
           <span className="text-sm text-gray-500">
-            hours ({formatHours(customHours)})
+            {t('payment.expiration.hoursUnit', { formatted: formatHours(customHours) })}
           </span>
         </div>
       )}
 
       {!showCustomInput && currentOption && (
         <p className="text-sm text-gray-500 pl-2">
-          Payment links will expire after {formatHours(value)}
+          {t('payment.expiration.willExpireAfter', { duration: formatHours(value) })}
         </p>
       )}
     </div>
@@ -143,6 +150,7 @@ interface PaymentConfigDisplay {
 }
 
 export const PaymentSettingsConfig: React.FC = () => {
+  const { t } = useTranslation('msp/billing-settings');
   const [config, setConfig] = useState<PaymentConfigDisplay | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingSettings, setSavingSettings] = useState(false);
@@ -164,14 +172,14 @@ export const PaymentSettingsConfig: React.FC = () => {
           setHasChanges(false);
         }
       } else {
-        toast.error(result.error || 'Failed to load payment configuration');
+        toast.error(result.error || t('payment.messages.loadConfigFailed'));
       }
     } catch (error) {
-      toast.error('Failed to load payment configuration');
+      toast.error(t('payment.messages.loadConfigFailed'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadConfig();
@@ -201,12 +209,12 @@ export const PaymentSettingsConfig: React.FC = () => {
         setConfig((prev) => prev ? { ...prev, settings: result.data! } : null);
         setLocalSettings(result.data);
         setHasChanges(false);
-        toast.success('Settings saved successfully');
+        toast.success(t('payment.messages.settingsSaved'));
       } else {
-        toast.error(result.error || 'Failed to save settings');
+        toast.error(result.error || t('payment.messages.saveSettingsFailed'));
       }
     } catch (error) {
-      toast.error('Failed to save settings');
+      toast.error(t('payment.messages.saveSettingsFailed'));
     } finally {
       setSavingSettings(false);
     }
@@ -229,14 +237,14 @@ export const PaymentSettingsConfig: React.FC = () => {
             <AlertCircle className="h-8 w-8 text-amber-600" />
           </div>
         </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Stripe Not Connected</h3>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">{t('payment.notConnected.title')}</h3>
         <p className="text-gray-500 mb-4 max-w-md mx-auto">
-          To configure payment settings, you need to connect your Stripe account first.
+          {t('payment.notConnected.description')}
         </p>
         <Link href="/msp/settings?tab=Integrations&category=payments">
           <Button id="go-to-integrations">
             <CreditCard className="h-4 w-4 mr-2" />
-            Connect Stripe
+            {t('payment.notConnected.connectButton')}
           </Button>
         </Link>
       </div>
@@ -248,9 +256,9 @@ export const PaymentSettingsConfig: React.FC = () => {
       {/* Payment Links in Emails */}
       <div className="flex items-center justify-between">
         <div className="space-y-0.5">
-          <Label>Include Payment Links in Invoice Emails</Label>
+          <Label>{t('payment.settings.paymentLinksInEmails.label')}</Label>
           <p className="text-sm text-gray-500">
-            Add a &quot;Pay Now&quot; button to invoice emails
+            {t('payment.settings.paymentLinksInEmails.description')}
           </p>
         </div>
         <Switch
@@ -265,9 +273,9 @@ export const PaymentSettingsConfig: React.FC = () => {
       {/* Payment Confirmations */}
       <div className="flex items-center justify-between">
         <div className="space-y-0.5">
-          <Label>Send Payment Confirmation Emails</Label>
+          <Label>{t('payment.settings.paymentConfirmations.label')}</Label>
           <p className="text-sm text-gray-500">
-            Email customers when their payment is received
+            {t('payment.settings.paymentConfirmations.description')}
           </p>
         </div>
         <Switch
@@ -281,9 +289,9 @@ export const PaymentSettingsConfig: React.FC = () => {
 
       {/* Payment Link Expiration */}
       <div className="space-y-2">
-        <Label>Payment Link Expiration</Label>
+        <Label>{t('payment.settings.paymentLinkExpiration.label')}</Label>
         <p className="text-sm text-gray-500">
-          How long payment links remain valid before expiring
+          {t('payment.settings.paymentLinkExpiration.description')}
         </p>
         <PaymentLinkExpirationSelector
           value={localSettings?.paymentLinkExpirationHours ?? 168}
@@ -306,10 +314,10 @@ export const PaymentSettingsConfig: React.FC = () => {
           {savingSettings ? (
             <>
               <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              Saving...
+              {t('payment.settings.actions.saving')}
             </>
           ) : (
-            'Save Settings'
+            t('payment.settings.actions.save')
           )}
         </Button>
       </div>

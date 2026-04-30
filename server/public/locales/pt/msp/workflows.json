@@ -426,7 +426,8 @@
       "summaryTitle": "Payload still needs required event fields before this run can start",
       "summaryDescription": "Fill the missing fields below, switch to Form Builder, or use a sample payload button.",
       "moreErrors": "+{{count}} more…"
-    }
+    },
+    "sampleEmailBody": "Corpo de e-mail de exemplo"
   },
   "eventList": {
     "common": {
@@ -638,7 +639,10 @@
     },
     "stepPanel": {
       "readOnly": "Read-only access: step editing is disabled.",
-      "selectPrompt": "Select a step to edit its configuration."
+      "selectPrompt": "Select a step to edit its configuration.",
+      "readOnlyNotice": "Acesso somente leitura: a edição de etapas está desativada.",
+      "contractMode": "Modo de contrato:",
+      "catalogSchema": "Esquema do catálogo:"
     },
     "stepConfig": {
       "eventLabel": "Event",
@@ -652,7 +656,27 @@
       "assignOnResume": "Assign on resume",
       "fieldLabel": "Field",
       "fieldPathLabel": "Field path",
-      "dataContextToggle": "What data can I access here?"
+      "dataContextToggle": "What data can I access here?",
+      "condition": "Condição",
+      "itemsExpression": "Expressão de itens",
+      "itemVariable": "Variável de item",
+      "concurrency": "Concorrência",
+      "onItemError": "Em erro de item",
+      "captureErrorAs": "Capturar erro como",
+      "workflowId": "ID do fluxo de trabalho",
+      "workflowVersion": "Versão do fluxo de trabalho",
+      "inputMapping": "Mapeamento de entrada",
+      "outputMapping": "Mapeamento de saída",
+      "value": "Valor",
+      "mode": "Modo",
+      "days": "Dias",
+      "hours": "Horas",
+      "minutes": "Minutos",
+      "seconds": "Segundos",
+      "untilInput": "Entrada até",
+      "specificDateTime": "Data e hora específicas",
+      "untilExpression": "Expressão até",
+      "returnNotice": "Return interrompe a execução do fluxo de trabalho."
     },
     "mappingExpr": {
       "add": "Add",
@@ -751,7 +775,8 @@
         "warnings": "Warnings",
         "valid": "Valid",
         "unknown": "Unknown"
-      }
+      },
+      "errors": "Erros de validação"
     },
     "discardDialog": {
       "title": "Discard unsaved changes?",
@@ -928,6 +953,61 @@
       "publishFailed": "Failed to publish workflow",
       "publishValidationErrors": "Publish failed - fix validation errors",
       "systemEventMissingSchema": "This system event is missing a valid schema and cannot be selected until fixed."
+    },
+    "propsPanel": {
+      "resizeAria": "Redimensionar painel de propriedades",
+      "settingsTitle": "Configurações do fluxo de trabalho",
+      "settingsSubtitle": "Controles de visibilidade, pausa e segurança.",
+      "visibleToUsers": "Visível para os usuários",
+      "paused": "Pausado (parar novas execuções)",
+      "concurrencyLimit": "Limite de concorrência",
+      "unlimited": "Ilimitado",
+      "autoPauseFailureRate": "Pausa automática por taxa de falhas",
+      "failureRateThreshold": "Limite da taxa de falhas",
+      "minRunsBeforeAutoPause": "Execuções mínimas antes da pausa automática"
+    },
+    "trigger": {
+      "summary": "Resumo do gatilho",
+      "actionNeeded": "Ação necessária",
+      "noMappingNeeded": "Nenhum mapeamento necessário",
+      "sourceSchemaOverride": "Substituir esquema de origem do gatilho",
+      "useCatalogSchemaDefault": "Usar esquema do catálogo (padrão)",
+      "useCatalogSchemaPlaceholder": "Usar esquema do catálogo…",
+      "noSchemasFound": "Nenhum esquema encontrado",
+      "mappingTitle": "Mapeamento do gatilho",
+      "mappingNotRequired": "Mapeamento: Não necessário.",
+      "mappingErrors": "Erros de mapeamento",
+      "mappingWarnings": "Avisos de mapeamento"
+    },
+    "schemaSettings": {
+      "lockVersion": "Bloquear versão do esquema",
+      "lockVersionHelp": "Bloqueia a versão do esquema para evitar que futuras alterações do gatilho afetem este fluxo de trabalho.",
+      "lockedVersion": "Versão do esquema bloqueada",
+      "manualRef": "Referência manual do esquema",
+      "fixedForTimeTriggers": "Fixo para gatilhos temporais",
+      "availableFieldsPreview": "Pré-visualização dos campos disponíveis",
+      "payloadContract": "Esquema de contrato do payload do fluxo",
+      "ref": "Referência do esquema:",
+      "loadFailed": "Falha ao carregar o esquema.",
+      "notLoaded": "Esquema ainda não carregado.",
+      "loadPreviewFailed": "Falha ao carregar a pré-visualização do esquema.",
+      "selectVersionPlaceholder": "Selecionar versão do esquema…",
+      "payloadRefAdvanced": "Referência do esquema do payload (avançado)"
+    },
+    "expression": {
+      "insertField": "Inserir campo",
+      "enterPlaceholder": "Inserir expressão..."
+    },
+    "dataContext": {
+      "availableDataAtStep": "Dados disponíveis nesta etapa",
+      "payload": "Payload",
+      "noPayloadFields": "Nenhum campo de payload",
+      "payloadSchemaRefHint": "Defina 'Referência do esquema do payload' para definir a estrutura do payload",
+      "stepOutputs": "Saídas da etapa (vars)",
+      "outputSchemaUnavailable": "Esquema de saída não disponível",
+      "noFields": "Sem campos",
+      "copyAllPaths": "Copiar todos os caminhos",
+      "copyAllFieldPaths": "Copiar todos os caminhos dos campos"
     }
   },
   "actionInputFieldInfo": {
@@ -2274,5 +2354,49 @@
     "enableHint": "Ative a Automação de fluxos de trabalho em Definições para aceder.",
     "goToExperimental": "Ir para funcionalidades experimentais",
     "openSettings": "Abrir definições"
+  },
+  "flow": {
+    "designer": {
+      "title": "Designer de fluxo de trabalho"
+    },
+    "sidebar": {
+      "dragHint": "Arraste esses nós para o canvas:"
+    },
+    "picker": {
+      "searchPlaceholder": "Pesquisar..."
+    },
+    "fields": {
+      "selectInputField": "Selecionar campo de entrada",
+      "customFieldReference": "Referência de campo personalizada",
+      "selectOrEnterReference": "Selecione ou insira uma referência de campo"
+    },
+    "delete": {
+      "confirmTitle": "Confirmar exclusão",
+      "confirmMessage": "Tem certeza de que deseja excluir este fluxo de trabalho?"
+    },
+    "topBar": {
+      "workflowName": "Nome do fluxo de trabalho",
+      "workflowDescription": "Descrição do fluxo de trabalho"
+    },
+    "nodes": {
+      "classifier": {
+        "newClassification": "Nova classificação"
+      },
+      "selector": {
+        "defaultInput": "Entrada padrão"
+      },
+      "decision": {
+        "type": "Tipo",
+        "conditionValue": "Valor da condição",
+        "defaultOutput": "Saída padrão",
+        "defaultOutputProp": "Saída padrão"
+      },
+      "ticketCreator": {
+        "ticketTitle": "Título do ticket:",
+        "ticketDescription": "Descrição do ticket:",
+        "selectBoard": "Selecione ou insira um quadro",
+        "selectPriority": "Selecione ou insira uma prioridade"
+      }
+    }
   }
 }

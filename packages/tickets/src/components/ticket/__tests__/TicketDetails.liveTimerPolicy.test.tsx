@@ -66,6 +66,8 @@ vi.mock('@alga-psa/ui', () => ({
 vi.mock('@alga-psa/ui/context', () => ({
   useSchedulingCallbacks: () => ({
     launchTimeEntry: launchTimeEntryMock,
+    fetchTimeEntriesForTicket: vi.fn(),
+    deleteTimeEntry: vi.fn(),
   }),
 }));
 

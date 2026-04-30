@@ -304,27 +304,42 @@ export class TenantSecretProvider {
    * Returns a map of secret names to the workflow IDs that reference them.
    */
   async getSecretUsage(): Promise<Map<string, string[]>> {
-    // Query workflow definitions to find $secret references
-    // This is a simplified implementation - in practice, you'd parse workflow JSON
-    const workflows = await this.knex('workflow_definitions_v2')
-      .where({ tenant: this.tenantId })
-      .whereRaw("definition_json::text LIKE '%$secret%'")
-      .select('workflow_id', 'definition_json');
+    const definitions = await this.knex('workflow_definitions')
+      .where({ tenant_id: this.tenantId })
+      .select<{ workflow_id: string }[]>('workflow_id');
+
+    const workflowIds = definitions.map((row) => row.workflow_id);
+    if (workflowIds.length === 0) {
+      return new Map();
+    }
+
+    const [versions, drafts] = await Promise.all([
+      this.knex('workflow_definition_versions')
+        .whereIn('workflow_id', workflowIds)
+        .whereRaw("definition_json::text LIKE '%$secret%'")
+        .select<{ workflow_id: string; definition_json: unknown }[]>('workflow_id', 'definition_json'),
+      this.knex('workflow_definitions')
+        .where({ tenant_id: this.tenantId })
+        .whereIn('workflow_id', workflowIds)
+        .whereRaw("draft_definition::text LIKE '%$secret%'")
+        .select<{ workflow_id: string; draft_definition: unknown }[]>('workflow_id', 'draft_definition'),
+    ]);
 
     const usage = new Map<string, string[]>();
 
-    for (const workflow of workflows) {
-      const json = JSON.stringify(workflow.definition_json);
-      // Find all $secret references
+    const addReferences = (workflowId: string, payload: unknown) => {
+      const json = JSON.stringify(payload);
       const matches = json.matchAll(/"\$secret"\s*:\s*"([^"]+)"/g);
       for (const match of matches) {
         const secretName = match[1];
-        if (!usage.has(secretName)) {
-          usage.set(secretName, []);
-        }
-        usage.get(secretName)!.push(workflow.workflow_id);
+        const list = usage.get(secretName) ?? [];
+        if (!list.includes(workflowId)) list.push(workflowId);
+        usage.set(secretName, list);
       }
-    }
+    };
+
+    for (const row of versions) addReferences(row.workflow_id, row.definition_json);
+    for (const row of drafts) addReferences(row.workflow_id, row.draft_definition);
 
     return usage;
   }

@@ -1114,6 +1114,82 @@
       "saveSettingsFailed": "Failed to save settings",
       "webhookConfigured": "Webhook configured successfully!",
       "webhookConfigureFailed": "Failed to configure webhook"
+    },
+    "expiration": {
+      "selectPlaceholder": "Select expiration time",
+      "custom": "Custom...",
+      "hoursSingular": "{{count}} hour",
+      "hoursPlural": "{{count}} hours",
+      "daysSingular": "{{count}} day",
+      "daysPlural": "{{count}} days",
+      "daysDecimal": "{{count}} days",
+      "hoursUnit": "hours ({{formatted}})",
+      "willExpireAfter": "Payment links will expire after {{duration}}"
+    },
+    "notConnected": {
+      "title": "Stripe Not Connected",
+      "description": "To configure payment settings, you need to connect your Stripe account first.",
+      "connectButton": "Connect Stripe"
+    },
+    "settings": {
+      "paymentLinksInEmails": {
+        "label": "Include Payment Links in Invoice Emails",
+        "description": "Add a \"Pay Now\" button to invoice emails"
+      },
+      "paymentConfirmations": {
+        "label": "Send Payment Confirmation Emails",
+        "description": "Email customers when their payment is received"
+      },
+      "paymentLinkExpiration": {
+        "label": "Payment Link Expiration",
+        "description": "How long payment links remain valid before expiring"
+      },
+      "actions": {
+        "save": "Save Settings",
+        "saving": "Saving..."
+      }
+    },
+    "stripe": {
+      "cardTitle": "Stripe Payments",
+      "cardDescription": "Accept credit card payments for your invoices",
+      "connectedTitle": "Stripe Connected",
+      "publishableKey": "Publishable key: {{key}}...",
+      "testConnection": "Test Connection",
+      "disconnect": "Disconnect",
+      "disconnectDialog": {
+        "title": "Disconnect Stripe",
+        "message": "Are you sure you want to disconnect Stripe? Payment links will no longer work.",
+        "confirm": "Disconnect",
+        "cancel": "Cancel"
+      },
+      "webhook": {
+        "label": "Webhook Configuration",
+        "configuredTitle": "Webhooks configured automatically",
+        "configuredDescription": "Alga PSA will receive payment notifications for:",
+        "failedTitle": "Webhook configuration failed",
+        "failedDescription": "Automatic webhook configuration failed. Click retry to attempt configuration again.",
+        "configuring": "Configuring...",
+        "retry": "Retry Configuration"
+      },
+      "connectForm": {
+        "secretKeyLabel": "Secret Key",
+        "secretKeyPlaceholder": "sk_live_... or sk_test_...",
+        "secretKeyHelpPrefix": "Find this in your",
+        "secretKeyHelpLink": "Stripe Dashboard → API Keys",
+        "publishableKeyLabel": "Publishable Key",
+        "publishableKeyPlaceholder": "pk_live_... or pk_test_...",
+        "connecting": "Connecting...",
+        "connect": "Connect Stripe",
+        "cancel": "Cancel"
+      },
+      "empty": {
+        "description": "Connect your Stripe account to accept online payments for invoices",
+        "connectButton": "Connect Stripe"
+      },
+      "settingsCard": {
+        "title": "Payment Settings",
+        "description": "Configure how payment links work with your invoices"
+      }
     }
   }
 }

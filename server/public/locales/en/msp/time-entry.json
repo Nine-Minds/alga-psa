@@ -305,6 +305,13 @@
       "message": "This will move the time sheet back to Changes Requested so time entries can be edited."
     }
   },
+  "timeSheetTable": {
+    "empty": {
+      "title": "No work items on your time sheet",
+      "description": "Add a new work item to get started tracking your time for this week.",
+      "getStarted": "Get Started"
+    }
+  },
   "timeSheetList": {
     "delete": {
       "title": "Delete Work Item",

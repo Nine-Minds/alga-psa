@@ -87,7 +87,8 @@
     },
     "hidden": {
       "title": "Hidden setup cards ({{count}})",
-      "subtitle": "Restore any card if you need it later."
+      "subtitle": "Restore any card if you need it later.",
+      "titleCombined": "Hidden cards ({{count}})"
     },
     "checklist": {
       "title": "Onboarding checklist",
@@ -158,5 +159,25 @@
     "morning": "Bom dia",
     "afternoon": "Boa tarde",
     "evening": "Boa noite"
+  },
+  "mspDashboard": "Painel MSP",
+  "mobileApp": {
+    "title": "Download AlgaPSA Mobile app",
+    "description": "Scan a QR code with your phone to download the AlgaPSA mobile app.",
+    "appStore": "App Store (iOS)",
+    "playStore": "Google Play (Android)",
+    "appStoreQrAlt": "QR code linking to the AlgaPSA app on the Apple App Store",
+    "playStoreQrAlt": "QR code linking to the AlgaPSA app on Google Play",
+    "hide": "Hide",
+    "hiding": "Hiding...",
+    "dismissAria": "Hide mobile app card",
+    "dismissError": "Failed to hide the card.",
+    "restore": "Get AlgaPSA Mobile app",
+    "restoring": "Restoring...",
+    "restoreError": "Failed to restore the card.",
+    "hidden": {
+      "title": "Hidden mobile app card",
+      "subtitle": "Restore it if you need it later."
+    }
   }
 }

@@ -305,6 +305,13 @@
       "message": "11111"
     }
   },
+  "timeSheetTable": {
+    "empty": {
+      "title": "11111",
+      "description": "11111",
+      "getStarted": "11111"
+    }
+  },
   "timeSheetList": {
     "delete": {
       "title": "11111",

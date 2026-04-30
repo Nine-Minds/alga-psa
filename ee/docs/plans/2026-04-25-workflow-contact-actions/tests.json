@@ -1,0 +1,224 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit/catalog: registering business operations exposes all new `contacts.*` action IDs under the Contact designer catalog group with expected labels and versions",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F004",
+      "F036",
+      "F007",
+      "F010",
+      "F013",
+      "F016",
+      "F019",
+      "F021",
+      "F023",
+      "F025",
+      "F034",
+      "F039"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit/schema: contact action input schemas include picker metadata for contact, client, and ticket IDs and expose compact output schemas suitable for downstream mappings",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F016",
+      "F023",
+      "F025",
+      "F027",
+      "F028"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Integration DB: `contacts.create` creates a tenant-scoped contact with client, phone numbers, additional email addresses, compact output, action-provided idempotency metadata, and duplicate email failure as a standard conflict/validation action error",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F030",
+      "F031",
+      "F032",
+      "F033",
+      "F039"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Integration DB: `contacts.update` patches only supplied fields, preserves omitted fields, returns before/after summaries, and rejects invalid primary-email changes through existing model validation",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005",
+      "F006",
+      "F029",
+      "F030",
+      "F031",
+      "F032",
+      "F033"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Integration DB: `contacts.add_to_client` assigns an unassigned contact, no-ops when already assigned to the target client, and conflicts when the contact belongs to a different client",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F024",
+      "F029",
+      "F030",
+      "F031",
+      "F032",
+      "F033"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Integration DB: `contacts.move_to_client` moves a contact to a new client, returns previous/current client IDs, no-ops on repeated target, and enforces `expected_current_client_id` guard",
+    "implemented": true,
+    "featureIds": [
+      "F025",
+      "F026",
+      "F029",
+      "F030",
+      "F031",
+      "F032",
+      "F033"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Integration DB: `contacts.assign_to_ticket` updates only `tickets.contact_name_id`, returns previous/current contact IDs, is stable when repeated, rejects cross-client assignment, and does not set `tickets.client_id` for no-client tickets unless an existing app action path is found to do so",
+    "implemented": true,
+    "featureIds": [
+      "F016",
+      "F017",
+      "F018",
+      "F029",
+      "F030",
+      "F031",
+      "F032",
+      "F033"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Integration DB: `contacts.add_tag` creates or reuses contact tag definitions/mappings using the same permission semantics as `clients.add_tag`, returns added/existing counts, and is idempotent on repeat calls without duplicate-insert transaction aborts",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F014",
+      "F015",
+      "F029",
+      "F030",
+      "F031",
+      "F032",
+      "F033",
+      "F039"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Integration DB: `contacts.duplicate` requires a new unique email override, copies selected source fields, applies field/client overrides, optionally copies tags, excludes historical relationships, and fails on email conflicts",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011",
+      "F012",
+      "F029",
+      "F030",
+      "F031",
+      "F032",
+      "F033",
+      "F035",
+      "F039"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Integration DB: `contacts.add_note` creates a contact notes document when missing, appends note content on subsequent calls, returns document metadata, and does not create an interaction row",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F020",
+      "F029",
+      "F030",
+      "F031",
+      "F032",
+      "F033",
+      "F039"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Integration DB: `contacts.add_interaction` inserts a valid contact-linked interaction using the contact-derived client, workflow actor as owner, supplied type/timing/details, default status fallback, and ticket relationship validation",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F022",
+      "F029",
+      "F030",
+      "F031",
+      "F032",
+      "F033",
+      "F039"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Integration DB: `contacts.delete` requires `confirm: true`, performs guarded hard delete with owned-child cleanup for eligible contacts, supports `on_not_found: return_false`, and returns dependency conflict details when blocked",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F008",
+      "F009",
+      "F029",
+      "F030",
+      "F031",
+      "F032",
+      "F033",
+      "F035"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Unit/permission: each new contact action checks the expected permission before mutation and returns `PERMISSION_DENIED` when the workflow actor lacks access",
+    "implemented": true,
+    "featureIds": [
+      "F037",
+      "F015",
+      "F031",
+      "F035"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Unit/audit/events: each side-effectful contact action writes workflow run audit; representative action.call smoke coverage verifies saveAs output consumption; create/update/deactivate publish contact domain events with lazy best-effort event publishing",
+    "implemented": true,
+    "featureIds": [
+      "F030",
+      "F032",
+      "F039"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Integration DB: `contacts.deactivate` sets `is_inactive = true`, returns previous/current inactive state, and is idempotent when called again on an inactive contact",
+    "implemented": true,
+    "featureIds": [
+      "F036",
+      "F037",
+      "F038",
+      "F029",
+      "F030",
+      "F031",
+      "F032",
+      "F033",
+      "F039"
+    ]
+  }
+]

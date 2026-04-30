@@ -129,7 +129,7 @@ export async function launchPublishedWorkflowRun(
 ): Promise<WorkflowRunLaunchResult> {
   initializeWorkflowRuntimeV2();
 
-  const workflow = await WorkflowDefinitionModelV2.getById(knex, request.workflowId);
+  const workflow = await WorkflowDefinitionModelV2.getById(knex, request.tenantId ?? '', request.workflowId);
   if (!workflow) {
     throw new Error('Workflow not found');
   }

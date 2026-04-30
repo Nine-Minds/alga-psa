@@ -47,15 +47,17 @@ const PaymentLinkExpirationSelector: React.FC<PaymentLinkExpirationSelectorProps
   onChange,
   disabled = false,
 }) => {
+  const { t } = useTranslation('msp/billing-settings');
+
   // Predefined expiration options in hours
   const expirationOptions = useMemo(() => [
-    { hours: 24, label: '1 day' },
-    { hours: 48, label: '2 days' },
-    { hours: 72, label: '3 days' },
-    { hours: 168, label: '7 days' },
-    { hours: 336, label: '14 days' },
-    { hours: 720, label: '30 days' },
-  ], []);
+    { hours: 24, label: t('payment.expiration.daysSingular', { count: 1 }) },
+    { hours: 48, label: t('payment.expiration.daysPlural', { count: 2 }) },
+    { hours: 72, label: t('payment.expiration.daysPlural', { count: 3 }) },
+    { hours: 168, label: t('payment.expiration.daysPlural', { count: 7 }) },
+    { hours: 336, label: t('payment.expiration.daysPlural', { count: 14 }) },
+    { hours: 720, label: t('payment.expiration.daysPlural', { count: 30 }) },
+  ], [t]);
 
   // Check if current value matches a predefined option
   const currentOption = expirationOptions.find(opt => opt.hours === value);
@@ -64,13 +66,17 @@ const PaymentLinkExpirationSelector: React.FC<PaymentLinkExpirationSelectorProps
   // Format hours to a readable string
   const formatHours = (hours: number): string => {
     if (hours < 24) {
-      return `${hours} hour${hours !== 1 ? 's' : ''}`;
+      return hours === 1
+        ? t('payment.expiration.hoursSingular', { count: hours })
+        : t('payment.expiration.hoursPlural', { count: hours });
     }
     const days = hours / 24;
     if (days === Math.floor(days)) {
-      return `${days} day${days !== 1 ? 's' : ''}`;
+      return days === 1
+        ? t('payment.expiration.daysSingular', { count: days })
+        : t('payment.expiration.daysPlural', { count: days });
     }
-    return `${days.toFixed(1)} days`;
+    return t('payment.expiration.daysDecimal', { count: Number(days.toFixed(1)) });
   };
 
   // Create select options
@@ -79,8 +85,8 @@ const PaymentLinkExpirationSelector: React.FC<PaymentLinkExpirationSelectorProps
       value: opt.hours.toString(),
       label: opt.label,
     })),
-    { value: 'custom', label: 'Custom...' },
-  ], [expirationOptions]);
+    { value: 'custom', label: t('payment.expiration.custom') },
+  ], [expirationOptions, t]);
 
   const [showCustomInput, setShowCustomInput] = useState(isCustom);
   const [customHours, setCustomHours] = useState(isCustom ? value : 168);
@@ -107,11 +113,11 @@ const PaymentLinkExpirationSelector: React.FC<PaymentLinkExpirationSelectorProps
         options={selectOptions}
         value={isCustom ? 'custom' : value.toString()}
         onValueChange={handleSelectChange}
-        placeholder="Select expiration time"
+        placeholder={t('payment.expiration.selectPlaceholder')}
         disabled={disabled}
         className="w-full max-w-xs"
       />
-      
+
       {showCustomInput && (
         <div className="flex items-center gap-2 pl-2">
           <Input
@@ -127,14 +133,14 @@ const PaymentLinkExpirationSelector: React.FC<PaymentLinkExpirationSelectorProps
             disabled={disabled}
           />
           <span className="text-sm text-gray-500">
-            hours ({formatHours(customHours)})
+            {t('payment.expiration.hoursUnit', { formatted: formatHours(customHours) })}
           </span>
         </div>
       )}
 
       {!showCustomInput && currentOption && (
         <p className="text-sm text-gray-500 pl-2">
-          Payment links will expire after {formatHours(value)}
+          {t('payment.expiration.willExpireAfter', { duration: formatHours(value) })}
         </p>
       )}
     </div>
@@ -360,9 +366,9 @@ export const PaymentSettings: React.FC = () => {
               <CreditCard className="h-5 w-5 text-indigo-600" />
             </div>
             <div>
-              <CardTitle>Stripe Payments</CardTitle>
+              <CardTitle>{t('payment.stripe.cardTitle')}</CardTitle>
               <CardDescription>
-                Accept credit card payments for your invoices
+                {t('payment.stripe.cardDescription')}
               </CardDescription>
             </div>
           </div>
@@ -377,9 +383,9 @@ export const PaymentSettings: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <CheckCircle className="h-5 w-5 text-success" />
                       <div>
-                        <p className="font-medium">Stripe Connected</p>
+                        <p className="font-medium">{t('payment.stripe.connectedTitle')}</p>
                         <p className="text-sm">
-                          Publishable key: {config.publishable_key?.slice(0, 12)}...
+                          {t('payment.stripe.publishableKey', { key: config.publishable_key?.slice(0, 12) })}
                         </p>
                       </div>
                     </div>
@@ -394,7 +400,7 @@ export const PaymentSettings: React.FC = () => {
                         {testing ? (
                           <RefreshCw className="h-4 w-4 animate-spin" />
                         ) : (
-                          'Test Connection'
+                          t('payment.stripe.testConnection')
                         )}
                       </Button>
                       <Button
@@ -404,7 +410,7 @@ export const PaymentSettings: React.FC = () => {
                         id="disconnect-stripe"
                       >
                         <Unplug className="h-4 w-4 mr-1" />
-                        Disconnect
+                        {t('payment.stripe.disconnect')}
                       </Button>
                     </div>
                   </div>
@@ -414,15 +420,15 @@ export const PaymentSettings: React.FC = () => {
               {/* Webhook Status */}
               {config.webhook_status === 'enabled' ? (
                 <div className="space-y-3">
-                  <Label>Webhook Configuration</Label>
+                  <Label>{t('payment.stripe.webhook.label')}</Label>
                   <Alert variant="success" showIcon={false}>
                     <AlertDescription>
                       <div className="flex items-center gap-2 mb-2">
                         <CheckCircle className="h-4 w-4 text-success" />
-                        <span className="font-medium">Webhooks configured automatically</span>
+                        <span className="font-medium">{t('payment.stripe.webhook.configuredTitle')}</span>
                       </div>
                       <p className="text-sm mb-2">
-                        Alga PSA will receive payment notifications for:
+                        {t('payment.stripe.webhook.configuredDescription')}
                       </p>
                       <ul className="text-sm list-disc list-inside space-y-1">
                         {config.webhook_events?.map((event) => (
@@ -435,9 +441,9 @@ export const PaymentSettings: React.FC = () => {
               ) : (
                 <Alert variant="warning" showIcon={false}>
                   <AlertDescription>
-                    <p className="font-medium mb-2">Webhook configuration failed</p>
+                    <p className="font-medium mb-2">{t('payment.stripe.webhook.failedTitle')}</p>
                     <p className="text-sm mb-3">
-                      Automatic webhook configuration failed. Click retry to attempt configuration again.
+                      {t('payment.stripe.webhook.failedDescription')}
                     </p>
                     <Button
                       id="retry-webhook-config"
@@ -449,12 +455,12 @@ export const PaymentSettings: React.FC = () => {
                       {retryingWebhook ? (
                         <>
                           <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                          Configuring...
+                          {t('payment.stripe.webhook.configuring')}
                         </>
                       ) : (
                         <>
                           <RefreshCw className="h-4 w-4 mr-2" />
-                          Retry Configuration
+                          {t('payment.stripe.webhook.retry')}
                         </>
                       )}
                     </Button>
@@ -465,34 +471,34 @@ export const PaymentSettings: React.FC = () => {
           ) : showConnectForm ? (
             <form onSubmit={handleConnect} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="secretKey">Secret Key</Label>
+                <Label htmlFor="secretKey">{t('payment.stripe.connectForm.secretKeyLabel')}</Label>
                 <Input
                   id="secretKey"
                   type="password"
-                  placeholder="sk_live_... or sk_test_..."
+                  placeholder={t('payment.stripe.connectForm.secretKeyPlaceholder')}
                   value={secretKey}
                   onChange={(e) => setSecretKey(e.target.value)}
                   required
                 />
                 <p className="text-sm text-gray-500">
-                  Find this in your{' '}
+                  {t('payment.stripe.connectForm.secretKeyHelpPrefix')}{' '}
                   <a
                     href="https://dashboard.stripe.com/apikeys"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-indigo-600 hover:underline"
                   >
-                    Stripe Dashboard → API Keys
+                    {t('payment.stripe.connectForm.secretKeyHelpLink')}
                   </a>
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="publishableKey">Publishable Key</Label>
+                <Label htmlFor="publishableKey">{t('payment.stripe.connectForm.publishableKeyLabel')}</Label>
                 <Input
                   id="publishableKey"
                   type="text"
-                  placeholder="pk_live_... or pk_test_..."
+                  placeholder={t('payment.stripe.connectForm.publishableKeyPlaceholder')}
                   value={publishableKey}
                   onChange={(e) => setPublishableKey(e.target.value)}
                   required
@@ -504,10 +510,10 @@ export const PaymentSettings: React.FC = () => {
                   {connecting ? (
                     <>
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Connecting...
+                      {t('payment.stripe.connectForm.connecting')}
                     </>
                   ) : (
-                    'Connect Stripe'
+                    t('payment.stripe.connectForm.connect')
                   )}
                 </Button>
                 <Button
@@ -516,7 +522,7 @@ export const PaymentSettings: React.FC = () => {
                   variant="outline"
                   onClick={() => setShowConnectForm(false)}
                 >
-                  Cancel
+                  {t('payment.stripe.connectForm.cancel')}
                 </Button>
               </div>
             </form>
@@ -524,11 +530,11 @@ export const PaymentSettings: React.FC = () => {
             <div className="text-center py-8">
               <CreditCard className="h-12 w-12 text-gray-300 mx-auto mb-4" />
               <p className="text-gray-500 mb-4">
-                Connect your Stripe account to accept online payments for invoices
+                {t('payment.stripe.empty.description')}
               </p>
               <Button id="connect-stripe-button" onClick={() => setShowConnectForm(true)}>
                 <CreditCard className="h-4 w-4 mr-2" />
-                Connect Stripe
+                {t('payment.stripe.empty.connectButton')}
               </Button>
             </div>
           )}
@@ -544,9 +550,9 @@ export const PaymentSettings: React.FC = () => {
                 <Settings className="h-5 w-5 text-gray-600" />
               </div>
               <div>
-                <CardTitle>Payment Settings</CardTitle>
+                <CardTitle>{t('payment.stripe.settingsCard.title')}</CardTitle>
                 <CardDescription>
-                  Configure how payment links work with your invoices
+                  {t('payment.stripe.settingsCard.description')}
                 </CardDescription>
               </div>
             </div>
@@ -555,9 +561,9 @@ export const PaymentSettings: React.FC = () => {
             {/* Payment Links in Emails */}
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Include Payment Links in Invoice Emails</Label>
+                <Label>{t('payment.settings.paymentLinksInEmails.label')}</Label>
                 <p className="text-sm text-gray-500">
-                  Add a &quot;Pay Now&quot; button to invoice emails
+                  {t('payment.settings.paymentLinksInEmails.description')}
                 </p>
               </div>
               <Switch
@@ -572,9 +578,9 @@ export const PaymentSettings: React.FC = () => {
             {/* Payment Confirmations */}
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Send Payment Confirmation Emails</Label>
+                <Label>{t('payment.settings.paymentConfirmations.label')}</Label>
                 <p className="text-sm text-gray-500">
-                  Email customers when their payment is received
+                  {t('payment.settings.paymentConfirmations.description')}
                 </p>
               </div>
               <Switch
@@ -588,9 +594,9 @@ export const PaymentSettings: React.FC = () => {
 
             {/* Payment Link Expiration */}
             <div className="space-y-2">
-              <Label>Payment Link Expiration</Label>
+              <Label>{t('payment.settings.paymentLinkExpiration.label')}</Label>
               <p className="text-sm text-gray-500">
-                How long payment links remain valid before expiring
+                {t('payment.settings.paymentLinkExpiration.description')}
               </p>
               <PaymentLinkExpirationSelector
                 value={localSettings?.paymentLinkExpirationHours ?? 168}
@@ -613,10 +619,10 @@ export const PaymentSettings: React.FC = () => {
                 {savingSettings ? (
                   <>
                     <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
+                    {t('payment.settings.actions.saving')}
                   </>
                 ) : (
-                  'Save Settings'
+                  t('payment.settings.actions.save')
                 )}
               </Button>
             </div>
@@ -629,10 +635,10 @@ export const PaymentSettings: React.FC = () => {
         isOpen={showDisconnectDialog}
         onClose={() => setShowDisconnectDialog(false)}
         onConfirm={handleDisconnect}
-        title="Disconnect Stripe"
-        message="Are you sure you want to disconnect Stripe? Payment links will no longer work."
-        confirmLabel="Disconnect"
-        cancelLabel="Cancel"
+        title={t('payment.stripe.disconnectDialog.title')}
+        message={t('payment.stripe.disconnectDialog.message')}
+        confirmLabel={t('payment.stripe.disconnectDialog.confirm')}
+        cancelLabel={t('payment.stripe.disconnectDialog.cancel')}
         isConfirming={disconnecting}
         id="disconnect-stripe-dialog"
       />

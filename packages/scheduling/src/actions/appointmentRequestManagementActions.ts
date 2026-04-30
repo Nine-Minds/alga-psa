@@ -21,7 +21,7 @@ import {
   type AssociateRequestToTicketInput
 } from '../schemas/appointmentRequestSchemas';
 import { SystemEmailService } from '@alga-psa/email';
-import ScheduleEntry from '../models/scheduleEntry';
+import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {

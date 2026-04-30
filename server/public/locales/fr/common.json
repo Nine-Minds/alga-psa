@@ -547,7 +547,9 @@
     },
     "checkEmail": {
       "resendSuccess": "E-mail envoyé ! Veuillez consulter votre boîte de réception.",
-      "resendFailed": "Échec de l'envoi de l'e-mail. Veuillez réessayer."
+      "resendFailed": "Échec de l'envoi de l'e-mail. Veuillez réessayer.",
+      "whatsNext": "Et maintenant ?",
+      "didntReceive": "Vous n'avez pas reçu l'e-mail ?"
     }
   },
   "share": {
@@ -561,7 +563,9 @@
       "linkNotAvailable": "Lien indisponible",
       "linkExpired": "Ce lien de partage a expiré.",
       "downloadLimitReached": "La limite de téléchargements a été atteinte."
-    }
+    },
+    "downloadStarted": "Téléchargement démarré avec succès !",
+    "enterPassword": "Saisir le mot de passe"
   },
   "tickets": {
     "responseSource": {
@@ -1029,5 +1033,49 @@
       "Pacific": "Pacifique",
       "Etc": "Autre"
     }
+  },
+  "pages": {
+    "errors": {
+      "somethingWentWrong": "Quelque chose a mal tourné !",
+      "genericError": "Une erreur s'est produite. Veuillez réessayer plus tard.",
+      "notFoundTitle": "404 - Page non trouvée",
+      "notFoundDescription": "La page que vous recherchez n'existe pas.",
+      "userNotAuthenticated": "Utilisateur non authentifié",
+      "userNotAuthenticatedError": "Erreur : Utilisateur non authentifié",
+      "missingRunId": "ID d'exécution manquant.",
+      "teamLeadAccessRequired": "Accès chef d'équipe requis",
+      "teamsTabUnavailable": "Onglet Teams indisponible",
+      "teamsSignInUnavailable": "Connexion Teams indisponible",
+      "assetNotFound": "Actif introuvable",
+      "contactNotFound": "Contact introuvable",
+      "templateNotFound": "Modèle introuvable",
+      "contactLoadError": "Erreur lors du chargement du contact",
+      "unknownError": "Une erreur inconnue s'est produite",
+      "templateNotFoundDetail": "Le modèle que vous recherchez n'existe pas ou a été supprimé.",
+      "teamLeadAccessDetail": "Pour approuver les feuilles de temps des membres de votre équipe, vous devez être chef d'équipe.",
+      "teamsTabEnableHint": "Demandez à un administrateur PSA d'activer l'intégration Teams pour ce tenant avant de rouvrir l'onglet."
+    },
+    "actions": {
+      "tryAgain": "Réessayer",
+      "goToTeamSettings": "Aller aux paramètres de l'équipe",
+      "selectDateRange": "Sélectionner une plage de dates"
+    },
+    "loading": {
+      "billingDashboard": "Chargement du tableau de bord de facturation...",
+      "onboarding": "Chargement de l'onboarding...",
+      "extension": "Chargement de l'extension...",
+      "extensionSettings": "Chargement des paramètres de l'extension...",
+      "ssoSettings": "Chargement des paramètres SSO..."
+    },
+    "titles": {
+      "emailLogs": "Journaux e-mail",
+      "editAsset": "Modifier l'actif",
+      "slaSettings": "Paramètres SLA",
+      "documentEditor": "Éditeur de document",
+      "accountManagement": "Gestion du compte"
+    }
+  },
+  "feedback": {
+    "providePlaceholder": "Veuillez fournir un commentaire"
   }
 }

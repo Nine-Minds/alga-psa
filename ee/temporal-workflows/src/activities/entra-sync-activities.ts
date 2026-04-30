@@ -1,6 +1,7 @@
 import logger from '@alga-psa/core/logger';
 import { randomUUID } from 'crypto';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db/tenant';
+import { retryOnTenantReadOnly } from '@alga-psa/db';
 import { getEntraProviderAdapter } from '@ee/lib/integrations/entra/providers';
 import { executeEntraSync } from '@ee/lib/integrations/entra/sync/syncEngine';
 import { filterEntraUsersForTenant } from '@ee/lib/integrations/entra/settingsService';
@@ -165,52 +166,56 @@ export async function upsertSyncRunActivity(
     initiatedBy: input.initiatedBy,
   });
 
-  return runWithTenant(input.tenantId, async () => {
-    const { knex } = await createTenantKnex();
-    const now = knex.fn.now();
+  return retryOnTenantReadOnly(
+    () =>
+      runWithTenant(input.tenantId, async () => {
+        const { knex } = await createTenantKnex();
+        const now = knex.fn.now();
 
-    const existing = await knex('entra_sync_runs')
-      .where({
-        tenant: input.tenantId,
-        workflow_id: input.workflowId,
-      })
-      .first(['run_id']);
+        const existing = await knex('entra_sync_runs')
+          .where({
+            tenant: input.tenantId,
+            workflow_id: input.workflowId,
+          })
+          .first(['run_id']);
 
-    if (existing?.run_id) {
-      await knex('entra_sync_runs')
-        .where({
+        if (existing?.run_id) {
+          await knex('entra_sync_runs')
+            .where({
+              tenant: input.tenantId,
+              run_id: existing.run_id,
+            })
+            .update({
+              status: 'running',
+              initiated_by: input.initiatedBy || null,
+              updated_at: now,
+            });
+          return { runId: String(existing.run_id) };
+        }
+
+        const runId = randomUUID();
+        await knex('entra_sync_runs').insert({
           tenant: input.tenantId,
-          run_id: existing.run_id,
-        })
-        .update({
+          run_id: runId,
+          workflow_id: input.workflowId,
+          run_type: input.runType,
           status: 'running',
           initiated_by: input.initiatedBy || null,
+          started_at: now,
+          completed_at: null,
+          total_tenants: 0,
+          processed_tenants: 0,
+          succeeded_tenants: 0,
+          failed_tenants: 0,
+          summary: knex.raw(`'{}'::jsonb`),
+          created_at: now,
           updated_at: now,
         });
-      return { runId: String(existing.run_id) };
-    }
 
-    const runId = randomUUID();
-    await knex('entra_sync_runs').insert({
-      tenant: input.tenantId,
-      run_id: runId,
-      workflow_id: input.workflowId,
-      run_type: input.runType,
-      status: 'running',
-      initiated_by: input.initiatedBy || null,
-      started_at: now,
-      completed_at: null,
-      total_tenants: 0,
-      processed_tenants: 0,
-      succeeded_tenants: 0,
-      failed_tenants: 0,
-      summary: knex.raw(`'{}'::jsonb`),
-      created_at: now,
-      updated_at: now,
-    });
-
-    return { runId };
-  });
+        return { runId };
+      }),
+    { logLabel: 'upsertSyncRunActivity' }
+  );
 }
 
 export async function finalizeSyncRunActivity(
@@ -223,26 +228,30 @@ export async function finalizeSyncRunActivity(
     summary: input.summary,
   });
 
-  await runWithTenant(input.tenantId, async () => {
-    const { knex } = await createTenantKnex();
-    const now = knex.fn.now();
+  await retryOnTenantReadOnly(
+    () =>
+      runWithTenant(input.tenantId, async () => {
+        const { knex } = await createTenantKnex();
+        const now = knex.fn.now();
 
-    await knex('entra_sync_runs')
-      .where({
-        tenant: input.tenantId,
-        run_id: input.runId,
-      })
-      .update({
-        status: input.status,
-        completed_at: now,
-        total_tenants: input.summary.totalTenants,
-        processed_tenants: input.summary.processedTenants,
-        succeeded_tenants: input.summary.succeededTenants,
-        failed_tenants: input.summary.failedTenants,
-        summary: knex.raw('?::jsonb', [JSON.stringify(input.summary)]),
-        updated_at: now,
-      });
-  });
+        await knex('entra_sync_runs')
+          .where({
+            tenant: input.tenantId,
+            run_id: input.runId,
+          })
+          .update({
+            status: input.status,
+            completed_at: now,
+            total_tenants: input.summary.totalTenants,
+            processed_tenants: input.summary.processedTenants,
+            succeeded_tenants: input.summary.succeededTenants,
+            failed_tenants: input.summary.failedTenants,
+            summary: knex.raw('?::jsonb', [JSON.stringify(input.summary)]),
+            updated_at: now,
+          });
+      }),
+    { logLabel: 'finalizeSyncRunActivity' }
+  );
 }
 
 export async function recordSyncTenantResultActivity(
@@ -255,49 +264,53 @@ export async function recordSyncTenantResultActivity(
     status: input.result.status,
   });
 
-  await runWithTenant(input.tenantId, async () => {
-    const { knex } = await createTenantKnex();
-    const now = knex.fn.now();
+  await retryOnTenantReadOnly(
+    () =>
+      runWithTenant(input.tenantId, async () => {
+        const { knex } = await createTenantKnex();
+        const now = knex.fn.now();
 
-    const existing = await knex('entra_sync_run_tenants')
-      .where({
-        tenant: input.tenantId,
-        run_id: input.runId,
-        managed_tenant_id: input.result.managedTenantId,
-      })
-      .first(['run_tenant_id']);
+        const existing = await knex('entra_sync_run_tenants')
+          .where({
+            tenant: input.tenantId,
+            run_id: input.runId,
+            managed_tenant_id: input.result.managedTenantId,
+          })
+          .first(['run_tenant_id']);
 
-    const row = {
-      tenant: input.tenantId,
-      run_id: input.runId,
-      managed_tenant_id: input.result.managedTenantId,
-      client_id: input.result.clientId || null,
-      status: input.result.status,
-      created_count: input.result.created,
-      linked_count: input.result.linked,
-      updated_count: input.result.updated,
-      ambiguous_count: input.result.ambiguous,
-      inactivated_count: input.result.inactivated,
-      error_message: input.result.errorMessage || null,
-      started_at: now,
-      completed_at: now,
-      updated_at: now,
-    };
-
-    if (existing?.run_tenant_id) {
-      await knex('entra_sync_run_tenants')
-        .where({
+        const row = {
           tenant: input.tenantId,
-          run_tenant_id: existing.run_tenant_id,
-        })
-        .update(row);
-      return;
-    }
+          run_id: input.runId,
+          managed_tenant_id: input.result.managedTenantId,
+          client_id: input.result.clientId || null,
+          status: input.result.status,
+          created_count: input.result.created,
+          linked_count: input.result.linked,
+          updated_count: input.result.updated,
+          ambiguous_count: input.result.ambiguous,
+          inactivated_count: input.result.inactivated,
+          error_message: input.result.errorMessage || null,
+          started_at: now,
+          completed_at: now,
+          updated_at: now,
+        };
 
-    await knex('entra_sync_run_tenants').insert({
-      ...row,
-      run_tenant_id: randomUUID(),
-      created_at: now,
-    });
-  });
+        if (existing?.run_tenant_id) {
+          await knex('entra_sync_run_tenants')
+            .where({
+              tenant: input.tenantId,
+              run_tenant_id: existing.run_tenant_id,
+            })
+            .update(row);
+          return;
+        }
+
+        await knex('entra_sync_run_tenants').insert({
+          ...row,
+          run_tenant_id: randomUUID(),
+          created_at: now,
+        });
+      }),
+    { logLabel: 'recordSyncTenantResultActivity' }
+  );
 }

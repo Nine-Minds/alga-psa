@@ -87,7 +87,8 @@
     },
     "hidden": {
       "title": "Verborgen setupkaarten ({{count}})",
-      "subtitle": "Herstel een kaart als je die later nodig hebt."
+      "subtitle": "Herstel een kaart als je die later nodig hebt.",
+      "titleCombined": "Verborgen kaarten ({{count}})"
     },
     "checklist": {
       "title": "Onboardingchecklist",
@@ -158,5 +159,25 @@
     "morning": "Goedemorgen",
     "afternoon": "Goedemiddag",
     "evening": "Goedenavond"
+  },
+  "mspDashboard": "MSP-dashboard",
+  "mobileApp": {
+    "title": "Download de AlgaPSA mobiele app",
+    "description": "Scan een QR-code met je telefoon om de AlgaPSA mobiele app te downloaden.",
+    "appStore": "App Store (iOS)",
+    "playStore": "Google Play (Android)",
+    "appStoreQrAlt": "QR-code die naar de AlgaPSA-app in de Apple App Store verwijst",
+    "playStoreQrAlt": "QR-code die naar de AlgaPSA-app in Google Play verwijst",
+    "hide": "Verbergen",
+    "hiding": "Verbergen...",
+    "dismissAria": "Mobiele-app-kaart verbergen",
+    "dismissError": "Kaart kon niet worden verborgen.",
+    "restore": "Haal de AlgaPSA mobiele app",
+    "restoring": "Herstellen...",
+    "restoreError": "Kaart kon niet worden hersteld.",
+    "hidden": {
+      "title": "Verborgen mobiele-app-kaart",
+      "subtitle": "Herstel hem als je hem later nodig hebt."
+    }
   }
 }

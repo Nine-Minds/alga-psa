@@ -426,7 +426,8 @@
       "summaryTitle": "Den Nutzdaten fehlen noch erforderliche Ereignisfelder, bevor diese Ausführung starten kann",
       "summaryDescription": "Füllen Sie die fehlenden Felder unten aus, wechseln Sie zum Formular-Assistenten oder verwenden Sie eine Beispiel-Nutzdaten-Schaltfläche.",
       "moreErrors": "+{{count}} weitere…"
-    }
+    },
+    "sampleEmailBody": "Beispiel-E-Mail-Inhalt"
   },
   "eventList": {
     "common": {
@@ -638,7 +639,10 @@
     },
     "stepPanel": {
       "readOnly": "Schreibgeschützter Zugriff: Schrittbearbeitung ist deaktiviert.",
-      "selectPrompt": "Wählen Sie einen Schritt, um dessen Konfiguration zu bearbeiten."
+      "selectPrompt": "Wählen Sie einen Schritt, um dessen Konfiguration zu bearbeiten.",
+      "readOnlyNotice": "Schreibgeschützter Zugriff: Schrittbearbeitung ist deaktiviert.",
+      "contractMode": "Vertragsmodus:",
+      "catalogSchema": "Katalogschema:"
     },
     "stepConfig": {
       "eventLabel": "Ereignis",
@@ -652,7 +656,27 @@
       "assignOnResume": "Bei Fortsetzung zuweisen",
       "fieldLabel": "Feld",
       "fieldPathLabel": "Feldpfad",
-      "dataContextToggle": "Auf welche Daten kann ich hier zugreifen?"
+      "dataContextToggle": "Auf welche Daten kann ich hier zugreifen?",
+      "condition": "Bedingung",
+      "itemsExpression": "Elemente-Ausdruck",
+      "itemVariable": "Elementvariable",
+      "concurrency": "Nebenläufigkeit",
+      "onItemError": "Bei Elementfehler",
+      "captureErrorAs": "Fehler erfassen als",
+      "workflowId": "Workflow-ID",
+      "workflowVersion": "Workflow-Version",
+      "inputMapping": "Eingabezuordnung",
+      "outputMapping": "Ausgabezuordnung",
+      "value": "Wert",
+      "mode": "Modus",
+      "days": "Tage",
+      "hours": "Stunden",
+      "minutes": "Minuten",
+      "seconds": "Sekunden",
+      "untilInput": "Bis-Eingabe",
+      "specificDateTime": "Bestimmtes Datum und Uhrzeit",
+      "untilExpression": "Bis-Ausdruck",
+      "returnNotice": "Return beendet die Workflow-Ausführung."
     },
     "mappingExpr": {
       "add": "Hinzufügen",
@@ -751,7 +775,8 @@
         "warnings": "Warnungen",
         "valid": "Gültig",
         "unknown": "Unbekannt"
-      }
+      },
+      "errors": "Validierungsfehler"
     },
     "discardDialog": {
       "title": "Nicht gespeicherte Änderungen verwerfen?",
@@ -928,6 +953,61 @@
       "publishFailed": "Workflow konnte nicht veröffentlicht werden",
       "publishValidationErrors": "Veröffentlichung fehlgeschlagen — Validierungsfehler beheben",
       "systemEventMissingSchema": "Für dieses Systemereignis fehlt ein gültiges Schema und es kann erst nach Behebung ausgewählt werden."
+    },
+    "propsPanel": {
+      "resizeAria": "Eigenschaftenbereich anpassen",
+      "settingsTitle": "Workflow-Einstellungen",
+      "settingsSubtitle": "Sichtbarkeit, Pause und Sicherheitskontrollen.",
+      "visibleToUsers": "Für Benutzer sichtbar",
+      "paused": "Pausiert (keine neuen Ausführungen)",
+      "concurrencyLimit": "Nebenläufigkeitslimit",
+      "unlimited": "Unbegrenzt",
+      "autoPauseFailureRate": "Automatisch pausieren bei Fehlerrate",
+      "failureRateThreshold": "Fehlerraten-Schwellenwert",
+      "minRunsBeforeAutoPause": "Mindestausführungen vor automatischer Pause"
+    },
+    "trigger": {
+      "summary": "Trigger-Zusammenfassung",
+      "actionNeeded": "Aktion erforderlich",
+      "noMappingNeeded": "Keine Zuordnung erforderlich",
+      "sourceSchemaOverride": "Trigger-Quellschema überschreiben",
+      "useCatalogSchemaDefault": "Katalogschema verwenden (Standard)",
+      "useCatalogSchemaPlaceholder": "Katalogschema verwenden…",
+      "noSchemasFound": "Keine Schemas gefunden",
+      "mappingTitle": "Trigger-Zuordnung",
+      "mappingNotRequired": "Zuordnung: Nicht erforderlich.",
+      "mappingErrors": "Zuordnungsfehler",
+      "mappingWarnings": "Zuordnungswarnungen"
+    },
+    "schemaSettings": {
+      "lockVersion": "Schemaversion sperren",
+      "lockVersionHelp": "Schemaversion sperren, um zu verhindern, dass zukünftige Trigger-Änderungen diesen Workflow beeinflussen.",
+      "lockedVersion": "Gesperrte Schemaversion",
+      "manualRef": "Manuelle Schemareferenz",
+      "fixedForTimeTriggers": "Für Zeit-Trigger festgelegt",
+      "availableFieldsPreview": "Vorschau verfügbarer Felder",
+      "payloadContract": "Workflow-Payload-Vertragsschema",
+      "ref": "Schemareferenz:",
+      "loadFailed": "Schema konnte nicht geladen werden.",
+      "notLoaded": "Schema noch nicht geladen.",
+      "loadPreviewFailed": "Schema-Vorschau konnte nicht geladen werden.",
+      "selectVersionPlaceholder": "Schemaversion auswählen…",
+      "payloadRefAdvanced": "Payload-Schemareferenz (erweitert)"
+    },
+    "expression": {
+      "insertField": "Feld einfügen",
+      "enterPlaceholder": "Ausdruck eingeben..."
+    },
+    "dataContext": {
+      "availableDataAtStep": "Verfügbare Daten in diesem Schritt",
+      "payload": "Payload",
+      "noPayloadFields": "Keine Payload-Felder",
+      "payloadSchemaRefHint": "Setzen Sie 'Payload-Schemareferenz', um die Payload-Struktur zu definieren",
+      "stepOutputs": "Schritt-Ausgaben (vars)",
+      "outputSchemaUnavailable": "Ausgabeschema nicht verfügbar",
+      "noFields": "Keine Felder",
+      "copyAllPaths": "Alle Pfade kopieren",
+      "copyAllFieldPaths": "Alle Feldpfade kopieren"
     }
   },
   "actionInputFieldInfo": {
@@ -2274,5 +2354,49 @@
     "enableHint": "Aktivieren Sie die Workflow-Automatisierung in den Einstellungen, um darauf zuzugreifen.",
     "goToExperimental": "Zu experimentellen Funktionen",
     "openSettings": "Einstellungen öffnen"
+  },
+  "flow": {
+    "designer": {
+      "title": "Workflow-Designer"
+    },
+    "sidebar": {
+      "dragHint": "Ziehen Sie diese Knoten auf die Arbeitsfläche:"
+    },
+    "picker": {
+      "searchPlaceholder": "Suchen..."
+    },
+    "fields": {
+      "selectInputField": "Eingabefeld auswählen",
+      "customFieldReference": "Benutzerdefinierte Feldreferenz",
+      "selectOrEnterReference": "Feldreferenz auswählen oder eingeben"
+    },
+    "delete": {
+      "confirmTitle": "Löschen bestätigen",
+      "confirmMessage": "Möchten Sie diesen Workflow wirklich löschen?"
+    },
+    "topBar": {
+      "workflowName": "Workflow-Name",
+      "workflowDescription": "Workflow-Beschreibung"
+    },
+    "nodes": {
+      "classifier": {
+        "newClassification": "Neue Klassifizierung"
+      },
+      "selector": {
+        "defaultInput": "Standard-Eingabe"
+      },
+      "decision": {
+        "type": "Typ",
+        "conditionValue": "Bedingungswert",
+        "defaultOutput": "Standard-Ausgabe",
+        "defaultOutputProp": "Standard-Ausgabe"
+      },
+      "ticketCreator": {
+        "ticketTitle": "Ticket-Titel:",
+        "ticketDescription": "Ticket-Beschreibung:",
+        "selectBoard": "Board auswählen oder eingeben",
+        "selectPriority": "Priorität auswählen oder eingeben"
+      }
+    }
   }
 }

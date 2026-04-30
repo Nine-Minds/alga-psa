@@ -154,10 +154,7 @@
       "failedLast24h": "Mislukt in afgelopen 24 uur",
       "openJobCenter": "Jobcentrum openen"
     },
-    "breadcrumb": {
-      "home": "Start",
-      "dashboard": "Dashboard"
-    },
+    "breadcrumb": "Broodkruimel",
     "tenantBadge": {
       "ariaLabel": "Actieve tenant {{tenant}}"
     },
@@ -167,7 +164,8 @@
       "dark": "Donker",
       "system": "Systeem",
       "selected": "Geselecteerd"
-    }
+    },
+    "openUserMenu": "Gebruikersmenu openen"
   },
   "dialogs": {
     "aiInterrupt": {

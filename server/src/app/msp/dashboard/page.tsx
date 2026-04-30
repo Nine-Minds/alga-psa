@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import DashboardContainer from '@/components/dashboard/DashboardContainer';
+import { getDashboardMobileAppCardDismissedAction } from '@/lib/actions/dashboardMobileAppActions';
 import { DashboardOnboardingSkeleton, DashboardOnboardingSlot } from '@alga-psa/onboarding/components';
 import { isEnterprise } from '@/lib/features';
 import type { Metadata } from 'next';
@@ -10,7 +11,9 @@ export const metadata: Metadata = {
 
 export const dynamic = 'force-dynamic';
 
-function DashboardPage() {
+async function DashboardPage() {
+  const mobileAppCardDismissed = await getDashboardMobileAppCardDismissedAction().catch(() => false);
+
   return (
     <DashboardContainer
       onboardingSection={
@@ -20,6 +23,7 @@ function DashboardPage() {
           </Suspense>
         ) : undefined
       }
+      initialMobileAppCardDismissed={mobileAppCardDismissed}
     />
   );
 }

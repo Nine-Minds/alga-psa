@@ -43,6 +43,7 @@ describe('RmmVitalsPanel', () => {
           updated_at: '2026-04-15T00:00:00Z',
           tenant: 'tenant-1',
         } as any}
+        assetFacts={[]}
         data={null}
         isLoading={false}
         onRefresh={() => undefined}
@@ -72,6 +73,7 @@ describe('RmmVitalsPanel', () => {
           last_seen_at: '2026-04-15T17:07:13Z',
           last_rmm_sync_at: '2026-04-15T17:08:00Z',
         } as any}
+        assetFacts={[]}
         data={null}
         isLoading={false}
         onRefresh={() => undefined}
@@ -83,5 +85,52 @@ describe('RmmVitalsPanel', () => {
     expect(html).toContain('online');
     expect(html).toContain('None');
     expect(html).toContain('N/A');
+  });
+
+  it('renders Tanium criticality when an available fact exists', () => {
+    const html = renderToStaticMarkup(
+      <RmmVitalsPanel
+        asset={{
+          asset_id: 'asset-1',
+          asset_type: 'workstation',
+          client_id: 'client-1',
+          asset_tag: 'tanium:1',
+          name: 'Managed Device',
+          status: 'active',
+          created_at: '2026-04-15T00:00:00Z',
+          updated_at: '2026-04-15T00:00:00Z',
+          tenant: 'tenant-1',
+          rmm_provider: 'tanium',
+          rmm_device_id: '1',
+          agent_status: 'online',
+        } as any}
+        assetFacts={[
+          {
+            asset_fact_id: 'fact-1',
+            tenant: 'tenant-1',
+            asset_id: 'asset-1',
+            source_type: 'integration',
+            provider: 'tanium',
+            namespace: 'tanium',
+            fact_key: 'criticality',
+            label: 'Tanium Criticality',
+            value_text: 'High',
+            value_number: 1.67,
+            value_json: {},
+            source: 'tanium.gateway.sensor.Endpoint Criticality with Level',
+            is_available: true,
+            created_at: '2026-04-15T00:00:00Z',
+            updated_at: '2026-04-15T00:00:00Z',
+          } as any,
+        ]}
+        data={null}
+        isLoading={false}
+        onRefresh={() => undefined}
+        isRefreshing={false}
+      />
+    );
+
+    expect(html).toContain('Tanium Criticality');
+    expect(html).toContain('High');
   });
 });

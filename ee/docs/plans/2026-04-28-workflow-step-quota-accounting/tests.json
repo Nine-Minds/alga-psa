@@ -1,0 +1,181 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: quota resolver uses an active Stripe subscription current_period_start/current_period_end and stores period_source stripe_subscription.",
+    "implemented": true,
+    "featureIds": [
+      "F003"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: quota resolver falls back to the current UTC calendar month and tier defaults when no valid active Stripe period exists.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: quota resolver applies metadata precedence of Stripe price metadata, then product metadata, then tier default.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F007"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: quota resolver maps workflow_step_limit=unlimited to effective_limit null and ignores invalid metadata by falling back safely.",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB integration: migrated workflow_step_usage_periods supports insert/upsert by tenant, period_start, and period_end and enforces uniqueness.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB integration: atomic reservation increments used_count below a finite limit and rejects without incrementing at the limit.",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "DB integration: concurrent finite reservations cannot increase used_count beyond effective_limit.",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F011"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "DB integration: unlimited reservations always succeed and still increment used_count for reporting.",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F012"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Runtime integration: DB WorkflowRuntimeV2 reserves quota before creating a STARTED step row and executes normally under the limit.",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F013"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Runtime integration: DB WorkflowRuntimeV2 quota exhaustion creates a quota wait, marks the run WAITING at the current node_path, and creates no step row for the blocked step.",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Runtime integration: retry attempts and forEach body attempts each consume additional quota when the attempt starts.",
+    "implemented": true,
+    "featureIds": [
+      "F027",
+      "F028"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Runtime integration: event.wait, time.wait, or human.task consumes quota on first entry and does not repeatedly consume while the run remains waiting.",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Temporal integration: projectWorkflowRuntimeV2StepStart reserves quota before creating a STARTED step row and reports quota exhaustion as a controlled pause/wait path.",
+    "implemented": true,
+    "featureIds": [
+      "F014",
+      "F015",
+      "F016",
+      "F017"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Job integration: workflow-quota-resume-scan skips exhausted tenants, resolves eligible quota waits, and sets matching runs back to RUNNING without pre-consuming quota.",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F021",
+      "F024"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Job integration: concurrent quota resume scans use row locking or equivalent safeguards so the same wait is not resolved twice.",
+    "implemented": true,
+    "featureIds": [
+      "F020"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Action/API integration: manual quota resume verifies tenant ownership and permissions, resumes when quota is available, and does not bypass runtime reservation.",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F024"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Action/API integration: manual quota resume returns used count, effective limit, and reset time when quota remains exhausted.",
+    "implemented": true,
+    "featureIds": [
+      "F023",
+      "F025"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Diagnostic integration: reconciliation reports drift between workflow_step_usage_periods.used_count and workflow_run_steps joined to workflow_runs for a tenant period.",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "Observability: quota reservation, quota exceeded, resume, invalid metadata fallback, and fallback-calendar usage emit structured logs or workflow run logs with tenant and period context.",
+    "implemented": true,
+    "featureIds": [
+      "F018"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Documentation review: support and engineering notes describe quota source, default limits, metadata override, pause/resume behavior, and reconciliation procedure.",
+    "implemented": true,
+    "featureIds": [
+      "F030"
+    ]
+  }
+]

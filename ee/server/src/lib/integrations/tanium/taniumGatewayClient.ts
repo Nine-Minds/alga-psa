@@ -45,6 +45,20 @@ export interface TaniumEndpointRecord {
   metadata?: Record<string, unknown>;
 }
 
+export interface TaniumSensorColumn {
+  name: string;
+  values: Array<string | null>;
+}
+
+export interface TaniumEndpointCriticalityReading {
+  endpointId: string;
+  label: string | null;
+  multiplier: number | null;
+  columns: TaniumSensorColumn[];
+  sourceUpdatedAt: string | null;
+  isAvailable: boolean;
+}
+
 function ensureHttpUrl(url: string): string {
   const trimmed = String(url || '').trim();
   if (!trimmed) return '';
@@ -619,6 +633,143 @@ export class TaniumGatewayClient {
     return endpoints;
   }
 
+  async getCriticalitySensorMetadata(): Promise<Array<{
+    name: string;
+    description: string | null;
+    valueType: string | null;
+    virtual: boolean | null;
+    harvested: boolean | null;
+    contentSetName: string | null;
+    columns: Array<{ name: string; valueType: string | null; hidden: boolean | null }>;
+  }>> {
+    const data = await this.query<{
+      sensors?: {
+        edges?: Array<{
+          node?: {
+            name?: string;
+            description?: string | null;
+            valueType?: string | null;
+            virtual?: boolean | null;
+            harvested?: boolean | null;
+            contentSetName?: string | null;
+            columns?: Array<{ name?: string; valueType?: string | null; hidden?: boolean | null } | null> | null;
+          } | null;
+        }>;
+      };
+    }>(
+      `
+        query TaniumCriticalitySensorMetadata {
+          sensors(
+            first: 10
+            filter: { path: "name", op: EQ, value: "Endpoint Criticality with Level" }
+          ) {
+            edges {
+              node {
+                name
+                description
+                valueType
+                virtual
+                harvested
+                contentSetName
+                columns {
+                  name
+                  valueType
+                  hidden
+                }
+              }
+            }
+          }
+        }
+      `
+    );
+
+    return (data?.sensors?.edges || [])
+      .map((edge) => edge?.node)
+      .filter((node): node is NonNullable<typeof node> => Boolean(node?.name))
+      .map((node) => ({
+        name: String(node.name),
+        description: node.description ?? null,
+        valueType: node.valueType ?? null,
+        virtual: typeof node.virtual === 'boolean' ? node.virtual : null,
+        harvested: typeof node.harvested === 'boolean' ? node.harvested : null,
+        contentSetName: node.contentSetName ?? null,
+        columns: (node.columns || [])
+          .filter((column): column is NonNullable<typeof column> => Boolean(column?.name))
+          .map((column) => ({
+            name: String(column.name),
+            valueType: column.valueType ?? null,
+            hidden: typeof column.hidden === 'boolean' ? column.hidden : null,
+          })),
+      }));
+  }
+
+  async listEndpointCriticalityReadings(input?: { computerGroupId?: string | null }): Promise<Map<string, TaniumEndpointCriticalityReading>> {
+    const query = `
+      query TaniumEndpointCriticality($first: Int!, $after: Cursor, $filter: EndpointFieldFilter) {
+        endpoints(first: $first, after: $after, filter: $filter) {
+          edges {
+            node {
+              id
+              criticality: sensorReadings(sensors: [{ name: "Endpoint Criticality with Level" }]) {
+                columns {
+                  name
+                  values
+                }
+              }
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+        }
+      }
+    `;
+    const filter = input?.computerGroupId
+      ? { memberOf: { id: String(input.computerGroupId) }, op: 'EQ', negated: false, any: false }
+      : null;
+
+    const byEndpointId = new Map<string, TaniumEndpointCriticalityReading>();
+    let hasNextPage = true;
+    let after: string | null = null;
+
+    while (hasNextPage) {
+      const data = await this.query<{
+        endpoints?: {
+          edges?: Array<{
+            node?: {
+              id?: string;
+              criticality?: {
+                columns?: Array<{ name?: string | null; values?: Array<string | null> | null } | null> | null;
+              } | null;
+            } | null;
+          }>;
+          pageInfo?: { hasNextPage?: boolean; endCursor?: string | null };
+        };
+      }>(query, { first: 250, after, filter });
+
+      for (const edge of data?.endpoints?.edges || []) {
+        const node = edge?.node;
+        if (!node?.id) continue;
+        const endpointId = String(node.id);
+        const columns = (node.criticality?.columns || [])
+          .filter((column): column is NonNullable<typeof column> => Boolean(column?.name))
+          .map((column) => ({
+            name: String(column.name),
+            values: Array.isArray(column.values) ? column.values.map((value) => value ?? null) : [],
+          }));
+
+        byEndpointId.set(endpointId, parseCriticalityFromColumns(endpointId, columns));
+      }
+
+      hasNextPage = Boolean(data?.endpoints?.pageInfo?.hasNextPage);
+      after = data?.endpoints?.pageInfo?.endCursor || null;
+      if (!after) hasNextPage = false;
+    }
+
+    return byEndpointId;
+  }
+
   async listAgedOutAssetFallback(input?: { computerGroupId?: string | null }): Promise<TaniumEndpointRecord[]> {
     if (!this.assetApi) return [];
 
@@ -658,4 +809,54 @@ export class TaniumGatewayClient {
 
 export function normalizeTaniumGatewayUrl(url: string): string {
   return ensureHttpUrl(url);
+}
+
+function parseCriticalityFromColumns(endpointId: string, columns: TaniumSensorColumn[]): TaniumEndpointCriticalityReading {
+  const normalized = columns.reduce<Record<string, Array<string | null>>>((acc, column) => {
+    acc[column.name.trim().toLowerCase()] = column.values;
+    return acc;
+  }, {});
+
+  const textCandidates = [
+    normalized.criticality_level?.[0],
+    normalized.level?.[0],
+    normalized.criticality_text?.[0],
+    normalized.criticality?.[0],
+  ];
+  const labelRaw = textCandidates.find((value) => String(value || '').trim().length > 0) || null;
+  const label = labelRaw ? String(labelRaw).trim() : null;
+
+  const numericCandidates = [
+    normalized.criticality_value?.[0],
+    normalized.multiplier?.[0],
+    normalized.criticality_multiplier?.[0],
+  ];
+  const numericRaw = numericCandidates.find((value) => String(value || '').trim().length > 0) || null;
+  const numericParsed = numericRaw === null ? NaN : Number(numericRaw);
+  const multiplier = Number.isFinite(numericParsed) ? numericParsed : labelToMultiplier(label);
+
+  return {
+    endpointId,
+    label,
+    multiplier,
+    columns,
+    sourceUpdatedAt: null,
+    isAvailable: Boolean(label || Number.isFinite(multiplier as number)),
+  };
+}
+
+function labelToMultiplier(label: string | null): number | null {
+  if (!label) return null;
+  switch (label.toLowerCase()) {
+    case 'low':
+      return 1;
+    case 'medium':
+      return 1.33;
+    case 'high':
+      return 1.67;
+    case 'critical':
+      return 2;
+    default:
+      return null;
+  }
 }

@@ -10,6 +10,7 @@
 
 import { Context } from '@temporalio/activity';
 import { getAdminConnection, refreshAdminConnection } from '@alga-psa/db/admin.js';
+import { retryOnReadOnly } from '@alga-psa/db';
 import { TagModel } from '@alga-psa/shared/models/tagModel.js';
 import { Knex } from 'knex';
 import type {
@@ -24,24 +25,6 @@ import type {
   DeleteTenantDataResult,
   SendCancellationEmailResult,
 } from '../types/tenant-deletion-types.js';
-
-/**
- * PgBouncer transaction-pooling in front of a Citus/Patroni HA setup occasionally
- * hands out a backend connection that has become read-only (e.g., after a failover
- * the backend is now attached to a standby). The process-cached admin pool's
- * own probe can pass on those connections, so queries fail later with
- * "read-only transaction" or "writing to worker nodes is not currently allowed".
- *
- * Callers use `isReadOnlyError` to detect the pattern, then call
- * `refreshAdminConnection()` to force-recreate the pool and retry once.
- */
-const READ_ONLY_ERROR_RE =
-  /read-only transaction|writing to worker nodes|cannot execute [A-Z]+ in a read-only/i;
-
-function isReadOnlyError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err ?? '');
-  return READ_ONLY_ERROR_RE.test(msg);
-}
 
 /**
  * Comprehensive list of tables to delete from, in dependency order.
@@ -59,8 +42,8 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'workflow_task_history', 'workflow_form_schemas',
 
   // Workflow runtime V2 (child tables first, then parent)
-  'workflow_run_logs', 'workflow_runtime_events',
-  'workflow_runs', 'tenant_workflow_schedule',
+  'workflow_run_logs', 'workflow_runtime_events', 'workflow_step_usage_periods',
+  'workflow_runs', 'tenant_workflow_schedule', 'workflow_definitions',
 
   // Task/project details
   'task_checklist_items', 'project_task_dependencies', 'task_resources',
@@ -171,7 +154,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Asset details
   'asset_maintenance_notifications', 'asset_maintenance_history', 'asset_service_history',
   'asset_ticket_associations', 'asset_document_associations', 'asset_relationships',
-  'asset_history', 'asset_associations', 'asset_software',
+  'asset_history', 'asset_associations', 'asset_software', 'asset_facts',
   'workstation_assets', 'server_assets', 'network_device_assets', 'mobile_device_assets', 'printer_assets',
 
   // Software catalog
@@ -257,6 +240,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'document_share_access_log', 'document_share_links',
   'kb_article_relations', 'kb_article_reviewers', 'kb_article_templates', 'kb_articles',
   'document_default_folders',
+  // Document folder templates: items and init rows reference document_folder_templates
+  // (CASCADE / SET NULL), so we delete the children first for a clean trail.
+  'document_folder_template_items', 'document_entity_folder_init', 'document_folder_templates',
   // Document associations must come before documents
   'document_associations',
 
@@ -1170,6 +1156,13 @@ async function getTableTenantColumn(
  * - authorization_bundle_revisions.bundle_id → authorization_bundles.bundle_id
  * - authorization_bundles.published_revision_id → authorization_bundle_revisions.revision_id
  *   (Null published_revision_id first so revisions can be deleted before bundles.)
+ *
+ * - inbound_ticket_defaults.client_id → clients.client_id (NO ACTION)
+ * - clients.inbound_ticket_defaults_id → inbound_ticket_defaults.id (NO ACTION)
+ *   (Cycle. Deletion order has clients early and inbound_ticket_defaults late,
+ *    so we null inbound_ticket_defaults.client_id here to let clients be
+ *    deleted first; clients.inbound_ticket_defaults_id rows are gone by the
+ *    time we get to inbound_ticket_defaults.)
  */
 async function breakCircularDependencies(
   knex: Knex,
@@ -1244,6 +1237,25 @@ async function breakCircularDependencies(
     });
   }
 
+  // Step 5: NULL out inbound_ticket_defaults.client_id so clients can be
+  // deleted before inbound_ticket_defaults (which lives in the late
+  // configuration block). The reverse FK clients.inbound_ticket_defaults_id
+  // is naturally cleared by the time we delete inbound_ticket_defaults.
+  try {
+    const result5 = await knex('inbound_ticket_defaults')
+      .where({ tenant: tenantId })
+      .whereNotNull('client_id')
+      .update({ client_id: null });
+    if (result5 > 0) {
+      log.info('Cleared client_id references in inbound_ticket_defaults', { count: result5 });
+    }
+  } catch (error) {
+    // Ignore if table/column doesn't exist (older schemas)
+    log.debug('Could not clear client_id in inbound_ticket_defaults (table or column may not exist)', {
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
+  }
+
   log.info('Circular dependencies broken successfully');
 }
 
@@ -1266,24 +1278,23 @@ export async function deleteTenantData(
   try {
     let adminKnex = await getAdminConnection();
 
-    // Retry helper for transient read-only backends. See isReadOnlyError above
-    // for context. If the retry also fails, the error propagates.
-    const withReadOnlyRetry = async <T>(
+    // Per-op wrapper that reuses `adminKnex` across calls — on a read-only
+    // failure, the refresh callback updates the closure variable so the
+    // remainder of this deletion uses the new pool without re-probing.
+    const withReadOnlyRetry = <T>(
       op: (k: Knex) => Promise<T>,
       label: string
-    ): Promise<T> => {
-      try {
-        return await op(adminKnex);
-      } catch (err) {
-        if (!isReadOnlyError(err)) throw err;
-        log.warn(
-          `[${label}] admin pool returned a read-only connection; refreshing pool and retrying once`,
-          { error: err instanceof Error ? err.message : String(err) }
-        );
-        adminKnex = await refreshAdminConnection();
-        return await op(adminKnex);
-      }
-    };
+    ): Promise<T> =>
+      retryOnReadOnly(
+        () => op(adminKnex),
+        async () => {
+          adminKnex = await refreshAdminConnection();
+        },
+        {
+          logLabel: label,
+          logger: { warn: (msg, meta) => log.warn(msg, meta as any) },
+        }
+      );
 
     // ============================================================
     // CRITICAL SAFEGUARD 1: Validate tenant is not master tenant

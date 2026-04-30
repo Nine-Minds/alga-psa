@@ -12,6 +12,17 @@
   z-index: 10;
 }
 
+.stackedContainer {
+  display: block;
+  max-height: none;
+  min-height: 2.5rem;
+}
+
+.stackedContainer .paletteToggle {
+  top: 8px;
+  right: 8px;
+}
+
 /* Clips the sliding card so its translateX animation cannot bleed past
    the palette's left edge into the app sidebar. */
 .clipper {
@@ -53,6 +64,41 @@
   padding: 0;
   margin: 0;
   border-width: 0;
+}
+
+.stackedContainer .clipper {
+  display: block;
+  flex: none;
+  min-height: auto;
+  overflow: visible;
+}
+
+.stackedContainer .card {
+  flex: none;
+}
+
+.stackedContainer .cardHidden {
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+}
+
+.stackedContainer .scrollArea {
+  flex: none;
+  max-height: 20rem;
+}
+
+.itemGrid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.itemGridFloating {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.itemGridStacked {
+  grid-template-columns: repeat(auto-fill, 5rem);
 }
 
 .scrollArea {

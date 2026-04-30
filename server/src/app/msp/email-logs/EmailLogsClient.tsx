@@ -6,6 +6,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogHeader } from '@alga-psa/ui/components/Dialog';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getEmailLogMetrics,
   getEmailLogs,
@@ -74,6 +75,7 @@ function formatSentAt(value: unknown): string {
 }
 
 export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLogsClientProps) {
+  const { t } = useTranslation('msp/admin');
   const seedLogs = initialLogs ?? EMPTY_LOGS;
   const [metrics, setMetrics] = useState<EmailLogMetrics>(initialMetrics ?? EMPTY_METRICS);
   const [logs, setLogs] = useState(seedLogs.data);
@@ -161,17 +163,17 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
   const columns: ColumnDefinition<EmailSendingLogListRecord>[] = useMemo(() => {
     return [
       {
-        title: 'Time',
+        title: t('emailLogs.table.time'),
         dataIndex: 'sent_at',
         render: (value) => formatSentAt(value),
       },
       {
-        title: 'Ticket',
+        title: t('emailLogs.table.ticket'),
         dataIndex: 'ticket_number',
         render: (value) => String(value || '—'),
       },
       {
-        title: 'Recipient',
+        title: t('emailLogs.table.recipient'),
         dataIndex: 'to_addresses',
         render: (value) => {
           const list = parseEmailList(value);
@@ -179,12 +181,12 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
         },
       },
       {
-        title: 'Subject',
+        title: t('emailLogs.table.subject'),
         dataIndex: 'subject',
         render: (value) => String(value || '—'),
       },
       {
-        title: 'Status',
+        title: t('emailLogs.table.status'),
         dataIndex: 'status',
         render: (value) => {
           const v = String(value || '').toLowerCase();
@@ -200,7 +202,7 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
         },
       },
     ];
-  }, []);
+  }, [t]);
 
   const failedRatePct = Math.round((metrics.failedRate ?? 0) * 100);
 
@@ -209,15 +211,15 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
       {/* Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="p-4">
-          <div className="text-sm text-[rgb(var(--color-text-500))]">Total sent</div>
+          <div className="text-sm text-[rgb(var(--color-text-500))]">{t('emailLogs.metrics.totalSent')}</div>
           <div className="text-2xl font-semibold text-[rgb(var(--color-text-900))]">{metrics.total}</div>
         </Card>
         <Card className="p-4">
-          <div className="text-sm text-[rgb(var(--color-text-500))]">Failed rate</div>
+          <div className="text-sm text-[rgb(var(--color-text-500))]">{t('emailLogs.metrics.failedRate')}</div>
           <div className="text-2xl font-semibold text-[rgb(var(--color-text-900))]">{failedRatePct}%</div>
         </Card>
         <Card className="p-4">
-          <div className="text-sm text-[rgb(var(--color-text-500))]">Today</div>
+          <div className="text-sm text-[rgb(var(--color-text-500))]">{t('emailLogs.metrics.today')}</div>
           <div className="text-2xl font-semibold text-[rgb(var(--color-text-900))]">{metrics.today}</div>
         </Card>
       </div>
@@ -229,42 +231,42 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
             <Input
               id="email-logs-filter-start-date"
               type="date"
-              label="Start date"
+              label={t('emailLogs.filters.startDate')}
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
             />
             <Input
               id="email-logs-filter-end-date"
               type="date"
-              label="End date"
+              label={t('emailLogs.filters.endDate')}
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
             />
             <div>
-              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">Status</label>
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">{t('emailLogs.filters.status')}</label>
               <select
                 className="w-full h-10 rounded-md border border-[rgb(var(--color-border-400))] bg-white px-3 text-sm"
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
               >
-                <option value="">All</option>
-                <option value="sent">Sent</option>
-                <option value="failed">Failed</option>
+                <option value="">{t('emailLogs.filters.statusOptions.all')}</option>
+                <option value="sent">{t('emailLogs.filters.statusOptions.sent')}</option>
+                <option value="failed">{t('emailLogs.filters.statusOptions.failed')}</option>
               </select>
             </div>
             <Input
               id="email-logs-filter-recipient"
               type="text"
-              label="Recipient"
-              placeholder="Search email…"
+              label={t('emailLogs.filters.recipient')}
+              placeholder={t('emailLogs.filters.recipientPlaceholder')}
               value={recipientEmail}
               onChange={(e) => setRecipientEmail(e.target.value)}
             />
             <Input
               id="email-logs-filter-ticket"
               type="text"
-              label="Ticket"
-              placeholder="Ticket #…"
+              label={t('emailLogs.filters.ticket')}
+              placeholder={t('emailLogs.filters.ticketPlaceholder')}
               value={ticketNumber}
               onChange={(e) => setTicketNumber(e.target.value)}
             />
@@ -272,7 +274,7 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
 
           <div className="flex items-center justify-between">
             <div className="text-sm text-[rgb(var(--color-text-500))]">
-              {isLoading ? 'Loading…' : `${total} result${total === 1 ? '' : 's'}`}
+              {isLoading ? t('emailLogs.loading') : t('emailLogs.results', { count: total })}
             </div>
             <Button
               id="email-logs-refresh"
@@ -283,7 +285,7 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
               }}
               disabled={isLoading}
             >
-              Refresh
+              {t('emailLogs.refresh')}
             </Button>
           </div>
         </div>
@@ -321,63 +323,63 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
         id="email-log-detail"
         isOpen={Boolean(selected)}
         onClose={() => setSelected(null)}
-        title="Email Log Details"
+        title={t('emailLogs.detail.title')}
         draggable={false}
         footer={(
           <div className="flex justify-end space-x-2">
             <Button id="email-log-detail-close" variant="outline" onClick={() => setSelected(null)}>
-              Close
+              {t('emailLogs.close')}
             </Button>
           </div>
         )}
       >
         <DialogHeader>
-          <div className="text-sm text-[rgb(var(--color-text-500))]">{selected?.subject || 'No subject'}</div>
+          <div className="text-sm text-[rgb(var(--color-text-500))]">{selected?.subject || t('emailLogs.detail.noSubject')}</div>
         </DialogHeader>
         <DialogContent>
           {selected && (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <div className="text-xs text-[rgb(var(--color-text-500))]">Sent at</div>
+                  <div className="text-xs text-[rgb(var(--color-text-500))]">{t('emailLogs.detail.sentAt')}</div>
                   <div className="text-sm text-[rgb(var(--color-text-900))]">{formatSentAt(selected.sent_at)}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-[rgb(var(--color-text-500))]">Status</div>
+                  <div className="text-xs text-[rgb(var(--color-text-500))]">{t('emailLogs.detail.status')}</div>
                   <div className="text-sm text-[rgb(var(--color-text-900))]">{selected.status}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-[rgb(var(--color-text-500))]">Provider</div>
+                  <div className="text-xs text-[rgb(var(--color-text-500))]">{t('emailLogs.detail.provider')}</div>
                   <div className="text-sm text-[rgb(var(--color-text-900))]">
                     {selected.provider_type} ({selected.provider_id})
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-[rgb(var(--color-text-500))]">Message ID</div>
+                  <div className="text-xs text-[rgb(var(--color-text-500))]">{t('emailLogs.detail.messageId')}</div>
                   <div className="text-sm text-[rgb(var(--color-text-900))] break-all">
                     {selected.message_id || '—'}
                   </div>
                 </div>
                 <div className="md:col-span-2">
-                  <div className="text-xs text-[rgb(var(--color-text-500))]">To</div>
+                  <div className="text-xs text-[rgb(var(--color-text-500))]">{t('emailLogs.detail.to')}</div>
                   <div className="text-sm text-[rgb(var(--color-text-900))] break-all">
                     {parseEmailList(selected.to_addresses).join(', ') || '—'}
                   </div>
                 </div>
                 <div className="md:col-span-2">
-                  <div className="text-xs text-[rgb(var(--color-text-500))]">From</div>
+                  <div className="text-xs text-[rgb(var(--color-text-500))]">{t('emailLogs.detail.from')}</div>
                   <div className="text-sm text-[rgb(var(--color-text-900))] break-all">{selected.from_address}</div>
                 </div>
                 {selected.error_message && (
                   <div className="md:col-span-2">
-                    <div className="text-xs text-[rgb(var(--color-text-500))]">Error</div>
+                    <div className="text-xs text-[rgb(var(--color-text-500))]">{t('emailLogs.detail.error')}</div>
                     <div className="text-sm text-red-600 break-words">{selected.error_message}</div>
                   </div>
                 )}
               </div>
 
               <div>
-                <div className="text-xs text-[rgb(var(--color-text-500))] mb-1">Metadata</div>
+                <div className="text-xs text-[rgb(var(--color-text-500))] mb-1">{t('emailLogs.detail.metadata')}</div>
                 <pre className="text-xs bg-gray-50 border border-gray-200 rounded-md p-3 overflow-auto max-h-72">
                   {JSON.stringify(selected.metadata ?? {}, null, 2)}
                 </pre>

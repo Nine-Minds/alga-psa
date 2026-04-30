@@ -71,7 +71,7 @@ export default function InstallerPanel() {
       }
     }
     e.target.value = '';
-  }, []);
+  }, [t]);
 
   const reset = useCallback(async () => {
     try {
@@ -107,7 +107,7 @@ export default function InstallerPanel() {
     } else {
       setFile(null);
     }
-  }, []);
+  }, [t]);
 
   // Primary "one-click" install: proxy upload (server action) -> finalize
   const handleInstall = useCallback(async () => {
@@ -127,7 +127,7 @@ export default function InstallerPanel() {
       const payload = (await extUploadProxy(fd)) as UploadProxyResponse;
       const key = payload?.upload?.key;
       if (!key || typeof key !== 'string') {
-        setError({ error: 'Upload succeeded but no key was returned' });
+        setError({ error: t('installer.uploadNoKey') });
         setInstalling(false);
         return;
       }
@@ -152,7 +152,7 @@ export default function InstallerPanel() {
             setNeedsManifest(true);
           }
           setError({
-            error: message || (manifestIssue ? 'Could not extract valid manifest from bundle.' : 'Unexpected error finalizing installation'),
+            error: message || (manifestIssue ? t('installer.manifestMissing') : t('installer.finalizeError')),
             code,
             details,
           });
@@ -167,11 +167,11 @@ export default function InstallerPanel() {
             version: fin.version.version,
           });
           if (!installResult?.success) {
-            throw new Error('Extension finalized, but install did not complete');
+            throw new Error(t('installer.installCompleteError'));
           }
         } catch (installErr: any) {
           setError({
-            error: installErr?.message ?? 'Extension finalized, but install did not complete',
+            error: installErr?.message ?? t('installer.installCompleteError'),
             code: installErr?.code,
             details: installErr?.details,
           });
@@ -182,17 +182,17 @@ export default function InstallerPanel() {
         setInstalling(false);
       } catch (finErr: any) {
         setError({
-          error: finErr?.message ?? 'Unexpected error finalizing installation',
+          error: finErr?.message ?? t('installer.finalizeError'),
           code: finErr?.code,
           details: finErr?.details,
         });
         setInstalling(false);
       }
     } catch (err: any) {
-      setError({ error: err?.message ?? 'Unexpected error during installation', details: err });
+      setError({ error: err?.message ?? t('installer.installUnexpected'), details: err });
       setInstalling(false);
     }
-  }, [file, manifestJson]);
+  }, [file, manifestJson, t]);
 
   // Secondary finalize step if manifest is required
   const handleFinalizeWithManifest = useCallback(async () => {
@@ -200,7 +200,7 @@ export default function InstallerPanel() {
     if (!key) return;
     const trimmedManifest = manifestJson.trim();
     if (!trimmedManifest) {
-      setError({ error: 'Please paste the manifest JSON before finalizing.' });
+      setError({ error: t('installer.finalizeRequireManifest') });
       return;
     }
 
@@ -221,7 +221,7 @@ export default function InstallerPanel() {
       if (!finalizeResponse.success) {
         const { message, code, details } = (finalizeResponse as { success: false; error: { message: string; code?: string; details?: unknown } }).error;
         setError({
-          error: message || 'Failed to finalize with provided manifest',
+          error: message || t('installer.finalizeProvidedFailed'),
           code,
           details,
         });
@@ -250,14 +250,14 @@ export default function InstallerPanel() {
       setNeedsManifest(false);
     } catch (err: any) {
       setError({
-        error: err?.message ?? 'Failed to finalize with provided manifest',
+        error: err?.message ?? t('installer.finalizeProvidedFailed'),
         code: err?.code,
         details: err?.details,
       });
     } finally {
       setInstalling(false);
     }
-  }, [manifestJson, file?.size]);
+  }, [manifestJson, file?.size, t]);
 
   // Build the dynamic action buttons shown in a sticky 2x grid
   const renderActionButtons = () => {
@@ -265,23 +265,23 @@ export default function InstallerPanel() {
     if (!success && !needsManifest) {
       buttons.push(
         <Button key="install" id="installer-install-btn" variant="default" disabled={!file || installing} onClick={handleInstall}>
-          {installing ? 'Installing…' : 'Install'}
+          {installing ? t('installer.installing') : t('installer.install')}
         </Button>
       );
       buttons.push(
         <Button key="reset" id="installer-reset-btn" variant="ghost" disabled={installing} onClick={reset}>
-          Reset
+          {t('installer.reset')}
         </Button>
       );
     } else if (!success && needsManifest) {
       buttons.push(
         <Button key="finalize" id="installer-finalize-btn" variant="default" disabled={installing || !manifestJson.trim()} onClick={handleFinalizeWithManifest}>
-          {installing ? 'Finalizing…' : 'Finalize'}
+          {installing ? t('installer.finalizing') : t('installer.finalize')}
         </Button>
       );
       buttons.push(
         <Button key="cancel" id="installer-cancel-btn" variant="ghost" disabled={installing} onClick={reset}>
-          Cancel
+          {t('installer.cancel')}
         </Button>
       );
     } else if (success) {
@@ -291,12 +291,12 @@ export default function InstallerPanel() {
           href="/msp/settings/extensions"
           className="inline-flex items-center justify-center px-3 py-2 text-sm rounded-md bg-primary-600 text-white hover:bg-primary-700"
         >
-          Manage Extensions
+          {t('installer.manageExtensions')}
         </Link>
       );
       buttons.push(
         <Button key="install-another" id="installer-another-btn" variant="ghost" onClick={reset}>
-          Install Another
+          {t('installer.installAnother')}
         </Button>
       );
     }
@@ -315,14 +315,14 @@ export default function InstallerPanel() {
   return (
     <Card className="relative">
       <CardHeader>
-        <CardTitle>Install Extension</CardTitle>
-        <CardDescription>Choose a signed bundle and install it.</CardDescription>
+        <CardTitle>{t('installer.title')}</CardTitle>
+        <CardDescription>{t('installer.description')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 pb-24">
         {!success && (
           <>
             <div className="space-y-2">
-              <Label htmlFor="installer-bundle-input">Extension Bundle (.tar.zst)</Label>
+              <Label htmlFor="installer-bundle-input">{t('installer.bundleLabel')}</Label>
               <Input
                 id="installer-bundle-input"
                 type="file"
@@ -331,7 +331,7 @@ export default function InstallerPanel() {
                 onChange={handleFileChange}
               />
               <p className="text-xs text-gray-500">
-                The manifest will be extracted automatically from the bundle.
+                {t('installer.bundleHint')}
               </p>
             </div>
 
@@ -345,13 +345,13 @@ export default function InstallerPanel() {
                   disabled={installing}
                 >
                   <span className={`transform transition-transform ${showAdvanced ? 'rotate-90' : ''}`}>▶</span>
-                  Advanced Options
+                  {t('installer.advancedOptions')}
                 </button>
                 {showAdvanced && (
                   <div className="mt-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="installer-manifest-json" className="text-sm">
-                        Custom Manifest (optional override)
+                        {t('installer.customManifestLabel')}
                       </Label>
                       <div>
                         <Input
@@ -371,13 +371,13 @@ export default function InstallerPanel() {
                           onClick={() => manifestFileInputRef.current?.click()}
                           disabled={installing}
                         >
-                          Browse
+                          {t('installer.browse')}
                         </Button>
                       </div>
                     </div>
                     <TextArea
                       id="installer-manifest-json"
-                      placeholder="Leave empty to use manifest from bundle, or paste custom manifest.json here"
+                      placeholder={t('installer.customManifestPlaceholder')}
                       rows={8}
                       value={manifestJson}
                       onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setManifestJson(e.target.value)}
@@ -392,11 +392,11 @@ export default function InstallerPanel() {
             {needsManifest && (
               <div className="space-y-3">
                 <div className="text-sm text-warning">
-                  Could not extract manifest from bundle. Please provide it manually.
+                  {t('installer.manifestExtractFailed')}
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="installer-manifest-json">Manifest JSON</Label>
+                    <Label htmlFor="installer-manifest-json">{t('installer.manifestJsonLabel')}</Label>
                     <div>
                       <Input
                         id="installer-manifest-file-fallback"
@@ -414,13 +414,13 @@ export default function InstallerPanel() {
                         onClick={() => manifestFileInputRef.current?.click()}
                         disabled={installing}
                       >
-                        Browse
+                        {t('installer.browse')}
                       </Button>
                     </div>
                   </div>
                   <TextArea
                     id="installer-manifest-json-fallback"
-                    placeholder='Paste the manifest.json content here'
+                    placeholder={t('installer.manifestJsonPlaceholder')}
                     rows={10}
                     value={manifestJson}
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setManifestJson(e.target.value)}
@@ -436,9 +436,9 @@ export default function InstallerPanel() {
           <div className="space-y-3">
             <Alert variant="success">
               <AlertDescription>
-                <div className="font-medium">Extension installed</div>
+                <div className="font-medium">{t('installer.installed')}</div>
                 <div className="text-sm mt-1">
-                  {success.extension.name} v{success.version.version}
+                  {t('installer.installedName', { name: success.extension.name, version: success.version.version })}
                 </div>
               </AlertDescription>
             </Alert>
@@ -449,7 +449,7 @@ export default function InstallerPanel() {
         {error && (
           <Alert variant="destructive">
             <AlertDescription>
-              <div className="text-sm font-medium">Error</div>
+              <div className="text-sm font-medium">{t('installer.error')}</div>
               <div className="text-sm mt-1">{error.error}</div>
             </AlertDescription>
           </Alert>

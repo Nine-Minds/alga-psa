@@ -9,7 +9,7 @@ import type { Knex } from "knex";
 import { dump as dumpYaml } from "js-yaml";
 import os from "os";
 
-import { getAdminConnection } from "@alga-psa/db/admin.js";
+import { getAdminConnection, retryOnAdminReadOnly } from "@alga-psa/db/admin.js";
 
 import type {
   PortalDomainActivityRecord,
@@ -230,31 +230,41 @@ export async function loadPortalDomain(args: {
 export async function markPortalDomainStatus(
   args: MarkStatusInput,
 ): Promise<void> {
-  const knex = await getConnection();
-  const updates: Record<string, unknown> = {
-    status: args.status,
-    updated_at: knex.fn.now(),
-    last_checked_at: knex.fn.now(),
-  };
+  await retryOnAdminReadOnly(
+    async () => {
+      const knex = await getConnection();
+      const updates: Record<string, unknown> = {
+        status: args.status,
+        updated_at: knex.fn.now(),
+        last_checked_at: knex.fn.now(),
+      };
 
-  if (args.statusMessage !== undefined) {
-    updates.status_message = args.statusMessage;
-  }
+      if (args.statusMessage !== undefined) {
+        updates.status_message = args.statusMessage;
+      }
 
-  if (args.verificationDetails !== undefined) {
-    updates.verification_details = args.verificationDetails;
-  }
+      if (args.verificationDetails !== undefined) {
+        updates.verification_details = args.verificationDetails;
+      }
 
-  await knex(TABLE_NAME).where({ id: args.portalDomainId }).update(updates);
+      await knex(TABLE_NAME).where({ id: args.portalDomainId }).update(updates);
+    },
+    { logLabel: 'markPortalDomainStatus' }
+  );
 }
 
 export async function deletePortalDomainRecord(
   args: { portalDomainId: string; tenantId: string },
 ): Promise<void> {
-  const knex = await getConnection();
-  await knex(TABLE_NAME)
-    .where({ id: args.portalDomainId, tenant: args.tenantId })
-    .delete();
+  await retryOnAdminReadOnly(
+    async () => {
+      const knex = await getConnection();
+      await knex(TABLE_NAME)
+        .where({ id: args.portalDomainId, tenant: args.tenantId })
+        .delete();
+    },
+    { logLabel: 'deletePortalDomainRecord' }
+  );
 }
 
 export async function verifyCnameRecord(
@@ -528,12 +538,18 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
 
   for (const manifest of manifests) {
     try {
-      await knex(TABLE_NAME).where({ id: manifest.record.id }).update({
-        certificate_secret_name: manifest.secretName,
-        last_synced_resource_version: null,
-        updated_at: knex.fn.now(),
-        last_checked_at: knex.fn.now(),
-      });
+      await retryOnAdminReadOnly(
+        async () => {
+          const k = await getConnection();
+          await k(TABLE_NAME).where({ id: manifest.record.id }).update({
+            certificate_secret_name: manifest.secretName,
+            last_synced_resource_version: null,
+            updated_at: k.fn.now(),
+            last_checked_at: k.fn.now(),
+          });
+        },
+        { logLabel: 'portal-domain:syncSecret' }
+      );
     } catch (error) {
       errors.push(
         formatErrorMessage(
@@ -554,12 +570,18 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
 
   if (cleanupIds.length > 0) {
     try {
-      await knex(TABLE_NAME).whereIn("id", cleanupIds).update({
-        certificate_secret_name: null,
-        last_synced_resource_version: null,
-        updated_at: knex.fn.now(),
-        last_checked_at: knex.fn.now(),
-      });
+      await retryOnAdminReadOnly(
+        async () => {
+          const k = await getConnection();
+          await k(TABLE_NAME).whereIn("id", cleanupIds).update({
+            certificate_secret_name: null,
+            last_synced_resource_version: null,
+            updated_at: k.fn.now(),
+            last_checked_at: k.fn.now(),
+          });
+        },
+        { logLabel: 'portal-domain:cleanupDisabled' }
+      );
     } catch (error) {
       errors.push(
         formatErrorMessage(

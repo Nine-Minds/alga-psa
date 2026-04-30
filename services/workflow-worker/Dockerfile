@@ -26,6 +26,7 @@ COPY shared/package.json ./shared/
 COPY services/workflow-worker/package.json ./services/workflow-worker/
 COPY server/package.json ./server/
 COPY packages/core/package.json ./packages/core/
+COPY packages/authorization/package.json ./packages/authorization/
 COPY packages/db/package.json ./packages/db/
 COPY packages/event-bus/package.json ./packages/event-bus/
 COPY packages/event-schemas/package.json ./packages/event-schemas/
@@ -45,6 +46,7 @@ RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm ins
   --workspace=workflow-worker \
   --workspace=server \
   --workspace=@alga-psa/core \
+  --workspace=@alga-psa/authorization \
   --workspace=@alga-psa/db \
   --workspace=@alga-psa/event-bus \
   --workspace=@alga-psa/event-schemas \
@@ -73,6 +75,14 @@ WORKDIR /app/packages/types
 RUN npm run build
 
 WORKDIR /app/packages/db
+RUN npm run build
+# packages/db currently emits under dist/db/src when built in the worker image because
+# it compiles path-mapped sources from the monorepo. Normalize the output to the
+# package.json exports expected by Node at runtime.
+RUN if [ -d dist/db/src ]; then cp -R dist/db/src/. dist/; fi \
+  && tsc-alias -p tsconfig.json -f --resolve-full-paths
+
+WORKDIR /app/packages/authorization
 RUN npm run build
 
 WORKDIR /app/packages/formatting

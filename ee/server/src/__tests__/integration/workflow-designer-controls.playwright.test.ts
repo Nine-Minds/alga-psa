@@ -73,7 +73,7 @@ async function createWorkflowTenant(
       }
     ]
   });
-  await ensureSystemEmailWorkflow(db);
+  await ensureSystemEmailWorkflow(db, tenantData.tenant.tenantId);
 
   // Warm the session on the base URL to ensure cookies apply correctly
   await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' });

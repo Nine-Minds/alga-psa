@@ -1,14 +1,21 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { usePostHog } from 'posthog-js/react';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
+import { Button } from '@alga-psa/ui/components/Button';
 import { usePerformanceTracking } from '@alga-psa/analytics/client';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { HiddenCardsExtrasProvider, type ExtraHiddenItem } from '@alga-psa/onboarding/components';
 import { isEnterprise } from '@/lib/features';
+import MobileAppCard from '@/components/dashboard/MobileAppCard';
+import {
+  dismissDashboardMobileAppCardAction,
+  restoreDashboardMobileAppCardAction,
+} from '@/lib/actions/dashboardMobileAppActions';
 
 function getGreetingKey(): 'morning' | 'afternoon' | 'evening' {
   const hour = new Date().getHours();
@@ -26,10 +33,12 @@ import {
   ClipboardList,
   Calendar,
   Sparkles,
+  RotateCcw,
 } from 'lucide-react';
 
 interface DashboardContainerProps {
   onboardingSection?: React.ReactNode;
+  initialMobileAppCardDismissed?: boolean;
 }
 
 interface FeatureCardProps {
@@ -199,10 +208,55 @@ function CommunityWelcomeBanner({ greeting, title, description }: BannerProps) {
   );
 }
 
-const WelcomeDashboard = ({ onboardingSection }: DashboardContainerProps) => {
+const WelcomeDashboard = ({ onboardingSection, initialMobileAppCardDismissed = false }: DashboardContainerProps) => {
   const posthog = usePostHog();
   const { t } = useTranslation('msp/dashboard');
   const [firstName, setFirstName] = useState<string>('');
+  const [mobileDismissed, setMobileDismissed] = useState(initialMobileAppCardDismissed);
+  const [isMobilePending, startMobileTransition] = useTransition();
+
+  const handleDismissMobileApp = () => {
+    if (isMobilePending) return;
+    setMobileDismissed(true);
+    startMobileTransition(async () => {
+      try {
+        await dismissDashboardMobileAppCardAction();
+      } catch (err) {
+        console.error('Error dismissing mobile app card:', err);
+        toast.error(
+          t('mobileApp.dismissError', { defaultValue: 'Failed to hide the card.' })
+        );
+        setMobileDismissed(false);
+      }
+    });
+  };
+
+  const handleRestoreMobileApp = () => {
+    if (isMobilePending) return;
+    setMobileDismissed(false);
+    startMobileTransition(async () => {
+      try {
+        await restoreDashboardMobileAppCardAction();
+      } catch (err) {
+        console.error('Error restoring mobile app card:', err);
+        toast.error(
+          t('mobileApp.restoreError', { defaultValue: 'Failed to restore the card.' })
+        );
+        setMobileDismissed(true);
+      }
+    });
+  };
+
+  const mobileExtras: ExtraHiddenItem[] = mobileDismissed
+    ? [
+        {
+          id: 'mobile-app',
+          title: t('mobileApp.restore', { defaultValue: 'Get the mobile app' }),
+          onRestore: handleRestoreMobileApp,
+          isRestoring: isMobilePending,
+        },
+      ]
+    : [];
 
   usePerformanceTracking('dashboard');
 
@@ -261,7 +315,7 @@ const WelcomeDashboard = ({ onboardingSection }: DashboardContainerProps) => {
   });
 
   return (
-    <ReflectionContainer id="dashboard-main" label="MSP Dashboard">
+    <ReflectionContainer id="dashboard-main" label={t('mspDashboard')}>
       <div className="min-h-screen p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col gap-8">
@@ -279,7 +333,11 @@ const WelcomeDashboard = ({ onboardingSection }: DashboardContainerProps) => {
                 />
               )}
 
-              {isEnterprise ? onboardingSection : null}
+              {isEnterprise ? (
+                <HiddenCardsExtrasProvider value={mobileExtras}>
+                  {onboardingSection}
+                </HiddenCardsExtrasProvider>
+              ) : null}
 
               <div>
                 <h2 className="text-xl font-semibold mb-4" style={{ color: 'rgb(var(--color-text-900))' }}>
@@ -326,6 +384,36 @@ const WelcomeDashboard = ({ onboardingSection }: DashboardContainerProps) => {
                   )}
                 </div>
               </div>
+
+              {!mobileDismissed ? (
+                <MobileAppCard onDismiss={handleDismissMobileApp} isDismissing={isMobilePending} />
+              ) : !isEnterprise ? (
+                <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-[rgb(var(--color-text-800))]">
+                      {t('mobileApp.hidden.title', { defaultValue: 'Hidden mobile app card' })}
+                    </p>
+                    <p className="text-xs text-[rgb(var(--color-text-500))]">
+                      {t('mobileApp.hidden.subtitle', { defaultValue: 'Restore it if you need it later.' })}
+                    </p>
+                  </div>
+                  <div className="mt-3">
+                    <Button
+                      id="restore-dashboard-mobile-app-card"
+                      variant="outline"
+                      size="xs"
+                      className="gap-1.5"
+                      onClick={handleRestoreMobileApp}
+                      disabled={isMobilePending}
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" />
+                      {isMobilePending
+                        ? t('mobileApp.restoring', { defaultValue: 'Restoring...' })
+                        : t('mobileApp.restore', { defaultValue: 'Get the mobile app' })}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
 
               <div className="rounded-lg border border-dashed border-[rgb(var(--color-border-200))] bg-white p-4">
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4">

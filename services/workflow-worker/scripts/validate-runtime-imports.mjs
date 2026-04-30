@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SERVICE_ROOT = path.resolve(__dirname, '..');
+const REPO_ROOT = path.resolve(SERVICE_ROOT, '../..');
 const DIST_ROOT = path.resolve(
   process.env.WORKFLOW_WORKER_VALIDATE_DIST_ROOT || path.join(SERVICE_ROOT, 'dist'),
 );
@@ -14,6 +15,14 @@ const DIST_ROOT = path.resolve(
 const ENTRY_CANDIDATES = [
   path.join(DIST_ROOT, 'services/workflow-worker/src/index.js'),
   path.join(DIST_ROOT, 'src/index.js'),
+];
+
+const EXTRA_ENTRY_CANDIDATES = [
+  // The worker imports @alga-psa/workflows/runtime/worker as a package export.
+  // That package dist is outside services/workflow-worker/dist, so scan it
+  // explicitly to catch bundled alias/server/UI leaks before Docker runtime.
+  path.join(REPO_ROOT, 'ee/packages/workflows/dist/runtime/worker.mjs'),
+  path.join(REPO_ROOT, 'ee/packages/workflows/dist/runtime/core.mjs'),
 ];
 
 const FORBIDDEN_ROOT_IMPORTS = new Set([
@@ -103,7 +112,10 @@ function validate() {
     throw new Error('Unable to locate workflow-worker dist entrypoint');
   }
 
-  const queue = [entry];
+  const queue = [
+    entry,
+    ...EXTRA_ENTRY_CANDIDATES.filter((candidate) => fs.existsSync(candidate)),
+  ];
   const visited = new Set();
   const violations = [];
 

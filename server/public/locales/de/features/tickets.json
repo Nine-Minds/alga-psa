@@ -1101,5 +1101,31 @@
       "childrenDescription": "Untergeordnete Tickets, die in diesem Master-Ticket gebündelt sind"
     }
   },
-  "invalidTicketData": "Ungültige Ticketdaten"
+  "invalidTicketData": "Ungültige Ticketdaten",
+  "timeEntries": {
+    "title": "Erfasste Zeit",
+    "loading": "Zeiteinträge werden geladen…",
+    "loadError": "Zeiteinträge konnten nicht geladen werden",
+    "empty": "Für dieses Ticket wurde noch keine Zeit erfasst.",
+    "myEntries": "Meine Einträge",
+    "otherTeam": "Andere Teammitglieder",
+    "othersAnonymized": "{{count}} Einträge von anderen Teammitgliedern ({{duration}})",
+    "noService": "Keine Leistung",
+    "unknownUser": "Unbekannter Benutzer",
+    "statusDraft": "Entwurf",
+    "statusSubmitted": "Eingereicht",
+    "statusApproved": "Genehmigt",
+    "statusChangesRequested": "Änderungen angefordert",
+    "statusUnknown": "Unbekannt",
+    "edit": "Zeiteintrag bearbeiten",
+    "delete": "Zeiteintrag löschen",
+    "deleteConfirmTitle": "Zeiteintrag löschen?",
+    "deleteConfirmMessage": "Dieser Zeiteintrag wird endgültig gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteConfirmAction": "Löschen",
+    "duration": {
+      "hr": "Std.",
+      "hrs": "Std.",
+      "min": "Min."
+    }
+  }
 }

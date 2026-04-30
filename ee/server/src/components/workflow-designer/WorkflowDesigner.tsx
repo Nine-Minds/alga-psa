@@ -51,6 +51,7 @@ import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
 import WorkflowEventList from './WorkflowEventList';
 import WorkflowRunDialog from './WorkflowRunDialog';
+import WorkflowDesignerAuditPanel from './WorkflowDesignerAuditPanel';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
 import WorkflowListV2 from '@alga-psa/workflows/components/automation-hub/WorkflowList';
 import EventsCatalogV2 from '@alga-psa/workflows/components/automation-hub/EventsCatalogV2';
@@ -58,6 +59,8 @@ import type { WorkflowPickerActions } from '@alga-psa/workflows/components/autom
 import { getAllContacts, getContactsByClient } from '@alga-psa/clients/actions';
 import { getAvailableStatuses, getTicketFieldOptions } from '@alga-psa/integrations/actions';
 import { getTicketById, getTicketsForList } from '@alga-psa/tickets/actions';
+import { getProjectsWithPhases } from '@alga-psa/projects/actions/projectActions';
+import { getProjectTaskData } from '@alga-psa/projects/actions/projectTaskActions';
 import WorkflowSchedules from './WorkflowSchedules';
 import { MappingPanel, type ActionInputField } from './mapping';
 import { ExpressionEditor, type ExpressionEditorHandle, type ExpressionContext, type JsonSchema as ExprJsonSchema } from './expression-editor';
@@ -113,6 +116,7 @@ import { WorkflowStepNameField } from './WorkflowStepNameField';
 import { WorkflowStepSaveOutputSection } from './WorkflowStepSaveOutputSection';
 import { WorkflowActionInputSection } from './WorkflowActionInputSection';
 import { WorkflowActionInputFixedPicker } from './WorkflowActionInputFixedPicker';
+import { resolveLocalJsonSchemaRef } from './jsonSchemaRefs';
 import { buildWorkflowReferenceFieldOptions } from './workflowReferenceOptions';
 import { shouldRenderWorkflowAiSchemaSection } from './workflowAiStepUtils';
 import { applyWorkflowActionPresentationHintsToList } from './workflowActionPresentation';
@@ -300,6 +304,10 @@ const DESIGNER_PALETTE_COLLAPSED_WIDTH = 32;
 const DESIGNER_PALETTE_TOGGLE_OVERHANG = 16;
 const DESIGNER_CENTER_LEFT_EXTRA_PADDING = 16;
 const DESIGNER_CENTER_RIGHT_EXTRA_PADDING = 24;
+const DESIGNER_CENTER_MIN_WIDTH = 480;
+const DESIGNER_CENTER_MAX_WIDTH = 896;
+const DESIGNER_SIDEBAR_FLOATING_MIN_WIDTH = 252;
+const DESIGNER_FLOAT_MIN_WIDTH = 1100;
 
 type PipeSegment = {
   index: number;
@@ -317,6 +325,8 @@ const workflowPickerActions: WorkflowPickerActions = {
   getAvailableStatuses,
   getTicketFieldOptions,
   getTicketById,
+  getProjectsWithPhases,
+  getProjectTaskData,
   getTicketsForList: async ({ boardFilterState, searchQuery }) => {
     const result = await getTicketsForList({ boardFilterState, searchQuery });
     return {
@@ -409,12 +419,17 @@ const mergeSchemaMetadata = (wrapper: JsonSchema, resolved: JsonSchema): JsonSch
   'x-workflow-editor': (resolved as any)['x-workflow-editor'] ?? (wrapper as any)['x-workflow-editor'],
 });
 
-const resolveSchema = (schema: JsonSchema, root?: JsonSchema): JsonSchema => {
+const resolveSchema = (schema: JsonSchema, root?: JsonSchema, seenRefs = new Set<string>()): JsonSchema => {
+  const rootSchema = root ?? schema;
+
   // Handle $ref
-  if (schema.$ref && root?.definitions) {
-    const refKey = schema.$ref.replace('#/definitions/', '');
-    const resolved = root.definitions?.[refKey];
-    if (resolved) return resolveSchema(resolved, root);
+  if (schema.$ref) {
+    const refKey = schema.$ref;
+    if (!seenRefs.has(refKey)) {
+      seenRefs.add(refKey);
+      const resolved = resolveLocalJsonSchemaRef(refKey, rootSchema);
+      if (resolved) return resolveSchema(resolved, rootSchema, seenRefs);
+    }
   }
 
   // Handle anyOf (used for nullable types) - extract the non-null variant
@@ -424,7 +439,7 @@ const resolveSchema = (schema: JsonSchema, root?: JsonSchema): JsonSchema => {
     );
     if (nonNullVariant) {
       // Merge nullable info back into resolved schema
-      const resolved = resolveSchema(nonNullVariant, root);
+      const resolved = resolveSchema(nonNullVariant, rootSchema, seenRefs);
       const merged = mergeSchemaMetadata(schema, resolved);
       return {
         ...merged,
@@ -1523,6 +1538,58 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     const currentPaletteWidth = isPaletteCollapsed
       ? DESIGNER_PALETTE_COLLAPSED_WIDTH
       : DESIGNER_PALETTE_WIDTH;
+    const anchorWidth = designerFloatAnchorRect.right - designerFloatAnchorRect.left;
+    const fixedFloatingWidth =
+      (DESIGNER_FLOAT_PANEL_OFFSET * 2)
+      + currentPaletteWidth
+      + DESIGNER_PALETTE_TOGGLE_OVERHANG
+      + DESIGNER_CENTER_LEFT_EXTRA_PADDING
+      + DESIGNER_CENTER_RIGHT_EXTRA_PADDING;
+    const isStacked = anchorWidth < DESIGNER_FLOAT_MIN_WIDTH;
+
+    if (isStacked) {
+      return {
+        isStacked,
+        paletteStyle: {
+          position: 'relative',
+          maxHeight: 'none',
+        } as React.CSSProperties,
+        sidebarStyle: {
+          position: 'relative',
+          width: '100%',
+          maxHeight: 'none',
+        } as React.CSSProperties,
+        centerScrollStyle: {} as React.CSSProperties,
+        centerPaneStyle: undefined,
+      };
+    }
+
+    const availableEditorWidth = Math.max(
+      DESIGNER_CENTER_MIN_WIDTH + DESIGNER_SIDEBAR_FLOATING_MIN_WIDTH,
+      anchorWidth - fixedFloatingWidth
+    );
+    const preferredEditorWidth = DESIGNER_CENTER_MAX_WIDTH + designerSidebarWidth;
+    const editorWidthShortfall = Math.max(0, preferredEditorWidth - availableEditorWidth);
+    const sharedShrink = editorWidthShortfall / 2;
+    let centerShrink = Math.min(DESIGNER_CENTER_MAX_WIDTH - DESIGNER_CENTER_MIN_WIDTH, sharedShrink);
+    let sidebarShrink = Math.min(designerSidebarWidth - DESIGNER_SIDEBAR_FLOATING_MIN_WIDTH, sharedShrink);
+    let remainingShrink = editorWidthShortfall - centerShrink - sidebarShrink;
+
+    if (remainingShrink > 0) {
+      const sidebarShrinkRoom = designerSidebarWidth - DESIGNER_SIDEBAR_FLOATING_MIN_WIDTH - sidebarShrink;
+      const extraSidebarShrink = Math.min(sidebarShrinkRoom, remainingShrink);
+      sidebarShrink += extraSidebarShrink;
+      remainingShrink -= extraSidebarShrink;
+    }
+
+    if (remainingShrink > 0) {
+      const centerShrinkRoom = DESIGNER_CENTER_MAX_WIDTH - DESIGNER_CENTER_MIN_WIDTH - centerShrink;
+      centerShrink += Math.min(centerShrinkRoom, remainingShrink);
+    }
+
+    const effectiveCenterWidth = DESIGNER_CENTER_MAX_WIDTH - centerShrink;
+    const effectiveSidebarWidth = designerSidebarWidth - sidebarShrink;
+
     const paletteLeft = Math.min(
       Math.max(DESIGNER_FLOAT_EDGE_GUTTER, designerFloatAnchorRect.left + DESIGNER_FLOAT_PANEL_OFFSET),
       window.innerWidth - DESIGNER_FLOAT_EDGE_GUTTER - currentPaletteWidth
@@ -1531,9 +1598,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     const sidebarLeft = Math.min(
       Math.max(
         DESIGNER_FLOAT_EDGE_GUTTER,
-        designerFloatAnchorRect.right - DESIGNER_FLOAT_PANEL_OFFSET - designerSidebarWidth
+        designerFloatAnchorRect.right - DESIGNER_FLOAT_PANEL_OFFSET - effectiveSidebarWidth
       ),
-      Math.max(DESIGNER_FLOAT_EDGE_GUTTER, window.innerWidth - DESIGNER_FLOAT_EDGE_GUTTER - designerSidebarWidth)
+      Math.max(DESIGNER_FLOAT_EDGE_GUTTER, window.innerWidth - DESIGNER_FLOAT_EDGE_GUTTER - effectiveSidebarWidth)
     );
     const maxHeight = Math.max(
       DESIGNER_FLOAT_MIN_HEIGHT,
@@ -1549,6 +1616,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     );
 
     return {
+      isStacked,
       paletteStyle: {
         position: 'fixed',
         top,
@@ -1559,12 +1627,15 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         position: 'fixed',
         top,
         left: sidebarLeft,
-        width: designerSidebarWidth,
+        width: effectiveSidebarWidth,
         maxHeight,
       } as React.CSSProperties,
       centerScrollStyle: {
         paddingLeft: `${centerPaddingLeft}px`,
         paddingRight: `${centerPaddingRight}px`,
+      } as React.CSSProperties,
+      centerPaneStyle: {
+        maxWidth: effectiveCenterWidth,
       } as React.CSSProperties,
     };
   }, [designerFloatAnchorRect, designerSidebarWidth, isPaletteCollapsed]);
@@ -1934,10 +2005,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   }, [isDesignerSidebarResizing, stopDesignerSidebarResize]);
 
   useEffect(() => {
-    if (!designerFloatAnchorRect && isDesignerSidebarResizing) {
+    if ((!designerFloatAnchorRect || designerFloatingLayout?.isStacked) && isDesignerSidebarResizing) {
       stopDesignerSidebarResize();
     }
-  }, [designerFloatAnchorRect, isDesignerSidebarResizing, stopDesignerSidebarResize]);
+  }, [designerFloatAnchorRect, designerFloatingLayout?.isStacked, isDesignerSidebarResizing, stopDesignerSidebarResize]);
 
   const handleControlPanelTabChange = useCallback((nextTabId: string) => {
     setActiveTab(nextTabId);
@@ -3483,12 +3554,17 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   };
 
   const showInitialDesignerSkeleton = isLoading && !activeDefinition;
+  const isDesignerStacked = designerFloatingLayout?.isStacked ?? false;
+  const canResizeDesignerSidebar = canManage && !isDesignerStacked;
 
   const designerContent = (
     <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
     <div className="flex flex-col h-full min-h-0">
-	      <div ref={designerFloatAnchorRef} className="relative flex flex-col flex-1 min-h-0 overflow-hidden bg-gray-50 dark:bg-[rgb(var(--color-background))]">
-        <div className="sticky top-4 z-20 h-0 pointer-events-none">
+	      <div
+          ref={designerFloatAnchorRef}
+          className={`relative flex flex-col flex-1 min-h-0 bg-gray-50 dark:bg-[rgb(var(--color-background))] ${isDesignerStacked ? 'overflow-y-auto' : 'overflow-hidden'}`}
+        >
+        <div className={isDesignerStacked ? 'contents' : 'sticky top-4 z-20 h-0 pointer-events-none'}>
           {/* Floating Icon-Grid Palette (left) */}
           <Droppable
             droppableId="palette"
@@ -3503,6 +3579,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
               <WorkflowDesignerPalette
                 visible={Boolean(designerFloatAnchorRect)}
                 style={designerFloatingLayout?.paletteStyle}
+                layout={isDesignerStacked ? 'stacked' : 'floating'}
+                className={isDesignerStacked ? 'order-1 mx-auto mt-4 w-[calc(100%-2rem)] max-w-4xl flex-none' : undefined}
                 search={search}
                 onSearchChange={setSearch}
                 registryError={registryError}
@@ -3532,17 +3610,17 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           {/* Floating Properties (right) */}
           <aside
             id="workflow-designer-sidebar-scroll"
-            className={`pointer-events-auto relative max-h-[calc(100vh-220px)] bg-white/95 dark:bg-[rgb(var(--color-card))]/95 backdrop-blur border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg shadow-lg overflow-y-auto p-4 space-y-4 z-40 ${designerFloatAnchorRect ? '' : 'hidden'}`}
+            className={`pointer-events-auto relative max-h-[calc(100vh-220px)] bg-white/95 dark:bg-[rgb(var(--color-card))]/95 backdrop-blur border border-gray-200 dark:border-[rgb(var(--color-border-200))] rounded-lg shadow-lg overflow-y-auto p-4 space-y-4 z-40 ${isDesignerStacked ? 'order-3 mx-4 mb-4 flex-none' : ''} ${designerFloatAnchorRect ? '' : 'hidden'}`}
             style={designerFloatingLayout?.sidebarStyle}
           >
             <div
               id="workflow-designer-sidebar-resize-handle"
               role="separator"
               aria-orientation="vertical"
-              aria-label="Resize properties panel"
-              className={`absolute inset-y-0 left-0 z-10 w-3 select-none ${canManage ? 'cursor-col-resize' : 'pointer-events-none opacity-0'}`}
+              aria-label={t('designer.propsPanel.resizeAria')}
+              className={`absolute inset-y-0 left-0 z-10 w-3 select-none ${canResizeDesignerSidebar ? 'cursor-col-resize' : 'pointer-events-none opacity-0'}`}
               onPointerDown={(event) => {
-                if (!canManage) return;
+                if (!canResizeDesignerSidebar) return;
                 event.preventDefault();
                 event.stopPropagation();
                 designerSidebarResizeRef.current = {
@@ -3559,8 +3637,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             {activeWorkflowRecord && metadataDraft && canEditMetadata && (
               <Card className="p-3 space-y-3">
                 <div>
-                  <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">Workflow Settings</div>
-                  <div className="text-xs text-gray-500">Visibility, pausing, and safety controls.</div>
+                  <div className="text-sm font-semibold text-gray-800 dark:text-gray-200">{t('designer.propsPanel.settingsTitle')}</div>
+                  <div className="text-xs text-gray-500">{t('designer.propsPanel.settingsSubtitle')}</div>
                 </div>
                 <Switch
                   id="workflow-settings-visible"
@@ -3568,7 +3646,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   onCheckedChange={(value) =>
                     setMetadataDraft((prev) => (prev ? { ...prev, isVisible: Boolean(value) } : prev))
                   }
-                  label="Visible to users"
+                  label={t('designer.propsPanel.visibleToUsers')}
                 />
                 <Switch
                   id="workflow-settings-paused"
@@ -3576,17 +3654,17 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   onCheckedChange={(value) =>
                     setMetadataDraft((prev) => (prev ? { ...prev, isPaused: Boolean(value) } : prev))
                   }
-                  label="Paused (stop new runs)"
+                  label={t('designer.propsPanel.paused')}
                 />
                 <Input
                   id="workflow-settings-concurrency"
-                  label="Concurrency limit"
+                  label={t('designer.propsPanel.concurrencyLimit')}
                   type="number"
                   value={metadataDraft.concurrencyLimit}
                   onChange={(event) =>
                     setMetadataDraft((prev) => (prev ? { ...prev, concurrencyLimit: event.target.value } : prev))
                   }
-                  placeholder="Unlimited"
+                  placeholder={t('designer.propsPanel.unlimited')}
                 />
                 <Switch
                   id="workflow-settings-auto-pause"
@@ -3594,11 +3672,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   onCheckedChange={(value) =>
                     setMetadataDraft((prev) => (prev ? { ...prev, autoPauseOnFailure: Boolean(value) } : prev))
                   }
-                  label="Auto-pause on failure rate"
+                  label={t('designer.propsPanel.autoPauseFailureRate')}
                 />
                 <Input
                   id="workflow-settings-failure-threshold"
-                  label="Failure rate threshold"
+                  label={t('designer.propsPanel.failureRateThreshold')}
                   type="number"
                   value={metadataDraft.failureRateThreshold}
                   disabled={!metadataDraft.autoPauseOnFailure}
@@ -3609,7 +3687,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                 />
                 <Input
                   id="workflow-settings-failure-min"
-                  label="Min runs before auto-pause"
+                  label={t('designer.propsPanel.minRunsBeforeAutoPause')}
                   type="number"
                   value={metadataDraft.failureRateMinRuns}
                   disabled={!metadataDraft.autoPauseOnFailure}
@@ -3627,11 +3705,18 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                 </Button>
               </Card>
             )}
+            {activeWorkflowId && activeWorkflowRecord && canAdmin && (
+              <WorkflowDesignerAuditPanel
+                workflowId={activeWorkflowId}
+                workflowName={activeWorkflowRecord.name ?? activeDefinition?.name ?? null}
+                canAdmin={canAdmin}
+              />
+            )}
             {selectedStep && activeDefinition ? (
               canManage || selectedStep.type === 'action.call' ? (
                 <div className="space-y-3">
                   {!canManage && (
-                    <div className="text-sm text-gray-500">Read-only access: step editing is disabled.</div>
+                    <div className="text-sm text-gray-500">{t('designer.stepPanel.readOnlyNotice')}</div>
                   )}
                   <StepConfigPanel
                     step={selectedStep}
@@ -3667,7 +3752,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                 <div className="mb-3 rounded border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <span className="font-semibold">Contract mode:</span>{' '}
+                      <span className="font-semibold">{t('designer.stepPanel.contractMode')}</span>{' '}
                       {payloadSchemaModeDraft === 'pinned' ? 'Pinned' : 'Inferred'}
                     </div>
                     {effectivePayloadSchemaRef && (
@@ -3696,7 +3781,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                 <div className="mb-3 rounded border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <span className="font-semibold">Contract mode:</span>{' '}
+                      <span className="font-semibold">{t('designer.stepPanel.contractMode')}</span>{' '}
                       {payloadSchemaModeDraft === 'pinned' ? 'Pinned' : 'Inferred'}
                     </div>
                     {effectivePayloadSchemaRef && (
@@ -3722,10 +3807,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
 	        <div
             id="workflow-designer-center-scroll"
-            className="flex-1 min-h-0 overflow-y-auto p-6 pl-72 pr-[460px]"
+            className={isDesignerStacked ? 'order-2 flex-none min-h-0 overflow-visible p-4' : 'flex-1 min-h-0 overflow-y-auto p-6 pl-72 pr-[460px]'}
             style={designerFloatingLayout?.centerScrollStyle}
           >
-          <div className="max-w-4xl mx-auto space-y-6">
+          <div className="max-w-4xl mx-auto space-y-6" style={designerFloatingLayout?.centerPaneStyle}>
                 {showInitialDesignerSkeleton ? (
                   <>
                     <Card className="p-4 space-y-4">
@@ -3994,7 +4079,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     {showTriggerSchemaDetails && (
                                       <div className="flex flex-wrap items-center justify-between gap-3">
                                         <div className="text-[11px] text-gray-600">
-                                          <span className="text-gray-500">Catalog schema:</span>{' '}
+                                          <span className="text-gray-500">{t('designer.stepPanel.catalogSchema')}</span>{' '}
                                           <span className="font-mono break-all">{selectedOption.payload_schema_ref ?? '—'}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -4076,7 +4161,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                     return (
                       <div className="mt-3 rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] px-3 py-2">
-                        <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">Trigger summary</div>
+                        <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">{t('designer.trigger.summary')}</div>
 
                         <div className="mt-2 space-y-1 text-[11px] text-gray-600">
                           <div className="flex flex-wrap items-center gap-2">
@@ -4086,9 +4171,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                           <div className="flex flex-wrap items-center gap-2">
                             <span>{summaryMessage}</span>
                             {mappingRequired ? (
-                              <Badge variant="warning">Action needed</Badge>
+                              <Badge variant="warning">{t('designer.trigger.actionNeeded')}</Badge>
                             ) : (
-                              <Badge variant="success">No mapping needed</Badge>
+                              <Badge variant="success">{t('designer.trigger.noMappingNeeded')}</Badge>
                             )}
                           </div>
                         </div>
@@ -4137,7 +4222,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                         <div className="mt-3 space-y-3 border-t border-gray-200 pt-3">
                             <div>
-                              <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">Trigger source schema override</div>
+                              <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">{t('designer.trigger.sourceSchemaOverride')}</div>
                               <div className="mt-2">
                                 <SearchableSelect
                                   id="workflow-designer-trigger-source-schema"
@@ -4151,7 +4236,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     if (current && !schemaRefs.includes(current)) {
                                       return [{ value: current, label: `${current} (unknown)` }, ...base];
                                     }
-                                    return [{ value: '', label: 'Use catalog schema (default)' }, ...base];
+                                    return [{ value: '', label: t('designer.trigger.useCatalogSchemaDefault') }, ...base];
                                   })()}
                                   value={String((activeDefinition.trigger as any).sourcePayloadSchemaRef ?? '')}
                                   onChange={(value) => {
@@ -4165,8 +4250,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     setShowUseEventSchemaSuggestion(true);
                                     handleDefinitionChange({ trigger: nextTrigger });
                                   }}
-                                  placeholder="Use catalog schema…"
-                                  emptyMessage="No schemas found"
+                                  placeholder={t('designer.trigger.useCatalogSchemaPlaceholder')}
+                                  emptyMessage={t('designer.trigger.noSchemasFound')}
                                   disabled={registryError || !canManage}
                                   dropdownMode="overlay"
                                 />
@@ -4175,7 +4260,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                             <div>
                               <div className="flex items-center justify-between gap-3">
-                                <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">Trigger mapping</div>
+                                <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">{t('designer.trigger.mappingTitle')}</div>
                                 {!mappingRequired && (
                                   <Button
                                     id="workflow-designer-trigger-mapping-toggle"
@@ -4192,14 +4277,14 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                               </div>
 
                               {!showEditor && !mappingRequired && !mappingProvided && (
-                                <div className="mt-2 text-xs text-gray-600">Mapping: Not required.</div>
+                                <div className="mt-2 text-xs text-gray-600">{t('designer.trigger.mappingNotRequired')}</div>
                               )}
 
                               {(mappingErrors.length > 0 || mappingWarnings.length > 0) && (
                                 <div className="mt-3 space-y-2">
                                   {mappingErrors.length > 0 && (
                                     <div className="rounded border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                                      <div className="font-semibold mb-1">Mapping errors</div>
+                                      <div className="font-semibold mb-1">{t('designer.trigger.mappingErrors')}</div>
                                       <ul className="list-disc pl-4 space-y-1">
                                         {mappingErrors.slice(0, 5).map((err, idx) => (
                                           <li key={`${err.code}-${idx}`}>{err.message}</li>
@@ -4212,7 +4297,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                   )}
                                   {mappingWarnings.length > 0 && (
                                     <div className="rounded border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-foreground">
-                                      <div className="font-semibold mb-1">Mapping warnings</div>
+                                      <div className="font-semibold mb-1">{t('designer.trigger.mappingWarnings')}</div>
                                       <ul className="list-disc pl-4 space-y-1">
                                         {mappingWarnings.slice(0, 5).map((warn, idx) => (
                                           <li key={`${warn.code}-${idx}`}>{warn.message}</li>
@@ -4395,11 +4480,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       <div id="workflow-designer-contract-advanced-panel" className="mt-2 rounded border border-gray-200 bg-gray-50 p-3">
                         <div className="flex items-center justify-between gap-3">
                           <div>
-                            <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">Lock schema version</div>
+                            <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">{t('designer.schemaSettings.lockVersion')}</div>
                             <div className="text-xs text-gray-500">
                               {isTimeTrigger(activeDefinition?.trigger)
                                 ? 'Clock triggers always stay pinned to the fixed workflow clock contract.'
-                                : 'Lock schema version to prevent future trigger changes from affecting this workflow.'}
+                                : t('designer.schemaSettings.lockVersionHelp')}
                             </div>
                           </div>
                           <Switch
@@ -4453,7 +4538,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
                         {payloadSchemaModeDraft === 'pinned' ? (
                           <>
-                            <div className="mt-3 text-xs text-gray-600">Locked schema version</div>
+                            <div className="mt-3 text-xs text-gray-600">{t('designer.schemaSettings.lockedVersion')}</div>
                             <div className="mt-2">
                               {registryStatus === 'loading' ? (
                                 <Skeleton className="h-10 w-full" />
@@ -4486,8 +4571,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     });
                                     handleDefinitionChange({ payloadSchemaRef: value });
                                   }}
-                                  placeholder="Select schema version…"
-                                  emptyMessage="No schemas found"
+                                  placeholder={t('designer.schemaSettings.selectVersionPlaceholder')}
+                                  emptyMessage={t('designer.trigger.noSchemasFound')}
                                   disabled={registryError || !canManage || isTimeTrigger(activeDefinition?.trigger)}
                                   required
                                   dropdownMode="overlay"
@@ -4496,9 +4581,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                             </div>
 
                             <div className="mt-2 flex items-center justify-between">
-                              <div className="text-xs text-gray-600">Manual schema ref</div>
+                              <div className="text-xs text-gray-600">{t('designer.schemaSettings.manualRef')}</div>
                               {isTimeTrigger(activeDefinition?.trigger) ? (
-                                <span className="text-[11px] text-gray-500">Fixed for time triggers</span>
+                                <span className="text-[11px] text-gray-500">{t('designer.schemaSettings.fixedForTimeTriggers')}</span>
                               ) : (
                                 <Button
                                   id="workflow-designer-schema-advanced"
@@ -4516,7 +4601,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                               <div className="mt-2">
                                 <Input
                                   id="workflow-designer-schema"
-                                  label="Payload schema ref (advanced)"
+                                  label={t('designer.schemaSettings.payloadRefAdvanced')}
                                   value={activeDefinition?.payloadSchemaRef ?? ''}
                                   onChange={(event) => {
                                     setPinnedPayloadSchemaRefDraft(event.target.value);
@@ -4577,7 +4662,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                     {contractSettingsExpanded && effectivePayloadSchemaRef && (
                       <div className="mt-3 rounded border border-gray-200 bg-gray-50 p-3">
                         <div className="flex items-center justify-between gap-3">
-                          <div className="text-xs font-semibold text-gray-700">Available fields preview</div>
+                          <div className="text-xs font-semibold text-gray-700">{t('designer.schemaSettings.availableFieldsPreview')}</div>
                           <div className="flex items-center gap-2">
                             <Button
                               id="workflow-designer-schema-preview-toggle"
@@ -4624,7 +4709,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                         {schemaPreviewExpanded && (
                           <div id="workflow-designer-schema-preview-content" className="mt-2 text-xs text-gray-600">
                             {payloadSchemaStatus === 'loading' && 'Loading schema…'}
-                            {payloadSchemaStatus === 'error' && 'Failed to load schema preview.'}
+                            {payloadSchemaStatus === 'error' && t('designer.schemaSettings.loadPreviewFailed')}
                             {payloadSchemaStatus === 'idle' && 'Schema preview is available once loaded.'}
                             {payloadSchemaStatus === 'loaded' && payloadSchema && (() => {
                               const props = (payloadSchema as any)?.properties ?? null;
@@ -4678,7 +4763,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   >
                     <div className="w-full max-w-3xl rounded-lg bg-white dark:bg-[rgb(var(--color-card))] shadow-xl border border-gray-200 dark:border-[rgb(var(--color-border-200))] overflow-hidden">
                       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">Workflow payload contract schema</div>
+                        <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{t('designer.schemaSettings.payloadContract')}</div>
                         <Button
                           id="workflow-designer-schema-modal-close"
                           variant="ghost"
@@ -4691,7 +4776,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       </div>
                       <div className="px-4 py-2 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-gray-50 dark:bg-[rgb(var(--color-background))]">
                         <div className="text-[11px] text-gray-600">
-                          <span className="text-gray-500">Schema ref:</span>{' '}
+                          <span className="text-gray-500">{t('designer.schemaSettings.ref')}</span>{' '}
                           <span className="font-mono break-all">{effectivePayloadSchemaRef}</span>
                           <span className="text-gray-400"> · </span>
                           <span className="text-gray-500">Mode:</span>{' '}
@@ -4703,7 +4788,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                           <div className="text-xs text-gray-500">Loading schema…</div>
                         )}
                         {payloadSchemaStatus === 'error' && (
-                          <div className="text-xs text-destructive">Failed to load schema.</div>
+                          <div className="text-xs text-destructive">{t('designer.schemaSettings.loadFailed')}</div>
                         )}
                         {payloadSchemaStatus === 'loaded' && payloadSchema && (
                           <pre
@@ -4714,7 +4799,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                           />
                         )}
                         {payloadSchemaStatus === 'idle' && (
-                          <div className="text-xs text-gray-500">Schema not loaded yet.</div>
+                          <div className="text-xs text-gray-500">{t('designer.schemaSettings.notLoaded')}</div>
                         )}
                       </div>
                     </div>
@@ -4746,7 +4831,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                       </div>
                       <div className="px-4 py-2 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-gray-50 dark:bg-[rgb(var(--color-background))]">
                         <div className="text-[11px] text-gray-600">
-                          <span className="text-gray-500">Schema ref:</span>{' '}
+                          <span className="text-gray-500">{t('designer.schemaSettings.ref')}</span>{' '}
                           <span className="font-mono break-all">{triggerSchemaModalRef}</span>
                         </div>
                       </div>
@@ -4755,7 +4840,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                           <div className="text-xs text-gray-500">Loading schema…</div>
                         )}
                         {triggerSchemaModalStatus === 'error' && (
-                          <div className="text-xs text-destructive">Failed to load schema.</div>
+                          <div className="text-xs text-destructive">{t('designer.schemaSettings.loadFailed')}</div>
                         )}
                         {triggerSchemaModalStatus === 'loaded' && triggerSchemaModalSchema && (
                           <pre
@@ -4766,7 +4851,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                           />
                         )}
                         {triggerSchemaModalStatus === 'idle' && (
-                          <div className="text-xs text-gray-500">Schema not loaded yet.</div>
+                          <div className="text-xs text-gray-500">{t('designer.schemaSettings.notLoaded')}</div>
                         )}
                       </div>
                     </div>
@@ -4823,7 +4908,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                           </>
                         )}
                         {publishedContractModalStatus === 'idle' && (
-                          <div className="text-xs text-gray-500">Schema not loaded yet.</div>
+                          <div className="text-xs text-gray-500">{t('designer.schemaSettings.notLoaded')}</div>
                         )}
                       </div>
                     </div>
@@ -6296,7 +6381,7 @@ export const StepConfigPanel: React.FC<{
 
       {errors.length > 0 && (
         <Card className="border border-destructive/30 bg-destructive/10 p-3">
-          <div className="text-xs font-semibold text-destructive mb-1">Validation errors</div>
+          <div className="text-xs font-semibold text-destructive mb-1">{t('designer.validation.errors')}</div>
           <ul className="text-xs text-destructive space-y-1">
             {errors.map((error, index) => (
               <li key={`${error.code}-${index}`}>{error.message}</li>
@@ -6410,7 +6495,7 @@ export const StepConfigPanel: React.FC<{
         return (
           <ExpressionField
             idPrefix={`if-condition-${step.id}`}
-            label="Condition"
+            label={t('designer.stepConfig.condition')}
             value={ensureExpr(ifStep.condition)}
             onChange={(expr) => onChange({ ...ifStep, condition: expr })}
             fieldOptions={enhancedFieldOptions}
@@ -6425,7 +6510,7 @@ export const StepConfigPanel: React.FC<{
           <div className="space-y-3">
             <ExpressionField
               idPrefix={`foreach-items-${step.id}`}
-              label="Items expression"
+              label={t('designer.stepConfig.itemsExpression')}
               value={ensureExpr(feStep.items)}
               onChange={(expr) => onChange({ ...feStep, items: expr })}
               fieldOptions={enhancedFieldOptions}
@@ -6433,13 +6518,13 @@ export const StepConfigPanel: React.FC<{
             />
             <Input
               id={`foreach-itemvar-${step.id}`}
-              label="Item variable"
+              label={t('designer.stepConfig.itemVariable')}
               value={feStep.itemVar}
               onChange={(event) => onChange({ ...feStep, itemVar: event.target.value })}
             />
             <Input
               id={`foreach-concurrency-${step.id}`}
-              label="Concurrency"
+              label={t('designer.stepConfig.concurrency')}
               type="number"
               value={feStep.concurrency ?? 1}
               onChange={(event) => onChange({ ...feStep, concurrency: Number(event.target.value) })}
@@ -6449,7 +6534,7 @@ export const StepConfigPanel: React.FC<{
               options={workflowOnErrorOptions}
               value={feStep.onItemError ?? 'continue'}
               onValueChange={(value) => onChange({ ...feStep, onItemError: value as 'continue' | 'fail' })}
-              label="On item error"
+              label={t('designer.stepConfig.onItemError')}
             />
           </div>
         );
@@ -6460,7 +6545,7 @@ export const StepConfigPanel: React.FC<{
         return (
           <Input
             id={`trycatch-capture-${step.id}`}
-            label="Capture error as"
+            label={t('designer.stepConfig.captureErrorAs')}
             value={tcStep.captureErrorAs ?? ''}
             onChange={(event) => {
               const value = event.target.value.trim();
@@ -6476,20 +6561,20 @@ export const StepConfigPanel: React.FC<{
           <div className="space-y-3">
             <Input
               id={`call-workflow-id-${step.id}`}
-              label="Workflow ID"
+              label={t('designer.stepConfig.workflowId')}
               value={cwStep.workflowId}
               onChange={(event) => onChange({ ...cwStep, workflowId: event.target.value })}
             />
             <Input
               id={`call-workflow-version-${step.id}`}
-              label="Workflow version"
+              label={t('designer.stepConfig.workflowVersion')}
               type="number"
               value={cwStep.workflowVersion}
               onChange={(event) => onChange({ ...cwStep, workflowVersion: Number(event.target.value) })}
             />
             <MappingExprEditor
               idPrefix={`call-workflow-input-${step.id}`}
-              label="Input mapping"
+              label={t('designer.stepConfig.inputMapping')}
               value={cwStep.inputMapping ?? {}}
               onChange={(mapping) => onChange({ ...cwStep, inputMapping: mapping })}
               fieldOptions={enhancedFieldOptions}
@@ -6497,7 +6582,7 @@ export const StepConfigPanel: React.FC<{
             />
             <MappingExprEditor
               idPrefix={`call-workflow-output-${step.id}`}
-              label="Output mapping"
+              label={t('designer.stepConfig.outputMapping')}
               value={cwStep.outputMapping ?? {}}
               onChange={(mapping) => onChange({ ...cwStep, outputMapping: mapping })}
               fieldOptions={enhancedFieldOptions}
@@ -6508,7 +6593,7 @@ export const StepConfigPanel: React.FC<{
       })()}
 
       {step.type === 'control.return' && (
-        <div className="text-sm text-gray-500">Return stops workflow execution.</div>
+        <div className="text-sm text-gray-500">{t('designer.stepConfig.returnNotice')}</div>
       )}
 
       {step.type === 'event.wait' && eventWaitConfig && (
@@ -6654,7 +6739,7 @@ export const StepConfigPanel: React.FC<{
                       ) : enumOptions.length > 0 && !expectsArray ? (
                         <CustomSelect
                           id={`event-wait-filter-value-${step.id}-${index}`}
-                          label="Value"
+                          label={t('designer.stepConfig.value')}
                           options={enumOptions}
                           value={valueAsString}
                           onValueChange={(value) => {
@@ -6666,7 +6751,7 @@ export const StepConfigPanel: React.FC<{
                       ) : fieldMeta?.type === 'boolean' && !expectsArray ? (
                         <CustomSelect
                           id={`event-wait-filter-value-${step.id}-${index}`}
-                          label="Value"
+                          label={t('designer.stepConfig.value')}
                           options={[
                             { value: 'true', label: 'true' },
                             { value: 'false', label: 'false' }
@@ -6678,7 +6763,7 @@ export const StepConfigPanel: React.FC<{
                       ) : fieldMeta?.type === 'number' && !expectsArray ? (
                         <Input
                           id={`event-wait-filter-value-${step.id}-${index}`}
-                          label="Value"
+                          label={t('designer.stepConfig.value')}
                           type="number"
                           value={valueAsString}
                           disabled={!editable}
@@ -6747,7 +6832,7 @@ export const StepConfigPanel: React.FC<{
           <div className="space-y-3">
             <CustomSelect
               id={`time-wait-mode-${step.id}`}
-              label="Mode"
+              label={t('designer.stepConfig.mode')}
               options={workflowWaitModeOptions}
               value={typeof timeWaitConfig.mode === 'string' ? timeWaitConfig.mode : 'duration'}
               onValueChange={(mode) => {
@@ -6769,7 +6854,7 @@ export const StepConfigPanel: React.FC<{
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                   <Input
                     id={`time-wait-duration-days-${step.id}`}
-                    label="Days"
+                    label={t('designer.stepConfig.days')}
                     type="number"
                     value={formatTimeWaitDurationPart(timeWaitDurationParts.days)}
                     disabled={!editable}
@@ -6777,7 +6862,7 @@ export const StepConfigPanel: React.FC<{
                   />
                   <Input
                     id={`time-wait-duration-hours-${step.id}`}
-                    label="Hours"
+                    label={t('designer.stepConfig.hours')}
                     type="number"
                     value={formatTimeWaitDurationPart(timeWaitDurationParts.hours)}
                     disabled={!editable}
@@ -6785,7 +6870,7 @@ export const StepConfigPanel: React.FC<{
                   />
                   <Input
                     id={`time-wait-duration-minutes-${step.id}`}
-                    label="Minutes"
+                    label={t('designer.stepConfig.minutes')}
                     type="number"
                     value={formatTimeWaitDurationPart(timeWaitDurationParts.minutes)}
                     disabled={!editable}
@@ -6793,7 +6878,7 @@ export const StepConfigPanel: React.FC<{
                   />
                   <Input
                     id={`time-wait-duration-seconds-${step.id}`}
-                    label="Seconds"
+                    label={t('designer.stepConfig.seconds')}
                     type="number"
                     value={formatTimeWaitDurationPart(timeWaitDurationParts.seconds)}
                     disabled={!editable}
@@ -6808,7 +6893,7 @@ export const StepConfigPanel: React.FC<{
               <div className="space-y-3">
                 <CustomSelect
                   id={`time-wait-until-authoring-mode-${step.id}`}
-                  label="Until input"
+                  label={t('designer.stepConfig.untilInput')}
                   options={workflowWaitTimingOptions}
                   value={timeWaitUntilAuthoringMode}
                   onValueChange={(value) => setTimeWaitUntilAuthoringMode(value === 'expression' ? 'expression' : 'fixed')}
@@ -6817,10 +6902,10 @@ export const StepConfigPanel: React.FC<{
 
                 {timeWaitUntilAuthoringMode === 'fixed' ? (
                   <div className="space-y-2">
-                    <Label htmlFor={`time-wait-until-picker-${step.id}`}>Specific date & time</Label>
+                    <Label htmlFor={`time-wait-until-picker-${step.id}`}>{t('designer.stepConfig.specificDateTime')}</Label>
                     <DateTimePicker
                       id={`time-wait-until-picker-${step.id}`}
-                      label="Specific date & time"
+                      label={t('designer.stepConfig.specificDateTime')}
                       value={fixedUntilValue}
                       onChange={(value) => updateWaitNodeConfig({
                         ...timeWaitConfig,
@@ -6836,7 +6921,7 @@ export const StepConfigPanel: React.FC<{
                 ) : (
                   <ExpressionField
                     idPrefix={`time-wait-until-${step.id}`}
-                    label="Until expression"
+                    label={t('designer.stepConfig.untilExpression')}
                     value={ensureExpr((timeWaitConfig.until as Expr | undefined) ?? { $expr: '' })}
                     onChange={(untilExpr) => updateWaitNodeConfig({ ...timeWaitConfig, until: untilExpr })}
                     fieldOptions={enhancedFieldOptions}
@@ -7301,6 +7386,7 @@ const ExpressionField: React.FC<{
   context?: ExpressionContext;
   disabled?: boolean;
 }> = ({ idPrefix, label, value, onChange, fieldOptions, description, context, disabled = false }) => {
+  const { t } = useTranslation('msp/workflows');
   const [error, setError] = useState<string | null>(null);
   const editorRef = useRef<ExpressionEditorHandle>(null);
 
@@ -7330,7 +7416,7 @@ const ExpressionField: React.FC<{
           id={`${idPrefix}-picker`}
           options={fieldOptions}
           value=""
-          placeholder="Insert field"
+          placeholder={t('designer.expression.insertField')}
           onValueChange={handleInsert}
           allowClear
           className="w-44"
@@ -7344,7 +7430,7 @@ const ExpressionField: React.FC<{
         context={context}
         singleLine={false}
         height={60}
-        placeholder="Enter expression..."
+        placeholder={t('designer.expression.enterPlaceholder')}
         hasError={!!error}
         ariaLabel={label}
         readOnly={disabled}
@@ -7617,9 +7703,11 @@ const SchemaReferenceSection: React.FC<{
   emptyMessage?: string;
   onCopyPath?: (path: string) => void;
   headerExtra?: React.ReactNode;
-}> = ({ title, icon, fields, pathPrefix, defaultExpanded = false, emptyMessage = 'No fields', onCopyPath, headerExtra }) => {
+}> = ({ title, icon, fields, pathPrefix, defaultExpanded = false, emptyMessage, onCopyPath, headerExtra }) => {
+  const { t } = useTranslation('msp/workflows');
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [copiedAll, setCopiedAll] = useState(false);
+  const resolvedEmptyMessage = emptyMessage ?? t('designer.dataContext.noFields');
 
   // §16.7 - Collect all paths recursively
   const getAllPaths = (fieldList: SchemaField[], prefix: string): string[] => {
@@ -7665,7 +7753,7 @@ const SchemaReferenceSection: React.FC<{
       {expanded && (
         <div className="px-2 py-2 bg-white dark:bg-[rgb(var(--color-card))] max-h-64 overflow-y-auto">
           {fields.length === 0 ? (
-            <div className="text-xs text-gray-400 text-center py-2">{emptyMessage}</div>
+            <div className="text-xs text-gray-400 text-center py-2">{resolvedEmptyMessage}</div>
           ) : (
             <>
               {/* §16.7 - Copy all paths button */}
@@ -7673,7 +7761,7 @@ const SchemaReferenceSection: React.FC<{
                 <button
                   onClick={handleCopyAllPaths}
                   className="text-[10px] text-gray-500 hover:text-gray-700 flex items-center gap-1"
-                  title="Copy all field paths"
+                  title={t('designer.dataContext.copyAllFieldPaths')}
                 >
                   {copiedAll ? (
                     <>
@@ -7683,7 +7771,7 @@ const SchemaReferenceSection: React.FC<{
                   ) : (
                     <>
                       <Copy className="w-3 h-3" />
-                      <span>Copy all paths</span>
+                      <span>{t('designer.dataContext.copyAllPaths')}</span>
                     </>
                   )}
                 </button>
@@ -7709,26 +7797,27 @@ const DataContextPanel: React.FC<{
   context: DataContext;
   onCopyPath?: (path: string) => void;
 }> = ({ context, onCopyPath }) => {
+  const { t } = useTranslation('msp/workflows');
   return (
     <div className="space-y-3">
       <div className="text-xs font-semibold text-gray-700 flex items-center gap-2">
         <HelpCircle className="w-3.5 h-3.5" />
-        Available Data at This Step
+        {t('designer.dataContext.availableDataAtStep')}
       </div>
 
       {/* Payload */}
       <SchemaReferenceSection
-        title="Payload"
+        title={t('designer.dataContext.payload')}
         fields={context.payload}
         pathPrefix="payload"
         defaultExpanded={true}
-        emptyMessage={context.payloadSchema ? "No payload fields" : "Set 'Payload schema ref' to define payload structure"}
+        emptyMessage={context.payloadSchema ? t('designer.dataContext.noPayloadFields') : t('designer.dataContext.payloadSchemaRefHint')}
         onCopyPath={onCopyPath}
       />
 
       {/* Previous step outputs */}
       <div className="space-y-2">
-        <div className="text-[10px] font-semibold text-gray-500 uppercase">Step Outputs (vars)</div>
+        <div className="text-[10px] font-semibold text-gray-500 uppercase">{t('designer.dataContext.stepOutputs')}</div>
         {context.steps.length > 0 ? (
           context.steps.map((stepOutput) => (
             <SchemaReferenceSection
@@ -7737,7 +7826,7 @@ const DataContextPanel: React.FC<{
               fields={stepOutput.fields}
               pathPrefix={`vars.${stepOutput.saveAs}`}
               defaultExpanded={false}
-              emptyMessage="Output schema not available"
+              emptyMessage={t('designer.dataContext.outputSchemaUnavailable')}
               onCopyPath={onCopyPath}
               headerExtra={
                 <span className="text-[10px] text-gray-400 font-normal">

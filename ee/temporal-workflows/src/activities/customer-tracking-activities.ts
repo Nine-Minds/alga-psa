@@ -5,7 +5,7 @@
  */
 
 import { Context } from '@temporalio/activity';
-import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { getAdminConnection, withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
 import { ClientModel } from '@alga-psa/shared/models/clientModel.js';
 import { ContactModel } from '@alga-psa/shared/models/contactModel.js';
 import { TagModel } from '@alga-psa/shared/models/tagModel.js';
@@ -233,7 +233,7 @@ export async function deleteCustomerClientActivity(input: {
       clientId: input.clientId
     });
     
-    await adminKnex.transaction(async (trx: Knex.Transaction<any, any[]>) => {
+    await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction<any, any[]>) => {
       // Delete client (contacts and tags will cascade)
       await trx('clients')
         .where({
@@ -272,7 +272,7 @@ export async function deleteCustomerContactActivity(input: {
       contactId: input.contactId
     });
     
-    await adminKnex.transaction(async (trx: Knex.Transaction<any, any[]>) => {
+    await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction<any, any[]>) => {
       await trx('contacts')
         .where({
           contact_name_id: input.contactId,

@@ -40,7 +40,7 @@ export class PgBossSlaBackend implements ISlaBackend {
   async completeSla(
     ticketId: string,
     type: 'response' | 'resolution',
-    _met: boolean
+    _met: boolean | null
   ): Promise<void> {
     await this.withTicketTransaction(ticketId, async (trx, tenant) => {
       if (type === 'response') {

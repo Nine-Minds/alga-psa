@@ -4,6 +4,7 @@ type DbState = {
   rmm_integrations: Array<any>;
   rmm_organization_mappings: Array<any>;
   clients: Array<any>;
+  asset_facts: Array<any>;
 };
 
 const secrets = new Map<string, string>();
@@ -13,6 +14,8 @@ let state: DbState;
 let gatewayGroups: Array<{ id: string; name: string }> = [];
 let gatewayEndpointsByScope: Record<string, any[]> = {};
 let fallbackEndpointsByScope: Record<string, any[]> = {};
+let criticalityReadingsByScope: Record<string, Map<string, any>> = {};
+let criticalityMetadataError: Error | null = null;
 let testConnectionError: Error | null = null;
 const assertTierAccessMock = vi.fn(async () => undefined);
 const listEndpointsMock = vi.fn(async (input?: { computerGroupId?: string | null }) => {
@@ -99,6 +102,17 @@ function createFakeKnex(db: DbState) {
               (row: any) => row.tenant === inserted.tenant && row.provider === inserted.provider
             )
           : null;
+      const existingAssetFact =
+        this.table === 'asset_facts'
+          ? rows.find(
+              (row: any) =>
+                row.tenant === inserted.tenant &&
+                row.asset_id === inserted.asset_id &&
+                row.source_type === inserted.source_type &&
+                row.namespace === inserted.namespace &&
+                row.fact_key === inserted.fact_key
+            )
+          : null;
 
       if (existingIntegration) {
         return {
@@ -111,12 +125,26 @@ function createFakeKnex(db: DbState) {
           returning: async () => [existingIntegration],
         };
       }
+      if (existingAssetFact) {
+        return {
+          onConflict: () => ({
+            merge: (patch: Record<string, unknown>) => {
+              Object.assign(existingAssetFact, patch);
+              return { returning: async () => [existingAssetFact] };
+            },
+          }),
+          returning: async () => [existingAssetFact],
+        };
+      }
 
       if (this.table === 'rmm_integrations') {
         inserted.integration_id = inserted.integration_id || 'integration_tanium';
       }
       if (this.table === 'rmm_organization_mappings') {
         inserted.mapping_id = inserted.mapping_id || `map_${rows.length + 1}`;
+      }
+      if (this.table === 'asset_facts') {
+        inserted.asset_fact_id = inserted.asset_fact_id || `fact_${rows.length + 1}`;
       }
       rows.push(inserted);
 
@@ -214,6 +242,13 @@ vi.mock('../../../lib/integrations/tanium/taniumGatewayClient', () => ({
     async listAgedOutAssetFallback(input?: { computerGroupId?: string | null }) {
       return listAgedOutAssetFallbackMock(input);
     }
+    async getCriticalitySensorMetadata() {
+      if (criticalityMetadataError) throw criticalityMetadataError;
+      return [];
+    }
+    async listEndpointCriticalityReadings(input?: { computerGroupId?: string | null }) {
+      return criticalityReadingsByScope[input?.computerGroupId || ''] || new Map();
+    }
   },
 }));
 
@@ -234,6 +269,8 @@ describe('taniumActions', () => {
     gatewayGroups = [];
     gatewayEndpointsByScope = {};
     fallbackEndpointsByScope = {};
+    criticalityReadingsByScope = {};
+    criticalityMetadataError = null;
     testConnectionError = null;
     assertTierAccessMock.mockClear();
     listEndpointsMock.mockClear();
@@ -253,6 +290,7 @@ describe('taniumActions', () => {
       ],
       rmm_organization_mappings: [],
       clients: [{ tenant: 'tenant_1', client_id: 'client_1', client_name: 'Client One' }],
+      asset_facts: [],
     };
 
     knexMock = createFakeKnex(state);
@@ -273,7 +311,7 @@ describe('taniumActions', () => {
     });
     gatewayGroups = [{ id: 'scope_1', name: 'New Name' }];
 
-    const result = await (syncTaniumScopes as any)();
+    const result = await (syncTaniumScopes as any)({}, { tenant: "tenant_1" });
 
     expect(result.success).toBe(true);
     expect(state.rmm_organization_mappings[0]).toMatchObject({
@@ -296,7 +334,7 @@ describe('taniumActions', () => {
     gatewayEndpointsByScope.scope_1 = [{ id: 'endpoint_1', name: 'Endpoint 1', online: true, computerGroupId: 'scope_1' }];
     ingestNormalizedRmmDeviceSnapshotMock.mockResolvedValue({ action: 'created' });
 
-    const result = await (triggerTaniumFullSync as any)();
+    const result = await (triggerTaniumFullSync as any)({}, { tenant: "tenant_1" });
 
     expect(result.success).toBe(true);
     expect(listEndpointsMock).toHaveBeenCalledTimes(1);
@@ -321,7 +359,7 @@ describe('taniumActions', () => {
     ];
     ingestNormalizedRmmDeviceSnapshotMock.mockResolvedValue({ action: 'updated' });
 
-    const result = await (triggerTaniumFullSync as any)();
+    const result = await (triggerTaniumFullSync as any)({}, { tenant: "tenant_1" });
 
     expect(result.success).toBe(true);
     expect(listEndpointsMock).toHaveBeenCalledWith({ computerGroupId: 'scope_1' });
@@ -331,7 +369,7 @@ describe('taniumActions', () => {
   });
 
   it('uses advanced-assets tier gating for Tanium actions', async () => {
-    await (syncTaniumScopes as any)();
+    await (syncTaniumScopes as any)({}, { tenant: "tenant_1" });
 
     expect(assertTierAccessMock).toHaveBeenCalledWith('ADVANCED_ASSETS');
   });
@@ -339,7 +377,7 @@ describe('taniumActions', () => {
   it('clears saved Asset API secret when configuration is saved with an empty fallback URL', async () => {
     secrets.set('tenant_1:tanium_asset_api_url', 'https://old-asset.example');
 
-    const result = await (saveTaniumConfiguration as any)(
+    const result = await (saveTaniumConfiguration as any)({}, { tenant: "tenant_1" },
       {
         gatewayUrl: 'https://tanium.example',
         assetApiUrl: '',
@@ -371,7 +409,7 @@ describe('taniumActions', () => {
     ];
     ingestNormalizedRmmDeviceSnapshotMock.mockResolvedValue({ action: 'created' });
 
-    const result = await (triggerTaniumFullSync as any)();
+    const result = await (triggerTaniumFullSync as any)({}, { tenant: "tenant_1" });
 
     expect(result.success).toBe(true);
     expect(ingestNormalizedRmmDeviceSnapshotMock.mock.calls[0]?.[0]?.snapshot?.assetType).toBe('server');
@@ -402,7 +440,7 @@ describe('taniumActions', () => {
     ];
     ingestNormalizedRmmDeviceSnapshotMock.mockResolvedValue({ action: 'created' });
 
-    const result = await (triggerTaniumFullSync as any)();
+    const result = await (triggerTaniumFullSync as any)({}, { tenant: "tenant_1" });
 
     expect(result.success).toBe(true);
     expect(ingestNormalizedRmmDeviceSnapshotMock.mock.calls[0]?.[0]?.snapshot?.assetType).toBe('workstation');
@@ -444,7 +482,7 @@ describe('taniumActions', () => {
     ];
     ingestNormalizedRmmDeviceSnapshotMock.mockResolvedValue({ action: 'created' });
 
-    const result = await (triggerTaniumFullSync as any)();
+    const result = await (triggerTaniumFullSync as any)({}, { tenant: "tenant_1" });
 
     expect(result.success).toBe(true);
     expect(ingestNormalizedRmmDeviceSnapshotMock.mock.calls[0]?.[0]?.snapshot?.extension).toMatchObject({
@@ -467,10 +505,73 @@ describe('taniumActions', () => {
   it('T007: connection test failure keeps integration inactive and returns actionable error', async () => {
     testConnectionError = new Error('Unauthorized: invalid token');
 
-    const result = await (testTaniumConnection as any)();
+    const result = await (testTaniumConnection as any)({}, { tenant: "tenant_1" });
 
     expect(result.success).toBe(false);
     expect(result.error).toContain('Unauthorized');
     expect(state.rmm_integrations[0].is_active).toBe(false);
+  });
+
+  it('upserts criticality fact only when ingestion returns an asset id', async () => {
+    state.rmm_organization_mappings.push({
+      tenant: 'tenant_1',
+      mapping_id: 'map_1',
+      integration_id: 'integration_tanium',
+      external_organization_id: 'scope_1',
+      client_id: 'client_1',
+      auto_sync_assets: true,
+    });
+    gatewayEndpointsByScope.scope_1 = [{ id: 'endpoint_1', name: 'Endpoint 1', online: true, computerGroupId: 'scope_1' }];
+    criticalityReadingsByScope.scope_1 = new Map([
+      ['endpoint_1', { endpointId: 'endpoint_1', label: 'Critical', multiplier: 2, columns: [{ name: 'criticality_level', values: ['Critical'] }], isAvailable: true }],
+    ]);
+    ingestNormalizedRmmDeviceSnapshotMock
+      .mockResolvedValueOnce({ action: 'updated', assetId: 'asset_1' })
+      .mockResolvedValueOnce({ action: 'updated' });
+
+    await (triggerTaniumFullSync as any)({}, { tenant: "tenant_1" });
+    gatewayEndpointsByScope.scope_1 = [{ id: 'endpoint_1', name: 'Endpoint 1', online: true, computerGroupId: 'scope_1' }];
+    await (triggerTaniumFullSync as any)({}, { tenant: "tenant_1" });
+
+    expect(state.asset_facts.length).toBe(1);
+    expect(state.asset_facts[0]).toMatchObject({
+      tenant: 'tenant_1',
+      asset_id: 'asset_1',
+      source_type: 'integration',
+      provider: 'tanium',
+      namespace: 'tanium',
+      fact_key: 'criticality',
+      is_available: true,
+      value_text: 'Critical',
+    });
+  });
+
+  it('continues sync when criticality enrichment fails and leaves existing facts untouched', async () => {
+    state.rmm_organization_mappings.push({
+      tenant: 'tenant_1',
+      mapping_id: 'map_1',
+      integration_id: 'integration_tanium',
+      external_organization_id: 'scope_1',
+      client_id: 'client_1',
+      auto_sync_assets: true,
+    });
+    state.asset_facts.push({
+      tenant: 'tenant_1',
+      asset_id: 'asset_1',
+      source_type: 'integration',
+      provider: 'tanium',
+      namespace: 'tanium',
+      fact_key: 'criticality',
+      value_text: 'High',
+      is_available: true,
+    });
+    gatewayEndpointsByScope.scope_1 = [{ id: 'endpoint_1', name: 'Endpoint 1', online: true, computerGroupId: 'scope_1' }];
+    criticalityMetadataError = new Error('forbidden');
+    ingestNormalizedRmmDeviceSnapshotMock.mockResolvedValue({ action: 'updated', assetId: 'asset_1' });
+
+    const result = await (triggerTaniumFullSync as any)({}, { tenant: "tenant_1" });
+    expect(result.success).toBe(true);
+    expect(state.asset_facts).toHaveLength(1);
+    expect(state.asset_facts[0].value_text).toBe('High');
   });
 });

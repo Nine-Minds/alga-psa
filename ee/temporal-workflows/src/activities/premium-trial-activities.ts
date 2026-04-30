@@ -7,7 +7,7 @@
  */
 
 import { Context } from '@temporalio/activity';
-import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { getAdminConnection, retryOnAdminReadOnly } from '@alga-psa/db/admin.js';
 
 const logger = () => Context.current().log;
 
@@ -45,29 +45,36 @@ export async function checkExpiredPremiumTrialsActivity(): Promise<CheckExpiredP
 
     for (const sub of expiredTrials) {
       try {
-        // Revert tenant plan to pro
-        await knex('tenants')
-          .where({ tenant: sub.tenant })
-          .update({ plan: 'pro', updated_at: knex.fn.now() });
+        await retryOnAdminReadOnly(
+          async () => {
+            const k = await getAdminConnection();
 
-        // Clear trial metadata on the subscription
-        const currentSub = await knex('stripe_subscriptions')
-          .where({ stripe_subscription_id: sub.stripe_subscription_id })
-          .select('metadata')
-          .first();
+            // Revert tenant plan to pro
+            await k('tenants')
+              .where({ tenant: sub.tenant })
+              .update({ plan: 'pro', updated_at: k.fn.now() });
 
-        const metadata = currentSub?.metadata || {};
-        const { premium_trial, premium_trial_started, premium_trial_end, ...remainingMetadata } = metadata;
+            // Clear trial metadata on the subscription
+            const currentSub = await k('stripe_subscriptions')
+              .where({ stripe_subscription_id: sub.stripe_subscription_id })
+              .select('metadata')
+              .first();
 
-        await knex('stripe_subscriptions')
-          .where({ stripe_subscription_id: sub.stripe_subscription_id })
-          .update({
-            metadata: {
-              ...remainingMetadata,
-              premium_trial_reverted: new Date().toISOString(),
-            },
-            updated_at: knex.fn.now(),
-          });
+            const metadata = currentSub?.metadata || {};
+            const { premium_trial, premium_trial_started, premium_trial_end, ...remainingMetadata } = metadata;
+
+            await k('stripe_subscriptions')
+              .where({ stripe_subscription_id: sub.stripe_subscription_id })
+              .update({
+                metadata: {
+                  ...remainingMetadata,
+                  premium_trial_reverted: new Date().toISOString(),
+                },
+                updated_at: k.fn.now(),
+              });
+          },
+          { logLabel: 'checkExpiredPremiumTrialsActivity' }
+        );
 
         reverted.push(sub.tenant);
         log.info(`Reverted expired Premium trial for tenant ${sub.tenant}`);

@@ -2,7 +2,7 @@ import logger from '@shared/core/logger.js';
 import {
   RedisStreamClient,
   WorkflowEventBaseSchema,
-} from '@alga-psa/workflow-streams';
+} from '@alga-psa/shared/workflow/streams/index.js';
 import {
   createSecretResolverFromProvider,
   getSchemaRegistry,
@@ -279,7 +279,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
 
     const schemaRegistry = getSchemaRegistry();
 
-    const workflows = await WorkflowDefinitionModelV2.list(knex);
+    const workflows = await WorkflowDefinitionModelV2.list(knex, event.tenant);
     const matching = workflows.filter(
       (workflow) => workflow.status === 'published' && (workflow.trigger as any)?.eventName === event.event_type
     );

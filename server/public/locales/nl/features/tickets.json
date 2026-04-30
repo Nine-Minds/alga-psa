@@ -1101,5 +1101,31 @@
       "childrenDescription": "Onderliggende tickets gebundeld in dit hoofdticket"
     }
   },
-  "invalidTicketData": "Ongeldige ticketgegevens"
+  "invalidTicketData": "Ongeldige ticketgegevens",
+  "timeEntries": {
+    "title": "Geregistreerde tijd",
+    "loading": "Tijdregistraties laden…",
+    "loadError": "Kan tijdregistraties niet laden",
+    "empty": "Er is nog geen tijd geregistreerd op dit ticket.",
+    "myEntries": "Mijn registraties",
+    "otherTeam": "Andere teamleden",
+    "othersAnonymized": "{{count}} registraties van andere teamleden ({{duration}})",
+    "noService": "Geen dienst",
+    "unknownUser": "Onbekende gebruiker",
+    "statusDraft": "Concept",
+    "statusSubmitted": "Ingediend",
+    "statusApproved": "Goedgekeurd",
+    "statusChangesRequested": "Wijzigingen aangevraagd",
+    "statusUnknown": "Onbekend",
+    "edit": "Tijdsregistratie bewerken",
+    "delete": "Tijdsregistratie verwijderen",
+    "deleteConfirmTitle": "Tijdsregistratie verwijderen?",
+    "deleteConfirmMessage": "De tijdsregistratie wordt permanent verwijderd. Deze actie kan niet ongedaan worden gemaakt.",
+    "deleteConfirmAction": "Verwijderen",
+    "duration": {
+      "hr": "uur",
+      "hrs": "uur",
+      "min": "min"
+    }
+  }
 }

@@ -359,7 +359,7 @@ export async function recordResolution(
       met
     });
 
-    if (!options?.skipBackend && met !== null) {
+    if (!options?.skipBackend) {
       try {
         const backend = await SlaBackendFactory.getBackend();
         await backend.completeSla(ticketId, 'resolution', met);
@@ -370,12 +370,28 @@ export async function recordResolution(
 
     return { success: true, met, recorded_at: resolvedAt };
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error recording resolution:', error);
+
+    // Best-effort: write a resolution_failed row to sla_audit_log so silent
+    // failures show up alongside the success rows. The transaction may already
+    // be aborted from the original error — swallow any inner failure so we
+    // never make things worse.
+    try {
+      await logSlaEvent(trx, tenant, ticketId, 'resolution_failed', {
+        resolved_at: resolvedAt.toISOString(),
+        resolved_by: resolvedBy,
+        error: message
+      });
+    } catch (auditError) {
+      console.error('Failed to write resolution_failed audit row:', auditError);
+    }
+
     return {
       success: false,
       met: null,
       recorded_at: resolvedAt,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: message
     };
   }
 }

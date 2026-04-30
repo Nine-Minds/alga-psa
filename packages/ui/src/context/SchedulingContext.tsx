@@ -3,7 +3,10 @@
 import React, { createContext, useContext } from 'react';
 import { Alert, AlertDescription } from '../components/Alert';
 import { toast } from 'react-hot-toast';
-import type { TimeEntryWorkItemContext } from '@alga-psa/types';
+import type {
+  TimeEntryWorkItemContext,
+  TicketTimeEntriesSummary,
+} from '@alga-psa/types';
 
 export type OpenDrawerFn = (
   content: React.ReactNode,
@@ -19,7 +22,10 @@ export interface SchedulingCallbacks {
     closeDrawer: () => void;
     context: TimeEntryWorkItemContext;
     onComplete?: () => void;
+    existingEntryId?: string;
   }) => Promise<void>;
+  fetchTimeEntriesForTicket: (ticketId: string) => Promise<TicketTimeEntriesSummary>;
+  deleteTimeEntry: (entryId: string) => Promise<void>;
 }
 
 const defaultSchedulingCallbacks: SchedulingCallbacks = {
@@ -33,6 +39,21 @@ const defaultSchedulingCallbacks: SchedulingCallbacks = {
     </div>
   ),
   launchTimeEntry: async () => {
+    toast('Time entry is managed in Scheduling.');
+  },
+  fetchTimeEntriesForTicket: async () => ({
+    entries: [],
+    ownTotalMinutes: 0,
+    ownEntryCount: 0,
+    othersTotalMinutes: 0,
+    othersEntryCount: 0,
+    othersVisibleMinutes: 0,
+    othersVisibleCount: 0,
+    othersHiddenMinutes: 0,
+    othersHiddenCount: 0,
+    totalMinutes: 0,
+  }),
+  deleteTimeEntry: async () => {
     toast('Time entry is managed in Scheduling.');
   },
 };

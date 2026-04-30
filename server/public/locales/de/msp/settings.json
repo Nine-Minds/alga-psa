@@ -19,7 +19,13 @@
     "importExport": "Import/Export",
     "email": "E-Mail",
     "integrations": "Integrationen",
-    "extensions": "Erweiterungen"
+    "extensions": "Erweiterungen",
+    "ticketingSettings": "Ticketing-Einstellungen",
+    "loadingTicketing": "Ticketing-Konfiguration wird geladen...",
+    "teamManagement": "Team-Verwaltung",
+    "loadingTeam": "Team-Konfiguration wird geladen...",
+    "loadingExperimental": "Experimentelle Funktionskonfiguration wird geladen...",
+    "loadingInteractions": "Interaktionseinstellungen werden geladen..."
   },
   "unsavedChanges": {
     "title": "Ungespeicherte Änderungen",
@@ -304,7 +310,8 @@
         "reportsToSelf": "Ein Benutzer kann sich nicht selbst als Vorgesetzten zuweisen",
         "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen"
       }
-    }
+    },
+    "loading": "Benutzerdetails werden geladen..."
   },
   "teams": {
     "title": "Teamverwaltung",
@@ -610,7 +617,40 @@
         "priorityMatrixTitle": "Prioritätsmatrix",
         "impactDescription": "Auswirkungsstufen definieren den Umfang des Problems",
         "urgencyDescription": "Dringlichkeitsstufen definieren, wie schnell das Problem gelöst werden muss",
-        "priorityDescription": "Die Priorität wird aus Auswirkung und Dringlichkeit berechnet"
+        "priorityDescription": "Die Priorität wird aus Auswirkung und Dringlichkeit berechnet",
+        "categories": {
+          "serviceRequest": "Serviceanfrage"
+        },
+        "priorityMatrix": {
+          "urgencyHeaderLine1": {
+            "high": "Hoch",
+            "mediumHigh": "Mittel-Hoch",
+            "medium": "Mittel",
+            "mediumLow": "Mittel-Niedrig",
+            "low": "Niedrig"
+          },
+          "urgencyHeaderLine2": {
+            "high": "Dringlichkeit (1)",
+            "mediumHigh": "Dringlichkeit (2)",
+            "medium": "Dringlichkeit (3)",
+            "mediumLow": "Dringlichkeit (4)",
+            "low": "Dringlichkeit (5)"
+          },
+          "impact": {
+            "high": "Hohe Auswirkung (1)",
+            "mediumHigh": "Mittel-Hohe Auswirkung (2)",
+            "medium": "Mittlere Auswirkung (3)",
+            "mediumLow": "Mittel-Niedrige Auswirkung (4)",
+            "low": "Niedrige Auswirkung (5)"
+          },
+          "priority": {
+            "critical": "Kritisch (1)",
+            "high": "Hoch (2)",
+            "medium": "Mittel (3)",
+            "low": "Niedrig (4)",
+            "planning": "Planung (5)"
+          }
+        }
       },
       "messages": {
         "success": {
@@ -842,7 +882,8 @@
           "saveFailed": "Interaktionstyp konnte nicht {{action}} werden. Bitte versuchen Sie es erneut."
         }
       }
-    }
+    },
+    "openMenu": "Menü öffnen"
   },
   "clientPortal": {
     "branding": {
@@ -927,7 +968,70 @@
         "forgotPassword": "Passwort vergessen?",
         "mspStaffLogin": "MSP-Mitarbeiter? Hier anmelden →"
       }
-    }
+    },
+    "domain": {
+      "title": "Benutzerdefinierte Domain",
+      "description": "Konfigurieren Sie einen markenspezifischen Hostnamen für Ihr Kundenportal. TLS-Zertifikate werden automatisch bereitgestellt, sobald DNS verifiziert ist.",
+      "currentStatus": "Aktueller Status",
+      "noDomainConfigured": "Keine benutzerdefinierte Domain konfiguriert",
+      "defaultStatusMessage": "Noch keine benutzerdefinierte Domain registriert.",
+      "lastChecked": "Zuletzt geprüft: {{value}}",
+      "updatingDomainPrefix": "Domain wird aktualisiert auf ",
+      "updatingDomainSuffix": ". Die Bereitstellung wird neu gestartet, sobald Sie aktualisieren.",
+      "editInstructions": "Um Ihre Domain zu ändern, bearbeiten Sie den Wert unten und senden Sie ihn ab, um eine neue Bereitstellung anzustoßen.",
+      "actions": {
+        "refresh": "Aktualisieren",
+        "refreshing": "Wird aktualisiert...",
+        "retry": "Wiederholen",
+        "retrying": "Wird wiederholt…",
+        "removeDomain": "Domain entfernen",
+        "saveDomain": "Domain speichern",
+        "updateDomain": "Domain aktualisieren",
+        "submitting": "Wird gesendet…",
+        "cancelEdit": "Bearbeitung abbrechen"
+      },
+      "form": {
+        "label": "Benutzerdefinierte Domain",
+        "helpTextPrefix": "Fügen Sie einen CNAME-Eintrag hinzu, der auf ",
+        "helpTextSuffix": " verweist, bevor Sie absenden.",
+        "placeholder": "portal.example.com"
+      },
+      "checklist": {
+        "title": "Einrichtungs-Checkliste",
+        "step1Prefix": "Erstellen Sie einen CNAME-Eintrag für Ihren gewählten Host, der auf ",
+        "step1Suffix": " verweist.",
+        "step2": "Klicken Sie auf „Domain speichern“, um die DNS-Verifizierung und die Zertifikatsbereitstellung auszulösen.",
+        "step3": "Verwenden Sie die Schaltfläche „Aktualisieren“, um den Bereitstellungsfortschritt abzufragen. Wir benachrichtigen Ihre Administratoren per E-Mail, falls die Bereitstellung fehlschlägt.",
+        "canonicalHostFallback": "kanonischer Host"
+      },
+      "badges": {
+        "pending_dns": "DNS ausstehend",
+        "verifying_dns": "DNS wird verifiziert",
+        "dns_failed": "DNS fehlgeschlagen",
+        "pending_certificate": "Zertifikat ausstehend",
+        "certificate_issuing": "Zertifikat wird ausgestellt",
+        "certificate_failed": "Zertifikat fehlgeschlagen",
+        "deploying": "Wird bereitgestellt",
+        "active": "Aktiv",
+        "disabled": "Deaktiviert",
+        "unknown": "Unbekannt"
+      },
+      "messages": {
+        "requestSubmitted": "Anfrage für benutzerdefinierte Domain übermittelt.",
+        "retryQueued": "Wiederholung in Warteschlange. Status in wenigen Augenblicken erneut prüfen.",
+        "removalRequested": "Entfernung der benutzerdefinierten Domain angefordert.",
+        "enterDomainFirst": "Geben Sie eine Domain ein, bevor Sie absenden.",
+        "confirmRemove": "Aktuelle benutzerdefinierte Domain entfernen? Der Datenverkehr wird auf die standardmäßig gehostete Adresse zurückgesetzt.",
+        "loadFailed": "Status der Portal-Domain konnte nicht geladen werden.",
+        "registerFailed": "Benutzerdefinierte Domain konnte nicht registriert werden.",
+        "refreshFailed": "Domain-Status konnte nicht aktualisiert werden.",
+        "retryFailed": "Wiederholung fehlgeschlagen.",
+        "disableFailed": "Benutzerdefinierte Domain konnte nicht deaktiviert werden."
+      }
+    },
+    "yourCompanyName": "Name Ihres Unternehmens",
+    "brandingPreviewMode": "Branding-Vorschau-Themenmodus",
+    "brandingUpdated": "Branding-Einstellungen aktualisiert"
   },
   "mspLanguage": {
     "title": "Organisationssprache",
@@ -958,7 +1062,21 @@
       "telemetry": "Telemetrie"
     },
     "internalTabs": {
-      "categories": "Kategorien"
+      "categories": "Kategorien",
+      "categoriesTypes": "Kategorien & Typen"
+    },
+    "loading": {
+      "settings": "Einstellungen werden geladen...",
+      "templates": "Vorlagen werden geladen...",
+      "categories": "Kategorien werden geladen..."
+    },
+    "unsaved": {
+      "title": "Nicht gespeicherte Änderungen",
+      "message": "Sie haben nicht gespeicherte Benachrichtigungseinstellungen. Möchten Sie die Seite wirklich verlassen? Ihre Änderungen gehen verloren."
+    },
+    "tenantDescription": {
+      "email": "Mandantenweite E-Mail-Benachrichtigungseinstellungen konfigurieren",
+      "internal": "Mandantenweite interne Benachrichtigungseinstellungen konfigurieren"
     },
     "sections": {
       "globalSettings": {
@@ -1193,7 +1311,8 @@
         "loadJobDetails": "Auftragsdetails konnten nicht geladen werden",
         "refreshHistory": "Importverlauf konnte nicht aktualisiert werden"
       }
-    }
+    },
+    "selectJobHint": "Wählen Sie einen Importauftrag aus, um die Ergebnisse zu untersuchen."
   },
   "email": {
     "title": "E-Mail-Konfiguration",
@@ -1238,6 +1357,107 @@
       "apiKeys": "API-Key-Konfiguration wird geladen...",
       "sso": "SSO-Verwaltungswerkzeuge werden geladen...",
       "sessions": "Aktive Sitzungen werden geladen..."
+    },
+    "ssoBulk": {
+      "loading": {
+        "title": "Single Sign-On",
+        "description": "SSO-Massenzuweisungs-Werkzeuge werden geladen..."
+      },
+      "autoLink": {
+        "title": "SSO für neue interne Benutzer automatisch einrichten",
+        "description": "Aktivieren Sie diese Option, um jedem neuen Mitarbeiterkonto sofort Ihren Unternehmens-SSO-Anbieter zuzuweisen, sodass eine passwortbasierte Anmeldung nicht erforderlich ist.",
+        "body": "Wenn aktiviert, können neu hinzugefügte MSP-Benutzer sich mit Google oder Microsoft über ihre geschäftliche E-Mail-Adresse anmelden. Sie müssen ihr Konto nicht manuell verknüpfen.",
+        "toggleLabel": "Automatischen SSO-Abgleich umschalten",
+        "disabledInfo": "Aktivieren Sie diese Option, damit neue und bestehende Mitarbeiter den „SSO verbinden“-Vorgang überspringen können, wenn ihre E-Mail-Adresse bereits mit einem konfigurierten Anbieter übereinstimmt. Wir protokollieren weiterhin jede automatische Verknüpfung."
+      },
+      "bulk": {
+        "title": "SSO-Massenzuweisung",
+        "description": "Wählen Sie interne Benutzer aus der Liste unten aus und verknüpfen Sie sie mit einem konfigurierten Google- oder Microsoft-Anbieter. Verwenden Sie die Vorschau, um die Auswirkungen vor der Ausführung zu überprüfen.",
+        "noProviders": "Es sind noch keine SSO-Anbieter konfiguriert. Fügen Sie OAuth-Anmeldedaten hinzu, um mit Massenzuweisungen fortzufahren."
+      },
+      "errors": {
+        "loadProviders": "SSO-Anbieterkonfiguration konnte nicht geladen werden.",
+        "updatePreferences": "SSO-Einstellungen konnten nicht aktualisiert werden."
+      },
+      "form": {
+        "title": "Anbieter auswählen & Benutzer wählen",
+        "description": "Wählen Sie den konfigurierten SSO-Anbieter für Ihre Mitarbeiter und suchen und wählen Sie dann die zu verknüpfenden Benutzer aus.",
+        "providerLabel": "Anbieter",
+        "notConfigured": "Nicht konfiguriert",
+        "providerNotConfiguredAlert": "Stellen Sie OAuth-Anmeldedaten für diesen Anbieter bereit, bevor Sie Konten verknüpfen.",
+        "actionLabel": "Aktion",
+        "linkSelected": "Ausgewählte Benutzer verknüpfen",
+        "unlinkSelected": "Verknüpfung ausgewählter Benutzer aufheben",
+        "actionPlaceholder": "SSO-Massenaktion auswählen",
+        "actionDescription": "Beim Verknüpfen wird der Anbieter zu jedem ausgewählten Benutzer hinzugefügt. Beim Aufheben der Verknüpfung wird der Anbieter entfernt, sodass der Benutzer wieder zur Passwort-/TOTP-Anmeldung zurückkehrt, bis er erneut verknüpft.",
+        "searchLabel": "Interne Benutzer suchen",
+        "searchPlaceholder": "Nach E-Mail oder Name suchen",
+        "noneSelected": "Noch keine Benutzer ausgewählt.",
+        "selected_one": "{{count}} Benutzer ausgewählt.",
+        "selected_other": "{{count}} Benutzer ausgewählt.",
+        "clearSelection": "Auswahl löschen",
+        "loadingUsers": "Benutzer werden geladen...",
+        "noMatch": "Keine Benutzer entsprechen dieser Suche.",
+        "noUsers": "Keine internen Benutzer gefunden.",
+        "clientPortalComing": "Massenzuweisungen für das Kundenportal sind in Kürze verfügbar. Vorerst gilt dieses Werkzeug nur für interne MSP-Benutzer.",
+        "loadUsersFailed": "Zuweisbare Benutzer konnten nicht geladen werden.",
+        "actions": {
+          "previewLink": "Zuweisung in der Vorschau anzeigen",
+          "previewUnlink": "Aufhebung in der Vorschau anzeigen",
+          "link": "Konten verknüpfen",
+          "unlink": "Verknüpfung der Konten aufheben",
+          "preparingPreview": "Vorschau wird vorbereitet…",
+          "linking": "Konten werden verknüpft…",
+          "unlinking": "Verknüpfung der Konten wird aufgehoben…",
+          "bulkLabel": "SSO-Massenaktionen {{location}}"
+        },
+        "table": {
+          "email": "E-Mail",
+          "id": "ID",
+          "name": "Name",
+          "status": "Status",
+          "active": "Aktiv",
+          "inactive": "Inaktiv",
+          "linkedProviders": "Verknüpfte Anbieter",
+          "unlinked": "Nicht verknüpft",
+          "lastLogin": "Letzte Anmeldung"
+        },
+        "toast": {
+          "providerRequiredTitle": "Anbieter erforderlich",
+          "providerRequiredDescription": "Wählen Sie einen konfigurierten Anbieter aus, bevor Sie fortfahren.",
+          "noUsersTitle": "Keine Benutzer ausgewählt",
+          "noUsersDescription": "Wählen Sie mindestens einen Benutzer aus der Tabelle aus.",
+          "failedTitle": "Massenzuweisung fehlgeschlagen",
+          "failedDescription": "SSO-Massenzuweisung konnte nicht verarbeitet werden.",
+          "linkCompleteTitle": "Verknüpfung abgeschlossen",
+          "unlinkCompleteTitle": "Aufhebung abgeschlossen",
+          "previewReadyTitle": "Vorschau bereit",
+          "linkedCount": "{{count}} Konten über {{provider}} verknüpft.",
+          "unlinkedCount": "Verknüpfung von {{count}} Konten über {{provider}} aufgehoben.",
+          "previewUnlink_one": "Vorschau bereit. Wir heben die Verknüpfung von {{count}} ausgewählten Benutzer auf.",
+          "previewUnlink_other": "Vorschau bereit. Wir heben die Verknüpfung von {{count}} ausgewählten Benutzern auf.",
+          "previewLink": "Vorschau bereit. Überprüfen Sie die Zusammenfassung, bevor Sie Konten verknüpfen."
+        },
+        "results": {
+          "completeTitle": "Zuweisung abgeschlossen",
+          "previewTitle": "Vorschau-Ergebnisse",
+          "noneMatched": "Keiner der ausgewählten Benutzer entsprach den aktuellen Filtern.",
+          "processed_one": "{{count}} Benutzer verarbeitet.",
+          "processed_other": "{{count}} Benutzer verarbeitet.",
+          "candidatesSelected": "{{count}} ausgewählt",
+          "unlinked": "Verknüpfung aufgehoben",
+          "wouldUnlink": "Verknüpfung würde aufgehoben",
+          "linked": "Verknüpft",
+          "wouldLink": "Würde verknüpft",
+          "alreadyUnlinked": "Bereits nicht verknüpft",
+          "alreadyLinked": "Bereits verknüpft",
+          "skippedInactive": "Übersprungen (inaktiv)"
+        },
+        "providerNames": {
+          "google": "Google Workspace",
+          "microsoft": "Microsoft 365"
+        }
+      }
     },
     "userRoles": {
       "title": "Rollen an Benutzer zuweisen",
@@ -1528,5 +1748,9 @@
     "inheritOption": "Organisationsstandard verwenden ({{language}})",
     "unsetHint": "Um die Client-Portal-Überschreibung zu entfernen, ändern Sie den Organisationsstandard unter Einstellungen → Sprache.",
     "updated": "Client-Portal-Standardsprache auf {{language}} aktualisiert"
+  },
+  "language": {
+    "selectLanguage": "Sprache auswählen",
+    "languagesUpdated": "Verfügbare Sprachen aktualisiert"
   }
 }

@@ -216,7 +216,7 @@ function ShareLandingContent() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password"
+                placeholder={t('share.enterPassword')}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && password) {
                     handleDownload();
@@ -236,7 +236,7 @@ function ShareLandingContent() {
           {downloadSuccess && (
             <Alert>
               <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertDescription>Download started successfully!</AlertDescription>
+              <AlertDescription>{t('share.downloadStarted')}</AlertDescription>
             </Alert>
           )}
 

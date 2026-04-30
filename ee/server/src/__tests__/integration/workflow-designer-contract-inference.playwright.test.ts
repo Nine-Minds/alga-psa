@@ -155,7 +155,7 @@ async function setupDesigner(page: Page, permissions = ADMIN_PERMISSIONS): Promi
     });
   }
 
-  await ensureSystemEmailWorkflow(db);
+  await ensureSystemEmailWorkflow(db, tenantData.tenant.tenantId);
 
   await page.goto(`${TEST_CONFIG.baseUrl}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
   await page.waitForLoadState('networkidle', { timeout: 30_000 });
@@ -167,6 +167,7 @@ async function setupDesigner(page: Page, permissions = ADMIN_PERMISSIONS): Promi
 
 async function createWorkflowWithTrigger(
   db: Knex,
+  tenantId: string,
   name: string,
   triggerEventName: string,
   payloadSchemaRef: string,
@@ -193,6 +194,7 @@ async function createWorkflowWithTrigger(
 
   await db('workflow_definitions').insert({
     workflow_id: workflowId,
+    tenant_id: tenantId,
     name,
     description: null,
     payload_schema_ref: payloadSchemaRef,
@@ -357,6 +359,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       // Create a workflow with a trigger event
       workflowId = await createWorkflowWithTrigger(
         db,
+        tenantData.tenant.tenantId,
         `Inferred Test ${uuidv4().slice(0, 6)}`,
         'INBOUND_EMAIL_RECEIVED',
         'payload.EmailWorkflowPayload.v1',
@@ -399,6 +402,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       // Create a workflow in pinned mode
       workflowId = await createWorkflowWithTrigger(
         db,
+        tenantData.tenant.tenantId,
         `Pinned Test ${uuidv4().slice(0, 6)}`,
         'INBOUND_EMAIL_RECEIVED',
         'payload.EmailWorkflowPayload.v1',
@@ -457,6 +461,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       // Create a workflow in pinned mode
       workflowId = await createWorkflowWithTrigger(
         db,
+        tenantData.tenant.tenantId,
         `Mode Switch ${uuidv4().slice(0, 6)}`,
         'INBOUND_EMAIL_RECEIVED',
         'payload.EmailWorkflowPayload.v1',
@@ -501,6 +506,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
     try {
       workflowId = await createWorkflowWithTrigger(
         db,
+        tenantData.tenant.tenantId,
         `Trigger Distinction ${uuidv4().slice(0, 6)}`,
         'INBOUND_EMAIL_RECEIVED',
         'payload.EmailWorkflowPayload.v1',
@@ -535,6 +541,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
     try {
       workflowId = await createWorkflowWithTrigger(
         db,
+        tenantData.tenant.tenantId,
         `Preview Test ${uuidv4().slice(0, 6)}`,
         'INBOUND_EMAIL_RECEIVED',
         'payload.EmailWorkflowPayload.v1',
@@ -582,6 +589,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       // Create inferred workflow
       workflowId1 = await createWorkflowWithTrigger(
         db,
+        tenantData.tenant.tenantId,
         `Inferred Modal ${uuidv4().slice(0, 6)}`,
         'INBOUND_EMAIL_RECEIVED',
         'payload.EmailWorkflowPayload.v1',
@@ -591,6 +599,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       // Create pinned workflow
       workflowId2 = await createWorkflowWithTrigger(
         db,
+        tenantData.tenant.tenantId,
         `Pinned Modal ${uuidv4().slice(0, 6)}`,
         'INBOUND_EMAIL_RECEIVED',
         'payload.EmailWorkflowPayload.v1',
@@ -677,6 +686,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
       // Create a workflow (as admin, before logging in as read-only)
       workflowId = await createWorkflowWithTrigger(
         db,
+        tenantData.tenant.tenantId,
         `ReadOnly Test ${uuidv4().slice(0, 6)}`,
         'INBOUND_EMAIL_RECEIVED',
         'payload.EmailWorkflowPayload.v1',
@@ -714,6 +724,7 @@ test.describe('Workflow Designer UI - Contract Section', () => {
     try {
       workflowId = await createWorkflowWithTrigger(
         db,
+        tenantData.tenant.tenantId,
         `Effective Preview ${uuidv4().slice(0, 6)}`,
         'INBOUND_EMAIL_RECEIVED',
         'payload.EmailWorkflowPayload.v1',

@@ -255,5 +255,320 @@
       "load": "Kan standaardwaarden voor tickets niet laden",
       "delete": "Kan standaardwaarden voor tickets niet verwijderen"
     }
+  },
+  "policyManagement": {
+    "resourceSections": {
+      "tickets": "Tickets",
+      "documents": "Documenten",
+      "time": "Tijd",
+      "projects": "Projecten",
+      "assets": "Assets",
+      "billing": "Facturatie"
+    },
+    "targetTypes": {
+      "role": "Rol",
+      "team": "Team",
+      "user": "Gebruiker",
+      "apiKey": "API-sleutel"
+    },
+    "templateSummaries": {
+      "own": "records die eigendom zijn van de principal",
+      "assigned": "records toegewezen aan de principal",
+      "managed": "records die eigendom zijn van beheerde gebruikers",
+      "ownOrAssigned": "records die eigendom zijn van of toegewezen aan de principal",
+      "ownOrManaged": "records die eigendom zijn van de principal of beheerde gebruikers",
+      "sameClient": "records binnen dezelfde klantscope",
+      "clientPortfolio": "records voor de klantportfolio van de principal",
+      "selectedClients": "records in geselecteerde klantscopes",
+      "sameTeam": "records die eigendom zijn van hetzelfde team",
+      "selectedBoards": "records in geselecteerde boards"
+    },
+    "constraintSummaries": {
+      "notSelfApprover": "blokkeert zelfgoedkeuring",
+      "clientVisibleOnly": "vereist voor de klant zichtbare records",
+      "hideSensitiveFields": "redigeert gevoelige velden"
+    },
+    "dates": {
+      "unknown": "Onbekend"
+    },
+    "ruleSummary": {
+      "base": "Beperk {{resourceType}} {{action}} tot {{scope}}.",
+      "withConstraint": "Beperk {{resourceType}} {{action}} tot {{scope}}; {{constraint}}."
+    },
+    "upsell": {
+      "title": "Autorisatiebundels",
+      "description": "Geavanceerd beheer van autorisatiebundels is beschikbaar in de Premium-laag. Upgrade om herbruikbare beperkingsbundels te beheren."
+    },
+    "hero": {
+      "badge": "Premium-werkruimte",
+      "title": "Autorisatiebundels",
+      "subtitle": "Beheer premium toegangsbeperkingen met conceptrevisies, scoped toewijzingen en veilige simulatie vanuit één bedieningscentrum.",
+      "newBundle": "Nieuwe bundel",
+      "addStarters": "Starterbundels toevoegen",
+      "addingStarters": "Starterbundels toevoegen..."
+    },
+    "metrics": {
+      "activeBundles": {
+        "title": "Actieve bundels",
+        "subtitle": "Herbruikbare beperkingsbundels die momenteel beschikbaar zijn om toe te wijzen"
+      },
+      "activeAssignments": {
+        "title": "Actieve toewijzingen",
+        "subtitle": "Live uitrol naar rollen, teams, gebruikers en API-sleutels"
+      },
+      "starterBundles": {
+        "title": "Starterbundels",
+        "subtitle": "Gebundelde relatiegerichte presets klaar om aan te passen"
+      },
+      "archivedBundles": {
+        "title": "Gearchiveerde bundels",
+        "subtitle": "Buiten gebruik gestelde bundels behouden voor audit en hergebruik"
+      }
+    },
+    "library": {
+      "eyebrow": "Bibliotheek",
+      "title": "Bibliotheek met autorisatiebundels",
+      "description": "Bekijk de status van bundels, beheer levenscycluswijzigingen en open een gerichte werkruimte voor één bundel tegelijk.",
+      "searchPlaceholder": "Zoek bundels op naam of beschrijving",
+      "showArchived": "Toon gearchiveerd",
+      "columns": {
+        "bundle": "Bundel",
+        "status": "Status",
+        "type": "Type",
+        "assignments": "Toewijzingen",
+        "updated": "Bijgewerkt",
+        "actions": "Acties"
+      },
+      "statusLabels": {
+        "active": "actief",
+        "archived": "gearchiveerd"
+      },
+      "typeLabels": {
+        "system": "Systeem",
+        "custom": "Aangepast"
+      },
+      "badges": {
+        "starter": "Starter"
+      },
+      "descriptions": {
+        "systemStarter": "Systeem-starterbundel.",
+        "customBundle": "Aangepaste beperkingsbundel voor toewijzingen aan rollen, teams, gebruikers of API-sleutels."
+      },
+      "effectiveSummary": "Effectief overzicht: {{status}} bundel met {{count}} actieve toewijzing(en).",
+      "empty": "Geen autorisatiebundels gevonden.",
+      "loading": "Autorisatiebundels laden...",
+      "actions": {
+        "openEditor": "Editor openen",
+        "assignments": "Toewijzingen",
+        "simulator": "Simulator",
+        "clone": "Klonen",
+        "archive": "Archiveren"
+      }
+    },
+    "workspace": {
+      "backToLibrary": "Terug naar bibliotheek",
+      "updatedWithAssignments": "Bijgewerkt {{date}} · {{count}} actieve toewijzing(en)",
+      "eyebrow": "Bundelwerkruimte",
+      "fallbackBundleName": "Geselecteerde bundel",
+      "fallbackDescription": "Gebruik de concept-editor, toewijzingsbeheerder en simulator om veilige beperkingswijzigingen door te voeren.",
+      "tabs": {
+        "editor": "Concept-editor",
+        "assignments": "Toewijzingen",
+        "simulator": "Simulator"
+      }
+    },
+    "editor": {
+      "header": "Bundel-editor",
+      "editingDraftPrefix": "Conceptrevisie bewerken voor ",
+      "editingDraftSuffix": ". Wijzigingen blijven in concept tot publicatie.",
+      "viewingPublishedPrefix": "Gepubliceerde revisie bekijken voor ",
+      "viewingPublishedSuffix": ". Er bestaat momenteel geen actieve conceptrevisie.",
+      "publishDraft": "Concept publiceren",
+      "publishing": "Publiceren...",
+      "publishedBadge": "Gepubliceerd",
+      "loading": "Concept-editor laden...",
+      "revisionSummary": "Revisieoverzicht: {{summary}}",
+      "ruleCount": "{{count}} {{revisionType}} regel(s)",
+      "revisionType": {
+        "draft": "concept",
+        "published": "gepubliceerd"
+      },
+      "emptyRules": "Nog geen {{revisionType}} regels voor {{resource}}.",
+      "ruleForm": {
+        "addDraftTitle": "Conceptregel toevoegen",
+        "editDraftTitle": "Conceptregel bewerken",
+        "createDraftTitle": "Conceptregel aanmaken",
+        "editPublishedTitle": "Gepubliceerde regel bewerken als concept",
+        "helperEditPublished": "Door op te slaan wordt een nieuwe conceptrevisie aangemaakt met uw wijzigingen aan deze gepubliceerde regel.",
+        "helperCreateDraft": "Door op te slaan wordt een nieuwe conceptrevisie voor deze bundel aangemaakt.",
+        "reset": "Opnieuw instellen",
+        "action": "Actie",
+        "template": "Sjabloon",
+        "constraint": "Beperking (optioneel)",
+        "constraintNone": "geen",
+        "saveDraftRule": "Conceptregel opslaan",
+        "addDraftRule": "Conceptregel toevoegen",
+        "saveAsDraftChange": "Opslaan als conceptwijziging",
+        "createDraftRule": "Conceptregel aanmaken"
+      },
+      "rule": {
+        "edit": "Bewerken",
+        "remove": "Verwijderen",
+        "removeAsDraft": "Verwijderen als conceptwijziging",
+        "removeDraftTooltip": "Verwijder deze conceptregel.",
+        "removePublishedTooltip": "Maak een nieuwe conceptrevisie aan die deze gepubliceerde regel verwijdert.",
+        "selectedClientScopes": "Geselecteerde klantscopes",
+        "selectedBoardScopes": "Geselecteerde boardscopes",
+        "redactedFields": "Geredigeerde velden"
+      },
+      "scopes": {
+        "clientTitle": "Geselecteerde klantscopes",
+        "boardTitle": "Geselecteerde boardscopes",
+        "selectClient": "Selecteer klant",
+        "selectBoard": "Selecteer board",
+        "addClientScope": "Klantscope toevoegen",
+        "addBoardScope": "Boardscope toevoegen",
+        "noClientScopes": "Nog geen klantscopes toegevoegd.",
+        "noBoardScopes": "Nog geen boardscopes toegevoegd.",
+        "remove": "Verwijderen"
+      },
+      "redaction": {
+        "label": "Geredigeerde velden",
+        "placeholder": "internal_cost, margin",
+        "helper": "Door komma's gescheiden veldnamen die geredigeerd moeten worden wanneer deze regel toegang verleent."
+      }
+    },
+    "assignments": {
+      "header": "Toewijzingsbeheerder",
+      "description": "Bekijk en beheer rol-, team-, gebruikers- en API-sleuteldoelen die momenteel door deze bundel worden beïnvloed.",
+      "loading": "Toewijzingen laden...",
+      "addAssignment": "Toewijzing toevoegen",
+      "selectTargetPlaceholder": "Selecteer {{target}}",
+      "addButton": "Toewijzing toevoegen",
+      "adding": "Toevoegen...",
+      "empty": "Nog geen toewijzingen voor deze bundel.",
+      "groupEmpty": "Geen {{target}}-toewijzingen.",
+      "statusActions": {
+        "disable": "Uitschakelen",
+        "enable": "Inschakelen",
+        "saving": "Opslaan..."
+      },
+      "statusLabels": {
+        "active": "actief",
+        "disabled": "uitgeschakeld"
+      }
+    },
+    "simulator": {
+      "header": "Toegangssimulator",
+      "description": "Simuleer concept- versus gepubliceerd bundelgedrag tegen een echte principal en bestaand record.",
+      "inputTitle": "Simulatie-invoer",
+      "resource": "Resource",
+      "action": "Actie",
+      "principal": "Principal",
+      "record": "Record",
+      "useSynthetic": "Synthetisch recordscenario gebruiken",
+      "syntheticOwnerPlaceholder": "Eigenaar gebruikers-ID (optioneel)",
+      "syntheticClientPlaceholder": "Klant-ID (optioneel)",
+      "syntheticBoardPlaceholder": "Board-ID (optioneel)",
+      "clientVisible": "Zichtbaar voor klant",
+      "run": "Simulatie uitvoeren",
+      "running": "Simulatie uitvoeren...",
+      "resultTitle": "Simulatieresultaat",
+      "draftRevision": "Conceptrevisie",
+      "publishedRevision": "Gepubliceerde revisie",
+      "allowed": "Toegestaan",
+      "denied": "Geweigerd",
+      "empty": "Voer een simulatie uit om concept- en gepubliceerd gedrag te vergelijken."
+    },
+    "createDialog": {
+      "title": "Autorisatiebundel aanmaken",
+      "cancel": "Annuleren",
+      "create": "Bundel aanmaken",
+      "creating": "Aanmaken...",
+      "nameLabel": "Naam",
+      "namePlaceholder": "Finance Reviewer West",
+      "descriptionLabel": "Beschrijving",
+      "descriptionPlaceholder": "Herbruikbare beperkingsbundel voor een specifiek team, klantgroep of workflow."
+    },
+    "clone": {
+      "copySuffix": "{{name}} Kopie"
+    },
+    "errors": {
+      "loadBundles": "Kan bundels niet laden.",
+      "loadEditor": "Kan bundel-editor niet laden.",
+      "loadAssignments": "Kan bundel-toewijzingen niet laden.",
+      "cloneBundle": "Kan bundel niet klonen.",
+      "archiveBundle": "Kan bundel niet archiveren.",
+      "seedStarters": "Kan starterbundels niet seeden.",
+      "bundleNameRequired": "Bundelnaam is vereist.",
+      "createBundle": "Kan bundel niet aanmaken.",
+      "publishDraft": "Kan bundelconcept niet publiceren.",
+      "selectTemplate": "Selecteer een sjabloon voordat u een regel opslaat.",
+      "selectClientRequired": "Voeg ten minste één geselecteerde klant toe voordat u deze regel opslaat.",
+      "selectBoardRequired": "Voeg ten minste één geselecteerd board toe voordat u deze regel opslaat.",
+      "redactedFieldRequired": "Voer ten minste één geredigeerd veld in voordat u deze regel opslaat.",
+      "saveRule": "Kan conceptregel niet opslaan.",
+      "removeRule": "Kan regel niet verwijderen.",
+      "selectTarget": "Selecteer een doel voordat u een toewijzing toevoegt.",
+      "addAssignment": "Kan toewijzing niet toevoegen.",
+      "updateAssignmentStatus": "Kan toewijzingsstatus niet bijwerken.",
+      "selectPrincipal": "Selecteer een principal voordat u een simulatie uitvoert.",
+      "selectRecord": "Selecteer een record voordat u een simulatie uitvoert.",
+      "runSimulation": "Kan simulatie niet uitvoeren.",
+      "simulator": {
+        "unsupportedAction": "De simulator ondersteunt momenteel alleen Lezen- en Goedkeuren-controles. Kies een van deze acties en probeer het opnieuw.",
+        "unsupportedResource": "Dit recordtype is nog niet beschikbaar in de simulator. Kies een ondersteund recordtype en probeer het opnieuw.",
+        "clientTicketNotSupported": "Ticketcontroles voor cliënt-gebruikers zijn nog niet beschikbaar in de simulator omdat de zichtbaarheid van ticket-boards niet is inbegrepen. Probeer een interne gebruiker, of verifieer de ticket-toegang voor cliënten in de app."
+      }
+    }
+  },
+  "emailLogs": {
+    "page": {
+      "title": "E-maillogboeken",
+      "description": "Bekijk uitgaande e-mailactiviteit en los problemen met meldingsbezorging op."
+    },
+    "metrics": {
+      "totalSent": "Totaal verzonden",
+      "failedRate": "Mislukkingspercentage",
+      "today": "Vandaag"
+    },
+    "filters": {
+      "startDate": "Startdatum",
+      "endDate": "Einddatum",
+      "status": "Status",
+      "recipient": "Ontvanger",
+      "recipientPlaceholder": "Zoek e-mail…",
+      "ticket": "Ticket",
+      "ticketPlaceholder": "Ticket #…",
+      "statusOptions": {
+        "all": "Alle",
+        "sent": "Verzonden",
+        "failed": "Mislukt"
+      }
+    },
+    "table": {
+      "time": "Tijd",
+      "ticket": "Ticket",
+      "recipient": "Ontvanger",
+      "subject": "Onderwerp",
+      "status": "Status"
+    },
+    "loading": "Laden...",
+    "results_one": "{{count}} resultaat",
+    "results_other": "{{count}} resultaten",
+    "refresh": "Vernieuwen",
+    "close": "Sluiten",
+    "detail": {
+      "title": "E-mailloggegevens",
+      "noSubject": "Geen onderwerp",
+      "sentAt": "Verzonden op",
+      "status": "Status",
+      "provider": "Provider",
+      "messageId": "Message ID",
+      "to": "Aan",
+      "from": "Van",
+      "error": "Fout",
+      "metadata": "Metadata"
+    }
   }
 }

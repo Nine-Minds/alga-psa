@@ -1,0 +1,190 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: selected follow-up crm.* actions register at version 1, preserve existing CRM actions, and appear under the CRM designer catalog group, including quote item/template actions",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F004",
+      "F007",
+      "F012",
+      "F015",
+      "F018",
+      "F022",
+      "F032",
+      "F034",
+      "F036",
+      "F041"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: follow-up CRM action schemas expose supported picker metadata for client, contact, ticket, and user fields without requiring quote/activity pickers",
+    "implemented": true,
+    "featureIds": [
+      "F031"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB-backed integration: crm.create_interaction_type creates a tenant type with display_order fallback, returns existing on duplicate when configured, records audit, and requires settings:update",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F033"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB-backed integration: crm.update_activity_status transitions a tenant activity to a valid interaction status, no-ops when already set, records audit, and rejects invalid statuses/cross-tenant activities",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005",
+      "F006",
+      "F033"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "DB-backed integration: crm.create_quote creates a tenant quote header for a valid client/contact, applies date/schema validation, and records audit without inline quote item creation",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F008",
+      "F010",
+      "F011",
+      "F033"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "DB-backed integration: crm.find_quotes returns tenant-scoped authorized quote summaries by quote ID/number/client/status and rejects unsafe unbounded searches",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F014",
+      "F033"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "DB-backed integration: crm.submit_quote_for_approval transitions draft quotes to pending_approval, rejects templates/non-draft quotes, handles no-op pending quotes, and records audit",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F016",
+      "F017",
+      "F033"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "DB-backed integration: crm.convert_quote converts eligible accepted quotes to contract, invoice, and both targets through shared-safe services and returns created target IDs",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F019",
+      "F020",
+      "F021",
+      "F033"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "DB-backed integration: crm.convert_quote rejects ineligible statuses, templates, missing selected item classes, cross-tenant quote IDs, and permission-denied actors",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F020",
+      "F021",
+      "F033"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "DB-backed integration: crm.tag_activity validates interaction targets, creates missing tag definitions/mappings idempotently, enforces permissions, records audit, and returns added/existing counts",
+    "implemented": true,
+    "featureIds": [
+      "F022",
+      "F023",
+      "F024",
+      "F025",
+      "F033"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Unit or DB-backed integration: crm.tag_activity publishes TAG_DEFINITION_CREATED and TAG_APPLIED only for new changes with deterministic idempotency keys and schema-compatible payloads",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Runtime smoke: representative follow-up CRM action.call step saves output with saveAs and downstream expression assignment can consume it",
+    "implemented": true,
+    "featureIds": [
+      "F032"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Regression: existing crm.create_activity_note, first-pass CRM actions, Client workflow actions, Ticket workflow actions, and quote model/action tests continue to pass",
+    "implemented": true,
+    "featureIds": [
+      "F034"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Plan hygiene: scratchpad records final decisions for quote header/item/template split, interaction type permission, interaction-only tag scope, quote event stance, and dropped create_client_note scope",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F027",
+      "F035",
+      "F036",
+      "F041",
+      "F046"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "DB-backed integration: crm.add_quote_item adds valid one-time and recurring quote items to editable quotes, assigns display order, recalculates totals, returns item/quote summary, and records audit",
+    "implemented": true,
+    "featureIds": [
+      "F036",
+      "F037",
+      "F038",
+      "F039",
+      "F040",
+      "F033"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "DB-backed integration: crm.create_quote_from_template creates a client quote from a template quote, copies safe header/item data, applies overrides, recalculates totals, records audit, and rejects non-template/cross-tenant templates",
+    "implemented": true,
+    "featureIds": [
+      "F041",
+      "F042",
+      "F043",
+      "F044",
+      "F045",
+      "F033"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Unit: quote pipeline actions do not introduce new quote event schemas; they emit only pre-existing quote events if available and otherwise remain audit/quote-activity only",
+    "implemented": true,
+    "featureIds": [
+      "F046"
+    ]
+  }
+]

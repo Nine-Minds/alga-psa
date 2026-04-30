@@ -38,3 +38,11 @@ export {
   enforceSnapshotSize
 } from './utils/redactionUtils';
 export { evaluateEventWaitFilters } from './utils/eventWaitFilters';
+export {
+  WorkflowStepQuotaService,
+  workflowStepQuotaService,
+  type WorkflowStepQuotaSummary,
+  type WorkflowStepQuotaReservationResult,
+  type WorkflowStepQuotaLimitSource,
+  type WorkflowStepQuotaPeriodSource
+} from './services/workflowStepQuotaService';

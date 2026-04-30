@@ -48,6 +48,7 @@
     "@alga-psa/authorization": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/shared": "*",
     "@alga-psa/types": "*",
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",

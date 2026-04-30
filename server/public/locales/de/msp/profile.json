@@ -195,5 +195,41 @@
         "default": "Hinweis"
       }
     }
+  },
+  "connectSso": {
+    "verify": {
+      "title": "Sichern Sie Ihr Konto mit SSO",
+      "description": "Verknüpfen Sie Azure AD oder Google Workspace, um organisatorische Richtlinien wiederzuverwenden und lokale Zwei-Faktor-Abfragen zu überspringen.",
+      "signedInAs": "Angemeldet als",
+      "currentPassword": "Aktuelles Passwort",
+      "twoFactorCode": "Zwei-Faktor-Code",
+      "twoFactorPlaceholder": "123456",
+      "verifyCredentials": "Anmeldedaten verifizieren",
+      "verifying": "Wird verifiziert...",
+      "reset": "Zurücksetzen",
+      "linkedSuccess": "Anbieter erfolgreich verknüpft.",
+      "credentialsVerified": "Anmeldedaten verifiziert. Wählen Sie unten einen Anbieter aus, um die Verknüpfung Ihres Kontos abzuschließen.",
+      "verifyFailed": "Anmeldedaten konnten nicht verifiziert werden.",
+      "verifyBeforeProvider": "Verifizieren Sie Ihr Passwort (und ggf. den Zwei-Faktor-Code), bevor Sie einen Anbieter verbinden."
+    },
+    "providers": {
+      "title": "Anbieter verbinden",
+      "description": "Wählen Sie einen Anbieter aus, um die SSO-Verknüpfung abzuschließen. Sie werden durch den Anmeldevorgang des Anbieters geleitet.",
+      "noneConfigured": "Für diese Umgebung sind keine SSO-Anbieter konfiguriert. Bitten Sie Ihren Administrator, Google- oder Microsoft-Anmeldedaten zu konfigurieren.",
+      "notConfigured": "Nicht konfiguriert",
+      "branding": {
+        "google": "Mit Google fortfahren",
+        "microsoft": "Mit Microsoft fortfahren",
+        "default": "Fortfahren"
+      }
+    },
+    "linked": {
+      "title": "Verknüpfte Konten",
+      "description": "Wir aktualisieren die Verknüpfung beim nächsten Anmelden über einen verbundenen Anbieter.",
+      "empty": "Es sind noch keine SSO-Anbieter verknüpft. Schließen Sie die obigen Schritte ab, um einen zu verbinden.",
+      "linkedAt": "Verknüpft am {{date}}",
+      "lastUsed": "Zuletzt verwendet am {{date}}",
+      "notUsedYet": "Noch nicht verwendet"
+    }
   }
 }

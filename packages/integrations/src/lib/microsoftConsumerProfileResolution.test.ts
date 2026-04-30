@@ -36,6 +36,7 @@ const hoisted = vi.hoisted(() => {
 
   const state = {
     tenantSecrets: new Map<string, string>(),
+    appSecrets: new Map<string, string>(),
     microsoftProfiles: [] as MicrosoftProfileRow[],
     microsoftConsumerBindings: [] as MicrosoftConsumerBindingRow[],
     emailProviders: [] as LegacyUsageRow[],
@@ -93,6 +94,7 @@ const hoisted = vi.hoisted(() => {
   return {
     state,
     getTenantSecretMock: vi.fn(async (tenant: string, key: string) => state.tenantSecrets.get(`${tenant}:${key}`) || null),
+    getAppSecretMock: vi.fn(async (key: string) => state.appSecrets.get(key) || null),
     setTenantSecretMock: vi.fn(async (tenant: string, key: string, value: string | null) => {
       if (value === null) {
         state.tenantSecrets.delete(`${tenant}:${key}`);
@@ -107,6 +109,7 @@ const hoisted = vi.hoisted(() => {
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: async () => ({
     getTenantSecret: hoisted.getTenantSecretMock,
+    getAppSecret: hoisted.getAppSecretMock,
     setTenantSecret: hoisted.setTenantSecretMock,
   }),
 }));
@@ -120,6 +123,7 @@ import { resolveMicrosoftConsumerProfileConfig } from './microsoftConsumerProfil
 describe('resolveMicrosoftConsumerProfileConfig', () => {
   beforeEach(() => {
     hoisted.state.tenantSecrets.clear();
+    hoisted.state.appSecrets.clear();
     hoisted.state.microsoftProfiles.length = 0;
     hoisted.state.microsoftConsumerBindings.length = 0;
     hoisted.state.emailProviders.length = 0;
@@ -172,10 +176,106 @@ describe('resolveMicrosoftConsumerProfileConfig', () => {
       clientId: 'bound-client-id',
       clientSecret: 'bound-secret',
       microsoftTenantId: 'bound-tenant-id',
+      credentialSource: 'binding',
     });
     expect(result.clientId).not.toBe(process.env.MICROSOFT_CLIENT_ID);
     expect(result.clientSecret).not.toBe(process.env.MICROSOFT_CLIENT_SECRET);
     expect(result.microsoftTenantId).not.toBe(process.env.MICROSOFT_TENANT_ID);
+  });
+
+  it('T401: falls back to hosted app-level Microsoft email credentials when no Email binding exists', async () => {
+    hoisted.state.appSecrets.set('MICROSOFT_CLIENT_ID', 'hosted-client-id');
+    hoisted.state.appSecrets.set('MICROSOFT_CLIENT_SECRET', 'hosted-client-secret');
+    hoisted.state.appSecrets.set('MICROSOFT_TENANT_ID', 'hosted-tenant-id');
+
+    const result = await resolveMicrosoftConsumerProfileConfig('tenant-hosted', 'email');
+
+    expect(result).toEqual({
+      status: 'ready',
+      tenantId: 'tenant-hosted',
+      consumerType: 'email',
+      clientId: 'hosted-client-id',
+      clientSecret: 'hosted-client-secret',
+      microsoftTenantId: 'hosted-tenant-id',
+      credentialSource: 'app',
+    });
+  });
+
+  it('T402: uses hosted Microsoft email env credentials when app secrets are unavailable', async () => {
+    process.env.MICROSOFT_CLIENT_ID = 'env-hosted-client-id';
+    process.env.MICROSOFT_CLIENT_SECRET = 'env-hosted-client-secret';
+    process.env.MICROSOFT_TENANT_ID = 'env-hosted-tenant-id';
+
+    const result = await resolveMicrosoftConsumerProfileConfig('tenant-env-hosted', 'email');
+
+    expect(result).toEqual({
+      status: 'ready',
+      tenantId: 'tenant-env-hosted',
+      consumerType: 'email',
+      clientId: 'env-hosted-client-id',
+      clientSecret: 'env-hosted-client-secret',
+      microsoftTenantId: 'env-hosted-tenant-id',
+      credentialSource: 'app',
+    });
+  });
+
+  it('T403: does not implicitly bind Email to an unrelated single Microsoft profile before hosted fallback', async () => {
+    hoisted.state.appSecrets.set('MICROSOFT_CLIENT_ID', 'hosted-client-id');
+    hoisted.state.appSecrets.set('MICROSOFT_CLIENT_SECRET', 'hosted-client-secret');
+    hoisted.state.microsoftProfiles.push({
+      tenant: 'tenant-with-sso-profile',
+      profile_id: 'profile-sso-only',
+      display_name: 'SSO Profile',
+      display_name_normalized: 'sso profile',
+      client_id: 'sso-client-id',
+      tenant_id: 'sso-tenant-id',
+      client_secret_ref: 'sso-secret-ref',
+      is_default: true,
+      is_archived: false,
+      archived_at: null,
+      created_by: null,
+      updated_by: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+    hoisted.state.tenantSecrets.set('tenant-with-sso-profile:sso-secret-ref', 'sso-secret');
+    hoisted.state.emailProviders.push({
+      tenant: 'tenant-with-sso-profile',
+      provider_type: 'microsoft',
+    });
+
+    await expect(resolveMicrosoftConsumerProfileConfig('tenant-with-sso-profile', 'email')).resolves.toEqual({
+      status: 'ready',
+      tenantId: 'tenant-with-sso-profile',
+      consumerType: 'email',
+      clientId: 'hosted-client-id',
+      clientSecret: 'hosted-client-secret',
+      microsoftTenantId: 'common',
+      credentialSource: 'app',
+    });
+    expect(hoisted.state.microsoftConsumerBindings).toHaveLength(0);
+  });
+
+  it('T404: does not fall back to hosted credentials when an explicit Email binding is invalid', async () => {
+    hoisted.state.appSecrets.set('MICROSOFT_CLIENT_ID', 'hosted-client-id');
+    hoisted.state.appSecrets.set('MICROSOFT_CLIENT_SECRET', 'hosted-client-secret');
+    hoisted.state.microsoftConsumerBindings.push({
+      tenant: 'tenant-invalid-binding',
+      consumer_type: 'email',
+      profile_id: 'missing-profile',
+      created_by: null,
+      updated_by: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+
+    await expect(resolveMicrosoftConsumerProfileConfig('tenant-invalid-binding', 'email')).resolves.toEqual({
+      status: 'invalid_profile',
+      tenantId: 'tenant-invalid-binding',
+      consumerType: 'email',
+      profileId: 'missing-profile',
+      message: 'Selected Email Microsoft profile is missing or archived',
+    });
   });
 
   it('T325/T326: materializes the calendar binding only from concrete legacy calendar usage and otherwise fails closed', async () => {
@@ -231,6 +331,7 @@ describe('resolveMicrosoftConsumerProfileConfig', () => {
       clientId: 'legacy-client',
       clientSecret: 'legacy-secret',
       microsoftTenantId: 'legacy-tenant',
+      credentialSource: 'binding',
     });
     expect(hoisted.state.microsoftConsumerBindings).toEqual([
       expect.objectContaining({

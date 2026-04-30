@@ -445,21 +445,22 @@
           "step2": {
             "title": "2. Een Application Access Policy maken",
             "intro": "Het aanmaken van vergaderingen uitsluitend via de app moet expliciet worden toegestaan voor het organisatoraccount.",
-            "note": "Wacht 5–10 minuten op de doorvoering van het beleid voordat u op Verifiëren klikt."
+            "note": "Wacht tot 30 minuten op de doorvoering van het beleid voordat u op Verifiëren klikt."
           }
         }
       },
       "organizer": {
         "title": "Vergaderorganisator",
-        "label": "Standaard vergaderorganisator (UPN of Microsoft-gebruikers-ID)",
-        "help": "Goedgekeurde afspraken maken Teams-vergaderingen aan als deze Microsoft-gebruiker. Een UPN zoals scheduling@acme.com is meestal de veiligste keuze.",
-        "placeholder": "scheduling@acme.com"
+        "label": "Microsoft-gebruikersobject-id van standaardvergaderorganisator",
+        "help": "Goedgekeurde afspraken maken Teams-vergaderingen aan als deze Microsoft-gebruiker. Gebruik de Entra-object-id; UPN's kunnen 404 teruggeven vanuit Microsoft Graph onlineMeetings.",
+        "placeholder": "00000000-0000-0000-0000-000000000000"
       },
       "actions": {
         "save": "Opslaan",
         "saving": "Opslaan...",
         "verify": "Verifiëren",
-        "verifying": "Verifiëren..."
+        "verifying": "Verifiëren...",
+        "openRunbook": "Setup-runbook openen"
       },
       "feedback": {
         "saveSuccess": "Teams-vergaderorganisator opgeslagen",

@@ -1,0 +1,149 @@
+{
+  "sidebar": {
+    "title": "Chat",
+    "subtitleHistory": "Sesiones de IA recientes del usuario actual",
+    "subtitleDefault": "Chatea con IA y administra las sesiones guardadas",
+    "showHistory": "Mostrar historial de chat",
+    "hideHistory": "Ocultar historial de chat",
+    "showHistoryTooltip": "Mostrar historial",
+    "hideHistoryTooltip": "Ocultar historial",
+    "startNewChat": "Iniciar nuevo chat",
+    "hideSidebar": "Ocultar barra lateral del chat",
+    "hideSidebarTooltip": "Ocultar chat",
+    "introMessage": "Chatea con IA: ¡pregunta lo que sea!",
+    "loadingChatConversation": "Cargando conversación del chat",
+    "history": {
+      "searchResults": "Resultados de búsqueda",
+      "recentChats": "Chats recientes",
+      "loading": "Cargando…",
+      "searchAriaLabel": "Buscar en el historial de chats",
+      "searchPlaceholder": "Buscar chats guardados",
+      "typeAtLeastNChars": "Escribe al menos {{count}} caracteres para buscar chats guardados.",
+      "emptyInitial": "Los chats guardados aparecerán aquí después de que envíes un mensaje.",
+      "emptySearch": "No se encontraron chats coincidentes.",
+      "untitled": "Chat sin título",
+      "noMessagesYet": "Aún no hay mensajes",
+      "loadingConversation": "Cargando conversación…",
+      "chatActionsFor": "Acciones de chat para {{title}}",
+      "rename": "Cambiar nombre",
+      "delete": "Eliminar",
+      "unableToLoadRecent": "No se pudieron cargar los chats recientes.",
+      "unableToLoadSearch": "No se pudieron cargar los resultados de la búsqueda."
+    },
+    "timestamp": {
+      "recently": "Recientemente",
+      "justNow": "Justo ahora",
+      "minutesAgo": "Hace {{count}} min",
+      "hoursAgo": "Hace {{count}} h",
+      "daysAgo": "Hace {{count}} d"
+    },
+    "newChatConfirm": {
+      "title": "¿Iniciar un nuevo chat?",
+      "message": "Tu chat actual se eliminará de la barra lateral. Los mensajes guardados permanecen en el historial de chats.",
+      "confirmLabel": "Iniciar nuevo chat",
+      "cancelLabel": "Mantener chat actual"
+    },
+    "deleteConfirm": {
+      "title": "¿Eliminar este chat?",
+      "messageWithTitle": "¿Eliminar \"{{title}}\" de tu historial de IA? Esto no se puede deshacer.",
+      "fallbackTitle": "este chat",
+      "confirmLabel": "Eliminar chat",
+      "cancelLabel": "Cancelar"
+    },
+    "rename": {
+      "dialogTitle": "Cambiar nombre del chat",
+      "inputLabel": "Título del chat",
+      "inputPlaceholder": "Ingresa el título del chat",
+      "cancel": "Cancelar",
+      "save": "Guardar"
+    }
+  },
+  "chat": {
+    "greeting": "¡Soy Alga! Tu asistente de IA favorito. Hazme una pregunta.",
+    "avatarAlt": "Alga",
+    "defaultFunctionName": "Llamada a función",
+    "resultTruncated": "El resultado era demasiado grande y se truncó.",
+    "inputPlaceholder": "Enviar un mensaje",
+    "inputPlaceholderGenerating": "Generando texto...",
+    "inputAriaLabel": "Mensaje a Alga",
+    "thinking": "Pensando...",
+    "hintMultiline": "Modo multilínea: Enter agrega una nueva línea. Ctrl+Enter o ⌘+Enter envía.",
+    "hintSingleLine": "Presiona Enter para enviar. Shift+Enter cambia al modo multilínea.",
+    "editingNotice": "Editando el mensaje seleccionado. Al enviar se reemplazará ese mensaje y se regenerará el hilo desde ahí.",
+    "cancelEdit": "Cancelar edición",
+    "stop": "DETENER",
+    "send": "ENVIAR",
+    "viewDetails": "Ver detalles",
+    "viewFullValue": "Ver valor completo",
+    "parameters": "Parámetros",
+    "plan": "Plan",
+    "playbooks": "Playbooks",
+    "validation": {
+      "dialogTitle": "Mensaje requerido",
+      "ok": "Aceptar",
+      "enterMessage": "Ingresa un mensaje antes de enviar."
+    },
+    "errors": {
+      "userNotIdentified": "No se puede enviar el mensaje: usuario no identificado.",
+      "unableToSave": "No se puede guardar este mensaje, continuando sin persistencia por ahora.",
+      "requestFailedStatus": "La solicitud falló con estado {{status}}",
+      "unexpectedResponse": "Respuesta inesperada del asistente.",
+      "unexpectedError": "Ocurrió un error inesperado.",
+      "generationError": "Ocurrió un error al generar la respuesta.",
+      "connectionInterrupted": "Conexión interrumpida — mostrando respuesta parcial.",
+      "connectionInterruptedWithReason": "Conexión interrumpida — {{reason}}"
+    },
+    "function": {
+      "approveAriaLabel": "Aprobar llamada a función",
+      "declineAriaLabel": "Rechazar llamada a función",
+      "approve": "Aprobar",
+      "approving": "Aprobando…",
+      "deny": "Denegar",
+      "processing": "Procesando…",
+      "autoApproveLabel": "Aprobar automáticamente futuras solicitudes {{method}}",
+      "executingRequest": "Ejecutando solicitud…",
+      "continuingWithoutCall": "Continuando sin llamar a la función…",
+      "autoApprovalEnabled": "Aprobación automática habilitada para solicitudes {{method}}.",
+      "reviewAndApprove": "Revisa y aprueba cuando estés listo.",
+      "completedNoDetails": "La acción se completó sin detalles adicionales.",
+      "emDash": "—"
+    }
+  },
+  "quickAsk": {
+    "title": "Consulta rápida",
+    "yoloLabel": "YOLO",
+    "yoloAriaLabel": "Modo YOLO (aprobar automáticamente acciones HTTP)",
+    "openInSidebar": "Abrir en la barra lateral",
+    "close": "Cerrar",
+    "ask": "Preguntar",
+    "inputPlaceholder": "Haz una pregunta rápida…",
+    "inputAriaLabel": "Entrada de Consulta rápida",
+    "followUpNotice": "Haz preguntas de seguimiento abajo. Este chat se guardará como un chat de la barra lateral.",
+    "startingSession": "Iniciando sesión…",
+    "session": "Sesión: {{chatId}}",
+    "hint": "Esc para cerrar • Enter para preguntar • Shift+Enter para nueva línea • {{modifier}}+↑ para reabrir"
+  },
+  "message": {
+    "authorAlga": "Alga",
+    "authorYou": "Tú",
+    "authorSystem": "Sistema",
+    "avatarAlt": "Avatar de Alga",
+    "draftingResponse": "Redactando respuesta…",
+    "interrupted": "Interrumpido",
+    "interruptionDetail": "Conexión interrumpida — mostrando respuesta parcial.",
+    "showAssistantReasoning": "Mostrar razonamiento del asistente",
+    "editAriaLabel": "Editar este mensaje",
+    "editTooltip": "Editar este mensaje",
+    "regenerateAriaLabel": "Regenerar desde este mensaje",
+    "regenerateTooltip": "Regenerar desde este mensaje",
+    "functionStatus": {
+      "success": "Función ejecutada",
+      "declined": "Función rechazada",
+      "pending": "Función en cola",
+      "error": "Error de función"
+    }
+  },
+  "mention": {
+    "noResultsFound": "No se encontraron resultados"
+  }
+}

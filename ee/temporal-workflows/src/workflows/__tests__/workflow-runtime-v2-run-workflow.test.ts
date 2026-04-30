@@ -331,6 +331,57 @@ describe('workflowRuntimeV2RunWorkflow', () => {
     });
   });
 
+  it('treats quota pause at step start as controlled wait and exits without completion', async () => {
+    const definition: WorkflowDefinition = {
+      id: 'wf_quota_pause',
+      name: 'Quota Pause',
+      version: 1,
+      payloadSchemaRef: 'payload.test.v1',
+      steps: [
+        {
+          id: 'step_action',
+          type: 'action.call',
+          config: { actionId: 'ticket.update', version: 1 },
+        },
+      ],
+    };
+
+    mockActivities.loadWorkflowRuntimeV2PinnedDefinition.mockResolvedValue({
+      definition,
+      initialScopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        system: {
+          runId: 'run_quota_pause',
+          workflowId: 'wf_quota_pause',
+          workflowVersion: 1,
+          tenantId: 'tenant_1',
+          definitionHash: 'hash_quota_pause',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    });
+    mockActivities.projectWorkflowRuntimeV2StepStart.mockResolvedValueOnce({
+      stepId: null,
+      quotaPaused: true,
+    });
+
+    const { workflowRuntimeV2RunWorkflow } = await loadWorkflow();
+    await workflowRuntimeV2RunWorkflow({
+      runId: 'run_quota_pause',
+      tenantId: 'tenant_1',
+      workflowId: 'wf_quota_pause',
+      workflowVersion: 1,
+      triggerType: null,
+      executionKey: 'exec_quota_pause',
+    });
+
+    expect(mockActivities.executeWorkflowRuntimeV2ActionStep).not.toHaveBeenCalled();
+    expect(mockActivities.projectWorkflowRuntimeV2StepCompletion).not.toHaveBeenCalled();
+    expect(mockActivities.completeWorkflowRuntimeV2Run).not.toHaveBeenCalled();
+  });
+
   it('keeps Temporal interpreter state synchronized for non-action node steps', async () => {
     const definition: WorkflowDefinition = {
       id: 'wf_2_node_sync',

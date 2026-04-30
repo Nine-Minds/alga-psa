@@ -14,6 +14,7 @@ import { HfInference } from '@huggingface/inference';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useAIChatContext } from '@product/chat/context';
 
 import {
@@ -173,14 +174,17 @@ const determineHttpDetails = (fn: PendingFunctionState | null) => {
   };
 };
 
+type ChatTranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
 const buildFunctionCallMeta = (
+  t: ChatTranslateFn,
   fn: PendingFunctionState,
   action: 'approve' | 'decline',
   status: FunctionCallMeta['status'],
 ): FunctionCallMeta => {
   const httpDetails = determineHttpDetails(fn);
   return {
-    displayName: fn.metadata.displayName ?? fn.functionCall?.name ?? 'Function call',
+    displayName: fn.metadata.displayName ?? fn.functionCall?.name ?? t('chat.defaultFunctionName'),
     method: httpDetails.method,
     endpoint: httpDetails.endpointLabel,
     action,
@@ -189,7 +193,7 @@ const buildFunctionCallMeta = (
     preview: sanitizeThinking(fn.assistantPreview ?? ''),
     notice:
       fn.functionCall.toolResultTruncated && action === 'approve'
-        ? 'Result was too large and was truncated.'
+        ? t('chat.resultTruncated')
         : undefined,
   };
 };
@@ -278,6 +282,7 @@ export const Chat: React.FC<ChatProps> = ({
   onInterruptibleStateChange,
   onRegisterCancelHandler,
 }) => {
+  const { t } = useTranslation('msp/chat');
   const textareaId = useId();
   const [messageText, setMessageText] = useState('');
   const [incomingMessage, setIncomingMessage] = useState('');
@@ -365,7 +370,7 @@ export const Chat: React.FC<ChatProps> = ({
     if (!fn) {
       return;
     }
-    const meta = buildFunctionCallMeta(fn, action, status);
+    const meta = buildFunctionCallMeta(t, fn, action, status);
     setNewChatMessages((prev) => [
       ...prev,
       {
@@ -620,7 +625,7 @@ export const Chat: React.FC<ChatProps> = ({
   const sendMessage = () => {
     const trimmedMessage = messageText.trim();
     if (!trimmedMessage.length) {
-      setValidationMessage('Please enter a message before sending.');
+      setValidationMessage(t('chat.validation.enterMessage'));
       setShowValidationDialog(true);
       return;
     }
@@ -710,12 +715,12 @@ export const Chat: React.FC<ChatProps> = ({
     pendingAssistantMessageIdRef.current = null;
     setGeneratingResponse(true);
     setIsFunction(true);
-    setIncomingMessage('Thinking...');
+    setIncomingMessage(t('chat.thinking'));
 
     if (!userId) {
       setGeneratingResponse(false);
       setIsFunction(false);
-      setFunctionError('Unable to send message: user not identified.');
+      setFunctionError(t('chat.errors.userNotIdentified'));
       return;
     }
 
@@ -759,7 +764,7 @@ export const Chat: React.FC<ChatProps> = ({
       }
     } catch (error) {
       console.error('Failed to persist user message', error);
-      setFunctionError('Unable to save this message, continuing without persistence for now.');
+      setFunctionError(t('chat.errors.unableToSave'));
     }
 
     if (!reuseExistingUserMessage) {
@@ -810,7 +815,7 @@ export const Chat: React.FC<ChatProps> = ({
       });
 
       if (!response.ok) {
-        let errorMessage = `Request failed with status ${response.status}`;
+        let errorMessage = t('chat.errors.requestFailedStatus', { status: response.status });
         try {
           const data = await response.json();
           if (data?.error) {
@@ -908,7 +913,7 @@ export const Chat: React.FC<ChatProps> = ({
         setFullMessageStatusDetail(null);
       } else {
         setFullMessageStatus('interrupted');
-        setFullMessageStatusDetail('Connection interrupted — showing partial response.');
+        setFullMessageStatusDetail(t('chat.errors.connectionInterrupted'));
       }
 
       setFullReasoning(streamedReasoning);
@@ -950,12 +955,12 @@ export const Chat: React.FC<ChatProps> = ({
         setFullMessageStatus('interrupted');
         setFullMessageStatusDetail(
           error instanceof Error
-            ? `Connection interrupted — ${error.message}`
-            : 'Connection interrupted — showing partial response.',
+            ? t('chat.errors.connectionInterruptedWithReason', { reason: error.message })
+            : t('chat.errors.connectionInterrupted'),
         );
         setFullMessage(partial);
       } else {
-        setIncomingMessage('An error occurred while generating the response.');
+        setIncomingMessage(t('chat.errors.generationError'));
       }
 
       streamingTextRef.current = null;
@@ -972,6 +977,7 @@ export const Chat: React.FC<ChatProps> = ({
     addAssistantMessageToPersistence,
     aiContext,
     mentions,
+    t,
   ]);
 
   useEffect(() => {
@@ -1023,7 +1029,7 @@ export const Chat: React.FC<ChatProps> = ({
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data?.error || `Request failed with status ${response.status}`);
+        throw new Error(data?.error || t('chat.errors.requestFailedStatus', { status: response.status }));
       }
 
       const outcomeStatus: FunctionCallMeta['status'] =
@@ -1057,7 +1063,7 @@ export const Chat: React.FC<ChatProps> = ({
         if (finalAssistantContent.length === 0) {
           const preview = pendingFunction.assistantPreview?.trim() ?? '';
           finalAssistantContent =
-            preview.length > 0 ? preview : 'The action completed without additional details.';
+            preview.length > 0 ? preview : t('chat.function.completedNoDetails');
         }
         const assistantOrder = messageOrderRef.current + 1;
         messageOrderRef.current = assistantOrder;
@@ -1104,7 +1110,7 @@ export const Chat: React.FC<ChatProps> = ({
         setIsFunction(true);
         setGeneratingResponse(false);
       } else {
-        throw new Error('Unexpected response from the assistant.');
+        throw new Error(t('chat.errors.unexpectedResponse'));
       }
     } catch (error) {
       if (
@@ -1125,7 +1131,7 @@ export const Chat: React.FC<ChatProps> = ({
       console.error('Error executing function call', error);
       appendFunctionCallMarker(pendingFunction, action, 'error');
       setFunctionError(
-        error instanceof Error ? error.message : 'An unexpected error occurred.',
+        error instanceof Error ? error.message : t('chat.errors.unexpectedError'),
       );
       setPendingFunctionStatus('awaiting');
       setPendingFunctionAction('none');
@@ -1136,7 +1142,7 @@ export const Chat: React.FC<ChatProps> = ({
       executeAbortControllerRef.current = null;
       setIsExecutingFunction(false);
     }
-  }, [pendingFunction, chatId, addAssistantMessageToPersistence, aiContext]);
+  }, [pendingFunction, chatId, addAssistantMessageToPersistence, aiContext, t]);
 
   const persistedDisplayMessages = (messages as DisplayChatMessage[]).filter(
     (message) => resolveDisplayMessageRole(message) !== 'function',
@@ -1291,7 +1297,7 @@ export const Chat: React.FC<ChatProps> = ({
 
       const replacementContent = updatedMessage.trim();
       if (!replacementContent.length) {
-        setValidationMessage('Please enter a message before sending.');
+        setValidationMessage(t('chat.validation.enterMessage'));
         setShowValidationDialog(true);
         return;
       }
@@ -1496,7 +1502,7 @@ export const Chat: React.FC<ChatProps> = ({
 
     return (
       <details className="function-arg-value-collapsible">
-        <summary>View full value</summary>
+        <summary>{t('chat.viewFullValue')}</summary>
         <pre className="function-arg-value-full">{formatted}</pre>
       </details>
     );
@@ -1544,11 +1550,11 @@ export const Chat: React.FC<ChatProps> = ({
   const statusText =
     pendingFunctionStatus === 'executing'
       ? pendingFunctionAction === 'approve'
-        ? 'Executing request…'
-        : 'Continuing without calling the function…'
+        ? t('chat.function.executingRequest')
+        : t('chat.function.continuingWithoutCall')
       : autoApprovalEnabledForMethod && isHttpMethod
-        ? `Auto-approval enabled for ${method} requests.`
-        : 'Review and approve when you are ready.';
+        ? t('chat.function.autoApprovalEnabled', { method })
+        : t('chat.function.reviewAndApprove');
 
   return (
     <div className="chat-container">
@@ -1564,12 +1570,12 @@ export const Chat: React.FC<ChatProps> = ({
                 <Image
                   className="mb-6"
                   src="/avatar-purple-no-shadow.svg"
-                  alt="Alga"
+                  alt={t('chat.avatarAlt')}
                   width={150}
                   height={150}
                 />
                 <h1 className="mt-6 text-2xl mx-1">
-                  I am Alga! Your favorite AI assistant. Ask me a question.
+                  {t('chat.greeting')}
                 </h1>
               </div>
             </div>
@@ -1614,7 +1620,7 @@ export const Chat: React.FC<ChatProps> = ({
                   <Image
                     className="chat-img"
                     src="/avatar-purple-no-shadow.svg"
-                    alt="Alga"
+                    alt={t('chat.avatarAlt')}
                     width={18}
                     height={18}
                   />
@@ -1631,7 +1637,7 @@ export const Chat: React.FC<ChatProps> = ({
                     )}
                     {(pendingFunction.metadata.description || assistantPlanText || pendingFunction.metadata.playbooks?.length || pendingArgumentEntries.length > 0) && (
                       <details className="function-approval-details">
-                        <summary>View details</summary>
+                        <summary>{t('chat.viewDetails')}</summary>
                         {pendingFunction.metadata.description && (
                           <p className="function-approval-description">
                             {pendingFunction.metadata.description}
@@ -1639,7 +1645,7 @@ export const Chat: React.FC<ChatProps> = ({
                         )}
                         {assistantPlanText ? (
                           <div className="function-approval-reasoning">
-                            <span className="function-arg-key">Plan</span>
+                            <span className="function-arg-key">{t('chat.plan')}</span>
                             {assistantPlanItems.length ? (
                               <ol className="function-approval-plan">
                                 {assistantPlanItems.map((item) => (
@@ -1653,7 +1659,7 @@ export const Chat: React.FC<ChatProps> = ({
                         ) : null}
                         {pendingFunction.metadata.playbooks?.length ? (
                           <div className="function-approval-playbooks">
-                            <span className="function-arg-key">Playbooks</span>
+                            <span className="function-arg-key">{t('chat.playbooks')}</span>
                             <span className="function-arg-value">
                               {pendingFunction.metadata.playbooks.join(', ')}
                             </span>
@@ -1661,7 +1667,7 @@ export const Chat: React.FC<ChatProps> = ({
                         ) : null}
                         {pendingArgumentEntries.length > 0 && (
                           <div className="function-approval-arguments">
-                            <h4>Parameters</h4>
+                            <h4>{t('chat.parameters')}</h4>
                             <ul className="function-arg-list">
                               {pendingArgumentEntries.map(([key, value]) => (
                                 <li key={key} className="function-arg-item">
@@ -1686,7 +1692,7 @@ export const Chat: React.FC<ChatProps> = ({
                             onCheckedChange={(checked) =>
                               handleAutoApprovePreferenceChange(normalizedMethod, checked)
                             }
-                            label={`Auto-approve future ${normalizedMethod} requests`}
+                            label={t('chat.function.autoApproveLabel', { method: normalizedMethod })}
                           />
                         </div>
                       </div>
@@ -1695,27 +1701,27 @@ export const Chat: React.FC<ChatProps> = ({
                     <div className="function-approval-actions">
                       <Button
                         id="chat-approve-function"
-                        label="Approve function call"
+                        label={t('chat.function.approveAriaLabel')}
                         size="sm"
                         variant="default"
                         onClick={() => handleFunctionAction('approve')}
                         disabled={isExecutingFunction}
                       >
                         {isExecutingFunction && pendingFunctionAction === 'approve'
-                          ? 'Approving…'
-                          : 'Approve'}
+                          ? t('chat.function.approving')
+                          : t('chat.function.approve')}
                       </Button>
                       <Button
                         id="chat-decline-function"
-                        label="Decline function call"
+                        label={t('chat.function.declineAriaLabel')}
                         size="sm"
                         variant="outline"
                         onClick={() => handleFunctionAction('decline')}
                         disabled={isExecutingFunction}
                       >
                         {isExecutingFunction && pendingFunctionAction === 'decline'
-                          ? 'Processing…'
-                          : 'Deny'}
+                          ? t('chat.function.processing')
+                          : t('chat.function.deny')}
                       </Button>
                     </div>
                   </div>
@@ -1746,12 +1752,12 @@ export const Chat: React.FC<ChatProps> = ({
                 id={textareaId}
                 value={messageText}
                 onChange={handleInputChange}
-                placeholder={generatingResponse ? 'Generating text...' : 'Send a message'}
+                placeholder={generatingResponse ? t('chat.inputPlaceholderGenerating') : t('chat.inputPlaceholder')}
                 className="chat-input"
                 onKeyDown={handleTextareaKeyDown}
                 rows={3}
                 disabled={generatingResponse || isFunction}
-                aria-label="Message Alga"
+                aria-label={t('chat.inputAriaLabel')}
                 aria-busy={generatingResponse || isFunction}
                 data-automation-id="chat-input"
               />
@@ -1766,19 +1772,18 @@ export const Chat: React.FC<ChatProps> = ({
             </div>
             <p className="chat-input__hint">
               {isMultilineMode
-                ? 'Multiline mode: Enter adds a new line. Ctrl+Enter or ⌘+Enter sends.'
-                : 'Press Enter to send. Shift+Enter switches to multiline mode.'}
+                ? t('chat.hintMultiline')
+                : t('chat.hintSingleLine')}
             </p>
             {editingMessageIndex !== null ? (
               <p className="chat-input__hint chat-input__hint--editing">
-                Editing selected message. Sending will replace that message and regenerate the
-                thread from there.
+                {t('chat.editingNotice')}
                 <button
                   type="button"
                   className="chat-input__cancel-edit"
                   onClick={handleCancelEdit}
                 >
-                  Cancel edit
+                  {t('chat.cancelEdit')}
                 </button>
               </p>
             ) : null}
@@ -1791,7 +1796,7 @@ export const Chat: React.FC<ChatProps> = ({
                 type="button"
                 className="chat-action chat-action--stop"
               >
-                STOP
+                {t('chat.stop')}
               </button>
             ) : null}
             <button
@@ -1800,7 +1805,7 @@ export const Chat: React.FC<ChatProps> = ({
               className="chat-action chat-action--send"
               disabled={generatingResponse || isFunction}
             >
-              SEND
+              {t('chat.send')}
             </button>
           </div>
         </div>
@@ -1809,7 +1814,7 @@ export const Chat: React.FC<ChatProps> = ({
       <Dialog
         isOpen={showValidationDialog}
         onClose={closeValidationDialog}
-        title="Message Required"
+        title={t('chat.validation.dialogTitle')}
         id="chat-empty-message-dialog"
         footer={(
           <div className="flex justify-end space-x-2">
@@ -1817,7 +1822,7 @@ export const Chat: React.FC<ChatProps> = ({
               id="chat-empty-message-dialog-ok"
               onClick={closeValidationDialog}
             >
-              OK
+              {t('chat.validation.ok')}
             </Button>
           </div>
         )}

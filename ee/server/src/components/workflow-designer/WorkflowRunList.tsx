@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink, RefreshCw } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -12,6 +12,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
+import Drawer from '@alga-psa/ui/components/Drawer';
 import WorkflowRunDialog from './WorkflowRunDialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { toast } from 'react-hot-toast';
@@ -27,7 +28,7 @@ import {
   useWorkflowRunSortOptions,
   useWorkflowRunStatusOptions,
 } from '@alga-psa/workflows/hooks/useWorkflowEnumOptions';
-import WorkflowRunDetails from './WorkflowRunDetails';
+import WorkflowRunDetailsPanel from '../workflow-run-studio/WorkflowRunDetailsPanel';
 import {
   getWorkflowScheduleStatusBadgeClass,
   isTimeTriggeredRun
@@ -257,6 +258,20 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
     () => runs.filter((run) => selectedRunIds.has(run.run_id)),
     [runs, selectedRunIds]
   );
+  const selectedRunIndex = useMemo(
+    () => runs.findIndex((run) => run.run_id === selectedRunId),
+    [runs, selectedRunId]
+  );
+  const selectedRun = selectedRunIndex >= 0 ? runs[selectedRunIndex] : null;
+  const canSelectPreviousRun = selectedRunIndex > 0;
+  const canSelectNextRun = selectedRunIndex >= 0 && selectedRunIndex < runs.length - 1;
+  const handleSelectAdjacentRun = useCallback((direction: -1 | 1) => {
+    if (selectedRunIndex < 0) return;
+    const nextRun = runs[selectedRunIndex + direction];
+    if (nextRun) {
+      setSelectedRunId(nextRun.run_id);
+    }
+  }, [runs, selectedRunIndex]);
   const showSelection = canAdmin;
 
   const showTenantColumn = useMemo(() => {
@@ -907,7 +922,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                       size="sm"
                       onClick={() => setSelectedRunId(run.run_id)}
                     >
-                      {t('runList.actions.details', { defaultValue: 'Details' })}
+                      {t('runList.actions.preview', { defaultValue: 'Preview' })}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -944,20 +959,76 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
           )}
         </Card>
 
-        {selectedRunId && (
-          <Card className="p-4">
-            <WorkflowRunDetails
-              runId={selectedRunId}
-              workflowName={workflowNameMap.get(runs.find((run) => run.run_id === selectedRunId)?.workflow_id ?? '')}
-              workflowTrigger={workflowTriggerMap.get(
-                runs.find((run) => run.run_id === selectedRunId)?.workflow_id ?? ''
-              )}
-              canAdmin={canAdmin}
-              onClose={handleRunDetailsClose}
-            />
-          </Card>
-        )}
       </div>
+
+      <Drawer
+        id="workflow-run-preview-drawer"
+        isOpen={Boolean(selectedRunId)}
+        onClose={handleRunDetailsClose}
+        width="min(92vw, 1120px)"
+        hideCloseButton
+      >
+        {selectedRunId && (
+          <div className="max-h-[calc(100vh-3rem)] min-w-0 space-y-4 overflow-y-auto pr-2">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgb(var(--color-border-200))] pb-4 pr-2">
+              <div>
+                <div className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
+                  {t('runList.preview.title', { defaultValue: 'Run preview' })}
+                </div>
+                <div className="text-xs text-[rgb(var(--color-text-500))]">
+                  {selectedRun
+                    ? t('runList.preview.position', {
+                        defaultValue: '{{current}} of {{total}} loaded runs',
+                        current: selectedRunIndex + 1,
+                        total: runs.length,
+                      })
+                    : t('runList.preview.selectedRun', { defaultValue: 'Selected run' })}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  id="workflow-run-preview-previous"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSelectAdjacentRun(-1)}
+                  disabled={!canSelectPreviousRun}
+                >
+                  <ChevronLeft className="mr-1 h-4 w-4" />
+                  {t('runList.preview.previous', { defaultValue: 'Previous' })}
+                </Button>
+                <Button
+                  id="workflow-run-preview-next"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleSelectAdjacentRun(1)}
+                  disabled={!canSelectNextRun}
+                >
+                  {t('runList.preview.next', { defaultValue: 'Next' })}
+                  <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+                <Button
+                  id="workflow-run-preview-open-full-page"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.location.assign(`/msp/workflows/runs/${selectedRunId}`)}
+                >
+                  <ExternalLink className="mr-1 h-4 w-4" />
+                  {t('runList.preview.openFullPage', { defaultValue: 'Open full page' })}
+                </Button>
+                <Button id="workflow-run-preview-close" variant="ghost" size="sm" onClick={handleRunDetailsClose}>
+                  {t('runList.preview.close', { defaultValue: 'Close' })}
+                </Button>
+              </div>
+            </div>
+            <WorkflowRunDetailsPanel
+              runId={selectedRunId}
+              workflowName={workflowNameMap.get(selectedRun?.workflow_id ?? '')}
+              workflowTrigger={workflowTriggerMap.get(selectedRun?.workflow_id ?? '')}
+              canAdmin={canAdmin}
+            />
+          </div>
+        )}
+      </Drawer>
 
       {showSelection && (
         <>
