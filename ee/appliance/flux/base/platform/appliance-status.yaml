@@ -180,7 +180,7 @@ spec:
                     method: 'GET',
                     path,
                     ca: kubeCa,
-                    headers: { Authorization: `Bearer ${kubeToken}`, Accept: 'text/plain' },
+                    headers: { Authorization: `Bearer ${kubeToken}` },
                     timeout: 5000,
                   }, (res) => {
                     let body = '';
