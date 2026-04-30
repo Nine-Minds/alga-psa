@@ -188,6 +188,62 @@ function inferComponentFromObjectName(name) {
   return null;
 }
 
+function imageSizeEstimate(image) {
+  const value = String(image || '');
+  if (/ghcr\.io\/nine-minds\/alga-psa-ee:/i.test(value)) {
+    return { estimatedCompressedBytes: 1865000000, estimatedSizeHuman: '~1.8 GB' };
+  }
+  if (/node:20-alpine/i.test(value)) {
+    return { estimatedCompressedBytes: 59000000, estimatedSizeHuman: '~60 MB' };
+  }
+  return { estimatedCompressedBytes: null, estimatedSizeHuman: null };
+}
+
+function extractImageFromMessage(message) {
+  const text = String(message || '');
+  return (text.match(/image "([^"]+)"/i) || text.match(/([a-z0-9./_-]+:[a-zA-Z0-9._-]+)/))?.[1] || null;
+}
+
+function elapsedSecondsSince(timestamp) {
+  if (!timestamp) return null;
+  const parsed = Date.parse(timestamp);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(0, Math.floor((Date.now() - parsed) / 1000));
+}
+
+function detectActiveImagePulls(status) {
+  const events = status.recentEvents || [];
+  const pulls = [];
+  const seen = new Set();
+  for (const event of events) {
+    const message = String(event.message || '');
+    if (!/pulling image/i.test(message) || /successfully pulled/i.test(message) || /failed to pull/i.test(message)) {
+      continue;
+    }
+    const image = extractImageFromMessage(message);
+    const component = inferComponentFromObjectName(event.involvedObject || '') || 'unknown';
+    const key = `${component}:${image || message}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const size = imageSizeEstimate(image);
+    pulls.push({
+      component,
+      operation: 'pulling_image',
+      image,
+      ...size,
+      progressPercent: null,
+      progressAvailable: false,
+      progressReason: 'Kubernetes events do not expose image pull byte progress.',
+      startedAt: event.lastTimestamp || null,
+      elapsedSeconds: elapsedSecondsSince(event.lastTimestamp),
+      message: image
+        ? `Pulling image ${image}. This can take several minutes on a local VM.`
+        : message,
+    });
+  }
+  return pulls;
+}
+
 function detectMissingImageTag(status) {
   const events = status.recentEvents || [];
   const match = events.find((entry) => {
@@ -437,6 +493,7 @@ function toCanonicalStatus(status) {
       (status.bootstrap?.job?.completed !== true && status.flux.helmStatus === 'healthy'));
   const fullyHealthy = loginReady && backgroundReady;
 
+  const activeOperations = status.activeOperations || [];
   const blockers =
     status.topBlocker.layer === 'none'
       ? []
@@ -463,7 +520,11 @@ function toCanonicalStatus(status) {
   let rollupMessage = 'Appliance installation is in progress.';
   let nextAction = 'Wait for readiness checks to complete.';
 
-  if (!platformReady || !coreReady || !bootstrapReady || !loginReady) {
+  if (activeOperations.length > 0 && !loginReady) {
+    rollupState = 'installing';
+    rollupMessage = activeOperations[0].message || 'Appliance installation is in progress.';
+    nextAction = 'Wait for the active operation to complete. Image pulls can take several minutes on a local VM.';
+  } else if (!platformReady || !coreReady || !bootstrapReady || !loginReady) {
     if (blockers.length > 0) {
       rollupState = 'failed_action_required';
       rollupMessage = 'A core platform blocker requires action before login is available.';
@@ -512,6 +573,7 @@ function toCanonicalStatus(status) {
       fullHealth: { ready: fullyHealthy, status: statusFromHealth(fullyHealthy) },
     },
     topBlockers: blockers,
+    activeOperations,
     components: componentRows,
     recentEvents: status.recentEvents,
     loginProbe: status.loginProbe || { checked: false, reachable: false, statusCode: null, location: null },
@@ -760,6 +822,8 @@ export async function collectStatus(env, options = {}) {
     recentEvents = summarizeEvents(eventsResult.ok ? parseJsonOutput(eventsResult.output) : null);
   }
 
+  const activeOperations = detectActiveImagePulls({ recentEvents });
+
   const status = {
     timestamp: new Date().toISOString(),
     siteId: env.site.siteId,
@@ -777,6 +841,7 @@ export async function collectStatus(env, options = {}) {
     bootstrap,
     loginProbe,
     recentEvents,
+    activeOperations,
   };
 
   status.connectivityMode = determineConnectivity(status);

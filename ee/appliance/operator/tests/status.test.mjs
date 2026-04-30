@@ -497,6 +497,39 @@ test('Talos client auth failure does not block LOGIN_READY when Kubernetes and c
   assert.equal(status.canonical.rollup.state, 'fully_healthy');
 });
 
+test('active core image pull reports installing state with size estimate instead of action required', async () => {
+  const responses = healthyResponses();
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n msp get deployment/alga-core-sebastian -o json'] = {
+    ok: true,
+    output: JSON.stringify({ spec: { replicas: 1 }, status: { readyReplicas: 0 } }),
+  };
+  responses['kubectl --kubeconfig /tmp/kubeconfig get events --sort-by=.metadata.creationTimestamp -A -o json'] = {
+    ok: true,
+    output: JSON.stringify({
+      items: [
+        {
+          metadata: { namespace: 'msp', creationTimestamp: '2026-04-30T00:00:00Z' },
+          reason: 'Pulling',
+          type: 'Normal',
+          message: 'Pulling image "ghcr.io/nine-minds/alga-psa-ee:94446747"',
+          involvedObject: { kind: 'Pod', name: 'alga-core-sebastian-5bd8b8d9f8-xxyyy' },
+        },
+      ],
+    }),
+  };
+
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+
+  assert.equal(status.canonical.rollup.state, 'installing');
+  assert.match(status.canonical.rollup.message, /Pulling image ghcr\.io\/nine-minds\/alga-psa-ee:94446747/i);
+  assert.equal(status.canonical.activeOperations.length, 1);
+  assert.equal(status.canonical.activeOperations[0].component, 'alga-core');
+  assert.equal(status.canonical.activeOperations[0].estimatedSizeHuman, '~1.8 GB');
+  assert.equal(status.canonical.activeOperations[0].progressAvailable, false);
+});
+
 test('T009: helm timeout with db subPath failure reports db storage blocker as top cause', async () => {
   const responses = healthyResponses();
   responses['kubectl --kubeconfig /tmp/kubeconfig -n alga-system get helmreleases.helm.toolkit.fluxcd.io -o json'] = {

@@ -1147,3 +1147,27 @@ Allow appliance smoke tests to use the remote branch corresponding to the curren
 
 - `ee/appliance/tests/run-plan-tests.sh` now creates a temporary bare Git remote, pushes the current branch to it, and verifies `--repo-branch current` resolves and validates correctly.
 - Also verifies `--require-remote-branch` fails fast when an explicit branch is missing from the configured remote.
+
+## 2026-04-30 Status UX Image Pull Clarification
+
+### Finding During UTM Fresh Bootstrap
+
+During a fresh UTM bootstrap of `Talos-Appliance-BranchTest`, the status UI reached `:8080` before the app URL, but the page reported `failed_action_required` while the core Alga image was still pulling/unpacking:
+
+- `alga-core-sebastian-bootstrap-r1-*`: `ContainerCreating`
+- `alga-core-sebastian-*`: `Init:0/1`
+- event: `Pulling image "ghcr.io/nine-minds/alga-psa-ee:94446747"`
+
+This should be an installing/progress state, not an action-required blocker.
+
+### Changes
+
+- Added `activeOperations` to the status model for image pull / container preparation work.
+- Active image pulls now include component, image, elapsed time, estimated size when known, and an explicit note that Kubernetes does not expose byte-level image pull progress.
+- `ghcr.io/nine-minds/alga-psa-ee:*` is shown with an estimated compressed size of `~1.8 GB` based on observed appliance image size.
+- Rollup stays `installing` while active core image pulls are in progress instead of flipping to `failed_action_required`.
+- The status HTML page now shows current operation, readiness tiers, and blockers, rather than only the four summary fields.
+
+### Limitation
+
+Kubernetes events expose phase-level image pull signals (`Pulling image`, `Successfully pulled`, `Failed to pull`) but not pull-byte percentages. The status API reports `progressAvailable: false` and explains why.

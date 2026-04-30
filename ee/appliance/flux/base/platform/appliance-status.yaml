@@ -130,6 +130,7 @@ spec:
                     fullHealth: { ready: false, status: 'progressing' },
                   },
                   topBlockers: [],
+                  activeOperations: [],
                   components: [],
                   recentEvents: [],
                   loginProbe: { checked: false, reachable: false, statusCode: null, location: null },
@@ -226,6 +227,90 @@ spec:
                 if (value.includes('alga-core-sebastian') || value.includes('alga-core')) return 'alga-core';
                 if (value.includes('db-')) return 'db';
                 return null;
+              }
+
+              function imageSizeEstimate(image) {
+                const value = String(image || '');
+                if (/ghcr\.io\/nine-minds\/alga-psa-ee:/i.test(value)) {
+                  return { estimatedCompressedBytes: 1865000000, estimatedSizeHuman: '~1.8 GB' };
+                }
+                if (/node:20-alpine/i.test(value)) {
+                  return { estimatedCompressedBytes: 59000000, estimatedSizeHuman: '~60 MB' };
+                }
+                return { estimatedCompressedBytes: null, estimatedSizeHuman: null };
+              }
+
+              function imageFromMessage(message) {
+                const text = String(message || '');
+                return (text.match(/image "([^"]+)"/i) || text.match(/([a-z0-9./_-]+:[a-zA-Z0-9._-]+)/))?.[1] || null;
+              }
+
+              function elapsedSecondsSince(timestamp) {
+                if (!timestamp) return null;
+                const parsed = Date.parse(timestamp);
+                if (!Number.isFinite(parsed)) return null;
+                return Math.max(0, Math.floor((Date.now() - parsed) / 1000));
+              }
+
+              function collectActiveOperations(events, podsJson) {
+                const operations = [];
+                const seen = new Set();
+                for (const event of events || []) {
+                  const message = String(event.message || '');
+                  if (!/pulling image/i.test(message) || /successfully pulled|failed to pull/i.test(message)) continue;
+                  const image = imageFromMessage(message);
+                  const component = componentFromObject(event.involvedObject) || 'unknown';
+                  const key = `${component}:${image || message}`;
+                  if (seen.has(key)) continue;
+                  seen.add(key);
+                  const size = imageSizeEstimate(image);
+                  operations.push({
+                    component,
+                    operation: 'pulling_image',
+                    image,
+                    ...size,
+                    progressPercent: null,
+                    progressAvailable: false,
+                    progressReason: 'Kubernetes does not expose image pull byte progress.',
+                    startedAt: event.lastTimestamp || null,
+                    elapsedSeconds: elapsedSecondsSince(event.lastTimestamp),
+                    message: image
+                      ? `Pulling image ${image}. This can take several minutes on a local VM.`
+                      : message,
+                  });
+                }
+
+                for (const pod of podsJson?.items || []) {
+                  const podName = pod.metadata?.name || '';
+                  const component = componentFromObject(podName) || 'unknown';
+                  const allContainers = [...(pod.spec?.initContainers || []), ...(pod.spec?.containers || [])];
+                  const allStatuses = [...(pod.status?.initContainerStatuses || []), ...(pod.status?.containerStatuses || [])];
+                  for (const status of allStatuses) {
+                    const waiting = status.state?.waiting;
+                    if (!waiting || !['ContainerCreating', 'PodInitializing'].includes(waiting.reason)) continue;
+                    const spec = allContainers.find((container) => container.name === status.name);
+                    const image = spec?.image || status.image || null;
+                    const key = `${component}:${podName}:${status.name}:${image}`;
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+                    const size = imageSizeEstimate(image);
+                    operations.push({
+                      component,
+                      operation: 'pulling_image',
+                      image,
+                      ...size,
+                      progressPercent: null,
+                      progressAvailable: false,
+                      progressReason: 'Kubernetes does not expose image pull byte progress.',
+                      startedAt: pod.metadata?.creationTimestamp || null,
+                      elapsedSeconds: elapsedSecondsSince(pod.metadata?.creationTimestamp),
+                      message: image
+                        ? `Preparing ${component}: pulling or unpacking ${image}. This can take several minutes on a local VM.`
+                        : `Preparing ${component}: ${waiting.reason}.`,
+                    });
+                  }
+                }
+                return operations;
               }
 
               function summarizeEvents(json) {
@@ -355,7 +440,7 @@ spec:
                 const fallback = fallbackCanonical();
                 if (!serviceHost || !kubeToken) return fallback;
 
-                const [nodesJson, sourcesJson, kustomizationsJson, helmJson, selectionJson, valuesJson, jobsJson, eventsJson] = await Promise.all([
+                const [nodesJson, sourcesJson, kustomizationsJson, helmJson, selectionJson, valuesJson, jobsJson, eventsJson, podsJson] = await Promise.all([
                   kubeGet('/api/v1/nodes'),
                   kubeGet('/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories'),
                   kubeGet('/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/flux-system/kustomizations'),
@@ -364,6 +449,7 @@ spec:
                   kubeGet('/api/v1/namespaces/alga-system/configmaps/appliance-values-alga-core'),
                   kubeGet('/apis/batch/v1/namespaces/msp/jobs'),
                   kubeGet('/api/v1/events'),
+                  kubeGet('/api/v1/namespaces/msp/pods'),
                 ]);
 
                 const resources = await Promise.all(COMPONENTS.map(async (component) => {
@@ -386,6 +472,7 @@ spec:
                 const kustomizations = fluxItems(kustomizationsJson?.items);
                 const helmReleases = fluxItems(helmJson?.items);
                 const recentEvents = summarizeEvents(eventsJson);
+                const activeOperations = collectActiveOperations(recentEvents, podsJson);
                 const appUrl = parseAppUrl(valuesJson) || fallback.urls.loginUrl;
                 const loginProbe = await httpProbe(appUrl);
                 const nodesReady = (nodesJson?.items || []).length > 0 && (nodesJson?.items || []).every((node) => readyCondition(node)?.status === 'True');
@@ -398,7 +485,7 @@ spec:
                 const loginReady = coreReady && webReady && loginProbe.reachable === true;
                 const backgroundReady = resources.filter((entry) => entry.tier === 'background').every((entry) => entry.ready);
                 const fullyHealthy = loginReady && backgroundReady;
-                const state = { components: resources, recentEvents, sources, kustomizations, helmReleases };
+                const state = { components: resources, recentEvents, sources, kustomizations, helmReleases, activeOperations };
                 const topBlocker = makeBlocker(state, loginReady);
                 const blockers = topBlocker.layer === 'none' ? [] : [{
                   severity: topBlocker.loginBlocking === false ? 'background' : 'critical',
@@ -412,7 +499,11 @@ spec:
                 let rollupState = 'installing';
                 let rollupMessage = 'Appliance installation is in progress.';
                 let nextAction = 'Wait for readiness checks to complete.';
-                if (!platformReady || !coreReady || !bootstrapReady || !loginReady) {
+                if (activeOperations.length > 0 && !loginReady) {
+                  rollupState = 'installing';
+                  rollupMessage = activeOperations[0].message || 'Appliance installation is in progress.';
+                  nextAction = 'Wait for the active operation to complete. Image pulls can take several minutes on a local VM.';
+                } else if (!platformReady || !coreReady || !bootstrapReady || !loginReady) {
                   const blocking = blockers.find((entry) => entry.loginBlocking !== false);
                   if (blocking) {
                     rollupState = 'failed_action_required';
@@ -457,6 +548,7 @@ spec:
                     fullHealth: { ready: fullyHealthy, status: statusFromBool(fullyHealthy) },
                   },
                   topBlockers: blockers,
+                  activeOperations,
                   components: resources,
                   recentEvents,
                   loginProbe,
@@ -497,6 +589,7 @@ spec:
                   tiers: status.tiers,
                   components: status.components,
                   topBlockers: status.topBlockers,
+                  activeOperations: status.activeOperations,
                   recentEvents: status.recentEvents,
                   flux: { note: 'Flux source, Kustomization, and Helm details are summarized into tiers and blockers.' },
                   supportBundle: {
@@ -550,7 +643,7 @@ spec:
                     return;
                   }
 
-                  const page = '<!doctype html><html><head><meta charset="utf-8" /><title>Appliance Status</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:24px;line-height:1.45}.card{max-width:760px;border:1px solid #ddd;border-radius:8px;padding:16px}h1{margin-top:0}.row{margin:8px 0}.label{font-weight:600}code{background:#f4f4f4;padding:2px 4px;border-radius:4px}</style></head><body><div class="card"><h1>Appliance Status</h1><p id="summary">Loading status...</p><div class="row"><span class="label">Install state:</span> <span id="install-state">-</span></div><div class="row"><span class="label">Current phase:</span> <span id="phase">-</span></div><div class="row"><span class="label">Login URL:</span> <span id="login-url">-</span></div><div class="row"><span class="label">Next action:</span> <span id="next-action">-</span></div><div class="row"><small>API: <code>/api/status</code>, <code>/api/overview</code>, and <code>/api/diagnostics</code> (token required)</small></div></div><script>fetch("/api/overview"+window.location.search).then((r)=>{if(!r.ok)throw new Error("Unauthorized or unavailable");return r.json();}).then((data)=>{document.getElementById("summary").textContent=data.message||"Appliance status loaded.";document.getElementById("install-state").textContent=data.installState||"-";document.getElementById("phase").textContent=data.currentPhase||"-";document.getElementById("login-url").textContent=data.loginUrl||"Not available yet";document.getElementById("next-action").textContent=data.nextAction||"-";}).catch((err)=>{document.getElementById("summary").textContent=err.message;});</script></body></html>';
+                  const page = '<!doctype html><html><head><meta charset="utf-8" /><title>Appliance Status</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:24px;line-height:1.45}.card{max-width:920px;border:1px solid #ddd;border-radius:8px;padding:16px}h1{margin-top:0}.row{margin:8px 0}.label{font-weight:600}.section{margin-top:18px;padding-top:12px;border-top:1px solid #eee}.op{background:#f8fafc;border:1px solid #dde6f3;border-radius:8px;padding:12px;margin:8px 0}.muted{color:#666}code{background:#f4f4f4;padding:2px 4px;border-radius:4px}ul{margin-top:6px}</style></head><body><div class="card"><h1>Appliance Status</h1><p id="summary">Loading status...</p><div class="row"><span class="label">Install state:</span> <span id="install-state">-</span></div><div class="row"><span class="label">Current phase:</span> <span id="phase">-</span></div><div class="row"><span class="label">Login URL:</span> <span id="login-url">-</span></div><div class="row"><span class="label">Next action:</span> <span id="next-action">-</span></div><div class="section"><h2>Current operation</h2><div id="operations" class="muted">Checking active work...</div></div><div class="section"><h2>Readiness</h2><div id="tiers">-</div></div><div class="section"><h2>Blockers</h2><div id="blockers" class="muted">-</div></div><div class="row section"><small>API: <code>/api/status</code>, <code>/api/overview</code>, and <code>/api/diagnostics</code> (token required)</small></div></div><script>function fmtSeconds(s){if(s==null)return "unknown";if(s<60)return s+"s";return Math.floor(s/60)+"m "+(s%60)+"s";}function renderOps(ops){const el=document.getElementById("operations");if(!ops||!ops.length){el.textContent="No active image pull or long-running operation detected.";return;}el.innerHTML=ops.map((op)=>`<div class="op"><div><strong>${op.component||"component"}</strong>: ${op.message||op.operation}</div><div>Image: <code>${op.image||"unknown"}</code></div><div>Estimated size: ${op.estimatedSizeHuman||"unknown"}</div><div>Elapsed: ${fmtSeconds(op.elapsedSeconds)}</div><div class="muted">Pull progress: ${op.progressAvailable?op.progressPercent+"%":"not available from Kubernetes"}</div></div>`).join("");}function renderTiers(tiers){const el=document.getElementById("tiers");el.innerHTML="<ul>"+Object.entries(tiers||{}).map(([k,v])=>`<li><strong>${k}</strong>: ${v.ready?"ready":"not ready"} (${v.status})</li>`).join("")+"</ul>";}function renderBlockers(blockers){const el=document.getElementById("blockers");if(!blockers||!blockers.length){el.textContent="No action-required blockers detected.";return;}el.innerHTML="<ul>"+blockers.map((b)=>`<li><strong>${b.component||b.layer}</strong>: ${b.reason} ${b.loginBlocking===false?"(background/non-login-blocking)":""}</li>`).join("")+"</ul>";}fetch("/api/status"+window.location.search).then((r)=>{if(!r.ok)throw new Error("Unauthorized or unavailable");return r.json();}).then((data)=>{document.getElementById("summary").textContent=data.rollup?.message||"Appliance status loaded.";document.getElementById("install-state").textContent=data.rollup?.state||data.status||"-";document.getElementById("phase").textContent=data.currentPhase||data.rollup?.state||"-";document.getElementById("login-url").textContent=data.urls?.loginUrl||data.loginUrl||"Not available yet";document.getElementById("next-action").textContent=data.rollup?.nextAction||data.nextAction||"-";renderOps(data.activeOperations);renderTiers(data.tiers);renderBlockers(data.topBlockers);}).catch((err)=>{document.getElementById("summary").textContent=err.message;});</script></body></html>';
                   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                   res.end(page);
                 } catch (error) {
