@@ -264,3 +264,20 @@ Suggested implementation order:
 ### Validation (F010)
 
 - `kubectl apply --dry-run=client -f ee/appliance/flux/base/platform/appliance-status.yaml`
+
+- `F011`: Added explicit read-only RBAC for appliance-status status collection.
+
+### F011 Implementation Details
+
+- Added `ClusterRole` `appliance-status-readonly` and `ClusterRoleBinding` in `ee/appliance/flux/base/platform/appliance-status.yaml` for service account `appliance-system/appliance-status`.
+- Read-only access granted (`get/list/watch`) for:
+  - core resources: `nodes`, `pods`, `persistentvolumeclaims`, `events`, `configmaps`
+  - batch: `jobs`
+  - Flux source: `gitrepositories`
+  - Flux kustomize: `kustomizations`
+  - Flux helm: `helmreleases`
+- No mutation verbs were granted.
+
+### Validation (F011)
+
+- `kubectl apply --dry-run=client -f ee/appliance/flux/base/platform/appliance-status.yaml`

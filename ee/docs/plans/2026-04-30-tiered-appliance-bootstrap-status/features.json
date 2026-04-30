@@ -87,7 +87,7 @@
   {
     "id": "F011",
     "description": "Give appliance-status read-only Kubernetes RBAC for nodes, pods, jobs, PVCs, events, Flux resources, HelmReleases, and selected metadata-only ConfigMaps/Secrets.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Proposed Architecture"
     ]
