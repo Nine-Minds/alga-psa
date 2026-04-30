@@ -151,8 +151,11 @@ Suggested implementation order:
 - `F001`: Canonical appliance status JSON model now emitted by `collectStatus`.
 - `F002`: Implemented tiered readiness rollups for platform/core/bootstrap/login/background/full health.
 - `F003`: Implemented user-facing rollup classification for installing/ready/ready-with-issues/fully-healthy/failed-action-required.
+- `F004`: Enhanced status CLI reporting to include canonical rollup and tier readiness details.
+- `F005`: Enhanced bootstrap phase progress classification to include Storage, Core App, and Background Services.
 - `T001`: Unit test added for canonical JSON shape in healthy synthetic fixture.
 - `T002`: Unit test added for login-ready + background-failed rollup behavior.
+- `T003`: Unit test added for core blocker producing failed/action-required rollup.
 
 ### What Changed
 
@@ -172,6 +175,10 @@ Suggested implementation order:
   - `background` computed independently from login-critical services.
   - `platform` depends on Talos/Kubernetes/Flux source health.
 - Added `T002` case asserting `LOGIN_READY=true` and `BACKGROUND_READY=false` produce `ready_with_background_issues`.
+- Added `T003` case asserting a core DB readiness failure keeps `LOGIN_READY=false` and emits `failed_action_required`.
+- Updated `ee/appliance/operator/lib/format.mjs` so CLI/TUI summary includes canonical rollup lines and workload section includes tier readiness lines when canonical status is present.
+- Updated `ee/appliance/operator/lib/lifecycle.mjs` bootstrap phase detector patterns to emit phase markers for `Storage`, `Core App`, and `Background Services`.
+- Added lifecycle test coverage for new phase marker detection in `ee/appliance/operator/tests/lifecycle-cli.test.mjs`.
 
 ### Decisions / Rationale
 
@@ -181,6 +188,7 @@ Suggested implementation order:
 ### Commands Run
 
 - `node --test ee/appliance/operator/tests/status.test.mjs`
+- `node --test ee/appliance/operator/tests/lifecycle-cli.test.mjs ee/appliance/operator/tests/format.test.mjs ee/appliance/operator/tests/status.test.mjs`
 
 ### Gotchas
 

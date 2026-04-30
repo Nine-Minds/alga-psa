@@ -8,9 +8,12 @@ function nowStamp() {
 const BOOTSTRAP_PHASE_PATTERNS = [
   { phase: 'Talos', re: /(Talos|talosctl|maintenance API|secure Talos API)/i },
   { phase: 'Kubernetes', re: /(Kubernetes API|kubeconfig|node .*Ready|kubectl)/i },
+  { phase: 'Storage', re: /(local-path|storage smoke|install-storage|provisioner|pvc)/i },
   { phase: 'Flux', re: /(flux|GitRepository|Kustomization|source-controller|kustomize-controller)/i },
+  { phase: 'Core App', re: /(alga-core|bootstrap job|db-0|pgbouncer|redis|login[- ]ready|dashboard)/i },
+  { phase: 'Background Services', re: /(temporal|temporal-ui|workflow-worker|temporal-worker|email-service|background)/i },
   { phase: 'Helm', re: /(helmrelease|helm-controller|Helm)/i },
-  { phase: 'Workloads', re: /(alga-core|deployment|rollout|bootstrap job|pods|statefulset)/i },
+  { phase: 'Workloads', re: /(deployment|rollout|pods|statefulset)/i },
 ];
 
 const FAILURE_CLASSIFIERS = [

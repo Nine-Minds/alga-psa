@@ -194,6 +194,41 @@ test('runBootstrap only reuses kubeconfig and talosconfig when explicitly provid
   assert.match(runner.calls[0].args.join(' '), /--talosconfig \/tmp\/override\.talosconfig/);
 });
 
+test('runBootstrap emits storage, core-app, and background phase markers from progress lines', async () => {
+  const env = {
+    runtime: {
+      bootstrapScript: '/tmp/bootstrap-appliance.sh',
+      assetRoot: '/tmp',
+    },
+    site: { configDir: '/tmp/site', siteId: 'appliance-single-node' },
+    paths: { kubeconfig: '/tmp/site/kubeconfig', talosconfig: '/tmp/site/talosconfig' },
+    nodeIp: '10.0.0.10',
+    appUrl: 'https://psa.example.com',
+    defaultReleaseVersion: '1.0.0',
+  };
+  const events = [];
+  const runner = new MockStreamingRunner({
+    code: 0,
+    lines: [
+      'local-path provisioner is ready',
+      'alga-core deployment rollout progressing',
+      'workflow-worker deployment pending',
+    ],
+  });
+
+  const result = await runBootstrap(env, {
+    bootstrapMode: 'recover',
+    hostname: 'alga-appliance',
+    onProgress: (event) => events.push(event),
+    runner,
+  });
+
+  assert.equal(result.ok, true);
+  assert(events.some((event) => event.type === 'phase' && event.phase === 'Storage'));
+  assert(events.some((event) => event.type === 'phase' && event.phase === 'Core App'));
+  assert(events.some((event) => event.type === 'phase' && event.phase === 'Background Services'));
+});
+
 test('runUpgrade passes skip-reconcile only when reconcileAfterApply is disabled', async () => {
   const env = {
     runtime: {

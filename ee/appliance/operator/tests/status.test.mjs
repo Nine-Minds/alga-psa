@@ -153,6 +153,21 @@ test('T002: login-ready with background failures rolls up as ready_with_backgrou
   assert.equal(status.canonical.rollup.state, 'ready_with_background_issues');
 });
 
+test('T003: core blocker keeps LOGIN_READY false and rollup failed_action_required', async () => {
+  const responses = healthyResponses();
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n msp get statefulset/db -o json'] = {
+    ok: true,
+    output: JSON.stringify({ spec: { replicas: 1 }, status: { readyReplicas: 0 } }),
+  };
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+
+  assert.equal(status.canonical.tiers.core.ready, false);
+  assert.equal(status.canonical.tiers.login.ready, false);
+  assert.equal(status.canonical.rollup.state, 'failed_action_required');
+});
+
 test('T004: status dashboard model includes talos, cluster, flux, workloads, release, and config paths', async () => {
   const releasesDir = releaseFixtureDir();
   const status = await collectStatus(buildEnv(releasesDir), {

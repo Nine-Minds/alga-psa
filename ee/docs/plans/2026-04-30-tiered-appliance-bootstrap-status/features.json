@@ -28,7 +28,7 @@
   {
     "id": "F004",
     "description": "Enhance the existing appliance status CLI to report the canonical status model and tiered readiness.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Implementation Milestones"
     ]
@@ -36,7 +36,7 @@
   {
     "id": "F005",
     "description": "Enhance bootstrap CLI output to print phase-by-phase progress for Talos, Kubernetes, storage, Flux, core app, and background service installation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Bootstrap and Flux Flow"
     ]

@@ -22,7 +22,7 @@
   {
     "id": "T003",
     "description": "Unit: readiness rollup reports Failed/action required when a core Postgres or bootstrap blocker prevents LOGIN_READY.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F003",
