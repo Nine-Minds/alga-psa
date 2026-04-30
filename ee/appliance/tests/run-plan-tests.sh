@@ -404,7 +404,7 @@ t018_output="$(
 )"
 require_text "$t018_output" "Release artifact warning: one or more background image tags are missing:"
 require_text "$t018_output" "ghcr.io/nine-minds/workflow-worker:a2cbb43"
-require_text "$t018_output" "ghcr.io/nine-minds/temporal-worker:61e4a00e"
+require_text "$t018_output" "ghcr.io/nine-minds/temporal-worker:a2cbb43"
 require_text "$t018_output" "Background image issues will be reported by appliance status and do not block core login readiness."
 require_text "$t018_output" "exit_code:0"
 

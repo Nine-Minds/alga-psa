@@ -30,7 +30,7 @@
       "algaCore": "a2cbb430",
       "workflowWorker": "a2cbb43",
       "emailService": "61e4a00e",
-      "temporalWorker": "61e4a00e"
+      "temporalWorker": "a2cbb43"
     }
   },
   "channel": "candidate"
