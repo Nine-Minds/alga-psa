@@ -233,3 +233,18 @@ Suggested implementation order:
 
 - This first `appliance-status` workload intentionally provides a minimal token-gated surface and placeholder `/api/status` payload; canonical collector wiring and full overview/diagnostics pages remain tracked by `F009` and `F010`.
 - `hostPort: 8080` is used for deterministic access on single-node appliance installs where NodePort ranges would not map to `8080` by default.
+
+- `F009`: Added token-protected overview page and overview API fields for install state, phase, login URL, and next action.
+
+### F009 Implementation Details
+
+- Extended `ee/appliance/flux/base/platform/appliance-status.yaml` server behavior:
+  - New overview model with `installState`, `currentPhase`, `loginUrl`, `nextAction`, `message`, `timestamp`.
+  - `GET /api/status` now includes overview-oriented fields.
+  - Added `GET /api/overview` for explicit overview retrieval.
+  - Root page (`/`) now renders a token-protected overview UI and loads data from `/api/overview`.
+- Added `HOST_IP` env (from pod `status.hostIP`) and computed default login URL as `http://<host-ip>:3000`.
+
+### Validation (F009)
+
+- `kubectl apply --dry-run=client -f ee/appliance/flux/base/platform/appliance-status.yaml`

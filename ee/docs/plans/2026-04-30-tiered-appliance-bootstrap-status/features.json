@@ -70,7 +70,7 @@
   {
     "id": "F009",
     "description": "Implement a token-protected overview page that shows install state, current phase, login URL when available, and the highest-priority user action.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UI Layers"
     ]
