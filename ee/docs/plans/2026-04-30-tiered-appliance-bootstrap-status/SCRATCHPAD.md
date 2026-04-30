@@ -153,6 +153,8 @@ Suggested implementation order:
 - `F003`: Implemented user-facing rollup classification for installing/ready/ready-with-issues/fully-healthy/failed-action-required.
 - `F004`: Enhanced status CLI reporting to include canonical rollup and tier readiness details.
 - `F005`: Enhanced bootstrap phase progress classification to include Storage, Core App, and Background Services.
+- `F006`: Added bootstrap status token generation, local persistence, and CLI output of status URL/token.
+- `F007`: Added in-cluster `appliance-system/appliance-status-auth` Secret creation for the status token.
 - `T001`: Unit test added for canonical JSON shape in healthy synthetic fixture.
 - `T002`: Unit test added for login-ready + background-failed rollup behavior.
 - `T003`: Unit test added for core blocker producing failed/action-required rollup.
@@ -179,6 +181,13 @@ Suggested implementation order:
 - Updated `ee/appliance/operator/lib/format.mjs` so CLI/TUI summary includes canonical rollup lines and workload section includes tier readiness lines when canonical status is present.
 - Updated `ee/appliance/operator/lib/lifecycle.mjs` bootstrap phase detector patterns to emit phase markers for `Storage`, `Core App`, and `Background Services`.
 - Added lifecycle test coverage for new phase marker detection in `ee/appliance/operator/tests/lifecycle-cli.test.mjs`.
+- Updated `ee/appliance/scripts/bootstrap-appliance.sh` with:
+  - `generate_status_token` helper.
+  - `STATUS_TOKEN_PATH` under site config (`~/.alga-psa-appliance/<site-id>/status-token` via resolved config dir).
+  - `ensure_status_token` to reuse persisted token when present or generate a new token.
+  - `ensure_status_auth_secret` to create/apply `appliance-system/appliance-status-auth` with `token` literal.
+  - final CLI output block printing status URL (`http://<node-ip>:8080`) and token.
+- Updated `ee/appliance/tests/run-plan-tests.sh` dry-run assertions to verify token/secret/status output lines.
 
 ### Decisions / Rationale
 
@@ -189,7 +198,9 @@ Suggested implementation order:
 
 - `node --test ee/appliance/operator/tests/status.test.mjs`
 - `node --test ee/appliance/operator/tests/lifecycle-cli.test.mjs ee/appliance/operator/tests/format.test.mjs ee/appliance/operator/tests/status.test.mjs`
+- `bash ee/appliance/scripts/bootstrap-appliance.sh --release-version 1.0-rc5 --bootstrap-mode fresh --node-ip 192.0.2.10 --hostname alga-appliance --app-url https://psa.example.test --interface enp0s1 --network-mode dhcp --repo-url https://github.com/example/alga-psa.git --repo-branch main --config-dir <tmp> --dry-run`
 
 ### Gotchas
 
 - `kubeJson()` accepts resource tokens, so event retrieval with sort flags must use a direct `kubectl` command invocation rather than passing a combined pseudo-resource string.
+- `ee/appliance/tests/run-plan-tests.sh` currently fails earlier in this environment with `release-version must follow x.y.z` from the build-images dry-run section, so bootstrap token behavior was validated using direct bootstrap dry-run invocation instead of full script pass.

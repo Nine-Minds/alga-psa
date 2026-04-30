@@ -100,6 +100,11 @@ require_text "$bootstrap_dry_run_output" "reset-appliance-data.sh"
 require_text "$bootstrap_dry_run_output" "create source git alga-appliance"
 require_text "$bootstrap_dry_run_output" "install-storage.sh --kubeconfig"
 require_text "$bootstrap_dry_run_output" "collect-support-bundle.sh"
+require_text "$bootstrap_dry_run_output" "write status token to"
+require_text "$bootstrap_dry_run_output" "create/apply secret appliance-system/appliance-status-auth"
+require_text "$bootstrap_dry_run_output" "Appliance status UI:"
+require_text "$bootstrap_dry_run_output" "URL:   http://192.0.2.10:8080"
+require_text "$bootstrap_dry_run_output" "Token:"
 require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'appUrl: "https://psa.example.test"'
 require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'host: "psa.example.test"'
 require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'domainSuffix: ""'

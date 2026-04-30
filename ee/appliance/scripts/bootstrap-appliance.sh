@@ -31,6 +31,8 @@ REPO_PATH="ee/appliance/flux/base"
 OUTPUT_DIR_OVERRIDE=""
 DRY_RUN=false
 PREPULL_IMAGES=false
+STATUS_TOKEN=""
+STATUS_TOKEN_PATH=""
 TEMP_WORK_DIR=""
 TEMP_PROFILE_DIR=""
 RELEASE_APP_VERSION=""
@@ -151,6 +153,17 @@ PY
   fi
 }
 
+generate_status_token() {
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 24
+  else
+    python3 - <<'PY'
+import secrets
+print(secrets.token_hex(24))
+PY
+  fi
+}
+
 yaml_string() {
   python3 - "$1" <<'PY'
 import json
@@ -253,6 +266,17 @@ persist_operator_metadata() {
   fi
 }
 
+status_node_ip() {
+  local value="${NODE_IP:-}"
+  if [ -z "$value" ] && [ -f "$CONFIG_DIR/node-ip" ]; then
+    value="$(tr -d '\n' < "$CONFIG_DIR/node-ip")"
+  fi
+  if [ -z "$value" ]; then
+    value="$(infer_node_ip_from_kubeconfig || true)"
+  fi
+  printf '%s\n' "$value"
+}
+
 resolve_release_version() {
   local releases_dir
   local latest_release
@@ -296,6 +320,8 @@ resolve_config_paths() {
   if [ -z "$KUBECONFIG_PATH" ]; then
     KUBECONFIG_PATH="$CONFIG_DIR/kubeconfig"
   fi
+
+  STATUS_TOKEN_PATH="$CONFIG_DIR/status-token"
 }
 
 reuse_existing_cluster_config() {
@@ -761,6 +787,37 @@ ensure_alga_auth_secret() {
     --dry-run=client -o yaml | kubectl --kubeconfig "$KUBECONFIG_PATH" apply -f -
 }
 
+ensure_status_token() {
+  if [ -z "$STATUS_TOKEN" ] && [ -f "$STATUS_TOKEN_PATH" ]; then
+    STATUS_TOKEN="$(tr -d '\n' < "$STATUS_TOKEN_PATH")"
+  fi
+
+  if [ -z "$STATUS_TOKEN" ]; then
+    STATUS_TOKEN="$(generate_status_token)"
+  fi
+
+  if $DRY_RUN; then
+    echo "+ write status token to $STATUS_TOKEN_PATH"
+    return 0
+  fi
+
+  printf '%s\n' "$STATUS_TOKEN" > "$STATUS_TOKEN_PATH"
+  chmod 600 "$STATUS_TOKEN_PATH"
+}
+
+ensure_status_auth_secret() {
+  ensure_namespace "appliance-system"
+
+  if $DRY_RUN; then
+    echo "+ kubectl create/apply secret appliance-system/appliance-status-auth"
+    return 0
+  fi
+
+  kubectl --kubeconfig "$KUBECONFIG_PATH" -n appliance-system create secret generic appliance-status-auth \
+    --from-literal=token="$STATUS_TOKEN" \
+    --dry-run=client -o yaml | kubectl --kubeconfig "$KUBECONFIG_PATH" apply -f -
+}
+
 create_runtime_values_dir() {
   local source_profile_dir="$REPO_ROOT/ee/appliance/flux/profiles/$PROFILE"
   local values_dir
@@ -1168,6 +1225,8 @@ reset_appliance_state_if_requested
 
 ensure_namespace "msp"
 ensure_namespace "alga-system"
+ensure_status_token
+ensure_status_auth_secret
 if $DRY_RUN; then
   run_cmd "$REPO_ROOT/ee/appliance/scripts/install-storage.sh" --kubeconfig "$KUBECONFIG_PATH" --dry-run
 else
@@ -1187,10 +1246,15 @@ persist_operator_metadata
 cat <<EOF
 Appliance bootstrap submitted.
 
+Appliance status UI:
+  URL:   http://$(status_node_ip):8080
+  Token: ${STATUS_TOKEN}
+
 Persisted operator files:
   Talos config: $TALOSCONFIG_PATH
   Kubeconfig:   $KUBECONFIG_PATH
   Machine config: $CONFIG_DIR/controlplane.yaml
+  Status token: $STATUS_TOKEN_PATH
   Values: $CONFIG_DIR/values/
 
 Support bundle:
