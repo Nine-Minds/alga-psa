@@ -492,3 +492,19 @@ Suggested implementation order:
 - `bash ee/appliance/scripts/bootstrap-appliance.sh ... --dry-run` (validated image-validation phase output and status URL/token output)
 - `bash ee/appliance/tests/run-plan-tests.sh` currently still stops at pre-existing `release-version must follow x.y.z` check in build-images dry-run section.
 
+
+### Additional Tests Completed
+
+- `T016` implemented via `ee/appliance/tests/run-plan-tests.sh` explicit kubeconfig/talosconfig dry-run path:
+  - verifies explicit reuse path does not invoke Talos re-generation (`talosctl gen config` absent).
+- `T017` implemented via direct invocation in `ee/appliance/tests/run-plan-tests.sh`:
+  - `reset-appliance-data.sh --force --dry-run` now executes successfully, covering regression for prior unbound variable failure.
+- `T024` implemented via existing and extended CLI/bootstrap output checks:
+  - lifecycle phase markers validated in `ee/appliance/operator/tests/lifecycle-cli.test.mjs`.
+  - bootstrap dry-run output in `run-plan-tests.sh` verifies status UI block (`Appliance status UI`, URL, token) and phase-related progress lines.
+
+### Remaining Test Gaps / Blockers
+
+- `T013`, `T014`, `T015`, `T018`, `T019` need fuller integration harnesses (mocked live API/server or cluster RBAC assertions) not yet present in this pass.
+- `T020`-`T023` require local UTM/Talos smoke environment execution and are not runnable in this CI-like local code-only pass.
+

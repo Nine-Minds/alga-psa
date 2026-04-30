@@ -138,7 +138,7 @@
   {
     "id": "T016",
     "description": "Integration: explicit kubeconfig/talosconfig bootstrap path reuses existing cluster access without regenerating or overwriting Talos credentials.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
@@ -146,7 +146,7 @@
   {
     "id": "T017",
     "description": "Integration: fresh reset helper succeeds on a new empty appliance disk and does not fail with an unbound variable.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
@@ -210,7 +210,7 @@
   {
     "id": "T024",
     "description": "CLI acceptance: bootstrap progress output includes phase markers and points the user to the status UI after it is installed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F005",
