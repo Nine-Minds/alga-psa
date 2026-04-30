@@ -1,0 +1,146 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: status collector returns the canonical JSON shape with release metadata, URLs, tiers, blockers, components, and events for a synthetic healthy appliance.",
+    "implemented": false,
+    "featureIds": ["F001", "F027"]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: readiness rollup reports LOGIN_READY=true and BACKGROUND_READY=false as Ready with background issues when only background components fail.",
+    "implemented": false,
+    "featureIds": ["F002", "F003", "F021", "F026"]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: readiness rollup reports Failed/action required when a core Postgres or bootstrap blocker prevents LOGIN_READY.",
+    "implemented": false,
+    "featureIds": ["F002", "F003", "F013", "F017"]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: DNS resolver failure text from Talos or Kubernetes events is classified as a platform DNS blocker with explicit DNS-server remediation guidance.",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: Postgres subPath creation failure is classified as a login-blocking core storage blocker, not a generic pod failure.",
+    "implemented": false,
+    "featureIds": ["F013", "F016"]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: image pull 'not found' for workflow-worker is classified as a non-login-blocking background missing-tag blocker.",
+    "implemented": false,
+    "featureIds": ["F014", "F021"]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: image pull 'not found' for alga-core is classified as a login-blocking missing-tag blocker.",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T008",
+    "description": "Unit: image pull 'context canceled' is classified as a retryable/interrupted pull rather than a missing image tag.",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T009",
+    "description": "Unit: Helm install timeout with underlying db-0 CreateContainerConfigError reports the DB/PVC blocker as top blocker.",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: bootstrap job completion plus database seed query maps to BOOTSTRAP_READY=true.",
+    "implemented": false,
+    "featureIds": ["F017", "F026"]
+  },
+  {
+    "id": "T011",
+    "description": "Unit: Temporal schema compatibility failure is classified as Temporal schema not initialized with autosetup/schema setup guidance.",
+    "implemented": false,
+    "featureIds": ["F018", "F025"]
+  },
+  {
+    "id": "T012",
+    "description": "Unit: Temporal UI service-link env collision error is classified with disable-service-links guidance.",
+    "implemented": false,
+    "featureIds": ["F019", "F025"]
+  },
+  {
+    "id": "T013",
+    "description": "Integration: bootstrap token generation writes the local status-token file, creates the in-cluster appliance-status-auth Secret, and prints URL/token to CLI output.",
+    "implemented": false,
+    "featureIds": ["F006", "F007", "F008"]
+  },
+  {
+    "id": "T014",
+    "description": "Integration: appliance-status endpoint rejects unauthenticated requests and returns /api/status for requests with the generated token.",
+    "implemented": false,
+    "featureIds": ["F008", "F009", "F010"]
+  },
+  {
+    "id": "T015",
+    "description": "Integration: appliance-status service account can read required status resources but cannot read secret values or mutate workload resources.",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T016",
+    "description": "Integration: explicit kubeconfig/talosconfig bootstrap path reuses existing cluster access without regenerating or overwriting Talos credentials.",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T017",
+    "description": "Integration: fresh reset helper succeeds on a new empty appliance disk and does not fail with an unbound variable.",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T018",
+    "description": "Integration: release manifest validation fails fast when workflow-worker or temporal-worker image tags are missing from GHCR.",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T019",
+    "description": "Integration: tiered Flux Kustomizations install platform before core and core before background, and background failure does not mark alga-core unavailable.",
+    "implemented": false,
+    "featureIds": ["F020", "F021"]
+  },
+  {
+    "id": "T020",
+    "description": "Local UTM smoke: a fresh Talos appliance bootstrap exposes the status UI on port 8080 before the Alga web app is ready.",
+    "implemented": false,
+    "featureIds": ["F005", "F006", "F008"]
+  },
+  {
+    "id": "T021",
+    "description": "Local UTM smoke: core bootstrap reaches LOGIN_READY, the app URL responds, and server.users contains seeded users.",
+    "implemented": false,
+    "featureIds": ["F017", "F026"]
+  },
+  {
+    "id": "T022",
+    "description": "Local UTM smoke: with a deliberately missing workflow-worker tag, the UI reports Ready with background issues and shows the missing image tag as non-login-blocking.",
+    "implemented": false,
+    "featureIds": ["F014", "F021", "F022"]
+  },
+  {
+    "id": "T023",
+    "description": "Local UTM smoke: a Temporal install uses autosetup and disables service links so Temporal and Temporal UI become ready without manual patches.",
+    "implemented": false,
+    "featureIds": ["F018", "F019", "F025"]
+  },
+  {
+    "id": "T024",
+    "description": "CLI acceptance: bootstrap progress output includes phase markers and points the user to the status UI after it is installed.",
+    "implemented": false,
+    "featureIds": ["F004", "F005", "F006"]
+  }
+]

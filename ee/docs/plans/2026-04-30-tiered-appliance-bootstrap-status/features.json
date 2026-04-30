@@ -1,0 +1,170 @@
+[
+  {
+    "id": "F001",
+    "description": "Define a canonical appliance status JSON model that includes release metadata, URLs, rollup state, readiness tiers, top blockers, components, and recent events.",
+    "implemented": false,
+    "prdRefs": ["Status API", "Readiness Model"]
+  },
+  {
+    "id": "F002",
+    "description": "Implement tiered readiness rollups for PLATFORM_READY, CORE_READY, BOOTSTRAP_READY, LOGIN_READY, BACKGROUND_READY, and FULLY_HEALTHY.",
+    "implemented": false,
+    "prdRefs": ["Readiness Model", "User-facing Rollup States"]
+  },
+  {
+    "id": "F003",
+    "description": "Classify user-facing rollup states as Installing, Ready to log in, Ready with background issues, Fully healthy, or Failed/action required.",
+    "implemented": false,
+    "prdRefs": ["User-facing Rollup States"]
+  },
+  {
+    "id": "F004",
+    "description": "Enhance the existing appliance status CLI to report the canonical status model and tiered readiness.",
+    "implemented": false,
+    "prdRefs": ["Implementation Milestones"]
+  },
+  {
+    "id": "F005",
+    "description": "Enhance bootstrap CLI output to print phase-by-phase progress for Talos, Kubernetes, storage, Flux, core app, and background service installation.",
+    "implemented": false,
+    "prdRefs": ["Bootstrap and Flux Flow"]
+  },
+  {
+    "id": "F006",
+    "description": "Generate a bootstrap status token, persist it under the appliance config directory, and print it with the status URL during bootstrap.",
+    "implemented": false,
+    "prdRefs": ["Proposed Architecture", "Bootstrap and Flux Flow"]
+  },
+  {
+    "id": "F007",
+    "description": "Create an appliance-system namespace and in-cluster appliance-status-auth Secret containing the generated status token.",
+    "implemented": false,
+    "prdRefs": ["Proposed Architecture"]
+  },
+  {
+    "id": "F008",
+    "description": "Add an early-installed appliance-status chart or manifest set that exposes a token-protected status service on a predictable node port, defaulting to 8080.",
+    "implemented": false,
+    "prdRefs": ["Proposed Architecture", "Bootstrap and Flux Flow"]
+  },
+  {
+    "id": "F009",
+    "description": "Implement a token-protected overview page that shows install state, current phase, login URL when available, and the highest-priority user action.",
+    "implemented": false,
+    "prdRefs": ["UI Layers"]
+  },
+  {
+    "id": "F010",
+    "description": "Implement a token-protected advanced diagnostics page showing readiness tiers, component status, top blockers, recent events, and Helm/Flux state.",
+    "implemented": false,
+    "prdRefs": ["UI Layers", "Blocker Detection Requirements"]
+  },
+  {
+    "id": "F011",
+    "description": "Give appliance-status read-only Kubernetes RBAC for nodes, pods, jobs, PVCs, events, Flux resources, HelmReleases, and selected metadata-only ConfigMaps/Secrets.",
+    "implemented": false,
+    "prdRefs": ["Proposed Architecture"]
+  },
+  {
+    "id": "F012",
+    "description": "Detect DNS resolver failures during Talos or Kubernetes bootstrap and surface explicit DNS remediation guidance.",
+    "implemented": false,
+    "prdRefs": ["Blocker Detection Requirements", "Durable Fixes from Observed Run"]
+  },
+  {
+    "id": "F013",
+    "description": "Detect Postgres PVC/subPath initialization failures and classify them as login-blocking core storage blockers.",
+    "implemented": false,
+    "prdRefs": ["Blocker Detection Requirements"]
+  },
+  {
+    "id": "F014",
+    "description": "Detect image tag not found failures and classify them as login-blocking or background-only based on component tier.",
+    "implemented": false,
+    "prdRefs": ["Blocker Detection Requirements"]
+  },
+  {
+    "id": "F015",
+    "description": "Detect interrupted image pulls separately from missing image tags and report them as retryable image pull interruptions.",
+    "implemented": false,
+    "prdRefs": ["Blocker Detection Requirements"]
+  },
+  {
+    "id": "F016",
+    "description": "When Helm install times out, inspect underlying pods, jobs, and events so the top blocker reports the root cause instead of only the Helm timeout.",
+    "implemented": false,
+    "prdRefs": ["Blocker Detection Requirements"]
+  },
+  {
+    "id": "F017",
+    "description": "Detect bootstrap job states including waiting, running, failed, and completed, and summarize migration/seed success for BOOTSTRAP_READY.",
+    "implemented": false,
+    "prdRefs": ["Readiness Model", "Blocker Detection Requirements"]
+  },
+  {
+    "id": "F018",
+    "description": "Detect Temporal schema/autosetup failures and report schema initialization guidance.",
+    "implemented": false,
+    "prdRefs": ["Blocker Detection Requirements", "Durable Fixes from Observed Run"]
+  },
+  {
+    "id": "F019",
+    "description": "Detect Kubernetes service-link environment collisions in Temporal UI or similar services and report disable-service-links guidance.",
+    "implemented": false,
+    "prdRefs": ["Blocker Detection Requirements", "Durable Fixes from Observed Run"]
+  },
+  {
+    "id": "F020",
+    "description": "Split appliance Flux resources into platform, core, and background groups with explicit dependency order.",
+    "implemented": false,
+    "prdRefs": ["Flux/Helm Organization"]
+  },
+  {
+    "id": "F021",
+    "description": "Ensure background Flux/Helm failures do not unset LOGIN_READY when core app readiness criteria are satisfied.",
+    "implemented": false,
+    "prdRefs": ["Readiness Model", "Flux/Helm Organization"]
+  },
+  {
+    "id": "F022",
+    "description": "Validate release manifest image references before applying background releases and report missing tags as release artifact blockers.",
+    "implemented": false,
+    "prdRefs": ["Durable Fixes from Observed Run", "Acceptance Criteria"]
+  },
+  {
+    "id": "F023",
+    "description": "Fix fresh reset helper behavior so it handles new or empty Talos appliance disks without an unbound variable failure.",
+    "implemented": false,
+    "prdRefs": ["Durable Fixes from Observed Run"]
+  },
+  {
+    "id": "F024",
+    "description": "Fix operator/script handling so explicit kubeconfig and talosconfig reuse does not regenerate or overwrite existing Talos credentials unexpectedly.",
+    "implemented": false,
+    "prdRefs": ["Durable Fixes from Observed Run"]
+  },
+  {
+    "id": "F025",
+    "description": "Update Temporal chart/runtime values so Temporal autosetup runs during install and service links are disabled where needed.",
+    "implemented": false,
+    "prdRefs": ["Durable Fixes from Observed Run"]
+  },
+  {
+    "id": "F026",
+    "description": "Make LOGIN_READY detection verify Alga web deployment readiness, app HTTP response, dashboard/login redirect, and representative seed data.",
+    "implemented": false,
+    "prdRefs": ["Readiness Model", "Acceptance Criteria"]
+  },
+  {
+    "id": "F027",
+    "description": "Persist and expose the selected appliance release version, app version, channel, and Git revision in the status model.",
+    "implemented": false,
+    "prdRefs": ["Status API"]
+  },
+  {
+    "id": "F028",
+    "description": "Add support-bundle entry point metadata to the advanced diagnostics model, with implementation of bundle download allowed in a later milestone.",
+    "implemented": false,
+    "prdRefs": ["Implementation Milestones", "UI Layers"]
+  }
+]
