@@ -341,6 +341,17 @@ function determineTopBlocker(status) {
     };
   }
 
+  const bootstrapFailure = detectBootstrapFailure(status);
+  if (bootstrapFailure) {
+    return {
+      layer: 'Bootstrap job failure',
+      component: bootstrapFailure.component,
+      loginBlocking: true,
+      reason: bootstrapFailure.reason,
+      nextAction: bootstrapFailure.nextAction,
+    };
+  }
+
   const temporalSchemaSignal = detectTemporalSchemaFailure(status);
   if (temporalSchemaSignal) {
     return {
@@ -487,8 +498,10 @@ function toCanonicalStatus(status) {
     platformSourcesReady;
   const seedUsersCount = status.bootstrap?.seed?.usersCount;
   const hasVerifiedSeedUsers = Number.isFinite(seedUsersCount) && seedUsersCount > 0;
+  const bootstrapFailed = status.bootstrap?.job?.failed === true;
   const bootstrapReady =
     coreReady &&
+    !bootstrapFailed &&
     ((status.bootstrap?.job?.completed === true && hasVerifiedSeedUsers) ||
       (status.bootstrap?.job?.completed !== true && status.flux.helmStatus === 'healthy'));
   const fullyHealthy = loginReady && backgroundReady;
@@ -527,7 +540,9 @@ function toCanonicalStatus(status) {
   } else if (!platformReady || !coreReady || !bootstrapReady || !loginReady) {
     if (blockers.length > 0) {
       rollupState = 'failed_action_required';
-      rollupMessage = 'A core platform blocker requires action before login is available.';
+      rollupMessage = blockers[0].layer === 'Bootstrap job failure'
+        ? blockers[0].reason
+        : 'A core platform blocker requires action before login is available.';
       nextAction = blockers[0].nextAction;
     }
   } else if (fullyHealthy) {
@@ -575,6 +590,7 @@ function toCanonicalStatus(status) {
     topBlockers: blockers,
     activeOperations,
     components: componentRows,
+    bootstrap: status.bootstrap,
     recentEvents: status.recentEvents,
     loginProbe: status.loginProbe || { checked: false, reachable: false, statusCode: null, location: null },
   };
@@ -621,6 +637,84 @@ function summarizeBootstrapJob(jobsJson) {
     return { state: 'running', completed: false, failed: false, name: job.metadata?.name || null };
   }
   return { state: 'waiting', completed: false, failed: false, name: job.metadata?.name || null };
+}
+
+function detectBootstrapLogErrors(logText) {
+  return String(logText || '')
+    .split(/\r?\n/)
+    .filter((line) => /\b(ERROR|FATAL)\b|Configured seed directory does not exist|Migration failed|seed .*failed|Unhandled|Exception/i.test(line))
+    .slice(-10);
+}
+
+function bootstrapLogNextAction(reason) {
+  if (/Configured seed directory does not exist/i.test(reason)) {
+    return 'Verify the appliance image contains the configured seed directory, or update the bootstrap seed path in the release/chart values.';
+  }
+  if (/password authentication failed|connection refused|could not connect|database/i.test(reason)) {
+    return 'Check database readiness, credentials, and bootstrap job environment, then retry recover mode.';
+  }
+  return 'Review the bootstrap log excerpt, fix the reported issue, then rerun bootstrap recover mode.';
+}
+
+function detectBootstrapFailure(status) {
+  if (!status.bootstrap?.job?.failed) return null;
+  const signal = status.bootstrap?.logs?.detectedErrors?.at(-1) || `Bootstrap job failed: ${status.bootstrap.job.name || 'unknown job'}`;
+  return {
+    component: status.bootstrap.job.name || 'bootstrap',
+    reason: /^Bootstrap failed:/i.test(signal) ? signal : `Bootstrap failed: ${signal}`,
+    nextAction: bootstrapLogNextAction(signal),
+  };
+}
+
+async function collectBootstrapLogs(shell, kubeconfig, bootstrapJob) {
+  const empty = { available: false, pod: null, container: null, tail: [], detectedErrors: [] };
+  if (!bootstrapJob?.name || (!bootstrapJob.failed && bootstrapJob.state !== 'running')) return empty;
+
+  const podsResult = await shell.runCapture('kubectl', [
+    '--kubeconfig',
+    kubeconfig,
+    '-n',
+    'msp',
+    'get',
+    'pods',
+    '-l',
+    `job-name=${bootstrapJob.name}`,
+    '-o',
+    'json',
+  ]);
+  if (!podsResult.ok) return empty;
+
+  const pods = parseJsonOutput(podsResult.output)?.items || [];
+  const preferred =
+    pods.find((pod) => pod.status?.phase === 'Failed') ||
+    pods.sort((a, b) => String(b.metadata?.creationTimestamp || '').localeCompare(String(a.metadata?.creationTimestamp || '')))[0];
+  if (!preferred) return empty;
+
+  const podName = preferred.metadata?.name;
+  const containers = preferred.spec?.containers || [];
+  const container = containers.find((entry) => entry.name === 'bootstrap')?.name || containers[0]?.name || 'bootstrap';
+  const logsResult = await shell.runCapture('kubectl', [
+    '--kubeconfig',
+    kubeconfig,
+    '-n',
+    'msp',
+    'logs',
+    podName,
+    '-c',
+    container,
+    '--tail=160',
+    '--timestamps',
+  ]);
+  if (!logsResult.ok) return { ...empty, pod: podName, container };
+
+  const tail = String(logsResult.output || '').split(/\r?\n/).filter(Boolean).slice(-160);
+  return {
+    available: true,
+    pod: podName,
+    container,
+    tail,
+    detectedErrors: detectBootstrapLogErrors(logsResult.output),
+  };
 }
 
 export async function collectStatus(env, options = {}) {
@@ -736,6 +830,7 @@ export async function collectStatus(env, options = {}) {
   const bootstrap = {
     job: { state: 'waiting', completed: false, failed: false, name: null },
     seed: { usersCount: null },
+    logs: { available: false, pod: null, container: null, tail: [], detectedErrors: [] },
   };
   const loginProbe = { checked: false, reachable: false, statusCode: null, location: null };
 
@@ -764,6 +859,7 @@ export async function collectStatus(env, options = {}) {
 
     const jobs = await kubeJson(shell, kubeconfig, 'msp', 'jobs.batch');
     bootstrap.job = summarizeBootstrapJob(jobs.json);
+    bootstrap.logs = await collectBootstrapLogs(shell, kubeconfig, bootstrap.job);
 
     if (bootstrap.job.completed) {
       const usersResult = await shell.runCapture('kubectl', [

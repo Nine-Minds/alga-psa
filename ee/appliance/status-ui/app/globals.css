@@ -1,0 +1,48 @@
+:root {
+  --color-background: 248 250 252;
+  --color-card: 255 255 255;
+  --color-primary-50: 239 246 255;
+  --color-primary-100: 219 234 254;
+  --color-primary-500: 59 130 246;
+  --color-primary-700: 29 78 216;
+  --color-border-100: 241 245 249;
+  --color-border-200: 226 232 240;
+  --color-border-300: 203 213 225;
+  --color-text-500: 100 116 139;
+  --color-text-700: 51 65 85;
+  --color-text-900: 15 23 42;
+  --color-success: 22 163 74;
+  --color-warning: 217 119 6;
+  --color-error: 220 38 38;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  background: rgb(var(--color-background));
+  color: rgb(var(--color-text-900));
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.45;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+code {
+  border: 1px solid rgb(var(--color-border-200));
+  border-radius: 6px;
+  background: rgb(var(--color-border-100));
+  padding: 2px 5px;
+}

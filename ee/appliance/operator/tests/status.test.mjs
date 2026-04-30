@@ -601,6 +601,52 @@ test('T010: bootstrap job completion plus seeded users query sets BOOTSTRAP_READ
   assert.equal(status.canonical.tiers.bootstrap.ready, true);
 });
 
+test('bootstrap job log error is promoted into canonical blocker and rollup', async () => {
+  const responses = healthyResponses();
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n msp get jobs.batch -o json'] = {
+    ok: true,
+    output: JSON.stringify({
+      items: [
+        {
+          metadata: { name: 'alga-core-sebastian-bootstrap-r7' },
+          status: { conditions: [{ type: 'Failed', status: 'True' }], failed: 1 },
+        },
+      ],
+    }),
+  };
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n msp get pods -l job-name=alga-core-sebastian-bootstrap-r7 -o json'] = {
+    ok: true,
+    output: JSON.stringify({
+      items: [
+        {
+          metadata: { name: 'alga-core-sebastian-bootstrap-r7-abc', creationTimestamp: '2026-04-30T00:01:00Z' },
+          spec: { containers: [{ name: 'bootstrap' }] },
+          status: { phase: 'Failed' },
+        },
+      ],
+    }),
+  };
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n msp logs alga-core-sebastian-bootstrap-r7-abc -c bootstrap --tail=160 --timestamps'] = {
+    ok: true,
+    output: [
+      '2026-04-30T00:01:00Z Running migrations',
+      '2026-04-30T00:01:01Z ERROR: Configured seed directory does not exist: /app/ee/server/seeds/onboarding',
+    ].join('\n'),
+  };
+
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+
+  assert.equal(status.topBlocker.layer, 'Bootstrap job failure');
+  assert.match(status.topBlocker.reason, /Configured seed directory does not exist/);
+  assert.match(status.topBlocker.nextAction, /seed directory/);
+  assert.equal(status.canonical.topBlockers[0].layer, 'Bootstrap job failure');
+  assert.match(status.canonical.rollup.message, /Configured seed directory does not exist/);
+  assert.equal(status.canonical.bootstrap.logs.available, true);
+  assert.equal(status.canonical.bootstrap.logs.detectedErrors.length, 1);
+});
+
 test('T011: Temporal schema compatibility errors are classified with autosetup guidance', async () => {
   const responses = healthyResponses();
   responses['kubectl --kubeconfig /tmp/kubeconfig -n msp get deployment/temporal -o json'] = {

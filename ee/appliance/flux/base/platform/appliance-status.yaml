@@ -12,6 +12,9 @@ rules:
   - apiGroups: [""]
     resources: ["nodes", "pods", "persistentvolumeclaims", "events", "configmaps"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
   - apiGroups: ["apps"]
     resources: ["deployments", "statefulsets"]
     verbs: ["get", "list", "watch"]
@@ -160,6 +163,32 @@ spec:
                     res.on('end', () => {
                       if (res.statusCode < 200 || res.statusCode >= 300) return resolve(null);
                       try { resolve(JSON.parse(body)); } catch { resolve(null); }
+                    });
+                  });
+                  req.on('timeout', () => req.destroy());
+                  req.on('error', () => resolve(null));
+                  req.end();
+                });
+              }
+
+              function kubeGetText(path) {
+                if (!serviceHost || !kubeToken) return Promise.resolve(null);
+                return new Promise((resolve) => {
+                  const req = https.request({
+                    host: serviceHost,
+                    port: servicePort,
+                    method: 'GET',
+                    path,
+                    ca: kubeCa,
+                    headers: { Authorization: `Bearer ${kubeToken}`, Accept: 'text/plain' },
+                    timeout: 5000,
+                  }, (res) => {
+                    let body = '';
+                    res.setEncoding('utf8');
+                    res.on('data', (chunk) => { body += chunk; });
+                    res.on('end', () => {
+                      if (res.statusCode < 200 || res.statusCode >= 300) return resolve(null);
+                      resolve(body);
                     });
                   });
                   req.on('timeout', () => req.destroy());
@@ -358,6 +387,70 @@ spec:
                 return { state: 'waiting', completed: false, failed: false, name: job.metadata?.name || null };
               }
 
+              function bootstrapPodsForJob(podsJson, jobName) {
+                const items = podsJson?.items || [];
+                return items
+                  .filter((pod) => {
+                    const name = pod.metadata?.name || '';
+                    const labels = pod.metadata?.labels || {};
+                    return (jobName && labels['job-name'] === jobName) || (/bootstrap/i.test(name) && /alga-core/i.test(name));
+                  })
+                  .sort((a, b) => String(b.metadata?.creationTimestamp || '').localeCompare(String(a.metadata?.creationTimestamp || '')));
+              }
+
+              function detectErrorLines(logText) {
+                const lines = String(logText || '').split(/\r?\n/).filter(Boolean);
+                const errors = [];
+                for (const line of lines) {
+                  if (/\b(ERROR|FATAL)\b|Configured seed directory does not exist|Migration failed|seed .*failed|Unhandled|Exception/i.test(line)) {
+                    errors.push(line);
+                  }
+                }
+                return errors.slice(-10);
+              }
+
+              function bootstrapNextAction(reason) {
+                if (/Configured seed directory does not exist/i.test(reason)) {
+                  return 'Verify the appliance image contains the configured seed directory, or update the bootstrap seed path in the release/chart values.';
+                }
+                if (/password authentication failed|connection refused|could not connect|database/i.test(reason)) {
+                  return 'Check database readiness, credentials, and bootstrap job environment, then retry recover mode.';
+                }
+                return 'Review the bootstrap log excerpt below, fix the reported issue, then rerun bootstrap recover mode.';
+              }
+
+              async function collectBootstrapLogs(bootstrapJob, podsJson) {
+                const empty = { available: false, pod: null, container: null, tail: [], detectedErrors: [] };
+                if (!bootstrapJob?.name || (!bootstrapJob.failed && bootstrapJob.state !== 'running')) return empty;
+                const pods = bootstrapPodsForJob(podsJson, bootstrapJob.name);
+                const preferred = pods.find((pod) => pod.status?.phase === 'Failed') || pods[0];
+                if (!preferred) return empty;
+                const podName = preferred.metadata?.name;
+                const containers = preferred.spec?.containers || [];
+                const container = containers.find((entry) => entry.name === 'bootstrap')?.name || containers[0]?.name || 'bootstrap';
+                const logText = await kubeGetText(`/api/v1/namespaces/msp/pods/${encodeURIComponent(podName)}/log?container=${encodeURIComponent(container)}&tailLines=160&timestamps=true`);
+                if (!logText) return { ...empty, pod: podName, container };
+                const tail = String(logText).split(/\r?\n/).filter(Boolean).slice(-160);
+                return {
+                  available: true,
+                  pod: podName,
+                  container,
+                  tail,
+                  detectedErrors: detectErrorLines(logText),
+                };
+              }
+
+              function detectBootstrapFailure(bootstrap) {
+                if (!bootstrap?.job?.failed) return null;
+                const signal = bootstrap.logs?.detectedErrors?.at(-1) || `Bootstrap job failed: ${bootstrap.job.name || 'unknown job'}`;
+                const reason = /^Bootstrap failed:/i.test(signal) ? signal : `Bootstrap failed: ${signal}`;
+                return {
+                  component: bootstrap.job.name || 'bootstrap',
+                  reason,
+                  nextAction: bootstrapNextAction(signal),
+                };
+              }
+
               function detectMissingImage(events) {
                 const match = events.find((entry) => /imagepullbackoff|failed to pull image|errimagepull/i.test(entry.message || '') && /not found/i.test(entry.message || ''));
                 if (!match) return null;
@@ -399,6 +492,16 @@ spec:
                     loginBlocking: false,
                     reason: `Image pull interrupted and retryable: ${interrupted.message}`,
                     nextAction: 'Wait for automatic retry or restart the affected pod if retries stall.',
+                  };
+                }
+                const bootstrapFailure = detectBootstrapFailure(state.bootstrap);
+                if (bootstrapFailure) {
+                  return {
+                    layer: 'Bootstrap job failure',
+                    component: bootstrapFailure.component,
+                    loginBlocking: true,
+                    reason: bootstrapFailure.reason,
+                    nextAction: bootstrapFailure.nextAction,
                   };
                 }
                 const badCore = firstNotReady(state.components, ['db', 'redis', 'pgbouncer', 'alga-core']);
@@ -490,12 +593,14 @@ spec:
                 const coreReady = ['db', 'redis', 'pgbouncer'].every((name) => resources.find((entry) => entry.name === name)?.ready === true);
                 const webReady = resources.find((entry) => entry.name === 'alga-core')?.ready === true;
                 const bootstrapJob = summarizeBootstrapJob(jobsJson);
+                const bootstrapLogs = await collectBootstrapLogs(bootstrapJob, podsJson);
+                const bootstrap = { job: bootstrapJob, logs: bootstrapLogs };
                 const helmHealthy = helmReleases.length > 0 && helmReleases.every((entry) => entry.ready);
-                const bootstrapReady = coreReady && (bootstrapJob.completed || helmHealthy);
+                const bootstrapReady = coreReady && !bootstrapJob.failed && (bootstrapJob.completed || helmHealthy);
                 const loginReady = coreReady && webReady && loginProbe.reachable === true;
                 const backgroundReady = resources.filter((entry) => entry.tier === 'background').every((entry) => entry.ready);
                 const fullyHealthy = loginReady && backgroundReady;
-                const state = { components: resources, recentEvents, sources, kustomizations, helmReleases, activeOperations };
+                const state = { components: resources, recentEvents, sources, kustomizations, helmReleases, activeOperations, bootstrap };
                 const topBlocker = makeBlocker(state, loginReady);
                 const blockers = topBlocker.layer === 'none' ? [] : [{
                   severity: topBlocker.loginBlocking === false ? 'background' : 'critical',
@@ -517,7 +622,9 @@ spec:
                   const blocking = blockers.find((entry) => entry.loginBlocking !== false);
                   if (blocking) {
                     rollupState = 'failed_action_required';
-                    rollupMessage = 'A core platform blocker requires action before login is available.';
+                    rollupMessage = blocking.layer === 'Bootstrap job failure'
+                      ? blocking.reason
+                      : 'A core platform blocker requires action before login is available.';
                     nextAction = blocking.nextAction;
                   }
                 } else if (fullyHealthy) {
@@ -560,6 +667,7 @@ spec:
                   topBlockers: blockers,
                   activeOperations,
                   components: resources,
+                  bootstrap,
                   recentEvents,
                   loginProbe,
                 };
@@ -600,6 +708,7 @@ spec:
                   components: status.components,
                   topBlockers: status.topBlockers,
                   activeOperations: status.activeOperations,
+                  bootstrap: status.bootstrap,
                   recentEvents: status.recentEvents,
                   flux: { note: 'Flux source, Kustomization, and Helm details are summarized into tiers and blockers.' },
                   supportBundle: {
@@ -653,7 +762,121 @@ spec:
                     return;
                   }
 
-                  const page = '<!doctype html><html><head><meta charset="utf-8" /><title>Appliance Status</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:24px;line-height:1.45}.card{max-width:920px;border:1px solid #ddd;border-radius:8px;padding:16px}h1{margin-top:0}.row{margin:8px 0}.label{font-weight:600}.section{margin-top:18px;padding-top:12px;border-top:1px solid #eee}.op{background:#f8fafc;border:1px solid #dde6f3;border-radius:8px;padding:12px;margin:8px 0}.muted{color:#666}code{background:#f4f4f4;padding:2px 4px;border-radius:4px}ul{margin-top:6px}</style></head><body><div class="card"><h1>Appliance Status</h1><p id="summary">Loading status...</p><div class="row"><span class="label">Install state:</span> <span id="install-state">-</span></div><div class="row"><span class="label">Current phase:</span> <span id="phase">-</span></div><div class="row"><span class="label">Login URL:</span> <span id="login-url">-</span></div><div class="row"><span class="label">Next action:</span> <span id="next-action">-</span></div><div class="section"><h2>Current operation</h2><div id="operations" class="muted">Checking active work...</div></div><div class="section"><h2>Readiness</h2><div id="tiers">-</div></div><div class="section"><h2>Blockers</h2><div id="blockers" class="muted">-</div></div><div class="row section"><small>API: <code>/api/status</code>, <code>/api/overview</code>, and <code>/api/diagnostics</code> (token required)</small></div></div><script>function fmtSeconds(s){if(s==null)return "unknown";if(s<60)return s+"s";return Math.floor(s/60)+"m "+(s%60)+"s";}function renderOps(ops){const el=document.getElementById("operations");if(!ops||!ops.length){el.textContent="No active image pull or long-running operation detected.";return;}el.innerHTML=ops.map((op)=>`<div class="op"><div><strong>${op.component||"component"}</strong>: ${op.message||op.operation}</div><div>Image: <code>${op.image||"unknown"}</code></div><div>Estimated size: ${op.estimatedSizeHuman||"unknown"}</div><div>Elapsed: ${fmtSeconds(op.elapsedSeconds)}</div><div class="muted">Pull progress: ${op.progressAvailable?op.progressPercent+"%":"not available from Kubernetes"}</div></div>`).join("");}function renderTiers(tiers){const el=document.getElementById("tiers");el.innerHTML="<ul>"+Object.entries(tiers||{}).map(([k,v])=>`<li><strong>${k}</strong>: ${v.ready?"ready":"not ready"} (${v.status})</li>`).join("")+"</ul>";}function renderBlockers(blockers){const el=document.getElementById("blockers");if(!blockers||!blockers.length){el.textContent="No action-required blockers detected.";return;}el.innerHTML="<ul>"+blockers.map((b)=>`<li><strong>${b.component||b.layer}</strong>: ${b.reason} ${b.loginBlocking===false?"(background/non-login-blocking)":""}</li>`).join("")+"</ul>";}fetch("/api/status"+window.location.search).then((r)=>{if(!r.ok)throw new Error("Unauthorized or unavailable");return r.json();}).then((data)=>{document.getElementById("summary").textContent=data.rollup?.message||"Appliance status loaded.";document.getElementById("install-state").textContent=data.rollup?.state||data.status||"-";document.getElementById("phase").textContent=data.currentPhase||data.rollup?.state||"-";document.getElementById("login-url").textContent=data.urls?.loginUrl||data.loginUrl||"Not available yet";document.getElementById("next-action").textContent=data.rollup?.nextAction||data.nextAction||"-";renderOps(data.activeOperations);renderTiers(data.tiers);renderBlockers(data.topBlockers);}).catch((err)=>{document.getElementById("summary").textContent=err.message;});</script></body></html>';
+                  const page = String.raw`<!doctype html>
+                  <html>
+                  <head>
+                    <meta charset="utf-8" />
+                    <meta name="viewport" content="width=device-width, initial-scale=1" />
+                    <title>Alga Appliance Status</title>
+                    <style>
+                      :root {
+                        --color-background: 248 250 252;
+                        --color-card: 255 255 255;
+                        --color-primary-50: 239 246 255;
+                        --color-primary-100: 219 234 254;
+                        --color-primary-500: 59 130 246;
+                        --color-primary-700: 29 78 216;
+                        --color-border-100: 241 245 249;
+                        --color-border-200: 226 232 240;
+                        --color-border-300: 203 213 225;
+                        --color-text-500: 100 116 139;
+                        --color-text-700: 51 65 85;
+                        --color-text-900: 15 23 42;
+                        --color-success: 22 163 74;
+                        --color-warning: 217 119 6;
+                        --color-error: 220 38 38;
+                      }
+                      * { box-sizing: border-box; }
+                      body { margin: 0; background: rgb(var(--color-background)); color: rgb(var(--color-text-900)); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.45; }
+                      .shell { max-width: 1180px; margin: 0 auto; padding: 28px; }
+                      .hero { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); margin-bottom: 18px; }
+                      .eyebrow { color: rgb(var(--color-primary-700)); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: 12px; }
+                      h1 { margin: 0; font-size: clamp(28px, 4vw, 44px); letter-spacing: -0.04em; }
+                      h2 { margin: 0 0 10px; font-size: 16px; }
+                      .summary { color: rgb(var(--color-text-700)); font-size: 17px; max-width: 860px; }
+                      .grid { display: grid; gap: 14px; }
+                      .grid.cols { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+                      .card { background: rgb(var(--color-card)); border: 1px solid rgb(var(--color-border-200)); border-radius: 16px; padding: 16px; box-shadow: 0 10px 30px rgba(15, 23, 42, .06); }
+                      .span-8 { grid-column: span 8; } .span-4 { grid-column: span 4; } .span-6 { grid-column: span 6; } .span-12 { grid-column: span 12; }
+                      .muted { color: rgb(var(--color-text-500)); }
+                      .kv { display: grid; gap: 10px; }
+                      .row { display: flex; justify-content: space-between; gap: 14px; border-bottom: 1px solid rgb(var(--color-border-100)); padding: 8px 0; }
+                      .row:last-child { border-bottom: 0; }
+                      .label { color: rgb(var(--color-text-500)); }
+                      .value { font-weight: 650; text-align: right; word-break: break-word; }
+                      .badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 700; border: 1px solid rgb(var(--color-border-200)); background: rgb(var(--color-border-100)); }
+                      .badge.ready, .badge.fully_healthy, .badge.ready_to_log_in, .badge.ready_with_background_issues { color: rgb(var(--color-success)); background: rgba(22,163,74,.1); border-color: rgba(22,163,74,.25); }
+                      .badge.installing, .badge.progressing { color: rgb(var(--color-primary-700)); background: rgb(var(--color-primary-50)); border-color: rgb(var(--color-primary-100)); }
+                      .badge.failed_action_required, .badge.degraded, .badge.unhealthy { color: rgb(var(--color-error)); background: rgba(220,38,38,.08); border-color: rgba(220,38,38,.22); }
+                      .tiers { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+                      .tier { border: 1px solid rgb(var(--color-border-200)); border-radius: 12px; padding: 12px; background: linear-gradient(180deg, #fff, rgb(var(--color-background))); }
+                      .tier-name { font-weight: 750; text-transform: capitalize; }
+                      .op { border: 1px solid rgb(var(--color-primary-100)); background: rgb(var(--color-primary-50)); border-radius: 14px; padding: 14px; }
+                      .blocker { border-left: 4px solid rgb(var(--color-error)); background: rgba(220,38,38,.06); border-radius: 12px; padding: 12px; margin-top: 8px; }
+                      code { background: rgb(var(--color-border-100)); border: 1px solid rgb(var(--color-border-200)); border-radius: 6px; padding: 2px 5px; }
+                      pre { margin: 0; padding: 14px; border-radius: 12px; background: #0f172a; color: #dbeafe; overflow: auto; max-height: 360px; font-size: 12px; line-height: 1.5; }
+                      .events { display: grid; gap: 8px; }
+                      .event { border: 1px solid rgb(var(--color-border-200)); border-radius: 10px; padding: 10px; }
+                      .footer { margin-top: 16px; font-size: 12px; color: rgb(var(--color-text-500)); }
+                      @media (max-width: 850px) { .shell { padding: 16px; } .grid.cols { grid-template-columns: 1fr; } .span-8,.span-4,.span-6,.span-12 { grid-column: auto; } .row { display: block; } .value { display: block; text-align: left; margin-top: 3px; } }
+                    </style>
+                  </head>
+                  <body>
+                    <main class="shell">
+                      <section class="hero">
+                        <div class="eyebrow">Alga PSA Appliance</div>
+                        <h1>Install status</h1>
+                        <div id="summary" class="summary">Loading status...</div>
+                      </section>
+                      <section class="grid cols">
+                        <div class="card span-8">
+                          <h2>Overview</h2>
+                          <div class="kv">
+                            <div class="row"><span class="label">Install state</span><span class="value"><span id="install-state" class="badge">-</span></span></div>
+                            <div class="row"><span class="label">Current phase</span><span id="phase" class="value">-</span></div>
+                            <div class="row"><span class="label">Login URL</span><span id="login-url" class="value">-</span></div>
+                            <div class="row"><span class="label">Next action</span><span id="next-action" class="value">-</span></div>
+                          </div>
+                        </div>
+                        <div class="card span-4">
+                          <h2>Current operation</h2>
+                          <div id="operations" class="muted">Checking active work...</div>
+                        </div>
+                        <div class="card span-12">
+                          <h2>Readiness tiers</h2>
+                          <div id="tiers" class="tiers">-</div>
+                        </div>
+                        <div class="card span-6">
+                          <h2>Blockers</h2>
+                          <div id="blockers" class="muted">-</div>
+                        </div>
+                        <div class="card span-6">
+                          <h2>Bootstrap log</h2>
+                          <div id="bootstrap-log-status" class="muted">No bootstrap log loaded yet.</div>
+                          <pre id="bootstrap-log" hidden></pre>
+                        </div>
+                        <div class="card span-12">
+                          <h2>Recent events</h2>
+                          <div id="events" class="events muted">-</div>
+                        </div>
+                      </section>
+                      <div class="footer">API: <code>/api/status</code>, <code>/api/overview</code>, and <code>/api/diagnostics</code> require this token.</div>
+                    </main>
+                    <script>
+                      function fmtSeconds(s){ if(s==null)return "unknown"; if(s<60)return s+"s"; return Math.floor(s/60)+"m "+(s%60)+"s"; }
+                      function esc(value){ return String(value ?? '').replace(/[&<>"']/g, (ch)=>({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch])); }
+                      function badgeClass(value){ return 'badge '+String(value || '').replace(/[^a-z0-9_-]/gi, '_'); }
+                      function renderOps(ops){ const el=document.getElementById('operations'); if(!ops||!ops.length){el.textContent='No active image pull or long-running operation detected.';return;} el.innerHTML=ops.map((op)=>'<div class="op"><div><strong>'+esc(op.component||'component')+'</strong>: '+esc(op.message||op.operation)+'</div><div>Image: <code>'+esc(op.image||'unknown')+'</code></div><div>Estimated size: '+esc(op.estimatedSizeHuman||'unknown')+'</div><div>Elapsed: '+fmtSeconds(op.elapsedSeconds)+'</div><div class="muted">Pull progress: '+(op.progressAvailable?esc(op.progressPercent)+'%':'not available from Kubernetes')+'</div></div>').join(''); }
+                      function renderTiers(tiers){ const el=document.getElementById('tiers'); el.innerHTML=Object.entries(tiers||{}).map(([k,v])=>'<div class="tier"><div class="tier-name">'+esc(k)+'</div><div><span class="'+badgeClass(v.status)+'">'+(v.ready?'ready':'not ready')+'</span></div><div class="muted">'+esc(v.status)+'</div></div>').join('') || '<span class="muted">No tier data yet.</span>'; }
+                      function renderBlockers(blockers){ const el=document.getElementById('blockers'); if(!blockers||!blockers.length){el.textContent='No action-required blockers detected.';return;} el.innerHTML=blockers.map((b)=>'<div class="blocker"><strong>'+esc(b.component||b.layer)+'</strong><div>'+esc(b.reason)+'</div><div class="muted">'+esc(b.nextAction||'')+'</div>'+(b.loginBlocking===false?'<div class="muted">background / non-login-blocking</div>':'')+'</div>').join(''); }
+                      function renderBootstrap(bootstrap){ const status=document.getElementById('bootstrap-log-status'); const pre=document.getElementById('bootstrap-log'); const logs=bootstrap?.logs; if(!logs?.available){ status.textContent=bootstrap?.job?.name ? 'No log excerpt available for '+bootstrap.job.name+'.' : 'No bootstrap job log available yet.'; pre.hidden=true; return; } status.innerHTML='<strong>'+esc(logs.pod)+'</strong> / '+esc(logs.container)+(logs.detectedErrors?.length?'<div class="blocker"><strong>Detected error</strong><div>'+esc(logs.detectedErrors.at(-1))+'</div></div>':''); pre.hidden=false; pre.textContent=(logs.tail||[]).join('\\n'); }
+                      function renderEvents(events){ const el=document.getElementById('events'); const rows=(events||[]).slice(-8).reverse(); if(!rows.length){ el.textContent='No recent events.'; return; } el.innerHTML=rows.map((ev)=>'<div class="event"><strong>'+esc(ev.type)+' '+esc(ev.reason)+'</strong> <span class="muted">'+esc(ev.namespace)+' '+esc(ev.involvedObject||'')+'</span><div>'+esc(ev.message)+'</div></div>').join(''); }
+                      async function load(){ const r=await fetch('/api/status'+window.location.search); if(!r.ok) throw new Error('Unauthorized or unavailable'); const data=await r.json(); document.getElementById('summary').textContent=data.rollup?.message||'Appliance status loaded.'; const state=data.rollup?.state||data.status||'-'; const stateEl=document.getElementById('install-state'); stateEl.textContent=state; stateEl.className=badgeClass(state); document.getElementById('phase').textContent=data.currentPhase||state; document.getElementById('login-url').textContent=data.urls?.loginUrl||data.loginUrl||'Not available yet'; document.getElementById('next-action').textContent=data.rollup?.nextAction||data.nextAction||'-'; renderOps(data.activeOperations); renderTiers(data.tiers); renderBlockers(data.topBlockers); renderBootstrap(data.bootstrap); renderEvents(data.recentEvents); }
+                      load().catch((err)=>{document.getElementById('summary').textContent=err.message;});
+                      setInterval(()=>load().catch(()=>{}), 5000);
+                    </script>
+                  </body>
+                  </html>`;
                   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
                   res.end(page);
                 } catch (error) {

@@ -515,8 +515,8 @@ function LogPane({ selectedPod, logState, logNotice, loadingOlder, loadingLogs }
   );
 }
 
-function ProgressPane({ lines }) {
-  const shown = lines.slice(-7);
+function ProgressPane({ lines, maxLines = 12 }) {
+  const shown = lines.slice(-maxLines);
   return React.createElement(
     Box,
     {
@@ -524,9 +524,9 @@ function ProgressPane({ lines }) {
       borderColor: BRAND_SECONDARY,
       paddingX: 1,
       flexDirection: 'column',
-      minHeight: 9,
+      minHeight: Math.min(maxLines + 2, 28),
     },
-    React.createElement(Text, { bold: true, color: BRAND_PRIMARY }, 'Live Progress'),
+    React.createElement(Text, { bold: true, color: BRAND_PRIMARY }, 'Live Progress / Install Log'),
     ...(shown.length
       ? shown.map((line, index) =>
           React.createElement(
@@ -536,6 +536,27 @@ function ProgressPane({ lines }) {
           ),
         )
       : [React.createElement(Text, { key: 'empty', color: TEXT_MUTED }, 'No lifecycle output yet.')]),
+  );
+}
+
+function RunningSummaryPane({ env, status, formType }) {
+  const canonical = status?.canonical || status || {};
+  const rollup = canonical.rollup || {};
+  const operation = canonical.activeOperations?.[0]?.message || rollup.message || 'Waiting for lifecycle output...';
+  const statusUrl = canonical.urls?.statusUrl || (env.nodeIp ? `http://${env.nodeIp}:8080` : 'unknown');
+  const loginUrl = canonical.urls?.loginUrl || env.appUrl || (env.nodeIp ? `http://${env.nodeIp}:3000` : 'unknown');
+  const blocker = canonical.topBlockers?.[0] || status?.topBlocker || null;
+  return React.createElement(
+    Box,
+    { borderStyle: 'round', borderColor: BRAND_PRIMARY, paddingX: 1, flexDirection: 'column' },
+    React.createElement(Text, { bold: true, color: BRAND_PRIMARY }, `${formType || 'Bootstrap'} status`),
+    React.createElement(Text, { color: BRAND_SECONDARY }, `Status page: ${statusUrl}`),
+    React.createElement(Text, { color: TEXT_MUTED }, `Login URL: ${loginUrl}`),
+    React.createElement(Text, { color: rollup.state === 'failed_action_required' ? COLOR_ERROR : BRAND_SECONDARY }, `Install state: ${rollup.state || canonical.status || 'unknown'}`),
+    React.createElement(Text, { color: TEXT_MUTED }, `Current operation: ${operation}`),
+    blocker
+      ? React.createElement(Text, { color: COLOR_WARN }, `Blocker: ${blocker.reason || blocker.layer}`)
+      : React.createElement(Text, { color: TEXT_MUTED }, 'Blocker: none detected yet'),
   );
 }
 
@@ -937,6 +958,18 @@ function TuiApp({ initialEnv, actions, onExit }) {
     }, WORKLOAD_REFRESH_MS);
     return () => clearInterval(timer);
   }, [refreshWorkloads, view]);
+
+  useEffect(() => {
+    if (view !== 'running') {
+      return undefined;
+    }
+
+    refreshStatus();
+    const timer = setInterval(() => {
+      refreshStatus();
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [refreshStatus, view]);
 
   async function executeFormAction() {
     setBusy(true);
@@ -1407,6 +1440,16 @@ function TuiApp({ initialEnv, actions, onExit }) {
     }
   });
 
+  if (view === 'running') {
+    return React.createElement(
+      Box,
+      { flexDirection: 'column', width: '100%' },
+      React.createElement(RunningSummaryPane, { env, status, formType }),
+      React.createElement(Box, { marginTop: 1 }, React.createElement(ProgressPane, { lines: progressLines, maxLines: 24 })),
+      React.createElement(Box, { marginTop: 1 }, React.createElement(HelpStrip, { view, busy, formName: formType || 'Bootstrap' })),
+    );
+  }
+
   return React.createElement(
     Box,
     { flexDirection: 'column', width: '100%' },
@@ -1462,7 +1505,7 @@ function TuiApp({ initialEnv, actions, onExit }) {
       ),
     ),
     showProgressPane
-      ? React.createElement(Box, { marginTop: 1 }, React.createElement(ProgressPane, { lines: progressLines }))
+      ? React.createElement(Box, { marginTop: 1 }, React.createElement(ProgressPane, { lines: progressLines, maxLines: 10 }))
       : null,
     React.createElement(Box, { marginTop: 1 }, React.createElement(HelpStrip, { view, busy, formName: formType || 'Home' })),
   );
