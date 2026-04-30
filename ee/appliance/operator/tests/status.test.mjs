@@ -235,3 +235,29 @@ test('T005: workload-unhealthy state reports workload blocker', async () => {
   assert.equal(status.workloads.status, 'unhealthy');
   assert.equal(status.topBlocker.layer, 'workload readiness failure');
 });
+
+test('T004: DNS resolver failures are classified with explicit DNS remediation guidance', async () => {
+  const responses = healthyResponses();
+  responses['kubectl --kubeconfig /tmp/kubeconfig get events --sort-by=.metadata.creationTimestamp -A -o json'] = {
+    ok: true,
+    output: JSON.stringify({
+      items: [
+        {
+          metadata: { namespace: 'flux-system', creationTimestamp: '2026-04-30T00:00:00Z' },
+          reason: 'Failed',
+          type: 'Warning',
+          message: 'lookup factory.talos.dev on 192.168.64.1:53: connection refused',
+          involvedObject: { kind: 'Pod', name: 'source-controller-abc' },
+        },
+      ],
+    }),
+  };
+
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+
+  assert.equal(status.topBlocker.layer, 'Platform DNS resolution');
+  assert.match(status.topBlocker.reason, /DNS resolver failure detected/i);
+  assert.match(status.topBlocker.nextAction, /Configure explicit DNS servers/i);
+});

@@ -281,3 +281,22 @@ Suggested implementation order:
 ### Validation (F011)
 
 - `kubectl apply --dry-run=client -f ee/appliance/flux/base/platform/appliance-status.yaml`
+
+- `F012`: Implemented DNS failure detection and DNS remediation blocker messaging.
+- `T004`: Added unit test coverage for DNS resolver failure classification.
+
+### F012/T004 Implementation Details
+
+- Updated `ee/appliance/operator/lib/status.mjs`:
+  - Added `cluster.apiError` capture from `/readyz` failures.
+  - Added `detectDnsFailure(status)` scanning host/cluster/event/Flux/workload messages for DNS lookup failures (`lookup ... connection refused|no such host|server misbehaving|i/o timeout`).
+  - Updated `determineTopBlocker` to prioritize DNS blockers with actionable remediation:
+    - layer: `Platform DNS resolution`
+    - nextAction: configure explicit DNS servers (e.g. `1.1.1.1,8.8.8.8`) and retry.
+- Added `T004` test in `ee/appliance/operator/tests/status.test.mjs` with a realistic event message:
+  - `lookup factory.talos.dev on 192.168.64.1:53: connection refused`
+  - asserts blocker layer/reason/nextAction are DNS-specific.
+
+### Validation (F012/T004)
+
+- `node --test ee/appliance/operator/tests/status.test.mjs`

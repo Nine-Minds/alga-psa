@@ -156,7 +156,32 @@ function determineConnectivity(status) {
   return 'degraded';
 }
 
+function detectDnsFailure(status) {
+  const signals = [
+    status.host.details,
+    status.cluster.apiError,
+    ...(status.recentEvents || []).map((entry) => entry.message),
+    ...(status.flux.sources || []).map((entry) => entry.message),
+    ...(status.flux.kustomizations || []).map((entry) => entry.message),
+    ...(status.flux.helmReleases || []).map((entry) => entry.message),
+    ...(status.workloads.components || []).map((entry) => entry.message),
+  ]
+    .filter(Boolean)
+    .map((value) => String(value));
+
+  return signals.find((value) => /\blookup\b/i.test(value) && /\b(connection refused|no such host|server misbehaving|i\/o timeout)\b/i.test(value));
+}
+
 function determineTopBlocker(status) {
+  const dnsSignal = detectDnsFailure(status);
+  if (dnsSignal) {
+    return {
+      layer: 'Platform DNS resolution',
+      reason: `DNS resolver failure detected: ${dnsSignal}`,
+      nextAction: 'Configure explicit DNS servers (for example 1.1.1.1,8.8.8.8) in bootstrap settings, then retry.',
+    };
+  }
+
   if (status.host.status === 'unreachable') {
     return {
       layer: 'Talos host reachability',
@@ -365,6 +390,7 @@ export async function collectStatus(env, options = {}) {
   const cluster = {
     apiReachable: apiResult.ok,
     status: apiResult.ok ? 'healthy' : 'unavailable',
+    apiError: apiResult.ok ? '' : apiResult.output,
     nodeReadiness: [],
   };
 

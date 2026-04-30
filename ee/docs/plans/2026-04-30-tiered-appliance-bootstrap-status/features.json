@@ -95,7 +95,7 @@
   {
     "id": "F012",
     "description": "Detect DNS resolver failures during Talos or Kubernetes bootstrap and surface explicit DNS remediation guidance.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Blocker Detection Requirements",
       "Durable Fixes from Observed Run"
