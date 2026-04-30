@@ -84,6 +84,20 @@ function healthyResponses() {
       ok: true,
       output: JSON.stringify({ data: { 'alga-core.talos-single-node.yaml': 'appUrl: https://psa.example.com' } }),
     },
+    'kubectl --kubeconfig /tmp/kubeconfig get events --sort-by=.metadata.creationTimestamp -A -o json': {
+      ok: true,
+      output: JSON.stringify({
+        items: [
+          {
+            metadata: { namespace: 'msp', creationTimestamp: '2026-04-30T00:00:00Z' },
+            reason: 'Pulled',
+            type: 'Normal',
+            message: 'Successfully pulled image',
+            involvedObject: { kind: 'Pod', name: 'alga-core-sebastian-abc' },
+          },
+        ],
+      }),
+    },
   };
 
   const workloadResources = [
@@ -104,6 +118,25 @@ function healthyResponses() {
   }
   return responses;
 }
+
+test('T001: canonical status shape includes release, urls, rollup, tiers, blockers, components, and events', async () => {
+  const releasesDir = releaseFixtureDir();
+  const status = await collectStatus(buildEnv(releasesDir), {
+    runner: new MockCaptureRunner(healthyResponses()),
+  });
+
+  assert.equal(status.canonical.siteId, 'appliance-single-node');
+  assert.equal(status.canonical.release.selectedReleaseVersion, '1.0.0');
+  assert.equal(status.canonical.release.appVersion, '1.0.0');
+  assert.equal(status.canonical.urls.loginUrl, 'https://psa.example.com');
+  assert.equal(status.canonical.urls.statusUrl, 'http://10.0.0.2:8080');
+  assert.equal(status.canonical.rollup.state, 'fully_healthy');
+  assert.equal(status.canonical.tiers.platform.ready, true);
+  assert.equal(status.canonical.tiers.login.ready, true);
+  assert.equal(status.canonical.topBlockers.length, 0);
+  assert.equal(status.canonical.components.length, 8);
+  assert.equal(status.canonical.recentEvents.length, 1);
+});
 
 test('T004: status dashboard model includes talos, cluster, flux, workloads, release, and config paths', async () => {
   const releasesDir = releaseFixtureDir();

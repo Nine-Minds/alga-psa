@@ -2,14 +2,14 @@ import { readReleaseManifest } from './releases.mjs';
 import { ShellRunner } from './runner.mjs';
 
 const PSA_COMPONENTS = [
-  { name: 'alga-core', kind: 'deployment', resource: 'alga-core-sebastian' },
-  { name: 'db', kind: 'statefulset', resource: 'db' },
-  { name: 'redis', kind: 'statefulset', resource: 'redis' },
-  { name: 'pgbouncer', kind: 'deployment', resource: 'pgbouncer' },
-  { name: 'temporal', kind: 'deployment', resource: 'temporal' },
-  { name: 'workflow-worker', kind: 'deployment', resource: 'workflow-worker' },
-  { name: 'email-service', kind: 'deployment', resource: 'email-service' },
-  { name: 'temporal-worker', kind: 'deployment', resource: 'temporal-worker' },
+  { name: 'alga-core', kind: 'deployment', resource: 'alga-core-sebastian', tier: 'login' },
+  { name: 'db', kind: 'statefulset', resource: 'db', tier: 'core' },
+  { name: 'redis', kind: 'statefulset', resource: 'redis', tier: 'core' },
+  { name: 'pgbouncer', kind: 'deployment', resource: 'pgbouncer', tier: 'core' },
+  { name: 'temporal', kind: 'deployment', resource: 'temporal', tier: 'background' },
+  { name: 'workflow-worker', kind: 'deployment', resource: 'workflow-worker', tier: 'background' },
+  { name: 'email-service', kind: 'deployment', resource: 'email-service', tier: 'background' },
+  { name: 'temporal-worker', kind: 'deployment', resource: 'temporal-worker', tier: 'background' },
 ];
 
 function parseJsonOutput(output) {
@@ -212,6 +212,121 @@ function determineTopBlocker(status) {
   };
 }
 
+function statusFromHealth(healthy) {
+  if (healthy === true) {
+    return 'healthy';
+  }
+  return 'degraded';
+}
+
+function toCanonicalStatus(status) {
+  const componentRows = status.workloads.components.map((component) => ({
+    name: component.name,
+    tier: PSA_COMPONENTS.find((entry) => entry.name === component.name)?.tier || 'background',
+    ready: component.status === 'healthy',
+    status: component.status,
+    message: component.message || '',
+    namespace: component.namespace,
+  }));
+
+  const coreComponentNames = new Set(['db', 'redis', 'pgbouncer']);
+  const coreReady = componentRows
+    .filter((component) => coreComponentNames.has(component.name))
+    .every((component) => component.ready);
+  const loginReady = coreReady && componentRows.find((component) => component.name === 'alga-core')?.ready === true;
+  const backgroundRows = componentRows.filter((component) => component.tier === 'background');
+  const backgroundReady = backgroundRows.length > 0 && backgroundRows.every((component) => component.ready);
+  const platformReady =
+    status.host.status === 'healthy' && status.cluster.apiReachable && status.cluster.status === 'healthy' && status.flux.status !== 'unavailable';
+  const bootstrapReady = status.flux.helmStatus === 'healthy' && coreReady;
+  const fullyHealthy = loginReady && backgroundReady;
+
+  const blockers =
+    status.topBlocker.layer === 'none'
+      ? []
+      : [
+          {
+            severity: loginReady ? 'background' : 'critical',
+            component: status.topBlocker.layer,
+            layer: status.topBlocker.layer,
+            reason: status.topBlocker.reason,
+            nextAction: status.topBlocker.nextAction,
+            loginBlocking: !loginReady,
+          },
+        ];
+
+  let rollupState = 'installing';
+  let rollupMessage = 'Appliance installation is in progress.';
+  let nextAction = 'Wait for readiness checks to complete.';
+
+  if (!platformReady || !coreReady || !bootstrapReady) {
+    if (blockers.length > 0) {
+      rollupState = 'failed_action_required';
+      rollupMessage = 'A core platform blocker requires action before login is available.';
+      nextAction = blockers[0].nextAction;
+    }
+  } else if (fullyHealthy) {
+    rollupState = 'fully_healthy';
+    rollupMessage = 'All selected services are healthy.';
+    nextAction = 'No immediate action required.';
+  } else if (loginReady) {
+    if (backgroundReady) {
+      rollupState = 'ready_to_log_in';
+      rollupMessage = 'Alga is ready to log in.';
+      nextAction = 'Open the login URL.';
+    } else {
+      rollupState = 'ready_with_background_issues';
+      rollupMessage = 'Alga is ready to log in. Background services need attention.';
+      nextAction = blockers[0]?.nextAction || 'Open the login URL and review background blockers.';
+    }
+  }
+
+  return {
+    siteId: status.siteId,
+    timestamp: status.timestamp,
+    release: {
+      selectedReleaseVersion: status.release.selectedReleaseVersion,
+      appVersion: status.release.metadata?.app?.version || null,
+      channel: status.release.metadata?.channel || null,
+      gitRevision: status.release.metadata?.app?.releaseBranch || null,
+    },
+    urls: {
+      statusUrl: status.nodeIp ? `http://${status.nodeIp}:8080` : null,
+      loginUrl: status.release.appUrl || (status.nodeIp ? `http://${status.nodeIp}:3000` : null),
+    },
+    rollup: {
+      state: rollupState,
+      message: rollupMessage,
+      nextAction,
+    },
+    tiers: {
+      platform: { ready: platformReady, status: statusFromHealth(platformReady) },
+      core: { ready: coreReady, status: statusFromHealth(coreReady) },
+      bootstrap: { ready: bootstrapReady, status: statusFromHealth(bootstrapReady) },
+      login: { ready: loginReady, status: statusFromHealth(loginReady) },
+      background: { ready: backgroundReady, status: statusFromHealth(backgroundReady) },
+      fullHealth: { ready: fullyHealthy, status: statusFromHealth(fullyHealthy) },
+    },
+    topBlockers: blockers,
+    components: componentRows,
+    recentEvents: status.recentEvents,
+  };
+}
+
+function summarizeEvents(eventsJson) {
+  const items = eventsJson?.items || [];
+  return items
+    .slice(0, 20)
+    .map((item) => ({
+      namespace: item.metadata?.namespace || 'unknown',
+      reason: item.reason || 'Unknown',
+      type: item.type || 'Normal',
+      message: item.message || '',
+      lastTimestamp: item.lastTimestamp || item.eventTime || item.metadata?.creationTimestamp || null,
+      involvedObject: `${item.involvedObject?.kind || 'Unknown'}/${item.involvedObject?.name || 'unknown'}`,
+    }));
+}
+
 export async function collectStatus(env, options = {}) {
   const shell = options.runner || new ShellRunner({ cwd: env.runtime.assetRoot });
   const kubeconfig = options.kubeconfig || env.paths.kubeconfig;
@@ -353,6 +468,21 @@ export async function collectStatus(env, options = {}) {
     }
   }
 
+  let recentEvents = [];
+  if (cluster.apiReachable) {
+    const eventsResult = await shell.runCapture('kubectl', [
+      '--kubeconfig',
+      kubeconfig,
+      'get',
+      'events',
+      '--sort-by=.metadata.creationTimestamp',
+      '-A',
+      '-o',
+      'json',
+    ]);
+    recentEvents = summarizeEvents(eventsResult.ok ? parseJsonOutput(eventsResult.output) : null);
+  }
+
   const status = {
     timestamp: new Date().toISOString(),
     siteId: env.site.siteId,
@@ -367,9 +497,11 @@ export async function collectStatus(env, options = {}) {
     flux,
     workloads,
     release,
+    recentEvents,
   };
 
   status.connectivityMode = determineConnectivity(status);
   status.topBlocker = determineTopBlocker(status);
+  status.canonical = toCanonicalStatus(status);
   return status;
 }

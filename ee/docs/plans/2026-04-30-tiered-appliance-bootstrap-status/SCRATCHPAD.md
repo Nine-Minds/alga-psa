@@ -143,3 +143,36 @@ Suggested implementation order:
 3. Build shared status collector and blocker detector used by CLI.
 4. Add early appliance-status chart/service.
 5. Split Flux platform/core/background once status model is in place.
+
+## 2026-04-29 Implementation Log
+
+### Completed
+
+- `F001`: Canonical appliance status JSON model now emitted by `collectStatus`.
+- `T001`: Unit test added for canonical JSON shape in healthy synthetic fixture.
+
+### What Changed
+
+- Extended status collector output in `ee/appliance/operator/lib/status.mjs` with a canonical model at `status.canonical` containing:
+  - `siteId`, `timestamp`
+  - `release` metadata (`selectedReleaseVersion`, `appVersion`, `channel`, `gitRevision`)
+  - `urls` (`statusUrl`, `loginUrl`)
+  - `rollup` (`state`, `message`, `nextAction`)
+  - `tiers` (platform/core/bootstrap/login/background/fullHealth)
+  - `topBlockers`, `components`, `recentEvents`
+- Preserved existing top-level status fields (`host`, `cluster`, `flux`, `workloads`, `release`, `topBlocker`, etc.) to avoid breaking current CLI/TUI consumers while introducing canonical shape.
+- Added cluster event collection (`kubectl get events --sort-by=.metadata.creationTimestamp -A -o json`) and normalized event summaries.
+- Added `T001` assertions in `ee/appliance/operator/tests/status.test.mjs` and mocked event query output.
+
+### Decisions / Rationale
+
+- Added canonical data as `status.canonical` instead of replacing the current status object to keep backward compatibility with existing formatter/TUI paths and allow incremental migration.
+- Mapped `gitRevision` to release manifest branch metadata for now (`release.metadata.app.releaseBranch`) because manifests currently do not include a commit SHA field.
+
+### Commands Run
+
+- `node --test ee/appliance/operator/tests/status.test.mjs`
+
+### Gotchas
+
+- `kubeJson()` accepts resource tokens, so event retrieval with sort flags must use a direct `kubectl` command invocation rather than passing a combined pseudo-resource string.
