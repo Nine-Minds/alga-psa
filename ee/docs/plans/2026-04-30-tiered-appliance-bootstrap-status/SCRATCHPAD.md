@@ -248,3 +248,19 @@ Suggested implementation order:
 ### Validation (F009)
 
 - `kubectl apply --dry-run=client -f ee/appliance/flux/base/platform/appliance-status.yaml`
+
+- `F010`: Added token-protected advanced diagnostics API/page with readiness tiers, component list, blockers/events arrays, and Flux/Helm snapshot model.
+
+### F010 Implementation Details
+
+- Extended `appliance-status` server with `readDiagnostics()` model and endpoint `GET /api/diagnostics` including:
+  - `tiers`
+  - `components`
+  - `topBlockers`
+  - `recentEvents`
+  - `flux` (`source`, `helmReleases`)
+- Added token-protected `/diagnostics` HTML page that fetches and renders diagnostics JSON for support/operator workflows.
+
+### Validation (F010)
+
+- `kubectl apply --dry-run=client -f ee/appliance/flux/base/platform/appliance-status.yaml`

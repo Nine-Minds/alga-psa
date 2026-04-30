@@ -48,6 +48,32 @@ spec:
                 };
               }
 
+              function readDiagnostics() {
+                const overview = readOverview();
+                return {
+                  overview,
+                  tiers: {
+                    platform: { ready: false, status: 'progressing' },
+                    core: { ready: false, status: 'progressing' },
+                    bootstrap: { ready: false, status: 'progressing' },
+                    login: { ready: false, status: 'progressing' },
+                    background: { ready: false, status: 'progressing' },
+                    fullHealth: { ready: false, status: 'progressing' },
+                  },
+                  components: [
+                    { name: 'alga-core', layer: 'core', status: 'progressing' },
+                    { name: 'workflow-worker', layer: 'background', status: 'pending' },
+                    { name: 'temporal', layer: 'background', status: 'pending' },
+                  ],
+                  topBlockers: [],
+                  recentEvents: [],
+                  flux: {
+                    source: { status: 'unknown' },
+                    helmReleases: [],
+                  },
+                };
+              }
+
               function unauthorized(res) {
                 res.writeHead(401, {
                   'Content-Type': 'application/json',
@@ -94,9 +120,22 @@ spec:
                   return;
                 }
 
+                if (req.url.startsWith('/api/diagnostics')) {
+                  res.writeHead(200, { 'Content-Type': 'application/json' });
+                  res.end(JSON.stringify(readDiagnostics()));
+                  return;
+                }
+
                 if (req.url.startsWith('/healthz')) {
                   res.writeHead(200, { 'Content-Type': 'text/plain' });
                   res.end('ok');
+                  return;
+                }
+
+                if (req.url.startsWith('/diagnostics')) {
+                  const page = '<!doctype html><html><head><meta charset="utf-8" /><title>Appliance Diagnostics</title><style>body{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;margin:24px;line-height:1.45}.card{max-width:920px;border:1px solid #ddd;border-radius:8px;padding:16px}pre{background:#f8f8f8;border:1px solid #eee;padding:12px;overflow:auto}</style></head><body><div class=\"card\"><h1>Advanced Diagnostics</h1><p>Readiness tiers, components, blockers, events, and Flux/Helm state.</p><pre id=\"diag\">Loading...</pre></div><script>fetch(\"/api/diagnostics\"+window.location.search).then((r)=>{if(!r.ok)throw new Error(\"Unauthorized or unavailable\");return r.json();}).then((data)=>{document.getElementById(\"diag\").textContent=JSON.stringify(data,null,2);}).catch((err)=>{document.getElementById(\"diag\").textContent=err.message;});</script></body></html>';
+                  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                  res.end(page);
                   return;
                 }
 

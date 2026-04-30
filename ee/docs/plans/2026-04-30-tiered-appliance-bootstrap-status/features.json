@@ -78,7 +78,7 @@
   {
     "id": "F010",
     "description": "Implement a token-protected advanced diagnostics page showing readiness tiers, component status, top blockers, recent events, and Helm/Flux state.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UI Layers",
       "Blocker Detection Requirements"
