@@ -1064,23 +1064,25 @@ spec:
                 - ALL
           resources:
             requests:
-              cpu: 10m
-              memory: 32Mi
+              cpu: 25m
+              memory: 96Mi
             limits:
-              cpu: 100m
-              memory: 128Mi
+              cpu: 250m
+              memory: 256Mi
           livenessProbe:
             httpGet:
               path: /healthz
               port: 8080
-            initialDelaySeconds: 3
+            initialDelaySeconds: 5
             periodSeconds: 10
+            timeoutSeconds: 3
           readinessProbe:
             httpGet:
               path: /healthz
               port: 8080
-            initialDelaySeconds: 1
+            initialDelaySeconds: 2
             periodSeconds: 5
+            timeoutSeconds: 3
       volumes:
         - name: tmp
           emptyDir: {}
