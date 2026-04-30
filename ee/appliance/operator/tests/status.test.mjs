@@ -70,7 +70,13 @@ function healthyResponses() {
     },
     'kubectl --kubeconfig /tmp/kubeconfig -n flux-system get kustomizations.kustomize.toolkit.fluxcd.io -o json': {
       ok: true,
-      output: JSON.stringify({ items: [{ metadata: { name: 'alga-appliance' }, status: { conditions: readyCondition('True') } }] }),
+      output: JSON.stringify({
+        items: [
+          { metadata: { name: 'alga-platform' }, status: { conditions: readyCondition('True') } },
+          { metadata: { name: 'alga-core' }, status: { conditions: readyCondition('True') } },
+          { metadata: { name: 'alga-background' }, status: { conditions: readyCondition('True') } },
+        ],
+      }),
     },
     'kubectl --kubeconfig /tmp/kubeconfig -n alga-system get helmreleases.helm.toolkit.fluxcd.io -o json': {
       ok: true,
@@ -148,6 +154,16 @@ test('T002: login-ready with background failures rolls up as ready_with_backgrou
     ok: true,
     output: JSON.stringify({ spec: { replicas: 1 }, status: { readyReplicas: 0 } }),
   };
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n flux-system get kustomizations.kustomize.toolkit.fluxcd.io -o json'] = {
+    ok: true,
+    output: JSON.stringify({
+      items: [
+        { metadata: { name: 'alga-platform' }, status: { conditions: readyCondition('True') } },
+        { metadata: { name: 'alga-core' }, status: { conditions: readyCondition('True') } },
+        { metadata: { name: 'alga-background' }, status: { conditions: readyCondition('False', 'dependency not ready') } },
+      ],
+    }),
+  };
   const status = await collectStatus(buildEnv(releaseFixtureDir()), {
     runner: new MockCaptureRunner(responses),
   });
@@ -155,6 +171,7 @@ test('T002: login-ready with background failures rolls up as ready_with_backgrou
   assert.equal(status.canonical.tiers.login.ready, true);
   assert.equal(status.canonical.tiers.background.ready, false);
   assert.equal(status.canonical.rollup.state, 'ready_with_background_issues');
+  assert.notEqual(status.canonical.rollup.state, 'failed_action_required');
 });
 
 test('T003: core blocker keeps LOGIN_READY false and rollup failed_action_required', async () => {

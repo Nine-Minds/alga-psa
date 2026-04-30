@@ -163,7 +163,7 @@
   {
     "id": "F020",
     "description": "Split appliance Flux resources into platform, core, and background groups with explicit dependency order.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flux/Helm Organization"
     ]
@@ -171,7 +171,7 @@
   {
     "id": "F021",
     "description": "Ensure background Flux/Helm failures do not unset LOGIN_READY when core app readiness criteria are satisfied.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Readiness Model",
       "Flux/Helm Organization"

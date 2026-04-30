@@ -368,6 +368,15 @@ function statusFromHealth(healthy) {
   return 'degraded';
 }
 
+function fluxEntryReady(entries, name) {
+  const row = (entries || []).find((entry) => entry.name === name);
+  return row ? row.ready === true : false;
+}
+
+function fluxSourcesHealthy(entries) {
+  return (entries || []).length > 0 && (entries || []).every((entry) => entry.ready === true);
+}
+
 function toCanonicalStatus(status) {
   const componentRows = status.workloads.components.map((component) => ({
     name: component.name,
@@ -384,11 +393,14 @@ function toCanonicalStatus(status) {
   const loginReady = coreReady && componentRows.find((component) => component.name === 'alga-core')?.ready === true;
   const backgroundRows = componentRows.filter((component) => component.tier === 'background');
   const backgroundReady = backgroundRows.every((component) => component.ready);
+  const platformKustomizationReady = fluxEntryReady(status.flux.kustomizations, 'alga-platform');
+  const platformSourcesReady = fluxSourcesHealthy(status.flux.sources);
   const platformReady =
     status.host.status === 'healthy' &&
     status.cluster.apiReachable &&
     status.cluster.status === 'healthy' &&
-    status.flux.status === 'healthy';
+    platformKustomizationReady &&
+    platformSourcesReady;
   const seedUsersCount = status.bootstrap?.seed?.usersCount;
   const hasVerifiedSeedUsers = Number.isFinite(seedUsersCount) && seedUsersCount > 0;
   const bootstrapReady =

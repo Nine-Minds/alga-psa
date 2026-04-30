@@ -423,3 +423,30 @@ Suggested implementation order:
 ### Validation (F017/T010)
 
 - `node --test ee/appliance/operator/tests/status.test.mjs`
+
+- `F020`: Split appliance Flux resources into explicit `alga-platform`, `alga-core`, and `alga-background` Flux Kustomizations with dependency order.
+- `F021`: Prevented background Flux failures from forcing login-not-ready rollups.
+
+### F020/F021 Implementation Details
+
+- Updated `ee/appliance/flux/base/kustomization.yaml` to apply only shared namespaces plus Flux Kustomization CRs.
+- Added `ee/appliance/flux/base/flux/kustomizations.yaml` defining:
+  - `alga-platform` (`path: ./ee/appliance/flux/base/platform`)
+  - `alga-core` depends on `alga-platform` (`path: ./ee/appliance/flux/base/core`)
+  - `alga-background` depends on `alga-core` (`path: ./ee/appliance/flux/base/background`)
+- Added tier sub-kustomizations:
+  - `ee/appliance/flux/base/platform/kustomization.yaml`
+  - `ee/appliance/flux/base/core/kustomization.yaml`
+  - `ee/appliance/flux/base/background/kustomization.yaml`
+- Updated `ee/appliance/operator/lib/status.mjs` tier logic:
+  - `platformReady` now requires Flux sources healthy and `flux-system/Kustomization alga-platform` Ready, instead of the aggregate Flux kustomization status.
+  - This ensures `alga-background` failures do not unset `LOGIN_READY`/promote rollup to login-blocking failure.
+- Updated `ee/appliance/operator/tests/status.test.mjs`:
+  - healthy fixture now includes `alga-platform`, `alga-core`, and `alga-background` kustomization rows.
+  - `T002` now explicitly sets `alga-background` not Ready and asserts rollup remains `ready_with_background_issues` (not `failed_action_required`).
+- Updated `ee/appliance/tests/run-plan-tests.sh` to require new Flux tier files.
+
+### Validation (F020/F021)
+
+- `node --test ee/appliance/operator/tests/status.test.mjs`
+
