@@ -145,7 +145,7 @@
   {
     "id": "F018",
     "description": "Detect Temporal schema/autosetup failures and report schema initialization guidance.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Blocker Detection Requirements",
       "Durable Fixes from Observed Run"
@@ -154,7 +154,7 @@
   {
     "id": "F019",
     "description": "Detect Kubernetes service-link environment collisions in Temporal UI or similar services and report disable-service-links guidance.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Blocker Detection Requirements",
       "Durable Fixes from Observed Run"

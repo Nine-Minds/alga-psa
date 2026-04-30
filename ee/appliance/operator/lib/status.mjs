@@ -225,6 +225,22 @@ function detectInterruptedImagePull(status) {
   };
 }
 
+function detectTemporalSchemaFailure(status) {
+  const signals = [
+    ...(status.recentEvents || []).map((entry) => String(entry.message || '')),
+    ...(status.workloads.components || []).map((entry) => String(entry.message || '')),
+  ];
+  return signals.find((value) => /sql schema version compatibility check failed/i.test(value));
+}
+
+function detectServiceLinkCollision(status) {
+  const signals = [
+    ...(status.recentEvents || []).map((entry) => String(entry.message || '')),
+    ...(status.workloads.components || []).map((entry) => String(entry.message || '')),
+  ];
+  return signals.find((value) => /cannot unmarshal .*tcp:\/\//i.test(value));
+}
+
 function determineTopBlocker(status) {
   const dnsSignal = detectDnsFailure(status);
   if (dnsSignal) {
@@ -265,6 +281,28 @@ function determineTopBlocker(status) {
       loginBlocking: isLoginBlocking,
       reason: `Image tag not found: ${imageDescriptor}`,
       nextAction: 'Publish the missing image tag or update the appliance release manifest to a valid tag.',
+    };
+  }
+
+  const temporalSchemaSignal = detectTemporalSchemaFailure(status);
+  if (temporalSchemaSignal) {
+    return {
+      layer: 'Temporal schema initialization',
+      component: 'temporal',
+      loginBlocking: false,
+      reason: `Temporal schema not initialized: ${temporalSchemaSignal}`,
+      nextAction: 'Ensure Temporal autosetup/schema initialization runs during install, then restart Temporal.',
+    };
+  }
+
+  const serviceLinkSignal = detectServiceLinkCollision(status);
+  if (serviceLinkSignal) {
+    return {
+      layer: 'Kubernetes service-link environment collision',
+      component: 'temporal-ui',
+      loginBlocking: false,
+      reason: `Service-link environment collision detected: ${serviceLinkSignal}`,
+      nextAction: 'Disable service links for the affected deployment and restart the workload.',
     };
   }
 

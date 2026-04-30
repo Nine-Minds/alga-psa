@@ -378,3 +378,24 @@ Suggested implementation order:
 ### Validation (F016/T009)
 
 - `node --test ee/appliance/operator/tests/status.test.mjs`
+
+- `F018`: Implemented Temporal schema/autosetup failure detection and remediation guidance.
+- `F019`: Implemented service-link env collision detection and remediation guidance.
+- `T011`: Added Temporal schema blocker unit test.
+- `T012`: Added service-link collision blocker unit test.
+
+### F018/F019/T011/T012 Implementation Details
+
+- Updated `ee/appliance/operator/lib/status.mjs`:
+  - Added `detectTemporalSchemaFailure(status)` for `sql schema version compatibility check failed`.
+  - Added `detectServiceLinkCollision(status)` for `cannot unmarshal ... tcp://... into int` style collisions.
+  - Added top blocker mappings:
+    - `Temporal schema initialization` with autosetup guidance.
+    - `Kubernetes service-link environment collision` with disable-service-links guidance.
+- Added tests in `ee/appliance/operator/tests/status.test.mjs`:
+  - `T011` injects Temporal schema compatibility failure event.
+  - `T012` injects Temporal UI service-link collision event.
+
+### Validation (F018/F019/T011/T012)
+
+- `node --test ee/appliance/operator/tests/status.test.mjs`

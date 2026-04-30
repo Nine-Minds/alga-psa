@@ -92,7 +92,7 @@
   {
     "id": "T011",
     "description": "Unit: Temporal schema compatibility failure is classified as Temporal schema not initialized with autosetup/schema setup guidance.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F025"
@@ -101,7 +101,7 @@
   {
     "id": "T012",
     "description": "Unit: Temporal UI service-link env collision error is classified with disable-service-links guidance.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F025"

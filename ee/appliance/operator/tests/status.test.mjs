@@ -420,3 +420,63 @@ test('T009: helm timeout with db subPath failure reports db storage blocker as t
   assert.equal(status.topBlocker.layer, 'Core Postgres storage initialization');
   assert.match(status.topBlocker.reason, /subPath/i);
 });
+
+test('T011: Temporal schema compatibility errors are classified with autosetup guidance', async () => {
+  const responses = healthyResponses();
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n msp get deployment/temporal -o json'] = {
+    ok: true,
+    output: JSON.stringify({ spec: { replicas: 1 }, status: { readyReplicas: 0 } }),
+  };
+  responses['kubectl --kubeconfig /tmp/kubeconfig get events --sort-by=.metadata.creationTimestamp -A -o json'] = {
+    ok: true,
+    output: JSON.stringify({
+      items: [
+        {
+          metadata: { namespace: 'msp', creationTimestamp: '2026-04-30T00:00:00Z' },
+          reason: 'BackOff',
+          type: 'Warning',
+          message: 'sql schema version compatibility check failed',
+          involvedObject: { kind: 'Pod', name: 'temporal-abcde' },
+        },
+      ],
+    }),
+  };
+
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+
+  assert.equal(status.topBlocker.layer, 'Temporal schema initialization');
+  assert.match(status.topBlocker.reason, /schema not initialized/i);
+  assert.match(status.topBlocker.nextAction, /autosetup/i);
+});
+
+test('T012: Temporal UI service-link collision errors are classified with disable-service-links guidance', async () => {
+  const responses = healthyResponses();
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n msp get deployment/temporal -o json'] = {
+    ok: true,
+    output: JSON.stringify({ spec: { replicas: 1 }, status: { readyReplicas: 0 } }),
+  };
+  responses['kubectl --kubeconfig /tmp/kubeconfig get events --sort-by=.metadata.creationTimestamp -A -o json'] = {
+    ok: true,
+    output: JSON.stringify({
+      items: [
+        {
+          metadata: { namespace: 'msp', creationTimestamp: '2026-04-30T00:00:00Z' },
+          reason: 'BackOff',
+          type: 'Warning',
+          message: 'cannot unmarshal !!str tcp://10.96.0.1:443 into int',
+          involvedObject: { kind: 'Pod', name: 'temporal-ui-abcde' },
+        },
+      ],
+    }),
+  };
+
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+
+  assert.equal(status.topBlocker.layer, 'Kubernetes service-link environment collision');
+  assert.match(status.topBlocker.reason, /service-link environment collision/i);
+  assert.match(status.topBlocker.nextAction, /Disable service links/i);
+});
