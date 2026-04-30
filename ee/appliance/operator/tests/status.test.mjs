@@ -384,3 +384,39 @@ test('T008: image pull context canceled is classified as retryable interruption'
   assert.match(status.topBlocker.reason, /retryable/i);
   assert.match(status.topBlocker.nextAction, /automatic retry/i);
 });
+
+test('T009: helm timeout with db subPath failure reports db storage blocker as top cause', async () => {
+  const responses = healthyResponses();
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n alga-system get helmreleases.helm.toolkit.fluxcd.io -o json'] = {
+    ok: true,
+    output: JSON.stringify({
+      items: [{ metadata: { name: 'alga-core' }, status: { conditions: readyCondition('False', 'context deadline exceeded') } }],
+    }),
+  };
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n msp get statefulset/db -o json'] = {
+    ok: true,
+    output: JSON.stringify({ spec: { replicas: 1 }, status: { readyReplicas: 0 } }),
+  };
+  responses['kubectl --kubeconfig /tmp/kubeconfig get events --sort-by=.metadata.creationTimestamp -A -o json'] = {
+    ok: true,
+    output: JSON.stringify({
+      items: [
+        {
+          metadata: { namespace: 'msp', creationTimestamp: '2026-04-30T00:00:00Z' },
+          reason: 'Failed',
+          type: 'Warning',
+          message: 'failed to create subPath directory for volumeMount "db-data"',
+          involvedObject: { kind: 'Pod', name: 'db-0' },
+        },
+      ],
+    }),
+  };
+
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+
+  assert.equal(status.flux.helmStatus, 'unhealthy');
+  assert.equal(status.topBlocker.layer, 'Core Postgres storage initialization');
+  assert.match(status.topBlocker.reason, /subPath/i);
+});

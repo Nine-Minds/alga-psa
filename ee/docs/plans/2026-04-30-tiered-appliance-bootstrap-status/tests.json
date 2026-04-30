@@ -75,7 +75,7 @@
   {
     "id": "T009",
     "description": "Unit: Helm install timeout with underlying db-0 CreateContainerConfigError reports the DB/PVC blocker as top blocker.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ]

@@ -363,3 +363,18 @@ Suggested implementation order:
 ### Validation (F015/T008)
 
 - `node --test ee/appliance/operator/tests/status.test.mjs`
+
+- `F016`: Ensured root-cause blocker precedence over generic Helm timeout when lower-level DB/PVC failures are present.
+- `T009`: Added unit coverage for Helm timeout + DB subPath root-cause prioritization.
+
+### F016/T009 Implementation Details
+
+- Existing blocker ordering in `determineTopBlocker` now explicitly favors low-level root-cause detectors (DNS, Postgres PVC/subPath, image issues) before generic Flux/Helm readiness blockers.
+- Added `T009` in `ee/appliance/operator/tests/status.test.mjs` with:
+  - HelmRelease condition message `context deadline exceeded`.
+  - concurrent DB subPath event failure signal.
+  - assertion that top blocker is `Core Postgres storage initialization`, not generic Helm timeout.
+
+### Validation (F016/T009)
+
+- `node --test ee/appliance/operator/tests/status.test.mjs`

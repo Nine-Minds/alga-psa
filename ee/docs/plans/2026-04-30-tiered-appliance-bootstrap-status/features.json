@@ -128,7 +128,7 @@
   {
     "id": "F016",
     "description": "When Helm install times out, inspect underlying pods, jobs, and events so the top blocker reports the root cause instead of only the Helm timeout.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Blocker Detection Requirements"
     ]
