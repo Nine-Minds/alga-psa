@@ -171,7 +171,7 @@
   {
     "id": "T020",
     "description": "Local UTM smoke: a fresh Talos appliance bootstrap exposes the status UI on port 8080 before the Alga web app is ready.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F006",
@@ -181,7 +181,7 @@
   {
     "id": "T021",
     "description": "Local UTM smoke: core bootstrap reaches LOGIN_READY, the app URL responds, and server.users contains seeded users.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F026"
@@ -190,7 +190,7 @@
   {
     "id": "T022",
     "description": "Local UTM smoke: with a deliberately missing workflow-worker tag, the UI reports Ready with background issues and shows the missing image tag as non-login-blocking.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F021",
@@ -200,7 +200,7 @@
   {
     "id": "T023",
     "description": "Local UTM smoke: a Temporal install uses autosetup and disables service links so Temporal and Temporal UI become ready without manual patches.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F019",

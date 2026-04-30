@@ -57,6 +57,7 @@ require_file "$ROOT/ee/appliance/scripts/install-storage.sh"
 require_file "$ROOT/ee/appliance/scripts/repair-release.sh"
 require_file "$ROOT/ee/appliance/scripts/reset-appliance-data.sh"
 require_file "$ROOT/ee/appliance/scripts/upgrade-appliance.sh"
+require_file "$ROOT/ee/appliance/tests/local-utm-smoke.sh"
 
 bash "$ROOT/ee/appliance/scripts/build-images.sh" --help >/dev/null
 bash "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh" --help >/dev/null
@@ -65,12 +66,14 @@ bash "$ROOT/ee/appliance/scripts/install-storage.sh" --help >/dev/null
 bash "$ROOT/ee/appliance/scripts/repair-release.sh" --help >/dev/null
 bash "$ROOT/ee/appliance/scripts/reset-appliance-data.sh" --help >/dev/null
 bash "$ROOT/ee/appliance/scripts/upgrade-appliance.sh" --help >/dev/null
+bash "$ROOT/ee/appliance/tests/local-utm-smoke.sh" --help >/dev/null
 bash -n "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh"
 bash -n "$ROOT/ee/appliance/scripts/collect-support-bundle.sh"
 bash -n "$ROOT/ee/appliance/scripts/install-storage.sh"
 bash -n "$ROOT/ee/appliance/scripts/repair-release.sh"
 bash -n "$ROOT/ee/appliance/scripts/reset-appliance-data.sh"
 bash -n "$ROOT/ee/appliance/scripts/upgrade-appliance.sh"
+bash -n "$ROOT/ee/appliance/tests/local-utm-smoke.sh"
 bash "$ROOT/ee/appliance/scripts/reset-appliance-data.sh" --kubeconfig /tmp/example.kubeconfig --force --dry-run >/dev/null
 
 dry_run_output="$(
