@@ -508,3 +508,42 @@ Suggested implementation order:
 - `T013`, `T014`, `T015`, `T018`, `T019` need fuller integration harnesses (mocked live API/server or cluster RBAC assertions) not yet present in this pass.
 - `T020`-`T023` require local UTM/Talos smoke environment execution and are not runnable in this CI-like local code-only pass.
 
+## 2026-04-30 Additional Test Harness Progress
+
+### Completed
+
+- `T013`: Added mocked non-dry-run bootstrap integration coverage that verifies:
+  - local `status-token` file is written,
+  - printed token matches persisted token,
+  - `appliance-system/appliance-status-auth` Secret creation/apply path is executed.
+- `T014`: Added runtime integration coverage that extracts the embedded `appliance-status` Node server from `flux/base/platform/appliance-status.yaml`, starts it locally, and verifies:
+  - unauthenticated `/api/status` returns `401`,
+  - authenticated token requests return status JSON.
+- `T015`: Added RBAC assertions validating status service access remains read-only and excludes secret-value access/mutation verbs.
+- `T018`: Added non-dry-run integration coverage with mocked cluster commands and mocked GHCR responses proving bootstrap exits early on missing background image tags (`workflow-worker`, `temporal-worker`) with release-artifact blocker messaging.
+- `T019`: Added assertions for tiered Flux dependency config (`alga-platform -> alga-core -> alga-background`) and preserved non-login-blocking background failure rollup behavior via targeted `status.test.mjs` execution.
+
+### What Changed
+
+- Updated `ee/appliance/tests/run-plan-tests.sh`:
+  - Added `require_not_text()` helper.
+  - Added mocked-command bootstrap execution block for `T013`.
+  - Added embedded-server extraction/start/auth validation block for `T014`.
+  - Added RBAC read-only/no-secrets/no-mutation assertions for `T015`.
+  - Added missing-tag fail-fast integration block for `T018` using fake `curl` + stubbed `kubectl/flux/talosctl`.
+  - Added Flux dependency + status-tier semantics checks for `T019`.
+
+### Validation Commands
+
+- `bash ee/appliance/tests/run-plan-tests.sh` (still stops at pre-existing build-images guard: `release-version must follow x.y.z`).
+- Targeted validation for new coverage blocks was executed directly:
+  - mocked non-dry-run bootstrap token/secret flow (`T013`)
+  - embedded status server auth behavior (`T014`)
+  - RBAC rule assertions (`T015`)
+  - missing image-tag fail-fast path (`T018`)
+  - targeted status test execution for background-degraded rollup semantics (`T019`)
+
+### Gotchas
+
+- `validate_background_image_tags()` intentionally no-ops during `--dry-run`; `T018` requires non-dry-run execution with mocked Kubernetes/Flux/Talos commands to stay deterministic.
+- Existing global `run-plan-tests.sh` failure (`release-version must follow x.y.z`) predates this pass and still prevents a single fully-green end-to-end run of that script in this environment.

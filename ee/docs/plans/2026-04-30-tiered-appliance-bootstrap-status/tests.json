@@ -110,7 +110,7 @@
   {
     "id": "T013",
     "description": "Integration: bootstrap token generation writes the local status-token file, creates the in-cluster appliance-status-auth Secret, and prints URL/token to CLI output.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007",
@@ -120,7 +120,7 @@
   {
     "id": "T014",
     "description": "Integration: appliance-status endpoint rejects unauthenticated requests and returns /api/status for requests with the generated token.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F009",
@@ -130,7 +130,7 @@
   {
     "id": "T015",
     "description": "Integration: appliance-status service account can read required status resources but cannot read secret values or mutate workload resources.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011"
     ]
@@ -154,7 +154,7 @@
   {
     "id": "T018",
     "description": "Integration: release manifest validation fails fast when workflow-worker or temporal-worker image tags are missing from GHCR.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
@@ -162,7 +162,7 @@
   {
     "id": "T019",
     "description": "Integration: tiered Flux Kustomizations install platform before core and core before background, and background failure does not mark alga-core unavailable.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F021"

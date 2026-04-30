@@ -20,6 +20,15 @@ require_text() {
   }
 }
 
+require_not_text() {
+  local haystack="$1"
+  local needle="$2"
+  if printf '%s\n' "$haystack" | grep -Fq -- "$needle"; then
+    echo "expected output to not contain: $needle" >&2
+    exit 1
+  fi
+}
+
 require_dir "$ROOT/ee/appliance"
 require_dir "$ROOT/ee/appliance/flux"
 require_dir "$ROOT/ee/appliance/manifests"
@@ -160,6 +169,191 @@ if printf '%s\n' "$explicit_reuse_output" | grep -Fq "talosctl gen config"; then
   echo "expected explicit kubeconfig/talosconfig reuse path to skip talosctl gen config" >&2
   exit 1
 fi
+
+# T013: non-dry-run bootstrap with mocked cluster commands writes status-token,
+# creates/applies appliance-status-auth Secret, and prints URL/token.
+t013_tmp="$(mktemp -d)"
+t013_fakebin="$t013_tmp/fakebin"
+mkdir -p "$t013_fakebin"
+cat >"$t013_fakebin/kubectl" <<'EOF'
+#!/usr/bin/env bash
+printf 'kubectl %s\n' "$*" >>"${BOOTSTRAP_MOCK_LOG:?}"
+if [[ "$*" == *"create secret generic appliance-status-auth"* ]] && [[ "$*" == *"--dry-run=client -o yaml"* ]]; then
+  cat <<'YAML'
+apiVersion: v1
+kind: Secret
+metadata:
+  name: appliance-status-auth
+YAML
+fi
+exit 0
+EOF
+cat >"$t013_fakebin/flux" <<'EOF'
+#!/usr/bin/env bash
+printf 'flux %s\n' "$*" >>"${BOOTSTRAP_MOCK_LOG:?}"
+exit 0
+EOF
+cat >"$t013_fakebin/talosctl" <<'EOF'
+#!/usr/bin/env bash
+printf 'talosctl %s\n' "$*" >>"${BOOTSTRAP_MOCK_LOG:?}"
+exit 0
+EOF
+chmod +x "$t013_fakebin/kubectl" "$t013_fakebin/flux" "$t013_fakebin/talosctl"
+printf 'apiVersion: v1\nclusters: []\ncontexts: []\nusers: []\n' > "$t013_tmp/reuse.kubeconfig"
+printf 'context: appliance\n' > "$t013_tmp/reuse.talosconfig"
+export BOOTSTRAP_MOCK_LOG="$t013_tmp/mock.log"
+t013_output="$(
+  PATH="$t013_fakebin:$PATH" \
+  bash "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh" \
+    --release-version 1.0-rc5 \
+    --bootstrap-mode recover \
+    --repo-url https://github.com/example/alga-psa.git \
+    --repo-branch main \
+    --kubeconfig "$t013_tmp/reuse.kubeconfig" \
+    --talosconfig "$t013_tmp/reuse.talosconfig" \
+    --config-dir "$t013_tmp/site" \
+    --skip-image-tag-validation
+)"
+require_file "$t013_tmp/site/status-token"
+t013_token_file="$(tr -d '\n' < "$t013_tmp/site/status-token")"
+t013_token_printed="$(printf '%s\n' "$t013_output" | sed -n 's/^[[:space:]]*Token: //p' | head -n 1 | tr -d '\n')"
+if [ -z "$t013_token_printed" ] || [ "$t013_token_printed" != "$t013_token_file" ]; then
+  echo "expected printed status token to match persisted token file" >&2
+  exit 1
+fi
+require_text "$t013_output" "Appliance status UI:"
+require_text "$t013_output" "Status token: $t013_tmp/site/status-token"
+require_text "$(cat "$t013_tmp/mock.log")" "-n appliance-system create secret generic appliance-status-auth"
+require_text "$(cat "$t013_tmp/mock.log")" "kubectl --kubeconfig $t013_tmp/reuse.kubeconfig apply -f -"
+
+# T014: execute embedded appliance-status server and verify token auth behavior.
+t014_tmp="$(mktemp -d)"
+t014_server="$t014_tmp/server.js"
+python3 - "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml" "$t014_server" <<'PY'
+import pathlib
+import sys
+
+src = pathlib.Path(sys.argv[1]).read_text()
+start = "cat <<'JS' >/tmp/server.js\n"
+end = "\n              JS\n"
+i = src.find(start)
+if i < 0:
+    raise SystemExit("could not find embedded JS start marker")
+j = src.find(end, i + len(start))
+if j < 0:
+    raise SystemExit("could not find embedded JS end marker")
+body = src[i + len(start):j]
+pathlib.Path(sys.argv[2]).write_text(body)
+PY
+perl -0pi -e "s/server\\.listen\\(8080, '0\\.0\\.0\\.0'\\);/server.listen(Number(process.env.PORT || 18080), '127.0.0.1');/" "$t014_server"
+STATUS_TOKEN="integration-token" HOST_IP="192.0.2.77" PORT=18080 node "$t014_server" >"$t014_tmp/server.log" 2>&1 &
+t014_pid=$!
+cleanup_t014() {
+  if kill -0 "$t014_pid" >/dev/null 2>&1; then
+    kill "$t014_pid" >/dev/null 2>&1 || true
+    wait "$t014_pid" >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup_t014 EXIT
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  if curl -fsS "http://127.0.0.1:18080/healthz?token=integration-token" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 0.2
+done
+t014_unauth_code="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:18080/api/status")"
+[ "$t014_unauth_code" = "401" ] || { echo "expected unauthenticated /api/status to return 401, got $t014_unauth_code" >&2; exit 1; }
+t014_auth_header="$(curl -fsS -H "Authorization: Bearer integration-token" "http://127.0.0.1:18080/api/status")"
+t014_auth_query="$(curl -fsS "http://127.0.0.1:18080/api/status?token=integration-token")"
+require_text "$t014_auth_header" '"service":"appliance-status"'
+require_text "$t014_auth_header" '"status":"installing"'
+require_text "$t014_auth_query" '"loginUrl":"http://192.0.2.77:3000"'
+cleanup_t014
+trap - EXIT
+
+# T015: RBAC grants read-only resource visibility without secret access or mutation verbs.
+require_text "$(yq eval '.rules[] | select(.apiGroups == [\"\"]) | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "nodes"
+require_text "$(yq eval '.rules[] | select(.apiGroups == [\"\"]) | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "pods"
+require_text "$(yq eval '.rules[] | select(.apiGroups == [\"\"]) | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "persistentvolumeclaims"
+require_text "$(yq eval '.rules[] | select(.apiGroups == [\"\"]) | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "events"
+require_text "$(yq eval '.rules[] | select(.apiGroups == [\"\"]) | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "configmaps"
+require_text "$(yq eval '.rules[] | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "jobs"
+require_text "$(yq eval '.rules[] | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "gitrepositories"
+require_text "$(yq eval '.rules[] | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "kustomizations"
+require_text "$(yq eval '.rules[] | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "helmreleases"
+t015_verbs="$(yq eval '.rules[] | .verbs[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")"
+require_not_text "$t015_verbs" "create"
+require_not_text "$t015_verbs" "update"
+require_not_text "$t015_verbs" "patch"
+require_not_text "$t015_verbs" "delete"
+require_not_text "$(yq eval '.rules[] | .resources[]' "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml")" "secrets"
+
+# T018: release validation fails fast when background image tags are missing.
+t018_tmp="$(mktemp -d)"
+t018_fakebin="$t018_tmp/fakebin"
+mkdir -p "$t018_fakebin"
+cat >"$t018_fakebin/kubectl" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+cat >"$t018_fakebin/flux" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+cat >"$t018_fakebin/talosctl" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+cat >"$t018_fakebin/curl" <<'EOF'
+#!/usr/bin/env bash
+if [[ "$*" == *"ghcr.io/token?scope=repository:nine-minds/workflow-worker:pull"* ]]; then
+  printf '{"token":"mock-token"}\n'
+  exit 0
+fi
+if [[ "$*" == *"ghcr.io/token?scope=repository:nine-minds/temporal-worker:pull"* ]]; then
+  printf '{"token":"mock-token"}\n'
+  exit 0
+fi
+if [[ "$*" == *"ghcr.io/v2/nine-minds/workflow-worker/manifests/"* ]]; then
+  exit 22
+fi
+if [[ "$*" == *"ghcr.io/v2/nine-minds/temporal-worker/manifests/"* ]]; then
+  exit 22
+fi
+exec /usr/bin/curl "$@"
+EOF
+chmod +x "$t018_fakebin/kubectl" "$t018_fakebin/flux" "$t018_fakebin/talosctl" "$t018_fakebin/curl"
+t018_cfg="$t018_tmp/cfg"
+mkdir -p "$t018_cfg"
+printf 'apiVersion: v1\nclusters: []\ncontexts: []\nusers: []\n' > "$t018_cfg/reuse.kubeconfig"
+printf 'context: appliance\n' > "$t018_cfg/reuse.talosconfig"
+t018_output="$(
+  set +e
+  PATH="$t018_fakebin:$PATH" \
+  bash "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh" \
+    --release-version 1.0-rc5 \
+    --bootstrap-mode recover \
+    --repo-url https://github.com/example/alga-psa.git \
+    --repo-branch main \
+    --kubeconfig "$t018_cfg/reuse.kubeconfig" \
+    --talosconfig "$t018_cfg/reuse.talosconfig" \
+    --config-dir "$t018_tmp/site" \
+    2>&1
+  echo "exit_code:$?"
+)"
+require_text "$t018_output" "Release artifact blocker: one or more background image tags are missing:"
+require_text "$t018_output" "ghcr.io/nine-minds/workflow-worker:61e4a00e"
+require_text "$t018_output" "ghcr.io/nine-minds/temporal-worker:61e4a00e"
+require_text "$t018_output" "exit_code:1"
+
+# T019: Flux tiered dependencies and status tiering semantics remain non-login-blocking for background failures.
+require_text "$(cat "$ROOT/ee/appliance/flux/base/flux/kustomizations.yaml")" "name: alga-platform"
+require_text "$(cat "$ROOT/ee/appliance/flux/base/flux/kustomizations.yaml")" "name: alga-core"
+require_text "$(cat "$ROOT/ee/appliance/flux/base/flux/kustomizations.yaml")" "name: alga-background"
+require_text "$(cat "$ROOT/ee/appliance/flux/base/flux/kustomizations.yaml")" "dependsOn:"
+require_text "$(cat "$ROOT/ee/appliance/flux/base/flux/kustomizations.yaml")" "- name: alga-platform"
+require_text "$(cat "$ROOT/ee/appliance/flux/base/flux/kustomizations.yaml")" "- name: alga-core"
+node --test "$ROOT/ee/appliance/operator/tests/status.test.mjs" --test-name-pattern "T002:"
 
 upgrade_tmp="$(mktemp -d)"
 upgrade_dry_run_output="$(
