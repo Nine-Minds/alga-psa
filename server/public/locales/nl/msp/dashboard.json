@@ -155,6 +155,11 @@
       "restoreFailed": "Onboardingstap kon niet worden hersteld."
     }
   },
+  "greeting": {
+    "morning": "Goedemorgen",
+    "afternoon": "Goedemiddag",
+    "evening": "Goedenavond"
+  },
   "mspDashboard": "MSP-dashboard",
   "mobileApp": {
     "title": "Download de AlgaPSA mobiele app",

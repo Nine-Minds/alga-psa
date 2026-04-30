@@ -267,5 +267,11 @@
         "fetchFailed": "Nie udało się pobrać dokumentów"
       }
     }
-  }
+  },
+  "uploadError": "Nie udało się przesłać dokumentu",
+  "downloadError": "Nie udało się pobrać dokumentu",
+  "uploadHint": "Prześlij pliki, aby udostępnić je w tym zadaniu",
+  "file": "plik",
+  "files": "pliki",
+  "view": "Wyświetl"
 }

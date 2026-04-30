@@ -56,7 +56,9 @@
       "createFailed": "Impossibile creare il ticket. Riprova.",
       "boardRequired": "Seleziona una bacheca"
     },
-    "boardPlaceholder": "Seleziona bacheca"
+    "boardPlaceholder": "Seleziona bacheca",
+    "linkedToAsset": "Asset collegato: {{name}}",
+    "linkedToAssetGeneric": "Asset collegato"
   },
   "status": {
     "open": "Aperto",
@@ -135,7 +137,8 @@
     "sla": "SLA",
     "updated": "Aggiornato",
     "openInNewTab": "Apri in una nuova scheda",
-    "actions": "Azioni"
+    "actions": "Azioni",
+    "linkedAssets": "Asset collegati"
   },
   "actions": {
     "view": "Visualizza",
@@ -240,7 +243,9 @@
     "unbundleFailed": "Impossibile separare il ticket",
     "addToBundleFailed": "Impossibile aggiungere il ticket al gruppo",
     "promoteMasterFailed": "Impossibile promuovere il principale",
-    "updateBundleSettingsFailed": "Impossibile aggiornare le impostazioni del gruppo"
+    "updateBundleSettingsFailed": "Impossibile aggiornare le impostazioni del gruppo",
+    "assetLoadFailed": "Impossibile caricare i dettagli dell'asset",
+    "assetNotFound": "Asset non trovato"
   },
   "conversation": {
     "comments": "Commenti",
@@ -1096,6 +1101,7 @@
       "childrenDescription": "Ticket figli raggruppati in questo ticket master"
     }
   },
+  "invalidTicketData": "Dati del ticket non validi",
   "timeEntries": {
     "title": "Tempo registrato",
     "loading": "Caricamento delle voci di tempo…",

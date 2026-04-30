@@ -1,11 +1,12 @@
 {
   "catalog": {
-    "title": "Solicitar Serviços",
-    "description": "Navegue pelos serviços publicados e envie solicitações estruturadas.",
+    "title": "Pedidos de serviço",
+    "description": "Envie um pedido estruturado e criaremos automaticamente um ticket.",
     "myRequests": "Minhas Solicitações",
     "empty": "Nenhum serviço de solicitação está disponível no momento.",
     "fallbackCategory": "Serviço",
-    "noDescription": "Nenhuma descrição fornecida"
+    "noDescription": "Nenhuma descrição fornecida",
+    "newRequestHeading": "Enviar um novo pedido"
   },
   "detail": {
     "version": "Versão {{version}}",
@@ -30,7 +31,8 @@
       "request": "Solicitação",
       "submitted": "Enviada",
       "status": "Status",
-      "details": "Detalhes"
+      "details": "Detalhes",
+      "ticket": "Ticket"
     },
     "view": "Visualizar",
     "unknownDate": "Desconhecida",
@@ -38,7 +40,8 @@
       "pending": "Pendente",
       "succeeded": "Concluída",
       "failed": "Falhou"
-    }
+    },
+    "noTicket": "Sem ticket"
   },
   "submissionDetail": {
     "backToMyRequests": "Voltar para Minhas Solicitações",
@@ -54,5 +57,15 @@
     "noAttachments": "Nenhum anexo incluído.",
     "fileIdLabel": "ID do Arquivo: {{id}}",
     "fileTypeLabel": "Tipo: {{mime}}"
+  },
+  "recent": {
+    "title": "Os seus pedidos recentes",
+    "viewAll": "Ver todos",
+    "empty": "Ainda não enviou pedidos.",
+    "ticket": "Ticket #{{number}}",
+    "noTicket": "Sem ticket"
+  },
+  "myRequestsAll": {
+    "title": "Os seus pedidos"
   }
 }

@@ -122,6 +122,7 @@ export const ServiceHistoryTab: React.FC<ServiceHistoryTabProps> = ({ asset }) =
           })
         } : undefined,
         assetId: asset.asset_id,
+        assetName: asset.name,
       })}
     </>
   );

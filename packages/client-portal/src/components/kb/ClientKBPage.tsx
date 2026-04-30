@@ -260,18 +260,6 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold">
-            {t('kb.title', 'Knowledge Base')}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t('kb.subtitle', 'Find answers to common questions and how-to guides')}
-          </p>
-        </div>
-      </div>
-
       <div className="flex flex-1 gap-4 min-h-0">
         {/* Category Sidebar */}
         {categories.length > 0 && (

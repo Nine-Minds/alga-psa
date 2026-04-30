@@ -101,7 +101,8 @@
     "notAssigned": "Nicht zugewiesen",
     "viewDetails": "Details anzeigen",
     "edit": "Bearbeiten",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "rowActionsLabel": "Zeilenaktionen"
   },
   "details": {
     "title": "Termindetails",
@@ -138,5 +139,21 @@
     "on": "am",
     "declined": "Abgelehnt:",
     "invalidDateTime": "Ungültiges Datum/Uhrzeit"
-  }
+  },
+  "views": {
+    "list": "Liste",
+    "calendar": "Kalender",
+    "label": "Ansicht wechseln"
+  },
+  "calendar": {
+    "today": "Heute",
+    "more": "mehr",
+    "label": "Terminkalender",
+    "previousMonth": "Vorheriger Monat",
+    "nextMonth": "Nächster Monat",
+    "cellWithCount": "{{date}}, {{count}} Termine",
+    "moreAria": "{{count}} weitere am {{date}} anzeigen",
+    "requestOnDate": "Termin am {{date}} anfragen"
+  },
+  "backToAppointments": "Zurück zu Terminen"
 }

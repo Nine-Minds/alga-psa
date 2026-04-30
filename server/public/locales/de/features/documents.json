@@ -267,5 +267,11 @@
         "fetchFailed": "Dokumente konnten nicht abgerufen werden"
       }
     }
-  }
+  },
+  "uploadError": "Dokument konnte nicht hochgeladen werden",
+  "downloadError": "Dokument konnte nicht heruntergeladen werden",
+  "uploadHint": "Dateien hochladen, um sie mit dieser Aufgabe zu teilen",
+  "file": "Datei",
+  "files": "Dateien",
+  "view": "Anzeigen"
 }

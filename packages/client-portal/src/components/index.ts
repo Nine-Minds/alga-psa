@@ -34,6 +34,13 @@ export { default as ClientAccount } from './account/ClientAccount';
 export { default as LicenseManagementPage } from './account/LicenseManagementPage';
 
 export { default as ClientPortalLayout } from './layout/ClientPortalLayout';
+export { ClientDevicesPage } from './assets/ClientDevicesPage';
+export {
+  ClientPortalPageProvider,
+  useClientPortalHeader,
+  useSetClientPortalHeader,
+} from './layout/ClientPortalPageContext';
+export type { PageHeaderState } from './layout/ClientPortalPageContext';
 
 export { default as ClientPortalTenantDiscovery } from './auth/ClientPortalTenantDiscovery';
 

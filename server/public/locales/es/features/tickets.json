@@ -56,7 +56,9 @@
       "createFailed": "No se pudo crear el ticket. Inténtalo de nuevo.",
       "boardRequired": "Selecciona un tablero"
     },
-    "boardPlaceholder": "Seleccionar tablero"
+    "boardPlaceholder": "Seleccionar tablero",
+    "linkedToAsset": "Activo vinculado: {{name}}",
+    "linkedToAssetGeneric": "Activo vinculado"
   },
   "status": {
     "open": "Abierto",
@@ -135,7 +137,8 @@
     "sla": "SLA",
     "updated": "Actualizado",
     "openInNewTab": "Abrir en nueva pestaña",
-    "actions": "Acciones"
+    "actions": "Acciones",
+    "linkedAssets": "Activos vinculados"
   },
   "actions": {
     "view": "Ver",
@@ -240,7 +243,9 @@
     "unbundleFailed": "Error al desagrupar el ticket",
     "addToBundleFailed": "Error al añadir el ticket al grupo",
     "promoteMasterFailed": "Error al promover el principal",
-    "updateBundleSettingsFailed": "Error al actualizar la configuración del grupo"
+    "updateBundleSettingsFailed": "Error al actualizar la configuración del grupo",
+    "assetLoadFailed": "Error al cargar los detalles del activo",
+    "assetNotFound": "Activo no encontrado"
   },
   "conversation": {
     "comments": "Comentarios",
@@ -1096,6 +1101,7 @@
       "childrenDescription": "Tickets secundarios agrupados en este ticket principal"
     }
   },
+  "invalidTicketData": "Datos del ticket no válidos",
   "timeEntries": {
     "title": "Tiempo registrado",
     "loading": "Cargando entradas de tiempo…",

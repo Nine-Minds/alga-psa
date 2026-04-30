@@ -505,140 +505,184 @@ const ClientPortalSettings = () => {
                 })()}
               </div>
 
-              {/* Dashboard Preview */}
-              {previewMode === 'dashboard' && (
-              <div className={`border border-gray-200 rounded-lg overflow-hidden bg-gray-50 ${previewTheme === 'dark' ? 'dark' : ''}`}>
-                {/* Mock Navigation Bar */}
-                <div className="bg-white shadow-sm border-b border-gray-200">
-                  <div className="px-4 py-3 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      {logoUrl ? (
-                        <img src={logoUrl} alt="Logo" className="h-7 object-contain" />
-                      ) : (
-                        <div className="w-7 h-7 bg-gray-300 rounded" />
-                      )}
-                      <span className="text-base font-semibold text-gray-900">
-                        {clientName || 'Your Client'} Portal
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <nav className="hidden md:flex items-center gap-6">
-                        <span
-                          className="text-sm font-medium cursor-default"
-                          style={{ color: secondaryColor || '#6366F1' }}
-                        >
-                          Dashboard
-                        </span>
-                        <span className="text-sm text-gray-600 hover:text-gray-900 cursor-default">Tickets</span>
-                        <span className="text-sm text-gray-600 hover:text-gray-900 cursor-default">Projects</span>
-                      </nav>
-                      <div className="w-8 h-8 bg-gray-300 rounded-full" />
-                    </div>
-                  </div>
-                </div>
+              {/* Dashboard Preview — small, hand-rolled mock that mirrors the
+                  live client portal layout. Theme classes are switched per
+                  previewTheme so the dark-mode toggle actually changes colors;
+                  the wrapper is height-bounded so the page doesn't grow huge
+                  when the preview is open. */}
+              {previewMode === 'dashboard' && (() => {
+                const isDark = previewTheme === 'dark';
+                const pageBg = isDark ? 'bg-slate-950' : 'bg-gray-100';
+                const surface = isDark ? 'bg-slate-900' : 'bg-white';
+                const surfaceMuted = isDark ? 'bg-slate-800' : 'bg-white';
+                const borderCls = isDark ? 'border-slate-700' : 'border-gray-200';
+                const heading = isDark ? 'text-slate-100' : 'text-gray-900';
+                const text = isDark ? 'text-slate-300' : 'text-gray-700';
+                const subtext = isDark ? 'text-slate-400' : 'text-gray-500';
+                const sidebarInactiveText = isDark ? '#94a3b8' : '#cbd5e1';
 
-                {/* Mock Dashboard Content */}
-                <div className="p-4">
-                  {/* Welcome Section */}
-                  <div className="bg-white rounded-lg p-4 mb-3">
-                    <h2 className="text-base font-semibold text-gray-900 mb-1">{t('clientPortal.dashboardPreview.welcome')}</h2>
-                    <p className="text-xs text-gray-600">{t('clientPortal.dashboardPreview.subtitle')}</p>
-                  </div>
+                return (
+                  <div className={`border ${borderCls} rounded-lg overflow-hidden ${pageBg} max-h-[560px] overflow-y-auto`}>
+                    <div className="flex">
+                      {/* Sidebar */}
+                      <aside className="w-40 shrink-0 bg-slate-900 text-white py-3">
+                        <div className="px-3 flex items-center gap-2">
+                          {logoUrl ? (
+                            <img src={logoUrl} alt="Logo" className="h-6 w-6 rounded-full object-contain bg-white/10" />
+                          ) : (
+                            <div
+                              className="h-6 w-6 rounded-full"
+                              style={{ backgroundColor: primaryColor || '#8B5CF6' }}
+                            />
+                          )}
+                          <span className="text-sm font-semibold truncate">
+                            {clientName || 'Your Client'}
+                          </span>
+                        </div>
+                        <div className="px-3 mt-3 text-[10px] uppercase tracking-wider text-slate-400">
+                          {t('clientPortal.dashboardPreview.workspaceSection', { defaultValue: 'Workspace' })}
+                        </div>
+                        <ul className="mt-1 space-y-0.5">
+                          {[
+                            { label: t('clientPortal.dashboardPreview.navDashboard', { defaultValue: 'Dashboard' }), active: true },
+                            { label: t('clientPortal.dashboardPreview.navTickets', { defaultValue: 'Tickets' }), active: false },
+                            { label: t('clientPortal.dashboardPreview.navServiceRequests', { defaultValue: 'Service Requests' }), active: false },
+                            { label: t('clientPortal.dashboardPreview.navProjects', { defaultValue: 'Projects' }), active: false },
+                            { label: t('clientPortal.dashboardPreview.navAppointments', { defaultValue: 'Appointments' }), active: false },
+                            { label: t('clientPortal.dashboardPreview.navDevices', { defaultValue: 'My devices' }), active: false },
+                          ].map((item, idx) => (
+                            <li key={idx}>
+                              <div
+                                className="mx-2 rounded px-2 py-1 text-xs"
+                                style={
+                                  item.active
+                                    ? { backgroundColor: `${primaryColor || '#8B5CF6'}33`, color: '#fff' }
+                                    : { color: sidebarInactiveText }
+                                }
+                              >
+                                {item.label}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </aside>
 
-                  {/* Stats Cards */}
-                  <div className="grid grid-cols-3 gap-3 mb-3">
-                    <div className="bg-white rounded-lg p-3 border border-gray-200">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-gray-600">{t('clientPortal.dashboardPreview.openTickets')}</span>
-                        <div
-                          className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold"
-                          style={{ backgroundColor: primaryColor || '#8B5CF6' }}
-                        >
-                          3
+                      {/* Right column */}
+                      <div className="flex-1 min-w-0">
+                        {/* Topbar */}
+                        <div className={`${surface} border-b ${borderCls} px-4 py-3 flex items-center justify-between`}>
+                          <div className="min-w-0">
+                            <div className={`text-[10px] uppercase tracking-wider ${subtext} truncate`}>
+                              {clientName ? clientName.toUpperCase() : 'CLIENT PORTAL'}
+                            </div>
+                            <div className={`text-sm font-semibold ${heading}`}>
+                              {t('clientPortal.dashboardPreview.dashboardTitle', { defaultValue: 'Dashboard' })}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className={`h-6 w-6 rounded-full ${isDark ? 'bg-slate-700' : 'bg-gray-100'}`} />
+                            <div className={`h-6 w-6 rounded-full ${isDark ? 'bg-slate-700' : 'bg-gray-100'}`} />
+                            <div className={`h-7 w-7 rounded-full ${isDark ? 'bg-slate-600' : 'bg-gray-300'}`} />
+                          </div>
+                        </div>
+
+                        {/* Body */}
+                        <div className="p-3 space-y-3">
+                          {/* Hero */}
+                          <div
+                            className="rounded-lg p-3 text-white"
+                            style={{
+                              background: `linear-gradient(135deg, ${primaryColor || '#8B5CF6'}, ${secondaryColor || '#6366F1'})`,
+                            }}
+                          >
+                            <div className="text-[10px] uppercase tracking-wider text-white/80">
+                              {t('clientPortal.dashboardPreview.welcomeBack', { defaultValue: 'Welcome back' })}
+                            </div>
+                            <div className="text-sm font-semibold">
+                              {t('clientPortal.dashboardPreview.greeting', { defaultValue: 'Good morning, Alex 👋' })}
+                            </div>
+                            <p className="mt-1 text-xs text-white/85">
+                              {t('clientPortal.dashboardPreview.subtitle')}
+                            </p>
+                          </div>
+
+                          {/* KPI cards */}
+                          <div className="grid grid-cols-5 gap-2">
+                            {[
+                              { label: t('clientPortal.dashboardPreview.openTickets'), value: '3' },
+                              { label: t('clientPortal.dashboardPreview.activeProjects'), value: '5' },
+                              { label: t('clientPortal.dashboardPreview.serviceRequests', { defaultValue: 'Service requests' }), value: '2' },
+                              { label: t('clientPortal.dashboardPreview.upcomingVisits', { defaultValue: 'Upcoming visits' }), value: '1' },
+                              { label: t('clientPortal.dashboardPreview.activeDevices', { defaultValue: 'Active devices' }), value: '8' },
+                            ].map((card, idx) => (
+                              <div
+                                key={idx}
+                                className={`rounded-lg ${surfaceMuted} border ${borderCls} p-2`}
+                              >
+                                <div className={`text-[10px] truncate ${subtext}`}>{card.label}</div>
+                                <div
+                                  className="mt-1 text-sm font-semibold"
+                                  style={{ color: idx === 0 ? primaryColor || '#8B5CF6' : isDark ? '#f1f5f9' : '#111' }}
+                                >
+                                  {card.value}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Activity + side rail */}
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className={`col-span-2 rounded-lg ${surfaceMuted} border ${borderCls} p-3`}>
+                              <div className={`text-xs font-semibold ${heading} mb-2`}>
+                                {t('clientPortal.dashboardPreview.recentActivity')}
+                              </div>
+                              <div className="space-y-1.5">
+                                {[
+                                  { dot: primaryColor, text: t('clientPortal.dashboardPreview.ticketUpdated'), when: t('clientPortal.dashboardPreview.hoursAgo', { count: 2 }) },
+                                  { dot: secondaryColor, text: t('clientPortal.dashboardPreview.newInvoice'), when: t('clientPortal.dashboardPreview.hoursAgo', { count: 5 }) },
+                                  { dot: primaryColor, text: t('clientPortal.dashboardPreview.milestoneCompleted'), when: t('clientPortal.dashboardPreview.dayAgo') },
+                                ].map((row, idx) => (
+                                  <div key={idx} className="flex items-center gap-2 text-[11px]">
+                                    <span
+                                      className="h-1.5 w-1.5 rounded-full"
+                                      style={{ backgroundColor: row.dot || '#8B5CF6' }}
+                                    />
+                                    <span className={`${text} truncate`}>{row.text}</span>
+                                    <span className={`ml-auto ${subtext} shrink-0`}>{row.when}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                            <div className={`rounded-lg ${surfaceMuted} border ${borderCls} p-3`}>
+                              <div className={`text-xs font-semibold ${heading} mb-2`}>
+                                {t('clientPortal.dashboardPreview.upcomingShort', { defaultValue: 'Upcoming' })}
+                              </div>
+                              <div className="flex items-start gap-2">
+                                <div
+                                  className="flex w-9 flex-col items-center justify-center rounded py-1"
+                                  style={{
+                                    backgroundColor: `${primaryColor || '#8B5CF6'}1A`,
+                                    color: primaryColor || '#8B5CF6',
+                                  }}
+                                >
+                                  <div className="text-[9px] font-semibold uppercase tracking-wider">May</div>
+                                  <div className="text-base font-semibold leading-none">19</div>
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className={`text-[11px] font-medium ${heading} truncate`}>
+                                    {t('clientPortal.dashboardPreview.basicSupport', { defaultValue: 'Basic Support' })}
+                                  </div>
+                                  <div className={`text-[10px] ${subtext}`}>12:30 PM · 60m</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      <div className="text-lg font-semibold text-gray-900">3</div>
-                      <div className="text-xs text-gray-500">{t('clientPortal.dashboardPreview.urgent', { count: 2 })}</div>
-                    </div>
-                    <div className="bg-white rounded-lg p-3 border border-gray-200">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-gray-600">{t('clientPortal.dashboardPreview.activeProjects')}</span>
-                        <div
-                          className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold"
-                          style={{ backgroundColor: secondaryColor || '#6366F1' }}
-                        >
-                          5
-                        </div>
-                      </div>
-                      <div className="text-lg font-semibold text-gray-900">5</div>
-                      <div className="text-xs text-gray-500">{t('clientPortal.dashboardPreview.nearDeadline', { count: 1 })}</div>
-                    </div>
-                    <div className="bg-white rounded-lg p-3 border border-gray-200">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs text-gray-600">{t('clientPortal.dashboardPreview.invoices')}</span>
-                        <div className="w-6 h-6 rounded bg-gray-300 flex items-center justify-center text-white text-xs font-bold">
-                          $
-                        </div>
-                      </div>
-                      <div className="text-lg font-semibold text-gray-900">$2,450</div>
-                      <div className="text-xs text-gray-500">{t('clientPortal.dashboardPreview.dueThisMonth')}</div>
                     </div>
                   </div>
-
-                  {/* Recent Activity */}
-                  <div className="bg-white rounded-lg p-4 mb-3">
-                    <h3 className="text-sm font-semibold text-gray-900 mb-3">{t('clientPortal.dashboardPreview.recentActivity')}</h3>
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-xs">
-                        <div
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: primaryColor || '#8B5CF6' }}
-                        />
-                        <span className="text-gray-600">{t('clientPortal.dashboardPreview.ticketUpdated')}</span>
-                        <span className="text-gray-400 ml-auto">{t('clientPortal.dashboardPreview.hoursAgo', { count: 2 })}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        <div
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: secondaryColor || '#6366F1' }}
-                        />
-                        <span className="text-gray-600">{t('clientPortal.dashboardPreview.newInvoice')}</span>
-                        <span className="text-gray-400 ml-auto">{t('clientPortal.dashboardPreview.hoursAgo', { count: 5 })}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        <div
-                          className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: primaryColor || '#8B5CF6' }}
-                        />
-                        <span className="text-gray-600">{t('clientPortal.dashboardPreview.milestoneCompleted')}</span>
-                        <span className="text-gray-400 ml-auto">{t('clientPortal.dashboardPreview.dayAgo')}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Quick Actions */}
-                  <div className="flex gap-2">
-                    <button
-                      className="px-3 py-1.5 rounded text-white text-xs font-medium transition-opacity hover:opacity-90"
-                      style={{ backgroundColor: primaryColor }}
-                      disabled
-                    >
-                      {t('clientPortal.dashboardPreview.createTicket')}
-                    </button>
-                    <button
-                      className="px-3 py-1.5 rounded text-xs font-medium border transition-colors"
-                      style={{
-                        borderColor: secondaryColor || '#6366F1',
-                        color: secondaryColor || '#6366F1'
-                      }}
-                      disabled
-                    >
-                      {t('clientPortal.dashboardPreview.viewProjects')}
-                    </button>
-                  </div>
-                </div>
-              </div>
-              )}
+                );
+              })()}
 
               {/* Sign-in Page Preview */}
               {previewMode === 'signin' && (

@@ -241,16 +241,6 @@ export default function ClientDocumentsPage() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold">{t('title', 'Documents')}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t('portal.subtitle', 'View and download your shared documents')}
-          </p>
-        </div>
-      </div>
-
       <div className="flex flex-1 gap-4 min-h-0">
         {/* Folder Sidebar */}
         {folders.length > 0 && (

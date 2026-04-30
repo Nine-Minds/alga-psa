@@ -993,7 +993,8 @@
     "editComment": "Commentaar bewerken",
     "deleteCommentAriaLabel": "Commentaar verwijderen",
     "deleteComment": "Commentaar verwijderen",
-    "deleteCommentConfirmation": "Weet u zeker dat u dit commentaar wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+    "deleteCommentConfirmation": "Weet u zeker dat u dit commentaar wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "update": "Bijwerken"
   },
   "enums": {
     "addOnDescription": {

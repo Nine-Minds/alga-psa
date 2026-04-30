@@ -993,7 +993,8 @@
     "editComment": "Kommentar bearbeiten",
     "deleteCommentAriaLabel": "Kommentar löschen",
     "deleteComment": "Kommentar löschen",
-    "deleteCommentConfirmation": "Möchten Sie diesen Kommentar wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+    "deleteCommentConfirmation": "Möchten Sie diesen Kommentar wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "update": "Aktualisieren"
   },
   "enums": {
     "addOnDescription": {

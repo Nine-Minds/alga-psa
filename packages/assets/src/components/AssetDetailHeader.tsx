@@ -173,6 +173,7 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
           })
         } : undefined,
         assetId: asset.asset_id,
+        assetName: asset.name,
       })}
     </>
   );

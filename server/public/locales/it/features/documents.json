@@ -267,5 +267,11 @@
         "fetchFailed": "Impossibile recuperare i documenti"
       }
     }
-  }
+  },
+  "uploadError": "Caricamento del documento non riuscito",
+  "downloadError": "Download del documento non riuscito",
+  "uploadHint": "Carica file da condividere con questa attività",
+  "file": "file",
+  "files": "file",
+  "view": "Vedi"
 }

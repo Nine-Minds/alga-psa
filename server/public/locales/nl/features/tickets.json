@@ -56,7 +56,9 @@
       "createFailed": "Ticket aanmaken is mislukt. Probeer het opnieuw.",
       "boardRequired": "Selecteer een board"
     },
-    "boardPlaceholder": "Board selecteren"
+    "boardPlaceholder": "Board selecteren",
+    "linkedToAsset": "Gekoppeld apparaat: {{name}}",
+    "linkedToAssetGeneric": "Gekoppeld apparaat"
   },
   "status": {
     "open": "Openen",
@@ -135,7 +137,8 @@
     "sla": "SLA",
     "updated": "Bijgewerkt",
     "openInNewTab": "Openen in nieuw tabblad",
-    "actions": "Acties"
+    "actions": "Acties",
+    "linkedAssets": "Gekoppelde apparaten"
   },
   "actions": {
     "view": "Bekijken",
@@ -240,7 +243,9 @@
     "unbundleFailed": "Ticket kon niet worden ontkoppeld",
     "addToBundleFailed": "Ticket kon niet aan bundel worden toegevoegd",
     "promoteMasterFailed": "Hoofdticket kon niet worden gepromoveerd",
-    "updateBundleSettingsFailed": "Bundelinstellingen konden niet worden bijgewerkt"
+    "updateBundleSettingsFailed": "Bundelinstellingen konden niet worden bijgewerkt",
+    "assetLoadFailed": "Kan de assetdetails niet laden",
+    "assetNotFound": "Apparaat niet gevonden"
   },
   "conversation": {
     "comments": "Reacties",
@@ -1096,6 +1101,7 @@
       "childrenDescription": "Onderliggende tickets gebundeld in dit hoofdticket"
     }
   },
+  "invalidTicketData": "Ongeldige ticketgegevens",
   "timeEntries": {
     "title": "Geregistreerde tijd",
     "loading": "Tijdregistraties laden…",

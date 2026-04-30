@@ -267,5 +267,11 @@
         "fetchFailed": "Failed to fetch documents"
       }
     }
-  }
+  },
+  "uploadError": "Failed to upload document",
+  "downloadError": "Failed to download document",
+  "uploadHint": "Upload files to share with this task",
+  "file": "file",
+  "files": "files",
+  "view": "View"
 }

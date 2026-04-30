@@ -19,10 +19,10 @@ export default function ProjectsOverviewPage() {
   const [projects, setProjects] = useState<IProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const pageSize = 10;
   
   // Define columns for the DataTable
   const columns: ColumnDefinition<IProject>[] = [
@@ -130,15 +130,6 @@ export default function ProjectsOverviewPage() {
   
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-semibold">{t('title')}</h1>
-          <p className="text-gray-600">
-            {t('subtitle')}
-          </p>
-        </div>
-      </div>
-      
       {/* Filters */}
       <div className="flex items-center gap-4">
           <div className="relative w-64 shrink-0">
@@ -191,6 +182,10 @@ export default function ProjectsOverviewPage() {
         currentPage={page}
         onPageChange={setPage}
         pageSize={pageSize}
+        onItemsPerPageChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
         totalItems={totalItems}
         onRowClick={handleViewProject}
       />

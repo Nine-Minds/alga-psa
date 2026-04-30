@@ -1343,5 +1343,6 @@
     "dependsOn": "Abhängig von",
     "unknownTask": "Unbekannte Aufgabe",
     "blocks": "Blockiert"
-  }
+  },
+  "columnsHidden": "Spalte(n) aufgrund begrenzten Platzes ausgeblendet. Browser vergrößern, um mehr zu sehen."
 }

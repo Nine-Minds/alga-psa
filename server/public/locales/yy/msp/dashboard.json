@@ -1,4 +1,9 @@
 {
+  "greeting": {
+    "morning": "55555",
+    "afternoon": "55555",
+    "evening": "55555"
+  },
   "welcome": {
     "title": "55555",
     "description": "55555",

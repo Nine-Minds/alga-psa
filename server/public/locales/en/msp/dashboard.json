@@ -1,4 +1,9 @@
 {
+  "greeting": {
+    "morning": "Good morning",
+    "afternoon": "Good afternoon",
+    "evening": "Good evening"
+  },
   "welcome": {
     "title": "Welcome to Your MSP Command Center",
     "description": "Track onboarding progress, configure critical services, and keep every client experience consistent.",

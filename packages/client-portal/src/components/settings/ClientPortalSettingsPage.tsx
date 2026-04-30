@@ -128,13 +128,6 @@ export default function ClientPortalSettingsPage() {
   return (
     <DrawerProvider>
     <div className="container mx-auto py-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">{tProfile('clientSettings.title')}</h1>
-        <p className="text-gray-600">
-          {tProfile('clientSettings.description')}
-        </p>
-      </div>
-
       <CustomTabs
         tabs={tabs}
         defaultTab={activeTab}

@@ -1343,5 +1343,6 @@
     "dependsOn": "Dipende da",
     "unknownTask": "Attività sconosciuta",
     "blocks": "Blocca"
-  }
+  },
+  "columnsHidden": "colonna/e nascoste per spazio limitato. Ridimensiona il browser per vederne altre."
 }

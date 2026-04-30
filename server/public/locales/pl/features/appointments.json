@@ -101,7 +101,8 @@
     "notAssigned": "Nieprzypisany",
     "viewDetails": "Zobacz szczegóły",
     "edit": "Edytuj",
-    "cancel": "Anuluj"
+    "cancel": "Anuluj",
+    "rowActionsLabel": "Akcje wiersza"
   },
   "details": {
     "title": "Szczegóły wizyty",
@@ -138,5 +139,21 @@
     "on": "w dniu",
     "declined": "Odrzucono:",
     "invalidDateTime": "Nieprawidłowa data/godzina"
-  }
+  },
+  "views": {
+    "list": "Lista",
+    "calendar": "Kalendarz",
+    "label": "Przełącz widok"
+  },
+  "calendar": {
+    "today": "Dziś",
+    "more": "więcej",
+    "label": "Kalendarz wizyt",
+    "previousMonth": "Poprzedni miesiąc",
+    "nextMonth": "Następny miesiąc",
+    "cellWithCount": "{{date}}, {{count}} wizyt",
+    "moreAria": "Pokaż {{count}} więcej {{date}}",
+    "requestOnDate": "Zarezerwuj wizytę na {{date}}"
+  },
+  "backToAppointments": "Powrót do wizyt"
 }

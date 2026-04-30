@@ -7,6 +7,8 @@ import { getAuthenticatedClientId } from '@alga-psa/client-portal/lib/clientAuth
 import {
   groupServiceRequestCatalogItemsByCategory,
   listVisibleServiceRequestCatalogItems,
+  listClientServiceRequestSubmissions,
+  type ServiceRequestClientSubmissionListRow,
   type ServiceRequestPortalCatalogGroup,
 } from '../../../lib/service-requests';
 
@@ -28,5 +30,22 @@ export const listRequestServiceCatalogGroupsAction = withAuth(async (
       contactId: currentUser.contact_id ?? null,
     });
     return groupServiceRequestCatalogItemsByCategory(items);
+  });
+});
+
+export const listMyRecentServiceRequestsAction = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext,
+  limit: number = 5,
+): Promise<ServiceRequestClientSubmissionListRow[]> => {
+  if (currentUser.user_type !== 'client') {
+    return [];
+  }
+
+  const { knex } = await createTenantKnex();
+  return withTransaction(knex, async (trx) => {
+    const clientId = await getAuthenticatedClientId(trx, currentUser.user_id, tenant);
+    const all = await listClientServiceRequestSubmissions(trx, tenant, clientId);
+    return all.slice(0, Math.max(1, limit));
   });
 });

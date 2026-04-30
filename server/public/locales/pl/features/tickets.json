@@ -56,7 +56,9 @@
       "createFailed": "Nie udało się utworzyć zgłoszenia. Spróbuj ponownie.",
       "boardRequired": "Wybierz tablicę"
     },
-    "boardPlaceholder": "Wybierz tablicę"
+    "boardPlaceholder": "Wybierz tablicę",
+    "linkedToAsset": "Powiązany zasób: {{name}}",
+    "linkedToAssetGeneric": "Powiązany zasób"
   },
   "status": {
     "open": "Otwarte",
@@ -135,7 +137,8 @@
     "sla": "SLA",
     "updated": "Zaktualizowano",
     "openInNewTab": "Otwórz w nowej karcie",
-    "actions": "Akcje"
+    "actions": "Akcje",
+    "linkedAssets": "Powiązane zasoby"
   },
   "actions": {
     "view": "Wyświetl",
@@ -240,7 +243,9 @@
     "unbundleFailed": "Nie udało się rozpakować zgłoszenia",
     "addToBundleFailed": "Nie udało się dodać zgłoszenia do pakietu",
     "promoteMasterFailed": "Nie udało się promować zgłoszenia głównego",
-    "updateBundleSettingsFailed": "Nie udało się zaktualizować ustawień pakietu"
+    "updateBundleSettingsFailed": "Nie udało się zaktualizować ustawień pakietu",
+    "assetLoadFailed": "Nie udało się załadować szczegółów zasobu",
+    "assetNotFound": "Nie znaleziono zasobu"
   },
   "conversation": {
     "comments": "Komentarze",
@@ -1096,6 +1101,7 @@
       "childrenDescription": "Zgłoszenia podrzędne zgrupowane w tym zgłoszeniu głównym"
     }
   },
+  "invalidTicketData": "Nieprawidłowe dane zgłoszenia",
   "timeEntries": {
     "title": "Zarejestrowany czas",
     "loading": "Ładowanie wpisów czasu…",

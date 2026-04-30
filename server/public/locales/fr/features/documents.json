@@ -267,5 +267,11 @@
         "fetchFailed": "Échec du chargement des documents"
       }
     }
-  }
+  },
+  "uploadError": "Échec du téléversement du document",
+  "downloadError": "Échec du téléchargement du document",
+  "uploadHint": "Téléversez des fichiers à partager avec cette tâche",
+  "file": "fichier",
+  "files": "fichiers",
+  "view": "Voir"
 }

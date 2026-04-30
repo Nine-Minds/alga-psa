@@ -5,7 +5,8 @@
     "myRequests": "11111",
     "empty": "11111",
     "fallbackCategory": "11111",
-    "noDescription": "11111"
+    "noDescription": "11111",
+    "newRequestHeading": "11111"
   },
   "detail": {
     "version": "11111 {{version}} 11111",
@@ -30,7 +31,8 @@
       "request": "11111",
       "submitted": "11111",
       "status": "11111",
-      "details": "11111"
+      "details": "11111",
+      "ticket": "11111"
     },
     "view": "11111",
     "unknownDate": "11111",
@@ -38,7 +40,8 @@
       "pending": "11111",
       "succeeded": "11111",
       "failed": "11111"
-    }
+    },
+    "noTicket": "11111"
   },
   "submissionDetail": {
     "backToMyRequests": "11111",
@@ -54,5 +57,15 @@
     "noAttachments": "11111",
     "fileIdLabel": "11111 {{id}} 11111",
     "fileTypeLabel": "11111 {{mime}} 11111"
+  },
+  "recent": {
+    "title": "11111",
+    "viewAll": "11111",
+    "empty": "11111",
+    "ticket": "11111 {{number}} 11111",
+    "noTicket": "11111"
+  },
+  "myRequestsAll": {
+    "title": "11111"
   }
 }

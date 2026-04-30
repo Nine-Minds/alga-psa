@@ -3,12 +3,17 @@
 import { Asset } from '@alga-psa/types';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { Button } from '@alga-psa/ui/components/Button';
+import { PlusCircle } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface AssetDetailsProps {
   asset: Asset;
+  onCreateTicket?: (asset: Asset) => void;
 }
 
-export function AssetDetails({ asset }: AssetDetailsProps) {
+export function AssetDetails({ asset, onCreateTicket }: AssetDetailsProps) {
+  const { t } = useTranslation('client-portal');
   // Helper function to format dates
   const formatDate = (dateString: string | undefined) => {
     if (!dateString) return 'N/A';
@@ -145,12 +150,25 @@ export function AssetDetails({ asset }: AssetDetailsProps) {
         </div>
       </Card>
 
-      {/* Extension Data */}
-      <Card>
-        <div className="p-4">
-          {renderExtensionData()}
+      {/* Extension Data — only render the card when we actually have type-specific details. */}
+      {renderExtensionData() && (
+        <Card>
+          <div className="p-4">{renderExtensionData()}</div>
+        </Card>
+      )}
+
+      {onCreateTicket && (
+        <div className="flex justify-end">
+          <Button
+            id="asset-details-create-ticket"
+            variant="default"
+            onClick={() => onCreateTicket(asset)}
+          >
+            <PlusCircle className="h-4 w-4 mr-2" />
+            {t('devices.createTicket', 'Create ticket')}
+          </Button>
         </div>
-      </Card>
+      )}
     </div>
   );
 }

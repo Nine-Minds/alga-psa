@@ -56,7 +56,9 @@
       "priorityRequired": "Please select a priority",
       "boardRequired": "Please select a board",
       "createFailed": "Failed to create ticket. Please try again."
-    }
+    },
+    "linkedToAsset": "Ativo vinculado: {{name}}",
+    "linkedToAssetGeneric": "Ativo vinculado"
   },
   "status": {
     "open": "Open",
@@ -135,7 +137,8 @@
     "sla": "SLA",
     "updated": "Updated",
     "openInNewTab": "Open in new tab",
-    "actions": "Actions"
+    "actions": "Actions",
+    "linkedAssets": "Ativos vinculados"
   },
   "actions": {
     "view": "View",
@@ -240,7 +243,9 @@
     "unbundleFailed": "Falha ao desagrupar o ticket",
     "addToBundleFailed": "Falha ao adicionar o ticket ao pacote",
     "promoteMasterFailed": "Falha ao promover o principal",
-    "updateBundleSettingsFailed": "Falha ao atualizar as configurações do pacote"
+    "updateBundleSettingsFailed": "Falha ao atualizar as configurações do pacote",
+    "assetLoadFailed": "Falha ao carregar os detalhes do ativo",
+    "assetNotFound": "Ativo não encontrado"
   },
   "conversation": {
     "comments": "Comments",
@@ -1096,6 +1101,7 @@
       "childrenDescription": "Child tickets bundled in this master ticket"
     }
   },
+  "invalidTicketData": "Dados do ticket inválidos",
   "timeEntries": {
     "title": "Tempo registrado",
     "loading": "Carregando registros de tempo…",

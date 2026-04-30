@@ -11,11 +11,78 @@
     "account": "11111",
     "signOut": "11111",
     "clientPortal": "11111",
+    "clientPortalLabel": "11111",
     "portal": "11111",
     "notifications": "11111",
     "documents": "11111",
     "knowledgeBase": "11111",
-    "requestServices": "11111"
+    "requestServices": "11111",
+    "home": "11111",
+    "myTickets": "11111",
+    "newRequest": "11111",
+    "schedule": "11111",
+    "myDevices": "11111",
+    "helpCenter": "11111",
+    "organization": "11111",
+    "supportCard": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "sections": {
+      "workspace": "11111",
+      "resources": "11111",
+      "more": "11111",
+      "apps": "11111"
+    }
+  },
+  "sidebar": {
+    "goToDashboard": "11111",
+    "logoAlt": "11111",
+    "expandSidebar": "11111",
+    "collapseSidebar": "11111"
+  },
+  "devices": {
+    "pageTitle": "11111",
+    "loading": "11111",
+    "statusOkTitle": "11111",
+    "statusOkBody": "11111 {{count}} 11111",
+    "empty": {
+      "title": "11111",
+      "body": "11111"
+    },
+    "types": {
+      "workstation": "11111",
+      "server": "11111",
+      "mobile": "11111",
+      "printer": "11111",
+      "network": "11111",
+      "unknown": "11111"
+    },
+    "statusWarnTitle": "11111",
+    "statusWarnBody": "11111 {{active}} 11111 {{inactive}} 11111",
+    "status": {
+      "active": "11111",
+      "inactive": "11111"
+    },
+    "searchPlaceholder": "11111",
+    "filters": {
+      "allTypes": "11111",
+      "allStatuses": "11111"
+    },
+    "clearFilters": "11111",
+    "columns": {
+      "name": "11111",
+      "type": "11111",
+      "status": "11111",
+      "location": "11111",
+      "updated": "11111",
+      "actions": "11111"
+    },
+    "notAvailable": "11111",
+    "detailsTitle": "11111",
+    "createTicket": "11111",
+    "createTicketForDevice": "11111",
+    "rowActionsLabel": "11111"
   },
   "dashboard": {
     "title": "11111",
@@ -26,17 +93,97 @@
       "openTickets": "11111",
       "activeProjects": "11111",
       "pendingInvoices": "11111",
-      "activeAssets": "11111"
+      "activeAssets": "11111",
+      "upcomingVisits": "11111",
+      "activeDevices": "11111",
+      "openTicketsHint": "11111",
+      "activeProjectsHint": "11111",
+      "nextLabel": "11111 {{when}} 11111",
+      "noneScheduled": "11111",
+      "deviceStatusHint": "11111",
+      "serviceRequests": "11111",
+      "serviceRequestsHint": "11111",
+      "openTicketsDescription": "11111",
+      "activeProjectsDescription": "11111",
+      "serviceRequestsDescription": "11111",
+      "upcomingVisitsDescription": "11111",
+      "activeDevicesDescription": "11111"
+    },
+    "welcomeBack": "11111",
+    "heroSubtitle": "11111",
+    "greeting": {
+      "morning": "11111",
+      "afternoon": "11111",
+      "evening": "11111"
+    },
+    "nextToday": "11111",
+    "nextTomorrow": "11111",
+    "recentTickets": {
+      "title": "11111",
+      "viewAll": "11111",
+      "id": "11111",
+      "subject": "11111",
+      "status": "11111",
+      "priority": "11111",
+      "updated": "11111",
+      "empty": "11111",
+      "countLabel": "11111 {{count}} 11111"
+    },
+    "activity": {
+      "title": "11111",
+      "subtitle": "11111",
+      "empty": "11111",
+      "emptyHint": "11111",
+      "viewTickets": "11111",
+      "titles": {
+        "ticket": "11111 {{name}} 11111",
+        "invoice": "11111 {{name}} 11111",
+        "asset": "11111 {{name}} 11111",
+        "project": "11111 {{name}} 11111",
+        "quote": {
+          "_default": "11111 {{name}} 11111",
+          "sent": "11111 {{name}} 11111",
+          "accepted": "11111 {{name}} 11111",
+          "rejected": "11111 {{name}} 11111",
+          "expired": "11111 {{name}} 11111"
+        },
+        "service_request": {
+          "_default": "11111 {{name}} 11111",
+          "pending": "11111 {{name}} 11111",
+          "succeeded": "11111 {{name}} 11111",
+          "failed": "11111 {{name}} 11111"
+        },
+        "appointment": {
+          "_default": "11111 {{name}} 11111",
+          "pending": "11111 {{name}} 11111",
+          "approved": "11111 {{name}} 11111",
+          "declined": "11111 {{name}} 11111",
+          "cancelled": "11111 {{name}} 11111"
+        }
+      }
+    },
+    "devices": {
+      "title": "11111",
+      "viewAll": "11111",
+      "countLabel": "11111 {{count}} 11111",
+      "emptyShort": "11111",
+      "emptyBody": "11111",
+      "healthy": "11111",
+      "inactive": "11111",
+      "active": "11111"
     },
     "quickActions": {
       "title": "11111",
       "createTicket": "11111",
       "requestAppointment": "11111",
-      "viewLatestInvoice": "11111"
+      "viewLatestInvoice": "11111",
+      "newServiceRequest": "11111"
     },
     "appointments": {
       "title": "11111",
       "noUpcoming": "11111",
+      "noUpcomingShort": "11111",
+      "countLabel": "11111 {{count}} 11111",
       "requestButton": "11111",
       "viewAll": "11111",
       "technician": "11111"
@@ -44,7 +191,13 @@
     "recentActivity": {
       "title": "11111"
     },
-    "viewAll": "11111 {{item}} 11111"
+    "viewAll": "11111 {{item}} 11111",
+    "timeAgo": {
+      "justNow": "11111",
+      "minutes": "11111 {{count}} 11111",
+      "hours": "11111 {{count}} 11111",
+      "days": "11111 {{count}} 11111"
+    }
   },
   "auth": {
     "signIn": "11111",

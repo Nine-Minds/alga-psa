@@ -1343,5 +1343,6 @@
     "dependsOn": "Afhankelijk van",
     "unknownTask": "Onbekende taak",
     "blocks": "Blokkeert"
-  }
+  },
+  "columnsHidden": "kolom(men) verborgen door beperkte ruimte. Verklein/vergroot het browservenster om meer te zien."
 }

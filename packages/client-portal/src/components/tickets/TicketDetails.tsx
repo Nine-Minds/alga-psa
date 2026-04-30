@@ -8,6 +8,11 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { RichTextViewer } from '@alga-psa/ui/editor';
 import { Card } from '@alga-psa/ui/components/Card';
 import { TicketDocumentsSection, TicketConversation, TicketAppointmentRequests, TicketOriginBadge, type ITicketAppointmentRequest } from '@alga-psa/tickets/components';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Link2 } from 'lucide-react';
+import { AssetDetails } from '../assets/AssetDetails';
+import { getClientAssetById } from '@alga-psa/client-portal/actions';
+import type { Asset } from '@alga-psa/types';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
 import { getTicketOrigin } from '@alga-psa/tickets/lib/ticketOrigin';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
@@ -77,6 +82,12 @@ export function TicketDetails({
   const [statusOptions] = useState<IStatus[]>(initialStatusOptions);
   const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
   const [ticketToUpdateStatus, setTicketToUpdateStatus] = useState<{ ticketId: string; newStatusId: string; currentStatusName: string; newStatusName: string; } | null>(null);
+  const [linkedAssetPreview, setLinkedAssetPreview] = useState<{
+    asset: Asset | null;
+    loading: boolean;
+    error: string | null;
+    fallbackName: string;
+  } | null>(null);
   const [newCommentContent, setNewCommentContent] = useState<PartialBlock[]>([{ 
     type: "paragraph",
     props: {
@@ -634,6 +645,68 @@ export function TicketDetails({
               </div>
             </div>
 
+            {/* Linked assets — populated from asset_associations on the server. */}
+            {(() => {
+              const linkedAssets = (ticket as ITicketWithDetails & {
+                linkedAssets?: Array<{ asset_id: string; name: string; asset_tag: string | null }>;
+              }).linkedAssets;
+              if (!linkedAssets || linkedAssets.length === 0) return null;
+
+              const openAssetPreview = async (
+                assetId: string,
+                fallbackName: string,
+              ) => {
+                setLinkedAssetPreview({ asset: null, loading: true, error: null, fallbackName });
+                try {
+                  const asset = await getClientAssetById(assetId);
+                  setLinkedAssetPreview({
+                    asset,
+                    loading: false,
+                    error: asset ? null : t('messages.assetNotFound', 'Asset not found'),
+                    fallbackName,
+                  });
+                } catch (err) {
+                  console.error('Failed to load linked asset', err);
+                  setLinkedAssetPreview({
+                    asset: null,
+                    loading: false,
+                    error: t('messages.assetLoadFailed', 'Failed to load asset details'),
+                    fallbackName,
+                  });
+                }
+              };
+
+              return (
+                <div>
+                  <label className="font-bold text-gray-900 block mb-2">
+                    {t('fields.linkedAssets', 'Linked assets')}
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {linkedAssets.map((asset) => {
+                      const display = asset.name || asset.asset_tag || asset.asset_id.slice(0, 8);
+                      return (
+                        <button
+                          key={asset.asset_id}
+                          type="button"
+                          onClick={() => openAssetPreview(asset.asset_id, display)}
+                          className="inline-flex items-center focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-300))] rounded-full"
+                        >
+                          <Badge
+                            variant="secondary"
+                            className="inline-flex items-center gap-1.5 rounded-full hover:opacity-80"
+                            data-testid={`ticket-linked-asset-${asset.asset_id}`}
+                          >
+                            <Link2 className="h-3 w-3" />
+                            {display}
+                          </Badge>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Due Date */}
             <div>
               <label className="font-bold text-gray-900 block mb-2">
@@ -760,6 +833,32 @@ export function TicketDetails({
     </>
   );
 
+  const linkedAssetDialog = (
+    <Dialog
+      isOpen={!!linkedAssetPreview}
+      onClose={() => setLinkedAssetPreview(null)}
+      title={
+        linkedAssetPreview?.asset?.name ||
+        linkedAssetPreview?.fallbackName ||
+        t('fields.linkedAssets', 'Linked assets')
+      }
+    >
+      {linkedAssetPreview?.loading && (
+        <div className="p-6 text-sm text-gray-600">
+          {tCommon('common.loading', 'Loading...')}
+        </div>
+      )}
+      {linkedAssetPreview && !linkedAssetPreview.loading && linkedAssetPreview.error && (
+        <div className="p-6 text-sm text-red-700">
+          {linkedAssetPreview.error}
+        </div>
+      )}
+      {linkedAssetPreview?.asset && !linkedAssetPreview.loading && (
+        <AssetDetails asset={linkedAssetPreview.asset} />
+      )}
+    </Dialog>
+  );
+
   // Render standalone or in dialog based on asStandalone prop
   if (asStandalone) {
     return (
@@ -778,6 +877,8 @@ export function TicketDetails({
           confirmLabel={tCommon('common.update', 'Update')}
           cancelLabel={tCommon('common.cancel', 'Cancel')}
         />
+
+        {linkedAssetDialog}
       </>
     );
   }
@@ -801,6 +902,8 @@ export function TicketDetails({
         confirmLabel={tCommon('common.update', 'Update')}
         cancelLabel={tCommon('common.cancel', 'Cancel')}
       />
+
+      {linkedAssetDialog}
     </>
   );
 }

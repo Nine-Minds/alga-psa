@@ -56,7 +56,9 @@
       "priorityRequired": "11111",
       "boardRequired": "11111",
       "createFailed": "11111"
-    }
+    },
+    "linkedToAsset": "11111 {{name}} 11111",
+    "linkedToAssetGeneric": "11111"
   },
   "status": {
     "open": "11111",
@@ -135,7 +137,8 @@
     "sla": "11111",
     "updated": "11111",
     "openInNewTab": "11111",
-    "actions": "11111"
+    "actions": "11111",
+    "linkedAssets": "11111"
   },
   "actions": {
     "view": "11111",
@@ -240,7 +243,9 @@
     "unbundleFailed": "11111",
     "addToBundleFailed": "11111",
     "promoteMasterFailed": "11111",
-    "updateBundleSettingsFailed": "11111"
+    "updateBundleSettingsFailed": "11111",
+    "assetLoadFailed": "11111",
+    "assetNotFound": "11111"
   },
   "conversation": {
     "comments": "11111",
@@ -1096,6 +1101,7 @@
       "childrenDescription": "11111"
     }
   },
+  "invalidTicketData": "11111",
   "timeEntries": {
     "title": "11111",
     "loading": "11111",

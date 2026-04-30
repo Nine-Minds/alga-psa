@@ -1,7 +1,7 @@
 {
   "nav": {
     "dashboard": "Dashboard",
-    "tickets": "Support Tickets",
+    "tickets": "Tickets",
     "projects": "Projects",
     "appointments": "Appointments",
     "billing": "Billing",
@@ -15,7 +15,25 @@
     "notifications": "Notifications",
     "documents": "Documents",
     "knowledgeBase": "Knowledge Base",
-    "requestServices": "Request Services"
+    "requestServices": "Pedidos de serviço",
+    "home": "Início",
+    "myTickets": "Meus tickets",
+    "newRequest": "Novo pedido",
+    "schedule": "Agenda",
+    "myDevices": "Meus dispositivos",
+    "helpCenter": "Centro de ajuda",
+    "organization": "Organização",
+    "clientPortalLabel": "Portal do cliente",
+    "supportCard": {
+      "title": "Precisa de ajuda urgente?",
+      "description": "Entre em contato a qualquer momento."
+    },
+    "sections": {
+      "workspace": "Área de trabalho",
+      "resources": "Recursos",
+      "more": "Mais",
+      "apps": "Apps"
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -26,25 +44,111 @@
       "openTickets": "Open Support Tickets",
       "activeProjects": "Open Projects",
       "pendingInvoices": "Pending Invoices",
-      "activeAssets": "Active Assets"
+      "activeAssets": "Active Assets",
+      "upcomingVisits": "Próximas visitas",
+      "activeDevices": "Dispositivos ativos",
+      "openTicketsHint": "Suporte ativo",
+      "activeProjectsHint": "Em andamento",
+      "nextLabel": "Próximo: {{when}}",
+      "noneScheduled": "Nada agendado",
+      "deviceStatusHint": "Endpoints geridos",
+      "serviceRequests": "Pedidos de serviço",
+      "serviceRequestsHint": "Total de submissões",
+      "openTicketsDescription": "Tickets de suporte em que ainda estamos a trabalhar.",
+      "activeProjectsDescription": "Projetos que estamos a entregar à sua equipa.",
+      "serviceRequestsDescription": "Pedidos estruturados que enviou a partir do catálogo.",
+      "upcomingVisitsDescription": "Visitas agendadas com os nossos técnicos.",
+      "activeDevicesDescription": "Equipamentos que gerimos e monitorizamos atualmente."
     },
     "quickActions": {
       "title": "Quick Actions",
-      "createTicket": "Create Support Ticket",
-      "requestAppointment": "Request Appointment",
-      "viewLatestInvoice": "View Latest Invoice"
+      "createTicket": "Criar ticket",
+      "requestAppointment": "Pedir consulta",
+      "viewLatestInvoice": "View Latest Invoice",
+      "newServiceRequest": "Novo pedido de serviço"
     },
     "appointments": {
       "title": "Upcoming Appointments",
       "noUpcoming": "No upcoming appointments. Request one now!",
       "requestButton": "Request Appointment",
       "viewAll": "View all appointments →",
-      "technician": "Technician"
+      "technician": "Technician",
+      "noUpcomingShort": "Nada na agenda",
+      "countLabel": "{{count}} próximos"
     },
     "recentActivity": {
       "title": "Recent Activity"
     },
-    "viewAll": "View all {{item}} →"
+    "viewAll": "View all {{item}} →",
+    "welcomeBack": "Bem-vindo de volta",
+    "heroSubtitle": "Aqui está um resumo da sua atividade de suporte de TI. Nossa equipe está disponível para ajudar.",
+    "greeting": {
+      "morning": "Bom dia",
+      "afternoon": "Boa tarde",
+      "evening": "Boa noite"
+    },
+    "nextToday": "Hoje",
+    "nextTomorrow": "Amanhã",
+    "recentTickets": {
+      "title": "Tickets recentes",
+      "viewAll": "Ver todos",
+      "id": "ID",
+      "subject": "Assunto",
+      "status": "Status",
+      "priority": "Prioridade",
+      "updated": "Atualizado",
+      "empty": "Sem tickets ativos — ótimo!",
+      "countLabel": "{{count}} exibidos"
+    },
+    "activity": {
+      "title": "Atividade recente",
+      "subtitle": "Atualizações recentes da sua conta",
+      "empty": "Sem atividade ainda",
+      "emptyHint": "Quando tickets forem atualizados ou faturas chegarem, você as verá aqui.",
+      "viewTickets": "Ver todos os tickets",
+      "titles": {
+        "ticket": "Novo ticket: {{name}}",
+        "invoice": "Fatura {{name}} gerada",
+        "asset": "Manutenção do ativo: {{name}}",
+        "project": "Projeto atualizado: {{name}}",
+        "quote": {
+          "_default": "Orçamento {{name}}",
+          "sent": "Orçamento {{name}} enviado para revisão",
+          "accepted": "Orçamento {{name}} aceite",
+          "rejected": "Orçamento {{name}} rejeitado",
+          "expired": "Orçamento {{name}} expirado"
+        },
+        "service_request": {
+          "_default": "Pedido de serviço: {{name}}",
+          "pending": "Pedido de serviço submetido: {{name}}",
+          "succeeded": "Pedido de serviço concluído: {{name}}",
+          "failed": "Pedido de serviço falhou: {{name}}"
+        },
+        "appointment": {
+          "_default": "Agendamento: {{name}}",
+          "pending": "Agendamento pedido: {{name}}",
+          "approved": "Agendamento confirmado: {{name}}",
+          "declined": "Agendamento recusado: {{name}}",
+          "cancelled": "Agendamento cancelado: {{name}}"
+        }
+      }
+    },
+    "devices": {
+      "title": "Seus dispositivos",
+      "viewAll": "Ver todos",
+      "countLabel": "{{count}} geridos",
+      "emptyShort": "Ainda sem dispositivos",
+      "emptyBody": "Os dispositivos geridos pelo seu fornecedor aparecerão aqui.",
+      "healthy": "Saudável",
+      "inactive": "Inativo",
+      "active": "Ativo"
+    },
+    "timeAgo": {
+      "justNow": "agora mesmo",
+      "minutes": "há {{count}} min",
+      "hours": "há {{count}} h",
+      "days": "há {{count}}d"
+    }
   },
   "auth": {
     "signIn": "Sign In",
@@ -532,5 +636,54 @@
       "projects": "Projects",
       "system": "System"
     }
+  },
+  "sidebar": {
+    "goToDashboard": "Ir para o painel",
+    "logoAlt": "Logotipo do portal do cliente",
+    "expandSidebar": "Expandir barra lateral",
+    "collapseSidebar": "Recolher barra lateral"
+  },
+  "devices": {
+    "pageTitle": "Meus dispositivos",
+    "loading": "Carregando dispositivos…",
+    "statusOkTitle": "Todos os dispositivos ativos",
+    "statusOkBody": "{{count}} dispositivos reportando",
+    "empty": {
+      "title": "Ainda sem dispositivos",
+      "body": "Os dispositivos geridos pelo seu fornecedor aparecerão aqui."
+    },
+    "types": {
+      "workstation": "Estações de trabalho",
+      "server": "Servidores",
+      "mobile": "Móvel",
+      "printer": "Impressoras",
+      "network": "Rede",
+      "unknown": "Outros"
+    },
+    "statusWarnTitle": "Alguns dispositivos inativos",
+    "statusWarnBody": "{{active}} ativos · {{inactive}} inativos",
+    "status": {
+      "active": "Ativo",
+      "inactive": "Inativo"
+    },
+    "searchPlaceholder": "Pesquisar por nome, etiqueta ou série",
+    "filters": {
+      "allTypes": "Todos os tipos",
+      "allStatuses": "Todos os estados"
+    },
+    "clearFilters": "Limpar filtros",
+    "columns": {
+      "name": "Nome",
+      "type": "Tipo",
+      "status": "Estado",
+      "location": "Localização",
+      "updated": "Atualizado",
+      "actions": "Ações"
+    },
+    "notAvailable": "N/D",
+    "detailsTitle": "Detalhes do ativo",
+    "createTicket": "Criar ticket",
+    "createTicketForDevice": "Criar ticket para este dispositivo",
+    "rowActionsLabel": "Ações da linha"
   }
 }

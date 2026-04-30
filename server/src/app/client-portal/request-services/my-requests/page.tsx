@@ -17,6 +17,8 @@ export default async function MyServiceRequestsPage() {
       submission.submitted_at instanceof Date
         ? submission.submitted_at.toISOString()
         : String(submission.submitted_at),
+    created_ticket_id: submission.created_ticket_id,
+    ticket_number: submission.ticket_number,
   }));
 
   return (
@@ -42,6 +44,8 @@ export default async function MyServiceRequestsPage() {
             request: t('myRequests.columns.request'),
             submitted: t('myRequests.columns.submitted'),
             status: t('myRequests.columns.status'),
+            ticket: t('myRequests.columns.ticket', 'Ticket'),
+            noTicket: t('myRequests.noTicket', 'No ticket'),
             details: t('myRequests.columns.details'),
             view: t('myRequests.view'),
             unknownDate: t('myRequests.unknownDate'),

@@ -155,6 +155,11 @@
       "restoreFailed": "Onboarding-Schritt konnte nicht wiederhergestellt werden."
     }
   },
+  "greeting": {
+    "morning": "Guten Morgen",
+    "afternoon": "Guten Tag",
+    "evening": "Guten Abend"
+  },
   "mspDashboard": "MSP-Dashboard",
   "mobileApp": {
     "title": "Lade die AlgaPSA Mobile App herunter",

@@ -101,7 +101,8 @@
     "notAssigned": "Niet toegewezen",
     "viewDetails": "Bekijk details",
     "edit": "Bewerken",
-    "cancel": "Annuleren"
+    "cancel": "Annuleren",
+    "rowActionsLabel": "Rijacties"
   },
   "details": {
     "title": "Afspraakdetails",
@@ -138,5 +139,21 @@
     "on": "op",
     "declined": "Afgewezen:",
     "invalidDateTime": "Ongeldige datum/tijd"
-  }
+  },
+  "views": {
+    "list": "Lijst",
+    "calendar": "Kalender",
+    "label": "Weergave wisselen"
+  },
+  "calendar": {
+    "today": "Vandaag",
+    "more": "meer",
+    "label": "Afsprakenkalender",
+    "previousMonth": "Vorige maand",
+    "nextMonth": "Volgende maand",
+    "cellWithCount": "{{date}}, {{count}} afspraken",
+    "moreAria": "Toon nog {{count}} op {{date}}",
+    "requestOnDate": "Afspraak aanvragen op {{date}}"
+  },
+  "backToAppointments": "Terug naar afspraken"
 }

@@ -15,16 +15,23 @@ interface Props {
   session: Session | null;
   branding: TenantBranding | null;
   initialLocale?: SupportedLocale | null;
+  initialSidebarCollapsed?: boolean;
 }
 
-export function ClientPortalLayoutClient({ children, session, branding, initialLocale }: Props) {
+export function ClientPortalLayoutClient({
+  children,
+  session,
+  branding,
+  initialLocale,
+  initialSidebarCollapsed = false,
+}: Props) {
   return (
     <AppSessionProvider session={session}>
       <PostHogUserIdentifier />
       <I18nWrapper portal="client" initialLocale={initialLocale || undefined}>
         <BrandingProvider initialBranding={branding}>
           <ClientPortalDocumentsProvider>
-            <ClientPortalLayout>
+            <ClientPortalLayout initialSidebarCollapsed={initialSidebarCollapsed}>
               {children}
             </ClientPortalLayout>
           </ClientPortalDocumentsProvider>

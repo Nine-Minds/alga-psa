@@ -155,6 +155,11 @@
       "restoreFailed": "Impossible de restaurer l'étape d'onboarding."
     }
   },
+  "greeting": {
+    "morning": "Bonjour",
+    "afternoon": "Bon après-midi",
+    "evening": "Bonsoir"
+  },
   "mspDashboard": "Tableau de bord MSP",
   "mobileApp": {
     "title": "Téléchargez l'application mobile AlgaPSA",

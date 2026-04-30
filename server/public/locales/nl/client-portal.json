@@ -1,7 +1,7 @@
 {
   "nav": {
     "dashboard": "Dashboard",
-    "tickets": "Supporttickets",
+    "tickets": "Tickets",
     "projects": "Projecten",
     "appointments": "Afspraken",
     "billing": "Facturatie",
@@ -15,7 +15,25 @@
     "notifications": "Meldingen",
     "documents": "Documenten",
     "knowledgeBase": "Kennisbank",
-    "requestServices": "Services aanvragen"
+    "requestServices": "Serviceverzoeken",
+    "home": "Home",
+    "myTickets": "Mijn tickets",
+    "newRequest": "Nieuw verzoek",
+    "schedule": "Planning",
+    "myDevices": "Mijn apparaten",
+    "helpCenter": "Helpcentrum",
+    "organization": "Organisatie",
+    "clientPortalLabel": "Klantenportaal",
+    "supportCard": {
+      "title": "Dringend hulp nodig?",
+      "description": "Neem op elk moment contact op."
+    },
+    "sections": {
+      "workspace": "Werkruimte",
+      "resources": "Bronnen",
+      "more": "Meer",
+      "apps": "Apps"
+    }
   },
   "dashboard": {
     "title": "Dashboard",
@@ -26,25 +44,111 @@
       "openTickets": "Open supporttickets",
       "activeProjects": "Lopende projecten",
       "pendingInvoices": "Openstaande facturen",
-      "activeAssets": "Actieve assets"
+      "activeAssets": "Actieve assets",
+      "upcomingVisits": "Aankomende bezoeken",
+      "activeDevices": "Actieve apparaten",
+      "openTicketsHint": "Actieve support",
+      "activeProjectsHint": "Lopend",
+      "nextLabel": "Volgende: {{when}}",
+      "noneScheduled": "Niets gepland",
+      "deviceStatusHint": "Beheerde endpoints",
+      "serviceRequests": "Serviceverzoeken",
+      "serviceRequestsHint": "Totaal aantal inzendingen",
+      "openTicketsDescription": "Supporttickets waar we nog aan werken.",
+      "activeProjectsDescription": "Projecten die we voor je team uitvoeren.",
+      "serviceRequestsDescription": "Gestructureerde verzoeken die je via de catalogus hebt ingediend.",
+      "upcomingVisitsDescription": "Geplande afspraken met onze technici.",
+      "activeDevicesDescription": "Apparaten die we momenteel beheren en monitoren."
     },
     "quickActions": {
       "title": "Snelle acties",
-      "createTicket": "Supportticket aanmaken",
+      "createTicket": "Ticket aanmaken",
       "requestAppointment": "Afspraak aanvragen",
-      "viewLatestInvoice": "Laatste factuur bekijken"
+      "viewLatestInvoice": "Laatste factuur bekijken",
+      "newServiceRequest": "Nieuw serviceverzoek"
     },
     "appointments": {
       "title": "Komende afspraken",
       "noUpcoming": "Geen komende afspraken. Vraag er nu een aan!",
       "requestButton": "Afspraak aanvragen",
       "viewAll": "Alle afspraken bekijken →",
-      "technician": "Technicus"
+      "technician": "Technicus",
+      "noUpcomingShort": "Niets gepland",
+      "countLabel": "{{count}} aankomend"
     },
     "recentActivity": {
       "title": "Recente activiteit"
     },
-    "viewAll": "Alle {{item}} bekijken →"
+    "viewAll": "Alle {{item}} bekijken →",
+    "welcomeBack": "Welkom terug",
+    "heroSubtitle": "Hier is een overzicht van je IT-supportactiviteit. Ons team staat klaar om te helpen.",
+    "greeting": {
+      "morning": "Goedemorgen",
+      "afternoon": "Goedemiddag",
+      "evening": "Goedenavond"
+    },
+    "nextToday": "Vandaag",
+    "nextTomorrow": "Morgen",
+    "recentTickets": {
+      "title": "Recente tickets",
+      "viewAll": "Bekijk alles",
+      "id": "ID",
+      "subject": "Onderwerp",
+      "status": "Status",
+      "priority": "Prioriteit",
+      "updated": "Bijgewerkt",
+      "empty": "Geen actieve tickets — top!",
+      "countLabel": "{{count}} weergegeven"
+    },
+    "activity": {
+      "title": "Recente activiteit",
+      "subtitle": "Laatste updates van je account",
+      "empty": "Nog geen activiteit",
+      "emptyHint": "Wanneer tickets worden bijgewerkt of facturen binnenkomen, zie je ze hier.",
+      "viewTickets": "Alle tickets bekijken",
+      "titles": {
+        "ticket": "Nieuw ticket: {{name}}",
+        "invoice": "Factuur {{name}} gegenereerd",
+        "asset": "Apparaatonderhoud: {{name}}",
+        "project": "Project bijgewerkt: {{name}}",
+        "quote": {
+          "_default": "Offerte {{name}}",
+          "sent": "Offerte {{name}} ter beoordeling verzonden",
+          "accepted": "Offerte {{name}} geaccepteerd",
+          "rejected": "Offerte {{name}} afgewezen",
+          "expired": "Offerte {{name}} verlopen"
+        },
+        "service_request": {
+          "_default": "Serviceverzoek: {{name}}",
+          "pending": "Serviceverzoek ingediend: {{name}}",
+          "succeeded": "Serviceverzoek afgehandeld: {{name}}",
+          "failed": "Serviceverzoek mislukt: {{name}}"
+        },
+        "appointment": {
+          "_default": "Afspraak: {{name}}",
+          "pending": "Afspraak aangevraagd: {{name}}",
+          "approved": "Afspraak bevestigd: {{name}}",
+          "declined": "Afspraak afgewezen: {{name}}",
+          "cancelled": "Afspraak geannuleerd: {{name}}"
+        }
+      }
+    },
+    "devices": {
+      "title": "Je apparaten",
+      "viewAll": "Bekijk alles",
+      "countLabel": "{{count}} beheerd",
+      "emptyShort": "Nog geen apparaten",
+      "emptyBody": "De apparaten die je provider beheert verschijnen hier.",
+      "healthy": "Gezond",
+      "inactive": "Inactief",
+      "active": "Actief"
+    },
+    "timeAgo": {
+      "justNow": "zojuist",
+      "minutes": "{{count}} min geleden",
+      "hours": "{{count}} u geleden",
+      "days": "{{count}}d geleden"
+    }
   },
   "auth": {
     "signIn": "Aanmelden",
@@ -532,5 +636,54 @@
       "projects": "Projecten",
       "system": "Systeem"
     }
+  },
+  "sidebar": {
+    "goToDashboard": "Naar dashboard",
+    "logoAlt": "Klantenportaal-logo",
+    "expandSidebar": "Zijbalk uitvouwen",
+    "collapseSidebar": "Zijbalk inklappen"
+  },
+  "devices": {
+    "pageTitle": "Mijn apparaten",
+    "loading": "Apparaten laden…",
+    "statusOkTitle": "Alle apparaten actief",
+    "statusOkBody": "{{count}} apparaten gemeld",
+    "empty": {
+      "title": "Nog geen apparaten",
+      "body": "De apparaten die je provider beheert verschijnen hier."
+    },
+    "types": {
+      "workstation": "Werkstations",
+      "server": "Servers",
+      "mobile": "Mobiel",
+      "printer": "Printers",
+      "network": "Netwerk",
+      "unknown": "Overig"
+    },
+    "statusWarnTitle": "Sommige apparaten inactief",
+    "statusWarnBody": "{{active}} actief · {{inactive}} inactief",
+    "status": {
+      "active": "Actief",
+      "inactive": "Inactief"
+    },
+    "searchPlaceholder": "Zoek op naam, tag of serienummer",
+    "filters": {
+      "allTypes": "Alle types",
+      "allStatuses": "Alle statussen"
+    },
+    "clearFilters": "Filters wissen",
+    "columns": {
+      "name": "Naam",
+      "type": "Type",
+      "status": "Status",
+      "location": "Locatie",
+      "updated": "Bijgewerkt",
+      "actions": "Acties"
+    },
+    "notAvailable": "N.v.t.",
+    "detailsTitle": "Asset-details",
+    "createTicket": "Ticket aanmaken",
+    "createTicketForDevice": "Maak een ticket voor dit apparaat",
+    "rowActionsLabel": "Rijacties"
   }
 }

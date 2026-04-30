@@ -101,7 +101,8 @@
     "notAssigned": "Non assegnato",
     "viewDetails": "Vedi dettagli",
     "edit": "Modifica",
-    "cancel": "Annulla"
+    "cancel": "Annulla",
+    "rowActionsLabel": "Azioni riga"
   },
   "details": {
     "title": "Dettagli appuntamento",
@@ -138,5 +139,21 @@
     "on": "il",
     "declined": "Rifiutato:",
     "invalidDateTime": "Data/ora non valida"
-  }
+  },
+  "views": {
+    "list": "Elenco",
+    "calendar": "Calendario",
+    "label": "Cambia vista"
+  },
+  "calendar": {
+    "today": "Oggi",
+    "more": "altro",
+    "label": "Calendario appuntamenti",
+    "previousMonth": "Mese precedente",
+    "nextMonth": "Mese successivo",
+    "cellWithCount": "{{date}}, {{count}} appuntamenti",
+    "moreAria": "Mostra altri {{count}} il {{date}}",
+    "requestOnDate": "Richiedi appuntamento il {{date}}"
+  },
+  "backToAppointments": "Torna agli appuntamenti"
 }

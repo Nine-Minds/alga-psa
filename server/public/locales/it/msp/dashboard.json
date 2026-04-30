@@ -155,6 +155,11 @@
       "restoreFailed": "Impossibile ripristinare il passaggio di onboarding."
     }
   },
+  "greeting": {
+    "morning": "Buongiorno",
+    "afternoon": "Buon pomeriggio",
+    "evening": "Buonasera"
+  },
   "mspDashboard": "Dashboard MSP",
   "mobileApp": {
     "title": "Scarica l'app mobile AlgaPSA",

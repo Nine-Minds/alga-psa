@@ -993,7 +993,8 @@
     "editComment": "Modifica commento",
     "deleteCommentAriaLabel": "Elimina commento",
     "deleteComment": "Elimina commento",
-    "deleteCommentConfirmation": "Sei sicuro di voler eliminare questo commento? Questa azione non può essere annullata."
+    "deleteCommentConfirmation": "Sei sicuro di voler eliminare questo commento? Questa azione non può essere annullata.",
+    "update": "Aggiorna"
   },
   "enums": {
     "addOnDescription": {

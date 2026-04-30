@@ -659,20 +659,7 @@ export function TicketList() {
   return (
     <div className="bg-white shadow rounded-lg w-full">
       <div className="sticky top-0 z-40 bg-white rounded-t-lg p-6 border-b border-gray-100">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
-            <p className="text-gray-600">{t('subtitle')}</p>
-          </div>
-          <Button
-            id="create-ticket-button"
-            className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] px-4 py-2"
-            onClick={() => setIsAddTicketOpen(true)}
-          >
-            {t('createButton')}
-          </Button>
-        </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <CustomSelect
             options={statusOptions}
             value={selectedStatus}
@@ -754,6 +741,14 @@ export function TicketList() {
             >
               <XCircle className="h-4 w-4" />
               Reset
+            </Button>
+
+            <Button
+              id="create-ticket-button"
+              className="ml-auto bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] px-4 py-2 shrink-0"
+              onClick={() => setIsAddTicketOpen(true)}
+            >
+              {t('createButton')}
             </Button>
         </div>
       </div>

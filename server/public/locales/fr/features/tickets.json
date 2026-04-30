@@ -56,7 +56,9 @@
       "createFailed": "Échec de la création du ticket. Veuillez réessayer.",
       "boardRequired": "Veuillez sélectionner un tableau"
     },
-    "boardPlaceholder": "Sélectionner un tableau"
+    "boardPlaceholder": "Sélectionner un tableau",
+    "linkedToAsset": "Actif lié : {{name}}",
+    "linkedToAssetGeneric": "Actif lié"
   },
   "status": {
     "open": "Ouvert",
@@ -135,7 +137,8 @@
     "sla": "SLA",
     "updated": "Mis à jour",
     "openInNewTab": "Ouvrir dans un nouvel onglet",
-    "actions": "Actions"
+    "actions": "Actions",
+    "linkedAssets": "Actifs liés"
   },
   "actions": {
     "view": "Voir",
@@ -240,7 +243,9 @@
     "unbundleFailed": "Échec du dégroupement du ticket",
     "addToBundleFailed": "Échec de l'ajout du ticket au groupe",
     "promoteMasterFailed": "Échec de la promotion du principal",
-    "updateBundleSettingsFailed": "Échec de la mise à jour des paramètres du groupe"
+    "updateBundleSettingsFailed": "Échec de la mise à jour des paramètres du groupe",
+    "assetLoadFailed": "Échec du chargement des détails de l'actif",
+    "assetNotFound": "Actif introuvable"
   },
   "conversation": {
     "comments": "Commentaires",
@@ -1096,6 +1101,7 @@
       "childrenDescription": "Tickets enfants regroupés dans ce ticket maître"
     }
   },
+  "invalidTicketData": "Données du ticket non valides",
   "timeEntries": {
     "title": "Temps enregistré",
     "loading": "Chargement des entrées de temps…",

@@ -101,7 +101,8 @@
     "notAssigned": "No asignado",
     "viewDetails": "Ver detalles",
     "edit": "Editar",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "rowActionsLabel": "Acciones de fila"
   },
   "details": {
     "title": "Detalles de la cita",
@@ -138,5 +139,21 @@
     "on": "el",
     "declined": "Rechazado:",
     "invalidDateTime": "Fecha/hora no válida"
-  }
+  },
+  "views": {
+    "list": "Lista",
+    "calendar": "Calendario",
+    "label": "Cambiar vista"
+  },
+  "calendar": {
+    "today": "Hoy",
+    "more": "más",
+    "label": "Calendario de citas",
+    "previousMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "cellWithCount": "{{date}}, {{count}} citas",
+    "moreAria": "Mostrar {{count}} más el {{date}}",
+    "requestOnDate": "Solicitar cita el {{date}}"
+  },
+  "backToAppointments": "Volver a citas"
 }

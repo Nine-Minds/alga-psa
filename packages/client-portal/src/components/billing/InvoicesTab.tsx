@@ -44,6 +44,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [selectedInvoice, setSelectedInvoice] = useState<InvoiceViewModel | null>(null);
   const [downloadingInvoices, setDownloadingInvoices] = useState<Set<string>>(new Set());
   const [sendingEmails, setSendingEmails] = useState<Set<string>>(new Set());
@@ -298,8 +299,12 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
           columns={invoiceColumns}
           pagination={true}
           currentPage={currentPage}
-          onPageChange={setCurrentPage}
-          pageSize={10}
+          onPageChange={(p) => setCurrentPage(p)}
+          pageSize={pageSize}
+          onItemsPerPageChange={(size) => {
+            setPageSize(size);
+            setCurrentPage(1);
+          }}
           onRowClick={handleInvoiceClick}
         />
         {invoices.length === 0 && (

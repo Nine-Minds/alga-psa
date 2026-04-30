@@ -1,4 +1,19 @@
 {
+  "views": {
+    "list": "55555",
+    "calendar": "55555",
+    "label": "55555"
+  },
+  "calendar": {
+    "today": "55555",
+    "more": "55555",
+    "label": "55555",
+    "previousMonth": "55555",
+    "nextMonth": "55555",
+    "cellWithCount": "55555 {{date}} 55555 {{count}} 55555",
+    "moreAria": "55555 {{count}} 55555 {{date}} 55555",
+    "requestOnDate": "55555 {{date}} 55555"
+  },
   "modal": {
     "title": "55555",
     "editTitle": "55555",
@@ -101,7 +116,8 @@
     "notAssigned": "55555",
     "viewDetails": "55555",
     "edit": "55555",
-    "cancel": "55555"
+    "cancel": "55555",
+    "rowActionsLabel": "55555"
   },
   "details": {
     "title": "55555",
@@ -138,5 +154,6 @@
     "on": "55555",
     "declined": "55555",
     "invalidDateTime": "55555"
-  }
+  },
+  "backToAppointments": "55555"
 }

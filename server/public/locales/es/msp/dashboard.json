@@ -155,6 +155,11 @@
       "restoreFailed": "No se pudo restaurar el paso de incorporación."
     }
   },
+  "greeting": {
+    "morning": "Buenos días",
+    "afternoon": "Buenas tardes",
+    "evening": "Buenas noches"
+  },
   "mspDashboard": "Panel MSP",
   "mobileApp": {
     "title": "Descarga la aplicación móvil de AlgaPSA",

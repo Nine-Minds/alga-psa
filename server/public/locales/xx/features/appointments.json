@@ -1,4 +1,19 @@
 {
+  "views": {
+    "list": "11111",
+    "calendar": "11111",
+    "label": "11111"
+  },
+  "calendar": {
+    "today": "11111",
+    "more": "11111",
+    "label": "11111",
+    "previousMonth": "11111",
+    "nextMonth": "11111",
+    "cellWithCount": "11111 {{date}} 11111 {{count}} 11111",
+    "moreAria": "11111 {{count}} 11111 {{date}} 11111",
+    "requestOnDate": "11111 {{date}} 11111"
+  },
   "modal": {
     "title": "11111",
     "editTitle": "11111",
@@ -101,7 +116,8 @@
     "notAssigned": "11111",
     "viewDetails": "11111",
     "edit": "11111",
-    "cancel": "11111"
+    "cancel": "11111",
+    "rowActionsLabel": "11111"
   },
   "details": {
     "title": "11111",
@@ -138,5 +154,6 @@
     "on": "11111",
     "declined": "11111",
     "invalidDateTime": "11111"
-  }
+  },
+  "backToAppointments": "11111"
 }

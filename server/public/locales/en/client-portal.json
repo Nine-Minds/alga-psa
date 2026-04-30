@@ -1,7 +1,7 @@
 {
   "nav": {
     "dashboard": "Dashboard",
-    "tickets": "Support Tickets",
+    "tickets": "Tickets",
     "projects": "Projects",
     "appointments": "Appointments",
     "billing": "Billing",
@@ -11,11 +11,78 @@
     "account": "Account",
     "signOut": "Sign out",
     "clientPortal": "Client Portal",
+    "clientPortalLabel": "Client portal",
     "portal": "Portal",
     "notifications": "Notifications",
     "documents": "Documents",
     "knowledgeBase": "Knowledge Base",
-    "requestServices": "Request Services"
+    "requestServices": "Service Requests",
+    "home": "Home",
+    "myTickets": "My tickets",
+    "newRequest": "New request",
+    "schedule": "Schedule",
+    "myDevices": "My devices",
+    "helpCenter": "Help center",
+    "organization": "Organization",
+    "supportCard": {
+      "title": "Need urgent help?",
+      "description": "Reach out any time for assistance."
+    },
+    "sections": {
+      "workspace": "Workspace",
+      "resources": "Resources",
+      "more": "More",
+      "apps": "Apps"
+    }
+  },
+  "sidebar": {
+    "goToDashboard": "Go to dashboard",
+    "logoAlt": "Client Portal Logo",
+    "expandSidebar": "Expand sidebar",
+    "collapseSidebar": "Collapse sidebar"
+  },
+  "devices": {
+    "pageTitle": "My devices",
+    "loading": "Loading devices…",
+    "statusOkTitle": "All devices active",
+    "statusOkBody": "{{count}} devices reporting in",
+    "empty": {
+      "title": "No devices yet",
+      "body": "Devices your provider manages will appear here."
+    },
+    "types": {
+      "workstation": "Workstations",
+      "server": "Servers",
+      "mobile": "Mobile",
+      "printer": "Printers",
+      "network": "Network",
+      "unknown": "Other"
+    },
+    "statusWarnTitle": "Some devices inactive",
+    "statusWarnBody": "{{active}} active · {{inactive}} inactive",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "searchPlaceholder": "Search by name, tag, or serial",
+    "filters": {
+      "allTypes": "All types",
+      "allStatuses": "All statuses"
+    },
+    "clearFilters": "Clear filters",
+    "columns": {
+      "name": "Name",
+      "type": "Type",
+      "status": "Status",
+      "location": "Location",
+      "updated": "Updated",
+      "actions": "Actions"
+    },
+    "notAvailable": "N/A",
+    "detailsTitle": "Asset details",
+    "createTicket": "Create ticket",
+    "createTicketForDevice": "Create a ticket for this device",
+    "rowActionsLabel": "Row actions"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -26,17 +93,97 @@
       "openTickets": "Open Support Tickets",
       "activeProjects": "Open Projects",
       "pendingInvoices": "Pending Invoices",
-      "activeAssets": "Active Assets"
+      "activeAssets": "Active Assets",
+      "upcomingVisits": "Upcoming visits",
+      "activeDevices": "Active devices",
+      "openTicketsHint": "Active support",
+      "activeProjectsHint": "In progress",
+      "nextLabel": "Next: {{when}}",
+      "noneScheduled": "None scheduled",
+      "deviceStatusHint": "Managed endpoints",
+      "serviceRequests": "Service requests",
+      "serviceRequestsHint": "Total submissions",
+      "openTicketsDescription": "Support tickets we are still working on.",
+      "activeProjectsDescription": "Projects we are delivering for your team.",
+      "serviceRequestsDescription": "Structured requests you have submitted from the catalog.",
+      "upcomingVisitsDescription": "Scheduled appointments with our technicians.",
+      "activeDevicesDescription": "Endpoints we currently manage and monitor."
+    },
+    "welcomeBack": "Welcome back",
+    "heroSubtitle": "Here's a snapshot of your IT support activity. Our team is standing by to help you stay productive.",
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    },
+    "nextToday": "Today",
+    "nextTomorrow": "Tomorrow",
+    "recentTickets": {
+      "title": "Recent tickets",
+      "viewAll": "View all",
+      "id": "ID",
+      "subject": "Subject",
+      "status": "Status",
+      "priority": "Priority",
+      "updated": "Updated",
+      "empty": "No active tickets — nice!",
+      "countLabel": "{{count}} shown"
+    },
+    "activity": {
+      "title": "Recent activity",
+      "subtitle": "Latest updates across your account",
+      "empty": "No recent activity yet",
+      "emptyHint": "When tickets are updated or invoices arrive, you will see them here.",
+      "viewTickets": "View all tickets",
+      "titles": {
+        "ticket": "New ticket: {{name}}",
+        "invoice": "Invoice {{name}} generated",
+        "asset": "Asset maintenance: {{name}}",
+        "project": "Project updated: {{name}}",
+        "quote": {
+          "_default": "Quote {{name}}",
+          "sent": "Quote {{name}} sent for review",
+          "accepted": "Quote {{name}} accepted",
+          "rejected": "Quote {{name}} rejected",
+          "expired": "Quote {{name}} expired"
+        },
+        "service_request": {
+          "_default": "Service request: {{name}}",
+          "pending": "Service request submitted: {{name}}",
+          "succeeded": "Service request fulfilled: {{name}}",
+          "failed": "Service request failed: {{name}}"
+        },
+        "appointment": {
+          "_default": "Appointment: {{name}}",
+          "pending": "Appointment requested: {{name}}",
+          "approved": "Appointment confirmed: {{name}}",
+          "declined": "Appointment declined: {{name}}",
+          "cancelled": "Appointment cancelled: {{name}}"
+        }
+      }
+    },
+    "devices": {
+      "title": "Your devices",
+      "viewAll": "View all",
+      "countLabel": "{{count}} managed",
+      "emptyShort": "No devices yet",
+      "emptyBody": "Devices your provider manages will appear here.",
+      "healthy": "Healthy",
+      "inactive": "Inactive",
+      "active": "Active"
     },
     "quickActions": {
       "title": "Quick Actions",
-      "createTicket": "Create Support Ticket",
-      "requestAppointment": "Request Appointment",
-      "viewLatestInvoice": "View Latest Invoice"
+      "createTicket": "Create ticket",
+      "requestAppointment": "Request appointment",
+      "viewLatestInvoice": "View Latest Invoice",
+      "newServiceRequest": "New service request"
     },
     "appointments": {
       "title": "Upcoming Appointments",
       "noUpcoming": "No upcoming appointments. Request one now!",
+      "noUpcomingShort": "Nothing on the calendar",
+      "countLabel": "{{count}} upcoming",
       "requestButton": "Request Appointment",
       "viewAll": "View all appointments →",
       "technician": "Technician"
@@ -44,7 +191,13 @@
     "recentActivity": {
       "title": "Recent Activity"
     },
-    "viewAll": "View all {{item}} →"
+    "viewAll": "View all {{item}} →",
+    "timeAgo": {
+      "justNow": "just now",
+      "minutes": "{{count}} min ago",
+      "hours": "{{count}} h ago",
+      "days": "{{count}}d ago"
+    }
   },
   "auth": {
     "signIn": "Sign In",

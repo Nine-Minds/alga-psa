@@ -155,6 +155,11 @@
       "restoreFailed": "Failed to restore onboarding step."
     }
   },
+  "greeting": {
+    "morning": "Bom dia",
+    "afternoon": "Boa tarde",
+    "evening": "Boa noite"
+  },
   "mspDashboard": "Painel MSP",
   "mobileApp": {
     "title": "Download AlgaPSA Mobile app",

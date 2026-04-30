@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -11,12 +11,16 @@ export interface MyRequestsTableRow {
   request_name: string;
   execution_status: 'pending' | 'succeeded' | 'failed';
   submitted_at: string;
+  created_ticket_id?: string | null;
+  ticket_number?: string | null;
 }
 
 interface MyRequestsTableLabels {
   request: string;
   submitted: string;
   status: string;
+  ticket: string;
+  noTicket: string;
   details: string;
   view: string;
   unknownDate: string;
@@ -41,6 +45,8 @@ function formatDateTime(value: string, unknownLabel: string): string {
 }
 
 export function MyRequestsTable({ rows, labels }: MyRequestsTableProps) {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const columns = useMemo<ColumnDefinition<MyRequestsTableRow>[]>(
     () => [
       {
@@ -74,6 +80,24 @@ export function MyRequestsTable({ rows, labels }: MyRequestsTableProps) {
         },
       },
       {
+        title: labels.ticket,
+        dataIndex: 'created_ticket_id',
+        sortable: false,
+        render: (_value, row) => {
+          if (!row.created_ticket_id) {
+            return <span className="text-[rgb(var(--color-text-500))]">{labels.noTicket}</span>;
+          }
+          return (
+            <Link
+              href={`/client-portal/tickets/${row.created_ticket_id}`}
+              className="text-[rgb(var(--color-primary-600))] hover:underline"
+            >
+              {row.ticket_number ? `#${row.ticket_number}` : labels.view}
+            </Link>
+          );
+        },
+      },
+      {
         title: labels.details,
         dataIndex: 'submission_id',
         sortable: false,
@@ -96,9 +120,13 @@ export function MyRequestsTable({ rows, labels }: MyRequestsTableProps) {
       data={rows}
       columns={columns}
       pagination
-      currentPage={1}
-      pageSize={25}
-      onPageChange={() => {}}
+      currentPage={currentPage}
+      onPageChange={setCurrentPage}
+      pageSize={pageSize}
+      onItemsPerPageChange={(size) => {
+        setPageSize(size);
+        setCurrentPage(1);
+      }}
     />
   );
 }

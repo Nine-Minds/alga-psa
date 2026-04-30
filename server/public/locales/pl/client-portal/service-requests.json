@@ -1,11 +1,12 @@
 {
   "catalog": {
-    "title": "Zgłoszenia usług",
-    "description": "Przeglądaj opublikowane usługi i przesyłaj ustrukturyzowane zgłoszenia.",
+    "title": "Zgłoszenia serwisowe",
+    "description": "Wyślij ustrukturyzowane zgłoszenie, a my automatycznie utworzymy zgłoszenie.",
     "myRequests": "Moje zgłoszenia",
     "empty": "Obecnie nie są dostępne żadne usługi zgłoszeń.",
     "fallbackCategory": "Usługa",
-    "noDescription": "Nie podano opisu"
+    "noDescription": "Nie podano opisu",
+    "newRequestHeading": "Wyślij nowe zgłoszenie"
   },
   "detail": {
     "version": "Wersja {{version}}",
@@ -30,7 +31,8 @@
       "request": "Zgłoszenie",
       "submitted": "Przesłano",
       "status": "Status",
-      "details": "Szczegóły"
+      "details": "Szczegóły",
+      "ticket": "Zgłoszenie"
     },
     "view": "Zobacz",
     "unknownDate": "Nieznana",
@@ -38,7 +40,8 @@
       "pending": "Oczekuje",
       "succeeded": "Zakończone",
       "failed": "Nieudane"
-    }
+    },
+    "noTicket": "Brak zgłoszenia"
   },
   "submissionDetail": {
     "backToMyRequests": "Powrót do Moich zgłoszeń",
@@ -54,5 +57,15 @@
     "noAttachments": "Brak załączników.",
     "fileIdLabel": "ID pliku: {{id}}",
     "fileTypeLabel": "Typ: {{mime}}"
+  },
+  "recent": {
+    "title": "Twoje ostatnie zgłoszenia",
+    "viewAll": "Zobacz wszystkie",
+    "empty": "Brak wysłanych zgłoszeń.",
+    "ticket": "Zgłoszenie #{{number}}",
+    "noTicket": "Brak zgłoszenia"
+  },
+  "myRequestsAll": {
+    "title": "Twoje zgłoszenia"
   }
 }

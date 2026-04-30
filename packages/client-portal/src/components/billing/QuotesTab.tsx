@@ -35,6 +35,7 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -111,7 +112,11 @@ const QuotesTab: React.FC<QuotesTabProps> = React.memo(({ formatCurrency, format
         pagination={true}
         currentPage={currentPage}
         onPageChange={setCurrentPage}
-        pageSize={10}
+        pageSize={pageSize}
+        onItemsPerPageChange={(size) => {
+          setPageSize(size);
+          setCurrentPage(1);
+        }}
         onRowClick={(quote) => router.push(`/client-portal/billing/quotes/${quote.quote_id}`)}
       />
       {quotes.length === 0 && (

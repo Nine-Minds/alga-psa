@@ -2,10 +2,10 @@
  * Server-side i18n utilities for Next.js App Router
  */
 
+import fs from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import i18next, { TFunction } from 'i18next';
-import FsBackend from 'i18next-fs-backend';
-import fs from 'fs';
-import path from 'path';
 import { cache } from 'react';
 import { cookies, headers } from 'next/headers.js';
 import {
@@ -18,38 +18,55 @@ import {
 import { getConnection } from '@alga-psa/db/tenant';
 
 /**
- * Resolve the on-disk path to the locales directory.
+ * Resolve the absolute path to the locales directory.
  *
- * Why: server-side i18n previously fetched its own static locale files over
- * HTTP, which deadlocked SSR and broke whenever the dev port differed from
- * NEXT_PUBLIC_URL. Reading from disk avoids both.
+ * Server components can run with `process.cwd()` pointing at different roots
+ * depending on whether the dev server starts from `server/`, `ee/server/`, or
+ * the monorepo root. We avoid HTTP fetch loaders so SSR doesn't depend on the
+ * dev port — historically `i18next-http-backend` defaulted to `localhost:3000`,
+ * which silently failed when the dev server ran on a different port and
+ * surfaced as raw translation keys in the UI.
+ *
+ * Env overrides (in priority order): `I18N_LOCALES_DIR`, `ALGA_LOCALES_DIR`.
  */
-function resolveLocalesLoadPath(): string {
-  if (process.env.I18N_LOCALES_DIR) {
-    return path.join(process.env.I18N_LOCALES_DIR, '{{lng}}/{{ns}}.json');
-  }
+function getLocalesDir(): string {
+  const override = process.env.I18N_LOCALES_DIR || process.env.ALGA_LOCALES_DIR;
+  if (override) return override;
 
   const candidates = [
-    path.join(process.cwd(), 'public/locales'),            // server/ as cwd
-    path.join(process.cwd(), '../server/public/locales'),  // ee/server/ as cwd
-    path.join(process.cwd(), 'server/public/locales'),     // monorepo root as cwd
+    path.resolve(process.cwd(), 'public/locales'),            // server/ as cwd
+    path.resolve(process.cwd(), '../server/public/locales'),  // ee/server/ as cwd
+    path.resolve(process.cwd(), 'server/public/locales'),     // monorepo root as cwd
   ];
 
   for (const dir of candidates) {
     try {
-      if (fs.existsSync(dir)) {
-        return path.join(dir, '{{lng}}/{{ns}}.json');
-      }
+      if (existsSync(dir)) return dir;
     } catch {
       // ignore and try next candidate
     }
   }
 
-  return path.join(process.cwd(), 'public/locales/{{lng}}/{{ns}}.json');
+  return path.resolve(process.cwd(), 'public/locales');
+}
+
+async function loadNamespaceFromDisk(
+  locale: SupportedLocale,
+  namespace: string,
+): Promise<Record<string, unknown> | null> {
+  const filePath = path.join(getLocalesDir(), locale, `${namespace}.json`);
+  try {
+    const raw = await fs.readFile(filePath, 'utf8');
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Initialize i18next for server-side rendering
+ * Initialize i18next for server-side rendering by reading locale JSON
+ * directly from disk. Loads each requested namespace plus the fallback locale
+ * so missing keys still resolve.
  */
 async function initI18next(locale: SupportedLocale, namespaces: string[] = []) {
   const instance = i18next.createInstance();
@@ -58,20 +75,28 @@ async function initI18next(locale: SupportedLocale, namespaces: string[] = []) {
     new Set<string>([...(I18N_CONFIG.ns ?? ['common']), ...namespaces])
   );
 
-  await instance
-    .use(FsBackend)
-    .init({
-      ...I18N_CONFIG,
-      ns: requestedNamespaces,
-      lng: locale,
-      backend: {
-        loadPath: resolveLocalesLoadPath(),
-      },
-    });
+  await instance.init({
+    ...I18N_CONFIG,
+    ns: requestedNamespaces,
+    lng: locale,
+    // Resources are added below; disable backend to avoid extra fetching.
+    initImmediate: false,
+  });
 
-  if (namespaces.length > 0) {
-    await instance.loadNamespaces(namespaces);
-  }
+  const fallback =
+    typeof I18N_CONFIG.fallbackLng === 'string' ? I18N_CONFIG.fallbackLng : LOCALE_CONFIG.defaultLocale;
+  const localesToLoad = locale === fallback ? [locale] : [locale, fallback as SupportedLocale];
+
+  await Promise.all(
+    localesToLoad.flatMap((lng) =>
+      requestedNamespaces.map(async (ns) => {
+        const data = await loadNamespaceFromDisk(lng, ns);
+        if (data) {
+          instance.addResourceBundle(lng, ns, data, true, true);
+        }
+      })
+    )
+  );
 
   return instance;
 }

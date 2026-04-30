@@ -101,7 +101,8 @@
     "notAssigned": "Non assigné",
     "viewDetails": "Voir les détails",
     "edit": "Modifier",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "rowActionsLabel": "Actions de ligne"
   },
   "details": {
     "title": "Détails du rendez-vous",
@@ -138,5 +139,21 @@
     "on": "le",
     "declined": "Refusé :",
     "invalidDateTime": "Date/heure invalide"
-  }
+  },
+  "views": {
+    "list": "Liste",
+    "calendar": "Calendrier",
+    "label": "Changer de vue"
+  },
+  "calendar": {
+    "today": "Aujourd'hui",
+    "more": "plus",
+    "label": "Calendrier des rendez-vous",
+    "previousMonth": "Mois précédent",
+    "nextMonth": "Mois suivant",
+    "cellWithCount": "{{date}}, {{count}} rendez-vous",
+    "moreAria": "Afficher {{count}} de plus le {{date}}",
+    "requestOnDate": "Demander un rendez-vous le {{date}}"
+  },
+  "backToAppointments": "Retour aux rendez-vous"
 }

@@ -26,6 +26,7 @@ export function MspAssetCrossFeatureProvider({ children }: { children: ReactNode
         onTicketAdded={props.onTicketAdded}
         prefilledClient={props.prefilledClient}
         assetId={props.assetId}
+        assetName={props.assetName}
       />
     ),
     []

@@ -155,6 +155,11 @@
       "restoreFailed": "Nie udało się przywrócić kroku onboardingu."
     }
   },
+  "greeting": {
+    "morning": "Dzień dobry",
+    "afternoon": "Dzień dobry",
+    "evening": "Dobry wieczór"
+  },
   "mspDashboard": "Pulpit MSP",
   "mobileApp": {
     "title": "Pobierz aplikację mobilną AlgaPSA",

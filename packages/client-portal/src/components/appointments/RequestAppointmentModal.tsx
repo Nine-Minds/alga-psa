@@ -37,6 +37,8 @@ interface RequestAppointmentModalProps {
   onOpenChange: (open: boolean) => void;
   onAppointmentRequested?: () => void;
   editingAppointment?: AppointmentRequest | null;
+  /** Pre-fill the date selector when opening (e.g., from calendar day "+ button"). */
+  initialDate?: Date | null;
 }
 
 interface Service {
@@ -72,7 +74,8 @@ export function RequestAppointmentModal({
   open,
   onOpenChange,
   onAppointmentRequested,
-  editingAppointment
+  editingAppointment,
+  initialDate,
 }: RequestAppointmentModalProps) {
   const { t } = useTranslation('features/appointments');
   const { t: tCommon } = useTranslation('common');
@@ -136,6 +139,13 @@ export function RequestAppointmentModal({
       setLinkedTicketId(editingAppointment.ticket_id || '__no_ticket__');
     }
   }, [open, editingAppointment]);
+
+  // Pre-fill date when launched from a specific calendar day.
+  useEffect(() => {
+    if (open && !editingAppointment && initialDate) {
+      setSelectedDate(initialDate);
+    }
+  }, [open, editingAppointment, initialDate]);
 
   // Load services when modal opens
   useEffect(() => {
