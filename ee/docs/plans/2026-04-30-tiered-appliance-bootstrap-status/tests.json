@@ -11,7 +11,7 @@
   {
     "id": "T002",
     "description": "Unit: readiness rollup reports LOGIN_READY=true and BACKGROUND_READY=false as Ready with background issues when only background components fail.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F003",

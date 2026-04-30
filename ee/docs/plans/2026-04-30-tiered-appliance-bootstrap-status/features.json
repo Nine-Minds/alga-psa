@@ -11,7 +11,7 @@
   {
     "id": "F002",
     "description": "Implement tiered readiness rollups for PLATFORM_READY, CORE_READY, BOOTSTRAP_READY, LOGIN_READY, BACKGROUND_READY, and FULLY_HEALTHY.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Readiness Model",
       "User-facing Rollup States"
@@ -20,7 +20,7 @@
   {
     "id": "F003",
     "description": "Classify user-facing rollup states as Installing, Ready to log in, Ready with background issues, Fully healthy, or Failed/action required.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "User-facing Rollup States"
     ]

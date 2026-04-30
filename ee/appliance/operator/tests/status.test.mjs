@@ -138,6 +138,21 @@ test('T001: canonical status shape includes release, urls, rollup, tiers, blocke
   assert.equal(status.canonical.recentEvents.length, 1);
 });
 
+test('T002: login-ready with background failures rolls up as ready_with_background_issues', async () => {
+  const responses = healthyResponses();
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n msp get deployment/workflow-worker -o json'] = {
+    ok: true,
+    output: JSON.stringify({ spec: { replicas: 1 }, status: { readyReplicas: 0 } }),
+  };
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+
+  assert.equal(status.canonical.tiers.login.ready, true);
+  assert.equal(status.canonical.tiers.background.ready, false);
+  assert.equal(status.canonical.rollup.state, 'ready_with_background_issues');
+});
+
 test('T004: status dashboard model includes talos, cluster, flux, workloads, release, and config paths', async () => {
   const releasesDir = releaseFixtureDir();
   const status = await collectStatus(buildEnv(releasesDir), {

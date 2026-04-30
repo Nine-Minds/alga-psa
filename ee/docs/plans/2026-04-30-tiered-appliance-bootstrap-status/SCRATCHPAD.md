@@ -149,7 +149,10 @@ Suggested implementation order:
 ### Completed
 
 - `F001`: Canonical appliance status JSON model now emitted by `collectStatus`.
+- `F002`: Implemented tiered readiness rollups for platform/core/bootstrap/login/background/full health.
+- `F003`: Implemented user-facing rollup classification for installing/ready/ready-with-issues/fully-healthy/failed-action-required.
 - `T001`: Unit test added for canonical JSON shape in healthy synthetic fixture.
+- `T002`: Unit test added for login-ready + background-failed rollup behavior.
 
 ### What Changed
 
@@ -163,6 +166,12 @@ Suggested implementation order:
 - Preserved existing top-level status fields (`host`, `cluster`, `flux`, `workloads`, `release`, `topBlocker`, etc.) to avoid breaking current CLI/TUI consumers while introducing canonical shape.
 - Added cluster event collection (`kubectl get events --sort-by=.metadata.creationTimestamp -A -o json`) and normalized event summaries.
 - Added `T001` assertions in `ee/appliance/operator/tests/status.test.mjs` and mocked event query output.
+- Refined tier calculations to enforce:
+  - `core` requires db + redis + pgbouncer all ready.
+  - `login` requires `core` + alga-core ready.
+  - `background` computed independently from login-critical services.
+  - `platform` depends on Talos/Kubernetes/Flux source health.
+- Added `T002` case asserting `LOGIN_READY=true` and `BACKGROUND_READY=false` produce `ready_with_background_issues`.
 
 ### Decisions / Rationale
 

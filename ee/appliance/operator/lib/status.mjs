@@ -230,14 +230,16 @@ function toCanonicalStatus(status) {
   }));
 
   const coreComponentNames = new Set(['db', 'redis', 'pgbouncer']);
-  const coreReady = componentRows
-    .filter((component) => coreComponentNames.has(component.name))
-    .every((component) => component.ready);
+  const coreRows = componentRows.filter((component) => coreComponentNames.has(component.name));
+  const coreReady = coreRows.length > 0 && coreRows.every((component) => component.ready);
   const loginReady = coreReady && componentRows.find((component) => component.name === 'alga-core')?.ready === true;
   const backgroundRows = componentRows.filter((component) => component.tier === 'background');
-  const backgroundReady = backgroundRows.length > 0 && backgroundRows.every((component) => component.ready);
+  const backgroundReady = backgroundRows.every((component) => component.ready);
   const platformReady =
-    status.host.status === 'healthy' && status.cluster.apiReachable && status.cluster.status === 'healthy' && status.flux.status !== 'unavailable';
+    status.host.status === 'healthy' &&
+    status.cluster.apiReachable &&
+    status.cluster.status === 'healthy' &&
+    status.flux.status === 'healthy';
   const bootstrapReady = status.flux.helmStatus === 'healthy' && coreReady;
   const fullyHealthy = loginReady && backgroundReady;
 
@@ -259,7 +261,7 @@ function toCanonicalStatus(status) {
   let rollupMessage = 'Appliance installation is in progress.';
   let nextAction = 'Wait for readiness checks to complete.';
 
-  if (!platformReady || !coreReady || !bootstrapReady) {
+  if (!platformReady || !coreReady || !bootstrapReady || !loginReady) {
     if (blockers.length > 0) {
       rollupState = 'failed_action_required';
       rollupMessage = 'A core platform blocker requires action before login is available.';
