@@ -204,3 +204,32 @@ Suggested implementation order:
 
 - `kubeJson()` accepts resource tokens, so event retrieval with sort flags must use a direct `kubectl` command invocation rather than passing a combined pseudo-resource string.
 - `ee/appliance/tests/run-plan-tests.sh` currently fails earlier in this environment with `release-version must follow x.y.z` from the build-images dry-run section, so bootstrap token behavior was validated using direct bootstrap dry-run invocation instead of full script pass.
+
+### 2026-04-29 Additional Progress
+
+- `F008`: Added early-installed `appliance-status` manifest set under Flux base platform resources with token-protected HTTP endpoints on node port `8080`.
+
+### F008 Implementation Details
+
+- Added `ee/appliance/flux/base/platform/appliance-status.yaml` containing:
+  - `ServiceAccount` in `appliance-system`.
+  - `Deployment` (`appliance-status`) using `node:20-alpine` with:
+    - host exposure via `hostPort: 8080` for predictable `http://<node-ip>:8080` access.
+    - token auth sourced from Secret `appliance-status-auth` key `token`.
+    - Bearer token auth (`Authorization: Bearer <token>`) and query-token fallback (`?token=<token>`).
+    - `GET /api/status` returning bootstrap placeholder JSON.
+    - `GET /healthz` probes for liveness/readiness.
+- Updated `ee/appliance/flux/base/kustomization.yaml` to include `platform/appliance-status.yaml` before app releases.
+- Updated `ee/appliance/flux/base/namespaces.yaml` to include `appliance-system` namespace in GitOps-managed base.
+- Extended `ee/appliance/tests/run-plan-tests.sh` to require and client-validate `flux/base/platform/appliance-status.yaml`.
+
+### Validation Run
+
+- `bash -n ee/appliance/scripts/bootstrap-appliance.sh`
+- `kubectl apply --dry-run=client -f ee/appliance/flux/base/platform/appliance-status.yaml`
+- `bash ee/appliance/tests/run-plan-tests.sh` (still fails in this environment at existing check: `release-version must follow x.y.z`)
+
+### Notes / Gotchas
+
+- This first `appliance-status` workload intentionally provides a minimal token-gated surface and placeholder `/api/status` payload; canonical collector wiring and full overview/diagnostics pages remain tracked by `F009` and `F010`.
+- `hostPort: 8080` is used for deterministic access on single-node appliance installs where NodePort ranges would not map to `8080` by default.

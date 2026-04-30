@@ -61,7 +61,7 @@
   {
     "id": "F008",
     "description": "Add an early-installed appliance-status chart or manifest set that exposes a token-protected status service on a predictable node port, defaulting to 8080.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Proposed Architecture",
       "Bootstrap and Flux Flow"

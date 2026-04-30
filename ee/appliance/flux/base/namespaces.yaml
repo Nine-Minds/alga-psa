@@ -6,6 +6,11 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
+  name: appliance-system
+---
+apiVersion: v1
+kind: Namespace
+metadata:
   name: msp
   labels:
     pod-security.kubernetes.io/enforce: privileged

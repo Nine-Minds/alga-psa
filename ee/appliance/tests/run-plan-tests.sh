@@ -30,6 +30,7 @@ require_dir "$ROOT/ee/appliance/tests"
 
 require_file "$ROOT/ee/appliance/README.md"
 require_file "$ROOT/ee/appliance/manifests/local-path-storage.yaml"
+require_file "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml"
 require_file "$ROOT/ee/appliance/schematics/metal-amd64.yaml"
 require_file "$ROOT/ee/appliance/releases/schema.json"
 require_file "$ROOT/ee/appliance/releases/channels/candidate.json"
@@ -150,6 +151,7 @@ jq -e '.app.releaseBranch == "release/1.0-rc5"' "$ROOT/ee/appliance/releases/1.0
 jq -e '.app.images.algaCore == "94446747"' "$ROOT/ee/appliance/releases/1.0-rc5/release.json" >/dev/null
 yq eval '.customization' "$ROOT/ee/appliance/schematics/metal-amd64.yaml" >/dev/null
 kubectl apply --dry-run=client -f "$ROOT/ee/appliance/manifests/local-path-storage.yaml" >/dev/null
+kubectl apply --dry-run=client -f "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml" >/dev/null
 
 cat <<'EOF'
 appliance image scaffolding checks passed
