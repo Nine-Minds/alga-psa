@@ -31,6 +31,7 @@ REPO_PATH="ee/appliance/flux/base"
 OUTPUT_DIR_OVERRIDE=""
 DRY_RUN=false
 PREPULL_IMAGES=false
+SKIP_IMAGE_TAG_VALIDATION=false
 STATUS_TOKEN=""
 STATUS_TOKEN_PATH=""
 TEMP_WORK_DIR=""
@@ -79,6 +80,7 @@ Options:
   --temporal-worker-tag <tag>    Override manifest tag for temporal-worker image
   --alga-auth-key <value>        ALGA_AUTH_KEY value for msp/alga-psa-shared
   --prepull-images               Pre-pull large app images onto the Talos node before GitOps apply
+  --skip-image-tag-validation    Skip remote background image-tag existence checks (not recommended)
   --dry-run                      Print the planned commands without mutating cluster state
   --help                         Show this help
 
@@ -456,6 +458,61 @@ release_field() {
   jq -r "$jq_filter" "$REPO_ROOT/ee/appliance/releases/$RELEASE_VERSION/release.json"
 }
 
+ghcr_tag_exists() {
+  local repository="$1"
+  local tag="$2"
+  local token
+  local manifest_url
+
+  token="$(
+    curl -fsSL "https://ghcr.io/token?scope=repository:${repository}:pull" | jq -r '.token // empty'
+  )" || return 1
+  [ -n "$token" ] || return 1
+
+  manifest_url="https://ghcr.io/v2/${repository}/manifests/${tag}"
+  curl -fsSI \
+    -H "Authorization: Bearer $token" \
+    -H "Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json" \
+    "$manifest_url" >/dev/null
+}
+
+validate_background_image_tags() {
+  if $DRY_RUN; then
+    echo "+ validate remote background image tags in GHCR"
+    return 0
+  fi
+
+  if $SKIP_IMAGE_TAG_VALIDATION; then
+    echo "Skipping remote image-tag validation by request (--skip-image-tag-validation)."
+    return 0
+  fi
+
+  local missing=()
+  local checks=(
+    "nine-minds/workflow-worker:$WORKFLOW_WORKER_TAG"
+    "nine-minds/email-service:$EMAIL_SERVICE_TAG"
+    "nine-minds/temporal-worker:$TEMPORAL_WORKER_TAG"
+  )
+  local check
+  local repo
+  local tag
+
+  for check in "${checks[@]}"; do
+    repo="${check%%:*}"
+    tag="${check##*:}"
+    if ! ghcr_tag_exists "$repo" "$tag"; then
+      missing+=("ghcr.io/${repo}:${tag}")
+    fi
+  done
+
+  if [ "${#missing[@]}" -gt 0 ]; then
+    echo "Release artifact blocker: one or more background image tags are missing:" >&2
+    printf '  - %s\n' "${missing[@]}" >&2
+    echo "Next action: publish the missing tags or update ee/appliance/releases/$RELEASE_VERSION/release.json." >&2
+    exit 1
+  fi
+}
+
 set_yaml_value() {
   local file_path="$1"
   local dotted_path="$2"
@@ -635,7 +692,12 @@ EOF
   write_machine_config_documents
 
   chmod 600 "$CONFIG_DIR/talosconfig" "$CONFIG_DIR/controlplane.yaml"
-  TALOSCONFIG_PATH="$CONFIG_DIR/talosconfig"
+  if [ "$TALOSCONFIG_EXPLICIT" = true ]; then
+    cp "$CONFIG_DIR/talosconfig" "$TALOSCONFIG_PATH"
+    chmod 600 "$TALOSCONFIG_PATH"
+  else
+    TALOSCONFIG_PATH="$CONFIG_DIR/talosconfig"
+  fi
 }
 
 wait_for_talos_maintenance() {
@@ -1190,6 +1252,10 @@ while [ "$#" -gt 0 ]; do
       PREPULL_IMAGES=true
       shift
       ;;
+    --skip-image-tag-validation)
+      SKIP_IMAGE_TAG_VALIDATION=true
+      shift
+      ;;
     --dry-run)
       DRY_RUN=true
       shift
@@ -1208,6 +1274,7 @@ done
 
 require_command git
 require_command jq
+require_command curl
 require_command kubectl
 require_command flux
 require_command python3
@@ -1238,6 +1305,7 @@ ensure_alga_auth_secret
 apply_runtime_values
 apply_release_selection
 prepull_images
+validate_background_image_tags
 install_gitops_sync
 wait_for_bootstrap
 

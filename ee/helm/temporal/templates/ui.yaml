@@ -19,6 +19,7 @@ spec:
         {{- include "temporal.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: ui
     spec:
+      enableServiceLinks: false
       containers:
         - name: temporal-ui
           image: "{{ .Values.ui.image.repository }}:{{ .Values.ui.image.tag }}"

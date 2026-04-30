@@ -105,6 +105,13 @@ spec:
                     source: { status: 'unknown' },
                     helmReleases: [],
                   },
+                  supportBundle: {
+                    available: true,
+                    action: 'run_script',
+                    script: 'ee/appliance/scripts/collect-support-bundle.sh',
+                    requiresToken: true,
+                    note: 'Bundle download endpoint is deferred; run via CLI/operator for now.',
+                  },
                 };
               }
 

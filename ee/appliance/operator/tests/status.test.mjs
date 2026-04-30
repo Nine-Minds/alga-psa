@@ -66,7 +66,14 @@ function healthyResponses() {
     },
     'kubectl --kubeconfig /tmp/kubeconfig -n flux-system get gitrepositories.source.toolkit.fluxcd.io -o json': {
       ok: true,
-      output: JSON.stringify({ items: [{ metadata: { name: 'alga-appliance' }, status: { conditions: readyCondition('True') } }] }),
+      output: JSON.stringify({
+        items: [
+          {
+            metadata: { name: 'alga-appliance' },
+            status: { conditions: readyCondition('True'), artifact: { revision: 'sha1:1234abcd' } },
+          },
+        ],
+      }),
     },
     'kubectl --kubeconfig /tmp/kubeconfig -n flux-system get kustomizations.kustomize.toolkit.fluxcd.io -o json': {
       ok: true,
@@ -108,6 +115,10 @@ function healthyResponses() {
         ],
       }),
     },
+    'curl -ksS -I --max-time 10 https://psa.example.com': {
+      ok: true,
+      output: 'HTTP/2 302\nlocation: https://psa.example.com/msp/dashboard\n',
+    },
   };
 
   const workloadResources = [
@@ -138,6 +149,7 @@ test('T001: canonical status shape includes release, urls, rollup, tiers, blocke
   assert.equal(status.canonical.siteId, 'appliance-single-node');
   assert.equal(status.canonical.release.selectedReleaseVersion, '1.0.0');
   assert.equal(status.canonical.release.appVersion, '1.0.0');
+  assert.equal(status.canonical.release.gitRevision, 'release/1.0.0@sha1:1234abcd');
   assert.equal(status.canonical.urls.loginUrl, 'https://psa.example.com');
   assert.equal(status.canonical.urls.statusUrl, 'http://10.0.0.2:8080');
   assert.equal(status.canonical.rollup.state, 'fully_healthy');
@@ -146,6 +158,7 @@ test('T001: canonical status shape includes release, urls, rollup, tiers, blocke
   assert.equal(status.canonical.topBlockers.length, 0);
   assert.equal(status.canonical.components.length, 8);
   assert.equal(status.canonical.recentEvents.length, 1);
+  assert.equal(status.canonical.loginProbe.reachable, true);
 });
 
 test('T002: login-ready with background failures rolls up as ready_with_background_issues', async () => {

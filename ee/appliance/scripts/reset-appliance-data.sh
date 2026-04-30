@@ -153,8 +153,8 @@ spec:
             - -ec
             - |
               target="/host${STORAGE_PATH}"
-              mkdir -p "$target"
-              find "$target" -mindepth 1 -maxdepth 1 -print -exec rm -rf {} +
+              mkdir -p "\$target"
+              find "\$target" -mindepth 1 -maxdepth 1 -print -exec rm -rf {} +
           volumeMounts:
             - name: host-root
               mountPath: /host

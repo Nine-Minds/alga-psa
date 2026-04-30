@@ -450,3 +450,45 @@ Suggested implementation order:
 
 - `node --test ee/appliance/operator/tests/status.test.mjs`
 
+
+- `F022`: Added background release image-tag preflight validation before GitOps apply with explicit release-artifact blocker messaging.
+- `F023`: Fixed fresh reset helper unbound-variable failure in reset job manifest generation.
+- `F024`: Hardened explicit kubeconfig/talosconfig handling so explicit reuse paths skip Talos config generation and explicit talosconfig paths are preserved.
+- `F025`: Ensured Temporal runtime uses autosetup entrypoint and disabled Kubernetes service links for Temporal server/UI chart workloads.
+- `F026`: Tightened `LOGIN_READY` to require successful app HTTP probe (status/redirect behavior), not only pod readiness.
+- `F027`: Canonical release metadata now includes Git revision derived from Flux source artifact revision.
+- `F028`: Added support-bundle entry-point metadata to appliance-status advanced diagnostics payload.
+
+### F022-F028 Implementation Details
+
+- Updated `ee/appliance/scripts/bootstrap-appliance.sh`:
+  - Added `validate_background_image_tags()` with GHCR manifest existence checks for background images.
+  - Emits `Release artifact blocker` with missing image list and remediation when tags are absent.
+  - Added `--skip-image-tag-validation` escape hatch.
+  - Added `curl` to required commands.
+  - Preserved explicit talosconfig behavior in `generate_machine_config()` by copying generated talosconfig to explicit path instead of replacing runtime path.
+- Updated `ee/appliance/scripts/reset-appliance-data.sh`:
+  - Escaped in-job `$target` references so heredoc rendering no longer triggers `target: unbound variable` under `set -u`.
+- Updated `ee/helm/temporal/templates/deployment.yaml` and `ee/helm/temporal/templates/ui.yaml`:
+  - Added `enableServiceLinks: false`.
+- Updated `ee/appliance/operator/lib/status.mjs`:
+  - Added Flux source artifact revision projection into canonical `release.gitRevision`.
+  - Added login HTTP probe via `curl -I` and required probe success for canonical `LOGIN_READY`.
+  - Exposed probe details in canonical model (`loginProbe`).
+- Updated `ee/appliance/flux/base/platform/appliance-status.yaml` diagnostics payload with support-bundle entry-point metadata.
+- Expanded `ee/appliance/tests/run-plan-tests.sh` coverage:
+  - verifies new flux tier files exist,
+  - verifies bootstrap dry-run logs image validation phase,
+  - verifies explicit kubeconfig/talosconfig dry-run path skips Talos generation,
+  - verifies reset dry-run invocation succeeds,
+  - verifies Temporal templates include autosetup + `enableServiceLinks: false`.
+
+### Validation (F022-F028)
+
+- `node --test ee/appliance/operator/tests/status.test.mjs`
+- `bash -n ee/appliance/scripts/bootstrap-appliance.sh`
+- `bash -n ee/appliance/scripts/reset-appliance-data.sh`
+- `bash ee/appliance/scripts/reset-appliance-data.sh --kubeconfig /tmp/example.kubeconfig --force --dry-run`
+- `bash ee/appliance/scripts/bootstrap-appliance.sh ... --dry-run` (validated image-validation phase output and status URL/token output)
+- `bash ee/appliance/tests/run-plan-tests.sh` currently still stops at pre-existing `release-version must follow x.y.z` check in build-images dry-run section.
+

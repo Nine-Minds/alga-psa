@@ -40,6 +40,8 @@ require_file "$ROOT/ee/appliance/releases/schema.json"
 require_file "$ROOT/ee/appliance/releases/channels/candidate.json"
 require_file "$ROOT/ee/appliance/releases/channels/stable.json"
 require_file "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh"
+require_file "$ROOT/ee/helm/temporal/templates/deployment.yaml"
+require_file "$ROOT/ee/helm/temporal/templates/ui.yaml"
 require_file "$ROOT/ee/appliance/scripts/build-images.sh"
 require_file "$ROOT/ee/appliance/scripts/collect-support-bundle.sh"
 require_file "$ROOT/ee/appliance/scripts/install-storage.sh"
@@ -60,6 +62,7 @@ bash -n "$ROOT/ee/appliance/scripts/install-storage.sh"
 bash -n "$ROOT/ee/appliance/scripts/repair-release.sh"
 bash -n "$ROOT/ee/appliance/scripts/reset-appliance-data.sh"
 bash -n "$ROOT/ee/appliance/scripts/upgrade-appliance.sh"
+bash "$ROOT/ee/appliance/scripts/reset-appliance-data.sh" --kubeconfig /tmp/example.kubeconfig --force --dry-run >/dev/null
 
 dry_run_output="$(
   EE_APPLIANCE_SCHEMATIC_ID_OVERRIDE=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
@@ -105,11 +108,15 @@ require_text "$bootstrap_dry_run_output" "reset-appliance-data.sh"
 require_text "$bootstrap_dry_run_output" "create source git alga-appliance"
 require_text "$bootstrap_dry_run_output" "install-storage.sh --kubeconfig"
 require_text "$bootstrap_dry_run_output" "collect-support-bundle.sh"
+require_text "$bootstrap_dry_run_output" "validate remote background image tags in GHCR"
 require_text "$bootstrap_dry_run_output" "write status token to"
 require_text "$bootstrap_dry_run_output" "create/apply secret appliance-system/appliance-status-auth"
 require_text "$bootstrap_dry_run_output" "Appliance status UI:"
 require_text "$bootstrap_dry_run_output" "URL:   http://192.0.2.10:8080"
 require_text "$bootstrap_dry_run_output" "Token:"
+require_text "$(cat "$ROOT/ee/helm/temporal/templates/deployment.yaml")" 'entrypoint.sh autosetup'
+require_text "$(cat "$ROOT/ee/helm/temporal/templates/deployment.yaml")" 'enableServiceLinks: false'
+require_text "$(cat "$ROOT/ee/helm/temporal/templates/ui.yaml")" 'enableServiceLinks: false'
 require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'appUrl: "https://psa.example.test"'
 require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'host: "psa.example.test"'
 require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'domainSuffix: ""'
@@ -134,6 +141,25 @@ stale_bootstrap_dry_run_output="$(
 
 require_text "$stale_bootstrap_dry_run_output" "talosctl gen config"
 require_text "$stale_bootstrap_dry_run_output" "wait for Talos maintenance API on 192.0.2.10"
+
+explicit_cfg_tmp="$(mktemp -d)"
+printf 'apiVersion: v1\nclusters: []\ncontexts: []\nusers: []\n' > "$explicit_cfg_tmp/reuse.kubeconfig"
+printf 'context: appliance\n' > "$explicit_cfg_tmp/reuse.talosconfig"
+explicit_reuse_output="$(
+  bash "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh" \
+    --release-version 1.0-rc5 \
+    --bootstrap-mode recover \
+    --repo-url https://github.com/example/alga-psa.git \
+    --repo-branch main \
+    --kubeconfig "$explicit_cfg_tmp/reuse.kubeconfig" \
+    --talosconfig "$explicit_cfg_tmp/reuse.talosconfig" \
+    --config-dir "$explicit_cfg_tmp/site" \
+    --dry-run
+)"
+if printf '%s\n' "$explicit_reuse_output" | grep -Fq "talosctl gen config"; then
+  echo "expected explicit kubeconfig/talosconfig reuse path to skip talosctl gen config" >&2
+  exit 1
+fi
 
 upgrade_tmp="$(mktemp -d)"
 upgrade_dry_run_output="$(

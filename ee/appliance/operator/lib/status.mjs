@@ -87,6 +87,7 @@ function summarizeFluxItems(items) {
       ready: ready?.status === 'True',
       status: ready?.status || 'Unknown',
       message: ready?.message || '',
+      revision: item.status?.artifact?.revision || item.status?.lastAppliedRevision || '',
     };
   });
 }
@@ -377,7 +378,33 @@ function fluxSourcesHealthy(entries) {
   return (entries || []).length > 0 && (entries || []).every((entry) => entry.ready === true);
 }
 
+function summarizeLoginProbe(probeOutput, appUrl) {
+  const lines = String(probeOutput || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const statusLine = lines.find((line) => /^HTTP\/\d/i.test(line)) || '';
+  const code = Number.parseInt((statusLine.match(/^HTTP\/\d(?:\.\d)?\s+(\d{3})/i) || [])[1] || '', 10);
+  const locationLine = lines.find((line) => /^location:/i.test(line)) || '';
+  const location = locationLine ? locationLine.split(':').slice(1).join(':').trim() : '';
+  const appHost = appUrl ? new URL(appUrl).host : '';
+  const locationLooksValid =
+    location.includes('/msp/dashboard') || location.includes('/login') || (appHost && location.includes(appHost));
+  const redirect = [301, 302, 307, 308].includes(code);
+  const reachable = Number.isFinite(code) && code >= 200 && code < 400 && (!redirect || locationLooksValid);
+  return {
+    checked: true,
+    reachable,
+    statusCode: Number.isFinite(code) ? code : null,
+    location: location || null,
+  };
+}
+
 function toCanonicalStatus(status) {
+  const sourceRevision = (status.flux.sources || []).find((entry) => entry.name === 'alga-appliance')?.revision || null;
+  const releaseBranch = status.release.metadata?.app?.releaseBranch || null;
+  const gitRevision = sourceRevision && releaseBranch ? `${releaseBranch}@${sourceRevision}` : releaseBranch || sourceRevision;
+
   const componentRows = status.workloads.components.map((component) => ({
     name: component.name,
     tier: PSA_COMPONENTS.find((entry) => entry.name === component.name)?.tier || 'background',
@@ -390,7 +417,9 @@ function toCanonicalStatus(status) {
   const coreComponentNames = new Set(['db', 'redis', 'pgbouncer']);
   const coreRows = componentRows.filter((component) => coreComponentNames.has(component.name));
   const coreReady = coreRows.length > 0 && coreRows.every((component) => component.ready);
-  const loginReady = coreReady && componentRows.find((component) => component.name === 'alga-core')?.ready === true;
+  const webReady = componentRows.find((component) => component.name === 'alga-core')?.ready === true;
+  const loginProbeReady = status.loginProbe?.reachable === true;
+  const loginReady = coreReady && webReady && loginProbeReady;
   const backgroundRows = componentRows.filter((component) => component.tier === 'background');
   const backgroundReady = backgroundRows.every((component) => component.ready);
   const platformKustomizationReady = fluxEntryReady(status.flux.kustomizations, 'alga-platform');
@@ -464,7 +493,7 @@ function toCanonicalStatus(status) {
       selectedReleaseVersion: status.release.selectedReleaseVersion,
       appVersion: status.release.metadata?.app?.version || null,
       channel: status.release.metadata?.channel || null,
-      gitRevision: status.release.metadata?.app?.releaseBranch || null,
+      gitRevision,
     },
     urls: {
       statusUrl: status.nodeIp ? `http://${status.nodeIp}:8080` : null,
@@ -486,6 +515,7 @@ function toCanonicalStatus(status) {
     topBlockers: blockers,
     components: componentRows,
     recentEvents: status.recentEvents,
+    loginProbe: status.loginProbe || { checked: false, reachable: false, statusCode: null, location: null },
   };
 }
 
@@ -646,6 +676,7 @@ export async function collectStatus(env, options = {}) {
     job: { state: 'waiting', completed: false, failed: false, name: null },
     seed: { usersCount: null },
   };
+  const loginProbe = { checked: false, reachable: false, statusCode: null, location: null };
 
   if (cluster.apiReachable) {
     const selection = await kubeJson(shell, kubeconfig, 'alga-system', 'configmap/appliance-release-selection');
@@ -703,6 +734,18 @@ export async function collectStatus(env, options = {}) {
     }
   }
 
+  if (cluster.apiReachable) {
+    const probeUrl = release.appUrl || (nodeIp ? `http://${nodeIp}:3000` : null);
+    if (probeUrl) {
+      const probe = await shell.runCapture('curl', ['-ksS', '-I', '--max-time', '10', probeUrl]);
+      if (probe.ok) {
+        Object.assign(loginProbe, summarizeLoginProbe(probe.output, probeUrl));
+      } else {
+        loginProbe.checked = true;
+      }
+    }
+  }
+
   let recentEvents = [];
   if (cluster.apiReachable) {
     const eventsResult = await shell.runCapture('kubectl', [
@@ -733,6 +776,7 @@ export async function collectStatus(env, options = {}) {
     workloads,
     release,
     bootstrap,
+    loginProbe,
     recentEvents,
   };
 

@@ -180,7 +180,7 @@
   {
     "id": "F022",
     "description": "Validate release manifest image references before applying background releases and report missing tags as release artifact blockers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Durable Fixes from Observed Run",
       "Acceptance Criteria"
@@ -189,7 +189,7 @@
   {
     "id": "F023",
     "description": "Fix fresh reset helper behavior so it handles new or empty Talos appliance disks without an unbound variable failure.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Durable Fixes from Observed Run"
     ]
@@ -197,7 +197,7 @@
   {
     "id": "F024",
     "description": "Fix operator/script handling so explicit kubeconfig and talosconfig reuse does not regenerate or overwrite existing Talos credentials unexpectedly.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Durable Fixes from Observed Run"
     ]
@@ -205,7 +205,7 @@
   {
     "id": "F025",
     "description": "Update Temporal chart/runtime values so Temporal autosetup runs during install and service links are disabled where needed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Durable Fixes from Observed Run"
     ]
@@ -213,7 +213,7 @@
   {
     "id": "F026",
     "description": "Make LOGIN_READY detection verify Alga web deployment readiness, app HTTP response, dashboard/login redirect, and representative seed data.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Readiness Model",
       "Acceptance Criteria"
@@ -222,7 +222,7 @@
   {
     "id": "F027",
     "description": "Persist and expose the selected appliance release version, app version, channel, and Git revision in the status model.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Status API"
     ]
@@ -230,7 +230,7 @@
   {
     "id": "F028",
     "description": "Add support-bundle entry point metadata to the advanced diagnostics model, with implementation of bundle download allowed in a later milestone.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Implementation Milestones",
       "UI Layers"
