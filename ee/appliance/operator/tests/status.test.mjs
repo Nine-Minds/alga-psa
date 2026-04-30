@@ -291,3 +291,65 @@ test('T005: Postgres subPath failure is classified as a core storage blocker', a
   assert.match(status.topBlocker.reason, /PVC\/subPath initialization failed/i);
   assert.match(status.topBlocker.nextAction, /repair or recreate the Postgres PVC subPath/i);
 });
+
+test('T006: workflow-worker missing image tag is classified as background-only blocker', async () => {
+  const responses = healthyResponses();
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n msp get deployment/workflow-worker -o json'] = {
+    ok: true,
+    output: JSON.stringify({ spec: { replicas: 1 }, status: { readyReplicas: 0 } }),
+  };
+  responses['kubectl --kubeconfig /tmp/kubeconfig get events --sort-by=.metadata.creationTimestamp -A -o json'] = {
+    ok: true,
+    output: JSON.stringify({
+      items: [
+        {
+          metadata: { namespace: 'msp', creationTimestamp: '2026-04-30T00:00:00Z' },
+          reason: 'Failed',
+          type: 'Warning',
+          message: 'Failed to pull image "ghcr.io/nine-minds/workflow-worker:61e4a00e": not found',
+          involvedObject: { kind: 'Pod', name: 'workflow-worker-6c5f8f7d9b-abcde' },
+        },
+      ],
+    }),
+  };
+
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+
+  assert.equal(status.topBlocker.layer, 'Image tag availability');
+  assert.equal(status.topBlocker.component, 'workflow-worker');
+  assert.equal(status.topBlocker.loginBlocking, false);
+  assert.match(status.topBlocker.reason, /workflow-worker:61e4a00e/i);
+});
+
+test('T007: alga-core missing image tag is classified as login-blocking blocker', async () => {
+  const responses = healthyResponses();
+  responses['kubectl --kubeconfig /tmp/kubeconfig -n msp get deployment/alga-core-sebastian -o json'] = {
+    ok: true,
+    output: JSON.stringify({ spec: { replicas: 1 }, status: { readyReplicas: 0 } }),
+  };
+  responses['kubectl --kubeconfig /tmp/kubeconfig get events --sort-by=.metadata.creationTimestamp -A -o json'] = {
+    ok: true,
+    output: JSON.stringify({
+      items: [
+        {
+          metadata: { namespace: 'msp', creationTimestamp: '2026-04-30T00:00:00Z' },
+          reason: 'Failed',
+          type: 'Warning',
+          message: 'ImagePullBackOff: Failed to pull image "ghcr.io/nine-minds/alga-psa-ee:deadbeef": not found',
+          involvedObject: { kind: 'Pod', name: 'alga-core-sebastian-5bd8b8d9f8-xxyyy' },
+        },
+      ],
+    }),
+  };
+
+  const status = await collectStatus(buildEnv(releaseFixtureDir()), {
+    runner: new MockCaptureRunner(responses),
+  });
+
+  assert.equal(status.topBlocker.layer, 'Image tag availability');
+  assert.equal(status.topBlocker.component, 'alga-core');
+  assert.equal(status.topBlocker.loginBlocking, true);
+  assert.match(status.topBlocker.reason, /alga-psa-ee:deadbeef/i);
+});

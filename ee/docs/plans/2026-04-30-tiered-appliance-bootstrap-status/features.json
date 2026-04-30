@@ -112,7 +112,7 @@
   {
     "id": "F014",
     "description": "Detect image tag not found failures and classify them as login-blocking or background-only based on component tier.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Blocker Detection Requirements"
     ]

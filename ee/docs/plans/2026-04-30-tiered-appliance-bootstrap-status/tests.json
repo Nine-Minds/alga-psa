@@ -50,7 +50,7 @@
   {
     "id": "T006",
     "description": "Unit: image pull 'not found' for workflow-worker is classified as a non-login-blocking background missing-tag blocker.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014",
       "F021"
@@ -59,7 +59,7 @@
   {
     "id": "T007",
     "description": "Unit: image pull 'not found' for alga-core is classified as a login-blocking missing-tag blocker.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]

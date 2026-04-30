@@ -177,6 +177,37 @@ function detectPostgresSubPathFailure(status) {
   return messages.find((value) => /failed to create subpath directory/i.test(value) || /volumemount "db-data"/i.test(value));
 }
 
+function inferComponentFromObjectName(name) {
+  const value = String(name || '').toLowerCase();
+  if (value.includes('workflow-worker')) return 'workflow-worker';
+  if (value.includes('temporal-worker')) return 'temporal-worker';
+  if (value.includes('email-service')) return 'email-service';
+  if (value.includes('temporal')) return 'temporal';
+  if (value.includes('alga-core-sebastian') || value.includes('alga-core')) return 'alga-core';
+  return null;
+}
+
+function detectMissingImageTag(status) {
+  const events = status.recentEvents || [];
+  const match = events.find((entry) => {
+    const message = String(entry.message || '');
+    return /imagepullbackoff|failed to pull image|errimagepull/i.test(message) && /not found/i.test(message);
+  });
+  if (!match) {
+    return null;
+  }
+
+  const component = inferComponentFromObjectName(match.involvedObject || '');
+  const tier = PSA_COMPONENTS.find((entry) => entry.name === component)?.tier || 'background';
+  const imageMatch = String(match.message || '').match(/([a-z0-9./_-]+:[a-zA-Z0-9._-]+)/);
+  return {
+    component,
+    tier,
+    image: imageMatch ? imageMatch[1] : null,
+    message: match.message || 'Image tag not found',
+  };
+}
+
 function determineTopBlocker(status) {
   const dnsSignal = detectDnsFailure(status);
   if (dnsSignal) {
@@ -193,6 +224,19 @@ function determineTopBlocker(status) {
       layer: 'Core Postgres storage initialization',
       reason: `Postgres PVC/subPath initialization failed: ${postgresSubPathSignal}`,
       nextAction: 'Repair or recreate the Postgres PVC subPath (db-data) and restart the db pod.',
+    };
+  }
+
+  const missingImage = detectMissingImageTag(status);
+  if (missingImage) {
+    const isLoginBlocking = missingImage.tier !== 'background';
+    const imageDescriptor = missingImage.image || 'referenced image tag';
+    return {
+      layer: 'Image tag availability',
+      component: missingImage.component || 'unknown',
+      loginBlocking: isLoginBlocking,
+      reason: `Image tag not found: ${imageDescriptor}`,
+      nextAction: 'Publish the missing image tag or update the appliance release manifest to a valid tag.',
     };
   }
 
@@ -287,12 +331,20 @@ function toCanonicalStatus(status) {
       ? []
       : [
           {
-            severity: loginReady ? 'background' : 'critical',
-            component: status.topBlocker.layer,
+            severity:
+              typeof status.topBlocker.loginBlocking === 'boolean'
+                ? status.topBlocker.loginBlocking
+                  ? 'critical'
+                  : 'background'
+                : loginReady
+                  ? 'background'
+                  : 'critical',
+            component: status.topBlocker.component || status.topBlocker.layer,
             layer: status.topBlocker.layer,
             reason: status.topBlocker.reason,
             nextAction: status.topBlocker.nextAction,
-            loginBlocking: !loginReady,
+            loginBlocking:
+              typeof status.topBlocker.loginBlocking === 'boolean' ? status.topBlocker.loginBlocking : !loginReady,
           },
         ];
 

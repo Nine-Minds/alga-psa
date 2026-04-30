@@ -320,3 +320,26 @@ Suggested implementation order:
 ### Validation (F013/T005)
 
 - `node --test ee/appliance/operator/tests/status.test.mjs`
+
+- `F014`: Implemented missing-image-tag blocker detection with tier-aware login-blocking classification.
+- `T006`: Added workflow-worker missing-tag unit coverage.
+- `T007`: Added alga-core missing-tag unit coverage.
+
+### F014/T006/T007 Implementation Details
+
+- Updated `ee/appliance/operator/lib/status.mjs`:
+  - Added `inferComponentFromObjectName()` for pod/deployment name mapping.
+  - Added `detectMissingImageTag(status)` scanning recent event messages for image pull + `not found` patterns.
+  - Enhanced `determineTopBlocker` to emit image-tag blocker details:
+    - layer: `Image tag availability`
+    - component: mapped component (e.g., `workflow-worker`, `alga-core`)
+    - loginBlocking based on component tier (`background` -> false, core/login -> true)
+    - actionable release-manifest/tag remediation guidance.
+  - Updated canonical blocker projection to respect explicit `topBlocker.loginBlocking` and `topBlocker.component` when present.
+- Added tests in `ee/appliance/operator/tests/status.test.mjs`:
+  - `T006` verifies workflow-worker `not found` is non-login-blocking background blocker.
+  - `T007` verifies alga-core `not found` is login-blocking blocker.
+
+### Validation (F014/T006/T007)
+
+- `node --test ee/appliance/operator/tests/status.test.mjs`
