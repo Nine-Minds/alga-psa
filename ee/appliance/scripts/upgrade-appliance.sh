@@ -229,6 +229,9 @@ if $DRY_RUN; then
   echo "+ kubectl --kubeconfig $KUBECONFIG_PATH -n alga-system create configmap appliance-release-selection ..."
   if ! $SKIP_RECONCILE; then
     echo "+ flux --kubeconfig $KUBECONFIG_PATH reconcile helmrelease alga-core -n alga-system --with-source --timeout $RECONCILE_TIMEOUT"
+    for release_name in pgbouncer temporal workflow-worker email-service temporal-worker; do
+      echo "+ kubectl --kubeconfig $KUBECONFIG_PATH -n alga-system annotate helmrelease $release_name reconcile.fluxcd.io/requestedAt=<timestamp> --overwrite"
+    done
   fi
   exit 0
 fi
@@ -247,6 +250,18 @@ kubectl --kubeconfig "$KUBECONFIG_PATH" -n alga-system create configmap applianc
 
 if ! $SKIP_RECONCILE && command -v flux >/dev/null 2>&1; then
   flux --kubeconfig "$KUBECONFIG_PATH" reconcile helmrelease alga-core -n alga-system --with-source --timeout "$RECONCILE_TIMEOUT"
+
+  requested_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  for release_name in pgbouncer temporal workflow-worker email-service temporal-worker; do
+    echo "► requesting HelmRelease reconcile for $release_name"
+    if kubectl --kubeconfig "$KUBECONFIG_PATH" -n alga-system get helmrelease "$release_name" >/dev/null 2>&1; then
+      kubectl --kubeconfig "$KUBECONFIG_PATH" -n alga-system annotate helmrelease "$release_name" \
+        "reconcile.fluxcd.io/requestedAt=$requested_at" \
+        --overwrite
+    else
+      echo "⚠ HelmRelease $release_name was not found; skipping reconcile request"
+    fi
+  done
 fi
 
 echo "Applied appliance release $RELEASE_VERSION"

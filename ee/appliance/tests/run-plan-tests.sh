@@ -133,7 +133,7 @@ require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" '
 require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'host: "psa.example.test"'
 require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'domainSuffix: ""'
 require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'tag: "a2cbb430"'
-require_text "$(cat "$bootstrap_tmp/values/workflow-worker.talos-single-node.yaml")" 'tag: "61e4a00e"'
+require_text "$(cat "$bootstrap_tmp/values/workflow-worker.talos-single-node.yaml")" 'tag: "a2cbb43"'
 
 current_branch="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD)"
 branch_remote_tmp="$(mktemp -d)"
@@ -403,7 +403,7 @@ t018_output="$(
   echo "exit_code:$?"
 )"
 require_text "$t018_output" "Release artifact warning: one or more background image tags are missing:"
-require_text "$t018_output" "ghcr.io/nine-minds/workflow-worker:61e4a00e"
+require_text "$t018_output" "ghcr.io/nine-minds/workflow-worker:a2cbb43"
 require_text "$t018_output" "ghcr.io/nine-minds/temporal-worker:61e4a00e"
 require_text "$t018_output" "Background image issues will be reported by appliance status and do not block core login readiness."
 require_text "$t018_output" "exit_code:0"
@@ -429,6 +429,7 @@ upgrade_dry_run_output="$(
 require_text "$upgrade_dry_run_output" "apply -k $upgrade_tmp"
 require_text "$upgrade_dry_run_output" "appliance-release-selection"
 require_text "$upgrade_dry_run_output" "reconcile helmrelease alga-core"
+require_text "$upgrade_dry_run_output" "annotate helmrelease workflow-worker"
 
 jq -e '.title == "Alga Talos Appliance Release Manifest"' "$ROOT/ee/appliance/releases/schema.json" >/dev/null
 jq -e '.channel == "candidate"' "$ROOT/ee/appliance/releases/channels/candidate.json" >/dev/null

@@ -28,7 +28,7 @@
     "valuesProfile": "talos-single-node",
     "images": {
       "algaCore": "a2cbb430",
-      "workflowWorker": "61e4a00e",
+      "workflowWorker": "a2cbb43",
       "emailService": "61e4a00e",
       "temporalWorker": "61e4a00e"
     }
