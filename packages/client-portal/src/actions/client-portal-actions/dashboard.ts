@@ -17,6 +17,13 @@ export interface DashboardMetrics {
   activeProjects: number;
   pendingInvoices: number;
   activeAssets: number;
+  /**
+   * Total service request submissions for this client. The execution_status
+   * column flips from 'pending' → 'succeeded' almost immediately on the default
+   * provider, so a "pending only" count would almost always read 0; total is
+   * the more useful at-a-glance number.
+   */
+  serviceRequests: number;
 }
 
 export interface RecentActivity {
@@ -33,6 +40,40 @@ type RecentInvoiceActivityRow = {
   service_period_start?: string | Date | null;
   service_period_end?: string | Date | null;
 };
+
+/**
+ * Extracts plain text from a BlockNote JSON string. Ticket descriptions and
+ * comments are stored as serialized BlockNote (an array of blocks). Falls back
+ * to the raw string if it's not parseable as BlockNote — covers legacy
+ * plain-text rows.
+ */
+function extractPlainTextFromBlockNote(raw: string | null | undefined): string {
+  if (!raw) return '';
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return raw;
+    const lines: string[] = [];
+    for (const block of parsed) {
+      const content = (block as { content?: unknown }).content;
+      if (Array.isArray(content)) {
+        const line = content
+          .map((item: any) => (typeof item?.text === 'string' ? item.text : ''))
+          .join('')
+          .trim();
+        if (line) lines.push(line);
+      }
+    }
+    return lines.join('\n');
+  } catch {
+    return raw;
+  }
+}
+
+function summarizeForActivity(raw: string | null | undefined, maxLength = 200): string {
+  const text = extractPlainTextFromBlockNote(raw).replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+  return text.length > maxLength ? `${text.slice(0, maxLength).trimEnd()}…` : text;
+}
 
 function normalizeDateOnly(value: string | Date | null | undefined): string | null {
   if (!value) return null;
@@ -96,7 +137,13 @@ export const getDashboardMetrics = withAuth(async (
       const clientId = contact.client_id;
       const visibility = await getClientContactVisibilityContext(trx, tenant, userContactId);
 
-        const [[ticketCount], [projectCount], [invoiceCount], [assetCount]] = await Promise.all([
+        const [
+          [ticketCount],
+          [projectCount],
+          [invoiceCount],
+          [assetCount],
+          [serviceRequestCount],
+        ] = await Promise.all([
         // Get open tickets count
         applyVisibilityBoardFilter(
           trx('tickets')
@@ -135,7 +182,15 @@ export const getDashboardMetrics = withAuth(async (
             'assets.client_id': clientId
           })
           .andWhere('status', '!=', 'inactive')
-          .count('* as count')
+          .count('* as count'),
+
+        // Total service request submissions for this client (any status).
+        trx('service_request_submissions')
+          .where({
+            'tenant': tenant,
+            'client_id': clientId,
+          })
+          .count('* as count'),
       ]);
 
       return {
@@ -143,6 +198,7 @@ export const getDashboardMetrics = withAuth(async (
         activeProjects: Number(projectCount.count || 0),
         pendingInvoices: Number(invoiceCount.count || 0),
         activeAssets: Number(assetCount.count || 0),
+        serviceRequests: Number(serviceRequestCount.count || 0),
       };
     });
 
@@ -210,7 +266,10 @@ export const getRecentActivity = withAuth(async (
         .orderBy('tickets.updated_at', 'desc')
         .limit(3);
 
-      // Get recent invoices
+      // Get recent invoices.
+      // Drafts (no finalized_at) are not visible to client portal users —
+      // mirror the InvoicesTab/getClientInvoices contract here so the activity
+      // feed never surfaces an invoice the client can't actually open.
       const invoices = await trx('invoices as inv')
         .select([
           'inv.invoice_number',
@@ -227,6 +286,7 @@ export const getRecentActivity = withAuth(async (
           this.on('ic.item_id', '=', 'iid.item_id')
               .andOn('ic.tenant', '=', 'iid.tenant');
         })
+        .whereNotNull('inv.finalized_at')
         .where({
           'inv.tenant': tenant,
           'inv.client_id': clientId
@@ -262,7 +322,7 @@ export const getRecentActivity = withAuth(async (
         type: 'ticket',
         title: `New ticket: ${t.title}`,
         timestamp: t.timestamp,
-        description: t.description || 'No description available'
+        description: summarizeForActivity(t.description) || 'No description available',
       })),
       ...result.invoices.map((i: RecentInvoiceActivityRow): RecentActivity => ({
         type: 'invoice',

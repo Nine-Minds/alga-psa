@@ -10,9 +10,11 @@ import {
   getRecentActivity,
   getClientAssets,
   type RecentActivity,
+  type DashboardMetrics,
 } from '@alga-psa/client-portal/actions';
 import type { Asset } from '@alga-psa/types';
 import { RequestAppointmentModal } from '../appointments/RequestAppointmentModal';
+import { ClientAddTicket } from '../tickets/ClientAddTicket';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   Calendar,
@@ -29,33 +31,14 @@ import {
   Network,
   HardDrive,
   Activity as ActivityIcon,
+  PlusCircle,
+  LayoutTemplate,
 } from 'lucide-react';
-import { fromZonedTime } from 'date-fns-tz';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { toBrowserDate } from '../appointments/dateUtils';
+import type { AppointmentSummary } from '../appointments/types';
 
-function normalizeDateValue(value: unknown): string | null {
-  if (!value) return null;
-  if (value instanceof Date) return value.toISOString().split('T')[0];
-  if (typeof value === 'string') return value.slice(0, 10);
-  return null;
-}
-
-function normalizeTimeValue(value: unknown): string | null {
-  if (!value) return null;
-  if (typeof value === 'string') return value.slice(0, 5);
-  return null;
-}
-
-interface AppointmentRequest {
-  appointment_request_id: string;
-  service_name: string;
-  requested_date: string;
-  requested_time: string;
-  requested_duration: number;
-  requester_timezone?: string | null;
-  status: 'pending' | 'approved' | 'declined' | 'cancelled';
-  preferred_assigned_user_name?: string;
-}
+type TranslateFn = ReturnType<typeof useTranslation>['t'];
 
 function activityVisuals(type: RecentActivity['type']): {
   Icon: React.ComponentType<{ className?: string }>;
@@ -102,32 +85,38 @@ function deviceIcon(type: Asset['asset_type']): React.ComponentType<{ className?
   }
 }
 
-function getGreeting(t: any): string {
+function getGreeting(t: TranslateFn): string {
   const hour = new Date().getHours();
   if (hour < 12) return t('dashboard.greeting.morning', 'Good morning');
   if (hour < 18) return t('dashboard.greeting.afternoon', 'Good afternoon');
   return t('dashboard.greeting.evening', 'Good evening');
 }
 
-function timeAgo(value: string | Date | null | undefined): string {
+function timeAgo(value: string | Date | null | undefined, t: TranslateFn, locale?: string): string {
   if (!value) return '';
   const dt = value instanceof Date ? value : new Date(value);
+  if (isNaN(dt.getTime())) return '';
   const diff = Date.now() - dt.getTime();
-  if (diff < 60_000) return 'just now';
+  if (diff < 60_000) return t('dashboard.timeAgo.justNow', 'just now');
   const mins = Math.floor(diff / 60_000);
-  if (mins < 60) return `${mins} min ago`;
+  if (mins < 60) return t('dashboard.timeAgo.minutes', { defaultValue: '{{count}} min ago', count: mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs} h ago`;
+  if (hrs < 24) return t('dashboard.timeAgo.hours', { defaultValue: '{{count}} h ago', count: hrs });
   const days = Math.floor(hrs / 24);
-  if (days < 7) return `${days}d ago`;
-  return dt.toLocaleDateString();
+  if (days < 7) return t('dashboard.timeAgo.days', { defaultValue: '{{count}}d ago', count: days });
+  return dt.toLocaleDateString(locale);
 }
 
+const DASHBOARD_PREVIEW_DEVICES = 4;
+const DASHBOARD_PREVIEW_APPOINTMENTS = 3;
+
 export function ClientDashboard() {
-  const { t } = useTranslation('client-portal');
+  const { t, i18n } = useTranslation('client-portal');
+  const locale = i18n.language || undefined;
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
-  const [metrics, setMetrics] = useState<any>(null);
-  const [upcomingAppointments, setUpcomingAppointments] = useState<AppointmentRequest[]>([]);
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [upcomingAppointments, setUpcomingAppointments] = useState<AppointmentSummary[]>([]);
   const [activities, setActivities] = useState<RecentActivity[]>([]);
   const [devices, setDevices] = useState<Asset[]>([]);
   const [firstName, setFirstName] = useState<string>('');
@@ -147,7 +136,9 @@ export function ClientDashboard() {
       setMetrics(metricsData);
 
       if (appointmentsResult.success && appointmentsResult.data) {
-        setUpcomingAppointments(appointmentsResult.data as any);
+        // Action returns IAppointmentRequest joined with service_name (joined column
+        // not on the typed return).
+        setUpcomingAppointments(appointmentsResult.data as unknown as AppointmentSummary[]);
       } else {
         setUpcomingAppointments([]);
       }
@@ -167,25 +158,17 @@ export function ClientDashboard() {
   const nextAppointmentLabel = useMemo(() => {
     const next = upcomingAppointments[0];
     if (!next) return null;
-    const dateStr = normalizeDateValue(next.requested_date);
-    const timeStr = normalizeTimeValue(next.requested_time);
-    if (!dateStr || !timeStr) return null;
-    try {
-      const tz = next.requester_timezone || 'UTC';
-      const dt = fromZonedTime(`${dateStr}T${timeStr}:00`, tz);
-      if (isNaN(dt.getTime())) return null;
-      const today = new Date();
-      const sameDay = dt.toDateString() === today.toDateString();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(today.getDate() + 1);
-      const isTomorrow = dt.toDateString() === tomorrow.toDateString();
-      if (sameDay) return t('dashboard.nextToday', 'Today');
-      if (isTomorrow) return t('dashboard.nextTomorrow', 'Tomorrow');
-      return dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    } catch {
-      return null;
-    }
-  }, [upcomingAppointments, t]);
+    const dt = toBrowserDate(next.requested_date, next.requested_time, next.requester_timezone);
+    if (!dt) return null;
+    const today = new Date();
+    const sameDay = dt.toDateString() === today.toDateString();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const isTomorrow = dt.toDateString() === tomorrow.toDateString();
+    if (sameDay) return t('dashboard.nextToday', 'Today');
+    if (isTomorrow) return t('dashboard.nextTomorrow', 'Tomorrow');
+    return dt.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+  }, [upcomingAppointments, t, locale]);
 
   if (error) {
     return (
@@ -217,7 +200,22 @@ export function ClientDashboard() {
 
   const greeting = getGreeting(t);
 
-  const kpiCards = [
+  interface KpiCard {
+    id: string;
+    label: string;
+    value: number;
+    icon: React.ComponentType<{ className?: string }>;
+    href: string;
+    hint: string;
+    description: string;
+    action?: {
+      id: string;
+      label: string;
+      onClick: () => void;
+    };
+  }
+
+  const kpiCards: KpiCard[] = [
     {
       id: 'open-tickets',
       label: t('dashboard.metrics.openTickets'),
@@ -225,6 +223,15 @@ export function ClientDashboard() {
       icon: MessageSquare,
       href: '/client-portal/tickets',
       hint: t('dashboard.metrics.openTicketsHint', 'Active support'),
+      description: t(
+        'dashboard.metrics.openTicketsDescription',
+        'Support tickets we are still working on.',
+      ),
+      action: {
+        id: 'kpi-open-tickets-create',
+        label: t('dashboard.quickActions.createTicket', 'Create ticket'),
+        onClick: () => setIsTicketModalOpen(true),
+      },
     },
     {
       id: 'active-projects',
@@ -233,6 +240,22 @@ export function ClientDashboard() {
       icon: Layers,
       href: '/client-portal/projects',
       hint: t('dashboard.metrics.activeProjectsHint', 'In progress'),
+      description: t(
+        'dashboard.metrics.activeProjectsDescription',
+        'Projects we are delivering for your team.',
+      ),
+    },
+    {
+      id: 'service-requests',
+      label: t('dashboard.metrics.serviceRequests', 'Service requests'),
+      value: metrics.serviceRequests ?? 0,
+      icon: LayoutTemplate,
+      href: '/client-portal/request-services',
+      hint: t('dashboard.metrics.serviceRequestsHint', 'Total submissions'),
+      description: t(
+        'dashboard.metrics.serviceRequestsDescription',
+        'Structured requests you have submitted from the catalog.',
+      ),
     },
     {
       id: 'upcoming-visits',
@@ -241,8 +264,17 @@ export function ClientDashboard() {
       icon: Calendar,
       href: '/client-portal/appointments',
       hint: nextAppointmentLabel
-        ? t('dashboard.metrics.nextLabel', 'Next: {{when}}').replace('{{when}}', nextAppointmentLabel)
+        ? t('dashboard.metrics.nextLabel', { defaultValue: 'Next: {{when}}', when: nextAppointmentLabel })
         : t('dashboard.metrics.noneScheduled', 'None scheduled'),
+      description: t(
+        'dashboard.metrics.upcomingVisitsDescription',
+        'Scheduled appointments with our technicians.',
+      ),
+      action: {
+        id: 'kpi-upcoming-visits-request',
+        label: t('dashboard.quickActions.requestAppointment', 'Request appointment'),
+        onClick: () => setIsAppointmentModalOpen(true),
+      },
     },
     {
       id: 'active-devices',
@@ -251,6 +283,10 @@ export function ClientDashboard() {
       icon: Monitor,
       href: '/client-portal/devices',
       hint: t('dashboard.metrics.deviceStatusHint', 'Managed endpoints'),
+      description: t(
+        'dashboard.metrics.activeDevicesDescription',
+        'Endpoints we currently manage and monitor.',
+      ),
     },
   ];
 
@@ -272,28 +308,49 @@ export function ClientDashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {kpiCards.map((card) => {
           const Icon = card.icon;
           return (
-            <Link
+            <div
               key={card.id}
-              href={card.href}
-              className="group rounded-xl border border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-card))] p-5 transition-shadow hover:shadow-md"
+              className="group flex flex-col rounded-xl border border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-card))] p-5 transition-shadow hover:shadow-md"
             >
-              <div className="flex items-start justify-between">
-                <div className="text-sm font-medium text-[rgb(var(--color-text-600))]">
-                  {card.label}
+              {/* Link wraps just the metric area so clicks on the action Button below
+                  don't bubble up and trigger the card's navigation. */}
+              <Link href={card.href} className="flex-1 block">
+                <div className="flex items-start justify-between">
+                  <div className="text-sm font-medium text-[rgb(var(--color-text-600))]">
+                    {card.label}
+                  </div>
+                  <Icon className="h-4 w-4 text-[rgb(var(--color-text-500))] group-hover:text-[rgb(var(--color-primary-500))]" />
                 </div>
-                <Icon className="h-4 w-4 text-[rgb(var(--color-text-500))] group-hover:text-[rgb(var(--color-primary-500))]" />
-              </div>
-              <div className="mt-3 text-3xl font-semibold text-[rgb(var(--color-text-900))]">
-                {card.value}
-              </div>
-              <div className="mt-2 text-xs text-[rgb(var(--color-text-500))]">
-                {card.hint}
-              </div>
-            </Link>
+                <div className="mt-3 text-3xl font-semibold text-[rgb(var(--color-text-900))]">
+                  {card.value}
+                </div>
+                <div className="mt-2 text-xs font-medium text-[rgb(var(--color-text-500))]">
+                  {card.hint}
+                </div>
+                <p className="mt-1 text-xs leading-snug text-[rgb(var(--color-text-500))]">
+                  {card.description}
+                </p>
+              </Link>
+
+              {card.action && (
+                <div className="mt-4 pt-3 border-t border-[rgb(var(--color-border-100))]">
+                  <Button
+                    id={card.action.id}
+                    variant="default"
+                    size="sm"
+                    className="w-full"
+                    onClick={card.action.onClick}
+                  >
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    {card.action.label}
+                  </Button>
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
@@ -347,8 +404,8 @@ export function ClientDashboard() {
                           <div className="text-sm font-medium text-[rgb(var(--color-text-900))] truncate">
                             {activity.title}
                           </div>
-                          <div className="text-[11px] text-[rgb(var(--color-text-500))] flex-shrink-0">
-                            {timeAgo(activity.timestamp)}
+                          <div className="text-xs text-[rgb(var(--color-text-500))] flex-shrink-0">
+                            {timeAgo(activity.timestamp, t, locale)}
                           </div>
                         </div>
                         {activity.description && (
@@ -375,7 +432,7 @@ export function ClientDashboard() {
             </div>
             <div className="mt-0.5 text-xs text-[rgb(var(--color-text-500))]">
               {upcomingAppointments.length > 0
-                ? t('dashboard.appointments.countLabel', '{{count}} upcoming').replace('{{count}}', String(upcomingAppointments.length))
+                ? t('dashboard.appointments.countLabel', { defaultValue: '{{count}} upcoming', count: upcomingAppointments.length })
                 : t('dashboard.appointments.noUpcomingShort', 'Nothing on the calendar')}
             </div>
           </CardHeader>
@@ -386,40 +443,33 @@ export function ClientDashboard() {
               </p>
             ) : (
               <div className="space-y-2">
-                {upcomingAppointments.slice(0, 3).map((appointment) => {
-                  const dateStr = normalizeDateValue(appointment.requested_date);
-                  const timeStr = normalizeTimeValue(appointment.requested_time);
-                  let dt: Date | null = null;
-                  if (dateStr && timeStr) {
-                    try {
-                      const tz = appointment.requester_timezone || 'UTC';
-                      const parsed = fromZonedTime(`${dateStr}T${timeStr}:00`, tz);
-                      if (!isNaN(parsed.getTime())) dt = parsed;
-                    } catch {
-                      /* noop */
-                    }
-                  }
+                {upcomingAppointments.slice(0, DASHBOARD_PREVIEW_APPOINTMENTS).map((appointment) => {
+                  const dt = toBrowserDate(
+                    appointment.requested_date,
+                    appointment.requested_time,
+                    appointment.requester_timezone,
+                  );
                   return (
                     <div
                       key={appointment.appointment_request_id}
                       className="flex gap-2 rounded-md border border-[rgb(var(--color-border-100))] p-2 hover:border-[rgb(var(--color-primary-300))] transition-colors"
                     >
-                      <div className="flex w-10 flex-col items-center justify-center rounded bg-[rgb(var(--color-primary-50))] py-1 text-[rgb(var(--color-primary-700))]">
-                        <div className="text-[9px] font-semibold uppercase tracking-wider">
-                          {dt ? dt.toLocaleDateString(undefined, { month: 'short' }) : '—'}
+                      <div className="flex w-12 flex-col items-center justify-center rounded bg-[rgb(var(--color-primary-50))] py-1.5 text-[rgb(var(--color-primary-700))]">
+                        <div className="text-[11px] font-semibold uppercase tracking-wider">
+                          {dt ? dt.toLocaleDateString(locale, { month: 'short' }) : '—'}
                         </div>
-                        <div className="text-base font-semibold leading-none">
+                        <div className="text-lg font-semibold leading-none">
                           {dt ? dt.getDate() : '—'}
                         </div>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-xs font-medium text-[rgb(var(--color-text-900))]">
+                        <div className="truncate text-sm font-medium text-[rgb(var(--color-text-900))]">
                           {appointment.service_name}
                         </div>
-                        <div className="mt-0.5 flex items-center gap-1 text-[10px] text-[rgb(var(--color-text-600))]">
-                          <Clock className="h-2.5 w-2.5" />
+                        <div className="mt-1 flex items-center gap-1 text-xs text-[rgb(var(--color-text-600))]">
+                          <Clock className="h-3 w-3" />
                           {dt
-                            ? dt.toLocaleTimeString(undefined, {
+                            ? dt.toLocaleTimeString(locale, {
                                 hour: '2-digit',
                                 minute: '2-digit',
                               })
@@ -433,25 +483,16 @@ export function ClientDashboard() {
               </div>
             )}
 
-            <div className="mt-3 space-y-1.5">
-              <Button
-                id="dashboard-request-appointment-quick"
-                variant="default"
-                size="sm"
-                className="w-full"
-                onClick={() => setIsAppointmentModalOpen(true)}
-              >
-                {t('dashboard.appointments.requestButton')}
-              </Button>
-              {upcomingAppointments.length > 0 && (
+            {upcomingAppointments.length > 0 && (
+              <div className="mt-3">
                 <Link
                   href="/client-portal/appointments"
                   className="block text-center text-xs font-medium text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-600))]"
                 >
                   {t('dashboard.appointments.viewAll')}
                 </Link>
-              )}
-            </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -472,7 +513,7 @@ export function ClientDashboard() {
             </div>
             <div className="mt-0.5 text-xs text-[rgb(var(--color-text-500))]">
               {devices.length > 0
-                ? t('dashboard.devices.countLabel', '{{count}} managed').replace('{{count}}', String(devices.length))
+                ? t('dashboard.devices.countLabel', { defaultValue: '{{count}} managed', count: devices.length })
                 : t('dashboard.devices.emptyShort', 'No devices yet')}
             </div>
           </CardHeader>
@@ -483,9 +524,9 @@ export function ClientDashboard() {
               </p>
             ) : (
               <ul className="space-y-2">
-                {devices.slice(0, 4).map((d) => {
+                {devices.slice(0, DASHBOARD_PREVIEW_DEVICES).map((d) => {
                   const Icon = deviceIcon(d.asset_type);
-                  const healthy = d.status !== 'inactive';
+                  const isActive = d.status !== 'inactive';
                   return (
                     <li
                       key={d.asset_id}
@@ -493,25 +534,25 @@ export function ClientDashboard() {
                     >
                       <Icon className="h-4 w-4 flex-shrink-0 text-[rgb(var(--color-text-500))]" />
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-xs font-medium text-[rgb(var(--color-text-900))]">
+                        <div className="truncate text-sm font-medium text-[rgb(var(--color-text-900))]">
                           {d.name}
                         </div>
                         {d.serial_number && (
-                          <div className="truncate text-[10px] text-[rgb(var(--color-text-500))]">
+                          <div className="truncate text-xs text-[rgb(var(--color-text-500))]">
                             {d.serial_number}
                           </div>
                         )}
                       </div>
                       <span
                         className={[
-                          'inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium',
-                          healthy
+                          'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                          isActive
                             ? 'bg-emerald-50 text-emerald-700'
                             : 'bg-gray-100 text-gray-600',
                         ].join(' ')}
                       >
-                        {healthy
-                          ? t('dashboard.devices.healthy', 'Healthy')
+                        {isActive
+                          ? t('dashboard.devices.active', 'Active')
                           : t('dashboard.devices.inactive', 'Inactive')}
                       </span>
                     </li>
@@ -528,6 +569,12 @@ export function ClientDashboard() {
         open={isAppointmentModalOpen}
         onOpenChange={setIsAppointmentModalOpen}
         onAppointmentRequested={fetchDashboardData}
+      />
+
+      <ClientAddTicket
+        open={isTicketModalOpen}
+        onOpenChange={setIsTicketModalOpen}
+        onTicketAdded={fetchDashboardData}
       />
     </div>
   );

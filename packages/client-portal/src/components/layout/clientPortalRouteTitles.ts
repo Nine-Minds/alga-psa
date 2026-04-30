@@ -12,7 +12,7 @@ const ROUTE_TO_KEY: Array<{ test: (p: string) => boolean; key: string }> = [
   { test: (p) => p.startsWith('/client-portal/appointments'), key: 'nav.appointments' },
   { test: (p) => p.startsWith('/client-portal/devices'), key: 'nav.myDevices' },
   { test: (p) => p.startsWith('/client-portal/documents'), key: 'nav.documents' },
-  { test: (p) => p.startsWith('/client-portal/knowledge-base'), key: 'nav.helpCenter' },
+  { test: (p) => p.startsWith('/client-portal/knowledge-base'), key: 'nav.knowledgeBase' },
   { test: (p) => p.startsWith('/client-portal/billing'), key: 'nav.billing' },
   { test: (p) => p.startsWith('/client-portal/client-settings'), key: 'nav.clientSettings' },
   { test: (p) => p.startsWith('/client-portal/profile'), key: 'nav.profile' },

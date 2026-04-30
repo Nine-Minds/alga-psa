@@ -15,7 +15,7 @@
     "notifications": "Notifiche",
     "documents": "Documenti",
     "knowledgeBase": "Base di conoscenza",
-    "requestServices": "Richiedi servizi",
+    "requestServices": "Richieste di servizio",
     "home": "Home",
     "myTickets": "I miei ticket",
     "newRequest": "Nuova richiesta",
@@ -51,13 +51,21 @@
       "activeProjectsHint": "In corso",
       "nextLabel": "Successivo: {{when}}",
       "noneScheduled": "Nessuno programmato",
-      "deviceStatusHint": "Endpoint gestiti"
+      "deviceStatusHint": "Endpoint gestiti",
+      "serviceRequests": "Richieste di servizio",
+      "serviceRequestsHint": "Invii totali",
+      "openTicketsDescription": "Ticket di supporto su cui stiamo ancora lavorando.",
+      "activeProjectsDescription": "Progetti che stiamo realizzando per il tuo team.",
+      "serviceRequestsDescription": "Richieste strutturate inviate dal catalogo.",
+      "upcomingVisitsDescription": "Appuntamenti pianificati con i nostri tecnici.",
+      "activeDevicesDescription": "Dispositivi che gestiamo e monitoriamo attualmente."
     },
     "quickActions": {
       "title": "Azioni rapide",
-      "createTicket": "Crea ticket di supporto",
+      "createTicket": "Crea ticket",
       "requestAppointment": "Richiedi appuntamento",
-      "viewLatestInvoice": "Visualizza l'ultima fattura"
+      "viewLatestInvoice": "Visualizza l'ultima fattura",
+      "newServiceRequest": "Nuova richiesta di servizio"
     },
     "appointments": {
       "title": "Prossimi appuntamenti",
@@ -97,7 +105,7 @@
       "subtitle": "Ultimi aggiornamenti del tuo account",
       "empty": "Nessuna attività ancora",
       "emptyHint": "Quando i ticket vengono aggiornati o arrivano le fatture, le vedrai qui.",
-      "viewTickets": "Vedi tutti i ticket"
+      "viewTickets": "Mostra tutti i ticket"
     },
     "devices": {
       "title": "I tuoi dispositivi",
@@ -106,7 +114,14 @@
       "emptyShort": "Nessun dispositivo",
       "emptyBody": "I dispositivi gestiti dal tuo provider appariranno qui.",
       "healthy": "In salute",
-      "inactive": "Inattivo"
+      "inactive": "Inattivo",
+      "active": "Attivo"
+    },
+    "timeAgo": {
+      "justNow": "proprio ora",
+      "minutes": "{{count}} min fa",
+      "hours": "{{count}} h fa",
+      "days": "{{count}}g fa"
     }
   },
   "auth": {
@@ -605,8 +620,8 @@
   "devices": {
     "pageTitle": "I miei dispositivi",
     "loading": "Caricamento dispositivi…",
-    "statusOkTitle": "Tutti i dispositivi sono in salute",
-    "statusOkBody": "{{count}} dispositivi segnalano",
+    "statusOkTitle": "Tutti i dispositivi attivi",
+    "statusOkBody": "{{count}} dispositivi in segnalazione",
     "empty": {
       "title": "Nessun dispositivo ancora",
       "body": "I dispositivi gestiti dal tuo provider appariranno qui."
@@ -618,6 +633,31 @@
       "printer": "Stampanti",
       "network": "Rete",
       "unknown": "Altro"
-    }
+    },
+    "statusWarnTitle": "Alcuni dispositivi inattivi",
+    "statusWarnBody": "{{active}} attivi · {{inactive}} inattivi",
+    "status": {
+      "active": "Attivo",
+      "inactive": "Inattivo"
+    },
+    "searchPlaceholder": "Cerca per nome, tag o numero di serie",
+    "filters": {
+      "allTypes": "Tutti i tipi",
+      "allStatuses": "Tutti gli stati"
+    },
+    "clearFilters": "Rimuovi filtri",
+    "columns": {
+      "name": "Nome",
+      "type": "Tipo",
+      "status": "Stato",
+      "location": "Posizione",
+      "updated": "Aggiornato",
+      "actions": "Azioni"
+    },
+    "notAvailable": "N/D",
+    "detailsTitle": "Dettagli asset",
+    "createTicket": "Crea ticket",
+    "createTicketForDevice": "Crea un ticket per questo dispositivo",
+    "rowActionsLabel": "Azioni riga"
   }
 }

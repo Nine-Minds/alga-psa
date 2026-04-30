@@ -10,51 +10,24 @@ import { RequestAppointmentModal } from './RequestAppointmentModal';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
-import { Calendar, Clock, User, FileText, AlertCircle, X, ExternalLink, List, LayoutGrid } from 'lucide-react';
+import { Calendar, Clock, User, FileText, AlertCircle, X, ExternalLink, List, LayoutGrid, MoreVertical, Eye, Pencil, Trash2 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@alga-psa/ui/components/DropdownMenu';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { AppointmentsCalendar } from './AppointmentsCalendar';
 import { format } from 'date-fns';
-import { fromZonedTime } from 'date-fns-tz';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { getMyAppointmentRequests, cancelAppointmentRequest } from '@alga-psa/client-portal/actions';
+import { toBrowserDate } from './dateUtils';
+import type { AppointmentRequest, AppointmentStatus } from './types';
 
-/** Safely convert a PG DATE (may be JS Date object) or string to YYYY-MM-DD */
-function normalizeDateValue(value: unknown): string | null {
-  if (!value) return null;
-  if (value instanceof Date) return value.toISOString().split('T')[0];
-  if (typeof value === 'string') return value.slice(0, 10);
-  return null;
-}
-
-/** Safely convert a PG TIME (may be string like "11:00:00") to HH:MM */
-function normalizeTimeValue(value: unknown): string | null {
-  if (!value) return null;
-  if (typeof value === 'string') return value.slice(0, 5);
-  return null;
-}
-
-interface AppointmentRequest {
-  appointment_request_id: string;
-  service_id: string;
-  service_name: string;
-  requested_date: string;
-  requested_time: string;
-  requested_duration: number;
-  requester_timezone?: string | null;
-  status: 'pending' | 'approved' | 'declined' | 'cancelled';
-  preferred_assigned_user_name?: string;
-  description?: string;
-  ticket_id?: string;
-  ticket_number?: string;
-  approved_at?: string;
-  declined_reason?: string;
-  online_meeting_url?: string | null;
-  created_at: string;
-}
-
-type FilterStatus = 'all' | 'pending' | 'approved' | 'declined' | 'cancelled';
+type FilterStatus = 'all' | AppointmentStatus;
 
 export default function AppointmentsPage() {
   const { t } = useTranslation('features/appointments');
@@ -70,6 +43,7 @@ export default function AppointmentsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [requestInitialDate, setRequestInitialDate] = useState<Date | null>(null);
 
   const loadAppointments = useCallback(async () => {
     setLoading(true);
@@ -78,7 +52,10 @@ export default function AppointmentsPage() {
       const filters = filterStatus && filterStatus !== 'all' ? { status: filterStatus } : undefined;
       const result = await getMyAppointmentRequests(filters);
       if (result.success && result.data) {
-        setAppointments(result.data as any);
+        // Action returns IAppointmentRequest joined with service_name; the row shape
+        // matches AppointmentRequest at runtime but the joined columns aren't on the
+        // typed return.
+        setAppointments(result.data as unknown as AppointmentRequest[]);
       } else {
         setAppointments([]);
         if (result.error) {
@@ -157,23 +134,13 @@ export default function AppointmentsPage() {
       dataIndex: 'requested_date',
       width: '20%',
       render: (value: unknown, record: AppointmentRequest) => {
-        const dateStr = normalizeDateValue(value);
-        const timeStr = normalizeTimeValue(record.requested_time);
-
-        let display = 'N/A';
-        if (dateStr && timeStr) {
-          try {
-            // requested_time is the user's naive local time in record.requester_timezone.
-            // 'UTC' fallback preserves legacy behavior for rows written before the tz column existed.
-            const dt = fromZonedTime(`${dateStr}T${timeStr}:00`, record.requester_timezone || 'UTC');
-            if (!isNaN(dt.getTime())) {
-              display = dt.toLocaleString('en-US', {
-                month: 'short', day: 'numeric', year: 'numeric',
-                hour: '2-digit', minute: '2-digit'
-              });
-            }
-          } catch { /* fallback */ }
-        }
+        const dt = toBrowserDate(value, record.requested_time, record.requester_timezone);
+        const display = dt
+          ? dt.toLocaleString('en-US', {
+              month: 'short', day: 'numeric', year: 'numeric',
+              hour: '2-digit', minute: '2-digit',
+            })
+          : 'N/A';
 
         return (
           <div className="text-sm">
@@ -208,41 +175,53 @@ export default function AppointmentsPage() {
     {
       title: t('table.actions'),
       dataIndex: 'appointment_request_id',
-      width: '20%',
+      width: '10%',
       render: (value: string, record: AppointmentRequest) => (
-        <div className="flex items-center gap-2">
-          <Button
-            id={`view-appointment-${value}`}
-            variant="soft"
-            size="sm"
-            onClick={() => setSelectedAppointment(record)}
-          >
-            {t('table.viewDetails')}
-          </Button>
-          {record.status === 'pending' && (
-            <>
-              <Button
-                id={`edit-appointment-${value}`}
-                variant="default"
-                size="sm"
-                onClick={() => {
-                  setEditingAppointment(record);
-                  setIsRequestModalOpen(true);
-                }}
-              >
-                {t('table.edit')}
-              </Button>
-              <Button
-                id={`cancel-appointment-${value}`}
-                variant="outline"
-                size="sm"
-                onClick={() => setAppointmentToCancel(value)}
-              >
-                {t('table.cancel')}
-              </Button>
-            </>
-          )}
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              id={`appointment-row-actions-${value}`}
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={(e) => e.stopPropagation()}
+              aria-label={t('table.rowActionsLabel', 'Row actions')}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              id={`view-appointment-${value}`}
+              onSelect={() => setSelectedAppointment(record)}
+            >
+              <Eye className="mr-2 h-4 w-4" />
+              {t('table.viewDetails')}
+            </DropdownMenuItem>
+            {record.status === 'pending' && (
+              <>
+                <DropdownMenuItem
+                  id={`edit-appointment-${value}`}
+                  onSelect={() => {
+                    setEditingAppointment(record);
+                    setIsRequestModalOpen(true);
+                  }}
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  {t('table.edit')}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  id={`cancel-appointment-${value}`}
+                  onSelect={() => setAppointmentToCancel(value)}
+                  className="text-[rgb(var(--color-text-700))]"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  {t('table.cancel')}
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       )
     }
   ];
@@ -331,6 +310,10 @@ export default function AppointmentsPage() {
                 );
                 if (full) setSelectedAppointment(full);
               }}
+              onCreateOnDate={(date) => {
+                setRequestInitialDate(date);
+                setIsRequestModalOpen(true);
+              }}
             />
           ) : (
             <div className="p-6">
@@ -376,10 +359,12 @@ export default function AppointmentsPage() {
           setIsRequestModalOpen(open);
           if (!open) {
             setEditingAppointment(null);
+            setRequestInitialDate(null);
           }
         }}
         onAppointmentRequested={loadAppointments}
         editingAppointment={editingAppointment}
+        initialDate={requestInitialDate}
       />
 
       {/* Appointment Details Modal */}
@@ -447,19 +432,17 @@ export default function AppointmentsPage() {
                     </div>
                     <div className="text-sm text-gray-900">
                       {(() => {
-                        const dateStr = normalizeDateValue(selectedAppointment.requested_date);
-                        const timeStr = normalizeTimeValue(selectedAppointment.requested_time);
-                        if (!dateStr || !timeStr) return 'N/A';
-                        try {
-                          const dt = fromZonedTime(`${dateStr}T${timeStr}:00`, selectedAppointment.requester_timezone || 'UTC');
-                          if (isNaN(dt.getTime())) return 'N/A';
-                          return dt.toLocaleString('en-US', {
-                            weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
-                            hour: '2-digit', minute: '2-digit'
-                          });
-                        } catch {
-                          return 'N/A';
-                        }
+                        const dt = toBrowserDate(
+                          selectedAppointment.requested_date,
+                          selectedAppointment.requested_time,
+                          selectedAppointment.requester_timezone,
+                        );
+                        return dt
+                          ? dt.toLocaleString('en-US', {
+                              weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+                              hour: '2-digit', minute: '2-digit',
+                            })
+                          : 'N/A';
                       })()}
                     </div>
                     <div className="text-sm text-gray-600 mt-1">

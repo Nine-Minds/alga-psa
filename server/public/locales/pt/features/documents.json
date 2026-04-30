@@ -267,5 +267,11 @@
         "fetchFailed": "Falha ao obter os documentos"
       }
     }
-  }
+  },
+  "uploadError": "Falha ao enviar o documento",
+  "downloadError": "Falha ao baixar o documento",
+  "uploadHint": "Envie ficheiros para partilhar com esta tarefa",
+  "file": "ficheiro",
+  "files": "ficheiros",
+  "view": "Ver"
 }

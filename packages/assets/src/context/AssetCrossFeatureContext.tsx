@@ -9,6 +9,8 @@ export interface AssetQuickAddTicketRenderProps {
   onTicketAdded: (ticket?: ITicket) => void;
   prefilledClient?: { id: string; name: string };
   assetId?: string;
+  /** Display name shown in the dialog so the operator sees which asset will be linked. */
+  assetName?: string;
 }
 
 export interface AssetTicketDetailsRenderProps {

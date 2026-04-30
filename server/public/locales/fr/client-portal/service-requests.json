@@ -1,11 +1,12 @@
 {
   "catalog": {
-    "title": "Demander des services",
-    "description": "Parcourez les services publiés et soumettez des demandes structurées.",
+    "title": "Demandes de service",
+    "description": "Envoyez une demande structurée et nous créerons un ticket automatiquement.",
     "myRequests": "Mes demandes",
     "empty": "Aucun service de demande n'est actuellement disponible.",
     "fallbackCategory": "Service",
-    "noDescription": "Aucune description fournie"
+    "noDescription": "Aucune description fournie",
+    "newRequestHeading": "Soumettre une nouvelle demande"
   },
   "detail": {
     "version": "Version {{version}}",
@@ -30,7 +31,8 @@
       "request": "Demande",
       "submitted": "Soumise",
       "status": "Statut",
-      "details": "Détails"
+      "details": "Détails",
+      "ticket": "Ticket"
     },
     "view": "Voir",
     "unknownDate": "Inconnue",
@@ -38,7 +40,8 @@
       "pending": "En attente",
       "succeeded": "Réussie",
       "failed": "Échouée"
-    }
+    },
+    "noTicket": "Pas de ticket"
   },
   "submissionDetail": {
     "backToMyRequests": "Retour à Mes demandes",
@@ -54,5 +57,15 @@
     "noAttachments": "Aucune pièce jointe incluse.",
     "fileIdLabel": "ID du fichier : {{id}}",
     "fileTypeLabel": "Type : {{mime}}"
+  },
+  "recent": {
+    "title": "Vos demandes récentes",
+    "viewAll": "Tout voir",
+    "empty": "Aucune demande envoyée pour le moment.",
+    "ticket": "Ticket n°{{number}}",
+    "noTicket": "Pas encore de ticket"
+  },
+  "myRequestsAll": {
+    "title": "Vos demandes"
   }
 }

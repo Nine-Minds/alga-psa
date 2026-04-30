@@ -16,7 +16,7 @@
     "notifications": "Notifications",
     "documents": "Documents",
     "knowledgeBase": "Knowledge Base",
-    "requestServices": "Request Services",
+    "requestServices": "Service Requests",
     "home": "Home",
     "myTickets": "My tickets",
     "newRequest": "New request",
@@ -44,7 +44,7 @@
   "devices": {
     "pageTitle": "My devices",
     "loading": "Loading devices…",
-    "statusOkTitle": "All devices healthy",
+    "statusOkTitle": "All devices active",
     "statusOkBody": "{{count}} devices reporting in",
     "empty": {
       "title": "No devices yet",
@@ -57,7 +57,32 @@
       "printer": "Printers",
       "network": "Network",
       "unknown": "Other"
-    }
+    },
+    "statusWarnTitle": "Some devices inactive",
+    "statusWarnBody": "{{active}} active · {{inactive}} inactive",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "searchPlaceholder": "Search by name, tag, or serial",
+    "filters": {
+      "allTypes": "All types",
+      "allStatuses": "All statuses"
+    },
+    "clearFilters": "Clear filters",
+    "columns": {
+      "name": "Name",
+      "type": "Type",
+      "status": "Status",
+      "location": "Location",
+      "updated": "Updated",
+      "actions": "Actions"
+    },
+    "notAvailable": "N/A",
+    "detailsTitle": "Asset details",
+    "createTicket": "Create ticket",
+    "createTicketForDevice": "Create a ticket for this device",
+    "rowActionsLabel": "Row actions"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -75,7 +100,14 @@
       "activeProjectsHint": "In progress",
       "nextLabel": "Next: {{when}}",
       "noneScheduled": "None scheduled",
-      "deviceStatusHint": "Managed endpoints"
+      "deviceStatusHint": "Managed endpoints",
+      "serviceRequests": "Service requests",
+      "serviceRequestsHint": "Total submissions",
+      "openTicketsDescription": "Support tickets we are still working on.",
+      "activeProjectsDescription": "Projects we are delivering for your team.",
+      "serviceRequestsDescription": "Structured requests you have submitted from the catalog.",
+      "upcomingVisitsDescription": "Scheduled appointments with our technicians.",
+      "activeDevicesDescription": "Endpoints we currently manage and monitor."
     },
     "welcomeBack": "Welcome back",
     "heroSubtitle": "Here's a snapshot of your IT support activity. Our team is standing by to help you stay productive.",
@@ -101,7 +133,8 @@
       "title": "Recent activity",
       "subtitle": "Latest updates across your account",
       "empty": "No recent activity yet",
-      "emptyHint": "When tickets are updated or invoices arrive, you will see them here."
+      "emptyHint": "When tickets are updated or invoices arrive, you will see them here.",
+      "viewTickets": "View all tickets"
     },
     "devices": {
       "title": "Your devices",
@@ -110,13 +143,15 @@
       "emptyShort": "No devices yet",
       "emptyBody": "Devices your provider manages will appear here.",
       "healthy": "Healthy",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "active": "Active"
     },
     "quickActions": {
       "title": "Quick Actions",
-      "createTicket": "Create Support Ticket",
-      "requestAppointment": "Request Appointment",
-      "viewLatestInvoice": "View Latest Invoice"
+      "createTicket": "Create ticket",
+      "requestAppointment": "Request appointment",
+      "viewLatestInvoice": "View Latest Invoice",
+      "newServiceRequest": "New service request"
     },
     "appointments": {
       "title": "Upcoming Appointments",
@@ -130,7 +165,13 @@
     "recentActivity": {
       "title": "Recent Activity"
     },
-    "viewAll": "View all {{item}} →"
+    "viewAll": "View all {{item}} →",
+    "timeAgo": {
+      "justNow": "just now",
+      "minutes": "{{count}} min ago",
+      "hours": "{{count}} h ago",
+      "days": "{{count}}d ago"
+    }
   },
   "auth": {
     "signIn": "Sign In",

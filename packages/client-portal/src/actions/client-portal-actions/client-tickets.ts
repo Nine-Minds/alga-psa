@@ -29,6 +29,7 @@ const clientTicketSchema = z.object({
   description: z.string().min(1),
   priority_id: z.string(),
   board_id: z.string().optional(),
+  asset_id: z.string().uuid().optional(),
 });
 
 const VISIBILITY_NOT_FOUND_ERROR =
@@ -245,7 +246,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       const { visibility } = await resolvePortalVisibility(trx, tenant, user.user_id);
 
       // Get ticket details with related data
-      const [ticket, conversations, documents, users] = await Promise.all([
+      const [ticket, conversations, documents, users, linkedAssets] = await Promise.all([
         trx('tickets as t')
         .select(
           't.*',
@@ -333,10 +334,35 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
               )
             )
         `, [tenant, ticketId, tenant, ticketId, tenant, ticketId, tenant])
-        .then((result: any) => result.rows)
+        .then((result: any) => result.rows),
+
+        // Linked assets (asset_associations -> assets) scoped to the requester's client.
+        trx('asset_associations as aa')
+          .innerJoin('assets as a', function joinAssets() {
+            this.on('aa.asset_id', '=', 'a.asset_id').andOn('aa.tenant', '=', 'a.tenant');
+          })
+          .where({
+            'aa.tenant': tenant,
+            'aa.entity_id': ticketId,
+            'aa.entity_type': 'ticket',
+            'a.client_id': visibility.clientId,
+          })
+          .select<Array<{
+            asset_id: string;
+            name: string;
+            asset_tag: string | null;
+            asset_type: string | null;
+            relationship_type: string | null;
+          }>>(
+            'a.asset_id',
+            'a.name',
+            'a.asset_tag',
+            'a.asset_type',
+            'aa.relationship_type',
+          )
       ]);
 
-      return { ticket, conversations, documents, users };
+      return { ticket, conversations, documents, users, linkedAssets };
     });
 
     if (!result.ticket) {
@@ -425,6 +451,10 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       closed_at: result.ticket.closed_at instanceof Date ? result.ticket.closed_at.toISOString() : result.ticket.closed_at,
       conversations: result.conversations,
       documents: result.documents,
+      // Linked assets joined from asset_associations; the type is broadened on
+      // the consumer side via a small augmentation since ITicketWithDetails
+      // doesn't model this today.
+      linkedAssets: result.linkedAssets,
       userMap,
       contactMap
     };
@@ -909,7 +939,10 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         priority_id: data.get('priority_id'),
         board_id: data.get('board_id')
           ? data.get('board_id')?.toString()
-          : undefined
+          : undefined,
+        asset_id: data.get('asset_id')
+          ? data.get('asset_id')?.toString()
+          : undefined,
       });
 
       const requestedBoardId = validatedData.board_id?.trim() || null;
@@ -995,6 +1028,33 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
         user.user_id,
         3 // max retries
       );
+
+      // If an asset was selected, link it to the ticket. The asset must already
+      // belong to the requester's client; we verify ownership before inserting.
+      if (validatedData.asset_id) {
+        const asset = await trx('assets')
+          .where({
+            tenant,
+            asset_id: validatedData.asset_id,
+            client_id: visibility.clientId,
+          })
+          .select('asset_id')
+          .first();
+
+        if (!asset) {
+          throw new Error('Selected asset does not belong to this client');
+        }
+
+        await trx('asset_associations').insert({
+          tenant,
+          asset_id: validatedData.asset_id,
+          entity_id: ticketResult.ticket_id,
+          entity_type: 'ticket',
+          relationship_type: 'affected',
+          created_by: user.user_id,
+          created_at: new Date().toISOString(),
+        });
+      }
 
       // Publish TICKET_ASSIGNED event if a default agent was set
       if (createTicketInput.assigned_to) {

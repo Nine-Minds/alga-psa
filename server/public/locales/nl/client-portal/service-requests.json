@@ -1,11 +1,12 @@
 {
   "catalog": {
-    "title": "Services aanvragen",
-    "description": "Blader door gepubliceerde services en dien gestructureerde aanvragen in.",
+    "title": "Serviceverzoeken",
+    "description": "Dien een gestructureerd verzoek in en wij maken automatisch een ticket aan.",
     "myRequests": "Mijn aanvragen",
     "empty": "Er zijn momenteel geen aanvraagservices beschikbaar.",
     "fallbackCategory": "Service",
-    "noDescription": "Geen beschrijving opgegeven"
+    "noDescription": "Geen beschrijving opgegeven",
+    "newRequestHeading": "Nieuw verzoek indienen"
   },
   "detail": {
     "version": "Versie {{version}}",
@@ -30,7 +31,8 @@
       "request": "Aanvraag",
       "submitted": "Ingediend",
       "status": "Status",
-      "details": "Details"
+      "details": "Details",
+      "ticket": "Ticket"
     },
     "view": "Bekijken",
     "unknownDate": "Onbekend",
@@ -38,7 +40,8 @@
       "pending": "In behandeling",
       "succeeded": "Geslaagd",
       "failed": "Mislukt"
-    }
+    },
+    "noTicket": "Geen ticket"
   },
   "submissionDetail": {
     "backToMyRequests": "Terug naar Mijn aanvragen",
@@ -54,5 +57,15 @@
     "noAttachments": "Geen bijlagen toegevoegd.",
     "fileIdLabel": "Bestand-ID: {{id}}",
     "fileTypeLabel": "Type: {{mime}}"
+  },
+  "recent": {
+    "title": "Je recente verzoeken",
+    "viewAll": "Bekijk alle",
+    "empty": "Nog geen verzoeken ingediend.",
+    "ticket": "Ticket #{{number}}",
+    "noTicket": "Nog geen ticket"
+  },
+  "myRequestsAll": {
+    "title": "Je verzoeken"
   }
 }

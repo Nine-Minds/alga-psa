@@ -56,7 +56,9 @@
       "priorityRequired": "Please select a priority",
       "boardRequired": "Please select a board",
       "createFailed": "Failed to create ticket. Please try again."
-    }
+    },
+    "linkedToAsset": "Linked asset: {{name}}",
+    "linkedToAssetGeneric": "Linked asset"
   },
   "status": {
     "open": "Open",
@@ -135,7 +137,8 @@
     "sla": "SLA",
     "updated": "Updated",
     "openInNewTab": "Open in new tab",
-    "actions": "Actions"
+    "actions": "Actions",
+    "linkedAssets": "Linked assets"
   },
   "actions": {
     "view": "View",
@@ -240,7 +243,9 @@
     "unbundleFailed": "Failed to unbundle ticket",
     "addToBundleFailed": "Failed to add ticket to bundle",
     "promoteMasterFailed": "Failed to promote master",
-    "updateBundleSettingsFailed": "Failed to update bundle settings"
+    "updateBundleSettingsFailed": "Failed to update bundle settings",
+    "assetLoadFailed": "Failed to load asset details",
+    "assetNotFound": "Asset not found"
   },
   "conversation": {
     "comments": "Comments",
@@ -1095,5 +1100,6 @@
     "bundle": {
       "childrenDescription": "Child tickets bundled in this master ticket"
     }
-  }
+  },
+  "invalidTicketData": "Invalid ticket data"
 }

@@ -267,5 +267,11 @@
         "fetchFailed": "Kan documenten niet ophalen"
       }
     }
-  }
+  },
+  "uploadError": "Document uploaden mislukt",
+  "downloadError": "Document downloaden mislukt",
+  "uploadHint": "Upload bestanden om met deze taak te delen",
+  "file": "bestand",
+  "files": "bestanden",
+  "view": "Bekijken"
 }

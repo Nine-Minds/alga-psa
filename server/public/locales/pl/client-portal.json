@@ -15,7 +15,7 @@
     "notifications": "Powiadomienia",
     "documents": "Dokumenty",
     "knowledgeBase": "Baza wiedzy",
-    "requestServices": "Zamów usługi",
+    "requestServices": "Zgłoszenia serwisowe",
     "home": "Strona główna",
     "myTickets": "Moje zgłoszenia",
     "newRequest": "Nowe zgłoszenie",
@@ -51,13 +51,21 @@
       "activeProjectsHint": "W toku",
       "nextLabel": "Następna: {{when}}",
       "noneScheduled": "Nic nie zaplanowano",
-      "deviceStatusHint": "Zarządzane urządzenia"
+      "deviceStatusHint": "Zarządzane urządzenia",
+      "serviceRequests": "Zgłoszenia serwisowe",
+      "serviceRequestsHint": "Łączna liczba zgłoszeń",
+      "openTicketsDescription": "Zgłoszenia wsparcia, nad którymi nadal pracujemy.",
+      "activeProjectsDescription": "Projekty realizowane dla Twojego zespołu.",
+      "serviceRequestsDescription": "Ustrukturyzowane zgłoszenia wysłane z katalogu.",
+      "upcomingVisitsDescription": "Zaplanowane wizyty z naszymi technikami.",
+      "activeDevicesDescription": "Urządzenia, którymi obecnie zarządzamy i monitorujemy."
     },
     "quickActions": {
       "title": "Szybkie akcje",
       "createTicket": "Utwórz zgłoszenie",
-      "requestAppointment": "Złóż wniosek o wizytę",
-      "viewLatestInvoice": "Zobacz ostatnią fakturę"
+      "requestAppointment": "Zarezerwuj wizytę",
+      "viewLatestInvoice": "Zobacz ostatnią fakturę",
+      "newServiceRequest": "Nowe zgłoszenie serwisowe"
     },
     "appointments": {
       "title": "Nadchodzące wizyty",
@@ -97,7 +105,7 @@
       "subtitle": "Najnowsze aktualizacje konta",
       "empty": "Brak ostatniej aktywności",
       "emptyHint": "Gdy zgłoszenia będą aktualizowane lub pojawią się faktury, zobaczysz je tutaj.",
-      "viewTickets": "Zobacz wszystkie zgłoszenia"
+      "viewTickets": "Pokaż wszystkie zgłoszenia"
     },
     "devices": {
       "title": "Twoje urządzenia",
@@ -106,7 +114,14 @@
       "emptyShort": "Brak urządzeń",
       "emptyBody": "Tutaj pojawią się urządzenia zarządzane przez dostawcę.",
       "healthy": "Sprawne",
-      "inactive": "Nieaktywne"
+      "inactive": "Nieaktywne",
+      "active": "Aktywne"
+    },
+    "timeAgo": {
+      "justNow": "przed chwilą",
+      "minutes": "{{count}} min temu",
+      "hours": "{{count}} godz. temu",
+      "days": "{{count}}d temu"
     }
   },
   "auth": {
@@ -605,8 +620,8 @@
   "devices": {
     "pageTitle": "Moje urządzenia",
     "loading": "Ładowanie urządzeń…",
-    "statusOkTitle": "Wszystkie urządzenia są sprawne",
-    "statusOkBody": "Zgłaszane urządzenia: {{count}}",
+    "statusOkTitle": "Wszystkie urządzenia aktywne",
+    "statusOkBody": "{{count}} urządzeń zgłaszających się",
     "empty": {
       "title": "Brak urządzeń",
       "body": "Tutaj pojawią się urządzenia zarządzane przez dostawcę."
@@ -618,6 +633,31 @@
       "printer": "Drukarki",
       "network": "Sieć",
       "unknown": "Inne"
-    }
+    },
+    "statusWarnTitle": "Niektóre urządzenia nieaktywne",
+    "statusWarnBody": "{{active}} aktywnych · {{inactive}} nieaktywnych",
+    "status": {
+      "active": "Aktywne",
+      "inactive": "Nieaktywne"
+    },
+    "searchPlaceholder": "Szukaj po nazwie, znaczniku lub numerze seryjnym",
+    "filters": {
+      "allTypes": "Wszystkie typy",
+      "allStatuses": "Wszystkie statusy"
+    },
+    "clearFilters": "Wyczyść filtry",
+    "columns": {
+      "name": "Nazwa",
+      "type": "Typ",
+      "status": "Status",
+      "location": "Lokalizacja",
+      "updated": "Zaktualizowano",
+      "actions": "Akcje"
+    },
+    "notAvailable": "Brak",
+    "detailsTitle": "Szczegóły zasobu",
+    "createTicket": "Utwórz zgłoszenie",
+    "createTicketForDevice": "Utwórz zgłoszenie dla tego urządzenia",
+    "rowActionsLabel": "Akcje wiersza"
   }
 }

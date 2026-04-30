@@ -989,7 +989,8 @@
     "editComment": "Editar comentario",
     "deleteCommentAriaLabel": "Eliminar comentario",
     "deleteComment": "Eliminar comentario",
-    "deleteCommentConfirmation": "¿Está seguro de que desea eliminar este comentario? Esta acción no se puede deshacer."
+    "deleteCommentConfirmation": "¿Está seguro de que desea eliminar este comentario? Esta acción no se puede deshacer.",
+    "update": "Actualizar"
   },
   "enums": {
     "addOnDescription": {

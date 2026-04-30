@@ -1,4 +1,9 @@
 {
+  "greeting": {
+    "morning": "11111",
+    "afternoon": "11111",
+    "evening": "11111"
+  },
   "welcome": {
     "title": "11111",
     "description": "11111",
@@ -153,10 +158,5 @@
       "dismissFailed": "11111",
       "restoreFailed": "11111"
     }
-  },
-  "greeting": {
-    "morning": "11111",
-    "afternoon": "11111",
-    "evening": "11111"
   }
 }

@@ -928,7 +928,8 @@
     "editComment": "11111",
     "deleteCommentAriaLabel": "11111",
     "deleteComment": "11111",
-    "deleteCommentConfirmation": "11111"
+    "deleteCommentConfirmation": "11111",
+    "update": "11111"
   },
   "sessionManagement": {
     "title": "11111",

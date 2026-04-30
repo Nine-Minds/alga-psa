@@ -914,7 +914,8 @@
     "editComment": "Edytuj komentarz",
     "deleteCommentAriaLabel": "Usuń komentarz",
     "deleteComment": "Usuń komentarz",
-    "deleteCommentConfirmation": "Czy na pewno chcesz usunąć ten komentarz? Tej operacji nie można cofnąć."
+    "deleteCommentConfirmation": "Czy na pewno chcesz usunąć ten komentarz? Tej operacji nie można cofnąć.",
+    "update": "Zaktualizuj"
   },
   "sessionManagement": {
     "title": "Aktywne sesje",

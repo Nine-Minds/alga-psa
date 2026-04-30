@@ -15,7 +15,7 @@
     "notifications": "Notificaciones",
     "documents": "Documentos",
     "knowledgeBase": "Base de conocimiento",
-    "requestServices": "Solicitar servicios",
+    "requestServices": "Solicitudes de servicio",
     "home": "Inicio",
     "myTickets": "Mis tickets",
     "newRequest": "Nueva solicitud",
@@ -51,13 +51,21 @@
       "activeProjectsHint": "En curso",
       "nextLabel": "Próximo: {{when}}",
       "noneScheduled": "Sin programar",
-      "deviceStatusHint": "Endpoints gestionados"
+      "deviceStatusHint": "Endpoints gestionados",
+      "serviceRequests": "Solicitudes de servicio",
+      "serviceRequestsHint": "Total de envíos",
+      "openTicketsDescription": "Tickets de soporte en los que aún estamos trabajando.",
+      "activeProjectsDescription": "Proyectos que estamos entregando para tu equipo.",
+      "serviceRequestsDescription": "Solicitudes estructuradas que enviaste desde el catálogo.",
+      "upcomingVisitsDescription": "Citas programadas con nuestros técnicos.",
+      "activeDevicesDescription": "Equipos que gestionamos y supervisamos actualmente."
     },
     "quickActions": {
       "title": "Acciones rápidas",
-      "createTicket": "Crear ticket de soporte",
+      "createTicket": "Crear ticket",
       "requestAppointment": "Solicitar cita",
-      "viewLatestInvoice": "Ver la última factura"
+      "viewLatestInvoice": "Ver la última factura",
+      "newServiceRequest": "Nueva solicitud de servicio"
     },
     "appointments": {
       "title": "Próximas citas",
@@ -106,7 +114,14 @@
       "emptyShort": "Aún no hay dispositivos",
       "emptyBody": "Los dispositivos gestionados por tu proveedor aparecerán aquí.",
       "healthy": "Saludable",
-      "inactive": "Inactivo"
+      "inactive": "Inactivo",
+      "active": "Activo"
+    },
+    "timeAgo": {
+      "justNow": "ahora mismo",
+      "minutes": "hace {{count}} min",
+      "hours": "hace {{count}} h",
+      "days": "hace {{count}}d"
     }
   },
   "auth": {
@@ -605,7 +620,7 @@
   "devices": {
     "pageTitle": "Mis dispositivos",
     "loading": "Cargando dispositivos…",
-    "statusOkTitle": "Todos los dispositivos en buen estado",
+    "statusOkTitle": "Todos los dispositivos activos",
     "statusOkBody": "{{count}} dispositivos reportando",
     "empty": {
       "title": "Aún no hay dispositivos",
@@ -618,6 +633,31 @@
       "printer": "Impresoras",
       "network": "Red",
       "unknown": "Otros"
-    }
+    },
+    "statusWarnTitle": "Algunos dispositivos inactivos",
+    "statusWarnBody": "{{active}} activos · {{inactive}} inactivos",
+    "status": {
+      "active": "Activo",
+      "inactive": "Inactivo"
+    },
+    "searchPlaceholder": "Buscar por nombre, etiqueta o serie",
+    "filters": {
+      "allTypes": "Todos los tipos",
+      "allStatuses": "Todos los estados"
+    },
+    "clearFilters": "Limpiar filtros",
+    "columns": {
+      "name": "Nombre",
+      "type": "Tipo",
+      "status": "Estado",
+      "location": "Ubicación",
+      "updated": "Actualizado",
+      "actions": "Acciones"
+    },
+    "notAvailable": "N/D",
+    "detailsTitle": "Detalles del activo",
+    "createTicket": "Crear ticket",
+    "createTicketForDevice": "Crear ticket para este dispositivo",
+    "rowActionsLabel": "Acciones de fila"
   }
 }

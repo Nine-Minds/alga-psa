@@ -1,11 +1,18 @@
 {
   "views": {
     "list": "List",
-    "calendar": "Calendar"
+    "calendar": "Calendar",
+    "label": "Switch view"
   },
   "calendar": {
     "today": "Today",
-    "more": "more"
+    "more": "more",
+    "label": "Appointments calendar",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "cellWithCount": "{{date}}, {{count}} appointments",
+    "moreAria": "Show {{count}} more on {{date}}",
+    "requestOnDate": "Request appointment on {{date}}"
   },
   "modal": {
     "title": "Request Appointment",
@@ -109,7 +116,8 @@
     "notAssigned": "Not assigned",
     "viewDetails": "View Details",
     "edit": "Edit",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "rowActionsLabel": "Row actions"
   },
   "details": {
     "title": "Appointment Details",
@@ -146,5 +154,6 @@
     "on": "on",
     "declined": "Declined:",
     "invalidDateTime": "Invalid date/time"
-  }
+  },
+  "backToAppointments": "Back to Appointments"
 }

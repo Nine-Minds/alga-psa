@@ -26,9 +26,16 @@ import { resolveClientPortalTitleKey } from './clientPortalRouteTitles';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
+  initialSidebarCollapsed?: boolean;
 }
 
-function LayoutShell({ children }: { children: ReactNode }) {
+function LayoutShell({
+  children,
+  initialSidebarCollapsed,
+}: {
+  children: ReactNode;
+  initialSidebarCollapsed: boolean;
+}) {
   const [userData, setUserData] = useState<IUserWithRoles | null>(null);
   const [permissions, setPermissions] = useState({
     hasClientSettingsAccess: false,
@@ -36,6 +43,7 @@ function LayoutShell({ children }: { children: ReactNode }) {
     hasUserManagementAccess: false,
     hasAccountAccess: false,
   });
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
   const { branding } = useBranding();
   const { enabled: knowledgeBaseEnabled } = useFeatureFlag('knowledge-base', {
     defaultValue: false,
@@ -59,20 +67,29 @@ function LayoutShell({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      const user = await getCurrentUser();
-      if (user) {
-        setUserData(user);
-        const perms = await checkClientPortalPermissions();
-        setPermissions({
-          hasClientSettingsAccess: perms.hasClientSettingsAccess,
-          hasBillingAccess: perms.hasBillingAccess,
-          hasUserManagementAccess: perms.hasUserManagementAccess,
-          hasAccountAccess: perms.hasAccountAccess,
-        });
+    let mounted = true;
+    (async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!mounted) return;
+        if (user) {
+          setUserData(user);
+          const perms = await checkClientPortalPermissions();
+          if (!mounted) return;
+          setPermissions({
+            hasClientSettingsAccess: perms.hasClientSettingsAccess,
+            hasBillingAccess: perms.hasBillingAccess,
+            hasUserManagementAccess: perms.hasUserManagementAccess,
+            hasAccountAccess: perms.hasAccountAccess,
+          });
+        }
+      } finally {
+        if (mounted) setPermissionsLoaded(true);
       }
+    })();
+    return () => {
+      mounted = false;
     };
-    fetchUserData();
   }, []);
 
   const defaultBreadcrumb = useMemo(() => {
@@ -91,7 +108,9 @@ function LayoutShell({ children }: { children: ReactNode }) {
           hasClientSettingsAccess: permissions.hasClientSettingsAccess,
           hasBillingAccess: permissions.hasBillingAccess,
         }}
+        permissionsLoaded={permissionsLoaded}
         knowledgeBaseEnabled={knowledgeBaseEnabled}
+        initialCollapsed={initialSidebarCollapsed}
       />
 
       <div className="flex min-h-screen flex-1 flex-col min-w-0">
@@ -116,11 +135,16 @@ function LayoutShell({ children }: { children: ReactNode }) {
   );
 }
 
-export default function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
+export default function ClientPortalLayout({
+  children,
+  initialSidebarCollapsed = false,
+}: ClientPortalLayoutProps) {
   return (
     <DrawerProvider>
       <ClientPortalPageProvider>
-        <LayoutShell>{children}</LayoutShell>
+        <LayoutShell initialSidebarCollapsed={initialSidebarCollapsed}>
+          {children}
+        </LayoutShell>
       </ClientPortalPageProvider>
       <DrawerOutlet />
     </DrawerProvider>

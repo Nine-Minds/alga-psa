@@ -56,7 +56,9 @@
       "createFailed": "Ticket konnte nicht erstellt werden. Bitte versuche es erneut.",
       "boardRequired": "Bitte wähle ein Board aus"
     },
-    "boardPlaceholder": "Board auswählen"
+    "boardPlaceholder": "Board auswählen",
+    "linkedToAsset": "Verknüpftes Asset: {{name}}",
+    "linkedToAssetGeneric": "Verknüpftes Asset"
   },
   "status": {
     "open": "Offen",
@@ -135,7 +137,8 @@
     "sla": "SLA",
     "updated": "Aktualisiert",
     "openInNewTab": "In neuem Tab öffnen",
-    "actions": "Aktionen"
+    "actions": "Aktionen",
+    "linkedAssets": "Verknüpfte Assets"
   },
   "actions": {
     "view": "Anzeigen",
@@ -240,7 +243,9 @@
     "unbundleFailed": "Bündel konnte nicht aufgelöst werden",
     "addToBundleFailed": "Ticket konnte nicht zum Bündel hinzugefügt werden",
     "promoteMasterFailed": "Hauptticket konnte nicht befördert werden",
-    "updateBundleSettingsFailed": "Bündeleinstellungen konnten nicht aktualisiert werden"
+    "updateBundleSettingsFailed": "Bündeleinstellungen konnten nicht aktualisiert werden",
+    "assetLoadFailed": "Fehler beim Laden der Asset-Details",
+    "assetNotFound": "Asset nicht gefunden"
   },
   "conversation": {
     "comments": "Kommentare",
@@ -1095,5 +1100,6 @@
     "bundle": {
       "childrenDescription": "Untergeordnete Tickets, die in diesem Master-Ticket gebündelt sind"
     }
-  }
+  },
+  "invalidTicketData": "Ungültige Ticketdaten"
 }

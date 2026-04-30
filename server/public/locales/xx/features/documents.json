@@ -267,5 +267,11 @@
         "fetchFailed": "11111"
       }
     }
-  }
+  },
+  "uploadError": "11111",
+  "downloadError": "11111",
+  "uploadHint": "11111",
+  "file": "11111",
+  "files": "11111",
+  "view": "11111"
 }

@@ -989,7 +989,8 @@
     "editComment": "Modifier le commentaire",
     "deleteCommentAriaLabel": "Supprimer le commentaire",
     "deleteComment": "Supprimer le commentaire",
-    "deleteCommentConfirmation": "Êtes-vous sûr de vouloir supprimer ce commentaire ? Cette action est irréversible."
+    "deleteCommentConfirmation": "Êtes-vous sûr de vouloir supprimer ce commentaire ? Cette action est irréversible.",
+    "update": "Mettre à jour"
   },
   "enums": {
     "addOnDescription": {

@@ -19,10 +19,10 @@ export default function ProjectsOverviewPage() {
   const [projects, setProjects] = useState<IProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const pageSize = 10;
   
   // Define columns for the DataTable
   const columns: ColumnDefinition<IProject>[] = [
@@ -182,6 +182,10 @@ export default function ProjectsOverviewPage() {
         currentPage={page}
         onPageChange={setPage}
         pageSize={pageSize}
+        onItemsPerPageChange={(size) => {
+          setPageSize(size);
+          setPage(1);
+        }}
         totalItems={totalItems}
         onRowClick={handleViewProject}
       />

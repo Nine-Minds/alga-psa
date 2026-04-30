@@ -267,5 +267,11 @@
         "fetchFailed": "No se pudieron cargar los documentos"
       }
     }
-  }
+  },
+  "uploadError": "Error al subir el documento",
+  "downloadError": "Error al descargar el documento",
+  "uploadHint": "Sube archivos para compartir con esta tarea",
+  "file": "archivo",
+  "files": "archivos",
+  "view": "Ver"
 }

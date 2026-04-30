@@ -1343,5 +1343,6 @@
     "dependsOn": "55555",
     "unknownTask": "55555",
     "blocks": "55555"
-  }
+  },
+  "columnsHidden": "55555"
 }

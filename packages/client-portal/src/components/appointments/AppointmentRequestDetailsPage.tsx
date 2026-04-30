@@ -14,6 +14,7 @@ import { fromZonedTime } from 'date-fns-tz';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { getAppointmentRequestDetails, cancelAppointmentRequest } from '@alga-psa/client-portal/actions';
+import { useSetClientPortalHeader } from '../layout/ClientPortalPageContext';
 
 /** Safely convert a PG DATE (may be JS Date object) or string to YYYY-MM-DD */
 function normalizeDateValue(value: unknown): string | null {
@@ -64,6 +65,16 @@ export function AppointmentRequestDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCancelConfirmation, setShowCancelConfirmation] = useState(false);
+
+  // Update top bar title with the loaded appointment's service name (or fallback).
+  useSetClientPortalHeader(
+    {
+      title:
+        appointment?.service_name ||
+        t('details.title', 'Appointment Request Details'),
+    },
+    [appointment?.service_name, t],
+  );
 
   const loadAppointment = useCallback(async () => {
     setLoading(true);

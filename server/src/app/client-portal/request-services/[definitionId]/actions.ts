@@ -31,6 +31,26 @@ function buildRequestServiceDefinitionRedirectUrl(
     : `/client-portal/request-services/${definitionId}`;
 }
 
+/**
+ * URL for the catalog/list page; used after a successful submission so the
+ * user lands somewhere actionable (their request list + catalog) instead of
+ * an empty form page.
+ */
+function buildRequestServiceCatalogRedirectUrl(
+  params: Record<string, string | null | undefined>
+): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (typeof value === 'string' && value.length > 0) {
+      search.set(key, value);
+    }
+  }
+  const query = search.toString();
+  return query.length > 0
+    ? `/client-portal/request-services?${query}`
+    : '/client-portal/request-services';
+}
+
 export const getRequestServiceDefinitionDetailAction = withAuth(async (
   currentUser: IUserWithRoles,
   { tenant }: AuthContext,
@@ -207,7 +227,7 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
   }
 
   redirect(
-    buildRequestServiceDefinitionRedirectUrl(definitionId, {
+    buildRequestServiceCatalogRedirectUrl({
       submitted: outcome.submissionId,
       ticketId: outcome.createdTicketId,
     })

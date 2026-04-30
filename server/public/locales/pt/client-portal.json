@@ -15,7 +15,7 @@
     "notifications": "Notifications",
     "documents": "Documents",
     "knowledgeBase": "Knowledge Base",
-    "requestServices": "Request Services",
+    "requestServices": "Pedidos de serviço",
     "home": "Início",
     "myTickets": "Meus tickets",
     "newRequest": "Novo pedido",
@@ -51,13 +51,21 @@
       "activeProjectsHint": "Em andamento",
       "nextLabel": "Próximo: {{when}}",
       "noneScheduled": "Nada agendado",
-      "deviceStatusHint": "Endpoints geridos"
+      "deviceStatusHint": "Endpoints geridos",
+      "serviceRequests": "Pedidos de serviço",
+      "serviceRequestsHint": "Total de submissões",
+      "openTicketsDescription": "Tickets de suporte em que ainda estamos a trabalhar.",
+      "activeProjectsDescription": "Projetos que estamos a entregar à sua equipa.",
+      "serviceRequestsDescription": "Pedidos estruturados que enviou a partir do catálogo.",
+      "upcomingVisitsDescription": "Visitas agendadas com os nossos técnicos.",
+      "activeDevicesDescription": "Equipamentos que gerimos e monitorizamos atualmente."
     },
     "quickActions": {
       "title": "Quick Actions",
-      "createTicket": "Create Support Ticket",
-      "requestAppointment": "Request Appointment",
-      "viewLatestInvoice": "View Latest Invoice"
+      "createTicket": "Criar ticket",
+      "requestAppointment": "Pedir consulta",
+      "viewLatestInvoice": "View Latest Invoice",
+      "newServiceRequest": "Novo pedido de serviço"
     },
     "appointments": {
       "title": "Upcoming Appointments",
@@ -106,7 +114,14 @@
       "emptyShort": "Ainda sem dispositivos",
       "emptyBody": "Os dispositivos geridos pelo seu fornecedor aparecerão aqui.",
       "healthy": "Saudável",
-      "inactive": "Inativo"
+      "inactive": "Inativo",
+      "active": "Ativo"
+    },
+    "timeAgo": {
+      "justNow": "agora mesmo",
+      "minutes": "há {{count}} min",
+      "hours": "há {{count}} h",
+      "days": "há {{count}}d"
     }
   },
   "auth": {
@@ -605,7 +620,7 @@
   "devices": {
     "pageTitle": "Meus dispositivos",
     "loading": "Carregando dispositivos…",
-    "statusOkTitle": "Todos os dispositivos saudáveis",
+    "statusOkTitle": "Todos os dispositivos ativos",
     "statusOkBody": "{{count}} dispositivos reportando",
     "empty": {
       "title": "Ainda sem dispositivos",
@@ -618,6 +633,31 @@
       "printer": "Impressoras",
       "network": "Rede",
       "unknown": "Outros"
-    }
+    },
+    "statusWarnTitle": "Alguns dispositivos inativos",
+    "statusWarnBody": "{{active}} ativos · {{inactive}} inativos",
+    "status": {
+      "active": "Ativo",
+      "inactive": "Inativo"
+    },
+    "searchPlaceholder": "Pesquisar por nome, etiqueta ou série",
+    "filters": {
+      "allTypes": "Todos os tipos",
+      "allStatuses": "Todos os estados"
+    },
+    "clearFilters": "Limpar filtros",
+    "columns": {
+      "name": "Nome",
+      "type": "Tipo",
+      "status": "Estado",
+      "location": "Localização",
+      "updated": "Atualizado",
+      "actions": "Ações"
+    },
+    "notAvailable": "N/D",
+    "detailsTitle": "Detalhes do ativo",
+    "createTicket": "Criar ticket",
+    "createTicketForDevice": "Criar ticket para este dispositivo",
+    "rowActionsLabel": "Ações da linha"
   }
 }

@@ -2,8 +2,9 @@
  * Server-side i18n utilities for Next.js App Router
  */
 
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import i18next, { TFunction } from 'i18next';
-import HttpBackend from 'i18next-http-backend';
 import { cache } from 'react';
 import { cookies, headers } from 'next/headers.js';
 import {
@@ -16,7 +17,38 @@ import {
 import { getConnection } from '@alga-psa/db/tenant';
 
 /**
- * Initialize i18next for server-side rendering
+ * Resolves the absolute path to the locales directory.
+ *
+ * Server components run with `process.cwd()` pointing at the Next.js app root
+ * (the `server/` package in this repo). Locale JSON lives under
+ * `<cwd>/public/locales/<lng>/<ns>.json`. We avoid HTTP fetch loaders so that
+ * SSR doesn't depend on the dev port — historically `i18next-http-backend`
+ * defaulted to `localhost:3000`, which silently failed when the dev server
+ * was on a different port and surfaced as raw translation keys in the UI.
+ */
+function getLocalesDir(): string {
+  const override = process.env.ALGA_LOCALES_DIR;
+  if (override) return override;
+  return path.resolve(process.cwd(), 'public/locales');
+}
+
+async function loadNamespaceFromDisk(
+  locale: SupportedLocale,
+  namespace: string,
+): Promise<Record<string, unknown> | null> {
+  const filePath = path.join(getLocalesDir(), locale, `${namespace}.json`);
+  try {
+    const raw = await fs.readFile(filePath, 'utf8');
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Initialize i18next for server-side rendering by reading locale JSON
+ * directly from disk. Loads each requested namespace plus the fallback locale
+ * so missing keys still resolve.
  */
 async function initI18next(locale: SupportedLocale, namespaces: string[] = []) {
   const instance = i18next.createInstance();
@@ -25,20 +57,28 @@ async function initI18next(locale: SupportedLocale, namespaces: string[] = []) {
     new Set<string>([...(I18N_CONFIG.ns ?? ['common']), ...namespaces])
   );
 
-  await instance
-    .use(HttpBackend)
-    .init({
-      ...I18N_CONFIG,
-      ns: requestedNamespaces,
-      lng: locale,
-      backend: {
-        loadPath: `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/locales/{{lng}}/{{ns}}.json`,
-      },
-    });
+  await instance.init({
+    ...I18N_CONFIG,
+    ns: requestedNamespaces,
+    lng: locale,
+    // Resources are added below; disable backend to avoid extra fetching.
+    initImmediate: false,
+  });
 
-  if (namespaces.length > 0) {
-    await instance.loadNamespaces(namespaces);
-  }
+  const fallback =
+    typeof I18N_CONFIG.fallbackLng === 'string' ? I18N_CONFIG.fallbackLng : LOCALE_CONFIG.defaultLocale;
+  const localesToLoad = locale === fallback ? [locale] : [locale, fallback as SupportedLocale];
+
+  await Promise.all(
+    localesToLoad.flatMap((lng) =>
+      requestedNamespaces.map(async (ns) => {
+        const data = await loadNamespaceFromDisk(lng, ns);
+        if (data) {
+          instance.addResourceBundle(lng, ns, data, true, true);
+        }
+      })
+    )
+  );
 
   return instance;
 }

@@ -7,6 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/c
 import { Button } from '@alga-psa/ui/components/Button';
 import { HelpCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Link2 } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { addTicket, updateTicket } from '../actions/ticketActions';
@@ -154,6 +156,8 @@ interface QuickAddTicketProps {
   prefilledAdditionalAgents?: { user_id: string; name?: string }[];
   isEmbedded?: boolean;
   assetId?: string;
+  /** Optional asset display name; rendered in a banner so the operator sees which asset will be linked. */
+  assetName?: string;
   renderBeforeFooter?: () => React.ReactNode;
 }
 
@@ -171,6 +175,7 @@ export function QuickAddTicket({
   prefilledAdditionalAgents,
   isEmbedded = false,
   assetId,
+  assetName,
   renderBeforeFooter
 }: QuickAddTicketProps) {
   const router = useRouter();
@@ -1042,6 +1047,26 @@ export function QuickAddTicket({
                     </ul>
                   </AlertDescription>
                 </Alert>
+              )}
+
+              {assetId && (
+                <div className="mb-4 flex pb-2">
+                  <Badge
+                    variant="secondary"
+                    className="inline-flex items-center gap-1.5 rounded-full"
+                    data-testid="quick-add-ticket-asset-pill"
+                  >
+                    <Link2 className="h-3 w-3" />
+                    {assetName
+                      ? t('create.linkedToAsset', {
+                          defaultValue: 'Linked asset: {{name}}',
+                          name: assetName,
+                        })
+                      : t('create.linkedToAssetGeneric', {
+                          defaultValue: 'Linked asset',
+                        })}
+                  </Badge>
+                </div>
               )}
 
               <ReflectionContainer id={`${id}-form`} label={t('quickAdd.formLabel', 'Quick Add Ticket Form')}>

@@ -15,7 +15,7 @@
     "notifications": "Meldingen",
     "documents": "Documenten",
     "knowledgeBase": "Kennisbank",
-    "requestServices": "Services aanvragen",
+    "requestServices": "Serviceverzoeken",
     "home": "Home",
     "myTickets": "Mijn tickets",
     "newRequest": "Nieuw verzoek",
@@ -51,13 +51,21 @@
       "activeProjectsHint": "Lopend",
       "nextLabel": "Volgende: {{when}}",
       "noneScheduled": "Niets gepland",
-      "deviceStatusHint": "Beheerde endpoints"
+      "deviceStatusHint": "Beheerde endpoints",
+      "serviceRequests": "Serviceverzoeken",
+      "serviceRequestsHint": "Totaal aantal inzendingen",
+      "openTicketsDescription": "Supporttickets waar we nog aan werken.",
+      "activeProjectsDescription": "Projecten die we voor je team uitvoeren.",
+      "serviceRequestsDescription": "Gestructureerde verzoeken die je via de catalogus hebt ingediend.",
+      "upcomingVisitsDescription": "Geplande afspraken met onze technici.",
+      "activeDevicesDescription": "Apparaten die we momenteel beheren en monitoren."
     },
     "quickActions": {
       "title": "Snelle acties",
-      "createTicket": "Supportticket aanmaken",
+      "createTicket": "Ticket aanmaken",
       "requestAppointment": "Afspraak aanvragen",
-      "viewLatestInvoice": "Laatste factuur bekijken"
+      "viewLatestInvoice": "Laatste factuur bekijken",
+      "newServiceRequest": "Nieuw serviceverzoek"
     },
     "appointments": {
       "title": "Komende afspraken",
@@ -106,7 +114,14 @@
       "emptyShort": "Nog geen apparaten",
       "emptyBody": "De apparaten die je provider beheert verschijnen hier.",
       "healthy": "Gezond",
-      "inactive": "Inactief"
+      "inactive": "Inactief",
+      "active": "Actief"
+    },
+    "timeAgo": {
+      "justNow": "zojuist",
+      "minutes": "{{count}} min geleden",
+      "hours": "{{count}} u geleden",
+      "days": "{{count}}d geleden"
     }
   },
   "auth": {
@@ -605,8 +620,8 @@
   "devices": {
     "pageTitle": "Mijn apparaten",
     "loading": "Apparaten laden…",
-    "statusOkTitle": "Alle apparaten gezond",
-    "statusOkBody": "{{count}} apparaten rapporteren",
+    "statusOkTitle": "Alle apparaten actief",
+    "statusOkBody": "{{count}} apparaten gemeld",
     "empty": {
       "title": "Nog geen apparaten",
       "body": "De apparaten die je provider beheert verschijnen hier."
@@ -618,6 +633,31 @@
       "printer": "Printers",
       "network": "Netwerk",
       "unknown": "Overig"
-    }
+    },
+    "statusWarnTitle": "Sommige apparaten inactief",
+    "statusWarnBody": "{{active}} actief · {{inactive}} inactief",
+    "status": {
+      "active": "Actief",
+      "inactive": "Inactief"
+    },
+    "searchPlaceholder": "Zoek op naam, tag of serienummer",
+    "filters": {
+      "allTypes": "Alle types",
+      "allStatuses": "Alle statussen"
+    },
+    "clearFilters": "Filters wissen",
+    "columns": {
+      "name": "Naam",
+      "type": "Type",
+      "status": "Status",
+      "location": "Locatie",
+      "updated": "Bijgewerkt",
+      "actions": "Acties"
+    },
+    "notAvailable": "N.v.t.",
+    "detailsTitle": "Asset-details",
+    "createTicket": "Ticket aanmaken",
+    "createTicketForDevice": "Maak een ticket voor dit apparaat",
+    "rowActionsLabel": "Rijacties"
   }
 }

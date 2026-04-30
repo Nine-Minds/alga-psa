@@ -69,23 +69,21 @@ export function ClientPortalExtensionsNav({ sidebarOpen, isFirstSection = false 
     }
 
     return (
-      <Tooltip.Provider delayDuration={300} key={item.id}>
-        <Tooltip.Root>
-          <Tooltip.Trigger asChild>
-            <li>{link}</li>
-          </Tooltip.Trigger>
-          <Tooltip.Portal>
-            <Tooltip.Content
-              className="bg-subMenu-bg text-subMenu-text px-2 py-1 rounded-md text-sm z-50"
-              side="right"
-              sideOffset={5}
-            >
-              {item.label}
-              <Tooltip.Arrow style={{ fill: 'var(--color-submenu-bg)' }} />
-            </Tooltip.Content>
-          </Tooltip.Portal>
-        </Tooltip.Root>
-      </Tooltip.Provider>
+      <Tooltip.Root key={item.id}>
+        <Tooltip.Trigger asChild>
+          <li>{link}</li>
+        </Tooltip.Trigger>
+        <Tooltip.Portal>
+          <Tooltip.Content
+            className="bg-subMenu-bg text-subMenu-text px-2 py-1 rounded-md text-sm z-50"
+            side="right"
+            sideOffset={5}
+          >
+            {item.label}
+            <Tooltip.Arrow style={{ fill: 'var(--color-submenu-bg)' }} />
+          </Tooltip.Content>
+        </Tooltip.Portal>
+      </Tooltip.Root>
     );
   };
 

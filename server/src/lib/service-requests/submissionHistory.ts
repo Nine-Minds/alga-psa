@@ -23,6 +23,10 @@ export interface ServiceRequestClientSubmissionListRow {
   request_name: string;
   execution_status: 'pending' | 'succeeded' | 'failed';
   submitted_at: Date;
+  /** Ticket created by the execution provider, if any. */
+  created_ticket_id: string | null;
+  /** Display number of the linked ticket (joined from tickets table). */
+  ticket_number: string | null;
 }
 
 export interface ServiceRequestClientSubmissionDetail {
@@ -223,13 +227,27 @@ export async function listClientServiceRequestSubmissions(
   tenant: string,
   clientId: string
 ): Promise<ServiceRequestClientSubmissionListRow[]> {
-  const rows = await knex('service_request_submissions')
-    .where({
-      tenant,
-      client_id: clientId,
+  const rows = await knex('service_request_submissions as submission')
+    .leftJoin('tickets as ticket', function joinTicket() {
+      this.on('ticket.tenant', '=', 'submission.tenant').andOn(
+        'ticket.ticket_id',
+        '=',
+        'submission.created_ticket_id'
+      );
     })
-    .orderBy('created_at', 'desc')
-    .select('submission_id', 'request_name', 'execution_status', 'created_at as submitted_at');
+    .where({
+      'submission.tenant': tenant,
+      'submission.client_id': clientId,
+    })
+    .orderBy('submission.created_at', 'desc')
+    .select(
+      'submission.submission_id',
+      'submission.request_name',
+      'submission.execution_status',
+      'submission.created_at as submitted_at',
+      'submission.created_ticket_id',
+      'ticket.ticket_number'
+    );
 
   return rows as ServiceRequestClientSubmissionListRow[];
 }

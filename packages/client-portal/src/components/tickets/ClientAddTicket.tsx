@@ -7,6 +7,8 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Link2 } from 'lucide-react';
 import { createClientTicket } from '@alga-psa/client-portal/actions';
 import { getClientTicketFormData } from '@alga-psa/tickets/actions/ticketFormActions';
 import { IPriority, IBoard } from '@alga-psa/types';
@@ -42,9 +44,19 @@ interface ClientAddTicketProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onTicketAdded?: () => void;
+  /** When provided, the created ticket is linked to this asset via asset_associations. */
+  assetId?: string;
+  /** Optional asset display name; shown in a banner so the user knows which device they're filing about. */
+  assetName?: string;
 }
 
-export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAddTicketProps) {
+export function ClientAddTicket({
+  open,
+  onOpenChange,
+  onTicketAdded,
+  assetId,
+  assetName,
+}: ClientAddTicketProps) {
   const { t } = useTranslation('features/tickets');
   const { t: tCommon } = useTranslation('common');
   const noBoardsAvailableMessage = t(
@@ -144,6 +156,9 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
       if (boardId) {
         formData.append('board_id', boardId);
       }
+      if (assetId) {
+        formData.append('asset_id', assetId);
+      }
 
       await createClientTicket(formData);
       resetForm();
@@ -233,6 +248,26 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
+            )}
+
+            {assetId && (
+              <div className="flex pb-2">
+                <Badge
+                  variant="secondary"
+                  className="inline-flex items-center gap-1.5 rounded-full"
+                  data-testid="client-add-ticket-asset-pill"
+                >
+                  <Link2 className="h-3 w-3" />
+                  {assetName
+                    ? t('create.linkedToAsset', {
+                        defaultValue: 'Linked asset: {{name}}',
+                        name: assetName,
+                      })
+                    : t('create.linkedToAssetGeneric', {
+                        defaultValue: 'Linked asset',
+                      })}
+                </Badge>
+              </div>
             )}
 
             <form id="client-add-ticket-form" onSubmit={handleSubmit} className="space-y-4" noValidate>

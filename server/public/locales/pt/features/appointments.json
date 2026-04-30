@@ -101,7 +101,8 @@
     "notAssigned": "Not assigned",
     "viewDetails": "View Details",
     "edit": "Edit",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "rowActionsLabel": "Ações da linha"
   },
   "details": {
     "title": "Appointment Details",
@@ -141,10 +142,18 @@
   },
   "views": {
     "list": "Lista",
-    "calendar": "Calendário"
+    "calendar": "Calendário",
+    "label": "Mudar vista"
   },
   "calendar": {
     "today": "Hoje",
-    "more": "mais"
-  }
+    "more": "mais",
+    "label": "Calendário de agendamentos",
+    "previousMonth": "Mês anterior",
+    "nextMonth": "Próximo mês",
+    "cellWithCount": "{{date}}, {{count}} agendamentos",
+    "moreAria": "Mostrar mais {{count}} em {{date}}",
+    "requestOnDate": "Pedir consulta em {{date}}"
+  },
+  "backToAppointments": "Voltar para os agendamentos"
 }
