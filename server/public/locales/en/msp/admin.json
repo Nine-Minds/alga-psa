@@ -464,7 +464,7 @@
       "inputTitle": "Simulation input",
       "resource": "Resource",
       "action": "Action",
-      "principal": "Principal",
+      "principal": "User",
       "record": "Record",
       "useSynthetic": "Use synthetic record scenario",
       "syntheticOwnerPlaceholder": "Owner user ID (optional)",

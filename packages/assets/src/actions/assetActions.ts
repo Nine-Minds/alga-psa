@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import {
     CreateAssetRequest,
     UpdateAssetRequest,
@@ -25,11 +26,6 @@ import {
     ServerAsset,
     MobileDeviceAsset,
     PrinterAsset,
-    isWorkstationAsset,
-    isNetworkDeviceAsset,
-    isServerAsset,
-    isMobileDeviceAsset,
-    isPrinterAsset,
     AssetSummaryMetrics,
     HealthStatus,
     SecurityStatus,
@@ -120,45 +116,26 @@ function pruneNullishValues(value: unknown): unknown {
 function sanitizeUpdatePayload(data: UpdateAssetRequest): UpdateAssetRequest {
     const sanitized = {
         ...data,
-        workstation: data.workstation ? (({ installed_software, last_login, gpu_model, ...rest }) => ({
+        workstation: data.workstation ? (({ last_login, gpu_model, ...rest }) => ({
             ...rest,
             last_login: normalizeNullableString(last_login),
-            gpu_model: normalizeNullableString(gpu_model),
-            installed_software: Array.isArray(installed_software) ? installed_software : []
+            gpu_model: normalizeNullableString(gpu_model)
         }))(data.workstation) : undefined,
-        network_device: data.network_device ? (({ vlan_config, port_config, ...rest }) => ({
-            ...rest,
-            vlan_config: vlan_config || {},
-            port_config: port_config || {}
-        }))(data.network_device) : undefined,
-        server: data.server ? (({
-            storage_config,
-            network_interfaces,
-            installed_services,
-            raid_config,
-            hypervisor,
-            primary_ip,
-            ...rest
-        }) => ({
+        network_device: data.network_device,
+        server: data.server ? (({ raid_config, hypervisor, primary_ip, ...rest }) => ({
             ...rest,
             raid_config: normalizeNullableString(raid_config),
             hypervisor: normalizeNullableString(hypervisor),
-            primary_ip: normalizeNullableString(primary_ip),
-            storage_config: Array.isArray(storage_config) ? storage_config : [],
-            network_interfaces: Array.isArray(network_interfaces) ? network_interfaces : [],
-            installed_services: Array.isArray(installed_services) ? installed_services : []
+            primary_ip: normalizeNullableString(primary_ip)
         }))(data.server) : undefined,
-        mobile_device: data.mobile_device ? (({ installed_apps, carrier, phone_number, ...rest }) => ({
+        mobile_device: data.mobile_device ? (({ carrier, phone_number, ...rest }) => ({
             ...rest,
             carrier: normalizeNullableString(carrier),
-            phone_number: normalizeNullableString(phone_number),
-            installed_apps: Array.isArray(installed_apps) ? installed_apps : []
+            phone_number: normalizeNullableString(phone_number)
         }))(data.mobile_device) : undefined,
-        printer: data.printer ? (({ supported_paper_types, ip_address, ...rest }) => ({
+        printer: data.printer ? (({ ip_address, ...rest }) => ({
             ...rest,
-            ip_address: normalizeNullableString(ip_address),
-            supported_paper_types: Array.isArray(supported_paper_types) ? supported_paper_types : [],
-            supply_levels: rest.supply_levels || {}
+            ip_address: normalizeNullableString(ip_address)
         }))(data.printer) : undefined
     };
 
@@ -445,31 +422,8 @@ async function getExtensionData(knex: Knex, tenant: string, asset_id: string, as
     }
 }
 
-// Helper function to validate extension data based on type
-function validateExtensionData(data: unknown, type: string | undefined): AssetExtensionType | null {
-    if (!data || typeof data !== 'object' || !type) return null;
-
-    switch (type.toLowerCase()) {
-        case 'workstation':
-            if (isWorkstationAsset(data)) return data;
-            break;
-        case 'network_device':
-            if (isNetworkDeviceAsset(data)) return data;
-            break;
-        case 'server':
-            if (isServerAsset(data)) return data;
-            break;
-        case 'mobile_device':
-            if (isMobileDeviceAsset(data)) return data;
-            break;
-        case 'printer':
-            if (isPrinterAsset(data)) return data;
-            break;
-    }
-    return null;
-}
-
-// Helper function to insert/update extension table data
+// Helper function to insert/update extension table data.
+// Trusts upstream Zod validation (createAssetSchema / updateAssetSchema in the action layer).
 async function upsertExtensionData(
     knex: Knex,
     tenant: string,
@@ -477,15 +431,11 @@ async function upsertExtensionData(
     asset_type: string | undefined,
     data: unknown
 ): Promise<void> {
-    if (!asset_type) return;
-    
-    const validatedData = validateExtensionData(data, asset_type);
-    if (!validatedData) return;
+    if (!asset_type || !data || typeof data !== 'object') return;
 
     const table = `${asset_type.toLowerCase()}_assets`;
-    // Remove tenant and asset_id from validatedData to avoid duplicate properties
-    const { tenant: _t, asset_id: _a, ...extensionFields } = validatedData;
-    const extensionData = { tenant, asset_id, ...extensionFields };
+    // Strip tenant/asset_id — they're the Citus partition key + PK and cannot appear in an UPDATE SET clause.
+    const { tenant: _t, asset_id: _a, ...extensionFields } = data as Record<string, unknown>;
 
     // Check if record exists
     const exists = await knex(table)
@@ -493,11 +443,12 @@ async function upsertExtensionData(
         .first();
 
     if (exists) {
+        if (Object.keys(extensionFields).length === 0) return;
         await knex(table)
             .where({ tenant, asset_id })
-            .update(extensionData);
+            .update(extensionFields);
     } else {
-        await knex(table).insert(extensionData);
+        await knex(table).insert({ tenant, asset_id, ...extensionFields });
     }
 }
 
@@ -577,7 +528,7 @@ export const getAssetDetailBundle = withAuth(async (user, { tenant }, asset_id: 
             fetchAssetMaintenanceReport(trx, tenant, asset_id),
             fetchAssetHistory(trx, tenant, asset_id),
             canReadTickets ? fetchAssetLinkedTickets(trx, tenant, asset_id, context) : Promise.resolve([]),
-            canReadDocuments ? fetchAssetDocuments(trx, tenant, asset_id, 15, context) : Promise.resolve([])
+            canReadDocuments ? fetchAssetDocuments(trx, tenant, asset_id, assetRecord.client_id ?? null, 15, context) : Promise.resolve([])
         ]);
 
         return {
@@ -1014,6 +965,18 @@ export const updateAsset = withAuth(async (user, { tenant }, asset_id: string, d
         return updated;
     } catch (error) {
         console.error('Error updating asset:', error);
+        if (error instanceof z.ZodError) {
+            // Serialize field-level issues so the client can render them inline + in a toast
+            // without losing the user's in-progress form data.
+            throw new Error(JSON.stringify({
+                kind: 'validation',
+                issues: error.issues.map((issue) => ({
+                    path: issue.path,
+                    message: issue.message,
+                    code: issue.code,
+                })),
+            }));
+        }
         throw new Error('Failed to update asset');
     }
 });
@@ -2143,6 +2106,7 @@ async function fetchAssetDocuments(
     db: Knex | Knex.Transaction,
     tenant: string,
     asset_id: string,
+    asset_client_id: string | null,
     limit = 15,
     authorizationContext?: AssetReadAuthorizationContext
 ): Promise<IDocument[]> {
@@ -2165,6 +2129,11 @@ async function fetchAssetDocuments(
             db.raw("CONCAT(users.first_name, ' ', users.last_name) as created_by_full_name")
         );
 
+    // The document's client linkage in this view is the asset's owning client
+    // (we already filtered to documents associated with this asset). `documents`
+    // has no `client_id` column of its own, so without this the kernel always
+    // saw clientId=null and portal users from the asset's client failed
+    // `same_client`.
     const recordsAfterIntersection = authorizationContext
         ? (await Promise.all(records.map(async (record) => {
             const decision = await authorizationContext.authorizationKernel.authorizeResource({
@@ -2173,7 +2142,7 @@ async function fetchAssetDocuments(
                 record: {
                     id: record.document_id,
                     ownerUserId: record.created_by ?? null,
-                    clientId: record.client_id ?? null,
+                    clientId: asset_client_id,
                     is_client_visible: record.is_client_visible === true,
                 },
                 requestCache: authorizationContext.requestCache,

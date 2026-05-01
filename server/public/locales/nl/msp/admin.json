@@ -464,7 +464,7 @@
       "inputTitle": "Simulatie-invoer",
       "resource": "Resource",
       "action": "Actie",
-      "principal": "Principal",
+      "principal": "Gebruiker",
       "record": "Record",
       "useSynthetic": "Synthetisch recordscenario gebruiken",
       "syntheticOwnerPlaceholder": "Eigenaar gebruikers-ID (optioneel)",
