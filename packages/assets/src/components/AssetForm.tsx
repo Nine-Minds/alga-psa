@@ -25,6 +25,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getAsset, updateAsset } from '../actions/assetActions';
 import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
 import { useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
 import { Monitor, Network, Server, Smartphone, Printer as PrinterIcon, Router, Shield, Radio, Scale, MapPin, ExternalLink } from 'lucide-react';
 import { Text } from '@radix-ui/themes';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
@@ -56,7 +57,10 @@ export default function AssetForm({ assetId }: AssetFormProps) {
   const [asset, setAsset] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Distinguish load failures (no asset to render) from save failures (keep the form mounted with user input intact).
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [clients, setClients] = useState<ClientOptionSummary[]>([]);
   const [clientsLoading, setClientsLoading] = useState(true);
   const [clientsError, setClientsError] = useState<string | null>(null);
@@ -142,7 +146,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
       try {
         const data = await getAsset(assetId);
         if (!data) {
-          setError(t('assetForm.errors.assetNotFound', { defaultValue: 'Asset not found' }));
+          setLoadError(t('assetForm.errors.assetNotFound', { defaultValue: 'Asset not found' }));
           return;
         }
         setAsset(data);
@@ -226,7 +230,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
         setSelectedLocationId(data.location ? 'custom' : '');
       } catch (error) {
         console.error('Error loading asset:', error);
-        setError(t('assetForm.errors.loadFailed', { defaultValue: 'Failed to load asset details' }));
+        setLoadError(t('assetForm.errors.loadFailed', { defaultValue: 'Failed to load asset details' }));
       } finally {
         setLoading(false);
       }
@@ -897,7 +901,8 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     if (!asset) return;
 
     setSaving(true);
-    setError(null);
+    setSaveError(null);
+    setFieldErrors({});
 
     try {
       // Format the data before sending
@@ -1013,7 +1018,28 @@ export default function AssetForm({ assetId }: AssetFormProps) {
       router.refresh();
     } catch (error) {
       console.error('Error updating asset:', error);
-      setError(t('assetForm.errors.updateFailed', { defaultValue: 'Failed to update asset' }));
+
+      const message = error instanceof Error ? error.message : '';
+      let parsed: { kind?: string; issues?: Array<{ path?: unknown; message?: string }> } | null = null;
+      try { parsed = JSON.parse(message); } catch { /* not a structured error */ }
+
+      if (parsed?.kind === 'validation' && Array.isArray(parsed.issues)) {
+        const nextFieldErrors: Record<string, string> = {};
+        for (const issue of parsed.issues) {
+          const key = Array.isArray(issue.path) ? issue.path.join('.') : String(issue.path ?? '');
+          if (key) nextFieldErrors[key] = issue.message || 'Invalid';
+        }
+        setFieldErrors(nextFieldErrors);
+        const summary = t('assetForm.errors.validation', {
+          defaultValue: 'Please fix the highlighted fields before saving.',
+        });
+        setSaveError(summary);
+        toast.error(summary);
+      } else {
+        const summary = t('assetForm.errors.updateFailed', { defaultValue: 'Failed to update asset' });
+        setSaveError(summary);
+        toast.error(summary);
+      }
     } finally {
       setSaving(false);
     }
@@ -1030,11 +1056,11 @@ export default function AssetForm({ assetId }: AssetFormProps) {
       );
   }
 
-  if (error || !asset) {
+  if (loadError || !asset) {
     return (
       <div id="asset-form-error" className="flex items-center justify-center min-h-[400px]">
         <div className="text-red-500">
-          {error || t('assetForm.errors.assetNotFound', { defaultValue: 'Asset not found' })}
+          {loadError || t('assetForm.errors.assetNotFound', { defaultValue: 'Asset not found' })}
         </div>
       </div>
     );
@@ -1321,9 +1347,18 @@ export default function AssetForm({ assetId }: AssetFormProps) {
           </Button>
         </div>
 
-        {error && (
-          <div id="form-error" className="text-red-500 text-sm mt-2">
-            {error}
+        {saveError && (
+          <div id="form-error" className="mt-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div className="font-medium">{saveError}</div>
+            {Object.keys(fieldErrors).length > 0 && (
+              <ul id="form-field-errors" className="mt-1 list-disc pl-5">
+                {Object.entries(fieldErrors).map(([path, message]) => (
+                  <li key={path}>
+                    <span className="font-mono">{path}</span>: {message}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </form>

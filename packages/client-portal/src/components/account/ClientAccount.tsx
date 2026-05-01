@@ -162,7 +162,7 @@ export default function ClientAccount() {
       {/* Invoices */}
       <Card className="bg-white">
         <CardHeader>
-          <CardTitle>{tBilling('invoices')}</CardTitle>
+          <CardTitle>{tBilling('tabs.invoices')}</CardTitle>
         </CardHeader>
         <CardContent>
           {!hasInvoiceAccess ? (

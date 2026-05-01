@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
+import { useAssetCrossFeature } from '../context/AssetCrossFeatureContext';
 import { useRegisterUIComponent } from '@alga-psa/ui/ui-reflection/useRegisterUIComponent';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useClientDrawer } from '@alga-psa/ui';
@@ -138,6 +139,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const [drawerError, setDrawerError] = useState<string | null>(null);
   const [drawerLoading, setDrawerLoading] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [ticketDialogAsset, setTicketDialogAsset] = useState<Asset | null>(null);
+  const { renderQuickAddTicket } = useAssetCrossFeature();
   const lastRequestIdRef = useRef<number>(0);
   const lastAssetsRequestIdRef = useRef<number>(0);
   const lastAssetsQueryKeyRef = useRef<string>('');
@@ -741,11 +744,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
             <DropdownMenuSeparator />
             <DropdownMenuItem
               id={`create-ticket-${record.asset_id}`}
-              onSelect={() => {
-                if (typeof window !== 'undefined') {
-                  window.location.assign(`/msp/tickets/new?assetId=${record.asset_id}`);
-                }
-              }}
+              onSelect={() => setTicketDialogAsset(record)}
             >
               {t('assetDashboardClient.actions.createTicket', { defaultValue: 'Create ticket' })}
             </DropdownMenuItem>
@@ -1247,6 +1246,24 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
         onClose={handleDrawerClose}
         onTabChange={handleDrawerTabChange}
       />
+
+      {renderQuickAddTicket({
+        open: Boolean(ticketDialogAsset),
+        onOpenChange: (open) => {
+          if (!open) setTicketDialogAsset(null);
+        },
+        onTicketAdded: () => setTicketDialogAsset(null),
+        prefilledClient: ticketDialogAsset?.client_id
+          ? {
+              id: ticketDialogAsset.client_id,
+              name:
+                ticketDialogAsset.client?.client_name ||
+                t('assetDetailHeader.values.unknownClient', { defaultValue: 'Unknown Client' }),
+            }
+          : undefined,
+        assetId: ticketDialogAsset?.asset_id,
+        assetName: ticketDialogAsset?.name,
+      })}
     </div>
   );
 }

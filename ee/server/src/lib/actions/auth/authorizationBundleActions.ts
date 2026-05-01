@@ -93,6 +93,8 @@ export interface AuthorizationBundleAssignmentViewerPayload {
 export interface AuthorizationSimulationOption {
   id: string;
   label: string;
+  /** Optional descriptive sub-label (e.g. portal context for roles, email for users) */
+  subLabel?: string;
 }
 
 export interface AuthorizationSimulationDecision {
@@ -578,10 +580,36 @@ export const listAuthorizationBundleAssignmentsAction = withAuth(
       apiKeyIds.length > 0
         ? knex('api_keys').where({ tenant }).whereIn('api_key_id', apiKeyIds).select<{ api_key_id: string; description: string | null }[]>('api_key_id', 'description')
         : Promise.resolve([]),
-      knex('roles').where({ tenant }).orderBy('role_name', 'asc').select<{ role_id: string; role_name: string }[]>('role_id', 'role_name'),
+      knex('roles').where({ tenant }).orderBy('role_name', 'asc').select<{ role_id: string; role_name: string; msp: boolean; client: boolean }[]>('role_id', 'role_name', 'msp', 'client'),
       knex('teams').where({ tenant }).orderBy('team_name', 'asc').select<{ team_id: string; team_name: string }[]>('team_id', 'team_name'),
       knex('users').where({ tenant }).orderBy('username', 'asc').select<{ user_id: string; first_name: string | null; last_name: string | null; username: string | null; email: string | null }[]>('user_id', 'first_name', 'last_name', 'username', 'email'),
-      knex('api_keys').where({ tenant }).orderBy('created_at', 'desc').select<{ api_key_id: string; description: string | null }[]>('api_key_id', 'description'),
+      knex('api_keys as ak')
+        .leftJoin('users as u', function () {
+          this.on('u.user_id', '=', 'ak.user_id').andOn('u.tenant', '=', 'ak.tenant');
+        })
+        .where('ak.tenant', tenant)
+        .where('ak.active', true)
+        .andWhere(function () {
+          this.whereNull('ak.expires_at').orWhere('ak.expires_at', '>', knex.fn.now());
+        })
+        .orderBy('ak.created_at', 'desc')
+        .select<
+          Array<{
+            api_key_id: string;
+            description: string | null;
+            owner_first_name: string | null;
+            owner_last_name: string | null;
+            owner_username: string | null;
+            owner_email: string | null;
+          }>
+        >(
+          'ak.api_key_id',
+          'ak.description',
+          'u.first_name as owner_first_name',
+          'u.last_name as owner_last_name',
+          'u.username as owner_username',
+          'u.email as owner_email',
+        ),
     ]);
 
     const roleNameById = new Map(roles.map((row) => [row.role_id, row.role_name]));
@@ -617,16 +645,39 @@ export const listAuthorizationBundleAssignmentsAction = withAuth(
         };
       }),
       availableTargets: {
-        role: availableRoles.map((row) => ({ id: row.role_id, label: row.role_name })),
+        role: availableRoles.map((row) => {
+          const portalLabel = row.msp && row.client
+            ? 'MSP & Client portal'
+            : row.msp
+              ? 'MSP'
+              : row.client
+                ? 'Client portal'
+                : undefined;
+          return {
+            id: row.role_id,
+            label: row.role_name,
+            subLabel: portalLabel,
+          };
+        }),
         team: availableTeams.map((row) => ({ id: row.team_id, label: row.team_name })),
         user: availableUsers.map((row) => ({
           id: row.user_id,
           label: [row.first_name, row.last_name].filter(Boolean).join(' ').trim() || row.username || row.email || row.user_id,
         })),
-        api_key: availableApiKeys.map((row) => ({
-          id: row.api_key_id,
-          label: row.description || row.api_key_id,
-        })),
+        api_key: availableApiKeys.map((row) => {
+          const ownerName = [row.owner_first_name, row.owner_last_name]
+            .filter(Boolean)
+            .join(' ')
+            .trim()
+            || row.owner_username
+            || row.owner_email
+            || null;
+          return {
+            id: row.api_key_id,
+            label: row.description || row.api_key_id,
+            subLabel: ownerName ?? undefined,
+          };
+        }),
       },
     };
   }

@@ -204,7 +204,15 @@ export const createAssetSchema = z.object({
   printer: printerAssetSchema.omit({ tenant: true, asset_id: true }).optional()
 });
 
-export const updateAssetSchema = createAssetSchema.partial();
+export const updateAssetSchema = createAssetSchema
+  .extend({
+    workstation: workstationAssetSchema.omit({ tenant: true, asset_id: true }).partial().optional(),
+    network_device: network_device_asset_schema.omit({ tenant: true, asset_id: true }).partial().optional(),
+    server: serverAssetSchema.omit({ tenant: true, asset_id: true }).partial().optional(),
+    mobile_device: mobileDeviceAssetSchema.omit({ tenant: true, asset_id: true }).partial().optional(),
+    printer: printerAssetSchema.omit({ tenant: true, asset_id: true }).partial().optional()
+  })
+  .partial();
 
 export const createAssetAssociationSchema = z.object({
   asset_id: z.string().uuid(),

@@ -31,8 +31,8 @@
       "types": "./src/bundles/starterBundles.ts"
     },
     "./adapters/rbac": {
-      "import": "./dist/adapters/rbacAdapter.js",
-      "types": "./src/adapters/rbacAdapter.ts"
+      "import": "./dist/adapters/rbac.js",
+      "types": "./src/adapters/rbac.ts"
     },
     "./pagination": {
       "import": "./dist/pagination/index.js",
