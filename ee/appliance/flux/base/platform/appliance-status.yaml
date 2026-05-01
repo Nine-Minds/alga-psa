@@ -257,7 +257,7 @@ spec:
 
               function isHelmStorageStuck(entry) {
                 const message = String(entry?.message || '');
-                return /has no deployed releases|another operation \(install|upgrade|rollback\) is in progress|uninstalling/i.test(message);
+                return /has no deployed releases|another operation \((install|upgrade|rollback)\) is in progress|uninstalling/i.test(message);
               }
 
               function reconciliationOperations(state) {
