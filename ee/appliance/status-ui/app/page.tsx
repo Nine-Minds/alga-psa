@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import styles from './status.module.css';
 
 type Blocker = {
@@ -69,6 +69,10 @@ function withToken(path: string, query: string) {
   return path.includes('?') ? `${path}&${query.slice(1)}` : `${path}${query}`;
 }
 
+const INITIAL_LOG_LINES = 300;
+const LOG_LOAD_INCREMENT = 300;
+const MAX_LOG_LINES = 5000;
+
 export default function StatusPage() {
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -78,8 +82,12 @@ export default function StatusPage() {
   const [selectedPod, setSelectedPod] = useState<PodRow | null>(null);
   const [selectedContainer, setSelectedContainer] = useState('');
   const [podLog, setPodLog] = useState<string[]>([]);
+  const [podLogTailLines, setPodLogTailLines] = useState(INITIAL_LOG_LINES);
+  const [loadingOlderLogs, setLoadingOlderLogs] = useState(false);
   const [podStatus, setPodStatus] = useState('Loading pods...');
   const [logStatus, setLogStatus] = useState('Select a pod to view logs.');
+  const logPreRef = useRef<HTMLPreElement | null>(null);
+  const pendingScrollRestoreRef = useRef<{ previousHeight: number } | null>(null);
   const query = useMemo(tokenQuery, []);
 
   useEffect(() => {
@@ -120,6 +128,7 @@ export default function StatusPage() {
           if (selectedPod && !rows.some((pod) => pod.namespace === selectedPod.namespace && pod.name === selectedPod.name)) {
             setSelectedPod(null);
             setPodLog([]);
+            setPodLogTailLines(INITIAL_LOG_LINES);
             setLogStatus('Select a pod to view logs.');
           }
         }
@@ -146,7 +155,7 @@ export default function StatusPage() {
         namespace: pod.namespace,
         pod: pod.name,
         container,
-        tailLines: '300',
+        tailLines: String(podLogTailLines),
       });
       try {
         const response = await fetch(withToken(`/api/pods/logs?${params.toString()}`, query), { cache: 'no-store' });
@@ -154,10 +163,24 @@ export default function StatusPage() {
         const data = (await response.json()) as { available?: boolean; lines?: string[] };
         if (!cancelled) {
           setPodLog(data.lines || []);
-          setLogStatus(`${data.available ? 'Loaded' : 'No logs available'} for ${pod.namespace}/${pod.name}${container ? ` / ${container}` : ''}.`);
+          const lineCount = data.lines?.length || 0;
+          const limitMessage = podLogTailLines >= MAX_LOG_LINES ? ' Reached log history limit.' : '';
+          setLogStatus(`${data.available ? `Loaded ${lineCount} log lines` : 'No logs available'} for ${pod.namespace}/${pod.name}${container ? ` / ${container}` : ''}.${limitMessage}`);
+          const restore = pendingScrollRestoreRef.current;
+          if (restore) {
+            pendingScrollRestoreRef.current = null;
+            requestAnimationFrame(() => {
+              const pre = logPreRef.current;
+              if (pre) {
+                pre.scrollTop = Math.max(0, pre.scrollHeight - restore.previousHeight);
+              }
+            });
+          }
         }
       } catch (err) {
         if (!cancelled) setLogStatus(err instanceof Error ? err.message : String(err));
+      } finally {
+        if (!cancelled) setLoadingOlderLogs(false);
       }
     }
     loadLogs();
@@ -166,7 +189,7 @@ export default function StatusPage() {
       cancelled = true;
       clearInterval(timer);
     };
-  }, [activeTab, query, selectedContainer, selectedPod]);
+  }, [activeTab, podLogTailLines, query, selectedContainer, selectedPod]);
 
   const state = status?.rollup?.state || status?.status || 'loading';
   const operations = status?.activeOperations || [];
@@ -177,7 +200,27 @@ export default function StatusPage() {
     setSelectedPod(pod);
     setSelectedContainer(pod.containers?.[0] || '');
     setPodLog([]);
+    setPodLogTailLines(INITIAL_LOG_LINES);
+    pendingScrollRestoreRef.current = null;
     setLogStatus(`Loading logs for ${pod.namespace}/${pod.name}...`);
+  }
+
+  function chooseContainer(container: string) {
+    setSelectedContainer(container);
+    setPodLog([]);
+    setPodLogTailLines(INITIAL_LOG_LINES);
+    pendingScrollRestoreRef.current = null;
+    if (selectedPod) {
+      setLogStatus(`Loading logs for ${selectedPod.namespace}/${selectedPod.name}${container ? ` / ${container}` : ''}...`);
+    }
+  }
+
+  function handleLogScroll() {
+    const pre = logPreRef.current;
+    if (!pre || loadingOlderLogs || podLogTailLines >= MAX_LOG_LINES || pre.scrollTop > 0) return;
+    pendingScrollRestoreRef.current = { previousHeight: pre.scrollHeight };
+    setLoadingOlderLogs(true);
+    setPodLogTailLines((current) => Math.min(MAX_LOG_LINES, current + LOG_LOAD_INCREMENT));
   }
 
   return (
@@ -312,13 +355,13 @@ export default function StatusPage() {
             <div className={styles.toolbar}>
               <h2>{selectedPod ? `Logs: ${selectedPod.namespace}/${selectedPod.name}` : 'Pod logs'}</h2>
               <label className={styles.muted}>Container{' '}
-                <select value={selectedContainer} onChange={(event) => setSelectedContainer(event.target.value)} disabled={!selectedPod}>
+                <select value={selectedContainer} onChange={(event) => chooseContainer(event.target.value)} disabled={!selectedPod}>
                   {(selectedPod?.containers || []).map((container) => <option key={container} value={container}>{container}</option>)}
                 </select>
               </label>
             </div>
-            <p className={styles.muted}>{logStatus}</p>
-            {selectedPod ? <pre className={styles.log}>{podLog.join('\n')}</pre> : null}
+            <p className={styles.muted}>{loadingOlderLogs ? 'Loading previous 300 log lines… ' : ''}{logStatus}</p>
+            {selectedPod ? <pre ref={logPreRef} onScroll={handleLogScroll} className={styles.log}>{podLog.join('\n')}</pre> : null}
           </article>
         </section>
       ) : null}
