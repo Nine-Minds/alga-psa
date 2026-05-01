@@ -232,10 +232,55 @@ spec:
                     name: item.metadata?.name || 'unknown',
                     ready: ready?.status === 'True',
                     status: ready?.status || 'Unknown',
+                    reason: ready?.reason || '',
                     message: ready?.message || '',
                     revision: item.status?.artifact?.revision || item.status?.lastAppliedRevision || '',
                   };
                 });
+              }
+
+              function isProgressingStatus(entry) {
+                const status = String(entry?.status || '').toLowerCase();
+                const reason = String(entry?.reason || '').toLowerCase();
+                const message = String(entry?.message || '').toLowerCase();
+                return status === 'unknown'
+                  || reason.includes('progress')
+                  || reason.includes('dependencynotready')
+                  || message.includes('reconciliation in progress')
+                  || message.includes('running health checks')
+                  || message.includes("running 'install' action")
+                  || message.includes("running 'upgrade' action")
+                  || message.includes('fulfilling prerequisites')
+                  || message.includes('latest generation of object has not been reconciled')
+                  || message.includes('dependency') && message.includes('not ready');
+              }
+
+              function isHelmStorageStuck(entry) {
+                const message = String(entry?.message || '');
+                return /has no deployed releases|another operation \(install|upgrade|rollback\) is in progress|uninstalling/i.test(message);
+              }
+
+              function reconciliationOperations(state) {
+                const rows = [...(state.sources || []), ...(state.kustomizations || []), ...(state.helmReleases || [])];
+                return rows
+                  .filter((entry) => !entry.ready && isProgressingStatus(entry) && !isHelmStorageStuck(entry))
+                  .map((entry) => ({
+                    component: entry.name,
+                    operation: 'reconciling',
+                    image: null,
+                    estimatedCompressedBytes: null,
+                    estimatedSizeHuman: null,
+                    progressPercent: null,
+                    progressAvailable: false,
+                    progressReason: 'Flux and Helm report phase-level reconciliation status, not byte-level progress.',
+                    startedAt: null,
+                    elapsedSeconds: null,
+                    message: entry.message || `${entry.name} is reconciling.`,
+                  }));
+              }
+
+              function tierStatus(ready) {
+                return ready ? 'healthy' : 'progressing';
               }
 
               function readinessStatus(ready, total) {
@@ -250,10 +295,6 @@ spec:
                 const total = item.spec?.replicas ?? 1;
                 const ready = item.status?.readyReplicas ?? 0;
                 return { status: readinessStatus(ready, total), ready, total };
-              }
-
-              function statusFromBool(ready) {
-                return ready ? 'healthy' : 'degraded';
               }
 
               function componentFromObject(name) {
@@ -606,8 +647,8 @@ spec:
                     nextAction: 'Check workload pods and recent events, then collect a support bundle.',
                   };
                 }
-                const badSource = (state.sources || []).find((entry) => !entry.ready);
-                const badKustomization = (state.kustomizations || []).find((entry) => !entry.ready);
+                const badSource = (state.sources || []).find((entry) => !entry.ready && !isProgressingStatus(entry));
+                const badKustomization = (state.kustomizations || []).find((entry) => !entry.ready && !isProgressingStatus(entry));
                 if (badSource || badKustomization) {
                   const row = badSource || badKustomization;
                   return {
@@ -618,7 +659,17 @@ spec:
                     nextAction: 'Review Flux GitRepository and Kustomization conditions.',
                   };
                 }
-                const badHelm = (state.helmReleases || []).find((entry) => !entry.ready);
+                const stuckHelm = (state.helmReleases || []).find((entry) => !entry.ready && isHelmStorageStuck(entry));
+                if (stuckHelm) {
+                  return {
+                    layer: 'Helm release storage issue',
+                    component: stuckHelm.name,
+                    loginBlocking: !loginReady,
+                    reason: stuckHelm.message || `${stuckHelm.name} has inconsistent Helm release storage`,
+                    nextAction: 'Inspect Helm release secrets and HelmRelease events. If storage is stuck in uninstalling, clear stale release storage and reconcile.',
+                  };
+                }
+                const badHelm = (state.helmReleases || []).find((entry) => !entry.ready && !isProgressingStatus(entry));
                 if (badHelm) {
                   return {
                     layer: 'Helm release failure',
@@ -677,7 +728,7 @@ spec:
                 const kustomizations = fluxItems(kustomizationsJson?.items);
                 const helmReleases = fluxItems(helmJson?.items);
                 const recentEvents = summarizeEvents(eventsJson);
-                const activeOperations = collectActiveOperations(recentEvents, podsJson);
+                const imageOperations = collectActiveOperations(recentEvents, podsJson);
                 const appUrl = parseAppUrl(valuesJson) || fallback.urls.loginUrl;
                 const loginProbe = await httpProbe(appUrl);
                 const nodesReady = (nodesJson?.items || []).length > 0 && (nodesJson?.items || []).every((node) => readyCondition(node)?.status === 'True');
@@ -692,7 +743,10 @@ spec:
                 const loginReady = coreReady && webReady && loginProbe.reachable === true;
                 const backgroundReady = resources.filter((entry) => entry.tier === 'background').every((entry) => entry.ready);
                 const fullyHealthy = loginReady && backgroundReady;
-                const state = { components: resources, recentEvents, sources, kustomizations, helmReleases, activeOperations, bootstrap };
+                const state = { components: resources, recentEvents, sources, kustomizations, helmReleases, activeOperations: imageOperations, bootstrap };
+                const reconcileOperations = reconciliationOperations(state);
+                const activeOperations = [...imageOperations, ...reconcileOperations].slice(0, 6);
+                state.activeOperations = activeOperations;
                 const topBlocker = makeBlocker(state, loginReady);
                 const blockers = topBlocker.layer === 'none' ? [] : [{
                   severity: topBlocker.loginBlocking === false ? 'background' : 'critical',
@@ -749,12 +803,12 @@ spec:
                   currentPhase: rollupState,
                   nextAction,
                   tiers: {
-                    platform: { ready: platformReady, status: statusFromBool(platformReady) },
-                    core: { ready: coreReady, status: statusFromBool(coreReady) },
-                    bootstrap: { ready: bootstrapReady, status: statusFromBool(bootstrapReady) },
-                    login: { ready: loginReady, status: statusFromBool(loginReady) },
-                    background: { ready: backgroundReady, status: statusFromBool(backgroundReady) },
-                    fullHealth: { ready: fullyHealthy, status: statusFromBool(fullyHealthy) },
+                    platform: { ready: platformReady, status: tierStatus(platformReady) },
+                    core: { ready: coreReady, status: tierStatus(coreReady) },
+                    bootstrap: { ready: bootstrapReady, status: tierStatus(bootstrapReady) },
+                    login: { ready: loginReady, status: tierStatus(loginReady) },
+                    background: { ready: backgroundReady, status: tierStatus(backgroundReady) },
+                    fullHealth: { ready: fullyHealthy, status: tierStatus(fullyHealthy) },
                   },
                   topBlockers: blockers,
                   activeOperations,
@@ -923,13 +977,14 @@ spec:
                       .value { font-weight: 650; text-align: right; word-break: break-word; }
                       .badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 700; border: 1px solid rgb(var(--color-border-200)); background: rgb(var(--color-border-100)); }
                       .badge.ready, .badge.fully_healthy, .badge.ready_to_log_in, .badge.ready_with_background_issues, .badge.healthy, .badge.Running, .badge.Succeeded { color: rgb(var(--color-success)); background: rgba(22,163,74,.1); border-color: rgba(22,163,74,.25); }
-                      .badge.installing, .badge.progressing, .badge.ContainerCreating, .badge.PodInitializing, .badge.Pending { color: rgb(var(--color-primary-700)); background: rgb(var(--color-primary-50)); border-color: rgb(var(--color-primary-100)); }
-                      .badge.failed_action_required, .badge.degraded, .badge.unhealthy, .badge.Error, .badge.Failed, .badge.CrashLoopBackOff, .badge.ImagePullBackOff { color: rgb(var(--color-error)); background: rgba(220,38,38,.08); border-color: rgba(220,38,38,.22); }
+                      .badge.installing, .badge.progressing, .badge.degraded, .badge.ContainerCreating, .badge.PodInitializing, .badge.Pending { color: rgb(var(--color-primary-700)); background: rgb(var(--color-primary-50)); border-color: rgb(var(--color-primary-100)); }
+                      .badge.failed_action_required, .badge.unhealthy, .badge.Error, .badge.Failed, .badge.CrashLoopBackOff, .badge.ImagePullBackOff { color: rgb(var(--color-error)); background: rgba(220,38,38,.08); border-color: rgba(220,38,38,.22); }
                       .tiers { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
                       .tier { border: 1px solid rgb(var(--color-border-200)); border-radius: 12px; padding: 12px; background: linear-gradient(180deg, #fff, rgb(var(--color-background))); }
                       .tier-name { font-weight: 750; text-transform: capitalize; }
                       .op { border: 1px solid rgb(var(--color-primary-100)); background: rgb(var(--color-primary-50)); border-radius: 14px; padding: 14px; }
                       .blocker { border-left: 4px solid rgb(var(--color-error)); background: rgba(220,38,38,.06); border-radius: 12px; padding: 12px; margin-top: 8px; }
+                      .blocker.background { border-left-color: rgb(var(--color-primary-700)); background: rgb(var(--color-primary-50)); }
                       code { background: rgb(var(--color-border-100)); border: 1px solid rgb(var(--color-border-200)); border-radius: 6px; padding: 2px 5px; }
                       pre { margin: 0; padding: 14px; border-radius: 12px; background: #0f172a; color: #dbeafe; overflow: auto; max-height: 420px; font-size: 12px; line-height: 1.5; }
                       .events { display: grid; gap: 8px; }
@@ -1003,7 +1058,7 @@ spec:
                       function badgeClass(value){ return 'badge '+String(value || '').replace(/[^a-z0-9_-]/gi, '_'); }
                       function renderOps(ops){ const el=document.getElementById('operations'); if(!ops||!ops.length){el.textContent='No active image pull or long-running operation detected.';return;} el.innerHTML=ops.map((op)=>'<div class="op"><div><strong>'+esc(op.component||'component')+'</strong>: '+esc(op.message||op.operation)+'</div><div>Image: <code>'+esc(op.image||'unknown')+'</code></div><div>Estimated size: '+esc(op.estimatedSizeHuman||'unknown')+'</div><div>Elapsed: '+fmtSeconds(op.elapsedSeconds)+'</div><div class="muted">Pull progress: '+(op.progressAvailable?esc(op.progressPercent)+'%':'not available from Kubernetes')+'</div></div>').join(''); }
                       function renderTiers(tiers){ const el=document.getElementById('tiers'); el.innerHTML=Object.entries(tiers||{}).map(([k,v])=>'<div class="tier"><div class="tier-name">'+esc(k)+'</div><div><span class="'+badgeClass(v.status)+'">'+(v.ready?'ready':'not ready')+'</span></div><div class="muted">'+esc(v.status)+'</div></div>').join('') || '<span class="muted">No tier data yet.</span>'; }
-                      function renderBlockers(blockers){ const el=document.getElementById('blockers'); if(!blockers||!blockers.length){el.textContent='No action-required blockers detected.';return;} el.innerHTML=blockers.map((b)=>'<div class="blocker"><strong>'+esc(b.component||b.layer)+'</strong><div>'+esc(b.reason)+'</div><div class="muted">'+esc(b.nextAction||'')+'</div>'+(b.loginBlocking===false?'<div class="muted">background / non-login-blocking</div>':'')+'</div>').join(''); }
+                      function renderBlockers(blockers){ const el=document.getElementById('blockers'); if(!blockers||!blockers.length){el.textContent='No action-required blockers detected.';return;} el.innerHTML=blockers.map((b)=>'<div class="blocker '+(b.loginBlocking===false?'background':'')+'"><strong>'+esc(b.component||b.layer)+'</strong><div>'+esc(b.reason)+'</div><div class="muted">'+esc(b.nextAction||'')+'</div>'+(b.loginBlocking===false?'<div class="muted">background / non-login-blocking</div>':'')+'</div>').join(''); }
                       function renderBootstrap(bootstrap){ const status=document.getElementById('bootstrap-log-status'); const pre=document.getElementById('bootstrap-log'); const logs=bootstrap?.logs; if(!logs?.available){ status.textContent=bootstrap?.job?.name ? 'No log excerpt available for '+bootstrap.job.name+'.' : 'No bootstrap job log available yet.'; pre.hidden=true; return; } status.innerHTML='<strong>'+esc(logs.pod)+'</strong> / '+esc(logs.container)+(logs.detectedErrors?.length?'<div class="blocker"><strong>Detected error</strong><div>'+esc(logs.detectedErrors.at(-1))+'</div></div>':''); pre.hidden=false; pre.textContent=(logs.tail||[]).join('\\n'); }
                       function renderEvents(events){ const el=document.getElementById('events'); const rows=(events||[]).slice(-8).reverse(); if(!rows.length){ el.textContent='No recent events.'; return; } el.innerHTML=rows.map((ev)=>'<div class="event"><strong>'+esc(ev.type)+' '+esc(ev.reason)+'</strong> <span class="muted">'+esc(ev.namespace)+' '+esc(ev.involvedObject||'')+'</span><div>'+esc(ev.message)+'</div></div>').join(''); }
                       async function loadStatus(){ const r=await fetch('/api/status'+window.location.search); if(!r.ok) throw new Error('Unauthorized or unavailable'); const data=await r.json(); document.getElementById('summary').textContent=data.rollup?.message||'Appliance status loaded.'; const state=data.rollup?.state||data.status||'-'; const stateEl=document.getElementById('install-state'); stateEl.textContent=state; stateEl.className=badgeClass(state); document.getElementById('phase').textContent=data.currentPhase||state; document.getElementById('login-url').textContent=data.urls?.loginUrl||data.loginUrl||'Not available yet'; document.getElementById('next-action').textContent=data.rollup?.nextAction||data.nextAction||'-'; renderOps(data.activeOperations); renderTiers(data.tiers); renderBlockers(data.topBlockers); renderBootstrap(data.bootstrap); renderEvents(data.recentEvents); document.getElementById('diag').textContent=JSON.stringify(data,null,2); }

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import styles from './status.module.css';
 
 type Blocker = {
+  severity?: 'critical' | 'background' | string;
   component?: string;
   layer?: string;
   reason?: string;
@@ -55,7 +56,7 @@ function formatSeconds(value?: number | null) {
 function badgeClass(value?: string) {
   const normalized = value || 'unknown';
   if (['fully_healthy', 'ready_to_log_in', 'ready_with_background_issues', 'healthy', 'Running', 'Succeeded'].includes(normalized)) return styles.ready;
-  if (['installing', 'progressing', 'unknown', 'Pending', 'ContainerCreating', 'PodInitializing'].includes(normalized)) return styles.installing;
+  if (['installing', 'progressing', 'unknown', 'Pending', 'ContainerCreating', 'PodInitializing', 'degraded'].includes(normalized)) return styles.installing;
   return styles.failed;
 }
 
@@ -278,7 +279,7 @@ export default function StatusPage() {
           <article className={styles.card}>
             <h2>Blockers</h2>
             {(status?.topBlockers || []).length === 0 ? <p className={styles.muted}>No action-required blockers detected.</p> : status?.topBlockers?.map((blocker, index) => (
-              <div className={styles.blocker} key={`${blocker.component}-${index}`}>
+              <div className={`${styles.blocker} ${blocker.loginBlocking === false ? styles.backgroundBlocker : ''}`} key={`${blocker.component}-${index}`}>
                 <strong>{blocker.component || blocker.layer}</strong>
                 <p>{blocker.reason}</p>
                 <p className={styles.muted}>{blocker.nextAction}</p>
