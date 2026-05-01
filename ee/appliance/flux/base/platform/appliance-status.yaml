@@ -64,6 +64,8 @@ spec:
       labels:
         app.kubernetes.io/name: appliance-status
     spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: appliance-status
       automountServiceAccountToken: true
       containers:
@@ -1051,7 +1053,6 @@ spec:
           ports:
             - name: http
               containerPort: 8080
-              hostPort: 8080
           volumeMounts:
             - name: tmp
               mountPath: /tmp
