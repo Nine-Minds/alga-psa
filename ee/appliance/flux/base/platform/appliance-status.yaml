@@ -928,243 +928,243 @@ spec:
 
               function updateJobScript() {
                 return String.raw`const fs = require('fs');
-const http = require('http');
-const https = require('https');
-const { execFileSync } = require('child_process');
-const path = require('path');
+              const http = require('http');
+              const https = require('https');
+              const { execFileSync } = require('child_process');
+              const path = require('path');
 
-const action = process.env.UPDATE_ACTION || 'apply';
-const requestedChannel = process.env.UPDATE_CHANNEL || '';
-const serviceHost = process.env.KUBERNETES_SERVICE_HOST;
-const servicePort = process.env.KUBERNETES_SERVICE_PORT || '443';
-const token = fs.readFileSync('/var/run/secrets/kubernetes.io/serviceaccount/token', 'utf8').trim();
-const ca = fs.readFileSync('/var/run/secrets/kubernetes.io/serviceaccount/ca.crt');
+              const action = process.env.UPDATE_ACTION || 'apply';
+              const requestedChannel = process.env.UPDATE_CHANNEL || '';
+              const serviceHost = process.env.KUBERNETES_SERVICE_HOST;
+              const servicePort = process.env.KUBERNETES_SERVICE_PORT || '443';
+              const token = fs.readFileSync('/var/run/secrets/kubernetes.io/serviceaccount/token', 'utf8').trim();
+              const ca = fs.readFileSync('/var/run/secrets/kubernetes.io/serviceaccount/ca.crt');
 
-function kubeRequest(method, requestPath, body = null, contentType = 'application/json') {
-  return new Promise((resolve, reject) => {
-    const payload = body == null ? null : JSON.stringify(body);
-    const headers = { Authorization: 'Bearer ' + token, Accept: 'application/json' };
-    if (payload != null) headers['Content-Type'] = contentType;
-    const req = https.request({ host: serviceHost, port: servicePort, method, path: requestPath, ca, headers, timeout: 15000 }, (res) => {
-      let text = '';
-      res.setEncoding('utf8');
-      res.on('data', (chunk) => { text += chunk; });
-      res.on('end', () => {
-        let parsed = null;
-        try { parsed = text ? JSON.parse(text) : null; } catch {}
-        if (res.statusCode < 200 || res.statusCode >= 300) {
-          const error = new Error(method + ' ' + requestPath + ' failed with ' + res.statusCode + ': ' + text.slice(0, 500));
-          error.statusCode = res.statusCode;
-          error.body = parsed;
-          reject(error);
-          return;
-        }
-        resolve(parsed);
-      });
-    });
-    req.on('timeout', () => req.destroy(new Error(method + ' ' + requestPath + ' timed out')));
-    req.on('error', reject);
-    if (payload != null) req.write(payload);
-    req.end();
-  });
-}
+              function kubeRequest(method, requestPath, body = null, contentType = 'application/json') {
+                return new Promise((resolve, reject) => {
+                  const payload = body == null ? null : JSON.stringify(body);
+                  const headers = { Authorization: 'Bearer ' + token, Accept: 'application/json' };
+                  if (payload != null) headers['Content-Type'] = contentType;
+                  const req = https.request({ host: serviceHost, port: servicePort, method, path: requestPath, ca, headers, timeout: 15000 }, (res) => {
+                    let text = '';
+                    res.setEncoding('utf8');
+                    res.on('data', (chunk) => { text += chunk; });
+                    res.on('end', () => {
+                      let parsed = null;
+                      try { parsed = text ? JSON.parse(text) : null; } catch {}
+                      if (res.statusCode < 200 || res.statusCode >= 300) {
+                        const error = new Error(method + ' ' + requestPath + ' failed with ' + res.statusCode + ': ' + text.slice(0, 500));
+                        error.statusCode = res.statusCode;
+                        error.body = parsed;
+                        reject(error);
+                        return;
+                      }
+                      resolve(parsed);
+                    });
+                  });
+                  req.on('timeout', () => req.destroy(new Error(method + ' ' + requestPath + ' timed out')));
+                  req.on('error', reject);
+                  if (payload != null) req.write(payload);
+                  req.end();
+                });
+              }
 
-async function kubeGet(requestPath) { return kubeRequest('GET', requestPath); }
-async function kubePatch(requestPath, body) { return kubeRequest('PATCH', requestPath, body, 'application/merge-patch+json'); }
-async function kubePost(requestPath, body) { return kubeRequest('POST', requestPath, body); }
+              async function kubeGet(requestPath) { return kubeRequest('GET', requestPath); }
+              async function kubePatch(requestPath, body) { return kubeRequest('PATCH', requestPath, body, 'application/merge-patch+json'); }
+              async function kubePost(requestPath, body) { return kubeRequest('POST', requestPath, body); }
 
-function download(url, destination) {
-  return new Promise((resolve, reject) => {
-    const parsed = new URL(url);
-    const lib = parsed.protocol === 'https:' ? https : http;
-    const req = lib.get(parsed, { timeout: 30000 }, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        download(new URL(res.headers.location, parsed).toString(), destination).then(resolve, reject);
-        return;
-      }
-      if (res.statusCode !== 200) {
-        reject(new Error('download failed with ' + res.statusCode + ' from ' + url));
-        res.resume();
-        return;
-      }
-      const stream = fs.createWriteStream(destination);
-      res.pipe(stream);
-      stream.on('finish', () => stream.close(resolve));
-      stream.on('error', reject);
-    });
-    req.on('timeout', () => req.destroy(new Error('download timed out: ' + url)));
-    req.on('error', reject);
-  });
-}
+              function download(url, destination) {
+                return new Promise((resolve, reject) => {
+                  const parsed = new URL(url);
+                  const lib = parsed.protocol === 'https:' ? https : http;
+                  const req = lib.get(parsed, { timeout: 30000 }, (res) => {
+                    if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                      download(new URL(res.headers.location, parsed).toString(), destination).then(resolve, reject);
+                      return;
+                    }
+                    if (res.statusCode !== 200) {
+                      reject(new Error('download failed with ' + res.statusCode + ' from ' + url));
+                      res.resume();
+                      return;
+                    }
+                    const stream = fs.createWriteStream(destination);
+                    res.pipe(stream);
+                    stream.on('finish', () => stream.close(resolve));
+                    stream.on('error', reject);
+                  });
+                  req.on('timeout', () => req.destroy(new Error('download timed out: ' + url)));
+                  req.on('error', reject);
+                });
+              }
 
-function findFile(root, suffix) {
-  const stack = [root];
-  while (stack.length) {
-    const current = stack.pop();
-    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
-      const full = path.join(current, entry.name);
-      if (entry.isDirectory()) stack.push(full);
-      else if (full.endsWith(suffix)) return full;
-    }
-  }
-  return null;
-}
+              function findFile(root, suffix) {
+                const stack = [root];
+                while (stack.length) {
+                  const current = stack.pop();
+                  for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+                    const full = path.join(current, entry.name);
+                    if (entry.isDirectory()) stack.push(full);
+                    else if (full.endsWith(suffix)) return full;
+                  }
+                }
+                return null;
+              }
 
-function yamlString(value) {
-  return JSON.stringify(String(value));
-}
+              function yamlString(value) {
+                return JSON.stringify(String(value));
+              }
 
-function setYamlValue(source, dottedPath, value) {
-  const target = dottedPath.split('.');
-  const lines = source.split(/\r?\n/);
-  const stack = [];
-  let replaced = false;
-  const output = lines.map((line) => {
-    const stripped = line.trimStart();
-    const indent = line.length - stripped.length;
-    while (stack.length && indent <= stack[stack.length - 1][0]) stack.pop();
-    if (stripped.endsWith(':') && !stripped.startsWith('- ')) {
-      stack.push([indent, stripped.slice(0, -1).trim()]);
-      return line;
-    }
-    const current = stack.map((entry) => entry[1]);
-    if (current.join('.') === target.slice(0, -1).join('.') && stripped.startsWith(target[target.length - 1] + ':')) {
-      replaced = true;
-      return line.slice(0, indent) + target[target.length - 1] + ': ' + value;
-    }
-    return line;
-  });
-  if (!replaced) throw new Error('Failed to update ' + dottedPath);
-  return output.join('\n');
-}
+              function setYamlValue(source, dottedPath, value) {
+                const target = dottedPath.split('.');
+                const lines = source.split(/\r?\n/);
+                const stack = [];
+                let replaced = false;
+                const output = lines.map((line) => {
+                  const stripped = line.trimStart();
+                  const indent = line.length - stripped.length;
+                  while (stack.length && indent <= stack[stack.length - 1][0]) stack.pop();
+                  if (stripped.endsWith(':') && !stripped.startsWith('- ')) {
+                    stack.push([indent, stripped.slice(0, -1).trim()]);
+                    return line;
+                  }
+                  const current = stack.map((entry) => entry[1]);
+                  if (current.join('.') === target.slice(0, -1).join('.') && stripped.startsWith(target[target.length - 1] + ':')) {
+                    replaced = true;
+                    return line.slice(0, indent) + target[target.length - 1] + ': ' + value;
+                  }
+                  return line;
+                });
+                if (!replaced) throw new Error('Failed to update ' + dottedPath);
+                return output.join('\n');
+              }
 
-async function patchAnnotation(apiPath, name) {
-  const requestedAt = new Date().toISOString();
-  try {
-    await kubePatch(apiPath, { metadata: { annotations: { 'reconcile.fluxcd.io/requestedAt': requestedAt } } });
-    console.log('requested reconcile:', name);
-  } catch (error) {
-    if (error.statusCode === 404) console.log('skipping missing resource:', name);
-    else throw error;
-  }
-}
+              async function patchAnnotation(apiPath, name) {
+                const requestedAt = new Date().toISOString();
+                try {
+                  await kubePatch(apiPath, { metadata: { annotations: { 'reconcile.fluxcd.io/requestedAt': requestedAt } } });
+                  console.log('requested reconcile:', name);
+                } catch (error) {
+                  if (error.statusCode === 404) console.log('skipping missing resource:', name);
+                  else throw error;
+                }
+              }
 
-async function sourceTree() {
-  const git = await kubeGet('/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories/alga-appliance');
-  const artifactUrl = git?.status?.artifact?.url;
-  if (!artifactUrl) throw new Error('GitRepository alga-appliance does not have a source artifact yet');
-  const work = fs.mkdtempSync('/tmp/appliance-update-');
-  const archive = path.join(work, 'source.tar.gz');
-  const extractDir = path.join(work, 'src');
-  fs.mkdirSync(extractDir);
-  console.log('downloading source artifact:', artifactUrl);
-  await download(artifactUrl, archive);
-  execFileSync('tar', ['-xzf', archive, '-C', extractDir], { stdio: 'inherit' });
-  return extractDir;
-}
+              async function sourceTree() {
+                const git = await kubeGet('/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories/alga-appliance');
+                const artifactUrl = git?.status?.artifact?.url;
+                if (!artifactUrl) throw new Error('GitRepository alga-appliance does not have a source artifact yet');
+                const work = fs.mkdtempSync('/tmp/appliance-update-');
+                const archive = path.join(work, 'source.tar.gz');
+                const extractDir = path.join(work, 'src');
+                fs.mkdirSync(extractDir);
+                console.log('downloading source artifact:', artifactUrl);
+                await download(artifactUrl, archive);
+                execFileSync('tar', ['-xzf', archive, '-C', extractDir], { stdio: 'inherit' });
+                return extractDir;
+              }
 
-function readJson(filePath) {
-  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
-}
+              function readJson(filePath) {
+                return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+              }
 
-async function resolveRelease(channel) {
-  const root = await sourceTree();
-  const channelPath = findFile(root, '/ee/appliance/releases/channels/' + channel + '.json');
-  if (!channelPath) throw new Error('Channel file not found in source artifact: ' + channel);
-  const channelJson = readJson(channelPath);
-  const releaseVersion = channelJson.releaseVersion;
-  if (!releaseVersion) throw new Error('Channel ' + channel + ' does not specify releaseVersion');
-  const releasePath = findFile(root, '/ee/appliance/releases/' + releaseVersion + '/release.json');
-  if (!releasePath) throw new Error('Release manifest not found in source artifact: ' + releaseVersion);
-  return { channelJson, releaseVersion, release: readJson(releasePath) };
-}
+              async function resolveRelease(channel) {
+                const root = await sourceTree();
+                const channelPath = findFile(root, '/ee/appliance/releases/channels/' + channel + '.json');
+                if (!channelPath) throw new Error('Channel file not found in source artifact: ' + channel);
+                const channelJson = readJson(channelPath);
+                const releaseVersion = channelJson.releaseVersion;
+                if (!releaseVersion) throw new Error('Channel ' + channel + ' does not specify releaseVersion');
+                const releasePath = findFile(root, '/ee/appliance/releases/' + releaseVersion + '/release.json');
+                if (!releasePath) throw new Error('Release manifest not found in source artifact: ' + releaseVersion);
+                return { channelJson, releaseVersion, release: readJson(releasePath) };
+              }
 
-async function currentChannel() {
-  try {
-    const selection = await kubeGet('/api/v1/namespaces/alga-system/configmaps/appliance-release-selection');
-    return selection?.data?.selectedChannel || selection?.data?.channel || 'stable';
-  } catch {
-    return 'stable';
-  }
-}
+              async function currentChannel() {
+                try {
+                  const selection = await kubeGet('/api/v1/namespaces/alga-system/configmaps/appliance-release-selection');
+                  return selection?.data?.selectedChannel || selection?.data?.channel || 'stable';
+                } catch {
+                  return 'stable';
+                }
+              }
 
-function configKey(configMap, name, profile) {
-  const preferred = name + '.' + profile + '.yaml';
-  if (configMap?.data?.[preferred] != null) return preferred;
-  const existing = Object.keys(configMap?.data || {}).find((key) => key.startsWith(name + '.') && key.endsWith('.yaml'));
-  return existing || preferred;
-}
+              function configKey(configMap, name, profile) {
+                const preferred = name + '.' + profile + '.yaml';
+                if (configMap?.data?.[preferred] != null) return preferred;
+                const existing = Object.keys(configMap?.data || {}).find((key) => key.startsWith(name + '.') && key.endsWith('.yaml'));
+                return existing || preferred;
+              }
 
-async function patchValuesConfigMap(name, profile, mutate) {
-  const cm = await kubeGet('/api/v1/namespaces/alga-system/configmaps/appliance-values-' + name);
-  const key = configKey(cm, name, profile);
-  const source = cm?.data?.[key];
-  if (source == null) throw new Error('ConfigMap appliance-values-' + name + ' does not contain ' + key);
-  const updated = mutate(source);
-  await kubePatch('/api/v1/namespaces/alga-system/configmaps/appliance-values-' + name, { data: { [key]: updated } });
-  console.log('updated values configmap:', name, key);
-}
+              async function patchValuesConfigMap(name, profile, mutate) {
+                const cm = await kubeGet('/api/v1/namespaces/alga-system/configmaps/appliance-values-' + name);
+                const key = configKey(cm, name, profile);
+                const source = cm?.data?.[key];
+                if (source == null) throw new Error('ConfigMap appliance-values-' + name + ' does not contain ' + key);
+                const updated = mutate(source);
+                await kubePatch('/api/v1/namespaces/alga-system/configmaps/appliance-values-' + name, { data: { [key]: updated } });
+                console.log('updated values configmap:', name, key);
+              }
 
-async function applyRelease(channel) {
-  const { releaseVersion, release } = await resolveRelease(channel);
-  const profile = release?.app?.valuesProfile || 'talos-single-node';
-  const images = release?.app?.images || {};
-  console.log('applying channel:', channel, 'release:', releaseVersion, 'profile:', profile);
+              async function applyRelease(channel) {
+                const { releaseVersion, release } = await resolveRelease(channel);
+                const profile = release?.app?.valuesProfile || 'talos-single-node';
+                const images = release?.app?.images || {};
+                console.log('applying channel:', channel, 'release:', releaseVersion, 'profile:', profile);
 
-  await patchValuesConfigMap('alga-core', profile, (yaml) => {
-    let out = setYamlValue(yaml, 'setup.image.tag', yamlString(images.algaCore));
-    out = setYamlValue(out, 'server.image.tag', yamlString(images.algaCore));
-    return out;
-  });
-  await patchValuesConfigMap('workflow-worker', profile, (yaml) => setYamlValue(yaml, 'image.tag', yamlString(images.workflowWorker)));
-  await patchValuesConfigMap('email-service', profile, (yaml) => setYamlValue(yaml, 'image.tag', yamlString(images.emailService)));
-  await patchValuesConfigMap('temporal-worker', profile, (yaml) => setYamlValue(yaml, 'image.tag', yamlString(images.temporalWorker)));
+                await patchValuesConfigMap('alga-core', profile, (yaml) => {
+                  let out = setYamlValue(yaml, 'setup.image.tag', yamlString(images.algaCore));
+                  out = setYamlValue(out, 'server.image.tag', yamlString(images.algaCore));
+                  return out;
+                });
+                await patchValuesConfigMap('workflow-worker', profile, (yaml) => setYamlValue(yaml, 'image.tag', yamlString(images.workflowWorker)));
+                await patchValuesConfigMap('email-service', profile, (yaml) => setYamlValue(yaml, 'image.tag', yamlString(images.emailService)));
+                await patchValuesConfigMap('temporal-worker', profile, (yaml) => setYamlValue(yaml, 'image.tag', yamlString(images.temporalWorker)));
 
-  const selectionData = {
-    releaseVersion,
-    selectedChannel: channel,
-    appVersion: release?.app?.version || '',
-    releaseBranch: release?.app?.releaseBranch || '',
-    algaCoreTag: images.algaCore || '',
-    workflowWorkerTag: images.workflowWorker || '',
-    emailServiceTag: images.emailService || '',
-    temporalWorkerTag: images.temporalWorker || '',
-  };
-  try {
-    await kubePatch('/api/v1/namespaces/alga-system/configmaps/appliance-release-selection', { data: selectionData });
-  } catch (error) {
-    if (error.statusCode !== 404) throw error;
-    await kubePost('/api/v1/namespaces/alga-system/configmaps', { apiVersion: 'v1', kind: 'ConfigMap', metadata: { name: 'appliance-release-selection', namespace: 'alga-system' }, data: selectionData });
-  }
-  console.log('updated release selection');
-}
+                const selectionData = {
+                  releaseVersion,
+                  selectedChannel: channel,
+                  appVersion: release?.app?.version || '',
+                  releaseBranch: release?.app?.releaseBranch || '',
+                  algaCoreTag: images.algaCore || '',
+                  workflowWorkerTag: images.workflowWorker || '',
+                  emailServiceTag: images.emailService || '',
+                  temporalWorkerTag: images.temporalWorker || '',
+                };
+                try {
+                  await kubePatch('/api/v1/namespaces/alga-system/configmaps/appliance-release-selection', { data: selectionData });
+                } catch (error) {
+                  if (error.statusCode !== 404) throw error;
+                  await kubePost('/api/v1/namespaces/alga-system/configmaps', { apiVersion: 'v1', kind: 'ConfigMap', metadata: { name: 'appliance-release-selection', namespace: 'alga-system' }, data: selectionData });
+                }
+                console.log('updated release selection');
+              }
 
-async function requestReconciles() {
-  await patchAnnotation('/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories/alga-appliance', 'GitRepository/alga-appliance');
-  for (const name of ['alga-platform', 'alga-core', 'alga-background', 'alga-appliance']) {
-    await patchAnnotation('/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/flux-system/kustomizations/' + name, 'Kustomization/' + name);
-  }
-  for (const name of ['alga-core', 'pgbouncer', 'temporal', 'workflow-worker', 'email-service', 'temporal-worker']) {
-    await patchAnnotation('/apis/helm.toolkit.fluxcd.io/v2/namespaces/alga-system/helmreleases/' + name, 'HelmRelease/' + name);
-  }
-}
+              async function requestReconciles() {
+                await patchAnnotation('/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories/alga-appliance', 'GitRepository/alga-appliance');
+                for (const name of ['alga-platform', 'alga-core', 'alga-background', 'alga-appliance']) {
+                  await patchAnnotation('/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/flux-system/kustomizations/' + name, 'Kustomization/' + name);
+                }
+                for (const name of ['alga-core', 'pgbouncer', 'temporal', 'workflow-worker', 'email-service', 'temporal-worker']) {
+                  await patchAnnotation('/apis/helm.toolkit.fluxcd.io/v2/namespaces/alga-system/helmreleases/' + name, 'HelmRelease/' + name);
+                }
+              }
 
-(async () => {
-  if (action === 'check') {
-    console.log('checking for updates by reconciling Flux source and tiers');
-    await requestReconciles();
-    console.log('check submitted');
-    return;
-  }
-  const channel = requestedChannel || await currentChannel();
-  if (!['stable', 'nightly'].includes(channel)) throw new Error('Unsupported channel: ' + channel);
-  await applyRelease(channel);
-  await requestReconciles();
-  console.log('upgrade submitted for channel ' + channel);
-})().catch((error) => {
-  console.error(error.stack || error.message || String(error));
-  process.exit(1);
-});`;
+              (async () => {
+                if (action === 'check') {
+                  console.log('checking for updates by reconciling Flux source and tiers');
+                  await requestReconciles();
+                  console.log('check submitted');
+                  return;
+                }
+                const channel = requestedChannel || await currentChannel();
+                if (!['stable', 'nightly'].includes(channel)) throw new Error('Unsupported channel: ' + channel);
+                await applyRelease(channel);
+                await requestReconciles();
+                console.log('upgrade submitted for channel ' + channel);
+              })().catch((error) => {
+                console.error(error.stack || error.message || String(error));
+                process.exit(1);
+              });`;
               }
 
               function updateJobState(job) {
