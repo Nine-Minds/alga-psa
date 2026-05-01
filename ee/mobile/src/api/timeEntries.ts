@@ -34,11 +34,14 @@ export type TicketTimeEntrySummaryItem = {
 export type TicketTimeEntriesSummary = {
   entries: TicketTimeEntrySummaryItem[];
   ownTotalMinutes: number;
-  othersTotalMinutes: number;
-  totalMinutes: number;
   ownEntryCount: number;
+  othersTotalMinutes: number;
   othersEntryCount: number;
-  canViewOthers: boolean;
+  othersVisibleMinutes: number;
+  othersVisibleCount: number;
+  othersHiddenMinutes: number;
+  othersHiddenCount: number;
+  totalMinutes: number;
 };
 
 export type ServiceOption = {

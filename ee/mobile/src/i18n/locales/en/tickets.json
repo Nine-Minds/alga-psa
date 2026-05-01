@@ -363,6 +363,7 @@
   },
   "timeEntries": {
     "title": "Logged Time",
+    "addEntry": "Add time entry",
     "empty": "No time has been logged on this ticket yet.",
     "myEntries": "My entries",
     "otherTeam": "Other team members",

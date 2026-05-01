@@ -54,12 +54,14 @@ export function TimeEntriesSection({
   ticketId,
   refreshKey = 0,
   meUserId,
+  onAddPress,
 }: {
   client: ApiClient | null;
   apiKey: string | null;
   ticketId: string;
   refreshKey?: number;
   meUserId?: string | null;
+  onAddPress?: () => void;
 }) {
   const { t } = useTranslation("tickets");
   const tShort = useCallback(
@@ -115,14 +117,35 @@ export function TimeEntriesSection({
       <SectionHeader
         title={t("timeEntries.title", { defaultValue: "Logged Time" }) as string}
         action={(
-          <Badge
-            label={
-              summary
-                ? formatMinutes(summary.totalMinutes, tShort)
-                : "—"
-            }
-            tone="neutral"
-          />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
+            <Badge
+              label={
+                summary
+                  ? formatMinutes(summary.totalMinutes, tShort)
+                  : "—"
+              }
+              tone="neutral"
+            />
+            {onAddPress ? (
+              <Pressable
+                onPress={onAddPress}
+                accessibilityRole="button"
+                accessibilityLabel={t("timeEntries.addEntry", { defaultValue: "Add time entry" }) as string}
+                hitSlop={8}
+                style={({ pressed }) => ({
+                  width: 28,
+                  height: 28,
+                  borderRadius: 14,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: colors.primary,
+                  opacity: pressed ? 0.7 : 1,
+                })}
+              >
+                <Feather name="plus" size={16} color={colors.textInverse} />
+              </Pressable>
+            ) : null}
+          </View>
         )}
       />
 
@@ -161,13 +184,13 @@ export function TimeEntriesSection({
             </CollapsibleGroup>
           ) : null}
 
-          {summary.othersEntryCount > 0 && summary.canViewOthers ? (
+          {summary.othersVisibleCount > 0 ? (
             <CollapsibleGroup
               title={
                 t("timeEntries.otherTeam", { defaultValue: "Other team members" }) +
-                ` (${summary.othersEntryCount})`
+                ` (${summary.othersVisibleCount})`
               }
-              total={formatMinutes(summary.othersTotalMinutes, tShort)}
+              total={formatMinutes(summary.othersVisibleMinutes, tShort)}
               expanded={showOthers}
               onToggle={() => setShowOthers((value) => !value)}
             >
@@ -182,7 +205,7 @@ export function TimeEntriesSection({
             </CollapsibleGroup>
           ) : null}
 
-          {summary.othersEntryCount > 0 && !summary.canViewOthers ? (
+          {summary.othersHiddenCount > 0 ? (
             <View
               style={{
                 flexDirection: "row",
@@ -200,8 +223,8 @@ export function TimeEntriesSection({
               <Text style={{ ...typography.caption, color: colors.textSecondary, flex: 1 }}>
                 {t("timeEntries.othersAnonymized", {
                   defaultValue: "{{count}} entries by other team members ({{duration}})",
-                  count: summary.othersEntryCount,
-                  duration: formatMinutes(summary.othersTotalMinutes, tShort),
+                  count: summary.othersHiddenCount,
+                  duration: formatMinutes(summary.othersHiddenMinutes, tShort),
                 })}
               </Text>
             </View>

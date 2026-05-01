@@ -657,6 +657,7 @@ export function TicketDetailBody({
             ticketId={ticketId}
             refreshKey={timeEntriesRefreshKey}
             meUserId={meUserId}
+            onAddPress={() => { timeEntryHook.openTimeEntryModal(); }}
           />
           <View style={{ height: spacing.sm }} />
           <KeyValue label={t("detail.created")} value={formatDateTimeWithRelative(ticket.entered_at)} />
