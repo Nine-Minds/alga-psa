@@ -112,6 +112,24 @@ require_command() {
   fi
 }
 
+require_flux_v2_cli() {
+  require_command flux
+
+  if ! flux install --help 2>&1 | grep -q -- '--kubeconfig'; then
+    cat >&2 <<'EOF'
+Unsupported Flux CLI found: this bootstrap requires the Flux v2 CLI with --kubeconfig support.
+
+Install Flux v2 and make sure it appears first on PATH:
+  macOS: brew install fluxcd/tap/flux
+  Linux: https://fluxcd.io/flux/installation/
+
+Verify with:
+  flux version --client
+EOF
+    exit 1
+  fi
+}
+
 is_interactive() {
   [ -t 0 ]
 }
@@ -1491,7 +1509,7 @@ require_command git
 require_command jq
 require_command curl
 require_command kubectl
-require_command flux
+require_flux_v2_cli
 require_command python3
 require_command talosctl
 
