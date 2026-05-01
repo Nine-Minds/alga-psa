@@ -446,9 +446,29 @@ EOF
   fi
 }
 
+normalize_git_url_for_flux() {
+  local url="$1"
+
+  if [[ "$url" == *://* ]]; then
+    printf '%s\n' "$url"
+    return 0
+  fi
+
+  if [[ "$url" =~ ^([^@[:space:]/]+@[^:[:space:]/]+):(.+)$ ]]; then
+    printf 'ssh://%s/%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+    return 0
+  fi
+
+  printf '%s\n' "$url"
+}
+
 resolve_repo_defaults() {
   if [ -z "$REPO_URL" ]; then
     REPO_URL="$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null || true)"
+  fi
+
+  if [ -n "$REPO_URL" ]; then
+    REPO_URL="$(normalize_git_url_for_flux "$REPO_URL")"
   fi
 
   if [ "$REPO_BRANCH_FROM_CURRENT" = true ]; then
