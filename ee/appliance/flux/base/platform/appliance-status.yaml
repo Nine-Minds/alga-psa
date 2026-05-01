@@ -13,6 +13,9 @@ rules:
     resources: ["nodes", "pods", "persistentvolumeclaims", "events", "configmaps"]
     verbs: ["get", "list", "watch"]
   - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["create", "patch", "update"]
+  - apiGroups: [""]
     resources: ["pods/log"]
     verbs: ["get"]
   - apiGroups: ["apps"]
@@ -20,16 +23,16 @@ rules:
     verbs: ["get", "list", "watch"]
   - apiGroups: ["batch"]
     resources: ["jobs"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get", "list", "watch", "create"]
   - apiGroups: ["source.toolkit.fluxcd.io"]
     resources: ["gitrepositories"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get", "list", "watch", "patch"]
   - apiGroups: ["kustomize.toolkit.fluxcd.io"]
     resources: ["kustomizations"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get", "list", "watch", "patch"]
   - apiGroups: ["helm.toolkit.fluxcd.io"]
     resources: ["helmreleases"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get", "list", "watch", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -198,6 +201,58 @@ spec:
                   req.on('timeout', () => req.destroy());
                   req.on('error', () => resolve(null));
                   req.end();
+                });
+              }
+
+              function kubeRequest(method, path, body = null, extraHeaders = {}) {
+                if (!serviceHost || !kubeToken) return Promise.resolve({ ok: false, statusCode: 0, body: null, text: 'Kubernetes service account is unavailable' });
+                return new Promise((resolve) => {
+                  const payload = body == null ? null : JSON.stringify(body);
+                  const headers = { Authorization: `Bearer ${kubeToken}`, Accept: 'application/json', ...extraHeaders };
+                  if (payload != null && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+                  const req = https.request({
+                    host: serviceHost,
+                    port: servicePort,
+                    method,
+                    path,
+                    ca: kubeCa,
+                    headers,
+                    timeout: 8000,
+                  }, (res) => {
+                    let text = '';
+                    res.setEncoding('utf8');
+                    res.on('data', (chunk) => { text += chunk; });
+                    res.on('end', () => {
+                      let parsed = null;
+                      try { parsed = text ? JSON.parse(text) : null; } catch { parsed = null; }
+                      resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, statusCode: res.statusCode || 0, body: parsed, text });
+                    });
+                  });
+                  req.on('timeout', () => req.destroy(new Error('Kubernetes request timed out')));
+                  req.on('error', (error) => resolve({ ok: false, statusCode: 0, body: null, text: error.message }));
+                  if (payload != null) req.write(payload);
+                  req.end();
+                });
+              }
+
+              function jsonResponse(res, statusCode, body) {
+                res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(body));
+              }
+
+              function readJsonBody(req) {
+                return new Promise((resolve, reject) => {
+                  let body = '';
+                  req.setEncoding('utf8');
+                  req.on('data', (chunk) => {
+                    body += chunk;
+                    if (body.length > 32768) reject(new Error('Request body is too large'));
+                  });
+                  req.on('end', () => {
+                    if (!body.trim()) return resolve({});
+                    try { resolve(JSON.parse(body)); } catch (error) { reject(error); }
+                  });
+                  req.on('error', reject);
                 });
               }
 
@@ -794,7 +849,8 @@ spec:
                   release: {
                     selectedReleaseVersion: selectionJson?.data?.releaseVersion || null,
                     appVersion: selectionJson?.data?.appVersion || null,
-                    channel: selectionJson?.data?.channel || null,
+                    channel: selectionJson?.data?.selectedChannel || selectionJson?.data?.channel || null,
+                    selectedChannel: selectionJson?.data?.selectedChannel || selectionJson?.data?.channel || null,
                     gitRevision,
                   },
                   urls: { statusUrl: hostIp ? `http://${hostIp}:8080` : null, loginUrl: appUrl },
@@ -867,6 +923,342 @@ spec:
                 };
               }
 
+              const UPDATE_JOB_LABEL = 'app.kubernetes.io/name=appliance-update';
+              const UPDATE_CHANNELS = ['stable', 'nightly'];
+
+              function updateJobScript() {
+                return String.raw`const fs = require('fs');
+const http = require('http');
+const https = require('https');
+const { execFileSync } = require('child_process');
+const path = require('path');
+
+const action = process.env.UPDATE_ACTION || 'apply';
+const requestedChannel = process.env.UPDATE_CHANNEL || '';
+const serviceHost = process.env.KUBERNETES_SERVICE_HOST;
+const servicePort = process.env.KUBERNETES_SERVICE_PORT || '443';
+const token = fs.readFileSync('/var/run/secrets/kubernetes.io/serviceaccount/token', 'utf8').trim();
+const ca = fs.readFileSync('/var/run/secrets/kubernetes.io/serviceaccount/ca.crt');
+
+function kubeRequest(method, requestPath, body = null, contentType = 'application/json') {
+  return new Promise((resolve, reject) => {
+    const payload = body == null ? null : JSON.stringify(body);
+    const headers = { Authorization: 'Bearer ' + token, Accept: 'application/json' };
+    if (payload != null) headers['Content-Type'] = contentType;
+    const req = https.request({ host: serviceHost, port: servicePort, method, path: requestPath, ca, headers, timeout: 15000 }, (res) => {
+      let text = '';
+      res.setEncoding('utf8');
+      res.on('data', (chunk) => { text += chunk; });
+      res.on('end', () => {
+        let parsed = null;
+        try { parsed = text ? JSON.parse(text) : null; } catch {}
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          const error = new Error(method + ' ' + requestPath + ' failed with ' + res.statusCode + ': ' + text.slice(0, 500));
+          error.statusCode = res.statusCode;
+          error.body = parsed;
+          reject(error);
+          return;
+        }
+        resolve(parsed);
+      });
+    });
+    req.on('timeout', () => req.destroy(new Error(method + ' ' + requestPath + ' timed out')));
+    req.on('error', reject);
+    if (payload != null) req.write(payload);
+    req.end();
+  });
+}
+
+async function kubeGet(requestPath) { return kubeRequest('GET', requestPath); }
+async function kubePatch(requestPath, body) { return kubeRequest('PATCH', requestPath, body, 'application/merge-patch+json'); }
+async function kubePost(requestPath, body) { return kubeRequest('POST', requestPath, body); }
+
+function download(url, destination) {
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const lib = parsed.protocol === 'https:' ? https : http;
+    const req = lib.get(parsed, { timeout: 30000 }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        download(new URL(res.headers.location, parsed).toString(), destination).then(resolve, reject);
+        return;
+      }
+      if (res.statusCode !== 200) {
+        reject(new Error('download failed with ' + res.statusCode + ' from ' + url));
+        res.resume();
+        return;
+      }
+      const stream = fs.createWriteStream(destination);
+      res.pipe(stream);
+      stream.on('finish', () => stream.close(resolve));
+      stream.on('error', reject);
+    });
+    req.on('timeout', () => req.destroy(new Error('download timed out: ' + url)));
+    req.on('error', reject);
+  });
+}
+
+function findFile(root, suffix) {
+  const stack = [root];
+  while (stack.length) {
+    const current = stack.pop();
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) stack.push(full);
+      else if (full.endsWith(suffix)) return full;
+    }
+  }
+  return null;
+}
+
+function yamlString(value) {
+  return JSON.stringify(String(value));
+}
+
+function setYamlValue(source, dottedPath, value) {
+  const target = dottedPath.split('.');
+  const lines = source.split(/\r?\n/);
+  const stack = [];
+  let replaced = false;
+  const output = lines.map((line) => {
+    const stripped = line.trimStart();
+    const indent = line.length - stripped.length;
+    while (stack.length && indent <= stack[stack.length - 1][0]) stack.pop();
+    if (stripped.endsWith(':') && !stripped.startsWith('- ')) {
+      stack.push([indent, stripped.slice(0, -1).trim()]);
+      return line;
+    }
+    const current = stack.map((entry) => entry[1]);
+    if (current.join('.') === target.slice(0, -1).join('.') && stripped.startsWith(target[target.length - 1] + ':')) {
+      replaced = true;
+      return line.slice(0, indent) + target[target.length - 1] + ': ' + value;
+    }
+    return line;
+  });
+  if (!replaced) throw new Error('Failed to update ' + dottedPath);
+  return output.join('\n');
+}
+
+async function patchAnnotation(apiPath, name) {
+  const requestedAt = new Date().toISOString();
+  try {
+    await kubePatch(apiPath, { metadata: { annotations: { 'reconcile.fluxcd.io/requestedAt': requestedAt } } });
+    console.log('requested reconcile:', name);
+  } catch (error) {
+    if (error.statusCode === 404) console.log('skipping missing resource:', name);
+    else throw error;
+  }
+}
+
+async function sourceTree() {
+  const git = await kubeGet('/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories/alga-appliance');
+  const artifactUrl = git?.status?.artifact?.url;
+  if (!artifactUrl) throw new Error('GitRepository alga-appliance does not have a source artifact yet');
+  const work = fs.mkdtempSync('/tmp/appliance-update-');
+  const archive = path.join(work, 'source.tar.gz');
+  const extractDir = path.join(work, 'src');
+  fs.mkdirSync(extractDir);
+  console.log('downloading source artifact:', artifactUrl);
+  await download(artifactUrl, archive);
+  execFileSync('tar', ['-xzf', archive, '-C', extractDir], { stdio: 'inherit' });
+  return extractDir;
+}
+
+function readJson(filePath) {
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+async function resolveRelease(channel) {
+  const root = await sourceTree();
+  const channelPath = findFile(root, '/ee/appliance/releases/channels/' + channel + '.json');
+  if (!channelPath) throw new Error('Channel file not found in source artifact: ' + channel);
+  const channelJson = readJson(channelPath);
+  const releaseVersion = channelJson.releaseVersion;
+  if (!releaseVersion) throw new Error('Channel ' + channel + ' does not specify releaseVersion');
+  const releasePath = findFile(root, '/ee/appliance/releases/' + releaseVersion + '/release.json');
+  if (!releasePath) throw new Error('Release manifest not found in source artifact: ' + releaseVersion);
+  return { channelJson, releaseVersion, release: readJson(releasePath) };
+}
+
+async function currentChannel() {
+  try {
+    const selection = await kubeGet('/api/v1/namespaces/alga-system/configmaps/appliance-release-selection');
+    return selection?.data?.selectedChannel || selection?.data?.channel || 'stable';
+  } catch {
+    return 'stable';
+  }
+}
+
+function configKey(configMap, name, profile) {
+  const preferred = name + '.' + profile + '.yaml';
+  if (configMap?.data?.[preferred] != null) return preferred;
+  const existing = Object.keys(configMap?.data || {}).find((key) => key.startsWith(name + '.') && key.endsWith('.yaml'));
+  return existing || preferred;
+}
+
+async function patchValuesConfigMap(name, profile, mutate) {
+  const cm = await kubeGet('/api/v1/namespaces/alga-system/configmaps/appliance-values-' + name);
+  const key = configKey(cm, name, profile);
+  const source = cm?.data?.[key];
+  if (source == null) throw new Error('ConfigMap appliance-values-' + name + ' does not contain ' + key);
+  const updated = mutate(source);
+  await kubePatch('/api/v1/namespaces/alga-system/configmaps/appliance-values-' + name, { data: { [key]: updated } });
+  console.log('updated values configmap:', name, key);
+}
+
+async function applyRelease(channel) {
+  const { releaseVersion, release } = await resolveRelease(channel);
+  const profile = release?.app?.valuesProfile || 'talos-single-node';
+  const images = release?.app?.images || {};
+  console.log('applying channel:', channel, 'release:', releaseVersion, 'profile:', profile);
+
+  await patchValuesConfigMap('alga-core', profile, (yaml) => {
+    let out = setYamlValue(yaml, 'setup.image.tag', yamlString(images.algaCore));
+    out = setYamlValue(out, 'server.image.tag', yamlString(images.algaCore));
+    return out;
+  });
+  await patchValuesConfigMap('workflow-worker', profile, (yaml) => setYamlValue(yaml, 'image.tag', yamlString(images.workflowWorker)));
+  await patchValuesConfigMap('email-service', profile, (yaml) => setYamlValue(yaml, 'image.tag', yamlString(images.emailService)));
+  await patchValuesConfigMap('temporal-worker', profile, (yaml) => setYamlValue(yaml, 'image.tag', yamlString(images.temporalWorker)));
+
+  const selectionData = {
+    releaseVersion,
+    selectedChannel: channel,
+    appVersion: release?.app?.version || '',
+    releaseBranch: release?.app?.releaseBranch || '',
+    algaCoreTag: images.algaCore || '',
+    workflowWorkerTag: images.workflowWorker || '',
+    emailServiceTag: images.emailService || '',
+    temporalWorkerTag: images.temporalWorker || '',
+  };
+  try {
+    await kubePatch('/api/v1/namespaces/alga-system/configmaps/appliance-release-selection', { data: selectionData });
+  } catch (error) {
+    if (error.statusCode !== 404) throw error;
+    await kubePost('/api/v1/namespaces/alga-system/configmaps', { apiVersion: 'v1', kind: 'ConfigMap', metadata: { name: 'appliance-release-selection', namespace: 'alga-system' }, data: selectionData });
+  }
+  console.log('updated release selection');
+}
+
+async function requestReconciles() {
+  await patchAnnotation('/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories/alga-appliance', 'GitRepository/alga-appliance');
+  for (const name of ['alga-platform', 'alga-core', 'alga-background', 'alga-appliance']) {
+    await patchAnnotation('/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/flux-system/kustomizations/' + name, 'Kustomization/' + name);
+  }
+  for (const name of ['alga-core', 'pgbouncer', 'temporal', 'workflow-worker', 'email-service', 'temporal-worker']) {
+    await patchAnnotation('/apis/helm.toolkit.fluxcd.io/v2/namespaces/alga-system/helmreleases/' + name, 'HelmRelease/' + name);
+  }
+}
+
+(async () => {
+  if (action === 'check') {
+    console.log('checking for updates by reconciling Flux source and tiers');
+    await requestReconciles();
+    console.log('check submitted');
+    return;
+  }
+  const channel = requestedChannel || await currentChannel();
+  if (!['stable', 'nightly'].includes(channel)) throw new Error('Unsupported channel: ' + channel);
+  await applyRelease(channel);
+  await requestReconciles();
+  console.log('upgrade submitted for channel ' + channel);
+})().catch((error) => {
+  console.error(error.stack || error.message || String(error));
+  process.exit(1);
+});`;
+              }
+
+              function updateJobState(job) {
+                const conditions = job?.status?.conditions || [];
+                if (conditions.some((entry) => entry.type === 'Complete' && entry.status === 'True')) return 'succeeded';
+                if (conditions.some((entry) => entry.type === 'Failed' && entry.status === 'True')) return 'failed';
+                if ((job?.status?.active || 0) > 0) return 'running';
+                return 'pending';
+              }
+
+              function summarizeUpdateJob(job) {
+                if (!job) return null;
+                return {
+                  name: job.metadata?.name || null,
+                  action: job.metadata?.labels?.['appliance.alga/status-action'] || null,
+                  channel: job.metadata?.labels?.['appliance.alga/channel'] || null,
+                  state: updateJobState(job),
+                  createdAt: job.metadata?.creationTimestamp || null,
+                  startedAt: job.status?.startTime || null,
+                  completedAt: job.status?.completionTime || null,
+                  active: job.status?.active || 0,
+                  succeeded: job.status?.succeeded || 0,
+                  failed: job.status?.failed || 0,
+                };
+              }
+
+              async function collectUpdateStatus() {
+                const jobsJson = await kubeGet(`/apis/batch/v1/namespaces/appliance-system/jobs?labelSelector=${encodeURIComponent(UPDATE_JOB_LABEL)}`);
+                const jobs = (jobsJson?.items || []).slice().sort((a, b) => String(b.metadata?.creationTimestamp || '').localeCompare(String(a.metadata?.creationTimestamp || '')));
+                const latest = jobs[0] || null;
+                let logs = { available: false, lines: [], pod: null, container: 'updater' };
+                if (latest?.metadata?.name) {
+                  const pods = await kubeGet(`/api/v1/namespaces/appliance-system/pods?labelSelector=${encodeURIComponent('job-name=' + latest.metadata.name)}`);
+                  const pod = (pods?.items || [])[0];
+                  if (pod?.metadata?.name) {
+                    logs = await collectPodLogs('appliance-system', pod.metadata.name, 'updater', 300);
+                  }
+                }
+                return {
+                  latest: summarizeUpdateJob(latest),
+                  active: jobs.map(summarizeUpdateJob).filter((job) => job && ['pending', 'running'].includes(job.state)),
+                  history: jobs.slice(0, 5).map(summarizeUpdateJob),
+                  logs,
+                };
+              }
+
+              async function createUpdateJob(action, channel) {
+                const current = await collectUpdateStatus();
+                if (current.active.length > 0) {
+                  return { conflict: true, status: current };
+                }
+                if (!['check', 'apply'].includes(action)) throw new Error(`Unsupported update action: ${action}`);
+                if (action === 'apply' && channel && !UPDATE_CHANNELS.includes(channel)) throw new Error(`Unsupported channel: ${channel}`);
+                const suffix = Date.now().toString(36);
+                const name = `appliance-update-${suffix}`;
+                const script = updateJobScript();
+                const command = `cat <<'UPDATER' >/tmp/update.js\n${script}\nUPDATER\nnode /tmp/update.js`;
+                const labels = {
+                  'app.kubernetes.io/name': 'appliance-update',
+                  'appliance.alga/status-action': action,
+                };
+                if (channel) labels['appliance.alga/channel'] = channel;
+                const job = {
+                  apiVersion: 'batch/v1',
+                  kind: 'Job',
+                  metadata: { name, namespace: 'appliance-system', labels },
+                  spec: {
+                    backoffLimit: 0,
+                    ttlSecondsAfterFinished: 86400,
+                    template: {
+                      metadata: { labels },
+                      spec: {
+                        restartPolicy: 'Never',
+                        serviceAccountName: 'appliance-status',
+                        automountServiceAccountToken: true,
+                        containers: [{
+                          name: 'updater',
+                          image: 'node:20-alpine',
+                          imagePullPolicy: 'IfNotPresent',
+                          command: ['sh', '-c', command],
+                          env: [
+                            { name: 'UPDATE_ACTION', value: action },
+                            { name: 'UPDATE_CHANNEL', value: channel || '' },
+                          ],
+                        }],
+                      },
+                    },
+                  },
+                };
+                const created = await kubeRequest('POST', '/apis/batch/v1/namespaces/appliance-system/jobs', job);
+                if (!created.ok) throw new Error(`Failed to create update job: ${created.text}`);
+                return { conflict: false, job: summarizeUpdateJob(created.body) };
+              }
+
               const server = http.createServer(async (req, res) => {
                 if (req.url.startsWith('/healthz')) {
                   res.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -880,6 +1272,33 @@ spec:
                 }
 
                 try {
+                  if (req.url.startsWith('/api/update/status')) {
+                    const status = await collectUpdateStatus();
+                    jsonResponse(res, 200, status);
+                    return;
+                  }
+
+                  if (req.url.startsWith('/api/update/check')) {
+                    if (req.method !== 'POST') {
+                      jsonResponse(res, 405, { error: 'method_not_allowed' });
+                      return;
+                    }
+                    const result = await createUpdateJob('check', '');
+                    jsonResponse(res, result.conflict ? 409 : 202, result);
+                    return;
+                  }
+
+                  if (req.url.startsWith('/api/update/apply')) {
+                    if (req.method !== 'POST') {
+                      jsonResponse(res, 405, { error: 'method_not_allowed' });
+                      return;
+                    }
+                    const body = await readJsonBody(req);
+                    const result = await createUpdateJob('apply', body.channel || '');
+                    jsonResponse(res, result.conflict ? 409 : 202, result);
+                    return;
+                  }
+
                   if (req.url.startsWith('/api/pods/logs')) {
                     const url = new URL(req.url, 'http://localhost');
                     const logs = await collectPodLogs(
@@ -962,8 +1381,9 @@ spec:
                       h2 { margin: 0 0 10px; font-size: 16px; }
                       .summary { color: rgb(var(--color-text-700)); font-size: 17px; max-width: 860px; }
                       .tabs { display:flex; gap:8px; margin: 0 0 16px; flex-wrap: wrap; }
-                      .tab-button { border:1px solid rgb(var(--color-border-200)); background: rgb(var(--color-card)); color: rgb(var(--color-text-700)); border-radius: 999px; padding: 8px 14px; cursor:pointer; font-weight:700; }
-                      .tab-button.active { background: rgb(var(--color-primary-50)); color: rgb(var(--color-primary-700)); border-color: rgb(var(--color-primary-100)); }
+                      .tab-button, .action-button { border:1px solid rgb(var(--color-border-200)); background: rgb(var(--color-card)); color: rgb(var(--color-text-700)); border-radius: 999px; padding: 8px 14px; cursor:pointer; font-weight:700; }
+                      .tab-button.active, .action-button { background: rgb(var(--color-primary-50)); color: rgb(var(--color-primary-700)); border-color: rgb(var(--color-primary-100)); }
+                      .action-button:disabled { opacity:.6; cursor:not-allowed; }
                       .tab-panel[hidden] { display:none; }
                       .grid { display: grid; gap: 14px; }
                       .grid.cols { grid-template-columns: repeat(12, minmax(0, 1fr)); }
@@ -1011,6 +1431,7 @@ spec:
                       </section>
                       <nav class="tabs" aria-label="Appliance status tabs">
                         <button class="tab-button active" data-tab="overview">Overview</button>
+                        <button class="tab-button" data-tab="updates">Updates</button>
                         <button class="tab-button" data-tab="pods">Pods</button>
                         <button class="tab-button" data-tab="diagnostics">Diagnostics</button>
                       </nav>
@@ -1030,6 +1451,21 @@ spec:
                           <div class="card span-6"><h2>Blockers</h2><div id="blockers" class="muted">-</div></div>
                           <div class="card span-6"><h2>Bootstrap log</h2><div id="bootstrap-log-status" class="muted">No bootstrap log loaded yet.</div><pre id="bootstrap-log" hidden></pre></div>
                           <div class="card span-12"><h2>Recent events</h2><div id="events" class="events muted">-</div></div>
+                        </div>
+                      </section>
+                      <section id="tab-updates" class="tab-panel" hidden>
+                        <div class="grid cols">
+                          <div class="card span-12">
+                            <h2>Updates</h2>
+                            <div class="kv">
+                              <div class="row"><span class="label">Selected channel</span><span id="update-current-channel" class="value">-</span></div>
+                              <div class="row"><span class="label">Resolved release</span><span id="update-release" class="value">-</span></div>
+                              <div class="row"><span class="label">Flux revision</span><span id="update-revision" class="value">-</span></div>
+                            </div>
+                            <div class="toolbar"><label class="muted">Channel <select id="update-channel"><option value="stable">stable</option><option value="nightly">nightly</option></select></label><button id="update-check" class="action-button">Check for updates</button><button id="update-apply" class="action-button">Apply channel upgrade</button></div>
+                            <div id="update-message" class="muted">No update job has run yet.</div>
+                          </div>
+                          <div class="card span-12"><h2>Update job</h2><div id="update-job" class="muted">Loading update status...</div><pre id="update-log" hidden></pre></div>
                         </div>
                       </section>
                       <section id="tab-pods" class="tab-panel" hidden>
@@ -1061,22 +1497,27 @@ spec:
                       function renderBlockers(blockers){ const el=document.getElementById('blockers'); if(!blockers||!blockers.length){el.textContent='No action-required blockers detected.';return;} el.innerHTML=blockers.map((b)=>'<div class="blocker '+(b.loginBlocking===false?'background':'')+'"><strong>'+esc(b.component||b.layer)+'</strong><div>'+esc(b.reason)+'</div><div class="muted">'+esc(b.nextAction||'')+'</div>'+(b.loginBlocking===false?'<div class="muted">background / non-login-blocking</div>':'')+'</div>').join(''); }
                       function renderBootstrap(bootstrap){ const status=document.getElementById('bootstrap-log-status'); const pre=document.getElementById('bootstrap-log'); const logs=bootstrap?.logs; if(!logs?.available){ status.textContent=bootstrap?.job?.name ? 'No log excerpt available for '+bootstrap.job.name+'.' : 'No bootstrap job log available yet.'; pre.hidden=true; return; } status.innerHTML='<strong>'+esc(logs.pod)+'</strong> / '+esc(logs.container)+(logs.detectedErrors?.length?'<div class="blocker"><strong>Detected error</strong><div>'+esc(logs.detectedErrors.at(-1))+'</div></div>':''); pre.hidden=false; pre.textContent=(logs.tail||[]).join('\\n'); }
                       function renderEvents(events){ const el=document.getElementById('events'); const rows=(events||[]).slice(-8).reverse(); if(!rows.length){ el.textContent='No recent events.'; return; } el.innerHTML=rows.map((ev)=>'<div class="event"><strong>'+esc(ev.type)+' '+esc(ev.reason)+'</strong> <span class="muted">'+esc(ev.namespace)+' '+esc(ev.involvedObject||'')+'</span><div>'+esc(ev.message)+'</div></div>').join(''); }
-                      async function loadStatus(){ const r=await fetch('/api/status'+window.location.search); if(!r.ok) throw new Error('Unauthorized or unavailable'); const data=await r.json(); document.getElementById('summary').textContent=data.rollup?.message||'Appliance status loaded.'; const state=data.rollup?.state||data.status||'-'; const stateEl=document.getElementById('install-state'); stateEl.textContent=state; stateEl.className=badgeClass(state); document.getElementById('phase').textContent=data.currentPhase||state; document.getElementById('login-url').textContent=data.urls?.loginUrl||data.loginUrl||'Not available yet'; document.getElementById('next-action').textContent=data.rollup?.nextAction||data.nextAction||'-'; renderOps(data.activeOperations); renderTiers(data.tiers); renderBlockers(data.topBlockers); renderBootstrap(data.bootstrap); renderEvents(data.recentEvents); document.getElementById('diag').textContent=JSON.stringify(data,null,2); }
+                      async function loadStatus(){ const r=await fetch('/api/status'+window.location.search); if(!r.ok) throw new Error('Unauthorized or unavailable'); const data=await r.json(); document.getElementById('summary').textContent=data.rollup?.message||'Appliance status loaded.'; const state=data.rollup?.state||data.status||'-'; const stateEl=document.getElementById('install-state'); stateEl.textContent=state; stateEl.className=badgeClass(state); document.getElementById('phase').textContent=data.currentPhase||state; document.getElementById('login-url').textContent=data.urls?.loginUrl||data.loginUrl||'Not available yet'; document.getElementById('next-action').textContent=data.rollup?.nextAction||data.nextAction||'-'; const channel=data.release?.selectedChannel||data.release?.channel||'unknown'; document.getElementById('update-current-channel').textContent=channel; if(channel==='stable'||channel==='nightly') document.getElementById('update-channel').value=channel; document.getElementById('update-release').textContent=data.release?.selectedReleaseVersion||'unknown'; document.getElementById('update-revision').textContent=data.release?.gitRevision||'unknown'; renderOps(data.activeOperations); renderTiers(data.tiers); renderBlockers(data.topBlockers); renderBootstrap(data.bootstrap); renderEvents(data.recentEvents); document.getElementById('diag').textContent=JSON.stringify(data,null,2); }
                       function fmtAge(s){ return fmtSeconds(s); }
                       function renderPods(){ const body=document.getElementById('pods-body'); body.innerHTML=podRows.map((pod,idx)=>'<tr data-index="'+idx+'" class="'+(selectedPod&&selectedPod.namespace===pod.namespace&&selectedPod.name===pod.name?'selected':'')+'"><td>'+esc(pod.namespace)+'</td><td>'+esc(pod.name)+'</td><td><span class="'+badgeClass(pod.status)+'">'+esc(pod.status)+'</span></td><td>'+esc(pod.readyText)+'</td><td>'+esc(pod.restarts)+'</td><td>'+fmtAge(pod.ageSeconds)+'</td><td>'+esc(pod.nodeName||'-')+'</td></tr>').join(''); [...body.querySelectorAll('tr')].forEach((tr)=>tr.addEventListener('click',()=>selectPod(podRows[Number(tr.dataset.index)]))); document.getElementById('pods-status').textContent=podRows.length+' pods loaded.'; }
                       async function loadPods(){ const ns=document.getElementById('pod-namespace').value || 'appliance'; const r=await fetch('/api/pods?namespace='+encodeURIComponent(ns)+'&'+window.location.search.slice(1)); if(!r.ok) throw new Error('Unable to load pods'); const data=await r.json(); podRows=data.pods||[]; if(selectedPod&&!podRows.some((p)=>p.namespace===selectedPod.namespace&&p.name===selectedPod.name)){ selectedPod=null; podLogTailLines=300; document.getElementById('pod-log-status').textContent='Select a pod to view logs.'; document.getElementById('pod-log').hidden=true; } renderPods(); }
                       function selectPod(pod){ selectedPod=pod; podLogTailLines=300; loadingOlderLogs=false; const pre=document.getElementById('pod-log'); pre.textContent=''; pre.scrollTop=0; const select=document.getElementById('pod-container'); select.innerHTML=(pod.containers||[]).map((name)=>'<option value="'+esc(name)+'">'+esc(name)+'</option>').join(''); document.getElementById('pod-log-title').textContent='Logs: '+pod.namespace+'/'+pod.name; renderPods(); loadPodLogs(); }
                       async function loadPodLogs(options={}){ if(!selectedPod) return; const pre=document.getElementById('pod-log'); const previousHeight=options.preserveScroll?pre.scrollHeight:null; const container=document.getElementById('pod-container').value || (selectedPod.containers||[])[0] || ''; const params=new URLSearchParams({namespace:selectedPod.namespace,pod:selectedPod.name,container,tailLines:String(podLogTailLines)}); const tokenParams=new URLSearchParams(window.location.search); for(const [k,v] of tokenParams.entries()) params.set(k,v); const r=await fetch('/api/pods/logs?'+params.toString()); if(!r.ok) throw new Error('Unable to load pod logs'); const data=await r.json(); const count=(data.lines||[]).length; document.getElementById('pod-log-status').textContent=(loadingOlderLogs?'Loaded previous log lines. ':'')+(data.available?'Loaded '+count+' log lines':'No logs available')+' for '+selectedPod.namespace+'/'+selectedPod.name+(container?' / '+container:'')+(podLogTailLines>=maxPodLogLines?' Reached log history limit.':''); pre.hidden=false; pre.textContent=(data.lines||[]).join('\n'); if(options.preserveScroll&&previousHeight!=null){ requestAnimationFrame(()=>{ pre.scrollTop=Math.max(0, pre.scrollHeight-previousHeight); }); } loadingOlderLogs=false; }
                       function loadOlderPodLogs(){ if(!selectedPod||loadingOlderLogs||podLogTailLines>=maxPodLogLines) return; loadingOlderLogs=true; podLogTailLines=Math.min(maxPodLogLines,podLogTailLines+300); document.getElementById('pod-log-status').textContent='Loading previous 300 log lines…'; loadPodLogs({preserveScroll:true}).catch((err)=>{ loadingOlderLogs=false; document.getElementById('pod-log-status').textContent=err.message; }); }
-                      function showTab(tab){ activeTab=tab; document.querySelectorAll('.tab-button').forEach((btn)=>btn.classList.toggle('active',btn.dataset.tab===tab)); document.querySelectorAll('.tab-panel').forEach((panel)=>panel.hidden=panel.id!=='tab-'+tab); if(tab==='pods') loadPods().catch((err)=>document.getElementById('pods-status').textContent=err.message); }
+                      async function loadUpdateStatus(){ const r=await fetch('/api/update/status'+window.location.search); if(!r.ok) throw new Error('Unable to load update status'); const data=await r.json(); const job=data.latest; const el=document.getElementById('update-job'); if(!job){ el.textContent='No update job has run yet.'; } else { el.innerHTML='<div class="kv"><div class="row"><span class="label">Job</span><span class="value">'+esc(job.name||'-')+'</span></div><div class="row"><span class="label">Action</span><span class="value">'+esc(job.action||'-')+'</span></div><div class="row"><span class="label">Channel</span><span class="value">'+esc(job.channel||'-')+'</span></div><div class="row"><span class="label">State</span><span class="value"><span class="'+badgeClass(job.state)+'">'+esc(job.state||'-')+'</span></span></div></div>'; } const pre=document.getElementById('update-log'); if(data.logs?.available){ pre.hidden=false; pre.textContent=(data.logs.lines||[]).join('\n'); } else { pre.hidden=true; pre.textContent=''; } }
+                      async function startUpdate(action){ const channel=document.getElementById('update-channel').value; const msg=document.getElementById('update-message'); const check=document.getElementById('update-check'); const apply=document.getElementById('update-apply'); check.disabled=true; apply.disabled=true; msg.textContent=action==='check'?'Starting update check…':'Starting '+channel+' upgrade…'; try{ const r=await fetch('/api/update/'+(action==='check'?'check':'apply')+window.location.search,{method:'POST',headers:{'Content-Type':'application/json'},body:action==='apply'?JSON.stringify({channel}):'{}'}); const data=await r.json(); if(!r.ok){ if(r.status===409&&data.status) await loadUpdateStatus(); throw new Error(data.error||(r.status===409?'Another update job is already running.':'Unable to start update job')); } msg.textContent=action==='check'?'Update check submitted.':'Upgrade submitted. Progress will appear below.'; await loadUpdateStatus(); } catch(err){ msg.textContent=err.message; } finally { check.disabled=false; apply.disabled=false; } }
+                      function showTab(tab){ activeTab=tab; document.querySelectorAll('.tab-button').forEach((btn)=>btn.classList.toggle('active',btn.dataset.tab===tab)); document.querySelectorAll('.tab-panel').forEach((panel)=>panel.hidden=panel.id!=='tab-'+tab); if(tab==='pods') loadPods().catch((err)=>document.getElementById('pods-status').textContent=err.message); if(tab==='updates') loadUpdateStatus().catch((err)=>document.getElementById('update-message').textContent=err.message); }
                       document.querySelectorAll('.tab-button').forEach((btn)=>btn.addEventListener('click',()=>showTab(btn.dataset.tab)));
                       document.getElementById('pod-namespace').addEventListener('change',()=>{ selectedPod=null; loadPods().catch((err)=>document.getElementById('pods-status').textContent=err.message); });
                       document.getElementById('pod-container').addEventListener('change',()=>{ podLogTailLines=300; loadingOlderLogs=false; const pre=document.getElementById('pod-log'); pre.textContent=''; pre.scrollTop=0; loadPodLogs().catch((err)=>document.getElementById('pod-log-status').textContent=err.message); });
                       document.getElementById('pod-log').addEventListener('scroll',(event)=>{ if(event.currentTarget.scrollTop<=0) loadOlderPodLogs(); });
+                      document.getElementById('update-check').addEventListener('click',()=>startUpdate('check'));
+                      document.getElementById('update-apply').addEventListener('click',()=>startUpdate('apply'));
                       loadStatus().catch((err)=>{document.getElementById('summary').textContent=err.message;});
                       setInterval(()=>loadStatus().catch(()=>{}), 5000);
                       setInterval(()=>{ if(activeTab==='pods') loadPods().catch(()=>{}); }, 5000);
                       setInterval(()=>{ if(activeTab==='pods' && selectedPod) loadPodLogs().catch(()=>{}); }, 5000);
+                      setInterval(()=>{ if(activeTab==='updates') loadUpdateStatus().catch(()=>{}); }, 5000);
                     </script>
                   </body>
                   </html>`;

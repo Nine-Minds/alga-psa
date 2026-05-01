@@ -238,6 +238,21 @@
   padding: 8px 10px;
 }
 
+.actionButton {
+  cursor: pointer;
+  border: 1px solid rgb(var(--color-primary-100));
+  border-radius: 999px;
+  background: rgb(var(--color-primary-50));
+  color: rgb(var(--color-primary-700));
+  padding: 8px 14px;
+  font-weight: 750;
+}
+
+.actionButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .tableWrap {
   overflow: auto;
   border: 1px solid rgb(var(--color-border-200));

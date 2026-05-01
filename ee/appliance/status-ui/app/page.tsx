@@ -23,6 +23,23 @@ type PodRow = {
   containers?: string[];
 };
 
+type UpdateJob = {
+  name?: string | null;
+  action?: string | null;
+  channel?: string | null;
+  state?: string;
+  createdAt?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+};
+
+type UpdateStatus = {
+  latest?: UpdateJob | null;
+  active?: UpdateJob[];
+  history?: UpdateJob[];
+  logs?: { available?: boolean; lines?: string[]; pod?: string | null; container?: string | null };
+};
+
 type StatusResponse = {
   status?: string;
   timestamp?: string;
@@ -45,6 +62,13 @@ type StatusResponse = {
     logs?: { available?: boolean; pod?: string | null; container?: string | null; tail?: string[]; detectedErrors?: string[] };
   };
   recentEvents?: Array<{ type?: string; reason?: string; namespace?: string; involvedObject?: string; message?: string }>;
+  release?: {
+    selectedReleaseVersion?: string | null;
+    appVersion?: string | null;
+    channel?: string | null;
+    selectedChannel?: string | null;
+    gitRevision?: string | null;
+  };
 };
 
 function formatSeconds(value?: number | null) {
@@ -77,7 +101,7 @@ const MAX_LOG_LINES = 5000;
 export default function StatusPage() {
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'pods' | 'diagnostics'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'updates' | 'pods' | 'diagnostics'>('overview');
   const [namespaceScope, setNamespaceScope] = useState('appliance');
   const [pods, setPods] = useState<PodRow[]>([]);
   const [selectedPod, setSelectedPod] = useState<PodRow | null>(null);
@@ -87,6 +111,10 @@ export default function StatusPage() {
   const [loadingOlderLogs, setLoadingOlderLogs] = useState(false);
   const [podStatus, setPodStatus] = useState('Loading pods...');
   const [logStatus, setLogStatus] = useState('Select a pod to view logs.');
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null);
+  const [updateChannel, setUpdateChannel] = useState('stable');
+  const [updateMessage, setUpdateMessage] = useState('');
+  const [updateBusy, setUpdateBusy] = useState(false);
   const logPreRef = useRef<HTMLPreElement | null>(null);
   const pendingScrollRestoreRef = useRef<{ previousHeight: number } | null>(null);
   const query = useMemo(tokenQuery, []);
@@ -113,6 +141,32 @@ export default function StatusPage() {
       clearInterval(timer);
     };
   }, [query]);
+
+  useEffect(() => {
+    const selected = status?.release?.selectedChannel || status?.release?.channel;
+    if (selected === 'stable' || selected === 'nightly') setUpdateChannel(selected);
+  }, [status?.release?.channel, status?.release?.selectedChannel]);
+
+  useEffect(() => {
+    if (activeTab !== 'updates') return undefined;
+    let cancelled = false;
+    async function loadUpdateStatus() {
+      try {
+        const response = await fetch(withToken('/api/update/status', query), { cache: 'no-store' });
+        if (!response.ok) throw new Error('Unable to load update status');
+        const data = (await response.json()) as UpdateStatus;
+        if (!cancelled) setUpdateStatus(data);
+      } catch (err) {
+        if (!cancelled) setUpdateMessage(err instanceof Error ? err.message : String(err));
+      }
+    }
+    loadUpdateStatus();
+    const timer = setInterval(loadUpdateStatus, 5000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [activeTab, query]);
 
   useEffect(() => {
     if (activeTab !== 'pods') return undefined;
@@ -216,6 +270,30 @@ export default function StatusPage() {
     }
   }
 
+  async function startUpdate(action: 'check' | 'apply') {
+    setUpdateBusy(true);
+    setUpdateMessage(action === 'check' ? 'Starting update check…' : `Starting ${updateChannel} upgrade…`);
+    try {
+      const response = await fetch(withToken(`/api/update/${action === 'check' ? 'check' : 'apply'}`, query), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: action === 'apply' ? JSON.stringify({ channel: updateChannel }) : '{}',
+      });
+      const data = (await response.json()) as { status?: UpdateStatus; error?: string };
+      if (!response.ok) {
+        if (response.status === 409 && data.status) setUpdateStatus(data.status);
+        throw new Error(data.error || (response.status === 409 ? 'Another update job is already running.' : 'Unable to start update job'));
+      }
+      setUpdateMessage(action === 'check' ? 'Update check submitted.' : 'Upgrade submitted. Progress will appear below.');
+      const statusResponse = await fetch(withToken('/api/update/status', query), { cache: 'no-store' });
+      if (statusResponse.ok) setUpdateStatus(await statusResponse.json() as UpdateStatus);
+    } catch (err) {
+      setUpdateMessage(err instanceof Error ? err.message : String(err));
+    } finally {
+      setUpdateBusy(false);
+    }
+  }
+
   function handleLogScroll() {
     const pre = logPreRef.current;
     if (!pre || loadingOlderLogs || podLogTailLines >= MAX_LOG_LINES || pre.scrollTop > 0) return;
@@ -234,6 +312,7 @@ export default function StatusPage() {
 
       <nav className={styles.tabs} aria-label="Appliance status tabs">
         <button className={activeTab === 'overview' ? styles.activeTab : ''} onClick={() => setActiveTab('overview')}>Overview</button>
+        <button className={activeTab === 'updates' ? styles.activeTab : ''} onClick={() => setActiveTab('updates')}>Updates</button>
         <button className={activeTab === 'pods' ? styles.activeTab : ''} onClick={() => setActiveTab('pods')}>Pods</button>
         <button className={activeTab === 'diagnostics' ? styles.activeTab : ''} onClick={() => setActiveTab('diagnostics')}>Diagnostics</button>
       </nav>
@@ -310,6 +389,43 @@ export default function StatusPage() {
                 </div>
               ))}
             </div>
+          </article>
+        </section>
+      ) : null}
+
+      {activeTab === 'updates' ? (
+        <section className={styles.grid}>
+          <article className={`${styles.card} ${styles.full}`}>
+            <h2>Updates</h2>
+            <dl className={styles.kv}>
+              <div><dt>Selected channel</dt><dd>{status?.release?.selectedChannel || status?.release?.channel || 'unknown'}</dd></div>
+              <div><dt>Resolved release</dt><dd>{status?.release?.selectedReleaseVersion || 'unknown'}</dd></div>
+              <div><dt>Flux revision</dt><dd>{status?.release?.gitRevision || 'unknown'}</dd></div>
+            </dl>
+            <div className={styles.toolbar}>
+              <label className={styles.muted}>Channel{' '}
+                <select value={updateChannel} onChange={(event) => setUpdateChannel(event.target.value)} disabled={updateBusy}>
+                  <option value="stable">stable</option>
+                  <option value="nightly">nightly</option>
+                </select>
+              </label>
+              <button className={styles.actionButton} onClick={() => startUpdate('check')} disabled={updateBusy}>Check for updates</button>
+              <button className={styles.actionButton} onClick={() => startUpdate('apply')} disabled={updateBusy}>Apply channel upgrade</button>
+            </div>
+            {updateMessage ? <p className={styles.muted}>{updateMessage}</p> : null}
+          </article>
+          <article className={`${styles.card} ${styles.full}`}>
+            <h2>Update job</h2>
+            {updateStatus?.latest ? (
+              <dl className={styles.kv}>
+                <div><dt>Job</dt><dd>{updateStatus.latest.name}</dd></div>
+                <div><dt>Action</dt><dd>{updateStatus.latest.action || '-'}</dd></div>
+                <div><dt>Channel</dt><dd>{updateStatus.latest.channel || '-'}</dd></div>
+                <div><dt>State</dt><dd><span className={`${styles.badge} ${badgeClass(updateStatus.latest.state)}`}>{updateStatus.latest.state}</span></dd></div>
+                <div><dt>Started</dt><dd>{updateStatus.latest.startedAt || updateStatus.latest.createdAt || '-'}</dd></div>
+              </dl>
+            ) : <p className={styles.muted}>No update job has run yet.</p>}
+            {updateStatus?.logs?.available ? <pre className={styles.log}>{(updateStatus.logs.lines || []).join('\n')}</pre> : null}
           </article>
         </section>
       ) : null}
