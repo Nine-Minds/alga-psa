@@ -290,10 +290,10 @@ async function resolveDocumentAuthorizationRecords(
           .select<{ task_id: string; client_id: string | null }[]>('pt.task_id', 'p.client_id')
       : Promise.resolve([]),
     contractIds.size > 0
-      ? trx('billing_plans')
+      ? trx('client_contracts')
           .where({ tenant })
-          .whereIn('plan_id', Array.from(contractIds))
-          .select<{ plan_id: string; company_id: string | null }[]>('plan_id', 'company_id')
+          .whereIn('contract_id', Array.from(contractIds))
+          .select<{ contract_id: string; client_id: string | null }[]>('contract_id', 'client_id')
       : Promise.resolve([]),
   ]);
 
@@ -309,14 +309,20 @@ async function resolveDocumentAuthorizationRecords(
   for (const row of projectTaskClientRows) {
     projectTaskClientById.set(row.task_id, row.client_id ?? null);
   }
-  const contractClientById = new Map<string, string | null>();
+  const contractClientIdsByContractId = new Map<string, Set<string>>();
   for (const row of contractClientRows) {
-    contractClientById.set(row.plan_id, row.company_id ?? null);
+    if (!row.client_id) continue;
+    let clientIds = contractClientIdsByContractId.get(row.contract_id);
+    if (!clientIds) {
+      clientIds = new Set<string>();
+      contractClientIdsByContractId.set(row.contract_id, clientIds);
+    }
+    clientIds.add(row.client_id);
   }
 
   for (const document of documents) {
     const documentAssociations = associationByDocument.get(document.document_id) ?? [];
-    const directClientAssociation = documentAssociations.find((association) => association.entity_type === 'client');
+    const directClientAssociations = documentAssociations.filter((association) => association.entity_type === 'client');
     const userAssociations = documentAssociations.filter((association) => association.entity_type === 'user');
     const teamAssociations = documentAssociations.filter((association) => association.entity_type === 'team');
     const contactAssociations = documentAssociations.filter((association) => association.entity_type === 'contact');
@@ -330,30 +336,37 @@ async function resolveDocumentAuthorizationRecords(
         ? user.user_id
         : null;
 
-    const clientFromContact =
-      contactAssociations
-        .map((association) => contactClientById.get(association.entity_id))
-        .find((clientId): clientId is string => typeof clientId === 'string') ?? null;
-    const clientFromTicket =
-      ticketAssociations
-        .map((association) => ticketClientById.get(association.entity_id))
-        .find((clientId): clientId is string => typeof clientId === 'string') ?? null;
-    const clientFromTask =
-      projectTaskAssociations
-        .map((association) => projectTaskClientById.get(association.entity_id))
-        .find((clientId): clientId is string => typeof clientId === 'string') ?? null;
-    const clientFromContract =
-      contractAssociations
-        .map((association) => contractClientById.get(association.entity_id))
-        .find((clientId): clientId is string => typeof clientId === 'string') ?? null;
+    // A document can be linked to multiple clients via any combination of direct
+    // client, contact, ticket, project_task, and contract associations. Gather every
+    // candidate client_id, then prefer the viewer's own clientId when it matches so
+    // the kernel's `same_client` rule authorizes the viewer.
+    const candidateClientIds = new Set<string>();
+    for (const association of directClientAssociations) {
+      candidateClientIds.add(association.entity_id);
+    }
+    for (const association of contactAssociations) {
+      const clientId = contactClientById.get(association.entity_id);
+      if (clientId) candidateClientIds.add(clientId);
+    }
+    for (const association of ticketAssociations) {
+      const clientId = ticketClientById.get(association.entity_id);
+      if (clientId) candidateClientIds.add(clientId);
+    }
+    for (const association of projectTaskAssociations) {
+      const clientId = projectTaskClientById.get(association.entity_id);
+      if (clientId) candidateClientIds.add(clientId);
+    }
+    for (const association of contractAssociations) {
+      const contractClientIds = contractClientIdsByContractId.get(association.entity_id);
+      if (!contractClientIds) continue;
+      for (const clientId of contractClientIds) {
+        candidateClientIds.add(clientId);
+      }
+    }
 
-    const clientId =
-      directClientAssociation?.entity_id ??
-      clientFromContact ??
-      clientFromTicket ??
-      clientFromTask ??
-      clientFromContract ??
-      null;
+    const clientId = user.clientId && candidateClientIds.has(user.clientId)
+      ? user.clientId
+      : (candidateClientIds.values().next().value ?? null);
 
     records.set(document.document_id, {
       id: document.document_id,

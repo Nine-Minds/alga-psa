@@ -7,6 +7,7 @@ import {
   FlaskConical,
   Layers3,
   type LucideIcon,
+  MoreVertical,
   Search,
   Shield,
   Sparkles,
@@ -15,14 +16,24 @@ import {
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import CustomTabs from '@alga-psa/ui/components/CustomTabs';
+import ViewSwitcher, { type ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
-import { TIER_FEATURES } from '@alga-psa/types';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import UserPicker from '@alga-psa/ui/components/UserPicker';
+import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@alga-psa/ui/components/DropdownMenu';
+import { TIER_FEATURES, type ColumnDefinition, type IUserWithRoles, type ITeam } from '@alga-psa/types';
+import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useTierFeature } from 'server/src/context/TierContext';
 import {
@@ -214,7 +225,7 @@ function OverviewMetricCard({
 }) {
   return (
     <Card className="border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]">
-      <CardContent className="p-5">
+      <CardContent className="px-5 pb-5 pt-7">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[rgb(var(--color-text-500))]">
@@ -276,6 +287,42 @@ export default function PolicyManagement() {
   const [newBundleName, setNewBundleName] = useState('');
   const [newBundleDescription, setNewBundleDescription] = useState('');
   const [creatingBundle, setCreatingBundle] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [allUsers, setAllUsers] = useState<IUserWithRoles[]>([]);
+  const [allTeams, setAllTeams] = useState<ITeam[]>([]);
+  const [pickerDataLoaded, setPickerDataLoaded] = useState(false);
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, includeArchived]);
+
+  useEffect(() => {
+    const needsPickerData = Boolean(assignmentBundleId || simulatorBundleId);
+    if (!needsPickerData || pickerDataLoaded) {
+      return;
+    }
+    let cancelled = false;
+    void Promise.all([getAllUsers(), getTeams()])
+      .then(([users, teams]) => {
+        if (cancelled) return;
+        setAllUsers(users);
+        setAllTeams(teams);
+        setPickerDataLoaded(true);
+      })
+      .catch((loadError) => {
+        if (cancelled) return;
+        console.error('Failed to load assignment picker data', loadError);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [assignmentBundleId, simulatorBundleId, pickerDataLoaded]);
 
   const activeCount = useMemo(
     () => entries.filter((entry) => entry.status === 'active').length,
@@ -469,11 +516,11 @@ export default function PolicyManagement() {
     [t]
   );
 
-  const workspaceTabs = useMemo(
+  const workspaceViewOptions = useMemo<ViewSwitcherOption<WorkspacePanel>[]>(
     () => [
-      { id: 'editor', label: t('policyManagement.workspace.tabs.editor'), icon: Sparkles, content: <div /> },
-      { id: 'assignments', label: t('policyManagement.workspace.tabs.assignments'), icon: Users, content: <div /> },
-      { id: 'simulator', label: t('policyManagement.workspace.tabs.simulator'), icon: FlaskConical, content: <div /> },
+      { value: 'editor', label: t('policyManagement.workspace.tabs.editor'), icon: Sparkles, id: 'authorization-bundle-workspace-tab-editor' },
+      { value: 'assignments', label: t('policyManagement.workspace.tabs.assignments'), icon: Users, id: 'authorization-bundle-workspace-tab-assignments' },
+      { value: 'simulator', label: t('policyManagement.workspace.tabs.simulator'), icon: FlaskConical, id: 'authorization-bundle-workspace-tab-simulator' },
     ],
     [t]
   );
@@ -801,6 +848,151 @@ export default function PolicyManagement() {
     return ids.map((id) => nameById.get(id) ?? id);
   };
 
+  const policyColumns: ColumnDefinition<AuthorizationBundleLibraryEntry>[] = [
+    {
+      title: t('policyManagement.library.columns.bundle'),
+      dataIndex: 'name',
+      width: '36%',
+      render: (_, entry) => {
+        const statusLabel = entry.status === 'active'
+          ? t('policyManagement.library.statusLabels.active')
+          : t('policyManagement.library.statusLabels.archived');
+        return (
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="font-medium text-[rgb(var(--color-text-900))]">{entry.name}</div>
+              {entry.isSystem ? <Badge variant="outline">{t('policyManagement.library.badges.starter')}</Badge> : null}
+            </div>
+            <div className="text-xs text-[rgb(var(--color-text-500))]">
+              {entry.description || (entry.isSystem
+                ? t('policyManagement.library.descriptions.systemStarter')
+                : t('policyManagement.library.descriptions.customBundle'))}
+            </div>
+            <div className="text-xs text-[rgb(var(--color-text-500))]">
+              {t('policyManagement.library.effectiveSummary', { status: statusLabel, count: entry.assignmentCount })}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      title: t('policyManagement.library.columns.status'),
+      dataIndex: 'status',
+      width: '12%',
+      render: (_, entry) => {
+        const statusLabel = entry.status === 'active'
+          ? t('policyManagement.library.statusLabels.active')
+          : t('policyManagement.library.statusLabels.archived');
+        return (
+          <Badge variant={entry.status === 'active' ? 'default' : 'secondary'}>
+            {statusLabel}
+          </Badge>
+        );
+      },
+    },
+    {
+      title: t('policyManagement.library.columns.type'),
+      dataIndex: 'isSystem',
+      width: '12%',
+      render: (_, entry) => (
+        entry.isSystem
+          ? t('policyManagement.library.typeLabels.system')
+          : t('policyManagement.library.typeLabels.custom')
+      ),
+    },
+    {
+      title: t('policyManagement.library.columns.assignments'),
+      dataIndex: 'assignmentCount',
+      width: '12%',
+    },
+    {
+      title: t('policyManagement.library.columns.updated'),
+      dataIndex: 'updatedAt',
+      width: '20%',
+      render: (value) => formatDate(value as string),
+    },
+    {
+      title: t('policyManagement.library.columns.actions'),
+      dataIndex: 'bundleId',
+      width: '8%',
+      headerClassName: 'text-right',
+      cellClassName: 'text-right',
+      sortable: false,
+      render: (_, entry) => {
+        const rowBusy = busyBundleId === entry.bundleId;
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                id={`authorization-bundle-actions-${entry.bundleId}`}
+                variant="ghost"
+                className="h-8 w-8 p-0"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <span className="sr-only">
+                  {t('policyManagement.library.actions.openMenu', { defaultValue: 'Open menu' })}
+                </span>
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                id={`authorization-bundle-edit-${entry.bundleId}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openWorkspace(entry.bundleId, 'editor');
+                }}
+              >
+                {t('policyManagement.library.actions.openEditor')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                id={`authorization-bundle-assignments-${entry.bundleId}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openWorkspace(entry.bundleId, 'assignments');
+                }}
+              >
+                {t('policyManagement.library.actions.assignments')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                id={`authorization-bundle-simulator-${entry.bundleId}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openWorkspace(entry.bundleId, 'simulator');
+                }}
+              >
+                {t('policyManagement.library.actions.simulator')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                id={`authorization-bundle-clone-${entry.bundleId}`}
+                disabled={rowBusy}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void handleClone(entry);
+                }}
+              >
+                {t('policyManagement.library.actions.clone')}
+              </DropdownMenuItem>
+              {entry.status === 'active' ? (
+                <DropdownMenuItem
+                  id={`authorization-bundle-archive-${entry.bundleId}`}
+                  className="text-destructive focus:text-destructive"
+                  disabled={rowBusy}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void handleArchive(entry);
+                  }}
+                >
+                  {t('policyManagement.library.actions.archive')}
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
+  ];
+
   if (!hasBundleLibrary) {
     return (
       <Card className="border-dashed border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))]">
@@ -897,7 +1089,7 @@ export default function PolicyManagement() {
 
       {!selectedBundleId ? (
         <Card className="overflow-hidden rounded-2xl border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] shadow-sm">
-        <CardHeader className="gap-5 border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] pb-6">
+        <CardHeader className="gap-5 bg-[rgb(var(--color-card))] pb-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-1">
               <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[rgb(var(--color-text-500))]">
@@ -919,129 +1111,37 @@ export default function PolicyManagement() {
                   onChange={(event) => setSearch(event.target.value)}
                 />
               </div>
-              <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] px-3 py-2 dark:bg-[rgb(var(--color-border-50))]">
                 <Switch
                   id="authorization-bundle-toggle-archived-button"
                   checked={includeArchived}
                   onCheckedChange={setIncludeArchived}
                   label={t('policyManagement.library.showArchived')}
                 />
-              </div>
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('policyManagement.library.columns.bundle')}</TableHead>
-                <TableHead>{t('policyManagement.library.columns.status')}</TableHead>
-                <TableHead>{t('policyManagement.library.columns.type')}</TableHead>
-                <TableHead>{t('policyManagement.library.columns.assignments')}</TableHead>
-                <TableHead>{t('policyManagement.library.columns.updated')}</TableHead>
-                <TableHead className="text-right">{t('policyManagement.library.columns.actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {!loading && entries.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="px-6 py-10 text-center text-sm text-muted-foreground">
-                    {t('policyManagement.library.empty')}
-                  </TableCell>
-                </TableRow>
-              ) : null}
-
-              {entries.map((entry) => {
-                const rowBusy = busyBundleId === entry.bundleId;
-                const statusLabel = entry.status === 'active'
-                  ? t('policyManagement.library.statusLabels.active')
-                  : t('policyManagement.library.statusLabels.archived');
-                return (
-                  <TableRow key={entry.bundleId}>
-                    <TableCell>
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <div className="font-medium text-[rgb(var(--color-text-900))]">{entry.name}</div>
-                          {entry.isSystem ? <Badge variant="outline">{t('policyManagement.library.badges.starter')}</Badge> : null}
-                        </div>
-                        <div className="text-xs text-[rgb(var(--color-text-500))]">
-                          {entry.description || (entry.isSystem
-                            ? t('policyManagement.library.descriptions.systemStarter')
-                            : t('policyManagement.library.descriptions.customBundle'))}
-                        </div>
-                        <div className="text-xs text-[rgb(var(--color-text-500))]">
-                          {t('policyManagement.library.effectiveSummary', { status: statusLabel, count: entry.assignmentCount })}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={entry.status === 'active' ? 'default' : 'secondary'}>
-                        {statusLabel}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{entry.isSystem ? t('policyManagement.library.typeLabels.system') : t('policyManagement.library.typeLabels.custom')}</TableCell>
-                    <TableCell>{entry.assignmentCount}</TableCell>
-                    <TableCell>{formatDate(entry.updatedAt)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <Button
-                          id={`authorization-bundle-edit-${entry.bundleId}`}
-                          size="sm"
-                          onClick={() => openWorkspace(entry.bundleId, 'editor')}
-                        >
-                          {t('policyManagement.library.actions.openEditor')}
-                        </Button>
-                        <Button
-                          id={`authorization-bundle-assignments-${entry.bundleId}`}
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openWorkspace(entry.bundleId, 'assignments')}
-                        >
-                          {t('policyManagement.library.actions.assignments')}
-                        </Button>
-                        <Button
-                          id={`authorization-bundle-simulator-${entry.bundleId}`}
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openWorkspace(entry.bundleId, 'simulator')}
-                        >
-                          {t('policyManagement.library.actions.simulator')}
-                        </Button>
-                        <Button
-                          id={`authorization-bundle-clone-${entry.bundleId}`}
-                          size="sm"
-                          variant="outline"
-                          disabled={rowBusy}
-                          onClick={() => void handleClone(entry)}
-                        >
-                          {t('policyManagement.library.actions.clone')}
-                        </Button>
-                        {entry.status === 'active' ? (
-                          <Button
-                            id={`authorization-bundle-archive-${entry.bundleId}`}
-                            size="sm"
-                            variant="destructive"
-                            disabled={rowBusy}
-                            onClick={() => void handleArchive(entry)}
-                          >
-                            {t('policyManagement.library.actions.archive')}
-                          </Button>
-                        ) : null}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="px-6 py-10 text-center text-sm text-muted-foreground">
-                    {t('policyManagement.library.loading')}
-                  </TableCell>
-                </TableRow>
-              ) : null}
-            </TableBody>
-          </Table>
+          {loading && entries.length === 0 ? (
+            <div className="px-6 py-10 text-center text-sm text-muted-foreground">
+              {t('policyManagement.library.loading')}
+            </div>
+          ) : entries.length === 0 ? (
+            <div className="px-6 py-10 text-center text-sm text-muted-foreground">
+              {t('policyManagement.library.empty')}
+            </div>
+          ) : (
+            <DataTable
+              id="authorization-bundles-table"
+              data={entries}
+              columns={policyColumns}
+              pagination={true}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              pageSize={pageSize}
+              onItemsPerPageChange={handlePageSizeChange}
+              onRowClick={(entry) => openWorkspace(entry.bundleId, 'editor')}
+            />
+          )}
         </CardContent>
         </Card>
       ) : null}
@@ -1088,21 +1188,12 @@ export default function PolicyManagement() {
                     {selectedBundleEntry?.description || t('policyManagement.workspace.fallbackDescription')}
                   </CardDescription>
                 </div>
-                <div className="min-w-0 xl:min-w-[420px]">
-                  <CustomTabs
-                    tabs={workspaceTabs}
-                    idPrefix="authorization-bundle-workspace-tabs"
-                    value={activeWorkspacePanel ?? 'editor'}
-                    onTabChange={(tabValue) => openWorkspace(selectedBundleId, tabValue as WorkspacePanel)}
-                    tabStyles={{
-                      root: 'w-full',
-                      list: 'mb-0 rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-1.5 shadow-sm dark:bg-[rgb(var(--color-border-50))]',
-                      trigger: 'rounded-lg border-b-0 text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] data-[state=active]:bg-[rgb(var(--color-card))] data-[state=active]:text-[rgb(var(--color-primary-700))] data-[state=active]:shadow-sm',
-                      activeTrigger: 'data-[state=active]:border-transparent',
-                      content: 'hidden',
-                    }}
-                  />
-                </div>
+                <ViewSwitcher
+                  currentView={activeWorkspacePanel ?? 'editor'}
+                  options={workspaceViewOptions}
+                  onChange={(view) => openWorkspace(selectedBundleId, view)}
+                  aria-label={t('policyManagement.workspace.eyebrow')}
+                />
               </div>
             </div>
           </CardHeader>
@@ -1532,17 +1623,45 @@ export default function PolicyManagement() {
                           value={assignmentTargetType}
                           onValueChange={(value) => setAssignmentTargetType(value as AssignmentTargetType)}
                         />
-                        <CustomSelect
-                          id="authorization-bundle-assignment-target-id"
-                          options={assignmentTargetOptions.map((option) => ({
-                            value: option.id,
-                            label: option.label,
-                          }))}
-                          value={assignmentTargetId}
-                          onValueChange={setAssignmentTargetId}
-                          placeholder={t('policyManagement.assignments.selectTargetPlaceholder', { target: t(TARGET_TYPE_LABEL_KEYS[assignmentTargetType]).toLowerCase() })}
-                          disabled={assignmentTargetOptions.length === 0}
-                        />
+                        {assignmentTargetType === 'user' ? (
+                          <UserPicker
+                            id="authorization-bundle-assignment-target-id"
+                            value={assignmentTargetId}
+                            onValueChange={setAssignmentTargetId}
+                            users={allUsers}
+                            getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                            placeholder={t('policyManagement.assignments.selectTargetPlaceholder', { target: t(TARGET_TYPE_LABEL_KEYS[assignmentTargetType]).toLowerCase() })}
+                            buttonWidth="full"
+                            labelStyle="none"
+                            userTypeFilter={null}
+                          />
+                        ) : assignmentTargetType === 'team' ? (
+                          <UserAndTeamPicker
+                            id="authorization-bundle-assignment-target-id"
+                            value={assignmentTargetId}
+                            onValueChange={() => { /* user selections disabled in team mode */ }}
+                            onTeamSelect={(teamId) => setAssignmentTargetId(teamId)}
+                            users={[]}
+                            teams={allTeams}
+                            getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                            placeholder={t('policyManagement.assignments.selectTargetPlaceholder', { target: t(TARGET_TYPE_LABEL_KEYS[assignmentTargetType]).toLowerCase() })}
+                            buttonWidth="full"
+                            labelStyle="none"
+                          />
+                        ) : (
+                          <CustomSelect
+                            id="authorization-bundle-assignment-target-id"
+                            options={assignmentTargetOptions.map((option) => ({
+                              value: option.id,
+                              label: option.label,
+                              dropdownHint: option.subLabel,
+                            }))}
+                            value={assignmentTargetId}
+                            onValueChange={setAssignmentTargetId}
+                            placeholder={t('policyManagement.assignments.selectTargetPlaceholder', { target: t(TARGET_TYPE_LABEL_KEYS[assignmentTargetType]).toLowerCase() })}
+                            disabled={assignmentTargetOptions.length === 0}
+                          />
+                        )}
                         <Button
                           id="authorization-bundle-assignment-add-button"
                           size="sm"
@@ -1631,7 +1750,7 @@ export default function PolicyManagement() {
                   {t('policyManagement.simulator.description')}
                 </p>
 
-                <div className="grid gap-4 lg:grid-cols-2">
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
                   <div className="space-y-5 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-5 lg:p-6">
                     <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">{t('policyManagement.simulator.inputTitle')}</div>
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -1661,11 +1780,15 @@ export default function PolicyManagement() {
 
                       <label className="text-sm">
                         <div className="mb-1 text-muted-foreground">{t('policyManagement.simulator.principal')}</div>
-                        <CustomSelect
+                        <UserPicker
                           id="authorization-bundle-simulator-principal"
-                          options={principalOptions.map((option) => ({ value: option.id, label: option.label }))}
                           value={simulatorPrincipalId}
                           onValueChange={setSimulatorPrincipalId}
+                          users={allUsers}
+                          getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                          buttonWidth="full"
+                          labelStyle="none"
+                          userTypeFilter={null}
                         />
                       </label>
 
@@ -1730,11 +1853,11 @@ export default function PolicyManagement() {
                     </div>
                   </div>
 
-                  <div className="space-y-5 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-5 lg:p-6">
+                  <div className="space-y-4 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 lg:p-5">
                     <div className="text-sm font-medium text-[rgb(var(--color-text-900))]">{t('policyManagement.simulator.resultTitle')}</div>
                     {simulationResult ? (
-                      <div className="grid gap-3 md:grid-cols-2">
-                        <div className="space-y-4 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]">
+                      <div className="grid gap-3">
+                        <div className="space-y-3 rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-4 dark:bg-[rgb(var(--color-border-50))]">
                           <div className="flex items-center justify-between gap-2">
                             <h4 className="font-medium text-[rgb(var(--color-text-900))]">{t('policyManagement.simulator.draftRevision')}</h4>
                             <Badge variant={simulationResult.draft.allowed ? 'default' : 'error'}>
@@ -1747,7 +1870,7 @@ export default function PolicyManagement() {
                             ))}
                           </div>
                         </div>
-                        <div className="space-y-4 rounded-2xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-5 dark:bg-[rgb(var(--color-border-50))]">
+                        <div className="space-y-3 rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-4 dark:bg-[rgb(var(--color-border-50))]">
                           <div className="flex items-center justify-between gap-2">
                             <h4 className="font-medium text-[rgb(var(--color-text-900))]">{t('policyManagement.simulator.publishedRevision')}</h4>
                             <Badge variant={simulationResult.published.allowed ? 'default' : 'error'}>

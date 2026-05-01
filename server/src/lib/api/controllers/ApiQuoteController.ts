@@ -65,10 +65,16 @@ export class ApiQuoteController extends ApiBaseController {
   }
 
   private buildQuoteRecordContext(quote: Record<string, any>) {
+    // `approved_by` is the approver, NOT an assignee. Coercing it into
+    // assignedUserIds would let any approver pass the `own_or_assigned`
+    // relationship rule on quotes they didn't author. Quotes have no
+    // assignee concept today, so leave assignedUserIds empty. Self-approval
+    // is enforced separately via the `billing_not_self_approver_denied`
+    // mutation guard in assertQuoteApproveAllowed.
     return {
       id: quote.quote_id,
       ownerUserId: typeof quote.created_by === 'string' ? quote.created_by : undefined,
-      assignedUserIds: typeof quote.approved_by === 'string' ? [quote.approved_by] : [],
+      assignedUserIds: [] as string[],
       clientId: typeof quote.client_id === 'string' ? quote.client_id : undefined,
       status: quote.status,
     };

@@ -464,7 +464,7 @@
       "inputTitle": "Entrada da simulação",
       "resource": "Recurso",
       "action": "Ação",
-      "principal": "Principal",
+      "principal": "Usuário",
       "record": "Registro",
       "useSynthetic": "Usar cenário de registro sintético",
       "syntheticOwnerPlaceholder": "ID do usuário proprietário (opcional)",

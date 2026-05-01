@@ -464,7 +464,7 @@
       "inputTitle": "Simulationseingabe",
       "resource": "Ressource",
       "action": "Aktion",
-      "principal": "Principal",
+      "principal": "Benutzer",
       "record": "Datensatz",
       "useSynthetic": "Synthetisches Datensatzszenario verwenden",
       "syntheticOwnerPlaceholder": "Besitzer-Benutzer-ID (optional)",

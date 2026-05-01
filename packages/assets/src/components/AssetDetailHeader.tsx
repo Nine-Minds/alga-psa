@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSWRConfig } from 'swr';
-import { 
-  Laptop, 
-  Server, 
-  Smartphone, 
-  Printer, 
-  Network, 
+import {
+  Laptop,
+  Server,
+  Smartphone,
+  Printer,
+  Network,
   HelpCircle,
   MoreVertical,
   Edit,
@@ -16,11 +17,14 @@ import {
 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import BackNav from '@alga-psa/ui/components/BackNav';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 import { StatusBadge } from './shared/StatusBadge';
-import type { Asset } from '@alga-psa/types';
+import type { Asset, DeletionValidationResult } from '@alga-psa/types';
 import { useAssetCrossFeature } from '../context/AssetCrossFeatureContext';
 import { RemoteAccessButton } from './RemoteAccessButton';
 import { getRmmProviderDisplayName } from '../lib/rmmProviderDisplay';
+import { deleteAsset } from '../actions/assetActions';
+import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { 
   DropdownMenu,
@@ -53,17 +57,81 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
   isRefreshing 
 }) => {
   const { t } = useTranslation('msp/assets');
+  const router = useRouter();
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const { mutate } = useSWRConfig();
   const { renderQuickAddTicket } = useAssetCrossFeature();
   const Icon = getAssetIcon(asset.asset_type);
-  
+
   // Determine badge status
   const badgeStatus = asset.agent_status || 'unknown';
 
   const handleTicketAdded = () => {
     mutate(['asset', asset.asset_id, 'tickets']);
   };
+
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
+  const [isDeletePending, startDeleteTransition] = useTransition();
+
+  const resetDeleteState = useCallback(() => {
+    setIsDeleteDialogOpen(false);
+    setDeleteValidation(null);
+    setIsDeleteValidating(false);
+    setIsDeleteProcessing(false);
+  }, []);
+
+  const openDeleteDialog = useCallback(async () => {
+    setIsDeleteDialogOpen(true);
+    setIsDeleteValidating(true);
+    try {
+      const result = await preCheckDeletion('asset', asset.asset_id);
+      setDeleteValidation(result);
+    } catch (error) {
+      console.error('Failed to validate asset deletion:', error);
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: t('deleteAssetButton.errors.validationFailed', {
+          defaultValue: 'Failed to validate deletion. Please try again.'
+        }),
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
+    }
+  }, [asset.asset_id, t]);
+
+  const handleConfirmDelete = useCallback(() => {
+    startDeleteTransition(async () => {
+      try {
+        setIsDeleteProcessing(true);
+        const result = await deleteAsset(asset.asset_id);
+        if (!result.success) {
+          setDeleteValidation(result);
+          return;
+        }
+        resetDeleteState();
+        router.push('/msp/assets');
+      } catch (err) {
+        console.error('Failed to delete asset:', err);
+        setDeleteValidation({
+          canDelete: false,
+          code: 'VALIDATION_FAILED',
+          message: t('deleteAssetButton.errors.deleteFailed', {
+            defaultValue: 'Failed to delete asset. Please try again.'
+          }),
+          dependencies: [],
+          alternatives: []
+        });
+      } finally {
+        setIsDeleteProcessing(false);
+      }
+    });
+  }, [asset.asset_id, resetDeleteState, router, t]);
 
   return (
     <>
@@ -148,12 +216,19 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
                   <DropdownMenuSeparator />
                 </>
               )}
-              <DropdownMenuItem>
+              <DropdownMenuItem
+                id="edit-asset-action"
+                onSelect={() => router.push(`/msp/assets/${asset.asset_id}/edit`)}
+              >
                 <Edit className="mr-2 h-4 w-4" />
                 {t('assetDetailHeader.actions.editAsset', { defaultValue: 'Edit Asset' })}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-red-600 focus:text-red-600">
+              <DropdownMenuItem
+                id="delete-asset-action"
+                className="text-red-600 focus:text-red-600"
+                onSelect={() => { void openDeleteDialog(); }}
+              >
                 <Trash2 className="mr-2 h-4 w-4" />
                 {t('assetDetailHeader.actions.deleteAsset', { defaultValue: 'Delete Asset' })}
               </DropdownMenuItem>
@@ -175,6 +250,19 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
         assetId: asset.asset_id,
         assetName: asset.name,
       })}
+
+      <DeleteEntityDialog
+        id={`delete-asset-dialog-${asset.asset_id}`}
+        isOpen={isDeleteDialogOpen}
+        onClose={resetDeleteState}
+        onConfirmDelete={handleConfirmDelete}
+        entityName={asset.name || t('deleteAssetButton.entityNameFallback', {
+          defaultValue: 'this asset'
+        })}
+        validationResult={deleteValidation}
+        isValidating={isDeleteValidating}
+        isDeleting={isDeleteProcessing || isDeletePending}
+      />
     </>
   );
 };

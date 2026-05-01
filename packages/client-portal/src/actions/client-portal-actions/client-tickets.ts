@@ -64,7 +64,7 @@ async function resolveVisibleTicket(
   const visibility = await getClientContactVisibilityContext(trx, tenant, userContactId);
 
   const ticket = await trx('tickets as t')
-    .select('t.ticket_id')
+    .select('t.*')
     .where({
       't.ticket_id': ticketId,
       't.tenant': tenant,
