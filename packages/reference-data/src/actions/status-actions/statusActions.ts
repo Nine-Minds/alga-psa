@@ -7,6 +7,7 @@ import { withAuth } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import { IStatus, ItemType } from '@alga-psa/types';
+import { createWorkItemStatusNameFilterValue } from './workItemStatusFilter';
 
 export const getStatuses = withAuth(async (_user, { tenant }, type?: ItemType, boardId?: string | null) => {
   try {
@@ -271,6 +272,9 @@ export interface StatusOption {
   value: string;
   label: string;
   isStandard?: boolean;
+  statusName?: string;
+  isClosed?: boolean;
+  className?: string;
 }
 
 export const getWorkItemStatusOptions = withAuth(async (_user, { tenant }, itemType?: ItemType | ItemType[]): Promise<StatusOption[]> => {
@@ -278,13 +282,13 @@ export const getWorkItemStatusOptions = withAuth(async (_user, { tenant }, itemT
     const { knex: db } = await createTenantKnex();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const itemTypesToFetch = itemType 
-        ? (Array.isArray(itemType) ? itemType : [itemType]) 
+      const itemTypesToFetch = itemType
+        ? (Array.isArray(itemType) ? itemType : [itemType])
         : ['ticket', 'project_task'];
 
       const statusesQuery = trx('statuses')
         .where({ tenant: tenant })
-        .select('status_id', 'name', 'order_number')
+        .select('status_id', 'name', 'order_number', 'is_closed')
         .orderBy('order_number', 'asc')
         .orderBy('name', 'asc');
 
@@ -293,14 +297,26 @@ export const getWorkItemStatusOptions = withAuth(async (_user, { tenant }, itemT
       }
       const statuses = await statusesQuery;
 
+      // Deduplicate by status name. Per-board ticket statuses can produce
+      // multiple rows with the same name; the filter selects by name so a
+      // single option per name is enough.
+      const seenNames = new Map<string, { is_closed: boolean }>();
+      for (const s of statuses) {
+        if (!s.name || seenNames.has(s.name)) continue;
+        seenNames.set(s.name, { is_closed: Boolean(s.is_closed) });
+      }
+
       const options: StatusOption[] = [
         { value: 'all_open', label: 'All Open' },
         { value: 'all_closed', label: 'All Closed' },
-        ...statuses.map(s => ({
-          value: s.status_id,
-          label: s.name,
+        ...Array.from(seenNames.entries()).map(([name, { is_closed }]) => ({
+          value: createWorkItemStatusNameFilterValue(name),
+          label: name,
           isStandard: false,
-        }))
+          statusName: name,
+          isClosed: is_closed,
+          className: is_closed ? 'bg-gray-200 text-gray-600' : undefined,
+        })),
       ];
 
       return options;
