@@ -455,7 +455,11 @@ normalize_git_url_for_flux() {
   fi
 
   if [[ "$url" =~ ^([^@[:space:]/]+@[^:[:space:]/]+):(.+)$ ]]; then
-    printf 'ssh://%s/%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+    if [[ "${BASH_REMATCH[1]}" == git@github.com ]]; then
+      printf 'https://github.com/%s\n' "${BASH_REMATCH[2]}"
+    else
+      printf 'ssh://%s/%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+    fi
     return 0
   fi
 
