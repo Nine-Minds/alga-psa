@@ -7,6 +7,7 @@ import { IWorkItem, IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import User from '@alga-psa/db/models/user';
+import { parseWorkItemStatusNameFilterValue } from '@alga-psa/reference-data/actions';
 
 export interface BaseSearchOptions {
   searchTerm?: string;
@@ -105,7 +106,12 @@ export const searchDispatchWorkItems = withAuth(async (
          } else if (statusFilter === 'all_closed') {
            queryBuilder.where('s.is_closed', true);
          } else if (statusFilter && statusFilter !== 'all_open' && statusFilter !== 'all_closed') {
-           queryBuilder.where('t.status_id', statusFilter);
+           const statusName = parseWorkItemStatusNameFilterValue(statusFilter);
+           if (statusName !== null) {
+             queryBuilder.where('s.name', statusName);
+           } else {
+             queryBuilder.where('t.status_id', statusFilter);
+           }
          }
 
          if (filterUnscheduledOption === true) {
