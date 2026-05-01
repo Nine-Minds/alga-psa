@@ -5,48 +5,33 @@
  */
 
 import type { IEventPublisher } from '@alga-psa/types';
-import { v4 as uuidv4 } from 'uuid';
+import type { PublishOptions } from '@alga-psa/event-bus/publishers';
 
 /**
- * Helper function to publish events to notification channels
- * This ensures workflow-created tickets trigger the same notifications as server-created tickets
+ * Publish workflow-originated ticket events through the shared event bus.
+ *
+ * Inbound email ticket creation runs from shared workflow code, not the Next.js
+ * ticket action path. Publishing through @alga-psa/event-bus keeps the stream
+ * names and fanout channels aligned with the app subscribers (emailservice::v7
+ * and internal-notifications). Do not write raw Redis stream names here; they
+ * can drift from the configured subscriber channels.
  */
-async function publishToNotificationChannels(
+async function publishNotificationEvent(
   eventType: string,
-  tenant: string,
-  payload: Record<string, any>
+  payload: Record<string, any>,
+  options?: PublishOptions
 ): Promise<void> {
   try {
-    const { RedisStreamClient } = await import('../streams/redisStreamClient');
-    const client = new RedisStreamClient();
-    await client.initialize();
+    const { publishEvent } = await import('@alga-psa/event-bus/publishers');
+    await publishEvent({ eventType: eventType as any, payload } as any, options);
 
-    const event = {
-      id: uuidv4(),
-      eventType,
-      timestamp: new Date().toISOString(),
-      payload
-    };
-
-    const eventJson = JSON.stringify(event);
-
-    // Publish to email notifications channel
-    const emailStream = `events:${eventType}:email-notifications`;
-    await client.publishToStream(emailStream, {
-      event: eventJson,
-      channel: 'email-notifications'
+    console.log(`[WorkflowEventPublisher] Published ${eventType} through event bus`, {
+      tenantId: payload.tenantId,
+      ticketId: payload.ticketId,
+      channel: options?.channel,
     });
-
-    // Publish to internal notifications channel
-    const internalStream = `events:${eventType}:internal-notifications`;
-    await client.publishToStream(internalStream, {
-      event: eventJson,
-      channel: 'internal-notifications'
-    });
-
-    console.log(`[WorkflowEventPublisher] Published ${eventType} to notification channels`);
   } catch (error) {
-    console.error(`[WorkflowEventPublisher] Failed to publish ${eventType} to notification channels:`, error);
+    console.error(`[WorkflowEventPublisher] Failed to publish ${eventType} through event bus:`, error);
     // Don't throw - notification failure shouldn't break ticket operations
   }
 }
@@ -65,7 +50,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
       ...data.metadata
     };
 
-    await publishToNotificationChannels('TICKET_CREATED', data.tenantId, payload);
+    await publishNotificationEvent('TICKET_CREATED', payload);
   }
 
   async publishTicketUpdated(data: {
@@ -83,7 +68,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
       ...data.metadata
     };
 
-    await publishToNotificationChannels('TICKET_UPDATED', data.tenantId, payload);
+    await publishNotificationEvent('TICKET_UPDATED', payload);
   }
 
   async publishTicketClosed(data: {
@@ -99,7 +84,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
       ...data.metadata
     };
 
-    await publishToNotificationChannels('TICKET_CLOSED', data.tenantId, payload);
+    await publishNotificationEvent('TICKET_CLOSED', payload);
   }
 
   async publishCommentCreated(data: {
@@ -121,7 +106,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
       }
     };
 
-    await publishToNotificationChannels('TICKET_COMMENT_ADDED', data.tenantId, payload);
+    await publishNotificationEvent('TICKET_COMMENT_ADDED', payload, { channel: 'internal-notifications' });
   }
 
   /**
@@ -140,6 +125,6 @@ export class WorkflowEventPublisher implements IEventPublisher {
       assignedByUserId: data.assignedByUserId
     };
 
-    await publishToNotificationChannels('TICKET_ASSIGNED', data.tenantId, payload);
+    await publishNotificationEvent('TICKET_ASSIGNED', payload);
   }
 }
