@@ -9,7 +9,7 @@ SCHEMATIC_PATH="${REPO_ROOT}/ee/appliance/schematics/metal-amd64.yaml"
 OUT_DIR="${REPO_ROOT}/dist/appliance"
 RELEASES_DIR="${REPO_ROOT}/ee/appliance/releases"
 VALUES_PROFILE="talos-single-node"
-CHANNEL="candidate"
+CHANNEL="stable"
 ARCH="amd64"
 PLATFORM="metal"
 DRY_RUN=0
@@ -33,7 +33,7 @@ Options:
   --schematic <path>            Schematic YAML path (default: ee/appliance/schematics/metal-amd64.yaml)
   --out <dir>                   Artifact output directory root (default: dist/appliance)
   --values-profile <name>       Appliance values profile name (default: talos-single-node)
-  --channel <name>              Release channel recorded in manifest (default: candidate)
+  --channel <name>              Release channel recorded in manifest (default: stable)
   --dry-run                     Resolve and print artifact metadata without downloading or writing files
   --help                        Show this help
 
@@ -281,8 +281,8 @@ if [ ! -f "$SCHEMATIC_PATH" ]; then
   exit 1
 fi
 
-if [ "$CHANNEL" != "candidate" ] && [ "$CHANNEL" != "stable" ]; then
-  echo "channel must be candidate or stable" >&2
+if [ "$CHANNEL" != "stable" ] && [ "$CHANNEL" != "nightly" ]; then
+  echo "channel must be stable or nightly" >&2
   exit 1
 fi
 

@@ -46,8 +46,8 @@ require_file "$ROOT/ee/appliance/flux/base/core/kustomization.yaml"
 require_file "$ROOT/ee/appliance/flux/base/background/kustomization.yaml"
 require_file "$ROOT/ee/appliance/schematics/metal-amd64.yaml"
 require_file "$ROOT/ee/appliance/releases/schema.json"
-require_file "$ROOT/ee/appliance/releases/channels/candidate.json"
 require_file "$ROOT/ee/appliance/releases/channels/stable.json"
+require_file "$ROOT/ee/appliance/releases/channels/nightly.json"
 require_file "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh"
 require_file "$ROOT/ee/helm/temporal/templates/deployment.yaml"
 require_file "$ROOT/ee/helm/temporal/templates/ui.yaml"
@@ -432,10 +432,10 @@ require_text "$upgrade_dry_run_output" "reconcile helmrelease alga-core"
 require_text "$upgrade_dry_run_output" "annotate helmrelease workflow-worker"
 
 jq -e '.title == "Alga Talos Appliance Release Manifest"' "$ROOT/ee/appliance/releases/schema.json" >/dev/null
-jq -e '.channel == "candidate"' "$ROOT/ee/appliance/releases/channels/candidate.json" >/dev/null
-jq -e '.channel == "stable"' "$ROOT/ee/appliance/releases/channels/stable.json" >/dev/null
-jq -e '.app.releaseBranch == "release/1.0-rc5"' "$ROOT/ee/appliance/releases/1.0-rc5/release.json" >/dev/null
-jq -e '.app.images.algaCore == "a2cbb430"' "$ROOT/ee/appliance/releases/1.0-rc5/release.json" >/dev/null
+jq -e '.channel == "stable" and .releaseVersion == "1.0-rc5.1"' "$ROOT/ee/appliance/releases/channels/stable.json" >/dev/null
+jq -e '.channel == "nightly" and .releaseVersion == "1.0-rc5.1" and .repoBranch == "main"' "$ROOT/ee/appliance/releases/channels/nightly.json" >/dev/null
+jq -e '.app.releaseBranch == "release/1.0-rc5"' "$ROOT/ee/appliance/releases/1.0-rc5.1/release.json" >/dev/null
+jq -e '.app.images.algaCore == "a2cbb430"' "$ROOT/ee/appliance/releases/1.0-rc5.1/release.json" >/dev/null
 yq eval '.customization' "$ROOT/ee/appliance/schematics/metal-amd64.yaml" >/dev/null
 kubectl apply --dry-run=client -f "$ROOT/ee/appliance/manifests/local-path-storage.yaml" >/dev/null
 kubectl apply --dry-run=client -f "$ROOT/ee/appliance/flux/base/platform/appliance-status.yaml" >/dev/null

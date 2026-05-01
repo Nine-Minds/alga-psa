@@ -116,6 +116,7 @@ export function formatStatusReport(status) {
       ),
     ],
     release: [
+      `Selected channel: ${status.release.selectedChannel || 'none'}`,
       `Selected release: ${status.release.selectedReleaseVersion || 'unknown'}`,
       `App URL: ${status.release.appUrl || 'unknown'}`,
       `Release app version: ${status.release.metadata?.app?.version || 'unknown'}`,

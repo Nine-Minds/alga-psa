@@ -567,6 +567,7 @@ function toCanonicalStatus(status) {
     siteId: status.siteId,
     timestamp: status.timestamp,
     release: {
+      selectedChannel: status.release.selectedChannel,
       selectedReleaseVersion: status.release.selectedReleaseVersion,
       appVersion: status.release.metadata?.app?.version || null,
       channel: status.release.metadata?.channel || null,
@@ -813,6 +814,7 @@ export async function collectStatus(env, options = {}) {
   }
 
   const release = {
+    selectedChannel: null,
     selectedReleaseVersion: null,
     metadata: null,
     appUrl: env.appUrl,
@@ -838,6 +840,7 @@ export async function collectStatus(env, options = {}) {
 
   if (cluster.apiReachable) {
     const selection = await kubeJson(shell, kubeconfig, 'alga-system', 'configmap/appliance-release-selection');
+    release.selectedChannel = selection.json?.data?.selectedChannel || null;
     release.selectedReleaseVersion = selection.json?.data?.releaseVersion || null;
 
     const values = await kubeJson(shell, kubeconfig, 'alga-system', 'configmap/appliance-values-alga-core');

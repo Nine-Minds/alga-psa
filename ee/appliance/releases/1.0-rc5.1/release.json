@@ -1,6 +1,6 @@
 {
-  "releaseVersion": "1.0-rc5",
-  "generatedAt": "2026-03-25T00:00:00Z",
+  "releaseVersion": "1.0-rc5.1",
+  "generatedAt": "2026-05-01T00:00:00Z",
   "talos": {
     "version": "v1.12.0",
     "schematicId": "376567988ad370138ad8b2698212367b8edcb69b5fd68c80be1f2ec7d603b4ba",

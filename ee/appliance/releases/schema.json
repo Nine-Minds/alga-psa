@@ -145,7 +145,7 @@
     },
     "channel": {
       "type": "string",
-      "enum": ["candidate", "stable"]
+      "enum": ["stable", "nightly"]
     }
   }
 }

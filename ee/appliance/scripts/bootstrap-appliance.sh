@@ -4,6 +4,7 @@ set -euo pipefail
 SITE_ID="appliance-single-node"
 PROFILE="talos-single-node"
 RELEASE_VERSION=""
+CHANNEL=""
 BOOTSTRAP_MODE=""
 CLUSTER_NAME="alga-appliance"
 HOSTNAME_VALUE=""
@@ -58,6 +59,7 @@ Usage:
 Options:
   --site-id <id>                 Appliance/site identifier (default: appliance-single-node)
   --release-version <version>    Appliance release version from ee/appliance/releases/
+  --channel <name>               Resolve release from ee/appliance/releases/channels/<name>.json
   --profile <name>               Values profile name (default: talos-single-node)
   --bootstrap-mode <mode>        Bootstrap mode: fresh or recover
   --node-ip <ip>                 Talos node IP for first boot and ongoing access
@@ -285,11 +287,59 @@ status_node_ip() {
   printf '%s\n' "$value"
 }
 
+channel_field() {
+  local jq_filter="$1"
+  if [ -z "$CHANNEL" ]; then
+    printf '%s\n' ""
+    return 0
+  fi
+  jq -r "$jq_filter // empty" "$REPO_ROOT/ee/appliance/releases/channels/$CHANNEL.json"
+}
+
+resolve_default_channel() {
+  local releases_dir="$REPO_ROOT/ee/appliance/releases"
+  if [ -f "$releases_dir/channels/stable.json" ]; then
+    printf '%s\n' "stable"
+    return 0
+  fi
+  find "$releases_dir/channels" -maxdepth 1 -type f -name '*.json' -exec basename {} .json \; 2>/dev/null | sort | head -n 1
+}
+
 resolve_release_version() {
   local releases_dir
   local latest_release
+  local channel_release
+  local channel_repo_branch
 
   releases_dir="$REPO_ROOT/ee/appliance/releases"
+
+  if [ -n "$RELEASE_VERSION" ] && [ -z "$CHANNEL" ]; then
+    return 0
+  fi
+
+  if [ -z "$CHANNEL" ]; then
+    CHANNEL="$(resolve_default_channel || true)"
+  fi
+
+  if [ -n "$CHANNEL" ]; then
+    if [ ! -f "$releases_dir/channels/$CHANNEL.json" ]; then
+      echo "Release channel not found: $releases_dir/channels/$CHANNEL.json" >&2
+      exit 1
+    fi
+    channel_release="$(channel_field '.releaseVersion')"
+    if [ -z "$channel_release" ] || [ "$channel_release" = "null" ]; then
+      echo "Release channel $CHANNEL does not point to a releaseVersion" >&2
+      exit 1
+    fi
+    if [ -z "$RELEASE_VERSION" ]; then
+      RELEASE_VERSION="$channel_release"
+    fi
+    channel_repo_branch="$(channel_field '.repoBranch')"
+    if [ -z "$REPO_BRANCH" ] && [ "$REPO_BRANCH_FROM_CURRENT" = false ] && [ -n "$channel_repo_branch" ]; then
+      REPO_BRANCH="$channel_repo_branch"
+    fi
+    return 0
+  fi
 
   if [ -n "$RELEASE_VERSION" ]; then
     return 0
@@ -369,6 +419,7 @@ Flux source:
   Repo path:       $REPO_PATH
   Source mode:     $mode
   Release version: $RELEASE_VERSION
+  Release channel: ${CHANNEL:-none}
   Release branch:  ${RELEASE_APP_BRANCH:-unknown}
 EOF
 
@@ -1045,6 +1096,7 @@ apply_release_selection() {
 
   kubectl --kubeconfig "$KUBECONFIG_PATH" -n alga-system create configmap appliance-release-selection \
     --from-literal=releaseVersion="$RELEASE_VERSION" \
+    --from-literal=selectedChannel="${CHANNEL:-}" \
     --from-literal=appVersion="$RELEASE_APP_VERSION" \
     --from-literal=releaseBranch="$release_branch" \
     --from-literal=algaCoreTag="$ALGA_CORE_TAG" \
@@ -1301,6 +1353,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --release-version)
       RELEASE_VERSION="$2"
+      shift 2
+      ;;
+    --channel)
+      CHANNEL="$2"
       shift 2
       ;;
     --profile)

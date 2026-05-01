@@ -183,12 +183,15 @@ function mapProgressEvent(event) {
 
 function makeBootstrapDefaults(env) {
   const releaseVersion = env.defaultReleaseVersion || env.releases.at(-1) || '';
+  const releaseSource = (env.channels || []).length ? 'channel' : 'release';
   const nodeIp = env.nodeIp || '';
   const appUrl = env.appUrl || (nodeIp ? `http://${nodeIp}:3000` : '');
   const siteId = env.site?.siteId || env.suggestedSiteId || 'appliance-single-node';
 
   return {
     siteId,
+    releaseSource,
+    channel: env.defaultChannel || env.channels?.[0] || '',
     releaseVersion,
     bootstrapMode: 'recover',
     nodeIp,
@@ -204,6 +207,8 @@ function makeBootstrapDefaults(env) {
 
 function makeUpgradeDefaults(env) {
   return {
+    releaseSource: (env.channels || []).length ? 'channel' : 'release',
+    channel: env.defaultChannel || env.channels?.[0] || '',
     releaseVersion: env.defaultReleaseVersion || env.releases.at(-1) || '',
     reconcileAfterApply: 'yes',
   };
@@ -668,7 +673,7 @@ function MainPane({
   if (view === 'form') {
     const fields = formFields(formType, env);
     const title = `${formType} Form`;
-    const noReleases = (formType === 'Bootstrap' || formType === 'Upgrade') && !(env.releases || []).length;
+    const noReleases = (formType === 'Bootstrap' || formType === 'Upgrade') && !(env.releases || []).length && !(env.channels || []).length;
 
     if (noReleases) {
       return React.createElement(
@@ -760,9 +765,12 @@ function MainPane({
 }
 
 function formFields(formType, env) {
+  const releaseSourceOptions = (env.channels || []).length ? ['channel', 'release'] : ['release'];
   if (formType === 'Bootstrap') {
     return [
       ...(env.site ? [] : [{ key: 'siteId', label: 'Site ID', type: 'text' }]),
+      { key: 'releaseSource', label: 'Release Source', type: 'select', options: releaseSourceOptions },
+      { key: 'channel', label: 'Channel', type: 'select', options: env.channels || [] },
       { key: 'releaseVersion', label: 'Release Version', type: 'select', options: env.releases || [] },
       { key: 'bootstrapMode', label: 'Bootstrap Mode', type: 'select', options: BOOTSTRAP_MODES },
       { key: 'nodeIp', label: 'Node IP', type: 'text' },
@@ -778,6 +786,8 @@ function formFields(formType, env) {
 
   if (formType === 'Upgrade') {
     return [
+      { key: 'releaseSource', label: 'Release Source', type: 'select', options: releaseSourceOptions },
+      { key: 'channel', label: 'Channel', type: 'select', options: env.channels || [] },
       { key: 'releaseVersion', label: 'Release Version', type: 'select', options: env.releases || [] },
       { key: 'reconcileAfterApply', label: 'Reconcile After Apply', type: 'select', options: YES_NO_OPTIONS },
     ];
@@ -987,14 +997,22 @@ function TuiApp({ initialEnv, actions, onExit }) {
     try {
       let output;
       if (formType === 'Bootstrap') {
+        const releaseOptions = formValues.releaseSource === 'channel'
+          ? { channel: formValues.channel, releaseVersion: undefined }
+          : { releaseVersion: formValues.releaseVersion, channel: undefined };
         output = await actions.runBootstrap(env, {
           ...formValues,
+          ...releaseOptions,
           siteId: formValues.siteId,
           onProgress: (event) => append(mapProgressEvent(event)),
         });
       } else if (formType === 'Upgrade') {
+        const releaseOptions = formValues.releaseSource === 'channel'
+          ? { channel: formValues.channel, releaseVersion: undefined }
+          : { releaseVersion: formValues.releaseVersion, channel: undefined };
         output = await actions.runUpgrade(env, {
           ...formValues,
+          ...releaseOptions,
           reconcileAfterApply: formValues.reconcileAfterApply !== 'no',
           onProgress: (event) => append(mapProgressEvent(event)),
         });
@@ -1359,7 +1377,7 @@ function TuiApp({ initialEnv, actions, onExit }) {
 
     if (view === 'form') {
       const fields = formFields(formType, env);
-      const noReleases = (formType === 'Bootstrap' || formType === 'Upgrade') && !(env.releases || []).length;
+      const noReleases = (formType === 'Bootstrap' || formType === 'Upgrade') && !(env.releases || []).length && !(env.channels || []).length;
 
       if (key.escape) {
         setView('home');

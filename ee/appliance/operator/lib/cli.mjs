@@ -23,6 +23,7 @@ function usage() {
     '  --kubeconfig <path>',
     '  --talosconfig <path>',
     '  --release-version <version>',
+    '  --channel <name>     Resolve release from releases/channels/<name>.json',
     '  --asset-root <path>  (standalone runtime path containing scripts/ and releases/)',
   ].join('\n');
 }
@@ -71,6 +72,7 @@ export async function runCli(argv) {
     if (command === 'bootstrap') {
       const result = await runBootstrap(env, {
         releaseVersion: flags['release-version'],
+        channel: flags.channel,
         bootstrapMode: flags['bootstrap-mode'] || 'recover',
         nodeIp: flags['node-ip'],
         hostname: flags.hostname,
@@ -99,6 +101,7 @@ export async function runCli(argv) {
     if (command === 'upgrade') {
       const result = await runUpgrade(env, {
         releaseVersion: flags['release-version'],
+        channel: flags.channel,
         dryRun: toBoolean(flags['dry-run']),
         onProgress: logProgress,
       });
