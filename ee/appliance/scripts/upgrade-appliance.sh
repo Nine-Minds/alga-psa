@@ -2,6 +2,7 @@
 set -euo pipefail
 
 RELEASE_VERSION=""
+CHANNEL=""
 KUBECONFIG_PATH="${KUBECONFIG:-}"
 CONFIG_DIR=""
 PROFILE=""
@@ -14,10 +15,11 @@ TEMP_DIR=""
 usage() {
   cat <<'EOF'
 Usage:
-  upgrade-appliance.sh --release-version <version> --kubeconfig <path> [options]
+  upgrade-appliance.sh (--release-version <version>|--channel <name>) --kubeconfig <path> [options]
 
 Options:
   --release-version <version>  Appliance release version from ee/appliance/releases/
+  --channel <name>             Resolve release from ee/appliance/releases/channels/<name>.json
   --kubeconfig <path>          Target appliance kubeconfig
   --config-dir <path>          Optional directory to persist rendered values
   --profile <name>             Override values profile (defaults to manifest value)
@@ -38,6 +40,49 @@ run_cmd() {
     return 0
   fi
   "$@"
+}
+
+channel_field() {
+  local jq_filter="$1"
+  if [ -z "$CHANNEL" ]; then
+    printf '%s\n' ""
+    return 0
+  fi
+  jq -r "$jq_filter // empty" "$REPO_ROOT/ee/appliance/releases/channels/$CHANNEL.json"
+}
+
+resolve_default_channel() {
+  local releases_dir="$REPO_ROOT/ee/appliance/releases"
+  if [ -f "$releases_dir/channels/stable.json" ]; then
+    printf '%s\n' "stable"
+    return 0
+  fi
+  find "$releases_dir/channels" -maxdepth 1 -type f -name '*.json' -exec basename {} .json \; 2>/dev/null | sort | head -n 1
+}
+
+resolve_release_version() {
+  local releases_dir="$REPO_ROOT/ee/appliance/releases"
+  local channel_release
+  if [ -n "$RELEASE_VERSION" ] && [ -z "$CHANNEL" ]; then
+    return 0
+  fi
+  if [ -z "$CHANNEL" ]; then
+    CHANNEL="$(resolve_default_channel || true)"
+  fi
+  if [ -n "$CHANNEL" ]; then
+    if [ ! -f "$releases_dir/channels/$CHANNEL.json" ]; then
+      echo "Release channel not found: $releases_dir/channels/$CHANNEL.json" >&2
+      exit 1
+    fi
+    channel_release="$(channel_field '.releaseVersion')"
+    if [ -z "$channel_release" ] || [ "$channel_release" = "null" ]; then
+      echo "Release channel $CHANNEL does not point to a releaseVersion" >&2
+      exit 1
+    fi
+    if [ -z "$RELEASE_VERSION" ]; then
+      RELEASE_VERSION="$channel_release"
+    fi
+  fi
 }
 
 release_field() {
@@ -111,6 +156,10 @@ while [ "$#" -gt 0 ]; do
       RELEASE_VERSION="$2"
       shift 2
       ;;
+    --channel)
+      CHANNEL="$2"
+      shift 2
+      ;;
     --kubeconfig)
       KUBECONFIG_PATH="$2"
       shift 2
@@ -147,8 +196,10 @@ while [ "$#" -gt 0 ]; do
   esac
 done
 
+resolve_release_version
+
 if [ -z "$RELEASE_VERSION" ] || [ -z "$KUBECONFIG_PATH" ]; then
-  echo "release-version and kubeconfig are required" >&2
+  echo "release-version (or channel) and kubeconfig are required" >&2
   usage >&2
   exit 1
 fi
@@ -229,6 +280,9 @@ if $DRY_RUN; then
   echo "+ kubectl --kubeconfig $KUBECONFIG_PATH -n alga-system create configmap appliance-release-selection ..."
   if ! $SKIP_RECONCILE; then
     echo "+ flux --kubeconfig $KUBECONFIG_PATH reconcile helmrelease alga-core -n alga-system --with-source --timeout $RECONCILE_TIMEOUT"
+    for release_name in pgbouncer temporal workflow-worker email-service temporal-worker; do
+      echo "+ kubectl --kubeconfig $KUBECONFIG_PATH -n alga-system annotate helmrelease $release_name reconcile.fluxcd.io/requestedAt=<timestamp> --overwrite"
+    done
   fi
   exit 0
 fi
@@ -237,6 +291,7 @@ kubectl --kubeconfig "$KUBECONFIG_PATH" apply -k "$CONFIG_DIR"
 
 kubectl --kubeconfig "$KUBECONFIG_PATH" -n alga-system create configmap appliance-release-selection \
   --from-literal=releaseVersion="$RELEASE_VERSION" \
+  --from-literal=selectedChannel="${CHANNEL:-}" \
   --from-literal=appVersion="$(release_field '.app.version')" \
   --from-literal=releaseBranch="$(release_field '.app.releaseBranch')" \
   --from-literal=algaCoreTag="$(release_field '.app.images.algaCore')" \
@@ -247,6 +302,18 @@ kubectl --kubeconfig "$KUBECONFIG_PATH" -n alga-system create configmap applianc
 
 if ! $SKIP_RECONCILE && command -v flux >/dev/null 2>&1; then
   flux --kubeconfig "$KUBECONFIG_PATH" reconcile helmrelease alga-core -n alga-system --with-source --timeout "$RECONCILE_TIMEOUT"
+
+  requested_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  for release_name in pgbouncer temporal workflow-worker email-service temporal-worker; do
+    echo "► requesting HelmRelease reconcile for $release_name"
+    if kubectl --kubeconfig "$KUBECONFIG_PATH" -n alga-system get helmrelease "$release_name" >/dev/null 2>&1; then
+      kubectl --kubeconfig "$KUBECONFIG_PATH" -n alga-system annotate helmrelease "$release_name" \
+        "reconcile.fluxcd.io/requestedAt=$requested_at" \
+        --overwrite
+    else
+      echo "⚠ HelmRelease $release_name was not found; skipping reconcile request"
+    fi
+  done
 fi
 
-echo "Applied appliance release $RELEASE_VERSION"
+echo "Applied appliance release $RELEASE_VERSION${CHANNEL:+ from channel $CHANNEL}"

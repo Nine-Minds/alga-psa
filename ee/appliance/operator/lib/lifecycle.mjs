@@ -1,3 +1,4 @@
+import { resolveReleaseReference } from './releases.mjs';
 import { ShellRunner } from './runner.mjs';
 import { resolveSitePaths } from './runtime-paths.mjs';
 
@@ -8,9 +9,12 @@ function nowStamp() {
 const BOOTSTRAP_PHASE_PATTERNS = [
   { phase: 'Talos', re: /(Talos|talosctl|maintenance API|secure Talos API)/i },
   { phase: 'Kubernetes', re: /(Kubernetes API|kubeconfig|node .*Ready|kubectl)/i },
+  { phase: 'Storage', re: /(local-path|storage smoke|install-storage|provisioner|pvc)/i },
   { phase: 'Flux', re: /(flux|GitRepository|Kustomization|source-controller|kustomize-controller)/i },
+  { phase: 'Core App', re: /(alga-core|bootstrap job|db-0|pgbouncer|redis|login[- ]ready|dashboard)/i },
+  { phase: 'Background Services', re: /(temporal|temporal-ui|workflow-worker|temporal-worker|email-service|background)/i },
   { phase: 'Helm', re: /(helmrelease|helm-controller|Helm)/i },
-  { phase: 'Workloads', re: /(alga-core|deployment|rollout|bootstrap job|pods|statefulset)/i },
+  { phase: 'Workloads', re: /(deployment|rollout|pods|statefulset)/i },
 ];
 
 const FAILURE_CLASSIFIERS = [
@@ -39,14 +43,11 @@ function detectBootstrapPhase(line) {
   return null;
 }
 
-function normalizeReleaseVersion(env, releaseVersion) {
-  if (releaseVersion) {
-    return releaseVersion;
-  }
-  if (env.defaultReleaseVersion) {
-    return env.defaultReleaseVersion;
-  }
-  throw new Error('No release version available. Publish a release or pass --release-version.');
+function normalizeReleaseReference(env, options = {}) {
+  return resolveReleaseReference(env.runtime.releasesDir, {
+    releaseVersion: options.releaseVersion,
+    channel: options.channel,
+  });
 }
 
 function buildScriptArgs(flagMap) {
@@ -110,12 +111,14 @@ async function runLifecycleScript({ script, args, runner, cwd, onProgress, phase
 }
 
 export async function runBootstrap(env, options = {}) {
-  const releaseVersion = normalizeReleaseVersion(env, options.releaseVersion);
+  const releaseRef = normalizeReleaseReference(env, options);
+  const releaseVersion = releaseRef.releaseVersion;
   const siteId = options.siteId || env.site?.siteId || env.suggestedSiteId || 'appliance-single-node';
   const derivedSite = env.site || (env.configBaseDir ? resolveSitePaths(env.configBaseDir, siteId) : null);
   const args = buildScriptArgs({
     'site-id': siteId,
     'release-version': releaseVersion,
+    channel: releaseRef.channel,
     'bootstrap-mode': options.bootstrapMode,
     'node-ip': options.nodeIp || env.nodeIp,
     hostname: options.hostname,
@@ -129,7 +132,7 @@ export async function runBootstrap(env, options = {}) {
     kubeconfig: options.kubeconfig,
     talosconfig: options.talosconfig,
     'repo-url': options.repoUrl,
-    'repo-branch': options.repoBranch,
+    'repo-branch': options.repoBranch || releaseRef.channelMetadata?.repoBranch,
     'prepull-images': options.prepullImages,
     'dry-run': options.dryRun,
   });
@@ -145,9 +148,11 @@ export async function runBootstrap(env, options = {}) {
 }
 
 export async function runUpgrade(env, options = {}) {
-  const releaseVersion = normalizeReleaseVersion(env, options.releaseVersion);
+  const releaseRef = normalizeReleaseReference(env, options);
+  const releaseVersion = releaseRef.releaseVersion;
   const args = buildScriptArgs({
     'release-version': releaseVersion,
+    channel: releaseRef.channel,
     kubeconfig: options.kubeconfig || env.paths.kubeconfig,
     'config-dir': options.configDir || env.site.configDir,
     profile: options.profile,

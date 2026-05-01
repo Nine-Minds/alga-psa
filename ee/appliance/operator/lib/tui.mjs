@@ -183,12 +183,15 @@ function mapProgressEvent(event) {
 
 function makeBootstrapDefaults(env) {
   const releaseVersion = env.defaultReleaseVersion || env.releases.at(-1) || '';
+  const releaseSource = (env.channels || []).length ? 'channel' : 'release';
   const nodeIp = env.nodeIp || '';
   const appUrl = env.appUrl || (nodeIp ? `http://${nodeIp}:3000` : '');
   const siteId = env.site?.siteId || env.suggestedSiteId || 'appliance-single-node';
 
   return {
     siteId,
+    releaseSource,
+    channel: env.defaultChannel || env.channels?.[0] || '',
     releaseVersion,
     bootstrapMode: 'recover',
     nodeIp,
@@ -204,6 +207,8 @@ function makeBootstrapDefaults(env) {
 
 function makeUpgradeDefaults(env) {
   return {
+    releaseSource: (env.channels || []).length ? 'channel' : 'release',
+    channel: env.defaultChannel || env.channels?.[0] || '',
     releaseVersion: env.defaultReleaseVersion || env.releases.at(-1) || '',
     reconcileAfterApply: 'yes',
   };
@@ -515,8 +520,8 @@ function LogPane({ selectedPod, logState, logNotice, loadingOlder, loadingLogs }
   );
 }
 
-function ProgressPane({ lines }) {
-  const shown = lines.slice(-7);
+function ProgressPane({ lines, maxLines = 12 }) {
+  const shown = lines.slice(-maxLines);
   return React.createElement(
     Box,
     {
@@ -524,9 +529,9 @@ function ProgressPane({ lines }) {
       borderColor: BRAND_SECONDARY,
       paddingX: 1,
       flexDirection: 'column',
-      minHeight: 9,
+      minHeight: Math.min(maxLines + 2, 28),
     },
-    React.createElement(Text, { bold: true, color: BRAND_PRIMARY }, 'Live Progress'),
+    React.createElement(Text, { bold: true, color: BRAND_PRIMARY }, 'Live Progress / Install Log'),
     ...(shown.length
       ? shown.map((line, index) =>
           React.createElement(
@@ -536,6 +541,27 @@ function ProgressPane({ lines }) {
           ),
         )
       : [React.createElement(Text, { key: 'empty', color: TEXT_MUTED }, 'No lifecycle output yet.')]),
+  );
+}
+
+function RunningSummaryPane({ env, status, formType }) {
+  const canonical = status?.canonical || status || {};
+  const rollup = canonical.rollup || {};
+  const operation = canonical.activeOperations?.[0]?.message || rollup.message || 'Waiting for lifecycle output...';
+  const statusUrl = canonical.urls?.statusUrl || (env.nodeIp ? `http://${env.nodeIp}:8080` : 'unknown');
+  const loginUrl = canonical.urls?.loginUrl || env.appUrl || (env.nodeIp ? `http://${env.nodeIp}:3000` : 'unknown');
+  const blocker = canonical.topBlockers?.[0] || status?.topBlocker || null;
+  return React.createElement(
+    Box,
+    { borderStyle: 'round', borderColor: BRAND_PRIMARY, paddingX: 1, flexDirection: 'column' },
+    React.createElement(Text, { bold: true, color: BRAND_PRIMARY }, `${formType || 'Bootstrap'} status`),
+    React.createElement(Text, { color: BRAND_SECONDARY }, `Status page: ${statusUrl}`),
+    React.createElement(Text, { color: TEXT_MUTED }, `Login URL: ${loginUrl}`),
+    React.createElement(Text, { color: rollup.state === 'failed_action_required' ? COLOR_ERROR : BRAND_SECONDARY }, `Install state: ${rollup.state || canonical.status || 'unknown'}`),
+    React.createElement(Text, { color: TEXT_MUTED }, `Current operation: ${operation}`),
+    blocker
+      ? React.createElement(Text, { color: COLOR_WARN }, `Blocker: ${blocker.reason || blocker.layer}`)
+      : React.createElement(Text, { color: TEXT_MUTED }, 'Blocker: none detected yet'),
   );
 }
 
@@ -647,7 +673,7 @@ function MainPane({
   if (view === 'form') {
     const fields = formFields(formType, env);
     const title = `${formType} Form`;
-    const noReleases = (formType === 'Bootstrap' || formType === 'Upgrade') && !(env.releases || []).length;
+    const noReleases = (formType === 'Bootstrap' || formType === 'Upgrade') && !(env.releases || []).length && !(env.channels || []).length;
 
     if (noReleases) {
       return React.createElement(
@@ -739,9 +765,12 @@ function MainPane({
 }
 
 function formFields(formType, env) {
+  const releaseSourceOptions = (env.channels || []).length ? ['channel', 'release'] : ['release'];
   if (formType === 'Bootstrap') {
     return [
       ...(env.site ? [] : [{ key: 'siteId', label: 'Site ID', type: 'text' }]),
+      { key: 'releaseSource', label: 'Release Source', type: 'select', options: releaseSourceOptions },
+      { key: 'channel', label: 'Channel', type: 'select', options: env.channels || [] },
       { key: 'releaseVersion', label: 'Release Version', type: 'select', options: env.releases || [] },
       { key: 'bootstrapMode', label: 'Bootstrap Mode', type: 'select', options: BOOTSTRAP_MODES },
       { key: 'nodeIp', label: 'Node IP', type: 'text' },
@@ -757,6 +786,8 @@ function formFields(formType, env) {
 
   if (formType === 'Upgrade') {
     return [
+      { key: 'releaseSource', label: 'Release Source', type: 'select', options: releaseSourceOptions },
+      { key: 'channel', label: 'Channel', type: 'select', options: env.channels || [] },
       { key: 'releaseVersion', label: 'Release Version', type: 'select', options: env.releases || [] },
       { key: 'reconcileAfterApply', label: 'Reconcile After Apply', type: 'select', options: YES_NO_OPTIONS },
     ];
@@ -938,6 +969,18 @@ function TuiApp({ initialEnv, actions, onExit }) {
     return () => clearInterval(timer);
   }, [refreshWorkloads, view]);
 
+  useEffect(() => {
+    if (view !== 'running') {
+      return undefined;
+    }
+
+    refreshStatus();
+    const timer = setInterval(() => {
+      refreshStatus();
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [refreshStatus, view]);
+
   async function executeFormAction() {
     setBusy(true);
     setView('running');
@@ -954,14 +997,22 @@ function TuiApp({ initialEnv, actions, onExit }) {
     try {
       let output;
       if (formType === 'Bootstrap') {
+        const releaseOptions = formValues.releaseSource === 'channel'
+          ? { channel: formValues.channel, releaseVersion: undefined }
+          : { releaseVersion: formValues.releaseVersion, channel: undefined };
         output = await actions.runBootstrap(env, {
           ...formValues,
+          ...releaseOptions,
           siteId: formValues.siteId,
           onProgress: (event) => append(mapProgressEvent(event)),
         });
       } else if (formType === 'Upgrade') {
+        const releaseOptions = formValues.releaseSource === 'channel'
+          ? { channel: formValues.channel, releaseVersion: undefined }
+          : { releaseVersion: formValues.releaseVersion, channel: undefined };
         output = await actions.runUpgrade(env, {
           ...formValues,
+          ...releaseOptions,
           reconcileAfterApply: formValues.reconcileAfterApply !== 'no',
           onProgress: (event) => append(mapProgressEvent(event)),
         });
@@ -1326,7 +1377,7 @@ function TuiApp({ initialEnv, actions, onExit }) {
 
     if (view === 'form') {
       const fields = formFields(formType, env);
-      const noReleases = (formType === 'Bootstrap' || formType === 'Upgrade') && !(env.releases || []).length;
+      const noReleases = (formType === 'Bootstrap' || formType === 'Upgrade') && !(env.releases || []).length && !(env.channels || []).length;
 
       if (key.escape) {
         setView('home');
@@ -1407,6 +1458,16 @@ function TuiApp({ initialEnv, actions, onExit }) {
     }
   });
 
+  if (view === 'running') {
+    return React.createElement(
+      Box,
+      { flexDirection: 'column', width: '100%' },
+      React.createElement(RunningSummaryPane, { env, status, formType }),
+      React.createElement(Box, { marginTop: 1 }, React.createElement(ProgressPane, { lines: progressLines, maxLines: 24 })),
+      React.createElement(Box, { marginTop: 1 }, React.createElement(HelpStrip, { view, busy, formName: formType || 'Bootstrap' })),
+    );
+  }
+
   return React.createElement(
     Box,
     { flexDirection: 'column', width: '100%' },
@@ -1462,7 +1523,7 @@ function TuiApp({ initialEnv, actions, onExit }) {
       ),
     ),
     showProgressPane
-      ? React.createElement(Box, { marginTop: 1 }, React.createElement(ProgressPane, { lines: progressLines }))
+      ? React.createElement(Box, { marginTop: 1 }, React.createElement(ProgressPane, { lines: progressLines, maxLines: 10 }))
       : null,
     React.createElement(Box, { marginTop: 1 }, React.createElement(HelpStrip, { view, busy, formName: formType || 'Home' })),
   );

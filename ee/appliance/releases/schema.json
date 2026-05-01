@@ -16,7 +16,7 @@
   "properties": {
     "releaseVersion": {
       "type": "string",
-      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+      "pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?(-[A-Za-z0-9._-]+)?$"
     },
     "generatedAt": {
       "type": "string",
@@ -145,7 +145,7 @@
     },
     "channel": {
       "type": "string",
-      "enum": ["candidate", "stable"]
+      "enum": ["stable", "nightly"]
     }
   }
 }

@@ -1,0 +1,51 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: alga-platform
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 10m
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: alga-appliance
+  path: ./ee/appliance/flux/base/platform
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: alga-core
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 30m
+  prune: true
+  wait: true
+  dependsOn:
+    - name: alga-platform
+  sourceRef:
+    kind: GitRepository
+    name: alga-appliance
+  path: ./ee/appliance/flux/base/core
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: alga-background
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 30m
+  prune: true
+  wait: true
+  dependsOn:
+    - name: alga-core
+  sourceRef:
+    kind: GitRepository
+    name: alga-appliance
+  path: ./ee/appliance/flux/base/background

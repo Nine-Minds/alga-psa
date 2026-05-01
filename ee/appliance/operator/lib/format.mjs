@@ -22,6 +22,9 @@ export function formatStatusSummary(status) {
     `Connectivity: ${status.connectivityMode}`,
     `Selected release: ${status.release.selectedReleaseVersion || 'unknown'}`,
   ];
+  if (status.canonical?.rollup?.state) {
+    lines.push(`Rollup: ${status.canonical.rollup.state}`);
+  }
   return lines;
 }
 
@@ -72,6 +75,8 @@ export function formatStatusReport(status) {
       `Site: ${status.siteId}`,
       `Node IP: ${status.nodeIp || 'unknown'}`,
       `Connectivity: ${status.connectivityMode}`,
+      ...(status.canonical?.rollup?.state ? [`Rollup: ${status.canonical.rollup.state}`] : []),
+      ...(status.canonical?.rollup?.message ? [`Rollup detail: ${status.canonical.rollup.message}`] : []),
       `Top blocker: ${status.topBlocker.layer}`,
       `Blocker detail: ${status.topBlocker.reason}`,
       `Next action: ${status.topBlocker.nextAction}`,
@@ -96,11 +101,22 @@ export function formatStatusReport(status) {
     ],
     workloads: [
       `Workload status: ${status.workloads.status}`,
+      ...(status.canonical?.tiers
+        ? [
+            `Tier platform: ${status.canonical.tiers.platform.ready ? 'ready' : 'not-ready'}`,
+            `Tier core: ${status.canonical.tiers.core.ready ? 'ready' : 'not-ready'}`,
+            `Tier bootstrap: ${status.canonical.tiers.bootstrap.ready ? 'ready' : 'not-ready'}`,
+            `Tier login: ${status.canonical.tiers.login.ready ? 'ready' : 'not-ready'}`,
+            `Tier background: ${status.canonical.tiers.background.ready ? 'ready' : 'not-ready'}`,
+            `Tier fullHealth: ${status.canonical.tiers.fullHealth.ready ? 'ready' : 'not-ready'}`,
+          ]
+        : []),
       ...status.workloads.components.map((entry) =>
         `${entry.name}: ${entry.status} (${entry.ready})${entry.message ? ` - ${entry.message}` : ''}`,
       ),
     ],
     release: [
+      `Selected channel: ${status.release.selectedChannel || 'none'}`,
       `Selected release: ${status.release.selectedReleaseVersion || 'unknown'}`,
       `App URL: ${status.release.appUrl || 'unknown'}`,
       `Release app version: ${status.release.metadata?.app?.version || 'unknown'}`,

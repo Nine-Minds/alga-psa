@@ -1,6 +1,6 @@
 {
-  "channel": "stable",
+  "channel": "nightly",
   "releaseVersion": "1.0-rc5.1",
-  "repoBranch": "release/1.0-rc5",
+  "repoBranch": "main",
   "updatedAt": "2026-05-01T00:00:00Z"
 }

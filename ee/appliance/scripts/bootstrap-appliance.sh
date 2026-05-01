@@ -4,6 +4,7 @@ set -euo pipefail
 SITE_ID="appliance-single-node"
 PROFILE="talos-single-node"
 RELEASE_VERSION=""
+CHANNEL=""
 BOOTSTRAP_MODE=""
 CLUSTER_NAME="alga-appliance"
 HOSTNAME_VALUE=""
@@ -27,10 +28,15 @@ TEMPORAL_WORKER_TAG=""
 ALGA_AUTH_KEY_VALUE=""
 REPO_URL=""
 REPO_BRANCH=""
+REPO_BRANCH_FROM_CURRENT=false
+REQUIRE_REMOTE_BRANCH=false
 REPO_PATH="ee/appliance/flux/base"
 OUTPUT_DIR_OVERRIDE=""
 DRY_RUN=false
 PREPULL_IMAGES=false
+SKIP_IMAGE_TAG_VALIDATION=false
+STATUS_TOKEN=""
+STATUS_TOKEN_PATH=""
 TEMP_WORK_DIR=""
 TEMP_PROFILE_DIR=""
 RELEASE_APP_VERSION=""
@@ -53,6 +59,7 @@ Usage:
 Options:
   --site-id <id>                 Appliance/site identifier (default: appliance-single-node)
   --release-version <version>    Appliance release version from ee/appliance/releases/
+  --channel <name>               Resolve release from ee/appliance/releases/channels/<name>.json
   --profile <name>               Values profile name (default: talos-single-node)
   --bootstrap-mode <mode>        Bootstrap mode: fresh or recover
   --node-ip <ip>                 Talos node IP for first boot and ongoing access
@@ -69,7 +76,8 @@ Options:
   --kubeconfig <path>            Existing kubeconfig path (explicitly reuses installed cluster)
   --talosconfig <path>           Existing talosconfig path
   --repo-url <url>               Git repository URL for Flux source
-  --repo-branch <branch>         Git repository branch for Flux source
+  --repo-branch <branch|current> Git repository branch for Flux source; use current to test the checked-out branch
+  --require-remote-branch        Validate that --repo-branch exists on --repo-url before mutating the appliance
   --repo-path <path>             Repo path for Flux kustomization (default: ee/appliance/flux/base)
   --alga-core-tag <tag>          Override manifest tag for alga-core server/setup image
   --workflow-worker-tag <tag>    Override manifest tag for workflow-worker image
@@ -77,6 +85,7 @@ Options:
   --temporal-worker-tag <tag>    Override manifest tag for temporal-worker image
   --alga-auth-key <value>        ALGA_AUTH_KEY value for msp/alga-psa-shared
   --prepull-images               Pre-pull large app images onto the Talos node before GitOps apply
+  --skip-image-tag-validation    Skip remote background image-tag existence checks (not recommended)
   --dry-run                      Print the planned commands without mutating cluster state
   --help                         Show this help
 
@@ -90,6 +99,9 @@ default operator config root.
 Bootstrap modes:
   fresh    Wipes existing appliance namespaces and local-path data before reinstall
   recover  Preserves existing appliance state and reuses surviving PVC-backed data
+
+Branch-under-test workflow:
+  Pass --repo-branch current to resolve the local checked-out Git branch and use it as the Flux source branch. The branch must already exist on --repo-url because Flux fetches from Git, not the local worktree. The script warns when the local branch has unpushed commits or uncommitted changes that Flux cannot see.
 EOF
 }
 
@@ -147,6 +159,17 @@ generate_auth_key() {
     python3 - <<'PY'
 import secrets
 print(secrets.token_hex(32))
+PY
+  fi
+}
+
+generate_status_token() {
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 24
+  else
+    python3 - <<'PY'
+import secrets
+print(secrets.token_hex(24))
 PY
   fi
 }
@@ -253,11 +276,70 @@ persist_operator_metadata() {
   fi
 }
 
+status_node_ip() {
+  local value="${NODE_IP:-}"
+  if [ -z "$value" ] && [ -f "$CONFIG_DIR/node-ip" ]; then
+    value="$(tr -d '\n' < "$CONFIG_DIR/node-ip")"
+  fi
+  if [ -z "$value" ]; then
+    value="$(infer_node_ip_from_kubeconfig || true)"
+  fi
+  printf '%s\n' "$value"
+}
+
+channel_field() {
+  local jq_filter="$1"
+  if [ -z "$CHANNEL" ]; then
+    printf '%s\n' ""
+    return 0
+  fi
+  jq -r "$jq_filter // empty" "$REPO_ROOT/ee/appliance/releases/channels/$CHANNEL.json"
+}
+
+resolve_default_channel() {
+  local releases_dir="$REPO_ROOT/ee/appliance/releases"
+  if [ -f "$releases_dir/channels/stable.json" ]; then
+    printf '%s\n' "stable"
+    return 0
+  fi
+  find "$releases_dir/channels" -maxdepth 1 -type f -name '*.json' -exec basename {} .json \; 2>/dev/null | sort | head -n 1
+}
+
 resolve_release_version() {
   local releases_dir
   local latest_release
+  local channel_release
+  local channel_repo_branch
 
   releases_dir="$REPO_ROOT/ee/appliance/releases"
+
+  if [ -n "$RELEASE_VERSION" ] && [ -z "$CHANNEL" ]; then
+    return 0
+  fi
+
+  if [ -z "$CHANNEL" ]; then
+    CHANNEL="$(resolve_default_channel || true)"
+  fi
+
+  if [ -n "$CHANNEL" ]; then
+    if [ ! -f "$releases_dir/channels/$CHANNEL.json" ]; then
+      echo "Release channel not found: $releases_dir/channels/$CHANNEL.json" >&2
+      exit 1
+    fi
+    channel_release="$(channel_field '.releaseVersion')"
+    if [ -z "$channel_release" ] || [ "$channel_release" = "null" ]; then
+      echo "Release channel $CHANNEL does not point to a releaseVersion" >&2
+      exit 1
+    fi
+    if [ -z "$RELEASE_VERSION" ]; then
+      RELEASE_VERSION="$channel_release"
+    fi
+    channel_repo_branch="$(channel_field '.repoBranch')"
+    if [ -z "$REPO_BRANCH" ] && [ "$REPO_BRANCH_FROM_CURRENT" = false ] && [ -n "$channel_repo_branch" ]; then
+      REPO_BRANCH="$channel_repo_branch"
+    fi
+    return 0
+  fi
 
   if [ -n "$RELEASE_VERSION" ]; then
     return 0
@@ -267,12 +349,93 @@ resolve_release_version() {
   RELEASE_VERSION="$latest_release"
 }
 
+current_git_branch() {
+  local branch
+  branch="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+  if [ -z "$branch" ] || [ "$branch" = "HEAD" ]; then
+    echo "Unable to resolve current Git branch from $REPO_ROOT. Pass an explicit --repo-branch." >&2
+    exit 1
+  fi
+  printf '%s\n' "$branch"
+}
+
+remote_branch_sha() {
+  local repo_url="$1"
+  local branch="$2"
+  git -C "$REPO_ROOT" ls-remote --heads "$repo_url" "$branch" 2>/dev/null | awk 'NR == 1 { print $1 }'
+}
+
+validate_repo_branch_source() {
+  local remote_sha=""
+  local local_sha=""
+
+  if [ -z "$REPO_URL" ] || [ -z "$REPO_BRANCH" ]; then
+    return 0
+  fi
+
+  if [ "$REPO_BRANCH_FROM_CURRENT" = false ] && [ "$REQUIRE_REMOTE_BRANCH" = false ]; then
+    return 0
+  fi
+
+  remote_sha="$(remote_branch_sha "$REPO_URL" "$REPO_BRANCH")"
+  if [ -z "$remote_sha" ]; then
+    cat >&2 <<EOF
+Flux source branch is not available on the configured remote.
+
+  Repo URL:    $REPO_URL
+  Repo branch: $REPO_BRANCH
+
+Flux reads from the Git server, not the local worktree. Push this branch to the remote or pass a different --repo-branch.
+EOF
+    exit 1
+  fi
+
+  if [ "$REPO_BRANCH_FROM_CURRENT" = true ]; then
+    local_sha="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || true)"
+    if [ -n "$local_sha" ] && [ "$remote_sha" != "$local_sha" ]; then
+      if git -C "$REPO_ROOT" merge-base --is-ancestor "$remote_sha" "$local_sha" >/dev/null 2>&1; then
+        echo "Warning: current branch $REPO_BRANCH has local commits that are not on $REPO_URL; Flux will use remote commit $remote_sha." >&2
+      else
+        echo "Warning: current branch $REPO_BRANCH differs from $REPO_URL; Flux will use remote commit $remote_sha." >&2
+      fi
+    fi
+
+    if [ -n "$(git -C "$REPO_ROOT" status --porcelain 2>/dev/null || true)" ]; then
+      echo "Warning: local worktree has uncommitted changes; Flux will not see them until they are committed and pushed." >&2
+    fi
+  fi
+}
+
+print_repo_source_summary() {
+  local mode="configured"
+  if [ "$REPO_BRANCH_FROM_CURRENT" = true ]; then
+    mode="branch-under-test"
+  fi
+
+  cat <<EOF
+Flux source:
+  Repo URL:        $REPO_URL
+  Repo branch:     $REPO_BRANCH
+  Repo path:       $REPO_PATH
+  Source mode:     $mode
+  Release version: $RELEASE_VERSION
+  Release channel: ${CHANNEL:-none}
+  Release branch:  ${RELEASE_APP_BRANCH:-unknown}
+EOF
+
+  if [ -n "${RELEASE_APP_BRANCH:-}" ] && [ "$REPO_BRANCH" != "$RELEASE_APP_BRANCH" ]; then
+    echo "  Note: Flux source branch differs from release manifest branch; testing manifests/charts from $REPO_BRANCH with release artifacts from $RELEASE_VERSION."
+  fi
+}
+
 resolve_repo_defaults() {
   if [ -z "$REPO_URL" ]; then
     REPO_URL="$(git -C "$REPO_ROOT" remote get-url origin 2>/dev/null || true)"
   fi
 
-  if [ -z "$REPO_BRANCH" ]; then
+  if [ "$REPO_BRANCH_FROM_CURRENT" = true ]; then
+    REPO_BRANCH="$(current_git_branch)"
+  elif [ -z "$REPO_BRANCH" ]; then
     REPO_BRANCH="$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
   fi
 }
@@ -296,6 +459,8 @@ resolve_config_paths() {
   if [ -z "$KUBECONFIG_PATH" ]; then
     KUBECONFIG_PATH="$CONFIG_DIR/kubeconfig"
   fi
+
+  STATUS_TOKEN_PATH="$CONFIG_DIR/status-token"
 }
 
 reuse_existing_cluster_config() {
@@ -423,11 +588,69 @@ resolve_runtime_inputs() {
   if [ -n "$APP_URL" ]; then
     url_host "$APP_URL" >/dev/null
   fi
+
+  validate_repo_branch_source
+  print_repo_source_summary
 }
 
 release_field() {
   local jq_filter="$1"
   jq -r "$jq_filter" "$REPO_ROOT/ee/appliance/releases/$RELEASE_VERSION/release.json"
+}
+
+ghcr_tag_exists() {
+  local repository="$1"
+  local tag="$2"
+  local token
+  local manifest_url
+
+  token="$(
+    curl -fsSL "https://ghcr.io/token?scope=repository:${repository}:pull" | jq -r '.token // empty'
+  )" || return 1
+  [ -n "$token" ] || return 1
+
+  manifest_url="https://ghcr.io/v2/${repository}/manifests/${tag}"
+  curl -fsSI \
+    -H "Authorization: Bearer $token" \
+    -H "Accept: application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json" \
+    "$manifest_url" >/dev/null
+}
+
+validate_background_image_tags() {
+  if $DRY_RUN; then
+    echo "+ validate remote background image tags in GHCR"
+    return 0
+  fi
+
+  if $SKIP_IMAGE_TAG_VALIDATION; then
+    echo "Skipping remote image-tag validation by request (--skip-image-tag-validation)."
+    return 0
+  fi
+
+  local missing=()
+  local checks=(
+    "nine-minds/workflow-worker:$WORKFLOW_WORKER_TAG"
+    "nine-minds/email-service:$EMAIL_SERVICE_TAG"
+    "nine-minds/temporal-worker:$TEMPORAL_WORKER_TAG"
+  )
+  local check
+  local repo
+  local tag
+
+  for check in "${checks[@]}"; do
+    repo="${check%%:*}"
+    tag="${check##*:}"
+    if ! ghcr_tag_exists "$repo" "$tag"; then
+      missing+=("ghcr.io/${repo}:${tag}")
+    fi
+  done
+
+  if [ "${#missing[@]}" -gt 0 ]; then
+    echo "Release artifact warning: one or more background image tags are missing:" >&2
+    printf '  - %s\n' "${missing[@]}" >&2
+    echo "Background image issues will be reported by appliance status and do not block core login readiness." >&2
+    echo "Next action: publish the missing tags or update ee/appliance/releases/$RELEASE_VERSION/release.json." >&2
+  fi
 }
 
 set_yaml_value() {
@@ -609,7 +832,12 @@ EOF
   write_machine_config_documents
 
   chmod 600 "$CONFIG_DIR/talosconfig" "$CONFIG_DIR/controlplane.yaml"
-  TALOSCONFIG_PATH="$CONFIG_DIR/talosconfig"
+  if [ "$TALOSCONFIG_EXPLICIT" = true ]; then
+    cp "$CONFIG_DIR/talosconfig" "$TALOSCONFIG_PATH"
+    chmod 600 "$TALOSCONFIG_PATH"
+  else
+    TALOSCONFIG_PATH="$CONFIG_DIR/talosconfig"
+  fi
 }
 
 wait_for_talos_maintenance() {
@@ -761,6 +989,37 @@ ensure_alga_auth_secret() {
     --dry-run=client -o yaml | kubectl --kubeconfig "$KUBECONFIG_PATH" apply -f -
 }
 
+ensure_status_token() {
+  if [ -z "$STATUS_TOKEN" ] && [ -f "$STATUS_TOKEN_PATH" ]; then
+    STATUS_TOKEN="$(tr -d '\n' < "$STATUS_TOKEN_PATH")"
+  fi
+
+  if [ -z "$STATUS_TOKEN" ]; then
+    STATUS_TOKEN="$(generate_status_token)"
+  fi
+
+  if $DRY_RUN; then
+    echo "+ write status token to $STATUS_TOKEN_PATH"
+    return 0
+  fi
+
+  printf '%s\n' "$STATUS_TOKEN" > "$STATUS_TOKEN_PATH"
+  chmod 600 "$STATUS_TOKEN_PATH"
+}
+
+ensure_status_auth_secret() {
+  ensure_namespace "appliance-system"
+
+  if $DRY_RUN; then
+    echo "+ kubectl create/apply secret appliance-system/appliance-status-auth"
+    return 0
+  fi
+
+  kubectl --kubeconfig "$KUBECONFIG_PATH" -n appliance-system create secret generic appliance-status-auth \
+    --from-literal=token="$STATUS_TOKEN" \
+    --dry-run=client -o yaml | kubectl --kubeconfig "$KUBECONFIG_PATH" apply -f -
+}
+
 create_runtime_values_dir() {
   local source_profile_dir="$REPO_ROOT/ee/appliance/flux/profiles/$PROFILE"
   local values_dir
@@ -837,6 +1096,7 @@ apply_release_selection() {
 
   kubectl --kubeconfig "$KUBECONFIG_PATH" -n alga-system create configmap appliance-release-selection \
     --from-literal=releaseVersion="$RELEASE_VERSION" \
+    --from-literal=selectedChannel="${CHANNEL:-}" \
     --from-literal=appVersion="$RELEASE_APP_VERSION" \
     --from-literal=releaseBranch="$release_branch" \
     --from-literal=algaCoreTag="$ALGA_CORE_TAG" \
@@ -916,6 +1176,8 @@ install_gitops_sync() {
   if $DRY_RUN; then
     echo "+ flux --kubeconfig $KUBECONFIG_PATH create source git alga-appliance --url=$REPO_URL --branch=$REPO_BRANCH --interval=1m --export | kubectl apply -f -"
     echo "+ flux --kubeconfig $KUBECONFIG_PATH create kustomization alga-appliance --source=GitRepository/alga-appliance.flux-system --path=./$REPO_PATH --prune=true --wait=true --export | kubectl apply -f -"
+    echo "+ flux --kubeconfig $KUBECONFIG_PATH reconcile source git alga-appliance -n flux-system"
+    echo "+ kubectl --kubeconfig $KUBECONFIG_PATH -n flux-system annotate kustomization/alga-appliance reconcile.fluxcd.io/requestedAt=<timestamp> --overwrite"
     return 0
   fi
 
@@ -936,6 +1198,12 @@ install_gitops_sync() {
     --export | kubectl --kubeconfig "$KUBECONFIG_PATH" apply -f -
 
   kubectl --kubeconfig "$KUBECONFIG_PATH" -n flux-system wait --for=condition=Ready --timeout=5m gitrepository/alga-appliance
+
+  flux --kubeconfig "$KUBECONFIG_PATH" reconcile source git alga-appliance -n flux-system
+  local requested_at
+  requested_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  kubectl --kubeconfig "$KUBECONFIG_PATH" -n flux-system annotate kustomization/alga-appliance \
+    reconcile.fluxcd.io/requestedAt="$requested_at" --overwrite >/dev/null
 }
 
 wait_for_alga_core_release() {
@@ -967,9 +1235,16 @@ prepull_images() {
   fi
 
   talos_cmd image pull "ghcr.io/nine-minds/alga-psa-ee:${ALGA_CORE_TAG}"
-  talos_cmd image pull "ghcr.io/nine-minds/workflow-worker:${WORKFLOW_WORKER_TAG}"
-  talos_cmd image pull "ghcr.io/nine-minds/email-service:${EMAIL_SERVICE_TAG}"
-  talos_cmd image pull "ghcr.io/nine-minds/temporal-worker:${TEMPORAL_WORKER_TAG}"
+
+  local background_image
+  for background_image in \
+    "ghcr.io/nine-minds/workflow-worker:${WORKFLOW_WORKER_TAG}" \
+    "ghcr.io/nine-minds/email-service:${EMAIL_SERVICE_TAG}" \
+    "ghcr.io/nine-minds/temporal-worker:${TEMPORAL_WORKER_TAG}"; do
+    if ! talos_cmd image pull "$background_image"; then
+      echo "Warning: failed to pre-pull non-login-blocking background image $background_image" >&2
+    fi
+  done
 }
 
 promote_bootstrap_mode_to_recover() {
@@ -1003,6 +1278,51 @@ promote_bootstrap_mode_to_recover() {
   BOOTSTRAP_MODE="recover"
 }
 
+status_url() {
+  local status_ip
+  status_ip="$(status_node_ip)"
+  if [ -z "$status_ip" ]; then
+    printf 'http://<node-ip>:8080\n'
+  else
+    printf 'http://%s:8080\n' "$status_ip"
+  fi
+}
+
+wait_for_status_service() {
+  local status_ip
+  local attempt
+  status_ip="$(status_node_ip)"
+
+  if $DRY_RUN; then
+    echo "+ wait for appliance-status health endpoint on $(status_url)"
+    return 0
+  fi
+
+  if [ -z "$status_ip" ]; then
+    echo "Warning: unable to derive node IP for appliance status URL." >&2
+    return 1
+  fi
+
+  for attempt in $(seq 1 60); do
+    if curl -fsS "http://${status_ip}:8080/healthz?token=${STATUS_TOKEN}" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 2
+  done
+
+  echo "Warning: appliance-status did not become reachable on http://${status_ip}:8080 within 120s; continuing core bootstrap." >&2
+  return 1
+}
+
+print_status_access() {
+  local phase_label="${1:-available}"
+  cat <<EOF
+Appliance status UI (${phase_label}):
+  URL:   $(status_url)
+  Token: ${STATUS_TOKEN}
+EOF
+}
+
 wait_for_bootstrap() {
   if $DRY_RUN; then
     cat <<EOF
@@ -1033,6 +1353,10 @@ while [ "$#" -gt 0 ]; do
       ;;
     --release-version)
       RELEASE_VERSION="$2"
+      shift 2
+      ;;
+    --channel)
+      CHANNEL="$2"
       shift 2
       ;;
     --profile)
@@ -1102,8 +1426,18 @@ while [ "$#" -gt 0 ]; do
       shift 2
       ;;
     --repo-branch)
-      REPO_BRANCH="$2"
+      if [ "$2" = "current" ]; then
+        REPO_BRANCH_FROM_CURRENT=true
+        REPO_BRANCH=""
+      else
+        REPO_BRANCH_FROM_CURRENT=false
+        REPO_BRANCH="$2"
+      fi
       shift 2
+      ;;
+    --require-remote-branch)
+      REQUIRE_REMOTE_BRANCH=true
+      shift
       ;;
     --repo-path)
       REPO_PATH="$2"
@@ -1133,6 +1467,10 @@ while [ "$#" -gt 0 ]; do
       PREPULL_IMAGES=true
       shift
       ;;
+    --skip-image-tag-validation)
+      SKIP_IMAGE_TAG_VALIDATION=true
+      shift
+      ;;
     --dry-run)
       DRY_RUN=true
       shift
@@ -1151,6 +1489,7 @@ done
 
 require_command git
 require_command jq
+require_command curl
 require_command kubectl
 require_command flux
 require_command python3
@@ -1168,6 +1507,8 @@ reset_appliance_state_if_requested
 
 ensure_namespace "msp"
 ensure_namespace "alga-system"
+ensure_status_token
+ensure_status_auth_secret
 if $DRY_RUN; then
   run_cmd "$REPO_ROOT/ee/appliance/scripts/install-storage.sh" --kubeconfig "$KUBECONFIG_PATH" --dry-run
 else
@@ -1180,6 +1521,9 @@ apply_runtime_values
 apply_release_selection
 prepull_images
 install_gitops_sync
+print_status_access "submitted"
+wait_for_status_service || true
+validate_background_image_tags
 wait_for_bootstrap
 
 persist_operator_metadata
@@ -1187,10 +1531,15 @@ persist_operator_metadata
 cat <<EOF
 Appliance bootstrap submitted.
 
+Appliance status UI:
+  URL:   $(status_url)
+  Token: ${STATUS_TOKEN}
+
 Persisted operator files:
   Talos config: $TALOSCONFIG_PATH
   Kubeconfig:   $KUBECONFIG_PATH
   Machine config: $CONFIG_DIR/controlplane.yaml
+  Status token: $STATUS_TOKEN_PATH
   Values: $CONFIG_DIR/values/
 
 Support bundle:

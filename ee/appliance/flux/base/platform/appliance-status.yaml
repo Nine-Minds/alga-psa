@@ -1,0 +1,1587 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: appliance-status
+  namespace: appliance-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: appliance-status-readonly
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "pods", "persistentvolumeclaims", "events", "configmaps"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["create", "patch", "update"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch", "create"]
+  - apiGroups: ["source.toolkit.fluxcd.io"]
+    resources: ["gitrepositories"]
+    verbs: ["get", "list", "watch", "patch"]
+  - apiGroups: ["kustomize.toolkit.fluxcd.io"]
+    resources: ["kustomizations"]
+    verbs: ["get", "list", "watch", "patch"]
+  - apiGroups: ["helm.toolkit.fluxcd.io"]
+    resources: ["helmreleases"]
+    verbs: ["get", "list", "watch", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: appliance-status-readonly
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: appliance-status-readonly
+subjects:
+  - kind: ServiceAccount
+    name: appliance-status
+    namespace: appliance-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appliance-status
+  namespace: appliance-system
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: appliance-status
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: appliance-status
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      serviceAccountName: appliance-status
+      automountServiceAccountToken: true
+      containers:
+        - name: status
+          image: node:20-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - sh
+            - -c
+            - |
+              cat <<'JS' >/tmp/server.js
+              const fs = require('fs');
+              const http = require('http');
+              const https = require('https');
+
+              const token = process.env.STATUS_TOKEN || '';
+              const hostIp = process.env.HOST_IP || '';
+              const namespace = process.env.POD_NAMESPACE || 'appliance-system';
+              const serviceHost = process.env.KUBERNETES_SERVICE_HOST;
+              const servicePort = process.env.KUBERNETES_SERVICE_PORT || '443';
+              const saTokenPath = '/var/run/secrets/kubernetes.io/serviceaccount/token';
+              const caPath = '/var/run/secrets/kubernetes.io/serviceaccount/ca.crt';
+
+              const COMPONENTS = [
+                { name: 'alga-core', kind: 'deployment', resource: 'alga-core-sebastian', tier: 'login' },
+                { name: 'db', kind: 'statefulset', resource: 'db', tier: 'core' },
+                { name: 'redis', kind: 'statefulset', resource: 'redis', tier: 'core' },
+                { name: 'pgbouncer', kind: 'deployment', resource: 'pgbouncer', tier: 'core' },
+                { name: 'temporal', kind: 'deployment', resource: 'temporal', tier: 'background' },
+                { name: 'workflow-worker', kind: 'deployment', resource: 'workflow-worker', tier: 'background' },
+                { name: 'email-service', kind: 'deployment', resource: 'email-service', tier: 'background' },
+                { name: 'temporal-worker', kind: 'deployment', resource: 'temporal-worker', tier: 'background' },
+              ];
+
+              const APPLIANCE_NAMESPACES = ['msp', 'alga-system', 'appliance-system', 'flux-system', 'local-path-storage', 'kube-system'];
+
+              function readFile(path) {
+                try { return fs.readFileSync(path, 'utf8').trim(); } catch { return ''; }
+              }
+
+              const kubeToken = readFile(saTokenPath);
+              const kubeCa = fs.existsSync(caPath) ? fs.readFileSync(caPath) : undefined;
+
+              function timestampOf(event) {
+                return event.lastTimestamp || event.eventTime || event.metadata?.creationTimestamp || '';
+              }
+
+              function fallbackCanonical() {
+                const loginUrl = hostIp ? `http://${hostIp}:3000` : null;
+                const now = new Date().toISOString();
+                return {
+                  service: 'appliance-status',
+                  status: 'installing',
+                  siteId: 'appliance-single-node',
+                  timestamp: now,
+                  release: { selectedReleaseVersion: null, appVersion: null, channel: null, gitRevision: null },
+                  urls: { statusUrl: hostIp ? `http://${hostIp}:8080` : null, loginUrl },
+                  loginUrl,
+                  rollup: {
+                    state: 'installing',
+                    message: loginUrl
+                      ? 'Appliance bootstrap is in progress. Login will be available once core services are ready.'
+                      : 'Appliance bootstrap is in progress.',
+                    nextAction: 'Keep this page open and refresh while core services bootstrap.',
+                  },
+                  currentPhase: 'bootstrap_in_progress',
+                  nextAction: 'Keep this page open and refresh while core services bootstrap.',
+                  tiers: {
+                    platform: { ready: false, status: 'progressing' },
+                    core: { ready: false, status: 'progressing' },
+                    bootstrap: { ready: false, status: 'progressing' },
+                    login: { ready: false, status: 'progressing' },
+                    background: { ready: false, status: 'progressing' },
+                    fullHealth: { ready: false, status: 'progressing' },
+                  },
+                  topBlockers: [],
+                  activeOperations: [],
+                  components: [],
+                  recentEvents: [],
+                  loginProbe: { checked: false, reachable: false, statusCode: null, location: null },
+                };
+              }
+
+              function kubeGet(path) {
+                if (!serviceHost || !kubeToken) return Promise.resolve(null);
+                return new Promise((resolve) => {
+                  const req = https.request({
+                    host: serviceHost,
+                    port: servicePort,
+                    method: 'GET',
+                    path,
+                    ca: kubeCa,
+                    headers: { Authorization: `Bearer ${kubeToken}`, Accept: 'application/json' },
+                    timeout: 3000,
+                  }, (res) => {
+                    let body = '';
+                    res.setEncoding('utf8');
+                    res.on('data', (chunk) => { body += chunk; });
+                    res.on('end', () => {
+                      if (res.statusCode < 200 || res.statusCode >= 300) return resolve(null);
+                      try { resolve(JSON.parse(body)); } catch { resolve(null); }
+                    });
+                  });
+                  req.on('timeout', () => req.destroy());
+                  req.on('error', () => resolve(null));
+                  req.end();
+                });
+              }
+
+              function kubeGetText(path) {
+                if (!serviceHost || !kubeToken) return Promise.resolve(null);
+                return new Promise((resolve) => {
+                  const req = https.request({
+                    host: serviceHost,
+                    port: servicePort,
+                    method: 'GET',
+                    path,
+                    ca: kubeCa,
+                    headers: { Authorization: `Bearer ${kubeToken}` },
+                    timeout: 5000,
+                  }, (res) => {
+                    let body = '';
+                    res.setEncoding('utf8');
+                    res.on('data', (chunk) => { body += chunk; });
+                    res.on('end', () => {
+                      if (res.statusCode < 200 || res.statusCode >= 300) return resolve(null);
+                      resolve(body);
+                    });
+                  });
+                  req.on('timeout', () => req.destroy());
+                  req.on('error', () => resolve(null));
+                  req.end();
+                });
+              }
+
+              function kubeRequest(method, path, body = null, extraHeaders = {}) {
+                if (!serviceHost || !kubeToken) return Promise.resolve({ ok: false, statusCode: 0, body: null, text: 'Kubernetes service account is unavailable' });
+                return new Promise((resolve) => {
+                  const payload = body == null ? null : JSON.stringify(body);
+                  const headers = { Authorization: `Bearer ${kubeToken}`, Accept: 'application/json', ...extraHeaders };
+                  if (payload != null && !headers['Content-Type']) headers['Content-Type'] = 'application/json';
+                  const req = https.request({
+                    host: serviceHost,
+                    port: servicePort,
+                    method,
+                    path,
+                    ca: kubeCa,
+                    headers,
+                    timeout: 8000,
+                  }, (res) => {
+                    let text = '';
+                    res.setEncoding('utf8');
+                    res.on('data', (chunk) => { text += chunk; });
+                    res.on('end', () => {
+                      let parsed = null;
+                      try { parsed = text ? JSON.parse(text) : null; } catch { parsed = null; }
+                      resolve({ ok: res.statusCode >= 200 && res.statusCode < 300, statusCode: res.statusCode || 0, body: parsed, text });
+                    });
+                  });
+                  req.on('timeout', () => req.destroy(new Error('Kubernetes request timed out')));
+                  req.on('error', (error) => resolve({ ok: false, statusCode: 0, body: null, text: error.message }));
+                  if (payload != null) req.write(payload);
+                  req.end();
+                });
+              }
+
+              function jsonResponse(res, statusCode, body) {
+                res.writeHead(statusCode, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify(body));
+              }
+
+              function readJsonBody(req) {
+                return new Promise((resolve, reject) => {
+                  let body = '';
+                  req.setEncoding('utf8');
+                  req.on('data', (chunk) => {
+                    body += chunk;
+                    if (body.length > 32768) reject(new Error('Request body is too large'));
+                  });
+                  req.on('end', () => {
+                    if (!body.trim()) return resolve({});
+                    try { resolve(JSON.parse(body)); } catch (error) { reject(error); }
+                  });
+                  req.on('error', reject);
+                });
+              }
+
+              function httpProbe(rawUrl) {
+                if (!rawUrl) return Promise.resolve({ checked: false, reachable: false, statusCode: null, location: null });
+                return new Promise((resolve) => {
+                  let parsed;
+                  try { parsed = new URL(rawUrl); } catch { return resolve({ checked: true, reachable: false, statusCode: null, location: null }); }
+                  const lib = parsed.protocol === 'https:' ? https : http;
+                  const req = lib.request(parsed, { method: 'HEAD', timeout: 3000, rejectUnauthorized: false }, (res) => {
+                    const code = res.statusCode || null;
+                    const location = res.headers.location || null;
+                    const redirect = [301, 302, 307, 308].includes(code);
+                    const validLocation = !redirect || !location || location.includes('/msp/dashboard') || location.includes('/login') || location.includes(parsed.host);
+                    resolve({ checked: true, reachable: !!code && code >= 200 && code < 400 && validLocation, statusCode: code, location });
+                    res.resume();
+                  });
+                  req.on('timeout', () => req.destroy());
+                  req.on('error', () => resolve({ checked: true, reachable: false, statusCode: null, location: null }));
+                  req.end();
+                });
+              }
+
+              function readyCondition(item) {
+                return (item?.status?.conditions || []).find((entry) => entry.type === 'Ready') || null;
+              }
+
+              function fluxItems(items) {
+                return (items || []).map((item) => {
+                  const ready = readyCondition(item);
+                  return {
+                    name: item.metadata?.name || 'unknown',
+                    ready: ready?.status === 'True',
+                    status: ready?.status || 'Unknown',
+                    reason: ready?.reason || '',
+                    message: ready?.message || '',
+                    revision: item.status?.artifact?.revision || item.status?.lastAppliedRevision || '',
+                  };
+                });
+              }
+
+              function isProgressingStatus(entry) {
+                const status = String(entry?.status || '').toLowerCase();
+                const reason = String(entry?.reason || '').toLowerCase();
+                const message = String(entry?.message || '').toLowerCase();
+                return status === 'unknown'
+                  || reason.includes('progress')
+                  || reason.includes('dependencynotready')
+                  || message.includes('reconciliation in progress')
+                  || message.includes('running health checks')
+                  || message.includes("running 'install' action")
+                  || message.includes("running 'upgrade' action")
+                  || message.includes('fulfilling prerequisites')
+                  || message.includes('latest generation of object has not been reconciled')
+                  || message.includes('dependency') && message.includes('not ready');
+              }
+
+              function isHelmStorageStuck(entry) {
+                const message = String(entry?.message || '');
+                return /has no deployed releases|another operation \((install|upgrade|rollback)\) is in progress|uninstalling/i.test(message);
+              }
+
+              function reconciliationOperations(state) {
+                const rows = [...(state.sources || []), ...(state.kustomizations || []), ...(state.helmReleases || [])];
+                return rows
+                  .filter((entry) => !entry.ready && isProgressingStatus(entry) && !isHelmStorageStuck(entry))
+                  .map((entry) => ({
+                    component: entry.name,
+                    operation: 'reconciling',
+                    image: null,
+                    estimatedCompressedBytes: null,
+                    estimatedSizeHuman: null,
+                    progressPercent: null,
+                    progressAvailable: false,
+                    progressReason: 'Flux and Helm report phase-level reconciliation status, not byte-level progress.',
+                    startedAt: null,
+                    elapsedSeconds: null,
+                    message: entry.message || `${entry.name} is reconciling.`,
+                  }));
+              }
+
+              function tierStatus(ready) {
+                return ready ? 'healthy' : 'progressing';
+              }
+
+              function readinessStatus(ready, total) {
+                if (!total) return 'unknown';
+                if (ready >= total) return 'healthy';
+                if (ready > 0) return 'degraded';
+                return 'unhealthy';
+              }
+
+              function resourceReadiness(kind, item) {
+                if (!item) return { status: 'unknown', ready: 0, total: 0 };
+                const total = item.spec?.replicas ?? 1;
+                const ready = item.status?.readyReplicas ?? 0;
+                return { status: readinessStatus(ready, total), ready, total };
+              }
+
+              function componentFromObject(name) {
+                const value = String(name || '').toLowerCase();
+                if (value.includes('workflow-worker')) return 'workflow-worker';
+                if (value.includes('temporal-worker')) return 'temporal-worker';
+                if (value.includes('email-service')) return 'email-service';
+                if (value.includes('temporal')) return 'temporal';
+                if (value.includes('alga-core-sebastian') || value.includes('alga-core')) return 'alga-core';
+                if (value.includes('db-')) return 'db';
+                return null;
+              }
+
+              function imageSizeEstimate(image) {
+                const value = String(image || '');
+                if (/ghcr\.io\/nine-minds\/alga-psa-ee:/i.test(value)) {
+                  return { estimatedCompressedBytes: 1865000000, estimatedSizeHuman: '~1.8 GB' };
+                }
+                if (/node:20-alpine/i.test(value)) {
+                  return { estimatedCompressedBytes: 59000000, estimatedSizeHuman: '~60 MB' };
+                }
+                return { estimatedCompressedBytes: null, estimatedSizeHuman: null };
+              }
+
+              function imageFromMessage(message) {
+                const text = String(message || '');
+                return (text.match(/image "([^"]+)"/i) || text.match(/([a-z0-9./_-]+:[a-zA-Z0-9._-]+)/))?.[1] || null;
+              }
+
+              function elapsedSecondsSince(timestamp) {
+                if (!timestamp) return null;
+                const parsed = Date.parse(timestamp);
+                if (!Number.isFinite(parsed)) return null;
+                return Math.max(0, Math.floor((Date.now() - parsed) / 1000));
+              }
+
+              function collectActiveOperations(events, podsJson) {
+                const operations = [];
+                const seen = new Set();
+
+                for (const pod of podsJson?.items || []) {
+                  const podName = pod.metadata?.name || '';
+                  const component = componentFromObject(podName) || 'unknown';
+                  const allContainers = [...(pod.spec?.initContainers || []), ...(pod.spec?.containers || [])];
+                  const allStatuses = [...(pod.status?.initContainerStatuses || []), ...(pod.status?.containerStatuses || [])];
+                  for (const status of allStatuses) {
+                    const waiting = status.state?.waiting;
+                    if (!waiting || !['ContainerCreating', 'PodInitializing'].includes(waiting.reason)) continue;
+                    const spec = allContainers.find((container) => container.name === status.name);
+                    const image = spec?.image || status.image || null;
+                    const key = `${component}:${podName}:${status.name}:${image}`;
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+                    const size = imageSizeEstimate(image);
+                    operations.push({
+                      component,
+                      operation: 'pulling_image',
+                      image,
+                      ...size,
+                      progressPercent: null,
+                      progressAvailable: false,
+                      progressReason: 'Kubernetes does not expose image pull byte progress.',
+                      startedAt: pod.metadata?.creationTimestamp || null,
+                      elapsedSeconds: elapsedSecondsSince(pod.metadata?.creationTimestamp),
+                      message: image
+                        ? `Preparing ${component}: pulling or unpacking ${image}. This can take several minutes on a local VM.`
+                        : `Preparing ${component}: ${waiting.reason}.`,
+                    });
+                  }
+                }
+
+                if (operations.length > 0 || (podsJson?.items || []).length > 0) {
+                  return operations;
+                }
+
+                for (const event of events || []) {
+                  const message = String(event.message || '');
+                  if (!/pulling image/i.test(message) || /successfully pulled|failed to pull/i.test(message)) continue;
+                  const image = imageFromMessage(message);
+                  const component = componentFromObject(event.involvedObject) || 'unknown';
+                  const key = `${component}:${image || message}`;
+                  if (seen.has(key)) continue;
+                  seen.add(key);
+                  const size = imageSizeEstimate(image);
+                  operations.push({
+                    component,
+                    operation: 'pulling_image',
+                    image,
+                    ...size,
+                    progressPercent: null,
+                    progressAvailable: false,
+                    progressReason: 'Kubernetes does not expose image pull byte progress.',
+                    startedAt: event.lastTimestamp || null,
+                    elapsedSeconds: elapsedSecondsSince(event.lastTimestamp),
+                    message: image
+                      ? `Pulling image ${image}. This can take several minutes on a local VM.`
+                      : message,
+                  });
+                }
+                return operations;
+              }
+
+              function summarizeEvents(json) {
+                const items = (json?.items || []).slice().sort((a, b) => timestampOf(a).localeCompare(timestampOf(b)));
+                return items.slice(-20).map((item) => ({
+                  namespace: item.metadata?.namespace || item.involvedObject?.namespace || 'unknown',
+                  reason: item.reason || 'Unknown',
+                  type: item.type || 'Normal',
+                  message: item.message || '',
+                  lastTimestamp: timestampOf(item) || null,
+                  involvedObject: `${item.involvedObject?.kind || 'Unknown'}/${item.involvedObject?.name || 'unknown'}`,
+                }));
+              }
+
+              function podAgeSeconds(pod) {
+                const timestamp = pod.metadata?.creationTimestamp;
+                if (!timestamp) return null;
+                const parsed = Date.parse(timestamp);
+                if (!Number.isFinite(parsed)) return null;
+                return Math.max(0, Math.floor((Date.now() - parsed) / 1000));
+              }
+
+              function podDisplayStatus(pod) {
+                if (pod.metadata?.deletionTimestamp) return 'Terminating';
+                const statuses = [...(pod.status?.initContainerStatuses || []), ...(pod.status?.containerStatuses || [])];
+                const waiting = statuses.find((entry) => entry.state?.waiting);
+                if (waiting) return waiting.state.waiting.reason || 'Waiting';
+                const terminated = statuses.find((entry) => entry.state?.terminated && entry.state.terminated.exitCode !== 0);
+                if (terminated) return terminated.state.terminated.reason || 'Error';
+                return pod.status?.phase || 'Unknown';
+              }
+
+              function summarizePod(pod) {
+                const regularStatuses = pod.status?.containerStatuses || [];
+                const allStatuses = [...(pod.status?.initContainerStatuses || []), ...regularStatuses];
+                const containers = [...(pod.spec?.initContainers || []), ...(pod.spec?.containers || [])].map((container) => container.name);
+                const ready = regularStatuses.filter((entry) => entry.ready).length;
+                const total = pod.spec?.containers?.length || regularStatuses.length || 0;
+                const restarts = allStatuses.reduce((sum, entry) => sum + (entry.restartCount || 0), 0);
+                return {
+                  namespace: pod.metadata?.namespace || 'unknown',
+                  name: pod.metadata?.name || 'unknown',
+                  status: podDisplayStatus(pod),
+                  phase: pod.status?.phase || 'Unknown',
+                  ready,
+                  total,
+                  readyText: `${ready}/${total}`,
+                  restarts,
+                  ageSeconds: podAgeSeconds(pod),
+                  nodeName: pod.spec?.nodeName || null,
+                  podIP: pod.status?.podIP || null,
+                  containers,
+                  createdAt: pod.metadata?.creationTimestamp || null,
+                };
+              }
+
+              function podRank(pod) {
+                if (['Running', 'Succeeded'].includes(pod.status) && pod.ready === pod.total) return 2;
+                if (pod.status === 'Pending' || pod.status === 'ContainerCreating' || pod.status === 'PodInitializing') return 1;
+                return 0;
+              }
+
+              async function collectPods(scope = 'appliance') {
+                const json = scope && scope !== 'all' && scope !== 'appliance'
+                  ? await kubeGet(`/api/v1/namespaces/${encodeURIComponent(scope)}/pods`)
+                  : await kubeGet('/api/v1/pods');
+                let pods = (json?.items || []).map(summarizePod);
+                if (!scope || scope === 'appliance') {
+                  pods = pods.filter((pod) => APPLIANCE_NAMESPACES.includes(pod.namespace));
+                }
+                pods.sort((a, b) =>
+                  (podRank(a) - podRank(b)) ||
+                  a.namespace.localeCompare(b.namespace) ||
+                  a.name.localeCompare(b.name)
+                );
+                return {
+                  scope: scope || 'appliance',
+                  namespaces: ['appliance', 'all', ...APPLIANCE_NAMESPACES],
+                  pods,
+                  timestamp: new Date().toISOString(),
+                };
+              }
+
+              async function collectPodLogs(namespaceName, podName, containerName, tailLines = 300) {
+                if (!namespaceName || !podName) {
+                  return { namespace: namespaceName || null, pod: podName || null, container: containerName || null, lines: [], error: 'namespace and pod are required' };
+                }
+                const safeTail = Math.max(20, Math.min(Number.parseInt(String(tailLines || 300), 10) || 300, 5000));
+                const params = new URLSearchParams({ tailLines: String(safeTail), timestamps: 'true' });
+                if (containerName) params.set('container', containerName);
+                const text = await kubeGetText(`/api/v1/namespaces/${encodeURIComponent(namespaceName)}/pods/${encodeURIComponent(podName)}/log?${params.toString()}`);
+                return {
+                  namespace: namespaceName,
+                  pod: podName,
+                  container: containerName || null,
+                  tailLines: safeTail,
+                  lines: text ? String(text).split(/\r?\n/).filter(Boolean) : [],
+                  available: !!text,
+                  timestamp: new Date().toISOString(),
+                };
+              }
+
+              function parseAppUrl(configMap) {
+                for (const value of Object.values(configMap?.data || {})) {
+                  const match = String(value).match(/appUrl:\s*["']?([^\n"']+)/);
+                  if (match) return match[1].trim();
+                }
+                return null;
+              }
+
+              function summarizeBootstrapJob(jobsJson) {
+                const items = jobsJson?.items || [];
+                const job = items.find((entry) => /bootstrap/i.test(entry.metadata?.name || '') && /alga-core/i.test(entry.metadata?.name || '')) ||
+                  items.find((entry) => /bootstrap/i.test(entry.metadata?.name || ''));
+                if (!job) return { state: 'waiting', completed: false, failed: false, name: null };
+                const conditions = job.status?.conditions || [];
+                const completed = conditions.some((entry) => entry.type === 'Complete' && entry.status === 'True') || (job.status?.succeeded || 0) > 0;
+                const failed = conditions.some((entry) => entry.type === 'Failed' && entry.status === 'True');
+                const active = (job.status?.active || 0) > 0;
+                if (failed) return { state: 'failed', completed: false, failed: true, name: job.metadata?.name || null };
+                if (completed) return { state: 'completed', completed: true, failed: false, name: job.metadata?.name || null };
+                if (active) return { state: 'running', completed: false, failed: false, name: job.metadata?.name || null };
+                return { state: 'waiting', completed: false, failed: false, name: job.metadata?.name || null };
+              }
+
+              function bootstrapPodsForJob(podsJson, jobName) {
+                const items = podsJson?.items || [];
+                return items
+                  .filter((pod) => {
+                    const name = pod.metadata?.name || '';
+                    const labels = pod.metadata?.labels || {};
+                    return (jobName && labels['job-name'] === jobName) || (/bootstrap/i.test(name) && /alga-core/i.test(name));
+                  })
+                  .sort((a, b) => String(b.metadata?.creationTimestamp || '').localeCompare(String(a.metadata?.creationTimestamp || '')));
+              }
+
+              function detectErrorLines(logText) {
+                const lines = String(logText || '').split(/\r?\n/).filter(Boolean);
+                const errors = [];
+                for (const line of lines) {
+                  if (/\b(ERROR|FATAL)\b|Configured seed directory does not exist|Migration failed|seed .*failed|Unhandled|Exception/i.test(line)) {
+                    errors.push(line);
+                  }
+                }
+                return errors.slice(-10);
+              }
+
+              function bootstrapNextAction(reason) {
+                if (/Configured seed directory does not exist/i.test(reason)) {
+                  return 'Verify the appliance image contains the configured seed directory, or update the bootstrap seed path in the release/chart values.';
+                }
+                if (/password authentication failed|connection refused|could not connect|database/i.test(reason)) {
+                  return 'Check database readiness, credentials, and bootstrap job environment, then retry recover mode.';
+                }
+                return 'Review the bootstrap log excerpt below, fix the reported issue, then rerun bootstrap recover mode.';
+              }
+
+              async function collectBootstrapLogs(bootstrapJob, podsJson) {
+                const empty = { available: false, pod: null, container: null, tail: [], detectedErrors: [] };
+                if (!bootstrapJob?.name || (!bootstrapJob.failed && bootstrapJob.state !== 'running')) return empty;
+                const pods = bootstrapPodsForJob(podsJson, bootstrapJob.name);
+                const preferred = pods.find((pod) => pod.status?.phase === 'Failed') || pods[0];
+                if (!preferred) return empty;
+                const podName = preferred.metadata?.name;
+                const containers = preferred.spec?.containers || [];
+                const container = containers.find((entry) => entry.name === 'bootstrap')?.name || containers[0]?.name || 'bootstrap';
+                const logText = await kubeGetText(`/api/v1/namespaces/msp/pods/${encodeURIComponent(podName)}/log?container=${encodeURIComponent(container)}&tailLines=160&timestamps=true`);
+                if (!logText) return { ...empty, pod: podName, container };
+                const tail = String(logText).split(/\r?\n/).filter(Boolean).slice(-160);
+                return {
+                  available: true,
+                  pod: podName,
+                  container,
+                  tail,
+                  detectedErrors: detectErrorLines(logText),
+                };
+              }
+
+              function detectBootstrapFailure(bootstrap) {
+                if (!bootstrap?.job?.failed) return null;
+                const signal = bootstrap.logs?.detectedErrors?.at(-1) || `Bootstrap job failed: ${bootstrap.job.name || 'unknown job'}`;
+                const reason = /^Bootstrap failed:/i.test(signal) ? signal : `Bootstrap failed: ${signal}`;
+                return {
+                  component: bootstrap.job.name || 'bootstrap',
+                  reason,
+                  nextAction: bootstrapNextAction(signal),
+                };
+              }
+
+              function detectMissingImage(events) {
+                const match = events.find((entry) => /imagepullbackoff|failed to pull image|errimagepull/i.test(entry.message || '') && /not found/i.test(entry.message || ''));
+                if (!match) return null;
+                const component = componentFromObject(match.involvedObject);
+                const tier = COMPONENTS.find((entry) => entry.name === component)?.tier || 'background';
+                const image = (String(match.message || '').match(/([a-z0-9./_-]+:[a-zA-Z0-9._-]+)/) || [])[1] || null;
+                return { component, tier, image, message: match.message || 'Image tag not found' };
+              }
+
+              function detectInterruptedPull(events) {
+                const match = events.find((entry) => /failed to pull image|imagepullbackoff|errimagepull/i.test(entry.message || '') && /(context canceled|cancelled|context deadline exceeded)/i.test(entry.message || ''));
+                if (!match) return null;
+                return { component: componentFromObject(match.involvedObject), message: match.message || 'Image pull interrupted' };
+              }
+
+              function firstNotReady(entries, names) {
+                return names
+                  .map((name) => entries.find((entry) => entry.name === name))
+                  .find((entry) => entry && entry.ready !== true && entry.status !== 'unknown') || null;
+              }
+
+              function makeBlocker(state, loginReady) {
+                const missingImage = detectMissingImage(state.recentEvents);
+                if (missingImage) {
+                  const loginBlocking = missingImage.tier !== 'background';
+                  return {
+                    layer: 'Image tag availability',
+                    component: missingImage.component || 'unknown',
+                    loginBlocking,
+                    reason: `Image tag not found: ${missingImage.image || 'referenced image tag'}`,
+                    nextAction: 'Publish the missing image tag or update the appliance release manifest to a valid tag.',
+                  };
+                }
+                const interrupted = detectInterruptedPull(state.recentEvents);
+                if (interrupted) {
+                  return {
+                    layer: 'Image pull interruption',
+                    component: interrupted.component || 'unknown',
+                    loginBlocking: false,
+                    reason: `Image pull interrupted and retryable: ${interrupted.message}`,
+                    nextAction: 'Wait for automatic retry or restart the affected pod if retries stall.',
+                  };
+                }
+                const bootstrapFailure = detectBootstrapFailure(state.bootstrap);
+                if (bootstrapFailure) {
+                  return {
+                    layer: 'Bootstrap job failure',
+                    component: bootstrapFailure.component,
+                    loginBlocking: true,
+                    reason: bootstrapFailure.reason,
+                    nextAction: bootstrapFailure.nextAction,
+                  };
+                }
+                const badCore = firstNotReady(state.components, ['db', 'redis', 'pgbouncer', 'alga-core']);
+                if (badCore) {
+                  return {
+                    layer: 'workload readiness failure',
+                    component: badCore.name,
+                    loginBlocking: true,
+                    reason: `${badCore.name} is ${badCore.status}`,
+                    nextAction: 'Check workload pods and recent events, then collect a support bundle.',
+                  };
+                }
+                const badSource = (state.sources || []).find((entry) => !entry.ready && !isProgressingStatus(entry));
+                const badKustomization = (state.kustomizations || []).find((entry) => !entry.ready && !isProgressingStatus(entry));
+                if (badSource || badKustomization) {
+                  const row = badSource || badKustomization;
+                  return {
+                    layer: 'Flux source/reconcile failure',
+                    component: row.name,
+                    loginBlocking: !loginReady,
+                    reason: row.message || 'One or more Flux resources are not Ready',
+                    nextAction: 'Review Flux GitRepository and Kustomization conditions.',
+                  };
+                }
+                const stuckHelm = (state.helmReleases || []).find((entry) => !entry.ready && isHelmStorageStuck(entry));
+                if (stuckHelm) {
+                  return {
+                    layer: 'Helm release storage issue',
+                    component: stuckHelm.name,
+                    loginBlocking: !loginReady,
+                    reason: stuckHelm.message || `${stuckHelm.name} has inconsistent Helm release storage`,
+                    nextAction: 'Inspect Helm release secrets and HelmRelease events. If storage is stuck in uninstalling, clear stale release storage and reconcile.',
+                  };
+                }
+                const badHelm = (state.helmReleases || []).find((entry) => !entry.ready && !isProgressingStatus(entry));
+                if (badHelm) {
+                  return {
+                    layer: 'Helm release failure',
+                    component: badHelm.name,
+                    loginBlocking: !loginReady,
+                    reason: badHelm.message || 'One or more appliance HelmRelease objects are not Ready',
+                    nextAction: 'Inspect HelmRelease status and reconcile events.',
+                  };
+                }
+                const badBackground = (state.components || []).find((entry) => entry.tier === 'background' && !entry.ready && entry.status !== 'unknown');
+                if (badBackground) {
+                  return {
+                    layer: 'background workload readiness failure',
+                    component: badBackground.name,
+                    loginBlocking: false,
+                    reason: `${badBackground.name} is ${badBackground.status}`,
+                    nextAction: 'Review background workload pods. Login can continue if core is ready.',
+                  };
+                }
+                return { layer: 'none', reason: 'No blocker detected', nextAction: 'No immediate action required.' };
+              }
+
+              async function collectCanonical() {
+                const fallback = fallbackCanonical();
+                if (!serviceHost || !kubeToken) return fallback;
+
+                const [nodesJson, sourcesJson, kustomizationsJson, helmJson, selectionJson, valuesJson, jobsJson, eventsJson, podsJson] = await Promise.all([
+                  kubeGet('/api/v1/nodes'),
+                  kubeGet('/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories'),
+                  kubeGet('/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/flux-system/kustomizations'),
+                  kubeGet('/apis/helm.toolkit.fluxcd.io/v2/namespaces/alga-system/helmreleases'),
+                  kubeGet('/api/v1/namespaces/alga-system/configmaps/appliance-release-selection'),
+                  kubeGet('/api/v1/namespaces/alga-system/configmaps/appliance-values-alga-core'),
+                  kubeGet('/apis/batch/v1/namespaces/msp/jobs'),
+                  kubeGet('/api/v1/events'),
+                  kubeGet('/api/v1/namespaces/msp/pods'),
+                ]);
+
+                const resources = await Promise.all(COMPONENTS.map(async (component) => {
+                  const path = component.kind === 'deployment'
+                    ? `/apis/apps/v1/namespaces/msp/deployments/${component.resource}`
+                    : `/apis/apps/v1/namespaces/msp/statefulsets/${component.resource}`;
+                  const item = await kubeGet(path);
+                  const readiness = resourceReadiness(component.kind, item);
+                  return {
+                    name: component.name,
+                    tier: component.tier,
+                    ready: readiness.status === 'healthy',
+                    status: readiness.status,
+                    message: item ? '' : 'Resource not found or unavailable',
+                    namespace: 'msp',
+                  };
+                }));
+
+                const sources = fluxItems(sourcesJson?.items);
+                const kustomizations = fluxItems(kustomizationsJson?.items);
+                const helmReleases = fluxItems(helmJson?.items);
+                const recentEvents = summarizeEvents(eventsJson);
+                const imageOperations = collectActiveOperations(recentEvents, podsJson);
+                const appUrl = parseAppUrl(valuesJson) || fallback.urls.loginUrl;
+                const loginProbe = await httpProbe(appUrl);
+                const nodesReady = (nodesJson?.items || []).length > 0 && (nodesJson?.items || []).every((node) => readyCondition(node)?.status === 'True');
+                const platformReady = nodesReady && sources.some((entry) => entry.name === 'alga-appliance' && entry.ready) && kustomizations.some((entry) => entry.name === 'alga-platform' && entry.ready);
+                const coreReady = ['db', 'redis', 'pgbouncer'].every((name) => resources.find((entry) => entry.name === name)?.ready === true);
+                const webReady = resources.find((entry) => entry.name === 'alga-core')?.ready === true;
+                const bootstrapJob = summarizeBootstrapJob(jobsJson);
+                const bootstrapLogs = await collectBootstrapLogs(bootstrapJob, podsJson);
+                const bootstrap = { job: bootstrapJob, logs: bootstrapLogs };
+                const helmHealthy = helmReleases.length > 0 && helmReleases.every((entry) => entry.ready);
+                const bootstrapReady = coreReady && !bootstrapJob.failed && (bootstrapJob.completed || helmHealthy);
+                const loginReady = coreReady && webReady && loginProbe.reachable === true;
+                const backgroundReady = resources.filter((entry) => entry.tier === 'background').every((entry) => entry.ready);
+                const fullyHealthy = loginReady && backgroundReady;
+                const state = { components: resources, recentEvents, sources, kustomizations, helmReleases, activeOperations: imageOperations, bootstrap };
+                const reconcileOperations = reconciliationOperations(state);
+                const activeOperations = [...imageOperations, ...reconcileOperations].slice(0, 6);
+                state.activeOperations = activeOperations;
+                const topBlocker = makeBlocker(state, loginReady);
+                const blockers = topBlocker.layer === 'none' ? [] : [{
+                  severity: topBlocker.loginBlocking === false ? 'background' : 'critical',
+                  component: topBlocker.component || topBlocker.layer,
+                  layer: topBlocker.layer,
+                  reason: topBlocker.reason,
+                  nextAction: topBlocker.nextAction,
+                  loginBlocking: typeof topBlocker.loginBlocking === 'boolean' ? topBlocker.loginBlocking : !loginReady,
+                }];
+
+                let rollupState = 'installing';
+                let rollupMessage = 'Appliance installation is in progress.';
+                let nextAction = 'Wait for readiness checks to complete.';
+                if (activeOperations.length > 0 && !loginReady) {
+                  rollupState = 'installing';
+                  rollupMessage = activeOperations[0].message || 'Appliance installation is in progress.';
+                  nextAction = 'Wait for the active operation to complete. Image pulls can take several minutes on a local VM.';
+                } else if (!platformReady || !coreReady || !bootstrapReady || !loginReady) {
+                  const blocking = blockers.find((entry) => entry.loginBlocking !== false);
+                  if (blocking) {
+                    rollupState = 'failed_action_required';
+                    rollupMessage = blocking.layer === 'Bootstrap job failure'
+                      ? blocking.reason
+                      : 'A core platform blocker requires action before login is available.';
+                    nextAction = blocking.nextAction;
+                  }
+                } else if (fullyHealthy) {
+                  rollupState = 'fully_healthy';
+                  rollupMessage = 'All selected services are healthy.';
+                  nextAction = 'No immediate action required.';
+                } else if (loginReady) {
+                  rollupState = backgroundReady ? 'ready_to_log_in' : 'ready_with_background_issues';
+                  rollupMessage = backgroundReady ? 'Alga is ready to log in.' : 'Alga is ready to log in. Background services need attention.';
+                  nextAction = backgroundReady ? 'Open the login URL.' : (blockers[0]?.nextAction || 'Open the login URL and review background blockers.');
+                }
+
+                const releaseBranch = selectionJson?.data?.releaseBranch || null;
+                const sourceRevision = sources.find((entry) => entry.name === 'alga-appliance')?.revision || null;
+                const gitRevision = sourceRevision && releaseBranch ? `${releaseBranch}@${sourceRevision}` : releaseBranch || sourceRevision;
+                const result = {
+                  service: 'appliance-status',
+                  status: rollupState,
+                  siteId: selectionJson?.data?.siteId || 'appliance-single-node',
+                  timestamp: new Date().toISOString(),
+                  release: {
+                    selectedReleaseVersion: selectionJson?.data?.releaseVersion || null,
+                    appVersion: selectionJson?.data?.appVersion || null,
+                    channel: selectionJson?.data?.selectedChannel || selectionJson?.data?.channel || null,
+                    selectedChannel: selectionJson?.data?.selectedChannel || selectionJson?.data?.channel || null,
+                    gitRevision,
+                  },
+                  urls: { statusUrl: hostIp ? `http://${hostIp}:8080` : null, loginUrl: appUrl },
+                  loginUrl: appUrl,
+                  rollup: { state: rollupState, message: rollupMessage, nextAction },
+                  currentPhase: rollupState,
+                  nextAction,
+                  tiers: {
+                    platform: { ready: platformReady, status: tierStatus(platformReady) },
+                    core: { ready: coreReady, status: tierStatus(coreReady) },
+                    bootstrap: { ready: bootstrapReady, status: tierStatus(bootstrapReady) },
+                    login: { ready: loginReady, status: tierStatus(loginReady) },
+                    background: { ready: backgroundReady, status: tierStatus(backgroundReady) },
+                    fullHealth: { ready: fullyHealthy, status: tierStatus(fullyHealthy) },
+                  },
+                  topBlockers: blockers,
+                  activeOperations,
+                  components: resources,
+                  bootstrap,
+                  recentEvents,
+                  loginProbe,
+                };
+                return result;
+              }
+
+              function unauthorized(res) {
+                res.writeHead(401, {
+                  'Content-Type': 'application/json',
+                  'WWW-Authenticate': 'Bearer realm="appliance-status"',
+                });
+                res.end(JSON.stringify({ error: 'unauthorized' }));
+              }
+
+              function isAuthorized(req) {
+                if (!token) return false;
+                const auth = req.headers.authorization || '';
+                if (auth.startsWith('Bearer ')) return auth.slice('Bearer '.length).trim() === token;
+                const url = new URL(req.url, 'http://localhost');
+                return url.searchParams.get('token') === token;
+              }
+
+              function overviewFromStatus(status) {
+                return {
+                  installState: status.rollup.state,
+                  currentPhase: status.currentPhase,
+                  loginUrl: status.urls.loginUrl,
+                  nextAction: status.rollup.nextAction,
+                  message: status.rollup.message,
+                  timestamp: status.timestamp,
+                };
+              }
+
+              function diagnosticsFromStatus(status) {
+                return {
+                  overview: overviewFromStatus(status),
+                  tiers: status.tiers,
+                  components: status.components,
+                  topBlockers: status.topBlockers,
+                  activeOperations: status.activeOperations,
+                  bootstrap: status.bootstrap,
+                  recentEvents: status.recentEvents,
+                  flux: { note: 'Flux source, Kustomization, and Helm details are summarized into tiers and blockers.' },
+                  supportBundle: {
+                    available: true,
+                    action: 'run_script',
+                    script: 'ee/appliance/scripts/collect-support-bundle.sh',
+                    requiresToken: true,
+                    note: 'Bundle download endpoint is deferred; run via CLI/operator for now.',
+                  },
+                };
+              }
+
+              const UPDATE_JOB_LABEL = 'app.kubernetes.io/name=appliance-update';
+              const UPDATE_CHANNELS = ['stable', 'nightly'];
+
+              function updateJobScript() {
+                return String.raw`const fs = require('fs');
+              const http = require('http');
+              const https = require('https');
+              const { execFileSync } = require('child_process');
+              const path = require('path');
+
+              const action = process.env.UPDATE_ACTION || 'apply';
+              const requestedChannel = process.env.UPDATE_CHANNEL || '';
+              const serviceHost = process.env.KUBERNETES_SERVICE_HOST;
+              const servicePort = process.env.KUBERNETES_SERVICE_PORT || '443';
+              const token = fs.readFileSync('/var/run/secrets/kubernetes.io/serviceaccount/token', 'utf8').trim();
+              const ca = fs.readFileSync('/var/run/secrets/kubernetes.io/serviceaccount/ca.crt');
+
+              function kubeRequest(method, requestPath, body = null, contentType = 'application/json') {
+                return new Promise((resolve, reject) => {
+                  const payload = body == null ? null : JSON.stringify(body);
+                  const headers = { Authorization: 'Bearer ' + token, Accept: 'application/json' };
+                  if (payload != null) headers['Content-Type'] = contentType;
+                  const req = https.request({ host: serviceHost, port: servicePort, method, path: requestPath, ca, headers, timeout: 15000 }, (res) => {
+                    let text = '';
+                    res.setEncoding('utf8');
+                    res.on('data', (chunk) => { text += chunk; });
+                    res.on('end', () => {
+                      let parsed = null;
+                      try { parsed = text ? JSON.parse(text) : null; } catch {}
+                      if (res.statusCode < 200 || res.statusCode >= 300) {
+                        const error = new Error(method + ' ' + requestPath + ' failed with ' + res.statusCode + ': ' + text.slice(0, 500));
+                        error.statusCode = res.statusCode;
+                        error.body = parsed;
+                        reject(error);
+                        return;
+                      }
+                      resolve(parsed);
+                    });
+                  });
+                  req.on('timeout', () => req.destroy(new Error(method + ' ' + requestPath + ' timed out')));
+                  req.on('error', reject);
+                  if (payload != null) req.write(payload);
+                  req.end();
+                });
+              }
+
+              async function kubeGet(requestPath) { return kubeRequest('GET', requestPath); }
+              async function kubePatch(requestPath, body) { return kubeRequest('PATCH', requestPath, body, 'application/merge-patch+json'); }
+              async function kubePost(requestPath, body) { return kubeRequest('POST', requestPath, body); }
+
+              function download(url, destination) {
+                return new Promise((resolve, reject) => {
+                  const parsed = new URL(url);
+                  const lib = parsed.protocol === 'https:' ? https : http;
+                  const req = lib.get(parsed, { timeout: 30000 }, (res) => {
+                    if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+                      download(new URL(res.headers.location, parsed).toString(), destination).then(resolve, reject);
+                      return;
+                    }
+                    if (res.statusCode !== 200) {
+                      reject(new Error('download failed with ' + res.statusCode + ' from ' + url));
+                      res.resume();
+                      return;
+                    }
+                    const stream = fs.createWriteStream(destination);
+                    res.pipe(stream);
+                    stream.on('finish', () => stream.close(resolve));
+                    stream.on('error', reject);
+                  });
+                  req.on('timeout', () => req.destroy(new Error('download timed out: ' + url)));
+                  req.on('error', reject);
+                });
+              }
+
+              function findFile(root, suffix) {
+                const stack = [root];
+                while (stack.length) {
+                  const current = stack.pop();
+                  for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+                    const full = path.join(current, entry.name);
+                    if (entry.isDirectory()) stack.push(full);
+                    else if (full.endsWith(suffix)) return full;
+                  }
+                }
+                return null;
+              }
+
+              function yamlString(value) {
+                return JSON.stringify(String(value));
+              }
+
+              function setYamlValue(source, dottedPath, value) {
+                const target = dottedPath.split('.');
+                const lines = source.split(/\r?\n/);
+                const stack = [];
+                let replaced = false;
+                const output = lines.map((line) => {
+                  const stripped = line.trimStart();
+                  const indent = line.length - stripped.length;
+                  while (stack.length && indent <= stack[stack.length - 1][0]) stack.pop();
+                  if (stripped.endsWith(':') && !stripped.startsWith('- ')) {
+                    stack.push([indent, stripped.slice(0, -1).trim()]);
+                    return line;
+                  }
+                  const current = stack.map((entry) => entry[1]);
+                  if (current.join('.') === target.slice(0, -1).join('.') && stripped.startsWith(target[target.length - 1] + ':')) {
+                    replaced = true;
+                    return line.slice(0, indent) + target[target.length - 1] + ': ' + value;
+                  }
+                  return line;
+                });
+                if (!replaced) throw new Error('Failed to update ' + dottedPath);
+                return output.join('\n');
+              }
+
+              async function patchAnnotation(apiPath, name) {
+                const requestedAt = new Date().toISOString();
+                try {
+                  await kubePatch(apiPath, { metadata: { annotations: { 'reconcile.fluxcd.io/requestedAt': requestedAt } } });
+                  console.log('requested reconcile:', name);
+                } catch (error) {
+                  if (error.statusCode === 404) console.log('skipping missing resource:', name);
+                  else throw error;
+                }
+              }
+
+              async function sourceTree() {
+                const git = await kubeGet('/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories/alga-appliance');
+                const artifactUrl = git?.status?.artifact?.url;
+                if (!artifactUrl) throw new Error('GitRepository alga-appliance does not have a source artifact yet');
+                const work = fs.mkdtempSync('/tmp/appliance-update-');
+                const archive = path.join(work, 'source.tar.gz');
+                const extractDir = path.join(work, 'src');
+                fs.mkdirSync(extractDir);
+                console.log('downloading source artifact:', artifactUrl);
+                await download(artifactUrl, archive);
+                execFileSync('tar', ['-xzf', archive, '-C', extractDir], { stdio: 'inherit' });
+                return extractDir;
+              }
+
+              function readJson(filePath) {
+                return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+              }
+
+              async function resolveRelease(channel) {
+                const root = await sourceTree();
+                const channelPath = findFile(root, '/ee/appliance/releases/channels/' + channel + '.json');
+                if (!channelPath) throw new Error('Channel file not found in source artifact: ' + channel);
+                const channelJson = readJson(channelPath);
+                const releaseVersion = channelJson.releaseVersion;
+                if (!releaseVersion) throw new Error('Channel ' + channel + ' does not specify releaseVersion');
+                const releasePath = findFile(root, '/ee/appliance/releases/' + releaseVersion + '/release.json');
+                if (!releasePath) throw new Error('Release manifest not found in source artifact: ' + releaseVersion);
+                return { channelJson, releaseVersion, release: readJson(releasePath) };
+              }
+
+              async function currentChannel() {
+                try {
+                  const selection = await kubeGet('/api/v1/namespaces/alga-system/configmaps/appliance-release-selection');
+                  return selection?.data?.selectedChannel || selection?.data?.channel || 'stable';
+                } catch {
+                  return 'stable';
+                }
+              }
+
+              function configKey(configMap, name, profile) {
+                const preferred = name + '.' + profile + '.yaml';
+                if (configMap?.data?.[preferred] != null) return preferred;
+                const existing = Object.keys(configMap?.data || {}).find((key) => key.startsWith(name + '.') && key.endsWith('.yaml'));
+                return existing || preferred;
+              }
+
+              async function patchValuesConfigMap(name, profile, mutate) {
+                const cm = await kubeGet('/api/v1/namespaces/alga-system/configmaps/appliance-values-' + name);
+                const key = configKey(cm, name, profile);
+                const source = cm?.data?.[key];
+                if (source == null) throw new Error('ConfigMap appliance-values-' + name + ' does not contain ' + key);
+                const updated = mutate(source);
+                await kubePatch('/api/v1/namespaces/alga-system/configmaps/appliance-values-' + name, { data: { [key]: updated } });
+                console.log('updated values configmap:', name, key);
+              }
+
+              async function applyRelease(channel) {
+                const { releaseVersion, release } = await resolveRelease(channel);
+                const profile = release?.app?.valuesProfile || 'talos-single-node';
+                const images = release?.app?.images || {};
+                console.log('applying channel:', channel, 'release:', releaseVersion, 'profile:', profile);
+
+                await patchValuesConfigMap('alga-core', profile, (yaml) => {
+                  let out = setYamlValue(yaml, 'setup.image.tag', yamlString(images.algaCore));
+                  out = setYamlValue(out, 'server.image.tag', yamlString(images.algaCore));
+                  return out;
+                });
+                await patchValuesConfigMap('workflow-worker', profile, (yaml) => setYamlValue(yaml, 'image.tag', yamlString(images.workflowWorker)));
+                await patchValuesConfigMap('email-service', profile, (yaml) => setYamlValue(yaml, 'image.tag', yamlString(images.emailService)));
+                await patchValuesConfigMap('temporal-worker', profile, (yaml) => setYamlValue(yaml, 'image.tag', yamlString(images.temporalWorker)));
+
+                const selectionData = {
+                  releaseVersion,
+                  selectedChannel: channel,
+                  appVersion: release?.app?.version || '',
+                  releaseBranch: release?.app?.releaseBranch || '',
+                  algaCoreTag: images.algaCore || '',
+                  workflowWorkerTag: images.workflowWorker || '',
+                  emailServiceTag: images.emailService || '',
+                  temporalWorkerTag: images.temporalWorker || '',
+                };
+                try {
+                  await kubePatch('/api/v1/namespaces/alga-system/configmaps/appliance-release-selection', { data: selectionData });
+                } catch (error) {
+                  if (error.statusCode !== 404) throw error;
+                  await kubePost('/api/v1/namespaces/alga-system/configmaps', { apiVersion: 'v1', kind: 'ConfigMap', metadata: { name: 'appliance-release-selection', namespace: 'alga-system' }, data: selectionData });
+                }
+                console.log('updated release selection');
+              }
+
+              async function requestReconciles() {
+                await patchAnnotation('/apis/source.toolkit.fluxcd.io/v1/namespaces/flux-system/gitrepositories/alga-appliance', 'GitRepository/alga-appliance');
+                for (const name of ['alga-platform', 'alga-core', 'alga-background', 'alga-appliance']) {
+                  await patchAnnotation('/apis/kustomize.toolkit.fluxcd.io/v1/namespaces/flux-system/kustomizations/' + name, 'Kustomization/' + name);
+                }
+                for (const name of ['alga-core', 'pgbouncer', 'temporal', 'workflow-worker', 'email-service', 'temporal-worker']) {
+                  await patchAnnotation('/apis/helm.toolkit.fluxcd.io/v2/namespaces/alga-system/helmreleases/' + name, 'HelmRelease/' + name);
+                }
+              }
+
+              (async () => {
+                if (action === 'check') {
+                  console.log('checking for updates by reconciling Flux source and tiers');
+                  await requestReconciles();
+                  console.log('check submitted');
+                  return;
+                }
+                const channel = requestedChannel || await currentChannel();
+                if (!['stable', 'nightly'].includes(channel)) throw new Error('Unsupported channel: ' + channel);
+                await applyRelease(channel);
+                await requestReconciles();
+                console.log('upgrade submitted for channel ' + channel);
+              })().catch((error) => {
+                console.error(error.stack || error.message || String(error));
+                process.exit(1);
+              });`;
+              }
+
+              function updateJobState(job) {
+                const conditions = job?.status?.conditions || [];
+                if (conditions.some((entry) => entry.type === 'Complete' && entry.status === 'True')) return 'succeeded';
+                if (conditions.some((entry) => entry.type === 'Failed' && entry.status === 'True')) return 'failed';
+                if ((job?.status?.active || 0) > 0) return 'running';
+                return 'pending';
+              }
+
+              function summarizeUpdateJob(job) {
+                if (!job) return null;
+                return {
+                  name: job.metadata?.name || null,
+                  action: job.metadata?.labels?.['appliance.alga/status-action'] || null,
+                  channel: job.metadata?.labels?.['appliance.alga/channel'] || null,
+                  state: updateJobState(job),
+                  createdAt: job.metadata?.creationTimestamp || null,
+                  startedAt: job.status?.startTime || null,
+                  completedAt: job.status?.completionTime || null,
+                  active: job.status?.active || 0,
+                  succeeded: job.status?.succeeded || 0,
+                  failed: job.status?.failed || 0,
+                };
+              }
+
+              async function collectUpdateStatus() {
+                const jobsJson = await kubeGet(`/apis/batch/v1/namespaces/appliance-system/jobs?labelSelector=${encodeURIComponent(UPDATE_JOB_LABEL)}`);
+                const jobs = (jobsJson?.items || []).slice().sort((a, b) => String(b.metadata?.creationTimestamp || '').localeCompare(String(a.metadata?.creationTimestamp || '')));
+                const latest = jobs[0] || null;
+                let logs = { available: false, lines: [], pod: null, container: 'updater' };
+                if (latest?.metadata?.name) {
+                  const pods = await kubeGet(`/api/v1/namespaces/appliance-system/pods?labelSelector=${encodeURIComponent('job-name=' + latest.metadata.name)}`);
+                  const pod = (pods?.items || [])[0];
+                  if (pod?.metadata?.name) {
+                    logs = await collectPodLogs('appliance-system', pod.metadata.name, 'updater', 300);
+                  }
+                }
+                return {
+                  latest: summarizeUpdateJob(latest),
+                  active: jobs.map(summarizeUpdateJob).filter((job) => job && ['pending', 'running'].includes(job.state)),
+                  history: jobs.slice(0, 5).map(summarizeUpdateJob),
+                  logs,
+                };
+              }
+
+              async function createUpdateJob(action, channel) {
+                const current = await collectUpdateStatus();
+                if (current.active.length > 0) {
+                  return { conflict: true, status: current };
+                }
+                if (!['check', 'apply'].includes(action)) throw new Error(`Unsupported update action: ${action}`);
+                if (action === 'apply' && channel && !UPDATE_CHANNELS.includes(channel)) throw new Error(`Unsupported channel: ${channel}`);
+                const suffix = Date.now().toString(36);
+                const name = `appliance-update-${suffix}`;
+                const script = updateJobScript();
+                const command = `cat <<'UPDATER' >/tmp/update.js\n${script}\nUPDATER\nnode /tmp/update.js`;
+                const labels = {
+                  'app.kubernetes.io/name': 'appliance-update',
+                  'appliance.alga/status-action': action,
+                };
+                if (channel) labels['appliance.alga/channel'] = channel;
+                const job = {
+                  apiVersion: 'batch/v1',
+                  kind: 'Job',
+                  metadata: { name, namespace: 'appliance-system', labels },
+                  spec: {
+                    backoffLimit: 0,
+                    ttlSecondsAfterFinished: 86400,
+                    template: {
+                      metadata: { labels },
+                      spec: {
+                        restartPolicy: 'Never',
+                        serviceAccountName: 'appliance-status',
+                        automountServiceAccountToken: true,
+                        containers: [{
+                          name: 'updater',
+                          image: 'node:20-alpine',
+                          imagePullPolicy: 'IfNotPresent',
+                          command: ['sh', '-c', command],
+                          env: [
+                            { name: 'UPDATE_ACTION', value: action },
+                            { name: 'UPDATE_CHANNEL', value: channel || '' },
+                          ],
+                        }],
+                      },
+                    },
+                  },
+                };
+                const created = await kubeRequest('POST', '/apis/batch/v1/namespaces/appliance-system/jobs', job);
+                if (!created.ok) throw new Error(`Failed to create update job: ${created.text}`);
+                return { conflict: false, job: summarizeUpdateJob(created.body) };
+              }
+
+              const server = http.createServer(async (req, res) => {
+                if (req.url.startsWith('/healthz')) {
+                  res.writeHead(200, { 'Content-Type': 'text/plain' });
+                  res.end('ok');
+                  return;
+                }
+
+                if (!isAuthorized(req)) {
+                  unauthorized(res);
+                  return;
+                }
+
+                try {
+                  if (req.url.startsWith('/api/update/status')) {
+                    const status = await collectUpdateStatus();
+                    jsonResponse(res, 200, status);
+                    return;
+                  }
+
+                  if (req.url.startsWith('/api/update/check')) {
+                    if (req.method !== 'POST') {
+                      jsonResponse(res, 405, { error: 'method_not_allowed' });
+                      return;
+                    }
+                    const result = await createUpdateJob('check', '');
+                    jsonResponse(res, result.conflict ? 409 : 202, result);
+                    return;
+                  }
+
+                  if (req.url.startsWith('/api/update/apply')) {
+                    if (req.method !== 'POST') {
+                      jsonResponse(res, 405, { error: 'method_not_allowed' });
+                      return;
+                    }
+                    const body = await readJsonBody(req);
+                    const result = await createUpdateJob('apply', body.channel || '');
+                    jsonResponse(res, result.conflict ? 409 : 202, result);
+                    return;
+                  }
+
+                  if (req.url.startsWith('/api/pods/logs')) {
+                    const url = new URL(req.url, 'http://localhost');
+                    const logs = await collectPodLogs(
+                      url.searchParams.get('namespace'),
+                      url.searchParams.get('pod'),
+                      url.searchParams.get('container'),
+                      url.searchParams.get('tailLines') || 300,
+                    );
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(logs));
+                    return;
+                  }
+
+                  if (req.url.startsWith('/api/pods')) {
+                    const url = new URL(req.url, 'http://localhost');
+                    const pods = await collectPods(url.searchParams.get('namespace') || 'appliance');
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(pods));
+                    return;
+                  }
+
+                  if (req.url.startsWith('/api/status')) {
+                    const status = await collectCanonical();
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(status));
+                    return;
+                  }
+
+                  if (req.url.startsWith('/api/overview')) {
+                    const status = await collectCanonical();
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(overviewFromStatus(status)));
+                    return;
+                  }
+
+                  if (req.url.startsWith('/api/diagnostics')) {
+                    const status = await collectCanonical();
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(diagnosticsFromStatus(status)));
+                    return;
+                  }
+
+                  if (req.url.startsWith('/diagnostics')) {
+                    const page = '<!doctype html><html><head><meta charset="utf-8" /><title>Appliance Diagnostics</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:24px;line-height:1.45}.card{max-width:920px;border:1px solid #ddd;border-radius:8px;padding:16px}pre{background:#f8f8f8;border:1px solid #eee;padding:12px;overflow:auto}</style></head><body><div class="card"><h1>Advanced Diagnostics</h1><p>Readiness tiers, components, blockers, and recent events.</p><pre id="diag">Loading...</pre></div><script>fetch("/api/diagnostics"+window.location.search).then((r)=>{if(!r.ok)throw new Error("Unauthorized or unavailable");return r.json();}).then((data)=>{document.getElementById("diag").textContent=JSON.stringify(data,null,2);}).catch((err)=>{document.getElementById("diag").textContent=err.message;});</script></body></html>';
+                    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                    res.end(page);
+                    return;
+                  }
+
+                  const page = String.raw`<!doctype html>
+                  <html>
+                  <head>
+                    <meta charset="utf-8" />
+                    <meta name="viewport" content="width=device-width, initial-scale=1" />
+                    <title>Alga Appliance Status</title>
+                    <style>
+                      :root {
+                        --color-background: 248 250 252;
+                        --color-card: 255 255 255;
+                        --color-primary-50: 239 246 255;
+                        --color-primary-100: 219 234 254;
+                        --color-primary-500: 59 130 246;
+                        --color-primary-700: 29 78 216;
+                        --color-border-100: 241 245 249;
+                        --color-border-200: 226 232 240;
+                        --color-border-300: 203 213 225;
+                        --color-text-500: 100 116 139;
+                        --color-text-700: 51 65 85;
+                        --color-text-900: 15 23 42;
+                        --color-success: 22 163 74;
+                        --color-warning: 217 119 6;
+                        --color-error: 220 38 38;
+                      }
+                      * { box-sizing: border-box; }
+                      body { margin: 0; background: rgb(var(--color-background)); color: rgb(var(--color-text-900)); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.45; }
+                      .shell { max-width: 1180px; margin: 0 auto; padding: 28px; }
+                      .hero { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); margin-bottom: 18px; }
+                      .eyebrow { color: rgb(var(--color-primary-700)); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: 12px; }
+                      h1 { margin: 0; font-size: clamp(28px, 4vw, 44px); letter-spacing: -0.04em; }
+                      h2 { margin: 0 0 10px; font-size: 16px; }
+                      .summary { color: rgb(var(--color-text-700)); font-size: 17px; max-width: 860px; }
+                      .tabs { display:flex; gap:8px; margin: 0 0 16px; flex-wrap: wrap; }
+                      .tab-button, .action-button { border:1px solid rgb(var(--color-border-200)); background: rgb(var(--color-card)); color: rgb(var(--color-text-700)); border-radius: 999px; padding: 8px 14px; cursor:pointer; font-weight:700; }
+                      .tab-button.active, .action-button { background: rgb(var(--color-primary-50)); color: rgb(var(--color-primary-700)); border-color: rgb(var(--color-primary-100)); }
+                      .action-button:disabled { opacity:.6; cursor:not-allowed; }
+                      .tab-panel[hidden] { display:none; }
+                      .grid { display: grid; gap: 14px; }
+                      .grid.cols { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+                      .card { background: rgb(var(--color-card)); border: 1px solid rgb(var(--color-border-200)); border-radius: 16px; padding: 16px; box-shadow: 0 10px 30px rgba(15, 23, 42, .06); }
+                      .span-8 { grid-column: span 8; } .span-4 { grid-column: span 4; } .span-6 { grid-column: span 6; } .span-12 { grid-column: span 12; }
+                      .muted { color: rgb(var(--color-text-500)); }
+                      .kv { display: grid; gap: 10px; }
+                      .row { display: flex; justify-content: space-between; gap: 14px; border-bottom: 1px solid rgb(var(--color-border-100)); padding: 8px 0; }
+                      .row:last-child { border-bottom: 0; }
+                      .label { color: rgb(var(--color-text-500)); }
+                      .value { font-weight: 650; text-align: right; word-break: break-word; }
+                      .badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 700; border: 1px solid rgb(var(--color-border-200)); background: rgb(var(--color-border-100)); }
+                      .badge.ready, .badge.fully_healthy, .badge.ready_to_log_in, .badge.ready_with_background_issues, .badge.healthy, .badge.Running, .badge.Succeeded { color: rgb(var(--color-success)); background: rgba(22,163,74,.1); border-color: rgba(22,163,74,.25); }
+                      .badge.installing, .badge.progressing, .badge.degraded, .badge.ContainerCreating, .badge.PodInitializing, .badge.Pending { color: rgb(var(--color-primary-700)); background: rgb(var(--color-primary-50)); border-color: rgb(var(--color-primary-100)); }
+                      .badge.failed_action_required, .badge.unhealthy, .badge.Error, .badge.Failed, .badge.CrashLoopBackOff, .badge.ImagePullBackOff { color: rgb(var(--color-error)); background: rgba(220,38,38,.08); border-color: rgba(220,38,38,.22); }
+                      .tiers { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+                      .tier { border: 1px solid rgb(var(--color-border-200)); border-radius: 12px; padding: 12px; background: linear-gradient(180deg, #fff, rgb(var(--color-background))); }
+                      .tier-name { font-weight: 750; text-transform: capitalize; }
+                      .op { border: 1px solid rgb(var(--color-primary-100)); background: rgb(var(--color-primary-50)); border-radius: 14px; padding: 14px; }
+                      .blocker { border-left: 4px solid rgb(var(--color-error)); background: rgba(220,38,38,.06); border-radius: 12px; padding: 12px; margin-top: 8px; }
+                      .blocker.background { border-left-color: rgb(var(--color-primary-700)); background: rgb(var(--color-primary-50)); }
+                      code { background: rgb(var(--color-border-100)); border: 1px solid rgb(var(--color-border-200)); border-radius: 6px; padding: 2px 5px; }
+                      pre { margin: 0; padding: 14px; border-radius: 12px; background: #0f172a; color: #dbeafe; overflow: auto; max-height: 420px; font-size: 12px; line-height: 1.5; }
+                      .events { display: grid; gap: 8px; }
+                      .event { border: 1px solid rgb(var(--color-border-200)); border-radius: 10px; padding: 10px; }
+                      .toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+                      select { border:1px solid rgb(var(--color-border-200)); border-radius:10px; padding:8px 10px; background:rgb(var(--color-card)); color:rgb(var(--color-text-900)); }
+                      .table-wrap { overflow:auto; border:1px solid rgb(var(--color-border-200)); border-radius:14px; }
+                      table { width:100%; border-collapse:collapse; font-size:13px; }
+                      th, td { padding:10px 12px; border-bottom:1px solid rgb(var(--color-border-100)); text-align:left; white-space:nowrap; }
+                      th { color:rgb(var(--color-text-500)); font-size:12px; text-transform:uppercase; letter-spacing:.04em; background:rgb(var(--color-background)); }
+                      tr { cursor:pointer; }
+                      tr:hover, tr.selected { background:rgb(var(--color-primary-50)); }
+                      .logs-header { display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+                      .footer { margin-top: 16px; font-size: 12px; color: rgb(var(--color-text-500)); }
+                      @media (max-width: 850px) { .shell { padding: 16px; } .grid.cols { grid-template-columns: 1fr; } .span-8,.span-4,.span-6,.span-12 { grid-column: auto; } .row { display: block; } .value { display: block; text-align: left; margin-top: 3px; } }
+                    </style>
+                  </head>
+                  <body>
+                    <main class="shell">
+                      <section class="hero">
+                        <div class="eyebrow">Alga PSA Appliance</div>
+                        <h1>Install status</h1>
+                        <div id="summary" class="summary">Loading status...</div>
+                      </section>
+                      <nav class="tabs" aria-label="Appliance status tabs">
+                        <button class="tab-button active" data-tab="overview">Overview</button>
+                        <button class="tab-button" data-tab="updates">Updates</button>
+                        <button class="tab-button" data-tab="pods">Pods</button>
+                        <button class="tab-button" data-tab="diagnostics">Diagnostics</button>
+                      </nav>
+                      <section id="tab-overview" class="tab-panel">
+                        <div class="grid cols">
+                          <div class="card span-8">
+                            <h2>Overview</h2>
+                            <div class="kv">
+                              <div class="row"><span class="label">Install state</span><span class="value"><span id="install-state" class="badge">-</span></span></div>
+                              <div class="row"><span class="label">Current phase</span><span id="phase" class="value">-</span></div>
+                              <div class="row"><span class="label">Login URL</span><span id="login-url" class="value">-</span></div>
+                              <div class="row"><span class="label">Next action</span><span id="next-action" class="value">-</span></div>
+                            </div>
+                          </div>
+                          <div class="card span-4"><h2>Current operation</h2><div id="operations" class="muted">Checking active work...</div></div>
+                          <div class="card span-12"><h2>Readiness tiers</h2><div id="tiers" class="tiers">-</div></div>
+                          <div class="card span-6"><h2>Blockers</h2><div id="blockers" class="muted">-</div></div>
+                          <div class="card span-6"><h2>Bootstrap log</h2><div id="bootstrap-log-status" class="muted">No bootstrap log loaded yet.</div><pre id="bootstrap-log" hidden></pre></div>
+                          <div class="card span-12"><h2>Recent events</h2><div id="events" class="events muted">-</div></div>
+                        </div>
+                      </section>
+                      <section id="tab-updates" class="tab-panel" hidden>
+                        <div class="grid cols">
+                          <div class="card span-12">
+                            <h2>Updates</h2>
+                            <div class="kv">
+                              <div class="row"><span class="label">Selected channel</span><span id="update-current-channel" class="value">-</span></div>
+                              <div class="row"><span class="label">Resolved release</span><span id="update-release" class="value">-</span></div>
+                              <div class="row"><span class="label">Flux revision</span><span id="update-revision" class="value">-</span></div>
+                            </div>
+                            <div class="toolbar"><label class="muted">Channel <select id="update-channel"><option value="stable">stable</option><option value="nightly">nightly</option></select></label><button id="update-check" class="action-button">Check for updates</button><button id="update-apply" class="action-button">Apply channel upgrade</button></div>
+                            <div id="update-message" class="muted">No update job has run yet.</div>
+                          </div>
+                          <div class="card span-12"><h2>Update job</h2><div id="update-job" class="muted">Loading update status...</div><pre id="update-log" hidden></pre></div>
+                        </div>
+                      </section>
+                      <section id="tab-pods" class="tab-panel" hidden>
+                        <div class="grid cols">
+                          <div class="card span-12">
+                            <div class="toolbar"><h2>Pods</h2><label class="muted">Namespace <select id="pod-namespace"><option value="appliance">Appliance namespaces</option><option value="all">All namespaces</option><option value="msp">msp</option><option value="alga-system">alga-system</option><option value="appliance-system">appliance-system</option><option value="flux-system">flux-system</option><option value="local-path-storage">local-path-storage</option><option value="kube-system">kube-system</option></select></label></div>
+                            <div id="pods-status" class="muted">Loading pods...</div>
+                            <div class="table-wrap"><table><thead><tr><th>Namespace</th><th>Pod</th><th>Status</th><th>Ready</th><th>Restarts</th><th>Age</th><th>Node</th></tr></thead><tbody id="pods-body"></tbody></table></div>
+                          </div>
+                          <div class="card span-12">
+                            <div class="logs-header"><h2 id="pod-log-title">Pod logs</h2><label class="muted">Container <select id="pod-container"></select></label></div>
+                            <div id="pod-log-status" class="muted">Select a pod to view logs.</div>
+                            <pre id="pod-log" hidden></pre>
+                          </div>
+                        </div>
+                      </section>
+                      <section id="tab-diagnostics" class="tab-panel" hidden>
+                        <div class="card"><h2>Diagnostics</h2><p class="muted">Raw readiness, blocker, component, operation, bootstrap, and event details.</p><pre id="diag">Loading diagnostics...</pre></div>
+                      </section>
+                      <div class="footer">API: <code>/api/status</code>, <code>/api/overview</code>, <code>/api/pods</code>, <code>/api/pods/logs</code>, and <code>/api/diagnostics</code> require this token.</div>
+                    </main>
+                    <script>
+                      let selectedPod=null; let podRows=[]; let activeTab='overview'; let podLogTailLines=300; let loadingOlderLogs=false; const maxPodLogLines=5000;
+                      function fmtSeconds(s){ if(s==null)return 'unknown'; if(s<60)return s+'s'; return Math.floor(s/60)+'m '+(s%60)+'s'; }
+                      function esc(value){ return String(value ?? '').replace(/[&<>"']/g, (ch)=>({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch])); }
+                      function badgeClass(value){ return 'badge '+String(value || '').replace(/[^a-z0-9_-]/gi, '_'); }
+                      function renderOps(ops){ const el=document.getElementById('operations'); if(!ops||!ops.length){el.textContent='No active image pull or long-running operation detected.';return;} el.innerHTML=ops.map((op)=>'<div class="op"><div><strong>'+esc(op.component||'component')+'</strong>: '+esc(op.message||op.operation)+'</div><div>Image: <code>'+esc(op.image||'unknown')+'</code></div><div>Estimated size: '+esc(op.estimatedSizeHuman||'unknown')+'</div><div>Elapsed: '+fmtSeconds(op.elapsedSeconds)+'</div><div class="muted">Pull progress: '+(op.progressAvailable?esc(op.progressPercent)+'%':'not available from Kubernetes')+'</div></div>').join(''); }
+                      function renderTiers(tiers){ const el=document.getElementById('tiers'); el.innerHTML=Object.entries(tiers||{}).map(([k,v])=>'<div class="tier"><div class="tier-name">'+esc(k)+'</div><div><span class="'+badgeClass(v.status)+'">'+(v.ready?'ready':'not ready')+'</span></div><div class="muted">'+esc(v.status)+'</div></div>').join('') || '<span class="muted">No tier data yet.</span>'; }
+                      function renderBlockers(blockers){ const el=document.getElementById('blockers'); if(!blockers||!blockers.length){el.textContent='No action-required blockers detected.';return;} el.innerHTML=blockers.map((b)=>'<div class="blocker '+(b.loginBlocking===false?'background':'')+'"><strong>'+esc(b.component||b.layer)+'</strong><div>'+esc(b.reason)+'</div><div class="muted">'+esc(b.nextAction||'')+'</div>'+(b.loginBlocking===false?'<div class="muted">background / non-login-blocking</div>':'')+'</div>').join(''); }
+                      function renderBootstrap(bootstrap){ const status=document.getElementById('bootstrap-log-status'); const pre=document.getElementById('bootstrap-log'); const logs=bootstrap?.logs; if(!logs?.available){ status.textContent=bootstrap?.job?.name ? 'No log excerpt available for '+bootstrap.job.name+'.' : 'No bootstrap job log available yet.'; pre.hidden=true; return; } status.innerHTML='<strong>'+esc(logs.pod)+'</strong> / '+esc(logs.container)+(logs.detectedErrors?.length?'<div class="blocker"><strong>Detected error</strong><div>'+esc(logs.detectedErrors.at(-1))+'</div></div>':''); pre.hidden=false; pre.textContent=(logs.tail||[]).join('\\n'); }
+                      function renderEvents(events){ const el=document.getElementById('events'); const rows=(events||[]).slice(-8).reverse(); if(!rows.length){ el.textContent='No recent events.'; return; } el.innerHTML=rows.map((ev)=>'<div class="event"><strong>'+esc(ev.type)+' '+esc(ev.reason)+'</strong> <span class="muted">'+esc(ev.namespace)+' '+esc(ev.involvedObject||'')+'</span><div>'+esc(ev.message)+'</div></div>').join(''); }
+                      async function loadStatus(){ const r=await fetch('/api/status'+window.location.search); if(!r.ok) throw new Error('Unauthorized or unavailable'); const data=await r.json(); document.getElementById('summary').textContent=data.rollup?.message||'Appliance status loaded.'; const state=data.rollup?.state||data.status||'-'; const stateEl=document.getElementById('install-state'); stateEl.textContent=state; stateEl.className=badgeClass(state); document.getElementById('phase').textContent=data.currentPhase||state; document.getElementById('login-url').textContent=data.urls?.loginUrl||data.loginUrl||'Not available yet'; document.getElementById('next-action').textContent=data.rollup?.nextAction||data.nextAction||'-'; const channel=data.release?.selectedChannel||data.release?.channel||'unknown'; document.getElementById('update-current-channel').textContent=channel; if(channel==='stable'||channel==='nightly') document.getElementById('update-channel').value=channel; document.getElementById('update-release').textContent=data.release?.selectedReleaseVersion||'unknown'; document.getElementById('update-revision').textContent=data.release?.gitRevision||'unknown'; renderOps(data.activeOperations); renderTiers(data.tiers); renderBlockers(data.topBlockers); renderBootstrap(data.bootstrap); renderEvents(data.recentEvents); document.getElementById('diag').textContent=JSON.stringify(data,null,2); }
+                      function fmtAge(s){ return fmtSeconds(s); }
+                      function renderPods(){ const body=document.getElementById('pods-body'); body.innerHTML=podRows.map((pod,idx)=>'<tr data-index="'+idx+'" class="'+(selectedPod&&selectedPod.namespace===pod.namespace&&selectedPod.name===pod.name?'selected':'')+'"><td>'+esc(pod.namespace)+'</td><td>'+esc(pod.name)+'</td><td><span class="'+badgeClass(pod.status)+'">'+esc(pod.status)+'</span></td><td>'+esc(pod.readyText)+'</td><td>'+esc(pod.restarts)+'</td><td>'+fmtAge(pod.ageSeconds)+'</td><td>'+esc(pod.nodeName||'-')+'</td></tr>').join(''); [...body.querySelectorAll('tr')].forEach((tr)=>tr.addEventListener('click',()=>selectPod(podRows[Number(tr.dataset.index)]))); document.getElementById('pods-status').textContent=podRows.length+' pods loaded.'; }
+                      async function loadPods(){ const ns=document.getElementById('pod-namespace').value || 'appliance'; const r=await fetch('/api/pods?namespace='+encodeURIComponent(ns)+'&'+window.location.search.slice(1)); if(!r.ok) throw new Error('Unable to load pods'); const data=await r.json(); podRows=data.pods||[]; if(selectedPod&&!podRows.some((p)=>p.namespace===selectedPod.namespace&&p.name===selectedPod.name)){ selectedPod=null; podLogTailLines=300; document.getElementById('pod-log-status').textContent='Select a pod to view logs.'; document.getElementById('pod-log').hidden=true; } renderPods(); }
+                      function selectPod(pod){ selectedPod=pod; podLogTailLines=300; loadingOlderLogs=false; const pre=document.getElementById('pod-log'); pre.textContent=''; pre.scrollTop=0; const select=document.getElementById('pod-container'); select.innerHTML=(pod.containers||[]).map((name)=>'<option value="'+esc(name)+'">'+esc(name)+'</option>').join(''); document.getElementById('pod-log-title').textContent='Logs: '+pod.namespace+'/'+pod.name; renderPods(); loadPodLogs(); }
+                      async function loadPodLogs(options={}){ if(!selectedPod) return; const pre=document.getElementById('pod-log'); const previousHeight=options.preserveScroll?pre.scrollHeight:null; const container=document.getElementById('pod-container').value || (selectedPod.containers||[])[0] || ''; const params=new URLSearchParams({namespace:selectedPod.namespace,pod:selectedPod.name,container,tailLines:String(podLogTailLines)}); const tokenParams=new URLSearchParams(window.location.search); for(const [k,v] of tokenParams.entries()) params.set(k,v); const r=await fetch('/api/pods/logs?'+params.toString()); if(!r.ok) throw new Error('Unable to load pod logs'); const data=await r.json(); const count=(data.lines||[]).length; document.getElementById('pod-log-status').textContent=(loadingOlderLogs?'Loaded previous log lines. ':'')+(data.available?'Loaded '+count+' log lines':'No logs available')+' for '+selectedPod.namespace+'/'+selectedPod.name+(container?' / '+container:'')+(podLogTailLines>=maxPodLogLines?' Reached log history limit.':''); pre.hidden=false; pre.textContent=(data.lines||[]).join('\n'); if(options.preserveScroll&&previousHeight!=null){ requestAnimationFrame(()=>{ pre.scrollTop=Math.max(0, pre.scrollHeight-previousHeight); }); } loadingOlderLogs=false; }
+                      function loadOlderPodLogs(){ if(!selectedPod||loadingOlderLogs||podLogTailLines>=maxPodLogLines) return; loadingOlderLogs=true; podLogTailLines=Math.min(maxPodLogLines,podLogTailLines+300); document.getElementById('pod-log-status').textContent='Loading previous 300 log lines…'; loadPodLogs({preserveScroll:true}).catch((err)=>{ loadingOlderLogs=false; document.getElementById('pod-log-status').textContent=err.message; }); }
+                      async function loadUpdateStatus(){ const r=await fetch('/api/update/status'+window.location.search); if(!r.ok) throw new Error('Unable to load update status'); const data=await r.json(); const job=data.latest; const el=document.getElementById('update-job'); if(!job){ el.textContent='No update job has run yet.'; } else { el.innerHTML='<div class="kv"><div class="row"><span class="label">Job</span><span class="value">'+esc(job.name||'-')+'</span></div><div class="row"><span class="label">Action</span><span class="value">'+esc(job.action||'-')+'</span></div><div class="row"><span class="label">Channel</span><span class="value">'+esc(job.channel||'-')+'</span></div><div class="row"><span class="label">State</span><span class="value"><span class="'+badgeClass(job.state)+'">'+esc(job.state||'-')+'</span></span></div></div>'; } const pre=document.getElementById('update-log'); if(data.logs?.available){ pre.hidden=false; pre.textContent=(data.logs.lines||[]).join('\n'); } else { pre.hidden=true; pre.textContent=''; } }
+                      async function startUpdate(action){ const channel=document.getElementById('update-channel').value; const msg=document.getElementById('update-message'); const check=document.getElementById('update-check'); const apply=document.getElementById('update-apply'); check.disabled=true; apply.disabled=true; msg.textContent=action==='check'?'Starting update check…':'Starting '+channel+' upgrade…'; try{ const r=await fetch('/api/update/'+(action==='check'?'check':'apply')+window.location.search,{method:'POST',headers:{'Content-Type':'application/json'},body:action==='apply'?JSON.stringify({channel}):'{}'}); const data=await r.json(); if(!r.ok){ if(r.status===409&&data.status) await loadUpdateStatus(); throw new Error(data.error||(r.status===409?'Another update job is already running.':'Unable to start update job')); } msg.textContent=action==='check'?'Update check submitted.':'Upgrade submitted. Progress will appear below.'; await loadUpdateStatus(); } catch(err){ msg.textContent=err.message; } finally { check.disabled=false; apply.disabled=false; } }
+                      function showTab(tab){ activeTab=tab; document.querySelectorAll('.tab-button').forEach((btn)=>btn.classList.toggle('active',btn.dataset.tab===tab)); document.querySelectorAll('.tab-panel').forEach((panel)=>panel.hidden=panel.id!=='tab-'+tab); if(tab==='pods') loadPods().catch((err)=>document.getElementById('pods-status').textContent=err.message); if(tab==='updates') loadUpdateStatus().catch((err)=>document.getElementById('update-message').textContent=err.message); }
+                      document.querySelectorAll('.tab-button').forEach((btn)=>btn.addEventListener('click',()=>showTab(btn.dataset.tab)));
+                      document.getElementById('pod-namespace').addEventListener('change',()=>{ selectedPod=null; loadPods().catch((err)=>document.getElementById('pods-status').textContent=err.message); });
+                      document.getElementById('pod-container').addEventListener('change',()=>{ podLogTailLines=300; loadingOlderLogs=false; const pre=document.getElementById('pod-log'); pre.textContent=''; pre.scrollTop=0; loadPodLogs().catch((err)=>document.getElementById('pod-log-status').textContent=err.message); });
+                      document.getElementById('pod-log').addEventListener('scroll',(event)=>{ if(event.currentTarget.scrollTop<=0) loadOlderPodLogs(); });
+                      document.getElementById('update-check').addEventListener('click',()=>startUpdate('check'));
+                      document.getElementById('update-apply').addEventListener('click',()=>startUpdate('apply'));
+                      loadStatus().catch((err)=>{document.getElementById('summary').textContent=err.message;});
+                      setInterval(()=>loadStatus().catch(()=>{}), 5000);
+                      setInterval(()=>{ if(activeTab==='pods') loadPods().catch(()=>{}); }, 5000);
+                      setInterval(()=>{ if(activeTab==='pods' && selectedPod) loadPodLogs().catch(()=>{}); }, 5000);
+                      setInterval(()=>{ if(activeTab==='updates') loadUpdateStatus().catch(()=>{}); }, 5000);
+                    </script>
+                  </body>
+                  </html>`;
+                  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                  res.end(page);
+                } catch (error) {
+                  res.writeHead(500, { 'Content-Type': 'application/json' });
+                  res.end(JSON.stringify({ error: 'status_collection_failed', message: error.message }));
+                }
+              });
+
+              server.listen(8080, '0.0.0.0');
+              JS
+              exec node /tmp/server.js
+          env:
+            - name: STATUS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: appliance-status-auth
+                  key: token
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 25m
+              memory: 96Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            timeoutSeconds: 3
+      volumes:
+        - name: tmp
+          emptyDir: {}

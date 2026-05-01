@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import os from 'node:os';
-import { listPublishedReleases, latestReleaseVersion } from './releases.mjs';
+import { defaultChannelName, defaultReleaseVersion, listChannels, listPublishedReleases } from './releases.mjs';
 import {
   fileExists,
   listSiteIds,
@@ -58,7 +58,9 @@ export function discoverEnvironment(options = {}) {
   const selectedSite = resolveSelectedSiteId(siteIds, options);
   const site = selectedSite.siteId ? resolveSitePaths(configBaseDir, selectedSite.siteId) : null;
   const releases = listPublishedReleases(runtime.releasesDir);
-  const defaultReleaseVersion = latestReleaseVersion(runtime.releasesDir);
+  const channels = listChannels(runtime.releasesDir);
+  const defaultChannel = defaultChannelName(runtime.releasesDir);
+  const resolvedDefaultReleaseVersion = defaultReleaseVersion(runtime.releasesDir);
 
   const discoveredNodeIp =
     options.nodeIp || (site ? readTextIfExists(site.nodeIpFile) : null) || null;
@@ -77,7 +79,9 @@ export function discoverEnvironment(options = {}) {
       talosconfig: options.talosconfig || site?.talosconfig || null,
     },
     releases,
-    defaultReleaseVersion,
+    channels,
+    defaultChannel,
+    defaultReleaseVersion: resolvedDefaultReleaseVersion,
     nodeIp: discoveredNodeIp,
     appUrl: discoveredAppUrl,
   };
