@@ -270,7 +270,15 @@
     },
     "forgotPassword": "Forgot password?",
     "sessionEndedTitle": "Session Ended",
-    "sessionEndedMessage": "Your session has been signed out. Please sign in again."
+    "sessionEndedMessage": "Your session has been signed out. Please sign in again.",
+    "clientRegistration": {
+      "errors": {
+        "contactNotFound": "Contacto não encontrado.",
+        "contactInactive": "Este contacto está inativo.",
+        "emailAlreadyExists": "Já existe um utilizador com este endereço de e-mail.",
+        "registrationFailed": "Não foi possível concluir o registo. Tente novamente."
+      }
+    }
   },
   "account": {
     "title": "Account",

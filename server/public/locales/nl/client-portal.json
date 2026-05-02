@@ -270,7 +270,15 @@
     },
     "forgotPassword": "Wachtwoord vergeten?",
     "sessionEndedTitle": "Sessie beëindigd",
-    "sessionEndedMessage": "Uw sessie is beëindigd. Log opnieuw in."
+    "sessionEndedMessage": "Uw sessie is beëindigd. Log opnieuw in.",
+    "clientRegistration": {
+      "errors": {
+        "contactNotFound": "Contact niet gevonden.",
+        "contactInactive": "Dit contact is inactief.",
+        "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres.",
+        "registrationFailed": "De registratie kon niet worden voltooid. Probeer het opnieuw."
+      }
+    }
   },
   "account": {
     "title": "Account",

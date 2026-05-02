@@ -270,7 +270,15 @@
     },
     "forgotPassword": "Nie pamiętasz hasła?",
     "sessionEndedTitle": "Sesja zakończona",
-    "sessionEndedMessage": "Twoja sesja została zakończona. Zaloguj się ponownie."
+    "sessionEndedMessage": "Twoja sesja została zakończona. Zaloguj się ponownie.",
+    "clientRegistration": {
+      "errors": {
+        "contactNotFound": "Nie znaleziono kontaktu.",
+        "contactInactive": "Ten kontakt jest nieaktywny.",
+        "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje.",
+        "registrationFailed": "Nie udało się zakończyć rejestracji. Spróbuj ponownie."
+      }
+    }
   },
   "account": {
     "title": "Konto",
