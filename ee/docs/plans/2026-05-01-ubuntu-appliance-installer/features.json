@@ -48,7 +48,7 @@
       "Console first-boot output",
       "Data and Configuration"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F007",
@@ -56,7 +56,7 @@
     "prdRefs": [
       "Console first-boot output"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F008",

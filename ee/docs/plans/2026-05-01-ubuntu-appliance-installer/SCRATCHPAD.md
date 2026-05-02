@@ -143,3 +143,7 @@ Minimum live validation environment should include:
 - (2026-05-01) **F005 completed**: Added console fallback startup path at `ee/appliance/ubuntu-iso/overlay/etc/systemd/system/alga-appliance-console.service`.
 - Added serial/console-friendly output entrypoint `ee/appliance/host-service/console.mjs` (prints node IP, setup URL, setup token path value, and log command) while keeping web setup as the primary flow.
 - Service shape is `Type=oneshot` with `StandardOutput=tty` to support VM/serial console display without replacing the web path on `:8080`.
+- (2026-05-01) **F006 completed**: Added first-boot/setup token initializer `ee/appliance/host-service/init-token.mjs`.
+- Token behavior: generates token when missing, persists to `/var/lib/alga-appliance/setup-token`, enforces restricted permissions (`0600` token file, `0750` parent directory) for sensitive status/setup access material.
+- Wired token initialization into both systemd services via `ExecStartPre`, ensuring token existence before web setup/status or console fallback output starts.
+- (2026-05-01) **F007 completed**: Console fallback output now prints detected node IP, setup URL (`http://<ip>:8080/setup`), setup token, and log locations (`journalctl -u alga-appliance.service -u alga-appliance-console.service -f`).
