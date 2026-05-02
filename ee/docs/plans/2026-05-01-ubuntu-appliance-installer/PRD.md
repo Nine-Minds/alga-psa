@@ -63,15 +63,16 @@ An internal operator who publishes image tags and release/channel metadata, and 
 7. User confirms or enters:
    - release channel, default `stable`
    - app URL / hostname
-   - DNS servers, default `8.8.8.8,8.8.4.4`
+   - DNS mode and DNS servers, defaulting to DHCP-provided resolvers when available and making custom DNS a deliberate choice
    - optional proxy settings if supported in the implementation
    - support/testing repo URL or branch override only when needed
-8. Setup installs k3s.
-9. Setup installs Flux.
-10. Setup points Flux at the Alga GitHub repo and the selected channel/branch/path.
-11. Setup applies runtime values and release selection.
-12. Status page shows install progress.
-13. User opens the main Alga app when login readiness is reached.
+8. Setup runs explicit preflight checks for DNS, GitHub release/channel access, GHCR access, and proxy/egress behavior before installing k3s.
+9. Setup installs k3s.
+10. Setup installs Flux.
+11. Setup points Flux at the Alga GitHub repo and the selected channel/branch/path.
+12. Setup applies runtime values and release selection.
+13. Status page shows install progress.
+14. User opens the main Alga app when login readiness is reached.
 
 ### Upgrade: app channel update
 
@@ -85,8 +86,9 @@ An internal operator who publishes image tags and release/channel metadata, and 
 ### Support diagnostics
 
 1. Admin opens the status UI or console TUI.
-2. Support can inspect current phase, last action, logs, k3s health, Flux state, HelmRelease state, pod status, and bootstrap logs.
+2. Support can inspect current phase, last action, logs, k3s health, Flux state, HelmRelease state, pod status, bootstrap logs, network diagnostics, and disk usage.
 3. Support can generate or request a support bundle.
+4. Support bundle output should be a single archive suitable for upload to Alga support, with sensitive files redacted or excluded.
 
 ## Architecture
 
@@ -151,6 +153,8 @@ Use an opinionated single-node k3s install:
 
 v1 uses the GitHub repo directly. Setup resolves channel metadata from the repo and configures Flux to reconcile the appliance path.
 
+Because GitHub/GHCR access is a hard v1 setup dependency, the setup engine must preflight this before k3s installation. The admin should not discover a proxy, DNS, or firewall problem only after Kubernetes is half-installed. Preflight should check DNS resolution, HTTPS connectivity to GitHub raw/repo endpoints, GHCR reachability, and the selected channel file before host mutation begins.
+
 Channels remain:
 
 ```text
@@ -198,14 +202,19 @@ The web setup UI should be primary. It should:
 - require a setup token
 - guide the admin through required fields
 - default channel to `stable`
-- default DNS servers to `8.8.8.8,8.8.4.4`
+- default DNS mode to DHCP/system-provided resolvers when available
+- make DNS configuration prominent, because MSP environments often depend on AD-integrated, split-horizon, or internal DNS
+- allow explicit custom DNS values, with examples such as `8.8.8.8,8.8.4.4`, but avoid silently overriding customer internal DNS by default
 - present `nightly` as non-production/testing/support-directed
+- run release-source connectivity preflight before installing k3s
 - show progress after setup starts
 - avoid making the user believe the main app is ready before bootstrap starts
 
 ### Console fallback
 
 The console fallback should collect the same required values as the web setup and start the same setup engine.
+
+The implementation should be usable from common appliance access paths: physical/virtual display console, VMware/UTM/cloud console, and serial console when configured. The console service should not be the only setup path; headless/racked deployments should be able to use the browser flow from a workstation on the same network. The console experience may be a TUI on the active console or a serial-friendly prompt flow, but it must share validation and setup logic with the web UI.
 
 ### Status UI
 
@@ -235,6 +244,27 @@ For each failure, show:
 - whether retry is safe
 - support bundle command/button
 
+### Support bundle design
+
+Support bundle generation is a first-class v1 requirement. The status UI should expose a one-button generation flow, and the host should also expose a documented one-command fallback.
+
+Minimum bundle contents:
+
+- appliance install state and phase-classified error summary
+- `alga-appliance.service` and console service journal excerpts
+- setup/update logs
+- k3s node status and version
+- k3s service status
+- Kubernetes namespaces, pods, deployments, statefulsets, jobs, PVCs, and recent events
+- Flux GitRepository/Kustomization status and relevant controller logs
+- HelmRelease status and relevant reconciliation messages
+- Alga bootstrap job status and logs
+- network diagnostics: IP addresses, routes, DNS resolver configuration, DNS lookup checks, GitHub/GHCR connectivity checks
+- disk and filesystem usage
+- selected channel/release metadata with secrets redacted
+
+The bundle must avoid including unrelated host secrets and should redact known tokens, passwords, kubeconfig client keys, and status/setup tokens unless explicitly requested by support.
+
 ## Data and Configuration
 
 Implementation should define concrete schemas for:
@@ -255,24 +285,42 @@ Secrets and tokens must be stored with restricted filesystem permissions.
 - The existing status/update concepts should be ported to a host-level service rather than discarded.
 - The existing PR for Talos/status work may still be useful as the source of release/channel/status logic.
 
+## v2 Update Direction
+
+v1 deliberately limits automated updates to Alga application/channel updates. That is a short-term liability because Ubuntu and k3s security updates will otherwise require support-run processes.
+
+The expected v2 direction is to design managed appliance maintenance windows that can:
+
+- check Ubuntu package update availability and security advisories
+- check supported k3s upgrade targets
+- run preflight backup/snapshot checks
+- apply OS package updates with clear reboot requirements
+- apply k3s upgrades only along validated version paths
+- report maintenance history in the status UI
+- provide rollback/remediation guidance when a host update fails
+
+This v2 work is intentionally not in scope for the first Ubuntu appliance implementation, but the v1 host service should store enough version and maintenance metadata to support it later.
+
 ## Risks
 
 - Ubuntu introduces more mutable host state than Talos.
 - k3s install failures may vary by host networking, DNS, and firewall setup.
-- Direct GitHub dependency means first install requires outbound access to GitHub and GHCR.
+- Direct GitHub dependency means first install requires outbound access to GitHub and GHCR; setup must fail fast and clearly when this is blocked.
+- Defaulting to public DNS can break MSP environments with AD-integrated, split-horizon, or internal DNS, so DNS must default to DHCP/system resolvers and be explained prominently.
 - Host-level status service must be secured because it can expose logs and trigger updates.
-- Keeping app updates automated while OS/k3s updates are manual requires clear docs to avoid false expectations.
+- Keeping app updates automated while OS/k3s updates are manual creates operational/CVE response burden and requires clear docs plus a v2 update roadmap.
 
 ## Acceptance Criteria
 
 - A VM can boot the custom Ubuntu ISO and complete unattended Ubuntu Server 24.04 install.
 - After reboot, the console displays setup URL and token.
-- Web setup can configure and start appliance install.
-- Console fallback can configure and start the same install flow.
+- Web setup can configure and start appliance install without silently overriding internal DNS.
+- Console fallback can configure and start the same install flow from VM console or serial-console-style access.
+- Setup preflights DNS, GitHub, GHCR, and selected channel access before k3s installation.
 - Setup installs k3s with the agreed v1 profile.
 - Setup installs Flux and reconciles Alga manifests from GitHub.
 - Status UI remains available on host port `8080` before and after k3s install.
-- Status UI shows install phases, logs, blockers, readiness tiers, pod/Flux/Helm health, and support guidance.
+- Status UI shows install phases, logs, blockers, readiness tiers, pod/Flux/Helm health, support guidance, and support bundle generation.
 - Main app reaches login readiness through the `stable` channel.
 - Background service failures do not block login readiness.
 - Status UI can apply an app-channel update for `stable` or `nightly`.

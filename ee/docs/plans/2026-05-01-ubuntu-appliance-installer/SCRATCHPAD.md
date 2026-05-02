@@ -49,13 +49,23 @@ Status UI should update Alga app/channel state only. Ubuntu package updates and 
 
 ### D008 — DNS default
 
-Setup should default DNS servers to Google DNS:
+Do not default to public Google DNS. MSP environments often rely on AD-integrated, split-horizon, or internal DNS. Setup should default to DHCP/system-provided resolvers when available, make DNS selection prominent, and require deliberate admin choice before overriding with public resolvers such as `8.8.8.8,8.8.4.4`.
 
-```text
-8.8.8.8,8.8.4.4
-```
+### D009 — Fail fast on GitHub/GHCR dependency
 
-Admins can override these values.
+v1 intentionally depends on GitHub/GHCR for online install. Setup must preflight DNS, GitHub raw/repo access, selected channel metadata, GHCR reachability, and proxy/egress behavior before installing k3s or otherwise mutating the host.
+
+### D010 — Name OS/k3s update liability and sketch v2
+
+App-only updates are acceptable for v1, but manual/support-run Ubuntu and k3s updates create CVE-response burden. The PRD now names this explicitly and includes a v2 managed maintenance direction.
+
+### D011 — Support bundle is first-class
+
+Support bundle generation should be designed as a v1 feature, not a vague future helper. It must include host logs, setup/update logs, k3s state, Kubernetes resources/events, Flux/Helm status, app bootstrap logs, network diagnostics, disk usage, release metadata, and redaction.
+
+### D012 — Console fallback must work for headless/racked deployments
+
+Console fallback should work from common hypervisor console and serial-console-style access paths, but web setup remains primary so racked/headless users are not forced into physical keyboard/monitor workflows.
 
 ## Open Questions
 
@@ -88,7 +98,8 @@ ee/appliance/operator/lib/tui.mjs
 
 - Flux needs a full URL format; do not pass GitHub scp-style URLs like `git@github.com:Nine-Minds/alga-psa.git` directly to Flux.
 - First install failures should fail early and clearly for missing/wrong Flux CLI, DNS, GitHub access, and GHCR access.
-- Existing Talos bootstrap had a `--dns-servers` flag that patched both Talos resolver config and CoreDNS. Ubuntu setup needs equivalent host/k3s/CoreDNS treatment.
+- GitHub/GHCR preflight should happen before k3s install, not after Kubernetes is half-configured.
+- Existing Talos bootstrap had a `--dns-servers` flag that patched both Talos resolver config and CoreDNS. Ubuntu setup needs equivalent host/k3s/CoreDNS treatment, but must not silently replace internal DNS with public DNS.
 - Kubernetes does not expose byte-level image pull percentages; status should show phase/image/elapsed time instead.
 - Background service failures should produce ready-with-background-issues, not block login readiness.
 
@@ -98,7 +109,9 @@ Minimum live validation environment should include:
 
 - UTM local VM for rapid iteration if feasible
 - VMware ESXi-like VM path or equivalent cloud custom ISO path before customer docs are finalized
-- Fresh install with DHCP + Google DNS defaults
+- Fresh install with DHCP/system DNS defaults
+- Fresh install with internal/split-horizon DNS preservation
 - Fresh install with DNS failure simulation
+- Fresh install with GitHub/GHCR/proxy failure simulation before k3s installation
 - Reboot persistence test
 - App-channel update test
