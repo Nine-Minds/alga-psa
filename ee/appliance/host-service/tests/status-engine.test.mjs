@@ -47,6 +47,52 @@ exit 1
     assert.equal(snapshot.kubernetes.nodes[0].ready, true);
     assert.equal(snapshot.kubernetes.podCount, 2);
     assert.equal(snapshot.kubernetes.warnings.length, 0);
+    assert.equal(snapshot.tiers.platformReady, true);
+    assert.equal(snapshot.tiers.coreReady, true);
+  } finally {
+    process.env.PATH = originalPath;
+  }
+});
+
+test('loginReady remains true when background service has issues', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-bg-'));
+  const stateFile = path.join(tmp, 'install-state.json');
+  const fakeBin = path.join(tmp, 'bin');
+  fs.mkdirSync(fakeBin, { recursive: true });
+
+  fs.writeFileSync(stateFile, JSON.stringify({ phase: 'app-readiness', status: 'release-config-complete' }));
+
+  const kubectlPath = path.join(fakeBin, 'kubectl');
+  fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
+if [[ "$*" == *"get nodes -o json"* ]]; then
+  cat <<'JSON'
+{"items":[{"metadata":{"name":"node-1"},"status":{"conditions":[{"type":"Ready","status":"True"}]}}]}
+JSON
+  exit 0
+fi
+if [[ "$*" == *"get pods -A --no-headers"* ]]; then
+  cat <<'TXT'
+msp alga-core-abc Running
+alga-system temporal-worker-xyz CrashLoopBackOff
+TXT
+  exit 0
+fi
+exit 1
+`);
+  fs.chmodSync(kubectlPath, 0o755);
+
+  const originalPath = process.env.PATH;
+  process.env.PATH = `${fakeBin}:${originalPath}`;
+  try {
+    const snapshot = collectStatusSnapshot({
+      stateFile,
+      kubeconfigPath: '/tmp/k3s.yaml',
+      kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
+    });
+
+    assert.equal(snapshot.tiers.loginReady, true);
+    assert.equal(snapshot.tiers.backgroundReady, false);
+    assert.equal(snapshot.tiers.backgroundIssues.length, 1);
   } finally {
     process.env.PATH = originalPath;
   }

@@ -192,3 +192,6 @@ Minimum live validation environment should include:
 - (2026-05-01) **F024 completed**: Implemented host-side status collection in `ee/appliance/host-service/status-engine.mjs`, using local kubeconfig (`/etc/rancher/k3s/k3s.yaml`) and `kubectl` queries (nodes/pods) instead of Talos APIs.
 - Added token-protected `/api/status` endpoint in `server.mjs` that returns install state + Kubernetes snapshot from the Ubuntu host service.
 - Added unit test `ee/appliance/host-service/tests/status-engine.test.mjs` validating kubeconfig-driven status collection via mocked `kubectl` responses.
+- (2026-05-01) **F025 completed**: Added readiness tier computation in `status-engine.mjs` with explicit booleans for `platformReady`, `coreReady`, `bootstrapReady`, `loginReady`, `backgroundReady`, and `fullyHealthy`.
+- (2026-05-01) **F026 completed**: Enforced readiness semantics so background workload issues (`email-service`, `temporal`, `workflow-worker`, `temporal-worker`) degrade `backgroundReady` without blocking `loginReady`.
+- Added regression test in `status-engine.test.mjs` proving `loginReady` remains true when `temporal-worker` is unhealthy while core/platform/bootstrap remain ready.

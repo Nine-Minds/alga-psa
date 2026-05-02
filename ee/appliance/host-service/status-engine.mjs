@@ -31,6 +31,36 @@ function runCommand(command) {
   };
 }
 
+function deriveReadiness(installState, nodes, podLines, warnings) {
+  const readyNodeCount = nodes.filter((node) => node.ready).length;
+  const platformReady = readyNodeCount > 0;
+  const coreReady = platformReady && podLines.length > 0;
+  const bootstrapReady = (installState?.status || '').includes('complete');
+
+  const backgroundServiceHints = ['email-service', 'temporal', 'workflow-worker', 'temporal-worker'];
+  const backgroundIssues = podLines.filter((line) => {
+    const lower = line.toLowerCase();
+    const isBackground = backgroundServiceHints.some((hint) => lower.includes(hint));
+    const looksHealthy = lower.includes(' running') || lower.includes(' completed');
+    return isBackground && !looksHealthy;
+  });
+
+  // Login readiness is gated by core/bootstrap, not background workloads.
+  const loginReady = platformReady && coreReady && bootstrapReady;
+  const backgroundReady = backgroundIssues.length === 0;
+  const fullyHealthy = loginReady && backgroundReady && warnings.length === 0;
+
+  return {
+    platformReady,
+    coreReady,
+    bootstrapReady,
+    loginReady,
+    backgroundReady,
+    fullyHealthy,
+    backgroundIssues
+  };
+}
+
 export function collectStatusSnapshot(options = {}) {
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
   const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
@@ -57,19 +87,23 @@ export function collectStatusSnapshot(options = {}) {
     ? podResult.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
     : [];
 
+  const warnings = [
+    ...(nodeResult.ok ? [] : [`node query failed: ${nodeResult.stderr.trim() || nodeResult.stdout.trim() || 'unknown error'}`]),
+    ...(podResult.ok ? [] : [`pod query failed: ${podResult.stderr.trim() || podResult.stdout.trim() || 'unknown error'}`])
+  ];
+  const tiers = deriveReadiness(installState, nodes, podLines, warnings);
+
   return {
     source: 'ubuntu-host-service',
     installState,
     currentPhase: installState?.phase || 'setup',
     status: installState?.status || 'unknown',
     kubeconfigPath,
+    tiers,
     kubernetes: {
       nodes,
       podCount: podLines.length,
-      warnings: [
-        ...(nodeResult.ok ? [] : [`node query failed: ${nodeResult.stderr.trim() || nodeResult.stdout.trim() || 'unknown error'}`]),
-        ...(podResult.ok ? [] : [`pod query failed: ${podResult.stderr.trim() || podResult.stdout.trim() || 'unknown error'}`])
-      ]
+      warnings
     }
   };
 }

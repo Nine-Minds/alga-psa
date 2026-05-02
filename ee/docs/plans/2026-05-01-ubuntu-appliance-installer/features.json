@@ -209,7 +209,7 @@
     "prdRefs": [
       "Status/readiness model"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F026",
@@ -217,7 +217,7 @@
     "prdRefs": [
       "Status/readiness model"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F027",
