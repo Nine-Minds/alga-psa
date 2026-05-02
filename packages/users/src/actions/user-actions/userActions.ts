@@ -108,7 +108,7 @@ export const checkEmailExistsGlobally = withAuth(async (
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(user, 'user', 'read', trx)) {
-        throw new Error('Permission denied: Cannot check email existence');
+        throwPermissionError('check email existence');
       }
 
       const criteria: Record<string, unknown> = { email: email.toLowerCase() };
@@ -144,7 +144,7 @@ export const addUser = withAuth(async (
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(user, 'user', 'create', trx)) {
-        throw new Error('Permission denied: Cannot create user');
+        throwPermissionError('create user');
       }
 
       if (!userData.roleId) {
@@ -264,7 +264,7 @@ export const addUser = withAuth(async (
   } catch (error: unknown) {
     logger.error('Error adding user:', error);
     const message = getErrorMessage(error);
-    if (message === 'Permission denied: Cannot create user') {
+    if (message.startsWith('Permission denied:')) {
       throw error;
     }
     throw new Error('Failed to add user');
@@ -281,7 +281,7 @@ export const deleteUser = withAuth(async (
 
     const assignedClient = await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(user, 'user', 'delete', trx)) {
-        throw new Error('Permission denied: Cannot delete user');
+        throwPermissionError('delete user');
       }
 
       return await trx('clients')
@@ -370,7 +370,7 @@ export const updateUser = withAuth(async (
       if (isOwnProfile) {
         logger.debug(`[updateUser] User ${currentUser.user_id} updating their own profile`);
       } else if (!await hasPermission(currentUser, 'user', 'update', trx)) {
-        throw new Error('Permission denied: Cannot update user');
+        throwPermissionError('update user');
       }
 
       // If user is being deactivated, clear default_assigned_to on boards
@@ -439,7 +439,7 @@ export const updateUser = withAuth(async (
   } catch (error) {
     logger.error(`Failed to update user with id ${userId}:`, error);
     const message = getErrorMessage(error);
-    if (message === 'Permission denied: Cannot update user') {
+    if (message.startsWith('Permission denied:')) {
       throw error;
     }
     throw new Error('Failed to update user');
@@ -457,7 +457,7 @@ export const updateUserRoles = withAuth(async (
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(currentUser, 'user', 'update', trx)) {
-        throw new Error('Permission denied: Cannot update user roles');
+        throwPermissionError('update user roles');
       }
 
       // Delete existing roles
@@ -524,7 +524,7 @@ export const registerClientUser = withAuth(async (
 
     return await withTransaction(db, async (trx: Knex.Transaction): Promise<RegisterClientUserResult> => {
       if (!await hasPermission(currentUser, 'user', 'create', trx)) {
-        throw new Error('Permission denied: Cannot create client user');
+        throwPermissionError('create client user');
       }
 
       // First verify the contact exists and get their tenant
