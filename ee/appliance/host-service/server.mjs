@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import http from 'node:http';
 import fs from 'node:fs';
+import path from 'node:path';
+import { spawn } from 'node:child_process';
 import { URL } from 'node:url';
 import { collectStatusSnapshot } from './status-engine.mjs';
-import { persistSetupInputs, runSetupWorkflow, validateSetupInputs } from './setup-engine.mjs';
+import { persistSetupInputs, validateSetupInputs } from './setup-engine.mjs';
 import { generateSupportBundle } from './support-bundle.mjs';
 import { runAppChannelUpdate } from './update-engine.mjs';
 
@@ -46,6 +48,20 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+function queueSetupWorkflow() {
+  const child = spawn(process.execPath, [
+    new URL('./setup-engine.mjs', import.meta.url).pathname,
+    'run',
+    '--setup-inputs', setupInputsFile,
+    '--state-file', stateFile
+  ], {
+    detached: true,
+    stdio: 'ignore',
+    env: process.env
+  });
+  child.unref();
 }
 
 function preflightGuidanceForPhase(phase) {
@@ -204,26 +220,17 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const setupResult = await runSetupWorkflow(setupInputs, { stateFile });
-      if (!setupResult.ok) {
-        const isPreflightBlocker = ['dns', 'network', 'github-release-source'].includes(setupResult.phase);
-        res.writeHead(412, { 'content-type': 'text/html; charset=utf-8' });
-        res.end(`<!doctype html><html><body>
-          <h1>Setup blocked</h1>
-          <p><strong>Phase:</strong> ${escapeHtml(setupResult.phase || 'unknown')}</p>
-          <p><strong>Step:</strong> ${escapeHtml(setupResult.step || 'unknown')}</p>
-          <p><strong>Cause:</strong> ${escapeHtml(setupResult.suspectedCause || setupResult.message || 'Unknown')}</p>
-          <p><strong>Suggested next step:</strong> ${escapeHtml(setupResult.suggestedNextStep || 'Review setup inputs and retry.')}</p>
-          <p><strong>Retry safe:</strong> ${setupResult.retrySafe ? 'yes' : 'no'}</p>
-          ${isPreflightBlocker ? '<p><strong>Preflight result:</strong> k3s installation has not started.</p>' : ''}
-          <p><strong>Network guidance:</strong> ${escapeHtml(preflightGuidanceForPhase(setupResult.phase))}</p>
-          <p>Fix the blocker and submit setup again.</p>
-        </body></html>`);
-        return;
-      }
+      fs.mkdirSync(path.dirname(stateFile), { recursive: true, mode: 0o750 });
+      fs.writeFileSync(stateFile, `${JSON.stringify({
+        status: 'setup-queued',
+        phase: 'setup',
+        lastAction: 'Setup accepted; background workflow is starting',
+        updatedAt: new Date().toISOString()
+      }, null, 2)}\n`, { mode: 0o600 });
+      queueSetupWorkflow();
 
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      res.end('<!doctype html><html><body><h1>Setup Started</h1><p>Preflight and k3s installation steps completed successfully.</p></body></html>');
+      res.writeHead(202, { 'content-type': 'text/html; charset=utf-8' });
+      res.end(`<!doctype html><html><body><h1>Setup Started</h1><p>The setup workflow is running in the background.</p><p>Track progress at <a href="/?token=${encodeURIComponent(providedToken)}">status</a>.</p></body></html>`);
       return;
     }
 
@@ -264,6 +271,12 @@ const server = http.createServer(async (req, res) => {
 
   res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   if (mode === 'status') {
+    const providedToken = url.searchParams.get('token') || '';
+    if (!setupToken || providedToken !== setupToken) {
+      res.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
+      res.end('Unauthorized: valid status token required.');
+      return;
+    }
     const snapshot = collectStatusSnapshot({ stateFile });
     const failureItems = (snapshot.failures || [])
       .map((failure) => `<li><strong>${escapeHtml(failure.category)}</strong>: ${escapeHtml(failure.suspectedCause)}<br/><em>Next:</em> ${escapeHtml(failure.suggestedNextStep)}<br/><em>Retry safe:</em> ${failure.retrySafe ? 'yes' : 'no'}</li>`)

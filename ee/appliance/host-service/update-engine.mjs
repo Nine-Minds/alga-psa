@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { applyFluxSource, applyReleaseSelectionConfiguration, resolveChannelMetadata, validateSetupInputs } from './setup-engine.mjs';
+import { applyFluxSource, applyReleaseSelectionConfiguration, applyRuntimeValuesAndReleaseSelection, resolveChannelMetadata, validateSetupInputs } from './setup-engine.mjs';
 import { persistMaintenanceMetadata } from './metadata-engine.mjs';
 
 const DEFAULT_STATE_FILE = '/var/lib/alga-appliance/install-state.json';
@@ -120,6 +120,18 @@ export async function runAppChannelUpdate(rawInputs, options = {}) {
       message: releaseSelection.message
     }, updateHistoryFile);
     return releaseSelection;
+  }
+
+  const runtimeValuesResult = await applyRuntimeValuesAndReleaseSelection(validated, releaseSelection, options);
+  if (!runtimeValuesResult.ok) {
+    appendUpdateHistory({
+      at: nowIso(),
+      channel: validated.channel,
+      ok: false,
+      phase: runtimeValuesResult.phase,
+      message: runtimeValuesResult.message
+    }, updateHistoryFile);
+    return runtimeValuesResult;
   }
 
   const fluxSourceResult = applyFluxSource(validated, releaseSelection, options);

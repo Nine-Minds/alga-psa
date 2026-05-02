@@ -7,9 +7,9 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 usage() {
   cat <<USAGE
 Usage:
-  $(basename "$0") --base-iso <path> --release-version <version> [--dry-run]
+  $(basename "$0") --base-iso <path> --release-version <version> [--dry-run] [--scaffold]
 
-Scaffold command for Ubuntu appliance ISO builds.
+Builds a custom Ubuntu appliance autoinstall ISO.
 
 Required flags:
   --base-iso <path>         Path to Ubuntu Server 24.04 LTS ISO.
@@ -17,12 +17,14 @@ Required flags:
 
 Optional flags:
   --dry-run                 Validate arguments and directory layout only.
+  --scaffold                Create a placeholder artifact for unit tests without remastering an ISO.
 USAGE
 }
 
 BASE_ISO=""
 RELEASE_VERSION=""
 DRY_RUN=0
+SCAFFOLD=0
 
 while (($#)); do
   case "$1" in
@@ -36,6 +38,10 @@ while (($#)); do
       ;;
     --dry-run)
       DRY_RUN=1
+      shift
+      ;;
+    --scaffold)
+      SCAFFOLD=1
       shift
       ;;
     -h|--help)
@@ -100,15 +106,66 @@ DRY
   exit 0
 fi
 
-cat <<MSG
-Layout validation passed.
-Full Ubuntu ISO remaster implementation is delivered in subsequent plan items.
-Intended output target: $OUTPUT_ISO
-MSG
-
 "$STAGE_SCRIPT"
 
-: > "$OUTPUT_ISO"
-sha256sum "$OUTPUT_ISO" > "$OUTPUT_SHA"
+if [[ "$SCAFFOLD" -eq 1 ]]; then
+  : > "$OUTPUT_ISO"
+  sha256sum "$OUTPUT_ISO" > "$OUTPUT_SHA"
+  printf 'Created scaffold artifact and checksum:\n- %s\n- %s\n' "$OUTPUT_ISO" "$OUTPUT_SHA"
+  exit 0
+fi
 
-printf 'Created scaffold artifact and checksum:\n- %s\n- %s\n' "$OUTPUT_ISO" "$OUTPUT_SHA"
+if ! command -v xorriso >/dev/null 2>&1; then
+  echo "xorriso is required to remaster the Ubuntu appliance ISO. Install xorriso or use --scaffold for layout-only tests." >&2
+  exit 1
+fi
+
+ISO_WORK="$ROOT_DIR/work/iso-root"
+rm -rf "$ISO_WORK"
+mkdir -p "$ISO_WORK"
+
+xorriso -osirrox on -indev "$BASE_ISO" -extract / "$ISO_WORK" >/dev/null
+chmod -R u+w "$ISO_WORK"
+
+rm -rf "$ISO_WORK/nocloud" "$ISO_WORK/alga-overlay"
+cp -R "$ROOT_DIR/config/nocloud" "$ISO_WORK/nocloud"
+cp -R "$ROOT_DIR/overlay" "$ISO_WORK/alga-overlay"
+
+for grub_file in "$ISO_WORK/boot/grub/grub.cfg" "$ISO_WORK/boot/grub/loopback.cfg"; do
+  if [[ -f "$grub_file" ]]; then
+    python3 - "$grub_file" <<'PY'
+import sys
+from pathlib import Path
+path = Path(sys.argv[1])
+text = path.read_text()
+needle = 'autoinstall ds=nocloud\\;s=/cdrom/nocloud/'
+out = []
+for line in text.splitlines():
+    stripped = line.lstrip()
+    if stripped.startswith('linux ') and 'autoinstall' not in line:
+        if '---' in line:
+            line = line.replace('---', f'{needle} ---', 1)
+        else:
+            line = f'{line} {needle}'
+    out.append(line)
+path.write_text('\n'.join(out) + '\n')
+PY
+  fi
+done
+
+rm -f "$OUTPUT_ISO" "$OUTPUT_SHA"
+xorriso -as mkisofs \
+  -r -V ALGA_UBUNTU \
+  -o "$OUTPUT_ISO" \
+  -J -joliet-long -l -iso-level 3 \
+  -c boot.catalog \
+  -b boot/grub/i386-pc/eltorito.img \
+  -no-emul-boot -boot-load-size 4 -boot-info-table \
+  -eltorito-alt-boot \
+  -e EFI/boot/bootx64.efi \
+  -no-emul-boot \
+  -isohybrid-gpt-basdat \
+  "$ISO_WORK"
+
+sha256sum "$OUTPUT_ISO" > "$OUTPUT_SHA"
+printf 'Created Ubuntu appliance ISO and checksum:\n- %s\n- %s\n' "$OUTPUT_ISO" "$OUTPUT_SHA"

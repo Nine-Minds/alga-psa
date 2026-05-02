@@ -48,7 +48,7 @@ exit 1
     assert.equal(snapshot.kubernetes.podCount, 2);
     assert.equal(snapshot.kubernetes.warnings.length, 0);
     assert.equal(snapshot.tiers.platformReady, true);
-    assert.equal(snapshot.tiers.coreReady, true);
+    assert.equal(snapshot.tiers.coreReady, false);
   } finally {
     process.env.PATH = originalPath;
   }
@@ -74,6 +74,18 @@ if [[ "$*" == *"get pods -A --no-headers"* ]]; then
   cat <<'TXT'
 msp alga-core-abc Running
 alga-system temporal-worker-xyz CrashLoopBackOff
+TXT
+  exit 0
+fi
+if [[ "$*" == *"-n msp get jobs --no-headers"* ]]; then
+  cat <<'TXT'
+alga-core-bootstrap 1/1 1 1m
+TXT
+  exit 0
+fi
+if [[ "$*" == *"-n alga-system get helmreleases"* ]]; then
+  cat <<'TXT'
+alga-core 1h True Release reconciliation succeeded
 TXT
   exit 0
 fi

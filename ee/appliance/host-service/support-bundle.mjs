@@ -23,10 +23,10 @@ function shellRun(command) {
 
 function redactText(value) {
   return String(value)
-    .replace(/(token\s*[:=]\s*)([^\s"']+)/ig, '$1[REDACTED]')
-    .replace(/(password\s*[:=]\s*)([^\s"']+)/ig, '$1[REDACTED]')
-    .replace(/(client-key-data\s*:\s*)([^\s"']+)/ig, '$1[REDACTED]')
-    .replace(/(authorization\s*:\s*bearer\s+)([^\s"']+)/ig, '$1[REDACTED]');
+    .replace(/((?:token|password|secret|client[-_]?key(?:-data)?|authorization)\s*[:=]\s*)([^\s"']+)/ig, '$1[REDACTED]')
+    .replace(/("(?:[^"]*(?:token|password|secret|clientKey|client-key-data)[^"]*)"\s*:\s*")([^"]+)(")/ig, '$1[REDACTED]$3')
+    .replace(/(authorization\s*:\s*bearer\s+)([^\s"']+)/ig, '$1[REDACTED]')
+    .replace(/(kind:\s*Secret[\s\S]*?\ndata:\n)([\s\S]*?)(\n(?:---|apiVersion:|kind:|metadata:)|$)/ig, '$1  [REDACTED_SECRET_DATA]: [REDACTED]$3');
 }
 
 function writeRedactedFile(file, content) {

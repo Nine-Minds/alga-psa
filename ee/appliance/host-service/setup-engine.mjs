@@ -1,7 +1,9 @@
 #!/usr/bin/env node
+import crypto from 'node:crypto';
 import dns from 'node:dns';
 import fs from 'node:fs';
 import https from 'node:https';
+import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { persistMaintenanceMetadata } from './metadata-engine.mjs';
@@ -96,9 +98,23 @@ function nowIso() {
   return new Date().toISOString();
 }
 
-function httpsRequest(url, timeoutMs = 8000) {
+function httpsRequest(url, timeoutMs = 8000, lookupServers = []) {
   return new Promise((resolve, reject) => {
-    const req = https.request(url, { method: 'GET', timeout: timeoutMs }, (res) => {
+    const requestOptions = { method: 'GET', timeout: timeoutMs };
+    if (lookupServers && lookupServers.length > 0) {
+      const resolver = new dns.promises.Resolver();
+      resolver.setServers(lookupServers);
+      requestOptions.lookup = async (hostname, _options, callback) => {
+        try {
+          const addresses = await resolver.resolve4(hostname);
+          callback(null, addresses[0], 4);
+        } catch (error) {
+          callback(error);
+        }
+      };
+    }
+
+    const req = https.request(url, requestOptions, (res) => {
       const chunks = [];
       res.on('data', (chunk) => chunks.push(chunk));
       res.on('end', () => {
@@ -115,6 +131,121 @@ function httpsRequest(url, timeoutMs = 8000) {
     req.on('error', reject);
     req.end();
   });
+}
+
+function runShell(command, options = {}) {
+  const result = spawnSync('sh', ['-c', command], {
+    env: process.env,
+    encoding: 'utf8',
+    input: options.input || undefined
+  });
+
+  return {
+    ok: result.status === 0,
+    status: result.status ?? 1,
+    stdout: result.stdout || '',
+    stderr: result.stderr || ''
+  };
+}
+
+function shellQuote(value) {
+  return `'${String(value).replaceAll("'", "'\\''")}'`;
+}
+
+function ensureCommand(command) {
+  return spawnSync('sh', ['-c', `command -v ${command}`], { encoding: 'utf8' }).status === 0;
+}
+
+function ensureFluxCli(options = {}) {
+  if (ensureCommand('flux')) {
+    return { ok: true, installed: false };
+  }
+
+  const installCommand = options.fluxCliInstallCommand || 'curl -s https://fluxcd.io/install.sh | bash';
+  const result = runShell(installCommand);
+  if (!result.ok || !ensureCommand('flux')) {
+    return {
+      ok: false,
+      stdout: result.stdout,
+      stderr: result.stderr,
+      message: 'Flux CLI is not installed and automatic installation failed.'
+    };
+  }
+
+  return { ok: true, installed: true };
+}
+
+function rawGithubUrl(repo, branch, filePath) {
+  return `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${branch}/${filePath}`;
+}
+
+async function fetchGithubText(repo, branch, filePath, timeoutMs, lookupServers = []) {
+  const url = rawGithubUrl(repo, branch, filePath);
+  const response = await httpsRequest(url, timeoutMs, lookupServers);
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw new Error(`GET ${url} returned ${response.statusCode}`);
+  }
+  return response.body;
+}
+
+function yamlString(value) {
+  return JSON.stringify(String(value));
+}
+
+function appUrlFromInput(value) {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+function hostFromAppUrl(value) {
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return String(value || '').replace(/^https?:\/\//i, '').split('/')[0];
+  }
+}
+
+function setYamlScalar(yaml, target, value) {
+  const output = [];
+  const stack = [];
+  let replaced = false;
+
+  for (const line of yaml.split(/\r?\n/)) {
+    const match = line.match(/^(\s*)([A-Za-z0-9_-]+):(?:\s|$)/);
+    const indent = line.match(/^\s*/)?.[0].length || 0;
+
+    while (stack.length && stack[stack.length - 1].indent >= indent) {
+      stack.pop();
+    }
+
+    if (match) {
+      const key = match[2];
+      const parentPath = stack.map((entry) => entry.key);
+      if (!replaced && parentPath.length === target.length - 1 && parentPath.every((part, index) => part === target[index]) && key === target[target.length - 1]) {
+        output.push(`${line.slice(0, indent)}${key}: ${value}`);
+        replaced = true;
+        stack.push({ indent, key });
+        continue;
+      }
+      stack.push({ indent, key });
+    }
+
+    output.push(line);
+  }
+
+  if (!replaced) {
+    throw new Error(`Failed to update YAML value ${target.join('.')}`);
+  }
+
+  return output.join('\n');
+}
+
+function resolverServersForInputs(inputs, resolvConfPath = DEFAULT_RESOLV_CONF) {
+  return inputs.dnsMode === 'custom'
+    ? inputs.dnsServers.split(',').map((value) => value.trim()).filter(Boolean)
+    : readSystemResolvers(resolvConfPath);
 }
 
 async function dnsLookup(hostname, servers) {
@@ -219,9 +350,7 @@ export async function runSetupPreflight(inputs, options = {}) {
   const state = baseState(inputs);
   writeInstallState(state, stateFile);
 
-  const servers = inputs.dnsMode === 'custom'
-    ? inputs.dnsServers.split(',').map((value) => value.trim()).filter(Boolean)
-    : readSystemResolvers(resolvConfPath);
+  const servers = resolverServersForInputs(inputs, resolvConfPath);
 
   if (inputs.dnsMode === 'system' && servers.length === 0) {
     const failure = preflightFailure(
@@ -250,7 +379,7 @@ export async function runSetupPreflight(inputs, options = {}) {
   const channelUrl = `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${repoBranch}/ee/appliance/releases/channels/${inputs.channel}.json`;
   let channelBody = '';
   try {
-    const channelResponse = await httpsRequest(channelUrl, timeoutMs);
+    const channelResponse = await httpsRequest(channelUrl, timeoutMs, servers);
     channelBody = channelResponse.body;
     if (channelResponse.statusCode < 200 || channelResponse.statusCode >= 300) {
       const failure = preflightFailure(
@@ -287,7 +416,7 @@ export async function runSetupPreflight(inputs, options = {}) {
   }
 
   try {
-    const ghcrResponse = await httpsRequest('https://ghcr.io/v2/', timeoutMs);
+    const ghcrResponse = await httpsRequest('https://ghcr.io/v2/', timeoutMs, servers);
     if (![200, 401].includes(ghcrResponse.statusCode)) {
       const failure = preflightFailure(
         'network',
@@ -349,7 +478,7 @@ export function installK3sSingleNode(options = {}) {
   const kubeconfigPath = options.kubeconfigPath || '/etc/rancher/k3s/k3s.yaml';
   const installScriptUrl = options.installScriptUrl || 'https://get.k3s.io';
   const k3sVersion = options.k3sVersion || process.env.ALGA_APPLIANCE_K3S_VERSION || 'v1.31.4+k3s1';
-  const installExec = options.installExec || process.env.ALGA_APPLIANCE_K3S_EXEC || `server --write-kubeconfig  --write-kubeconfig-mode 644 --disable traefik --disable servicelb`;
+  const installExec = options.installExec || process.env.ALGA_APPLIANCE_K3S_EXEC || `server --write-kubeconfig ${kubeconfigPath} --write-kubeconfig-mode 600 --disable traefik --disable servicelb`;
   const installCommand = options.installCommand || `curl -sfL ${installScriptUrl} | sh -s -`;
 
   writeInstallState({
@@ -508,6 +637,24 @@ export function installFlux(options = {}) {
   const kubeconfigPath = options.kubeconfigPath || '/etc/rancher/k3s/k3s.yaml';
   const fluxInstallCommand = options.fluxInstallCommand || `flux install --namespace flux-system --kubeconfig ${kubeconfigPath}`;
 
+  const cli = ensureFluxCli(options);
+  if (!cli.ok) {
+    const failure = preflightFailure(
+      'flux',
+      'install-flux-cli',
+      'Flux CLI is required before installing Flux controllers.',
+      `${cli.message || 'Install Flux CLI and retry.'} ${(cli.stderr || cli.stdout || '').trim()}`.trim()
+    );
+    writeInstallState({
+      status: 'flux-install-blocked',
+      phase: 'flux',
+      lastAction: failure.message,
+      failure,
+      updatedAt: nowIso()
+    }, stateFile);
+    return failure;
+  }
+
   writeInstallState({
     status: 'flux-install-running',
     phase: 'flux',
@@ -586,7 +733,7 @@ export async function resolveChannelMetadata(inputs, options = {}) {
   if (options.channelMetadataOverride) {
     channelData = options.channelMetadataOverride;
   } else {
-    const response = await httpsRequest(channelUrl, timeoutMs);
+    const response = await httpsRequest(channelUrl, timeoutMs, resolverServersForInputs(inputs, options.resolvConfPath || DEFAULT_RESOLV_CONF));
     if (response.statusCode < 200 || response.statusCode >= 300) {
       const failure = preflightFailure(
         'github-release-source',
@@ -646,6 +793,141 @@ export async function resolveChannelMetadata(inputs, options = {}) {
       repoUrl: success.repoUrl,
       repoBranch: success.repoBranch
     },
+    updatedAt: nowIso()
+  }, stateFile);
+
+  return success;
+}
+
+export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelection, options = {}) {
+  const stateFile = options.stateFile || DEFAULT_STATE_FILE;
+  const kubeconfigPath = options.kubeconfigPath || '/etc/rancher/k3s/k3s.yaml';
+  const timeoutMs = Number(options.timeoutMs || 8000);
+  const normalizedRepoUrl = normalizeGithubRepoUrl(releaseSelection.repoUrl || inputs.repoUrl);
+  const repo = extractRepoParts(normalizedRepoUrl);
+  const branch = releaseSelection.repoBranch || inputs.repoBranch || 'main';
+  const releaseVersion = releaseSelection.releaseVersion;
+  const tempDir = options.runtimeValuesDir || fs.mkdtempSync(path.join(os.tmpdir(), 'alga-runtime-values-'));
+  const valuesDir = path.join(tempDir, 'values');
+
+  writeInstallState({
+    status: 'runtime-values-running',
+    phase: 'github-release-source',
+    lastAction: 'Creating Kubernetes runtime values and release selection',
+    updatedAt: nowIso()
+  }, stateFile);
+
+  let releaseManifest;
+  try {
+    const lookupServers = resolverServersForInputs(inputs, options.resolvConfPath || DEFAULT_RESOLV_CONF);
+    const releaseBody = options.releaseManifestOverride
+      ? JSON.stringify(options.releaseManifestOverride)
+      : await fetchGithubText(repo, branch, `ee/appliance/releases/${releaseVersion}/release.json`, timeoutMs, lookupServers);
+    releaseManifest = JSON.parse(releaseBody);
+  } catch (error) {
+    const failure = preflightFailure(
+      'github-release-source',
+      'fetch-release-manifest',
+      `Unable to fetch release manifest ${releaseVersion}.`,
+      error instanceof Error ? error.message : String(error)
+    );
+    writeInstallState({ status: 'runtime-values-blocked', phase: 'github-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+    return failure;
+  }
+
+  const profile = releaseManifest.app?.valuesProfile || 'talos-single-node';
+  const names = ['alga-core', 'pgbouncer', 'temporal', 'workflow-worker', 'email-service', 'temporal-worker'];
+  const values = {};
+
+  try {
+    fs.mkdirSync(valuesDir, { recursive: true, mode: 0o700 });
+    for (const name of names) {
+      const key = `${name}.${profile}.yaml`;
+      const override = options.profileValuesOverride?.[key];
+      values[key] = override ?? await fetchGithubText(repo, branch, `ee/appliance/flux/profiles/${profile}/values/${key}`, timeoutMs, resolverServersForInputs(inputs, options.resolvConfPath || DEFAULT_RESOLV_CONF));
+    }
+
+    const images = releaseManifest.app?.images || {};
+    const bootstrapMode = options.bootstrapMode || 'recover';
+    values[`alga-core.${profile}.yaml`] = setYamlScalar(values[`alga-core.${profile}.yaml`], ['bootstrap', 'mode'], yamlString(bootstrapMode));
+    const appUrl = appUrlFromInput(inputs.appHostname);
+    if (appUrl) {
+      values[`alga-core.${profile}.yaml`] = setYamlScalar(values[`alga-core.${profile}.yaml`], ['appUrl'], yamlString(appUrl));
+      values[`alga-core.${profile}.yaml`] = setYamlScalar(values[`alga-core.${profile}.yaml`], ['host'], yamlString(hostFromAppUrl(appUrl)));
+      values[`alga-core.${profile}.yaml`] = setYamlScalar(values[`alga-core.${profile}.yaml`], ['domainSuffix'], '""');
+    }
+    if (images.algaCore) {
+      values[`alga-core.${profile}.yaml`] = setYamlScalar(values[`alga-core.${profile}.yaml`], ['setup', 'image', 'tag'], yamlString(images.algaCore));
+      values[`alga-core.${profile}.yaml`] = setYamlScalar(values[`alga-core.${profile}.yaml`], ['server', 'image', 'tag'], yamlString(images.algaCore));
+    }
+    if (images.workflowWorker) {
+      values[`workflow-worker.${profile}.yaml`] = setYamlScalar(values[`workflow-worker.${profile}.yaml`], ['image', 'tag'], yamlString(images.workflowWorker));
+    }
+    if (images.emailService) {
+      values[`email-service.${profile}.yaml`] = setYamlScalar(values[`email-service.${profile}.yaml`], ['image', 'tag'], yamlString(images.emailService));
+    }
+    if (images.temporalWorker) {
+      values[`temporal-worker.${profile}.yaml`] = setYamlScalar(values[`temporal-worker.${profile}.yaml`], ['image', 'tag'], yamlString(images.temporalWorker));
+    }
+
+    for (const [key, content] of Object.entries(values)) {
+      fs.writeFileSync(path.join(valuesDir, key), content.endsWith('\n') ? content : `${content}\n`, { mode: 0o600 });
+    }
+
+    fs.writeFileSync(path.join(tempDir, 'kustomization.yaml'), `apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\ngeneratorOptions:\n  disableNameSuffixHash: true\nconfigMapGenerator:\n${names.map((name) => `  - name: appliance-values-${name}\n    namespace: alga-system\n    files:\n      - ${name}.${profile}.yaml=values/${name}.${profile}.yaml`).join('\n')}\n`, { mode: 0o600 });
+  } catch (error) {
+    const failure = preflightFailure(
+      'github-release-source',
+      'render-runtime-values',
+      'Unable to render runtime values for the selected release.',
+      error instanceof Error ? error.message : String(error)
+    );
+    writeInstallState({ status: 'runtime-values-blocked', phase: 'github-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+    return failure;
+  }
+
+  const authKey = options.algaAuthKey || crypto.randomBytes(32).toString('base64url');
+  const statusToken = fs.existsSync(options.tokenFile || '/var/lib/alga-appliance/setup-token')
+    ? fs.readFileSync(options.tokenFile || '/var/lib/alga-appliance/setup-token', 'utf8').trim()
+    : crypto.randomBytes(24).toString('base64url');
+
+  const commands = [
+    `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} create namespace msp --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
+    `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} create namespace alga-system --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
+    `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} create namespace appliance-system --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
+    `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n msp create secret generic alga-psa-shared --from-literal=ALGA_AUTH_KEY=${shellQuote(authKey)} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
+    `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n appliance-system create secret generic appliance-status-auth --from-literal=token=${shellQuote(statusToken)} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
+    `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -k ${shellQuote(tempDir)}`,
+    `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n alga-system create configmap appliance-release-selection --from-literal=releaseVersion=${shellQuote(releaseVersion)} --from-literal=selectedChannel=${shellQuote(inputs.channel)} --from-literal=appVersion=${shellQuote(releaseManifest.app?.version || '')} --from-literal=releaseBranch=${shellQuote(releaseManifest.app?.releaseBranch || branch)} --from-literal=algaCoreTag=${shellQuote(releaseManifest.app?.images?.algaCore || '')} --from-literal=workflowWorkerTag=${shellQuote(releaseManifest.app?.images?.workflowWorker || '')} --from-literal=emailServiceTag=${shellQuote(releaseManifest.app?.images?.emailService || '')} --from-literal=temporalWorkerTag=${shellQuote(releaseManifest.app?.images?.temporalWorker || '')} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`
+  ];
+
+  for (const command of commands) {
+    const result = runShell(command);
+    if (!result.ok) {
+      const failure = preflightFailure(
+        'github-release-source',
+        'apply-runtime-values',
+        'Failed to apply Kubernetes runtime values or release selection.',
+        (result.stderr || result.stdout || `exit ${result.status}`).trim()
+      );
+      writeInstallState({ status: 'runtime-values-blocked', phase: 'github-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+      return failure;
+    }
+  }
+
+  const success = {
+    ok: true,
+    phase: 'github-release-source',
+    message: `Runtime values and release selection applied for ${releaseVersion}.`,
+    releaseVersion,
+    profile
+  };
+
+  writeInstallState({
+    status: 'runtime-values-complete',
+    phase: 'github-release-source',
+    lastAction: success.message,
+    runtimeValues: { profile, releaseVersion },
     updatedAt: nowIso()
   }, stateFile);
 
@@ -822,6 +1104,11 @@ export async function runSetupWorkflow(inputs, options = {}) {
     return releaseSelection;
   }
 
+  const runtimeValuesResult = await applyRuntimeValuesAndReleaseSelection(inputs, releaseSelection, { ...options, bootstrapMode: options.bootstrapMode || 'fresh' });
+  if (!runtimeValuesResult.ok) {
+    return runtimeValuesResult;
+  }
+
   const fluxSourceResult = applyFluxSource(inputs, releaseSelection, options);
   if (!fluxSourceResult.ok) {
     return fluxSourceResult;
@@ -838,4 +1125,49 @@ export async function runSetupWorkflow(inputs, options = {}) {
     installStateFile: options.stateFile
   });
   return configResult;
+}
+
+function parseCliArgs(argv) {
+  const parsed = { command: argv[0] || '' };
+  for (let i = 1; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === '--setup-inputs') {
+      parsed.setupInputsFile = argv[i + 1];
+      i += 1;
+    } else if (arg === '--state-file') {
+      parsed.stateFile = argv[i + 1];
+      i += 1;
+    } else if (arg === '--kubeconfig') {
+      parsed.kubeconfigPath = argv[i + 1];
+      i += 1;
+    } else if (arg === '--release-selection-file') {
+      parsed.releaseSelectionFile = argv[i + 1];
+      i += 1;
+    }
+  }
+  return parsed;
+}
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const args = parseCliArgs(process.argv.slice(2));
+  if (args.command === 'run') {
+    const setupInputsFile = args.setupInputsFile || DEFAULT_SETUP_FILE;
+    try {
+      const raw = JSON.parse(fs.readFileSync(setupInputsFile, 'utf8'));
+      const inputs = validateSetupInputs(raw);
+      const result = await runSetupWorkflow(inputs, args);
+      process.stdout.write(`${JSON.stringify(result)}\n`);
+      if (!result.ok) process.exitCode = 1;
+    } catch (error) {
+      const failure = preflightFailure(
+        'setup',
+        'run-setup-workflow',
+        'Setup workflow failed before it could complete.',
+        error instanceof Error ? error.message : String(error)
+      );
+      writeInstallState({ status: 'setup-blocked', phase: 'setup', lastAction: failure.message, failure, updatedAt: nowIso() }, args.stateFile || DEFAULT_STATE_FILE);
+      process.stderr.write(`${JSON.stringify(failure)}\n`);
+      process.exitCode = 1;
+    }
+  }
 }

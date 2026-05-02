@@ -23,13 +23,15 @@ test('T001 build smoke: dry-run and scaffold build stage host artifacts and outp
   assert.equal(dryRun.status, 0, dryRun.stderr || dryRun.stdout);
   assert.match(dryRun.stdout, /layout validated/i);
 
-  const build = run('bash', [buildScript, '--base-iso', tmpIso, '--release-version', releaseVersion]);
+  const build = run('bash', [buildScript, '--base-iso', tmpIso, '--release-version', releaseVersion, '--scaffold']);
   assert.equal(build.status, 0, build.stderr || build.stdout);
 
   assert.equal(fs.existsSync(path.join(overlayRoot, 'appliance')), true);
   assert.equal(fs.existsSync(path.join(overlayRoot, 'host-service')), true);
   assert.equal(fs.existsSync(path.join(overlayRoot, 'operator')), true);
   assert.equal(fs.existsSync(path.join(overlayRoot, 'scripts')), true);
+  assert.equal(fs.existsSync(path.join(overlayRoot, 'flux')), true);
+  assert.equal(fs.existsSync(path.join(overlayRoot, 'releases')), true);
 
   const isoOut = path.join(outputRoot, `alga-appliance-ubuntu-${releaseVersion}.iso`);
   const shaOut = `${isoOut}.sha256`;

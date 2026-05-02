@@ -17,7 +17,7 @@ autoinstall:
 
   ssh:
     install-server: true
-    allow-pw: true
+    allow-pw: false
 
   storage:
     layout:
@@ -30,6 +30,7 @@ autoinstall:
     - git
     - jq
     - net-tools
+    - nodejs
     - openssh-server
     - unzip
     - ufw
@@ -38,10 +39,14 @@ autoinstall:
     disable_root: true
 
   late-commands:
-    - curtin in-target --target=/target -- mkdir -p /opt/alga-appliance /etc/alga-appliance /var/lib/alga-appliance /var/log/alga-appliance
+    - mkdir -p /target/opt/alga-appliance /target/etc/alga-appliance /target/var/lib/alga-appliance /target/var/log/alga-appliance
+    - bash -lc 'if [ -d /cdrom/alga-overlay ]; then cp -a /cdrom/alga-overlay/. /target/; fi'
     - curtin in-target --target=/target -- chown -R root:root /opt/alga-appliance /etc/alga-appliance /var/lib/alga-appliance /var/log/alga-appliance
     - curtin in-target --target=/target -- chmod 0755 /opt/alga-appliance
     - curtin in-target --target=/target -- chmod 0750 /etc/alga-appliance /var/lib/alga-appliance /var/log/alga-appliance
+    - curtin in-target --target=/target -- find /opt/alga-appliance -type f -name '*.sh' -exec chmod 0755 {} \;
+    - curtin in-target --target=/target -- chmod 0755 /opt/alga-appliance/appliance
+    - curtin in-target --target=/target -- passwd -l alga-admin
     - curtin in-target --target=/target -- bash -lc 'if [ -f /etc/systemd/system/alga-appliance.service ]; then systemctl enable alga-appliance.service; fi'
     - curtin in-target --target=/target -- bash -lc 'if [ -f /etc/systemd/system/alga-appliance-console.service ]; then systemctl enable alga-appliance-console.service; fi'
 

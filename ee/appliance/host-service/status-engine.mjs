@@ -145,17 +145,28 @@ function deriveFailureSummary(installState, podLines, warnings) {
   return summaries;
 }
 
-function deriveReadiness(installState, nodes, podLines, warnings) {
+function lineLooksHealthy(line) {
+  const lower = line.toLowerCase();
+  return lower.includes(' running') || lower.includes(' completed');
+}
+
+function deriveReadiness(installState, nodes, podLines, jobLines, helmLines, warnings) {
   const readyNodeCount = nodes.filter((node) => node.ready).length;
   const platformReady = readyNodeCount > 0;
-  const coreReady = platformReady && podLines.length > 0;
-  const bootstrapReady = (installState?.status || '').includes('complete');
+  const coreReady = platformReady && podLines.some((line) => {
+    const lower = line.toLowerCase();
+    return lower.startsWith('msp ') && lower.includes('alga-core') && lineLooksHealthy(line);
+  });
+  const bootstrapReady = coreReady && (
+    jobLines.some((line) => line.toLowerCase().includes('bootstrap') && /\s1\/1\s/.test(line)) ||
+    helmLines.some((line) => line.toLowerCase().startsWith('alga-core') && line.toLowerCase().includes('true'))
+  );
 
   const backgroundServiceHints = ['email-service', 'temporal', 'workflow-worker', 'temporal-worker'];
   const backgroundIssues = podLines.filter((line) => {
     const lower = line.toLowerCase();
     const isBackground = backgroundServiceHints.some((hint) => lower.includes(hint));
-    const looksHealthy = lower.includes(' running') || lower.includes(' completed');
+    const looksHealthy = lineLooksHealthy(line);
     return isBackground && !looksHealthy;
   });
 
@@ -183,6 +194,8 @@ export function collectStatusSnapshot(options = {}) {
   const installState = readJsonFile(stateFile);
   const nodeResult = runCommand(`${kubectlPrefix} get nodes -o json`);
   const podResult = runCommand(`${kubectlPrefix} get pods -A --no-headers`);
+  const jobResult = runCommand(`${kubectlPrefix} -n msp get jobs --no-headers`);
+  const helmResult = runCommand(`${kubectlPrefix} -n alga-system get helmreleases.helm.toolkit.fluxcd.io --no-headers`);
 
   let nodes = [];
   if (nodeResult.ok) {
@@ -201,11 +214,18 @@ export function collectStatusSnapshot(options = {}) {
     ? podResult.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
     : [];
 
+  const jobLines = jobResult.ok
+    ? jobResult.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+    : [];
+  const helmLines = helmResult.ok
+    ? helmResult.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+    : [];
+
   const warnings = [
     ...(nodeResult.ok ? [] : [`node query failed: ${nodeResult.stderr.trim() || nodeResult.stdout.trim() || 'unknown error'}`]),
     ...(podResult.ok ? [] : [`pod query failed: ${podResult.stderr.trim() || podResult.stdout.trim() || 'unknown error'}`])
   ];
-  const tiers = deriveReadiness(installState, nodes, podLines, warnings);
+  const tiers = deriveReadiness(installState, nodes, podLines, jobLines, helmLines, warnings);
   const failures = deriveFailureSummary(installState, podLines, warnings);
 
   return {
@@ -219,6 +239,8 @@ export function collectStatusSnapshot(options = {}) {
     kubernetes: {
       nodes,
       podCount: podLines.length,
+      jobCount: jobLines.length,
+      helmReleaseCount: helmLines.length,
       warnings
     }
   };

@@ -9,12 +9,15 @@ DEST_ROOT="$ISO_ROOT/overlay/opt/alga-appliance"
 SRC_APPLIANCE_ROOT="$REPO_ROOT/ee/appliance"
 
 rm -rf "$DEST_ROOT"
-mkdir -p "$DEST_ROOT"/{host-service,operator,scripts,status-ui}
+mkdir -p "$DEST_ROOT"
 
 cp "$SRC_APPLIANCE_ROOT/appliance" "$DEST_ROOT/appliance"
 cp -R "$SRC_APPLIANCE_ROOT/host-service" "$DEST_ROOT/host-service"
 cp -R "$SRC_APPLIANCE_ROOT/operator" "$DEST_ROOT/operator"
 cp -R "$SRC_APPLIANCE_ROOT/scripts" "$DEST_ROOT/scripts"
+cp -R "$SRC_APPLIANCE_ROOT/flux" "$DEST_ROOT/flux"
+cp -R "$SRC_APPLIANCE_ROOT/releases" "$DEST_ROOT/releases"
+mkdir -p "$DEST_ROOT/status-ui"
 
 if [[ -d "$SRC_APPLIANCE_ROOT/status-ui/dist" ]]; then
   cp -R "$SRC_APPLIANCE_ROOT/status-ui/dist" "$DEST_ROOT/status-ui/dist"
@@ -31,5 +34,7 @@ Staged host appliance artifacts:
 - $DEST_ROOT/host-service
 - $DEST_ROOT/operator
 - $DEST_ROOT/scripts
+- $DEST_ROOT/flux
+- $DEST_ROOT/releases
 - $DEST_ROOT/status-ui
 MSG
