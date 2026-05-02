@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import http from 'node:http';
 import fs from 'node:fs';
-import path from 'node:path';
 import { URL } from 'node:url';
+import { persistSetupInputs, validateSetupInputs } from './setup-engine.mjs';
 
 const port = Number(process.env.ALGA_APPLIANCE_PORT || 8080);
 const stateFile = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
@@ -33,14 +33,6 @@ function readRequestBody(req) {
   });
 }
 
-function persistSetupInputs(inputs) {
-  const setupDir = path.dirname(setupInputsFile);
-  fs.mkdirSync(setupDir, { recursive: true, mode: 0o750 });
-  fs.writeFileSync(setupInputsFile, `${JSON.stringify(inputs, null, 2)}\n`, { mode: 0o600 });
-  fs.chmodSync(setupDir, 0o750);
-  fs.chmodSync(setupInputsFile, 0o600);
-}
-
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const mode = currentMode();
@@ -63,35 +55,21 @@ const server = http.createServer(async (req, res) => {
     if ((req.method || 'GET').toUpperCase() === 'POST') {
       const body = await readRequestBody(req);
       const params = new URLSearchParams(body);
-      const channel = params.get('channel') || 'stable';
-      const appHostname = params.get('appHostname') || '';
-      const dnsMode = params.get('dnsMode') || 'system';
-      const dnsServers = params.get('dnsServers') || '';
-      const repoUrl = params.get('repoUrl') || 'https://github.com/Nine-Minds/alga-psa.git';
-      const repoBranch = params.get('repoBranch') || '';
-
-      if (!['stable', 'nightly'].includes(channel)) {
+      try {
+        const setupInputs = validateSetupInputs({
+          channel: params.get('channel') || 'stable',
+          appHostname: params.get('appHostname') || '',
+          dnsMode: params.get('dnsMode') || 'system',
+          dnsServers: params.get('dnsServers') || '',
+          repoUrl: params.get('repoUrl') || 'https://github.com/Nine-Minds/alga-psa.git',
+          repoBranch: params.get('repoBranch') || ''
+        });
+        persistSetupInputs(setupInputs, setupInputsFile);
+      } catch (error) {
         res.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' });
-        res.end('Invalid channel. Use stable or nightly.');
+        res.end(error instanceof Error ? error.message : 'Invalid setup inputs.');
         return;
       }
-
-      if (!['system', 'custom'].includes(dnsMode)) {
-        res.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' });
-        res.end('Invalid DNS mode. Use system or custom.');
-        return;
-      }
-
-      const setupInputs = {
-        channel,
-        appHostname,
-        dnsMode,
-        dnsServers,
-        repoUrl,
-        repoBranch,
-        submittedAt: new Date().toISOString()
-      };
-      persistSetupInputs(setupInputs);
 
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
       res.end('<!doctype html><html><body><h1>Setup Saved</h1><p>Inputs validated and persisted. Setup engine wiring is next.</p></body></html>');

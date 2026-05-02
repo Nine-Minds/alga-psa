@@ -157,3 +157,6 @@ Minimum live validation environment should include:
   - DNS defaults to `Use DHCP/system resolvers`
   - custom DNS is opt-in and called out as deliberate (with example format guidance)
 - (2026-05-01) **F013 completed**: Setup POST now validates and persists inputs to `/etc/alga-appliance/setup-inputs.json` (or `ALGA_APPLIANCE_SETUP_INPUTS_FILE` override), with restricted file permissions (`0600`) and restricted directory permissions (`0750`).
+- (2026-05-01) **F012 completed**: Added console setup prompt flow `ee/appliance/host-service/console-setup.mjs` collecting the same required values as web setup.
+- Shared validation/persistence: introduced `ee/appliance/host-service/setup-engine.mjs`; both web POST `/setup` and console prompt use the same `validateSetupInputs()` + `persistSetupInputs()` logic.
+- Console-first guidance now includes explicit fallback command to launch interactive setup from VM/serial console.

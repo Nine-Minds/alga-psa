@@ -26,6 +26,7 @@ const lines = [
   `Setup URL: http://${ip}:${port}/setup`,
   `Setup token: ${token}`,
   'Web setup is the primary path.',
+  'Console setup fallback: /usr/bin/env node /opt/alga-appliance/host-service/console-setup.mjs',
   'For logs: journalctl -u alga-appliance.service -u alga-appliance-console.service -f'
 ];
 

@@ -99,7 +99,7 @@
     "prdRefs": [
       "Console fallback"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F013",
