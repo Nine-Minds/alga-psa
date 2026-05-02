@@ -132,3 +132,7 @@ Minimum live validation environment should include:
 - Scope covered: unattended install defaults (locale/timezone), direct full-disk partitioning policy, base appliance admin account, required utility packages, and first-boot service enablement hooks for `alga-appliance.service` and `alga-appliance-console.service`.
 - Security/operations note: appliance state directories are created in install-time late commands with root ownership and restricted permissions (`0750` for `/etc/alga-appliance`, `/var/lib/alga-appliance`, `/var/log/alga-appliance`).
 - Build entrypoint hardening: `build-ubuntu-appliance-iso.sh` now fails fast if `config/nocloud/user-data` or `meta-data` are missing.
+- (2026-05-01) **F003 completed**: Implemented host artifact packaging flow with `ee/appliance/ubuntu-iso/scripts/stage-host-artifacts.sh`.
+- Packaging behavior: stages `ee/appliance/appliance`, `ee/appliance/operator/`, `ee/appliance/scripts/`, and built `ee/appliance/status-ui/dist` into `ee/appliance/ubuntu-iso/overlay/opt/alga-appliance/` for ISO-installed host delivery.
+- `build-ubuntu-appliance-iso.sh` now enforces presence/executability of the staging script and runs it during non-dry-run builds.
+- Gotcha: `status-ui/dist` is expected to exist at packaging time; staging warns if missing so CI/release automation must build status-ui first.

@@ -17,6 +17,8 @@ This layout separates concerns so later plan items can evolve independently:
 ## Build Contract
 
 `scripts/build-ubuntu-appliance-iso.sh` is the single entrypoint.
+It stages host appliance artifacts through `scripts/stage-host-artifacts.sh`
+into `overlay/opt/alga-appliance/` before ISO remaster steps.
 
 Expected inputs:
 

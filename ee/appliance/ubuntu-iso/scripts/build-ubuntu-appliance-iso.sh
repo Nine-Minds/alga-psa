@@ -81,6 +81,12 @@ for required_file in \
   fi
 done
 
+STAGE_SCRIPT="$ROOT_DIR/scripts/stage-host-artifacts.sh"
+if [[ ! -x "$STAGE_SCRIPT" ]]; then
+  echo "Missing executable staging script: $STAGE_SCRIPT" >&2
+  exit 1
+fi
+
 OUTPUT_ISO="$ROOT_DIR/output/alga-appliance-ubuntu-${RELEASE_VERSION}.iso"
 OUTPUT_SHA="$OUTPUT_ISO.sha256"
 
@@ -99,6 +105,8 @@ Layout validation passed.
 Full Ubuntu ISO remaster implementation is delivered in subsequent plan items.
 Intended output target: $OUTPUT_ISO
 MSG
+
+"$STAGE_SCRIPT"
 
 : > "$OUTPUT_ISO"
 sha256sum "$OUTPUT_ISO" > "$OUTPUT_SHA"

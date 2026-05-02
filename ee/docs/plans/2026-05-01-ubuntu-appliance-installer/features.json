@@ -22,7 +22,7 @@
     "prdRefs": [
       "Host setup/status service"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F004",
