@@ -136,3 +136,10 @@ Minimum live validation environment should include:
 - Packaging behavior: stages `ee/appliance/appliance`, `ee/appliance/operator/`, `ee/appliance/scripts/`, and built `ee/appliance/status-ui/dist` into `ee/appliance/ubuntu-iso/overlay/opt/alga-appliance/` for ISO-installed host delivery.
 - `build-ubuntu-appliance-iso.sh` now enforces presence/executability of the staging script and runs it during non-dry-run builds.
 - Gotcha: `status-ui/dist` is expected to exist at packaging time; staging warns if missing so CI/release automation must build status-ui first.
+- (2026-05-01) **F004 completed**: Added host web service systemd unit at `ee/appliance/ubuntu-iso/overlay/etc/systemd/system/alga-appliance.service` bound to port `8080`.
+- Added host runtime skeleton at `ee/appliance/host-service/server.mjs` (HTTP server with setup/status mode detection via `/var/lib/alga-appliance/install-state.json` and `/healthz` endpoint).
+- Updated artifact staging to package `ee/appliance/host-service/` into `/opt/alga-appliance/host-service` on the target host.
+- Validation run: `curl http://127.0.0.1:8080/healthz` returned `{"ok":true,"mode":"setup"}` while running `server.mjs` locally.
+- (2026-05-01) **F005 completed**: Added console fallback startup path at `ee/appliance/ubuntu-iso/overlay/etc/systemd/system/alga-appliance-console.service`.
+- Added serial/console-friendly output entrypoint `ee/appliance/host-service/console.mjs` (prints node IP, setup URL, setup token path value, and log command) while keeping web setup as the primary flow.
+- Service shape is `Type=oneshot` with `StandardOutput=tty` to support VM/serial console display without replacing the web path on `:8080`.

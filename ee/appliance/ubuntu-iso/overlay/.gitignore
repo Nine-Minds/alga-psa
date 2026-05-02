@@ -1,3 +1,5 @@
-*
+/opt/
+/*
 !.gitignore
 !.gitkeep
+!/etc/

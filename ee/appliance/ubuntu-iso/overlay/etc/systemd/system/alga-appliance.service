@@ -1,0 +1,20 @@
+[Unit]
+Description=Alga Appliance Host Setup and Status Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+Environment=ALGA_APPLIANCE_PORT=8080
+Environment=ALGA_APPLIANCE_STATE_FILE=/var/lib/alga-appliance/install-state.json
+ExecStart=/usr/bin/env node /opt/alga-appliance/host-service/server.mjs
+Restart=always
+RestartSec=3
+WorkingDirectory=/opt/alga-appliance
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

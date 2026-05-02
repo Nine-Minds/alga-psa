@@ -9,9 +9,10 @@ DEST_ROOT="$ISO_ROOT/overlay/opt/alga-appliance"
 SRC_APPLIANCE_ROOT="$REPO_ROOT/ee/appliance"
 
 rm -rf "$DEST_ROOT"
-mkdir -p "$DEST_ROOT"/{operator,scripts,status-ui}
+mkdir -p "$DEST_ROOT"/{host-service,operator,scripts,status-ui}
 
 cp "$SRC_APPLIANCE_ROOT/appliance" "$DEST_ROOT/appliance"
+cp -R "$SRC_APPLIANCE_ROOT/host-service" "$DEST_ROOT/host-service"
 cp -R "$SRC_APPLIANCE_ROOT/operator" "$DEST_ROOT/operator"
 cp -R "$SRC_APPLIANCE_ROOT/scripts" "$DEST_ROOT/scripts"
 
@@ -27,6 +28,7 @@ find "$DEST_ROOT/scripts" -type f -name '*.sh' -exec chmod 0755 {} +
 cat <<MSG
 Staged host appliance artifacts:
 - $DEST_ROOT/appliance
+- $DEST_ROOT/host-service
 - $DEST_ROOT/operator
 - $DEST_ROOT/scripts
 - $DEST_ROOT/status-ui

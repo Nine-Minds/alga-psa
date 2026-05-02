@@ -31,7 +31,7 @@
       "Host setup/status service",
       "Status UI"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F005",
@@ -39,7 +39,7 @@
     "prdRefs": [
       "Console fallback"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F006",

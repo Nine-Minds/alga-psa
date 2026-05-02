@@ -1,0 +1,21 @@
+[Unit]
+Description=Alga Appliance Console Fallback Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+Environment=ALGA_APPLIANCE_PORT=8080
+Environment=ALGA_APPLIANCE_TOKEN_FILE=/var/lib/alga-appliance/setup-token
+ExecStart=/usr/bin/env node /opt/alga-appliance/host-service/console.mjs
+StandardOutput=tty
+StandardError=journal
+TTYPath=/dev/console
+TTYReset=yes
+TTYVHangup=yes
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
