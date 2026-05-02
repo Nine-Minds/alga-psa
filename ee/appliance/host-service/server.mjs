@@ -65,8 +65,9 @@ function queueSetupWorkflow() {
 }
 
 function tokenHelpHtml() {
-  return `<p>The setup/status token is printed on the VM console and persisted in the login banner.</p>
-    <p>If you have host shell access, read it with: <code>sudo cat /var/lib/alga-appliance/setup-token</code></p>`;
+  return `<p>The setup/status token and temporary local admin password are printed on the VM console and persisted in the login banner.</p>
+    <p>If the console was cleared, press Enter or reopen the VM console to display the banner again.</p>
+    <p>If you have host shell access, read the token with: <code>sudo cat /var/lib/alga-appliance/setup-token</code></p>`;
 }
 
 function preflightGuidanceForPhase(phase) {

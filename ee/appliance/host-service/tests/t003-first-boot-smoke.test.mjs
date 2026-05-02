@@ -27,7 +27,11 @@ test('T003 first-boot smoke: console output and host web service health', async 
   const issueFile = path.join(tmp, 'issue');
   const motdFile = path.join(tmp, 'motd');
   const runBannerFile = path.join(tmp, 'run-banner');
+  const adminPasswordFile = path.join(tmp, 'admin-password');
+  const adminPasswordStateFile = path.join(tmp, 'admin-password-state.json');
   fs.writeFileSync(tokenFile, 'token-123\n');
+  fs.writeFileSync(adminPasswordFile, 'admin-temp-123\n');
+  fs.writeFileSync(adminPasswordStateFile, JSON.stringify({ status: 'temporary', user: 'alga-admin', changeRequired: true }));
 
   const consoleResult = await new Promise((resolve) => {
     const child = spawn('node', [consoleScript], {
@@ -38,7 +42,10 @@ test('T003 first-boot smoke: console output and host web service health', async 
         ALGA_APPLIANCE_PORT: '18080',
         ALGA_APPLIANCE_ISSUE_FILE: issueFile,
         ALGA_APPLIANCE_MOTD_FILE: motdFile,
-        ALGA_APPLIANCE_RUN_BANNER_FILE: runBannerFile
+        ALGA_APPLIANCE_RUN_BANNER_FILE: runBannerFile,
+        ALGA_APPLIANCE_ADMIN_USER: 'alga-admin',
+        ALGA_APPLIANCE_ADMIN_PASSWORD_FILE: adminPasswordFile,
+        ALGA_APPLIANCE_ADMIN_PASSWORD_STATE_FILE: adminPasswordStateFile
       },
       stdio: ['ignore', 'pipe', 'pipe']
     });
@@ -52,6 +59,9 @@ test('T003 first-boot smoke: console output and host web service health', async 
   assert.equal(consoleResult.code, 0, consoleResult.stderr);
   assert.match(consoleResult.stdout, /Setup URL:/);
   assert.match(consoleResult.stdout, /Setup token: token-123/);
+  assert.match(consoleResult.stdout, /User: alga-admin/);
+  assert.match(consoleResult.stdout, /Temporary password: admin-temp-123/);
+  assert.match(consoleResult.stdout, /Password change required on first login/);
   assert.match(consoleResult.stdout, /Console setup fallback:/);
   assert.match(fs.readFileSync(issueFile, 'utf8'), /Setup token: token-123/);
   assert.match(fs.readFileSync(motdFile, 'utf8'), /Setup URL: http:\/\/.+:18080\/setup\?token=token-123/);
