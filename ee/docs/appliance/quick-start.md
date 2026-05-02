@@ -1,117 +1,55 @@
-# Quick Start Guide
+# Quick Start Guide (Ubuntu Appliance)
 
-This guide takes you from appliance ISO to first Alga PSA login.
+This guide covers new installs on VMware ESXi or cloud VMs using the Ubuntu appliance ISO.
 
-It assumes you are a technical IT administrator or MSP technician with:
+## 1. Prepare VM
 
-- a supported VM host
-- the appliance ISO for the release you want to install
-- a workstation that can reach the appliance VM
-- the appliance operator available from this repo or a packaged asset bundle
+- Create a VM with a new disk and attach the Alga Ubuntu appliance ISO.
+- Use networking that allows a workstation browser to reach VM port `8080`.
+- Prefer DHCP reservation or static IP so the setup URL stays stable.
 
-## 1. Prepare The VM
+## 2. Boot ISO And Wait For First Reboot
 
-Create a new VM and attach the appliance ISO.
+- Ubuntu autoinstall runs unattended.
+- VM reboots into installed Ubuntu Server 24.04 LTS.
 
-Recommended first-install settings:
+## 3. Open Setup
 
-- use a clean new disk
-- use bridged networking if you want the appliance directly reachable on your LAN
-- keep the appliance IP stable during bootstrap
-  - use a DHCP reservation or
-  - assign a static address
+After reboot, console shows:
 
-You will need:
+- node IP
+- setup URL: `http://<node-ip>:8080/setup`
+- setup token
+- console fallback command
 
-- appliance release version
-- appliance IP or DNS name
-- hostname
-- network mode: DHCP or static
-- interface name
-- static IP, gateway, and DNS values if not using DHCP
+Open setup URL from your workstation and include the setup token.
 
-## 2. Boot The ISO
+## 4. Complete Setup
 
-Start the VM and wait for the Talos maintenance screen.
+Required values:
 
-Confirm from the VM console:
+- release channel (`stable` default, `nightly` for testing/support-directed use)
+- app URL/hostname
+- DNS mode (`DHCP/system resolvers` default)
+- optional support/testing repo URL/branch override
 
-- the VM has an IP address
-- the network is up
-- the node is in Talos maintenance mode, not booting a previously installed disk
+Important DNS behavior:
 
-If the VM boots an existing Talos install, stop here and reset or recreate the disk before continuing.
+- default keeps system/DHCP resolvers
+- custom public DNS (for example `8.8.8.8,8.8.4.4`) is deliberate opt-in
+- do not override internal AD/split-horizon DNS unless intended
 
-## 3. Start The Operator
+Setup runs preflight checks for DNS, GitHub channel access, GHCR reachability, and proxy/egress before k3s install.
 
-From your workstation, launch the appliance operator:
+## 5. Track Status
 
-```bash
-ee/appliance/appliance tui
-```
+Use `http://<node-ip>:8080` for status and diagnostics during and after setup.
 
-The operator is the supported interface for:
+Readiness tiers include platform/core/bootstrap/login/background/fully-healthy.
+Background service issues do not block login readiness.
 
-- bootstrap
-- upgrade
-- reset
-- status
-- workload inspection
-- support bundle export
+## 6. App Updates
 
-## 4. Run Bootstrap
+Use `http://<node-ip>:8080/updates?token=<status-token>` for app-channel updates (`stable` or `nightly`).
 
-In the TUI:
-
-1. Choose `Bootstrap`.
-2. Select the appliance release.
-3. Enter:
-   - site ID
-   - node IP
-   - hostname
-   - app URL
-   - network mode
-   - interface
-   - DNS settings if needed
-4. Confirm the action.
-
-`siteId` is a stable operator label for this appliance on your workstation. Choose something clear, for example:
-
-- `customer-a`
-- `hq-primary`
-- `appliance-lab-01`
-
-The operator uses it for the local config directory:
-
-```text
-~/.alga-psa-appliance/<site-id>/
-```
-
-Bootstrap will:
-
-- generate Talos machine config
-- persist operator access files under `~/.alga-psa-appliance/<site-id>/`
-- bootstrap the Talos node
-- install storage prerequisites
-- install Flux
-- apply the appliance release
-- wait for the initial Alga PSA rollout
-
-## 5. Verify First Login
-
-After bootstrap completes:
-
-1. Open `Status` and confirm the appliance is healthy or converging normally.
-2. Open `Workloads` and verify the `msp` workloads are starting successfully.
-3. Open the app URL you configured, for example:
-
-```text
-http://<appliance-ip>:3000
-```
-
-You should reach the Alga PSA login screen.
-
-For day-2 tasks and deeper troubleshooting, continue with:
-
-- [operators-manual.md](/Users/roberisaacs/alga-psa.worktrees/feature/on-prem-enterprise-helm-install/ee/docs/appliance/operators-manual.md)
-- [technical-reference.md](/Users/roberisaacs/alga-psa.worktrees/feature/on-prem-enterprise-helm-install/ee/docs/appliance/technical-reference.md)
+v1 scope is app-only updates. Ubuntu and k3s updates are manual/support-run.

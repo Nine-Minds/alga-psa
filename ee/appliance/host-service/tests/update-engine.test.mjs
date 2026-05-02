@@ -10,6 +10,7 @@ test('runAppChannelUpdate applies channel update and persists history without OS
   const stateFile = path.join(tmp, 'install-state.json');
   const releaseSelectionFile = path.join(tmp, 'release-selection.json');
   const updateHistoryFile = path.join(tmp, 'update-history.json');
+  const metadataFile = path.join(tmp, 'maintenance-metadata.json');
   const fluxManifestPath = path.join(tmp, 'flux-source.yaml');
 
   fs.writeFileSync(releaseSelectionFile, JSON.stringify({
@@ -28,7 +29,10 @@ test('runAppChannelUpdate applies channel update and persists history without OS
     },
     fluxSourceApplyCommand: `cat > ${fluxManifestPath}`,
     reconcileSourceCommand: 'true',
-    reconcileHelmCommand: 'true'
+    reconcileHelmCommand: 'true',
+    metadataFile,
+    osReleaseFile: path.join(tmp, 'os-release'),
+    k3sVersionCommand: "printf 'k3s version v1.31.4+k3s1'"
   });
 
   assert.equal(result.ok, true);

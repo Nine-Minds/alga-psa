@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import https from 'node:https';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
+import { persistMaintenanceMetadata } from './metadata-engine.mjs';
 
 const DEFAULT_SETUP_FILE = '/etc/alga-appliance/setup-inputs.json';
 const DEFAULT_STATE_FILE = '/var/lib/alga-appliance/install-state.json';
@@ -826,5 +827,15 @@ export async function runSetupWorkflow(inputs, options = {}) {
     return fluxSourceResult;
   }
 
-  return applyReleaseSelectionConfiguration(inputs, releaseSelection, options);
+  const configResult = applyReleaseSelectionConfiguration(inputs, releaseSelection, options);
+  if (!configResult.ok) {
+    return configResult;
+  }
+
+  persistMaintenanceMetadata({
+    metadataFile: options.metadataFile,
+    releaseSelectionFile: options.releaseSelectionFile,
+    installStateFile: options.stateFile
+  });
+  return configResult;
 }

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { applyFluxSource, applyReleaseSelectionConfiguration, resolveChannelMetadata, validateSetupInputs } from './setup-engine.mjs';
+import { persistMaintenanceMetadata } from './metadata-engine.mjs';
 
 const DEFAULT_STATE_FILE = '/var/lib/alga-appliance/install-state.json';
 const DEFAULT_RELEASE_SELECTION_FILE = '/etc/alga-appliance/release-selection.json';
@@ -199,6 +200,14 @@ export async function runAppChannelUpdate(rawInputs, options = {}) {
     releaseVersion: releaseSelection.releaseVersion,
     message: result.message
   }, updateHistoryFile);
+
+  persistMaintenanceMetadata({
+    metadataFile: options.metadataFile,
+    releaseSelectionFile,
+    installStateFile: stateFile,
+    osReleaseFile: options.osReleaseFile,
+    k3sVersionCommand: options.k3sVersionCommand
+  });
 
   return result;
 }

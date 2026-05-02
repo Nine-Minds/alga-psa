@@ -226,3 +226,16 @@ Minimum live validation environment should include:
 - Validation run (2026-05-02):
   - `node --check ee/appliance/host-service/update-engine.mjs ee/appliance/host-service/server.mjs`
   - `node --test ee/appliance/host-service/tests/setup-engine.preflight.test.mjs ee/appliance/host-service/tests/setup-engine.workflow.test.mjs ee/appliance/host-service/tests/status-engine.test.mjs ee/appliance/host-service/tests/support-bundle.test.mjs ee/appliance/host-service/tests/update-engine.test.mjs`
+- (2026-05-02) **F035 completed**: Added maintenance/version metadata persistence in `ee/appliance/host-service/metadata-engine.mjs`.
+- Metadata file: `/var/lib/alga-appliance/maintenance-metadata.json` (0600/0750 permissions), storing Ubuntu host details, k3s version, selected app channel/release, last app update timestamp, explicit v1 manual-update policy, and v2 maintenance direction notes.
+- Wired metadata persistence into both setup completion (`runSetupWorkflow`) and app-channel updates (`runAppChannelUpdate`) so future managed-maintenance logic has durable baseline state.
+- Added automated test `ee/appliance/host-service/tests/metadata-engine.test.mjs`.
+- (2026-05-02) **F032/F033/F034/F038 completed**: Rewrote appliance docs to Ubuntu-first supported flow and app-update semantics.
+- Updated docs:
+  - `ee/docs/appliance/README.md` (Ubuntu as supported path, v1 update boundaries, v2 direction)
+  - `ee/docs/appliance/quick-start.md` (VMware/cloud Ubuntu ISO install, setup URL/token, DNS defaults/risk, status plane)
+  - `ee/docs/appliance/operators-manual.md` (status/failure model, support bundle, app-channel updates)
+  - `ee/appliance/README.md` (internal banner: Ubuntu supported, Talos legacy/internal)
+- Validation run (2026-05-02):
+  - `node --check ee/appliance/host-service/metadata-engine.mjs ee/appliance/host-service/setup-engine.mjs ee/appliance/host-service/update-engine.mjs ee/appliance/host-service/server.mjs`
+  - `node --test ee/appliance/host-service/tests/setup-engine.preflight.test.mjs ee/appliance/host-service/tests/setup-engine.workflow.test.mjs ee/appliance/host-service/tests/status-engine.test.mjs ee/appliance/host-service/tests/support-bundle.test.mjs ee/appliance/host-service/tests/update-engine.test.mjs ee/appliance/host-service/tests/metadata-engine.test.mjs`

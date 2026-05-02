@@ -277,7 +277,7 @@
     "prdRefs": [
       "New install: VMware ESXi or cloud VM"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F034",
@@ -285,7 +285,7 @@
     "prdRefs": [
       "Upgrade: app channel update"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F035",
@@ -294,7 +294,7 @@
       "v2 Update Direction",
       "Data and Configuration"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F036",
@@ -304,7 +304,7 @@
       "Failure Handling",
       "Web setup UI"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F037",
@@ -324,6 +324,6 @@
       "Talos Retirement Scope",
       "Rollout and Migration Notes"
     ],
-    "implemented": false
+    "implemented": true
   }
 ]

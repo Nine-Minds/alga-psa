@@ -1,6 +1,9 @@
-# Talos Appliance Assets
+# Appliance Assets (Ubuntu v1, Talos Legacy)
 
 This directory owns appliance-specific assets and automation for Alga PSA.
+
+Supported customer appliance path for v1 is Ubuntu Server 24.04 LTS with host setup/status service on port `8080`.
+Talos assets in this tree are legacy/internal unless explicitly used by support or engineering.
 
 For user-facing appliance installation and operation guides, start with:
 
@@ -9,7 +12,7 @@ For user-facing appliance installation and operation guides, start with:
 - `ee/docs/appliance/operators-manual.md`
 - `ee/docs/appliance/technical-reference.md`
 
-For the stable operating model and generic Talos appliance assumptions, start with:
+Legacy Talos reference docs (internal/support only):
 
 - `ee/docs/premise/README.md`
 - `ee/docs/premise/talos-release-model.md`
