@@ -86,6 +86,30 @@ function createAdminDb(existingUserId?: string) {
   }) as any;
 }
 
+// Mirrors the production admin lookup: returns a hit only when the criteria's
+// user_type matches one of the rows configured here. Used to prove the global
+// email check is correctly scoped per user_type.
+function createAdminDbByType(rowsByUserType: { internal?: string; client?: string; any?: string }) {
+  return ((table: string) => {
+    if (table !== 'users') {
+      throw new Error(`Unexpected admin table ${table}`);
+    }
+
+    return {
+      where: (criteria: Record<string, any>) => {
+        const wantedType = criteria?.user_type as 'internal' | 'client' | undefined;
+        const hit = wantedType ? rowsByUserType[wantedType] : rowsByUserType.any;
+        return {
+          whereNot: (_column: string, _value: string) => ({
+            first: async () => (hit ? { user_id: hit } : null),
+          }),
+          first: async () => (hit ? { user_id: hit } : null),
+        };
+      },
+    };
+  }) as any;
+}
+
 function createTenantDb(input: { plan: 'solo' | 'pro'; licensedUserCount: number | null; usedInternalUsers: number }) {
   return ((table: string) => {
     if (table === 'roles') {
@@ -268,5 +292,60 @@ describe('addUser', () => {
         email: 'updated@example.com',
       },
     });
+  });
+
+  // Regression for PR #2356: editing reports_to (or any field) re-submits the
+  // user's existing email and used to trip EMAIL_ALREADY_EXISTS on legitimate
+  // cross-tenant duplicates. The global lookup must be skipped when the email
+  // hasn't changed.
+  it('skips the global email check when the submitted email matches the current one', async () => {
+    createTenantKnexMock.mockResolvedValue({ knex: {} });
+    // Admin DB would *return* a duplicate if asked — this test passes only if
+    // the global check is never consulted.
+    getAdminConnectionMock.mockResolvedValue(createAdminDb('cross-tenant-duplicate'));
+
+    const updateUser = await loadUpdateUser();
+    const result = await updateUser(actingUser, tenantContext, actingUser.user_id, {
+      email: 'Updated@Example.com', // same as existing 'updated@example.com' modulo case
+      reports_to: 'manager-user',
+    });
+
+    expect(getAdminConnectionMock).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ success: true });
+    expect(userUpdateMock).toHaveBeenCalledWith(
+      {},
+      actingUser.user_id,
+      expect.objectContaining({
+        email: 'updated@example.com',
+        reports_to: 'manager-user',
+      })
+    );
+  });
+
+  // Regression for PR #2356: tenant provisioning creates the same person as an
+  // `internal` user in their MSP tenant and a `client` user in the master
+  // tenant. Updating the internal user's email must not be blocked by the
+  // unrelated client-portal row.
+  it('allows updating email when only a different user_type uses it globally', async () => {
+    createTenantKnexMock.mockResolvedValue({ knex: {} });
+    // Existing user is internal with a different email — forces the change
+    // path AND establishes the user_type to scope by.
+    getUserWithRolesMock.mockResolvedValueOnce({
+      user_id: 'user-1',
+      email: 'old@example.com',
+      user_type: 'internal',
+    });
+    // A client-portal duplicate exists, but no internal duplicate.
+    getAdminConnectionMock.mockResolvedValue(
+      createAdminDbByType({ client: 'client-portal-row' })
+    );
+
+    const updateUser = await loadUpdateUser();
+    const result = await updateUser(actingUser, tenantContext, actingUser.user_id, {
+      email: 'new@example.com',
+    });
+
+    expect(result).toMatchObject({ success: true });
+    expect(userUpdateMock).toHaveBeenCalled();
   });
 });

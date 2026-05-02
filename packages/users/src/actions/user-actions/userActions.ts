@@ -50,13 +50,20 @@ const getErrorMessage = (error: unknown): string =>
 
 async function findExistingUserByEmailGlobally(
   email: string,
-  options?: { excludeUserId?: string }
+  options?: { excludeUserId?: string; userType?: 'internal' | 'client' }
 ): Promise<Pick<IUser, 'user_id'> | undefined> {
   const db = await getAdminConnection();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    let query = trx('users')
-      .where({ email: email.toLowerCase() });
+    // Email uniqueness is scoped per user_type because the same person can
+    // legitimately exist as an `internal` user in their MSP tenant *and* as a
+    // `client` user in the master tenant (see tenant-provisioning flow).
+    const criteria: Record<string, unknown> = { email: email.toLowerCase() };
+    if (options?.userType) {
+      criteria.user_type = options.userType;
+    }
+
+    let query = trx('users').where(criteria);
 
     if (options?.excludeUserId) {
       query = query.whereNot('user_id', options.excludeUserId);
@@ -67,14 +74,15 @@ async function findExistingUserByEmailGlobally(
 }
 
 /**
- * Check if an email exists globally across all tenants
- * @param email The email address to check
- * @returns Promise<boolean> True if email exists, false otherwise
+ * Check if an email exists globally across all tenants. Optionally scope the
+ * check to a specific user_type — internal/client users with the same email
+ * are allowed by design (tenant provisioning creates both).
  */
 export const checkEmailExistsGlobally = withAuth(async (
   user,
   _ctx,
-  email: string
+  email: string,
+  userType?: 'internal' | 'client'
 ): Promise<boolean> => {
   try {
     const db = await getAdminConnection();
@@ -84,9 +92,12 @@ export const checkEmailExistsGlobally = withAuth(async (
         throw new Error('Permission denied: Cannot check email existence');
       }
 
-      const existingUser = await trx('users')
-        .where({ email: email.toLowerCase() })
-        .first('user_id');
+      const criteria: Record<string, unknown> = { email: email.toLowerCase() };
+      if (userType) {
+        criteria.user_type = userType;
+      }
+
+      const existingUser = await trx('users').where(criteria).first('user_id');
       return !!existingUser;
     });
   } catch (error) {
@@ -147,8 +158,11 @@ export const addUser = withAuth(async (
         };
       }
 
-      // Check if email already exists globally
-      const emailExists = await checkEmailExistsGlobally(userData.email);
+      // Check if email already exists globally for this user_type. Internal
+      // and client users may share an email by design.
+      const emailExists = await findExistingUserByEmailGlobally(userData.email, {
+        userType: userData.userType || 'internal',
+      });
       if (emailExists) {
         return {
           success: false,
@@ -371,16 +385,26 @@ export const updateUser = withAuth(async (
       let normalizedUserData = userData;
       if (userData.email) {
         const normalizedEmail = userData.email.toLowerCase();
-        const existingUser = await findExistingUserByEmailGlobally(normalizedEmail, {
-          excludeUserId: userId,
-        });
+        // Only run the global uniqueness check when the email is actually
+        // changing — otherwise editing any field (e.g. setting a manager)
+        // would re-validate the unchanged email and could trip on legitimate
+        // cross-tenant duplicates.
+        const existing = await User.getUserWithRoles(trx, userId);
+        const currentEmail = existing?.email?.toLowerCase();
 
-        if (existingUser) {
-          return {
-            success: false,
-            code: 'EMAIL_ALREADY_EXISTS',
-            error: 'A user with this email address already exists',
-          };
+        if (currentEmail !== normalizedEmail) {
+          const existingUser = await findExistingUserByEmailGlobally(normalizedEmail, {
+            excludeUserId: userId,
+            userType: existing?.user_type as 'internal' | 'client' | undefined,
+          });
+
+          if (existingUser) {
+            return {
+              success: false,
+              code: 'EMAIL_ALREADY_EXISTS',
+              error: 'A user with this email address already exists',
+            };
+          }
         }
 
         normalizedUserData = {
@@ -508,8 +532,11 @@ export const registerClientUser = withAuth(async (
         return { success: false, error: 'Contact is inactive' };
       }
 
-      // Check if user already exists globally
-      const emailExists = await checkEmailExistsGlobally(email);
+      // Check if a client user with this email already exists. Internal users
+      // with the same email are allowed (tenant provisioning creates both).
+      const emailExists = await findExistingUserByEmailGlobally(email, {
+        userType: 'client',
+      });
       if (emailExists) {
         return { success: false, error: 'User with this email already exists' };
       }
