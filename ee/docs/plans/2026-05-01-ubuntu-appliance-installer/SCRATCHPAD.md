@@ -246,3 +246,21 @@ Minimum live validation environment should include:
 - Coverage: runs build script dry-run validation plus scaffold build, verifies host artifact staging into ISO overlay (`appliance`, `host-service`, `operator`, `scripts`) and validates generated `.iso` + `.sha256` outputs.
 - Validation run:
   - `node --test ee/appliance/ubuntu-iso/tests/t001-build-smoke.test.mjs`
+- (2026-05-02) **T002 completed (manual artifact)**: Added VM smoke runbook `ee/docs/plans/2026-05-01-ubuntu-appliance-installer/manual-tests/T002-vm-smoke.md` for unattended install + reboot validation on VMware/cloud VM.
+- Constraint: this repository-local CLI environment cannot boot hypervisor VMs directly; test implementation captures exact execution/evidence requirements for operator-run validation.
+- (2026-05-02) **T003 completed**: Added first-boot smoke automation `ee/appliance/host-service/tests/t003-first-boot-smoke.test.mjs`.
+- Coverage: validates console output includes setup URL/token/fallback guidance and verifies host web service health endpoint (`/healthz`) responds on configured port.
+- Validation run:
+  - `node --test ee/appliance/host-service/tests/t003-first-boot-smoke.test.mjs`
+- (2026-05-02) **Test coverage expansion completed** for `T006/T007/T008/T009/T010/T012/T013/T014/T015/T017/T019/T020` using existing and new host-service/unit smoke tests plus updated Ubuntu-first docs.
+- Added classification mapping regression in `ee/appliance/host-service/tests/status-engine.test.mjs` for Flux/storage/app-bootstrap/app-readiness phase mapping correctness.
+- Combined validation run:
+  - `node --test ee/appliance/host-service/tests/setup-engine.preflight.test.mjs ee/appliance/host-service/tests/setup-engine.workflow.test.mjs ee/appliance/host-service/tests/status-engine.test.mjs ee/appliance/host-service/tests/support-bundle.test.mjs ee/appliance/host-service/tests/update-engine.test.mjs ee/appliance/host-service/tests/metadata-engine.test.mjs ee/appliance/host-service/tests/t003-first-boot-smoke.test.mjs ee/appliance/ubuntu-iso/tests/t001-build-smoke.test.mjs`
+- Remaining tests intentionally not marked complete are those requiring full live VM/hypervisor or reboot lifecycle execution from outside this repo-local CLI context (and deeper end-to-end setup/update execution path beyond isolated unit/integration checks).
+- (2026-05-02) Added manual execution runbooks for remaining live-environment validations:
+  - `manual-tests/T004-web-setup-happy-path.md`
+  - `manual-tests/T005-console-fallback-happy-path.md`
+  - `manual-tests/T011-end-to-end-install.md`
+  - `manual-tests/T016-reboot-persistence.md`
+  - `manual-tests/T018-dns-behavior.md`
+- These tests require VM/hypervisor execution, network topology control, and reboot lifecycle validation not directly runnable in this repo-local CLI session; runbooks include explicit commands, expected outcomes, and evidence capture requirements.

@@ -139,3 +139,49 @@ test('collectStatusSnapshot classifies persisted k3s failures', () => {
     process.env.PATH = originalPath;
   }
 });
+
+test('collectStatusSnapshot maps failure phases to expected categories', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-phase-map-'));
+  const fakeBin = path.join(tmp, 'bin');
+  fs.mkdirSync(fakeBin, { recursive: true });
+  const kubectlPath = path.join(fakeBin, 'kubectl');
+  fs.writeFileSync(kubectlPath, '#!/usr/bin/env bash\nexit 1\n');
+  fs.chmodSync(kubectlPath, 0o755);
+
+  const originalPath = process.env.PATH;
+  process.env.PATH = `${fakeBin}:${originalPath}`;
+  try {
+    const cases = [
+      ['flux', 'flux-install-blocked', 'flux'],
+      ['storage', 'storage-config-blocked', 'storage'],
+      ['app-bootstrap', 'bootstrap-blocked', 'app-bootstrap'],
+      ['app-readiness', 'readiness-blocked', 'app-readiness']
+    ];
+
+    for (const [phase, status, expectedCategory] of cases) {
+      const stateFile = path.join(tmp, `${phase}.json`);
+      fs.writeFileSync(stateFile, JSON.stringify({
+        phase,
+        status,
+        lastAction: `${phase} failed`,
+        failure: {
+          phase,
+          step: `${phase}-step`,
+          message: `${phase} failed`,
+          suspectedCause: `${phase} cause`,
+          suggestedNextStep: `${phase} next`,
+          retrySafe: true
+        }
+      }));
+
+      const snapshot = collectStatusSnapshot({
+        stateFile,
+        kubeconfigPath: '/tmp/k3s.yaml',
+        kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
+      });
+      assert.equal(snapshot.failures[0].category, expectedCategory);
+    }
+  } finally {
+    process.env.PATH = originalPath;
+  }
+});
