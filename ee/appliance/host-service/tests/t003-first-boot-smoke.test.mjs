@@ -24,12 +24,22 @@ function httpGet(url) {
 test('T003 first-boot smoke: console output and host web service health', async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-t003-'));
   const tokenFile = path.join(tmp, 'setup-token');
+  const issueFile = path.join(tmp, 'issue');
+  const motdFile = path.join(tmp, 'motd');
+  const runBannerFile = path.join(tmp, 'run-banner');
   fs.writeFileSync(tokenFile, 'token-123\n');
 
   const consoleResult = await new Promise((resolve) => {
     const child = spawn('node', [consoleScript], {
       cwd: repoRoot,
-      env: { ...process.env, ALGA_APPLIANCE_TOKEN_FILE: tokenFile, ALGA_APPLIANCE_PORT: '18080' },
+      env: {
+        ...process.env,
+        ALGA_APPLIANCE_TOKEN_FILE: tokenFile,
+        ALGA_APPLIANCE_PORT: '18080',
+        ALGA_APPLIANCE_ISSUE_FILE: issueFile,
+        ALGA_APPLIANCE_MOTD_FILE: motdFile,
+        ALGA_APPLIANCE_RUN_BANNER_FILE: runBannerFile
+      },
       stdio: ['ignore', 'pipe', 'pipe']
     });
     let stdout = '';
@@ -43,6 +53,9 @@ test('T003 first-boot smoke: console output and host web service health', async 
   assert.match(consoleResult.stdout, /Setup URL:/);
   assert.match(consoleResult.stdout, /Setup token: token-123/);
   assert.match(consoleResult.stdout, /Console setup fallback:/);
+  assert.match(fs.readFileSync(issueFile, 'utf8'), /Setup token: token-123/);
+  assert.match(fs.readFileSync(motdFile, 'utf8'), /Setup URL: http:\/\/.+:18080\/setup\?token=token-123/);
+  assert.match(fs.readFileSync(runBannerFile, 'utf8'), /Alga Appliance setup is ready/);
 
   const server = spawn('node', [serverScript], {
     cwd: repoRoot,

@@ -64,6 +64,11 @@ function queueSetupWorkflow() {
   child.unref();
 }
 
+function tokenHelpHtml() {
+  return `<p>The setup/status token is printed on the VM console and persisted in the login banner.</p>
+    <p>If you have host shell access, read it with: <code>sudo cat /var/lib/alga-appliance/setup-token</code></p>`;
+}
+
 function preflightGuidanceForPhase(phase) {
   if (phase === 'dns') {
     return 'Confirm DHCP/static resolver configuration, internal DNS reachability, and split-horizon DNS expectations.';
@@ -293,7 +298,7 @@ const server = http.createServer(async (req, res) => {
     </body></html>`);
     return;
   }
-  res.end(`<!doctype html><html><body><h1>Alga Appliance Setup</h1><p>Mode: ${mode}</p></body></html>`);
+  res.end(`<!doctype html><html><body><h1>Alga Appliance Setup</h1><p>Mode: ${mode}</p>${tokenHelpHtml()}<p>Open <code>/setup?token=&lt;setup-token&gt;</code> to continue.</p></body></html>`);
 });
 
 server.listen(port, '0.0.0.0', () => {

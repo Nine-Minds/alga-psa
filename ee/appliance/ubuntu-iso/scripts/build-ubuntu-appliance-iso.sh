@@ -142,7 +142,7 @@ needle = 'autoinstall ds=nocloud\\;s=/cdrom/nocloud/'
 out = []
 for line in text.splitlines():
     stripped = line.lstrip()
-    if stripped.startswith('linux ') and 'autoinstall' not in line:
+    if stripped.startswith('linux') and len(stripped) > len('linux') and stripped[len('linux')].isspace() and 'autoinstall' not in line:
         if '---' in line:
             line = line.replace('---', f'{needle} ---', 1)
         else:
