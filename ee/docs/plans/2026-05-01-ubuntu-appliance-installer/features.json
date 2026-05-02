@@ -260,7 +260,7 @@
     "prdRefs": [
       "Release/update flow"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F032",
@@ -269,7 +269,7 @@
       "Non-Goals",
       "Release/update flow"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F033",

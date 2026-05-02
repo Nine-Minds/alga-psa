@@ -5,6 +5,7 @@ import { URL } from 'node:url';
 import { collectStatusSnapshot } from './status-engine.mjs';
 import { persistSetupInputs, runSetupWorkflow, validateSetupInputs } from './setup-engine.mjs';
 import { generateSupportBundle } from './support-bundle.mjs';
+import { runAppChannelUpdate } from './update-engine.mjs';
 
 const port = Number(process.env.ALGA_APPLIANCE_PORT || 8080);
 const stateFile = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
@@ -101,6 +102,57 @@ const server = http.createServer(async (req, res) => {
     const result = generateSupportBundle();
     res.writeHead(result.ok ? 200 : 500, { 'content-type': 'application/json' });
     res.end(JSON.stringify(result));
+    return;
+  }
+
+  if (url.pathname === '/api/updates') {
+    const providedToken = url.searchParams.get('token') || '';
+    if (!setupToken || providedToken !== setupToken) {
+      res.writeHead(401, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized: valid status token required.' }));
+      return;
+    }
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      res.writeHead(405, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Method not allowed. Use POST.' }));
+      return;
+    }
+
+    const body = await readRequestBody(req);
+    const params = new URLSearchParams(body);
+    const channel = (params.get('channel') || 'stable').trim();
+    if (!['stable', 'nightly'].includes(channel)) {
+      res.writeHead(400, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Invalid channel. Use stable or nightly.' }));
+      return;
+    }
+
+    const result = await runAppChannelUpdate({ channel });
+    res.writeHead(result.ok ? 200 : 412, { 'content-type': 'application/json' });
+    res.end(JSON.stringify(result));
+    return;
+  }
+
+  if (url.pathname === '/updates') {
+    const providedToken = url.searchParams.get('token') || '';
+    if (!setupToken || providedToken !== setupToken) {
+      res.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
+      res.end('Unauthorized: valid status token required.');
+      return;
+    }
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    res.end(`<!doctype html><html><body>
+      <h1>App Channel Updates</h1>
+      <p>Updates here only change Alga application channel/release state. Ubuntu and k3s updates are manual/support-run in v1.</p>
+      <form method="post" action="/api/updates?token=${encodeURIComponent(providedToken)}">
+        <label>Channel</label>
+        <select name="channel">
+          <option value="stable" selected>stable</option>
+          <option value="nightly">nightly (testing/support-directed)</option>
+        </select>
+        <button type="submit">Apply Update</button>
+      </form>
+    </body></html>`);
     return;
   }
 

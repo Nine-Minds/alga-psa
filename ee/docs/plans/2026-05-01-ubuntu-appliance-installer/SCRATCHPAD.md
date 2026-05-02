@@ -213,3 +213,16 @@ Minimum live validation environment should include:
 - Validation run (2026-05-02):
   - `node --check ee/appliance/host-service/support-bundle.mjs ee/appliance/host-service/server.mjs ee/appliance/host-service/status-engine.mjs`
   - `node --test ee/appliance/host-service/tests/setup-engine.preflight.test.mjs ee/appliance/host-service/tests/setup-engine.workflow.test.mjs ee/appliance/host-service/tests/status-engine.test.mjs ee/appliance/host-service/tests/support-bundle.test.mjs`
+- (2026-05-02) **F030/F031 completed**: Added app-only channel update flow in host service with new engine `ee/appliance/host-service/update-engine.mjs`.
+- Update behavior:
+  - token-protected web/API surfaces: `GET /updates?token=...` and `POST /api/updates?token=...`
+  - accepts `stable`/`nightly` channel selection
+  - resolves selected channel metadata from GitHub/release channels
+  - applies Flux source and persists selected release/runtime configuration
+  - requests Flux source + HelmRelease reconcile
+  - writes bounded update history at `/var/lib/alga-appliance/update-history.json`
+- Safety/scope: update state explicitly records `scope: application-only`; path does not perform Ubuntu package or k3s upgrades.
+- Added automated test `ee/appliance/host-service/tests/update-engine.test.mjs` validating channel update flow, release-selection persistence, update history persistence, and reconcile invocation wiring.
+- Validation run (2026-05-02):
+  - `node --check ee/appliance/host-service/update-engine.mjs ee/appliance/host-service/server.mjs`
+  - `node --test ee/appliance/host-service/tests/setup-engine.preflight.test.mjs ee/appliance/host-service/tests/setup-engine.workflow.test.mjs ee/appliance/host-service/tests/status-engine.test.mjs ee/appliance/host-service/tests/support-bundle.test.mjs ee/appliance/host-service/tests/update-engine.test.mjs`
