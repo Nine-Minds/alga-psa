@@ -189,3 +189,6 @@ Minimum live validation environment should include:
 - Added automated test coverage verifying persisted release-selection/runtime payload and state transition.
 - (2026-05-01) **F023 completed**: Updated host-service mode detection so port `8080` transitions into status mode as soon as setup state exists (install started), rather than waiting for a terminal `complete` phase marker.
 - Rationale: status/progress UX is now available immediately after setup begins, matching the requirement that host `:8080` remain the durable setup->status plane.
+- (2026-05-01) **F024 completed**: Implemented host-side status collection in `ee/appliance/host-service/status-engine.mjs`, using local kubeconfig (`/etc/rancher/k3s/k3s.yaml`) and `kubectl` queries (nodes/pods) instead of Talos APIs.
+- Added token-protected `/api/status` endpoint in `server.mjs` that returns install state + Kubernetes snapshot from the Ubuntu host service.
+- Added unit test `ee/appliance/host-service/tests/status-engine.test.mjs` validating kubeconfig-driven status collection via mocked `kubectl` responses.

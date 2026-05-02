@@ -201,7 +201,7 @@
       "Status/readiness model",
       "Host setup/status service"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F025",

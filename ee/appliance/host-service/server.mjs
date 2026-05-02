@@ -2,6 +2,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import { URL } from 'node:url';
+import { collectStatusSnapshot } from './status-engine.mjs';
 import { persistSetupInputs, runSetupWorkflow, validateSetupInputs } from './setup-engine.mjs';
 
 const port = Number(process.env.ALGA_APPLIANCE_PORT || 8080);
@@ -44,6 +45,20 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/healthz') {
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(JSON.stringify({ ok: true, mode }));
+    return;
+  }
+
+  if (url.pathname === '/api/status') {
+    const providedToken = url.searchParams.get('token') || '';
+    if (!setupToken || providedToken !== setupToken) {
+      res.writeHead(401, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized: valid status token required.' }));
+      return;
+    }
+
+    const snapshot = collectStatusSnapshot({ stateFile });
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify(snapshot));
     return;
   }
 
