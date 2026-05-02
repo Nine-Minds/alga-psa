@@ -37,6 +37,28 @@ function readRequestBody(req) {
   });
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function preflightGuidanceForPhase(phase) {
+  if (phase === 'dns') {
+    return 'Confirm DHCP/static resolver configuration, internal DNS reachability, and split-horizon DNS expectations.';
+  }
+  if (phase === 'network') {
+    return 'Confirm outbound HTTPS connectivity and proxy/firewall egress rules to required endpoints.';
+  }
+  if (phase === 'github-release-source') {
+    return 'Confirm access to raw.githubusercontent.com and selected channel file for the configured repo/branch.';
+  }
+  return 'Review host and network prerequisites, then retry setup.';
+}
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
   const mode = currentMode();
@@ -93,15 +115,18 @@ const server = http.createServer(async (req, res) => {
 
       const setupResult = await runSetupWorkflow(setupInputs, { stateFile });
       if (!setupResult.ok) {
+        const isPreflightBlocker = ['dns', 'network', 'github-release-source'].includes(setupResult.phase);
         res.writeHead(412, { 'content-type': 'text/html; charset=utf-8' });
         res.end(`<!doctype html><html><body>
           <h1>Setup blocked</h1>
-          <p><strong>Phase:</strong> ${setupResult.phase}</p>
-          <p><strong>Step:</strong> ${setupResult.step}</p>
-          <p><strong>Cause:</strong> ${setupResult.suspectedCause}</p>
-          <p><strong>Suggested next step:</strong> ${setupResult.suggestedNextStep}</p>
+          <p><strong>Phase:</strong> ${escapeHtml(setupResult.phase || 'unknown')}</p>
+          <p><strong>Step:</strong> ${escapeHtml(setupResult.step || 'unknown')}</p>
+          <p><strong>Cause:</strong> ${escapeHtml(setupResult.suspectedCause || setupResult.message || 'Unknown')}</p>
+          <p><strong>Suggested next step:</strong> ${escapeHtml(setupResult.suggestedNextStep || 'Review setup inputs and retry.')}</p>
           <p><strong>Retry safe:</strong> ${setupResult.retrySafe ? 'yes' : 'no'}</p>
-          <p>Fix the blocker and submit setup again. If this blocker is preflight-related, k3s installation has not started.</p>
+          ${isPreflightBlocker ? '<p><strong>Preflight result:</strong> k3s installation has not started.</p>' : ''}
+          <p><strong>Network guidance:</strong> ${escapeHtml(preflightGuidanceForPhase(setupResult.phase))}</p>
+          <p>Fix the blocker and submit setup again.</p>
         </body></html>`);
         return;
       }
@@ -147,7 +172,24 @@ const server = http.createServer(async (req, res) => {
   }
 
   res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-  res.end(`<!doctype html><html><body><h1>Alga Appliance ${mode === 'setup' ? 'Setup' : 'Status'}</h1><p>Mode: ${mode}</p></body></html>`);
+  if (mode === 'status') {
+    const snapshot = collectStatusSnapshot({ stateFile });
+    const failureItems = (snapshot.failures || [])
+      .map((failure) => `<li><strong>${escapeHtml(failure.category)}</strong>: ${escapeHtml(failure.suspectedCause)}<br/><em>Next:</em> ${escapeHtml(failure.suggestedNextStep)}<br/><em>Retry safe:</em> ${failure.retrySafe ? 'yes' : 'no'}</li>`)
+      .join('');
+    res.end(`<!doctype html><html><body>
+      <h1>Alga Appliance Status</h1>
+      <p><strong>Mode:</strong> status</p>
+      <p><strong>Current phase:</strong> ${escapeHtml(snapshot.currentPhase || 'unknown')}</p>
+      <p><strong>Last action:</strong> ${escapeHtml(snapshot.installState?.lastAction || 'n/a')}</p>
+      <h2>Readiness</h2>
+      <p>platform=${snapshot.tiers.platformReady} core=${snapshot.tiers.coreReady} bootstrap=${snapshot.tiers.bootstrapReady} login=${snapshot.tiers.loginReady} background=${snapshot.tiers.backgroundReady} fullyHealthy=${snapshot.tiers.fullyHealthy}</p>
+      <h2>Failures</h2>
+      ${failureItems ? `<ul>${failureItems}</ul>` : '<p>No active failures detected.</p>'}
+    </body></html>`);
+    return;
+  }
+  res.end(`<!doctype html><html><body><h1>Alga Appliance Setup</h1><p>Mode: ${mode}</p></body></html>`);
 });
 
 server.listen(port, '0.0.0.0', () => {

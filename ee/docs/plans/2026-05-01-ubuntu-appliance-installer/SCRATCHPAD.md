@@ -195,3 +195,11 @@ Minimum live validation environment should include:
 - (2026-05-01) **F025 completed**: Added readiness tier computation in `status-engine.mjs` with explicit booleans for `platformReady`, `coreReady`, `bootstrapReady`, `loginReady`, `backgroundReady`, and `fullyHealthy`.
 - (2026-05-01) **F026 completed**: Enforced readiness semantics so background workload issues (`email-service`, `temporal`, `workflow-worker`, `temporal-worker`) degrade `backgroundReady` without blocking `loginReady`.
 - Added regression test in `status-engine.test.mjs` proving `loginReady` remains true when `temporal-worker` is unhealthy while core/platform/bootstrap remain ready.
+- (2026-05-02) **F027 completed**: Added normalized failure classification output in `ee/appliance/host-service/status-engine.mjs` (`network`, `dns`, `github-release-source`, `k3s`, `flux`, `storage`, `app-bootstrap`, `app-readiness`, `background-services`).
+- Classification now derives from persisted setup/install state plus live pod/warning signals and is exposed in `collectStatusSnapshot().failures` for consistent host status/debug consumers.
+- (2026-05-02) **F028 completed**: Expanded host status surfaces to include operator-useful failure context (current phase, last action, suspected cause, suggested next step, retry safety, and log commands) in both `/api/status` and status-mode HTML response from `server.mjs`.
+- (2026-05-02) **F036 completed**: Improved preflight blocker visibility in `/setup` POST failure rendering: explicit preflight/no-k3s-started message for DNS/network/GitHub release-source failures plus targeted proxy/firewall/DNS guidance text before install begins.
+- Added regression test `collectStatusSnapshot classifies persisted k3s failures` in `ee/appliance/host-service/tests/status-engine.test.mjs`.
+- Validation run (2026-05-02):
+  - `node --check ee/appliance/host-service/setup-engine.mjs ee/appliance/host-service/status-engine.mjs ee/appliance/host-service/server.mjs`
+  - `node --test ee/appliance/host-service/tests/setup-engine.preflight.test.mjs ee/appliance/host-service/tests/setup-engine.workflow.test.mjs ee/appliance/host-service/tests/status-engine.test.mjs`

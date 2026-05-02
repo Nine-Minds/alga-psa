@@ -225,7 +225,7 @@
     "prdRefs": [
       "Failure Handling"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F028",
@@ -234,7 +234,7 @@
       "Failure Handling",
       "Status UI"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F029",
@@ -243,7 +243,7 @@
       "Support diagnostics",
       "Failure Handling"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F030",
