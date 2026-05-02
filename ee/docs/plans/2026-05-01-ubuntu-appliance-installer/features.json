@@ -140,7 +140,7 @@
     "prdRefs": [
       "k3s profile"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F018",

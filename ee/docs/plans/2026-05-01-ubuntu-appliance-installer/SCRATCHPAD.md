@@ -174,3 +174,6 @@ Minimum live validation environment should include:
 - Validation run: `node --check ee/appliance/host-service/{setup-engine.mjs,server.mjs,console-setup.mjs}` and `node --test ee/appliance/host-service/tests/setup-engine.preflight.test.mjs ee/appliance/host-service/tests/setup-engine.workflow.test.mjs`.
 - (2026-05-01) **F016 completed**: Updated default k3s install exec flags to disable unneeded bundled components by default (`--disable traefik --disable servicelb`) in `installK3sSingleNode()`.
 - Added regression coverage in `ee/appliance/host-service/tests/setup-engine.workflow.test.mjs` to assert installer receives those disable flags through `INSTALL_K3S_EXEC` when no explicit override is supplied.
+- (2026-05-01) **F017 completed**: Added post-k3s storage configuration phase `ensureLocalPathStorage()` in `setup-engine.mjs` and chained it into `runSetupWorkflow()` after successful k3s install.
+- Storage behavior: executes host-side storage installer command (default `/opt/alga-appliance/scripts/install-storage.sh --kubeconfig /etc/rancher/k3s/k3s.yaml`) and persists storage phase state (`storage-config-running|complete|blocked`) with troubleshooting guidance on failures.
+- Added automated test coverage for successful storage phase execution in `setup-engine.workflow.test.mjs`.

@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { installK3sSingleNode } from '../setup-engine.mjs';
+import { ensureLocalPathStorage, installK3sSingleNode } from '../setup-engine.mjs';
 
 test('installK3sSingleNode succeeds when installer command exits cleanly and kubeconfig exists', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-k3s-'));
@@ -43,4 +43,24 @@ test('installK3sSingleNode defaults disable Traefik and ServiceLB', () => {
   const installExec = fs.readFileSync(execCapture, 'utf8');
   assert.match(installExec, /--disable traefik/);
   assert.match(installExec, /--disable servicelb/);
+});
+
+test('ensureLocalPathStorage records success when installer command exits cleanly', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-storage-'));
+  const stateFile = path.join(tmp, 'state', 'install-state.json');
+  const marker = path.join(tmp, 'storage-ok.txt');
+
+  const result = ensureLocalPathStorage({
+    stateFile,
+    kubeconfigPath: path.join(tmp, 'k3s.yaml'),
+    storageInstallCommand: `printf 'ok' > ${marker}`
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.phase, 'storage');
+  assert.equal(fs.readFileSync(marker, 'utf8'), 'ok');
+
+  const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  assert.equal(persisted.status, 'storage-config-complete');
+  assert.equal(persisted.phase, 'storage');
 });

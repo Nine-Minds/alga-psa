@@ -415,6 +415,71 @@ export function installK3sSingleNode(options = {}) {
   return success;
 }
 
+export function ensureLocalPathStorage(options = {}) {
+  const stateFile = options.stateFile || DEFAULT_STATE_FILE;
+  const kubeconfigPath = options.kubeconfigPath || '/etc/rancher/k3s/k3s.yaml';
+  const storageInstallScript = options.storageInstallScript || '/opt/alga-appliance/scripts/install-storage.sh';
+  const storageInstallCommand = options.storageInstallCommand || `${storageInstallScript} --kubeconfig ${kubeconfigPath}`;
+
+  writeInstallState({
+    status: 'storage-config-running',
+    phase: 'storage',
+    lastAction: 'Ensuring local-path storage class is installed as default',
+    updatedAt: nowIso()
+  }, stateFile);
+
+  const result = spawnSync('sh', ['-c', storageInstallCommand], {
+    env: process.env,
+    encoding: 'utf8'
+  });
+
+  if (result.status !== 0) {
+    const stderr = (result.stderr || '').trim();
+    const stdout = (result.stdout || '').trim();
+    const message = stderr || stdout || `storage install command failed with exit code ${result.status ?? 1}`;
+    const failure = preflightFailure(
+      'storage',
+      'install-local-path-storage',
+      'Failed to install local-path storage defaults.',
+      `Inspect storage installer output and retry. ${message}`
+    );
+
+    writeInstallState({
+      status: 'storage-config-blocked',
+      phase: 'storage',
+      lastAction: failure.message,
+      failure,
+      installerOutput: {
+        stdout: result.stdout || '',
+        stderr: result.stderr || ''
+      },
+      updatedAt: nowIso()
+    }, stateFile);
+
+    return failure;
+  }
+
+  const success = {
+    ok: true,
+    phase: 'storage',
+    message: 'local-path storage installer completed successfully.',
+    kubeconfigPath
+  };
+
+  writeInstallState({
+    status: 'storage-config-complete',
+    phase: 'storage',
+    lastAction: success.message,
+    storage: {
+      installer: storageInstallScript,
+      kubeconfigPath
+    },
+    updatedAt: nowIso()
+  }, stateFile);
+
+  return success;
+}
+
 export async function runSetupWorkflow(inputs, options = {}) {
   const preflight = await runSetupPreflight(inputs, options);
   if (!preflight.ok) {
@@ -429,5 +494,10 @@ export async function runSetupWorkflow(inputs, options = {}) {
     };
   }
 
-  return installK3sSingleNode(options);
+  const k3sResult = installK3sSingleNode(options);
+  if (!k3sResult.ok) {
+    return k3sResult;
+  }
+
+  return ensureLocalPathStorage(options);
 }
