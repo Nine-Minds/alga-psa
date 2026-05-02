@@ -177,3 +177,6 @@ Minimum live validation environment should include:
 - (2026-05-01) **F017 completed**: Added post-k3s storage configuration phase `ensureLocalPathStorage()` in `setup-engine.mjs` and chained it into `runSetupWorkflow()` after successful k3s install.
 - Storage behavior: executes host-side storage installer command (default `/opt/alga-appliance/scripts/install-storage.sh --kubeconfig /etc/rancher/k3s/k3s.yaml`) and persists storage phase state (`storage-config-running|complete|blocked`) with troubleshooting guidance on failures.
 - Added automated test coverage for successful storage phase execution in `setup-engine.workflow.test.mjs`.
+- (2026-05-01) **F018 completed**: Added Flux installation phase `installFlux()` to setup workflow after successful k3s + storage phases.
+- Flux behavior: runs `flux install --namespace flux-system --kubeconfig /etc/rancher/k3s/k3s.yaml` by default, persists phase states (`flux-install-running|complete|blocked`), and records actionable failure details.
+- Added test coverage in `setup-engine.workflow.test.mjs` for successful Flux phase execution via a mocked command.

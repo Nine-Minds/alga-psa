@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ensureLocalPathStorage, installK3sSingleNode } from '../setup-engine.mjs';
+import { ensureLocalPathStorage, installFlux, installK3sSingleNode } from '../setup-engine.mjs';
 
 test('installK3sSingleNode succeeds when installer command exits cleanly and kubeconfig exists', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-k3s-'));
@@ -63,4 +63,24 @@ test('ensureLocalPathStorage records success when installer command exits cleanl
   const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
   assert.equal(persisted.status, 'storage-config-complete');
   assert.equal(persisted.phase, 'storage');
+});
+
+test('installFlux records success when flux install command exits cleanly', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-flux-'));
+  const stateFile = path.join(tmp, 'state', 'install-state.json');
+  const marker = path.join(tmp, 'flux-ok.txt');
+
+  const result = installFlux({
+    stateFile,
+    kubeconfigPath: path.join(tmp, 'k3s.yaml'),
+    fluxInstallCommand: `printf 'ok' > ${marker}`
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.phase, 'flux');
+  assert.equal(fs.readFileSync(marker, 'utf8'), 'ok');
+
+  const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  assert.equal(persisted.status, 'flux-install-complete');
+  assert.equal(persisted.phase, 'flux');
 });

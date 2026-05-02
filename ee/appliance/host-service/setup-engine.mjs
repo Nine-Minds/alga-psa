@@ -480,6 +480,70 @@ export function ensureLocalPathStorage(options = {}) {
   return success;
 }
 
+export function installFlux(options = {}) {
+  const stateFile = options.stateFile || DEFAULT_STATE_FILE;
+  const kubeconfigPath = options.kubeconfigPath || '/etc/rancher/k3s/k3s.yaml';
+  const fluxInstallCommand = options.fluxInstallCommand || `flux install --namespace flux-system --kubeconfig ${kubeconfigPath}`;
+
+  writeInstallState({
+    status: 'flux-install-running',
+    phase: 'flux',
+    lastAction: 'Installing Flux controllers into k3s cluster',
+    updatedAt: nowIso()
+  }, stateFile);
+
+  const result = spawnSync('sh', ['-c', fluxInstallCommand], {
+    env: process.env,
+    encoding: 'utf8'
+  });
+
+  if (result.status !== 0) {
+    const stderr = (result.stderr || '').trim();
+    const stdout = (result.stdout || '').trim();
+    const message = stderr || stdout || `flux install command failed with exit code ${result.status ?? 1}`;
+    const failure = preflightFailure(
+      'flux',
+      'install-flux',
+      'Flux installation failed.',
+      `Verify Flux CLI availability and cluster access. ${message}`
+    );
+
+    writeInstallState({
+      status: 'flux-install-blocked',
+      phase: 'flux',
+      lastAction: failure.message,
+      failure,
+      installerOutput: {
+        stdout: result.stdout || '',
+        stderr: result.stderr || ''
+      },
+      updatedAt: nowIso()
+    }, stateFile);
+
+    return failure;
+  }
+
+  const success = {
+    ok: true,
+    phase: 'flux',
+    message: 'Flux installation completed successfully.',
+    kubeconfigPath
+  };
+
+  writeInstallState({
+    status: 'flux-install-complete',
+    phase: 'flux',
+    lastAction: success.message,
+    flux: {
+      namespace: 'flux-system',
+      kubeconfigPath
+    },
+    updatedAt: nowIso()
+  }, stateFile);
+
+  return success;
+}
+
 export async function runSetupWorkflow(inputs, options = {}) {
   const preflight = await runSetupPreflight(inputs, options);
   if (!preflight.ok) {
@@ -499,5 +563,10 @@ export async function runSetupWorkflow(inputs, options = {}) {
     return k3sResult;
   }
 
-  return ensureLocalPathStorage(options);
+  const storageResult = ensureLocalPathStorage(options);
+  if (!storageResult.ok) {
+    return storageResult;
+  }
+
+  return installFlux(options);
 }
