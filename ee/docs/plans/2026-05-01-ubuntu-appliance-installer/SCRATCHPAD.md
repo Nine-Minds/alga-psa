@@ -150,3 +150,10 @@ Minimum live validation environment should include:
 - (2026-05-01) **F008 completed**: Implemented token-protected web setup route `/setup` in `ee/appliance/host-service/server.mjs`.
 - Behavior: `/setup` requires `?token=<setup-token>` matching `/var/lib/alga-appliance/setup-token`; mismatches return `401 Unauthorized`.
 - Local validation: unauthenticated request returned HTTP 401; authenticated request returned HTTP 200.
+- (2026-05-01) **F009/F010/F011 completed**: Expanded token-protected `/setup` UI with required fields: release channel, app URL/hostname, DNS mode, custom DNS servers, and support/testing repo URL + branch overrides.
+- Defaults/UX semantics implemented:
+  - channel defaults to `stable`
+  - `nightly` explicitly labeled as testing/support-directed
+  - DNS defaults to `Use DHCP/system resolvers`
+  - custom DNS is opt-in and called out as deliberate (with example format guidance)
+- (2026-05-01) **F013 completed**: Setup POST now validates and persists inputs to `/etc/alga-appliance/setup-inputs.json` (or `ALGA_APPLIANCE_SETUP_INPUTS_FILE` override), with restricted file permissions (`0600`) and restricted directory permissions (`0750`).

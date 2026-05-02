@@ -73,7 +73,7 @@
       "Web setup UI",
       "Install flow"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F010",
@@ -82,7 +82,7 @@
       "Web setup UI",
       "GitOps/release source"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F011",
@@ -91,7 +91,7 @@
       "Web setup UI",
       "Install flow"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F012",
@@ -107,7 +107,7 @@
     "prdRefs": [
       "Data and Configuration"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F014",

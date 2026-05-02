@@ -10,6 +10,7 @@ Group=root
 Environment=ALGA_APPLIANCE_PORT=8080
 Environment=ALGA_APPLIANCE_STATE_FILE=/var/lib/alga-appliance/install-state.json
 Environment=ALGA_APPLIANCE_TOKEN_FILE=/var/lib/alga-appliance/setup-token
+Environment=ALGA_APPLIANCE_SETUP_INPUTS_FILE=/etc/alga-appliance/setup-inputs.json
 ExecStartPre=/usr/bin/env node /opt/alga-appliance/host-service/init-token.mjs
 ExecStart=/usr/bin/env node /opt/alga-appliance/host-service/server.mjs
 Restart=always
