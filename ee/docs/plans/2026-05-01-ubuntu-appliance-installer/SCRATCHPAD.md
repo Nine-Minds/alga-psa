@@ -236,6 +236,13 @@ Minimum live validation environment should include:
   - `ee/docs/appliance/quick-start.md` (VMware/cloud Ubuntu ISO install, setup URL/token, DNS defaults/risk, status plane)
   - `ee/docs/appliance/operators-manual.md` (status/failure model, support bundle, app-channel updates)
   - `ee/appliance/README.md` (internal banner: Ubuntu supported, Talos legacy/internal)
+- (2026-05-02) **F037 completed**: Retired Talos operator from default supported CLI surface by gating `ee/appliance/appliance` behind explicit legacy opt-in (`ALGA_APPLIANCE_ALLOW_LEGACY_TALOS=1`).
+- Default invocation now points operators to Ubuntu setup/status flow on `http://<node-ip>:8080/setup` and `http://<node-ip>:8080`; Talos path remains available only for support/engineering override.
+- Updated legacy CLI usage text in `ee/appliance/operator/lib/cli.mjs` to clearly label the Talos command set as legacy and reference Ubuntu host service as the supported v1 path.
 - Validation run (2026-05-02):
   - `node --check ee/appliance/host-service/metadata-engine.mjs ee/appliance/host-service/setup-engine.mjs ee/appliance/host-service/update-engine.mjs ee/appliance/host-service/server.mjs`
   - `node --test ee/appliance/host-service/tests/setup-engine.preflight.test.mjs ee/appliance/host-service/tests/setup-engine.workflow.test.mjs ee/appliance/host-service/tests/status-engine.test.mjs ee/appliance/host-service/tests/support-bundle.test.mjs ee/appliance/host-service/tests/update-engine.test.mjs ee/appliance/host-service/tests/metadata-engine.test.mjs`
+- (2026-05-02) **T001 completed**: Added automated Ubuntu ISO build smoke test `ee/appliance/ubuntu-iso/tests/t001-build-smoke.test.mjs`.
+- Coverage: runs build script dry-run validation plus scaffold build, verifies host artifact staging into ISO overlay (`appliance`, `host-service`, `operator`, `scripts`) and validates generated `.iso` + `.sha256` outputs.
+- Validation run:
+  - `node --test ee/appliance/ubuntu-iso/tests/t001-build-smoke.test.mjs`

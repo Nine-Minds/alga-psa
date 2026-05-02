@@ -7,7 +7,8 @@ import { runTui } from './tui.mjs';
 
 function usage() {
   return [
-    'Usage: appliance <command> [options]',
+    'Legacy usage: appliance <command> [options]',
+    'Note: supported v1 installs use Ubuntu host setup/status service on port 8080.',
     '',
     'Commands:',
     '  tui',
