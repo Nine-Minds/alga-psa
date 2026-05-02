@@ -45,6 +45,25 @@ export type UpdateUserResult =
   | { success: true; user: IUserWithRoles | null }
   | { success: false; code: UpdateUserErrorCode; error: string };
 
+export type RegisterClientUserErrorCode =
+  | 'CONTACT_NOT_FOUND'
+  | 'CONTACT_INACTIVE'
+  | 'EMAIL_ALREADY_EXISTS'
+  | 'REGISTRATION_FAILED';
+
+/**
+ * Client portal registration result. UI consumers should map error codes to
+ * translation keys under `client-portal:auth.clientRegistration.errors.*`:
+ *   CONTACT_NOT_FOUND     → contactNotFound
+ *   CONTACT_INACTIVE      → contactInactive
+ *   EMAIL_ALREADY_EXISTS  → emailAlreadyExists
+ *   REGISTRATION_FAILED   → registrationFailed
+ * The English `error` field is provided as a defaultValue fallback only.
+ */
+export type RegisterClientUserResult =
+  | { success: true }
+  | { success: false; code: RegisterClientUserErrorCode; error: string };
+
 const getErrorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : '';
 
@@ -499,11 +518,11 @@ export const registerClientUser = withAuth(async (
   _ctx,
   email: string,
   password: string
-): Promise<{ success: boolean; error?: string }> => {
+): Promise<RegisterClientUserResult> => {
   try {
     const db = await getAdminConnection();
 
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
+    return await withTransaction(db, async (trx: Knex.Transaction): Promise<RegisterClientUserResult> => {
       if (!await hasPermission(currentUser, 'user', 'create', trx)) {
         throw new Error('Permission denied: Cannot create client user');
       }
@@ -525,11 +544,11 @@ export const registerClientUser = withAuth(async (
         .first();
 
       if (!contact) {
-        return { success: false, error: 'Contact not found' };
+        return { success: false, code: 'CONTACT_NOT_FOUND', error: 'Contact not found' };
       }
 
       if (contact.is_inactive) {
-        return { success: false, error: 'Contact is inactive' };
+        return { success: false, code: 'CONTACT_INACTIVE', error: 'Contact is inactive' };
       }
 
       // Check if a client user with this email already exists. Internal users
@@ -538,7 +557,11 @@ export const registerClientUser = withAuth(async (
         userType: 'client',
       });
       if (emailExists) {
-        return { success: false, error: 'User with this email already exists' };
+        return {
+          success: false,
+          code: 'EMAIL_ALREADY_EXISTS',
+          error: 'A user with this email address already exists',
+        };
       }
 
       // Split full name into first and last name
@@ -591,7 +614,11 @@ export const registerClientUser = withAuth(async (
     });
   } catch (error) {
     logger.error('Error registering client user:', error);
-    return { success: false, error: 'Failed to register user' };
+    return {
+      success: false,
+      code: 'REGISTRATION_FAILED',
+      error: 'Failed to register user',
+    };
   }
 });
 

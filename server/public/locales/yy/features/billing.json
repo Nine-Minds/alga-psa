@@ -11,19 +11,6 @@
   "viewContractLineDetails": "55555",
   "viewAllInvoices": "55555",
   "failedToLoad": "55555",
-  "invoices": {
-    "locations": {
-      "groupHeading": "55555",
-      "subtotal": "55555",
-      "unassigned": "55555",
-      "pickerPlaceholder": "55555",
-      "addLocationButton": "55555",
-      "removeGroup": "55555",
-      "emptyGroup": "55555",
-      "needMoreLocations": "55555",
-      "notSet": "55555"
-    }
-  },
   "payments": "55555",
   "contractLines": "55555",
   "usage": "55555",
@@ -74,6 +61,19 @@
     "advanceTiming": "55555",
     "arrearsTiming": "55555",
     "paymentSummaryServicePeriods": "55555"
+  },
+  "invoices": {
+    "locations": {
+      "groupHeading": "55555",
+      "subtotal": "55555",
+      "unassigned": "55555",
+      "pickerPlaceholder": "55555",
+      "addLocationButton": "55555",
+      "removeGroup": "55555",
+      "emptyGroup": "55555",
+      "needMoreLocations": "55555",
+      "notSet": "55555"
+    }
   },
   "frequency": {
     "monthly": "55555",

@@ -319,7 +319,15 @@
     },
     "forgotPassword": "Forgot password?",
     "sessionEndedTitle": "Session Ended",
-    "sessionEndedMessage": "Your session has been signed out. Please sign in again."
+    "sessionEndedMessage": "Your session has been signed out. Please sign in again.",
+    "clientRegistration": {
+      "errors": {
+        "contactNotFound": "Contact not found.",
+        "contactInactive": "This contact is inactive.",
+        "emailAlreadyExists": "A user with this email address already exists.",
+        "registrationFailed": "We couldn't complete the registration. Please try again."
+      }
+    }
   },
   "account": {
     "title": "Account",

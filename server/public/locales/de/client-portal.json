@@ -270,7 +270,15 @@
     },
     "forgotPassword": "Passwort vergessen?",
     "sessionEndedTitle": "Sitzung beendet",
-    "sessionEndedMessage": "Ihre Sitzung wurde beendet. Bitte melden Sie sich erneut an."
+    "sessionEndedMessage": "Ihre Sitzung wurde beendet. Bitte melden Sie sich erneut an.",
+    "clientRegistration": {
+      "errors": {
+        "contactNotFound": "Kontakt nicht gefunden.",
+        "contactInactive": "Dieser Kontakt ist inaktiv.",
+        "emailAlreadyExists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits.",
+        "registrationFailed": "Die Registrierung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut."
+      }
+    }
   },
   "account": {
     "title": "Konto",

@@ -270,7 +270,15 @@
     },
     "forgotPassword": "Mot de passe oublié ?",
     "sessionEndedTitle": "Session terminée",
-    "sessionEndedMessage": "Votre session a été fermée. Veuillez vous reconnecter."
+    "sessionEndedMessage": "Votre session a été fermée. Veuillez vous reconnecter.",
+    "clientRegistration": {
+      "errors": {
+        "contactNotFound": "Contact introuvable.",
+        "contactInactive": "Ce contact est inactif.",
+        "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà.",
+        "registrationFailed": "Nous n'avons pas pu finaliser l'inscription. Veuillez réessayer."
+      }
+    }
   },
   "account": {
     "title": "Compte",

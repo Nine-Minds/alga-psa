@@ -270,7 +270,15 @@
     },
     "forgotPassword": "¿Olvidaste tu contraseña?",
     "sessionEndedTitle": "Sesión finalizada",
-    "sessionEndedMessage": "Se ha cerrado su sesión. Vuelva a iniciar sesión."
+    "sessionEndedMessage": "Se ha cerrado su sesión. Vuelva a iniciar sesión.",
+    "clientRegistration": {
+      "errors": {
+        "contactNotFound": "Contacto no encontrado.",
+        "contactInactive": "Este contacto está inactivo.",
+        "emailAlreadyExists": "Ya existe un usuario con esta dirección de correo electrónico.",
+        "registrationFailed": "No pudimos completar el registro. Inténtalo de nuevo."
+      }
+    }
   },
   "account": {
     "title": "Cuenta",
