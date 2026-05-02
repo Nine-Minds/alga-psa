@@ -184,5 +184,26 @@
       "F014"
     ],
     "implemented": false
+  },
+  {
+    "id": "T019",
+    "description": "Talos retirement review: supported appliance CLI/docs/status paths no longer present Talos bootstrap as a v1 install option, and Ubuntu install docs are the primary appliance path.",
+    "featureIds": [
+      "F037",
+      "F038"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "T020",
+    "description": "Regression review: release/channel/status logic reused from the Talos work still functions in the Ubuntu host-service implementation without requiring talosctl, Talos machine config, or Talos APIs.",
+    "featureIds": [
+      "F019",
+      "F022",
+      "F024",
+      "F030",
+      "F037"
+    ],
+    "implemented": false
   }
 ]

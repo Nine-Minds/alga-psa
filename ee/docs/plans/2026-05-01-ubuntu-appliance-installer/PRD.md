@@ -12,6 +12,7 @@ Alga needs an appliance install path that preserves the good parts of the Talos 
 
 ## Goals
 
+- Replace the Talos appliance install path with a Ubuntu Server 24.04 LTS appliance path for v1.
 - Provide a custom Ubuntu Server 24.04 LTS autoinstall ISO for new appliance installs.
 - Keep the ISO focused on installing a predictable Ubuntu base host.
 - Move appliance-specific installation into a first-boot setup/status service.
@@ -28,7 +29,7 @@ Alga needs an appliance install path that preserves the good parts of the Talos 
 
 ## Non-Goals
 
-- Do not support Talos and Ubuntu as equal first-class appliance OS targets in this v1 plan.
+- Do not support Talos and Ubuntu as equal first-class appliance OS targets in this v1 plan; Talos should be retired from the supported appliance product path.
 - Do not automate Ubuntu package upgrades in the appliance status UI.
 - Do not automate k3s version upgrades in the appliance status UI.
 - Do not support fully offline installs in v1.
@@ -278,12 +279,37 @@ Implementation should define concrete schemas for:
 
 Secrets and tokens must be stored with restricted filesystem permissions.
 
+## Talos Retirement Scope
+
+Ubuntu is not an additional appliance option for v1; it replaces Talos as the supported appliance OS path. Implementation should remove, retire, or clearly mark legacy Talos-specific appliance flows so customers and support are not choosing between two supported installers.
+
+Talos-specific items to retire from the supported appliance surface include:
+
+- Talos bootstrap/operator flows for new installs
+- Talos machine config generation as a required appliance path
+- `talosctl` as a customer prerequisite for the Ubuntu appliance
+- Talos-specific install docs and troubleshooting as current customer guidance
+- status checks that require Talos APIs or Talos config
+- appliance assumptions tied to Talos host networking, maintenance mode, or machine config
+
+Reusable work from the Talos effort should be preserved where it remains valuable:
+
+- immutable release manifests
+- `stable` and `nightly` channels
+- Flux/GitOps reconciliation model
+- readiness tiers and login-readiness semantics
+- status/update UX concepts
+- support diagnostics patterns
+
+Existing local/lab Talos appliances may remain as historical or development artifacts, but the v1 product direction should not require maintaining Talos and Ubuntu as parallel supported appliance implementations.
+
 ## Rollout and Migration Notes
 
-- This plan creates a new Ubuntu appliance install path; it does not migrate existing Talos appliances in v1.
+- This plan replaces the supported appliance install path with Ubuntu; it does not migrate existing Talos appliances in v1.
 - Existing Talos release channel metadata should be reused where possible.
 - The existing status/update concepts should be ported to a host-level service rather than discarded.
 - The existing PR for Talos/status work may still be useful as the source of release/channel/status logic.
+- Documentation should clearly state that Ubuntu is the current supported appliance path and that Talos appliance artifacts are legacy/internal unless explicitly handled by support.
 
 ## v2 Update Direction
 
@@ -303,6 +329,7 @@ This v2 work is intentionally not in scope for the first Ubuntu appliance implem
 
 ## Risks
 
+- Retiring Talos reduces the parallel support matrix but may strand existing experimental Talos appliance work unless reusable pieces are deliberately ported.
 - Ubuntu introduces more mutable host state than Talos.
 - k3s install failures may vary by host networking, DNS, and firewall setup.
 - Direct GitHub dependency means first install requires outbound access to GitHub and GHCR; setup must fail fast and clearly when this is blocked.
@@ -325,3 +352,5 @@ This v2 work is intentionally not in scope for the first Ubuntu appliance implem
 - Background service failures do not block login readiness.
 - Status UI can apply an app-channel update for `stable` or `nightly`.
 - Reboot preserves k3s, Flux, app state, and host status service state.
+- Supported appliance docs and CLI flows no longer present Talos bootstrap as a v1 customer install option.
+- Reused release/channel/status logic functions on Ubuntu without Talos APIs, Talos machine config, or `talosctl`.

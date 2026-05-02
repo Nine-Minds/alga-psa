@@ -305,5 +305,25 @@
       "Web setup UI"
     ],
     "implemented": false
+  },
+  {
+    "id": "F037",
+    "description": "Remove or retire Talos-specific appliance implementation paths from the supported v1 appliance product surface, including Talos bootstrap/operator flows, Talos machine config assumptions, Talos-specific docs, and Talos-specific status dependencies, while preserving reusable release/channel/status logic in the Ubuntu implementation.",
+    "prdRefs": [
+      "Goals",
+      "Non-Goals",
+      "Talos Retirement Scope",
+      "Rollout and Migration Notes"
+    ],
+    "implemented": false
+  },
+  {
+    "id": "F038",
+    "description": "Add clear internal and external documentation that Ubuntu replaces Talos as the supported appliance OS path and that existing Talos appliance artifacts are legacy/unsupported unless explicitly handled by support.",
+    "prdRefs": [
+      "Talos Retirement Scope",
+      "Rollout and Migration Notes"
+    ],
+    "implemented": false
   }
 ]

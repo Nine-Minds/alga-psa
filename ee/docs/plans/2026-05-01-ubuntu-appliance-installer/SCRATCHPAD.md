@@ -67,6 +67,10 @@ Support bundle generation should be designed as a v1 feature, not a vague future
 
 Console fallback should work from common hypervisor console and serial-console-style access paths, but web setup remains primary so racked/headless users are not forced into physical keyboard/monitor workflows.
 
+### D013 — Retire Talos as the supported appliance path
+
+Ubuntu replaces Talos for the supported v1 appliance product. The plan should not leave Talos and Ubuntu as parallel customer-facing install options. Retire or clearly mark Talos bootstrap/operator/docs/status dependencies as legacy/internal, while porting reusable release/channel/status concepts to the Ubuntu host-service implementation.
+
 ## Open Questions
 
 - What exact k3s version should be pinned for the first Ubuntu appliance validation?
@@ -100,6 +104,7 @@ ee/appliance/operator/lib/tui.mjs
 - First install failures should fail early and clearly for missing/wrong Flux CLI, DNS, GitHub access, and GHCR access.
 - GitHub/GHCR preflight should happen before k3s install, not after Kubernetes is half-configured.
 - Existing Talos bootstrap had a `--dns-servers` flag that patched both Talos resolver config and CoreDNS. Ubuntu setup needs equivalent host/k3s/CoreDNS treatment, but must not silently replace internal DNS with public DNS.
+- Talos-specific customer-facing docs, prerequisites (`talosctl`), machine config generation, and Talos API status checks should not remain in the supported Ubuntu appliance path.
 - Kubernetes does not expose byte-level image pull percentages; status should show phase/image/elapsed time instead.
 - Background service failures should produce ready-with-background-issues, not block login readiness.
 
