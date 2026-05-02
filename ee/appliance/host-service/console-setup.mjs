@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
-import { persistSetupInputs, runSetupPreflight, validateSetupInputs } from './setup-engine.mjs';
+import { persistSetupInputs, runSetupWorkflow, validateSetupInputs } from './setup-engine.mjs';
 
 const setupInputsFile = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/etc/alga-appliance/setup-inputs.json';
 const stateFile = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
@@ -42,13 +42,13 @@ try {
   persistSetupInputs(inputs, setupInputsFile);
   output.write(`Setup inputs saved to ${setupInputsFile}\n`);
 
-  const preflight = await runSetupPreflight(inputs, { stateFile });
-  if (!preflight.ok) {
-    output.write(`Preflight blocked (${preflight.phase}/${preflight.step}): ${preflight.message}\n`);
-    output.write(`Suggested next step: ${preflight.suggestedNextStep}\n`);
+  const setupResult = await runSetupWorkflow(inputs, { stateFile });
+  if (!setupResult.ok) {
+    output.write(`Preflight blocked (${setupResult.phase}/${setupResult.step}): ${setupResult.message}\n`);
+    output.write(`Suggested next step: ${setupResult.suggestedNextStep}\n`);
     process.exitCode = 1;
   } else {
-    output.write('Preflight passed. Safe to proceed to k3s installation phase.\n');
+    output.write('Setup workflow phase completed successfully.\n');
   }
 } catch (error) {
   output.write(`Setup input error: ${error instanceof Error ? error.message : String(error)}\n`);

@@ -2,6 +2,7 @@
 import dns from 'node:dns';
 import fs from 'node:fs';
 import https from 'node:https';
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
 const DEFAULT_SETUP_FILE = '/etc/alga-appliance/setup-inputs.json';
@@ -318,4 +319,115 @@ export async function runSetupPreflight(inputs, options = {}) {
   }, stateFile);
 
   return success;
+}
+
+export function installK3sSingleNode(options = {}) {
+  const stateFile = options.stateFile || DEFAULT_STATE_FILE;
+  const kubeconfigPath = options.kubeconfigPath || '/etc/rancher/k3s/k3s.yaml';
+  const installScriptUrl = options.installScriptUrl || 'https://get.k3s.io';
+  const k3sVersion = options.k3sVersion || process.env.ALGA_APPLIANCE_K3S_VERSION || 'v1.31.4+k3s1';
+  const installExec = options.installExec || process.env.ALGA_APPLIANCE_K3S_EXEC || `server --write-kubeconfig  --write-kubeconfig-mode 644 --disable traefik --disable servicelb`;
+  const installCommand = options.installCommand || `curl -sfL ${installScriptUrl} | sh -s -`;
+
+  writeInstallState({
+    status: 'k3s-install-running',
+    phase: 'k3s',
+    lastAction: `Installing k3s ${k3sVersion}`,
+    updatedAt: nowIso()
+  }, stateFile);
+
+  const env = {
+    ...process.env,
+    INSTALL_K3S_VERSION: k3sVersion,
+    INSTALL_K3S_EXEC: installExec
+  };
+
+  const result = spawnSync('sh', ['-c', installCommand], {
+    env,
+    encoding: 'utf8'
+  });
+
+  if (result.status !== 0) {
+    const stderr = (result.stderr || '').trim();
+    const stdout = (result.stdout || '').trim();
+    const message = stderr || stdout || `k3s install command failed with exit code ${result.status ?? 1}`;
+
+    const failure = preflightFailure(
+      'k3s',
+      'install-k3s-server',
+      'k3s installation command failed.',
+      `Inspect installer output and host networking/firewall state. ${message}`
+    );
+
+    writeInstallState({
+      status: 'k3s-install-blocked',
+      phase: 'k3s',
+      lastAction: failure.message,
+      failure,
+      installerOutput: {
+        stdout: result.stdout || '',
+        stderr: result.stderr || ''
+      },
+      updatedAt: nowIso()
+    }, stateFile);
+
+    return failure;
+  }
+
+  if (!fs.existsSync(kubeconfigPath)) {
+    const failure = preflightFailure(
+      'k3s',
+      'verify-kubeconfig-path',
+      `k3s install completed but kubeconfig was not found at ${kubeconfigPath}.`,
+      'Validate k3s service startup and kubeconfig path configuration, then retry.'
+    );
+
+    writeInstallState({
+      status: 'k3s-install-blocked',
+      phase: 'k3s',
+      lastAction: failure.message,
+      failure,
+      updatedAt: nowIso()
+    }, stateFile);
+
+    return failure;
+  }
+
+  const success = {
+    ok: true,
+    phase: 'k3s',
+    message: `k3s installed successfully with kubeconfig at ${kubeconfigPath}.`,
+    k3sVersion,
+    kubeconfigPath
+  };
+
+  writeInstallState({
+    status: 'k3s-install-complete',
+    phase: 'k3s',
+    lastAction: success.message,
+    k3s: {
+      version: k3sVersion,
+      kubeconfigPath
+    },
+    updatedAt: nowIso()
+  }, stateFile);
+
+  return success;
+}
+
+export async function runSetupWorkflow(inputs, options = {}) {
+  const preflight = await runSetupPreflight(inputs, options);
+  if (!preflight.ok) {
+    return preflight;
+  }
+
+  if (options.skipK3sInstall === true) {
+    return {
+      ok: true,
+      phase: 'preflight',
+      message: 'Preflight succeeded; k3s install skipped by option override.'
+    };
+  }
+
+  return installK3sSingleNode(options);
 }

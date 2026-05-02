@@ -2,7 +2,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import { URL } from 'node:url';
-import { persistSetupInputs, runSetupPreflight, validateSetupInputs } from './setup-engine.mjs';
+import { persistSetupInputs, runSetupWorkflow, validateSetupInputs } from './setup-engine.mjs';
 
 const port = Number(process.env.ALGA_APPLIANCE_PORT || 8080);
 const stateFile = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
@@ -73,23 +73,23 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const preflight = await runSetupPreflight(setupInputs, { stateFile });
-      if (!preflight.ok) {
+      const setupResult = await runSetupWorkflow(setupInputs, { stateFile });
+      if (!setupResult.ok) {
         res.writeHead(412, { 'content-type': 'text/html; charset=utf-8' });
         res.end(`<!doctype html><html><body>
-          <h1>Preflight blocked</h1>
-          <p><strong>Phase:</strong> ${preflight.phase}</p>
-          <p><strong>Step:</strong> ${preflight.step}</p>
-          <p><strong>Cause:</strong> ${preflight.suspectedCause}</p>
-          <p><strong>Suggested next step:</strong> ${preflight.suggestedNextStep}</p>
-          <p><strong>Retry safe:</strong> ${preflight.retrySafe ? 'yes' : 'no'}</p>
-          <p>Fix the blocker and submit setup again. k3s installation has not started.</p>
+          <h1>Setup blocked</h1>
+          <p><strong>Phase:</strong> ${setupResult.phase}</p>
+          <p><strong>Step:</strong> ${setupResult.step}</p>
+          <p><strong>Cause:</strong> ${setupResult.suspectedCause}</p>
+          <p><strong>Suggested next step:</strong> ${setupResult.suggestedNextStep}</p>
+          <p><strong>Retry safe:</strong> ${setupResult.retrySafe ? 'yes' : 'no'}</p>
+          <p>Fix the blocker and submit setup again. If this blocker is preflight-related, k3s installation has not started.</p>
         </body></html>`);
         return;
       }
 
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      res.end('<!doctype html><html><body><h1>Preflight Passed</h1><p>Setup inputs saved and release-source preflight succeeded. k3s install phase wiring is next.</p></body></html>');
+      res.end('<!doctype html><html><body><h1>Setup Started</h1><p>Preflight and k3s installation steps completed successfully.</p></body></html>');
       return;
     }
 

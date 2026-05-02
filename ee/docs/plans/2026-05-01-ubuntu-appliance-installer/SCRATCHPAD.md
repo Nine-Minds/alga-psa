@@ -166,3 +166,11 @@ Minimum live validation environment should include:
 - Web setup now returns an explicit preflight-blocked response (HTTP 412) with phase, cause, suggested next step, and retry safety; console setup prints matching blocker guidance.
 - Added focused automated test file `ee/appliance/host-service/tests/setup-engine.preflight.test.mjs` validating custom DNS input enforcement and early DNS preflight blocking when no system resolvers exist.
 - Validation run: `node --check ee/appliance/host-service/{setup-engine.mjs,server.mjs,console-setup.mjs}` and `node --test ee/appliance/host-service/tests/setup-engine.preflight.test.mjs`.
+- (2026-05-01) **F015 completed**: Extended setup execution from preflight-only to workflow mode by adding `runSetupWorkflow()` and `installK3sSingleNode()` in `ee/appliance/host-service/setup-engine.mjs`.
+- k3s install behavior: pinned default version `v1.31.4+k3s1` (overrideable via `ALGA_APPLIANCE_K3S_VERSION`), single-node server install command through `https://get.k3s.io`, and post-install kubeconfig verification at `/etc/rancher/k3s/k3s.yaml`.
+- State modeling: writes explicit `k3s-install-running`, `k3s-install-complete`, and `k3s-install-blocked` phases with installer output/error guidance persisted into install-state.
+- Wiring: both web setup (`server.mjs`) and console setup (`console-setup.mjs`) now invoke the full setup workflow path rather than only preflight.
+- Added test `ee/appliance/host-service/tests/setup-engine.workflow.test.mjs` to validate successful k3s install path using a mocked local installer command and kubeconfig path.
+- Validation run: `node --check ee/appliance/host-service/{setup-engine.mjs,server.mjs,console-setup.mjs}` and `node --test ee/appliance/host-service/tests/setup-engine.preflight.test.mjs ee/appliance/host-service/tests/setup-engine.workflow.test.mjs`.
+- (2026-05-01) **F016 completed**: Updated default k3s install exec flags to disable unneeded bundled components by default (`--disable traefik --disable servicelb`) in `installK3sSingleNode()`.
+- Added regression coverage in `ee/appliance/host-service/tests/setup-engine.workflow.test.mjs` to assert installer receives those disable flags through `INSTALL_K3S_EXEC` when no explicit override is supplied.
