@@ -203,3 +203,13 @@ Minimum live validation environment should include:
 - Validation run (2026-05-02):
   - `node --check ee/appliance/host-service/setup-engine.mjs ee/appliance/host-service/status-engine.mjs ee/appliance/host-service/server.mjs`
   - `node --test ee/appliance/host-service/tests/setup-engine.preflight.test.mjs ee/appliance/host-service/tests/setup-engine.workflow.test.mjs ee/appliance/host-service/tests/status-engine.test.mjs`
+- (2026-05-02) **F029 completed**: Implemented host-service-first support bundle generation in `ee/appliance/host-service/support-bundle.mjs`.
+- Bundle collection includes: install/release/setup state snapshots, appliance journals, k3s service status, DNS/network diagnostics, disk usage, Kubernetes resource snapshots (namespaces/pods/deployments/statefulsets/jobs/PVC/events), Flux GitRepository/Kustomization status, HelmRelease status, and bootstrap job log capture.
+- Redaction behavior added for common secret fields (`token`, `password`, `client-key-data`, bearer authorization headers) across captured output and copied metadata files.
+- Added token-protected web/API flow in `server.mjs`:
+  - `POST /api/support-bundle?token=...` generates archive
+  - `GET /support-bundle?token=...` exposes one-button generation page and CLI fallback hint
+- Added automated test `ee/appliance/host-service/tests/support-bundle.test.mjs` validating archive creation wiring and redaction behavior.
+- Validation run (2026-05-02):
+  - `node --check ee/appliance/host-service/support-bundle.mjs ee/appliance/host-service/server.mjs ee/appliance/host-service/status-engine.mjs`
+  - `node --test ee/appliance/host-service/tests/setup-engine.preflight.test.mjs ee/appliance/host-service/tests/setup-engine.workflow.test.mjs ee/appliance/host-service/tests/status-engine.test.mjs ee/appliance/host-service/tests/support-bundle.test.mjs`

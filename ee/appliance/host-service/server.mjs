@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { URL } from 'node:url';
 import { collectStatusSnapshot } from './status-engine.mjs';
 import { persistSetupInputs, runSetupWorkflow, validateSetupInputs } from './setup-engine.mjs';
+import { generateSupportBundle } from './support-bundle.mjs';
 
 const port = Number(process.env.ALGA_APPLIANCE_PORT || 8080);
 const stateFile = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
@@ -81,6 +82,44 @@ const server = http.createServer(async (req, res) => {
     const snapshot = collectStatusSnapshot({ stateFile });
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(JSON.stringify(snapshot));
+    return;
+  }
+
+  if (url.pathname === '/api/support-bundle') {
+    const providedToken = url.searchParams.get('token') || '';
+    if (!setupToken || providedToken !== setupToken) {
+      res.writeHead(401, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized: valid status token required.' }));
+      return;
+    }
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      res.writeHead(405, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Method not allowed. Use POST.' }));
+      return;
+    }
+
+    const result = generateSupportBundle();
+    res.writeHead(result.ok ? 200 : 500, { 'content-type': 'application/json' });
+    res.end(JSON.stringify(result));
+    return;
+  }
+
+  if (url.pathname === '/support-bundle') {
+    const providedToken = url.searchParams.get('token') || '';
+    if (!setupToken || providedToken !== setupToken) {
+      res.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
+      res.end('Unauthorized: valid status token required.');
+      return;
+    }
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    res.end(`<!doctype html><html><body>
+      <h1>Generate Support Bundle</h1>
+      <p>This bundle includes host service logs, setup state, Kubernetes/Flux/Helm diagnostics, network checks, disk usage, and redacted metadata.</p>
+      <form method="post" action="/api/support-bundle?token=${encodeURIComponent(providedToken)}">
+        <button type="submit">Generate Bundle</button>
+      </form>
+      <p>CLI fallback: <code>/usr/bin/env node /opt/alga-appliance/host-service/support-bundle.mjs</code> (or call the status API).</p>
+    </body></html>`);
     return;
   }
 

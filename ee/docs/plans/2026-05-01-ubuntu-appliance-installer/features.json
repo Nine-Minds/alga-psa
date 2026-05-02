@@ -252,7 +252,7 @@
       "Release/update flow",
       "Upgrade: app channel update"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F031",
