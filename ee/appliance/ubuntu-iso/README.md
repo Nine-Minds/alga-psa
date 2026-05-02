@@ -32,4 +32,6 @@ Expected outputs:
 
 This commit establishes the layout and build interface (`F001`).
 
-Subsequent features populate autoinstall config, first-boot assets, and full ISO remastering.
+Autoinstall seed files now live in `config/nocloud/user-data` and `config/nocloud/meta-data`.
+
+Subsequent features add host service artifacts and full ISO remastering.

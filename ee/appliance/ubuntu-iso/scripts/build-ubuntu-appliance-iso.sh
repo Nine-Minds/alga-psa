@@ -72,6 +72,15 @@ for required_dir in \
   fi
 done
 
+for required_file in \
+  "$ROOT_DIR/config/nocloud/user-data" \
+  "$ROOT_DIR/config/nocloud/meta-data"; do
+  if [[ ! -f "$required_file" ]]; then
+    echo "Missing required file: $required_file" >&2
+    exit 1
+  fi
+done
+
 OUTPUT_ISO="$ROOT_DIR/output/alga-appliance-ubuntu-${RELEASE_VERSION}.iso"
 OUTPUT_SHA="$OUTPUT_ISO.sha256"
 

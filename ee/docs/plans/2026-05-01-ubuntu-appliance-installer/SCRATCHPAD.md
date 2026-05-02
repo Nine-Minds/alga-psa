@@ -128,3 +128,7 @@ Minimum live validation environment should include:
 - Added `ee/appliance/ubuntu-iso/README.md` to declare responsibilities/inputs/outputs for the Ubuntu ISO path and to separate scaffold-vs-full-remaster expectations.
 - Added dry-run validation command for repeatability: `ee/appliance/ubuntu-iso/scripts/build-ubuntu-appliance-iso.sh --base-iso <ubuntu.iso> --release-version <version> --dry-run`.
 - Gotcha: full ISO remastering tools (`xorriso`, `7z`, boot catalog regeneration) are intentionally deferred to subsequent features; the current script validates layout and interface so later steps can land without path churn.
+- (2026-05-01) **F002 completed**: Added Ubuntu 24.04 autoinstall NoCloud seed at `ee/appliance/ubuntu-iso/config/nocloud/user-data` + `meta-data`.
+- Scope covered: unattended install defaults (locale/timezone), direct full-disk partitioning policy, base appliance admin account, required utility packages, and first-boot service enablement hooks for `alga-appliance.service` and `alga-appliance-console.service`.
+- Security/operations note: appliance state directories are created in install-time late commands with root ownership and restricted permissions (`0750` for `/etc/alga-appliance`, `/var/lib/alga-appliance`, `/var/log/alga-appliance`).
+- Build entrypoint hardening: `build-ubuntu-appliance-iso.sh` now fails fast if `config/nocloud/user-data` or `meta-data` are missing.

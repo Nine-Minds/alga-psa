@@ -1,0 +1,48 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+  timezone: UTC
+
+  apt:
+    geoip: true
+    preserve_sources_list: false
+
+  identity:
+    hostname: alga-appliance
+    username: alga-admin
+    password: "$6$sN9bd8xq.7sVhY7A$R6Z4dM4mq8K/0WwNqNqQFNx0R8vAqA2sCY0T4yeiSxOhF9vDhcbPK26cv9YI6x8WoFI2hDCl9Imn8N8QZxozf."
+
+  ssh:
+    install-server: true
+    allow-pw: true
+
+  storage:
+    layout:
+      name: direct
+      sizing-policy: all
+
+  packages:
+    - ca-certificates
+    - curl
+    - git
+    - jq
+    - net-tools
+    - openssh-server
+    - unzip
+    - ufw
+
+  user-data:
+    disable_root: true
+
+  late-commands:
+    - curtin in-target --target=/target -- mkdir -p /opt/alga-appliance /etc/alga-appliance /var/lib/alga-appliance /var/log/alga-appliance
+    - curtin in-target --target=/target -- chown -R root:root /opt/alga-appliance /etc/alga-appliance /var/lib/alga-appliance /var/log/alga-appliance
+    - curtin in-target --target=/target -- chmod 0755 /opt/alga-appliance
+    - curtin in-target --target=/target -- chmod 0750 /etc/alga-appliance /var/lib/alga-appliance /var/log/alga-appliance
+    - curtin in-target --target=/target -- bash -lc 'if [ -f /etc/systemd/system/alga-appliance.service ]; then systemctl enable alga-appliance.service; fi'
+    - curtin in-target --target=/target -- bash -lc 'if [ -f /etc/systemd/system/alga-appliance-console.service ]; then systemctl enable alga-appliance-console.service; fi'
+
+  shutdown: reboot
