@@ -120,3 +120,11 @@ Minimum live validation environment should include:
 - Fresh install with GitHub/GHCR/proxy failure simulation before k3s installation
 - Reboot persistence test
 - App-channel update test
+
+## Implementation Log
+
+- (2026-05-01) **F001 completed**: Defined a concrete Ubuntu appliance ISO build layout under `ee/appliance/ubuntu-iso/` with the initial folder contract (`config/nocloud`, `overlay`, `scripts`, `work`, `output`) and a single entrypoint script `scripts/build-ubuntu-appliance-iso.sh`.
+- Rationale: The repo previously had Talos image-factory build paths only; no Ubuntu ISO structure existed, so downstream autoinstall and first-boot work had no stable location.
+- Added `ee/appliance/ubuntu-iso/README.md` to declare responsibilities/inputs/outputs for the Ubuntu ISO path and to separate scaffold-vs-full-remaster expectations.
+- Added dry-run validation command for repeatability: `ee/appliance/ubuntu-iso/scripts/build-ubuntu-appliance-iso.sh --base-iso <ubuntu.iso> --release-version <version> --dry-run`.
+- Gotcha: full ISO remastering tools (`xorriso`, `7z`, boot catalog regeneration) are intentionally deferred to subsequent features; the current script validates layout and interface so later steps can land without path churn.
