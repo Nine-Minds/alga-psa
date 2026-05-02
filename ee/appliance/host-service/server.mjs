@@ -16,7 +16,10 @@ function currentMode() {
 
   try {
     const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
-    return state.phase === 'complete' ? 'status' : 'setup';
+    if (state && typeof state === 'object' && typeof state.status === 'string' && state.status.length > 0) {
+      return 'status';
+    }
+    return 'setup';
   } catch {
     return 'setup';
   }

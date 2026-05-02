@@ -187,3 +187,5 @@ Minimum live validation environment should include:
 - (2026-05-01) **F022 completed**: Added `applyReleaseSelectionConfiguration()` to persist selected channel/release and runtime values into `/etc/alga-appliance/release-selection.json` (0600/0750 permissions) for host-side release selection state.
 - Setup workflow order now: preflight -> k3s -> storage -> Flux install -> channel metadata resolve -> Flux source apply -> release selection persistence.
 - Added automated test coverage verifying persisted release-selection/runtime payload and state transition.
+- (2026-05-01) **F023 completed**: Updated host-service mode detection so port `8080` transitions into status mode as soon as setup state exists (install started), rather than waiting for a terminal `complete` phase marker.
+- Rationale: status/progress UX is now available immediately after setup begins, matching the requirement that host `:8080` remain the durable setup->status plane.
