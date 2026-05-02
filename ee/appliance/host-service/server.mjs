@@ -2,7 +2,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import { URL } from 'node:url';
-import { persistSetupInputs, validateSetupInputs } from './setup-engine.mjs';
+import { persistSetupInputs, runSetupPreflight, validateSetupInputs } from './setup-engine.mjs';
 
 const port = Number(process.env.ALGA_APPLIANCE_PORT || 8080);
 const stateFile = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
@@ -55,8 +55,10 @@ const server = http.createServer(async (req, res) => {
     if ((req.method || 'GET').toUpperCase() === 'POST') {
       const body = await readRequestBody(req);
       const params = new URLSearchParams(body);
+      let setupInputs;
+
       try {
-        const setupInputs = validateSetupInputs({
+        setupInputs = validateSetupInputs({
           channel: params.get('channel') || 'stable',
           appHostname: params.get('appHostname') || '',
           dnsMode: params.get('dnsMode') || 'system',
@@ -71,8 +73,23 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      const preflight = await runSetupPreflight(setupInputs, { stateFile });
+      if (!preflight.ok) {
+        res.writeHead(412, { 'content-type': 'text/html; charset=utf-8' });
+        res.end(`<!doctype html><html><body>
+          <h1>Preflight blocked</h1>
+          <p><strong>Phase:</strong> ${preflight.phase}</p>
+          <p><strong>Step:</strong> ${preflight.step}</p>
+          <p><strong>Cause:</strong> ${preflight.suspectedCause}</p>
+          <p><strong>Suggested next step:</strong> ${preflight.suggestedNextStep}</p>
+          <p><strong>Retry safe:</strong> ${preflight.retrySafe ? 'yes' : 'no'}</p>
+          <p>Fix the blocker and submit setup again. k3s installation has not started.</p>
+        </body></html>`);
+        return;
+      }
+
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      res.end('<!doctype html><html><body><h1>Setup Saved</h1><p>Inputs validated and persisted. Setup engine wiring is next.</p></body></html>');
+      res.end('<!doctype html><html><body><h1>Preflight Passed</h1><p>Setup inputs saved and release-source preflight succeeded. k3s install phase wiring is next.</p></body></html>');
       return;
     }
 
@@ -103,7 +120,7 @@ const server = http.createServer(async (req, res) => {
         <input type="text" name="repoUrl" value="https://github.com/Nine-Minds/alga-psa.git" /><br /><br />
 
         <label>Repo branch override (support/testing only)</label><br />
-        <input type="text" name="repoBranch" placeholder="release/1.0.x" /><br /><br />
+        <input type="text" name="repoBranch" placeholder="main" /><br /><br />
 
         <button type="submit">Save and continue</button>
       </form>

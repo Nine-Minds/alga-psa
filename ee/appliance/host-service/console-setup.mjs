@@ -2,9 +2,10 @@
 import fs from 'node:fs';
 import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
-import { persistSetupInputs, validateSetupInputs } from './setup-engine.mjs';
+import { persistSetupInputs, runSetupPreflight, validateSetupInputs } from './setup-engine.mjs';
 
 const setupInputsFile = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/etc/alga-appliance/setup-inputs.json';
+const stateFile = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
 
 async function collectInputs() {
   if (!process.stdin.isTTY) {
@@ -28,7 +29,7 @@ async function collectInputs() {
       dnsMode: (await rl.question('DNS mode [system/custom] (default: system): ')).trim() || 'system',
       dnsServers: (await rl.question('Custom DNS servers comma-separated (optional): ')).trim(),
       repoUrl: (await rl.question('Repo URL override (default: https://github.com/Nine-Minds/alga-psa.git): ')).trim() || 'https://github.com/Nine-Minds/alga-psa.git',
-      repoBranch: (await rl.question('Repo branch override (optional): ')).trim()
+      repoBranch: (await rl.question('Repo branch override (default: main): ')).trim()
     };
   } finally {
     rl.close();
@@ -40,6 +41,15 @@ try {
   const inputs = validateSetupInputs(raw);
   persistSetupInputs(inputs, setupInputsFile);
   output.write(`Setup inputs saved to ${setupInputsFile}\n`);
+
+  const preflight = await runSetupPreflight(inputs, { stateFile });
+  if (!preflight.ok) {
+    output.write(`Preflight blocked (${preflight.phase}/${preflight.step}): ${preflight.message}\n`);
+    output.write(`Suggested next step: ${preflight.suggestedNextStep}\n`);
+    process.exitCode = 1;
+  } else {
+    output.write('Preflight passed. Safe to proceed to k3s installation phase.\n');
+  }
 } catch (error) {
   output.write(`Setup input error: ${error instanceof Error ? error.message : String(error)}\n`);
   process.exitCode = 1;

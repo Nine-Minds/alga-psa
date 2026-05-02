@@ -160,3 +160,9 @@ Minimum live validation environment should include:
 - (2026-05-01) **F012 completed**: Added console setup prompt flow `ee/appliance/host-service/console-setup.mjs` collecting the same required values as web setup.
 - Shared validation/persistence: introduced `ee/appliance/host-service/setup-engine.mjs`; both web POST `/setup` and console prompt use the same `validateSetupInputs()` + `persistSetupInputs()` logic.
 - Console-first guidance now includes explicit fallback command to launch interactive setup from VM/serial console.
+- (2026-05-01) **F014 completed**: Implemented setup preflight engine execution in `ee/appliance/host-service/setup-engine.mjs` and wired it through both `server.mjs` (`POST /setup`) and `console-setup.mjs`.
+- Preflight coverage now runs before any k3s mutation step: DNS resolution checks, GitHub channel metadata reachability/parse check, GHCR connectivity check, and proxy/egress environment context capture.
+- Added phase-classified persisted install-state updates at `/var/lib/alga-appliance/install-state.json` with retry-safe blocker guidance for DNS/network/GitHub release-source failures.
+- Web setup now returns an explicit preflight-blocked response (HTTP 412) with phase, cause, suggested next step, and retry safety; console setup prints matching blocker guidance.
+- Added focused automated test file `ee/appliance/host-service/tests/setup-engine.preflight.test.mjs` validating custom DNS input enforcement and early DNS preflight blocking when no system resolvers exist.
+- Validation run: `node --check ee/appliance/host-service/{setup-engine.mjs,server.mjs,console-setup.mjs}` and `node --test ee/appliance/host-service/tests/setup-engine.preflight.test.mjs`.
