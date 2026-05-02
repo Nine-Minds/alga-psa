@@ -377,6 +377,11 @@ export interface IBucketCharge extends IBillingCharge, TenantEntity {
   overageHours: number;
   overageRate: number;
   service_catalog_id: string;
+  isUsageBucket?: boolean;
+  unitOfMeasure?: string | null;
+  unitsUsed?: number;
+  includedUnits?: number;
+  overageUnits?: number;
 }
 
 export interface IProductCharge extends IBillingCharge, TenantEntity {

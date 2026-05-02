@@ -54,6 +54,7 @@
         "expand": "Expand",
         "collapse": "Collapse"
       },
+      "ready": "Ready to invoice",
       "canCombine": "Can combine into 1 invoice",
       "separate": "Must invoice separately",
       "blocked": "Contains blocked items",

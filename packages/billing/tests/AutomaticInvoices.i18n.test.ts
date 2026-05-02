@@ -65,6 +65,7 @@ describe('AutomaticInvoices i18n wiring contract', () => {
     ];
 
     const namespaceKeyChecks = [
+      'automaticInvoices.groups.ready',
       'automaticInvoices.groups.canCombine',
       'automaticInvoices.groups.separate',
       'automaticInvoices.groups.blocked',
