@@ -180,3 +180,10 @@ Minimum live validation environment should include:
 - (2026-05-01) **F018 completed**: Added Flux installation phase `installFlux()` to setup workflow after successful k3s + storage phases.
 - Flux behavior: runs `flux install --namespace flux-system --kubeconfig /etc/rancher/k3s/k3s.yaml` by default, persists phase states (`flux-install-running|complete|blocked`), and records actionable failure details.
 - Added test coverage in `setup-engine.workflow.test.mjs` for successful Flux phase execution via a mocked command.
+- (2026-05-01) **F019 completed**: Added `resolveChannelMetadata()` phase that resolves selected channel metadata directly from GitHub channel files and extracts `releaseVersion` + `repoBranch` for workflow use.
+- (2026-05-01) **F020 completed**: Added `applyFluxSource()` phase that applies Flux `GitRepository` + `Kustomization` resources against the selected branch/path (`./ee/appliance/flux/base`) using host kubeconfig.
+- (2026-05-01) **F021 completed**: Flux source configuration now normalizes SSH-style GitHub URLs (`git@github.com:org/repo.git`) into public HTTPS format before applying source manifests.
+- Added test coverage for channel metadata resolution and GitHub URL normalization in `ee/appliance/host-service/tests/setup-engine.workflow.test.mjs`.
+- (2026-05-01) **F022 completed**: Added `applyReleaseSelectionConfiguration()` to persist selected channel/release and runtime values into `/etc/alga-appliance/release-selection.json` (0600/0750 permissions) for host-side release selection state.
+- Setup workflow order now: preflight -> k3s -> storage -> Flux install -> channel metadata resolve -> Flux source apply -> release selection persistence.
+- Added automated test coverage verifying persisted release-selection/runtime payload and state transition.

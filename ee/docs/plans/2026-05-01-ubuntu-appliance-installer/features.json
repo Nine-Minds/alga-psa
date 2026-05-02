@@ -157,7 +157,7 @@
     "prdRefs": [
       "GitOps/release source"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F020",
@@ -166,7 +166,7 @@
       "GitOps/release source",
       "Install flow"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F021",
@@ -174,7 +174,7 @@
     "prdRefs": [
       "GitOps/release source"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F022",
@@ -183,7 +183,7 @@
       "GitOps/release source",
       "Install flow"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F023",

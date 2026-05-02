@@ -47,6 +47,20 @@ function extractRepoParts(normalizedRepoUrl) {
   return { owner: match[1], repo: match[2] };
 }
 
+function readChannelRelease(channelData) {
+  const releaseVersion = (channelData.releaseVersion || channelData.release || '').trim();
+  const repoBranch = (channelData.repoBranch || channelData.branch || '').trim();
+
+  if (!releaseVersion) {
+    throw new Error('Channel metadata is missing releaseVersion.');
+  }
+
+  return {
+    releaseVersion,
+    repoBranch: repoBranch || 'main'
+  };
+}
+
 function readSystemResolvers(resolvConfPath = DEFAULT_RESOLV_CONF) {
   if (!fs.existsSync(resolvConfPath)) {
     return [];
@@ -67,6 +81,14 @@ function writeInstallState(state, stateFile = DEFAULT_STATE_FILE) {
   fs.writeFileSync(stateFile, `${JSON.stringify(state, null, 2)}\n`, { mode: 0o600 });
   fs.chmodSync(stateDir, 0o750);
   fs.chmodSync(stateFile, 0o600);
+}
+
+function writeSecureJsonFile(targetFile, value) {
+  const dir = path.dirname(targetFile);
+  fs.mkdirSync(dir, { recursive: true, mode: 0o750 });
+  fs.writeFileSync(targetFile, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
+  fs.chmodSync(dir, 0o750);
+  fs.chmodSync(targetFile, 0o600);
 }
 
 function nowIso() {
@@ -544,6 +566,227 @@ export function installFlux(options = {}) {
   return success;
 }
 
+export async function resolveChannelMetadata(inputs, options = {}) {
+  const stateFile = options.stateFile || DEFAULT_STATE_FILE;
+  const timeoutMs = Number(options.timeoutMs || 8000);
+  const normalizedRepoUrl = normalizeGithubRepoUrl(inputs.repoUrl);
+  const repo = extractRepoParts(normalizedRepoUrl);
+  const branch = (inputs.repoBranch || 'main').trim() || 'main';
+  const channelUrl = `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${branch}/ee/appliance/releases/channels/${inputs.channel}.json`;
+
+  writeInstallState({
+    status: 'release-resolve-running',
+    phase: 'github-release-source',
+    lastAction: `Resolving ${inputs.channel} channel metadata`,
+    updatedAt: nowIso()
+  }, stateFile);
+
+  let channelData;
+  if (options.channelMetadataOverride) {
+    channelData = options.channelMetadataOverride;
+  } else {
+    const response = await httpsRequest(channelUrl, timeoutMs);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      const failure = preflightFailure(
+        'github-release-source',
+        'resolve-channel-metadata',
+        `Unable to resolve channel metadata from ${channelUrl} (${response.statusCode}).`,
+        'Verify release channel file exists for the selected branch and retry.'
+      );
+      writeInstallState({
+        status: 'release-resolve-blocked',
+        phase: 'github-release-source',
+        lastAction: failure.message,
+        failure,
+        updatedAt: nowIso()
+      }, stateFile);
+      return failure;
+    }
+    channelData = JSON.parse(response.body);
+  }
+
+  let releaseSelection;
+  try {
+    releaseSelection = readChannelRelease(channelData);
+  } catch (error) {
+    const failure = preflightFailure(
+      'github-release-source',
+      'parse-channel-release',
+      'Channel metadata does not contain required release fields.',
+      error instanceof Error ? error.message : String(error)
+    );
+    writeInstallState({
+      status: 'release-resolve-blocked',
+      phase: 'github-release-source',
+      lastAction: failure.message,
+      failure,
+      updatedAt: nowIso()
+    }, stateFile);
+    return failure;
+  }
+
+  const success = {
+    ok: true,
+    phase: 'github-release-source',
+    message: `Resolved channel ${inputs.channel} to release ${releaseSelection.releaseVersion}.`,
+    repoUrl: normalizedRepoUrl,
+    channel: inputs.channel,
+    repoBranch: releaseSelection.repoBranch,
+    releaseVersion: releaseSelection.releaseVersion
+  };
+
+  writeInstallState({
+    status: 'release-resolve-complete',
+    phase: 'github-release-source',
+    lastAction: success.message,
+    release: {
+      selectedChannel: success.channel,
+      selectedReleaseVersion: success.releaseVersion,
+      repoUrl: success.repoUrl,
+      repoBranch: success.repoBranch
+    },
+    updatedAt: nowIso()
+  }, stateFile);
+
+  return success;
+}
+
+export function applyFluxSource(inputs, releaseSelection, options = {}) {
+  const stateFile = options.stateFile || DEFAULT_STATE_FILE;
+  const kubeconfigPath = options.kubeconfigPath || '/etc/rancher/k3s/k3s.yaml';
+  const fluxPath = options.fluxPath || './ee/appliance/flux/base';
+  const sourceName = options.fluxSourceName || 'alga-appliance';
+  const sourceNamespace = options.fluxNamespace || 'flux-system';
+  const applyCommand = options.fluxSourceApplyCommand || `kubectl --kubeconfig ${kubeconfigPath} apply -f -`;
+  const normalizedRepoUrl = normalizeGithubRepoUrl(releaseSelection.repoUrl || inputs.repoUrl);
+  const sourceBranch = releaseSelection.repoBranch || inputs.repoBranch || 'main';
+
+  const manifest = `apiVersion: source.toolkit.fluxcd.io/v1\nkind: GitRepository\nmetadata:\n  name: ${sourceName}\n  namespace: ${sourceNamespace}\nspec:\n  interval: 1m0s\n  url: ${normalizedRepoUrl}\n  ref:\n    branch: ${sourceBranch}\n---\napiVersion: kustomize.toolkit.fluxcd.io/v1\nkind: Kustomization\nmetadata:\n  name: ${sourceName}\n  namespace: ${sourceNamespace}\nspec:\n  interval: 5m0s\n  path: ${fluxPath}\n  prune: true\n  sourceRef:\n    kind: GitRepository\n    name: ${sourceName}\n`;
+
+  writeInstallState({
+    status: 'flux-source-running',
+    phase: 'flux',
+    lastAction: 'Applying Flux GitRepository/Kustomization source configuration',
+    updatedAt: nowIso()
+  }, stateFile);
+
+  const result = spawnSync('sh', ['-c', applyCommand], {
+    env: process.env,
+    input: manifest,
+    encoding: 'utf8'
+  });
+
+  if (result.status !== 0) {
+    const stderr = (result.stderr || '').trim();
+    const stdout = (result.stdout || '').trim();
+    const message = stderr || stdout || `Flux source apply failed with exit code ${result.status ?? 1}`;
+    const failure = preflightFailure(
+      'flux',
+      'apply-flux-source',
+      'Failed to apply Flux GitRepository/Kustomization manifests.',
+      message
+    );
+
+    writeInstallState({
+      status: 'flux-source-blocked',
+      phase: 'flux',
+      lastAction: failure.message,
+      failure,
+      updatedAt: nowIso()
+    }, stateFile);
+
+    return failure;
+  }
+
+  const success = {
+    ok: true,
+    phase: 'flux',
+    message: 'Flux source manifests applied successfully.',
+    source: {
+      name: sourceName,
+      namespace: sourceNamespace,
+      repoUrl: normalizedRepoUrl,
+      branch: sourceBranch,
+      path: fluxPath
+    }
+  };
+
+  writeInstallState({
+    status: 'flux-source-complete',
+    phase: 'flux',
+    lastAction: success.message,
+    fluxSource: success.source,
+    updatedAt: nowIso()
+  }, stateFile);
+
+  return success;
+}
+
+export function applyReleaseSelectionConfiguration(inputs, releaseSelection, options = {}) {
+  const stateFile = options.stateFile || DEFAULT_STATE_FILE;
+  const releaseSelectionFile = options.releaseSelectionFile || '/etc/alga-appliance/release-selection.json';
+
+  writeInstallState({
+    status: 'release-config-running',
+    phase: 'github-release-source',
+    lastAction: 'Persisting runtime values and selected release configuration',
+    updatedAt: nowIso()
+  }, stateFile);
+
+  const payload = {
+    updatedAt: nowIso(),
+    selectedChannel: releaseSelection.channel || inputs.channel,
+    selectedReleaseVersion: releaseSelection.releaseVersion,
+    repoUrl: releaseSelection.repoUrl,
+    repoBranch: releaseSelection.repoBranch,
+    runtime: {
+      appHostname: inputs.appHostname,
+      dnsMode: inputs.dnsMode,
+      dnsServers: inputs.dnsServers
+    }
+  };
+
+  try {
+    writeSecureJsonFile(releaseSelectionFile, payload);
+  } catch (error) {
+    const failure = preflightFailure(
+      'github-release-source',
+      'write-release-selection',
+      'Unable to persist release selection configuration.',
+      error instanceof Error ? error.message : String(error)
+    );
+    writeInstallState({
+      status: 'release-config-blocked',
+      phase: 'github-release-source',
+      lastAction: failure.message,
+      failure,
+      updatedAt: nowIso()
+    }, stateFile);
+    return failure;
+  }
+
+  const success = {
+    ok: true,
+    phase: 'github-release-source',
+    message: `Release selection persisted to ${releaseSelectionFile}.`,
+    releaseSelectionFile
+  };
+
+  writeInstallState({
+    status: 'release-config-complete',
+    phase: 'github-release-source',
+    lastAction: success.message,
+    releaseSelection: {
+      file: releaseSelectionFile,
+      selectedChannel: payload.selectedChannel,
+      selectedReleaseVersion: payload.selectedReleaseVersion
+    },
+    updatedAt: nowIso()
+  }, stateFile);
+
+  return success;
+}
+
 export async function runSetupWorkflow(inputs, options = {}) {
   const preflight = await runSetupPreflight(inputs, options);
   if (!preflight.ok) {
@@ -568,5 +811,20 @@ export async function runSetupWorkflow(inputs, options = {}) {
     return storageResult;
   }
 
-  return installFlux(options);
+  const fluxResult = installFlux(options);
+  if (!fluxResult.ok) {
+    return fluxResult;
+  }
+
+  const releaseSelection = await resolveChannelMetadata(inputs, options);
+  if (!releaseSelection.ok) {
+    return releaseSelection;
+  }
+
+  const fluxSourceResult = applyFluxSource(inputs, releaseSelection, options);
+  if (!fluxSourceResult.ok) {
+    return fluxSourceResult;
+  }
+
+  return applyReleaseSelectionConfiguration(inputs, releaseSelection, options);
 }

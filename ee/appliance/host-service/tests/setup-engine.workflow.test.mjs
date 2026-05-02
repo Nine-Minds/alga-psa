@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ensureLocalPathStorage, installFlux, installK3sSingleNode } from '../setup-engine.mjs';
+import { applyFluxSource, applyReleaseSelectionConfiguration, ensureLocalPathStorage, installFlux, installK3sSingleNode, resolveChannelMetadata } from '../setup-engine.mjs';
 
 test('installK3sSingleNode succeeds when installer command exits cleanly and kubeconfig exists', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-k3s-'));
@@ -83,4 +83,81 @@ test('installFlux records success when flux install command exits cleanly', () =
   const persisted = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
   assert.equal(persisted.status, 'flux-install-complete');
   assert.equal(persisted.phase, 'flux');
+});
+
+test('resolveChannelMetadata uses channel release fields from GitHub schema', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-release-'));
+  const stateFile = path.join(tmp, 'state', 'install-state.json');
+
+  const result = await resolveChannelMetadata({
+    channel: 'stable',
+    repoUrl: 'https://github.com/Nine-Minds/alga-psa.git',
+    repoBranch: 'main'
+  }, {
+    stateFile,
+    channelMetadataOverride: {
+      channel: 'stable',
+      releaseVersion: '1.0-rc5.1',
+      repoBranch: 'release/1.0-rc5'
+    }
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.releaseVersion, '1.0-rc5.1');
+  assert.equal(result.repoBranch, 'release/1.0-rc5');
+});
+
+test('applyFluxSource normalizes SSH GitHub URL to HTTPS for Flux source', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-flux-source-'));
+  const stateFile = path.join(tmp, 'state', 'install-state.json');
+  const manifestPath = path.join(tmp, 'manifest.yaml');
+
+  const result = applyFluxSource({
+    channel: 'stable',
+    repoUrl: 'git@github.com:Nine-Minds/alga-psa.git',
+    repoBranch: 'main'
+  }, {
+    ok: true,
+    repoUrl: 'git@github.com:Nine-Minds/alga-psa.git',
+    repoBranch: 'main',
+    releaseVersion: '1.0-rc5.1'
+  }, {
+    stateFile,
+    fluxSourceApplyCommand: `cat > ${manifestPath}`
+  });
+
+  assert.equal(result.ok, true);
+  const manifest = fs.readFileSync(manifestPath, 'utf8');
+  assert.ok(manifest.includes('url: https://github.com/Nine-Minds/alga-psa'));
+});
+
+test('applyReleaseSelectionConfiguration persists selected release and runtime values', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-release-config-'));
+  const stateFile = path.join(tmp, 'state', 'install-state.json');
+  const releaseSelectionFile = path.join(tmp, 'etc', 'release-selection.json');
+
+  const result = applyReleaseSelectionConfiguration({
+    channel: 'stable',
+    appHostname: 'psa.example.com',
+    dnsMode: 'system',
+    dnsServers: ''
+  }, {
+    ok: true,
+    channel: 'stable',
+    releaseVersion: '1.0-rc5.1',
+    repoUrl: 'https://github.com/Nine-Minds/alga-psa',
+    repoBranch: 'release/1.0-rc5'
+  }, {
+    stateFile,
+    releaseSelectionFile
+  });
+
+  assert.equal(result.ok, true);
+  const persistedConfig = JSON.parse(fs.readFileSync(releaseSelectionFile, 'utf8'));
+  assert.equal(persistedConfig.selectedChannel, 'stable');
+  assert.equal(persistedConfig.selectedReleaseVersion, '1.0-rc5.1');
+  assert.equal(persistedConfig.runtime.appHostname, 'psa.example.com');
+
+  const persistedState = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+  assert.equal(persistedState.status, 'release-config-complete');
 });
