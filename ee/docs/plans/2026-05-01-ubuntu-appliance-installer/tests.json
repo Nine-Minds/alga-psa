@@ -1,0 +1,104 @@
+[
+  {
+    "id": "T001",
+    "description": "Build smoke: custom Ubuntu appliance ISO can be generated with autoinstall data and Alga first-boot service artifacts included.",
+    "featureIds": ["F001", "F002", "F003"],
+    "implemented": false
+  },
+  {
+    "id": "T002",
+    "description": "VM smoke: booting the ISO in a representative VM completes unattended Ubuntu Server 24.04 installation and reboots into the installed system.",
+    "featureIds": ["F001", "F002"],
+    "implemented": false
+  },
+  {
+    "id": "T003",
+    "description": "First-boot smoke: after reboot, host web service is listening on port 8080 and console output shows IP, setup URL, setup token, and fallback instructions.",
+    "featureIds": ["F004", "F005", "F006", "F007"],
+    "implemented": false
+  },
+  {
+    "id": "T004",
+    "description": "Web setup happy path: token-protected /setup accepts stable channel, app URL, default Google DNS, and starts setup engine phases.",
+    "featureIds": ["F008", "F009", "F010", "F011", "F013"],
+    "implemented": false
+  },
+  {
+    "id": "T005",
+    "description": "Console fallback happy path: console setup collects the same required values as web setup and starts the same setup engine.",
+    "featureIds": ["F005", "F012", "F013"],
+    "implemented": false
+  },
+  {
+    "id": "T006",
+    "description": "Preflight failure: setup detects DNS or GitHub reachability failure before k3s/app mutation and reports a DNS/GitHub phase blocker with retry guidance.",
+    "featureIds": ["F014", "F027", "F028"],
+    "implemented": false
+  },
+  {
+    "id": "T007",
+    "description": "k3s install smoke: setup installs single-node k3s with expected disabled components, kubeconfig path, and Ready node state.",
+    "featureIds": ["F015", "F016"],
+    "implemented": false
+  },
+  {
+    "id": "T008",
+    "description": "Storage smoke: local-path storage is default and a representative PVC-backed pod/job can write and read data.",
+    "featureIds": ["F017"],
+    "implemented": false
+  },
+  {
+    "id": "T009",
+    "description": "Flux source smoke: setup installs Flux, creates GitRepository/Kustomization from GitHub HTTPS source, and source reaches Ready.",
+    "featureIds": ["F018", "F019", "F020", "F021"],
+    "implemented": false
+  },
+  {
+    "id": "T010",
+    "description": "Release selection smoke: setup resolves stable channel metadata, applies runtime values, creates release-selection config, and starts Alga reconciliation.",
+    "featureIds": ["F019", "F022"],
+    "implemented": false
+  },
+  {
+    "id": "T011",
+    "description": "End-to-end install: from fresh VM boot through web setup, Alga core reaches login readiness and app responds on the expected URL.",
+    "featureIds": ["F001", "F002", "F008", "F015", "F018", "F020", "F022", "F023", "F024", "F025"],
+    "implemented": false
+  },
+  {
+    "id": "T012",
+    "description": "Readiness semantics: simulated or live background service failure reports background degraded/ready-with-issues without blocking login readiness.",
+    "featureIds": ["F025", "F026", "F027"],
+    "implemented": false
+  },
+  {
+    "id": "T013",
+    "description": "Failure classification: representative k3s, Flux, storage, app bootstrap, and app readiness failures map to the correct phase, cause, next action, and retry guidance.",
+    "featureIds": ["F027", "F028"],
+    "implemented": false
+  },
+  {
+    "id": "T014",
+    "description": "Support bundle smoke: status UI or documented command generates support diagnostics containing host logs, k3s status, Flux status, Helm status, pod summaries, and bootstrap logs without exposing unrelated secrets.",
+    "featureIds": ["F029"],
+    "implemented": false
+  },
+  {
+    "id": "T015",
+    "description": "App update smoke: status UI applies a stable or nightly app-channel update, updates release values/selection, requests Flux/Helm reconciliation, and returns to healthy or login-ready state.",
+    "featureIds": ["F030", "F031"],
+    "implemented": false
+  },
+  {
+    "id": "T016",
+    "description": "Reboot persistence: after successful install and host reboot, alga-appliance.service starts, k3s returns Ready, Flux/Helm resources remain reconciled, and status UI reports current state.",
+    "featureIds": ["F004", "F013", "F015", "F018", "F023", "F024"],
+    "implemented": false
+  },
+  {
+    "id": "T017",
+    "description": "Documentation review: install and upgrade docs clearly distinguish ISO boot, first-run setup, status UI availability, app readiness, app-only updates, and manual OS/k3s updates.",
+    "featureIds": ["F032", "F033", "F034"],
+    "implemented": false
+  }
+]

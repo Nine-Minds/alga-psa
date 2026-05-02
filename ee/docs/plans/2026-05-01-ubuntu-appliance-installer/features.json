@@ -1,0 +1,206 @@
+[
+  {
+    "id": "F001",
+    "description": "Define an Ubuntu Server 24.04 LTS autoinstall ISO build layout for the Alga appliance.",
+    "prdRefs": ["ISO layer"],
+    "implemented": false
+  },
+  {
+    "id": "F002",
+    "description": "Create autoinstall configuration for unattended Ubuntu installation with opinionated partitioning, base user, packages, and first-boot service enablement.",
+    "prdRefs": ["ISO layer", "Install flow"],
+    "implemented": false
+  },
+  {
+    "id": "F003",
+    "description": "Package host-level Alga appliance setup/status service artifacts into the ISO-installed Ubuntu host.",
+    "prdRefs": ["Host setup/status service"],
+    "implemented": false
+  },
+  {
+    "id": "F004",
+    "description": "Create systemd unit for the durable host web setup/status service on port 8080.",
+    "prdRefs": ["Host setup/status service", "Status UI"],
+    "implemented": false
+  },
+  {
+    "id": "F005",
+    "description": "Create systemd unit or equivalent startup path for the console setup fallback.",
+    "prdRefs": ["Console fallback"],
+    "implemented": false
+  },
+  {
+    "id": "F006",
+    "description": "Generate and persist a setup/status token with restricted permissions on first boot.",
+    "prdRefs": ["Console first-boot output", "Data and Configuration"],
+    "implemented": false
+  },
+  {
+    "id": "F007",
+    "description": "Display detected node IP, setup URL, setup token, fallback instructions, and log locations on the VM console after first boot.",
+    "prdRefs": ["Console first-boot output"],
+    "implemented": false
+  },
+  {
+    "id": "F008",
+    "description": "Implement token-protected web setup route at /setup on host port 8080.",
+    "prdRefs": ["Web setup UI"],
+    "implemented": false
+  },
+  {
+    "id": "F009",
+    "description": "Implement setup form fields for channel, app URL/hostname, DNS servers, and support/testing repo override values.",
+    "prdRefs": ["Web setup UI", "Install flow"],
+    "implemented": false
+  },
+  {
+    "id": "F010",
+    "description": "Default setup channel to stable and clearly mark nightly as testing/support-directed.",
+    "prdRefs": ["Web setup UI", "GitOps/release source"],
+    "implemented": false
+  },
+  {
+    "id": "F011",
+    "description": "Default setup DNS servers to 8.8.8.8,8.8.4.4 and allow the admin to override them.",
+    "prdRefs": ["Web setup UI", "Install flow"],
+    "implemented": false
+  },
+  {
+    "id": "F012",
+    "description": "Implement console fallback prompts that collect the same required setup values as the web setup UI.",
+    "prdRefs": ["Console fallback"],
+    "implemented": false
+  },
+  {
+    "id": "F013",
+    "description": "Persist setup inputs and install state under host appliance configuration/state paths with restricted permissions for sensitive values.",
+    "prdRefs": ["Data and Configuration"],
+    "implemented": false
+  },
+  {
+    "id": "F014",
+    "description": "Implement setup engine phases for validating network, DNS, GitHub, and GHCR reachability before mutating the host.",
+    "prdRefs": ["Failure Handling", "Install flow"],
+    "implemented": false
+  },
+  {
+    "id": "F015",
+    "description": "Install opinionated single-node k3s from the setup engine with pinned version and expected kubeconfig path.",
+    "prdRefs": ["k3s profile"],
+    "implemented": false
+  },
+  {
+    "id": "F016",
+    "description": "Disable unneeded bundled k3s components such as Traefik and ServiceLB unless required by final implementation validation.",
+    "prdRefs": ["k3s profile"],
+    "implemented": false
+  },
+  {
+    "id": "F017",
+    "description": "Ensure local-path storage is available and default for appliance persistent volumes.",
+    "prdRefs": ["k3s profile"],
+    "implemented": false
+  },
+  {
+    "id": "F018",
+    "description": "Install Flux into the k3s cluster from the setup engine.",
+    "prdRefs": ["GitOps/release source", "Install flow"],
+    "implemented": false
+  },
+  {
+    "id": "F019",
+    "description": "Resolve stable/nightly channel metadata directly from the GitHub repo for v1 online installs.",
+    "prdRefs": ["GitOps/release source"],
+    "implemented": false
+  },
+  {
+    "id": "F020",
+    "description": "Create Flux GitRepository and Kustomization resources pointing at the Alga GitHub repo and selected channel branch/path.",
+    "prdRefs": ["GitOps/release source", "Install flow"],
+    "implemented": false
+  },
+  {
+    "id": "F021",
+    "description": "Normalize GitHub SSH-style repository defaults to public HTTPS URLs for Flux source creation.",
+    "prdRefs": ["GitOps/release source"],
+    "implemented": false
+  },
+  {
+    "id": "F022",
+    "description": "Apply runtime values and appliance release-selection configuration for the selected channel/release.",
+    "prdRefs": ["GitOps/release source", "Install flow"],
+    "implemented": false
+  },
+  {
+    "id": "F023",
+    "description": "Transition host port 8080 from setup mode into durable status mode after setup begins/completes.",
+    "prdRefs": ["Status UI", "Host setup/status service"],
+    "implemented": false
+  },
+  {
+    "id": "F024",
+    "description": "Port or reimplement status collection from the Talos in-cluster status plane to the Ubuntu host service using the local k3s kubeconfig.",
+    "prdRefs": ["Status/readiness model", "Host setup/status service"],
+    "implemented": false
+  },
+  {
+    "id": "F025",
+    "description": "Report readiness tiers: platform, core, bootstrap, login, background, and fully healthy.",
+    "prdRefs": ["Status/readiness model"],
+    "implemented": false
+  },
+  {
+    "id": "F026",
+    "description": "Keep email, Temporal, workflow-worker, and temporal-worker from blocking login readiness.",
+    "prdRefs": ["Status/readiness model"],
+    "implemented": false
+  },
+  {
+    "id": "F027",
+    "description": "Classify setup/status failures by network, DNS, GitHub/release source, k3s, Flux, storage, app bootstrap, app readiness, and background services.",
+    "prdRefs": ["Failure Handling"],
+    "implemented": false
+  },
+  {
+    "id": "F028",
+    "description": "Show current phase, last action, logs, suspected cause, suggested next step, and retry safety in the status UI.",
+    "prdRefs": ["Failure Handling", "Status UI"],
+    "implemented": false
+  },
+  {
+    "id": "F029",
+    "description": "Expose support bundle generation or clear support bundle command from the host status service.",
+    "prdRefs": ["Support diagnostics", "Failure Handling"],
+    "implemented": false
+  },
+  {
+    "id": "F030",
+    "description": "Implement app-only channel update flow from the host status UI for stable and nightly.",
+    "prdRefs": ["Release/update flow", "Upgrade: app channel update"],
+    "implemented": false
+  },
+  {
+    "id": "F031",
+    "description": "Ensure app update flow resolves channel metadata, applies values/release selection, and requests Flux/Helm reconciliation without automating OS or k3s updates.",
+    "prdRefs": ["Release/update flow"],
+    "implemented": false
+  },
+  {
+    "id": "F032",
+    "description": "Document that Ubuntu package and k3s updates are manual/support-run in v1.",
+    "prdRefs": ["Non-Goals", "Release/update flow"],
+    "implemented": false
+  },
+  {
+    "id": "F033",
+    "description": "Document new-user install flow for VMware ESXi/cloud VM users with Ubuntu ISO, setup URL, DNS defaults, and bootstrap expectations.",
+    "prdRefs": ["New install: VMware ESXi or cloud VM"],
+    "implemented": false
+  },
+  {
+    "id": "F034",
+    "description": "Document upgrade flow for app-only channel updates through the host status UI.",
+    "prdRefs": ["Upgrade: app channel update"],
+    "implemented": false
+  }
+]
