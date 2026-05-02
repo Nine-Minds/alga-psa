@@ -64,7 +64,7 @@
     "prdRefs": [
       "Web setup UI"
     ],
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F009",

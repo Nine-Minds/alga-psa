@@ -147,3 +147,6 @@ Minimum live validation environment should include:
 - Token behavior: generates token when missing, persists to `/var/lib/alga-appliance/setup-token`, enforces restricted permissions (`0600` token file, `0750` parent directory) for sensitive status/setup access material.
 - Wired token initialization into both systemd services via `ExecStartPre`, ensuring token existence before web setup/status or console fallback output starts.
 - (2026-05-01) **F007 completed**: Console fallback output now prints detected node IP, setup URL (`http://<ip>:8080/setup`), setup token, and log locations (`journalctl -u alga-appliance.service -u alga-appliance-console.service -f`).
+- (2026-05-01) **F008 completed**: Implemented token-protected web setup route `/setup` in `ee/appliance/host-service/server.mjs`.
+- Behavior: `/setup` requires `?token=<setup-token>` matching `/var/lib/alga-appliance/setup-token`; mismatches return `401 Unauthorized`.
+- Local validation: unauthenticated request returned HTTP 401; authenticated request returned HTTP 200.
