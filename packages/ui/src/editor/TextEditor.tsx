@@ -96,6 +96,62 @@ export const DEFAULT_BLOCK: PartialBlock[] = [{
   }]
 }];
 
+// Block types whose empty form renders a "Heading" / "List item" / etc.
+// placeholder. Trailing instances of these are stripped on save so the
+// placeholder ghost text never appears in saved content.
+const PLACEHOLDER_PRONE_BLOCK_TYPES = new Set([
+  'paragraph',
+  'heading',
+  'bulletListItem',
+  'numberedListItem',
+  'checkListItem',
+  'codeBlock',
+  'quote',
+]);
+
+const MEDIA_BLOCK_TYPES = new Set(['image', 'video', 'audio', 'file']);
+
+const isTextContentItem = (item: any): item is { type: 'text'; text: string; styles: Record<string, unknown> } =>
+  item?.type === 'text' && typeof item?.text === 'string';
+
+const blockHasContent = (block: PartialBlock): boolean => {
+  if (!block.content) {
+    if (typeof block.type === 'string' && MEDIA_BLOCK_TYPES.has(block.type)) {
+      const props = block.props as Record<string, unknown> | undefined;
+      return Boolean(props?.url || props?.name);
+    }
+    return false;
+  }
+  if (Array.isArray(block.content)) {
+    return block.content.some((item) => {
+      if (isTextContentItem(item)) {
+        return item.text.trim() !== '';
+      }
+      return true;
+    });
+  }
+  return false;
+};
+
+/**
+ * Strip trailing empty placeholder-prone blocks (paragraph, heading, list
+ * items, code, quote). Leaves media and tables alone — those are intentional
+ * even when "empty" — and only trims from the tail so users can keep blank
+ * paragraphs between content for spacing.
+ */
+export function trimTrailingPlaceholderBlocks(blocks: PartialBlock[]): PartialBlock[] {
+  let i = blocks.length - 1;
+  while (i >= 0) {
+    const block = blocks[i];
+    const isTrimmable =
+      typeof block.type === 'string' && PLACEHOLDER_PRONE_BLOCK_TYPES.has(block.type);
+    if (!isTrimmable) break;
+    if (blockHasContent(block)) break;
+    i--;
+  }
+  return i >= 0 ? blocks.slice(0, i + 1) : [];
+}
+
 // Create custom schema with mention support
 const schema = BlockNoteSchema.create({
   inlineContentSpecs: {
@@ -158,45 +214,8 @@ export default function TextEditor({
       return DEFAULT_BLOCK;
     }
 
-    const mediaBlockTypes = new Set(['image', 'video', 'audio', 'file']);
-
-    // Type guard for text content
-    const isTextContent = (content: any): content is { type: "text"; text: string; styles: {} } => {
-      return content?.type === "text" && typeof content?.text === "string";
-    };
-
-    // Remove empty trailing blocks
-    let i = blocks.length - 1;
-    while (i >= 0) {
-      const block = blocks[i];
-      const hasContent = (block: PartialBlock): boolean => {
-        // Media blocks typically store payload in props and should not be
-        // trimmed as "empty" when opening edit mode.
-        if (!block.content) {
-          if (typeof block.type === 'string' && mediaBlockTypes.has(block.type)) {
-            const props = block.props as Record<string, unknown> | undefined;
-            return Boolean(props?.url || props?.name);
-          }
-          return false;
-        }
-        if (Array.isArray(block.content)) {
-          return block.content.some(item => {
-            if (isTextContent(item)) {
-              return item.text.trim() !== "";
-            }
-            return true; // Keep non-text content
-          });
-        }
-        return false;
-      };
-      
-      if (hasContent(block)) break;
-      i--;
-    }
-
-    // If all blocks were empty (i is -1), return DEFAULT_BLOCK
-    // Otherwise return the non-empty blocks
-    return i >= 0 ? blocks.slice(0, i + 1) : DEFAULT_BLOCK;
+    const trimmed = trimTrailingPlaceholderBlocks(blocks);
+    return trimmed.length > 0 ? trimmed : DEFAULT_BLOCK;
   })();
 
   // Ref for accessing editor instance from ProseMirror handlers
@@ -419,7 +438,10 @@ export default function TextEditor({
         console.log('TextEditor: Editor content changed:', editor.document);
       }
       if (onContentChange) {
-        onContentChange(editor.document as any);
+        // Strip empty trailing heading/list/etc. blocks so their placeholder
+        // text ("Heading", "List item", ...) doesn't ghost into saved content.
+        const trimmed = trimTrailingPlaceholderBlocks(editor.document as PartialBlock[]);
+        onContentChange((trimmed.length > 0 ? trimmed : DEFAULT_BLOCK) as any);
       }
     };
 

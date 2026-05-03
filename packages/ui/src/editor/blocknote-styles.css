@@ -18,3 +18,16 @@
 @import "../../../../node_modules/@blocknote/react/dist/style.css";
 @import "./_blocknoteStyles-patched.css";
 @import "../../../../node_modules/@blocknote/mantine/src/mantineStyles.css";
+
+/*
+ * Suppress BlockNote's block-type placeholders ("Heading", "List item", ...)
+ * in read-only surfaces. The viewer is a non-editable BlockNote, and its
+ * empty blocks would otherwise render a placeholder via [data-placeholder]
+ * ::before — which looks like ghost text bleeding into a saved comment.
+ */
+.bn-container [contenteditable="false"] [data-placeholder]::before,
+.bn-container [contenteditable="false"] [data-placeholder]::after,
+[contenteditable="false"] .bn-block-content[data-placeholder]::before,
+[contenteditable="false"] .bn-block-content[data-placeholder]::after {
+  content: none !important;
+}
