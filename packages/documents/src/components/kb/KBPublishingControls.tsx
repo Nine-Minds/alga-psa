@@ -18,10 +18,12 @@ import {
   Archive,
   Edit,
   ArrowRight,
+  Trash2,
 } from 'lucide-react';
 import {
   publishArticle,
   archiveArticle,
+  deleteArticle,
   ArticleStatus,
   IKBArticleWithDocument,
 } from '../../actions/kbArticleActions';
@@ -37,18 +39,22 @@ interface KBPublishingControlsProps {
   article: IKBArticleWithDocument;
   onStatusChange?: () => void;
   onSubmitForReview?: () => void;
+  onDeleted?: () => void;
 }
 
 export default function KBPublishingControls({
   article,
   onStatusChange,
   onSubmitForReview,
+  onDeleted,
 }: KBPublishingControlsProps) {
   const { t } = useTranslation('msp/knowledge-base');
   const [isPublishing, setIsPublishing] = useState(false);
   const [isArchiving, setIsArchiving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const getStatusLabel = useFormatArticleStatus();
   const getAudienceLabel = useFormatArticleAudience();
@@ -89,19 +95,37 @@ export default function KBPublishingControls({
     }
   };
 
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const result = await deleteArticle(article.article_id);
+      if (typeof result === 'object' && 'code' in result) {
+        toast.error(t('publishing.feedback.deleteError', { defaultValue: 'Failed to delete article' }));
+        return;
+      }
+      toast.success(t('publishing.feedback.deleteSuccess', { defaultValue: 'Article deleted permanently' }));
+      onDeleted?.();
+    } catch (error) {
+      handleError(error, t('publishing.feedback.deleteError', { defaultValue: 'Failed to delete article' }));
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+    }
+  };
+
   const getAvailableTransitions = (): Array<{
-    action: 'submit_review' | 'publish' | 'archive' | 'revert_draft';
+    action: 'submit_review' | 'publish' | 'archive' | 'revert_draft' | 'delete';
     label: string;
     icon: React.ReactNode;
     variant: 'default' | 'outline' | 'destructive';
-    targetStatus: ArticleStatus;
+    targetStatus: ArticleStatus | null;
   }> => {
     const transitions: Array<{
-      action: 'submit_review' | 'publish' | 'archive' | 'revert_draft';
+      action: 'submit_review' | 'publish' | 'archive' | 'revert_draft' | 'delete';
       label: string;
       icon: React.ReactNode;
       variant: 'default' | 'outline' | 'destructive';
-      targetStatus: ArticleStatus;
+      targetStatus: ArticleStatus | null;
     }> = [];
 
     switch (article.status) {
@@ -164,6 +188,17 @@ export default function KBPublishingControls({
       });
     }
 
+    // Permanent delete only for draft or archived (not for published or in-review)
+    if (article.status === 'draft' || article.status === 'archived') {
+      transitions.push({
+        action: 'delete',
+        label: t('publishing.actions.delete', { defaultValue: 'Delete permanently' }),
+        icon: <Trash2 className="w-4 h-4 mr-2" />,
+        variant: 'destructive',
+        targetStatus: null,
+      });
+    }
+
     return transitions;
   };
 
@@ -179,6 +214,9 @@ export default function KBPublishingControls({
         break;
       case 'archive':
         setArchiveDialogOpen(true);
+        break;
+      case 'delete':
+        setDeleteDialogOpen(true);
         break;
     }
   };
@@ -221,7 +259,7 @@ export default function KBPublishingControls({
               variant={transition.variant}
               className="w-full"
               onClick={() => handleTransition(transition.action)}
-              disabled={isPublishing || isArchiving}
+              disabled={isPublishing || isArchiving || isDeleting}
             >
               {transition.icon}
               {transition.label}
@@ -269,6 +307,21 @@ export default function KBPublishingControls({
         })}
         confirmLabel={t('publishing.actions.archive', { defaultValue: 'Archive' })}
         isConfirming={isArchiving}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        id="kb-publish-delete-dialog"
+        isOpen={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+        title={t('publishing.dialogs.delete.title', { defaultValue: 'Delete Article' })}
+        message={t('publishing.dialogs.delete.message', {
+          defaultValue:
+            'Are you sure you want to permanently delete this article? This will remove the article and its content, and cannot be undone.',
+        })}
+        confirmLabel={t('publishing.actions.delete', { defaultValue: 'Delete permanently' })}
+        isConfirming={isDeleting}
       />
     </Card>
   );

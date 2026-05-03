@@ -72,7 +72,8 @@
       "edit": "Edit",
       "submitForReview": "Submit for Review",
       "publish": "Publish",
-      "archive": "Archive"
+      "archive": "Archive",
+      "delete": "Delete permanently"
     },
     "pagination": {
       "itemsPerPage": {
@@ -88,11 +89,17 @@
       "archive": {
         "title": "Archive Article",
         "message": "Are you sure you want to archive \"{{title}}\"? This will remove it from client visibility."
+      },
+      "delete": {
+        "title": "Delete Article",
+        "message": "Are you sure you want to permanently delete \"{{title}}\"? This will remove the article and its content, and cannot be undone."
       }
     },
     "feedback": {
       "archiveError": "Failed to archive article",
-      "archiveSuccess": "Article archived"
+      "archiveSuccess": "Article archived",
+      "deleteError": "Failed to delete article",
+      "deleteSuccess": "Article deleted permanently"
     }
   },
   "editor": {
@@ -104,6 +111,7 @@
       "submitForReview": "Submit for Review",
       "publish": "Publish",
       "archive": "Archive",
+      "delete": "Delete permanently",
       "saveMetadata": "Save Metadata",
       "saving": "Saving..."
     },
@@ -118,7 +126,15 @@
       "publishSuccess": "Article published",
       "statusChangeError": "Failed to change article status",
       "submitForReviewSuccess": "Article submitted for review",
-      "archiveSuccess": "Article archived"
+      "archiveSuccess": "Article archived",
+      "deleteError": "Failed to delete article",
+      "deleteSuccess": "Article deleted permanently"
+    },
+    "dialogs": {
+      "delete": {
+        "title": "Delete Article",
+        "message": "Are you sure you want to permanently delete \"{{title}}\"? This will remove the article and its content, and cannot be undone."
+      }
     },
     "badges": {
       "reviewOverdue": "Review Overdue"
@@ -195,7 +211,8 @@
       "publish": "Publish",
       "approveAndPublish": "Approve & Publish",
       "archive": "Archive",
-      "republish": "Republish"
+      "republish": "Republish",
+      "delete": "Delete permanently"
     },
     "flow": {
       "draft": "Draft",
@@ -214,13 +231,19 @@
       "archive": {
         "title": "Archive Article",
         "message": "This will archive the article and remove it from client visibility. Are you sure?"
+      },
+      "delete": {
+        "title": "Delete Article",
+        "message": "Are you sure you want to permanently delete this article? This will remove the article and its content, and cannot be undone."
       }
     },
     "feedback": {
       "publishError": "Failed to publish article",
       "publishSuccess": "Article published successfully",
       "archiveError": "Failed to archive article",
-      "archiveSuccess": "Article archived"
+      "archiveSuccess": "Article archived",
+      "deleteError": "Failed to delete article",
+      "deleteSuccess": "Article deleted permanently"
     }
   },
   "reviewDashboard": {

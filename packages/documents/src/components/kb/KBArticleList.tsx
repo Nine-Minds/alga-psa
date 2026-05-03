@@ -35,9 +35,11 @@ import {
   ThumbsUp,
   ThumbsDown,
   AlertCircle,
+  Trash2,
 } from 'lucide-react';
 import {
   archiveArticle,
+  deleteArticle,
   IKBArticleWithDocument,
   ArticleStatus,
   ArticleAudience,
@@ -112,6 +114,11 @@ export default function KBArticleList({
   const [articleToArchive, setArticleToArchive] = useState<IKBArticleWithDocument | null>(null);
   const [isArchiving, setIsArchiving] = useState(false);
 
+  // Delete confirmation dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [articleToDelete, setArticleToDelete] = useState<IKBArticleWithDocument | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const getStatusLabel = useFormatArticleStatus();
   const getAudienceLabel = useFormatArticleAudience();
   const getTypeLabel = useFormatArticleType();
@@ -145,6 +152,32 @@ export default function KBArticleList({
   const confirmArchive = (article: IKBArticleWithDocument) => {
     setArticleToArchive(article);
     setArchiveDialogOpen(true);
+  };
+
+  const confirmDelete = (article: IKBArticleWithDocument) => {
+    setArticleToDelete(article);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!articleToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const result = await deleteArticle(articleToDelete.article_id);
+      if (typeof result === 'object' && 'code' in result) {
+        toast.error(t('list.feedback.deleteError', { defaultValue: 'Failed to delete article' }));
+        return;
+      }
+      toast.success(t('list.feedback.deleteSuccess', { defaultValue: 'Article deleted permanently' }));
+      onRefresh();
+    } catch (error) {
+      handleError(error, t('list.feedback.deleteError', { defaultValue: 'Failed to delete article' }));
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setArticleToDelete(null);
+    }
   };
 
   const toggleSelection = (articleId: string) => {
@@ -334,6 +367,16 @@ export default function KBArticleList({
                             {t('list.actions.archive', { defaultValue: 'Archive' })}
                           </DropdownMenuItem>
                         )}
+                        {(article.status === 'draft' || article.status === 'archived') && (
+                          <DropdownMenuItem
+                            id={`kb-article-delete-${article.article_id}`}
+                            onClick={() => confirmDelete(article)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            {t('list.actions.delete', { defaultValue: 'Delete permanently' })}
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -378,6 +421,25 @@ export default function KBArticleList({
         })}
         confirmLabel={t('list.actions.archive', { defaultValue: 'Archive' })}
         isConfirming={isArchiving}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        id="kb-article-delete-dialog"
+        isOpen={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false);
+          setArticleToDelete(null);
+        }}
+        onConfirm={handleDelete}
+        title={t('list.dialogs.delete.title', { defaultValue: 'Delete Article' })}
+        message={t('list.dialogs.delete.message', {
+          defaultValue:
+            'Are you sure you want to permanently delete "{{title}}"? This will remove the article and its content, and cannot be undone.',
+          title: articleToDelete?.document_name || articleToDelete?.slug || '',
+        })}
+        confirmLabel={t('list.actions.delete', { defaultValue: 'Delete permanently' })}
+        isConfirming={isDeleting}
       />
     </div>
   );

@@ -440,6 +440,62 @@ export const archiveArticle = withAuth(
 );
 
 /**
+ * Permanently deletes an article and its underlying document.
+ * Only allowed for draft or archived articles — published/in-review must be archived first.
+ * Cascades remove kb_article_relations and kb_article_reviewers via FK; tag_mappings,
+ * document_block_content, and the document itself are removed explicitly.
+ */
+export const deleteArticle = withAuth(
+  async (
+    user,
+    { tenant },
+    articleId: string
+  ): Promise<{ success: true } | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+
+    if (!(await hasPermission(user, 'document', 'delete'))) {
+      return permissionError('Permission denied');
+    }
+
+    if (!articleId) {
+      throw new Error('articleId is required');
+    }
+
+    return withTransaction(knex, async (trx) => {
+      const existing = await trx('kb_articles')
+        .where({ tenant, article_id: articleId })
+        .first();
+
+      if (!existing) {
+        throw new Error('Article not found');
+      }
+
+      if (existing.status !== 'draft' && existing.status !== 'archived') {
+        throw new Error('Only draft or archived articles can be deleted. Archive the article first.');
+      }
+
+      await trx('tag_mappings')
+        .where({ tenant, tagged_id: articleId, tagged_type: 'knowledge_base_article' })
+        .del();
+
+      await trx('kb_articles')
+        .where({ tenant, article_id: articleId })
+        .del();
+
+      await trx('document_block_content')
+        .where({ tenant, document_id: existing.document_id })
+        .del();
+
+      await trx('documents')
+        .where({ tenant, document_id: existing.document_id })
+        .del();
+
+      return { success: true };
+    });
+  }
+);
+
+/**
  * Submits an article for review.
  * F085: Creates reviewer assignments.
  */
