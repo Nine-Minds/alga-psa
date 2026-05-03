@@ -5,6 +5,7 @@ import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
+import { TableKit } from '@tiptap/extension-table';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCaret from '@tiptap/extension-collaboration-caret';
 import { prosemirrorJSONToYXmlFragment } from 'y-prosemirror';
@@ -174,6 +175,7 @@ export function CollaborativeEditor({
       StarterKit.configure({
         undoRedo: false,
       }),
+      TableKit.configure({ table: { resizable: true } }),
       Link.configure({
         openOnClick: false,
         autolink: true,
@@ -221,7 +223,7 @@ export function CollaborativeEditor({
     ],
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none',
+        class: 'prose prose-sm sm:prose-base max-w-none dark:prose-invert focus:outline-none',
       },
       handlePaste: () => {
         return false;

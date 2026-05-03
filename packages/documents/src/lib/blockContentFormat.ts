@@ -505,9 +505,40 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
     case 'horizontalRule':
       return { type: 'horizontalRule' };
     case 'table': {
-      const tableText = extractTextFromUnknown(block.content);
-      const content = tableText ? [{ type: 'text', text: tableText }] : [];
-      return content.length > 0 ? { type: 'paragraph', content } : { type: 'paragraph' };
+      // BlockNote shape: { type: 'table', content: { type: 'tableContent', rows: [{ cells: [[inline]] }] } }
+      // Tiptap shape: table > tableRow > (tableHeader|tableCell) > paragraph
+      const tableContent = block.content as unknown;
+      const rows: Array<{ cells?: unknown[]; isHeader?: boolean }> =
+        tableContent && typeof tableContent === 'object' && 'rows' in (tableContent as Record<string, unknown>)
+          ? ((tableContent as { rows?: Array<{ cells?: unknown[]; isHeader?: boolean }> }).rows ?? [])
+          : [];
+      if (rows.length === 0) {
+        return { type: 'paragraph' };
+      }
+      const tableRows: ProseMirrorNode[] = rows.map((row, rowIdx) => {
+        const cells = Array.isArray(row.cells) ? row.cells : [];
+        const isHeaderRow = row.isHeader === true || rowIdx === 0;
+        const cellNodes: ProseMirrorNode[] = cells.map((cell) => {
+          // A cell may be an inline-content array or an object wrapping one
+          const inline = Array.isArray(cell)
+            ? (cell as BlockNoteInline[])
+            : (cell && typeof cell === 'object' && 'content' in (cell as Record<string, unknown>)
+                ? ((cell as { content?: BlockNoteInline[] }).content ?? [])
+                : []);
+          const paragraphContent = convertInlineContent(inline);
+          const paragraph: ProseMirrorNode =
+            paragraphContent.length > 0
+              ? { type: 'paragraph', content: paragraphContent }
+              : { type: 'paragraph' };
+          return {
+            type: isHeaderRow ? 'tableHeader' : 'tableCell',
+            attrs: { colspan: 1, rowspan: 1, colwidth: null },
+            content: [paragraph],
+          };
+        });
+        return { type: 'tableRow', content: cellNodes };
+      });
+      return { type: 'table', content: tableRows };
     }
     default:
       return null;

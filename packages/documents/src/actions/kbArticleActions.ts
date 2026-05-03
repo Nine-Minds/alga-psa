@@ -1097,8 +1097,21 @@ export const getArticleTemplates = withAuth(
 interface BlockNoteBlock {
   type: string;
   props?: Record<string, any>;
-  content?: Array<{ type: string; text: string; styles?: Record<string, boolean | Record<string, string>> }>;
+  content?:
+    | Array<{ type: string; text: string; styles?: Record<string, boolean | Record<string, string>> }>
+    | { type: 'tableContent'; rows: Array<{ cells: Array<Array<{ type: string; text: string; styles?: Record<string, boolean | Record<string, string>> }>>; isHeader?: boolean }> };
   children?: BlockNoteBlock[];
+}
+
+function isTableSeparatorRow(line: string): boolean {
+  // Matches a GFM separator row like `| --- | :---: | ---: |`
+  return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
+}
+
+function splitTableRow(line: string): string[] {
+  // Strip leading/trailing pipes, then split. Cells are trimmed.
+  const trimmed = line.trim().replace(/^\|/, '').replace(/\|$/, '');
+  return trimmed.split('|').map((c) => c.trim());
 }
 
 function markdownToBlocks(markdown: string): BlockNoteBlock[] {
@@ -1192,6 +1205,38 @@ function markdownToBlocks(markdown: string): BlockNoteBlock[] {
       continue;
     }
 
+    // GFM table — header row, separator row (---), then body rows
+    // Detect: current line looks like a row (`| a | b |` or `a | b`) and the next line is a separator.
+    if (
+      line.includes('|') &&
+      i + 1 < lines.length &&
+      isTableSeparatorRow(lines[i + 1])
+    ) {
+      const headerCells = splitTableRow(line);
+      const bodyRows: string[][] = [];
+      let j = i + 2;
+      while (j < lines.length && lines[j].trim() && lines[j].includes('|')) {
+        bodyRows.push(splitTableRow(lines[j]));
+        j++;
+      }
+      const allRows = [
+        { cells: headerCells, isHeader: true },
+        ...bodyRows.map((cells) => ({ cells, isHeader: false })),
+      ];
+      blocks.push({
+        type: 'table',
+        content: {
+          type: 'tableContent',
+          rows: allRows.map((r) => ({
+            isHeader: r.isHeader,
+            cells: r.cells.map((cellText) => parseInlineMarkdown(cellText)),
+          })),
+        },
+      });
+      i = j;
+      continue;
+    }
+
     // Blank line → skip
     if (!line.trim()) {
       i++;
@@ -1206,15 +1251,19 @@ function markdownToBlocks(markdown: string): BlockNoteBlock[] {
       !lines[i].startsWith('#') &&
       !lines[i].startsWith('```') &&
       !/^\s*[-*+]\s+/.test(lines[i]) &&
-      !/^\s*\d+[.)]\s+/.test(lines[i])
+      !/^\s*\d+[.)]\s+/.test(lines[i]) &&
+      // stop if a GFM table starts on the next line
+      !(lines[i].includes('|') && i + 1 < lines.length && isTableSeparatorRow(lines[i + 1]))
     ) {
       paraLines.push(lines[i]);
       i++;
     }
-    blocks.push({
-      type: 'paragraph',
-      content: parseInlineMarkdown(paraLines.join(' ')),
-    });
+    if (paraLines.length > 0) {
+      blocks.push({
+        type: 'paragraph',
+        content: parseInlineMarkdown(paraLines.join(' ')),
+      });
+    }
   }
 
   return blocks;
