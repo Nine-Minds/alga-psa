@@ -37,7 +37,6 @@ interface SidebarPermissions {
 interface SidebarProps {
   permissions: SidebarPermissions;
   permissionsLoaded: boolean;
-  knowledgeBaseEnabled: boolean;
   initialCollapsed?: boolean;
 }
 
@@ -57,7 +56,6 @@ interface NavSection {
 export function ClientPortalSidebar({
   permissions,
   permissionsLoaded,
-  knowledgeBaseEnabled,
   initialCollapsed = false,
 }: SidebarProps) {
   const pathname = usePathname();
@@ -104,14 +102,12 @@ export function ClientPortalSidebar({
 
   const resourcesItems: NavItem[] = [
     { key: 'documents', href: '/client-portal/documents', label: t('nav.documents', 'Documents'), icon: FileText },
-    ...(knowledgeBaseEnabled
-      ? [{
-          key: 'knowledge-base',
-          href: '/client-portal/knowledge-base',
-          label: t('nav.knowledgeBase', 'Knowledge Base'),
-          icon: BookOpen,
-        }]
-      : []),
+    {
+      key: 'knowledge-base',
+      href: '/client-portal/knowledge-base',
+      label: t('nav.knowledgeBase', 'Knowledge Base'),
+      icon: BookOpen,
+    },
   ];
 
   const moreItems: NavItem[] = permissionsLoaded
