@@ -13,7 +13,6 @@ interface Props {
   session: Session | null;
   initialSidebarCollapsed: boolean;
   initialLocale?: SupportedLocale | null;
-  i18nEnabled: boolean;
 }
 
 export function MspLayoutClient({
@@ -21,7 +20,6 @@ export function MspLayoutClient({
   session,
   initialSidebarCollapsed,
   initialLocale,
-  i18nEnabled
 }: Props) {
   const content = (
     <AppSessionProvider session={session}>
@@ -37,12 +35,8 @@ export function MspLayoutClient({
     </AppSessionProvider>
   );
 
-  if (!i18nEnabled) {
-    return content;
-  }
-
   return (
-    <I18nWrapper portal="msp" initialLocale={initialLocale || undefined} showPseudoLocales={i18nEnabled}>
+    <I18nWrapper portal="msp" initialLocale={initialLocale || undefined}>
       {content}
     </I18nWrapper>
   );

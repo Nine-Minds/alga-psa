@@ -49,7 +49,6 @@ import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSk
 import { useUserPreferencesBatch } from '@alga-psa/user-composition/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getTeamsBasic, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
 
@@ -179,8 +178,6 @@ export default function ProjectDetail({
   const { value: kanbanZoomLevel, setValue: setKanbanZoomLevel } = prefs[PROJECT_KANBAN_ZOOM_LEVEL_SETTING];
   const { value: isHeaderPinned, setValue: setIsHeaderPinned } = prefs[PROJECT_HEADER_PINNED_SETTING];
   const { value: showStickyStatusNames, setValue: setShowStickyStatusNames } = prefs[PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING];
-
-  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
 
   // Kanban view state (existing - phase-scoped)
   const [selectedTask, setSelectedTask] = useState<IProjectTask | null>(null);
@@ -1191,7 +1188,6 @@ export default function ProjectDetail({
 
   // Fetch team names and avatar URLs for tasks with assigned teams
   useEffect(() => {
-    if (!teamsV2Enabled) return;
     let stale = false;
 
     const fetchTeamData = async () => {
@@ -1226,7 +1222,7 @@ export default function ProjectDetail({
 
     fetchTeamData();
     return () => { stale = true; };
-  }, [teamsV2Enabled, project.tenant]);
+  }, [project.tenant]);
 
   // Handle opening task from URL parameter (e.g., from notifications)
   // First effect: Fetch task and select its phase

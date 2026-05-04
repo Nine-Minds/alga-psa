@@ -17,12 +17,9 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
-import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import type { ITeam } from '@alga-psa/types';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
@@ -122,7 +119,6 @@ export function TemplateTaskForm({
   tenant,
 }: TemplateTaskFormProps) {
   const { t } = useTranslation(['features/projects', 'common']);
-  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [taskName, setTaskName] = useState('');
   const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>(() =>
@@ -190,12 +186,8 @@ export function TemplateTaskForm({
     fetchServices();
   }, []);
 
-  // Fetch teams when teams-v2 is enabled
+  // Fetch teams
   useEffect(() => {
-    if (!teamsV2Enabled) {
-      setTeams([]);
-      return;
-    }
     const fetchTeams = async () => {
       try {
         const fetchedTeams = await getTeams();
@@ -205,7 +197,7 @@ export function TemplateTaskForm({
       }
     };
     fetchTeams();
-  }, [teamsV2Enabled]);
+  }, []);
 
   // Fetch team avatar URL when assigned team changes
   const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
@@ -773,60 +765,42 @@ export function TemplateTaskForm({
               <Label htmlFor="assigned-to" className="block text-sm font-medium text-gray-700 mb-1">
                 {t('templates.taskForm.primaryAgentLabel', 'Primary Agent')}
               </Label>
-              {teamsV2Enabled ? (
-                <UserAndTeamPicker
-                  id="assigned-to"
-                  value={assignedTo}
-                  onValueChange={(value) => {
-                    setAssignedTo(value);
-                    setAssignedTeamId(null);
-                    if (value && additionalAgents.includes(value)) {
-                      setAdditionalAgents(additionalAgents.filter(id => id !== value));
-                    }
-                  }}
-                  onTeamSelect={(teamId) => {
-                    const team = teams.find(t => t.team_id === teamId);
-                    const leadId = team?.manager_id || team?.members?.find(m => m.role === 'lead')?.user_id;
-                    if (leadId) {
-                      setAssignedTo(leadId);
-                    }
-                    setAssignedTeamId(teamId);
-                    // Populate additional agents with team members
-                    if (team?.members) {
-                      const memberIds = team.members
-                        .map(m => m.user_id)
-                        .filter(id => id !== leadId);
-                      setAdditionalAgents(prev => {
-                        const combined = new Set([...prev, ...memberIds]);
-                        return Array.from(combined);
-                      });
-                    }
-                  }}
-                  users={users}
-                  teams={teams}
-                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                  getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
-                  placeholder={t('templates.taskForm.primaryAgentPlaceholder', 'Select primary agent (optional)')}
-                  disabled={isSubmitting}
-                  buttonWidth="full"
-                />
-              ) : (
-                <UserPicker
-                  id="assigned-to"
-                  value={assignedTo}
-                  onValueChange={(value) => {
-                    setAssignedTo(value);
-                    if (value && additionalAgents.includes(value)) {
-                      setAdditionalAgents(additionalAgents.filter(id => id !== value));
-                    }
-                  }}
-                  users={users}
-                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                  placeholder={t('templates.taskForm.primaryAgentPlaceholder', 'Select primary agent (optional)')}
-                  disabled={isSubmitting}
-                  buttonWidth="full"
-                />
-              )}
+              <UserAndTeamPicker
+                id="assigned-to"
+                value={assignedTo}
+                onValueChange={(value) => {
+                  setAssignedTo(value);
+                  setAssignedTeamId(null);
+                  if (value && additionalAgents.includes(value)) {
+                    setAdditionalAgents(additionalAgents.filter(id => id !== value));
+                  }
+                }}
+                onTeamSelect={(teamId) => {
+                  const team = teams.find(t => t.team_id === teamId);
+                  const leadId = team?.manager_id || team?.members?.find(m => m.role === 'lead')?.user_id;
+                  if (leadId) {
+                    setAssignedTo(leadId);
+                  }
+                  setAssignedTeamId(teamId);
+                  // Populate additional agents with team members
+                  if (team?.members) {
+                    const memberIds = team.members
+                      .map(m => m.user_id)
+                      .filter(id => id !== leadId);
+                    setAdditionalAgents(prev => {
+                      const combined = new Set([...prev, ...memberIds]);
+                      return Array.from(combined);
+                    });
+                  }
+                }}
+                users={users}
+                teams={teams}
+                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                placeholder={t('templates.taskForm.primaryAgentPlaceholder', 'Select primary agent (optional)')}
+                disabled={isSubmitting}
+                buttonWidth="full"
+              />
               {/* Team indicator */}
               {assignedTeamId && (() => {
                 const assignedTeam = teams.find(t => t.team_id === assignedTeamId);
@@ -852,46 +826,37 @@ export function TemplateTaskForm({
               <Label className="block text-sm font-medium text-gray-700 mb-1">
                 {t('templates.taskForm.additionalAgentsLabel', 'Additional Agents')}
               </Label>
-              {teamsV2Enabled ? (
-                <MultiUserAndTeamPicker
-                  values={additionalAgents}
-                  onValuesChange={(newValues) => {
-                    setError(null);
-                    setAdditionalAgents(newValues);
-                  }}
-                  onTeamValuesChange={(selectedTeamIds) => {
-                    for (const teamId of selectedTeamIds) {
-                      const selectedTeam = teams.find(t => t.team_id === teamId);
-                      if (!selectedTeam?.members) continue;
-                      // Assign the team so the team badge appears
-                      setAssignedTeamId(teamId);
-                      const leadId = selectedTeam.manager_id || selectedTeam.members.find(m => m.role === 'lead')?.user_id;
-                      if (!assignedTo && leadId) {
-                        setAssignedTo(leadId);
-                      }
-                      const primaryId = assignedTo || leadId;
-                      const newMembers = selectedTeam.members
-                        .map(m => m.user_id)
-                        .filter(id => id !== primaryId);
-                      setAdditionalAgents(prev => {
-                        const combined = new Set([...prev, ...newMembers]);
-                        return Array.from(combined);
-                      });
+              <MultiUserAndTeamPicker
+                values={additionalAgents}
+                onValuesChange={(newValues) => {
+                  setError(null);
+                  setAdditionalAgents(newValues);
+                }}
+                onTeamValuesChange={(selectedTeamIds) => {
+                  for (const teamId of selectedTeamIds) {
+                    const selectedTeam = teams.find(t => t.team_id === teamId);
+                    if (!selectedTeam?.members) continue;
+                    // Assign the team so the team badge appears
+                    setAssignedTeamId(teamId);
+                    const leadId = selectedTeam.manager_id || selectedTeam.members.find(m => m.role === 'lead')?.user_id;
+                    if (!assignedTo && leadId) {
+                      setAssignedTo(leadId);
                     }
-                  }}
-                  users={users.filter(u => u.user_id !== assignedTo)}
-                  teams={teams}
-                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                  getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
-                />
-              ) : (
-                <MultiUserPicker
-                  values={additionalAgents}
-                  onValuesChange={setAdditionalAgents}
-                  users={users.filter(u => u.user_id !== assignedTo)}
-                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                />
-              )}
+                    const primaryId = assignedTo || leadId;
+                    const newMembers = selectedTeam.members
+                      .map(m => m.user_id)
+                      .filter(id => id !== primaryId);
+                    setAdditionalAgents(prev => {
+                      const combined = new Set([...prev, ...newMembers]);
+                      return Array.from(combined);
+                    });
+                  }
+                }}
+                users={users.filter(u => u.user_id !== assignedTo)}
+                teams={teams}
+                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+              />
               <p className="text-xs text-gray-500 mt-1">
                 {t('templates.taskForm.additionalAgentsHelp', 'Additional team members to assign to this task')}
               </p>

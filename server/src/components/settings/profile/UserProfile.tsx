@@ -33,7 +33,6 @@ import { toast } from 'react-hot-toast';
 import { validateContactName, validateEmailAddress, validatePhoneNumber } from '@alga-psa/validation';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import { LanguagePreference } from '@alga-psa/ui/components/LanguagePreference';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getUserLocaleAction, updateUserLocaleAction } from '@alga-psa/user-composition/actions';
 import { getInheritedLocaleAction } from '@alga-psa/tenancy/actions';
@@ -103,7 +102,6 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [countryCode, setCountryCode] = useState('US');
   const [notificationView, setNotificationView] = useState<NotificationView>('internal');
-  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
   const [language, setLanguage] = useState<SupportedLocale | null>(null);
   const [currentEffectiveLocale, setCurrentEffectiveLocale] = useState<SupportedLocale | undefined>(undefined);
   const [inheritedSource, setInheritedSource] = useState<'client' | 'tenant' | 'system'>('system');
@@ -194,10 +192,6 @@ export default function UserProfile({ userId }: UserProfileProps) {
   }, [userId]);
 
   useEffect(() => {
-    if (!isMspI18nEnabled) {
-      return;
-    }
-
     let mounted = true;
     const loadLocale = async () => {
       setIsLocaleLoading(true);
@@ -221,7 +215,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
     return () => {
       mounted = false;
     };
-  }, [isMspI18nEnabled]);
+  }, []);
 
   const handleSave = async () => {
     if (!user) {
@@ -486,25 +480,23 @@ export default function UserProfile({ userId }: UserProfileProps) {
                 onValueChange={setTimezone}
               />
             </div>
-            {isMspI18nEnabled && (
-              <div className="pt-4 border-t border-gray-200">
-                <LanguagePreference
-                  value={language}
-                  currentEffectiveLocale={currentEffectiveLocale}
-                  inheritedSource={inheritedSource}
-                  onChange={async (locale) => {
-                    setLanguage(locale);
-                    if (locale === null) {
-                      await updateUserLocaleAction(null);
-                    } else {
-                      await updateUserLocaleAction(locale);
-                    }
-                  }}
-                  showNoneOption={true}
-                  loading={isLocaleLoading}
-                />
-              </div>
-            )}
+            <div className="pt-4 border-t border-gray-200">
+              <LanguagePreference
+                value={language}
+                currentEffectiveLocale={currentEffectiveLocale}
+                inheritedSource={inheritedSource}
+                onChange={async (locale) => {
+                  setLanguage(locale);
+                  if (locale === null) {
+                    await updateUserLocaleAction(null);
+                  } else {
+                    await updateUserLocaleAction(locale);
+                  }
+                }}
+                showNoneOption={true}
+                loading={isLocaleLoading}
+              />
+            </div>
           </CardContent>
         </Card>
       ),

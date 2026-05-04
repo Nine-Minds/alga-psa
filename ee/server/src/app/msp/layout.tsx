@@ -1,7 +1,6 @@
 import { cookies } from "next/headers.js";
 import { getSession } from "@alga-psa/auth";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
-import { featureFlags } from "server/src/lib/feature-flags/featureFlags";
 import { MspLayoutClient } from "./MspLayoutClient";
 import type { Metadata } from 'next';
 
@@ -32,18 +31,12 @@ export default async function MspLayout({
   const cookieStore = await cookies();
   const sidebarCookie = cookieStore.get('sidebar_collapsed')?.value;
   const initialSidebarCollapsed = sidebarCookie === 'true';
-  const isMspI18nEnabled = await featureFlags.isEnabled('msp-i18n-enabled', {
-    userId: session?.user?.id,
-    tenantId: session?.user?.tenant,
-    userRole: session?.user?.user_type,
-  });
-  const locale = isMspI18nEnabled ? await getHierarchicalLocaleAction() : null;
+  const locale = await getHierarchicalLocaleAction();
   return (
     <MspLayoutClient
       session={session}
       initialSidebarCollapsed={initialSidebarCollapsed}
       initialLocale={locale}
-      i18nEnabled={isMspI18nEnabled}
     >
       {children}
     </MspLayoutClient>

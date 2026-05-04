@@ -28,7 +28,6 @@ const DEFAULT_BOOLEAN_FLAGS: Record<string, boolean> = {
   'enable_jira_sync': false,
   'enable_salesforce_sync': false,
   'enable_client_client_dual_write': true,
-  'msp-i18n-enabled': false,
   'quoting-enabled': false,
 };
 

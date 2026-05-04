@@ -9,7 +9,6 @@ import { Globe } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { LOCALE_CONFIG, filterPseudoLocales, type SupportedLocale } from '@alga-psa/core/i18n/config';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import {
   getTenantLocaleSettingsAction,
   updateTenantDefaultLocaleAction,
@@ -18,10 +17,9 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const MspLanguageSettings = () => {
   const { t } = useTranslation('msp/settings');
-  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
   const visibleLocales = useMemo(
-    () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales, !!isMspI18nEnabled),
-    [isMspI18nEnabled],
+    () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales),
+    [],
   );
   const [defaultLocale, setDefaultLocale] = useState<SupportedLocale>(
     LOCALE_CONFIG.defaultLocale as SupportedLocale

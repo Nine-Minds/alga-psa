@@ -41,7 +41,6 @@ import { getServices } from '@alga-psa/scheduling/actions';
 import { IService } from '@alga-psa/types';
 import { getTeams } from '@alga-psa/teams/actions';
 import { ITeam } from '@alga-psa/types';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 interface UserHoursSetting {
   day_of_week: number;
@@ -129,7 +128,6 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   const userHoursFormRef = useRef<HTMLDivElement>(null);
   const serviceRulesFormRef = useRef<HTMLDivElement>(null);
 
-  const { enabled: isTeamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const daysOfWeek = useMemo(() => ([
     { value: 0, label: t('availabilitySettings.days.sunday', { defaultValue: 'Sunday' }) },
     { value: 1, label: t('availabilitySettings.days.monday', { defaultValue: 'Monday' }) },
@@ -141,7 +139,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
   ]), [t]);
 
   const buildReportsToUserIds = (usersList: Omit<IUser, 'tenant'>[]) => {
-    if (!isTeamsV2Enabled || !session?.user?.id) {
+    if (!session?.user?.id) {
       return new Set<string>();
     }
 
@@ -167,7 +165,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
 
   const reportsToUserIds = useMemo(
     () => buildReportsToUserIds(allUsers),
-    [allUsers, isTeamsV2Enabled, session?.user?.id]
+    [allUsers, session?.user?.id]
   );
 
   useEffect(() => {
@@ -228,9 +226,7 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
           // Filter users for this team
           const teamMemberIds = userManagedTeams[0].members?.map(m => m.user_id) || [];
           const allowedIds = new Set(teamMemberIds);
-          if (isTeamsV2Enabled) {
-            reportsToIds.forEach((id) => allowedIds.add(id));
-          }
+          reportsToIds.forEach((id) => allowedIds.add(id));
           const filteredUsers = fetchedUsers.filter(user => allowedIds.has(user.user_id));
           setUsers(filteredUsers);
         } else {
@@ -407,14 +403,12 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       if (selectedTeam) {
         const teamMemberIds = selectedTeam.members?.map(m => m.user_id) || [];
         const allowedIds = new Set(teamMemberIds);
-        if (isTeamsV2Enabled) {
-          reportsToUserIds.forEach((id) => allowedIds.add(id));
-        }
+        reportsToUserIds.forEach((id) => allowedIds.add(id));
         const filteredUsers = allUsers.filter(user => allowedIds.has(user.user_id));
         setUsers(filteredUsers);
       }
     }
-  }, [selectedTeamId, isManager, managedTeams, allUsers, isTeamsV2Enabled, reportsToUserIds]);
+  }, [selectedTeamId, isManager, managedTeams, allUsers, reportsToUserIds]);
 
   useEffect(() => {
     if (selectedUserId && activeTab === 'user-hours') {

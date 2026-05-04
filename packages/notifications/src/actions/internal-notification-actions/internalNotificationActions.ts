@@ -24,7 +24,6 @@ import {
   broadcastUnreadCount
 } from "../../realtime/internalNotificationBroadcaster";
 import logger from '@alga-psa/core/logger';
-import { featureFlags } from '@alga-psa/core/server';
 import { runPostCreationHooks } from './notificationHooks';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
@@ -66,28 +65,6 @@ async function getUserLocale(
     .where('u.user_id', userId)
     .andWhere('u.tenant', tenant)
     .first();
-
-  // Internal (MSP) users: force English when msp-i18n-enabled is off,
-  // mirroring the UI rollout gate on I18nWrapper.
-  if (user?.user_type === 'internal') {
-    let mspI18nEnabled = false;
-    try {
-      mspI18nEnabled = await featureFlags.isEnabled('msp-i18n-enabled', {
-        tenantId: tenant,
-        userId,
-      });
-    } catch (error) {
-      logger.warn('[InternalNotificationActions] msp-i18n-enabled evaluation failed; defaulting to disabled', {
-        error: error instanceof Error ? error.message : String(error),
-        tenant,
-        userId,
-      });
-    }
-
-    if (!mspI18nEnabled) {
-      return 'en';
-    }
-  }
 
   // 1. User's language preference (applies to both internal and client users)
   const userPreference = await trx('user_preferences')

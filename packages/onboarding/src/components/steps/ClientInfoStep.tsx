@@ -11,7 +11,6 @@ import type { StepProps } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { validateEmailAddress } from '@alga-psa/validation';
 import { useTranslation, useI18n } from '@alga-psa/ui/lib/i18n/client';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import {
   LOCALE_CONFIG,
   filterPseudoLocales,
@@ -26,7 +25,6 @@ interface ClientInfoStepProps extends StepProps {
 export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientInfoStepProps) {
   const { t } = useTranslation('msp/onboarding');
   const { locale: currentLocale, setLocale } = useI18n();
-  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
@@ -34,8 +32,8 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
   const [isLocaleChanging, setIsLocaleChanging] = useState(false);
 
   const visibleLocales = useMemo(
-    () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales, !!isMspI18nEnabled),
-    [isMspI18nEnabled],
+    () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales),
+    [],
   );
 
   const languageOptions = useMemo<SelectOption[]>(
@@ -170,30 +168,28 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
           />
         </div>
 
-        {isMspI18nEnabled && (
-          <div className="space-y-2">
-            <CustomSelect
-              id="onboarding-language"
-              label={t('clientInfoStep.fields.language.label', {
-                defaultValue: 'Language',
-              })}
-              options={languageOptions}
-              value={selectedLocale}
-              onValueChange={handleLocaleChange}
-              disabled={isLocaleChanging}
-              placeholder={t('clientInfoStep.fields.language.placeholder', {
-                defaultValue: 'Select a language',
-              })}
-              data-automation-id="onboarding-language-select"
-            />
-            <p className="text-xs text-gray-500">
-              {t('clientInfoStep.fields.language.help', {
-                defaultValue:
-                  'This sets the default language for your workspace. You can change it later in settings.',
-              })}
-            </p>
-          </div>
-        )}
+        <div className="space-y-2">
+          <CustomSelect
+            id="onboarding-language"
+            label={t('clientInfoStep.fields.language.label', {
+              defaultValue: 'Language',
+            })}
+            options={languageOptions}
+            value={selectedLocale}
+            onValueChange={handleLocaleChange}
+            disabled={isLocaleChanging}
+            placeholder={t('clientInfoStep.fields.language.placeholder', {
+              defaultValue: 'Select a language',
+            })}
+            data-automation-id="onboarding-language-select"
+          />
+          <p className="text-xs text-gray-500">
+            {t('clientInfoStep.fields.language.help', {
+              defaultValue:
+                'This sets the default language for your workspace. You can change it later in settings.',
+            })}
+          </p>
+        </div>
 
         <Alert variant="info">
           <AlertDescription>
@@ -280,30 +276,28 @@ export function ClientInfoStep({ data, updateData, isRevisit = false }: ClientIn
         />
       </div>
 
-      {isMspI18nEnabled && (
-        <div className="space-y-2">
-          <CustomSelect
-            id="onboarding-language"
-            label={t('clientInfoStep.fields.language.label', {
-              defaultValue: 'Language',
-            })}
-            options={languageOptions}
-            value={selectedLocale}
-            onValueChange={handleLocaleChange}
-            disabled={isLocaleChanging}
-            placeholder={t('clientInfoStep.fields.language.placeholder', {
-              defaultValue: 'Select a language',
-            })}
-            data-automation-id="onboarding-language-select"
-          />
-          <p className="text-xs text-gray-500">
-            {t('clientInfoStep.fields.language.help', {
-              defaultValue:
-                'Becomes the organization default for everyone — MSP staff and client portal users. Individual users and clients can override it later.',
-            })}
-          </p>
-        </div>
-      )}
+      <div className="space-y-2">
+        <CustomSelect
+          id="onboarding-language"
+          label={t('clientInfoStep.fields.language.label', {
+            defaultValue: 'Language',
+          })}
+          options={languageOptions}
+          value={selectedLocale}
+          onValueChange={handleLocaleChange}
+          disabled={isLocaleChanging}
+          placeholder={t('clientInfoStep.fields.language.placeholder', {
+            defaultValue: 'Select a language',
+          })}
+          data-automation-id="onboarding-language-select"
+        />
+        <p className="text-xs text-gray-500">
+          {t('clientInfoStep.fields.language.help', {
+            defaultValue:
+              'Becomes the organization default for everyone — MSP staff and client portal users. Individual users and clients can override it later.',
+          })}
+        </p>
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="email">

@@ -193,15 +193,7 @@ describe('MSP clients/contacts/assets/onboarding locale batch', () => {
     expect(getValue(readLocaleJson('yy', 'onboarding'), 'onboardingWizard.title')).toContain('55555');
   });
 
-  it('T044: MSP layout keeps locale loading behind the feature flag and representative surfaces keep English fallbacks', () => {
-    const layout = readRepoFile('server/src/app/msp/layout.tsx');
-    const layoutClient = readRepoFile('server/src/app/msp/MspLayoutClient.tsx');
-
-    expect(layout).toContain("'msp-i18n-enabled'");
-    expect(layout).toMatch(/const locale = isMspI18nEnabled \? await getHierarchicalLocaleAction\(\) : null;/);
-    expect(layoutClient).toContain("initialLocale={i18nEnabled ? (initialLocale || undefined) : 'en'}");
-    expect(layoutClient).toContain('showPseudoLocales={i18nEnabled}');
-
+  it('T044: representative surfaces use the right namespaces and keep English fallbacks', () => {
     const representativeFiles = [
       ['packages/clients/src/components/clients/Clients.tsx', "useTranslation('msp/clients')"],
       ['packages/clients/src/components/contacts/ContactDetails.tsx', "useTranslation('msp/contacts')"],

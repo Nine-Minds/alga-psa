@@ -40,9 +40,7 @@ import type { BlockNoteEditor } from '@blocknote/core';
 import { PartialBlock } from '@blocknote/core';
 import { ListChecks, Pencil, Plus, Trash2, Clock, Ticket } from 'lucide-react';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
-import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
-import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
@@ -67,7 +65,6 @@ import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
 import PrefillFromTicketDialog from './PrefillFromTicketDialog';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import type { ITeam } from '@alga-psa/types';
 import { TaskPrefillFields } from '../lib/taskTicketMapping';
@@ -155,7 +152,6 @@ export default function TaskForm({
   const [tempTaskId] = useState<string>(`temp-${Date.now()}`);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const { launchTimeEntry } = useSchedulingCallbacks();
-  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   // Convert from minutes to hours for display
   const [estimatedHours, setEstimatedHours] = useState<number>(
     task?.estimated_hours !== undefined && task?.estimated_hours !== null
@@ -404,10 +400,6 @@ export default function TaskForm({
   }, [task?.task_id]);
 
   useEffect(() => {
-    if (!teamsV2Enabled) {
-      setTeams([]);
-      return;
-    }
     const loadTeams = async () => {
       try {
         const fetchedTeams = await getTeams();
@@ -417,7 +409,7 @@ export default function TaskForm({
       }
     };
     loadTeams();
-  }, [teamsV2Enabled]);
+  }, []);
 
   // Fetch team avatar URL when assigned team changes
   useEffect(() => {
@@ -1605,39 +1597,22 @@ export default function TaskForm({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('assignedToLabel', 'Assigned To')}</label>
-                  {teamsV2Enabled ? (
-                    <UserAndTeamPicker
-                      label=""
-                      value={assignedUser ?? ''}
-                      onValueChange={(value) => {
-                        setAssignedUser(value === '' ? null : value);
-                      }}
-                      onTeamSelect={handleAssignTeam}
-                      size="sm"
-                      users={users.filter(u =>
-                        !([...taskResources, ...tempTaskResources])
-                          .some(r => r.additional_user_id === u.user_id)
-                      )}
-                      teams={teams}
-                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                      getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
-                    />
-                  ) : (
-                    <UserPicker
-                      label=""
-                      value={assignedUser ?? ''}
-                      onValueChange={(value) => {
-                        // Only set to null if explicitly choosing "Not assigned"
-                        setAssignedUser(value === '' ? null : value);
-                      }}
-                      size="sm"
-                      users={users.filter(u =>
-                        !([...taskResources, ...tempTaskResources])
-                          .some(r => r.additional_user_id === u.user_id)
-                      )}
-                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                    />
-                  )}
+                  <UserAndTeamPicker
+                    label=""
+                    value={assignedUser ?? ''}
+                    onValueChange={(value) => {
+                      setAssignedUser(value === '' ? null : value);
+                    }}
+                    onTeamSelect={handleAssignTeam}
+                    size="sm"
+                    users={users.filter(u =>
+                      !([...taskResources, ...tempTaskResources])
+                        .some(r => r.additional_user_id === u.user_id)
+                    )}
+                    teams={teams}
+                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                    getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                  />
                   {assignedTeamId && (() => {
                     const assignedTeam = teams.find(t => t.team_id === assignedTeamId);
                     return assignedTeam ? (
@@ -1655,95 +1630,57 @@ export default function TaskForm({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('additionalAgentsLabel', 'Additional Agents')}</label>
-                  {teamsV2Enabled ? (
-                    <MultiUserAndTeamPicker
-                      id="task-additional-agents"
-                      values={([...taskResources, ...tempTaskResources]).map(r => r.additional_user_id)}
-                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                      getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
-                      teams={teams}
-                      teamSectionLabel={taskFormT('addTeamMembers', 'Add Team Members')}
-                      onTeamValuesChange={(selectedTeamIds) => {
-                        // When a team is selected, use handleAssignTeam which already
-                        // expands team members into task_resources server-side.
-                        // Do NOT also call handleAddAgent per member (causes duplicates).
-                        for (const teamId of selectedTeamIds) {
-                          handleAssignTeam(teamId);
+                  <MultiUserAndTeamPicker
+                    id="task-additional-agents"
+                    values={([...taskResources, ...tempTaskResources]).map(r => r.additional_user_id)}
+                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                    getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                    teams={teams}
+                    teamSectionLabel={taskFormT('addTeamMembers', 'Add Team Members')}
+                    onTeamValuesChange={(selectedTeamIds) => {
+                      // When a team is selected, use handleAssignTeam which already
+                      // expands team members into task_resources server-side.
+                      // Do NOT also call handleAddAgent per member (causes duplicates).
+                      for (const teamId of selectedTeamIds) {
+                        handleAssignTeam(teamId);
+                      }
+                    }}
+                    onValuesChange={async (newUserIds) => {
+                      // Prevent race conditions from rapid clicks
+                      if (isProcessingAgentsRef.current) {
+                        return;
+                      }
+                      isProcessingAgentsRef.current = true;
+
+                      try {
+                        const currentResources = [...taskResources, ...tempTaskResources];
+                        const currentUserIds = currentResources.map(r => r.additional_user_id);
+
+                        // Find added users
+                        const addedUserIds = newUserIds.filter(id => !currentUserIds.includes(id));
+                        // Find removed users
+                        const removedUserIds = currentUserIds.filter(id => !newUserIds.includes(id));
+
+                        // Process all additions sequentially
+                        for (const userId of addedUserIds) {
+                          await handleAddAgent(userId);
                         }
-                      }}
-                      onValuesChange={async (newUserIds) => {
-                        // Prevent race conditions from rapid clicks
-                        if (isProcessingAgentsRef.current) {
-                          return;
-                        }
-                        isProcessingAgentsRef.current = true;
 
-                        try {
-                          const currentResources = [...taskResources, ...tempTaskResources];
-                          const currentUserIds = currentResources.map(r => r.additional_user_id);
-
-                          // Find added users
-                          const addedUserIds = newUserIds.filter(id => !currentUserIds.includes(id));
-                          // Find removed users
-                          const removedUserIds = currentUserIds.filter(id => !newUserIds.includes(id));
-
-                          // Process all additions sequentially
-                          for (const userId of addedUserIds) {
-                            await handleAddAgent(userId);
+                        // Process all removals sequentially
+                        for (const userId of removedUserIds) {
+                          const resource = currentResources.find(r => r.additional_user_id === userId);
+                          if (resource) {
+                            await handleRemoveAgent(resource.assignment_id);
                           }
-
-                          // Process all removals sequentially
-                          for (const userId of removedUserIds) {
-                            const resource = currentResources.find(r => r.additional_user_id === userId);
-                            if (resource) {
-                              await handleRemoveAgent(resource.assignment_id);
-                            }
-                          }
-                        } finally {
-                          isProcessingAgentsRef.current = false;
                         }
-                      }}
-                      users={users.filter(u => u.user_id !== assignedUser)}
-                      size="sm"
-                      placeholder={taskFormT('additionalAgentsPlaceholder', 'Select additional agents...')}
-                    />
-                  ) : (
-                    <MultiUserPicker
-                      id="task-additional-agents"
-                      values={([...taskResources, ...tempTaskResources]).map(r => r.additional_user_id)}
-                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                      onValuesChange={async (newUserIds) => {
-                        if (isProcessingAgentsRef.current) {
-                          return;
-                        }
-                        isProcessingAgentsRef.current = true;
-
-                        try {
-                          const currentResources = [...taskResources, ...tempTaskResources];
-                          const currentUserIds = currentResources.map(r => r.additional_user_id);
-
-                          const addedUserIds = newUserIds.filter(id => !currentUserIds.includes(id));
-                          const removedUserIds = currentUserIds.filter(id => !newUserIds.includes(id));
-
-                          for (const userId of addedUserIds) {
-                            await handleAddAgent(userId);
-                          }
-
-                          for (const userId of removedUserIds) {
-                            const resource = currentResources.find(r => r.additional_user_id === userId);
-                            if (resource) {
-                              await handleRemoveAgent(resource.assignment_id);
-                            }
-                          }
-                        } finally {
-                          isProcessingAgentsRef.current = false;
-                        }
-                      }}
-                      users={users.filter(u => u.user_id !== assignedUser)}
-                      size="sm"
-                      placeholder={taskFormT('additionalAgentsPlaceholder', 'Select additional agents...')}
-                    />
-                  )}
+                      } finally {
+                        isProcessingAgentsRef.current = false;
+                      }
+                    }}
+                    users={users.filter(u => u.user_id !== assignedUser)}
+                    size="sm"
+                    placeholder={taskFormT('additionalAgentsPlaceholder', 'Select additional agents...')}
+                  />
                 </div>
               </div>
             </div>

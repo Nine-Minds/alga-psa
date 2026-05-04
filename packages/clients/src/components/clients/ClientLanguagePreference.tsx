@@ -7,7 +7,6 @@ import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 interface ClientLanguagePreferenceProps {
   /** Client ID */
@@ -34,14 +33,13 @@ export function ClientLanguagePreference({
   onSave,
 }: ClientLanguagePreferenceProps) {
   const { t } = useTranslation('msp/clients');
-  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
   const [currentLocale, setCurrentLocale] = useState<SupportedLocale | undefined>();
   const [loading, setLoading] = useState(true);
   const [isChanging, setIsChanging] = useState(false);
 
   const visibleLocales = useMemo(
-    () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales, !!isMspI18nEnabled),
-    [isMspI18nEnabled],
+    () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales),
+    [],
   );
 
   const languageOptions = useMemo((): SelectOption[] => {

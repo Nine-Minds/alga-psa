@@ -55,7 +55,7 @@ import { ExternalLink, Mail } from 'lucide-react';
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
 import { PartialBlock, StyledText } from '@blocknote/core';
-import { useFeatureFlag, useTicketTimeTracking } from "@alga-psa/ui/hooks";
+import { useTicketTimeTracking } from "@alga-psa/ui/hooks";
 import { IntervalTrackingService } from "@alga-psa/ui/services";
 import { convertBlockNoteToMarkdown } from "@alga-psa/formatting/blocknoteUtils";
 import BackNav from '@alga-psa/ui/components/BackNav';
@@ -220,7 +220,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
     const [canViewCommentMetadataDebug, setCanViewCommentMetadataDebug] = useState(false);
-    const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
     const { getDocumentByTicketId, deleteDocument } = useDocumentsCrossFeature();
 
     useEffect(() => {
@@ -430,10 +429,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const intervalService = useMemo(() => new IntervalTrackingService(), []);
 
     useEffect(() => {
-        if (!teamsV2Enabled) {
-            setTeams([]);
-            return;
-        }
         const loadTeams = async () => {
             try {
                 const fetchedTeams = await getTeams();
@@ -443,13 +438,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             }
         };
         loadTeams();
-    }, [teamsV2Enabled]);
+    }, []);
 
     useEffect(() => {
-        if (!teamsV2Enabled) {
-            setTeam(null);
-            return;
-        }
         if (!ticket.assigned_team_id) {
             setTeam(null);
             return;
@@ -471,7 +462,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             }
         };
         loadTeam();
-    }, [teamsV2Enabled, ticket.assigned_team_id, teams]);
+    }, [ticket.assigned_team_id, teams]);
 
     // Timer logic
     const tick = useCallback(() => {

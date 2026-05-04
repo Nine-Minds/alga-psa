@@ -19,11 +19,9 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Plus, Trash2, Edit2, Check, X, CheckSquare, ListTodo, ListChecks } from 'lucide-react';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import type { TemplateChecklistItem, TemplateTask, TemplateWizardData } from '../../../types/templateWizard';
-import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { IUserWithRoles } from '@alga-psa/types';
 import type { ITeam } from '@alga-psa/types';
@@ -51,7 +49,6 @@ export function TemplateTasksStep({
   services,
 }: TemplateTasksStepProps) {
   const { t } = useTranslation(['features/projects', 'common']);
-  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(
     data.phases[0]?.temp_id || null
@@ -118,12 +115,8 @@ export function TemplateTasksStep({
     };
   }, [flushDescriptionChange]);
 
-  // Fetch teams when teams-v2 is enabled
+  // Fetch teams
   React.useEffect(() => {
-    if (!teamsV2Enabled) {
-      setTeams([]);
-      return;
-    }
     const fetchTeams = async () => {
       try {
         const fetchedTeams = await getTeams();
@@ -133,7 +126,7 @@ export function TemplateTasksStep({
       }
     };
     fetchTeams();
-  }, [teamsV2Enabled]);
+  }, []);
 
   // Debug priorities
   React.useEffect(() => {
@@ -396,38 +389,25 @@ export function TemplateTasksStep({
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <Label>{t('templates.wizard.tasks.assignedTo', 'Assigned To')}</Label>
-                            {teamsV2Enabled ? (
-                              <UserAndTeamPicker
-                                label=""
-                                value={task.assigned_to || ''}
-                                onValueChange={(value) =>
-                                  updateTask(task.temp_id, { assigned_to: value || undefined, assigned_team_id: undefined })
-                                }
-                                onTeamSelect={(teamId) => {
-                                  const team = teams.find(t => t.team_id === teamId);
-                                  updateTask(task.temp_id, {
-                                    assigned_to: team?.manager_id || undefined,
-                                    assigned_team_id: teamId,
-                                  });
-                                }}
-                                users={users}
-                                teams={teams}
-                                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                                getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
-                                placeholder={t('templates.wizard.tasks.notAssigned', 'Not assigned')}
-                              />
-                            ) : (
-                              <UserPicker
-                                label=""
-                                value={task.assigned_to || ''}
-                                onValueChange={(value) =>
-                                  updateTask(task.temp_id, { assigned_to: value || undefined })
-                                }
-                                users={users}
-                                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                                placeholder={t('templates.wizard.tasks.notAssigned', 'Not assigned')}
-                              />
-                            )}
+                            <UserAndTeamPicker
+                              label=""
+                              value={task.assigned_to || ''}
+                              onValueChange={(value) =>
+                                updateTask(task.temp_id, { assigned_to: value || undefined, assigned_team_id: undefined })
+                              }
+                              onTeamSelect={(teamId) => {
+                                const team = teams.find(t => t.team_id === teamId);
+                                updateTask(task.temp_id, {
+                                  assigned_to: team?.manager_id || undefined,
+                                  assigned_team_id: teamId,
+                                });
+                              }}
+                              users={users}
+                              teams={teams}
+                              getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                              getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                              placeholder={t('templates.wizard.tasks.notAssigned', 'Not assigned')}
+                            />
                           </div>
 
                           <div>

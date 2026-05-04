@@ -18,7 +18,6 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -305,7 +304,6 @@ function getGuidanceBlocks(
 export function MicrosoftIntegrationSettings() {
   const { t } = useTranslation('msp/integrations');
   const { toast } = useToast();
-  const teamsUiFlag = useFeatureFlag('teams-integration-ui', { defaultValue: false });
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [resetting, setResetting] = React.useState(false);
@@ -334,7 +332,6 @@ export function MicrosoftIntegrationSettings() {
     [bindings]
   );
   const teamsAvailability = resolveTeamsAvailability({
-    flagEnabled: teamsUiFlag.enabled,
     isEnterpriseEdition,
     requireTenantContext: false,
   });

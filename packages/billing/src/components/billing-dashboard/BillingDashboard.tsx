@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { IClient, IService } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 // Import all the components
 import ContractLinesOverview from './contract-lines/ContractLinesOverview';
@@ -57,19 +56,12 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const [isHydrated, setIsHydrated] = useState(false);
   const [error] = useState<string | null>(null);
 
-  const { enabled: isQuotingEnabled } = useFeatureFlag('quoting-enabled', { defaultValue: false });
-
   const tabDefinitions = useMemo(() => {
-    const translatedDefinitions = billingTabDefinitions.map((tab) => ({
+    return billingTabDefinitions.map((tab) => ({
       ...tab,
       label: t(tab.labelKey, { defaultValue: tab.label }),
     }));
-
-    if (isQuotingEnabled) return translatedDefinitions;
-    return translatedDefinitions.filter(
-      (tab) => tab.value !== 'quotes' && tab.value !== 'quote-templates' && tab.value !== 'quote-business-templates'
-    );
-  }, [isQuotingEnabled, t]);
+  }, [t]);
 
   const initialSearchParams = useMemo(() => {
     const params = new URLSearchParams();
@@ -161,20 +153,15 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           <AccountingExportsTab />
         </Tabs.Content>
 
-        {isQuotingEnabled && (
-          <Tabs.Content value="quotes">
-            <QuotesTab />
-          </Tabs.Content>
-        )}
+        <Tabs.Content value="quotes">
+          <QuotesTab />
+        </Tabs.Content>
 
-        {isQuotingEnabled && (
-          <Tabs.Content value="quote-templates">
-            <QuoteDocumentTemplatesPage />
-          </Tabs.Content>
-        )}
+        <Tabs.Content value="quote-templates">
+          <QuoteDocumentTemplatesPage />
+        </Tabs.Content>
 
-        {isQuotingEnabled && (
-          <Tabs.Content value="quote-business-templates">
+        <Tabs.Content value="quote-business-templates">
             <div className="space-y-4">
               <h2 className="text-2xl font-bold">
                 {t('dashboard.quoteTemplatesHeading', { defaultValue: 'Quote Templates' })}
@@ -185,8 +172,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
                 onNewTemplate={() => router.push('/msp/billing?tab=quotes&quoteId=new&isTemplate=true')}
               />
             </div>
-          </Tabs.Content>
-        )}
+        </Tabs.Content>
 
         <Tabs.Content value="reports">
           <ContractReports />
