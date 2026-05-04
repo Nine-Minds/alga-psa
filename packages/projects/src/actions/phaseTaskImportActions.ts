@@ -818,7 +818,8 @@ export const importPhasesAndTasks = withAuth(async (
   projectId: string,
   groupedPhases: IGroupedPhaseData[],
   statusResolutions: IStatusResolution[] = [],
-  defaultStatusMappingId?: string
+  defaultStatusMappingId?: string,
+  defaultPhaseName?: string
 ): Promise<IPhaseTaskImportResult> => {
   const { knex: db } = await createTenantKnex();
 
@@ -848,6 +849,31 @@ export const importPhasesAndTasks = withAuth(async (
       }
     });
 
+    // Get existing phases
+    const existingPhases = await ProjectModel.getPhases(trx, tenant, projectId);
+    const existingPhaseMap = new Map<string, IProjectPhase>();
+    existingPhases.forEach(phase => {
+      existingPhaseMap.set(phase.phase_name.toLowerCase(), phase);
+    });
+
+    // Build per-phase status fallbacks. The user's "default status" choice in the dialog is
+    // scoped to a specific phase (the chosen fallback phase) — applying it globally would
+    // silently override per-phase status sets for tasks in other phases.
+    const projectWideMappings = (): IProjectStatusMapping[] =>
+      statusMappings.filter((m: IProjectStatusMapping) => !m.phase_id);
+    const phaseScopedMappings = (phaseId: string): IProjectStatusMapping[] =>
+      statusMappings.filter((m: IProjectStatusMapping) => m.phase_id === phaseId);
+
+    // Decide whether a "create" or "use_default" resolution for a given phase should produce
+    // a phase-scoped mapping. We mirror the read-side logic in getImportStatusReferenceData:
+    // a phase whose project_status_mappings include any phase-scoped row uses ONLY those for
+    // its status set, so a project-wide insert there wouldn't show up for the phase afterward.
+    const targetPhaseIdForResolution = (phaseName: string): string | null => {
+      const phaseEntity = existingPhaseMap.get(phaseName.toLowerCase().trim());
+      if (!phaseEntity) return null;
+      return phaseScopedMappings(phaseEntity.phase_id).length > 0 ? phaseEntity.phase_id : null;
+    };
+
     // Build phase-scoped resolution lookup: phaseName(lower) -> statusName(lower) -> mapping_id
     const resolvedByPhase: Map<string, Map<string, string>> = new Map();
     const setResolved = (phaseName: string, statusName: string, mappingId: string) => {
@@ -856,60 +882,118 @@ export const importPhasesAndTasks = withAuth(async (
       resolvedByPhase.get(phaseKey)!.set(statusName.toLowerCase().trim(), mappingId);
     };
 
-    let defaultUnspecifiedStatusId: string | null = null;
+    // "use_default" resolutions share a single 'No Status Specified' status per phase scope.
+    // Different phase scopes need different mappings so the default is visible for each phase.
+    const defaultUnspecifiedStatusByScope = new Map<string, string>();
+    const scopeKey = (phaseId: string | null): string => phaseId ?? '__project_wide__';
 
     for (const resolution of statusResolutions) {
       const phaseName = resolution.phaseName || DEFAULT_PHASE_NAME;
+      const targetPhaseId = targetPhaseIdForResolution(phaseName);
       if (resolution.action === 'create') {
-        // Find or create a status by this name (deduped at the tenant level by createNewStatusMapping).
+        // Reuse an existing mapping in the same scope (phase-scoped or project-wide) when a
+        // status by this name is already mapped there; otherwise insert a new mapping pinned
+        // to that scope so the read-side lookups will surface it for the phase afterward.
         const existingByName = statusMappings.find(
-          m => (m.custom_name || m.status_name || m.name || '').toLowerCase().trim() ===
-            resolution.originalStatusName.toLowerCase().trim()
+          (m) =>
+            (m.custom_name || m.status_name || m.name || '').toLowerCase().trim() ===
+              resolution.originalStatusName.toLowerCase().trim() &&
+            (m.phase_id ?? null) === targetPhaseId
         );
         let mappingId: string;
         if (existingByName) {
           mappingId = existingByName.project_status_mapping_id;
         } else {
-          const newMapping = await createNewStatusMapping(trx, projectId, resolution.originalStatusName, statusMappings.length, tenant);
+          const newMapping = await createNewStatusMapping(
+            trx,
+            projectId,
+            resolution.originalStatusName,
+            statusMappings.length,
+            tenant,
+            targetPhaseId
+          );
           mappingId = newMapping.project_status_mapping_id;
           statusMappings = [...statusMappings, newMapping];
         }
         setResolved(phaseName, resolution.originalStatusName, mappingId);
-        statusMappingByName[resolution.originalStatusName.toLowerCase().trim()] = mappingId;
+        // The global by-name index is used as a last-resort fallback for unmatched statuses.
+        // Only populate it for project-wide resolutions so phase-scoped creates don't bleed
+        // into other phases' lookups.
+        if (targetPhaseId === null) {
+          statusMappingByName[resolution.originalStatusName.toLowerCase().trim()] = mappingId;
+        }
       } else if (resolution.action === 'map_to_existing' && resolution.mappedStatusId) {
         setResolved(phaseName, resolution.originalStatusName, resolution.mappedStatusId);
       } else if (resolution.action === 'use_default') {
-        if (!defaultUnspecifiedStatusId) {
+        const key = scopeKey(targetPhaseId);
+        let mappingId = defaultUnspecifiedStatusByScope.get(key);
+        if (!mappingId) {
           const existingDefault = statusMappings.find(
-            m => (m.custom_name || m.status_name || m.name || '').toLowerCase() === DEFAULT_UNSPECIFIED_STATUS_NAME.toLowerCase()
+            (m) =>
+              (m.custom_name || m.status_name || m.name || '').toLowerCase() ===
+                DEFAULT_UNSPECIFIED_STATUS_NAME.toLowerCase() &&
+              (m.phase_id ?? null) === targetPhaseId
           );
           if (existingDefault) {
-            defaultUnspecifiedStatusId = existingDefault.project_status_mapping_id;
+            mappingId = existingDefault.project_status_mapping_id;
           } else {
-            const newMapping = await createNewStatusMapping(trx, projectId, DEFAULT_UNSPECIFIED_STATUS_NAME, statusMappings.length, tenant);
-            defaultUnspecifiedStatusId = newMapping.project_status_mapping_id;
+            const newMapping = await createNewStatusMapping(
+              trx,
+              projectId,
+              DEFAULT_UNSPECIFIED_STATUS_NAME,
+              statusMappings.length,
+              tenant,
+              targetPhaseId
+            );
+            mappingId = newMapping.project_status_mapping_id;
             statusMappings = [...statusMappings, newMapping];
           }
+          defaultUnspecifiedStatusByScope.set(key, mappingId);
         }
-        setResolved(phaseName, resolution.originalStatusName, defaultUnspecifiedStatusId);
+        setResolved(phaseName, resolution.originalStatusName, mappingId);
       }
     }
 
-    // Default status for tasks without any status specified.
-    // Prefer caller-provided default if it exists in the project's mappings; otherwise fall back to first.
     const firstStatusMappingId = statusMappings[0].project_status_mapping_id;
-    const fallbackStatusMappingId =
-      defaultStatusMappingId &&
-      statusMappings.some((m: IProjectStatusMapping) => m.project_status_mapping_id === defaultStatusMappingId)
-        ? defaultStatusMappingId
-        : firstStatusMappingId;
 
-    // Get existing phases
-    const existingPhases = await ProjectModel.getPhases(trx, tenant, projectId);
-    const existingPhaseMap = new Map<string, IProjectPhase>();
-    existingPhases.forEach(phase => {
-      existingPhaseMap.set(phase.phase_name.toLowerCase(), phase);
-    });
+    const firstMappingForPhase = (phaseName: string): string => {
+      const phaseEntity = existingPhaseMap.get(phaseName.toLowerCase().trim());
+      if (phaseEntity) {
+        const phaseSpecific = phaseScopedMappings(phaseEntity.phase_id);
+        if (phaseSpecific.length > 0) {
+          return phaseSpecific[0].project_status_mapping_id;
+        }
+      }
+      return projectWideMappings()[0]?.project_status_mapping_id || firstStatusMappingId;
+    };
+
+    const isMappingValidForPhase = (phaseName: string, mappingId: string): boolean => {
+      const phaseEntity = existingPhaseMap.get(phaseName.toLowerCase().trim());
+      if (phaseEntity) {
+        const phaseSpecific = phaseScopedMappings(phaseEntity.phase_id);
+        if (phaseSpecific.length > 0) {
+          return phaseSpecific.some(m => m.project_status_mapping_id === mappingId);
+        }
+      }
+      return (
+        projectWideMappings().some(m => m.project_status_mapping_id === mappingId) ||
+        statusMappings.some((m: IProjectStatusMapping) => m.project_status_mapping_id === mappingId)
+      );
+    };
+
+    const normalizedDefaultPhase = defaultPhaseName?.toLowerCase().trim();
+    const fallbackForPhase = (phaseName: string): string => {
+      const phaseKey = phaseName.toLowerCase().trim();
+      if (
+        normalizedDefaultPhase &&
+        phaseKey === normalizedDefaultPhase &&
+        defaultStatusMappingId &&
+        isMappingValidForPhase(phaseName, defaultStatusMappingId)
+      ) {
+        return defaultStatusMappingId;
+      }
+      return firstMappingForPhase(phaseName);
+    };
 
     let phasesCreated = 0;
     let tasksCreated = 0;
@@ -981,15 +1065,18 @@ export const importPhasesAndTasks = withAuth(async (
               // Already resolved during grouping
               taskStatusMappingId = taskData.status_mapping_id;
             } else if (taskData.status_name) {
-              // Prefer phase-scoped resolution; fall back to global match, then default.
+              // Prefer phase-scoped resolution; fall back to global match, then per-phase default.
               const phaseKey = groupedPhase.phase_name.toLowerCase().trim();
               const statusKey = taskData.status_name.toLowerCase().trim();
               const phaseScoped = resolvedByPhase.get(phaseKey)?.get(statusKey);
               const globalMatched = statusMappingByName[statusKey];
-              taskStatusMappingId = phaseScoped || globalMatched || defaultUnspecifiedStatusId || fallbackStatusMappingId;
+              taskStatusMappingId =
+                phaseScoped || globalMatched || fallbackForPhase(groupedPhase.phase_name);
             } else {
-              // No status specified - use the user-selected fallback (or first as last resort)
-              taskStatusMappingId = fallbackStatusMappingId;
+              // No status specified - use the per-phase fallback. The user-chosen "default
+              // status" only applies to tasks whose phase matches the chosen fallback phase;
+              // tasks in other phases get the first valid status for their phase.
+              taskStatusMappingId = fallbackForPhase(groupedPhase.phase_name);
             }
 
             const newTask = await ProjectTaskModel.addTask(trx, tenant, phase.phase_id, {
@@ -1104,7 +1191,8 @@ async function createNewStatusMapping(
   projectId: string,
   statusName: string,
   existingCount: number,
-  tenant: string
+  tenant: string,
+  phaseId: string | null = null
 ): Promise<IProjectStatusMapping> {
   // Use advisory lock to serialize status creation for this tenant/type combination
   // This matches the logic in createTenantProjectStatus
@@ -1151,10 +1239,14 @@ async function createNewStatusMapping(
       .returning('*');
   }
 
-  // Check if a mapping already exists for this status in this project
-  const existingMapping = await trx('project_status_mappings')
-    .where({ tenant, project_id: projectId, status_id: status.status_id })
-    .first();
+  // Check if a mapping already exists in the same scope (phase-scoped or project-wide).
+  // A project-wide mapping and a phase-scoped mapping for the same status are distinct rows
+  // and serve different read paths, so the existence check must include phase_id.
+  const existingMappingQuery = trx('project_status_mappings')
+    .where({ tenant, project_id: projectId, status_id: status.status_id });
+  const existingMapping = phaseId === null
+    ? await existingMappingQuery.whereNull('phase_id').first()
+    : await existingMappingQuery.where({ phase_id: phaseId }).first();
 
   if (existingMapping) {
     return {
@@ -1170,6 +1262,7 @@ async function createNewStatusMapping(
       tenant,
       project_id: projectId,
       status_id: status.status_id,
+      phase_id: phaseId,
       display_order: existingCount + 1,
       is_visible: true,
       is_standard: false,

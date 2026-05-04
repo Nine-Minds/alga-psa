@@ -63,6 +63,57 @@ const MAX_IMPORT_ROWS = 5000;
 // Threshold for showing confirmation before import
 const LARGE_IMPORT_THRESHOLD = 100;
 
+/**
+ * Recompute the set of unmatched (phase, status) pairs given the current fallback phase.
+ *
+ * The fallback phase determines the effective phase for rows whose phase_name is blank,
+ * which in turn determines which phase-scoped status set their statuses are looked up in.
+ * Mirrors the server-side logic in validatePhaseTaskImportDataWithReferenceData so that
+ * the preview stays consistent if the user changes the fallback phase.
+ */
+function computeUnmatchedStatusState(
+  validationResults: ITaskImportValidationResult[],
+  defaultPhaseName: string,
+  statusLookup: Record<string, string>,
+  statusLookupByPhase: Record<string, Record<string, string>>
+): {
+  unmatchedStatuses: Array<{ phaseName: string; statusName: string }>;
+  unmatchedStatusInfo: IUnmatchedStatusInfo[];
+} {
+  const fallbackPhase = defaultPhaseName?.trim() || DEFAULT_PHASE_NAME;
+  const pairs = new Map<string, { phaseName: string; statusName: string }>();
+  const infoMap = new Map<string, IUnmatchedStatusInfo>();
+
+  for (const result of validationResults) {
+    const statusName = result.data.status?.trim();
+    if (!statusName) continue;
+    const phaseName = result.data.phase_name?.trim() || fallbackPhase;
+    const lookup = statusLookupByPhase[phaseName.toLowerCase()] || statusLookup;
+    if (lookup[statusName.toLowerCase()]) continue;
+
+    const key = `${phaseName.toLowerCase()}::${statusName.toLowerCase()}`;
+    if (!pairs.has(key)) {
+      pairs.set(key, { phaseName, statusName });
+      infoMap.set(key, {
+        statusName,
+        phaseName,
+        taskCount: 0,
+        taskNames: [],
+      });
+    }
+    const info = infoMap.get(key)!;
+    info.taskCount++;
+    if (info.taskNames.length < 3) {
+      info.taskNames.push(result.data.task_name || 'Unnamed task');
+    }
+  }
+
+  return {
+    unmatchedStatuses: Array.from(pairs.values()),
+    unmatchedStatusInfo: Array.from(infoMap.values()),
+  };
+}
+
 const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
   isOpen,
   onClose,
@@ -298,7 +349,6 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
       setServiceLookup(validationResponse.serviceLookup);
       setStatusLookup(validationResponse.statusLookup);
       setStatusLookupByPhase(validationResponse.statusLookupByPhase || {});
-      setUnmatchedStatuses(validationResponse.unmatchedStatuses);
       setUnmatchedAgents(validationResponse.unmatchedAgents);
 
       // Use reference data for dropdowns (no additional fetches needed)
@@ -316,36 +366,18 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
         '';
       setDefaultStatusMappingId(initialDefaultStatusId);
 
-      // Compute unmatched status info per (phase, status) pair
-      const unmatchedSet = new Set(
-        validationResponse.unmatchedStatuses.map(p => `${p.phaseName.toLowerCase()}::${p.statusName.toLowerCase()}`)
+      // Initial unmatched-status computation uses the dialog's current defaultPhaseName.
+      // The effect at the end of this file keeps these in sync if the user picks a different fallback phase.
+      const initial = computeUnmatchedStatusState(
+        validationResponse.validationResults,
+        defaultPhaseName,
+        validationResponse.statusLookup,
+        validationResponse.statusLookupByPhase || {}
       );
-      const statusInfoMap = new Map<string, IUnmatchedStatusInfo>();
-      validationResponse.validationResults.forEach(result => {
-        const statusName = result.data.status?.trim();
-        if (!statusName) return;
-        const phaseName = result.data.phase_name?.trim() || DEFAULT_PHASE_NAME;
-        const key = `${phaseName.toLowerCase()}::${statusName.toLowerCase()}`;
-        if (!unmatchedSet.has(key)) return;
-        if (!statusInfoMap.has(key)) {
-          statusInfoMap.set(key, {
-            statusName,
-            phaseName,
-            taskCount: 0,
-            taskNames: [],
-          });
-        }
-        const info = statusInfoMap.get(key)!;
-        info.taskCount++;
-        if (info.taskNames.length < 3) {
-          info.taskNames.push(result.data.task_name || 'Unnamed task');
-        }
-      });
-      setUnmatchedStatusInfo(Array.from(statusInfoMap.values()));
-
-      // Initialize status resolutions with default action, one per (phase, status) pair
+      setUnmatchedStatuses(initial.unmatchedStatuses);
+      setUnmatchedStatusInfo(initial.unmatchedStatusInfo);
       setStatusResolutions(
-        validationResponse.unmatchedStatuses.map(({ phaseName, statusName }) => ({
+        initial.unmatchedStatuses.map(({ phaseName, statusName }) => ({
           originalStatusName: statusName,
           phaseName,
           action: 'use_default' as StatusResolutionAction,
@@ -430,7 +462,8 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
         projectId,
         groupedPhases,
         statusResolutions,
-        defaultStatusMappingId || undefined
+        defaultStatusMappingId || undefined,
+        defaultPhaseName || undefined
       );
       setImportResult(result);
       onImportComplete(result);
@@ -441,7 +474,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
     } finally {
       setIsProcessing(false);
     }
-  }, [isProcessing, groupedPhases, projectId, onImportComplete, statusResolutions, importT, defaultStatusMappingId]);
+  }, [isProcessing, groupedPhases, projectId, onImportComplete, statusResolutions, importT, defaultStatusMappingId, defaultPhaseName]);
 
   // Handle status resolution changes — keyed by (phase, status)
   const handleStatusResolutionChange = useCallback((
@@ -659,6 +692,36 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
       if (cancelled) return;
       setGroupedPhases(grouped);
       setExpandedPhases(new Set(grouped.map(p => p.phase_name)));
+
+      // Recompute unmatched statuses against the new effective phase. A status that was
+      // matched under the previous fallback phase may no longer be valid (and vice versa),
+      // so we must regenerate the resolution UI's source of truth — otherwise the import
+      // silently picks a global match or default for newly-invalid statuses.
+      const recomputed = computeUnmatchedStatusState(
+        validationResults,
+        defaultPhaseName,
+        statusLookup,
+        statusLookupByPhase
+      );
+      setUnmatchedStatuses(recomputed.unmatchedStatuses);
+      setUnmatchedStatusInfo(recomputed.unmatchedStatusInfo);
+      // Preserve any resolutions the user has already configured for pairs that still exist;
+      // drop pairs that are now matched, and add new pairs with the default action.
+      setStatusResolutions(prev => {
+        const prevByKey = new Map(
+          prev.map(r => [`${r.phaseName.toLowerCase()}::${r.originalStatusName.toLowerCase()}`, r])
+        );
+        return recomputed.unmatchedStatuses.map(({ phaseName, statusName }) => {
+          const key = `${phaseName.toLowerCase()}::${statusName.toLowerCase()}`;
+          return (
+            prevByKey.get(key) ?? {
+              originalStatusName: statusName,
+              phaseName,
+              action: 'use_default' as StatusResolutionAction,
+            }
+          );
+        });
+      });
     })();
     return () => {
       cancelled = true;
