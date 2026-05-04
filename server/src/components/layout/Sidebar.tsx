@@ -55,7 +55,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   const router = useRouter();
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
   const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
-  const { enabled: isQuotingEnabled } = useFeatureFlag('quoting-enabled', { defaultValue: false });
 
   // Track mode changes for transition animation
   const prevModeRef = useRef<NavMode>(mode);
@@ -233,16 +232,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         items: section.items.filter((item) => item.translationKey !== 'settings.tabs.language')
       })).filter((section) => section.items.length > 0);
 
-  const billingSections: NavigationSection[] = isQuotingEnabled
-    ? billingNavigationSections
-    : billingNavigationSections.map((section) => ({
-        ...section,
-        items: section.items.filter((item) =>
-          item.translationKey !== 'nav.billing.quotes' &&
-          item.translationKey !== 'nav.billing.quoteBusinessTemplates' &&
-          item.translationKey !== 'nav.billing.quoteLayouts'
-        )
-      })).filter((section) => section.items.length > 0);
+  const billingSections: NavigationSection[] = billingNavigationSections;
 
   const rawSectionsToRender: NavigationSection[] = isSettingsMode
     ? settingsSections

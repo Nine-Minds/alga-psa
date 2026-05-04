@@ -8,7 +8,6 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import { NumberingSettings } from '@alga-psa/reference-data/components';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import DefaultCurrencySettings from './DefaultCurrencySettings';
 import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
@@ -88,11 +87,8 @@ const BillingSettings: React.FC = () => {
   const { t } = useTranslation('msp/billing-settings');
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
-  const { enabled: isQuotingEnabled } = useFeatureFlag('quoting-enabled', { defaultValue: false });
 
-  const billingSectionIds: readonly string[] = isQuotingEnabled
-    ? ['general', 'quoting', 'tax', 'payments']
-    : ['general', 'tax', 'payments'];
+  const billingSectionIds: readonly string[] = ['general', 'quoting', 'tax', 'payments'];
 
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {

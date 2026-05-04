@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { IClient, IService } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 // Import all the components
 import ContractLinesOverview from './contract-lines/ContractLinesOverview';
@@ -57,19 +56,12 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const [isHydrated, setIsHydrated] = useState(false);
   const [error] = useState<string | null>(null);
 
-  const { enabled: isQuotingEnabled } = useFeatureFlag('quoting-enabled', { defaultValue: false });
-
   const tabDefinitions = useMemo(() => {
-    const translatedDefinitions = billingTabDefinitions.map((tab) => ({
+    return billingTabDefinitions.map((tab) => ({
       ...tab,
       label: t(tab.labelKey, { defaultValue: tab.label }),
     }));
-
-    if (isQuotingEnabled) return translatedDefinitions;
-    return translatedDefinitions.filter(
-      (tab) => tab.value !== 'quotes' && tab.value !== 'quote-templates' && tab.value !== 'quote-business-templates'
-    );
-  }, [isQuotingEnabled, t]);
+  }, [t]);
 
   const initialSearchParams = useMemo(() => {
     const params = new URLSearchParams();
