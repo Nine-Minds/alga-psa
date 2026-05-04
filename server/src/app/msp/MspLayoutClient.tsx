@@ -19,7 +19,6 @@ interface Props {
   needsOnboarding: boolean;
   initialSidebarCollapsed: boolean;
   initialLocale?: SupportedLocale | null;
-  i18nEnabled: boolean;
 }
 
 export function MspLayoutClient({
@@ -28,7 +27,6 @@ export function MspLayoutClient({
   needsOnboarding,
   initialSidebarCollapsed,
   initialLocale,
-  i18nEnabled
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -70,11 +68,7 @@ export function MspLayoutClient({
   );
 
   return (
-    <I18nWrapper
-      portal="msp"
-      initialLocale={i18nEnabled ? (initialLocale || undefined) : 'en'}
-      showPseudoLocales={i18nEnabled}
-    >
+    <I18nWrapper portal="msp" initialLocale={initialLocale || undefined}>
       {content}
     </I18nWrapper>
   );

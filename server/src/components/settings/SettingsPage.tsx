@@ -63,7 +63,6 @@ import { EmailSettings } from '@alga-psa/integrations/email/settings/entry';
 import { ProjectSettings } from '@alga-psa/projects/components';
 
 import { SecretsManagement } from './secrets';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTier, useTierFeature } from '@/context/TierContext';
 import { TIER_FEATURES, FEATURE_MINIMUM_TIER } from '@alga-psa/types';
 
@@ -96,7 +95,6 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
   const canUseEntraSync = useTierFeature(TIER_FEATURES.ENTRA_SYNC);
   const canUseCipp = useTierFeature(TIER_FEATURES.CIPP);
   const canUseTeams = useTierFeature(TIER_FEATURES.TEAMS_INTEGRATION);
@@ -169,12 +167,12 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
         </Card>
       ),
     },
-    ...(isMspI18nEnabled ? [{
+    {
       id: 'language',
       label: t('tabs.language'),
       icon: Globe,
       content: <MspLanguageSettings />,
-    }] : []),
+    },
     {
       id: 'ticketing',
       label: t('tabs.ticketing'),

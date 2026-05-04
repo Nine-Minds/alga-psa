@@ -8,7 +8,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { LOCALE_CONFIG, filterPseudoLocales, type SupportedLocale } from '@alga-psa/core/i18n/config';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { useFeatureFlag } from '../../hooks';
 
 interface ClientPortalLanguageConfigProps {
   /** Current tenant ID */
@@ -27,10 +26,9 @@ export function ClientPortalLanguageConfig({
   onSave,
   className = '',
 }: ClientPortalLanguageConfigProps) {
-  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
   const visibleLocales = useMemo(
-    () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales, !!isMspI18nEnabled),
-    [isMspI18nEnabled],
+    () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales),
+    [],
   );
   const [selectedLocale, setSelectedLocale] = useState<SupportedLocale>(currentDefaultLocale);
   const [isSaving, setIsSaving] = useState(false);

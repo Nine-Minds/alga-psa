@@ -138,15 +138,7 @@ describe('MSP dispatch/reports/admin/time-entry locale batch', () => {
     expect(readLocaleText('it', 'time-entry')).not.toMatch(accentAuditPattern);
   });
 
-  it('T043: MSP layout keeps locale loading behind the feature flag and representative translated surfaces keep English default values', () => {
-    const layout = readRepoFile('server/src/app/msp/layout.tsx');
-    const layoutClient = readRepoFile('server/src/app/msp/MspLayoutClient.tsx');
-
-    expect(layout).toContain("'msp-i18n-enabled'");
-    expect(layout).toMatch(/const locale = isMspI18nEnabled \? await getHierarchicalLocaleAction\(\) : null;/);
-    expect(layoutClient).toContain("initialLocale={i18nEnabled ? (initialLocale || undefined) : 'en'}");
-    expect(layoutClient).toContain('showPseudoLocales={i18nEnabled}');
-
+  it('T043: representative translated surfaces use the right namespaces and keep English default values', () => {
     const representativeFiles = [
       ['packages/scheduling/src/components/technician-dispatch/WorkItemListPanel.tsx', "useTranslation('msp/dispatch')"],
       ['packages/billing/src/components/billing-dashboard/reports/ContractReports.tsx', "useTranslation('msp/reports')"],

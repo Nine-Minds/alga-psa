@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { LOCALE_CONFIG, filterPseudoLocales, type SupportedLocale } from '../lib/i18n/config';
 import { useI18n, useTranslation } from '../lib/i18n/client';
-import { useFeatureFlag } from '../hooks';
 import CustomSelect, { SelectOption } from './CustomSelect';
 import { toast } from 'react-hot-toast';
 
@@ -47,10 +46,9 @@ export function LanguagePreference({
 }: LanguagePreferenceProps) {
   const { locale: currentLocale, setLocale } = useI18n();
   const { t } = useTranslation('common');
-  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
   const visibleLocales = useMemo(
-    () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales, !!isMspI18nEnabled),
-    [isMspI18nEnabled],
+    () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales),
+    [],
   );
   const fieldLabel = label ?? t('language.preference.label', 'Language Preference');
   const fieldHelperText = helperText ?? t(

@@ -23,7 +23,6 @@ import SidebarBottomMenuItem from './SidebarBottomMenuItem';
 import GitHubStarButton from './GitHubStarButton';
 import type { MenuItem } from '@/config/menuConfig';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -54,7 +53,6 @@ const Sidebar: React.FC<SidebarProps> = ({
   const searchParams = useSearchParams();
   const router = useRouter();
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
-  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
 
   // Track mode changes for transition animation
   const prevModeRef = useRef<NavMode>(mode);
@@ -225,12 +223,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   // Determine which sections to render based on mode
-  const settingsSections: NavigationSection[] = isMspI18nEnabled
-    ? settingsNavigationSections
-    : settingsNavigationSections.map((section) => ({
-        ...section,
-        items: section.items.filter((item) => item.translationKey !== 'settings.tabs.language')
-      })).filter((section) => section.items.length > 0);
+  const settingsSections: NavigationSection[] = settingsNavigationSections;
 
   const billingSections: NavigationSection[] = billingNavigationSections;
 
