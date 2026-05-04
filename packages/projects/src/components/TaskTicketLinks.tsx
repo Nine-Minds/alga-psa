@@ -38,6 +38,7 @@ interface TaskTicketLinksProps {
   initialLinks?: IProjectTicketLinkWithDetails[];
   users: IUser[];
   onLinksChange?: (links: IProjectTicketLinkWithDetails[]) => void;
+  onInitialLinksLoaded?: (links: IProjectTicketLinkWithDetails[]) => void;
   onTicketCreated?: (ticket: { ticket_id: string; ticket_number: string; title: string }) => void;
   taskData?: {
     task_name: string;
@@ -79,6 +80,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
   initialLinks = undefined,
   users,
   onLinksChange,
+  onInitialLinksLoaded,
   onTicketCreated,
   taskData
 }, ref) {
@@ -259,24 +261,29 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
     }
   };
 
-  // Only fetch links if initialLinks is empty and taskId is available
+  // Refresh links from the server when the task already has cached links
+  // (e.g. opened from the kanban board). The cached copy may be stale or
+  // filtered differently than the user's current permissions, so we re-fetch
+  // and report the result via onInitialLinksLoaded so the dirty-check can use
+  // the post-fetch state as its baseline rather than the stale prop.
   useEffect(() => {
     let mounted = true;
 
     const fetchLinks = async () => {
-      // Skip fetching if we already have initialLinks
       if (taskId && initialLinks) {
         try {
           const links = await getTaskTicketLinksAction(taskId);
           if (mounted) {
             setTaskTicketLinks(links || []);
             onLinksChange?.(links || []);
+            onInitialLinksLoaded?.(links || []);
           }
         } catch (error) {
           console.error('Error fetching ticket links:', error);
           if (mounted) {
             setTaskTicketLinks([]);
             onLinksChange?.([]);
+            onInitialLinksLoaded?.([]);
           }
         }
       }
@@ -286,7 +293,7 @@ const TaskTicketLinks = forwardRef<TaskTicketLinksRef, TaskTicketLinksProps>(fun
     return () => {
       mounted = false;
     };
-  }, [taskId, onLinksChange, initialLinks]);
+  }, [taskId, onLinksChange, onInitialLinksLoaded, initialLinks]);
 
   const filteredTicketOptions = availableTickets
     .filter(ticket => {
