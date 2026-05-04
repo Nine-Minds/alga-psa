@@ -587,7 +587,8 @@
       "row": "Wiersz",
       "phase": "Faza",
       "task": "Zadanie",
-      "issues": "Problemy"
+      "issues": "Problemy",
+      "valid": "Prawidłowe"
     },
     "fields": {
       "task_name": "Nazwa zadania *",
@@ -602,7 +603,24 @@
       "task_type": "Typ zadania",
       "status": "Status",
       "tags": "Tagi"
-    }
+    },
+    "fallbackPhaseLabel": "Domyślna faza dla zadań bez phase_name",
+    "fallbackPhaseHelp": "{{count}} wiersz(y) bez fazy. Wybierz istniejącą fazę lub pozostaw wartość domyślną, aby utworzyć nową.",
+    "fallbackPhaseCreateDefault": "Utwórz nową fazę: „{{name}}\"",
+    "fallbackStatusLabel": "Domyślny status dla zadań bez statusu",
+    "fallbackStatusHelp": "{{count}} wiersz(y) bez statusu. Wybrany status zostanie przypisany do tych zadań.",
+    "rowResultsTitle": "Wyniki wierszy",
+    "rowFilterLabel": "Pokaż:",
+    "rowFilterAll": "Wszystkie wiersze ({{count}})",
+    "rowFilterImported": "Zostaną zaimportowane ({{count}})",
+    "rowFilterSkipped": "Zostaną pominięte ({{count}})",
+    "rowsToBeSkippedCount": "{{count}} wiersz(y) zostanie pominiętych",
+    "rowsToBeSkippedHelp": "ponieważ nie przeszły walidacji. Użyj filtra powyżej, aby je przejrzeć.",
+    "statusUnmatchedSuffix": "Brak dopasowania",
+    "statusUnmatchedTooltip": "Status nie pasuje do żadnego istniejącego statusu dla tej fazy. Rozwiąż to w krokach mapowania przed importem.",
+    "statusFallbackSuffix": "Domyślny",
+    "statusFallbackTooltip": "Używany jest domyślny status zastępczy dla tej fazy.",
+    "inPhaseBadge": "w {{phase}}"
   },
   "dialogs": {
     "moveTask": {

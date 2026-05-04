@@ -587,7 +587,8 @@
       "row": "Rij",
       "phase": "Fase",
       "task": "Taak",
-      "issues": "Problemen"
+      "issues": "Problemen",
+      "valid": "Geldig"
     },
     "fields": {
       "task_name": "Taaknaam *",
@@ -602,7 +603,24 @@
       "task_type": "Taaktype",
       "status": "Status",
       "tags": "Labels"
-    }
+    },
+    "fallbackPhaseLabel": "Standaardfase voor taken zonder phase_name",
+    "fallbackPhaseHelp": "{{count}} rij(en) zonder fase. Kies een bestaande fase of behoud de standaard om er een te maken.",
+    "fallbackPhaseCreateDefault": "Nieuwe fase maken: \"{{name}}\"",
+    "fallbackStatusLabel": "Standaardstatus voor taken zonder status",
+    "fallbackStatusHelp": "{{count}} rij(en) zonder status. De geselecteerde status wordt aan die taken toegewezen.",
+    "rowResultsTitle": "Rijresultaten",
+    "rowFilterLabel": "Tonen:",
+    "rowFilterAll": "Alle rijen ({{count}})",
+    "rowFilterImported": "Worden geïmporteerd ({{count}})",
+    "rowFilterSkipped": "Worden overgeslagen ({{count}})",
+    "rowsToBeSkippedCount": "{{count}} rij(en) worden overgeslagen",
+    "rowsToBeSkippedHelp": "omdat ze de validatie niet hebben doorstaan. Gebruik het filter hierboven om ze te bekijken.",
+    "statusUnmatchedSuffix": "Geen overeenkomst",
+    "statusUnmatchedTooltip": "Status komt niet overeen met een bestaande status voor deze fase. Los op in de mappingstappen voor de import.",
+    "statusFallbackSuffix": "Standaard",
+    "statusFallbackTooltip": "De standaard fallback-status voor deze fase wordt gebruikt.",
+    "inPhaseBadge": "in {{phase}}"
   },
   "dialogs": {
     "moveTask": {

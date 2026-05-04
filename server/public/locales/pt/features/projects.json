@@ -587,7 +587,8 @@
       "row": "Row",
       "phase": "Phase",
       "task": "Task",
-      "issues": "Issues"
+      "issues": "Issues",
+      "valid": "Válido"
     },
     "fields": {
       "task_name": "Task Name *",
@@ -602,7 +603,24 @@
       "task_type": "Task Type",
       "status": "Status",
       "tags": "Tags"
-    }
+    },
+    "fallbackPhaseLabel": "Fase padrão para tarefas sem phase_name",
+    "fallbackPhaseHelp": "{{count}} linha(s) sem fase. Escolha uma fase existente ou mantenha o padrão para criar uma.",
+    "fallbackPhaseCreateDefault": "Criar nova fase: \"{{name}}\"",
+    "fallbackStatusLabel": "Status padrão para tarefas sem status",
+    "fallbackStatusHelp": "{{count}} linha(s) sem status. O status selecionado será atribuído a essas tarefas.",
+    "rowResultsTitle": "Resultados das linhas",
+    "rowFilterLabel": "Mostrar:",
+    "rowFilterAll": "Todas as linhas ({{count}})",
+    "rowFilterImported": "Serão importadas ({{count}})",
+    "rowFilterSkipped": "Serão ignoradas ({{count}})",
+    "rowsToBeSkippedCount": "{{count}} linha(s) serão ignoradas",
+    "rowsToBeSkippedHelp": "porque falharam na validação. Use o filtro acima para revisá-las.",
+    "statusUnmatchedSuffix": "Sem correspondência",
+    "statusUnmatchedTooltip": "O status não corresponde a nenhum status existente para esta fase. Resolva nas etapas de mapeamento antes de importar.",
+    "statusFallbackSuffix": "Padrão",
+    "statusFallbackTooltip": "Usando o status padrão de fallback para esta fase.",
+    "inPhaseBadge": "em {{phase}}"
   },
   "dialogs": {
     "moveTask": {

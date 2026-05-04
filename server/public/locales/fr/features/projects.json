@@ -587,7 +587,8 @@
       "row": "Ligne",
       "phase": "Phase",
       "task": "Tâche",
-      "issues": "Problèmes"
+      "issues": "Problèmes",
+      "valid": "Valide"
     },
     "fields": {
       "task_name": "Nom de la tâche *",
@@ -602,7 +603,24 @@
       "task_type": "Type de tâche",
       "status": "Statut",
       "tags": "Étiquettes"
-    }
+    },
+    "fallbackPhaseLabel": "Phase par défaut pour les tâches sans phase_name",
+    "fallbackPhaseHelp": "{{count}} ligne(s) sans phase. Choisissez une phase existante ou conservez la valeur par défaut pour en créer une.",
+    "fallbackPhaseCreateDefault": "Créer une nouvelle phase : « {{name}} »",
+    "fallbackStatusLabel": "Statut par défaut pour les tâches sans statut",
+    "fallbackStatusHelp": "{{count}} ligne(s) sans statut. Le statut sélectionné sera attribué à ces tâches.",
+    "rowResultsTitle": "Résultats par ligne",
+    "rowFilterLabel": "Afficher :",
+    "rowFilterAll": "Toutes les lignes ({{count}})",
+    "rowFilterImported": "Seront importées ({{count}})",
+    "rowFilterSkipped": "Seront ignorées ({{count}})",
+    "rowsToBeSkippedCount": "{{count}} ligne(s) seront ignorées",
+    "rowsToBeSkippedHelp": "car elles n'ont pas passé la validation. Utilisez le filtre ci-dessus pour les examiner.",
+    "statusUnmatchedSuffix": "Non apparié",
+    "statusUnmatchedTooltip": "Le statut ne correspond à aucun statut existant pour cette phase. À résoudre dans les étapes de mappage avant l'import.",
+    "statusFallbackSuffix": "Par défaut",
+    "statusFallbackTooltip": "Utilisation du statut de repli par défaut pour cette phase.",
+    "inPhaseBadge": "dans {{phase}}"
   },
   "dialogs": {
     "moveTask": {
