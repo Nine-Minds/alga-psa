@@ -27,7 +27,7 @@ import { toast } from 'react-hot-toast';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
-import { getUserAvatarUrlAction, getContactAvatarUrlAction, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { getContactAvatarUrlAction, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getUserContactId } from '@alga-psa/user-composition/actions';
 import { utcToLocal, formatDateTime, getUserTimeZone } from '@alga-psa/core';
 import { getTicketingDisplaySettings } from '../../actions/ticketDisplaySettings';
@@ -293,37 +293,63 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
     fetchScheduledHours();
   }, [ticket.ticket_id, userId]);
 
-  // Fetch avatar URLs for primary agent, additional agents, and contact
+  // Fetch avatar URLs for primary + additional agents in a single batched call.
   useEffect(() => {
+    if (!tenant) {
+      setPrimaryAgentAvatarUrl(null);
+      setAdditionalAgentAvatarUrls({});
+      return;
+    }
+
+    const additionalAgentIds = additionalAgents
+      .map(a => a.additional_user_id)
+      .filter((id): id is string => Boolean(id));
+
+    const userIds = Array.from(
+      new Set(
+        [ticket.assigned_to, ...additionalAgentIds].filter(
+          (id): id is string => Boolean(id),
+        ),
+      ),
+    );
+
+    if (userIds.length === 0) {
+      setPrimaryAgentAvatarUrl(null);
+      setAdditionalAgentAvatarUrls({});
+      return;
+    }
+
+    let cancelled = false;
     const fetchAvatarUrls = async () => {
-      if (!tenant) return;
+      try {
+        const result = await getUserAvatarUrlsBatchAction(userIds, tenant);
+        if (cancelled) return;
 
-      // Fetch primary agent avatar URL
-      if (ticket.assigned_to) {
-        try {
-          const avatarUrl = await getUserAvatarUrlAction(ticket.assigned_to, tenant);
-          setPrimaryAgentAvatarUrl(avatarUrl);
-        } catch (error) {
-          console.error('Error fetching primary agent avatar URL:', error);
-        }
-      }
-
-      // Fetch additional agents avatar URLs
-      const avatarUrls: Record<string, string | null> = {};
-      for (const agent of additionalAgents) {
-        if (agent.additional_user_id) {
-          try {
-            const avatarUrl = await getUserAvatarUrlAction(agent.additional_user_id, tenant);
-            avatarUrls[agent.additional_user_id] = avatarUrl;
-          } catch (error) {
-            console.error(`Error fetching avatar URL for agent ${agent.additional_user_id}:`, error);
+        const lookup = (id: string): string | null => {
+          if (result && typeof (result as Map<string, string | null>).get === 'function') {
+            return (result as Map<string, string | null>).get(id) ?? null;
           }
+          return (result as unknown as Record<string, string | null>)[id] ?? null;
+        };
+
+        setPrimaryAgentAvatarUrl(ticket.assigned_to ? lookup(ticket.assigned_to) : null);
+
+        const avatarUrls: Record<string, string | null> = {};
+        for (const id of additionalAgentIds) {
+          avatarUrls[id] = lookup(id);
         }
+        setAdditionalAgentAvatarUrls(avatarUrls);
+      } catch (error) {
+        if (cancelled) return;
+        console.error('Error fetching agent avatar URLs:', error);
       }
-      setAdditionalAgentAvatarUrls(avatarUrls);
     };
 
     fetchAvatarUrls();
+
+    return () => {
+      cancelled = true;
+    };
   }, [ticket.assigned_to, additionalAgents, tenant]);
 
   // Fetch contact avatar URL
