@@ -12,7 +12,6 @@ import { TicketResponseState } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '@alga-psa/ui/components';
-import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction, searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
@@ -38,7 +37,6 @@ import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import type { SlaTimerStatus } from '@alga-psa/types';
 import { SlaStatusBadge } from '@alga-psa/ui/components/sla';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import type { ITeam } from '@alga-psa/types';
 import { useSession } from 'next-auth/react';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../lib/ticketRichText';
@@ -120,7 +118,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 }) => {
   const { data: session } = useSession();
   const { t } = useTranslation('features/tickets');
-  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const { deleteDocument } = useDocumentsCrossFeature();
   // Use initialCategories from server to avoid timing issues on first render
   const [categories, setCategories] = useState<ITicketCategory[]>(initialCategories);
@@ -972,55 +969,40 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             <div>
               <h5 className="font-bold mb-2">{t('fields.assignedTo', 'Assigned To')}</h5>
               <div className="flex items-center gap-1.5">
-                {teamsV2Enabled ? (
-                  <UserAndTeamPicker
-                    value={pendingChanges.assigned_to ?? originalTicketValues.assigned_to ?? ''}
-                    onValueChange={(value) => {
-                      handlePendingChange('assigned_to', value);
-                      // Clear team when switching to an individual agent
-                      if (pendingTeamId) {
-                        setPendingTeamId(null);
-                      }
-                      if (ticket.assigned_team_id) {
-                        setPendingTeamRemoval(true);
-                      }
-                    }}
-                    onTeamSelect={async (teamId) => {
-                      // Defer team assignment to Save Changes (consistent with assigned_to)
-                      setPendingTeamId(teamId);
-                      // Also set assigned_to to the team lead as a pending change
-                      const selectedTeam = teams.find(t => t.team_id === teamId);
-                      const leadId = selectedTeam?.manager_id || selectedTeam?.members?.find(m => m.role === 'lead')?.user_id;
-                      if (leadId) {
-                        handlePendingChange('assigned_to', leadId);
-                      }
-                    }}
-                    users={usersList}
-                    teams={teams}
-                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                    getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
-                    labelStyle="none"
-                    buttonWidth="fit"
-                    size="sm"
-                    className="!w-fit"
-                    placeholder={t('info.notAssigned', 'Not assigned')}
-                    disabled={workflowLocked}
-                  />
-                ) : (
-                  <UserPicker
-                    value={pendingChanges.assigned_to ?? originalTicketValues.assigned_to ?? ''}
-                    onValueChange={(value) => handlePendingChange('assigned_to', value)}
-                    users={usersList}
-                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                    labelStyle="none"
-                    buttonWidth="fit"
-                    size="sm"
-                    className="!w-fit"
-                    placeholder={t('info.notAssigned', 'Not assigned')}
-                    disabled={workflowLocked}
-                  />
-                )}
-                {teamsV2Enabled && (() => {
+                <UserAndTeamPicker
+                  value={pendingChanges.assigned_to ?? originalTicketValues.assigned_to ?? ''}
+                  onValueChange={(value) => {
+                    handlePendingChange('assigned_to', value);
+                    // Clear team when switching to an individual agent
+                    if (pendingTeamId) {
+                      setPendingTeamId(null);
+                    }
+                    if (ticket.assigned_team_id) {
+                      setPendingTeamRemoval(true);
+                    }
+                  }}
+                  onTeamSelect={async (teamId) => {
+                    // Defer team assignment to Save Changes (consistent with assigned_to)
+                    setPendingTeamId(teamId);
+                    // Also set assigned_to to the team lead as a pending change
+                    const selectedTeam = teams.find(t => t.team_id === teamId);
+                    const leadId = selectedTeam?.manager_id || selectedTeam?.members?.find(m => m.role === 'lead')?.user_id;
+                    if (leadId) {
+                      handlePendingChange('assigned_to', leadId);
+                    }
+                  }}
+                  users={usersList}
+                  teams={teams}
+                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                  getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                  labelStyle="none"
+                  buttonWidth="fit"
+                  size="sm"
+                  className="!w-fit"
+                  placeholder={t('info.notAssigned', 'Not assigned')}
+                  disabled={workflowLocked}
+                />
+                {(() => {
                   // Use pending team if set, otherwise saved team — but respect pending removal
                   const effectiveTeamId = pendingTeamId || (pendingTeamRemoval ? null : ticket.assigned_team_id);
                   if (!effectiveTeamId) return null;

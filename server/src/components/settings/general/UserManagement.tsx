@@ -48,7 +48,6 @@ import { LicenseUsage } from '@alga-psa/licensing/lib/get-license-usage';
 import { validateContactName, validateEmailAddress, validatePassword, getPasswordRequirements } from '@alga-psa/validation';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import OrgChart from './org-chart/OrgChart';
 import { QuickAddContact } from '@alga-psa/clients/components';
@@ -109,7 +108,6 @@ const UserManagement = (): React.JSX.Element => {
   const [contactValidationError, setContactValidationError] = useState<string | null>(null);
   const [isCopyingPortalLink, setIsCopyingPortalLink] = useState(false);
   const [userView, setUserView] = useState<'list' | 'org'>('list');
-  const { enabled: isTeamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const { isSolo } = useTier();
   const soloMspUserLimitReached = portalType === 'msp' && isSolo && (licenseUsage?.used ?? 0) >= 1;
   const soloMspLimitMessage = 'Solo plan is limited to 1 user. Upgrade to Pro to add more users.';
@@ -177,10 +175,10 @@ const UserManagement = (): React.JSX.Element => {
   }, [portalType]);
 
   useEffect(() => {
-    if (!isTeamsV2Enabled || portalType !== 'msp') {
+    if (portalType !== 'msp') {
       setUserView('list');
     }
-  }, [isTeamsV2Enabled, portalType]);
+  }, [portalType]);
 
   useEffect(() => {
     if (portalType === 'client') {
@@ -708,7 +706,7 @@ const fetchContacts = async (): Promise<void> => {
                 placeholder={t('users.form.fields.selectRole')}
               />
             </div>
-            {isTeamsV2Enabled && portalType === 'msp' && (
+            {portalType === 'msp' && (
               <div>
                 <Label>{t('users.form.fields.reportsTo')} <span className="text-sm text-muted-foreground font-normal">{t('users.form.fields.reportsToOptional')}</span></Label>
                 <UserPicker
@@ -964,7 +962,7 @@ const fetchContacts = async (): Promise<void> => {
             </AlertDescription>
           </Alert>
         )}
-        {isTeamsV2Enabled && portalType === 'msp' ? (
+        {portalType === 'msp' ? (
           <>
             <div className="flex justify-between mb-4">
               <div className="flex gap-6 items-center">

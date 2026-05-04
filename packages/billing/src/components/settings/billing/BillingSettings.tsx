@@ -205,7 +205,7 @@ const BillingSettings: React.FC = () => {
         </div>
       ),
     },
-    ...(isQuotingEnabled ? [{
+    {
       id: 'quoting',
       label: t('tabs.quoting', { defaultValue: 'Quoting' }),
       content: (
@@ -225,7 +225,7 @@ const BillingSettings: React.FC = () => {
           </Card>
         </div>
       ),
-    }] : []),
+    },
     {
       id: 'tax',
       label: t('tabs.tax', { defaultValue: 'Tax' }),

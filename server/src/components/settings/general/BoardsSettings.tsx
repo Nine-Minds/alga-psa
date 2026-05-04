@@ -19,7 +19,6 @@ import { getSlaPolicies } from '@alga-psa/sla/actions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { ISlaPolicy } from '@alga-psa/sla/types';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -167,7 +166,6 @@ const BoardsSettings: React.FC = () => {
   const [teams, setTeams] = useState<ITeam[]>([]);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [slaPolicies, setSlaPolicies] = useState<ISlaPolicy[]>([]);
-  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [error, setError] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
@@ -249,10 +247,8 @@ const BoardsSettings: React.FC = () => {
     fetchUsers();
     fetchPriorities();
     fetchSlaPolicies();
-    if (teamsV2Enabled) {
-      fetchTeams();
-    }
-  }, [teamsV2Enabled]);
+    fetchTeams();
+  }, []);
 
   // Prevent saving a mismatched default priority when toggling ITIL compliance on new boards.
   useEffect(() => {
@@ -1071,40 +1067,26 @@ const BoardsSettings: React.FC = () => {
             </div>
             <div>
               <Label htmlFor="default-assigned-agent-picker">{t('ticketing.boards.fields.defaultAssignedAgent.label')}</Label>
-              {teamsV2Enabled ? (
-                <UserAndTeamPicker
-                  id="default-assigned-agent-picker"
-                  value={formData.default_assigned_to}
-                  onValueChange={(value) => setFormData({ ...formData, default_assigned_to: value, default_assigned_team_id: '' })}
-                  onTeamSelect={(teamId) => {
-                    const team = teams.find(t => t.team_id === teamId);
-                    setFormData({
-                      ...formData,
-                      default_assigned_team_id: teamId,
-                      default_assigned_to: team?.manager_id || ''
-                    });
-                  }}
-                  users={users}
-                  teams={teams}
-                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                  getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
-                  placeholder={t('ticketing.boards.fields.defaultAssignedAgent.placeholder')}
-                  buttonWidth="full"
-                  labelStyle="none"
-                />
-              ) : (
-                <UserPicker
-                  id="default-assigned-agent-picker"
-                  value={formData.default_assigned_to}
-                  onValueChange={(value) => setFormData({ ...formData, default_assigned_to: value })}
-                  users={users}
-                  getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                  userTypeFilter="internal"
-                  placeholder={t('ticketing.boards.fields.defaultAssignedAgent.placeholder')}
-                  buttonWidth="full"
-                  labelStyle="none"
-                />
-              )}
+              <UserAndTeamPicker
+                id="default-assigned-agent-picker"
+                value={formData.default_assigned_to}
+                onValueChange={(value) => setFormData({ ...formData, default_assigned_to: value, default_assigned_team_id: '' })}
+                onTeamSelect={(teamId) => {
+                  const team = teams.find(t => t.team_id === teamId);
+                  setFormData({
+                    ...formData,
+                    default_assigned_team_id: teamId,
+                    default_assigned_to: team?.manager_id || ''
+                  });
+                }}
+                users={users}
+                teams={teams}
+                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                placeholder={t('ticketing.boards.fields.defaultAssignedAgent.placeholder')}
+                buttonWidth="full"
+                labelStyle="none"
+              />
               <p className="text-xs text-muted-foreground mt-1">
                 {t('ticketing.boards.fields.defaultAssignedAgent.help')}
               </p>

@@ -15,7 +15,6 @@ import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import type { GetTeamAvatarUrlsBatch } from '@alga-psa/ui/components/UserAndTeamPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IContact, ITeam, IUser } from '@alga-psa/types';
 import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
@@ -59,7 +58,6 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
   getTeamAvatarUrlsBatch,
 }) => {
   const { t } = useTranslation('features/tickets');
-  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [watchListInput, setWatchListInput] = useState('');
   const [watcherAddMode, setWatcherAddMode] = useState<WatcherAddMode>('client-contact');
   const [contactScope, setContactScope] = useState<ContactScope>('client');
@@ -407,7 +405,7 @@ const TicketWatchListCard: React.FC<TicketWatchListCardProps> = ({
               ) : null}
 
               {watcherAddMode === 'internal-user' ? (
-                teamsV2Enabled && teams.length > 0 ? (
+                teams.length > 0 ? (
                   <UserAndTeamPicker
                     id={`${id}-user-picker`}
                     value={selectedUserId}

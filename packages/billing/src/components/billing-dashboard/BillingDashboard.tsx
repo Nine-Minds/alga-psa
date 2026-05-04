@@ -153,20 +153,15 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           <AccountingExportsTab />
         </Tabs.Content>
 
-        {isQuotingEnabled && (
-          <Tabs.Content value="quotes">
-            <QuotesTab />
-          </Tabs.Content>
-        )}
+        <Tabs.Content value="quotes">
+          <QuotesTab />
+        </Tabs.Content>
 
-        {isQuotingEnabled && (
-          <Tabs.Content value="quote-templates">
-            <QuoteDocumentTemplatesPage />
-          </Tabs.Content>
-        )}
+        <Tabs.Content value="quote-templates">
+          <QuoteDocumentTemplatesPage />
+        </Tabs.Content>
 
-        {isQuotingEnabled && (
-          <Tabs.Content value="quote-business-templates">
+        <Tabs.Content value="quote-business-templates">
             <div className="space-y-4">
               <h2 className="text-2xl font-bold">
                 {t('dashboard.quoteTemplatesHeading', { defaultValue: 'Quote Templates' })}
@@ -177,8 +172,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
                 onNewTemplate={() => router.push('/msp/billing?tab=quotes&quoteId=new&isTemplate=true')}
               />
             </div>
-          </Tabs.Content>
-        )}
+        </Tabs.Content>
 
         <Tabs.Content value="reports">
           <ContractReports />

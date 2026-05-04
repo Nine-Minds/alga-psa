@@ -16,7 +16,6 @@ import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, Calendar as Calenda
 import { ContentCard } from '@alga-psa/ui/components';
 import { formatMinutesAsHoursAndMinutes } from '@alga-psa/core';
 import styles from './TicketDetails.module.css';
-import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
@@ -39,7 +38,6 @@ import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
 import { useDrawer } from '@alga-psa/ui';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -189,7 +187,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const { openDrawer } = useDrawer();
   const { renderQuickAddContact } = useQuickAddClient();
   const { t } = useTranslation('features/tickets');
-  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const liveTicketTimerEnabled = isLiveTicketTimerEnabled ?? isBoardLiveTicketTimerEnabled(board);
   const [showContactPicker, setShowContactPicker] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
@@ -942,7 +939,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             </div>
           )}
         </div>
-        {teamsV2Enabled && ticket.assigned_team_id && (
+        {ticket.assigned_team_id && (
           <div className="mb-4">
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1 bg-gray-100 rounded-full pl-1 pr-2 py-1">
@@ -1040,101 +1037,61 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           {/* Additional Agents */}
           <div>
             <h5 className="font-bold mb-2">{t('properties.additionalAgents', 'Additional Agents')}</h5>
-            {teamsV2Enabled ? (
-              <MultiUserAndTeamPicker
-                id={`${id}-additional-agents`}
-                values={additionalAgents.filter(a => a.additional_user_id).map(a => a.additional_user_id!)}
-                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
-                teams={teams}
-                teamSectionLabel={t('quickAdd.addTeamMembers', 'Add Team Members')}
-                onTeamValuesChange={(selectedTeamIds) => {
-                  // When a team is selected, assign the team — assignTeamToTicket already
-                  // expands team members into ticket_resources, so we must NOT also call
-                  // onAddAgent for each member (that would cause duplicate-insert errors).
-                  for (const teamId of selectedTeamIds) {
-                    if (ticket.assigned_team_id && onRemoveTeamAssignment) {
-                      // A team is already assigned — show the removal dialog first,
-                      // then assign the new team after the user confirms.
-                      setPendingSwitchTeamId(teamId);
-                      setIsRemoveTeamDialogOpen(true);
-                    } else if (onAssignTeam) {
-                      onAssignTeam(teamId);
+            <MultiUserAndTeamPicker
+              id={`${id}-additional-agents`}
+              values={additionalAgents.filter(a => a.additional_user_id).map(a => a.additional_user_id!)}
+              getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+              getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+              teams={teams}
+              teamSectionLabel={t('quickAdd.addTeamMembers', 'Add Team Members')}
+              onTeamValuesChange={(selectedTeamIds) => {
+                // When a team is selected, assign the team — assignTeamToTicket already
+                // expands team members into ticket_resources, so we must NOT also call
+                // onAddAgent for each member (that would cause duplicate-insert errors).
+                for (const teamId of selectedTeamIds) {
+                  if (ticket.assigned_team_id && onRemoveTeamAssignment) {
+                    // A team is already assigned — show the removal dialog first,
+                    // then assign the new team after the user confirms.
+                    setPendingSwitchTeamId(teamId);
+                    setIsRemoveTeamDialogOpen(true);
+                  } else if (onAssignTeam) {
+                    onAssignTeam(teamId);
+                  }
+                }
+              }}
+              onValuesChange={async (newUserIds) => {
+                if (isProcessingAgentsRef.current) {
+                  return;
+                }
+                isProcessingAgentsRef.current = true;
+
+                try {
+                  const currentUserIds = additionalAgents
+                    .filter(a => a.additional_user_id)
+                    .map(a => a.additional_user_id!);
+
+                  const addedUserIds = newUserIds.filter(id => !currentUserIds.includes(id));
+                  const removedUserIds = currentUserIds.filter(id => !newUserIds.includes(id));
+
+                  for (const userId of addedUserIds) {
+                    await onAddAgent(userId);
+                  }
+
+                  for (const userId of removedUserIds) {
+                    const agent = additionalAgents.find(a => a.additional_user_id === userId);
+                    if (agent?.assignment_id) {
+                      await onRemoveAgent(agent.assignment_id);
                     }
                   }
-                }}
-                onValuesChange={async (newUserIds) => {
-                  if (isProcessingAgentsRef.current) {
-                    return;
-                  }
-                  isProcessingAgentsRef.current = true;
-
-                  try {
-                    const currentUserIds = additionalAgents
-                      .filter(a => a.additional_user_id)
-                      .map(a => a.additional_user_id!);
-
-                    const addedUserIds = newUserIds.filter(id => !currentUserIds.includes(id));
-                    const removedUserIds = currentUserIds.filter(id => !newUserIds.includes(id));
-
-                    for (const userId of addedUserIds) {
-                      await onAddAgent(userId);
-                    }
-
-                    for (const userId of removedUserIds) {
-                      const agent = additionalAgents.find(a => a.additional_user_id === userId);
-                      if (agent?.assignment_id) {
-                        await onRemoveAgent(agent.assignment_id);
-                      }
-                    }
-                  } finally {
-                    isProcessingAgentsRef.current = false;
-                  }
-                }}
-                users={availableAgents.filter(agent => agent.user_id !== ticket.assigned_to)}
-                size="sm"
-                placeholder={t('properties.selectAdditionalAgents', 'Select additional agents...')}
-                onUserClick={onAgentClick}
-              />
-            ) : (
-              <MultiUserPicker
-                id={`${id}-additional-agents`}
-                values={additionalAgents.filter(a => a.additional_user_id).map(a => a.additional_user_id!)}
-                getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                onValuesChange={async (newUserIds) => {
-                  if (isProcessingAgentsRef.current) {
-                    return;
-                  }
-                  isProcessingAgentsRef.current = true;
-
-                  try {
-                    const currentUserIds = additionalAgents
-                      .filter(a => a.additional_user_id)
-                      .map(a => a.additional_user_id!);
-
-                    const addedUserIds = newUserIds.filter(id => !currentUserIds.includes(id));
-                    const removedUserIds = currentUserIds.filter(id => !newUserIds.includes(id));
-
-                    for (const userId of addedUserIds) {
-                      await onAddAgent(userId);
-                    }
-
-                    for (const userId of removedUserIds) {
-                      const agent = additionalAgents.find(a => a.additional_user_id === userId);
-                      if (agent?.assignment_id) {
-                        await onRemoveAgent(agent.assignment_id);
-                      }
-                    }
-                  } finally {
-                    isProcessingAgentsRef.current = false;
-                  }
-                }}
-                users={availableAgents.filter(agent => agent.user_id !== ticket.assigned_to)}
-                size="sm"
-                placeholder={t('properties.selectAdditionalAgents', 'Select additional agents...')}
-                onUserClick={onAgentClick}
-              />
-            )}
+                } finally {
+                  isProcessingAgentsRef.current = false;
+                }
+              }}
+              users={availableAgents.filter(agent => agent.user_id !== ticket.assigned_to)}
+              size="sm"
+              placeholder={t('properties.selectAdditionalAgents', 'Select additional agents...')}
+              onUserClick={onAgentClick}
+            />
           </div>
         </div>
       </ContentCard>
@@ -1165,7 +1122,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
       {surveySummaryCard}
 
     </div>
-      {teamsV2Enabled && ticket.assigned_team_id && (() => {
+      {ticket.assigned_team_id && (() => {
         const removeTeamFooter = (
           <div className="flex justify-end space-x-2">
             <Button
