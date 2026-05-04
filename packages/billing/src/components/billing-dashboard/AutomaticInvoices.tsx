@@ -53,7 +53,7 @@ interface AutomaticInvoicesProps {
   refreshTrigger?: number;
 }
 
-type AutomaticInvoiceGroupLabelKey = 'canCombine' | 'separate' | 'blocked' | 'notReady';
+type AutomaticInvoiceGroupLabelKey = 'ready' | 'canCombine' | 'separate' | 'blocked' | 'notReady';
 type AutomaticInvoiceIncompatibilityReasonKey =
   | 'invoiceWindowDiffers'
   | 'clientDiffers'
@@ -93,6 +93,7 @@ type RecurringSelectionGroup = {
 };
 
 const AUTOMATIC_INVOICE_GROUP_LABELS: Record<AutomaticInvoiceGroupLabelKey, string> = {
+  ready: 'Ready to invoice',
   canCombine: 'Can combine into 1 invoice',
   separate: 'Must invoice separately',
   blocked: 'Contains blocked items',
@@ -115,7 +116,7 @@ const getParentGroupSummary = ({
 } => {
   if (isCombinable) {
     return {
-      labelKey: 'canCombine',
+      labelKey: childCount > 1 ? 'canCombine' : 'ready',
       className: 'border-border/70 text-foreground',
     };
   }
@@ -1581,6 +1582,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 	              {
 	                title: t('automaticInvoices.ready.columns.group', { defaultValue: 'Group' }),
 	                dataIndex: 'parentGroupKey',
+                    width: '18rem',
 	                render: (_: unknown, record: RecurringInvoiceParentGroup) => {
 	                  const isExpanded = expandedParentGroups.has(record.parentSummary.parentGroupKey);
                     const contractNames = Array.from(
@@ -1622,8 +1624,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                         && contractLineNames.length === 0
                         && assignmentLabels.length > 0;
 	                  return (
-                      <div className="min-w-[16rem] space-y-2">
-                        <div className="flex items-start gap-2">
+                      <div className="min-w-0 max-w-full space-y-2">
+                        <div className="flex min-w-0 items-start gap-2">
                           <Button
                             id={`toggle-group-${record.parentSummary.parentGroupKey}`}
                             variant="ghost"
@@ -1640,7 +1642,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                           </Button>
                           <div className="min-w-0 space-y-1">
-                            <div className="font-medium">
+                            <div className="break-words font-medium leading-snug">
                               {record.parentSummary.clientName ?? t('common.labels.unknownClient', {
                                 defaultValue: 'Unknown client',
                               })}
@@ -1677,20 +1679,22 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                 </span>
                               ) : null}
                             </div>
-                            <div className="flex flex-wrap gap-2 text-xs">
-                              <span
-                                className={`inline-flex rounded-full border px-2 py-0.5 font-medium ${getParentGroupSummary({
-                                  isCombinable: record.parentSummary.isCombinable,
-                                  canGenerate: record.parentSummary.canGenerate,
-                                  incompatibilityReasons: record.parentSummary.incompatibilityReasons,
-                                  childCount: record.parentSummary.childCount,
-                                }).className}`}
-                              >
-                                {t(`automaticInvoices.groups.${record.parentSummary.combinabilitySummaryKey}`, {
-                                  defaultValue: AUTOMATIC_INVOICE_GROUP_LABELS[record.parentSummary.combinabilitySummaryKey],
-                                })}
-                              </span>
-                            </div>
+                            {record.parentSummary.combinabilitySummaryKey !== 'ready' ? (
+                              <div className="flex flex-wrap gap-2 text-xs">
+                                <span
+                                  className={`inline-flex whitespace-nowrap rounded-full border px-2 py-0.5 font-medium ${getParentGroupSummary({
+                                    isCombinable: record.parentSummary.isCombinable,
+                                    canGenerate: record.parentSummary.canGenerate,
+                                    incompatibilityReasons: record.parentSummary.incompatibilityReasons,
+                                    childCount: record.parentSummary.childCount,
+                                  }).className}`}
+                                >
+                                  {t(`automaticInvoices.groups.${record.parentSummary.combinabilitySummaryKey}`, {
+                                    defaultValue: AUTOMATIC_INVOICE_GROUP_LABELS[record.parentSummary.combinabilitySummaryKey],
+                                  })}
+                                </span>
+                              </div>
+                            ) : null}
                             {!record.parentSummary.isCombinable && record.parentSummary.incompatibilityReasons.length > 0 ? (
                               <div
                                 className="text-xs text-muted-foreground"
@@ -1738,6 +1742,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 	              {
 	                title: t('automaticInvoices.ready.columns.servicePeriod', { defaultValue: 'Service Period' }),
 	                dataIndex: 'servicePeriodLabel',
+                    width: '17rem',
 	                render: (_: unknown, record: RecurringInvoiceParentGroup) => (
 	                  <div className="space-y-1">
 	                    <div>{record.parentSummary.servicePeriodLabel}</div>
@@ -1761,9 +1766,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 	              {
 	                title: t('automaticInvoices.ready.columns.invoiceWindow', { defaultValue: 'Invoice Window' }),
 	                dataIndex: 'windowLabel',
+                    width: '17rem',
 	                render: (_: unknown, record: RecurringInvoiceParentGroup) => (
                     <div className="space-y-1">
-                      <div>{record.parentSummary.windowLabel}</div>
+                      <div className="whitespace-nowrap">{record.parentSummary.windowLabel}</div>
                       <div className="text-xs text-muted-foreground">
                         {record.parentSummary.isCombinable
                           ? t('automaticInvoices.ready.selectionHintCombined', {
@@ -1779,6 +1785,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 	              {
 	                title: t('automaticInvoices.ready.columns.included', { defaultValue: 'Included' }),
 	                dataIndex: 'childExecutionRows',
+                    width: '12rem',
 	                render: (_: unknown, record: RecurringInvoiceParentGroup) => {
 	                  const isExpanded = expandedParentGroups.has(record.parentSummary.parentGroupKey);
 	                  if (!isExpanded) {

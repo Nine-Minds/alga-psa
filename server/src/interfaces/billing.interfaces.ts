@@ -118,6 +118,7 @@ export interface IClientContractLine extends TenantEntity {
   contract_id?: string; // Reference to the contract (for pricing schedule lookups)
   // Added fields from join with contract_lines
   contract_line_name?: string;
+  contract_line_type?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' | string;
   billing_frequency?: string;
   contract_name?: string; // Contract name (added dynamically for contract-associated contract lines)
 }
@@ -377,6 +378,11 @@ export interface IBucketCharge extends IBillingCharge, TenantEntity {
   overageHours: number;
   overageRate: number;
   service_catalog_id: string;
+  isUsageBucket?: boolean;
+  unitOfMeasure?: string | null;
+  unitsUsed?: number;
+  includedUnits?: number;
+  overageUnits?: number;
 }
 
 export interface IProductCharge extends IBillingCharge, TenantEntity {

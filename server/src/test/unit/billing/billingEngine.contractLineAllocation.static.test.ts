@@ -45,5 +45,9 @@ describe('billingEngine allocation and regression guards', () => {
     expect(source).toContain('overageRate');
     expect(source).toContain('type: "bucket"');
   });
+
+  it('T041: recurring usage charges preserve configuration identity for invoice linkage', () => {
+    expect(source).toContain('config_id: serviceConfig?.config.config_id');
+  });
 });
 
