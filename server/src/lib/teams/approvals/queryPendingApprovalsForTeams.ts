@@ -1,4 +1,3 @@
-import { isFeatureFlagEnabled } from '@alga-psa/core';
 import { createTenantKnex, User } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { hasPermission } from 'server/src/lib/auth/rbac';
@@ -53,14 +52,7 @@ export async function listPendingApprovalsForTeams(params: {
   }
 
   if (!canReadAll) {
-    const reportsToEnabled = await isFeatureFlagEnabled('teams-v2', {
-      userId: params.user.user_id,
-      tenantId: params.tenantId,
-    });
-
-    const reportsToUserIds = reportsToEnabled
-      ? await User.getReportsToSubordinateIds(knex, params.user.user_id)
-      : [];
+    const reportsToUserIds = await User.getReportsToSubordinateIds(knex, params.user.user_id);
 
     query = query
       .where((builder) => {
@@ -75,7 +67,7 @@ export async function listPendingApprovalsForTeams(params: {
             .andWhere('teams.tenant', params.tenantId);
         });
 
-        if (reportsToEnabled && reportsToUserIds.length > 0) {
+        if (reportsToUserIds.length > 0) {
           builder.orWhereIn('users.user_id', reportsToUserIds);
         }
       })

@@ -319,7 +319,15 @@
     },
     "forgotPassword": "55555",
     "sessionEndedTitle": "55555",
-    "sessionEndedMessage": "55555"
+    "sessionEndedMessage": "55555",
+    "clientRegistration": {
+      "errors": {
+        "contactNotFound": "55555",
+        "contactInactive": "55555",
+        "emailAlreadyExists": "55555",
+        "registrationFailed": "55555"
+      }
+    }
   },
   "account": {
     "title": "55555",

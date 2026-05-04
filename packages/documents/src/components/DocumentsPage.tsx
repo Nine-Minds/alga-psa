@@ -18,7 +18,6 @@ import { DocumentTemplatesSettings } from './settings';
 import { ChevronRight, Settings2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 
 const FILTERS_PANE_COLLAPSED_SETTING = 'documents_filters_pane_collapsed';
@@ -41,7 +40,6 @@ export default function DocumentsPage() {
     }
   );
 
-  const { enabled: folderTemplatesEnabled } = useFeatureFlag('document-folder-templates', { defaultValue: false });
   const [showDefaultFolders, setShowDefaultFolders] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string>('');
@@ -256,23 +254,21 @@ export default function DocumentsPage() {
               </>
             )}
           </div>
-          {folderTemplatesEnabled && (
-            <button
-              onClick={() => setShowDefaultFolders(prev => !prev)}
-              className={`p-2 rounded-md border transition-colors ${
-                showDefaultFolders
-                  ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300'
-                  : 'border-gray-200 dark:border-[rgb(var(--color-border-200))] text-gray-500 dark:text-[rgb(var(--color-text-400))] hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-50))]'
-              }`}
-              title="Configure default folders"
-            >
-              <Settings2 className="w-5 h-5" />
-            </button>
-          )}
+          <button
+            onClick={() => setShowDefaultFolders(prev => !prev)}
+            className={`p-2 rounded-md border transition-colors ${
+              showDefaultFolders
+                ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300'
+                : 'border-gray-200 dark:border-[rgb(var(--color-border-200))] text-gray-500 dark:text-[rgb(var(--color-text-400))] hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-50))]'
+            }`}
+            title="Configure default folders"
+          >
+            <Settings2 className="w-5 h-5" />
+          </button>
         </div>
       </div>
 
-      {showDefaultFolders && folderTemplatesEnabled ? (
+      {showDefaultFolders ? (
         <Card className="p-6">
           <DocumentTemplatesSettings />
         </Card>

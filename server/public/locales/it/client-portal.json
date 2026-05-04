@@ -270,7 +270,15 @@
     },
     "forgotPassword": "Hai dimenticato la password?",
     "sessionEndedTitle": "Sessione terminata",
-    "sessionEndedMessage": "La tua sessione è stata disconnessa. Accedi di nuovo."
+    "sessionEndedMessage": "La tua sessione è stata disconnessa. Accedi di nuovo.",
+    "clientRegistration": {
+      "errors": {
+        "contactNotFound": "Contatto non trovato.",
+        "contactInactive": "Questo contatto è inattivo.",
+        "emailAlreadyExists": "Esiste già un utente con questo indirizzo e-mail.",
+        "registrationFailed": "Non è stato possibile completare la registrazione. Riprova."
+      }
+    }
   },
   "account": {
     "title": "Account",

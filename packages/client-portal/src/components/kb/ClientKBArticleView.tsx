@@ -199,6 +199,71 @@ export default function ClientKBArticleView({
           );
         case 'horizontalRule':
           return <hr key={key} className="my-6 border-t border-border" />;
+        case 'table': {
+          // BlockNote shape: { content: { type: 'tableContent', rows: [{ cells: [[inline]] }] } }
+          // Tiptap/ProseMirror shape: content: [{ type: 'tableRow', content: [{ type: 'tableHeader'|'tableCell', content: [...] }] }]
+          const tableContent = node.content;
+          let rows: Array<{ isHeader: boolean; cells: any[] }> = [];
+
+          if (tableContent && typeof tableContent === 'object' && !Array.isArray(tableContent) && Array.isArray((tableContent as any).rows)) {
+            // BlockNote shape
+            rows = (tableContent as any).rows.map((row: any, idx: number) => ({
+              isHeader: row.isHeader === true || idx === 0,
+              cells: Array.isArray(row.cells) ? row.cells : [],
+            }));
+          } else if (Array.isArray(tableContent)) {
+            // ProseMirror shape: each row is a tableRow whose content is tableHeader/tableCell
+            rows = tableContent.map((row: any, idx: number) => {
+              const cellNodes = Array.isArray(row?.content) ? row.content : [];
+              const isHeaderRow =
+                cellNodes.length > 0 && cellNodes.every((c: any) => c.type === 'tableHeader');
+              return {
+                isHeader: isHeaderRow || idx === 0,
+                cells: cellNodes,
+              };
+            });
+          }
+
+          if (rows.length === 0) return null;
+
+          const renderCell = (cell: any, ci: number, isHeader: boolean) => {
+            const Tag = isHeader ? 'th' : 'td';
+            const className = isHeader
+              ? 'border border-border px-3 py-2 bg-muted text-left font-semibold'
+              : 'border border-border px-3 py-2 align-top';
+            // ProseMirror cell: object with content array of paragraphs
+            if (cell && typeof cell === 'object' && !Array.isArray(cell) && Array.isArray(cell.content)) {
+              return (
+                <Tag key={`cell-${ci}`} className={className}>
+                  {cell.content.map((c: any, k: number) => renderNode(c, k))}
+                </Tag>
+              );
+            }
+            // BlockNote cell: array of inline nodes
+            if (Array.isArray(cell)) {
+              return (
+                <Tag key={`cell-${ci}`} className={className}>
+                  {cell.map((c: any, k: number) => renderText(c, k))}
+                </Tag>
+              );
+            }
+            return <Tag key={`cell-${ci}`} className={className} />;
+          };
+
+          return (
+            <div key={key} className="overflow-x-auto my-4">
+              <table className="border-collapse border border-border w-full text-sm">
+                <tbody>
+                  {rows.map((row, ri) => (
+                    <tr key={`row-${ri}`}>
+                      {row.cells.map((cell: any, ci: number) => renderCell(cell, ci, row.isHeader))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        }
         default:
           // Unknown type - try to render content if available
           if (node.content) {

@@ -1,5 +1,4 @@
 import { KnowledgeBasePage } from '@alga-psa/documents/components';
-import FeatureFlagPageWrapper from '@alga-psa/ui/components/feature-flags/FeatureFlagPageWrapper';
 import { getExperimentalFeatures } from '@alga-psa/tenancy/actions';
 
 export default async function KBReviewPage() {
@@ -11,9 +10,5 @@ export default async function KBReviewPage() {
     // Feature flag fetch failure is non-fatal
   }
 
-  return (
-    <FeatureFlagPageWrapper featureFlag="knowledge-base">
-      <KnowledgeBasePage activeTab="review" aiAssistantEnabled={aiAssistantEnabled} />
-    </FeatureFlagPageWrapper>
-  );
+  return <KnowledgeBasePage activeTab="review" aiAssistantEnabled={aiAssistantEnabled} />;
 }

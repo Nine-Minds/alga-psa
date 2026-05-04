@@ -16,7 +16,6 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import CollapsiblePasswordChangeForm from './CollapsiblePasswordChangeForm';
 import { getLicenseUsageAction } from '@alga-psa/licensing/actions';
 import toast from 'react-hot-toast';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface UserDetailsProps {
@@ -40,7 +39,6 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { closeDrawer } = useDrawer();
-  const { enabled: isTeamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
 
   // Admin password change states
   const [isAdmin, setIsAdmin] = useState(false);
@@ -69,10 +67,6 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   }, [user]);
 
   useEffect(() => {
-    if (!isTeamsV2Enabled) {
-      return;
-    }
-
     const fetchReportsToOptions = async () => {
       try {
         const allUsers = await getAllUsers(false, 'internal');
@@ -122,7 +116,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
     };
 
     fetchReportsToOptions();
-  }, [isTeamsV2Enabled, userId]);
+  }, [userId]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -231,12 +225,9 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           last_name: lastName,
           email: email,
           is_inactive: !isActive,
+          reports_to: reportsTo || null,
         };
 
-        if (isTeamsV2Enabled) {
-          updatedUserData.reports_to = reportsTo || null;
-        }
-        
         const result = await updateUser(user.user_id, updatedUserData);
         if (!result.success) {
           const errorKeys: Record<typeof result.code, string> = {
@@ -367,21 +358,19 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           />
         </div>
 
-        {isTeamsV2Enabled && (
-          <div>
-            <Text as="label" size="2" weight="medium" className="mb-2 block">
-              {t('userDetails.fields.reportsTo.label')}
-            </Text>
-            <CustomSelect
-              options={reportsToOptions}
-              value={reportsTo}
-              onValueChange={setReportsTo}
-              className="w-full"
-              placeholder={t('userDetails.fields.reportsTo.placeholder')}
-              allowClear
-            />
-          </div>
-        )}
+        <div>
+          <Text as="label" size="2" weight="medium" className="mb-2 block">
+            {t('userDetails.fields.reportsTo.label')}
+          </Text>
+          <CustomSelect
+            options={reportsToOptions}
+            value={reportsTo}
+            onValueChange={setReportsTo}
+            className="w-full"
+            placeholder={t('userDetails.fields.reportsTo.placeholder')}
+            allowClear
+          />
+        </div>
 
         {/* Last Login Info */}
         {user?.last_login_at && (

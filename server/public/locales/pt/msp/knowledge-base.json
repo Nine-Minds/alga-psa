@@ -72,7 +72,8 @@
       "edit": "Edit",
       "submitForReview": "Submit for Review",
       "publish": "Publish",
-      "archive": "Archive"
+      "archive": "Archive",
+      "delete": "Excluir permanentemente"
     },
     "pagination": {
       "itemsPerPage": {
@@ -88,11 +89,17 @@
       "archive": {
         "title": "Archive Article",
         "message": "Are you sure you want to archive \"{{title}}\"? This will remove it from client visibility."
+      },
+      "delete": {
+        "title": "Excluir artigo",
+        "message": "Tem certeza de que deseja excluir permanentemente \"{{title}}\"? Isso removerá o artigo e seu conteúdo, e não pode ser desfeito."
       }
     },
     "feedback": {
       "archiveError": "Failed to archive article",
-      "archiveSuccess": "Article archived"
+      "archiveSuccess": "Article archived",
+      "deleteError": "Falha ao excluir o artigo",
+      "deleteSuccess": "Artigo excluído permanentemente"
     }
   },
   "editor": {
@@ -105,7 +112,8 @@
       "publish": "Publish",
       "archive": "Archive",
       "saveMetadata": "Save Metadata",
-      "saving": "Saving..."
+      "saving": "Saving...",
+      "delete": "Excluir permanentemente"
     },
     "feedback": {
       "permissionDenied": "Permission denied",
@@ -118,7 +126,9 @@
       "publishSuccess": "Article published",
       "statusChangeError": "Failed to change article status",
       "submitForReviewSuccess": "Article submitted for review",
-      "archiveSuccess": "Article archived"
+      "archiveSuccess": "Article archived",
+      "deleteError": "Falha ao excluir o artigo",
+      "deleteSuccess": "Artigo excluído permanentemente"
     },
     "badges": {
       "reviewOverdue": "Review Overdue"
@@ -145,6 +155,12 @@
     },
     "tags": {
       "title": "Tags"
+    },
+    "dialogs": {
+      "delete": {
+        "title": "Excluir artigo",
+        "message": "Tem certeza de que deseja excluir permanentemente \"{{title}}\"? Isso removerá o artigo e seu conteúdo, e não pode ser desfeito."
+      }
     }
   },
   "filters": {
@@ -195,7 +211,8 @@
       "publish": "Publish",
       "approveAndPublish": "Approve & Publish",
       "archive": "Archive",
-      "republish": "Republish"
+      "republish": "Republish",
+      "delete": "Excluir permanentemente"
     },
     "flow": {
       "draft": "Draft",
@@ -214,13 +231,19 @@
       "archive": {
         "title": "Archive Article",
         "message": "This will archive the article and remove it from client visibility. Are you sure?"
+      },
+      "delete": {
+        "title": "Excluir artigo",
+        "message": "Tem certeza de que deseja excluir permanentemente este artigo? Isso removerá o artigo e seu conteúdo, e não pode ser desfeito."
       }
     },
     "feedback": {
       "publishError": "Failed to publish article",
       "publishSuccess": "Article published successfully",
       "archiveError": "Failed to archive article",
-      "archiveSuccess": "Article archived"
+      "archiveSuccess": "Article archived",
+      "deleteError": "Falha ao excluir o artigo",
+      "deleteSuccess": "Artigo excluído permanentemente"
     }
   },
   "reviewDashboard": {

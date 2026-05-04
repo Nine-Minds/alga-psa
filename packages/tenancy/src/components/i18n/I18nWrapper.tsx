@@ -10,14 +10,12 @@ interface I18nWrapperProps {
   children: ReactNode;
   initialLocale?: SupportedLocale;
   portal?: 'msp' | 'client';
-  showPseudoLocales?: boolean;
 }
 
 export function I18nWrapper({
   children,
   initialLocale,
   portal = 'msp',
-  showPseudoLocales = false,
 }: I18nWrapperProps) {
   const [locale, setLocale] = useState<SupportedLocale>(
     initialLocale || (LOCALE_CONFIG.defaultLocale as SupportedLocale)
@@ -53,7 +51,7 @@ export function I18nWrapper({
   }
 
   return (
-    <I18nProvider initialLocale={locale} portal={portal} namespaces={namespaces} showPseudoLocales={showPseudoLocales}>
+    <I18nProvider initialLocale={locale} portal={portal} namespaces={namespaces}>
       {children}
     </I18nProvider>
   );

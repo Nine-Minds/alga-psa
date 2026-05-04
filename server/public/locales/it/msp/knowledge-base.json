@@ -72,7 +72,8 @@
       "edit": "Modifica",
       "submitForReview": "Invia per la revisione",
       "publish": "Pubblica",
-      "archive": "Archivia"
+      "archive": "Archivia",
+      "delete": "Elimina definitivamente"
     },
     "pagination": {
       "itemsPerPage": {
@@ -88,11 +89,17 @@
       "archive": {
         "title": "Articolo di archivio",
         "message": "Sei sicuro di voler archiviare \"{{title}}\"? Ciò lo rimuoverà dalla visibilità del client."
+      },
+      "delete": {
+        "title": "Elimina articolo",
+        "message": "Sei sicuro di voler eliminare definitivamente \"{{title}}\"? Questo rimuoverà l'articolo e il suo contenuto e non può essere annullato."
       }
     },
     "feedback": {
       "archiveError": "Impossibile archiviare l'articolo",
-      "archiveSuccess": "Articolo archiviato"
+      "archiveSuccess": "Articolo archiviato",
+      "deleteError": "Impossibile eliminare l'articolo",
+      "deleteSuccess": "Articolo eliminato definitivamente"
     }
   },
   "editor": {
@@ -105,7 +112,8 @@
       "publish": "Pubblica",
       "archive": "Archivia",
       "saveMetadata": "Salva metadati",
-      "saving": "Salvataggio..."
+      "saving": "Salvataggio...",
+      "delete": "Elimina definitivamente"
     },
     "feedback": {
       "permissionDenied": "Autorizzazione negata",
@@ -118,7 +126,9 @@
       "publishSuccess": "Articolo pubblicato",
       "statusChangeError": "Impossibile modificare lo stato dell'articolo",
       "submitForReviewSuccess": "Articolo sottoposto a revisione",
-      "archiveSuccess": "Articolo archiviato"
+      "archiveSuccess": "Articolo archiviato",
+      "deleteError": "Impossibile eliminare l'articolo",
+      "deleteSuccess": "Articolo eliminato definitivamente"
     },
     "badges": {
       "reviewOverdue": "Revisione scaduta"
@@ -145,6 +155,12 @@
     },
     "tags": {
       "title": "Tag"
+    },
+    "dialogs": {
+      "delete": {
+        "title": "Elimina articolo",
+        "message": "Sei sicuro di voler eliminare definitivamente \"{{title}}\"? Questo rimuoverà l'articolo e il suo contenuto e non può essere annullato."
+      }
     }
   },
   "filters": {
@@ -195,7 +211,8 @@
       "publish": "Pubblica",
       "approveAndPublish": "Approva e pubblica",
       "archive": "Archivia",
-      "republish": "Ripubblica"
+      "republish": "Ripubblica",
+      "delete": "Elimina definitivamente"
     },
     "flow": {
       "draft": "Bozza",
@@ -214,13 +231,19 @@
       "archive": {
         "title": "Articolo di archivio",
         "message": "Ciò archivierà l'articolo e lo rimuoverà dalla visibilità del client. Sei sicuro?"
+      },
+      "delete": {
+        "title": "Elimina articolo",
+        "message": "Sei sicuro di voler eliminare definitivamente questo articolo? Questo rimuoverà l'articolo e il suo contenuto e non può essere annullato."
       }
     },
     "feedback": {
       "publishError": "Impossibile pubblicare l'articolo",
       "publishSuccess": "Articolo pubblicato con successo",
       "archiveError": "Impossibile archiviare l'articolo",
-      "archiveSuccess": "Articolo archiviato"
+      "archiveSuccess": "Articolo archiviato",
+      "deleteError": "Impossibile eliminare l'articolo",
+      "deleteSuccess": "Articolo eliminato definitivamente"
     }
   },
   "reviewDashboard": {

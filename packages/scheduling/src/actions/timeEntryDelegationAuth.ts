@@ -3,7 +3,6 @@
 import type { IUser } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { hasPermission } from '@alga-psa/auth';
-import { isFeatureFlagEnabled } from '@alga-psa/core';
 import { User } from '@alga-psa/db';
 import {
   BuiltinAuthorizationKernelProvider,
@@ -99,15 +98,9 @@ export async function resolveManagedSubjectUserIds(
 
   const managedIds = new Set(teamRows.map((row) => row.user_id));
 
-  const reportsToEnabled = await isFeatureFlagEnabled('teams-v2', {
-    userId: actor.user_id,
-    tenantId: tenant
-  });
-  if (reportsToEnabled) {
-    const reportsToUserIds = await User.getReportsToSubordinateIds(db, actor.user_id);
-    for (const userId of reportsToUserIds) {
-      managedIds.add(userId);
-    }
+  const reportsToUserIds = await User.getReportsToSubordinateIds(db, actor.user_id);
+  for (const userId of reportsToUserIds) {
+    managedIds.add(userId);
   }
 
   return Array.from(managedIds);

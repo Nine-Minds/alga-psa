@@ -106,7 +106,9 @@ export const I18N_CONFIG = {
 };
 
 /**
- * Pseudo-locale codes used for QA testing only
+ * Pseudo-locale codes used for QA / local testing only. Translation files
+ * remain on disk so developers can force these via cookie/URL, but they are
+ * never offered in user-facing language pickers.
  */
 export const PSEUDO_LOCALES: ReadonlyArray<SupportedLocale> = ['xx', 'yy'];
 
@@ -119,16 +121,15 @@ export const PSEUDO_LOCALES: ReadonlyArray<SupportedLocale> = ['xx', 'yy'];
 export const INCOMPLETE_LOCALES: ReadonlyArray<SupportedLocale> = ['pt'];
 
 /**
- * Filter pseudo-locales (and always-hidden incomplete locales) from a list.
+ * Filter pseudo-locales and incomplete locales from a list. Use this for any
+ * user-facing language picker.
  */
 export function filterPseudoLocales(
   locales: readonly SupportedLocale[],
-  includePseudo: boolean,
 ): SupportedLocale[] {
-  const base = includePseudo
-    ? [...locales]
-    : locales.filter((l) => !(PSEUDO_LOCALES as readonly string[]).includes(l));
-  return base.filter((l) => !(INCOMPLETE_LOCALES as readonly string[]).includes(l));
+  return locales
+    .filter((l) => !(PSEUDO_LOCALES as readonly string[]).includes(l))
+    .filter((l) => !(INCOMPLETE_LOCALES as readonly string[]).includes(l));
 }
 
 /**

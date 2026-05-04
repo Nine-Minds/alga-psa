@@ -71,7 +71,6 @@ interface I18nProviderProps {
   initialLocale?: SupportedLocale;
   portal?: 'msp' | 'client';
   namespaces?: string[];
-  showPseudoLocales?: boolean;
 }
 
 export function I18nProvider({
@@ -79,7 +78,6 @@ export function I18nProvider({
   initialLocale,
   portal = 'client',
   namespaces,
-  showPseudoLocales = false,
 }: I18nProviderProps) {
   const [locale, setLocaleState] = useState<SupportedLocale>(
     initialLocale || (LOCALE_CONFIG.defaultLocale as SupportedLocale)
@@ -158,7 +156,7 @@ export function I18nProvider({
   const value: I18nContextValue = {
     locale,
     setLocale,
-    supportedLocales: filterPseudoLocales(LOCALE_CONFIG.supportedLocales, showPseudoLocales),
+    supportedLocales: filterPseudoLocales(LOCALE_CONFIG.supportedLocales),
     localeNames: LOCALE_CONFIG.localeNames,
     isRTL: LOCALE_CONFIG.rtlLocales.includes(locale),
   };

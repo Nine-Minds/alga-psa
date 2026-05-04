@@ -72,7 +72,8 @@
       "edit": "11111",
       "submitForReview": "11111",
       "publish": "11111",
-      "archive": "11111"
+      "archive": "11111",
+      "delete": "11111"
     },
     "pagination": {
       "itemsPerPage": {
@@ -88,11 +89,17 @@
       "archive": {
         "title": "11111",
         "message": "11111 {{title}} 11111"
+      },
+      "delete": {
+        "title": "11111",
+        "message": "11111 {{title}} 11111"
       }
     },
     "feedback": {
       "archiveError": "11111",
-      "archiveSuccess": "11111"
+      "archiveSuccess": "11111",
+      "deleteError": "11111",
+      "deleteSuccess": "11111"
     }
   },
   "editor": {
@@ -104,6 +111,7 @@
       "submitForReview": "11111",
       "publish": "11111",
       "archive": "11111",
+      "delete": "11111",
       "saveMetadata": "11111",
       "saving": "11111"
     },
@@ -118,7 +126,15 @@
       "publishSuccess": "11111",
       "statusChangeError": "11111",
       "submitForReviewSuccess": "11111",
-      "archiveSuccess": "11111"
+      "archiveSuccess": "11111",
+      "deleteError": "11111",
+      "deleteSuccess": "11111"
+    },
+    "dialogs": {
+      "delete": {
+        "title": "11111",
+        "message": "11111 {{title}} 11111"
+      }
     },
     "badges": {
       "reviewOverdue": "11111"
@@ -195,7 +211,8 @@
       "publish": "11111",
       "approveAndPublish": "11111",
       "archive": "11111",
-      "republish": "11111"
+      "republish": "11111",
+      "delete": "11111"
     },
     "flow": {
       "draft": "11111",
@@ -214,13 +231,19 @@
       "archive": {
         "title": "11111",
         "message": "11111"
+      },
+      "delete": {
+        "title": "11111",
+        "message": "11111"
       }
     },
     "feedback": {
       "publishError": "11111",
       "publishSuccess": "11111",
       "archiveError": "11111",
-      "archiveSuccess": "11111"
+      "archiveSuccess": "11111",
+      "deleteError": "11111",
+      "deleteSuccess": "11111"
     }
   },
   "reviewDashboard": {

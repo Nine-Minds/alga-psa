@@ -45,18 +45,44 @@ export type UpdateUserResult =
   | { success: true; user: IUserWithRoles | null }
   | { success: false; code: UpdateUserErrorCode; error: string };
 
+export type RegisterClientUserErrorCode =
+  | 'CONTACT_NOT_FOUND'
+  | 'CONTACT_INACTIVE'
+  | 'EMAIL_ALREADY_EXISTS'
+  | 'REGISTRATION_FAILED';
+
+/**
+ * Client portal registration result. UI consumers should map error codes to
+ * translation keys under `client-portal:auth.clientRegistration.errors.*`:
+ *   CONTACT_NOT_FOUND     → contactNotFound
+ *   CONTACT_INACTIVE      → contactInactive
+ *   EMAIL_ALREADY_EXISTS  → emailAlreadyExists
+ *   REGISTRATION_FAILED   → registrationFailed
+ * The English `error` field is provided as a defaultValue fallback only.
+ */
+export type RegisterClientUserResult =
+  | { success: true }
+  | { success: false; code: RegisterClientUserErrorCode; error: string };
+
 const getErrorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : '';
 
 async function findExistingUserByEmailGlobally(
   email: string,
-  options?: { excludeUserId?: string }
+  options?: { excludeUserId?: string; userType?: 'internal' | 'client' }
 ): Promise<Pick<IUser, 'user_id'> | undefined> {
   const db = await getAdminConnection();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    let query = trx('users')
-      .where({ email: email.toLowerCase() });
+    // Email uniqueness is scoped per user_type because the same person can
+    // legitimately exist as an `internal` user in their MSP tenant *and* as a
+    // `client` user in the master tenant (see tenant-provisioning flow).
+    const criteria: Record<string, unknown> = { email: email.toLowerCase() };
+    if (options?.userType) {
+      criteria.user_type = options.userType;
+    }
+
+    let query = trx('users').where(criteria);
 
     if (options?.excludeUserId) {
       query = query.whereNot('user_id', options.excludeUserId);
@@ -67,26 +93,30 @@ async function findExistingUserByEmailGlobally(
 }
 
 /**
- * Check if an email exists globally across all tenants
- * @param email The email address to check
- * @returns Promise<boolean> True if email exists, false otherwise
+ * Check if an email exists globally across all tenants. Optionally scope the
+ * check to a specific user_type — internal/client users with the same email
+ * are allowed by design (tenant provisioning creates both).
  */
 export const checkEmailExistsGlobally = withAuth(async (
   user,
   _ctx,
-  email: string
+  email: string,
+  userType?: 'internal' | 'client'
 ): Promise<boolean> => {
   try {
     const db = await getAdminConnection();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(user, 'user', 'read', trx)) {
-        throw new Error('Permission denied: Cannot check email existence');
+        throwPermissionError('check email existence');
       }
 
-      const existingUser = await trx('users')
-        .where({ email: email.toLowerCase() })
-        .first('user_id');
+      const criteria: Record<string, unknown> = { email: email.toLowerCase() };
+      if (userType) {
+        criteria.user_type = userType;
+      }
+
+      const existingUser = await trx('users').where(criteria).first('user_id');
       return !!existingUser;
     });
   } catch (error) {
@@ -114,7 +144,7 @@ export const addUser = withAuth(async (
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(user, 'user', 'create', trx)) {
-        throw new Error('Permission denied: Cannot create user');
+        throwPermissionError('create user');
       }
 
       if (!userData.roleId) {
@@ -147,8 +177,11 @@ export const addUser = withAuth(async (
         };
       }
 
-      // Check if email already exists globally
-      const emailExists = await checkEmailExistsGlobally(userData.email);
+      // Check if email already exists globally for this user_type. Internal
+      // and client users may share an email by design.
+      const emailExists = await findExistingUserByEmailGlobally(userData.email, {
+        userType: userData.userType || 'internal',
+      });
       if (emailExists) {
         return {
           success: false,
@@ -231,7 +264,7 @@ export const addUser = withAuth(async (
   } catch (error: unknown) {
     logger.error('Error adding user:', error);
     const message = getErrorMessage(error);
-    if (message === 'Permission denied: Cannot create user') {
+    if (message.startsWith('Permission denied:')) {
       throw error;
     }
     throw new Error('Failed to add user');
@@ -248,7 +281,7 @@ export const deleteUser = withAuth(async (
 
     const assignedClient = await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(user, 'user', 'delete', trx)) {
-        throw new Error('Permission denied: Cannot delete user');
+        throwPermissionError('delete user');
       }
 
       return await trx('clients')
@@ -337,7 +370,7 @@ export const updateUser = withAuth(async (
       if (isOwnProfile) {
         logger.debug(`[updateUser] User ${currentUser.user_id} updating their own profile`);
       } else if (!await hasPermission(currentUser, 'user', 'update', trx)) {
-        throw new Error('Permission denied: Cannot update user');
+        throwPermissionError('update user');
       }
 
       // If user is being deactivated, clear default_assigned_to on boards
@@ -371,16 +404,26 @@ export const updateUser = withAuth(async (
       let normalizedUserData = userData;
       if (userData.email) {
         const normalizedEmail = userData.email.toLowerCase();
-        const existingUser = await findExistingUserByEmailGlobally(normalizedEmail, {
-          excludeUserId: userId,
-        });
+        // Only run the global uniqueness check when the email is actually
+        // changing — otherwise editing any field (e.g. setting a manager)
+        // would re-validate the unchanged email and could trip on legitimate
+        // cross-tenant duplicates.
+        const existing = await User.getUserWithRoles(trx, userId);
+        const currentEmail = existing?.email?.toLowerCase();
 
-        if (existingUser) {
-          return {
-            success: false,
-            code: 'EMAIL_ALREADY_EXISTS',
-            error: 'A user with this email address already exists',
-          };
+        if (currentEmail !== normalizedEmail) {
+          const existingUser = await findExistingUserByEmailGlobally(normalizedEmail, {
+            excludeUserId: userId,
+            userType: existing?.user_type as 'internal' | 'client' | undefined,
+          });
+
+          if (existingUser) {
+            return {
+              success: false,
+              code: 'EMAIL_ALREADY_EXISTS',
+              error: 'A user with this email address already exists',
+            };
+          }
         }
 
         normalizedUserData = {
@@ -396,7 +439,7 @@ export const updateUser = withAuth(async (
   } catch (error) {
     logger.error(`Failed to update user with id ${userId}:`, error);
     const message = getErrorMessage(error);
-    if (message === 'Permission denied: Cannot update user') {
+    if (message.startsWith('Permission denied:')) {
       throw error;
     }
     throw new Error('Failed to update user');
@@ -414,7 +457,7 @@ export const updateUserRoles = withAuth(async (
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!await hasPermission(currentUser, 'user', 'update', trx)) {
-        throw new Error('Permission denied: Cannot update user roles');
+        throwPermissionError('update user roles');
       }
 
       // Delete existing roles
@@ -475,13 +518,13 @@ export const registerClientUser = withAuth(async (
   _ctx,
   email: string,
   password: string
-): Promise<{ success: boolean; error?: string }> => {
+): Promise<RegisterClientUserResult> => {
   try {
     const db = await getAdminConnection();
 
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
+    return await withTransaction(db, async (trx: Knex.Transaction): Promise<RegisterClientUserResult> => {
       if (!await hasPermission(currentUser, 'user', 'create', trx)) {
-        throw new Error('Permission denied: Cannot create client user');
+        throwPermissionError('create client user');
       }
 
       // First verify the contact exists and get their tenant
@@ -501,17 +544,24 @@ export const registerClientUser = withAuth(async (
         .first();
 
       if (!contact) {
-        return { success: false, error: 'Contact not found' };
+        return { success: false, code: 'CONTACT_NOT_FOUND', error: 'Contact not found' };
       }
 
       if (contact.is_inactive) {
-        return { success: false, error: 'Contact is inactive' };
+        return { success: false, code: 'CONTACT_INACTIVE', error: 'Contact is inactive' };
       }
 
-      // Check if user already exists globally
-      const emailExists = await checkEmailExistsGlobally(email);
+      // Check if a client user with this email already exists. Internal users
+      // with the same email are allowed (tenant provisioning creates both).
+      const emailExists = await findExistingUserByEmailGlobally(email, {
+        userType: 'client',
+      });
       if (emailExists) {
-        return { success: false, error: 'User with this email already exists' };
+        return {
+          success: false,
+          code: 'EMAIL_ALREADY_EXISTS',
+          error: 'A user with this email address already exists',
+        };
       }
 
       // Split full name into first and last name
@@ -564,7 +614,11 @@ export const registerClientUser = withAuth(async (
     });
   } catch (error) {
     logger.error('Error registering client user:', error);
-    return { success: false, error: 'Failed to register user' };
+    return {
+      success: false,
+      code: 'REGISTRATION_FAILED',
+      error: 'Failed to register user',
+    };
   }
 });
 

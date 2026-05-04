@@ -72,7 +72,8 @@
       "edit": "Edytuj",
       "submitForReview": "Prześlij do recenzji",
       "publish": "Publikuj",
-      "archive": "Archiwizuj"
+      "archive": "Archiwizuj",
+      "delete": "Usuń trwale"
     },
     "pagination": {
       "itemsPerPage": {
@@ -88,11 +89,17 @@
       "archive": {
         "title": "Artykuł archiwalny",
         "message": "Czy na pewno chcesz zarchiwizować „{{title}}”? Spowoduje to usunięcie go z widoczności klienta."
+      },
+      "delete": {
+        "title": "Usuń artykuł",
+        "message": "Czy na pewno chcesz trwale usunąć \"{{title}}\"? Spowoduje to usunięcie artykułu wraz z jego zawartością i nie można tego cofnąć."
       }
     },
     "feedback": {
       "archiveError": "Nie udało się zarchiwizować artykułu",
-      "archiveSuccess": "Artykuł zarchiwizowany"
+      "archiveSuccess": "Artykuł zarchiwizowany",
+      "deleteError": "Nie udało się usunąć artykułu",
+      "deleteSuccess": "Artykuł trwale usunięty"
     }
   },
   "editor": {
@@ -105,7 +112,8 @@
       "publish": "Publikuj",
       "archive": "Archiwizuj",
       "saveMetadata": "Zapisz metadane",
-      "saving": "Zapisywanie..."
+      "saving": "Zapisywanie...",
+      "delete": "Usuń trwale"
     },
     "feedback": {
       "permissionDenied": "Odmowa pozwolenia",
@@ -118,7 +126,9 @@
       "publishSuccess": "Artykuł opublikowany",
       "statusChangeError": "Nie udało się zmienić statusu artykułu",
       "submitForReviewSuccess": "Artykuł przesłany do recenzji",
-      "archiveSuccess": "Artykuł zarchiwizowany"
+      "archiveSuccess": "Artykuł zarchiwizowany",
+      "deleteError": "Nie udało się usunąć artykułu",
+      "deleteSuccess": "Artykuł trwale usunięty"
     },
     "badges": {
       "reviewOverdue": "Recenzja zaległa"
@@ -145,6 +155,12 @@
     },
     "tags": {
       "title": "Tagi"
+    },
+    "dialogs": {
+      "delete": {
+        "title": "Usuń artykuł",
+        "message": "Czy na pewno chcesz trwale usunąć \"{{title}}\"? Spowoduje to usunięcie artykułu wraz z jego zawartością i nie można tego cofnąć."
+      }
     }
   },
   "filters": {
@@ -195,7 +211,8 @@
       "publish": "Publikuj",
       "approveAndPublish": "Zatwierdź i opublikuj",
       "archive": "Archiwizuj",
-      "republish": "Opublikuj ponownie"
+      "republish": "Opublikuj ponownie",
+      "delete": "Usuń trwale"
     },
     "flow": {
       "draft": "Projekt",
@@ -214,13 +231,19 @@
       "archive": {
         "title": "Artykuł archiwalny",
         "message": "Spowoduje to zarchiwizowanie artykułu i usunięcie go z widoku klienta. Czy jesteś pewien?"
+      },
+      "delete": {
+        "title": "Usuń artykuł",
+        "message": "Czy na pewno chcesz trwale usunąć ten artykuł? Spowoduje to usunięcie artykułu wraz z jego zawartością i nie można tego cofnąć."
       }
     },
     "feedback": {
       "publishError": "Nie udało się opublikować artykułu",
       "publishSuccess": "Artykuł opublikowany pomyślnie",
       "archiveError": "Nie udało się zarchiwizować artykułu",
-      "archiveSuccess": "Artykuł zarchiwizowany"
+      "archiveSuccess": "Artykuł zarchiwizowany",
+      "deleteError": "Nie udało się usunąć artykułu",
+      "deleteSuccess": "Artykuł trwale usunięty"
     }
   },
   "reviewDashboard": {

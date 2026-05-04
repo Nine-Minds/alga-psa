@@ -11,7 +11,6 @@ import {
   getSignOutTenantSlug,
 } from '@alga-psa/client-portal/actions';
 import { useBranding } from '@alga-psa/tenancy/components';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { DrawerProvider, DrawerOutlet } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -45,9 +44,6 @@ function LayoutShell({
   });
   const [permissionsLoaded, setPermissionsLoaded] = useState(false);
   const { branding } = useBranding();
-  const { enabled: knowledgeBaseEnabled } = useFeatureFlag('knowledge-base', {
-    defaultValue: false,
-  });
   const { header } = useClientPortalHeader();
   const pathname = usePathname();
   const { t } = useTranslation('client-portal');
@@ -109,7 +105,6 @@ function LayoutShell({
           hasBillingAccess: permissions.hasBillingAccess,
         }}
         permissionsLoaded={permissionsLoaded}
-        knowledgeBaseEnabled={knowledgeBaseEnabled}
         initialCollapsed={initialSidebarCollapsed}
       />
 

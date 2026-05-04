@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga
 import { Globe, Palette } from 'lucide-react';
 import { LanguageHierarchyTable } from '@alga-psa/ui/components/LanguageHierarchyTable';
 import { LOCALE_CONFIG, filterPseudoLocales, type SupportedLocale } from '@alga-psa/core/i18n/config';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import {
   getTenantBrandingAction,
@@ -35,7 +34,6 @@ const UNSET_LOCALE_VALUE = '__inherit__';
 
 const ClientPortalSettings = () => {
   const { t } = useTranslation('msp/settings');
-  const { enabled: isMspI18nEnabled } = useFeatureFlag('msp-i18n-enabled', { defaultValue: false });
   const [brandingLoading, setBrandingLoading] = useState(true);
   const [brandingSaving, setBrandingSaving] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>('');
@@ -57,8 +55,8 @@ const ClientPortalSettings = () => {
   const { refreshBranding } = useBranding();
 
   const visibleLocales = useMemo(
-    () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales, !!isMspI18nEnabled),
-    [isMspI18nEnabled],
+    () => filterPseudoLocales(LOCALE_CONFIG.supportedLocales),
+    [],
   );
 
   const languageOptions = useMemo<SelectOption[]>(() => {

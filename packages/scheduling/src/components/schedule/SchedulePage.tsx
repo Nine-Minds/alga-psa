@@ -12,7 +12,6 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getAppointmentRequests } from '@alga-psa/scheduling/actions';
 import { getCurrentUserPermissions, getCurrentUser, getReportsToSubordinates } from '@alga-psa/user-composition/actions';
 import { getTeams } from '@alga-psa/teams/actions';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 export default function SchedulePage() {
   const { t } = useTranslation('msp/schedule');
@@ -25,7 +24,6 @@ export default function SchedulePage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [canConfigureAvailability, setCanConfigureAvailability] = useState(false);
   const [highlightedRequestId, setHighlightedRequestId] = useState<string | null>(null);
-  const { enabled: isTeamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
 
   const fetchPendingCount = async () => {
     const result = await getAppointmentRequests({ status: 'pending' });
@@ -55,13 +53,8 @@ export default function SchedulePage() {
           return;
         }
 
-        if (isTeamsV2Enabled) {
-          const subordinates = await getReportsToSubordinates(currentUser.user_id);
-          setCanConfigureAvailability(subordinates.length > 0);
-          return;
-        }
-
-        setCanConfigureAvailability(false);
+        const subordinates = await getReportsToSubordinates(currentUser.user_id);
+        setCanConfigureAvailability(subordinates.length > 0);
       }
     } catch (error) {
       console.error('Failed to check team manager status:', error);

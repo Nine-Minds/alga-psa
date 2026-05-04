@@ -53,7 +53,6 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const navigationFlag = useFeatureFlag('ui-navigation-v2', { defaultValue: true });
   const useNavigationSections =
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
-  const { enabled: knowledgeBaseEnabled } = useFeatureFlag('knowledge-base', { defaultValue: false });
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const { hasFeature } = useTier();
 
@@ -106,24 +105,12 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
           return { ...item, subItems: filteredSubItems };
         }
 
-        if (item.name === 'Documents') {
-          const filteredSubItems = item.subItems?.filter((subItem) => {
-            if (subItem.name === 'Knowledge Base') return knowledgeBaseEnabled;
-            return true;
-          });
-          // If only one sub-item remains, flatten to direct link
-          if (filteredSubItems?.length === 1) {
-            return { ...item, href: filteredSubItems[0].href, subItems: undefined };
-          }
-          return { ...item, subItems: filteredSubItems };
-        }
-
         return item;
       }).filter((item): item is MenuItem => item !== null)
     }));
 
     return filterNavigationSectionsByFeatureAccess(filteredSections, hasFeature);
-  }, [canWorkflowAdmin, useNavigationSections, knowledgeBaseEnabled, hasFeature]);
+  }, [canWorkflowAdmin, useNavigationSections, hasFeature]);
 
   return (
     <Sidebar

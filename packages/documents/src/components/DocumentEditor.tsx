@@ -5,6 +5,7 @@ import { useEditor, EditorContent, type Editor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Underline from '@tiptap/extension-underline';
+import { TableKit } from '@tiptap/extension-table';
 import { Emoticon } from '@alga-psa/ui/editor';
 import { marked } from 'marked';
 import { getBlockContent, updateBlockContent } from '../actions/documentBlockContentActions';
@@ -60,6 +61,7 @@ export function DocumentEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit,
+      TableKit.configure({ table: { resizable: true } }),
       Link.configure({
         openOnClick: false,
         autolink: true,
@@ -75,7 +77,7 @@ export function DocumentEditor({
     content: '<p></p>',
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none',
+        class: 'prose prose-sm sm:prose-base max-w-none dark:prose-invert focus:outline-none',
       },
       handlePaste: (view, event, slice) => {
         const plainText = event.clipboardData?.getData('text/plain');

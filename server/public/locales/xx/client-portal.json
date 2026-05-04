@@ -319,7 +319,15 @@
     },
     "forgotPassword": "11111",
     "sessionEndedTitle": "11111",
-    "sessionEndedMessage": "11111"
+    "sessionEndedMessage": "11111",
+    "clientRegistration": {
+      "errors": {
+        "contactNotFound": "11111",
+        "contactInactive": "11111",
+        "emailAlreadyExists": "11111",
+        "registrationFailed": "11111"
+      }
+    }
   },
   "account": {
     "title": "11111",

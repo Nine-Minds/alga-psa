@@ -92,7 +92,6 @@ import styles from '../ProjectDetail.module.css';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import type { ITeam } from '@alga-psa/types';
 import {
@@ -423,12 +422,10 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
   }, [taskAssignments, template.tenant]);
 
   // Teams-v2: fetch teams and team avatar URLs
-  const { enabled: teamsV2Enabled } = useFeatureFlag('teams-v2', { defaultValue: false });
   const [teamNames, setTeamNames] = useState<Record<string, string>>({});
   const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>({});
 
   useEffect(() => {
-    if (!teamsV2Enabled) return;
     const fetchTeams = async () => {
       try {
         const fetchedTeams = await getTeams();
@@ -452,7 +449,7 @@ export default function TemplateEditor({ template: initialTemplate, onTemplateUp
       }
     };
     fetchTeams();
-  }, [teamsV2Enabled]);
+  }, []);
 
   // ============================================================
   // TEMPLATE ACTIONS
