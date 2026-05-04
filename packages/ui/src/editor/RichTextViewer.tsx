@@ -182,8 +182,21 @@ function splitTextByUrls(text: string, itemStyles: Record<string, unknown>): any
 }
 
 /**
- * Trim trailing empty paragraph blocks.
+ * Trim trailing empty placeholder-prone blocks (paragraph, heading, list
+ * items, code, quote). Mirrors the on-save normalization in TextEditor so
+ * legacy comments saved before the trim was applied don't show ghost
+ * "Heading" / "List item" placeholder text. Media and tables are preserved.
  */
+const PLACEHOLDER_PRONE_BLOCK_TYPES = new Set([
+  'paragraph',
+  'heading',
+  'bulletListItem',
+  'numberedListItem',
+  'checkListItem',
+  'codeBlock',
+  'quote',
+]);
+
 function trimTrailingEmpty(blocks: PartialBlock[]): PartialBlock[] {
   if (blocks.length === 0) return DEFAULT_EMPTY_BLOCK;
 
@@ -193,22 +206,23 @@ function trimTrailingEmpty(blocks: PartialBlock[]): PartialBlock[] {
     return typeof item === 'object' && item !== null && (item as any).type === 'text' && typeof (item as any).text === 'string';
   };
 
+  const hasContent = (candidate: PartialBlock): boolean => {
+    if (!candidate.content) return false;
+    if (!Array.isArray(candidate.content)) return false;
+    return candidate.content.some((item) => {
+      if (isTextContent(item)) {
+        return item.text.trim() !== '';
+      }
+      return true;
+    });
+  };
+
   let i = blocks.length - 1;
   while (i >= 0) {
     const block = blocks[i];
-    if (block.type !== 'paragraph') break;
-
-    const hasContent = (candidate: PartialBlock): boolean => {
-      if (!candidate.content) return false;
-      if (!Array.isArray(candidate.content)) return false;
-      return candidate.content.some((item) => {
-        if (isTextContent(item)) {
-          return item.text.trim() !== '';
-        }
-        return true;
-      });
-    };
-
+    const isTrimmable =
+      typeof block.type === 'string' && PLACEHOLDER_PRONE_BLOCK_TYPES.has(block.type);
+    if (!isTrimmable) break;
     if (hasContent(block)) break;
     i--;
   }

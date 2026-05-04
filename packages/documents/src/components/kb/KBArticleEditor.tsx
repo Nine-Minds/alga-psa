@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -22,6 +24,7 @@ import {
   Send,
   CheckCircle,
   Archive,
+  Trash2,
 } from 'lucide-react';
 import { CollaborativeEditor } from '../CollaborativeEditor';
 import { DocumentEditor } from '../DocumentEditor';
@@ -30,6 +33,7 @@ import {
   getArticle,
   updateArticle,
   publishArticle,
+  deleteArticle,
   IKBArticleWithDocument,
   IUpdateArticleInput,
   ArticleType,
@@ -83,6 +87,7 @@ export default function KBArticleEditor({
 }: KBArticleEditorProps) {
   const { t } = useTranslation('msp/knowledge-base');
   const { formatDate } = useFormatters();
+  const router = useRouter();
   const tRef = useRef(t);
   tRef.current = t;
 
@@ -92,6 +97,8 @@ export default function KBArticleEditor({
   const [hasUnsavedMetadata, setHasUnsavedMetadata] = useState(false);
   const [articleTags, setArticleTags] = useState<ITag[]>([]);
   const [isFallbackMode, setIsFallbackMode] = useState(!userName || !tenantId);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Auto-fallback if CollaborativeEditor can't connect within 5 seconds
   const collabConnectedRef = useRef(false);
@@ -255,6 +262,27 @@ export default function KBArticleEditor({
     }
   };
 
+  const handleDelete = async () => {
+    if (!article) return;
+    setIsDeleting(true);
+    try {
+      const result = await deleteArticle(article.article_id);
+      if (typeof result === 'object' && 'code' in result) {
+        toast.error(t('editor.feedback.deleteError', { defaultValue: 'Failed to delete article' }));
+        setIsDeleting(false);
+        return;
+      }
+      toast.success(t('editor.feedback.deleteSuccess', { defaultValue: 'Article deleted permanently' }));
+      // Close the dialog before navigating so Radix focus-trap doesn't swallow the route change.
+      setDeleteDialogOpen(false);
+      router.push('/msp/knowledge-base');
+      router.refresh();
+    } catch (error) {
+      handleError(error, t('editor.feedback.deleteError', { defaultValue: 'Failed to delete article' }));
+      setIsDeleting(false);
+    }
+  };
+
   const isStale = article?.next_review_due && new Date(article.next_review_due) < new Date();
 
   if (isLoading) {
@@ -352,6 +380,18 @@ export default function KBArticleEditor({
               >
                 <Archive className="w-4 h-4 mr-2" />
                 {t('editor.actions.archive', { defaultValue: 'Archive' })}
+              </Button>
+            )}
+            {(article.status === 'draft' || article.status === 'archived') && (
+              <Button
+                id="kb-editor-delete"
+                variant="destructive"
+                size="sm"
+                onClick={() => setDeleteDialogOpen(true)}
+                disabled={isSaving || isDeleting}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                {t('editor.actions.delete', { defaultValue: 'Delete permanently' })}
               </Button>
             )}
           </div>
@@ -561,6 +601,22 @@ export default function KBArticleEditor({
           </CardContent>
         </Card>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        id="kb-editor-delete-dialog"
+        isOpen={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+        title={t('editor.dialogs.delete.title', { defaultValue: 'Delete Article' })}
+        message={t('editor.dialogs.delete.message', {
+          defaultValue:
+            'Are you sure you want to permanently delete "{{title}}"? This will remove the article and its content, and cannot be undone.',
+          title: article.document_name || article.slug,
+        })}
+        confirmLabel={t('editor.actions.delete', { defaultValue: 'Delete permanently' })}
+        isConfirming={isDeleting}
+      />
     </div>
   );
 }

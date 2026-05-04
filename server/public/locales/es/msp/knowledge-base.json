@@ -72,7 +72,8 @@
       "edit": "Editar",
       "submitForReview": "Enviar para revisión",
       "publish": "Publicar",
-      "archive": "Archivar"
+      "archive": "Archivar",
+      "delete": "Eliminar permanentemente"
     },
     "pagination": {
       "itemsPerPage": {
@@ -88,11 +89,17 @@
       "archive": {
         "title": "Archivar artículo",
         "message": "¿Está seguro de que desea archivar \"{{title}}\"? Esto lo eliminará de la visibilidad del cliente."
+      },
+      "delete": {
+        "title": "Eliminar artículo",
+        "message": "¿Está seguro de que desea eliminar permanentemente \"{{title}}\"? Esto eliminará el artículo y su contenido, y no se puede deshacer."
       }
     },
     "feedback": {
       "archiveError": "No se pudo archivar el artículo",
-      "archiveSuccess": "Artículo archivado"
+      "archiveSuccess": "Artículo archivado",
+      "deleteError": "No se pudo eliminar el artículo",
+      "deleteSuccess": "Artículo eliminado permanentemente"
     }
   },
   "editor": {
@@ -105,7 +112,8 @@
       "publish": "Publicar",
       "archive": "Archivar",
       "saveMetadata": "Guardar metadatos",
-      "saving": "Guardando..."
+      "saving": "Guardando...",
+      "delete": "Eliminar permanentemente"
     },
     "feedback": {
       "permissionDenied": "Permiso denegado",
@@ -118,7 +126,9 @@
       "publishSuccess": "Artículo publicado",
       "statusChangeError": "No se pudo cambiar el estado del artículo",
       "submitForReviewSuccess": "Artículo enviado para revisión",
-      "archiveSuccess": "Artículo archivado"
+      "archiveSuccess": "Artículo archivado",
+      "deleteError": "No se pudo eliminar el artículo",
+      "deleteSuccess": "Artículo eliminado permanentemente"
     },
     "badges": {
       "reviewOverdue": "Revisión vencida"
@@ -145,6 +155,12 @@
     },
     "tags": {
       "title": "Etiquetas"
+    },
+    "dialogs": {
+      "delete": {
+        "title": "Eliminar artículo",
+        "message": "¿Está seguro de que desea eliminar permanentemente \"{{title}}\"? Esto eliminará el artículo y su contenido, y no se puede deshacer."
+      }
     }
   },
   "filters": {
@@ -195,7 +211,8 @@
       "publish": "Publicar",
       "approveAndPublish": "Aprobar y publicar",
       "archive": "Archivar",
-      "republish": "Republicar"
+      "republish": "Republicar",
+      "delete": "Eliminar permanentemente"
     },
     "flow": {
       "draft": "Borrador",
@@ -214,13 +231,19 @@
       "archive": {
         "title": "Archivar artículo",
         "message": "Esto archivará el artículo y lo eliminará de la visibilidad del cliente. ¿Está seguro?"
+      },
+      "delete": {
+        "title": "Eliminar artículo",
+        "message": "¿Está seguro de que desea eliminar permanentemente este artículo? Esto eliminará el artículo y su contenido, y no se puede deshacer."
       }
     },
     "feedback": {
       "publishError": "No se pudo publicar el artículo",
       "publishSuccess": "Artículo publicado con éxito",
       "archiveError": "No se pudo archivar el artículo",
-      "archiveSuccess": "Artículo archivado"
+      "archiveSuccess": "Artículo archivado",
+      "deleteError": "No se pudo eliminar el artículo",
+      "deleteSuccess": "Artículo eliminado permanentemente"
     }
   },
   "reviewDashboard": {
