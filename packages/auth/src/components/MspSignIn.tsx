@@ -76,80 +76,141 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
 
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 p-8 flex justify-between items-center">
-        <div className="flex items-center">
+        <a
+          href="https://www.nineminds.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center hover:opacity-80 transition-opacity"
+        >
           <Image
             src="/images/avatar-purple-background.png"
-            alt="Logo"
+            alt="Nine Minds"
             width={50}
             height={50}
             className="rounded-full mr-4"
           />
           <div>
-            <span className="text-2xl font-bold text-[rgb(var(--color-text-800))]">MSP Dashboard</span>
+            <span className="text-2xl font-bold text-[rgb(var(--color-text-800))]">Nine Minds</span>
           </div>
-        </div>
+        </a>
       </div>
 
       <div className="flex min-h-screen">
         {/* Left side with features */}
         <div className="hidden lg:flex lg:w-1/2 p-12 flex-col justify-center items-center">
           <div className="max-w-lg">
-            <Image
-              src="/images/avatar-purple-big.png"
-              alt="Client Logo"
-              width={200}
-              height={200}
-              className="rounded-full mb-8 mx-auto"
-            />
-            <h1 className="text-4xl font-bold text-[rgb(var(--color-text-800))] mb-4 text-center">
-              Professional Services Automation
-            </h1>
-            <p className="text-lg text-[rgb(var(--color-text-600))] mb-2 text-center">
-              Open source PSA platform for Managed Service Providers
-            </p>
+            <a
+              href="https://www.nineminds.com/alga-psa"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block hover:opacity-80 transition-opacity"
+            >
+              <Image
+                src="/images/avatar-purple-big.png"
+                alt="Alga PSA"
+                width={200}
+                height={200}
+                className="rounded-full mb-8 mx-auto"
+              />
+            </a>
+            <a
+              href="https://www.nineminds.com/alga-psa"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block hover:opacity-80 transition-opacity"
+            >
+              <h1 className="text-4xl font-bold text-[rgb(var(--color-text-800))] mb-4 text-center">
+                Professional Services Automation
+              </h1>
+            </a>
+            <a
+              href="https://www.nineminds.com/alga-psa"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block hover:opacity-80 transition-opacity"
+            >
+              <p className="text-lg text-[rgb(var(--color-text-600))] mb-2 text-center">
+                Open source PSA platform for Managed Service Providers
+              </p>
+            </a>
             <div className="space-y-3">
-              <div className="flex items-start space-x-3">
+              <a
+                href="https://www.nineminds.com/alga-psa"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start space-x-3 hover:opacity-80 transition-opacity"
+              >
                 <Ticket className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
                   <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Comprehensive Ticketing</h3>
                 </div>
-              </div>
-              <div className="flex items-start space-x-3">
+              </a>
+              <a
+                href="https://www.nineminds.com/alga-psa"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start space-x-3 hover:opacity-80 transition-opacity"
+              >
                 <Mail className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
                   <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Inbound Emails</h3>
                 </div>
-              </div>
-              <div className="flex items-start space-x-3">
+              </a>
+              <a
+                href="https://www.nineminds.com/alga-psa"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start space-x-3 hover:opacity-80 transition-opacity"
+              >
                 <Calendar className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
                   <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Technician Dispatch and Scheduling</h3>
                 </div>
-              </div>
-              <div className="flex items-start space-x-3">
+              </a>
+              <a
+                href="https://www.nineminds.com/alga-psa"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start space-x-3 hover:opacity-80 transition-opacity"
+              >
                 <Clock className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
                   <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Time Entry/Tracking</h3>
                 </div>
-              </div>
-              <div className="flex items-start space-x-3">
+              </a>
+              <a
+                href="https://www.nineminds.com/alga-psa"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start space-x-3 hover:opacity-80 transition-opacity"
+              >
                 <Layers className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
                   <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Project Management Tools</h3>
                 </div>
-              </div>
-              <div className="flex items-start space-x-3">
+              </a>
+              <a
+                href="https://www.nineminds.com/alga-psa"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start space-x-3 hover:opacity-80 transition-opacity"
+              >
                 <Users className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
                   <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Client and Contact Management</h3>
                 </div>
-              </div>
-              <div className="flex items-start space-x-3">
+              </a>
+              <a
+                href="https://www.nineminds.com/alga-psa"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start space-x-3 hover:opacity-80 transition-opacity"
+              >
                 <FileText className="w-5 h-5 text-[rgb(var(--color-primary-500))] mt-1 flex-shrink-0" />
                 <div>
                   <h3 className="text-[rgb(var(--color-text-800))] font-semibold text-sm">Centralized Document Uploads and Storage</h3>
                 </div>
-              </div>
+              </a>
             </div>
           </div>
         </div>
@@ -173,7 +234,7 @@ export default function MspSignIn({ initialEmail }: MspSignInProps) {
                 onTwoFactorRequired={() => setIsOpen2FA(true)}
               />
               <div className="mt-6 text-center">
-                <a href="/auth/client-portal/signin" className="text-sm text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]">
+                <a href="/auth/client-portal/signin" className="block text-sm text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]">
                   Looking for the Client Portal? Click here →
                 </a>
               </div>
