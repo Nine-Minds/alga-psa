@@ -54,6 +54,7 @@
         "expand": "11111",
         "collapse": "11111"
       },
+      "ready": "11111",
       "canCombine": "11111",
       "separate": "11111",
       "blocked": "11111",

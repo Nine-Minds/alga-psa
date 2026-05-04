@@ -54,6 +54,7 @@
         "expand": "Développer",
         "collapse": "Effondrement"
       },
+      "ready": "Prêt à facturer",
       "canCombine": "Peut être combiné en une seule facture",
       "separate": "Doit facturer séparément",
       "blocked": "Contient des éléments bloqués",
