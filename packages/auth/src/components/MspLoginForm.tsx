@@ -160,12 +160,25 @@ export default function MspLoginForm({
         </Alert>
       )}
 
-        <div className="text-sm text-right">
-          <Link href="/auth/msp/forgot-password"
-          className="font-medium text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-400))]"
-          {...withDataAutomationId({ id: 'msp-forgot-password-link' })}>
-            Forgot your password?
-          </Link>
+        <div className="text-sm text-right space-y-1">
+          <div>
+            <Link href="/auth/msp/forgot-password"
+            className="font-medium text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-400))]"
+            {...withDataAutomationId({ id: 'msp-forgot-password-link' })}>
+              Forgot your password?
+            </Link>
+          </div>
+          <div className="text-[rgb(var(--color-text-600))]">
+            Don&apos;t have an account?{' '}
+            <a
+              href="https://www.nineminds.com/plans"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-400))]"
+            >
+              Sign up
+            </a>
+          </div>
         </div>
 
       <div>
