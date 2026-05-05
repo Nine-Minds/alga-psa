@@ -153,3 +153,6 @@ implementation progresses; update earlier entries when something changes.
   existing email tenant-config getter under namespace `email` and a temporary
   hard-coded API getter under namespace `api`, so startup is already wired
   for the upcoming API limiter without altering email defaults.
+- (2026-05-05) **F005 complete.** `TenantEmailService.checkRateLimits()`
+  now consumes tokens from namespace `email`, preserving the pre-existing
+  per-tenant/per-user email semantics after the limiter API change.

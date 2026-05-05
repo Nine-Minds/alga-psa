@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "Update packages/email/src/TenantEmailService.ts:155 to pass 'email' as the first arg to tryConsume; the existing userId arg moves to second position.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Rollout / Migration"]
   },
   {
