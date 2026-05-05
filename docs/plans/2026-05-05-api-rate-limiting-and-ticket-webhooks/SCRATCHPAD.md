@@ -226,3 +226,7 @@ implementation progresses; update earlier entries when something changes.
 - (2026-05-05) **F013 complete.** `enforceApiRateLimit()` now treats
   `RATE_LIMIT_ENFORCE=false` as observation mode: it logs the throttle with
   tenant/api-key/retry metadata and returns a decision instead of throwing.
+- (2026-05-05) **F014 complete.** The NM Store branch in
+  `apiMiddleware.withApiKeyAuth()` now stamps `rateLimitSubjectId='nm_store'`
+  before calling the limiter so all global-key traffic shares one tenant
+  bucket instead of bypassing per-subject accounting.

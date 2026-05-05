@@ -80,7 +80,7 @@
   {
     "id": "F014",
     "description": "Use sentinel subjectId 'nm_store' for the NM Store global-key path inside withApiKeyAuth so its calls share one tenant-scoped bucket instead of being unbucketed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Security / Permissions"]
   },
   {
