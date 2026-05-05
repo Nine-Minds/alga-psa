@@ -104,7 +104,7 @@
   {
     "id": "F018",
     "description": "Call enforceApiRateLimit from withApiKeyAuth (both NM-Store and default branches) and withAuth in apiMiddleware.ts after `req.context = {...}`; stash decision on req.context.rateLimit.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {

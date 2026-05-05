@@ -239,3 +239,7 @@ implementation progresses; update earlier entries when something changes.
 - (2026-05-05) **F017 complete.** `ApiBaseController.authenticate()` now
   enforces the API bucket immediately after building request context and stores
   the resulting decision on `apiRequest.context.rateLimit`.
+- (2026-05-05) **F018 complete.** The middleware auth wrappers now call
+  `enforceApiRateLimit()` as soon as context is available. I also wired the
+  legacy `apiAuthMiddleware.ts` path so `/api/v1/test-auth` stays in the same
+  bucket family as the newer wrappers.
