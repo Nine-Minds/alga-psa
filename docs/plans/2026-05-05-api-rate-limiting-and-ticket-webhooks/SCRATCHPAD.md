@@ -207,3 +207,7 @@ implementation progresses; update earlier entries when something changes.
   `server/src/lib/api/rateLimit/__tests__/configGetter.invalidate.test.ts`
   to prove tenant-wide invalidation clears only that tenant and single-key
   invalidation clears only the targeted key.
+- (2026-05-05) **T006 complete.** Added
+  `server/src/lib/api/rateLimit/__tests__/configGetter.fallback.test.ts`
+  to verify the resolver order is per-key override, then tenant default, then
+  the hard-coded API defaults.
