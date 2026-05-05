@@ -98,7 +98,7 @@
   {
     "id": "F017",
     "description": "Call enforceApiRateLimit from ApiBaseController.authenticate after `apiRequest.context = {...}`; stash decision on apiRequest.context.rateLimit.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {

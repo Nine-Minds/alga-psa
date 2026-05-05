@@ -236,3 +236,6 @@ implementation progresses; update earlier entries when something changes.
 - (2026-05-05) **F016 complete.** Rate-limit denials now throw the existing
   `TooManyRequestsError` with `details.retry_after_ms`, `details.remaining`,
   and the full header set attached on `error.headers`.
+- (2026-05-05) **F017 complete.** `ApiBaseController.authenticate()` now
+  enforces the API bucket immediately after building request context and stores
+  the resulting decision on `apiRequest.context.rateLimit`.
