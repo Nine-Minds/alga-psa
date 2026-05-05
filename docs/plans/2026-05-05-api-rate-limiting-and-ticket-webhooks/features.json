@@ -86,7 +86,7 @@
   {
     "id": "F015",
     "description": "Implement shouldBypassRateLimit(pathname) covering health/version, internal-runner, and mobile-auth prefixes; mirror the existing shouldSkipApiKeyAuth shape.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {

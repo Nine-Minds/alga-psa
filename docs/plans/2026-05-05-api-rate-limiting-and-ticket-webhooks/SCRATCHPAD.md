@@ -230,3 +230,6 @@ implementation progresses; update earlier entries when something changes.
   `apiMiddleware.withApiKeyAuth()` now stamps `rateLimitSubjectId='nm_store'`
   before calling the limiter so all global-key traffic shares one tenant
   bucket instead of bypassing per-subject accounting.
+- (2026-05-05) **F015 complete.** `shouldBypassRateLimit()` now centralizes
+  the bypass prefixes for health endpoints, mobile auth, and runner-internal
+  endpoints so future auth wrappers reuse one rate-limit allowlist.
