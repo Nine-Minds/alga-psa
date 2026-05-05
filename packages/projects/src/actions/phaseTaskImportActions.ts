@@ -983,7 +983,11 @@ export const importPhasesAndTasks = withAuth(async (
                 agentId => agentId !== taskData.assigned_to
               );
               for (const additionalAgentId of uniqueAdditionalAgents) {
-                await ProjectTaskModel.addTaskResource(trx, tenant, newTask.task_id, additionalAgentId);
+                try {
+                  await ProjectTaskModel.addTaskResource(trx, tenant, newTask.task_id, additionalAgentId);
+                } catch (resourceError) {
+                  console.error(`Failed to add additional agent ${additionalAgentId}:`, resourceError);
+                }
               }
             }
 

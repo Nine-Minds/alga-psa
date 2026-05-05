@@ -9,8 +9,10 @@ import { ITag } from '@alga-psa/types';
 import { CheckSquare, Square, Ticket, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip, Ban, GitBranch, Link2, Tag, MessageSquare } from 'lucide-react';
 import { extractTaskDescriptionText } from '../lib/taskRichText';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import UserPicker from '@alga-psa/ui/components/UserPicker';
+import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import type { ITeam } from '@alga-psa/types';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { TagList } from '@alga-psa/ui/components';
@@ -46,6 +48,8 @@ interface TaskCardProps {
   zoomLevel?: number;
   onTaskSelected: (task: IProjectTask) => void;
   onAssigneeChange: (taskId: string, newAssigneeId: string, newTaskName?: string) => void;
+  onTeamAssign?: (taskId: string, teamId: string) => void | Promise<void>;
+  teams?: ITeam[];
   onDragStart: (e: React.DragEvent, taskId: string) => void;
   onDragEnd: (e: React.DragEvent) => void;
   projectTreeData?: any[];
@@ -87,6 +91,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   zoomLevel = 50,
   onTaskSelected,
   onAssigneeChange,
+  onTeamAssign,
+  teams = [],
   onDragStart,
   onDragEnd,
   projectTreeData,
@@ -378,14 +384,17 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       )}
       <div className={`flex items-center ${zoomLevel <= 30 ? 'gap-1' : 'gap-2'}`}>
         <div onClick={(e) => e.stopPropagation()}>
-          <UserPicker
+          <UserAndTeamPicker
             value={task.assigned_to || ''}
             onValueChange={(newAssigneeId: string) => onAssigneeChange(task.task_id, newAssigneeId)}
+            onTeamSelect={onTeamAssign ? (teamId: string) => onTeamAssign(task.task_id, teamId) : undefined}
             size={zoomLevel <= 30 ? 'xs' : 'sm'}
             users={users.filter(u =>
               !displayResources.some(r => r.additional_user_id === u.user_id)
             )}
+            teams={teams}
             getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+            getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
           />
         </div>
         {task.assigned_team_id && teamNames[task.assigned_team_id] && (
