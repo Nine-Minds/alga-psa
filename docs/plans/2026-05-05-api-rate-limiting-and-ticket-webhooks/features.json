@@ -38,7 +38,7 @@
   {
     "id": "F007",
     "description": "Add an optional `extraHeaders?: Record<string,string>` parameter to createSuccessResponse and createPaginatedResponse so callers can attach X-RateLimit-* headers to successful responses.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {

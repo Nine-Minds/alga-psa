@@ -175,3 +175,7 @@ implementation progresses; update earlier entries when something changes.
   headers and `handleApiError()` forwards them into `NextResponse.json()`,
   which lets later rate-limit errors attach `Retry-After` and
   `X-RateLimit-*` metadata without a parallel error class.
+- (2026-05-05) **F007 complete.** `createSuccessResponse()` and
+  `createPaginatedResponse()` now accept optional `extraHeaders` as a final
+  parameter, preserving existing controller call sites while opening a clean
+  path for rate-limit headers on successful responses.
