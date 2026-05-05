@@ -12,8 +12,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Registry configuration
-REGISTRY="ghcr.io/nine-minds/alga-psa-ce"
-MAX_FALLBACK_ATTEMPTS=10
+REGISTRY="${ALGA_IMAGE_REPO:-ghcr.io/nine-minds/alga-psa-ce}"
+IMAGE_PLATFORM="${ALGA_IMAGE_PLATFORM:-linux/amd64}"
 
 LAST_CHECK_ERROR=""
 
@@ -38,71 +38,105 @@ check_tag_exists() {
   fi
 }
 
-# Function to find a valid tag from recent commits
-find_valid_tag() {
-  echo -e "${YELLOW}⚠${NC}  Tag not found in registry. Searching recent commits for a valid tag..." >&2
-
-  cd "${ROOT_DIR}"
-  local commits=($(git rev-list HEAD -n ${MAX_FALLBACK_ATTEMPTS} --abbrev-commit --abbrev=8))
-
-  for commit in "${commits[@]}"; do
-    echo -e "${BLUE}→${NC} Trying commit ${commit}..." >&2
-    if check_tag_exists "${commit}"; then
-      echo -e "${GREEN}✓${NC} Found valid tag: ${commit}" >&2
-      echo "${commit}"
-      return 0
-    fi
-  done
-
-  return 1
+# Function to check if the image already exists locally
+check_local_image_exists() {
+  local tag="$1"
+  docker image inspect "${REGISTRY}:${tag}" >/dev/null 2>&1
 }
 
-# Determine the image tag to use.
-# Priority: existing ALGA_IMAGE_TAG env var > short SHA > release tag fallback
+pull_image() {
+  local tag="$1"
+  echo -e "${BLUE}→${NC} Pulling ${REGISTRY}:${tag} for ${IMAGE_PLATFORM}..." >&2
+  docker pull --platform "${IMAGE_PLATFORM}" "${REGISTRY}:${tag}"
+}
 
+build_local_image() {
+  local tag="$1"
+  echo -e "${BLUE}→${NC} Building ${REGISTRY}:${tag} from the current checkout..." >&2
+  echo -e "${BLUE}→${NC} Build platform: ${IMAGE_PLATFORM}" >&2
+
+  cd "${ROOT_DIR}"
+  docker build \
+    --platform "${IMAGE_PLATFORM}" \
+    -f Dockerfile.build \
+    -t "${REGISTRY}:${tag}" \
+    .
+}
+
+write_tag_file() {
+  local tag="$1"
+  cat >"${TAG_FILE}" <<EOF
+ALGA_IMAGE_TAG=${tag}
+EOF
+  echo -e "${GREEN}✓${NC} Pinned ALGA_IMAGE_TAG=${tag} to ${TAG_FILE}" >&2
+}
+
+cd "${ROOT_DIR}"
+
+# Explicit override remains available for CI/support scenarios, but it no longer
+# falls back to an unrelated recent commit. If the user pins a tag, that exact tag
+# must exist remotely or locally.
 if [[ -n "${ALGA_IMAGE_TAG:-}" ]]; then
   tag="${ALGA_IMAGE_TAG}"
   echo -e "${BLUE}→${NC} Using ALGA_IMAGE_TAG from environment: ${tag}" >&2
-else
-  cd "${ROOT_DIR}"
-  if git describe --exact-match --tags >/tmp/git_tag 2>/dev/null; then
-    tag="$(cat /tmp/git_tag)"
-    echo -e "${BLUE}→${NC} Using release tag: ${tag}" >&2
-  else
-    tag="$(git rev-parse --short=8 HEAD)"
-    echo -e "${BLUE}→${NC} Using short commit SHA: ${tag}" >&2
+
+  if check_tag_exists "${tag}"; then
+    pull_image "${tag}"
+    write_tag_file "${tag}"
+    exit 0
   fi
-fi
 
-# Validate that the tag exists in the registry
-if ! check_tag_exists "${tag}"; then
-  echo -e "${RED}✗${NC} Tag '${tag}' not found in registry: ${REGISTRY}" >&2
+  if check_local_image_exists "${tag}"; then
+    echo -e "${GREEN}✓${NC} Using existing local image ${REGISTRY}:${tag}" >&2
+    write_tag_file "${tag}"
+    exit 0
+  fi
 
+  echo -e "${RED}✗${NC} Explicit ALGA_IMAGE_TAG '${tag}' was not found remotely or locally for ${REGISTRY}." >&2
   if [[ -n "${LAST_CHECK_ERROR}" ]]; then
     echo -e "${YELLOW}ℹ${NC}  docker manifest inspect failed with:" >&2
     while IFS= read -r line; do
       echo -e "      ${line}" >&2
     done <<<"${LAST_CHECK_ERROR}"
   fi
-
-  if valid_tag=$(find_valid_tag); then
-    tag="${valid_tag}"
-    echo -e "${GREEN}✓${NC} Falling back to valid tag: ${tag}" >&2
-  else
-    echo -e "${RED}✗${NC} Could not find any valid tags in the last ${MAX_FALLBACK_ATTEMPTS} commits" >&2
-    echo -e "${YELLOW}ℹ${NC}  Possible solutions:" >&2
-    echo -e "   1. Wait for CI/CD to build and publish the image" >&2
-    echo -e "   2. Build the image locally with: nu main.nu build-ai-web --local --push" >&2
-    echo -e "   3. Checkout a commit with a published image" >&2
-    echo -e "   4. Set ALGA_IMAGE_TAG environment variable to a known good tag" >&2
-    exit 1
-  fi
-else
-  echo -e "${GREEN}✓${NC} Tag '${tag}' exists in registry" >&2
+  echo -e "${YELLOW}ℹ${NC}  Unset ALGA_IMAGE_TAG to build from the current checkout, or set it to an existing image tag." >&2
+  exit 1
 fi
 
-cat >"${TAG_FILE}" <<EOF
-ALGA_IMAGE_TAG=${tag}
-EOF
+head_sha="$(git rev-parse --short=8 HEAD)"
+worktree_status="$(git status --porcelain --untracked-files=normal)"
 
-echo -e "${GREEN}✓${NC} Pinned ALGA_IMAGE_TAG=${tag} to ${TAG_FILE}" >&2
+if [[ -n "${worktree_status}" ]]; then
+  tag="${head_sha}-local"
+  echo -e "${YELLOW}⚠${NC}  Worktree has uncommitted changes; building a local image instead of using the published HEAD image." >&2
+  echo -e "${YELLOW}ℹ${NC}  Local image tag: ${tag}" >&2
+  build_local_image "${tag}"
+  write_tag_file "${tag}"
+  exit 0
+fi
+
+tag="${head_sha}"
+echo -e "${BLUE}→${NC} Using current checkout SHA: ${tag}" >&2
+
+if check_tag_exists "${tag}"; then
+  pull_image "${tag}"
+  write_tag_file "${tag}"
+  exit 0
+fi
+
+if [[ -n "${LAST_CHECK_ERROR}" ]]; then
+  echo -e "${YELLOW}ℹ${NC}  No published image found for current checkout ${tag}:" >&2
+  while IFS= read -r line; do
+    echo -e "      ${line}" >&2
+  done <<<"${LAST_CHECK_ERROR}"
+fi
+
+if check_local_image_exists "${tag}" && [[ "${ALGA_FORCE_LOCAL_BUILD:-false}" != "true" ]]; then
+  echo -e "${GREEN}✓${NC} Using existing local image ${REGISTRY}:${tag}" >&2
+  echo -e "${YELLOW}ℹ${NC}  Set ALGA_FORCE_LOCAL_BUILD=true to rebuild it." >&2
+  write_tag_file "${tag}"
+  exit 0
+fi
+
+build_local_image "${tag}"
+write_tag_file "${tag}"
