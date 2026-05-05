@@ -14,7 +14,7 @@
   {
     "id": "T003",
     "description": "Unit (vitest, packages/email/src/__tests__/TokenBucketRateLimiter.email-regression.test.ts): with namespace 'email' and a getter returning the same config the existing email path used (maxTokens=60, refillRate=1), tryConsume behavior matches a baseline snapshot of consumption + refill across 1, 30, 60, and 61 calls.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001", "F002", "F005"]
   },
   {

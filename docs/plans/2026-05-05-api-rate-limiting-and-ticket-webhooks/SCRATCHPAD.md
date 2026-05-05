@@ -164,3 +164,8 @@ implementation progresses; update earlier entries when something changes.
   `packages/email/src/__tests__/TokenBucketRateLimiter.subjectId.test.ts`
   to verify namespace getters receive `subjectId` and that API-key buckets
   are keyed as `...:api:{tenant}:{subject}`.
+- (2026-05-05) **T003 complete.** Added
+  `packages/email/src/__tests__/TokenBucketRateLimiter.email-regression.test.ts`
+  with fake time pinned to confirm the email namespace preserves the legacy
+  60-token burst / 1-token-per-second refill behavior at calls 1, 30, 60,
+  and 61.
