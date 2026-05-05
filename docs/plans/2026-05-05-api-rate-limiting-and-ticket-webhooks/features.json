@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "Implement an in-process LRU-cached apiRateLimitConfigGetter (max 1000 entries, 30s TTL) with an invalidateApiRateLimitConfig(tenant, apiKeyId?) helper that clears tenant-wide entries when apiKeyId is omitted.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Non-functional Requirements"]
   },
   {

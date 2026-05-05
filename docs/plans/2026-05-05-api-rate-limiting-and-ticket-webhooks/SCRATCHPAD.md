@@ -196,3 +196,7 @@ implementation progresses; update earlier entries when something changes.
   `server/src/lib/api/rateLimit/apiRateLimitSettingsModel.ts` with exact-row
   reads/writes plus a fallback resolver that checks `(tenant, apiKeyId)`,
   then `(tenant, NULL)`, then the hard defaults `{ maxTokens: 120, refillRate: 1 }`.
+- (2026-05-05) **F011 complete.** Added
+  `server/src/lib/api/rateLimit/apiRateLimitConfigGetter.ts` with a 1000-entry,
+  30-second TTL cache, exact-entry invalidation, tenant-prefix invalidation,
+  and `initializeApp()` now uses it for the `api` namespace.
