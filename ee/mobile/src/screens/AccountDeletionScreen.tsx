@@ -53,7 +53,7 @@ export function AccountDeletionScreen() {
         result.data.subscriptionCancellationInstructions ??
         t(
           "accountDelete.cancelInstructions",
-          "To stop future Apple charges, open Settings > Apple ID > Subscriptions and cancel Alga PSA.",
+          "To stop future Apple charges, open Settings > Apple ID > Subscriptions and cancel AlgaPSA.",
         );
 
       Alert.alert(
@@ -116,14 +116,14 @@ export function AccountDeletionScreen() {
       <Text style={{ ...theme.typography.body, color: theme.colors.textSecondary, marginTop: theme.spacing.md }}>
         {t(
           "accountDelete.body",
-          "Deleting your account removes your user from Alga PSA. If you're on a Solo plan, your workspace and all its data — clients, tickets, invoices, time entries — will also be deleted. This cannot be undone.",
+          "Deleting your account removes your user from AlgaPSA. If you're on a Solo plan, your workspace and all its data — clients, tickets, invoices, time entries — will also be deleted. This cannot be undone.",
         )}
       </Text>
 
       <Text style={{ ...theme.typography.body, color: theme.colors.textSecondary, marginTop: theme.spacing.md }}>
         {t(
           "accountDelete.appleNote",
-          "Note: deleting your account here does NOT automatically cancel your Apple subscription. To stop future charges, open Settings on your iPhone → your name → Subscriptions → Alga PSA → Cancel Subscription.",
+          "Note: deleting your account here does NOT automatically cancel your Apple subscription. To stop future charges, open Settings on your iPhone → your name → Subscriptions → AlgaPSA → Cancel Subscription.",
         )}
       </Text>
 

@@ -460,7 +460,7 @@ export function CreateWorkspaceScreen() {
       >
         {t(
           "subtitle",
-          "Alga PSA Solo is a one-person plan for independent MSPs. Subscribe to create your workspace and start managing your clients, tickets, and invoices.",
+          "AlgaPSA Solo is a one-person plan for independent MSPs. Subscribe to create your workspace and start managing your clients, tickets, and invoices.",
         )}
       </Text>
 
