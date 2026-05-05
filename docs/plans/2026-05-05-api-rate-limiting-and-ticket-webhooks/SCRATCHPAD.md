@@ -142,3 +142,6 @@ implementation progresses; update earlier entries when something changes.
   `getBucketConfig`. Redis keys now include the namespace segment
   (`alga-psa:ratelimit:bucket:{namespace}:{tenant}[:{subject}]`) so future
   API/webhook buckets cannot collide with the existing email path.
+- (2026-05-05) **F002 complete.** `BucketConfigGetter` now receives
+  `(tenantId, subjectId?)`, which lets the limiter surface per-key and
+  per-webhook configuration decisions without additional key parsing.

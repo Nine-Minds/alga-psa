@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Widen the BucketConfigGetter signature from `(tenantId) => BucketConfig` to `(tenantId, subjectId?) => BucketConfig` so per-API-key and per-webhook overrides can be resolved.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {
