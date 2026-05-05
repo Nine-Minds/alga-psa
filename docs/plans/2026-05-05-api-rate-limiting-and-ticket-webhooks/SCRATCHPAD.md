@@ -156,3 +156,7 @@ implementation progresses; update earlier entries when something changes.
 - (2026-05-05) **F005 complete.** `TenantEmailService.checkRateLimits()`
   now consumes tokens from namespace `email`, preserving the pre-existing
   per-tenant/per-user email semantics after the limiter API change.
+- (2026-05-05) **T001 complete.** Added
+  `packages/email/src/__tests__/TokenBucketRateLimiter.namespaces.test.ts`
+  to prove the same tenant/subject can exhaust `email` without consuming the
+  `api` bucket.

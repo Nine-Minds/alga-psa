@@ -1,0 +1,224 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit (vitest, packages/email/src/__tests__/TokenBucketRateLimiter.namespaces.test.ts): same (tenant='t1', userId=undefined) in namespace 'email' and namespace 'api' produce two independent buckets — exhaust 'email' bucket, then 'api' bucket still allows tryConsume.",
+    "implemented": true,
+    "featureIds": ["F001", "F003"]
+  },
+  {
+    "id": "T002",
+    "description": "Unit (vitest, packages/email/src/__tests__/TokenBucketRateLimiter.subjectId.test.ts): the registered BucketConfigGetter for namespace 'api' is invoked with both tenantId and subjectId; getter returns per-key configs and the bucket key uses the subjectId as the third dimension.",
+    "implemented": false,
+    "featureIds": ["F002", "F003"]
+  },
+  {
+    "id": "T003",
+    "description": "Unit (vitest, packages/email/src/__tests__/TokenBucketRateLimiter.email-regression.test.ts): with namespace 'email' and a getter returning the same config the existing email path used (maxTokens=60, refillRate=1), tryConsume behavior matches a baseline snapshot of consumption + refill across 1, 30, 60, and 61 calls.",
+    "implemented": false,
+    "featureIds": ["F001", "F002", "F005"]
+  },
+  {
+    "id": "T004",
+    "description": "Unit (vitest, server/src/lib/api/rateLimit/__tests__/configGetter.cache.test.ts): two consecutive apiRateLimitConfigGetter('t1','k1') calls hit the DAL exactly once (mock counts calls).",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T005",
+    "description": "Unit (vitest, server/src/lib/api/rateLimit/__tests__/configGetter.invalidate.test.ts): invalidateApiRateLimitConfig('t1') clears all cached entries whose key starts with 't1:' and leaves other tenants intact; invalidateApiRateLimitConfig('t1','k1') clears only that one entry.",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T006",
+    "description": "Unit (vitest, server/src/lib/api/rateLimit/__tests__/configGetter.fallback.test.ts): with no row → returns hard defaults {120, 1.0}; with a (tenant, NULL) row → returns that row; with a (tenant, apiKeyId) row → returns the per-key row over the tenant default.",
+    "implemented": false,
+    "featureIds": ["F010"]
+  },
+  {
+    "id": "T007",
+    "description": "Integration (vitest + real Redis, server/src/test/integration/apiRateLimit.headers.test.ts): with maxTokens=120, refillRate=1, hit a TicketController-backed route 121 times under one (tenant, apiKeyId); call #121 returns 429 with Retry-After (integer seconds), X-RateLimit-Limit=120, X-RateLimit-Remaining=0, X-RateLimit-Reset (ISO8601 in the future), and body envelope { error: { code: 'RATE_LIMITED', details: { retry_after_ms, remaining: 0 } } }.",
+    "implemented": false,
+    "featureIds": ["F006", "F012", "F016", "F017"]
+  },
+  {
+    "id": "T008",
+    "description": "Integration (vitest + real Redis, server/src/test/integration/apiRateLimit.successHeaders.test.ts): a successful authenticated GET returns X-RateLimit-Limit and X-RateLimit-Remaining headers reflecting the bucket state at decision time.",
+    "implemented": false,
+    "featureIds": ["F007", "F019"]
+  },
+  {
+    "id": "T009",
+    "description": "Integration (vitest + real Redis, server/src/test/integration/apiRateLimit.keyIsolation.test.ts): two API keys K1 and K2 in the same tenant with maxTokens=5; exhaust K1; call #6 with K1 → 429, but call #1 with K2 → 200.",
+    "implemented": false,
+    "featureIds": ["F012", "F017"]
+  },
+  {
+    "id": "T010",
+    "description": "Integration (vitest + real Redis, server/src/test/integration/apiRateLimit.tenantIsolation.test.ts): exhausting tenant A's bucket does not affect tenant B's bucket for the same logical apiKeyId value.",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T011",
+    "description": "Integration (vitest + real Redis, server/src/test/integration/apiRateLimit.bypass.test.ts): a request to /api/v1/health (or a route in the bypass list) does not consume tokens — verify by exhausting the bucket via /api/v1/tickets and then issuing 5 health calls that all return 200.",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T012",
+    "description": "Integration (vitest + real Redis, server/src/test/integration/apiRateLimit.observation.test.ts): with RATE_LIMIT_ENFORCE=false, the 121st call returns 200 with X-RateLimit-Remaining=0 AND a structured WARN log line is emitted containing tenant, api_key_id, retry_after_ms.",
+    "implemented": false,
+    "featureIds": ["F013", "F049"]
+  },
+  {
+    "id": "T013",
+    "description": "Integration (vitest + real Redis, server/src/test/integration/apiRateLimit.failOpen.test.ts): stop the Redis client (connection.disconnect or a mock that throws), make 200 calls, all return 200 with X-RateLimit-Remaining=-1; api_rate_limit_redis_unavailable_total counter incremented.",
+    "implemented": false,
+    "featureIds": ["F012", "F049"]
+  },
+  {
+    "id": "T014",
+    "description": "Integration (vitest + real Redis, server/src/test/integration/apiRateLimit.authSurfaces.test.ts): exhaust the bucket via three different routes — one ApiBaseController-backed (e.g., /api/v1/tickets), one withApiKeyAuth-wrapped (e.g., /api/v1/service-types), and one withAuth-wrapped (/api/v1/test-auth) — all three return 429 from the same shared bucket.",
+    "implemented": false,
+    "featureIds": ["F017", "F018"]
+  },
+  {
+    "id": "T015",
+    "description": "Integration (vitest + real Redis, server/src/test/integration/apiRateLimit.nmStore.test.ts): NM Store global key + x-tenant-id header consumes from the 'nm_store' subjectId bucket; non-NM-Store key in the same tenant is unaffected.",
+    "implemented": false,
+    "featureIds": ["F014", "F018"]
+  },
+  {
+    "id": "T016",
+    "description": "Integration (vitest + real Postgres + real Redis, server/src/test/integration/apiRateLimit.dbOverride.test.ts): seed an api_rate_limit_settings row (tenant='tA', api_key_id='k1', max_tokens=3, refill_per_min=60); call #4 with K1 returns 429; call #1 with a different key in tenant 'tA' returns 200 (uses tenant default = 120 since no (tA, NULL) row).",
+    "implemented": false,
+    "featureIds": ["F008", "F009", "F010", "F012"]
+  },
+  {
+    "id": "T017",
+    "description": "Integration (vitest + real Postgres, server/src/test/integration/apiRateLimit.dbActions.test.ts): setApiRateLimitForKey writes the row and invalidates the cache (subsequent enforce call sees new limit immediately, not after 30s); clearApiRateLimitForKey reverts to tenant default.",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T018",
+    "description": "Unit (vitest, server/src/lib/api/schemas/__tests__/webhookSchemas.test.ts): webhookEventTypeSchema.safeParse('ticket.comment.added').success === true.",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T019",
+    "description": "Unit (vitest, server/src/lib/eventBus/subscribers/webhook/__tests__/webhookEventMap.test.ts): a table-driven test asserts each TICKET_* internal event maps to the documented public event(s); unknown event types return [].",
+    "implemented": false,
+    "featureIds": ["F032"]
+  },
+  {
+    "id": "T020",
+    "description": "Unit (vitest, server/src/lib/eventBus/subscribers/webhook/__tests__/webhookTicketPayload.test.ts): buildTicketWebhookPayload(TICKET_ASSIGNED, knex) returns the documented field set, no undefined leaks, tags is always an array (even when empty); calling it twice within 60s for the same ticket_id+tenant performs the join only once (in-memory cache hit).",
+    "implemented": false,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T021",
+    "description": "Unit (vitest, server/src/lib/eventBus/subscribers/webhook/__tests__/webhookTicketPayload.statusChanged.test.ts): for a TICKET_STATUS_CHANGED event with payload.changes.status_id={ from, to }, the public payload includes previous_status_id and previous_status_name resolved from the from value.",
+    "implemented": false,
+    "featureIds": ["F033", "F034"]
+  },
+  {
+    "id": "T022",
+    "description": "Unit (vitest, server/src/lib/eventBus/subscribers/webhook/__tests__/webhookTicketPayload.comment.test.ts): for TICKET_COMMENT_ADDED, the payload includes { comment: { text, author, timestamp, is_internal } } and does NOT include attachments or any field whose key matches /attach/i.",
+    "implemented": false,
+    "featureIds": ["F033"]
+  },
+  {
+    "id": "T023",
+    "description": "Unit (vitest, server/src/lib/webhooks/__tests__/sign.test.ts): golden vector — secret='shh', body='{\"a\":1}', ts=1700000000 produces the documented X-Alga-Signature value (hex); verifyWebhookSignature returns true on the same triple, false on a body byte change, false on ts skewed by ±1.",
+    "implemented": false,
+    "featureIds": ["F030", "F043"]
+  },
+  {
+    "id": "T024",
+    "description": "Unit (vitest, server/src/lib/webhooks/__tests__/ssrf.test.ts): assertSafeWebhookTarget rejects http://127.0.0.1, http://localhost, http://[::1], http://10.0.0.5, http://172.16.5.5, http://192.168.1.1, http://169.254.169.254, http://100.64.0.1, file:///etc/passwd, ftp://example.com — and accepts https://example.com. With WEBHOOK_SSRF_ALLOW_PRIVATE=true, the private addresses pass.",
+    "implemented": false,
+    "featureIds": ["F029"]
+  },
+  {
+    "id": "T025",
+    "description": "Integration (vitest + real Redis + ephemeral http server, server/src/test/integration/webhookDelivery.happyPath.test.ts): create a webhook subscribed to ticket.assigned in tenant A; publishEvent({ eventType:'TICKET_ASSIGNED', payload:{ tenantId:'A', ticket_id, ... } }); wait for the WebhookDeliveryQueue poller; assert (a) the stub HTTP server receives one POST, (b) the body has the documented envelope { event_id, event_type:'ticket.assigned', occurred_at, tenant_id:'A', data }, (c) X-Alga-Signature header verifies, (d) a webhook_deliveries row exists with status='delivered' and attempt_number=1.",
+    "implemented": false,
+    "featureIds": ["F024", "F025", "F026", "F027", "F028", "F030", "F032", "F033", "F035", "F036", "F037", "F038"]
+  },
+  {
+    "id": "T026",
+    "description": "Integration (vitest + real Redis + ephemeral http server, server/src/test/integration/webhookDelivery.tenantIsolation.test.ts): two webhooks — A subscribed to ticket.assigned in tenant TA, B subscribed in tenant TB. Publish TICKET_ASSIGNED with tenantId=TA. Assert webhook A is called once, webhook B is never called, no webhook_deliveries row is created in tenant TB.",
+    "implemented": false,
+    "featureIds": ["F035"]
+  },
+  {
+    "id": "T027",
+    "description": "Integration (vitest + real Redis + http server returning 500, server/src/test/integration/webhookDelivery.retries.test.ts): a delivery to a 500-returning stub triggers 5 attempts; using vitest fake timers, advance through 1m, 5m, 30m, 2h, 12h and assert each attempt fires once and webhook_deliveries.attempt_number progresses 1..5; after the 5th failure the row status becomes 'abandoned' and the ZSET item is removed.",
+    "implemented": false,
+    "featureIds": ["F037", "F039"]
+  },
+  {
+    "id": "T028",
+    "description": "Integration (vitest + fake timers, server/src/test/integration/webhookDelivery.autoDisable.test.ts): with a stub that always returns 500, advance 24h of attempts across multiple events; webhook.is_active becomes false, webhook.auto_disabled_at is set, and an email notification was queued for the owning user.",
+    "implemented": false,
+    "featureIds": ["F040"]
+  },
+  {
+    "id": "T029",
+    "description": "Integration (vitest + real Redis, server/src/test/integration/webhookDelivery.perWebhookRateLimit.test.ts): with webhook.rate_limit_per_min=10, enqueue 30 deliveries simultaneously; assert exactly 10 deliveries fire within the first second and the remaining 20 are re-zAdd-ed with deliverAt scores in the future (asserted by reading the ZSET).",
+    "implemented": false,
+    "featureIds": ["F031", "F037"]
+  },
+  {
+    "id": "T030",
+    "description": "Integration (vitest + 2 simulated workers, server/src/test/integration/webhookDelivery.zsetAtomicity.test.ts): two WebhookDeliveryQueue.process() invocations on the same job (simulating two pods racing). Exactly one zRem returns 1; the other returns 0 and the second worker exits without calling performWebhookDelivery (verified by spy).",
+    "implemented": false,
+    "featureIds": ["F037"]
+  },
+  {
+    "id": "T031",
+    "description": "Integration (vitest, server/src/test/integration/webhookDelivery.ssrf.test.ts): a webhook with url=http://127.0.0.1 fails with an SSRF error before any HTTP socket is opened (spy on undici/fetch confirms zero invocations); the same URL is accepted with WEBHOOK_SSRF_ALLOW_PRIVATE=true.",
+    "implemented": false,
+    "featureIds": ["F028", "F029"]
+  },
+  {
+    "id": "T032",
+    "description": "Integration (vitest + real Postgres, server/src/test/integration/webhook.secretLifecycle.test.ts): POST /api/v1/webhooks returns plaintext signing_secret in the response body once; subsequent GET /api/v1/webhooks/[id] response body does NOT contain any field matching /signing_secret/i; webhookModel.getSigningSecret resolves a non-empty string via the secret provider; rotateWebhookSecret returns a different plaintext, and the OLD plaintext fails verifyWebhookSignature against a body signed by the NEW secret.",
+    "implemented": false,
+    "featureIds": ["F024", "F027", "F042", "F043"]
+  },
+  {
+    "id": "T033",
+    "description": "Integration (vitest + ephemeral http server, server/src/test/integration/webhook.testEndpoint.test.ts): POST /api/v1/webhooks/[id]/test → stub server receives one POST with event_type='webhook.test'; signature verifies; webhook_deliveries row written with is_test=true; bucket token count for the webhook is unchanged (no rate-limit consumption for test calls).",
+    "implemented": false,
+    "featureIds": ["F031", "F046"]
+  },
+  {
+    "id": "T034",
+    "description": "Integration (vitest + ephemeral http server, server/src/test/integration/webhookDelivery.entityIdFilter.test.ts): a webhook with filter.entity_ids=['ticket-X','ticket-Y'] receives a delivery when a TICKET_ASSIGNED event for ticket-X publishes, and does NOT receive one when a TICKET_ASSIGNED event for ticket-Z publishes.",
+    "implemented": false,
+    "featureIds": ["F041"]
+  },
+  {
+    "id": "T035",
+    "description": "Integration (vitest + real Postgres, server/src/test/integration/webhook.cleanupJob.test.ts): seed 100 webhook_deliveries rows with attempted_at spread across 60 days; run the cleanup job once; assert rows older than 30 days are deleted and rows ≤30 days remain.",
+    "implemented": false,
+    "featureIds": ["F048"]
+  },
+  {
+    "id": "T036",
+    "description": "Integration (vitest + real Postgres, server/src/test/integration/webhook.controllerEndpoints.test.ts): exercise getDeliveryDetails (returns a known row by id), getWebhookHealth (computed from stats columns), getWebhookSubscriptions (returns webhook.event_types), listAvailableEvents (returns the public enum). Also assert that DELETED route paths (e.g., /api/v1/webhooks/transform, /webhooks/bulk, /webhooks/templates) return 404 (no longer registered).",
+    "implemented": false,
+    "featureIds": ["F044", "F045"]
+  },
+  {
+    "id": "T037",
+    "description": "Migration smoke (vitest + a fresh test database, server/src/test/integration/migrations.rateLimitAndWebhooks.test.ts): run the new migrations end-to-end; INSERT into api_rate_limit_settings and webhooks/webhook_deliveries succeed; the UNIQUE (tenant, api_key_id) constraint is enforced; a SELECT distribution_column from pg_dist_partition confirms 'tenant' for all three tables.",
+    "implemented": false,
+    "featureIds": ["F008", "F009", "F024", "F025", "F026"]
+  }
+]
