@@ -17,6 +17,7 @@ import { DEFAULT_CLIENT_PORTAL_CONFIG } from '@alga-psa/types';
 import { addDays } from 'date-fns';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import ProjectModel from '@alga-psa/projects/models/project';
+import ProjectTaskModel from '../models/projectTask';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { getProjectStatuses } from './projectActions';
 import type { IUser } from '@alga-psa/types';
@@ -761,13 +762,11 @@ export const applyTemplate = withAuth(async (
 
             // Only add if additional user is different from primary
             if (resource.user_id !== task.assigned_to) {
-              await trx('task_resources')
-                .insert({
-                  tenant,
-                  task_id: newTaskId,
-                  assigned_to: task.assigned_to,
-                  additional_user_id: resource.user_id
-                });
+              try {
+                await ProjectTaskModel.addTaskResource(trx, tenant, newTaskId, resource.user_id);
+              } catch (resourceError) {
+                console.error(`Failed to copy template task resource for user ${resource.user_id}:`, resourceError);
+              }
             }
           }
         }

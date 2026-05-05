@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails, IProjectTaskDependency } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { IPriority } from '@alga-psa/types';
@@ -22,6 +22,7 @@ import {
   removeTaskResourceAction,
   getTaskResourcesAction,
   assignTeamToProjectTask,
+  removeTeamFromProjectTask,
   addTicketLinkAction,
   deleteTaskTicketLinksByTicketIdAction,
   duplicateTaskToPhase,
@@ -44,6 +45,7 @@ import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
+import RemoveTeamDialog from './RemoveTeamDialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -140,6 +142,8 @@ export default function TaskForm({
   const [assignedUser, setAssignedUser] = useState<string | null>(task?.assigned_to ?? prefillData?.assigned_to ?? null);
   const [assignedTeamId, setAssignedTeamId] = useState<string | null>(task?.assigned_team_id ?? null);
   const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
+  const [isRemoveTeamDialogOpen, setIsRemoveTeamDialogOpen] = useState(false);
+  const [pendingSwitchTeamId, setPendingSwitchTeamId] = useState<string | null>(null);
   const [descriptionEditorKey, setDescriptionEditorKey] = useState(0);
   const [selectedPhase, setSelectedPhase] = useState<IProjectPhase>(phase);
   const [showMoveConfirmation, setShowMoveConfirmation] = useState(false);
@@ -431,6 +435,10 @@ export default function TaskForm({
       .catch(() => setTeamAvatarUrl(null));
   }, [assignedTeamId, teams]);
 
+  const teamMembersOnTask = useMemo(() => {
+    return taskResources.filter(r => r.role === 'team_member');
+  }, [taskResources]);
+
   // Separate effect for loading task dependencies
   useEffect(() => {
     const loadDependencies = async () => {
@@ -627,7 +635,7 @@ export default function TaskForm({
     }
   };
 
-  const handleAssignTeam = async (teamId: string) => {
+  const performTeamAssign = async (teamId: string) => {
     setAssignedTeamId(teamId);
     const team = teams.find(t => t.team_id === teamId);
     const leadId = team?.manager_id || team?.members?.find(member => member.role === 'lead')?.user_id || null;
@@ -668,6 +676,43 @@ export default function TaskForm({
 
       // Replace existing temp resources with team members
       setTempTaskResources(newResources);
+    }
+  };
+
+  const handleAssignTeam = async (teamId: string) => {
+    // If a team is already assigned to an existing task, prompt for the
+    // remove/keep mode before swapping. The existing team's resources are
+    // cleaned per the chosen mode, then the new team is assigned.
+    if (task?.task_id && assignedTeamId && assignedTeamId !== teamId) {
+      setPendingSwitchTeamId(teamId);
+      setIsRemoveTeamDialogOpen(true);
+      return;
+    }
+
+    await performTeamAssign(teamId);
+  };
+
+  const handleRemoveTeamAssignment = async (
+    mode: 'remove_all' | 'keep_all' | 'selective',
+    keepUserIds?: string[]
+  ) => {
+    if (!task?.task_id) {
+      // New task: just clear local state (nothing persisted yet)
+      setAssignedTeamId(null);
+      setTempTaskResources(prev => prev.filter(r => r.role !== 'team_member'));
+      return;
+    }
+    try {
+      await removeTeamFromProjectTask(task.task_id, { mode, keepUserIds });
+      setAssignedTeamId(null);
+      const resources = await getTaskResourcesAction(task.task_id);
+      setTaskResources(resources);
+      setInitialTaskResources(resources);
+      toast.success(taskFormT('teamRemovedSuccess', 'Team removed successfully'));
+    } catch (error) {
+      console.error('Failed to remove team assignment:', error);
+      toast.error(taskFormT('teamRemoveFailed', 'Failed to remove team assignment'));
+      throw error;
     }
   };
 
@@ -773,7 +818,11 @@ export default function TaskForm({
 
         // Save any temporarily stored additional agents (added while task had no primary agent)
         for (const resource of tempTaskResources) {
-          await addTaskResourceAction(taskToUpdate.task_id, resource.additional_user_id);
+          try {
+            await addTaskResourceAction(taskToUpdate.task_id, resource.additional_user_id);
+          } catch (agentError) {
+            console.error(`Failed to add additional agent ${resource.additional_user_id}:`, agentError);
+          }
         }
 
         onSubmit(resultTask);
@@ -807,7 +856,11 @@ export default function TaskForm({
             }
             // Add task resources
             for (const resource of tempTaskResources) {
-              await addTaskResourceAction(resultTask.task_id, resource.additional_user_id);
+              try {
+                await addTaskResourceAction(resultTask.task_id, resource.additional_user_id);
+              } catch (agentError) {
+                console.error(`Failed to add additional agent ${resource.additional_user_id}:`, agentError);
+              }
             }
 
             // Add ticket links using the actual task ID and phase ID
@@ -1624,6 +1677,18 @@ export default function TaskForm({
                           size="xs"
                         />
                         <span className="text-xs text-gray-500 truncate">{assignedTeam.team_name}</span>
+                        <button
+                          type="button"
+                          id="task-remove-team-btn"
+                          className="text-xs text-gray-400 hover:text-red-500 ml-1"
+                          onClick={() => {
+                            setPendingSwitchTeamId(null);
+                            setIsRemoveTeamDialogOpen(true);
+                          }}
+                          aria-label={taskFormT('removeTeamAssignment', 'Remove team assignment')}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
                       </div>
                     ) : null;
                   })()}
@@ -2094,6 +2159,39 @@ export default function TaskForm({
         confirmLabel={taskFormT('discardChanges', 'Discard changes')}
         cancelLabel={taskFormT('continueEditing', 'Continue editing')}
       />
+
+      {assignedTeamId && (
+        <RemoveTeamDialog
+          id="task-form-remove-team-dialog"
+          isOpen={isRemoveTeamDialogOpen}
+          onClose={() => {
+            setPendingSwitchTeamId(null);
+            setIsRemoveTeamDialogOpen(false);
+          }}
+          isSwitching={!!pendingSwitchTeamId}
+          teamMembers={teamMembersOnTask}
+          users={users}
+          onConfirm={async (mode, keepUserIds) => {
+            try {
+              await handleRemoveTeamAssignment(mode, keepUserIds);
+              if (pendingSwitchTeamId) {
+                const nextTeamId = pendingSwitchTeamId;
+                setPendingSwitchTeamId(null);
+                setIsRemoveTeamDialogOpen(false);
+                // Call performTeamAssign directly: handleAssignTeam reads
+                // assignedTeamId from the closure of this render, where it
+                // still holds the previous team id, so the guard would loop.
+                await performTeamAssign(nextTeamId);
+                return;
+              }
+            } catch {
+              return;
+            }
+            setPendingSwitchTeamId(null);
+            setIsRemoveTeamDialogOpen(false);
+          }}
+        />
+      )}
 
     </>
   );
