@@ -200,3 +200,6 @@ implementation progresses; update earlier entries when something changes.
   `server/src/lib/api/rateLimit/apiRateLimitConfigGetter.ts` with a 1000-entry,
   30-second TTL cache, exact-entry invalidation, tenant-prefix invalidation,
   and `initializeApp()` now uses it for the `api` namespace.
+- (2026-05-05) **T004 complete.** Added
+  `server/src/lib/api/rateLimit/__tests__/configGetter.cache.test.ts` to
+  verify identical cached lookups hit the settings resolver once.

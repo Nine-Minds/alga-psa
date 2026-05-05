@@ -20,7 +20,7 @@
   {
     "id": "T004",
     "description": "Unit (vitest, server/src/lib/api/rateLimit/__tests__/configGetter.cache.test.ts): two consecutive apiRateLimitConfigGetter('t1','k1') calls hit the DAL exactly once (mock counts calls).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
