@@ -20,7 +20,7 @@
   {
     "id": "F004",
     "description": "Update server/src/lib/initializeApp.ts to register both the existing email getter (namespace 'email') and a placeholder 'api' getter so the singleton wires up multi-namespace at startup.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Rollout / Migration"]
   },
   {

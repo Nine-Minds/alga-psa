@@ -149,3 +149,7 @@ implementation progresses; update earlier entries when something changes.
   now accepts a namespace-to-getter map, and lookup/fail-open behavior stays
   centralized inside the shared limiter instead of spreading per-namespace
   branching to callers.
+- (2026-05-05) **F004 complete.** `initializeApp()` now registers the
+  existing email tenant-config getter under namespace `email` and a temporary
+  hard-coded API getter under namespace `api`, so startup is already wired
+  for the upcoming API limiter without altering email defaults.
