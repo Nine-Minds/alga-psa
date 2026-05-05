@@ -78,6 +78,11 @@ implementation progresses; update earlier entries when something changes.
   are independent paths, and the NM Store branch in `withApiKeyAuth`
   produces a context with `apiKeyId === undefined`. Verified by reading
   service-types and test-auth routes.
+- (2026-05-05) `/api/v1/test-auth` does not use the same `withApiKeyAuth`
+  helper as `service-types`; it goes through the older
+  `server/src/lib/api/middleware/apiAuthMiddleware.ts`. Rate-limit wiring has
+  to cover that legacy wrapper too or the planned cross-surface test would
+  split buckets by middleware implementation.
 - (2026-05-05) Internal event vocabulary is much larger than the v1 public
   surface. `TICKET_REOPENED`, `TICKET_ESCALATED`, `TICKET_PRIORITY_CHANGED`,
   `TICKET_UNASSIGNED`, `TICKET_QUEUE_CHANGED`, `TICKET_TAGS_CHANGED`,
@@ -106,6 +111,8 @@ implementation progresses; update earlier entries when something changes.
   `cd server && npx vitest run --coverage.enabled=false src/test/unit/api/apiMiddleware.responseHeaders.test.ts`
 - (2026-05-05) Run the API rate-limit config getter unit tests:
   `cd server && npx vitest run --coverage.enabled=false src/lib/api/rateLimit/__tests__/configGetter.cache.test.ts src/lib/api/rateLimit/__tests__/configGetter.invalidate.test.ts src/lib/api/rateLimit/__tests__/configGetter.fallback.test.ts`
+- (2026-05-05) Run the API rate-limit enforcement helper tests:
+  `cd server && npx vitest run --coverage.enabled=false src/lib/api/rateLimit/__tests__/enforce.test.ts src/test/unit/api/apiMiddleware.responseHeaders.test.ts`
 
 ## Links / References
 
@@ -211,3 +218,8 @@ implementation progresses; update earlier entries when something changes.
   `server/src/lib/api/rateLimit/__tests__/configGetter.fallback.test.ts`
   to verify the resolver order is per-key override, then tenant default, then
   the hard-coded API defaults.
+- (2026-05-05) **F012 complete.** Added
+  `server/src/lib/api/rateLimit/enforce.ts` as the shared API limiter entry
+  point. It resolves the `api` namespace bucket, skips configured bypass
+  paths, computes rate-limit header values, and either throws
+  `TooManyRequestsError` or returns a `RateLimitDecision`.

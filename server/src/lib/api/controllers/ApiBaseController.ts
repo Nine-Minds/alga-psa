@@ -31,6 +31,7 @@ import {
   createPaginatedResponse,
   handleApiError
 } from '../middleware/apiMiddleware';
+import { enforceApiRateLimit } from '../rateLimit/enforce';
 
 export abstract class ApiBaseController {
   constructor(
@@ -82,6 +83,7 @@ export abstract class ApiBaseController {
       user,
       apiKeyId: keyRecord.api_key_id,
     };
+    apiRequest.context.rateLimit = await enforceApiRateLimit(apiRequest, apiRequest.context);
 
     return apiRequest;
   }

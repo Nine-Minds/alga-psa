@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Add a shared enforceApiRateLimit(req, context) helper at server/src/lib/api/rateLimit/enforce.ts that resolves namespace 'api' bucket, applies the SSRF-style bypass list, computes header values, and either throws TooManyRequestsError or returns a RateLimitDecision with limit/remaining/resetAt.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {

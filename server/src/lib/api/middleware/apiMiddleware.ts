@@ -11,12 +11,16 @@ import { hasPermission } from '../../auth/rbac';
 import { findUserById } from '@alga-psa/user-composition/actions';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { runAsSystem } from '@alga-psa/db';
+import type { RateLimitDecision } from '../rateLimit/enforce';
+import { enforceApiRateLimit } from '../rateLimit/enforce';
 
 export interface ApiContext {
   userId: string;
   tenant: string;
   user?: any;
   apiKeyId?: string;
+  rateLimitSubjectId?: string;
+  rateLimit?: RateLimitDecision;
   kind?: 'system' | 'user';
 }
 
@@ -164,8 +168,10 @@ export function withApiKeyAuth(options: ApiKeyAuthOptions = {}) {
               userId: '00000000-0000-0000-0000-000000000000',
               tenant: tenantId as string,
               user: null,
+              rateLimitSubjectId: 'nm_store',
               kind: 'system'
             };
+            req.context.rateLimit = await enforceApiRateLimit(req, req.context);
             // Ensure system operations are allowed for downstream createSystemContext()
             return await runAsSystem('withApiKeyAuth.system', async () => handler(req));
           }
@@ -184,9 +190,11 @@ export function withApiKeyAuth(options: ApiKeyAuthOptions = {}) {
         req.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
+          apiKeyId: keyRecord.api_key_id,
           user,
           kind: 'user'
         };
+        req.context.rateLimit = await enforceApiRateLimit(req, req.context);
 
         return await handler(req);
       } catch (error) {
@@ -224,8 +232,10 @@ export async function withAuth(handler: (req: ApiRequest) => Promise<NextRespons
       req.context = {
         userId: keyRecord.user_id,
         tenant: keyRecord.tenant,
+        apiKeyId: keyRecord.api_key_id,
         user
       };
+      req.context.rateLimit = await enforceApiRateLimit(req, req.context);
 
       return await handler(req);
     } catch (error) {

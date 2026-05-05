@@ -12,6 +12,7 @@ import {
   UnauthorizedError,
   handleApiError 
 } from './apiMiddleware';
+import { enforceApiRateLimit } from '../rateLimit/enforce';
 
 /**
  * Enhanced authentication middleware that properly handles API key auth
@@ -62,8 +63,10 @@ export async function withApiKeyAuth(
       apiRequest.context = {
         userId: keyRecord.user_id,
         tenant: keyRecord.tenant,
-        user
+        user,
+        apiKeyId: keyRecord.api_key_id,
       };
+      apiRequest.context.rateLimit = await enforceApiRateLimit(apiRequest, apiRequest.context);
 
       // Run the handler within the tenant context
       return await runWithTenant(tenantId, async () => {
