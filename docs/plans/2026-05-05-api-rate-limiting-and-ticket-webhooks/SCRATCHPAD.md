@@ -160,3 +160,7 @@ implementation progresses; update earlier entries when something changes.
   `packages/email/src/__tests__/TokenBucketRateLimiter.namespaces.test.ts`
   to prove the same tenant/subject can exhaust `email` without consuming the
   `api` bucket.
+- (2026-05-05) **T002 complete.** Added
+  `packages/email/src/__tests__/TokenBucketRateLimiter.subjectId.test.ts`
+  to verify namespace getters receive `subjectId` and that API-key buckets
+  are keyed as `...:api:{tenant}:{subject}`.

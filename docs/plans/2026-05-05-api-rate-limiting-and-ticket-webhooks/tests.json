@@ -8,7 +8,7 @@
   {
     "id": "T002",
     "description": "Unit (vitest, packages/email/src/__tests__/TokenBucketRateLimiter.subjectId.test.ts): the registered BucketConfigGetter for namespace 'api' is invoked with both tenantId and subjectId; getter returns per-key configs and the bucket key uses the subjectId as the third dimension.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002", "F003"]
   },
   {
