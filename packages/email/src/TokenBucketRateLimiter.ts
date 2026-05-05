@@ -42,7 +42,7 @@ export type TokenBucketRedisGetter = () => Promise<TokenBucketRedisClient>;
 /**
  * Function type for getting bucket configuration for a tenant
  */
-export type BucketConfigGetter = (tenantId: string) => Promise<BucketConfig>;
+export type BucketConfigGetter = (tenantId: string, subjectId?: string) => Promise<BucketConfig>;
 
 /**
  * Default bucket configuration
@@ -69,13 +69,13 @@ const DEFAULT_BUCKET_CONFIG: BucketConfig = {
  * - Handles concurrent requests gracefully
  *
  * Redis key pattern:
- * - Tenant-level: `alga-psa:ratelimit:bucket:{tenantId}`
- * - User-level: `alga-psa:ratelimit:bucket:{tenantId}:{userId}`
+ * - Tenant-level: `alga-psa:ratelimit:bucket:{namespace}:{tenantId}`
+ * - Subject-level: `alga-psa:ratelimit:bucket:{namespace}:{tenantId}:{subjectId}`
  */
 export class TokenBucketRateLimiter {
   private static instance: TokenBucketRateLimiter | null = null;
   private redis: TokenBucketRedisClient | null = null;
-  private configGetter: BucketConfigGetter | null = null;
+  private configGetters: Record<string, BucketConfigGetter> = {};
   private isInitialized = false;
 
   /** Key prefix for rate limit buckets */
@@ -100,11 +100,11 @@ export class TokenBucketRateLimiter {
    * Initialize the rate limiter with Redis client and config getter
    *
    * @param redisGetter - Function that returns a Redis client
-   * @param configGetter - Optional function to get bucket config per tenant (uses defaults if not provided)
+   * @param configGetters - Optional functions to get bucket config per namespace (uses defaults if not provided)
    */
   async initialize(
     redisGetter: TokenBucketRedisGetter,
-    configGetter?: BucketConfigGetter
+    configGetters: Record<string, BucketConfigGetter> = {}
   ): Promise<void> {
     if (this.isInitialized) {
       logger.warn('[TokenBucketRateLimiter] Already initialized');
@@ -113,7 +113,7 @@ export class TokenBucketRateLimiter {
 
     try {
       this.redis = await redisGetter();
-      this.configGetter = configGetter ?? null;
+      this.configGetters = configGetters;
       this.isInitialized = true;
 
       logger.info('[TokenBucketRateLimiter] Initialized successfully', {
@@ -136,23 +136,27 @@ export class TokenBucketRateLimiter {
   /**
    * Get the Redis key for a bucket
    */
-  private getBucketKey(tenantId: string, userId?: string): string {
-    if (userId) {
-      return `${this.prefix}${tenantId}:${userId}`;
+  private getBucketKey(namespace: string, tenantId: string, subjectId?: string): string {
+    if (subjectId) {
+      return `${this.prefix}${namespace}:${tenantId}:${subjectId}`;
     }
-    return `${this.prefix}${tenantId}`;
+    return `${this.prefix}${namespace}:${tenantId}`;
   }
 
   /**
    * Get bucket configuration for a tenant
    */
-  private async getBucketConfig(tenantId: string): Promise<BucketConfig> {
-    if (this.configGetter) {
+  private async getBucketConfig(namespace: string, tenantId: string, subjectId?: string): Promise<BucketConfig> {
+    const configGetter = this.configGetters[namespace];
+
+    if (configGetter) {
       try {
-        return await this.configGetter(tenantId);
+        return await configGetter(tenantId, subjectId);
       } catch (error) {
         logger.warn('[TokenBucketRateLimiter] Failed to get bucket config, using defaults', {
+          namespace,
           tenantId,
+          subjectId,
           error: error instanceof Error ? error.message : 'Unknown error'
         });
       }
@@ -163,14 +167,16 @@ export class TokenBucketRateLimiter {
   /**
    * Try to consume a token from the bucket
    *
+   * @param namespace - Bucket namespace
    * @param tenantId - The tenant ID
-   * @param userId - Optional user ID for per-user rate limiting
+   * @param subjectId - Optional subject ID for per-subject rate limiting
    * @param tokens - Number of tokens to consume (default: 1)
    * @returns RateLimitResult indicating if the request is allowed
    */
   async tryConsume(
+    namespace: string,
     tenantId: string,
-    userId?: string,
+    subjectId?: string,
     tokens: number = 1
   ): Promise<RateLimitResult> {
     if (!this.redis) {
@@ -179,8 +185,8 @@ export class TokenBucketRateLimiter {
       return { allowed: true, remaining: -1 };
     }
 
-    const bucketKey = this.getBucketKey(tenantId, userId);
-    const config = await this.getBucketConfig(tenantId);
+    const bucketKey = this.getBucketKey(namespace, tenantId, subjectId);
+    const config = await this.getBucketConfig(namespace, tenantId, subjectId);
     const now = Date.now();
 
     try {
@@ -216,8 +222,9 @@ export class TokenBucketRateLimiter {
         await this.redis.set(bucketKey, JSON.stringify(state), { EX: this.bucketTtlSeconds });
 
         logger.debug('[TokenBucketRateLimiter] Token consumed', {
+          namespace,
           tenantId,
-          userId,
+          subjectId,
           remaining: Math.floor(state.tokens),
           consumed: tokens
         });
@@ -236,8 +243,9 @@ export class TokenBucketRateLimiter {
         await this.redis.set(bucketKey, JSON.stringify(state), { EX: this.bucketTtlSeconds });
 
         logger.debug('[TokenBucketRateLimiter] Rate limit exceeded', {
+          namespace,
           tenantId,
-          userId,
+          subjectId,
           remaining: Math.floor(state.tokens),
           needed: tokens,
           retryAfterMs
@@ -254,8 +262,9 @@ export class TokenBucketRateLimiter {
       // On error, fail open (allow the request)
       logger.error('[TokenBucketRateLimiter] Error checking rate limit:', {
         error: error instanceof Error ? error.message : 'Unknown error',
+        namespace,
         tenantId,
-        userId
+        subjectId
       });
       return { allowed: true, remaining: -1 };
     }
@@ -264,13 +273,17 @@ export class TokenBucketRateLimiter {
   /**
    * Get current bucket state without consuming tokens
    */
-  async getState(tenantId: string, userId?: string): Promise<{ tokens: number; maxTokens: number } | null> {
+  async getState(
+    namespace: string,
+    tenantId: string,
+    subjectId?: string
+  ): Promise<{ tokens: number; maxTokens: number } | null> {
     if (!this.redis) {
       return null;
     }
 
-    const bucketKey = this.getBucketKey(tenantId, userId);
-    const config = await this.getBucketConfig(tenantId);
+    const bucketKey = this.getBucketKey(namespace, tenantId, subjectId);
+    const config = await this.getBucketConfig(namespace, tenantId, subjectId);
 
     try {
       const stateJson = await this.redis.get(bucketKey);
@@ -310,6 +323,7 @@ export class TokenBucketRateLimiter {
   async shutdown(): Promise<void> {
     this.isInitialized = false;
     this.redis = null;
+    this.configGetters = {};
     TokenBucketRateLimiter.instance = null;
     logger.info('[TokenBucketRateLimiter] Shutdown complete');
   }

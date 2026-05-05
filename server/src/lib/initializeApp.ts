@@ -143,26 +143,27 @@ export async function initializeApp() {
     try {
       await TokenBucketRateLimiter.getInstance().initialize(
         getRedisClient,
-        async (tenantId: string): Promise<BucketConfig> => {
-          // Get rate limit from notification_settings for this tenant
-          try {
-            const knex = await getConnection(tenantId);
-            const settings = await knex('notification_settings')
-              .where({ tenant: tenantId })
-              .first();
+        {
+          email: async (tenantId: string): Promise<BucketConfig> => {
+            try {
+              const knex = await getConnection(tenantId);
+              const settings = await knex('notification_settings')
+                .where({ tenant: tenantId })
+                .first();
 
-            const ratePerMinute = settings?.rate_limit_per_minute ?? 60;
+              const ratePerMinute = settings?.rate_limit_per_minute ?? 60;
 
-            // Convert rate per minute to token bucket config:
-            // maxTokens = rate limit (allows burst up to this amount)
-            // refillRate = rate per minute / 60 (tokens per second)
-            return {
-              maxTokens: ratePerMinute,
-              refillRate: ratePerMinute / 60
-            };
-          } catch (error) {
-            logger.warn(`Failed to get rate limit settings for tenant ${tenantId}, using defaults`);
-            return { maxTokens: 60, refillRate: 1 };
+              return {
+                maxTokens: ratePerMinute,
+                refillRate: ratePerMinute / 60
+              };
+            } catch (error) {
+              logger.warn(`Failed to get email rate limit settings for tenant ${tenantId}, using defaults`);
+              return { maxTokens: 60, refillRate: 1 };
+            }
+          },
+          api: async (): Promise<BucketConfig> => {
+            return { maxTokens: 120, refillRate: 1 };
           }
         }
       );

@@ -161,7 +161,7 @@ export class TenantEmailService extends BaseEmailService {
     }
 
     try {
-      const result = await rateLimiter.tryConsume(this.tenantId, params.userId);
+      const result = await rateLimiter.tryConsume('email', this.tenantId, params.userId);
 
       if (!result.allowed) {
         return {
