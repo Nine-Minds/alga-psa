@@ -69,6 +69,10 @@ implementation progresses; update earlier entries when something changes.
   Migration extension is `.cjs`, not `.ts`. Citus distribution lives in
   `ee/server/migrations/citus/`, separate from the create migration in
   `server/migrations/`.
+- (2026-05-05) PostgreSQL `UNIQUE (tenant, api_key_id)` would allow multiple
+  `(tenant, NULL)` tenant-default rows. The migration needs a separate unique
+  partial index on `tenant WHERE api_key_id IS NULL` to make the null fallback
+  row actually unique.
 - (2026-05-05) `ApiBaseController.authenticate` is **not** the universal
   hook point — `withApiKeyAuth` and `withAuth` in `apiMiddleware.ts:144,201`
   are independent paths, and the NM Store branch in `withApiKeyAuth`
@@ -100,6 +104,8 @@ implementation progresses; update earlier entries when something changes.
   `cd server && npx vitest run --coverage.enabled=false src/test/unit/notifications/tokenBucketRateLimiter.test.ts ../packages/email/src/__tests__/TokenBucketRateLimiter.namespaces.test.ts ../packages/email/src/__tests__/TokenBucketRateLimiter.subjectId.test.ts ../packages/email/src/__tests__/TokenBucketRateLimiter.email-regression.test.ts`
 - (2026-05-05) Run the API response-header unit test:
   `cd server && npx vitest run --coverage.enabled=false src/test/unit/api/apiMiddleware.responseHeaders.test.ts`
+- (2026-05-05) Run the API rate-limit config getter unit tests:
+  `cd server && npx vitest run --coverage.enabled=false src/lib/api/rateLimit/__tests__/configGetter.cache.test.ts src/lib/api/rateLimit/__tests__/configGetter.invalidate.test.ts src/lib/api/rateLimit/__tests__/configGetter.fallback.test.ts`
 
 ## Links / References
 
@@ -179,3 +185,7 @@ implementation progresses; update earlier entries when something changes.
   `createPaginatedResponse()` now accept optional `extraHeaders` as a final
   parameter, preserving existing controller call sites while opening a clean
   path for rate-limit headers on successful responses.
+- (2026-05-05) **F008 complete.** Added
+  `server/migrations/20260505123000_create_api_rate_limit_settings.cjs` with
+  tenant-scoped rate-limit columns plus separate unique indexes for per-key
+  rows and the `(tenant, NULL)` tenant default row.

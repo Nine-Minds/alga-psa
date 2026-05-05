@@ -30,6 +30,7 @@ import { registerWorkflowScheduleJobRunner } from '@alga-psa/workflows/lib/jobRu
 import { getRedisClient } from '../config/redisConfig';
 import { registerEnterpriseStorageProviders } from './storage/registerEnterpriseStorageProviders';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { apiRateLimitConfigGetter } from './api/rateLimit/apiRateLimitConfigGetter';
 
 let isFunctionExecuted = false;
 
@@ -162,9 +163,7 @@ export async function initializeApp() {
               return { maxTokens: 60, refillRate: 1 };
             }
           },
-          api: async (): Promise<BucketConfig> => {
-            return { maxTokens: 120, refillRate: 1 };
-          }
+          api: apiRateLimitConfigGetter
         }
       );
       logger.info('Token bucket rate limiter initialized');

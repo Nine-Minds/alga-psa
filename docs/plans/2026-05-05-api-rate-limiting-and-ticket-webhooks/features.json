@@ -44,7 +44,7 @@
   {
     "id": "F008",
     "description": "Create the api_rate_limit_settings table via a knex .cjs migration (cols: tenant, api_key_id NULL, max_tokens, refill_per_min, timestamps; UNIQUE (tenant, api_key_id)).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {
