@@ -145,3 +145,7 @@ implementation progresses; update earlier entries when something changes.
 - (2026-05-05) **F002 complete.** `BucketConfigGetter` now receives
   `(tenantId, subjectId?)`, which lets the limiter surface per-key and
   per-webhook configuration decisions without additional key parsing.
+- (2026-05-05) **F003 complete.** `TokenBucketRateLimiter.initialize()`
+  now accepts a namespace-to-getter map, and lookup/fail-open behavior stays
+  centralized inside the shared limiter instead of spreading per-namespace
+  branching to callers.

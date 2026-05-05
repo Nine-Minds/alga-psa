@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "Change TokenBucketRateLimiter.initialize to accept a `Record<namespace, BucketConfigGetter>` map and route lookups to the namespace-specific getter.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {
