@@ -50,7 +50,7 @@
   {
     "id": "F009",
     "description": "Add a Citus distribute-table .cjs migration under ee/server/migrations/citus that calls create_distributed_table('api_rate_limit_settings', 'tenant').",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations", "Rollout / Migration"]
   },
   {

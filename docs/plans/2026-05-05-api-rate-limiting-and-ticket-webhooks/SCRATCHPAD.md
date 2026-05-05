@@ -189,3 +189,6 @@ implementation progresses; update earlier entries when something changes.
   `server/migrations/20260505123000_create_api_rate_limit_settings.cjs` with
   tenant-scoped rate-limit columns plus separate unique indexes for per-key
   rows and the `(tenant, NULL)` tenant default row.
+- (2026-05-05) **F009 complete.** Added
+  `ee/server/migrations/citus/20260505123100_distribute_api_rate_limit_settings.cjs`
+  so the new settings table is distributed on `tenant` when Citus is present.
