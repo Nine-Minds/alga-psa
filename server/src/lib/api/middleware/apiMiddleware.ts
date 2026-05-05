@@ -34,6 +34,7 @@ export interface ApiError extends Error {
   statusCode: number;
   code?: string;
   details?: any;
+  headers?: Record<string, string>;
 }
 
 export class ValidationError extends Error implements ApiError {
@@ -319,7 +320,10 @@ export function handleApiError(error: any): NextResponse {
         message: error.message,
         details: error.details
       }
-    }, { status: error.statusCode });
+    }, {
+      status: error.statusCode,
+      headers: error.headers
+    });
   }
 
   // Handle Zod validation errors
@@ -371,6 +375,7 @@ export function createSuccessResponse(
   status: number = 200,
   metadata?: any,
   request?: NextRequest | URL | string,
+  extraHeaders?: Record<string, string>,
 ): NextResponse {
   // For 204 No Content, return empty response
   if (status === 204) {
@@ -390,7 +395,8 @@ export function createSuccessResponse(
   }
 
   const headers: HeadersInit = {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    ...(extraHeaders ?? {})
   };
 
   // Add deprecation warning if metadata indicates deprecated endpoint
@@ -415,6 +421,7 @@ export function createPaginatedResponse(
   limit: number,
   metadata?: any,
   request?: NextRequest | URL | string,
+  extraHeaders?: Record<string, string>,
 ): NextResponse {
   const totalPages = Math.ceil(total / limit);
   const ranged = applyFieldRangeRequests(data, request);
@@ -429,7 +436,8 @@ export function createPaginatedResponse(
   }
 
   const headers: HeadersInit = {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    ...(extraHeaders ?? {})
   };
 
   // Add deprecation warning if metadata indicates deprecated endpoint

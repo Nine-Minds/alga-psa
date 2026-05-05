@@ -98,6 +98,8 @@ implementation progresses; update earlier entries when something changes.
   `redis-cli --scan --pattern 'alga-psa:ratelimit:bucket:*' | xargs -L1 redis-cli get`
 - (2026-05-05) Run the namespace foundation unit suite without coverage noise:
   `cd server && npx vitest run --coverage.enabled=false src/test/unit/notifications/tokenBucketRateLimiter.test.ts ../packages/email/src/__tests__/TokenBucketRateLimiter.namespaces.test.ts ../packages/email/src/__tests__/TokenBucketRateLimiter.subjectId.test.ts ../packages/email/src/__tests__/TokenBucketRateLimiter.email-regression.test.ts`
+- (2026-05-05) Run the API response-header unit test:
+  `cd server && npx vitest run --coverage.enabled=false src/test/unit/api/apiMiddleware.responseHeaders.test.ts`
 
 ## Links / References
 
@@ -169,3 +171,7 @@ implementation progresses; update earlier entries when something changes.
   with fake time pinned to confirm the email namespace preserves the legacy
   60-token burst / 1-token-per-second refill behavior at calls 1, 30, 60,
   and 61.
+- (2026-05-05) **F006 complete.** `ApiError` now supports optional response
+  headers and `handleApiError()` forwards them into `NextResponse.json()`,
+  which lets later rate-limit errors attach `Retry-After` and
+  `X-RateLimit-*` metadata without a parallel error class.

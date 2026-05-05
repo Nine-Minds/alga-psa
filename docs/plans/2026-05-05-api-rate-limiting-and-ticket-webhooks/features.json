@@ -32,7 +32,7 @@
   {
     "id": "F006",
     "description": "Add an optional `headers?: Record<string,string>` field to the ApiError interface in apiMiddleware.ts and have handleApiError merge them into the NextResponse.json options.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {
