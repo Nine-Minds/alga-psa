@@ -587,7 +587,8 @@
       "row": "Riga",
       "phase": "Fase",
       "task": "Attività",
-      "issues": "Problemi"
+      "issues": "Problemi",
+      "valid": "Valido"
     },
     "fields": {
       "task_name": "Nome attività *",
@@ -602,7 +603,24 @@
       "task_type": "Tipo attività",
       "status": "Stato",
       "tags": "Tag"
-    }
+    },
+    "fallbackPhaseLabel": "Fase predefinita per attività senza phase_name",
+    "fallbackPhaseHelp": "{{count}} riga/righe senza fase. Scegli una fase esistente o mantieni il valore predefinito per crearne una.",
+    "fallbackPhaseCreateDefault": "Crea nuova fase: \"{{name}}\"",
+    "fallbackStatusLabel": "Stato predefinito per attività senza stato",
+    "fallbackStatusHelp": "{{count}} riga/righe senza stato. Lo stato selezionato verrà assegnato a tali attività.",
+    "rowResultsTitle": "Risultati delle righe",
+    "rowFilterLabel": "Mostra:",
+    "rowFilterAll": "Tutte le righe ({{count}})",
+    "rowFilterImported": "Saranno importate ({{count}})",
+    "rowFilterSkipped": "Saranno ignorate ({{count}})",
+    "rowsToBeSkippedCount": "{{count}} riga/righe saranno ignorate",
+    "rowsToBeSkippedHelp": "perché non hanno superato la convalida. Usa il filtro sopra per esaminarle.",
+    "statusUnmatchedSuffix": "Non corrispondente",
+    "statusUnmatchedTooltip": "Lo stato non corrisponde a nessuno stato esistente per questa fase. Risolvi nei passaggi di mappatura prima dell'importazione.",
+    "statusFallbackSuffix": "Predefinito",
+    "statusFallbackTooltip": "Utilizzo dello stato di ripiego predefinito per questa fase.",
+    "inPhaseBadge": "in {{phase}}"
   },
   "dialogs": {
     "moveTask": {

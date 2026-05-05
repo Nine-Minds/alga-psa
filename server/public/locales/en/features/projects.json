@@ -587,7 +587,8 @@
       "row": "Row",
       "phase": "Phase",
       "task": "Task",
-      "issues": "Issues"
+      "issues": "Issues",
+      "valid": "Valid"
     },
     "fields": {
       "task_name": "Task Name *",
@@ -602,7 +603,24 @@
       "task_type": "Task Type",
       "status": "Status",
       "tags": "Tags"
-    }
+    },
+    "fallbackPhaseLabel": "Default phase for tasks without phase_name",
+    "fallbackPhaseHelp": "{{count}} row(s) have no phase. Pick an existing phase or keep the default to create one.",
+    "fallbackPhaseCreateDefault": "Create new phase: \"{{name}}\"",
+    "fallbackStatusLabel": "Default status for tasks without status",
+    "fallbackStatusHelp": "{{count}} row(s) have no status. The selected status will be assigned to those tasks.",
+    "rowResultsTitle": "Row Results",
+    "rowFilterLabel": "Show:",
+    "rowFilterAll": "All rows ({{count}})",
+    "rowFilterImported": "Will be imported ({{count}})",
+    "rowFilterSkipped": "Will be skipped ({{count}})",
+    "rowsToBeSkippedCount": "{{count}} row(s) will be skipped",
+    "rowsToBeSkippedHelp": "because they failed validation. Use the filter above to review them.",
+    "statusUnmatchedSuffix": "Unmatched",
+    "statusUnmatchedTooltip": "Status does not match any existing status for this phase. Resolve in the mapping steps before import.",
+    "statusFallbackSuffix": "Default",
+    "statusFallbackTooltip": "Using the default fallback status for this phase.",
+    "inPhaseBadge": "in {{phase}}"
   },
   "dialogs": {
     "moveTask": {

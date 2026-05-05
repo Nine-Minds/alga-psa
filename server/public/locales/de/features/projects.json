@@ -587,7 +587,8 @@
       "row": "Zeile",
       "phase": "Phase",
       "task": "Aufgabe",
-      "issues": "Probleme"
+      "issues": "Probleme",
+      "valid": "Gültig"
     },
     "fields": {
       "task_name": "Aufgabenname *",
@@ -602,7 +603,24 @@
       "task_type": "Aufgabentyp",
       "status": "Status",
       "tags": "Tags"
-    }
+    },
+    "fallbackPhaseLabel": "Standardphase für Aufgaben ohne phase_name",
+    "fallbackPhaseHelp": "{{count}} Zeile(n) ohne Phase. Wählen Sie eine vorhandene Phase oder behalten Sie die Vorgabe, um eine neue zu erstellen.",
+    "fallbackPhaseCreateDefault": "Neue Phase erstellen: „{{name}}\"",
+    "fallbackStatusLabel": "Standardstatus für Aufgaben ohne Status",
+    "fallbackStatusHelp": "{{count}} Zeile(n) ohne Status. Der ausgewählte Status wird diesen Aufgaben zugewiesen.",
+    "rowResultsTitle": "Zeilenergebnisse",
+    "rowFilterLabel": "Anzeigen:",
+    "rowFilterAll": "Alle Zeilen ({{count}})",
+    "rowFilterImported": "Werden importiert ({{count}})",
+    "rowFilterSkipped": "Werden übersprungen ({{count}})",
+    "rowsToBeSkippedCount": "{{count}} Zeile(n) werden übersprungen",
+    "rowsToBeSkippedHelp": "weil sie die Validierung nicht bestanden haben. Verwenden Sie den Filter oben, um sie zu überprüfen.",
+    "statusUnmatchedSuffix": "Nicht zugeordnet",
+    "statusUnmatchedTooltip": "Der Status entspricht keinem vorhandenen Status für diese Phase. Bitte vor dem Import in den Zuordnungsschritten lösen.",
+    "statusFallbackSuffix": "Standard",
+    "statusFallbackTooltip": "Verwendung des Standard-Ersatzstatus für diese Phase.",
+    "inPhaseBadge": "in {{phase}}"
   },
   "dialogs": {
     "moveTask": {

@@ -15,6 +15,7 @@ import { Upload, AlertTriangle, Check, ChevronDown, ChevronRight } from 'lucide-
 import { parseCSV } from '@alga-psa/core';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import {
   generatePhaseTaskCSVTemplate,
   getImportReferenceData,
@@ -62,6 +63,57 @@ const MAX_IMPORT_ROWS = 5000;
 // Threshold for showing confirmation before import
 const LARGE_IMPORT_THRESHOLD = 100;
 
+/**
+ * Recompute the set of unmatched (phase, status) pairs given the current fallback phase.
+ *
+ * The fallback phase determines the effective phase for rows whose phase_name is blank,
+ * which in turn determines which phase-scoped status set their statuses are looked up in.
+ * Mirrors the server-side logic in validatePhaseTaskImportDataWithReferenceData so that
+ * the preview stays consistent if the user changes the fallback phase.
+ */
+function computeUnmatchedStatusState(
+  validationResults: ITaskImportValidationResult[],
+  defaultPhaseName: string,
+  statusLookup: Record<string, string>,
+  statusLookupByPhase: Record<string, Record<string, string>>
+): {
+  unmatchedStatuses: Array<{ phaseName: string; statusName: string }>;
+  unmatchedStatusInfo: IUnmatchedStatusInfo[];
+} {
+  const fallbackPhase = defaultPhaseName?.trim() || DEFAULT_PHASE_NAME;
+  const pairs = new Map<string, { phaseName: string; statusName: string }>();
+  const infoMap = new Map<string, IUnmatchedStatusInfo>();
+
+  for (const result of validationResults) {
+    const statusName = result.data.status?.trim();
+    if (!statusName) continue;
+    const phaseName = result.data.phase_name?.trim() || fallbackPhase;
+    const lookup = statusLookupByPhase[phaseName.toLowerCase()] || statusLookup;
+    if (lookup[statusName.toLowerCase()]) continue;
+
+    const key = `${phaseName.toLowerCase()}::${statusName.toLowerCase()}`;
+    if (!pairs.has(key)) {
+      pairs.set(key, { phaseName, statusName });
+      infoMap.set(key, {
+        statusName,
+        phaseName,
+        taskCount: 0,
+        taskNames: [],
+      });
+    }
+    const info = infoMap.get(key)!;
+    info.taskCount++;
+    if (info.taskNames.length < 3) {
+      info.taskNames.push(result.data.task_name || 'Unnamed task');
+    }
+  }
+
+  return {
+    unmatchedStatuses: Array.from(pairs.values()),
+    unmatchedStatusInfo: Array.from(infoMap.values()),
+  };
+}
+
 const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
   isOpen,
   onClose,
@@ -99,8 +151,18 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
   const [statusLookup, setStatusLookup] = useState<Record<string, string>>({});
   const [statusLookupByPhase, setStatusLookupByPhase] = useState<Record<string, Record<string, string>>>({});
 
-  // Status resolution state
-  const [unmatchedStatuses, setUnmatchedStatuses] = useState<string[]>([]);
+  // Existing project phases (for the fallback phase picker)
+  const [availablePhases, setAvailablePhases] = useState<IImportReferenceData['phases']>([]);
+
+  // Default fallback selections (apply when CSV row has no phase/status)
+  const [defaultPhaseName, setDefaultPhaseName] = useState<string>(DEFAULT_PHASE_NAME);
+  const [defaultStatusMappingId, setDefaultStatusMappingId] = useState<string>('');
+
+  // Preview filter for the validation results table
+  const [previewRowFilter, setPreviewRowFilter] = useState<'all' | 'imported' | 'skipped'>('all');
+
+  // Status resolution state — phase-scoped pairs
+  const [unmatchedStatuses, setUnmatchedStatuses] = useState<Array<{ phaseName: string; statusName: string }>>([]);
   const [unmatchedStatusInfo, setUnmatchedStatusInfo] = useState<IUnmatchedStatusInfo[]>([]);
   const [statusResolutions, setStatusResolutions] = useState<IStatusResolution[]>([]);
   const [projectStatusMappings, setProjectStatusMappings] = useState<IProjectStatusMapping[]>([]);
@@ -152,6 +214,10 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
       setUnmatchedAgentInfo([]);
       setAgentResolutions([]);
       setAvailableUsers([]);
+      setAvailablePhases([]);
+      setDefaultPhaseName(DEFAULT_PHASE_NAME);
+      setDefaultStatusMappingId('');
+      setPreviewRowFilter('all');
       setRowsTruncated(null);
       setImportConfirmed(false);
     }
@@ -260,9 +326,9 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
     setErrors([]);
 
     try {
-      // Map CSV data to ITaskImportRow objects
-      const mappedRows: ITaskImportRow[] = fullCSVData.map((row) => {
-        const mappedData: ITaskImportRow = {};
+      // Map CSV data to ITaskImportRow objects (header is row 1, first data row is row 2)
+      const mappedRows: ITaskImportRow[] = fullCSVData.map((row, rowIndex) => {
+        const mappedData: ITaskImportRow = { csvRowNumber: rowIndex + 2 };
         columnMappings.forEach((mapping, index) => {
           if (mapping.taskField) {
             (mappedData as Record<string, string>)[mapping.taskField] = row[index] || '';
@@ -283,38 +349,37 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
       setServiceLookup(validationResponse.serviceLookup);
       setStatusLookup(validationResponse.statusLookup);
       setStatusLookupByPhase(validationResponse.statusLookupByPhase || {});
-      setUnmatchedStatuses(validationResponse.unmatchedStatuses);
       setUnmatchedAgents(validationResponse.unmatchedAgents);
 
       // Use reference data for dropdowns (no additional fetches needed)
-      setProjectStatusMappings(referenceData.statusMappings as IProjectStatusMapping[]);
+      const projectMappings = referenceData.statusMappings as IProjectStatusMapping[];
+      setProjectStatusMappings(projectMappings);
       setAvailableUsers(referenceData.users);
+      setAvailablePhases(referenceData.phases || []);
 
-      // Compute unmatched status info (which tasks have each unmatched status)
-      const statusInfoMap = new Map<string, IUnmatchedStatusInfo>();
-      validationResponse.validationResults.forEach(result => {
-        const statusName = result.data.status?.trim();
-        if (statusName && validationResponse.unmatchedStatuses.includes(statusName)) {
-          if (!statusInfoMap.has(statusName)) {
-            statusInfoMap.set(statusName, {
-              statusName,
-              taskCount: 0,
-              taskNames: [],
-            });
-          }
-          const info = statusInfoMap.get(statusName)!;
-          info.taskCount++;
-          if (info.taskNames.length < 3) {
-            info.taskNames.push(result.data.task_name || 'Unnamed task');
-          }
-        }
-      });
-      setUnmatchedStatusInfo(Array.from(statusInfoMap.values()));
+      // Initialize the default fallback status to the first project-level mapping (preserving previous behavior).
+      // Prefer mappings without a phase_id (project-wide).
+      const defaultMappings = projectMappings.filter((m) => !m.phase_id);
+      const initialDefaultStatusId =
+        defaultMappings[0]?.project_status_mapping_id ||
+        projectMappings[0]?.project_status_mapping_id ||
+        '';
+      setDefaultStatusMappingId(initialDefaultStatusId);
 
-      // Initialize status resolutions with default action
+      // Initial unmatched-status computation uses the dialog's current defaultPhaseName.
+      // The effect at the end of this file keeps these in sync if the user picks a different fallback phase.
+      const initial = computeUnmatchedStatusState(
+        validationResponse.validationResults,
+        defaultPhaseName,
+        validationResponse.statusLookup,
+        validationResponse.statusLookupByPhase || {}
+      );
+      setUnmatchedStatuses(initial.unmatchedStatuses);
+      setUnmatchedStatusInfo(initial.unmatchedStatusInfo);
       setStatusResolutions(
-        validationResponse.unmatchedStatuses.map(statusName => ({
+        initial.unmatchedStatuses.map(({ phaseName, statusName }) => ({
           originalStatusName: statusName,
+          phaseName,
           action: 'use_default' as StatusResolutionAction,
         }))
       );
@@ -368,7 +433,9 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
         validationResponse.priorityLookup,
         validationResponse.serviceLookup,
         validationResponse.statusLookup,
-        validationResponse.statusLookupByPhase || {}
+        validationResponse.statusLookupByPhase || {},
+        [],
+        defaultPhaseName
       );
       setGroupedPhases(grouped);
 
@@ -381,7 +448,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
     } finally {
       setIsProcessing(false);
     }
-  }, [fullCSVData, columnMappings, validateMappings, projectId, importT]);
+  }, [fullCSVData, columnMappings, validateMappings, projectId, importT, defaultPhaseName]);
 
   const handleImport = useCallback(async () => {
     if (isProcessing || groupedPhases.length === 0) return;
@@ -391,7 +458,13 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
     setErrors([]);
 
     try {
-      const result = await importPhasesAndTasks(projectId, groupedPhases, statusResolutions);
+      const result = await importPhasesAndTasks(
+        projectId,
+        groupedPhases,
+        statusResolutions,
+        defaultStatusMappingId || undefined,
+        defaultPhaseName || undefined
+      );
       setImportResult(result);
       onImportComplete(result);
       setStep('complete');
@@ -401,17 +474,18 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
     } finally {
       setIsProcessing(false);
     }
-  }, [isProcessing, groupedPhases, projectId, onImportComplete, statusResolutions, importT]);
+  }, [isProcessing, groupedPhases, projectId, onImportComplete, statusResolutions, importT, defaultStatusMappingId, defaultPhaseName]);
 
-  // Handle status resolution changes
+  // Handle status resolution changes — keyed by (phase, status)
   const handleStatusResolutionChange = useCallback((
+    phaseName: string,
     statusName: string,
     action: StatusResolutionAction,
     mappedStatusId?: string
   ) => {
     setStatusResolutions(prev =>
       prev.map(resolution =>
-        resolution.originalStatusName === statusName
+        resolution.originalStatusName === statusName && resolution.phaseName === phaseName
           ? { ...resolution, action, mappedStatusId }
           : resolution
       )
@@ -458,7 +532,8 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
       serviceLookup,
       statusLookup,
       statusLookupByPhase,
-      agentResolutions
+      agentResolutions,
+      defaultPhaseName
     );
     setGroupedPhases(grouped);
 
@@ -467,7 +542,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
     } else {
       handleImport();
     }
-  }, [validationResults, userLookup, priorityLookup, serviceLookup, statusLookup, statusLookupByPhase, agentResolutions, unmatchedStatuses, handleImport]);
+  }, [validationResults, userLookup, priorityLookup, serviceLookup, statusLookup, statusLookupByPhase, agentResolutions, unmatchedStatuses, handleImport, defaultPhaseName]);
 
   const handleClose = useCallback(() => {
     if (!isProcessing) {
@@ -511,6 +586,147 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
     invalidCount: validationResults.filter(r => !r.isValid).length,
     totalTasks: groupedPhases.reduce((sum, phase) => sum + phase.tasks.length, 0),
   }), [validationResults, groupedPhases]);
+
+  // Counts of valid rows with no phase / status — used to gate fallback pickers
+  const { unphasedRowCount, unstatusedRowCount } = useMemo(() => {
+    const valid = validationResults.filter(r => r.isValid);
+    return {
+      unphasedRowCount: valid.filter(r => !r.data.phase_name?.trim()).length,
+      unstatusedRowCount: valid.filter(r => !r.data.status?.trim()).length,
+    };
+  }, [validationResults]);
+
+  // Status mappings scoped to the chosen default phase.
+  // If the chosen phase has phase-specific statuses, only those are valid; otherwise project-wide ones apply.
+  const fallbackStatusOptions = useMemo(() => {
+    const matchedPhase = availablePhases.find(
+      (p) => p.phase_name.toLowerCase().trim() === defaultPhaseName.toLowerCase().trim()
+    );
+    if (matchedPhase) {
+      const phaseScoped = projectStatusMappings.filter((m) => m.phase_id === matchedPhase.phase_id);
+      if (phaseScoped.length > 0) return phaseScoped;
+    }
+    return projectStatusMappings.filter((m) => !m.phase_id);
+  }, [availablePhases, defaultPhaseName, projectStatusMappings]);
+
+  // Keep the selected default status valid when the phase changes
+  useEffect(() => {
+    if (fallbackStatusOptions.length === 0) return;
+    const stillValid = fallbackStatusOptions.some(
+      (m) => m.project_status_mapping_id === defaultStatusMappingId
+    );
+    if (!stillValid) {
+      setDefaultStatusMappingId(fallbackStatusOptions[0].project_status_mapping_id);
+    }
+  }, [fallbackStatusOptions, defaultStatusMappingId]);
+
+  // Resolve the status that will actually be applied to a row, taking phase-specific status sets into account.
+  const resolveDisplayStatus = useCallback((row: ITaskImportRow): {
+    name: string;
+    isUnmatched: boolean;
+    isFallback: boolean;
+  } => {
+    const effectivePhase = (row.phase_name?.trim() || defaultPhaseName).toLowerCase().trim();
+    const phaseMatch = availablePhases.find(
+      (p) => p.phase_name.toLowerCase().trim() === effectivePhase
+    );
+    const phaseSpecific = phaseMatch
+      ? projectStatusMappings.filter((m) => m.phase_id === phaseMatch.phase_id)
+      : [];
+    const projectWide = projectStatusMappings.filter((m) => !m.phase_id);
+    const effectiveMappings = phaseSpecific.length > 0 ? phaseSpecific : projectWide;
+
+    const labelOf = (id: string) => {
+      const m = projectStatusMappings.find((x) => x.project_status_mapping_id === id);
+      return m?.custom_name || m?.status_name || m?.name || '—';
+    };
+
+    const csvStatus = row.status?.trim();
+    if (csvStatus) {
+      const lookup = statusLookupByPhase[effectivePhase] || statusLookup;
+      const id = lookup[csvStatus.toLowerCase()];
+      if (id) return { name: labelOf(id), isUnmatched: false, isFallback: false };
+      return { name: csvStatus, isUnmatched: true, isFallback: false };
+    }
+
+    // Empty CSV status → fallback. Honor user's explicit pick when the row's phase is the chosen default phase.
+    if (
+      effectivePhase === defaultPhaseName.toLowerCase().trim() &&
+      defaultStatusMappingId &&
+      effectiveMappings.some((m) => m.project_status_mapping_id === defaultStatusMappingId)
+    ) {
+      return { name: labelOf(defaultStatusMappingId), isUnmatched: false, isFallback: true };
+    }
+    const first = effectiveMappings[0];
+    if (first) {
+      return { name: labelOf(first.project_status_mapping_id), isUnmatched: false, isFallback: true };
+    }
+    return { name: '—', isUnmatched: false, isFallback: true };
+  }, [availablePhases, projectStatusMappings, statusLookupByPhase, statusLookup, defaultPhaseName, defaultStatusMappingId]);
+
+  // Regroup tasks when the user picks a different fallback phase in preview.
+  // Skip the initial render — handlePreview already produces the first grouping.
+  const previewInitializedRef = React.useRef(false);
+  useEffect(() => {
+    if (step !== 'preview') {
+      previewInitializedRef.current = false;
+      return;
+    }
+    if (!previewInitializedRef.current) {
+      previewInitializedRef.current = true;
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const validRows = validationResults.filter(r => r.isValid).map(r => r.data);
+      const grouped = await groupRowsIntoPhases(
+        validRows,
+        userLookup,
+        priorityLookup,
+        serviceLookup,
+        statusLookup,
+        statusLookupByPhase,
+        agentResolutions,
+        defaultPhaseName
+      );
+      if (cancelled) return;
+      setGroupedPhases(grouped);
+      setExpandedPhases(new Set(grouped.map(p => p.phase_name)));
+
+      // Recompute unmatched statuses against the new effective phase. A status that was
+      // matched under the previous fallback phase may no longer be valid (and vice versa),
+      // so we must regenerate the resolution UI's source of truth — otherwise the import
+      // silently picks a global match or default for newly-invalid statuses.
+      const recomputed = computeUnmatchedStatusState(
+        validationResults,
+        defaultPhaseName,
+        statusLookup,
+        statusLookupByPhase
+      );
+      setUnmatchedStatuses(recomputed.unmatchedStatuses);
+      setUnmatchedStatusInfo(recomputed.unmatchedStatusInfo);
+      // Preserve any resolutions the user has already configured for pairs that still exist;
+      // drop pairs that are now matched, and add new pairs with the default action.
+      setStatusResolutions(prev => {
+        const prevByKey = new Map(
+          prev.map(r => [`${r.phaseName.toLowerCase()}::${r.originalStatusName.toLowerCase()}`, r])
+        );
+        return recomputed.unmatchedStatuses.map(({ phaseName, statusName }) => {
+          const key = `${phaseName.toLowerCase()}::${statusName.toLowerCase()}`;
+          return (
+            prevByKey.get(key) ?? {
+              originalStatusName: statusName,
+              phaseName,
+              action: 'use_default' as StatusResolutionAction,
+            }
+          );
+        });
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [defaultPhaseName, step, validationResults, userLookup, priorityLookup, serviceLookup, statusLookup, statusLookupByPhase, agentResolutions]);
 
   // Check if all map_to_existing resolutions have a valid selection
   const hasIncompleteStatusMappings = useMemo(() => {
@@ -812,6 +1028,62 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                   />
                 </div>
               </div>
+
+              {/* Fallback phase picker — only shown when at least one valid row has no phase */}
+              {unphasedRowCount > 0 && (
+                <div className="flex items-center justify-between py-3 border-b">
+                  <div>
+                    <div className="text-gray-900 font-medium">
+                      {importT('fallbackPhaseLabel', 'Default phase for tasks without phase_name')}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {importT('fallbackPhaseHelp', '{{count}} row(s) have no phase. Pick an existing phase or keep the default to create one.', {
+                        count: unphasedRowCount,
+                      })}
+                    </div>
+                  </div>
+                  <CustomSelect
+                    options={[
+                      {
+                        value: DEFAULT_PHASE_NAME,
+                        label: importT('fallbackPhaseCreateDefault', 'Create new phase: "{{name}}"', { name: DEFAULT_PHASE_NAME }),
+                      },
+                      ...availablePhases.map(p => ({
+                        value: p.phase_name,
+                        label: p.phase_name,
+                      })),
+                    ]}
+                    value={defaultPhaseName}
+                    onValueChange={(value) => setDefaultPhaseName(value)}
+                    className="w-64"
+                  />
+                </div>
+              )}
+
+              {/* Fallback status picker — scoped to the statuses available for the selected default phase */}
+              {unstatusedRowCount > 0 && fallbackStatusOptions.length > 0 && (
+                <div className="flex items-center justify-between py-3 border-b">
+                  <div>
+                    <div className="text-gray-900 font-medium">
+                      {importT('fallbackStatusLabel', 'Default status for tasks without status')}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {importT('fallbackStatusHelp', '{{count}} row(s) have no status. The selected status will be assigned to those tasks.', {
+                        count: unstatusedRowCount,
+                      })}
+                    </div>
+                  </div>
+                  <CustomSelect
+                    options={fallbackStatusOptions.map(mapping => ({
+                      value: mapping.project_status_mapping_id,
+                      label: mapping.custom_name || mapping.status_name || mapping.name || 'Unnamed',
+                    }))}
+                    value={defaultStatusMappingId}
+                    onValueChange={(value) => setDefaultStatusMappingId(value)}
+                    className="w-64"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Grouped Preview */}
@@ -851,29 +1123,77 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
               </div>
             </div>
 
+            {/* Row filter — lets users focus on rows that will be skipped vs. imported */}
+            <div className="mb-2 flex items-center justify-between">
+              <h4 className="text-sm font-medium text-gray-700">
+                {importT('rowResultsTitle', 'Row Results')}
+              </h4>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">{importT('rowFilterLabel', 'Show:')}</span>
+                <CustomSelect
+                  options={[
+                    {
+                      value: 'all',
+                      label: importT('rowFilterAll', 'All rows ({{count}})', { count: validationResults.length }),
+                    },
+                    {
+                      value: 'imported',
+                      label: importT('rowFilterImported', 'Will be imported ({{count}})', {
+                        count: importOptions.skipInvalidRows ? validCount : validationResults.length,
+                      }),
+                    },
+                    {
+                      value: 'skipped',
+                      label: importT('rowFilterSkipped', 'Will be skipped ({{count}})', {
+                        count: importOptions.skipInvalidRows ? invalidCount : 0,
+                      }),
+                    },
+                  ]}
+                  value={previewRowFilter}
+                  onValueChange={(value) => {
+                    setPreviewRowFilter(value as 'all' | 'imported' | 'skipped');
+                    setCurrentPage(1);
+                  }}
+                  className="w-56"
+                />
+              </div>
+            </div>
+
             {/* Validation Results Table */}
             <div className="max-h-64 overflow-x-auto overflow-y-auto">
               <DataTable
-                key={`${currentPage}-${pageSize}`}
+                key={`${currentPage}-${pageSize}-${previewRowFilter}`}
                 id="phase-task-import-preview-table"
                 pagination={true}
                 currentPage={currentPage}
                 onPageChange={setCurrentPage}
                 pageSize={pageSize}
                 onItemsPerPageChange={handlePageSizeChange}
-                data={validationResults.map((result) => ({
-                  status: result.isValid,
-                  rowNumber: result.rowNumber,
-                  phase_name: result.data.phase_name || DEFAULT_PHASE_NAME,
-                  task_name: result.data.task_name,
-                  assigned_to: result.data.assigned_to,
-                  estimated_hours: result.data.estimated_hours,
-                  errors: result.errors,
-                  warnings: result.warnings,
-                }))}
+                data={validationResults
+                  .filter((result) => {
+                    if (previewRowFilter === 'all') return true;
+                    // When skipInvalidRows is off, every row is "to be imported" or blocks the import — no rows are skipped.
+                    const willBeSkipped = importOptions.skipInvalidRows ? !result.isValid : false;
+                    if (previewRowFilter === 'skipped') return willBeSkipped;
+                    return !willBeSkipped;
+                  })
+                  .map((result) => {
+                    const resolvedStatus = resolveDisplayStatus(result.data);
+                    return {
+                      status: result.isValid,
+                      rowNumber: result.rowNumber,
+                      phase_name: result.data.phase_name || defaultPhaseName,
+                      task_name: result.data.task_name,
+                      assigned_to: result.data.assigned_to,
+                      estimated_hours: result.data.estimated_hours,
+                      resolvedStatus,
+                      errors: result.errors,
+                      warnings: result.warnings,
+                    };
+                  })}
                 columns={[
                   {
-                    title: importT('table.status', 'Status'),
+                    title: importT('table.valid', 'Valid'),
                     dataIndex: 'status',
                     render: (value: boolean) =>
                       value ? (
@@ -901,6 +1221,34 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                   {
                     title: importT('table.task', 'Task'),
                     dataIndex: 'task_name',
+                  },
+                  {
+                    title: importT('table.status', 'Status'),
+                    dataIndex: 'resolvedStatus',
+                    render: (value: unknown) => {
+                      const v = value as { name: string; isUnmatched: boolean; isFallback: boolean };
+                      if (v.isUnmatched) {
+                        return (
+                          <Tooltip content={importT('statusUnmatchedTooltip', 'Status does not match any existing status for this phase. Resolve in the mapping steps before import.')}>
+                            <div className="flex flex-col items-start gap-1 cursor-help min-w-0">
+                              <span className="text-sm break-words whitespace-normal">{v.name}</span>
+                              <Badge variant="warning" size="sm">{importT('statusUnmatchedSuffix', 'Unmatched')}</Badge>
+                            </div>
+                          </Tooltip>
+                        );
+                      }
+                      if (v.isFallback) {
+                        return (
+                          <Tooltip content={importT('statusFallbackTooltip', 'Using the default fallback status for this phase.')}>
+                            <div className="flex flex-col items-start gap-1 cursor-help min-w-0">
+                              <span className="text-sm break-words whitespace-normal">{v.name}</span>
+                              <Badge variant="default-muted" size="sm">{importT('statusFallbackSuffix', 'Default')}</Badge>
+                            </div>
+                          </Tooltip>
+                        );
+                      }
+                      return <span className="text-sm break-words whitespace-normal">{v.name}</span>;
+                    },
                   },
                   {
                     title: importT('table.issues', 'Issues'),
@@ -971,6 +1319,16 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                 <AlertDescription>
                   <strong>{importT('invalidRowsCount', '{{count}} row(s)', { count: invalidCount })}</strong>{' '}
                   {importT('invalidRowsBlockingError', 'have validation errors. Enable "Skip invalid rows" to proceed with only the valid rows, or go back and fix your CSV.')}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Show notice when skip is enabled so users see how many rows are being dropped */}
+            {invalidCount > 0 && importOptions.skipInvalidRows && (
+              <Alert variant="warning" className="mt-4">
+                <AlertDescription>
+                  <strong>{importT('rowsToBeSkippedCount', '{{count}} row(s) will be skipped', { count: invalidCount })}</strong>{' '}
+                  {importT('rowsToBeSkippedHelp', 'because they failed validation. Use the filter above to review them.')}
                 </AlertDescription>
               </Alert>
             )}
@@ -1157,17 +1515,33 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
             <div className="space-y-4 max-h-96 overflow-y-auto">
               {unmatchedStatusInfo.map((statusInfo) => {
                 const resolution = statusResolutions.find(
-                  r => r.originalStatusName === statusInfo.statusName
+                  r => r.originalStatusName === statusInfo.statusName && r.phaseName === statusInfo.phaseName
                 );
+
+                // Determine the status options available for this phase.
+                // If the phase exists and has phase-specific mappings, show those; otherwise show project-wide mappings.
+                const phaseMatch = availablePhases.find(
+                  (p) => p.phase_name.toLowerCase().trim() === statusInfo.phaseName.toLowerCase().trim()
+                );
+                const phaseSpecific = phaseMatch
+                  ? projectStatusMappings.filter((m) => m.phase_id === phaseMatch.phase_id)
+                  : [];
+                const projectWideMappings = projectStatusMappings.filter((m) => !m.phase_id);
+                const mapOptions = phaseSpecific.length > 0 ? phaseSpecific : projectWideMappings;
+                const radioName = `status-${statusInfo.phaseName}-${statusInfo.statusName}`;
+                const cardKey = `${statusInfo.phaseName}::${statusInfo.statusName}`;
 
                 return (
                   <div
-                    key={statusInfo.statusName}
+                    key={cardKey}
                     className="border rounded-lg p-4 bg-gray-50"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div>
                         <span className="font-medium text-gray-900">&quot;{statusInfo.statusName}&quot;</span>
+                        <Badge variant="default-muted" size="sm" className="ml-2">
+                          {importT('inPhaseBadge', 'in {{phase}}', { phase: statusInfo.phaseName })}
+                        </Badge>
                         <span className="ml-2 text-sm text-gray-500">
                           {importT('taskCountLabel', '({{count}} task{{plural}})', {
                             count: statusInfo.taskCount,
@@ -1185,9 +1559,9 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="radio"
-                          name={`status-${statusInfo.statusName}`}
+                          name={radioName}
                           checked={resolution?.action === 'create'}
-                          onChange={() => handleStatusResolutionChange(statusInfo.statusName, 'create')}
+                          onChange={() => handleStatusResolutionChange(statusInfo.phaseName, statusInfo.statusName, 'create')}
                           className="text-primary-500"
                         />
                         <span className="text-sm">
@@ -1198,9 +1572,9 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="radio"
-                          name={`status-${statusInfo.statusName}`}
+                          name={radioName}
                           checked={resolution?.action === 'use_default'}
-                          onChange={() => handleStatusResolutionChange(statusInfo.statusName, 'use_default')}
+                          onChange={() => handleStatusResolutionChange(statusInfo.phaseName, statusInfo.statusName, 'use_default')}
                           className="text-primary-500"
                         />
                         <span className="text-sm">
@@ -1212,24 +1586,24 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                         <label className="flex items-center gap-2 cursor-pointer">
                           <input
                             type="radio"
-                            name={`status-${statusInfo.statusName}`}
+                            name={radioName}
                             checked={resolution?.action === 'map_to_existing'}
                             onChange={() => {
-                              const firstStatus = projectStatusMappings[0]?.project_status_mapping_id;
-                              handleStatusResolutionChange(statusInfo.statusName, 'map_to_existing', firstStatus);
+                              const firstStatus = mapOptions[0]?.project_status_mapping_id;
+                              handleStatusResolutionChange(statusInfo.phaseName, statusInfo.statusName, 'map_to_existing', firstStatus);
                             }}
                             className="text-primary-500"
                           />
                           <span className="text-sm">{importT('mapToExistingStatus', 'Map to existing:')}</span>
                         </label>
                         <CustomSelect
-                          options={projectStatusMappings.map(mapping => ({
+                          options={mapOptions.map(mapping => ({
                             value: mapping.project_status_mapping_id,
                             label: mapping.custom_name || mapping.status_name || mapping.name || 'Unnamed',
                           }))}
                           value={resolution?.mappedStatusId || ''}
                           onValueChange={(value) =>
-                            handleStatusResolutionChange(statusInfo.statusName, 'map_to_existing', value)
+                            handleStatusResolutionChange(statusInfo.phaseName, statusInfo.statusName, 'map_to_existing', value)
                           }
                           disabled={resolution?.action !== 'map_to_existing'}
                           className="w-48"

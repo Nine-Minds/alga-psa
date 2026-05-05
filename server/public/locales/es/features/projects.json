@@ -587,7 +587,8 @@
       "row": "Fila",
       "phase": "Fase",
       "task": "Tarea",
-      "issues": "Incidencias"
+      "issues": "Incidencias",
+      "valid": "Válido"
     },
     "fields": {
       "task_name": "Nombre de la tarea *",
@@ -602,7 +603,24 @@
       "task_type": "Tipo de tarea",
       "status": "Estado",
       "tags": "Etiquetas"
-    }
+    },
+    "fallbackPhaseLabel": "Fase predeterminada para tareas sin phase_name",
+    "fallbackPhaseHelp": "{{count}} fila(s) no tienen fase. Elija una fase existente o mantenga el valor predeterminado para crear una.",
+    "fallbackPhaseCreateDefault": "Crear nueva fase: \"{{name}}\"",
+    "fallbackStatusLabel": "Estado predeterminado para tareas sin estado",
+    "fallbackStatusHelp": "{{count}} fila(s) no tienen estado. El estado seleccionado se asignará a esas tareas.",
+    "rowResultsTitle": "Resultados de filas",
+    "rowFilterLabel": "Mostrar:",
+    "rowFilterAll": "Todas las filas ({{count}})",
+    "rowFilterImported": "Se importarán ({{count}})",
+    "rowFilterSkipped": "Se omitirán ({{count}})",
+    "rowsToBeSkippedCount": "{{count}} fila(s) se omitirán",
+    "rowsToBeSkippedHelp": "porque no superaron la validación. Use el filtro de arriba para revisarlas.",
+    "statusUnmatchedSuffix": "Sin coincidencia",
+    "statusUnmatchedTooltip": "El estado no coincide con ningún estado existente para esta fase. Resuélvalo en los pasos de mapeo antes de importar.",
+    "statusFallbackSuffix": "Predeterminado",
+    "statusFallbackTooltip": "Usando el estado predeterminado de respaldo para esta fase.",
+    "inPhaseBadge": "en {{phase}}"
   },
   "dialogs": {
     "moveTask": {
