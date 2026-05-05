@@ -1,7 +1,11 @@
 version: '3.8'
 
 x-common-config: &common-config
-  build: .
+  # Keep the build context at the repository root because hocuspocus/Dockerfile
+  # copies files using root-relative paths (hocuspocus/package.json, etc.).
+  build:
+    context: ..
+    dockerfile: hocuspocus/Dockerfile
   ports:
     - "${EXPOSE_HOCUSPOCUS_PORT}:1234"
   environment:
