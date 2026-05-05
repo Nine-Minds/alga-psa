@@ -192,3 +192,7 @@ implementation progresses; update earlier entries when something changes.
 - (2026-05-05) **F009 complete.** Added
   `ee/server/migrations/citus/20260505123100_distribute_api_rate_limit_settings.cjs`
   so the new settings table is distributed on `tenant` when Citus is present.
+- (2026-05-05) **F010 complete.** Added
+  `server/src/lib/api/rateLimit/apiRateLimitSettingsModel.ts` with exact-row
+  reads/writes plus a fallback resolver that checks `(tenant, apiKeyId)`,
+  then `(tenant, NULL)`, then the hard defaults `{ maxTokens: 120, refillRate: 1 }`.

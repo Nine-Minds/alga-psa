@@ -56,7 +56,7 @@
   {
     "id": "F010",
     "description": "Implement a small DAL (apiRateLimitSettingsModel) with getForKey(tenant, apiKeyId), upsertForKey, upsertForTenant, and clearForKey, and a fall-back resolver: (tenant, apiKeyId) → (tenant, NULL) → hard-coded defaults.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {
