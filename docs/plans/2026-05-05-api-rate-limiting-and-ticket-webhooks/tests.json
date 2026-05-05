@@ -26,7 +26,7 @@
   {
     "id": "T005",
     "description": "Unit (vitest, server/src/lib/api/rateLimit/__tests__/configGetter.invalidate.test.ts): invalidateApiRateLimitConfig('t1') clears all cached entries whose key starts with 't1:' and leaves other tenants intact; invalidateApiRateLimitConfig('t1','k1') clears only that one entry.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {

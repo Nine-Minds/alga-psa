@@ -203,3 +203,7 @@ implementation progresses; update earlier entries when something changes.
 - (2026-05-05) **T004 complete.** Added
   `server/src/lib/api/rateLimit/__tests__/configGetter.cache.test.ts` to
   verify identical cached lookups hit the settings resolver once.
+- (2026-05-05) **T005 complete.** Added
+  `server/src/lib/api/rateLimit/__tests__/configGetter.invalidate.test.ts`
+  to prove tenant-wide invalidation clears only that tenant and single-key
+  invalidation clears only the targeted key.
