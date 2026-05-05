@@ -14,6 +14,7 @@ NC='\033[0m' # No Color
 # Registry configuration
 REGISTRY="${ALGA_IMAGE_REPO:-ghcr.io/nine-minds/alga-psa-ce}"
 IMAGE_PLATFORM="${ALGA_IMAGE_PLATFORM:-linux/amd64}"
+NEXT_BUILD_MAX_OLD_SPACE_SIZE="${NEXT_BUILD_MAX_OLD_SPACE_SIZE:-12288}"
 
 LAST_CHECK_ERROR=""
 
@@ -54,10 +55,12 @@ build_local_image() {
   local tag="$1"
   echo -e "${BLUE}→${NC} Building ${REGISTRY}:${tag} from the current checkout..." >&2
   echo -e "${BLUE}→${NC} Build platform: ${IMAGE_PLATFORM}" >&2
+  echo -e "${BLUE}→${NC} Next.js max old space: ${NEXT_BUILD_MAX_OLD_SPACE_SIZE} MB" >&2
 
   cd "${ROOT_DIR}"
   docker build \
     --platform "${IMAGE_PLATFORM}" \
+    --build-arg "NEXT_BUILD_MAX_OLD_SPACE_SIZE=${NEXT_BUILD_MAX_OLD_SPACE_SIZE}" \
     -f Dockerfile.build \
     -t "${REGISTRY}:${tag}" \
     .

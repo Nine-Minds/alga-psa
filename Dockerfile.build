@@ -27,6 +27,7 @@ COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/
 FROM deps AS builder
 # Fallback secret values ensure edge-auth guards pass during build; real values come from runtime secrets.
 ARG NEXTAUTH_SECRET_BUILD="dev-placeholder-nextauth-secret-32"
+ARG NEXT_BUILD_MAX_OLD_SPACE_SIZE="12288"
 # Copy all project files and build the server
 
 WORKDIR /app
@@ -72,7 +73,11 @@ ENV EDITION="ce"
 ENV NEXT_PUBLIC_EDITION="community"
 
 WORKDIR /app/server
-RUN NEXTAUTH_SECRET="${NEXTAUTH_SECRET_BUILD}" AUTH_SECRET="${NEXTAUTH_SECRET_BUILD}" npm run build
+RUN NEXTAUTH_SECRET="${NEXTAUTH_SECRET_BUILD}" \
+    AUTH_SECRET="${NEXTAUTH_SECRET_BUILD}" \
+    NODE_OPTIONS="--max-old-space-size=${NEXT_BUILD_MAX_OLD_SPACE_SIZE}" \
+    NODE_ENV=production \
+    npm exec -- next build --webpack
 
 # Create secrets directory and populate with secure placeholder values
 RUN mkdir -p /app/secrets && \
