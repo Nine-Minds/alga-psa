@@ -233,3 +233,6 @@ implementation progresses; update earlier entries when something changes.
 - (2026-05-05) **F015 complete.** `shouldBypassRateLimit()` now centralizes
   the bypass prefixes for health endpoints, mobile auth, and runner-internal
   endpoints so future auth wrappers reuse one rate-limit allowlist.
+- (2026-05-05) **F016 complete.** Rate-limit denials now throw the existing
+  `TooManyRequestsError` with `details.retry_after_ms`, `details.remaining`,
+  and the full header set attached on `error.headers`.

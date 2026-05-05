@@ -92,7 +92,7 @@
   {
     "id": "F016",
     "description": "Reuse TooManyRequestsError (apiMiddleware.ts:101) for 429s; do not introduce a parallel RateLimitError class. Populate `details: { retry_after_ms, remaining }` and the `headers` field.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {
