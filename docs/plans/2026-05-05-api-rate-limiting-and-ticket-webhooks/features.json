@@ -74,7 +74,7 @@
   {
     "id": "F013",
     "description": "Honor the RATE_LIMIT_ENFORCE env var (default false until Stage 3): in observation mode, emit a structured WARN log + headers but do not throw on a denial.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Rollout / Migration"]
   },
   {

@@ -223,3 +223,6 @@ implementation progresses; update earlier entries when something changes.
   point. It resolves the `api` namespace bucket, skips configured bypass
   paths, computes rate-limit header values, and either throws
   `TooManyRequestsError` or returns a `RateLimitDecision`.
+- (2026-05-05) **F013 complete.** `enforceApiRateLimit()` now treats
+  `RATE_LIMIT_ENFORCE=false` as observation mode: it logs the throttle with
+  tenant/api-key/retry metadata and returns a decision instead of throwing.
