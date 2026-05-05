@@ -110,7 +110,7 @@
   {
     "id": "F019",
     "description": "Emit X-RateLimit-Limit and X-RateLimit-Remaining headers on successful responses by reading req.context.rateLimit and passing extraHeaders to createSuccessResponse / createPaginatedResponse.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {

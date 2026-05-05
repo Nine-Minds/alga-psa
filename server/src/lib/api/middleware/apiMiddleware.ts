@@ -404,8 +404,20 @@ export function createSuccessResponse(
     response.meta = mergedMetadata;
   }
 
+  const rateLimitHeaders =
+    typeof request === 'object' &&
+    request !== null &&
+    'context' in request &&
+    (request as ApiRequest).context?.rateLimit
+      ? {
+          'X-RateLimit-Limit': String((request as ApiRequest).context!.rateLimit!.limit),
+          'X-RateLimit-Remaining': String((request as ApiRequest).context!.rateLimit!.remaining),
+        }
+      : undefined;
+
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
+    ...(rateLimitHeaders ?? {}),
     ...(extraHeaders ?? {})
   };
 
@@ -445,8 +457,20 @@ export function createPaginatedResponse(
     metadata = mergedMetadata;
   }
 
+  const rateLimitHeaders =
+    typeof request === 'object' &&
+    request !== null &&
+    'context' in request &&
+    (request as ApiRequest).context?.rateLimit
+      ? {
+          'X-RateLimit-Limit': String((request as ApiRequest).context!.rateLimit!.limit),
+          'X-RateLimit-Remaining': String((request as ApiRequest).context!.rateLimit!.remaining),
+        }
+      : undefined;
+
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
+    ...(rateLimitHeaders ?? {}),
     ...(extraHeaders ?? {})
   };
 

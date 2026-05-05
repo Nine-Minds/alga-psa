@@ -243,3 +243,8 @@ implementation progresses; update earlier entries when something changes.
   `enforceApiRateLimit()` as soon as context is available. I also wired the
   legacy `apiAuthMiddleware.ts` path so `/api/v1/test-auth` stays in the same
   bucket family as the newer wrappers.
+- (2026-05-05) **F019 complete.** `createSuccessResponse()` and
+  `createPaginatedResponse()` now emit `X-RateLimit-Limit` and
+  `X-RateLimit-Remaining` automatically when the passed request carries
+  `context.rateLimit`, and the generic `ApiBaseController` create/update
+  paths now pass `apiRequest` through to the helper.

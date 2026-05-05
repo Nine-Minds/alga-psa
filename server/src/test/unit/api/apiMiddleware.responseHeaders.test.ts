@@ -37,6 +37,28 @@ describe('apiMiddleware response headers', () => {
     expect(response.headers.get('X-RateLimit-Limit')).toBe('120');
   });
 
+  it('derives success headers from request.context.rateLimit when a request is provided', () => {
+    const response = createSuccessResponse(
+      { ok: true },
+      200,
+      undefined,
+      {
+        context: {
+          tenant: 'tenant-1',
+          userId: 'user-1',
+          rateLimit: {
+            limit: 120,
+            remaining: 119,
+            resetAt: '2026-05-05T00:00:00.000Z',
+          },
+        },
+      } as any,
+    );
+
+    expect(response.headers.get('X-RateLimit-Limit')).toBe('120');
+    expect(response.headers.get('X-RateLimit-Remaining')).toBe('119');
+  });
+
   it('adds extra headers to paginated responses', () => {
     const response = createPaginatedResponse(
       [{ id: 1 }],
