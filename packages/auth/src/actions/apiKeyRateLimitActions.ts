@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { createTenantKnex } from '@alga-psa/db';
 import { IRole } from '@alga-psa/types';
-import { TokenBucketRateLimiter } from '@alga-psa/email';
+import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
 
 import { withAuth } from '../lib/withAuth';
 import { getUserRoles } from './policyActions';

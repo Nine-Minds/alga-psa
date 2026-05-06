@@ -1,4 +1,4 @@
-import logger from '@alga-psa/core/logger';
+import logger from '../logger';
 
 /**
  * Result of a rate limit check

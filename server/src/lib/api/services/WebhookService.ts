@@ -21,7 +21,7 @@ import {
   EventFilter,
   PayloadTransformation
 } from '../schemas/webhookSchemas';
-import { TokenBucketRateLimiter } from '@alga-psa/email';
+import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
 import { DatabaseService } from './DatabaseService';
 import { PaginatedResponse, SuccessResponse } from '../../types/api';
 import { validateTenantAccess } from '@alga-psa/validation';

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   TokenBucketRateLimiter,
   type TokenBucketRedisClient,
-} from '@alga-psa/email';
+} from '@alga-psa/core/rateLimit';
 
 const testState = vi.hoisted(() => ({
   validateApiKeyAnyTenantMock: vi.fn(),

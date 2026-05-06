@@ -1,4 +1,4 @@
-import type { BucketConfig } from '@alga-psa/email';
+import type { BucketConfig } from '@alga-psa/core/rateLimit';
 
 import { resolveApiRateLimitConfig } from './apiRateLimitSettingsModel';
 

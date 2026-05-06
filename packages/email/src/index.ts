@@ -21,14 +21,6 @@ export type {
   RedisClientGetter,
   EmailSendCallback
 } from './DelayedEmailQueue';
-export { TokenBucketRateLimiter } from './TokenBucketRateLimiter';
-export type {
-  RateLimitResult,
-  BucketConfig,
-  TokenBucketRedisClient,
-  TokenBucketRedisGetter,
-  BucketConfigGetter
-} from './TokenBucketRateLimiter';
 export * from './templateProcessors';
 export type { 
   SendEmailParams as TenantEmailParams,

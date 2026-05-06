@@ -1,5 +1,5 @@
 import { getConnection } from '@/lib/db/db';
-import type { BucketConfig } from '@alga-psa/email';
+import type { BucketConfig } from '@alga-psa/core/rateLimit';
 
 const TABLE_NAME = 'api_rate_limit_settings';
 

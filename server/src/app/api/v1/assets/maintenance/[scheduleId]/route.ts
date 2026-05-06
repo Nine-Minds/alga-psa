@@ -9,7 +9,7 @@ import { withApiKeyRouteAuth } from '@/lib/api/middleware/withApiKeyRouteAuth';
 
 const controller = new ApiAssetController();
 
-export const PUT = withApiKeyRouteAuth(async (request, { params }) => {
+export const PUT = withApiKeyRouteAuth<{ scheduleId: string }>(async (request, { params }) => {
   try {
     const resolvedParams = await params;
     const req = request as any;
@@ -20,7 +20,7 @@ export const PUT = withApiKeyRouteAuth(async (request, { params }) => {
   }
 });
 
-export const DELETE = withApiKeyRouteAuth(async (request, { params }) => {
+export const DELETE = withApiKeyRouteAuth<{ scheduleId: string }>(async (request, { params }) => {
   try {
     const resolvedParams = await params;
     const req = request as any;

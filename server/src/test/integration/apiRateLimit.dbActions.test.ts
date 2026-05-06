@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { TokenBucketRateLimiter, type TokenBucketRedisClient } from '@alga-psa/email';
+import { TokenBucketRateLimiter, type TokenBucketRedisClient } from '@alga-psa/core/rateLimit';
 
 import {
   apiRateLimitConfigGetter,

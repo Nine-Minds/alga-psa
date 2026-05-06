@@ -5,5 +5,5 @@ export const dynamic = 'force-dynamic';
 
 const controller = new ApiContractLineController();
 
-export const GET = withApiKeyRouteAuth(async (request, context) => controller.list()(request, context));
-export const POST = withApiKeyRouteAuth(async (request, context) => controller.create()(request, context));
+export const GET = withApiKeyRouteAuth(async (request) => controller.list()(request));
+export const POST = withApiKeyRouteAuth(async (request) => controller.create()(request));

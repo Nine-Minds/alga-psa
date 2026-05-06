@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-import { TokenBucketRateLimiter } from '@alga-psa/email';
+import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
 
 import {
   WebhookDeliveryJob,

@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { TokenBucketRateLimiter, type RedisClientLike } from '@alga-psa/email';
+import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
+import { type RedisClientLike } from '@alga-psa/email';
 
 const webhookModelState = vi.hoisted(() => ({
   recordDeliveryMock: vi.fn(),

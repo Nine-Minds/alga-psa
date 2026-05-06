@@ -9,7 +9,7 @@ import { withApiKeyRouteAuth } from '@/lib/api/middleware/withApiKeyRouteAuth';
 
 const controller = new ApiAssetController();
 
-export const POST = withApiKeyRouteAuth(async (request, { params }) => {
+export const POST = withApiKeyRouteAuth<{ id: string }>(async (request, { params }) => {
   try {
     const resolvedParams = await params;
     const req = request as any;

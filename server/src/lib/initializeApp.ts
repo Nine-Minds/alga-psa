@@ -22,7 +22,8 @@ import { validateEmailConfiguration, logEmailConfigWarnings } from './validation
 import { Temporal } from '@js-temporal/polyfill';
 import { JobStatus } from 'server/src/types/job';
 import { initializeNotificationAccumulator, shutdownNotificationAccumulator } from './eventBus/subscribers/ticketEmailSubscriber';
-import { DelayedEmailQueue, TenantEmailService, StaticTemplateProcessor, EmailProviderManager, TokenBucketRateLimiter, BucketConfig, sendPasswordResetEmail, getSystemEmailService } from '@alga-psa/email';
+import { DelayedEmailQueue, TenantEmailService, StaticTemplateProcessor, EmailProviderManager, sendPasswordResetEmail, getSystemEmailService } from '@alga-psa/email';
+import { TokenBucketRateLimiter, type BucketConfig } from '@alga-psa/core/rateLimit';
 import { EventEmailRetryQueue } from './notifications/EventEmailRetryQueue';
 import { registerAuthEmailProvider } from '@alga-psa/auth';
 import { registerWorkflowEmailProvider } from '@alga-psa/workflows/runtime';

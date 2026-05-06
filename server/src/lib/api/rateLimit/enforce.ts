@@ -1,5 +1,5 @@
 import logger from '@alga-psa/core/logger';
-import { TokenBucketRateLimiter } from '@alga-psa/email';
+import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
 import type { NextRequest } from 'next/server';
 
 import { apiRateLimitConfigGetter } from './apiRateLimitConfigGetter';

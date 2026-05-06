@@ -20,7 +20,7 @@ export interface ApiContext {
   user?: any;
   apiKeyId?: string;
   rateLimitSubjectId?: string;
-  rateLimit?: RateLimitDecision;
+  rateLimit?: RateLimitDecision | null;
   kind?: 'system' | 'user';
 }
 
@@ -107,6 +107,7 @@ export class TooManyRequestsError extends Error implements ApiError {
   statusCode = 429;
   code = 'RATE_LIMITED';
   details: any;
+  headers?: Record<string, string>;
 
   constructor(message: string = 'Too many requests', details?: any) {
     super(message);

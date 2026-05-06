@@ -388,7 +388,7 @@ export default function AdminWebhooksSetup() {
         webhookId: formState.webhookId,
         name: formState.name.trim(),
         url: formState.url.trim(),
-        eventTypes: formState.eventTypes,
+        eventTypes: formState.eventTypes as Parameters<typeof upsertWebhook>[0]['eventTypes'],
         customHeaders: parseCustomHeaders(
           formState.customHeadersText,
           (line) => t('security.webhooks.messages.invalidHeaderLine', { line }),

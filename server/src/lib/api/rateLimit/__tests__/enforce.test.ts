@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const tryConsumeMock = vi.hoisted(() => vi.fn());
 const apiRateLimitConfigGetterMock = vi.hoisted(() => vi.fn());
 
-vi.mock('@alga-psa/email', () => ({
+vi.mock('@alga-psa/core/rateLimit', () => ({
   TokenBucketRateLimiter: {
     getInstance: () => ({
       tryConsume: tryConsumeMock,

@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   TokenBucketRateLimiter,
   type TokenBucketRedisClient
-} from '../../../../../packages/email/src/TokenBucketRateLimiter';
+} from '@alga-psa/core/rateLimit';
 
 /**
  * Unit tests for the TokenBucketRateLimiter service.

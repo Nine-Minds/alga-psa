@@ -9,7 +9,7 @@ import { withApiKeyRouteAuth } from '@/lib/api/middleware/withApiKeyRouteAuth';
 
 const controller = new ApiAssetController();
 
-export const DELETE = withApiKeyRouteAuth(async (request, { params }) => {
+export const DELETE = withApiKeyRouteAuth<{ relationshipId: string }>(async (request, { params }) => {
   try {
     const resolvedParams = await params;
     return await controller.deleteRelationship(request as any, resolvedParams);

@@ -3,4 +3,4 @@ import { withApiKeyRouteAuth } from '@/lib/api/middleware/withApiKeyRouteAuth';
 
 const controller = new ApiContractLineController();
 
-export const DELETE = withApiKeyRouteAuth(async (request, context) => controller.bulkDeleteContractLines()(request, context));
+export const DELETE = withApiKeyRouteAuth(async (request) => controller.bulkDeleteContractLines()(request));
