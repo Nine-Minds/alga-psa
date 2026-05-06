@@ -218,7 +218,7 @@
   {
     "id": "F037",
     "description": "Implement WebhookDeliveryQueue (Redis ZSET singleton mirrored on DelayedEmailQueue) with enqueue(job), poller (zRangeByScore + zRem to claim, in-process semaphore cap of 50 concurrent deliveries), retry re-zAdd with computeBackoff, and graceful shutdown on SIGTERM with a 30s drain.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations", "Non-functional Requirements"]
   },
   {

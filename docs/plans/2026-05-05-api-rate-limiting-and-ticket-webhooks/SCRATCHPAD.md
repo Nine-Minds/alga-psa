@@ -142,6 +142,10 @@ implementation progresses; update earlier entries when something changes.
   unrelated `react-day-picker/src/style.css` loader issue seen with broad
   `initializeApp` smoke imports. The narrower `webhookSubscriber.ts` module
   import remains the useful compile smoke for webhook subscriber changes.
+- (2026-05-05) `WebhookDeliveryQueue` now owns the retry loop contract:
+  processors resolve on success and throw on retryable/non-retryable failure.
+  The queue handles atomic `zRem` claims, caps active work at 50 in-process
+  jobs, and re-enqueues attempts 2..5 with `computeBackoff(attempt)`.
 
 ## Commands / Runbooks
 
@@ -452,3 +456,10 @@ implementation progresses; update earlier entries when something changes.
   `server/src/lib/eventBus/subscribers/index.ts` so the existing
   register-all / unregister-all lifecycle now includes webhook ticket events
   alongside the other subscriber families.
+- (2026-05-05) **F037 complete.** Expanded
+  `server/src/lib/webhooks/WebhookDeliveryQueue.ts` from storage-only enqueue
+  support into the actual Redis ZSET poller: `initialize(getRedisClient,
+  processFn)` now starts a 2s processing loop, claims ready jobs via
+  `zRangeByScore` + `zRem`, limits active processor promises to 50, retries
+  failed jobs up to five total attempts using the shared backoff helper, and
+  drains in-flight work for up to 30 seconds on shutdown / `SIGTERM`.
