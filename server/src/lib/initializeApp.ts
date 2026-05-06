@@ -32,6 +32,8 @@ import { registerEnterpriseStorageProviders } from './storage/registerEnterprise
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { apiRateLimitConfigGetter } from './api/rateLimit/apiRateLimitConfigGetter';
 import { webhookRateLimitConfigGetter } from './webhooks/rateLimitConfig';
+import { WebhookDeliveryQueue } from './webhooks/WebhookDeliveryQueue';
+import { processWebhookDeliveryJob } from './webhooks/processWebhookDeliveryJob';
 
 let isFunctionExecuted = false;
 
@@ -197,6 +199,16 @@ export async function initializeApp() {
       logger.error('Failed to initialize event email retry queue:', error);
     }
 
+    try {
+      await WebhookDeliveryQueue.getInstance().initialize(
+        getRedisClient,
+        processWebhookDeliveryJob,
+      );
+      logger.info('Webhook delivery queue initialized');
+    } catch (error) {
+      logger.error('Failed to initialize webhook delivery queue:', error);
+    }
+
     // Initialize storage service
     const storageService = new StorageService();
 
@@ -235,6 +247,7 @@ export async function initializeApp() {
         await TokenBucketRateLimiter.getInstance().shutdown();
         await DelayedEmailQueue.getInstance().shutdown();
         await EventEmailRetryQueue.getInstance().shutdown();
+        await WebhookDeliveryQueue.getInstance().shutdown();
         await stopJobRunner();
         await cleanupEventBus();
         process.exit(0);
@@ -245,6 +258,7 @@ export async function initializeApp() {
         await TokenBucketRateLimiter.getInstance().shutdown();
         await DelayedEmailQueue.getInstance().shutdown();
         await EventEmailRetryQueue.getInstance().shutdown();
+        await WebhookDeliveryQueue.getInstance().shutdown();
         await stopJobRunner();
         await cleanupEventBus();
         process.exit(0);

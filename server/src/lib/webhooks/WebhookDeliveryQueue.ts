@@ -37,7 +37,14 @@ const DEFAULT_CONFIG: WebhookDeliveryQueueConfig = {
   shutdownDrainMs: 30_000,
 };
 
-export type WebhookDeliveryProcessor = (job: WebhookDeliveryJob) => Promise<void>;
+export type WebhookDeliveryProcessResult =
+  | { outcome: 'delivered' }
+  | { outcome: 'retry'; retryDelayMs?: number; errorMessage?: string | null }
+  | { outcome: 'abandoned'; errorMessage?: string | null };
+
+export type WebhookDeliveryProcessor = (
+  job: WebhookDeliveryJob,
+) => Promise<WebhookDeliveryProcessResult>;
 
 export class WebhookDeliveryQueue {
   private static instance: WebhookDeliveryQueue | null = null;
@@ -240,18 +247,22 @@ export class WebhookDeliveryQueue {
     job: StoredWebhookDeliveryJob,
     processor: WebhookDeliveryProcessor
   ): Promise<void> {
-    try {
-      await processor(job);
+    const result = await processor(job);
+
+    if (result.outcome === 'delivered') {
       logger.info('[WebhookDeliveryQueue] Delivered queued webhook job', {
         webhookId: job.webhookId,
         eventId: job.eventId,
         tenantId: job.tenantId,
         attempt: job.attempt,
       });
-    } catch (error) {
+      return;
+    }
+
+    if (result.outcome === 'retry') {
       const nextAttempt = job.attempt + 1;
       if (nextAttempt <= this.config.maxAttempts) {
-        const retryDelayMs = computeBackoff(job.attempt);
+        const retryDelayMs = result.retryDelayMs ?? computeBackoff(job.attempt);
         await this.enqueue({
           ...job,
           attempt: nextAttempt,
@@ -264,7 +275,7 @@ export class WebhookDeliveryQueue {
           tenantId: job.tenantId,
           attempt: nextAttempt,
           retryDelayMs,
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: result.errorMessage ?? 'Unknown error',
         });
         return;
       }
@@ -274,9 +285,18 @@ export class WebhookDeliveryQueue {
         eventId: job.eventId,
         tenantId: job.tenantId,
         attempt: job.attempt,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: result.errorMessage ?? 'Unknown error',
       });
+      return;
     }
+
+    logger.error('[WebhookDeliveryQueue] Webhook job abandoned', {
+      webhookId: job.webhookId,
+      eventId: job.eventId,
+      tenantId: job.tenantId,
+      attempt: job.attempt,
+      error: result.errorMessage ?? 'Unknown error',
+    });
   }
 
   private getQueueKey(): string {

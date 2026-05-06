@@ -143,9 +143,10 @@ implementation progresses; update earlier entries when something changes.
   `initializeApp` smoke imports. The narrower `webhookSubscriber.ts` module
   import remains the useful compile smoke for webhook subscriber changes.
 - (2026-05-05) `WebhookDeliveryQueue` now owns the retry loop contract:
-  processors resolve on success and throw on retryable/non-retryable failure.
-  The queue handles atomic `zRem` claims, caps active work at 50 in-process
-  jobs, and re-enqueues attempts 2..5 with `computeBackoff(attempt)`.
+  processors now return explicit `delivered` / `retry` / `abandoned`
+  outcomes. The queue handles atomic `zRem` claims, caps active work at 50
+  in-process jobs, and re-enqueues attempts 2..5 with
+  `computeBackoff(attempt)`.
 
 ## Commands / Runbooks
 
@@ -174,6 +175,7 @@ implementation progresses; update earlier entries when something changes.
 - (2026-05-05) Smoke-load the webhook payload builder:
   `cd server && npx tsx -e "import('./src/lib/eventBus/subscribers/webhook/webhookTicketPayload.ts').then(() => console.log('payload-ok'))"`
 - (2026-05-05) Smoke-load the webhook subscriber + queue storage layer:
+  `cd server && npx tsx -e "import('./src/lib/webhooks/processWebhookDeliveryJob.ts').then(() => console.log('processor-ok'))"`
   `cd server && npx tsx -e "import('./src/lib/webhooks/WebhookDeliveryQueue.ts').then(() => console.log('queue-ok'))"`
   `cd server && npx tsx -e "import('./src/lib/eventBus/subscribers/webhookSubscriber.ts').then(() => console.log('subscriber-ok'))"`
 - (2026-05-05) `cd server && npx tsc --noEmit --pretty false` currently OOMs
@@ -463,3 +465,7 @@ implementation progresses; update earlier entries when something changes.
   `zRangeByScore` + `zRem`, limits active processor promises to 50, retries
   failed jobs up to five total attempts using the shared backoff helper, and
   drains in-flight work for up to 30 seconds on shutdown / `SIGTERM`.
+- (2026-05-05) **F038 complete.** `initializeApp()` now boots the webhook
+  delivery queue with `getRedisClient` plus a real
+  `processWebhookDeliveryJob()` callback, and the existing SIGTERM/SIGINT
+  cleanup path now shuts the queue down alongside the email retry queues.

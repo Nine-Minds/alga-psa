@@ -224,7 +224,7 @@
   {
     "id": "F038",
     "description": "Initialize WebhookDeliveryQueue.getInstance().initialize(getRedisClient, processFn) in server/src/lib/initializeApp.ts alongside the existing DelayedEmailQueue block.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Rollout / Migration"]
   },
   {
