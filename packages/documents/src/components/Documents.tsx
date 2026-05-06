@@ -96,6 +96,10 @@ interface DocumentsProps {
   getFoldersFn?: () => Promise<string[]>;
   /** Skip folder chooser and upload directly into root scope. */
   forceUploadToRoot?: boolean;
+  /** Allow share-link surfaces. */
+  allowDocumentSharing?: boolean;
+  /** Allow linking existing documents from broader document surfaces. */
+  allowLinkExistingDocuments?: boolean;
 }
 
 const Documents = ({
@@ -113,7 +117,9 @@ const Documents = ({
   filters,
   namespace = 'common',
   getFoldersFn,
-  forceUploadToRoot = false
+  forceUploadToRoot = false,
+  allowDocumentSharing = true,
+  allowLinkExistingDocuments = true,
 }: DocumentsProps): React.JSX.Element => {
   const { t } = useTranslation(namespace);
   const documentKeyPrefix = namespace === 'common' ? 'documents.' : '';
@@ -1192,7 +1198,7 @@ const Documents = ({
             showVisibilityControls={showVisibilityControls}
             onToggleVisibility={handleToggleDocumentVisibility}
             isVisibilityUpdating={visibilityUpdatingIds.has(document.document_id)}
-            onShare={handleShareDocument}
+            onShare={allowDocumentSharing ? handleShareDocument : undefined}
             forceRefresh={editedDocumentId === document.document_id ? refreshTimestamp : undefined}
             onClick={getOrCreateClickHandler(document)}
             isContentDocument={!document.file_id}
@@ -1644,7 +1650,7 @@ const Documents = ({
                       onToggleVisibility={handleToggleDocumentVisibility}
                       visibilityUpdatingIds={visibilityUpdatingIds}
                       showShareControls={true}
-                      onShare={handleShareDocument}
+                      onShare={allowDocumentSharing ? handleShareDocument : undefined}
                     />
                   ) : (
                     documentsToDisplay.length > 0 ? (
@@ -1804,7 +1810,7 @@ const Documents = ({
           cancelLabel="Continue editing"
         />
 
-        {shareDialogDocument && (
+        {allowDocumentSharing && shareDialogDocument && (
           <ShareLinkDialog
             isOpen={true}
             onClose={() => setShareDialogDocument(null)}
@@ -1845,7 +1851,7 @@ const Documents = ({
               <Plus className="w-4 h-4 mr-2" />
               {tDoc('uploadFile', 'Upload File')}
             </Button>
-            {entityId && entityType && (
+            {entityId && entityType && allowLinkExistingDocuments && (
               <Button
                 id={`${id}-link-documents-btn`}
                 onClick={() => setShowSelector(true)}
@@ -1912,7 +1918,7 @@ const Documents = ({
             )}
         </div>
 
-        {showSelector && entityId && entityType ? (
+        {allowLinkExistingDocuments && showSelector && entityId && entityType ? (
           <DocumentSelector
             id={`${id}-selector`}
             entityId={entityId}
@@ -2004,7 +2010,7 @@ const Documents = ({
         />
       </div>
 
-      {shareDialogDocument && (
+      {allowDocumentSharing && shareDialogDocument && (
         <ShareLinkDialog
           isOpen={true}
           onClose={() => setShareDialogDocument(null)}

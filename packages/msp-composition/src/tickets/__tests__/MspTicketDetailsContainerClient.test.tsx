@@ -106,5 +106,7 @@ describe('MspTicketDetailsContainerClient', () => {
     );
 
     expect(lastTicketDetailsContainerProps.disableAttachmentFolderSelection).toBe(true);
+    expect(lastTicketDetailsContainerProps.disableAttachmentSharing).toBe(true);
+    expect(lastTicketDetailsContainerProps.disableAttachmentLinking).toBe(true);
   });
 });

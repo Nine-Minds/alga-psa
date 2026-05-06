@@ -20,6 +20,10 @@ interface TicketDocumentsSectionProps {
   getFoldersFn?: () => Promise<string[]>;
   /** When true, bypass folder chooser and upload directly to root ticket scope. */
   forceUploadToRoot?: boolean;
+  /** When false, do not expose share-link surfaces. */
+  allowDocumentSharing?: boolean;
+  /** When false, do not expose "link existing documents" picker. */
+  allowLinkExistingDocuments?: boolean;
 }
 
 const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
@@ -29,6 +33,8 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
   onDocumentCreated,
   getFoldersFn,
   forceUploadToRoot = false,
+  allowDocumentSharing = true,
+  allowLinkExistingDocuments = true,
 }) => {
   const router = useRouter();
   const { getDocumentByTicketId, renderDocuments } = useDocumentsCrossFeature();
@@ -108,6 +114,8 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
             namespace: 'features/documents',
             getFoldersFn,
             forceUploadToRoot,
+            allowDocumentSharing,
+            allowLinkExistingDocuments,
           })}
         </div>
       </div>

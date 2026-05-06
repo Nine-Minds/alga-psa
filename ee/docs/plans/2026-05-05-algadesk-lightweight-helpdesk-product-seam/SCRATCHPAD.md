@@ -373,3 +373,11 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 - Added `forceUploadToRoot` support in documents component wiring so entity-mode uploads bypass folder chooser when this flag is enabled.
 - Added contract coverage: `server/src/test/unit/tickets/algadeskAttachmentComposition.contract.test.ts`.
 - Command run: `cd server && npx vitest run src/test/unit/tickets/algadeskAttachmentComposition.contract.test.ts ../packages/tickets/src/components/ticket/useTicketRichTextUploadSession.test.tsx src/test/unit/app/msp/tickets/page.productComposition.test.tsx 'src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx'` -> pass (12 tests).
+- (2026-05-05) Completed F223/F224 by gating Algadesk ticket attachment surfaces away from broad document management affordances.
+- Added documents component controls:
+  - `allowDocumentSharing` to suppress share-link dialog/actions.
+  - `allowLinkExistingDocuments` to suppress "link existing documents" picker in entity mode.
+- Threaded Algadesk-safe flags through ticket detail composition and ticket documents section:
+  - `disableAttachmentSharing` / `disableAttachmentLinking` set from `isAlgadeskMode` in `MspTicketDetailsContainerClient`.
+- Updated static contract assertions in `server/src/test/unit/tickets/algadeskAttachmentComposition.contract.test.ts`.
+- Command run: `cd server && npx vitest run src/test/unit/tickets/algadeskAttachmentComposition.contract.test.ts ../packages/tickets/src/components/ticket/useTicketRichTextUploadSession.test.tsx src/test/unit/app/msp/tickets/page.productComposition.test.tsx 'src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx'` -> pass (12 tests).

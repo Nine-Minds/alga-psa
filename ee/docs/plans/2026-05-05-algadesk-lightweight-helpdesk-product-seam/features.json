@@ -1778,7 +1778,7 @@
   {
     "id": "F223",
     "description": "Prevent Algadesk attachment components from exposing broad document sharing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Knowledge base and attachments"
     ]
@@ -1786,7 +1786,7 @@
   {
     "id": "F224",
     "description": "Prevent Algadesk attachment components from exposing project/client document surfaces.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Knowledge base and attachments"
     ]
