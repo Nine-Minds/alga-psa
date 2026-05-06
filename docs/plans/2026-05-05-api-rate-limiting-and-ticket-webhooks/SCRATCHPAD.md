@@ -85,6 +85,11 @@ implementation progresses; update earlier entries when something changes.
   address classes. The helper now blocks RFC1918, loopback, link-local, and
   CGNAT IPv4 ranges plus `::1` and `fe80::/10`, and it short-circuits all of
   those checks when `WEBHOOK_SSRF_ALLOW_PRIVATE=true`.
+- (2026-05-05) The repo still had an older generic webhook validator that
+  expected `sha256=<hex>`. F030 replaces that with the PRD-specific outbound
+  format `t=<unix>,v1=<hex>` and routes the leftover schema helper through the
+  new shared implementation so future controller work doesn't split the
+  signature recipe again.
 - (2026-05-05) `ApiBaseController.authenticate` is **not** the universal
   hook point — `withApiKeyAuth` and `withAuth` in `apiMiddleware.ts:144,201`
   are independent paths, and the NM Store branch in `withApiKeyAuth`
@@ -143,6 +148,8 @@ implementation progresses; update earlier entries when something changes.
   `cd server && npx tsx -e "import('./src/lib/webhooks/delivery.ts').then(() => console.log('delivery-ok'))"`
 - (2026-05-05) Quick SSRF helper smoke:
   `cd server && npx tsx -e "import('./src/lib/webhooks/ssrf.ts').then(async ({ assertSafeWebhookTarget }) => { await assertSafeWebhookTarget('https://example.com'); console.log('public-ok'); try { await assertSafeWebhookTarget('http://127.0.0.1'); process.exit(1); } catch (error) { console.log((error && error.name) || 'error'); } })"`
+- (2026-05-05) Quick signing helper smoke:
+  `cd server && npx tsx -e "import('./src/lib/webhooks/sign.ts').then(({ signRequest, verifyWebhookSignature }) => { const header = signRequest('shh', '{\\\"a\\\":1}', 1700000000); console.log(header); console.log(verifyWebhookSignature(header, '{\\\"a\\\":1}', 'shh')); })"`
 
 ## Links / References
 
@@ -172,6 +179,8 @@ implementation progresses; update earlier entries when something changes.
     for webhook delivery with timeout/TLS/error classification.
   - `server/src/lib/webhooks/ssrf.ts` — outbound target validation for
     webhook delivery and test-send flows.
+  - `server/src/lib/webhooks/sign.ts` — outbound request signing and
+    signature verification helper for webhook deliveries.
 
 ## Open Questions
 
@@ -350,3 +359,8 @@ implementation progresses; update earlier entries when something changes.
   reject `localhost`/loopback/private/link-local/CGNAT destinations after DNS
   resolution, and only bypass those checks when
   `WEBHOOK_SSRF_ALLOW_PRIVATE=true`.
+- (2026-05-05) **F030 complete.** Added
+  `server/src/lib/webhooks/sign.ts` with the PRD's `X-Alga-Signature`
+  contract: `t=<timestamp>,v1=<sha256 hex>` over `${timestamp}.${body}`.
+  `webhookSchemas.validateWebhookSignature()` now delegates to the same helper
+  instead of preserving the old `sha256=<hex>` comparison logic.

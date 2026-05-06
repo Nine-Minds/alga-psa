@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { verifyWebhookSignature as verifyAlgaWebhookSignature } from '../../webhooks/sign';
 import { 
   uuidSchema, 
   emailSchema, 
@@ -494,23 +495,11 @@ export function validateWebhookSignature(
   secret: string,
   algorithm: 'sha1' | 'sha256' | 'sha512' = 'sha256'
 ): boolean {
-  const crypto = require('crypto');
-  const expectedSignature = crypto
-    .createHmac(algorithm, secret)
-    .update(payload, 'utf8')
-    .digest('hex');
-  
-  const expectedSignatureWithPrefix = `${algorithm}=${expectedSignature}`;
-  
-  // Use crypto.timingSafeEqual for constant-time comparison
-  const signatureBuffer = Buffer.from(signature);
-  const expectedBuffer = Buffer.from(expectedSignatureWithPrefix);
-  
-  if (signatureBuffer.length !== expectedBuffer.length) {
+  if (algorithm !== 'sha256') {
     return false;
   }
-  
-  return crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
+
+  return verifyAlgaWebhookSignature(signature, payload, secret);
 }
 
 // Default webhook templates

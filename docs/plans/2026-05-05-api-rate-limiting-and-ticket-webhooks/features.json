@@ -176,7 +176,7 @@
   {
     "id": "F030",
     "description": "Implement HMAC-SHA256 signing: signRequest(secret, body, ts) returns 'X-Alga-Signature: t=<ts>,v1=<hex>' over `${ts}.${body}`. Use crypto.createHmac.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Security / Permissions"]
   },
   {
