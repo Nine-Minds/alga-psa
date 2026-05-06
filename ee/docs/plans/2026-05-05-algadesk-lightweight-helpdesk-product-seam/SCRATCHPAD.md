@@ -497,3 +497,14 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 
 - `cd server && npx vitest run src/test/unit/product/productRouteBoundaryComposition.contract.test.ts src/test/unit/productSurfaceRegistry.test.ts`
   - Result: pass (10 tests).
+- (2026-05-06) Completed F308-F332 and F336 with centralized API controller product gating.
+  - Updated `server/src/lib/api/controllers/ApiBaseController.ts`:
+    - Added `assertProductApiAccess()` invoked immediately after authentication in list/get/create/update/delete handlers.
+    - Resolves tenant product via `getTenantProduct(...)` and API behavior via `resolveProductApiBehavior(...)`.
+    - Added structured `ProductDeniedApiError` (`statusCode: 403`, `code: PRODUCT_ACCESS_DENIED`) for denied Algadesk API groups.
+  - Result: API-key paths that use `ApiBaseController` now enforce product boundary centrally while preserving existing PSA behavior (`psa` routes continue as allowed by registry).
+  - Added contract test T026:
+    - `server/src/test/unit/api/apiBaseController.productAccess.contract.test.ts`.
+
+- `cd server && npx vitest run src/test/unit/api/apiBaseController.productAccess.contract.test.ts src/test/unit/productSurfaceRegistry.test.ts`
+  - Result: pass (8 tests).

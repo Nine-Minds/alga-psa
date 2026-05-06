@@ -277,5 +277,17 @@
       "F306",
       "F307"
     ]
+  },
+  {
+    "id": "T026",
+    "description": "Controller contract: ApiBaseController enforces product API access post-authentication and returns structured PRODUCT_ACCESS_DENIED errors for Algadesk-denied API groups while allowing PSA behavior through registry rules.",
+    "implemented": true,
+    "featureIds": [
+      "F308",
+      "F309",
+      "F310",
+      "F324",
+      "F336"
+    ]
   }
 ]

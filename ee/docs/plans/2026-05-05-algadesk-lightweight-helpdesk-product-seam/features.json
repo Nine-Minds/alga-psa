@@ -2458,7 +2458,7 @@
   {
     "id": "F308",
     "description": "Add product access check to ApiBaseController after tenant resolution.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2466,7 +2466,7 @@
   {
     "id": "F309",
     "description": "Return structured product-denied response for denied Algadesk API groups.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2474,7 +2474,7 @@
   {
     "id": "F310",
     "description": "Allow Algadesk API access to ticket CRUD routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2482,7 +2482,7 @@
   {
     "id": "F311",
     "description": "Allow Algadesk API access to ticket comment routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2490,7 +2490,7 @@
   {
     "id": "F312",
     "description": "Allow Algadesk API access to ticket assignment routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2498,7 +2498,7 @@
   {
     "id": "F313",
     "description": "Allow Algadesk API access to ticket attachment/document routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2506,7 +2506,7 @@
   {
     "id": "F314",
     "description": "Allow Algadesk API access to boards routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2514,7 +2514,7 @@
   {
     "id": "F315",
     "description": "Allow Algadesk API access to statuses routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2522,7 +2522,7 @@
   {
     "id": "F316",
     "description": "Allow Algadesk API access to priorities routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2530,7 +2530,7 @@
   {
     "id": "F317",
     "description": "Allow Algadesk API access to ticket categories routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2538,7 +2538,7 @@
   {
     "id": "F318",
     "description": "Allow Algadesk API access to clients routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2546,7 +2546,7 @@
   {
     "id": "F319",
     "description": "Allow Algadesk API access to contacts routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2554,7 +2554,7 @@
   {
     "id": "F320",
     "description": "Allow Algadesk API access to users/teams/roles/permissions needed for admin and assignment.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2562,7 +2562,7 @@
   {
     "id": "F321",
     "description": "Allow Algadesk API access to tags routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2570,7 +2570,7 @@
   {
     "id": "F322",
     "description": "Allow Algadesk API access to KB article routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2578,7 +2578,7 @@
   {
     "id": "F323",
     "description": "Allow Algadesk API access to email-to-ticket configuration and webhook paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2586,7 +2586,7 @@
   {
     "id": "F324",
     "description": "Deny Algadesk API access to billing analytics, financial, invoices, quotes, contracts, contract lines, services, service types, products, and accounting exports.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2594,7 +2594,7 @@
   {
     "id": "F325",
     "description": "Deny Algadesk API access to projects routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2602,7 +2602,7 @@
   {
     "id": "F326",
     "description": "Deny Algadesk API access to assets and RMM routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2610,7 +2610,7 @@
   {
     "id": "F327",
     "description": "Deny Algadesk API access to schedules, time entries, time sheets, and time periods.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2618,7 +2618,7 @@
   {
     "id": "F328",
     "description": "Deny Algadesk API access to automation/workflow/webhook routes outside allowed email.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2626,7 +2626,7 @@
   {
     "id": "F329",
     "description": "Deny Algadesk API access to extensions routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2634,7 +2634,7 @@
   {
     "id": "F330",
     "description": "Deny Algadesk API access to AI/chat routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2642,7 +2642,7 @@
   {
     "id": "F331",
     "description": "Deny Algadesk API access to surveys routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2650,7 +2650,7 @@
   {
     "id": "F332",
     "description": "Deny Algadesk API access to full document-management routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2682,7 +2682,7 @@
   {
     "id": "F336",
     "description": "Keep PSA API behavior unchanged for PSA tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
