@@ -22,7 +22,7 @@
   {
     "id": "T003",
     "description": "Unit: product surface registry classifies representative Algadesk allowed, upgrade-boundary, not-found, and API-denied paths with fail-closed unknown behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F022",

@@ -106,3 +106,14 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - `packages/types/src/constants/addOns.ts`
   - `server/src/lib/productAccess.ts`
 - Added regression assertion in `packages/types/src/constants/productCodes.test.ts` that product entitlement work does not alter tier or add-on resolution behavior.
+- (2026-05-05) Completed F019-F034 and T003 with a pure product surface registry module: `server/src/lib/productSurfaceRegistry.ts`.
+- Registry now includes:
+  - Product capability definitions (`psa` + `algadesk`)
+  - MSP and client portal route-group behavior maps (`allowed`, `upgrade_boundary`, `not_found`)
+  - API group behavior map (`allowed|denied`) and metadata visibility filtering
+  - Static/dynamic matcher helpers
+  - Path behavior resolvers for routes and APIs
+  - Menu + portal navigation filtering helpers
+  - Fail-closed unknown behavior for Algadesk
+  - `/desk/*` alias normalization mapped to MSP route groups
+- Added `server/src/test/unit/productSurfaceRegistry.test.ts` to validate representative route/API classifications and fail-closed behavior.

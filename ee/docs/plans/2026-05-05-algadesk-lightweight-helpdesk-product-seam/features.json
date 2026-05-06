@@ -146,7 +146,7 @@
   {
     "id": "F019",
     "description": "Create an authoritative product surface registry module.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry"
     ]
@@ -154,7 +154,7 @@
   {
     "id": "F020",
     "description": "Represent Algadesk capabilities in the registry.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry"
     ]
@@ -162,7 +162,7 @@
   {
     "id": "F021",
     "description": "Represent PSA capabilities in the registry.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry"
     ]
@@ -170,7 +170,7 @@
   {
     "id": "F022",
     "description": "Classify MSP route groups as allowed, upgrade-boundary, or not-found for Algadesk.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry"
     ]
@@ -178,7 +178,7 @@
   {
     "id": "F023",
     "description": "Classify client portal route groups as allowed, upgrade-boundary, or not-found for Algadesk.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry"
     ]
@@ -186,7 +186,7 @@
   {
     "id": "F024",
     "description": "Classify API groups as allowed or denied for Algadesk.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry"
     ]
@@ -194,7 +194,7 @@
   {
     "id": "F025",
     "description": "Classify metadata/OpenAPI visibility by product.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry"
     ]
@@ -202,7 +202,7 @@
   {
     "id": "F026",
     "description": "Provide matcher helpers for static route prefixes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry"
     ]
@@ -210,7 +210,7 @@
   {
     "id": "F027",
     "description": "Provide matcher helpers for dynamic route patterns.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry"
     ]
@@ -218,7 +218,7 @@
   {
     "id": "F028",
     "description": "Provide helper to resolve product route behavior for a pathname.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry"
     ]
@@ -226,7 +226,7 @@
   {
     "id": "F029",
     "description": "Provide helper to resolve product API behavior for a request path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry"
     ]
@@ -234,7 +234,7 @@
   {
     "id": "F030",
     "description": "Provide helper to filter menu sections by product.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry"
     ]
@@ -242,7 +242,7 @@
   {
     "id": "F031",
     "description": "Provide helper to filter portal navigation by product.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry"
     ]
@@ -250,7 +250,7 @@
   {
     "id": "F032",
     "description": "Default unknown route groups to denied for Algadesk.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry"
     ]
@@ -258,7 +258,7 @@
   {
     "id": "F033",
     "description": "Allow future desk aliases to map to the same Algadesk route groups.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry"
     ]
@@ -266,7 +266,7 @@
   {
     "id": "F034",
     "description": "Keep registry pure and testable without database access.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry"
     ]

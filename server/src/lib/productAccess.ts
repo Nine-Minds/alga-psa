@@ -5,6 +5,10 @@ import {
   resolveProductCode,
 } from '@alga-psa/types';
 
+/**
+ * Product access gates one dimension of authorization.
+ * Callers are expected to combine this with RBAC, tier, and add-on checks.
+ */
 export class ProductAccessError extends Error {
   public readonly status = 403;
   public readonly code = 'PRODUCT_ACCESS_DENIED';
