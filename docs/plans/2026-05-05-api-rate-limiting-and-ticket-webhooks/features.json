@@ -134,7 +134,7 @@
   {
     "id": "F023",
     "description": "Extend webhookEventTypeSchema (server/src/lib/api/schemas/webhookSchemas.ts) with 'ticket.comment.added' so create-webhook validation accepts it.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {

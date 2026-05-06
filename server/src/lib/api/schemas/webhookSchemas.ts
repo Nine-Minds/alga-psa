@@ -25,6 +25,7 @@ export const webhookEventTypeSchema = z.enum([
   'ticket.status_changed',
   'ticket.assigned',
   'ticket.closed',
+  'ticket.comment.added',
   'project.created',
   'project.updated',
   'project.completed',

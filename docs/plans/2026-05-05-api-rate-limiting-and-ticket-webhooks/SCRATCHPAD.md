@@ -285,3 +285,6 @@ implementation progresses; update earlier entries when something changes.
   (per-key override vs tenant default vs hard default), and the current
   remaining tokens from `TokenBucketRateLimiter.getState('api', tenant,
   apiKeyId)`.
+- (2026-05-05) **F023 complete.** The public webhook event enum now includes
+  `ticket.comment.added`, so webhook create/update validation no longer
+  rejects the v1 ticket-comment subscription event.
