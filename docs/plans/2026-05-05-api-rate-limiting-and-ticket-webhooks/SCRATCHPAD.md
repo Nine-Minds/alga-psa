@@ -155,6 +155,11 @@ implementation progresses; update earlier entries when something changes.
   from the webhook stats columns already maintained by the delivery processor,
   subscriptions are just `webhook.event_types`, and available events come
   from `webhookEventTypeSchema.options`.
+- (2026-05-05) Deferred webhook TODOs are now route-level cleanup, not
+  controller cleanup. The implemented surface keeps nested delivery/health/
+  subscriptions reads plus create/list/test/verify, and drops the transform,
+  filter, validate, bulk, search, export, trigger, and system-health routes
+  so they naturally 404 instead of advertising dead handlers.
 - (2026-05-05) `WebhookDeliveryQueue` now owns the retry loop contract:
   processors now return explicit `delivered` / `retry` / `abandoned`
   outcomes. The queue handles atomic `zRem` claims, caps active work at 50
@@ -525,3 +530,8 @@ implementation progresses; update earlier entries when something changes.
   summary from the webhook stats columns, `getSubscriptions()` returns the
   stored `event_types` for the webhook, and `listEvents()` returns the public
   enum from `webhookEventTypeSchema`.
+- (2026-05-05) **F045 complete.** Deleted the deferred webhook route handlers
+  for transform/filter validation, system health, global/nested subscription
+  creation, bulk/search/export, and manual event triggering. The nested
+  `[id]/subscriptions` route now exposes only `GET`, and the removed paths
+  will 404 instead of surfacing TODO-backed handlers.

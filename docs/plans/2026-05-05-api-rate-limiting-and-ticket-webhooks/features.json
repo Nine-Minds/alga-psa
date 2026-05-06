@@ -272,7 +272,7 @@
   {
     "id": "F045",
     "description": "Remove the route handlers for deferred TODO endpoints rather than leaving 501s in OpenAPI: testPayloadTransformation, testEventFilter, validateWebhookConfiguration, getSystemWebhookHealth, createWebhookSubscription, bulkWebhookOperation, searchWebhooks, exportWebhooks, triggerWebhookEvent.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Non-goals", "UX / UI Notes"]
   },
   {
