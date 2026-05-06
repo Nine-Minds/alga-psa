@@ -234,3 +234,27 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 
 - `cd server && npx vitest run src/test/unit/app/msp/tickets/page.productComposition.test.tsx src/test/unit/productSurfaceRegistry.test.ts src/test/unit/layout/SidebarWithFeatureFlags.productShell.test.tsx`
   - Result: pass (11 tests).
+- (2026-05-05) Completed F141 by validation of existing bulk move constraints.
+- Current ticket bulk move path already only accepts `destinationBoardId` + `destinationStatusId` (`packages/tickets/src/components/TicketingDashboard.tsx`, `packages/tickets/src/actions/ticketActions.ts`), with board/status validation server-side and no bulk move hooks for excluded PSA operations.
+- (2026-05-05) Completed F142/F144/F145 with product-aware ticket detail composition routing.
+- Updated `server/src/app/msp/tickets/[id]/page.tsx` to resolve tenant product and branch details mode:
+  - Algadesk path disables survey fetch, omits associated assets panel, bypasses AI chat boundary, and passes `isAlgadeskMode=true`.
+  - PSA path preserves existing behavior.
+- Updated `packages/msp-composition/src/tickets/MspTicketDetailsContainerClient.tsx` with `isAlgadeskMode`:
+  - Omits project task create/link/badge composition hooks in Algadesk mode (F167/F168/F169).
+  - Omits interval/time management composition hooks in Algadesk mode (F170/F171).
+  - Omits survey summary card in Algadesk mode (F173).
+- Combined with detail-page associated-assets omission and AI boundary bypass:
+  - Omits associated assets panel in Algadesk mode (F172).
+  - Removes AI detail context wrapper in Algadesk mode (F174).
+
+## Tests Added
+
+- `server/src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx`
+  - Asserts Algadesk detail path sets `isAlgadeskMode=true` and omits associated assets.
+  - Asserts PSA detail path remains in standard mode and keeps survey summary fetch behavior.
+
+## Commands Run (additional)
+
+- `cd server && npx vitest run src/test/unit/app/msp/tickets/page.productComposition.test.tsx 'src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx'`
+  - Result: pass (4 tests).

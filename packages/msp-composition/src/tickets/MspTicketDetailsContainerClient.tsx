@@ -19,9 +19,14 @@ type MspTicketDetailsContainerClientProps = Omit<
   'renderContactDetails' | 'renderClientDetails' | 'renderIntervalManagement' | 'surveySummaryCard'
 > & {
   surveySummary?: SurveyTicketSatisfactionSummary | null;
+  isAlgadeskMode?: boolean;
 };
 
-export default function MspTicketDetailsContainerClient({ surveySummary, ...props }: MspTicketDetailsContainerClientProps) {
+export default function MspTicketDetailsContainerClient({
+  surveySummary,
+  isAlgadeskMode = false,
+  ...props
+}: MspTicketDetailsContainerClientProps) {
   const ticketIntegrationValue = useTicketIntegrationValue();
 
   const renderContactDetails = useCallback(
@@ -77,14 +82,14 @@ export default function MspTicketDetailsContainerClient({ surveySummary, ...prop
       <TicketDetailsContainer
         {...props}
         surveySummaryCard={
-          surveySummary !== undefined
+          !isAlgadeskMode && surveySummary !== undefined
             ? <TicketSurveySummaryCard summary={surveySummary} />
             : undefined
         }
         renderContactDetails={renderContactDetails}
-        renderCreateProjectTask={renderCreateProjectTask}
+        renderCreateProjectTask={isAlgadeskMode ? undefined : renderCreateProjectTask}
         renderClientDetails={renderClientDetails}
-        renderIntervalManagement={renderIntervalManagement}
+        renderIntervalManagement={isAlgadeskMode ? undefined : renderIntervalManagement}
       />
     </TicketIntegrationProvider>
   );

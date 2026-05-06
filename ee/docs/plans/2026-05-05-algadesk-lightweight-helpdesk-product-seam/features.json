@@ -1122,7 +1122,7 @@
   {
     "id": "F141",
     "description": "Preserve bulk move behavior only for allowed board/status/category operations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]
@@ -1130,7 +1130,7 @@
   {
     "id": "F142",
     "description": "Ensure ticket list links resolve to Algadesk ticket detail composition.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]
@@ -1146,7 +1146,7 @@
   {
     "id": "F144",
     "description": "Render Algadesk ticket detail for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1154,7 +1154,7 @@
   {
     "id": "F145",
     "description": "Keep existing PSA ticket detail for PSA tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1330,7 +1330,7 @@
   {
     "id": "F167",
     "description": "Omit project task creation from Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1338,7 +1338,7 @@
   {
     "id": "F168",
     "description": "Omit project task linking from Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1346,7 +1346,7 @@
   {
     "id": "F169",
     "description": "Omit linked project task badge from Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1354,7 +1354,7 @@
   {
     "id": "F170",
     "description": "Omit interval/time management from Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1362,7 +1362,7 @@
   {
     "id": "F171",
     "description": "Omit time entry controls from Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1370,7 +1370,7 @@
   {
     "id": "F172",
     "description": "Omit asset association panels from Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1378,7 +1378,7 @@
   {
     "id": "F173",
     "description": "Omit survey summary card from Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1386,7 +1386,7 @@
   {
     "id": "F174",
     "description": "Omit AI assistant controls from Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
