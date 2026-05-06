@@ -152,7 +152,7 @@
   {
     "id": "F026",
     "description": "Add a Citus distribute-table .cjs migration calling create_distributed_table('webhooks','tenant') and create_distributed_table('webhook_deliveries','tenant').",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations", "Rollout / Migration"]
   },
   {

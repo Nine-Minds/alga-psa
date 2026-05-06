@@ -301,3 +301,8 @@ implementation progresses; update earlier entries when something changes.
   response capture columns, retry scheduling fields, `is_test`, and the three
   queue-oriented indexes required by the PRD (`webhook+attempted_at`,
   `event_id`, and partial pending/retrying `next_retry_at`).
+- (2026-05-05) **F026 complete.** Added
+  `ee/server/migrations/citus/20260505140100_distribute_webhook_tables.cjs`
+  to distribute both `webhooks` and `webhook_deliveries` on `tenant`, with
+  the same Citus-enabled / already-distributed guards used by the earlier
+  rate-limit distribution migration.
