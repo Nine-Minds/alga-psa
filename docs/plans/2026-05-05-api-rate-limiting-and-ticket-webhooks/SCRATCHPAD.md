@@ -270,3 +270,11 @@ implementation progresses; update earlier entries when something changes.
   doing inline API-key validation (ticket priorities/statuses/reactions,
   storage routes, and the non-mobile-auth mobile moderation/push/account
   routes) onto the shared helper so they consume the same `api` bucket.
+- (2026-05-05) **F021 complete.** Added tenant-admin server actions in
+  `packages/auth/src/actions/apiKeyRateLimitActions.ts`:
+  `getApiRateLimitForKey`, `setApiRateLimitForKey`,
+  `setTenantDefaultApiRateLimit`, and `clearApiRateLimitForKey`. They verify
+  admin access, scope API key IDs to the current tenant, use the
+  `api_rate_limit_settings` model for reads/writes, and invalidate the
+  in-process API rate-limit config cache immediately after every write so UI
+  updates do not wait on the 30s TTL.

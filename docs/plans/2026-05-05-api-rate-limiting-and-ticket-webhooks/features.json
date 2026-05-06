@@ -122,7 +122,7 @@
   {
     "id": "F021",
     "description": "Add server actions: getApiRateLimitForKey, setApiRateLimitForKey, setTenantDefaultApiRateLimit, clearApiRateLimitForKey. Each invalidates the LRU cache after writes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
