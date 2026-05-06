@@ -116,7 +116,7 @@
   {
     "id": "T020",
     "description": "Unit (vitest, server/src/lib/eventBus/subscribers/webhook/__tests__/webhookTicketPayload.test.ts): buildTicketWebhookPayload(TICKET_ASSIGNED, knex) returns the documented field set, no undefined leaks, tags is always an array (even when empty); calling it twice within 60s for the same ticket_id+tenant performs the join only once (in-memory cache hit).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F033"]
   },
   {
