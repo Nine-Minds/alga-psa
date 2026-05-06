@@ -86,7 +86,7 @@
   {
     "id": "T015",
     "description": "Integration (vitest + real Redis, server/src/test/integration/apiRateLimit.nmStore.test.ts): NM Store global key + x-tenant-id header consumes from the 'nm_store' subjectId bucket; non-NM-Store key in the same tenant is unaffected.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014", "F018"]
   },
   {

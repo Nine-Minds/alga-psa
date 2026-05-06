@@ -11,6 +11,7 @@ const testState = vi.hoisted(() => ({
   findUserByIdForApiMock: vi.fn(),
   validateApiKeyMock: vi.fn(),
   findUserByIdMock: vi.fn(),
+  getAppSecretMock: vi.fn(),
   runWithTenantMock: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
   hasPermissionMock: vi.fn(async () => true),
   apiRateLimitConfigGetterMock: vi.fn(async () => ({ maxTokens: 120, refillRate: 1 })),
@@ -64,6 +65,12 @@ vi.mock('@alga-psa/core/logger', () => ({
     debug: (...args: unknown[]) => testState.loggerDebugMock(...args),
     error: (...args: unknown[]) => testState.loggerErrorMock(...args),
   },
+}));
+
+vi.mock('@alga-psa/core/secrets', () => ({
+  getSecretProviderInstance: async () => ({
+    getAppSecret: (...args: unknown[]) => testState.getAppSecretMock(...args),
+  }),
 }));
 
 import { ApiBaseController } from '@/lib/api/controllers/ApiBaseController';
@@ -143,6 +150,7 @@ describe('API rate limit headers', () => {
     testState.findUserByIdForApiMock.mockReset();
     testState.validateApiKeyMock.mockReset();
     testState.findUserByIdMock.mockReset();
+    testState.getAppSecretMock.mockReset();
     testState.runWithTenantMock.mockReset();
     testState.hasPermissionMock.mockReset();
     testState.apiRateLimitConfigGetterMock.mockReset();
@@ -200,6 +208,7 @@ describe('API rate limit headers', () => {
       tenant: '11111111-1111-1111-1111-111111111111',
       user_type: 'internal',
     });
+    testState.getAppSecretMock.mockResolvedValue('nm-store-key');
     testState.runWithTenantMock.mockImplementation(async (_tenant: string, callback: () => Promise<unknown>) => callback());
     testState.hasPermissionMock.mockResolvedValue(true);
     testState.apiRateLimitConfigGetterMock.mockResolvedValue({ maxTokens: 120, refillRate: 1 });
@@ -418,5 +427,32 @@ describe('API rate limit headers', () => {
     expect((await controllerHandler(makeRequest())).status).toBe(429);
     expect((await apiKeyAuthHandler(makeRequest())).status).toBe(429);
     expect((await authHandler(makeRequest())).status).toBe(429);
+  });
+
+  it('T015: isolates the NM Store sentinel bucket from regular API keys', async () => {
+    TokenBucketRateLimiter.resetInstance();
+    testState.apiRateLimitConfigGetterMock.mockResolvedValue({ maxTokens: 5, refillRate: 1 });
+    await TokenBucketRateLimiter.getInstance().initialize(
+      async () => createMockRedis(),
+      { api: async () => ({ maxTokens: 5, refillRate: 1 }) },
+    );
+
+    const nmStoreHandler = withApiKeyAuth({ allowNmStore: true })(
+      async (req) => createSuccessResponse({ surface: 'nm-store' }, 200, undefined, req),
+    );
+    const regularHandler = withApiKeyAuth()(
+      async (req) => createSuccessResponse({ surface: 'regular' }, 200, undefined, req),
+    );
+
+    for (let attempt = 1; attempt <= 5; attempt += 1) {
+      expect((await nmStoreHandler(makeRequest('nm-store-key', '11111111-1111-1111-1111-111111111111'))).status).toBe(200);
+    }
+
+    expect((await nmStoreHandler(makeRequest('nm-store-key', '11111111-1111-1111-1111-111111111111'))).status).toBe(429);
+
+    const regularResponse = await regularHandler(makeRequest('test-api-key'));
+    expect(regularResponse.status).toBe(200);
+    expect(regularResponse.headers.get('X-RateLimit-Limit')).toBe('5');
+    expect(regularResponse.headers.get('X-RateLimit-Remaining')).toBe('4');
   });
 });

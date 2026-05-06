@@ -650,3 +650,8 @@ implementation progresses; update earlier entries when something changes.
   surfaces: after five mixed requests through `ApiBaseController`,
   `withApiKeyAuth`, and `withAuth`, the next request on each surface returns
   429 from the same `(tenant, api_key_id)` bucket.
+- (2026-05-06) **T015 complete.** Added NM Store coverage to the same
+  integration file by mocking `getAppSecret('nm_store_api_key')`: the
+  `withApiKeyAuth({ allowNmStore: true })` branch now throttles the shared
+  sentinel bucket after five requests, while a normal API key in the same
+  tenant still succeeds with its own `remaining=4` header.
