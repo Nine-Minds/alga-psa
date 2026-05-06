@@ -188,7 +188,7 @@
   {
     "id": "F032",
     "description": "Implement webhookEventMap.ts with TICKET_INTERNAL_TO_PUBLIC mapping (TICKET_CREATED → ticket.created, TICKET_UPDATED → ticket.updated, TICKET_STATUS_CHANGED → ticket.status_changed, TICKET_ASSIGNED → ticket.assigned, TICKET_CLOSED → ticket.closed, TICKET_COMMENT_ADDED → ticket.comment.added) and publicEventsFor(eventType).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {

@@ -90,6 +90,10 @@ implementation progresses; update earlier entries when something changes.
   format `t=<unix>,v1=<hex>` and routes the leftover schema helper through the
   new shared implementation so future controller work doesn't split the
   signature recipe again.
+- (2026-05-05) The ticket webhook surface now has a single canonical
+  translation layer under `eventBus/subscribers/webhook/`; future subscriber
+  fan-out code can map one internal event to one or more public webhook events
+  without duplicating string switches.
 - (2026-05-05) `ApiBaseController.authenticate` is **not** the universal
   hook point — `withApiKeyAuth` and `withAuth` in `apiMiddleware.ts:144,201`
   are independent paths, and the NM Store branch in `withApiKeyAuth`
@@ -150,6 +154,8 @@ implementation progresses; update earlier entries when something changes.
   `cd server && npx tsx -e "import('./src/lib/webhooks/ssrf.ts').then(async ({ assertSafeWebhookTarget }) => { await assertSafeWebhookTarget('https://example.com'); console.log('public-ok'); try { await assertSafeWebhookTarget('http://127.0.0.1'); process.exit(1); } catch (error) { console.log((error && error.name) || 'error'); } })"`
 - (2026-05-05) Quick signing helper smoke:
   `cd server && npx tsx -e "import('./src/lib/webhooks/sign.ts').then(({ signRequest, verifyWebhookSignature }) => { const header = signRequest('shh', '{\\\"a\\\":1}', 1700000000); console.log(header); console.log(verifyWebhookSignature(header, '{\\\"a\\\":1}', 'shh')); })"`
+- (2026-05-05) Quick event-map smoke:
+  `cd server && npx tsx -e "import('./src/lib/eventBus/subscribers/webhook/webhookEventMap.ts').then(({ publicEventsFor }) => { console.log(publicEventsFor('TICKET_ASSIGNED').join(',')); console.log(publicEventsFor('NOPE').length); })"`
 
 ## Links / References
 
@@ -181,6 +187,8 @@ implementation progresses; update earlier entries when something changes.
     webhook delivery and test-send flows.
   - `server/src/lib/webhooks/sign.ts` — outbound request signing and
     signature verification helper for webhook deliveries.
+  - `server/src/lib/eventBus/subscribers/webhook/webhookEventMap.ts` —
+    canonical mapping from internal ticket events to public webhook events.
 
 ## Open Questions
 
@@ -364,3 +372,8 @@ implementation progresses; update earlier entries when something changes.
   contract: `t=<timestamp>,v1=<sha256 hex>` over `${timestamp}.${body}`.
   `webhookSchemas.validateWebhookSignature()` now delegates to the same helper
   instead of preserving the old `sha256=<hex>` comparison logic.
+- (2026-05-05) **F032 complete.** Added
+  `server/src/lib/eventBus/subscribers/webhook/webhookEventMap.ts` with the
+  v1 ticket-event translation table and a `publicEventsFor()` helper that
+  returns a fresh array for each lookup, making the mapping ready for the
+  upcoming event-bus subscriber.
