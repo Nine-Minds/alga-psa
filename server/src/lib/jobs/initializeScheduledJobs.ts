@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob } from './index';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
 
@@ -215,6 +215,19 @@ export async function initializeScheduledJobs(): Promise<void> {
      }
    } catch (error) {
      logger.error('Failed to schedule temporary forms cleanup job', error);
+   }
+
+   try {
+     const cleanupJobId = await scheduleCleanupWebhookDeliveriesJob();
+     if (cleanupJobId) {
+       logger.info(`Scheduled webhook delivery cleanup job with ID ${cleanupJobId}`);
+     } else {
+       logger.info('Webhook delivery cleanup job already scheduled (singleton active)', {
+         returnedJobId: cleanupJobId,
+       });
+     }
+   } catch (error) {
+     logger.error('Failed to schedule webhook delivery cleanup job', error);
    }
 
    if (process.env.EDITION === 'enterprise') {

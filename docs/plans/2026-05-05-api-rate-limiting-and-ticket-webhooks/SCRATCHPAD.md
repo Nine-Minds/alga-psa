@@ -165,6 +165,10 @@ implementation progresses; update earlier entries when something changes.
   webhook URL + live signing secret, emits `event_type='webhook.test'`,
   records `is_test=true`, and intentionally skips outbound bucket
   consumption.
+- (2026-05-05) Broad imports through `server/src/lib/jobs/index.ts` also hit
+  the same unrelated `react-day-picker` CSS loader issue under `tsx`, so the
+  cleanup-job service module is the reliable smoke target for scheduled-job
+  additions in this environment.
 - (2026-05-05) `WebhookDeliveryQueue` now owns the retry loop contract:
   processors now return explicit `delivered` / `retry` / `abandoned`
   outcomes. The queue handles atomic `zRem` claims, caps active work at 50
@@ -546,3 +550,9 @@ implementation progresses; update earlier entries when something changes.
   observed transport result. It reuses the live signing/header and SSRF-guard
   path but skips the outbound rate-limit bucket and does not mutate webhook
   delivery stats.
+- (2026-05-05) **F048 complete.** Added
+  `server/src/services/cleanupWebhookDeliveriesJob.ts` plus scheduler wiring
+  in `server/src/lib/jobs/index.ts` and
+  `server/src/lib/jobs/initializeScheduledJobs.ts`. The new system-wide job
+  runs every 15 minutes and deletes `webhook_deliveries` rows older than
+  30 days in batches of 10,000 until the backlog is gone.

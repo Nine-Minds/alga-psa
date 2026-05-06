@@ -290,7 +290,7 @@
   {
     "id": "F048",
     "description": "Add a 15-minute scheduled job (initializeScheduledJobs) that deletes webhook_deliveries rows older than 30 days in batches of 10000.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Rollout / Migration"]
   },
   {
