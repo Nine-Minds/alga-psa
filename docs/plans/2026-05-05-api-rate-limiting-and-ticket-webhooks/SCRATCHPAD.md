@@ -151,6 +151,10 @@ implementation progresses; update earlier entries when something changes.
   "some failures in the last day." `maybeAutoDisable()` therefore keys off
   the first non-delivered attempt since `last_success_at` and disables only
   once that streak has remained all-failure for 24 hours.
+- (2026-05-05) Added feature `F052` after discovering a plan/code mismatch:
+  `webhookSchemas.ts` already exposed `event_filter.entity_ids`, but the
+  `webhooks` table migration and `webhookModel` never persisted `event_filter`
+  at all. The subscriber-side entity filter needs that durable field first.
 
 ## Commands / Runbooks
 
@@ -480,3 +484,7 @@ implementation progresses; update earlier entries when something changes.
   rolling stats, and once the first failure since the last success has aged
   past 24 hours the webhook is auto-disabled exactly once and the owning user
   receives a direct notification email via the system email service.
+- (2026-05-05) **F052 complete.** Updated the base webhook migration plus
+  `server/src/lib/webhooks/webhookModel.ts` so webhook rows now persist and
+  return `event_filter` JSON. That closes the storage gap under
+  `event_filter.entity_ids` before the subscriber starts enforcing it.

@@ -18,6 +18,7 @@ export interface WebhookRecord {
   method: string;
   eventTypes: string[];
   customHeaders: Record<string, string> | null;
+  eventFilter: Record<string, unknown> | null;
   securityType: string;
   verifySsl: boolean;
   retryConfig: Record<string, unknown> | null;
@@ -47,6 +48,7 @@ export interface InsertWebhookInput {
   method?: string;
   eventTypes: string[];
   customHeaders?: Record<string, string> | null;
+  eventFilter?: Record<string, unknown> | null;
   signingSecret: string;
   signingSecretVaultPath?: string;
   securityType?: string;
@@ -63,6 +65,7 @@ export interface UpdateWebhookInput {
   method?: string;
   eventTypes?: string[];
   customHeaders?: Record<string, string> | null;
+  eventFilter?: Record<string, unknown> | null;
   signingSecret?: string;
   signingSecretVaultPath?: string;
   securityType?: string;
@@ -144,6 +147,7 @@ function mapWebhookRow(row: any): WebhookRecord {
     method: row.method,
     eventTypes: row.event_types ?? [],
     customHeaders: row.custom_headers ?? null,
+    eventFilter: row.event_filter ?? null,
     securityType: row.security_type,
     verifySsl: row.verify_ssl,
     retryConfig: row.retry_config ?? null,
@@ -200,6 +204,7 @@ function buildWebhookUpdatePayload(input: UpdateWebhookInput): Record<string, un
   if (input.method !== undefined) payload.method = input.method;
   if (input.eventTypes !== undefined) payload.event_types = input.eventTypes;
   if (input.customHeaders !== undefined) payload.custom_headers = input.customHeaders;
+  if (input.eventFilter !== undefined) payload.event_filter = input.eventFilter;
   if (input.securityType !== undefined) payload.security_type = input.securityType;
   if (input.verifySsl !== undefined) payload.verify_ssl = input.verifySsl;
   if (input.retryConfig !== undefined) payload.retry_config = input.retryConfig;
@@ -316,6 +321,7 @@ async function insert(input: InsertWebhookInput): Promise<WebhookRecord> {
         method: input.method ?? 'POST',
         event_types: input.eventTypes,
         custom_headers: input.customHeaders ?? null,
+        event_filter: input.eventFilter ?? null,
         signing_secret_vault_path: signingSecretVaultPath,
         security_type: input.securityType ?? 'hmac_signature',
         verify_ssl: input.verifySsl ?? true,

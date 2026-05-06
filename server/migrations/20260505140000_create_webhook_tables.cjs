@@ -11,6 +11,7 @@ exports.up = async function up(knex) {
     table.text('method').notNullable().defaultTo('POST');
     table.specificType('event_types', 'text[]').notNullable().defaultTo(knex.raw("'{}'::text[]"));
     table.jsonb('custom_headers');
+    table.jsonb('event_filter');
     table.text('signing_secret_vault_path').notNullable();
     table.text('security_type').notNullable().defaultTo('hmac_signature');
     table.boolean('verify_ssl').notNullable().defaultTo(true);

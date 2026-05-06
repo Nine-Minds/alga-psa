@@ -240,6 +240,12 @@
     "prdRefs": ["Functional Requirements"]
   },
   {
+    "id": "F052",
+    "description": "Persist `event_filter` on webhook rows (migration + DAL mapping) so `event_filter.entity_ids` survives create/update/read and the entity-id subscriber filter has durable input data.",
+    "implemented": true,
+    "prdRefs": ["Open Questions", "Data / API / Integrations"]
+  },
+  {
     "id": "F041",
     "description": "Implement webhook subscription filtering by entity_ids — when a webhook row has filter.entity_ids set, drop events whose entity_id is not in the set. Skip generic conditions for v1.",
     "implemented": false,
