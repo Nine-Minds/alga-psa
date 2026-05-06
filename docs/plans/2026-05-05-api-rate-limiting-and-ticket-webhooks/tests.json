@@ -122,7 +122,7 @@
   {
     "id": "T021",
     "description": "Unit (vitest, server/src/lib/eventBus/subscribers/webhook/__tests__/webhookTicketPayload.statusChanged.test.ts): for a TICKET_STATUS_CHANGED event with payload.changes.status_id={ from, to }, the public payload includes previous_status_id and previous_status_name resolved from the from value.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F033", "F034"]
   },
   {
