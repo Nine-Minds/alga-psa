@@ -1,5 +1,5 @@
 import { getConsolidatedTicketListData } from '@alga-psa/tickets/actions/optimizedTicketActions';
-import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
+import { getCurrentUser, getCurrentUserPermissions, getUserPreference } from '@alga-psa/user-composition/actions';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { getTeams } from '@alga-psa/teams/actions';
 import type { ITicketListFilters } from '@alga-psa/types';
@@ -35,7 +35,20 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
 
     // Parse pagination parameters
     const page = params?.page && typeof params.page === 'string' ? parseInt(params.page, 10) : 1;
-    const pageSize = params?.pageSize && typeof params.pageSize === 'string' ? parseInt(params.pageSize, 10) : 10;
+    let pageSize = 10;
+    if (params?.pageSize && typeof params.pageSize === 'string') {
+      const parsed = parseInt(params.pageSize, 10);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        pageSize = parsed;
+      }
+    } else {
+      // No URL override — honor the user's saved preference so SSR data
+      // matches what the client will display after the preference loads.
+      const saved = await getUserPreference(user!.user_id, 'tickets_list_page_size').catch(() => null);
+      if (typeof saved === 'number' && Number.isFinite(saved) && saved > 0) {
+        pageSize = saved;
+      }
+    }
 
     // Parse search parameters into filter values
     const filtersFromURL: Partial<ITicketListFilters> = {};
