@@ -230,7 +230,7 @@
   {
     "id": "F039",
     "description": "Implement computeBackoff(attempt) returning the schedule 1m, 5m, 30m, 2h, 12h.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {

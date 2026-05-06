@@ -94,6 +94,10 @@ implementation progresses; update earlier entries when something changes.
   translation layer under `eventBus/subscribers/webhook/`; future subscriber
   fan-out code can map one internal event to one or more public webhook events
   without duplicating string switches.
+- (2026-05-05) The placeholder retry math in `WebhookService` was still using
+  generic exponential/linear config fields. F039 replaces that with the PRD's
+  fixed retry cadence and exposes it as a shared helper for the future Redis
+  queue worker.
 - (2026-05-05) `ApiBaseController.authenticate` is **not** the universal
   hook point — `withApiKeyAuth` and `withAuth` in `apiMiddleware.ts:144,201`
   are independent paths, and the NM Store branch in `withApiKeyAuth`
@@ -156,6 +160,8 @@ implementation progresses; update earlier entries when something changes.
   `cd server && npx tsx -e "import('./src/lib/webhooks/sign.ts').then(({ signRequest, verifyWebhookSignature }) => { const header = signRequest('shh', '{\\\"a\\\":1}', 1700000000); console.log(header); console.log(verifyWebhookSignature(header, '{\\\"a\\\":1}', 'shh')); })"`
 - (2026-05-05) Quick event-map smoke:
   `cd server && npx tsx -e "import('./src/lib/eventBus/subscribers/webhook/webhookEventMap.ts').then(({ publicEventsFor }) => { console.log(publicEventsFor('TICKET_ASSIGNED').join(',')); console.log(publicEventsFor('NOPE').length); })"`
+- (2026-05-05) Quick backoff helper smoke:
+  `cd server && npx tsx -e "import('./src/lib/webhooks/backoff.ts').then(({ computeBackoff }) => { console.log([1,2,3,4,5].map(computeBackoff).join(',')); })"`
 
 ## Links / References
 
@@ -189,6 +195,8 @@ implementation progresses; update earlier entries when something changes.
     signature verification helper for webhook deliveries.
   - `server/src/lib/eventBus/subscribers/webhook/webhookEventMap.ts` —
     canonical mapping from internal ticket events to public webhook events.
+  - `server/src/lib/webhooks/backoff.ts` — shared retry schedule helper for
+    the outbound webhook queue.
 
 ## Open Questions
 
@@ -377,3 +385,8 @@ implementation progresses; update earlier entries when something changes.
   v1 ticket-event translation table and a `publicEventsFor()` helper that
   returns a fresh array for each lookup, making the mapping ready for the
   upcoming event-bus subscriber.
+- (2026-05-05) **F039 complete.** Added
+  `server/src/lib/webhooks/backoff.ts` with the PRD retry schedule
+  (1m, 5m, 30m, 2h, 12h) and pointed the scaffolded
+  `WebhookService.calculateNextRetryTime()` method at that helper so old
+  placeholder retry math no longer diverges from the intended queue behavior.

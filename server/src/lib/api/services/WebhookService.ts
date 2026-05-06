@@ -32,6 +32,7 @@ import {
   addHateoasLinks 
 } from '../utils/responseHelpers';
 import { performWebhookDeliveryRequest } from '../../webhooks/delivery';
+import { computeBackoff } from '../../webhooks/backoff';
 
 export class WebhookService {
   constructor(
@@ -1090,31 +1091,9 @@ export class WebhookService {
 
   private calculateNextRetryTime(
     attemptNumber: number,
-    retryConfig: RetryConfig
+    _retryConfig: RetryConfig
   ): Date {
-    const { strategy, initial_delay, max_delay, backoff_multiplier } = retryConfig || {
-      strategy: 'exponential_backoff' as const,
-      initial_delay: 1000,
-      max_delay: 300000,
-      backoff_multiplier: 2
-    };
-    
-    let delay = initial_delay;
-
-    switch (strategy) {
-      case 'exponential_backoff':
-        delay = initial_delay * Math.pow(backoff_multiplier, attemptNumber - 1);
-        break;
-      case 'linear_backoff':
-        delay = initial_delay * attemptNumber;
-        break;
-      case 'fixed_interval':
-        delay = initial_delay;
-        break;
-    }
-
-    delay = Math.min(delay, max_delay);
-    return new Date(Date.now() + delay);
+    return new Date(Date.now() + computeBackoff(attemptNumber));
   }
 
   private async getRecentDeliveryStats(webhookId: string): Promise<any> {
