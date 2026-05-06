@@ -55,6 +55,14 @@ function buildThrottleHeaders(decision: RateLimitDecision, retryAfterMs?: number
   return headers;
 }
 
+function emitRateLimitMetric(
+  metric: string,
+  payload: Record<string, unknown>,
+  level: 'info' | 'warn' = 'info',
+): void {
+  logger[level](`[metric] ${metric}`, payload);
+}
+
 export function shouldBypassRateLimit(pathname: string): boolean {
   return RATE_LIMIT_BYPASS_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
@@ -80,6 +88,33 @@ export async function enforceApiRateLimit(
     resetAt: new Date(Date.now() + (retryAfterMs ?? 0)).toISOString(),
   };
 
+  const apiKeyId = context.apiKeyId ?? context.rateLimitSubjectId ?? null;
+  const outcome = result.allowed
+    ? 'allowed'
+    : isRateLimitEnforced()
+      ? 'throttled'
+      : 'observed_deny';
+
+  emitRateLimitMetric('api_rate_limit_consumed_total', {
+    tenant: context.tenant,
+    api_key_id: apiKeyId,
+    outcome,
+  });
+  emitRateLimitMetric('api_rate_limit_remaining', {
+    tenant: context.tenant,
+    api_key_id: apiKeyId,
+    remaining: decision.remaining,
+  });
+
+  if (result.remaining === -1) {
+    emitRateLimitMetric('api_rate_limit_redis_unavailable_total', {
+      tenant: context.tenant,
+      api_key_id: apiKeyId,
+      outcome,
+      pathname,
+    }, 'warn');
+  }
+
   if (result.allowed) {
     return decision;
   }
@@ -92,7 +127,7 @@ export async function enforceApiRateLimit(
 
   logger.warn('[api-rate-limit] request throttled', {
     tenant: context.tenant,
-    api_key_id: context.apiKeyId ?? context.rateLimitSubjectId ?? null,
+    api_key_id: apiKeyId,
     pathname,
     retry_after_ms: retryAfterMs,
     remaining: result.remaining,

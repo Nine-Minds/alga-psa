@@ -169,6 +169,10 @@ implementation progresses; update earlier entries when something changes.
   the same unrelated `react-day-picker` CSS loader issue under `tsx`, so the
   cleanup-job service module is the reliable smoke target for scheduled-job
   additions in this environment.
+- (2026-05-05) I could not find a dedicated operational metrics client/facade
+  in this repo. For the v1 observability items, the fallback is structured log
+  emission with stable metric names/labels rather than a Prometheus/StatsD
+  sink.
 - (2026-05-05) `WebhookDeliveryQueue` now owns the retry loop contract:
   processors now return explicit `delivered` / `retry` / `abandoned`
   outcomes. The queue handles atomic `zRem` claims, caps active work at 50
@@ -556,3 +560,8 @@ implementation progresses; update earlier entries when something changes.
   `server/src/lib/jobs/initializeScheduledJobs.ts`. The new system-wide job
   runs every 15 minutes and deletes `webhook_deliveries` rows older than
   30 days in batches of 10,000 until the backlog is gone.
+- (2026-05-05) **F049 complete.** `enforceApiRateLimit()` now emits
+  structured fallback metric logs for
+  `api_rate_limit_consumed_total`, `api_rate_limit_remaining`, and
+  `api_rate_limit_redis_unavailable_total`, using stable label fields
+  (`tenant`, `api_key_id`, `outcome`) alongside the existing throttle WARN.

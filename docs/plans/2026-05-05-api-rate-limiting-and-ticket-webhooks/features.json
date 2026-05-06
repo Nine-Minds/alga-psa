@@ -296,7 +296,7 @@
   {
     "id": "F049",
     "description": "Emit rate-limiter metrics: api_rate_limit_consumed_total{tenant,api_key_id,outcome}, api_rate_limit_remaining{tenant,api_key_id}, api_rate_limit_redis_unavailable_total. Use whatever metric backend the codebase exposes; logger WARN counts are the fallback.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Observability"]
   },
   {
