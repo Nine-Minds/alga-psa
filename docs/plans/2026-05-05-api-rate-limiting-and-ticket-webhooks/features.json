@@ -182,7 +182,7 @@
   {
     "id": "F031",
     "description": "Replace the broken WebhookService.checkRateLimit (line 1056, queries non-existent table) with TokenBucketRateLimiter.tryConsume('webhook-out', tenant, webhookId). Default config from webhooks.rate_limit_per_min.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {

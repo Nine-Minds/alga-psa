@@ -31,6 +31,7 @@ import { getRedisClient } from '../config/redisConfig';
 import { registerEnterpriseStorageProviders } from './storage/registerEnterpriseStorageProviders';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { apiRateLimitConfigGetter } from './api/rateLimit/apiRateLimitConfigGetter';
+import { webhookRateLimitConfigGetter } from './webhooks/rateLimitConfig';
 
 let isFunctionExecuted = false;
 
@@ -163,7 +164,8 @@ export async function initializeApp() {
               return { maxTokens: 60, refillRate: 1 };
             }
           },
-          api: apiRateLimitConfigGetter
+          api: apiRateLimitConfigGetter,
+          'webhook-out': webhookRateLimitConfigGetter
         }
       );
       logger.info('Token bucket rate limiter initialized');

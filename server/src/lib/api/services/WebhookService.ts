@@ -21,6 +21,7 @@ import {
   EventFilter,
   PayloadTransformation
 } from '../schemas/webhookSchemas';
+import { TokenBucketRateLimiter } from '@alga-psa/email';
 import { DatabaseService } from './DatabaseService';
 import { PaginatedResponse, SuccessResponse } from '../../types/api';
 import { validateTenantAccess } from '@alga-psa/validation';
@@ -475,12 +476,10 @@ export class WebhookService {
       return;
     }
 
-    // Apply rate limiting
-    if (webhook.rate_limit?.enabled) {
-      const rateLimitOk = await this.checkRateLimit(webhookId, webhook.rate_limit);
-      if (!rateLimitOk) {
-        return;
-      }
+    // Apply the shared per-webhook outbound rate limit.
+    const rateLimitOk = await this.checkRateLimit(tenantId, webhookId);
+    if (!rateLimitOk) {
+      return;
     }
 
     const deliveryId = crypto.randomUUID();
@@ -1037,20 +1036,16 @@ export class WebhookService {
   }
 
   private async checkRateLimit(
-    webhookId: string,
-    rateLimit: { requests_per_minute: number; burst_limit?: number }
+    tenantId: string,
+    webhookId: string
   ): Promise<boolean> {
-    // Implementation would check rate limits
-    // This is a simplified version
-    const now = new Date();
-    const oneMinuteAgo = new Date(now.getTime() - 60 * 1000);
+    const result = await TokenBucketRateLimiter.getInstance().tryConsume(
+      'webhook-out',
+      tenantId,
+      webhookId,
+    );
 
-    const recentDeliveries = await this.db.count('webhook_deliveries', {
-      webhook_id: webhookId,
-      attempted_at: { gte: oneMinuteAgo.toISOString() }
-    });
-
-    return recentDeliveries < rateLimit.requests_per_minute;
+    return result.allowed;
   }
 
   private async updateWebhookStats(webhookId: string, success: boolean): Promise<void> {

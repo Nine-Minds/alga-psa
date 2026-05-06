@@ -98,6 +98,10 @@ implementation progresses; update earlier entries when something changes.
   generic exponential/linear config fields. F039 replaces that with the PRD's
   fixed retry cadence and exposes it as a shared helper for the future Redis
   queue worker.
+- (2026-05-05) `initializeApp.ts` is a poor `tsx` smoke-import target in this
+  repo because importing the full app graph pulls Next/UI assets like
+  `react-day-picker/src/style.css`. For F031 validation, focused imports of the
+  new rate-limit getter and the touched service file are the useful checks.
 - (2026-05-05) `ApiBaseController.authenticate` is **not** the universal
   hook point — `withApiKeyAuth` and `withAuth` in `apiMiddleware.ts:144,201`
   are independent paths, and the NM Store branch in `withApiKeyAuth`
@@ -162,6 +166,8 @@ implementation progresses; update earlier entries when something changes.
   `cd server && npx tsx -e "import('./src/lib/eventBus/subscribers/webhook/webhookEventMap.ts').then(({ publicEventsFor }) => { console.log(publicEventsFor('TICKET_ASSIGNED').join(',')); console.log(publicEventsFor('NOPE').length); })"`
 - (2026-05-05) Quick backoff helper smoke:
   `cd server && npx tsx -e "import('./src/lib/webhooks/backoff.ts').then(({ computeBackoff }) => { console.log([1,2,3,4,5].map(computeBackoff).join(',')); })"`
+- (2026-05-05) Quick webhook rate-limit getter smoke:
+  `cd server && npx tsx -e "import('./src/lib/webhooks/rateLimitConfig.ts').then(({ DEFAULT_WEBHOOK_RATE_LIMIT_PER_MIN }) => console.log(DEFAULT_WEBHOOK_RATE_LIMIT_PER_MIN))"`
 
 ## Links / References
 
@@ -197,6 +203,8 @@ implementation progresses; update earlier entries when something changes.
     canonical mapping from internal ticket events to public webhook events.
   - `server/src/lib/webhooks/backoff.ts` — shared retry schedule helper for
     the outbound webhook queue.
+  - `server/src/lib/webhooks/rateLimitConfig.ts` — shared token-bucket config
+    getter for the `webhook-out` namespace.
 
 ## Open Questions
 
@@ -390,3 +398,10 @@ implementation progresses; update earlier entries when something changes.
   (1m, 5m, 30m, 2h, 12h) and pointed the scaffolded
   `WebhookService.calculateNextRetryTime()` method at that helper so old
   placeholder retry math no longer diverges from the intended queue behavior.
+- (2026-05-05) **F031 complete.** Added
+  `server/src/lib/webhooks/rateLimitConfig.ts`, registered the new
+  `'webhook-out'` namespace in `initializeApp()`, and replaced the stale
+  delivery-count query in `WebhookService.checkRateLimit()` with
+  `TokenBucketRateLimiter.tryConsume('webhook-out', tenant, webhookId)`.
+  The delivery path now applies the shared per-webhook bucket instead of the
+  mocked `webhook.rate_limit.enabled` branch.
