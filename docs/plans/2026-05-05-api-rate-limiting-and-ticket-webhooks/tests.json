@@ -128,19 +128,19 @@
   {
     "id": "T022",
     "description": "Unit (vitest, server/src/lib/eventBus/subscribers/webhook/__tests__/webhookTicketPayload.comment.test.ts): for TICKET_COMMENT_ADDED, the payload includes { comment: { text, author, timestamp, is_internal } } and does NOT include attachments or any field whose key matches /attach/i.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F033"]
   },
   {
     "id": "T023",
     "description": "Unit (vitest, server/src/lib/webhooks/__tests__/sign.test.ts): golden vector — secret='shh', body='{\"a\":1}', ts=1700000000 produces the documented X-Alga-Signature value (hex); verifyWebhookSignature returns true on the same triple, false on a body byte change, false on ts skewed by ±1.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030", "F043"]
   },
   {
     "id": "T024",
     "description": "Unit (vitest, server/src/lib/webhooks/__tests__/ssrf.test.ts): assertSafeWebhookTarget rejects http://127.0.0.1, http://localhost, http://[::1], http://10.0.0.5, http://172.16.5.5, http://192.168.1.1, http://169.254.169.254, http://100.64.0.1, file:///etc/passwd, ftp://example.com — and accepts https://example.com. With WEBHOOK_SSRF_ALLOW_PRIVATE=true, the private addresses pass.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F029"]
   },
   {
