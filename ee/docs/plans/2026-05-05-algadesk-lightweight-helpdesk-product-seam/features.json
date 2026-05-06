@@ -874,7 +874,7 @@
   {
     "id": "F110",
     "description": "Expose Knowledge Base settings tab for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]

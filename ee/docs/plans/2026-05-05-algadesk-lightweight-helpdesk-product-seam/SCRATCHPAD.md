@@ -206,3 +206,14 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 
 - `cd server && npx vitest run src/test/unit/dashboard/AlgadeskDashboard.contract.test.ts src/test/unit/settings/settingsProductTabs.test.ts src/test/unit/layout/SidebarWithFeatureFlags.productShell.test.tsx src/test/unit/productSurfaceRegistry.test.ts`
   - Result: pass (13 tests).
+- (2026-05-05) Completed F110 by adding an explicit Knowledge Base settings entry for Algadesk.
+- Added `knowledge-base` settings tab in `server/src/components/settings/SettingsPage.tsx` with focused KB management handoff link to `/msp/knowledge-base`.
+- Added settings nav item in `server/src/config/menuConfig.ts` and extended product allowlists for `knowledge-base` in:
+  - `server/src/lib/settingsProductTabs.ts`
+  - `server/src/lib/productSurfaceRegistry.ts`
+- Updated T006 assertion coverage to include Algadesk KB tab allowlist expectation.
+
+## Commands Run (additional)
+
+- `cd server && npx vitest run src/test/unit/settings/settingsProductTabs.test.ts src/test/unit/productSurfaceRegistry.test.ts src/test/unit/layout/SidebarWithFeatureFlags.productShell.test.tsx`
+  - Result: pass (11 tests).

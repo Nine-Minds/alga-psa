@@ -5,7 +5,7 @@
 
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle, KeyRound, FlaskConical } from 'lucide-react';
+import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle, KeyRound, FlaskConical, BookOpen } from 'lucide-react';
 import type { TabContent } from "@alga-psa/ui/components/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
@@ -17,6 +17,7 @@ import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSk
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { UnsavedChangesProvider } from "@alga-psa/ui";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import Link from 'next/link';
 
 function TicketingSettingsLoading() {
   const { t } = useTranslation('msp/settings');
@@ -186,6 +187,28 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
         <Suspense fallback={<SettingsTabSkeleton title={t('tabs.ticketingSettings')} description={t('tabs.loadingTicketing')} />}>
           <TicketingSettings />
         </Suspense>
+      ),
+    },
+    {
+      id: 'knowledge-base',
+      label: t('tabs.knowledgeBase', { defaultValue: 'Knowledge Base' }),
+      icon: BookOpen,
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('tabs.knowledgeBase', { defaultValue: 'Knowledge Base' })}</CardTitle>
+            <CardDescription>
+              {t('knowledgeBase.description', {
+                defaultValue: 'Manage knowledge base content and publishing workflow from the MSP knowledge base area.',
+              })}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/msp/knowledge-base" className="text-sm text-[rgb(var(--color-primary-600))] hover:underline">
+              {t('knowledgeBase.open', { defaultValue: 'Open Knowledge Base' })}
+            </Link>
+          </CardContent>
+        </Card>
       ),
     },
     {

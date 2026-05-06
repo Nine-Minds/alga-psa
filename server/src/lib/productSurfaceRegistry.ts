@@ -196,7 +196,7 @@ function includeByHref(productCode: ProductCode, href?: string): boolean {
   if (!href || href.startsWith('http')) return true;
   if (productCode === 'algadesk' && href.startsWith('/msp/settings?tab=')) {
     const tab = new URLSearchParams(href.split('?')[1]).get('tab');
-    const allowedTabs = new Set(['general', 'users', 'teams', 'ticketing', 'email', 'client-portal']);
+    const allowedTabs = new Set(['general', 'users', 'teams', 'ticketing', 'knowledge-base', 'email', 'client-portal']);
     return tab ? allowedTabs.has(tab) : false;
   }
   if (href.startsWith('/msp/')) return resolveProductRouteBehavior(productCode, href) === 'allowed';

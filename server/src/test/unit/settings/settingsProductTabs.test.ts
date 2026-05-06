@@ -8,6 +8,7 @@ describe('settings product tab allowlist', () => {
     expect(tabs.has('users')).toBe(true);
     expect(tabs.has('teams')).toBe(true);
     expect(tabs.has('ticketing')).toBe(true);
+    expect(tabs.has('knowledge-base')).toBe(true);
     expect(tabs.has('email')).toBe(true);
     expect(tabs.has('client-portal')).toBe(true);
 
