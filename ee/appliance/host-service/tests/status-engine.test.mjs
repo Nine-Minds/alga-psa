@@ -175,6 +175,62 @@ exit 1
   }
 });
 
+test('missing expected HelmReleases block fullyHealthy while staged kustomizations are still catching up', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-hr-missing-'));
+  const stateFile = path.join(tmp, 'install-state.json');
+  const fakeBin = path.join(tmp, 'bin');
+  fs.mkdirSync(fakeBin, { recursive: true });
+
+  fs.writeFileSync(stateFile, JSON.stringify({ phase: 'app-readiness', status: 'release-config-complete' }));
+
+  const kubectlPath = path.join(fakeBin, 'kubectl');
+  fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
+if [[ "$*" == *"get nodes -o json"* ]]; then
+  cat <<'JSON'
+{"items":[{"metadata":{"name":"node-1"},"status":{"conditions":[{"type":"Ready","status":"True"}]}}]}
+JSON
+  exit 0
+fi
+if [[ "$*" == *"get pods -A --no-headers"* ]]; then
+  cat <<'TXT'
+msp alga-core-abc Running
+TXT
+  exit 0
+fi
+if [[ "$*" == *"-n msp get jobs --no-headers"* ]]; then
+  cat <<'TXT'
+alga-core-bootstrap 1/1 1 1m
+TXT
+  exit 0
+fi
+if [[ "$*" == *"-n alga-system get helmreleases"* ]]; then
+  cat <<'TXT'
+alga-core 1h True Helm install succeeded
+pgbouncer 1h True Helm install succeeded
+TXT
+  exit 0
+fi
+exit 1
+`);
+  fs.chmodSync(kubectlPath, 0o755);
+
+  const originalPath = process.env.PATH;
+  process.env.PATH = `${fakeBin}:${originalPath}`;
+  try {
+    const snapshot = collectStatusSnapshot({
+      stateFile,
+      kubeconfigPath: '/tmp/k3s.yaml',
+      kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
+    });
+
+    assert.equal(snapshot.tiers.loginReady, true);
+    assert.equal(snapshot.tiers.fullyHealthy, false);
+    assert.equal(snapshot.failures.some((failure) => failure.suspectedCause.includes('temporal missing')), true);
+  } finally {
+    process.env.PATH = originalPath;
+  }
+});
+
 test('collectStatusSnapshot classifies persisted k3s failures', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-k3s-failure-'));
   const stateFile = path.join(tmp, 'install-state.json');

@@ -7,6 +7,7 @@ const DEFAULT_KUBECONFIG = '/etc/rancher/k3s/k3s.yaml';
 const DEFAULT_COMMAND_TIMEOUT_MS = 5_000;
 const MAX_DIAGNOSTIC_BYTES = 64 * 1024;
 const HAS_GNU_TIMEOUT = spawnSync('sh', ['-c', 'command -v timeout >/dev/null 2>&1']).status === 0;
+const EXPECTED_HELM_RELEASES = ['alga-core', 'pgbouncer', 'temporal', 'workflow-worker', 'email-service', 'temporal-worker'];
 
 function readJsonFile(file) {
   if (!fs.existsSync(file)) {
@@ -136,13 +137,25 @@ function guidanceForCategory(category) {
 }
 
 function helmReleaseIssues(helmLines) {
-  return helmLines.filter((line) => {
+  const seen = new Set();
+  const issues = helmLines.filter((line) => {
     const fields = line.trim().split(/\s+/);
     if (fields.length < 3) {
       return false;
     }
+    seen.add(fields[0]);
     return fields[2] !== 'True';
   });
+
+  if (helmLines.length > 0) {
+    for (const name of EXPECTED_HELM_RELEASES) {
+      if (!seen.has(name)) {
+        issues.push(`${name} missing from alga-system HelmReleases`);
+      }
+    }
+  }
+
+  return issues;
 }
 
 function deriveFailureSummary(installState, podLines, helmIssues, warnings) {
