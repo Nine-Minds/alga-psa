@@ -291,3 +291,8 @@ implementation progresses; update earlier entries when something changes.
 - (2026-05-05) **T018 complete.** Added
   `server/src/lib/api/schemas/__tests__/webhookSchemas.test.ts` to lock in
   acceptance of the new `ticket.comment.added` enum member.
+- (2026-05-05) **F024 complete.** Added
+  `server/migrations/20260505140000_create_webhook_tables.cjs` with the base
+  `webhooks` subscription table: tenant-scoped primary key, event list,
+  signing-secret vault path, retry/rate-limit config, activation flag, rolling
+  delivery stats, auto-disable timestamp, and creator/audit timestamps.

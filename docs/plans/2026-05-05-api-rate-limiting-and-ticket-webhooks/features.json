@@ -140,7 +140,7 @@
   {
     "id": "F024",
     "description": "Create the webhooks table via a .cjs migration with: webhook_id, tenant, name, url, method, event_types text[], custom_headers jsonb, signing_secret_vault_path text NOT NULL, security_type, verify_ssl, retry_config jsonb, rate_limit_per_min, is_active, total/successful/failed_deliveries, last_*_at timestamps, auto_disabled_at, created_by_user_id, created_at, updated_at.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {
