@@ -197,3 +197,11 @@ Working notes for remediating the current Algadesk implementation. This plan exi
 - (2026-05-06) Completed structured product-denied response normalization for standalone extension/integration guards (R097).
 - Added behavior test `server/src/test/unit/api/standaloneProductGuards.test.ts` proving denied product access returns `403` with `error.code = PRODUCT_ACCESS_DENIED` and capability/product details.
 - Validation run (pass): `cd server && npx vitest run src/test/unit/api/standaloneProductGuards.test.ts --reporter=dot`.
+- (2026-05-06) Completed representative allowed-API continuity checks (R098).
+- Expanded `server/src/test/unit/productSurfaceRegistry.test.ts` to assert Algadesk allow behavior for `/api/v1/clients`, `/api/v1/contacts`, and `/api/email/oauth/initiate` in addition to existing ticket/KB checks.
+- Updated `server/src/lib/productSurfaceRegistry.ts` allowlist to include `/api/email/oauth` and `/api/email/imap` paths as Algadesk-allowed email channel APIs.
+- Validation run (pass): `cd server && npx vitest run src/test/unit/productSurfaceRegistry.test.ts --reporter=dot`.
+- DB-backed integration verification for allowed ticket endpoints remains environment-blocked locally (`ECONNREFUSED` on Postgres :5432) and is tracked for later DB-available pass under RT011/RT124.
+- (2026-05-06) Completed representative PSA API regression checks (R099).
+- Added PSA assertions in `server/src/test/unit/productSurfaceRegistry.test.ts` for `/api/email/oauth/initiate` and `/api/integrations/entra/connect` to ensure PSA remains allowed while Algadesk remains constrained.
+- Validation run (pass): `cd server && npx vitest run src/test/unit/productSurfaceRegistry.test.ts --reporter=dot`.

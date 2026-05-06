@@ -83,7 +83,7 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
 export const PORTAL_ROUTE_RULES: readonly RouteRule[] = [
   {
     group: 'portal_helpdesk',
-    staticPrefixes: ['/client-portal/dashboard', '/client-portal/tickets', '/client-portal/knowledge-base', '/client-portal/profile', '/client-portal/settings', '/client-portal/client-settings'],
+    staticPrefixes: ['/client-portal/dashboard', '/client-portal/tickets', '/client-portal/knowledge-base', '/client-portal/profile', '/client-portal/client-settings'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
   },
   {
@@ -115,6 +115,8 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/tags',
       '/api/v1/kb-articles',
       '/api/v1/email',
+      '/api/email/oauth',
+      '/api/email/imap',
       '/api/v1/users',
       '/api/v1/teams',
     ],
