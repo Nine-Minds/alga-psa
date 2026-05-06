@@ -858,7 +858,7 @@
   {
     "id": "R108",
     "description": "Integrate relevant contact-detail Algadesk mode changes from the current uncommitted working tree.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Contact and document leak remediation"
     ]
@@ -866,7 +866,7 @@
   {
     "id": "R109",
     "description": "Prevent Algadesk `/msp/contacts/[id]?tab=documents` from fetching contact documents.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Contact and document leak remediation"
     ]
@@ -874,7 +874,7 @@
   {
     "id": "R110",
     "description": "Prevent Algadesk ContactDetails from rendering the Documents tab.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Contact and document leak remediation"
     ]
@@ -882,7 +882,7 @@
   {
     "id": "R111",
     "description": "Preserve PSA contact document fetching on `tab=documents`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Contact and document leak remediation"
     ]
@@ -890,7 +890,7 @@
   {
     "id": "R112",
     "description": "Preserve PSA ContactDetails Documents tab rendering.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Contact and document leak remediation"
     ]
@@ -898,7 +898,7 @@
   {
     "id": "R113",
     "description": "Add product composition tests for Algadesk and PSA contact detail behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Contact and document leak remediation"
     ]

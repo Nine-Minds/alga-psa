@@ -220,3 +220,11 @@ Working notes for remediating the current Algadesk implementation. This plan exi
 - PSA metadata/OpenAPI remains unchanged (`productCode === 'psa'` bypasses path/schema/permission/stats reductions).
 - Validation run (pass): `cd server && npm run typecheck -- --pretty false`.
 - Validation run (pass): `cd server && npx vitest run src/test/unit/api/apiMetadataController.productFiltering.contract.test.ts --reporter=dot`.
+- (2026-05-06) Completed contact/document leak remediation (R108-R113) and corresponding test item RT013.
+- Integrated product-aware contact composition changes:
+  - `server/src/app/msp/contacts/[id]/page.tsx` now resolves tenant product and skips `getDocumentsByEntity` for Algadesk on `tab=documents`.
+  - `packages/clients/src/components/contacts/ContactDetails.tsx` adds `isAlgadeskMode` and hides the Documents tab in Algadesk mode.
+- Added/updated tests:
+  - `server/src/test/unit/app/msp/contacts/[id]/page.productComposition.test.tsx` for Algadesk-vs-PSA document fetch behavior.
+  - `server/src/test/unit/contacts/ContactDetails.productMode.contract.test.ts` for Algadesk documents-tab suppression contract.
+- Validation run (pass): `cd server && npx vitest run 'src/test/unit/app/msp/contacts/[id]/page.productComposition.test.tsx' src/test/unit/contacts/ContactDetails.productMode.contract.test.ts --reporter=dot`.

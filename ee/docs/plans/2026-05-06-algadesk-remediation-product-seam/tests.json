@@ -128,7 +128,7 @@
   {
     "id": "RT013",
     "description": "Component/server-page: Algadesk contact detail with tab=documents does not fetch documents or render Documents tab, while PSA contact detail still fetches and renders documents.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "R109",
       "R110",
