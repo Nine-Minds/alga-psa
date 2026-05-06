@@ -4,6 +4,7 @@ import { getSystemEmailService } from '@alga-psa/email';
 import { getConnection } from '@/lib/db/db';
 
 import { WebhookRecord } from './webhookModel';
+import { emitWebhookMetric } from './metrics';
 
 const AUTO_DISABLE_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -63,6 +64,11 @@ export async function maybeAutoDisable(webhook: WebhookRecord): Promise<void> {
   if (!updated) {
     return;
   }
+
+  emitWebhookMetric('webhook_auto_disabled_total', {
+    tenant: updated.tenant,
+    webhook_id: updated.webhook_id,
+  }, 'warn');
 
   await notifyWebhookOwner({
     webhookId: updated.webhook_id,

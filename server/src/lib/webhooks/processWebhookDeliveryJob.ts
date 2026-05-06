@@ -9,6 +9,7 @@ import {
 import { maybeAutoDisable } from './autoDisable';
 import { computeBackoff } from './backoff';
 import { performWebhookDeliveryRequest } from './delivery';
+import { emitWebhookMetric } from './metrics';
 import { WEBHOOK_SIGNATURE_HEADER, signRequest } from './sign';
 import { webhookModel } from './webhookModel';
 
@@ -52,6 +53,11 @@ export async function processWebhookDeliveryJob(
     job.webhookId,
   );
   if (!rateLimit.allowed) {
+    emitWebhookMetric('webhook_deliveries_total', {
+      tenant: job.tenantId,
+      webhook_id: job.webhookId,
+      outcome: 'rate_limited',
+    }, 'warn');
     return {
       outcome: 'retry',
       retryDelayMs: rateLimit.retryAfterMs ?? computeBackoff(job.attempt),
@@ -119,6 +125,17 @@ export async function processWebhookDeliveryJob(
     isTest: false,
     attemptedAt: completedAt,
     completedAt,
+  });
+
+  emitWebhookMetric('webhook_deliveries_total', {
+    tenant: job.tenantId,
+    webhook_id: job.webhookId,
+    outcome: status,
+  });
+  emitWebhookMetric('webhook_delivery_duration_ms', {
+    tenant: job.tenantId,
+    webhook_id: job.webhookId,
+    duration_ms: deliveryResult.duration_ms ?? null,
   });
 
   const updatedWebhook = await webhookModel.updateStats({

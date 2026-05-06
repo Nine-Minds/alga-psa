@@ -302,7 +302,7 @@
   {
     "id": "F050",
     "description": "Emit webhook metrics: webhook_deliveries_total{tenant,webhook_id,outcome}, webhook_delivery_duration_ms histogram, webhook_queue_depth gauge (zCard), webhook_auto_disabled_total{tenant,webhook_id}.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Observability"]
   },
   {

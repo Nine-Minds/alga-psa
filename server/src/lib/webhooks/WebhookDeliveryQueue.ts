@@ -3,6 +3,7 @@ import type { RedisClientGetter, RedisClientLike } from '@alga-psa/email';
 import type { TicketWebhookPublicEvent } from '../eventBus/subscribers/webhook/webhookEventMap';
 import type { TicketWebhookPayload } from '../eventBus/subscribers/webhook/webhookTicketPayload';
 import { computeBackoff } from './backoff';
+import { emitWebhookMetric } from './metrics';
 
 export type WebhookDeliveryJob = {
   webhookId: string;
@@ -116,6 +117,7 @@ export class WebhookDeliveryQueue {
       score: job.deliverAt,
       value: this.getMemberValue(job.eventId, job.webhookId, job.attempt),
     });
+    const queueDepth = await redis.zCard(this.getQueueKey());
 
     logger.info('[WebhookDeliveryQueue] Enqueued webhook delivery job', {
       webhookId: job.webhookId,
@@ -124,6 +126,9 @@ export class WebhookDeliveryQueue {
       tenantId: job.tenantId,
       attempt: job.attempt,
       deliverAt: new Date(job.deliverAt).toISOString(),
+    });
+    emitWebhookMetric('webhook_queue_depth', {
+      queue_depth: queueDepth,
     });
   }
 
@@ -240,6 +245,13 @@ export class WebhookDeliveryQueue {
         this.inFlightJobs.delete(execution);
       });
       this.inFlightJobs.add(execution);
+    }
+
+    if (readyMembers.length > 0) {
+      const queueDepth = await redis.zCard(this.getQueueKey());
+      emitWebhookMetric('webhook_queue_depth', {
+        queue_depth: queueDepth,
+      });
     }
   }
 

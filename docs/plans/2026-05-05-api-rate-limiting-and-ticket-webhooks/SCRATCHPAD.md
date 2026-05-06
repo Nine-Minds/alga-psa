@@ -173,6 +173,10 @@ implementation progresses; update earlier entries when something changes.
   in this repo. For the v1 observability items, the fallback is structured log
   emission with stable metric names/labels rather than a Prometheus/StatsD
   sink.
+- (2026-05-05) Webhook observability follows that same fallback pattern:
+  queue depth is emitted from the Redis ZSET wrapper, delivery totals and
+  durations from the delivery processor, and auto-disable counts from the
+  state transition helper.
 - (2026-05-05) `WebhookDeliveryQueue` now owns the retry loop contract:
   processors now return explicit `delivered` / `retry` / `abandoned`
   outcomes. The queue handles atomic `zRem` claims, caps active work at 50
@@ -565,3 +569,10 @@ implementation progresses; update earlier entries when something changes.
   `api_rate_limit_consumed_total`, `api_rate_limit_remaining`, and
   `api_rate_limit_redis_unavailable_total`, using stable label fields
   (`tenant`, `api_key_id`, `outcome`) alongside the existing throttle WARN.
+- (2026-05-05) **F050 complete.** Added
+  `server/src/lib/webhooks/metrics.ts` and wired structured fallback metric
+  logs into `WebhookDeliveryQueue`, `processWebhookDeliveryJob()`, and
+  `maybeAutoDisable()`. That now emits
+  `webhook_queue_depth`, `webhook_deliveries_total`,
+  `webhook_delivery_duration_ms`, and
+  `webhook_auto_disabled_total`.
