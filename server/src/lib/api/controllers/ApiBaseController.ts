@@ -97,6 +97,8 @@ export abstract class ApiBaseController {
       apiKeyId: keyRecord.api_key_id,
     };
 
+    await this.assertProductApiAccess(apiRequest);
+
     return apiRequest;
   }
 
@@ -222,8 +224,6 @@ export abstract class ApiBaseController {
       try {
         // Authenticate
         const apiRequest = await this.authenticate(req);
-        await this.assertProductApiAccess(apiRequest);
-        
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
@@ -278,8 +278,6 @@ export abstract class ApiBaseController {
       try {
         // Authenticate
         const apiRequest = await this.authenticate(req);
-        await this.assertProductApiAccess(apiRequest);
-        
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
@@ -308,8 +306,6 @@ export abstract class ApiBaseController {
       try {
         // Authenticate
         const apiRequest = await this.authenticate(req);
-        await this.assertProductApiAccess(apiRequest);
-        
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
@@ -347,8 +343,6 @@ export abstract class ApiBaseController {
       try {
         // Authenticate
         const apiRequest = await this.authenticate(req);
-        await this.assertProductApiAccess(apiRequest);
-        
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
@@ -386,8 +380,6 @@ export abstract class ApiBaseController {
       try {
         // Authenticate
         const apiRequest = await this.authenticate(req);
-        await this.assertProductApiAccess(apiRequest);
-        
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions

@@ -162,3 +162,10 @@ Working notes for remediating the current Algadesk implementation. This plan exi
 - Validation run (pass):
   - `cd server && npm run typecheck -- --pretty false`
   - `cd server && npx vitest run ../packages/auth/src/lib/nextAuthOptions.productCodeMapping.test.ts src/test/unit/productSurfaceRegistry.test.ts src/test/unit/product/serverProductRouteGuard.test.tsx src/test/unit/app/serverProductRouteGuardPages.test.tsx --reporter=dot`
+- (2026-05-06) Completed API enforcement centralization pass (R085-R091) with one explicit follow-up blocker for client/contact custom-auth surfaces.
+- `ApiBaseController.authenticate()` is now the unavoidable product gate path (`await this.assertProductApiAccess(apiRequest)`), and base CRUD methods no longer rely on per-method product checks.
+- Added coverage at `server/src/test/unit/api/apiControllerProductAccessCoverage.contract.test.ts` to lock the authenticate-level enforcement pattern and verify representative overridden PSA-only controllers keep `await this.authenticate(req);` call sites (project/financial/invoice/quote/tag).
+- Validation run (pass):
+  - `cd server && npm run typecheck -- --pretty false`
+  - `cd server && npx vitest run src/test/unit/api/apiBaseController.productAccess.contract.test.ts src/test/unit/api/apiControllerProductAccessCoverage.contract.test.ts --reporter=dot`
+- Audit finding (blocks R092/R093): `server/src/lib/api/controllers/ApiClientController.ts` still performs manual API-key auth/context wiring instead of using base `authenticate()`, so product gate enforcement there is not yet centralized. This needs a follow-up refactor (and likely matching treatment for any similar manual-auth custom controllers) before marking custom client/contact/tag coverage fully complete.
