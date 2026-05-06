@@ -146,7 +146,7 @@
   {
     "id": "F025",
     "description": "Create the webhook_deliveries table via the same migration with: delivery_id, tenant, webhook_id, event_id, event_type, request/response capture, status, attempt_number, duration_ms, error_message, next_retry_at, is_test boolean, attempted_at, completed_at; plus indexes on (tenant, webhook_id, attempted_at DESC), (tenant, event_id), and a partial index on status IN ('pending','retrying') with next_retry_at.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations"]
   },
   {

@@ -296,3 +296,8 @@ implementation progresses; update earlier entries when something changes.
   `webhooks` subscription table: tenant-scoped primary key, event list,
   signing-secret vault path, retry/rate-limit config, activation flag, rolling
   delivery stats, auto-disable timestamp, and creator/audit timestamps.
+- (2026-05-05) **F025 complete.** Expanded the same webhook migration to add
+  `webhook_deliveries` with tenant/webhook foreign key wiring, request +
+  response capture columns, retry scheduling fields, `is_test`, and the three
+  queue-oriented indexes required by the PRD (`webhook+attempted_at`,
+  `event_id`, and partial pending/retrying `next_retry_at`).

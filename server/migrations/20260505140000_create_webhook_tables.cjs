@@ -32,6 +32,50 @@ exports.up = async function up(knex) {
     table.index(['tenant'], 'webhooks_tenant_idx');
     table.index(['tenant', 'is_active'], 'webhooks_tenant_active_idx');
   });
+
+  await knex.schema.createTable('webhook_deliveries', (table) => {
+    table.uuid('tenant').notNullable().references('tenant').inTable('tenants').onDelete('CASCADE');
+    table.uuid('delivery_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
+    table.uuid('webhook_id').notNullable();
+    table
+      .foreign(['tenant', 'webhook_id'])
+      .references(['tenant', 'webhook_id'])
+      .inTable('webhooks')
+      .onDelete('CASCADE');
+    table.uuid('event_id').notNullable();
+    table.text('event_type').notNullable();
+    table.jsonb('request_headers');
+    table.jsonb('request_body');
+    table.integer('response_status_code');
+    table.jsonb('response_headers');
+    table.text('response_body');
+    table.text('status').notNullable();
+    table.integer('attempt_number').notNullable().defaultTo(1);
+    table.integer('duration_ms');
+    table.text('error_message');
+    table.timestamp('next_retry_at', { useTz: true });
+    table.boolean('is_test').notNullable().defaultTo(false);
+    table.timestamp('attempted_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
+    table.timestamp('completed_at', { useTz: true });
+
+    table.primary(['tenant', 'delivery_id']);
+  });
+
+  await knex.schema.raw(`
+    CREATE INDEX webhook_deliveries_webhook_attempted_idx
+    ON webhook_deliveries (tenant, webhook_id, attempted_at DESC)
+  `);
+
+  await knex.schema.raw(`
+    CREATE INDEX webhook_deliveries_event_idx
+    ON webhook_deliveries (tenant, event_id)
+  `);
+
+  await knex.schema.raw(`
+    CREATE INDEX webhook_deliveries_retry_idx
+    ON webhook_deliveries (tenant, next_retry_at)
+    WHERE status IN ('pending', 'retrying')
+  `);
 };
 
 /**
@@ -39,5 +83,6 @@ exports.up = async function up(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function down(knex) {
+  await knex.schema.dropTableIfExists('webhook_deliveries');
   await knex.schema.dropTableIfExists('webhooks');
 };
