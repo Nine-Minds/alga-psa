@@ -274,7 +274,7 @@
   {
     "id": "F035",
     "description": "Add optional product_code input to tenant creation utilities.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Provisioning and tenant lifecycle"
     ]
@@ -282,7 +282,7 @@
   {
     "id": "F036",
     "description": "Default tenant creation utilities to psa when product_code is omitted.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Provisioning and tenant lifecycle"
     ]
@@ -290,7 +290,7 @@
   {
     "id": "F037",
     "description": "Allow dev/test fixtures to create Algadesk tenants explicitly.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Provisioning and tenant lifecycle"
     ]

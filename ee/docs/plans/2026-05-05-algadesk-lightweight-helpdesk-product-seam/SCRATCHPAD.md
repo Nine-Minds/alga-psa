@@ -117,3 +117,5 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - Fail-closed unknown behavior for Algadesk
   - `/desk/*` alias normalization mapped to MSP route groups
 - Added `server/src/test/unit/productSurfaceRegistry.test.ts` to validate representative route/API classifications and fail-closed behavior.
+- (2026-05-05) Completed F035/F036/F037 by extending `server/test-utils/testDataFactory.ts#createTenant` with optional `productCode` input and default `product_code: 'psa'`.
+- Added/update contract test `server/src/test/unit/testDataFactory.test.ts` to enforce default + explicit Algadesk fixture support.
