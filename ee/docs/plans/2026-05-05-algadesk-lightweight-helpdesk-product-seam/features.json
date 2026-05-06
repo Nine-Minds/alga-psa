@@ -298,7 +298,7 @@
   {
     "id": "F038",
     "description": "Allow provisioning APIs to preserve or set product_code.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Provisioning and tenant lifecycle"
     ]
@@ -306,7 +306,7 @@
   {
     "id": "F039",
     "description": "Ensure Stripe tier mapping does not overwrite product_code.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Provisioning and tenant lifecycle"
     ]
@@ -314,7 +314,7 @@
   {
     "id": "F040",
     "description": "Ensure mobile or IAP tier transitions do not overwrite product_code.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Provisioning and tenant lifecycle"
     ]

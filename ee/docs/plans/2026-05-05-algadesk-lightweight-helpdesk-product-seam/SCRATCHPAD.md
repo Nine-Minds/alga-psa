@@ -119,3 +119,16 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 - Added `server/src/test/unit/productSurfaceRegistry.test.ts` to validate representative route/API classifications and fail-closed behavior.
 - (2026-05-05) Completed F035/F036/F037 by extending `server/test-utils/testDataFactory.ts#createTenant` with optional `productCode` input and default `product_code: 'psa'`.
 - Added/update contract test `server/src/test/unit/testDataFactory.test.ts` to enforce default + explicit Algadesk fixture support.
+- (2026-05-05) Completed F038 by threading optional product entitlement through provisioning flows:
+  - Added `productCode?: 'psa' | 'algadesk'` to EE tenant creation interfaces in `ee/server/src/interfaces/tenant.interfaces.ts` and `ee/temporal-workflows/src/types/workflow-types.ts`.
+  - Passed `productCode` through workflow activity invocation in `ee/temporal-workflows/src/workflows/tenant-creation-workflow.ts`.
+  - Updated tenant creation DB write in `ee/temporal-workflows/src/db/tenant-operations.ts` to set `tenantData.product_code` when provided.
+  - Updated provisioning surfaces to accept/set product entitlement:
+    - `ee/server/src/app/api/v1/tenant-management/create-tenant/route.ts`
+    - `ee/server/src/services/provisioning/types/tenant.schema.ts`
+    - `ee/server/src/services/provisioning/tenantService.ts`
+- (2026-05-05) Completed F039/F040 by ensuring tier transitions do not write product entitlement:
+  - Added regression assertions in `ee/server/src/__tests__/unit/stripeService.tierPricing.test.ts` that tenant update payloads do not include `product_code`.
+  - Added focused IAP transition guard test `ee/server/src/__tests__/unit/stripeService.productCodePreservation.test.ts`.
+- (2026-05-05) Command run: `cd ee/server && npx vitest run src/__tests__/unit/stripeService.tierPricing.test.ts src/__tests__/unit/stripeService.productCodePreservation.test.ts`.
+  - Result: failed before test execution in this environment due to module resolution (`Cannot find package '@/lib/db/db'`) from `ee/server` Vitest context.
