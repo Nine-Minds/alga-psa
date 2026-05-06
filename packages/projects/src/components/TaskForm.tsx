@@ -39,7 +39,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { TextEditor } from '@alga-psa/ui/editor';
 import type { BlockNoteEditor } from '@blocknote/core';
 import { PartialBlock } from '@blocknote/core';
-import { ListChecks, Pencil, Plus, Trash2, Clock, Ticket } from 'lucide-react';
+import { ListChecks, Pencil, Plus, Trash2, Clock, Ticket, GripVertical } from 'lucide-react';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
@@ -78,6 +78,7 @@ import {
   isTaskRichTextEmpty,
 } from '../lib/taskRichText';
 import { useTranslation } from 'react-i18next';
+import checklistDnd from './ChecklistDragDrop.module.css';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
 
@@ -210,6 +211,15 @@ export default function TaskForm({
     initialTicketLinkIdsRef.current = new Set(links.map((link) => link.ticket_id));
   }, []);
   const [editingChecklistItemId, setEditingChecklistItemId] = useState<string | null>(null);
+  const [draggedChecklistId, setDraggedChecklistId] = useState<string | null>(null);
+  const [dragOverChecklistId, setDragOverChecklistId] = useState<string | null>(null);
+  const [checklistDropPosition, setChecklistDropPosition] = useState<'before' | 'after' | null>(null);
+  const [recentlyDroppedChecklistId, setRecentlyDroppedChecklistId] = useState<string | null>(null);
+  // Tracks whether the latest mousedown landed inside a checklist drag handle.
+  // dragstart fires on the wrapper (the draggable element) and its e.target is
+  // the wrapper, not the original mousedown target — so we capture that origin
+  // here on mousedown and use it to gate dragstart.
+  const checklistDragOriginIsHandleRef = useRef(false);
   const [isCrossProjectMove, setIsCrossProjectMove] = useState<boolean>(false);
   const [selectedDuplicatePhaseId, setSelectedDuplicatePhaseId] = useState<string | null>(null);
   const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false); // State for duplicate dialog
@@ -1144,7 +1154,7 @@ export default function TaskForm({
     setIsEditingChecklist(!isEditingChecklist);
   };
 
-  const addChecklistItem = (): string => {
+  const addChecklistItem = (insertAtIndex?: number): string => {
     const newItemId = `temp-${Date.now()}`;
     const newItem: Omit<ITaskChecklistItem, 'tenant'> = {
       checklist_item_id: newItemId,
@@ -1156,18 +1166,24 @@ export default function TaskForm({
       due_date: null,
       created_at: new Date(),
       updated_at: new Date(),
-      order_number: checklistItems.length + 1,
+      order_number: 0, // recomputed below
     };
-    setChecklistItems((items) => [...items, newItem]);
+    setChecklistItems((items) => {
+      const next = [...items];
+      const at = insertAtIndex === undefined ? next.length : Math.max(0, Math.min(insertAtIndex, next.length));
+      next.splice(at, 0, newItem);
+      return next.map((it, i) => ({ ...it, order_number: i + 1 }));
+    });
     return newItemId;
   };
 
   const handleChecklistItemKeyDown = (
-    e: React.KeyboardEvent<HTMLTextAreaElement>
+    e: React.KeyboardEvent<HTMLTextAreaElement>,
+    index: number
   ) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      const newId = addChecklistItem();
+      const newId = addChecklistItem(index + 1);
       setEditingChecklistItemId(newId);
     }
   };
@@ -1181,6 +1197,61 @@ export default function TaskForm({
   const removeChecklistItem = (index: number) => {
     const updatedItems = checklistItems.filter((_, i) => i !== index);
     setChecklistItems(updatedItems);
+  };
+
+  const resetChecklistDragState = () => {
+    setDraggedChecklistId(null);
+    setDragOverChecklistId(null);
+    setChecklistDropPosition(null);
+  };
+
+  const handleChecklistDragStart = (e: React.DragEvent, id: string) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+    requestAnimationFrame(() => setDraggedChecklistId(id));
+  };
+
+  const handleChecklistDragOver = (e: React.DragEvent, id: string) => {
+    if (!draggedChecklistId || draggedChecklistId === id) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const position: 'before' | 'after' =
+      e.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+    if (dragOverChecklistId !== id || checklistDropPosition !== position) {
+      setDragOverChecklistId(id);
+      setChecklistDropPosition(position);
+    }
+  };
+
+  const handleChecklistDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    const fromId = draggedChecklistId;
+    const position = checklistDropPosition;
+    resetChecklistDragState();
+    if (!fromId || fromId === targetId || position === null) return;
+
+    let didMove = false;
+    setChecklistItems((prev) => {
+      const items = [...prev];
+      const fromIndex = items.findIndex((item) => item.checklist_item_id === fromId);
+      const targetIndex = items.findIndex((item) => item.checklist_item_id === targetId);
+      if (fromIndex === -1 || targetIndex === -1) return prev;
+
+      let insertAt = position === 'after' ? targetIndex + 1 : targetIndex;
+      if (fromIndex < insertAt) insertAt -= 1;
+      if (insertAt === fromIndex) return prev;
+
+      const [moved] = items.splice(fromIndex, 1);
+      items.splice(insertAt, 0, moved);
+      didMove = true;
+      return items.map((it, i) => ({ ...it, order_number: i + 1 }));
+    });
+
+    if (didMove) {
+      setRecentlyDroppedChecklistId(fromId);
+      window.setTimeout(() => setRecentlyDroppedChecklistId((curr) => (curr === fromId ? null : curr)), 400);
+    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -1800,8 +1871,69 @@ export default function TaskForm({
                 <div className="flex flex-col space-y-2">
                   {checklistItems.map((item, index): React.JSX.Element => {
                     const isItemEditing = isEditingChecklist || editingChecklistItemId === item.checklist_item_id;
+                    const isDragging = draggedChecklistId === item.checklist_item_id;
+                    const isDropTarget = dragOverChecklistId === item.checklist_item_id && draggedChecklistId !== item.checklist_item_id;
+                    const isEntering = recentlyDroppedChecklistId === item.checklist_item_id;
+                    const isAnyDragging = draggedChecklistId !== null;
                     return (
-                      <div key={index} className="flex items-center gap-2 w-full">
+                      <div
+                        key={item.checklist_item_id}
+                        draggable
+                        onMouseDown={(e) => {
+                          const target = e.target as HTMLElement | null;
+                          checklistDragOriginIsHandleRef.current =
+                            !!target && !!target.closest(`.${checklistDnd.dragHandle}`);
+                        }}
+                        onDragStart={(e) => {
+                          if (!checklistDragOriginIsHandleRef.current) {
+                            e.preventDefault();
+                            return;
+                          }
+                          handleChecklistDragStart(e, item.checklist_item_id);
+                        }}
+                        onDragOver={(e) => handleChecklistDragOver(e, item.checklist_item_id)}
+                        onDrop={(e) => handleChecklistDrop(e, item.checklist_item_id)}
+                        onDragEnd={() => {
+                          checklistDragOriginIsHandleRef.current = false;
+                          resetChecklistDragState();
+                        }}
+                      >
+                        {isEditingChecklist && (
+                          <Tooltip content={taskFormT('insertChecklistItem', 'Insert item here')}>
+                            <div
+                              className={`${checklistDnd.insertZone} ${isAnyDragging ? checklistDnd.insertZoneHidden : ''}`}
+                              role="button"
+                              tabIndex={-1}
+                              aria-label={taskFormT('insertChecklistItem', 'Insert item here')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newId = addChecklistItem(index);
+                                setEditingChecklistItemId(newId);
+                              }}
+                            >
+                              <div className={checklistDnd.insertZoneLine} />
+                              <div className={checklistDnd.insertZoneButton}>
+                                <Plus className="h-3 w-3" />
+                              </div>
+                            </div>
+                          </Tooltip>
+                        )}
+                        {isDropTarget && checklistDropPosition === 'before' && (
+                          <div className={`${checklistDnd.dropPlaceholder} ${checklistDnd.visible}`} />
+                        )}
+                        <div
+                          className={`flex items-center gap-2 w-full ${checklistDnd.row} ${
+                            isDragging ? checklistDnd.dragging : ''
+                          } ${isEntering ? checklistDnd.entering : ''}`}
+                        >
+                          <Tooltip content={taskFormT('reorderChecklistItem', 'Drag to reorder')}>
+                            <div
+                              className={`${checklistDnd.dragHandle} cursor-grab text-gray-400 flex-none`}
+                              aria-label={taskFormT('reorderChecklistItem', 'Drag to reorder')}
+                            >
+                              <GripVertical className="h-4 w-4" />
+                            </div>
+                          </Tooltip>
                         <Checkbox
                           checked={item.completed}
                           onChange={(e) => updateChecklistItem(index, 'completed', e.target.checked)}
@@ -1818,7 +1950,7 @@ export default function TaskForm({
                               wrapperClassName="!mb-0 !px-0"
                               onBlur={() => setEditingChecklistItemId(null)} // Stop editing when focus is lost
                               autoFocus={editingChecklistItemId === item.checklist_item_id}
-                              onKeyDown={handleChecklistItemKeyDown}
+                              onKeyDown={(e) => handleChecklistItemKeyDown(e, index)}
                             />
                           </div>
                         ) : (
@@ -1831,37 +1963,63 @@ export default function TaskForm({
                         )}
                         <div className="flex items-center gap-1 shrink-0">
                           {!isItemEditing && (
+                            <Tooltip content={taskFormT('editChecklistItem', 'Edit checklist item')}>
+                              <Button
+                                id={`edit-checklist-${item.checklist_item_id}`}
+                                type="button"
+                                variant="icon"
+                                size="icon"
+                                onClick={() => setEditingChecklistItemId(item.checklist_item_id)}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                            </Tooltip>
+                          )}
+                          <Tooltip content={taskFormT('removeChecklistItem', 'Remove checklist item')}>
                             <Button
-                              id={`edit-checklist-${item.checklist_item_id}`}
+                              id={`remove-checklist-${item.checklist_item_id}`}
                               type="button"
                               variant="icon"
                               size="icon"
-                              onClick={() => setEditingChecklistItemId(item.checklist_item_id)}
-                              title={taskFormT('editChecklistItem', 'Edit checklist item')}
+                              // Fire on mousedown (with preventDefault) so the textarea's
+                              // blur handler doesn't unmount this button before click fires.
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                removeChecklistItem(index);
+                              }}
+                              className="text-destructive hover:text-destructive"
                             >
-                              <Pencil className="h-3.5 w-3.5" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
-                          )}
-                          <Button
-                            id={`remove-checklist-${item.checklist_item_id}`}
-                            type="button"
-                            variant="icon"
-                            size="icon"
-                            // Fire on mousedown (with preventDefault) so the textarea's
-                            // blur handler doesn't unmount this button before click fires.
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              removeChecklistItem(index);
-                            }}
-                            className="text-destructive hover:text-destructive"
-                            title={taskFormT('removeChecklistItem', 'Remove checklist item')}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          </Tooltip>
                         </div>
+                        </div>
+                        {isDropTarget && checklistDropPosition === 'after' && (
+                          <div className={`${checklistDnd.dropPlaceholder} ${checklistDnd.visible}`} />
+                        )}
                       </div>
                     );
                   })}
+                  {isEditingChecklist && checklistItems.length > 0 && draggedChecklistId === null && (
+                    <Tooltip content={taskFormT('insertChecklistItem', 'Insert item here')}>
+                      <div
+                        className={checklistDnd.insertZone}
+                        role="button"
+                        tabIndex={-1}
+                        aria-label={taskFormT('insertChecklistItem', 'Insert item here')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newId = addChecklistItem(checklistItems.length);
+                          setEditingChecklistItemId(newId);
+                        }}
+                      >
+                        <div className={checklistDnd.insertZoneLine} />
+                        <div className={checklistDnd.insertZoneButton}>
+                          <Plus className="h-3 w-3" />
+                        </div>
+                      </div>
+                    </Tooltip>
+                  )}
                 </div>
 
           </div>

@@ -434,10 +434,13 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
       });
     }
 
-    // Sort projects with case-insensitive alphabetical sorting
-    filtered.sort((a, b) => {
-      return a.project_name.toLowerCase().localeCompare(b.project_name.toLowerCase());
-    });
+    // Sort projects alphabetically with natural numeric ordering (e.g. "Project 2" before "Project 10")
+    filtered.sort((a, b) =>
+      a.project_name.localeCompare(b.project_name, undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      })
+    );
 
     return filtered;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tagsVersion tracks projectTagsRef mutations
