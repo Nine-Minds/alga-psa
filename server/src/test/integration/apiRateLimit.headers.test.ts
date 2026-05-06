@@ -91,14 +91,24 @@ describe('API rate limit headers', () => {
     testState.validateApiKeyAnyTenantMock.mockReset();
     testState.validateApiKeyForTenantMock.mockReset();
     testState.findUserByIdForApiMock.mockReset();
-    testState.runWithTenantMock.mockClear();
-    testState.hasPermissionMock.mockClear();
-    testState.apiRateLimitConfigGetterMock.mockClear();
+    testState.runWithTenantMock.mockReset();
+    testState.hasPermissionMock.mockReset();
+    testState.apiRateLimitConfigGetterMock.mockReset();
 
-    testState.validateApiKeyAnyTenantMock.mockResolvedValue({
-      tenant: '11111111-1111-1111-1111-111111111111',
-      api_key_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-      user_id: '22222222-2222-2222-2222-222222222222',
+    testState.validateApiKeyAnyTenantMock.mockImplementation(async (apiKey: string) => {
+      if (apiKey === 'second-api-key') {
+        return {
+          tenant: '11111111-1111-1111-1111-111111111111',
+          api_key_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+          user_id: '22222222-2222-2222-2222-222222222222',
+        };
+      }
+
+      return {
+        tenant: '11111111-1111-1111-1111-111111111111',
+        api_key_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        user_id: '22222222-2222-2222-2222-222222222222',
+      };
     });
     testState.validateApiKeyForTenantMock.mockResolvedValue(null);
     testState.findUserByIdForApiMock.mockResolvedValue({
@@ -106,6 +116,9 @@ describe('API rate limit headers', () => {
       tenant: '11111111-1111-1111-1111-111111111111',
       user_type: 'internal',
     });
+    testState.runWithTenantMock.mockImplementation(async (_tenant: string, callback: () => Promise<unknown>) => callback());
+    testState.hasPermissionMock.mockResolvedValue(true);
+    testState.apiRateLimitConfigGetterMock.mockResolvedValue({ maxTokens: 120, refillRate: 1 });
 
     await TokenBucketRateLimiter.getInstance().initialize(
       async () => createMockRedis(),
@@ -162,5 +175,35 @@ describe('API rate limit headers', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('X-RateLimit-Limit')).toBe('120');
     expect(response.headers.get('X-RateLimit-Remaining')).toBe('119');
+  });
+
+  it('T009: isolates rate-limit buckets per API key within the same tenant', async () => {
+    TokenBucketRateLimiter.resetInstance();
+    testState.apiRateLimitConfigGetterMock.mockResolvedValue({ maxTokens: 5, refillRate: 1 });
+    await TokenBucketRateLimiter.getInstance().initialize(
+      async () => createMockRedis(),
+      { api: async () => ({ maxTokens: 5, refillRate: 1 }) },
+    );
+
+    const controller = new TestTicketController();
+    const handler = controller.list();
+
+    for (let attempt = 1; attempt <= 5; attempt += 1) {
+      expect((await handler(makeRequest())).status).toBe(200);
+    }
+
+    const throttled = await handler(makeRequest());
+    expect(throttled.status).toBe(429);
+
+    const secondKeyRequest = new NextRequest('http://localhost/api/v1/tickets', {
+      headers: {
+        'x-api-key': 'second-api-key',
+      },
+    });
+    const unaffected = await handler(secondKeyRequest);
+
+    expect(unaffected.status).toBe(200);
+    expect(unaffected.headers.get('X-RateLimit-Limit')).toBe('5');
+    expect(unaffected.headers.get('X-RateLimit-Remaining')).toBe('4');
   });
 });

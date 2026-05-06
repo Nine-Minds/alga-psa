@@ -50,7 +50,7 @@
   {
     "id": "T009",
     "description": "Integration (vitest + real Redis, server/src/test/integration/apiRateLimit.keyIsolation.test.ts): two API keys K1 and K2 in the same tenant with maxTokens=5; exhaust K1; call #6 with K1 → 429, but call #1 with K2 → 200.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012", "F017"]
   },
   {

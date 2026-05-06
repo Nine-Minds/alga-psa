@@ -623,3 +623,7 @@ implementation progresses; update earlier entries when something changes.
   case assertion: an allowed authenticated request now proves
   `X-RateLimit-Limit=120` and `X-RateLimit-Remaining=119` are attached on the
   200 response from the same controller path.
+- (2026-05-06) **T009 complete.** Extended the same
+  `apiRateLimit.headers.test.ts` harness to swap API key identities within one
+  tenant and prove bucket isolation: with a 5-token config, key A throttles on
+  request 6 while key B still gets a 200 and its own `remaining=4` header.
