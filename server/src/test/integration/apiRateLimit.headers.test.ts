@@ -74,7 +74,11 @@ class TestTicketController extends ApiBaseController {
   }
 }
 
-function makeRequest(apiKey: string = 'test-api-key', tenantId?: string) {
+function makeRequest(
+  apiKey: string = 'test-api-key',
+  tenantId?: string,
+  url: string = 'http://localhost/api/v1/tickets',
+) {
   const headers = new Headers({
     'x-api-key': apiKey,
   });
@@ -82,7 +86,7 @@ function makeRequest(apiKey: string = 'test-api-key', tenantId?: string) {
     headers.set('x-tenant-id', tenantId);
   }
 
-  return new NextRequest('http://localhost/api/v1/tickets', {
+  return new NextRequest(url, {
     headers,
   });
 }
@@ -253,5 +257,31 @@ describe('API rate limit headers', () => {
     expect(unaffected.status).toBe(200);
     expect(unaffected.headers.get('X-RateLimit-Limit')).toBe('5');
     expect(unaffected.headers.get('X-RateLimit-Remaining')).toBe('4');
+  });
+
+  it('T011: bypass routes do not consume API rate-limit tokens', async () => {
+    TokenBucketRateLimiter.resetInstance();
+    testState.apiRateLimitConfigGetterMock.mockResolvedValue({ maxTokens: 5, refillRate: 1 });
+    await TokenBucketRateLimiter.getInstance().initialize(
+      async () => createMockRedis(),
+      { api: async () => ({ maxTokens: 5, refillRate: 1 }) },
+    );
+
+    const controller = new TestTicketController();
+    const handler = controller.list();
+
+    for (let attempt = 1; attempt <= 5; attempt += 1) {
+      expect((await handler(makeRequest())).status).toBe(200);
+    }
+    expect((await handler(makeRequest())).status).toBe(429);
+
+    for (let attempt = 1; attempt <= 5; attempt += 1) {
+      const bypassResponse = await handler(
+        makeRequest('test-api-key', undefined, 'http://localhost/api/v1/meta/health'),
+      );
+      expect(bypassResponse.status).toBe(200);
+    }
+
+    expect((await handler(makeRequest())).status).toBe(429);
   });
 });

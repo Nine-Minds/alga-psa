@@ -631,3 +631,7 @@ implementation progresses; update earlier entries when something changes.
   tenant-scoped API-key auth branch via `x-tenant-id` and proves the bucket key
   includes tenant: exhausting tenant A with a shared `api_key_id` no longer
   affects tenant B, which still succeeds with its own `remaining=4` header.
+- (2026-05-06) **T011 complete.** Extended the rate-limit integration harness
+  to drive an exhausted bucket and then swap only the request pathname to a
+  bypassed route (`/api/v1/meta/health`). Those calls stay 200 and the next
+  ticket-path request is still 429, proving bypasses do not consume tokens.

@@ -62,7 +62,7 @@
   {
     "id": "T011",
     "description": "Integration (vitest + real Redis, server/src/test/integration/apiRateLimit.bypass.test.ts): a request to /api/v1/health (or a route in the bypass list) does not consume tokens — verify by exhausting the bucket via /api/v1/tickets and then issuing 5 health calls that all return 200.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
