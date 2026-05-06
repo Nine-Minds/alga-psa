@@ -254,5 +254,14 @@
       "F270",
       "F271"
     ]
+  },
+  {
+    "id": "T024",
+    "description": "Component contract: Algadesk hides email-template automation surfaces in notifications settings compositions (including direct notifications route), preventing workflow/billing/project/survey template UI exposure.",
+    "implemented": true,
+    "featureIds": [
+      "F287",
+      "F288"
+    ]
   }
 ]

@@ -463,3 +463,18 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 - (2026-05-06) Completed F286 by verification of existing settings-product filtering:
   - `server/src/lib/settingsProductTabs.ts` excludes broad `integrations` tab for Algadesk.
   - `server/src/components/settings/SettingsPage.tsx` applies product-tab allowlist and keeps focused `email` tab for channel configuration.
+- (2026-05-06) Completed F287/F288 by product-gating notifications email-template surfaces for Algadesk.
+  - Updated `server/src/components/settings/general/NotificationsTab.tsx`:
+    - Added product-aware email tab allowlist for Algadesk (`settings`, `categories`, `telemetry`).
+    - Removed `email-templates` tab from Algadesk composition while preserving PSA behavior.
+    - Sanitized direct `section=email-templates` query access by restricting valid tabs in Algadesk mode.
+  - Updated `server/src/app/msp/settings/notifications/page.tsx`:
+    - Added product-aware email tab allowlist for Algadesk (`settings`, `categories`).
+    - Removed `email-templates` tab from direct notifications route in Algadesk mode while preserving PSA behavior.
+    - Sanitized direct `tab=email-templates` query access by restricting valid tabs in Algadesk mode.
+  - Added contract test T024: `server/src/test/unit/settings/algadeskEmailTemplateAutomationBoundary.contract.test.ts` asserting Algadesk-specific tab gating in both compositions.
+
+## Commands Run (additional)
+
+- `cd server && npx vitest run src/test/unit/settings/algadeskEmailTemplateAutomationBoundary.contract.test.ts src/test/unit/settings/algadeskEmailChannelsComposition.contract.test.ts src/test/unit/settings/algadeskInboundEmailChannelConfiguration.contract.test.ts`
+  - Result: pass (4 tests).

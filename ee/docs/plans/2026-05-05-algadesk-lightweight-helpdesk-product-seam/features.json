@@ -2290,7 +2290,7 @@
   {
     "id": "F287",
     "description": "Hide workflow-driven email automation surfaces for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2298,7 +2298,7 @@
   {
     "id": "F288",
     "description": "Hide survey/billing/project email template surfaces for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
