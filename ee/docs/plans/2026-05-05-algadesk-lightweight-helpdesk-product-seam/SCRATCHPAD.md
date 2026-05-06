@@ -164,3 +164,45 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - PSA tenant behavior remains unchanged (`productCode: psa` keeps full allowed menu set).
 - (2026-05-05) Command run: `cd server && npx vitest run src/test/unit/productSurfaceRegistry.test.ts`.
   - Result: pass (7 tests).
+- (2026-05-05) Completed F088 by making MSP shell branding product-aware without changing PSA shell behavior:
+  - `server/src/components/layout/Sidebar.tsx` now accepts `appDisplayName` and `appLogoAlt` props (defaults preserve PSA).
+  - `server/src/components/layout/SidebarWithFeatureFlags.tsx` sets Algadesk branding labels when `productCode === 'algadesk'`.
+  - `server/src/app/msp/MspLayoutClient.tsx` uses product-aware client UI shell title (`Algadesk MSP` vs `MSP Portal`).
+- (2026-05-05) Completed T005 with component coverage in `server/src/test/unit/layout/SidebarWithFeatureFlags.productShell.test.tsx`:
+  - Asserts Algadesk shell filters out blocked modules and uses Algadesk branding labels.
+  - Asserts PSA shell still includes representative PSA modules and uses AlgaPSA branding labels.
+- (2026-05-05) Command run: `cd server && npx vitest run src/test/unit/layout/SidebarWithFeatureFlags.productShell.test.tsx`.
+  - Result: pass (2 tests).
+- (2026-05-05) Completed F089-F102 and T007 with an Algadesk-specific dashboard composition.
+- Added dashboard data action `server/src/lib/actions/algadeskDashboardActions.ts` with tenant-scoped summaries for:
+  - open ticket count
+  - awaiting customer / awaiting internal counts
+  - ticket aging buckets (<2d, 2-7d, >7d)
+  - recently updated tickets
+  - email channel health summary from `email_providers`
+- Added Algadesk dashboard UI `server/src/components/dashboard/AlgadeskDashboard.tsx` with helpdesk-only cards/sections and no PSA-only widgets.
+- Updated `server/src/app/msp/dashboard/page.tsx` to resolve tenant product and render Algadesk dashboard for `algadesk` while preserving existing PSA dashboard behavior.
+- (2026-05-05) Completed F103-F109 and F111-F123 plus T006 with Algadesk settings tab composition narrowing.
+- Added product-aware settings tab allowlist helper: `server/src/lib/settingsProductTabs.ts`.
+- Updated `server/src/components/settings/SettingsPage.tsx` to:
+  - resolve current product via `useProduct()`
+  - filter available tabs to Algadesk-approved scope (general/users/teams/ticketing/email/client-portal)
+  - fail closed to `general` when excluded `tab` query params are requested.
+- Updated sidebar settings mode filtering:
+  - `server/src/components/layout/Sidebar.tsx` accepts `settingsSectionsOverride`.
+  - `server/src/components/layout/SidebarWithFeatureFlags.tsx` passes product-filtered settings sections.
+- Updated registry behavior in `server/src/lib/productSurfaceRegistry.ts`:
+  - added explicit Algadesk `not_found` route behavior for `/msp/settings/sla`
+  - added Algadesk query-tab filtering for `/msp/settings?tab=...` links in menu filtering.
+
+## Tests Added
+
+- T006: `server/src/test/unit/settings/settingsProductTabs.test.ts`
+  - Asserts Algadesk-approved settings tabs are present and excluded tabs (billing/SLA/projects/time-entry/integrations/extensions/experimental) are not allowed.
+- T007: `server/src/test/unit/dashboard/AlgadeskDashboard.contract.test.ts`
+  - Asserts Algadesk dashboard contains ticket/email summary sections and excludes PSA-only widget labels.
+
+## Commands Run
+
+- `cd server && npx vitest run src/test/unit/dashboard/AlgadeskDashboard.contract.test.ts src/test/unit/settings/settingsProductTabs.test.ts src/test/unit/layout/SidebarWithFeatureFlags.productShell.test.tsx src/test/unit/productSurfaceRegistry.test.ts`
+  - Result: pass (13 tests).

@@ -65,6 +65,8 @@ import { ProjectSettings } from '@alga-psa/projects/components';
 import { SecretsManagement } from './secrets';
 import { useTier, useTierFeature } from '@/context/TierContext';
 import { TIER_FEATURES, FEATURE_MINIMUM_TIER } from '@alga-psa/types';
+import { useProduct } from '@/context/ProductContext';
+import { getAllowedSettingsTabIds } from '@/lib/settingsProductTabs';
 
 type SettingsTabContent = TabContent & {
   requiredFeature?: TIER_FEATURES;
@@ -99,6 +101,9 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   const canUseCipp = useTierFeature(TIER_FEATURES.CIPP);
   const canUseTeams = useTierFeature(TIER_FEATURES.TEAMS_INTEGRATION);
   const { hasFeature } = useTier();
+  const { productCode } = useProduct();
+  const isAlgadesk = productCode === 'algadesk';
+  const allowedTabIds = useMemo(() => getAllowedSettingsTabIds(productCode), [productCode]);
 
   const baseTabContent: SettingsTabContent[] = [
     {
@@ -305,7 +310,14 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   };
 
   // Create a map of tab content by label for easy lookup
-  const allTabs = useMemo(() => [...baseTabContent, extensionsTab], [baseTabContent, extensionsTab]);
+  const allTabs = useMemo(() => {
+    const tabs = [...baseTabContent, extensionsTab];
+    if (!isAlgadesk) {
+      return tabs;
+    }
+
+    return tabs.filter((tab) => allowedTabIds.has(tab.id));
+  }, [allowedTabIds, baseTabContent, extensionsTab, isAlgadesk]);
 
   const initialTabId = useMemo(() => {
     const requestedTab = tabParam?.toLowerCase();

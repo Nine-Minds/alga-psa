@@ -698,7 +698,7 @@
   {
     "id": "F088",
     "description": "Use Algadesk branding labels in MSP shell where product name appears.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -706,7 +706,7 @@
   {
     "id": "F089",
     "description": "Create Algadesk dashboard page composition.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk dashboard"
     ]
@@ -714,7 +714,7 @@
   {
     "id": "F090",
     "description": "Show open ticket count on Algadesk dashboard.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk dashboard"
     ]
@@ -722,7 +722,7 @@
   {
     "id": "F091",
     "description": "Show ticket aging summary on Algadesk dashboard.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk dashboard"
     ]
@@ -730,7 +730,7 @@
   {
     "id": "F092",
     "description": "Show awaiting customer ticket summary on Algadesk dashboard.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk dashboard"
     ]
@@ -738,7 +738,7 @@
   {
     "id": "F093",
     "description": "Show awaiting internal ticket summary on Algadesk dashboard.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk dashboard"
     ]
@@ -746,7 +746,7 @@
   {
     "id": "F094",
     "description": "Show recently updated tickets on Algadesk dashboard.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk dashboard"
     ]
@@ -754,7 +754,7 @@
   {
     "id": "F095",
     "description": "Show email channel health summary on Algadesk dashboard.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk dashboard"
     ]
@@ -762,7 +762,7 @@
   {
     "id": "F096",
     "description": "Link dashboard ticket cards only to Algadesk-allowed ticket routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk dashboard"
     ]
@@ -770,7 +770,7 @@
   {
     "id": "F097",
     "description": "Exclude billing widgets from Algadesk dashboard.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk dashboard"
     ]
@@ -778,7 +778,7 @@
   {
     "id": "F098",
     "description": "Exclude project widgets from Algadesk dashboard.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk dashboard"
     ]
@@ -786,7 +786,7 @@
   {
     "id": "F099",
     "description": "Exclude asset widgets from Algadesk dashboard.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk dashboard"
     ]
@@ -794,7 +794,7 @@
   {
     "id": "F100",
     "description": "Exclude time/scheduling widgets from Algadesk dashboard.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk dashboard"
     ]
@@ -802,7 +802,7 @@
   {
     "id": "F101",
     "description": "Exclude workflow widgets from Algadesk dashboard.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk dashboard"
     ]
@@ -810,7 +810,7 @@
   {
     "id": "F102",
     "description": "Exclude AI/chat widgets from Algadesk dashboard.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk dashboard"
     ]
@@ -818,7 +818,7 @@
   {
     "id": "F103",
     "description": "Create Algadesk settings page composition.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]
@@ -826,7 +826,7 @@
   {
     "id": "F104",
     "description": "Expose General settings tab for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]
@@ -834,7 +834,7 @@
   {
     "id": "F105",
     "description": "Expose Users settings tab for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]
@@ -842,7 +842,7 @@
   {
     "id": "F106",
     "description": "Expose Teams settings tab for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]
@@ -850,7 +850,7 @@
   {
     "id": "F107",
     "description": "Expose Ticketing settings tab for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]
@@ -858,7 +858,7 @@
   {
     "id": "F108",
     "description": "Expose Email Channels settings tab for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]
@@ -866,7 +866,7 @@
   {
     "id": "F109",
     "description": "Expose Client Portal settings tab for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]
@@ -882,7 +882,7 @@
   {
     "id": "F111",
     "description": "Expose Profile or route users to profile settings as appropriate.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]
@@ -890,7 +890,7 @@
   {
     "id": "F112",
     "description": "Expose Security settings as appropriate for MSP users.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]
@@ -898,7 +898,7 @@
   {
     "id": "F113",
     "description": "Hide Language tab only if it is not part of Algadesk launch scope.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]
@@ -906,7 +906,7 @@
   {
     "id": "F114",
     "description": "Hide SLA settings for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]
@@ -914,7 +914,7 @@
   {
     "id": "F115",
     "description": "Hide Projects settings for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]
@@ -922,7 +922,7 @@
   {
     "id": "F116",
     "description": "Hide Interactions settings if support interactions are excluded.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]
@@ -930,7 +930,7 @@
   {
     "id": "F117",
     "description": "Hide Time Entry settings for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]
@@ -938,7 +938,7 @@
   {
     "id": "F118",
     "description": "Hide Billing settings for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]
@@ -946,7 +946,7 @@
   {
     "id": "F119",
     "description": "Hide broad Notifications settings if only ticket/email settings are included.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]
@@ -954,7 +954,7 @@
   {
     "id": "F120",
     "description": "Hide broad Integrations settings except focused email channel entry.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]
@@ -962,7 +962,7 @@
   {
     "id": "F121",
     "description": "Hide Extensions settings for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]
@@ -970,7 +970,7 @@
   {
     "id": "F122",
     "description": "Hide Experimental Features settings for Algadesk tenants unless explicitly retained.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]
@@ -978,7 +978,7 @@
   {
     "id": "F123",
     "description": "Reject excluded settings tabs on direct URL access.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk settings"
     ]

@@ -42,7 +42,7 @@
   {
     "id": "T005",
     "description": "Component: Algadesk MSP shell renders only dashboard, tickets, clients, contacts, knowledge base, and allowed settings/profile/security navigation, while PSA shell remains unchanged.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063",
       "F068",
@@ -53,7 +53,7 @@
   {
     "id": "T006",
     "description": "Component: Algadesk settings exposes only approved tabs and rejects direct access to excluded tabs such as billing, SLA, projects, time entry, integrations, extensions, and experimental features.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F103",
       "F107",
@@ -64,7 +64,7 @@
   {
     "id": "T007",
     "description": "Component: Algadesk dashboard shows ticket and email-channel health summaries and contains no billing, project, asset, time, workflow, or AI widgets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F089",
       "F090",

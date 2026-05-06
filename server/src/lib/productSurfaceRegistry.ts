@@ -39,6 +39,11 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
   },
   {
+    group: 'msp_settings_excluded',
+    staticPrefixes: ['/msp/settings/sla'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found' },
+  },
+  {
     group: 'msp_core_helpdesk',
     staticPrefixes: ['/msp/tickets', '/msp/clients', '/msp/contacts', '/msp/knowledge-base', '/msp/settings', '/msp/profile', '/msp/security-settings'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
@@ -189,6 +194,11 @@ type MenuLikeSection<T extends MenuLikeItem> = { items: T[] } & Record<string, u
 
 function includeByHref(productCode: ProductCode, href?: string): boolean {
   if (!href || href.startsWith('http')) return true;
+  if (productCode === 'algadesk' && href.startsWith('/msp/settings?tab=')) {
+    const tab = new URLSearchParams(href.split('?')[1]).get('tab');
+    const allowedTabs = new Set(['general', 'users', 'teams', 'ticketing', 'email', 'client-portal']);
+    return tab ? allowedTabs.has(tab) : false;
+  }
   if (href.startsWith('/msp/')) return resolveProductRouteBehavior(productCode, href) === 'allowed';
   if (href.startsWith('/client-portal/')) return resolveProductRouteBehavior(productCode, href) === 'allowed';
   return productCode === 'psa';

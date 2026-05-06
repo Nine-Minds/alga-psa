@@ -7,6 +7,7 @@ import {
   bottomMenuItems,
   menuItems as legacyMenuItems,
   navigationSections as originalSections,
+  settingsNavigationSections,
   type MenuItem,
   type NavigationSection,
 } from '@/config/menuConfig';
@@ -58,6 +59,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const { hasFeature } = useTier();
   const { productCode } = useProduct();
+  const isAlgadesk = productCode === 'algadesk';
 
   useEffect(() => {
     if (!useNavigationSections) return;
@@ -118,11 +120,18 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     );
   }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode]);
 
+  const settingsSections = useMemo<NavigationSection[]>(() => {
+    return filterMenuSectionsByProduct(productCode, settingsNavigationSections as unknown as NavigationSection[]);
+  }, [productCode]);
+
   return (
     <Sidebar
       {...props}
       menuSections={menuSections}
       bottomMenuItems={bottomMenuItems}
+      appDisplayName={isAlgadesk ? 'Algadesk' : 'AlgaPSA'}
+      appLogoAlt={isAlgadesk ? 'Algadesk Logo' : 'AlgaPSA Logo'}
+      settingsSectionsOverride={settingsSections}
     />
   );
 }
