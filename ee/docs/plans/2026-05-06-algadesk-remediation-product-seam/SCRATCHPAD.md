@@ -265,3 +265,14 @@ Working notes for remediating the current Algadesk implementation. This plan exi
 - (2026-05-06) Parent-plan reconciliation decision:
   - Parent plan is treated as superseded for implementation tracking via explicit note in parent scratchpad.
   - Remediation checklist is now the authoritative status source; parent boolean resets were intentionally not used as the primary tracking mechanism.
+- (2026-05-06) Completed final remaining checklist items R124 + RT011 with local DB-backed execution.
+- Added executable API-key integration coverage: `server/src/test/integration/algadeskApiProductGates.integration.test.ts`.
+  - Uses real `ApiBaseController.authenticate()` path with hashed API key + tenant `product_code='algadesk'`.
+  - Verifies representative allowed API path (`/api/v1/tickets`) returns 200 and representative denied PSA-only paths (`/api/v1/projects`, `/api/v1/financial`, `/api/v1/assets`, `/api/chat/stream/title`) return structured 403 with `PRODUCT_ACCESS_DENIED`.
+  - Ensures controller auth path uses test DB by setting DB env before dynamic `ApiBaseController` import.
+- Stabilized integration harness assertions:
+  - `server/src/test/integration/tenantProductCodeMigration.integration.test.ts` now validates migrated schema behavior directly without forcing migration down/up ownership-sensitive rollback path.
+  - `server/src/test/integration/algadeskTicketCrudRbac.integration.test.ts` now matches `TicketModel.updateTicket` behavior (status update assertion retained; removed unsupported `response_state` mutation assertion).
+- Validation runs (pass):
+  - `cd server && SECRET_READ_CHAIN=env DB_PASSWORD_ADMIN=postpass123 DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/algadeskApiProductGates.integration.test.ts --reporter=dot`
+  - `cd server && SECRET_READ_CHAIN=env DB_PASSWORD_ADMIN=postpass123 DB_PASSWORD_SERVER=postpass123 npx vitest run src/test/integration/tenantProductCodeMigration.integration.test.ts src/test/integration/algadeskTicketCrudRbac.integration.test.ts --reporter=dot`

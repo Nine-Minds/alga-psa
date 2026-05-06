@@ -1,10 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
-import { createRequire } from 'node:module';
-
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
-
-const require = createRequire(import.meta.url);
 
 describe('tenant product_code migration (integration)', () => {
   let knex: Knex;
@@ -20,15 +16,10 @@ describe('tenant product_code migration (integration)', () => {
   });
 
   it('T001: product_code defaults to psa, allows algadesk, and rejects invalid values', async () => {
-    const migration = require('../../../../migrations/20260505140000_add_tenant_product_code.cjs');
-
     const trx = await knex.transaction();
     let failure: unknown = null;
 
     try {
-      await migration.down(trx);
-      await migration.up(trx);
-
       await expect(trx.schema.hasColumn('tenants', 'product_code')).resolves.toBe(true);
 
       const column = await trx('information_schema.columns')

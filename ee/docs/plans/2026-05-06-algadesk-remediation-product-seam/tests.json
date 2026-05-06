@@ -106,7 +106,7 @@
   {
     "id": "RT011",
     "description": "API integration: Algadesk API key can access representative allowed ticket/client/contact/kb/email endpoints and gets structured 403 for representative denied billing/project/asset/time/workflow/AI/document endpoints.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "R097",
       "R098",

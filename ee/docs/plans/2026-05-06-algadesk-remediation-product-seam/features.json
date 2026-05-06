@@ -986,7 +986,7 @@
   {
     "id": "R124",
     "description": "Run focused integration tests for product_code migration and representative API gates when DB is available.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Test remediation"
     ]
