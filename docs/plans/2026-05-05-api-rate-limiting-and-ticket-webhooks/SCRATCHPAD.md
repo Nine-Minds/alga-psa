@@ -44,6 +44,10 @@ implementation progresses; update earlier entries when something changes.
 - (2026-05-05) **Rate-limiter and webhooks share the
   `TokenBucketRateLimiter` namespace work.** The webhook per-webhook outbound
   cap (namespace `'webhook-out'`) depends on F001–F005 being merged first.
+- (2026-05-06) **Place the v1 webhook admin UI under Security, next to API Keys.**
+  The open question remained unresolved, and the existing `/msp/security-settings`
+  surface already hosts the external API admin controls. Reusing that location
+  avoids inventing a second admin-only settings entry point during the MVP.
 
 ## Discoveries / Constraints
 
@@ -177,6 +181,9 @@ implementation progresses; update earlier entries when something changes.
   queue depth is emitted from the Redis ZSET wrapper, delivery totals and
   durations from the delivery processor, and auto-disable counts from the
   state transition helper.
+- (2026-05-05) Public docs for this plan now live at
+  `docs/api/api-rate-limiting-and-ticket-webhooks.md` and are linked from
+  `docs/api/api_overview.md`.
 - (2026-05-05) `WebhookDeliveryQueue` now owns the retry loop contract:
   processors now return explicit `delivered` / `retry` / `abandoned`
   outcomes. The queue handles atomic `zRem` claims, caps active work at 50
@@ -194,6 +201,15 @@ implementation progresses; update earlier entries when something changes.
   Generic `conditions`, `tags`, and `entity_types` remain schema-only for now
   per the PRD; the enqueue path simply treats an empty/missing `entity_ids`
   list as "match all."
+- (2026-05-06) The new webhook settings tab uses tenant-authenticated server
+  actions instead of the standalone `/api/v1/webhooks` controller surface.
+  That keeps the admin UI on the same auth model as the rest of settings while
+  still reusing the shared DAL, delivery transport, signing helper, and queue.
+- (2026-05-06) `tsx` import-smoke of the new client component still trips the
+  repo's unrelated `react-day-picker/src/style.css` loader issue. The focused
+  validation path for F047 is therefore `git diff --check` plus a direct smoke
+  import of the new server-action module, matching the earlier UI validation
+  limitation already documented for this repo.
 
 ## Commands / Runbooks
 
@@ -235,6 +251,8 @@ implementation progresses; update earlier entries when something changes.
   `cd server && npx tsx -e "import('./src/lib/webhooks/webhookModel.ts').then(() => console.log('ok'))"`
 - (2026-05-05) Smoke-import the webhook delivery transport after edits:
   `cd server && npx tsx -e "import('./src/lib/webhooks/delivery.ts').then(() => console.log('delivery-ok'))"`
+- (2026-05-06) Smoke-import the webhook admin server actions after edits:
+  `npx tsx -e "import('./packages/auth/src/actions/webhookActions.ts').then(() => console.log('webhook-actions-ok'))"`
 - (2026-05-05) Quick SSRF helper smoke:
   `cd server && npx tsx -e "import('./src/lib/webhooks/ssrf.ts').then(async ({ assertSafeWebhookTarget }) => { await assertSafeWebhookTarget('https://example.com'); console.log('public-ok'); try { await assertSafeWebhookTarget('http://127.0.0.1'); process.exit(1); } catch (error) { console.log((error && error.name) || 'error'); } })"`
 - (2026-05-05) Quick signing helper smoke:
@@ -576,3 +594,16 @@ implementation progresses; update earlier entries when something changes.
   `webhook_queue_depth`, `webhook_deliveries_total`,
   `webhook_delivery_duration_ms`, and
   `webhook_auto_disabled_total`.
+- (2026-05-05) **F051 complete.** Added
+  `docs/api/api-rate-limiting-and-ticket-webhooks.md` with the public
+  rate-limit contract, webhook event examples, HMAC verification recipes,
+  idempotency/ordering notes, and retry schedule; linked it from
+  `docs/api/api_overview.md`.
+- (2026-05-06) **F047 complete.** Added tenant-authenticated webhook admin
+  actions in `packages/auth/src/actions/webhookActions.ts`, a new
+  `AdminWebhooksSetup` settings component with create/edit, test-send,
+  secret rotation, pause/resume, delete, delivery history, and manual retry
+  enqueue, plus Security settings tab wiring in
+  `server/src/components/settings/security/SecuritySettingsPage.tsx`. The DAL
+  now also exposes tenant-scoped webhook listing and paginated delivery
+  history helpers for the UI.

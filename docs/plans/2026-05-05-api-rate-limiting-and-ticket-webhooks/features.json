@@ -284,7 +284,7 @@
   {
     "id": "F047",
     "description": "Build the Webhooks settings UI: list view (status, last delivery, success rate), create/edit form (name, URL, event types multi-select, custom headers, retry config), delivery history (paginated with response status/body/retry button), reveal-on-create + rotate secret, pause/resume/delete.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
@@ -308,7 +308,7 @@
   {
     "id": "F051",
     "description": "Public-facing API documentation: 429 semantics + Retry-After + X-RateLimit-* headers, default limits, observation-vs-enforce mode; webhook event payloads with example JSON per event; HMAC verification recipes in Node and Python; idempotency/ordering guarantees; retry behavior table.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Rollout / Migration"]
   }
 ]

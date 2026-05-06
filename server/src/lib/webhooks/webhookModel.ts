@@ -138,6 +138,11 @@ export interface MarkAbandonedInput {
   completedAt?: Date;
 }
 
+export interface ListWebhookDeliveriesOptions {
+  page?: number;
+  limit?: number;
+}
+
 function mapWebhookRow(row: any): WebhookRecord {
   return {
     tenant: row.tenant,
@@ -294,6 +299,15 @@ async function listForEventType(
     })
     .whereRaw('? = ANY(event_types)', [eventType])
     .orderBy('created_at', 'asc');
+
+  return rows.map(mapWebhookRow);
+}
+
+async function listByTenant(tenant: string): Promise<WebhookRecord[]> {
+  const knex = await getConnection(tenant);
+  const rows = await knex(WEBHOOKS_TABLE)
+    .where({ tenant })
+    .orderBy('created_at', 'desc');
 
   return rows.map(mapWebhookRow);
 }
@@ -493,6 +507,47 @@ async function getDeliveryById(
   return row ? mapDeliveryRow(row) : null;
 }
 
+async function listDeliveries(
+  tenant: string,
+  webhookId: string,
+  options: ListWebhookDeliveriesOptions = {},
+): Promise<{
+  data: WebhookDeliveryRecord[];
+  page: number;
+  limit: number;
+  total: number;
+}> {
+  const page = Math.max(1, options.page ?? 1);
+  const limit = Math.max(1, Math.min(options.limit ?? 10, 100));
+  const offset = (page - 1) * limit;
+  const knex = await getConnection(tenant);
+
+  const [rows, totalRow] = await Promise.all([
+    knex(WEBHOOK_DELIVERIES_TABLE)
+      .where({
+        tenant,
+        webhook_id: webhookId,
+      })
+      .orderBy('attempted_at', 'desc')
+      .limit(limit)
+      .offset(offset),
+    knex(WEBHOOK_DELIVERIES_TABLE)
+      .where({
+        tenant,
+        webhook_id: webhookId,
+      })
+      .count<{ count: string }[]>({ count: '*' })
+      .first(),
+  ]);
+
+  return {
+    data: rows.map(mapDeliveryRow),
+    page,
+    limit,
+    total: Number(totalRow?.count ?? 0),
+  };
+}
+
 async function updateStats(
   input: UpdateWebhookStatsInput,
 ): Promise<WebhookRecord | null> {
@@ -564,11 +619,13 @@ async function getSigningSecret(
 export const webhookModel = {
   getById,
   listForEventType,
+  listByTenant,
   insert,
   update,
   delete: deleteWebhook,
   recordDelivery,
   getDeliveryById,
+  listDeliveries,
   updateStats,
   markAbandoned,
   getSigningSecret,
