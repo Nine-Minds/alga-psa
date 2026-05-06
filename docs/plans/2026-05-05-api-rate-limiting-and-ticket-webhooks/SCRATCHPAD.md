@@ -73,6 +73,11 @@ implementation progresses; update earlier entries when something changes.
   `(tenant, NULL)` tenant-default rows. The migration needs a separate unique
   partial index on `tenant WHERE api_key_id IS NULL` to make the null fallback
   row actually unique.
+- (2026-05-05) The current secret-provider API resolves tenant secrets by
+  `(tenant, secretName)`, not by an arbitrary vault path. For webhook signing
+  secrets, `signing_secret_vault_path` therefore acts as stored metadata; the
+  DAL resolves the actual secret by taking the basename of the stored path and
+  calling `getTenantSecret(tenant, basename(path))`.
 - (2026-05-05) `ApiBaseController.authenticate` is **not** the universal
   hook point — `withApiKeyAuth` and `withAuth` in `apiMiddleware.ts:144,201`
   are independent paths, and the NM Store branch in `withApiKeyAuth`
@@ -125,6 +130,8 @@ implementation progresses; update earlier entries when something changes.
   package-resolution / JSX-config errors unrelated to this feature slice, so
   compile verification here is limited to focused runtime/unit checks plus
   manual review.
+- (2026-05-05) Smoke-import the webhook DAL after edits:
+  `cd server && npx tsx -e "import('./src/lib/webhooks/webhookModel.ts').then(() => console.log('ok'))"`
 
 ## Links / References
 
@@ -148,6 +155,8 @@ implementation progresses; update earlier entries when something changes.
     extend.
   - `ee/server/migrations/20251014120000_create_stripe_integration_tables.cjs:28`
     — `webhook_secret_vault_path` precedent.
+  - `server/src/lib/webhooks/webhookModel.ts` — tenant-scoped webhook DAL and
+    signing-secret resolution helpers.
 
 ## Open Questions
 
@@ -306,3 +315,10 @@ implementation progresses; update earlier entries when something changes.
   to distribute both `webhooks` and `webhook_deliveries` on `tenant`, with
   the same Citus-enabled / already-distributed guards used by the earlier
   rate-limit distribution migration.
+- (2026-05-05) **F027 complete.** Added
+  `server/src/lib/webhooks/webhookModel.ts` as the first non-mock webhook
+  foundation: public reads omit `signing_secret_vault_path`, inserts persist
+  signing secrets via `getSecretProviderInstance()`, delivery attempts write
+  to `webhook_deliveries`, stats updates increment the rolling counters on
+  `webhooks`, and `getSigningSecret()` resolves the stored path-style
+  reference back to the tenant secret name.

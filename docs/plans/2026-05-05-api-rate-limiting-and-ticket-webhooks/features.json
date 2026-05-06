@@ -158,7 +158,7 @@
   {
     "id": "F027",
     "description": "Implement webhookModel DAL with getById(webhookId, tenant), listForEventType(tenant, eventType), insert (with vault-path resolution), update, delete, recordDelivery, updateStats, markAbandoned, plus getSigningSecret(webhookId, tenant) that resolves signing_secret_vault_path via getSecretProviderInstance().",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API / Integrations", "Security / Permissions"]
   },
   {
