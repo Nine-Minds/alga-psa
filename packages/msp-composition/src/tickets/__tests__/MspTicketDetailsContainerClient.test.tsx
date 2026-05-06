@@ -76,5 +76,6 @@ describe('MspTicketDetailsContainerClient', () => {
 
     expect(typeof lastTicketDetailsContainerProps.uploadTicketAttachmentAction).toBe('function');
     expect(typeof lastTicketDetailsContainerProps.deleteDraftTicketAttachmentImagesAction).toBe('function');
+    expect(typeof lastTicketDetailsContainerProps.resolveTicketAttachmentViewUrl).toBe('function');
   });
 });

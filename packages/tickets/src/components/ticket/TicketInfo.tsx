@@ -87,6 +87,7 @@ interface TicketInfoProps {
     ticketId: string;
     documentIds: string[];
   }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
+  resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
   onOpenEmailNotificationLogs?: () => void;
   titleRef?: React.Ref<HTMLHeadingElement>;
   hideSlaStatus?: boolean;
@@ -124,6 +125,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   onClipboardImageUploaded,
   uploadTicketAttachmentAction,
   deleteDraftTicketAttachmentImagesAction,
+  resolveTicketAttachmentViewUrl,
   onOpenEmailNotificationLogs,
   titleRef,
   hideSlaStatus = false,
@@ -470,6 +472,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     onDiscard: discardDescriptionEdit,
     uploadDocumentAction: uploadTicketAttachmentAction,
     deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,
+    resolveDocumentViewUrl: resolveTicketAttachmentViewUrl,
     deleteDocumentFn: deleteDocument,
   });
 

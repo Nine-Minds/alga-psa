@@ -364,3 +364,7 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - Result: pass (9 tests).
 - `cd server && npx vitest run ../packages/msp-composition/src/tickets/__tests__/MspTicketDetailsContainerClient.test.tsx src/test/unit/app/msp/tickets/page.productComposition.test.tsx 'src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx'`
   - Result: package test blocked by existing Vitest mock/export mismatch in this environment (`@alga-psa/auth` mock missing `withAuthCheck`); server page-composition tests still pass.
+- (2026-05-05) Completed F221 by introducing a composed ticket-attachment view/download URL resolver seam.
+- Added `resolveTicketAttachmentViewUrl` in `packages/msp-composition/src/tickets/composedClipboardActions.ts` and threaded it through ticket detail composition (`TicketDetailsContainer` -> `TicketDetails` -> `TicketInfo`/`TicketConversation`) into `useTicketRichTextUploadSession`.
+- `useTicketRichTextUploadSession` now accepts `resolveDocumentViewUrl` so Algadesk ticket components can resolve attachment URLs via composition rather than hardcoded URL construction in component logic.
+- Added hook-level coverage in `packages/tickets/src/components/ticket/useTicketRichTextUploadSession.test.tsx` to assert injected URL-resolver behavior.

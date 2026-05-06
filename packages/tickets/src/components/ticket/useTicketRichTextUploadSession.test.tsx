@@ -237,4 +237,34 @@ describe('useTicketRichTextUploadSession', () => {
     expect(result.current.draftClipboardImages).toEqual([]);
     expect(onDiscard).toHaveBeenCalledTimes(1);
   });
+
+  it('uses injected view/download URL resolver when provided', async () => {
+    const { useTicketRichTextUploadSession } = await loadHook();
+    const uploadDocumentAction = vi.fn().mockResolvedValue(createUploadResult('doc-42', 'file-42'));
+    const resolveDocumentViewUrl = vi.fn().mockReturnValue('/algadesk/attachments/file-42');
+
+    const { result } = renderHook(() =>
+      useTicketRichTextUploadSession({
+        componentLabel: 'TicketConversation',
+        ticketId: 'ticket-1',
+        userId: 'user-1',
+        trackDraftUploads: true,
+        onDiscard: vi.fn(),
+        uploadDocumentAction,
+        resolveDocumentViewUrl,
+        toastApi: { error: vi.fn(), success: vi.fn() },
+      })
+    );
+
+    let resolvedUrl = '';
+    await act(async () => {
+      resolvedUrl = await result.current.uploadFile(new File(['1'], 'one.png', { type: 'image/png' }));
+    });
+
+    expect(resolveDocumentViewUrl).toHaveBeenCalledWith(
+      expect.objectContaining({ document_id: 'doc-42', file_id: 'file-42' })
+    );
+    expect(resolvedUrl).toBe('/algadesk/attachments/file-42');
+    expect(result.current.draftClipboardImages[0]?.url).toBe('/algadesk/attachments/file-42');
+  });
 });

@@ -75,6 +75,7 @@ interface TicketDetailsContainerProps {
     ticketId: string;
     documentIds: string[];
   }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
+  resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
 }
 
 export default function TicketDetailsContainer({
@@ -88,6 +89,7 @@ export default function TicketDetailsContainer({
   hideSlaStatus = false,
   uploadTicketAttachmentAction,
   deleteDraftTicketAttachmentImagesAction,
+  resolveTicketAttachmentViewUrl,
 }: TicketDetailsContainerProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -261,6 +263,7 @@ export default function TicketDetailsContainer({
             hideSlaStatus={hideSlaStatus}
             uploadTicketAttachmentAction={uploadTicketAttachmentAction}
             deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
+            resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
         />
         </Suspense>
       </div>

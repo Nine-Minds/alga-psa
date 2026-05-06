@@ -13,7 +13,11 @@ import { TicketIntegrationProvider } from '@alga-psa/projects/context/TicketInte
 import { useTicketIntegrationValue } from '../projects/useTicketIntegrationValue';
 import TicketSurveySummaryCard from '@alga-psa/surveys/components/TicketSurveySummaryCard';
 import { MspClientCrossFeatureProvider } from '../clients/MspClientCrossFeatureProvider';
-import { deleteDraftClipboardImages, uploadTicketAttachmentDocument } from './composedClipboardActions';
+import {
+  deleteDraftClipboardImages,
+  resolveTicketAttachmentViewUrl,
+  uploadTicketAttachmentDocument
+} from './composedClipboardActions';
 
 type MspTicketDetailsContainerClientProps = Omit<
   React.ComponentProps<typeof TicketDetailsContainer>,
@@ -94,6 +98,7 @@ export default function MspTicketDetailsContainerClient({
         hideSlaStatus={isAlgadeskMode}
         uploadTicketAttachmentAction={uploadTicketAttachmentDocument}
         deleteDraftTicketAttachmentImagesAction={deleteDraftClipboardImages}
+        resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
       />
     </TicketIntegrationProvider>
   );

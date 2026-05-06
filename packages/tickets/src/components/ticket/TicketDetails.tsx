@@ -181,6 +181,7 @@ interface TicketDetailsProps {
         ticketId: string;
         documentIds: string[];
     }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
+    resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
 }
 
 const TicketDetails: React.FC<TicketDetailsProps> = ({
@@ -227,6 +228,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     hideSlaStatus = false,
     uploadTicketAttachmentAction,
     deleteDraftTicketAttachmentImagesAction,
+    resolveTicketAttachmentViewUrl,
 }) => {
     const { t } = useTranslation('features/tickets');
     const { data: session } = useSession();
@@ -2233,6 +2235,7 @@ const handleClose = () => {
                                     onClipboardImageUploaded={refreshTicketDocuments}
                                     uploadTicketAttachmentAction={uploadTicketAttachmentAction}
                                     deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
+                                    resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
                                     onOpenEmailNotificationLogs={() => setIsEmailNotificationLogsDrawerOpen(true)}
                                     hideSlaStatus={hideSlaStatus}
                                     additionalAgents={additionalAgents.map(a => ({
@@ -2278,6 +2281,7 @@ const handleClose = () => {
                                     onClipboardImageUploaded={refreshTicketDocuments}
                                     uploadTicketAttachmentAction={uploadTicketAttachmentAction}
                                     deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
+                                    resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
                                     defaultNewestFirst
                                     canViewCommentMetadataDebug={canViewCommentMetadataDebug}
                                 />

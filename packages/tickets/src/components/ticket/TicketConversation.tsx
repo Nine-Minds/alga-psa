@@ -85,6 +85,7 @@ interface TicketConversationProps {
     ticketId: string;
     documentIds: string[];
   }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
+  resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
   defaultNewestFirst?: boolean;
   canViewCommentMetadataDebug?: boolean;
 }
@@ -122,6 +123,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   onClipboardImageUploaded,
   uploadTicketAttachmentAction,
   deleteDraftTicketAttachmentImagesAction,
+  resolveTicketAttachmentViewUrl,
   defaultNewestFirst = false,
   canViewCommentMetadataDebug = false,
 }) => {
@@ -154,6 +156,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     onDiscard: discardComposeEditor,
     uploadDocumentAction: uploadTicketAttachmentAction,
     deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,
+    resolveDocumentViewUrl: resolveTicketAttachmentViewUrl,
     deleteDocumentFn: deleteDocument,
   });
 
@@ -166,6 +169,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     onDiscard: onClose,
     uploadDocumentAction: uploadTicketAttachmentAction,
     deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,
+    resolveDocumentViewUrl: resolveTicketAttachmentViewUrl,
     deleteDocumentFn: deleteDocument,
   });
 

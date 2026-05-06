@@ -1762,7 +1762,7 @@
   {
     "id": "F221",
     "description": "Provide ticket-attachment download/view provider for Algadesk ticket components.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Knowledge base and attachments"
     ]
