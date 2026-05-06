@@ -89,7 +89,8 @@
       "permissions": "Berechtigungen",
       "userRoles": "Benutzerrollen",
       "policies": "Richtlinien",
-      "apiKeys": "API-Schlüssel"
+      "apiKeys": "API-Schlüssel",
+      "webhooks": "Webhooks"
     },
     "loading": {
       "roles": "Rollenkonfiguration wird geladen...",
@@ -97,6 +98,7 @@
       "userRoles": "Benutzerrollenkonfiguration wird geladen...",
       "policies": "Richtlinienkonfiguration wird geladen...",
       "apiKeys": "API-Key-Konfiguration wird geladen...",
+      "webhooks": "Webhook-Konfiguration wird geladen...",
       "sso": "SSO-Verwaltungswerkzeuge werden geladen...",
       "sessions": "Aktive Sitzungen werden geladen..."
     },
@@ -181,6 +183,166 @@
         "loading": "Sitzungen werden geladen...",
         "noMatch": "Keine Sitzungen entsprechen Ihrer Suche",
         "noSessions": "Keine aktiven Sitzungen gefunden"
+      }
+    },
+    "webhooks": {
+      "title": "Ausgehende Webhooks",
+      "description": "Erstellen Sie signierte Abonnements für Ticket-Lebenszyklen, filtern Sie diese auf bestimmte Ticket-IDs, prüfen Sie den Zustellverlauf und rotieren Sie Geheimnisse, ohne die Einstellungen zu verlassen.",
+      "newWebhook": "Neuer Webhook",
+      "tabs": {
+        "configuration": "Konfiguration",
+        "deliveries": "Zustellungen"
+      },
+      "stats": {
+        "total": "Webhooks gesamt",
+        "active": "Aktiv",
+        "autoDisabled": "Automatisch deaktiviert"
+      },
+      "secret": {
+        "label": "Signiergeheimnis",
+        "warning": "Dieser Wert wird nur jetzt angezeigt. Speichern Sie ihn im Empfänger, bevor Sie die Seite verlassen.",
+        "copy": "Kopieren",
+        "copied": "Signiergeheimnis in die Zwischenablage kopiert",
+        "copyFailed": "Signiergeheimnis konnte nicht in die Zwischenablage kopiert werden",
+        "close": "Schließen",
+        "download": "Als .txt herunterladen"
+      },
+      "form": {
+        "createTitle": "Webhook erstellen",
+        "editTitle": "Webhook bearbeiten",
+        "helper": "Die Retry-Konfiguration wird als JSON gespeichert; die Zustellfrequenz folgt in v1 weiterhin dem Standard-Backoff-Plan der Plattform.",
+        "name": "Name",
+        "namePlaceholder": "Feed für Ticket-Zuweisungen",
+        "url": "URL",
+        "urlPlaceholder": "https://example.com/hooks/alga",
+        "events": "Ereignisse",
+        "customHeaders": "Benutzerdefinierte Header",
+        "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
+        "ticketFilter": "Ticket-Filter",
+        "ticketFilterPlaceholder": "Eine Ticket-UUID pro Zeile. Leer lassen, um alle passenden Ticket-Ereignisse zu erhalten.",
+        "retryConfig": "Retry-Konfig (JSON)",
+        "verifySsl": "SSL-Zertifikate prüfen",
+        "webhookActive": "Webhook ist aktiv",
+        "save": "Änderungen speichern",
+        "saving": "Wird gespeichert…",
+        "create": "Webhook erstellen",
+        "clear": "Zurücksetzen",
+        "delete": "Löschen",
+        "payloadFields": "Übermittelte Felder",
+        "payloadFieldsHelp": "Standardmäßig werden alle Felder gesendet. Deaktivieren Sie ein Feld, um es von der Zustellung auszuschließen. Der Entitäts-Korrelationsschlüssel (z. B. ticket_id) ist immer enthalten.",
+        "payloadFieldsSelectAll": "Alle auswählen",
+        "payloadFieldsClear": "Leeren"
+      },
+      "list": {
+        "title": "Konfigurierte Webhooks",
+        "loading": "Wird geladen…",
+        "configuredCount": "{{count}} konfiguriert",
+        "empty": "Noch keine Webhooks konfiguriert.",
+        "columns": {
+          "name": "Name",
+          "status": "Status",
+          "lastDelivery": "Letzte Zustellung",
+          "success": "Erfolg",
+          "actions": "Aktionen"
+        },
+        "actions": {
+          "selected": "Ausgewählt",
+          "manage": "Verwalten",
+          "pause": "Pausieren",
+          "resume": "Fortsetzen",
+          "view": "Anzeigen",
+          "edit": "Bearbeiten"
+        }
+      },
+      "detail": {
+        "summary": "{{total}} Zustellungen, {{successful}} erfolgreich, {{failed}} fehlgeschlagen.",
+        "sendTest": "Test senden",
+        "sending": "Wird gesendet…",
+        "rotateSecret": "Geheimnis rotieren",
+        "rotating": "Wird rotiert…",
+        "back": "Zurück zu Webhooks"
+      },
+      "deliveries": {
+        "title": "Zustellverlauf",
+        "page": "Seite {{page}} von {{total}}",
+        "empty": "Noch keine Zustellungen erfasst.",
+        "columns": {
+          "event": "Ereignis",
+          "status": "Status",
+          "attempted": "Versucht",
+          "response": "Antwort",
+          "action": "Aktion"
+        },
+        "testBadge": "Testzustellung",
+        "attempt": "Versuch {{number}}",
+        "noResponseCode": "n. v.",
+        "noResponseBody": "Keine Antwortdaten erfasst.",
+        "retry": "Wiederholen",
+        "previous": "Zurück",
+        "next": "Weiter"
+      },
+      "messages": {
+        "loadFailed": "Webhook-Einstellungen konnten nicht geladen werden.",
+        "loadDeliveriesFailed": "Webhook-Zustellungen konnten nicht geladen werden.",
+        "saveFailed": "Webhook konnte nicht gespeichert werden.",
+        "createSuccess": "Webhook erstellt.",
+        "updateSuccess": "Webhook aktualisiert.",
+        "deleteConfirm": "Webhook \"{{name}}\" löschen?",
+        "deleteSuccess": "Webhook gelöscht.",
+        "deleteFailed": "Webhook konnte nicht gelöscht werden.",
+        "testSuccess": "Test erfolgreich gesendet ({{statusCode}}).",
+        "testFailed": "Test fehlgeschlagen: {{message}}",
+        "testRunFailed": "Webhook-Test konnte nicht gesendet werden.",
+        "unknownError": "Unbekannter Fehler",
+        "secretRotated": "Signiergeheimnis rotiert.",
+        "rotateFailed": "Webhook-Geheimnis konnte nicht rotiert werden.",
+        "resumed": "Webhook fortgesetzt.",
+        "paused": "Webhook pausiert.",
+        "stateChangeFailed": "Webhook-Status konnte nicht aktualisiert werden.",
+        "retryQueued": "Wiederholung für Ereignis {{eventId}} eingereiht.",
+        "retryFailed": "Wiederholung der Zustellung fehlgeschlagen.",
+        "invalidHeaderLine": "Ungültige Header-Zeile: \"{{line}}\"",
+        "invalidRetryConfig": "Die Retry-Konfiguration muss ein JSON-Objekt sein"
+      },
+      "common": {
+        "never": "Nie"
+      },
+      "health": {
+        "healthy": "gesund",
+        "failing": "fehlerhaft",
+        "disabled": "deaktiviert"
+      },
+      "deliveryStatus": {
+        "delivered": "zugestellt",
+        "retrying": "wiederholt",
+        "abandoned": "abgebrochen",
+        "pending": "ausstehend"
+      }
+    },
+    "apiKeys": {
+      "rateLimit": {
+        "columnTitle": "Ratenlimit",
+        "loading": "Wird geladen…",
+        "summary": "{{maxTokens}} Burst / {{refillPerMin}} pro Min.",
+        "source": "Quelle: {{label}}",
+        "sourceLabels": {
+          "key": "Außerkraftsetzung",
+          "tenant": "Mandanten-Standard",
+          "system": "System-Standard"
+        },
+        "remaining": " • Verbleibend: {{remaining}}/{{maxTokens}}",
+        "remainingUnavailable": " • Verbleibend: nicht verfügbar",
+        "actions": {
+          "edit": "Bearbeiten",
+          "override": "Außerkraftsetzen",
+          "save": "Speichern",
+          "cancel": "Abbrechen",
+          "reset": "Zurücksetzen"
+        },
+        "errors": {
+          "saveFailed": "API-Ratenlimit-Außerkraftsetzung konnte nicht gespeichert werden.",
+          "clearFailed": "API-Ratenlimit-Außerkraftsetzung konnte nicht entfernt werden."
+        }
       }
     }
   },

@@ -89,7 +89,8 @@
       "permissions": "Uprawnienia",
       "userRoles": "Role użytkowników",
       "policies": "Zasady",
-      "apiKeys": "Klucze API"
+      "apiKeys": "Klucze API",
+      "webhooks": "Webhooki"
     },
     "loading": {
       "roles": "Ładowanie konfiguracji ról...",
@@ -97,6 +98,7 @@
       "userRoles": "Ładowanie konfiguracji ról użytkowników...",
       "policies": "Ładowanie konfiguracji zasad...",
       "apiKeys": "Ładowanie konfiguracji kluczy API...",
+      "webhooks": "Ładowanie konfiguracji webhooków...",
       "sso": "Ładowanie narzędzi zarządzania SSO...",
       "sessions": "Ładowanie aktywnych sesji..."
     },
@@ -181,6 +183,166 @@
         "loading": "Ładowanie sesji...",
         "noMatch": "Żadne sesje nie pasują do wyszukiwania",
         "noSessions": "Nie znaleziono aktywnych sesji"
+      }
+    },
+    "webhooks": {
+      "title": "Webhooki wychodzące",
+      "description": "Twórz podpisane subskrypcje cyklu życia zgłoszeń, filtruj je po konkretnych identyfikatorach zgłoszeń, sprawdzaj historię dostarczeń i rotuj sekrety bez opuszczania ustawień.",
+      "newWebhook": "Nowy webhook",
+      "tabs": {
+        "configuration": "Konfiguracja",
+        "deliveries": "Dostarczenia"
+      },
+      "stats": {
+        "total": "Webhooki łącznie",
+        "active": "Aktywne",
+        "autoDisabled": "Wyłączone automatycznie"
+      },
+      "secret": {
+        "label": "Sekret podpisu",
+        "warning": "Ta wartość jest pokazywana tylko teraz. Zapisz ją w odbiorcy przed opuszczeniem strony.",
+        "copy": "Kopiuj",
+        "copied": "Tajny klucz podpisu skopiowany do schowka",
+        "copyFailed": "Nie udało się skopiować tajnego klucza podpisu do schowka",
+        "close": "Zamknij",
+        "download": "Pobierz jako .txt"
+      },
+      "form": {
+        "createTitle": "Utwórz webhook",
+        "editTitle": "Edytuj webhook",
+        "helper": "Konfiguracja ponownych prób jest zapisywana jako JSON; częstotliwość dostarczania nadal korzysta ze standardowego harmonogramu backoff platformy w wersji v1.",
+        "name": "Nazwa",
+        "namePlaceholder": "Kanał przypisań zgłoszeń",
+        "url": "URL",
+        "urlPlaceholder": "https://example.com/hooks/alga",
+        "events": "Zdarzenia",
+        "customHeaders": "Niestandardowe nagłówki",
+        "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
+        "ticketFilter": "Filtr zgłoszeń",
+        "ticketFilterPlaceholder": "Jeden UUID zgłoszenia na linię. Pozostaw puste, aby otrzymywać wszystkie pasujące zdarzenia zgłoszeń.",
+        "retryConfig": "Konfiguracja ponowień (JSON)",
+        "verifySsl": "Weryfikuj certyfikaty SSL",
+        "webhookActive": "Webhook jest aktywny",
+        "save": "Zapisz zmiany",
+        "saving": "Zapisywanie…",
+        "create": "Utwórz webhook",
+        "clear": "Wyczyść",
+        "delete": "Usuń",
+        "payloadFields": "Dostarczone pola",
+        "payloadFieldsHelp": "Domyślnie wysyłane są wszystkie pola. Odznacz, aby wykluczyć pole z dostawy. Klucz korelacji encji (np. ticket_id) jest zawsze uwzględniany.",
+        "payloadFieldsSelectAll": "Zaznacz wszystko",
+        "payloadFieldsClear": "Wyczyść"
+      },
+      "list": {
+        "title": "Skonfigurowane webhooki",
+        "loading": "Ładowanie…",
+        "configuredCount": "{{count}} skonfigurowanych",
+        "empty": "Nie skonfigurowano jeszcze żadnych webhooków.",
+        "columns": {
+          "name": "Nazwa",
+          "status": "Status",
+          "lastDelivery": "Ostatnia dostawa",
+          "success": "Sukces",
+          "actions": "Akcje"
+        },
+        "actions": {
+          "selected": "Wybrany",
+          "manage": "Zarządzaj",
+          "pause": "Wstrzymaj",
+          "resume": "Wznów",
+          "view": "Wyświetl",
+          "edit": "Edytuj"
+        }
+      },
+      "detail": {
+        "summary": "{{total}} dostarczeń, {{successful}} pomyślnych, {{failed}} nieudanych.",
+        "sendTest": "Wyślij test",
+        "sending": "Wysyłanie…",
+        "rotateSecret": "Rotuj sekret",
+        "rotating": "Rotacja…",
+        "back": "Wstecz do webhooków"
+      },
+      "deliveries": {
+        "title": "Historia dostarczeń",
+        "page": "Strona {{page}} z {{total}}",
+        "empty": "Nie zarejestrowano jeszcze dostarczeń.",
+        "columns": {
+          "event": "Zdarzenie",
+          "status": "Status",
+          "attempted": "Próba",
+          "response": "Odpowiedź",
+          "action": "Akcja"
+        },
+        "testBadge": "Dostarczenie testowe",
+        "attempt": "Próba {{number}}",
+        "noResponseCode": "—",
+        "noResponseBody": "Nie zarejestrowano treści odpowiedzi.",
+        "retry": "Ponów",
+        "previous": "Poprzednia",
+        "next": "Następna"
+      },
+      "messages": {
+        "loadFailed": "Nie udało się załadować ustawień webhooka.",
+        "loadDeliveriesFailed": "Nie udało się załadować dostarczeń webhooka.",
+        "saveFailed": "Nie udało się zapisać webhooka.",
+        "createSuccess": "Utworzono webhook.",
+        "updateSuccess": "Zaktualizowano webhook.",
+        "deleteConfirm": "Usunąć webhook \"{{name}}\"?",
+        "deleteSuccess": "Usunięto webhook.",
+        "deleteFailed": "Nie udało się usunąć webhooka.",
+        "testSuccess": "Test wysłany pomyślnie ({{statusCode}}).",
+        "testFailed": "Test nieudany: {{message}}",
+        "testRunFailed": "Nie udało się wysłać testu webhooka.",
+        "unknownError": "Nieznany błąd",
+        "secretRotated": "Sekret podpisu zrotowany.",
+        "rotateFailed": "Nie udało się zrotować sekretu webhooka.",
+        "resumed": "Wznowiono webhook.",
+        "paused": "Wstrzymano webhook.",
+        "stateChangeFailed": "Nie udało się zaktualizować stanu webhooka.",
+        "retryQueued": "Ponowienie w kolejce dla zdarzenia {{eventId}}.",
+        "retryFailed": "Nie udało się ponowić dostarczenia.",
+        "invalidHeaderLine": "Nieprawidłowa linia nagłówka: \"{{line}}\"",
+        "invalidRetryConfig": "Konfiguracja ponowień musi być obiektem JSON"
+      },
+      "common": {
+        "never": "Nigdy"
+      },
+      "health": {
+        "healthy": "sprawny",
+        "failing": "z błędami",
+        "disabled": "wyłączony"
+      },
+      "deliveryStatus": {
+        "delivered": "dostarczone",
+        "retrying": "ponawianie",
+        "abandoned": "porzucone",
+        "pending": "oczekujące"
+      }
+    },
+    "apiKeys": {
+      "rateLimit": {
+        "columnTitle": "Limit żądań",
+        "loading": "Ładowanie…",
+        "summary": "{{maxTokens}} burst / {{refillPerMin}} na min",
+        "source": "Źródło: {{label}}",
+        "sourceLabels": {
+          "key": "Nadpisanie",
+          "tenant": "Domyślne dla tenanta",
+          "system": "Domyślne systemowe"
+        },
+        "remaining": " • Pozostałe: {{remaining}}/{{maxTokens}}",
+        "remainingUnavailable": " • Pozostałe: niedostępne",
+        "actions": {
+          "edit": "Edytuj",
+          "override": "Nadpisz",
+          "save": "Zapisz",
+          "cancel": "Anuluj",
+          "reset": "Resetuj"
+        },
+        "errors": {
+          "saveFailed": "Nie udało się zapisać nadpisania limitu żądań API.",
+          "clearFailed": "Nie udało się usunąć nadpisania limitu żądań API."
+        }
       }
     }
   },

@@ -89,7 +89,8 @@
       "permissions": "11111",
       "userRoles": "11111",
       "policies": "11111",
-      "apiKeys": "11111"
+      "apiKeys": "11111",
+      "webhooks": "11111"
     },
     "loading": {
       "roles": "11111",
@@ -97,6 +98,7 @@
       "userRoles": "11111",
       "policies": "11111",
       "apiKeys": "11111",
+      "webhooks": "11111",
       "sso": "11111",
       "sessions": "11111"
     },
@@ -181,6 +183,166 @@
         "loading": "11111",
         "noMatch": "11111",
         "noSessions": "11111"
+      }
+    },
+    "webhooks": {
+      "title": "11111",
+      "description": "11111",
+      "newWebhook": "11111",
+      "tabs": {
+        "configuration": "11111",
+        "deliveries": "11111"
+      },
+      "stats": {
+        "total": "11111",
+        "active": "11111",
+        "autoDisabled": "11111"
+      },
+      "secret": {
+        "label": "11111",
+        "warning": "11111",
+        "copy": "11111",
+        "copied": "11111",
+        "copyFailed": "11111",
+        "close": "11111",
+        "download": "11111"
+      },
+      "form": {
+        "createTitle": "11111",
+        "editTitle": "11111",
+        "helper": "11111",
+        "name": "11111",
+        "namePlaceholder": "11111",
+        "url": "11111",
+        "urlPlaceholder": "11111",
+        "events": "11111",
+        "customHeaders": "11111",
+        "customHeadersPlaceholder": "11111",
+        "ticketFilter": "11111",
+        "ticketFilterPlaceholder": "11111",
+        "retryConfig": "11111",
+        "verifySsl": "11111",
+        "webhookActive": "11111",
+        "save": "11111",
+        "saving": "11111",
+        "create": "11111",
+        "clear": "11111",
+        "delete": "11111",
+        "payloadFields": "11111",
+        "payloadFieldsHelp": "11111",
+        "payloadFieldsSelectAll": "11111",
+        "payloadFieldsClear": "11111"
+      },
+      "list": {
+        "title": "11111",
+        "loading": "11111",
+        "configuredCount": "11111 {{count}} 11111",
+        "empty": "11111",
+        "columns": {
+          "name": "11111",
+          "status": "11111",
+          "lastDelivery": "11111",
+          "success": "11111",
+          "actions": "11111"
+        },
+        "actions": {
+          "selected": "11111",
+          "manage": "11111",
+          "pause": "11111",
+          "resume": "11111",
+          "view": "11111",
+          "edit": "11111"
+        }
+      },
+      "detail": {
+        "summary": "11111 {{total}} 11111 {{successful}} 11111 {{failed}} 11111",
+        "sendTest": "11111",
+        "sending": "11111",
+        "rotateSecret": "11111",
+        "rotating": "11111",
+        "back": "11111"
+      },
+      "deliveries": {
+        "title": "11111",
+        "page": "11111 {{page}} 11111 {{total}} 11111",
+        "empty": "11111",
+        "columns": {
+          "event": "11111",
+          "status": "11111",
+          "attempted": "11111",
+          "response": "11111",
+          "action": "11111"
+        },
+        "testBadge": "11111",
+        "attempt": "11111 {{number}} 11111",
+        "noResponseCode": "11111",
+        "noResponseBody": "11111",
+        "retry": "11111",
+        "previous": "11111",
+        "next": "11111"
+      },
+      "messages": {
+        "loadFailed": "11111",
+        "loadDeliveriesFailed": "11111",
+        "saveFailed": "11111",
+        "createSuccess": "11111",
+        "updateSuccess": "11111",
+        "deleteConfirm": "11111 {{name}} 11111",
+        "deleteSuccess": "11111",
+        "deleteFailed": "11111",
+        "testSuccess": "11111 {{statusCode}} 11111",
+        "testFailed": "11111 {{message}} 11111",
+        "testRunFailed": "11111",
+        "unknownError": "11111",
+        "secretRotated": "11111",
+        "rotateFailed": "11111",
+        "resumed": "11111",
+        "paused": "11111",
+        "stateChangeFailed": "11111",
+        "retryQueued": "11111 {{eventId}} 11111",
+        "retryFailed": "11111",
+        "invalidHeaderLine": "11111 {{line}} 11111",
+        "invalidRetryConfig": "11111"
+      },
+      "common": {
+        "never": "11111"
+      },
+      "health": {
+        "healthy": "11111",
+        "failing": "11111",
+        "disabled": "11111"
+      },
+      "deliveryStatus": {
+        "delivered": "11111",
+        "retrying": "11111",
+        "abandoned": "11111",
+        "pending": "11111"
+      }
+    },
+    "apiKeys": {
+      "rateLimit": {
+        "columnTitle": "11111",
+        "loading": "11111",
+        "summary": "11111 {{maxTokens}} 11111 {{refillPerMin}} 11111",
+        "source": "11111 {{label}} 11111",
+        "sourceLabels": {
+          "key": "11111",
+          "tenant": "11111",
+          "system": "11111"
+        },
+        "remaining": "11111 {{remaining}} 11111 {{maxTokens}} 11111",
+        "remainingUnavailable": "11111",
+        "actions": {
+          "edit": "11111",
+          "override": "11111",
+          "save": "11111",
+          "cancel": "11111",
+          "reset": "11111"
+        },
+        "errors": {
+          "saveFailed": "11111",
+          "clearFailed": "11111"
+        }
       }
     }
   },

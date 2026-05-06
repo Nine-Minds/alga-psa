@@ -89,7 +89,8 @@
       "permissions": "Permessi",
       "userRoles": "Ruoli utente",
       "policies": "Criteri",
-      "apiKeys": "Chiavi API"
+      "apiKeys": "Chiavi API",
+      "webhooks": "Webhooks"
     },
     "loading": {
       "roles": "Caricamento configurazione ruoli...",
@@ -97,6 +98,7 @@
       "userRoles": "Caricamento configurazione ruoli utente...",
       "policies": "Caricamento configurazione criteri...",
       "apiKeys": "Caricamento configurazione chiavi API...",
+      "webhooks": "Caricamento configurazione webhook...",
       "sso": "Caricamento strumenti di gestione SSO...",
       "sessions": "Caricamento sessioni attive..."
     },
@@ -181,6 +183,166 @@
         "loading": "Caricamento sessioni...",
         "noMatch": "Nessuna sessione corrisponde alla Sua ricerca",
         "noSessions": "Nessuna sessione attiva trovata"
+      }
+    },
+    "webhooks": {
+      "title": "Webhook in uscita",
+      "description": "Crea sottoscrizioni firmate al ciclo di vita dei ticket, filtrale per ID specifici, ispeziona la cronologia delle consegne e ruota i segreti senza uscire dalle impostazioni.",
+      "newWebhook": "Nuovo webhook",
+      "tabs": {
+        "configuration": "Configurazione",
+        "deliveries": "Consegne"
+      },
+      "stats": {
+        "total": "Webhook totali",
+        "active": "Attivi",
+        "autoDisabled": "Disattivati automaticamente"
+      },
+      "secret": {
+        "label": "Segreto di firma",
+        "warning": "Questo valore viene mostrato solo ora. Conservalo nel ricevitore prima di lasciare la pagina.",
+        "copy": "Copia",
+        "copied": "Segreto di firma copiato negli appunti",
+        "copyFailed": "Impossibile copiare il segreto di firma negli appunti",
+        "close": "Chiudi",
+        "download": "Scarica come .txt"
+      },
+      "form": {
+        "createTitle": "Crea webhook",
+        "editTitle": "Modifica webhook",
+        "helper": "La configurazione dei tentativi è memorizzata come JSON; la cadenza di consegna utilizza ancora la pianificazione di backoff standard della piattaforma in v1.",
+        "name": "Nome",
+        "namePlaceholder": "Feed di assegnazione ticket",
+        "url": "URL",
+        "urlPlaceholder": "https://example.com/hooks/alga",
+        "events": "Eventi",
+        "customHeaders": "Intestazioni personalizzate",
+        "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
+        "ticketFilter": "Filtro ticket",
+        "ticketFilterPlaceholder": "Un UUID ticket per riga. Lasciare vuoto per ricevere tutti gli eventi ticket corrispondenti.",
+        "retryConfig": "Configurazione tentativi (JSON)",
+        "verifySsl": "Verifica certificati SSL",
+        "webhookActive": "Il webhook è attivo",
+        "save": "Salva modifiche",
+        "saving": "Salvataggio…",
+        "create": "Crea webhook",
+        "clear": "Pulisci",
+        "delete": "Elimina",
+        "payloadFields": "Campi consegnati",
+        "payloadFieldsHelp": "Tutti i campi vengono inviati per impostazione predefinita. Deseleziona per escludere un campo dalla consegna. La chiave di correlazione dell’entità (es. ticket_id) è sempre inclusa.",
+        "payloadFieldsSelectAll": "Seleziona tutto",
+        "payloadFieldsClear": "Cancella"
+      },
+      "list": {
+        "title": "Webhook configurati",
+        "loading": "Caricamento…",
+        "configuredCount": "{{count}} configurati",
+        "empty": "Nessun webhook configurato.",
+        "columns": {
+          "name": "Nome",
+          "status": "Stato",
+          "lastDelivery": "Ultima consegna",
+          "success": "Successo",
+          "actions": "Azioni"
+        },
+        "actions": {
+          "selected": "Selezionato",
+          "manage": "Gestisci",
+          "pause": "Sospendi",
+          "resume": "Riprendi",
+          "view": "Visualizza",
+          "edit": "Modifica"
+        }
+      },
+      "detail": {
+        "summary": "{{total}} consegne, {{successful}} riuscite, {{failed}} fallite.",
+        "sendTest": "Invia test",
+        "sending": "Invio…",
+        "rotateSecret": "Ruota segreto",
+        "rotating": "Rotazione…",
+        "back": "Torna ai webhook"
+      },
+      "deliveries": {
+        "title": "Cronologia consegne",
+        "page": "Pagina {{page}} di {{total}}",
+        "empty": "Nessuna consegna registrata.",
+        "columns": {
+          "event": "Evento",
+          "status": "Stato",
+          "attempted": "Tentato",
+          "response": "Risposta",
+          "action": "Azione"
+        },
+        "testBadge": "Consegna di prova",
+        "attempt": "Tentativo {{number}}",
+        "noResponseCode": "n/d",
+        "noResponseBody": "Nessun corpo di risposta acquisito.",
+        "retry": "Riprova",
+        "previous": "Precedente",
+        "next": "Successivo"
+      },
+      "messages": {
+        "loadFailed": "Impossibile caricare le impostazioni del webhook.",
+        "loadDeliveriesFailed": "Impossibile caricare le consegne del webhook.",
+        "saveFailed": "Impossibile salvare il webhook.",
+        "createSuccess": "Webhook creato.",
+        "updateSuccess": "Webhook aggiornato.",
+        "deleteConfirm": "Eliminare il webhook \"{{name}}\"?",
+        "deleteSuccess": "Webhook eliminato.",
+        "deleteFailed": "Impossibile eliminare il webhook.",
+        "testSuccess": "Test inviato con successo ({{statusCode}}).",
+        "testFailed": "Test fallito: {{message}}",
+        "testRunFailed": "Impossibile inviare il test del webhook.",
+        "unknownError": "Errore sconosciuto",
+        "secretRotated": "Segreto di firma ruotato.",
+        "rotateFailed": "Impossibile ruotare il segreto del webhook.",
+        "resumed": "Webhook ripreso.",
+        "paused": "Webhook sospeso.",
+        "stateChangeFailed": "Impossibile aggiornare lo stato del webhook.",
+        "retryQueued": "Ritentativo in coda per l'evento {{eventId}}.",
+        "retryFailed": "Impossibile riprovare la consegna.",
+        "invalidHeaderLine": "Riga di intestazione non valida: \"{{line}}\"",
+        "invalidRetryConfig": "La configurazione dei tentativi deve essere un oggetto JSON"
+      },
+      "common": {
+        "never": "Mai"
+      },
+      "health": {
+        "healthy": "integro",
+        "failing": "in errore",
+        "disabled": "disattivato"
+      },
+      "deliveryStatus": {
+        "delivered": "consegnato",
+        "retrying": "in nuovo tentativo",
+        "abandoned": "abbandonato",
+        "pending": "in attesa"
+      }
+    },
+    "apiKeys": {
+      "rateLimit": {
+        "columnTitle": "Limite frequenza",
+        "loading": "Caricamento…",
+        "summary": "{{maxTokens}} burst / {{refillPerMin}} al min",
+        "source": "Origine: {{label}}",
+        "sourceLabels": {
+          "key": "Sovrascrittura",
+          "tenant": "Predefinito del tenant",
+          "system": "Predefinito di sistema"
+        },
+        "remaining": " • Rimanenti: {{remaining}}/{{maxTokens}}",
+        "remainingUnavailable": " • Rimanenti: non disponibile",
+        "actions": {
+          "edit": "Modifica",
+          "override": "Sovrascrivi",
+          "save": "Salva",
+          "cancel": "Annulla",
+          "reset": "Reimposta"
+        },
+        "errors": {
+          "saveFailed": "Impossibile salvare la sovrascrittura del limite di frequenza API.",
+          "clearFailed": "Impossibile rimuovere la sovrascrittura del limite di frequenza API."
+        }
       }
     }
   },

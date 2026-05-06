@@ -20,6 +20,7 @@ import {
   type ApiRateLimitSettingsView,
 } from '@alga-psa/auth/actions';
 import { Search, RotateCcw } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export interface AdminApiKey {
   api_key_id: string;
@@ -58,6 +59,7 @@ const AdminSearchInput = memo(({
 AdminSearchInput.displayName = 'AdminSearchInput';
 
 export default function AdminApiKeysSetup() {
+  const { t } = useTranslation('msp/profile');
   const [apiKeys, setApiKeys] = useState<AdminApiKey[]>([]);
   const [rateLimitsByKey, setRateLimitsByKey] = useState<Record<string, ApiRateLimitSettingsView>>({});
   const [rateLimitDrafts, setRateLimitDrafts] = useState<Record<string, ApiRateLimitSettingsValue>>({});
@@ -218,11 +220,11 @@ export default function AdminApiKeysSetup() {
       setError(null);
     } catch (error) {
       console.error('Failed to save API rate limit override:', error);
-      setError('Failed to save API rate limit override.');
+      setError(t('security.apiKeys.rateLimit.errors.saveFailed'));
     } finally {
       setSavingRateLimitKeyId(null);
     }
-  }, [rateLimitDrafts, seedRateLimitDraft]);
+  }, [rateLimitDrafts, seedRateLimitDraft, t]);
 
   const handleClearRateLimit = useCallback(async (apiKeyId: string) => {
     try {
@@ -236,11 +238,11 @@ export default function AdminApiKeysSetup() {
       setError(null);
     } catch (error) {
       console.error('Failed to clear API rate limit override:', error);
-      setError('Failed to clear API rate limit override.');
+      setError(t('security.apiKeys.rateLimit.errors.clearFailed'));
     } finally {
       setSavingRateLimitKeyId(null);
     }
-  }, [editingRateLimitKeyId, seedRateLimitDraft]);
+  }, [editingRateLimitKeyId, seedRateLimitDraft, t]);
 
   const handleDeactivateKey = async (keyId: string) => {
     try {
@@ -287,36 +289,38 @@ export default function AdminApiKeysSetup() {
       render: (value: Date | null) => value ? new Date(value).toLocaleString() : 'Never',
     },
     {
-      title: 'Rate Limit',
+      title: t('security.apiKeys.rateLimit.columnTitle'),
       dataIndex: 'api_key_id',
       width: '25%',
       render: (_: string, record: AdminApiKey) => {
         const view = rateLimitsByKey[record.api_key_id];
         if (!view) {
-          return <span className="text-sm text-gray-500">Loading…</span>;
+          return <span className="text-sm text-gray-500">{t('security.apiKeys.rateLimit.loading')}</span>;
         }
 
         const draft = rateLimitDrafts[record.api_key_id] ?? view.override ?? view.effective;
         const isEditing = editingRateLimitKeyId === record.api_key_id;
         const isSaving = savingRateLimitKeyId === record.api_key_id;
-        const sourceLabel =
-          view.source === 'key'
-            ? 'Override'
-            : view.source === 'tenant'
-              ? 'Tenant default'
-              : 'System default';
+        const sourceLabel = t(`security.apiKeys.rateLimit.sourceLabels.${view.source}`);
+        const remainingText = view.bucketState
+          ? t('security.apiKeys.rateLimit.remaining', {
+              remaining: view.bucketState.remaining,
+              maxTokens: view.bucketState.maxTokens,
+            })
+          : t('security.apiKeys.rateLimit.remainingUnavailable');
 
         return (
           <div className="space-y-2 text-sm">
             <div>
               <div className="font-medium">
-                {view.effective.maxTokens} burst / {view.effective.refillPerMin} per min
+                {t('security.apiKeys.rateLimit.summary', {
+                  maxTokens: view.effective.maxTokens,
+                  refillPerMin: view.effective.refillPerMin,
+                })}
               </div>
               <div className="text-gray-500">
-                Source: {sourceLabel}
-                {view.bucketState
-                  ? ` • Remaining: ${view.bucketState.remaining}/${view.bucketState.maxTokens}`
-                  : ' • Remaining: unavailable'}
+                {t('security.apiKeys.rateLimit.source', { label: sourceLabel })}
+                {remainingText}
               </div>
             </div>
 
@@ -349,7 +353,7 @@ export default function AdminApiKeysSetup() {
                     onClick={() => handleSaveRateLimit(record.api_key_id)}
                     disabled={isSaving}
                   >
-                    Save
+                    {t('security.apiKeys.rateLimit.actions.save')}
                   </Button>
                   <Button
                     id={`cancel-api-rate-limit-${record.api_key_id}`}
@@ -358,7 +362,7 @@ export default function AdminApiKeysSetup() {
                     onClick={() => handleCancelRateLimitEdit(view)}
                     disabled={isSaving}
                   >
-                    Cancel
+                    {t('security.apiKeys.rateLimit.actions.cancel')}
                   </Button>
                   {view.override ? (
                     <Button
@@ -368,7 +372,7 @@ export default function AdminApiKeysSetup() {
                       onClick={() => handleClearRateLimit(record.api_key_id)}
                       disabled={isSaving}
                     >
-                      Reset
+                      {t('security.apiKeys.rateLimit.actions.reset')}
                     </Button>
                   ) : null}
                 </div>
@@ -381,7 +385,9 @@ export default function AdminApiKeysSetup() {
                   variant="ghost"
                   onClick={() => handleEditRateLimit(view)}
                 >
-                  {view.override ? 'Edit' : 'Override'}
+                  {view.override
+                    ? t('security.apiKeys.rateLimit.actions.edit')
+                    : t('security.apiKeys.rateLimit.actions.override')}
                 </Button>
                 {view.override ? (
                   <Button
@@ -391,7 +397,7 @@ export default function AdminApiKeysSetup() {
                     onClick={() => handleClearRateLimit(record.api_key_id)}
                     disabled={isSaving}
                   >
-                    Reset
+                    {t('security.apiKeys.rateLimit.actions.reset')}
                   </Button>
                 ) : null}
               </div>
@@ -438,6 +444,7 @@ export default function AdminApiKeysSetup() {
     rateLimitDrafts,
     rateLimitsByKey,
     savingRateLimitKeyId,
+    t,
   ]);
 
   return (

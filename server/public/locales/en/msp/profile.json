@@ -89,7 +89,8 @@
       "permissions": "Permissions",
       "userRoles": "User Roles",
       "policies": "Policies",
-      "apiKeys": "API Keys"
+      "apiKeys": "API Keys",
+      "webhooks": "Webhooks"
     },
     "loading": {
       "roles": "Loading role configuration...",
@@ -97,6 +98,7 @@
       "userRoles": "Loading user role configuration...",
       "policies": "Loading policy configuration...",
       "apiKeys": "Loading API key configuration...",
+      "webhooks": "Loading webhook configuration...",
       "sso": "Loading SSO management tools...",
       "sessions": "Loading active sessions..."
     },
@@ -181,6 +183,166 @@
         "loading": "Loading sessions...",
         "noMatch": "No sessions match your search",
         "noSessions": "No active sessions found"
+      }
+    },
+    "webhooks": {
+      "title": "Outbound Webhooks",
+      "description": "Create signed ticket lifecycle subscriptions, filter them to specific ticket IDs, inspect delivery history, and rotate secrets without leaving settings.",
+      "newWebhook": "New Webhook",
+      "tabs": {
+        "configuration": "Configuration",
+        "deliveries": "Deliveries"
+      },
+      "stats": {
+        "total": "Total webhooks",
+        "active": "Active",
+        "autoDisabled": "Auto-disabled"
+      },
+      "secret": {
+        "label": "Signing secret",
+        "warning": "This value is shown only now. Store it in the receiver before you navigate away.",
+        "copy": "Copy",
+        "copied": "Signing secret copied to clipboard",
+        "copyFailed": "Failed to copy signing secret to clipboard",
+        "close": "Close",
+        "download": "Download as .txt"
+      },
+      "form": {
+        "createTitle": "Create Webhook",
+        "editTitle": "Edit Webhook",
+        "helper": "Retry config is stored as JSON; delivery cadence still uses the platform's standard backoff schedule in v1.",
+        "name": "Name",
+        "namePlaceholder": "Ticket assignment feed",
+        "url": "URL",
+        "urlPlaceholder": "https://example.com/hooks/alga",
+        "events": "Events",
+        "customHeaders": "Custom Headers",
+        "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
+        "ticketFilter": "Ticket Filter",
+        "ticketFilterPlaceholder": "One ticket UUID per line. Leave blank to receive all matching ticket events.",
+        "retryConfig": "Retry Config JSON",
+        "verifySsl": "Verify SSL certificates",
+        "webhookActive": "Webhook is active",
+        "save": "Save Changes",
+        "saving": "Saving…",
+        "create": "Create Webhook",
+        "clear": "Clear",
+        "delete": "Delete",
+        "payloadFields": "Delivered fields",
+        "payloadFieldsHelp": "All fields are sent by default. Uncheck to exclude a field from delivery. The entity correlation key (e.g. ticket_id) is always included.",
+        "payloadFieldsSelectAll": "Select all",
+        "payloadFieldsClear": "Clear"
+      },
+      "list": {
+        "title": "Configured Webhooks",
+        "loading": "Loading…",
+        "configuredCount": "{{count}} configured",
+        "empty": "No webhooks configured yet.",
+        "columns": {
+          "name": "Name",
+          "status": "Status",
+          "lastDelivery": "Last Delivery",
+          "success": "Success",
+          "actions": "Actions"
+        },
+        "actions": {
+          "selected": "Selected",
+          "manage": "Manage",
+          "pause": "Pause",
+          "resume": "Resume",
+          "view": "View",
+          "edit": "Edit"
+        }
+      },
+      "detail": {
+        "summary": "{{total}} deliveries, {{successful}} successful, {{failed}} failed.",
+        "sendTest": "Send Test",
+        "sending": "Sending…",
+        "rotateSecret": "Rotate Secret",
+        "rotating": "Rotating…",
+        "back": "Back to webhooks"
+      },
+      "deliveries": {
+        "title": "Delivery History",
+        "page": "Page {{page}} of {{total}}",
+        "empty": "No deliveries recorded yet.",
+        "columns": {
+          "event": "Event",
+          "status": "Status",
+          "attempted": "Attempted",
+          "response": "Response",
+          "action": "Action"
+        },
+        "testBadge": "Test delivery",
+        "attempt": "Attempt {{number}}",
+        "noResponseCode": "n/a",
+        "noResponseBody": "No response body captured.",
+        "retry": "Retry",
+        "previous": "Previous",
+        "next": "Next"
+      },
+      "messages": {
+        "loadFailed": "Failed to load webhook settings.",
+        "loadDeliveriesFailed": "Failed to load webhook deliveries.",
+        "saveFailed": "Failed to save webhook.",
+        "createSuccess": "Webhook created.",
+        "updateSuccess": "Webhook updated.",
+        "deleteConfirm": "Delete webhook \"{{name}}\"?",
+        "deleteSuccess": "Webhook deleted.",
+        "deleteFailed": "Failed to delete webhook.",
+        "testSuccess": "Test sent successfully ({{statusCode}}).",
+        "testFailed": "Test failed: {{message}}",
+        "testRunFailed": "Failed to send webhook test.",
+        "unknownError": "Unknown error",
+        "secretRotated": "Signing secret rotated.",
+        "rotateFailed": "Failed to rotate webhook secret.",
+        "resumed": "Webhook resumed.",
+        "paused": "Webhook paused.",
+        "stateChangeFailed": "Failed to update webhook state.",
+        "retryQueued": "Retry queued for event {{eventId}}.",
+        "retryFailed": "Failed to retry delivery.",
+        "invalidHeaderLine": "Invalid header line: \"{{line}}\"",
+        "invalidRetryConfig": "Retry config must be a JSON object"
+      },
+      "common": {
+        "never": "Never"
+      },
+      "health": {
+        "healthy": "healthy",
+        "failing": "failing",
+        "disabled": "disabled"
+      },
+      "deliveryStatus": {
+        "delivered": "delivered",
+        "retrying": "retrying",
+        "abandoned": "abandoned",
+        "pending": "pending"
+      }
+    },
+    "apiKeys": {
+      "rateLimit": {
+        "columnTitle": "Rate Limit",
+        "loading": "Loading…",
+        "summary": "{{maxTokens}} burst / {{refillPerMin}} per min",
+        "source": "Source: {{label}}",
+        "sourceLabels": {
+          "key": "Override",
+          "tenant": "Tenant default",
+          "system": "System default"
+        },
+        "remaining": " • Remaining: {{remaining}}/{{maxTokens}}",
+        "remainingUnavailable": " • Remaining: unavailable",
+        "actions": {
+          "edit": "Edit",
+          "override": "Override",
+          "save": "Save",
+          "cancel": "Cancel",
+          "reset": "Reset"
+        },
+        "errors": {
+          "saveFailed": "Failed to save API rate limit override.",
+          "clearFailed": "Failed to clear API rate limit override."
+        }
       }
     }
   },

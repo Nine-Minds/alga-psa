@@ -8,7 +8,6 @@ import { z } from 'zod';
 
 import { getUserRoles } from './policyActions';
 import { withAuth } from '../lib/withAuth';
-import { hasPermission } from '../lib/rbac';
 import type { TicketWebhookPayload } from '@/lib/eventBus/subscribers/webhook/webhookTicketPayload';
 import type { TicketWebhookPublicEvent } from '@/lib/eventBus/subscribers/webhook/webhookEventMap';
 import { buildSignedWebhookRequestHeaders, buildWebhookEnvelope } from '@/lib/webhooks/processWebhookDeliveryJob';
@@ -16,6 +15,11 @@ import { performWebhookDeliveryRequest } from '@/lib/webhooks/delivery';
 import { signRequest } from '@/lib/webhooks/sign';
 import { WebhookDeliveryQueue } from '@/lib/webhooks/WebhookDeliveryQueue';
 import { webhookModel, type WebhookDeliveryRecord, type WebhookRecord } from '@/lib/webhooks/webhookModel';
+import { WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY } from './webhookPayloadFields';
+// Types and the registry constant live in ./webhookPayloadFields and must be
+// imported from there directly. This module is "use server" — Next's RSC
+// bundler rejects any non-async-function export, so we cannot re-export
+// types or the registry from here.
 
 const SUPPORTED_WEBHOOK_EVENTS = [
   'ticket.created',
@@ -26,6 +30,43 @@ const SUPPORTED_WEBHOOK_EVENTS = [
   'ticket.comment.added',
 ] as const;
 
+// Per-webhook allowlist:
+//   null              — full payload for every entity (default).
+//   {}                — same as null.
+//   { ticket: null }  — full payload for that entity (explicit).
+//   { ticket: [] }    — required-only for that entity.
+//   { ticket: [...] } — only these fields for that entity (plus required).
+// Entities not present in the map fall back to "full payload".
+const payloadFieldsByEntitySchema = z
+  .record(z.string(), z.array(z.string()).nullable())
+  .nullable()
+  .superRefine((value, ctx) => {
+    if (!value) return;
+    for (const [entity, fields] of Object.entries(value)) {
+      const allowed =
+        (WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY as Record<string, readonly string[]>)[entity];
+      if (!allowed) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [entity],
+          message: `Unknown webhook entity "${entity}"`,
+        });
+        continue;
+      }
+      if (fields === null) continue;
+      const allowedSet = new Set(allowed);
+      for (const f of fields) {
+        if (!allowedSet.has(f)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [entity],
+            message: `Unknown field "${f}" for entity "${entity}"`,
+          });
+        }
+      }
+    }
+  });
+
 const webhookInputSchema = z.object({
   webhookId: z.string().uuid().optional(),
   name: z.string().trim().min(1).max(255),
@@ -33,6 +74,7 @@ const webhookInputSchema = z.object({
   eventTypes: z.array(z.enum(SUPPORTED_WEBHOOK_EVENTS)).min(1),
   customHeaders: z.record(z.string(), z.string()).default({}),
   entityIds: z.array(z.string().uuid()).default([]),
+  payloadFields: payloadFieldsByEntitySchema.optional(),
   retryConfig: z.record(z.string(), z.unknown()).nullable().optional(),
   verifySsl: z.boolean().default(true),
   rateLimitPerMin: z.number().int().min(1).max(1000).default(100),
@@ -57,6 +99,11 @@ export interface WebhookSettingsView {
   eventTypes: string[];
   customHeaders: Record<string, string>;
   entityIds: string[];
+  /**
+   * Per-entity payload field allowlist (see schema above for shape semantics).
+   * `null` = full payload for every entity (UI "select all" default).
+   */
+  payloadFields: Record<string, string[] | null> | null;
   retryConfig: Record<string, unknown> | null;
   verifySsl: boolean;
   rateLimitPerMin: number;
@@ -127,6 +174,7 @@ function mapWebhookView(webhook: WebhookRecord): WebhookSettingsView {
     entityIds: Array.isArray((webhook.eventFilter as { entity_ids?: unknown } | null)?.entity_ids)
       ? ((webhook.eventFilter as { entity_ids?: string[] }).entity_ids ?? [])
       : [],
+    payloadFields: webhook.payloadFields ?? null,
     retryConfig: webhook.retryConfig ?? null,
     verifySsl: webhook.verifySsl,
     rateLimitPerMin: webhook.rateLimitPerMin,
@@ -165,16 +213,18 @@ function mapDeliveryView(delivery: WebhookDeliveryRecord): WebhookDeliveryView {
   };
 }
 
-async function assertWebhookPermission(user: IUserWithRoles, action: string): Promise<void> {
+/**
+ * Webhook admin actions are gated on the same tenant-admin role check used by
+ * the API Keys settings tab (`apiKeyRateLimitActions.assertTenantAdmin`). The
+ * two tabs sit side-by-side under Settings → Security; gating them
+ * identically keeps the access model consistent and avoids an asymmetric
+ * RBAC story where a non-admin could manage webhooks but not API keys.
+ */
+async function assertWebhookPermission(user: IUserWithRoles, _action: string): Promise<void> {
   const roles = await getUserRoles(user.user_id);
   const isAdmin = roles.some((role) => role.role_name.toLowerCase() === 'admin');
-  if (isAdmin) {
-    return;
-  }
-
-  const allowed = await hasPermission(user, 'webhook', action);
-  if (!allowed) {
-    throw new Error(`Forbidden: webhook.${action} required`);
+  if (!isAdmin) {
+    throw new Error('Forbidden: Admin access required');
   }
 }
 
@@ -219,6 +269,7 @@ export const upsertWebhook = withAuth(async (user, _ctx, input: z.input<typeof w
       eventTypes: parsed.eventTypes,
       customHeaders: normalizedHeaders,
       eventFilter,
+      payloadFields: parsed.payloadFields ?? null,
       retryConfig: parsed.retryConfig ?? null,
       verifySsl: parsed.verifySsl,
       rateLimitPerMin: parsed.rateLimitPerMin,
@@ -243,6 +294,7 @@ export const upsertWebhook = withAuth(async (user, _ctx, input: z.input<typeof w
     eventTypes: parsed.eventTypes,
     customHeaders: normalizedHeaders,
     eventFilter,
+    payloadFields: parsed.payloadFields ?? null,
     signingSecret,
     retryConfig: parsed.retryConfig ?? null,
     verifySsl: parsed.verifySsl,

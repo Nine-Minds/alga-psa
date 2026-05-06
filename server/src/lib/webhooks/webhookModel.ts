@@ -19,6 +19,17 @@ export interface WebhookRecord {
   eventTypes: string[];
   customHeaders: Record<string, string> | null;
   eventFilter: Record<string, unknown> | null;
+  /**
+   * Per-entity payload field allowlist.
+   *   null                       -> full payload for every entity (default).
+   *   {}                         -> same as null (no per-entity overrides).
+   *   { ticket: null }           -> full payload for that entity (explicit).
+   *   { ticket: [] }             -> required-only for that entity.
+   *   { ticket: ["title", ...] } -> only these fields (plus required) for it.
+   *
+   * Entities not present in the map fall back to "full payload".
+   */
+  payloadFields: Record<string, string[] | null> | null;
   securityType: string;
   verifySsl: boolean;
   retryConfig: Record<string, unknown> | null;
@@ -49,6 +60,7 @@ export interface InsertWebhookInput {
   eventTypes: string[];
   customHeaders?: Record<string, string> | null;
   eventFilter?: Record<string, unknown> | null;
+  payloadFields?: Record<string, string[] | null> | null;
   signingSecret: string;
   signingSecretVaultPath?: string;
   securityType?: string;
@@ -66,6 +78,7 @@ export interface UpdateWebhookInput {
   eventTypes?: string[];
   customHeaders?: Record<string, string> | null;
   eventFilter?: Record<string, unknown> | null;
+  payloadFields?: Record<string, string[] | null> | null;
   signingSecret?: string;
   signingSecretVaultPath?: string;
   securityType?: string;
@@ -153,6 +166,7 @@ function mapWebhookRow(row: any): WebhookRecord {
     eventTypes: row.event_types ?? [],
     customHeaders: row.custom_headers ?? null,
     eventFilter: row.event_filter ?? null,
+    payloadFields: row.payload_fields ?? null,
     securityType: row.security_type,
     verifySsl: row.verify_ssl,
     retryConfig: row.retry_config ?? null,
@@ -210,6 +224,7 @@ function buildWebhookUpdatePayload(input: UpdateWebhookInput): Record<string, un
   if (input.eventTypes !== undefined) payload.event_types = input.eventTypes;
   if (input.customHeaders !== undefined) payload.custom_headers = input.customHeaders;
   if (input.eventFilter !== undefined) payload.event_filter = input.eventFilter;
+  if (input.payloadFields !== undefined) payload.payload_fields = input.payloadFields;
   if (input.securityType !== undefined) payload.security_type = input.securityType;
   if (input.verifySsl !== undefined) payload.verify_ssl = input.verifySsl;
   if (input.retryConfig !== undefined) payload.retry_config = input.retryConfig;
@@ -336,6 +351,7 @@ async function insert(input: InsertWebhookInput): Promise<WebhookRecord> {
         event_types: input.eventTypes,
         custom_headers: input.customHeaders ?? null,
         event_filter: input.eventFilter ?? null,
+        payload_fields: input.payloadFields ?? null,
         signing_secret_vault_path: signingSecretVaultPath,
         security_type: input.securityType ?? 'hmac_signature',
         verify_ssl: input.verifySsl ?? true,

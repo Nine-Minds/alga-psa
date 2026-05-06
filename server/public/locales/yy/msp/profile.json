@@ -89,7 +89,8 @@
       "permissions": "55555",
       "userRoles": "55555",
       "policies": "55555",
-      "apiKeys": "55555"
+      "apiKeys": "55555",
+      "webhooks": "55555"
     },
     "loading": {
       "roles": "55555",
@@ -97,6 +98,7 @@
       "userRoles": "55555",
       "policies": "55555",
       "apiKeys": "55555",
+      "webhooks": "55555",
       "sso": "55555",
       "sessions": "55555"
     },
@@ -181,6 +183,166 @@
         "loading": "55555",
         "noMatch": "55555",
         "noSessions": "55555"
+      }
+    },
+    "webhooks": {
+      "title": "55555",
+      "description": "55555",
+      "newWebhook": "55555",
+      "tabs": {
+        "configuration": "55555",
+        "deliveries": "55555"
+      },
+      "stats": {
+        "total": "55555",
+        "active": "55555",
+        "autoDisabled": "55555"
+      },
+      "secret": {
+        "label": "55555",
+        "warning": "55555",
+        "copy": "55555",
+        "copied": "55555",
+        "copyFailed": "55555",
+        "close": "55555",
+        "download": "55555"
+      },
+      "form": {
+        "createTitle": "55555",
+        "editTitle": "55555",
+        "helper": "55555",
+        "name": "55555",
+        "namePlaceholder": "55555",
+        "url": "55555",
+        "urlPlaceholder": "55555",
+        "events": "55555",
+        "customHeaders": "55555",
+        "customHeadersPlaceholder": "55555",
+        "ticketFilter": "55555",
+        "ticketFilterPlaceholder": "55555",
+        "retryConfig": "55555",
+        "verifySsl": "55555",
+        "webhookActive": "55555",
+        "save": "55555",
+        "saving": "55555",
+        "create": "55555",
+        "clear": "55555",
+        "delete": "55555",
+        "payloadFields": "55555",
+        "payloadFieldsHelp": "55555",
+        "payloadFieldsSelectAll": "55555",
+        "payloadFieldsClear": "55555"
+      },
+      "list": {
+        "title": "55555",
+        "loading": "55555",
+        "configuredCount": "55555 {{count}} 55555",
+        "empty": "55555",
+        "columns": {
+          "name": "55555",
+          "status": "55555",
+          "lastDelivery": "55555",
+          "success": "55555",
+          "actions": "55555"
+        },
+        "actions": {
+          "selected": "55555",
+          "manage": "55555",
+          "pause": "55555",
+          "resume": "55555",
+          "view": "55555",
+          "edit": "55555"
+        }
+      },
+      "detail": {
+        "summary": "55555 {{total}} 55555 {{successful}} 55555 {{failed}} 55555",
+        "sendTest": "55555",
+        "sending": "55555",
+        "rotateSecret": "55555",
+        "rotating": "55555",
+        "back": "55555"
+      },
+      "deliveries": {
+        "title": "55555",
+        "page": "55555 {{page}} 55555 {{total}} 55555",
+        "empty": "55555",
+        "columns": {
+          "event": "55555",
+          "status": "55555",
+          "attempted": "55555",
+          "response": "55555",
+          "action": "55555"
+        },
+        "testBadge": "55555",
+        "attempt": "55555 {{number}} 55555",
+        "noResponseCode": "55555",
+        "noResponseBody": "55555",
+        "retry": "55555",
+        "previous": "55555",
+        "next": "55555"
+      },
+      "messages": {
+        "loadFailed": "55555",
+        "loadDeliveriesFailed": "55555",
+        "saveFailed": "55555",
+        "createSuccess": "55555",
+        "updateSuccess": "55555",
+        "deleteConfirm": "55555 {{name}} 55555",
+        "deleteSuccess": "55555",
+        "deleteFailed": "55555",
+        "testSuccess": "55555 {{statusCode}} 55555",
+        "testFailed": "55555 {{message}} 55555",
+        "testRunFailed": "55555",
+        "unknownError": "55555",
+        "secretRotated": "55555",
+        "rotateFailed": "55555",
+        "resumed": "55555",
+        "paused": "55555",
+        "stateChangeFailed": "55555",
+        "retryQueued": "55555 {{eventId}} 55555",
+        "retryFailed": "55555",
+        "invalidHeaderLine": "55555 {{line}} 55555",
+        "invalidRetryConfig": "55555"
+      },
+      "common": {
+        "never": "55555"
+      },
+      "health": {
+        "healthy": "55555",
+        "failing": "55555",
+        "disabled": "55555"
+      },
+      "deliveryStatus": {
+        "delivered": "55555",
+        "retrying": "55555",
+        "abandoned": "55555",
+        "pending": "55555"
+      }
+    },
+    "apiKeys": {
+      "rateLimit": {
+        "columnTitle": "55555",
+        "loading": "55555",
+        "summary": "55555 {{maxTokens}} 55555 {{refillPerMin}} 55555",
+        "source": "55555 {{label}} 55555",
+        "sourceLabels": {
+          "key": "55555",
+          "tenant": "55555",
+          "system": "55555"
+        },
+        "remaining": "55555 {{remaining}} 55555 {{maxTokens}} 55555",
+        "remainingUnavailable": "55555",
+        "actions": {
+          "edit": "55555",
+          "override": "55555",
+          "save": "55555",
+          "cancel": "55555",
+          "reset": "55555"
+        },
+        "errors": {
+          "saveFailed": "55555",
+          "clearFailed": "55555"
+        }
       }
     }
   },

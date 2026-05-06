@@ -25,6 +25,13 @@ exports.up = async function up(knex) {
     table.timestamp('last_success_at', { useTz: true });
     table.timestamp('last_failure_at', { useTz: true });
     table.timestamp('auto_disabled_at', { useTz: true });
+    // Per-entity payload field allowlist:
+    //   NULL                       -> include all fields (default)
+    //   {}                         -> same as NULL
+    //   { ticket: null }           -> full payload for that entity (explicit)
+    //   { ticket: [] }             -> required-only for that entity
+    //   { ticket: ["title", ...] } -> only those fields (plus required) for that entity
+    table.jsonb('payload_fields');
     table.uuid('created_by_user_id').notNullable();
     table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
     table.timestamp('updated_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());

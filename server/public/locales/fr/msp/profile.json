@@ -89,7 +89,8 @@
       "permissions": "Autorisations",
       "userRoles": "Rôles des utilisateurs",
       "policies": "Politiques",
-      "apiKeys": "Clés API"
+      "apiKeys": "Clés API",
+      "webhooks": "Webhooks"
     },
     "loading": {
       "roles": "Chargement de la configuration des rôles...",
@@ -97,6 +98,7 @@
       "userRoles": "Chargement de la configuration des rôles des utilisateurs...",
       "policies": "Chargement de la configuration des politiques...",
       "apiKeys": "Chargement de la configuration des clés API...",
+      "webhooks": "Chargement de la configuration des webhooks...",
       "sso": "Chargement des outils de gestion SSO...",
       "sessions": "Chargement des sessions actives..."
     },
@@ -181,6 +183,166 @@
         "loading": "Chargement des sessions...",
         "noMatch": "Aucune session ne correspond à votre recherche",
         "noSessions": "Aucune session active trouvée"
+      }
+    },
+    "webhooks": {
+      "title": "Webhooks sortants",
+      "description": "Créez des abonnements signés au cycle de vie des tickets, filtrez-les par identifiants de ticket spécifiques, inspectez l'historique des livraisons et faites tourner les secrets sans quitter les paramètres.",
+      "newWebhook": "Nouveau webhook",
+      "tabs": {
+        "configuration": "Configuration",
+        "deliveries": "Livraisons"
+      },
+      "stats": {
+        "total": "Total des webhooks",
+        "active": "Actifs",
+        "autoDisabled": "Désactivés automatiquement"
+      },
+      "secret": {
+        "label": "Clé de signature",
+        "warning": "Cette valeur n'est affichée qu'une seule fois. Enregistrez-la dans le récepteur avant de quitter la page.",
+        "copy": "Copier",
+        "copied": "Secret de signature copié dans le presse-papiers",
+        "copyFailed": "Échec de la copie du secret de signature dans le presse-papiers",
+        "close": "Fermer",
+        "download": "Télécharger en .txt"
+      },
+      "form": {
+        "createTitle": "Créer un webhook",
+        "editTitle": "Modifier le webhook",
+        "helper": "La configuration des nouvelles tentatives est stockée au format JSON ; la cadence de livraison utilise toujours le calendrier de backoff standard de la plateforme en v1.",
+        "name": "Nom",
+        "namePlaceholder": "Flux d'attribution des tickets",
+        "url": "URL",
+        "urlPlaceholder": "https://example.com/hooks/alga",
+        "events": "Événements",
+        "customHeaders": "En-têtes personnalisés",
+        "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
+        "ticketFilter": "Filtre de tickets",
+        "ticketFilterPlaceholder": "Un UUID de ticket par ligne. Laissez vide pour recevoir tous les événements de ticket correspondants.",
+        "retryConfig": "Configuration des nouvelles tentatives (JSON)",
+        "verifySsl": "Vérifier les certificats SSL",
+        "webhookActive": "Le webhook est actif",
+        "save": "Enregistrer les modifications",
+        "saving": "Enregistrement…",
+        "create": "Créer le webhook",
+        "clear": "Effacer",
+        "delete": "Supprimer",
+        "payloadFields": "Champs envoyés",
+        "payloadFieldsHelp": "Tous les champs sont envoyés par défaut. Décochez pour exclure un champ de la livraison. La clé de corrélation de l’entité (p. ex. ticket_id) est toujours incluse.",
+        "payloadFieldsSelectAll": "Tout sélectionner",
+        "payloadFieldsClear": "Effacer"
+      },
+      "list": {
+        "title": "Webhooks configurés",
+        "loading": "Chargement…",
+        "configuredCount": "{{count}} configurés",
+        "empty": "Aucun webhook configuré pour le moment.",
+        "columns": {
+          "name": "Nom",
+          "status": "Statut",
+          "lastDelivery": "Dernière livraison",
+          "success": "Réussite",
+          "actions": "Actions"
+        },
+        "actions": {
+          "selected": "Sélectionné",
+          "manage": "Gérer",
+          "pause": "Suspendre",
+          "resume": "Reprendre",
+          "view": "Voir",
+          "edit": "Modifier"
+        }
+      },
+      "detail": {
+        "summary": "{{total}} livraisons, {{successful}} réussies, {{failed}} échouées.",
+        "sendTest": "Envoyer un test",
+        "sending": "Envoi…",
+        "rotateSecret": "Faire tourner la clé",
+        "rotating": "Rotation…",
+        "back": "Retour aux webhooks"
+      },
+      "deliveries": {
+        "title": "Historique des livraisons",
+        "page": "Page {{page}} sur {{total}}",
+        "empty": "Aucune livraison enregistrée pour le moment.",
+        "columns": {
+          "event": "Événement",
+          "status": "Statut",
+          "attempted": "Tenté",
+          "response": "Réponse",
+          "action": "Action"
+        },
+        "testBadge": "Livraison de test",
+        "attempt": "Tentative {{number}}",
+        "noResponseCode": "s.o.",
+        "noResponseBody": "Aucun corps de réponse capturé.",
+        "retry": "Réessayer",
+        "previous": "Précédent",
+        "next": "Suivant"
+      },
+      "messages": {
+        "loadFailed": "Impossible de charger les paramètres du webhook.",
+        "loadDeliveriesFailed": "Impossible de charger les livraisons du webhook.",
+        "saveFailed": "Impossible d'enregistrer le webhook.",
+        "createSuccess": "Webhook créé.",
+        "updateSuccess": "Webhook mis à jour.",
+        "deleteConfirm": "Supprimer le webhook \"{{name}}\" ?",
+        "deleteSuccess": "Webhook supprimé.",
+        "deleteFailed": "Impossible de supprimer le webhook.",
+        "testSuccess": "Test envoyé avec succès ({{statusCode}}).",
+        "testFailed": "Échec du test : {{message}}",
+        "testRunFailed": "Impossible d'envoyer le test de webhook.",
+        "unknownError": "Erreur inconnue",
+        "secretRotated": "Clé de signature renouvelée.",
+        "rotateFailed": "Impossible de faire tourner la clé du webhook.",
+        "resumed": "Webhook repris.",
+        "paused": "Webhook suspendu.",
+        "stateChangeFailed": "Impossible de mettre à jour l'état du webhook.",
+        "retryQueued": "Nouvelle tentative en file d'attente pour l'événement {{eventId}}.",
+        "retryFailed": "Impossible de réessayer la livraison.",
+        "invalidHeaderLine": "Ligne d'en-tête non valide : \"{{line}}\"",
+        "invalidRetryConfig": "La configuration des nouvelles tentatives doit être un objet JSON"
+      },
+      "common": {
+        "never": "Jamais"
+      },
+      "health": {
+        "healthy": "sain",
+        "failing": "en échec",
+        "disabled": "désactivé"
+      },
+      "deliveryStatus": {
+        "delivered": "livré",
+        "retrying": "nouvelle tentative",
+        "abandoned": "abandonné",
+        "pending": "en attente"
+      }
+    },
+    "apiKeys": {
+      "rateLimit": {
+        "columnTitle": "Limite de débit",
+        "loading": "Chargement…",
+        "summary": "{{maxTokens}} en rafale / {{refillPerMin}} par min",
+        "source": "Source : {{label}}",
+        "sourceLabels": {
+          "key": "Remplacement",
+          "tenant": "Valeur par défaut du tenant",
+          "system": "Valeur par défaut du système"
+        },
+        "remaining": " • Restant : {{remaining}}/{{maxTokens}}",
+        "remainingUnavailable": " • Restant : indisponible",
+        "actions": {
+          "edit": "Modifier",
+          "override": "Remplacer",
+          "save": "Enregistrer",
+          "cancel": "Annuler",
+          "reset": "Réinitialiser"
+        },
+        "errors": {
+          "saveFailed": "Impossible d'enregistrer le remplacement de la limite de débit de l'API.",
+          "clearFailed": "Impossible de supprimer le remplacement de la limite de débit de l'API."
+        }
       }
     }
   },

@@ -44,6 +44,9 @@ vi.mock('@/lib/eventBus/subscribers/webhook/webhookTicketPayload', () => ({
     tags: [],
   })),
   clearTicketWebhookPayloadCache: vi.fn(),
+  fetchTicketCommentsForWebhook: vi.fn(async () => []),
+  projectWebhookPayload: vi.fn((_entity: string, payload: any) => payload),
+  projectTicketWebhookPayload: vi.fn((payload: any) => payload),
 }));
 
 vi.mock('@/lib/webhooks/WebhookDeliveryQueue', () => ({

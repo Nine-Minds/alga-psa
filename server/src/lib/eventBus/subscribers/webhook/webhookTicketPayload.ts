@@ -19,6 +19,16 @@ type TicketWebhookCommentPayload = {
   is_internal: boolean;
 };
 
+type TicketWebhookCommentsEntry = {
+  comment_id: string;
+  text: string;
+  author: string | null;
+  is_internal: boolean;
+  is_resolution: boolean;
+  created_at: string;
+  updated_at: string | null;
+};
+
 export type TicketWebhookPayload = {
   ticket_id: string;
   ticket_number: string | null;
@@ -50,6 +60,11 @@ export type TicketWebhookPayload = {
   previous_status_name?: string | null;
   changes?: Record<string, NormalizedWebhookChange>;
   comment?: TicketWebhookCommentPayload;
+  /**
+   * Full thread for this ticket. Only populated when the subscriber
+   * requested the `comments` field. Ordered oldest → newest.
+   */
+  comments?: TicketWebhookCommentsEntry[];
 };
 
 type CachedTicketWebhookPayload = Omit<TicketWebhookPayload, 'changes' | 'comment'>;
@@ -139,6 +154,58 @@ export async function buildTicketWebhookPayload(
 
 export function clearTicketWebhookPayloadCache(): void {
   ticketWebhookCache.clear();
+}
+
+/**
+ * Per-entity always-required correlation keys. These never get stripped
+ * regardless of the user's allowlist.
+ */
+const ALWAYS_INCLUDED_KEYS_BY_ENTITY: Record<string, readonly string[]> = {
+  ticket: ['ticket_id'],
+};
+
+/**
+ * Project a fully-built webhook payload down to a per-subscriber field
+ * allowlist for the given entity. Returns the original payload unchanged
+ * when `allowedFields` is null (the default — no filtering, full payload).
+ *
+ * The entity's correlation key (e.g. `ticket_id` for tickets) is always
+ * retained regardless of whether the consumer included it in their
+ * selection.
+ */
+export function projectWebhookPayload<T extends Record<string, unknown>>(
+  entity: string,
+  payload: T,
+  allowedFields: string[] | null,
+): T {
+  if (allowedFields === null) {
+    return payload;
+  }
+
+  const allowed = new Set<string>(allowedFields);
+  for (const key of ALWAYS_INCLUDED_KEYS_BY_ENTITY[entity] ?? []) {
+    allowed.add(key);
+  }
+
+  const projected: Record<string, unknown> = {};
+  for (const key of Object.keys(payload)) {
+    if (allowed.has(key)) {
+      projected[key] = payload[key];
+    }
+  }
+
+  return projected as T;
+}
+
+/**
+ * @deprecated Use `projectWebhookPayload('ticket', payload, allowedFields)`.
+ * Kept as a thin shim so callers and tests can migrate without churn.
+ */
+export function projectTicketWebhookPayload(
+  payload: TicketWebhookPayload,
+  allowedFields: string[] | null,
+): TicketWebhookPayload {
+  return projectWebhookPayload('ticket', payload, allowedFields);
 }
 
 async function getCachedTicketWebhookPayload(
@@ -297,6 +364,58 @@ async function fetchStatusName(
     .first<{ name: string | null }>();
 
   return row?.name ?? null;
+}
+
+/**
+ * Fetch the full comment thread for a ticket. Used by the webhook subscriber
+ * when at least one matching webhook has the `comments` field selected.
+ *
+ * Lives outside the per-ticket payload cache because comments change on
+ * every TICKET_COMMENT_ADDED — caching them inside the 60s base payload
+ * would let stale threads slip out for a full minute after each new entry.
+ */
+export async function fetchTicketCommentsForWebhook(
+  knex: Knex,
+  tenantId: string,
+  ticketId: string,
+): Promise<TicketWebhookCommentsEntry[]> {
+  const rows = await knex('comments as c')
+    .leftJoin('users as u', function joinUsers() {
+      this.on('c.user_id', '=', 'u.user_id').andOn('c.tenant', '=', 'u.tenant');
+    })
+    .select(
+      'c.comment_id',
+      'c.note',
+      'c.markdown_content',
+      'c.is_internal',
+      'c.is_resolution',
+      'c.created_at',
+      'c.updated_at',
+      knex.raw(
+        "NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), '') as author_name",
+      ),
+    )
+    .where({
+      'c.tenant': tenantId,
+      'c.ticket_id': ticketId,
+    })
+    .orderBy('c.created_at', 'asc');
+
+  return rows.map((row: any) => ({
+    comment_id: row.comment_id,
+    text: typeof row.markdown_content === 'string' && row.markdown_content.length > 0
+      ? row.markdown_content
+      : (typeof row.note === 'string' ? row.note : ''),
+    author: row.author_name ?? null,
+    is_internal: Boolean(row.is_internal),
+    is_resolution: Boolean(row.is_resolution),
+    created_at: row.created_at instanceof Date
+      ? row.created_at.toISOString()
+      : String(row.created_at),
+    updated_at: row.updated_at
+      ? (row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at))
+      : null,
+  }));
 }
 
 function normalizeChanges(
