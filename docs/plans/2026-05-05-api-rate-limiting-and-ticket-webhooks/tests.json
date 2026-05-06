@@ -188,37 +188,37 @@
   {
     "id": "T032",
     "description": "Integration (vitest + real Postgres, server/src/test/integration/webhook.secretLifecycle.test.ts): POST /api/v1/webhooks returns plaintext signing_secret in the response body once; subsequent GET /api/v1/webhooks/[id] response body does NOT contain any field matching /signing_secret/i; webhookModel.getSigningSecret resolves a non-empty string via the secret provider; rotateWebhookSecret returns a different plaintext, and the OLD plaintext fails verifyWebhookSignature against a body signed by the NEW secret.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024", "F027", "F042", "F043"]
   },
   {
     "id": "T033",
     "description": "Integration (vitest + ephemeral http server, server/src/test/integration/webhook.testEndpoint.test.ts): POST /api/v1/webhooks/[id]/test → stub server receives one POST with event_type='webhook.test'; signature verifies; webhook_deliveries row written with is_test=true; bucket token count for the webhook is unchanged (no rate-limit consumption for test calls).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F031", "F046"]
   },
   {
     "id": "T034",
     "description": "Integration (vitest + ephemeral http server, server/src/test/integration/webhookDelivery.entityIdFilter.test.ts): a webhook with filter.entity_ids=['ticket-X','ticket-Y'] receives a delivery when a TICKET_ASSIGNED event for ticket-X publishes, and does NOT receive one when a TICKET_ASSIGNED event for ticket-Z publishes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F041"]
   },
   {
     "id": "T035",
     "description": "Integration (vitest + real Postgres, server/src/test/integration/webhook.cleanupJob.test.ts): seed 100 webhook_deliveries rows with attempted_at spread across 60 days; run the cleanup job once; assert rows older than 30 days are deleted and rows ≤30 days remain.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F048"]
   },
   {
     "id": "T036",
     "description": "Integration (vitest + real Postgres, server/src/test/integration/webhook.controllerEndpoints.test.ts): exercise getDeliveryDetails (returns a known row by id), getWebhookHealth (computed from stats columns), getWebhookSubscriptions (returns webhook.event_types), listAvailableEvents (returns the public enum). Also assert that DELETED route paths (e.g., /api/v1/webhooks/transform, /webhooks/bulk, /webhooks/templates) return 404 (no longer registered).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F044", "F045"]
   },
   {
     "id": "T037",
     "description": "Migration smoke (vitest + a fresh test database, server/src/test/integration/migrations.rateLimitAndWebhooks.test.ts): run the new migrations end-to-end; INSERT into api_rate_limit_settings and webhooks/webhook_deliveries succeed; the UNIQUE (tenant, api_key_id) constraint is enforced; a SELECT distribution_column from pg_dist_partition confirms 'tenant' for all three tables.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F009", "F024", "F025", "F026"]
   }
 ]

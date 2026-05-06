@@ -268,6 +268,18 @@ implementation progresses; update earlier entries when something changes.
   `error_type='ssrf'`; the bypassed path proves the override path lets the
   fetch through. The `Agent` constructor is mocked alongside `fetch` so
   `verify_ssl=false` paths don't touch the real undici Agent.
+- (2026-05-06) `T036` cannot use `vi.spyOn(ApiBaseController.prototype,
+  ...)` because `ApiWebhookController` declares its OWN `private`
+  `authenticate` and `checkPermission` that shadow the base class — the
+  spy must be on `ApiWebhookController.prototype` directly. URLs in
+  controller tests must use a real UUID for the `[id]` segment because
+  `extractIdFromPath` validates against `^[0-9a-f]{8}-...$`.
+- (2026-05-06) `T037` audits the migration source files instead of
+  spinning up a Citus-aware test database, since the vitest harness here
+  doesn't have Citus available. The audit verifies the table-creation +
+  partial unique-index + distribute_table contracts that real migrations
+  enforce; if/when a Citus test DB lands, this test should be replaced
+  with a real `migrate:up` smoke + a `pg_dist_partition` query.
 
 ## Commands / Runbooks
 
