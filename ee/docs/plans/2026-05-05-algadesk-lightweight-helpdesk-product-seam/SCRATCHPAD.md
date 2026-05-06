@@ -508,3 +508,14 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 
 - `cd server && npx vitest run src/test/unit/api/apiBaseController.productAccess.contract.test.ts src/test/unit/productSurfaceRegistry.test.ts`
   - Result: pass (8 tests).
+- (2026-05-06) Completed F333/F334/F335/F354 and T027 via product-aware metadata/OpenAPI filtering.
+  - Updated `server/src/lib/api/controllers/ApiMetadataController.ts`:
+    - Applies `assertProductApiAccess` across metadata controller endpoints (same guard model as ApiBaseController flow).
+    - Filters `/api/v1/meta/endpoints` response to only product-visible endpoint paths using `isApiVisibleInMetadata(productCode, endpoint.path)`.
+    - Filters `/api/v1/meta/openapi` `paths` object to only product-visible paths for current tenant product.
+  - PSA preservation: visibility filter returns full metadata for `psa` rules, preserving existing PSA metadata output.
+  - Added contract test:
+    - `server/src/test/unit/api/apiMetadataController.productVisibility.contract.test.ts`.
+
+- `cd server && npx vitest run src/test/unit/api/apiMetadataController.productVisibility.contract.test.ts src/test/unit/api/apiBaseController.productAccess.contract.test.ts src/test/unit/productSurfaceRegistry.test.ts`
+  - Result: pass (9 tests).

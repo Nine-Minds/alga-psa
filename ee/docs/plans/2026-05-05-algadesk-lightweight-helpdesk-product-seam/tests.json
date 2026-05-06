@@ -289,5 +289,16 @@
       "F324",
       "F336"
     ]
+  },
+  {
+    "id": "T027",
+    "description": "Controller contract: metadata/OpenAPI discovery endpoints filter Algadesk-visible API paths and preserve PSA metadata visibility.",
+    "implemented": true,
+    "featureIds": [
+      "F333",
+      "F334",
+      "F335",
+      "F354"
+    ]
   }
 ]

@@ -2658,7 +2658,7 @@
   {
     "id": "F333",
     "description": "Filter API endpoint metadata for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2666,7 +2666,7 @@
   {
     "id": "F334",
     "description": "Filter OpenAPI output for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2674,7 +2674,7 @@
   {
     "id": "F335",
     "description": "Filter API docs output for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API and metadata boundaries"
     ]
@@ -2826,7 +2826,7 @@
   {
     "id": "F354",
     "description": "Preserve existing PSA API metadata for PSA tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PSA preservation and future aliases"
     ]

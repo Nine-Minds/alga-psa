@@ -33,6 +33,8 @@ import {
   handleApiError
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
+import { getTenantProduct } from '@/lib/productAccess';
+import { isApiVisibleInMetadata } from '@/lib/productSurfaceRegistry';
 
 export class ApiMetadataController extends ApiBaseController {
   private metadataService: MetadataService;
@@ -78,6 +80,10 @@ export class ApiMetadataController extends ApiBaseController {
     }
   }
 
+  private async getApiMetadataProductCode(tenantId: string) {
+    return getTenantProduct(tenantId);
+  }
+
   // ============================================================================
   // API ENDPOINT DISCOVERY
   // ============================================================================
@@ -91,6 +97,7 @@ export class ApiMetadataController extends ApiBaseController {
       try {
         // Authenticate
         const apiRequest = await this.authenticate(req);
+        await this.assertProductApiAccess(apiRequest);
         
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
@@ -101,8 +108,16 @@ export class ApiMetadataController extends ApiBaseController {
 
           const result = await this.metadataService.getApiEndpoints(query, apiRequest.context!.tenant);
           const validatedResult = apiEndpointsResponseSchema.parse(result);
+          const productCode = await this.getApiMetadataProductCode(apiRequest.context!.tenant);
+          const visibleEndpoints = validatedResult.data.endpoints.filter((endpoint) =>
+            isApiVisibleInMetadata(productCode, endpoint.path),
+          );
 
-          return createSuccessResponse(validatedResult.data, 200, {
+          return createSuccessResponse({
+            ...validatedResult.data,
+            endpoints: visibleEndpoints,
+            totalEndpoints: visibleEndpoints.length,
+          }, 200, {
             message: 'API endpoints retrieved successfully',
             ...validatedResult.meta
           });
@@ -126,6 +141,7 @@ export class ApiMetadataController extends ApiBaseController {
       try {
         // Authenticate
         const apiRequest = await this.authenticate(req);
+        await this.assertProductApiAccess(apiRequest);
         
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
@@ -161,6 +177,7 @@ export class ApiMetadataController extends ApiBaseController {
       try {
         // Authenticate
         const apiRequest = await this.authenticate(req);
+        await this.assertProductApiAccess(apiRequest);
         
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
@@ -193,6 +210,7 @@ export class ApiMetadataController extends ApiBaseController {
       try {
         // Authenticate
         const apiRequest = await this.authenticate(req);
+        await this.assertProductApiAccess(apiRequest);
         
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
@@ -203,6 +221,12 @@ export class ApiMetadataController extends ApiBaseController {
 
           const result = await this.metadataService.generateOpenApiSpec(query, apiRequest.context!.tenant);
           const validatedResult = openApiResponseSchema.parse(result);
+          const productCode = await this.getApiMetadataProductCode(apiRequest.context!.tenant);
+          const filteredPaths = Object.fromEntries(
+            Object.entries(validatedResult.data.paths).filter(([apiPath]) =>
+              isApiVisibleInMetadata(productCode, apiPath),
+            ),
+          );
 
           // Set appropriate content type for OpenAPI spec
           const contentType = query.format === 'yaml' 
@@ -210,7 +234,10 @@ export class ApiMetadataController extends ApiBaseController {
             : 'application/json';
 
           return NextResponse.json(
-            validatedResult.data,
+            {
+              ...validatedResult.data,
+              paths: filteredPaths,
+            },
             {
               status: 200,
               headers: {
@@ -240,6 +267,7 @@ export class ApiMetadataController extends ApiBaseController {
       try {
         // Authenticate
         const apiRequest = await this.authenticate(req);
+        await this.assertProductApiAccess(apiRequest);
         
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
@@ -268,6 +296,7 @@ export class ApiMetadataController extends ApiBaseController {
       try {
         // Authenticate
         const apiRequest = await this.authenticate(req);
+        await this.assertProductApiAccess(apiRequest);
         
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
@@ -304,6 +333,7 @@ export class ApiMetadataController extends ApiBaseController {
       try {
         // Authenticate
         const apiRequest = await this.authenticate(req);
+        await this.assertProductApiAccess(apiRequest);
         
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
@@ -340,6 +370,7 @@ export class ApiMetadataController extends ApiBaseController {
       try {
         // Authenticate
         const apiRequest = await this.authenticate(req);
+        await this.assertProductApiAccess(apiRequest);
         
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
