@@ -1802,7 +1802,7 @@
   {
     "id": "F226",
     "description": "Keep attachment authorization scoped to ticket visibility.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Knowledge base and attachments"
     ]

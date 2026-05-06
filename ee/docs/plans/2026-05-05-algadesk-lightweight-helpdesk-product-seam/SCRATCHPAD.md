@@ -387,3 +387,17 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 - (2026-05-05) Completed F226 by strengthening/validating ticket-attachment authorization contract coverage.
 - Updated `packages/tickets/src/actions/comment-actions/clipboardImageDraftActions.contract.test.ts` assertions to match current injected delete implementation (`input.deleteDocumentFn(...)`) and explicit ticket-association check.
 - Command run: `cd server && npx vitest run ../packages/tickets/src/actions/comment-actions/clipboardImageDraftActions.contract.test.ts ../packages/tickets/src/components/ticket/useTicketRichTextUploadSession.test.tsx` -> pass (10 tests).
+- (2026-05-05) Completed F227-F243 with product-aware client-portal shell composition.
+- Server/client layout threading:
+  - `server/src/app/client-portal/layout.tsx` now resolves tenant product via `getCurrentTenantProduct()` and passes `productCode` into `ClientPortalLayoutClient`.
+  - `server/src/app/client-portal/ClientPortalLayoutClient.tsx` now passes `productCode` to `ClientPortalLayout`.
+- Client portal shell updates:
+  - `packages/client-portal/src/components/layout/ClientPortalLayout.tsx` now threads `productCode` to sidebar and marks shell root with `data-product-shell`.
+  - `packages/client-portal/src/components/layout/ClientPortalSidebar.tsx` now applies Algadesk-specific nav composition:
+    - keeps dashboard/tickets/knowledge-base/profile and client settings (when permitted)
+    - hides billing/projects/devices/documents/appointments/request-services/extensions
+    - keeps PSA behavior unchanged by default (`productCode='psa'`).
+- Added/updated contract coverage:
+  - `server/src/test/unit/client-portal/clientPortalProductLayout.contract.test.ts`
+  - `packages/client-portal/src/components/layout/ClientPortalSidebar.contract.test.ts`
+- Command run: `cd server && npx vitest run src/test/unit/client-portal/clientPortalProductLayout.contract.test.ts ../packages/client-portal/src/components/layout/ClientPortalSidebar.contract.test.ts` -> pass (8 tests).
