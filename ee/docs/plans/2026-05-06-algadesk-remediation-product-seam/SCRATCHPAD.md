@@ -117,3 +117,10 @@ Working notes for remediating the current Algadesk implementation. This plan exi
 - `filterMenuSectionsByProduct` generic was relaxed to accept structural section types without requiring `Record<string, unknown>`, resolving `SidebarWithFeatureFlags` type errors.
 - Validation run (pass): `cd server && npm run typecheck -- --pretty false`.
 - Validation run (pass): `cd server && npx vitest run src/test/unit/context/ProductContext.test.tsx --reporter=dot`.
+- (2026-05-06) Completed product-denied error remediation batch (R024-R029).
+- `ProductAccessError` now sets both `status` and `statusCode` to 403 with stable `PRODUCT_ACCESS_DENIED` code.
+- Added `isProductAccessError` and `toProductAccessDeniedResponse` helper in `server/src/lib/productAccess.ts` for standalone route handlers.
+- `handleApiError` now maps either `statusCode` or `status` to HTTP response status, fixing product-denied 403 normalization.
+- Standalone chat/email API routes using `assertTenantProductAccess` now convert product-denied errors to structured 403 responses.
+- Validation run (pass): `cd server && npm run typecheck -- --pretty false`.
+- Validation run (pass): `cd server && npx vitest run src/test/unit/productAccess.test.ts src/test/unit/api/apiMiddleware.productAccess.test.ts --reporter=dot`.

@@ -7,7 +7,7 @@ import {
   generateNonce,
   OAuthState 
 } from '@/utils/email/oauthHelpers';
-import { assertTenantProductAccess } from '@/lib/productAccess';
+import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
 
 export async function POST(request: NextRequest) {
   try {
@@ -95,6 +95,9 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
+    if (isProductAccessError(error)) {
+      return toProductAccessDeniedResponse(error);
+    }
     console.error('Error initiating OAuth:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to initiate OAuth' },

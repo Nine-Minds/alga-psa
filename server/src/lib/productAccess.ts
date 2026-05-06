@@ -1,5 +1,6 @@
 import { getSession } from '@alga-psa/auth';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { NextResponse } from 'next/server';
 import {
   ProductCode,
   resolveProductCode,
@@ -11,6 +12,7 @@ import {
  */
 export class ProductAccessError extends Error {
   public readonly status = 403;
+  public readonly statusCode = 403;
   public readonly code = 'PRODUCT_ACCESS_DENIED';
   public readonly capability: string;
   public readonly productCode: string | null;
@@ -21,6 +23,34 @@ export class ProductAccessError extends Error {
     this.capability = capability;
     this.productCode = productCode;
   }
+}
+
+export function isProductAccessError(error: unknown): error is ProductAccessError {
+  return (
+    error instanceof ProductAccessError ||
+    (typeof error === 'object' &&
+      error !== null &&
+      (error as { code?: unknown }).code === 'PRODUCT_ACCESS_DENIED' &&
+      (typeof (error as { status?: unknown }).status === 'number' ||
+        typeof (error as { statusCode?: unknown }).statusCode === 'number'))
+  );
+}
+
+export function toProductAccessDeniedResponse(error: unknown): NextResponse {
+  const typed = error as { message?: string; capability?: string; productCode?: string | null };
+  return NextResponse.json(
+    {
+      error: {
+        code: 'PRODUCT_ACCESS_DENIED',
+        message: typed.message ?? 'Product access denied',
+        details: {
+          capability: typed.capability ?? null,
+          productCode: typed.productCode ?? null,
+        },
+      },
+    },
+    { status: 403 },
+  );
 }
 
 function resolveProductOrThrow(rawProductCode: string | null | undefined, capability: string): ProductCode {

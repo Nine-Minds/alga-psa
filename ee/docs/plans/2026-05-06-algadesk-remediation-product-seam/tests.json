@@ -32,7 +32,7 @@
   {
     "id": "RT004",
     "description": "Unit: product-denied errors consistently return HTTP 403 with code PRODUCT_ACCESS_DENIED through API middleware and representative standalone route handler helpers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "R024",
       "R026",

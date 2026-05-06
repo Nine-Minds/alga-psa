@@ -186,7 +186,7 @@
   {
     "id": "R024",
     "description": "Add statusCode=403 to ProductAccessError.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product error handling"
     ]
@@ -194,7 +194,7 @@
   {
     "id": "R025",
     "description": "Keep PRODUCT_ACCESS_DENIED code stable on all product-denied errors.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product error handling"
     ]
@@ -202,7 +202,7 @@
   {
     "id": "R026",
     "description": "Update API error handling to map product-denied errors with status or statusCode to HTTP 403.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product error handling"
     ]
@@ -210,7 +210,7 @@
   {
     "id": "R027",
     "description": "Update standalone route handlers to return product-denied 403 instead of generic 500.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product error handling"
     ]
@@ -218,7 +218,7 @@
   {
     "id": "R028",
     "description": "Add a helper for converting ProductAccessError to NextResponse where route handlers do not use API middleware.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product error handling"
     ]
@@ -226,7 +226,7 @@
   {
     "id": "R029",
     "description": "Add tests for product-denied API middleware response shape.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product error handling"
     ]

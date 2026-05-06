@@ -75,11 +75,30 @@ describe('product access helpers', () => {
       expect(error).toMatchObject({
         name: 'ProductAccessError',
         status: 403,
+        statusCode: 403,
         code: 'PRODUCT_ACCESS_DENIED',
         capability: 'billing.read',
         productCode: 'algadesk',
       });
     }
+  });
+
+  it('toProductAccessDeniedResponse returns structured 403 payload', async () => {
+    const { ProductAccessError, toProductAccessDeniedResponse } = await import('../../lib/productAccess');
+    const error = new ProductAccessError('billing.read', 'algadesk');
+    const response = toProductAccessDeniedResponse(error);
+    const payload = await response.json();
+
+    expect(response.status).toBe(403);
+    expect(payload).toMatchObject({
+      error: {
+        code: 'PRODUCT_ACCESS_DENIED',
+        details: {
+          capability: 'billing.read',
+          productCode: 'algadesk',
+        },
+      },
+    });
   });
 
   it('getCurrentTenantProduct falls back to psa when no session tenant is available', async () => {

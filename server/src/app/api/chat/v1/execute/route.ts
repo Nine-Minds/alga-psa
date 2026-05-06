@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 import { getSession } from '@alga-psa/auth';
-import { assertTenantProductAccess } from '@/lib/productAccess';
+import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
 
 const isEnterpriseEdition =
   process.env.NEXT_PUBLIC_EDITION === 'enterprise' ||
@@ -41,11 +41,18 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  await assertTenantProductAccess({
-    tenantId,
-    capability: 'ai_chat',
-    allowedProducts: ['psa'],
-  });
+  try {
+    await assertTenantProductAccess({
+      tenantId,
+      capability: 'ai_chat',
+      allowedProducts: ['psa'],
+    });
+  } catch (error) {
+    if (isProductAccessError(error)) {
+      return toProductAccessDeniedResponse(error);
+    }
+    throw error;
+  }
 
   const { ChatCompletionsService } = await import('@product/chat/entry');
   return ChatCompletionsService.handleExecute(req);

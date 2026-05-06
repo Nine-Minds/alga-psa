@@ -3,7 +3,7 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { encodeState, generateNonce, type OAuthState } from '@/utils/email/oauthHelpers';
 import { createTenantKnex } from '@/lib/db';
-import { assertTenantProductAccess } from '@/lib/productAccess';
+import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
 
 export async function POST(request: NextRequest) {
   try {
@@ -78,6 +78,9 @@ export async function POST(request: NextRequest) {
       state: Buffer.from(JSON.stringify(state)).toString('base64')
     });
   } catch (error: any) {
+    if (isProductAccessError(error)) {
+      return toProductAccessDeniedResponse(error);
+    }
     console.error('IMAP OAuth initiate error:', error);
     return NextResponse.json({ error: error.message || 'Failed to initiate IMAP OAuth' }, { status: 500 });
   }
