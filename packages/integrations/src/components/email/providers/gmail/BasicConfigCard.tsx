@@ -27,16 +27,21 @@ export function BasicConfigCard({ form, hasAttemptedSubmit, title, description }
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="providerName">{t('forms.gmail.basic.providerNameLabel', {
-              defaultValue: 'Provider Name *',
+              defaultValue: 'Configuration Name *',
             })}</Label>
             <Input
               id="providerName"
               {...form.register('providerName')}
               placeholder={t('forms.gmail.basic.providerNamePlaceholder', {
-                defaultValue: 'e.g., Support Gmail',
+                defaultValue: 'e.g., Support Gmail (internal)',
               })}
               className={hasAttemptedSubmit && form.formState.errors.providerName ? 'border-red-500' : ''}
             />
+            <p className="text-xs text-muted-foreground">
+              {t('forms.gmail.basic.providerNameHelp', {
+                defaultValue: 'Internal name used to identify this configuration. Not shown in outbound emails.',
+              })}
+            </p>
             {form.formState.errors.providerName && (
               <p className="text-sm text-red-500">{form.formState.errors.providerName.message as string}</p>
             )}
@@ -59,6 +64,24 @@ export function BasicConfigCard({ form, hasAttemptedSubmit, title, description }
               <p className="text-sm text-red-500">{form.formState.errors.mailbox.message as string}</p>
             )}
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="senderDisplayName">{t('forms.gmail.basic.senderDisplayNameLabel', {
+            defaultValue: 'Sender Display Name',
+          })}</Label>
+          <Input
+            id="senderDisplayName"
+            {...form.register('senderDisplayName')}
+            placeholder={t('forms.gmail.basic.senderDisplayNamePlaceholder', {
+              defaultValue: 'e.g., Acme Support',
+            })}
+          />
+          <p className="text-xs text-muted-foreground">
+            {t('forms.gmail.basic.senderDisplayNameHelp', {
+              defaultValue: 'Display name shown in the From header on outbound ticket emails (replies, closures). Applied only when this mailbox matches the tenant\'s outbound ticketing-from address. Leave blank to fall back to the ticket\'s board name.',
+            })}
+          </p>
         </div>
 
         <div className="flex items-center space-x-2">
