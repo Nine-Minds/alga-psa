@@ -206,7 +206,7 @@
   {
     "id": "F035",
     "description": "Implement webhookSubscriber.ts subscribing to TICKET_CREATED, TICKET_UPDATED, TICKET_STATUS_CHANGED, TICKET_CLOSED, TICKET_ASSIGNED, TICKET_COMMENT_ADDED. Look up active webhooks in the same tenant matching the public event type and enqueue a delivery job.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {

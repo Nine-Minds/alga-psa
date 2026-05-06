@@ -133,6 +133,10 @@ implementation progresses; update earlier entries when something changes.
   domain shape (`previousStatusId`) or an older `changes.status_id.from`
   style. The webhook payload builder now accepts both so subscriber output
   stays stable across publishers while the event vocabulary converges.
+- (2026-05-05) `webhookSubscriber.ts` needs a queue boundary before the full
+  poller lands. I added `WebhookDeliveryQueue.enqueue()` as the initial Redis
+  storage contract now, and the later F037 work will extend that same class
+  with claim/process/retry behavior instead of swapping subscriber behavior.
 
 ## Commands / Runbooks
 
@@ -160,6 +164,9 @@ implementation progresses; update earlier entries when something changes.
   `cd server && npx vitest run --coverage.enabled=false src/lib/api/rateLimit/__tests__/enforce.test.ts src/test/unit/api/apiMiddleware.responseHeaders.test.ts`
 - (2026-05-05) Smoke-load the webhook payload builder:
   `cd server && npx tsx -e "import('./src/lib/eventBus/subscribers/webhook/webhookTicketPayload.ts').then(() => console.log('payload-ok'))"`
+- (2026-05-05) Smoke-load the webhook subscriber + queue storage layer:
+  `cd server && npx tsx -e "import('./src/lib/webhooks/WebhookDeliveryQueue.ts').then(() => console.log('queue-ok'))"`
+  `cd server && npx tsx -e "import('./src/lib/eventBus/subscribers/webhookSubscriber.ts').then(() => console.log('subscriber-ok'))"`
 - (2026-05-05) `cd server && npx tsc --noEmit --pretty false` currently OOMs
   in this repo, and even targeted `tsc` entrypoint checks surface existing
   package-resolution / JSX-config errors unrelated to this feature slice, so
@@ -428,3 +435,11 @@ implementation progresses; update earlier entries when something changes.
   tenant-scoped lookup of `previous_status_name`, using either
   `payload.previousStatusId` or the older `payload.changes.status_id.from`
   compatible shape when deriving the prior status.
+- (2026-05-05) **F035 complete.** Added
+  `server/src/lib/eventBus/subscribers/webhookSubscriber.ts`, which
+  subscribes to the six v1 ticket events, builds the curated webhook payload
+  once per internal event, filters subscribers by `(tenant, public event
+  type)`, and enqueues one delivery job per matching active webhook. I also
+  introduced the initial `server/src/lib/webhooks/WebhookDeliveryQueue.ts`
+  storage contract so the subscriber already targets the eventual Redis ZSET
+  queue instead of a temporary inline-delivery path.
