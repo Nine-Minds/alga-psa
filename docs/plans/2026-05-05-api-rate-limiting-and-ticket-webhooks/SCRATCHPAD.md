@@ -146,6 +146,10 @@ implementation progresses; update earlier entries when something changes.
   `.css` loader issue under `tsx`. For controller TODO replacements, the
   narrower DAL/helper module smokes plus `git diff --check` are the reliable
   local validation path unless we run the full server test suite.
+- (2026-05-05) The webhook signature-verify route now supports both the plan's
+  direct `secret_vault_path` input and a safer `webhook_id` lookup. Both
+  paths resolve to the same tenant secret provider and use the shared
+  `verifyWebhookSignature()` helper after normalizing the header format.
 - (2026-05-05) `WebhookDeliveryQueue` now owns the retry loop contract:
   processors now return explicit `delivered` / `retry` / `abandoned`
   outcomes. The queue handles atomic `zRem` claims, caps active work at 50
@@ -505,3 +509,8 @@ implementation progresses; update earlier entries when something changes.
   updates the webhook through `webhookModel.update(..., { signingSecret })`,
   and returns the plaintext once in the response instead of the old timestamp
   stub.
+- (2026-05-05) **F043 complete.** `ApiWebhookController.verifySignature()`
+  now resolves the signing secret from either `webhook_id` or
+  `secret_vault_path`, normalizes split signature inputs into the
+  `t=...,v1=...` header format when needed, and returns the real HMAC match
+  result instead of the old always-true stub.

@@ -4,6 +4,7 @@
  */
 
 import crypto from 'node:crypto';
+import path from 'node:path';
 import { NextRequest, NextResponse } from 'next/server';
 import { WebhookService } from '../services/WebhookService';
 import { 
@@ -52,6 +53,8 @@ import {
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 import { webhookModel } from '../../webhooks/webhookModel';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { verifyWebhookSignature as verifyAlgaWebhookSignature } from '../../webhooks/sign';
 
 export class ApiWebhookController {
   private webhookService: WebhookService;
@@ -1173,11 +1176,19 @@ export class ApiWebhookController {
           await this.checkPermission(apiRequest, 'verify');
 
           const signatureData = await this.validateData(apiRequest, webhookSignatureSchema);
+          const secret = await this.resolveWebhookVerificationSecret(
+            apiRequest.context!.tenant,
+            signatureData.webhook_id,
+            signatureData.secret_vault_path,
+          );
+          const signatureHeader = this.normalizeSignatureHeader(
+            signatureData.signature,
+            signatureData.timestamp,
+          );
+          const valid = signatureData.algorithm === 'sha256'
+            && verifyAlgaWebhookSignature(signatureHeader, signatureData.body, secret);
           
-          // TODO: Implement verifyWebhookSignature method in WebhookService
-          const result = { data: { valid: true } }; // Temporary stub
-          
-          return createSuccessResponse(result.data);
+          return createSuccessResponse({ valid });
         });
       } catch (error) {
         return handleApiError(error);
@@ -1285,6 +1296,48 @@ export class ApiWebhookController {
         return handleApiError(error);
       }
     };
+  }
+
+  private normalizeSignatureHeader(signature: string, timestamp?: number): string {
+    if (signature.includes('v1=')) {
+      return signature;
+    }
+
+    if (typeof timestamp === 'number') {
+      return `t=${timestamp},v1=${signature}`;
+    }
+
+    return signature;
+  }
+
+  private async resolveWebhookVerificationSecret(
+    tenantId: string,
+    webhookId?: string,
+    secretVaultPath?: string,
+  ): Promise<string> {
+    if (webhookId) {
+      const secret = await webhookModel.getSigningSecret(webhookId, tenantId);
+      if (!secret) {
+        throw new NotFoundError('Webhook signing secret not found');
+      }
+      return secret;
+    }
+
+    if (secretVaultPath) {
+      const secretProvider = await getSecretProviderInstance();
+      const secret = await secretProvider.getTenantSecret(
+        tenantId,
+        path.posix.basename(secretVaultPath),
+      );
+
+      if (!secret) {
+        throw new NotFoundError('Webhook signing secret not found');
+      }
+
+      return secret;
+    }
+
+    throw new ValidationError('webhook_id or secret_vault_path is required');
   }
 
   // ============================================================================

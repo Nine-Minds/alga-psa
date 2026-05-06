@@ -434,7 +434,9 @@ export const webhookSignatureSchema = z.object({
   algorithm: z.enum(['sha1', 'sha256', 'sha512']),
   signature: z.string(),
   timestamp: z.number().optional(),
-  body: z.string()
+  body: z.string(),
+  webhook_id: uuidSchema.optional(),
+  secret_vault_path: z.string().optional()
 });
 
 // Search and filtering schemas

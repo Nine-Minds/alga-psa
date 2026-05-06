@@ -260,7 +260,7 @@
   {
     "id": "F043",
     "description": "Implement controller endpoint verifyWebhookSignature (TODO at line 1175): take signature header + body + secret-vault-path, recompute, return match/no-match.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Security / Permissions"]
   },
   {
