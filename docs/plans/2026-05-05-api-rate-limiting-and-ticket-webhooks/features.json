@@ -278,7 +278,7 @@
   {
     "id": "F046",
     "description": "Implement POST /api/v1/webhooks/[id]/test: send a synthetic webhook.test payload to the configured URL with the live signing secret; record in webhook_deliveries with is_test=true; skip rate-limit token consumption; apply assertSafeWebhookTarget.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "UX / UI Notes"]
   },
   {

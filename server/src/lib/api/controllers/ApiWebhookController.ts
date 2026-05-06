@@ -56,6 +56,12 @@ import { ZodError } from 'zod';
 import { webhookModel } from '../../webhooks/webhookModel';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { verifyWebhookSignature as verifyAlgaWebhookSignature } from '../../webhooks/sign';
+import { signRequest } from '../../webhooks/sign';
+import {
+  buildSignedWebhookRequestHeaders,
+  buildWebhookEnvelope,
+} from '../../webhooks/processWebhookDeliveryJob';
+import { performWebhookDeliveryRequest } from '../../webhooks/delivery';
 
 export class ApiWebhookController {
   private webhookService: WebhookService;
@@ -397,14 +403,86 @@ export class ApiWebhookController {
           await this.checkPermission(apiRequest, 'test');
 
           const id = await this.extractIdFromPath(apiRequest);
-          const testData = await this.validateData(apiRequest, webhookTestSchema.partial());
-          
-          const result = await this.webhookService.testWebhook(
-            { ...testData, webhook_id: id },
-            apiRequest.context!.tenant
+          await this.validateData(apiRequest, webhookTestSchema.partial());
+
+          const webhook = await webhookModel.getById(id, apiRequest.context!.tenant);
+          if (!webhook) {
+            throw new NotFoundError('Webhook not found');
+          }
+
+          const signingSecret = await webhookModel.getSigningSecret(id, apiRequest.context!.tenant);
+          if (!signingSecret) {
+            throw new NotFoundError('Webhook signing secret not found');
+          }
+
+          const eventId = crypto.randomUUID();
+          const deliveryId = crypto.randomUUID();
+          const testedAt = new Date();
+          const request = {
+            webhookId: id,
+            eventId,
+            eventType: 'webhook.test',
+            occurredAt: testedAt.toISOString(),
+            payload: {
+              webhook_id: id,
+              webhook_name: webhook.name,
+              is_test: true,
+            },
+            attempt: 1,
+          };
+          const envelope = buildWebhookEnvelope(apiRequest.context!.tenant, request);
+          const requestBody = JSON.stringify(envelope);
+          const signature = signRequest(
+            signingSecret,
+            requestBody,
+            Math.floor(testedAt.getTime() / 1000),
           );
+          const requestHeaders = buildSignedWebhookRequestHeaders({
+            deliveryId,
+            request,
+            signature,
+            customHeaders: webhook.customHeaders,
+          });
+          const deliveryResult = await performWebhookDeliveryRequest({
+            webhook_id: id,
+            url: webhook.url,
+            method: webhook.method,
+            headers: requestHeaders,
+            payload: envelope,
+            verify_ssl: webhook.verifySsl,
+          });
+
+          const delivery = await webhookModel.recordDelivery({
+            tenant: apiRequest.context!.tenant,
+            deliveryId,
+            webhookId: id,
+            eventId,
+            eventType: 'webhook.test',
+            requestHeaders,
+            requestBody: envelope,
+            responseStatusCode: deliveryResult.status_code ?? null,
+            responseHeaders: deliveryResult.response_headers ?? null,
+            responseBody: deliveryResult.response_body ?? null,
+            status: deliveryResult.success ? 'delivered' : 'abandoned',
+            attemptNumber: 1,
+            durationMs: deliveryResult.duration_ms ?? null,
+            errorMessage: deliveryResult.error_message ?? null,
+            nextRetryAt: null,
+            isTest: true,
+            attemptedAt: testedAt,
+            completedAt: testedAt,
+          });
           
-          return createSuccessResponse(result.data);
+          return createSuccessResponse({
+            test_id: eventId,
+            delivery_id: delivery.deliveryId,
+            success: deliveryResult.success,
+            status_code: deliveryResult.status_code,
+            response_time_ms: deliveryResult.duration_ms,
+            response_body: deliveryResult.response_body,
+            error_message: deliveryResult.error_message,
+            tested_at: testedAt.toISOString(),
+          });
         });
       } catch (error) {
         return handleApiError(error);

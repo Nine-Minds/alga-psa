@@ -160,6 +160,11 @@ implementation progresses; update earlier entries when something changes.
   subscriptions reads plus create/list/test/verify, and drops the transform,
   filter, validate, bulk, search, export, trigger, and system-health routes
   so they naturally 404 instead of advertising dead handlers.
+- (2026-05-05) The nested webhook test route now diverges from the older
+  generic `/api/v1/webhooks/test` helper: `/[id]/test` always uses the stored
+  webhook URL + live signing secret, emits `event_type='webhook.test'`,
+  records `is_test=true`, and intentionally skips outbound bucket
+  consumption.
 - (2026-05-05) `WebhookDeliveryQueue` now owns the retry loop contract:
   processors now return explicit `delivered` / `retry` / `abandoned`
   outcomes. The queue handles atomic `zRem` claims, caps active work at 50
@@ -535,3 +540,9 @@ implementation progresses; update earlier entries when something changes.
   creation, bulk/search/export, and manual event triggering. The nested
   `[id]/subscriptions` route now exposes only `GET`, and the removed paths
   will 404 instead of surfacing TODO-backed handlers.
+- (2026-05-05) **F046 complete.** `ApiWebhookController.testById()` now sends
+  a real signed `webhook.test` request to the configured webhook URL, records
+  the attempt in `webhook_deliveries` with `is_test=true`, and returns the
+  observed transport result. It reuses the live signing/header and SSRF-guard
+  path but skips the outbound rate-limit bucket and does not mutate webhook
+  delivery stats.

@@ -18,12 +18,21 @@ const EVENT_TYPE_HEADER = 'X-Alga-Event-Type';
 const DELIVERY_ID_HEADER = 'X-Alga-Delivery-Id';
 const DELIVERY_ATTEMPT_HEADER = 'X-Alga-Delivery-Attempt';
 
-type WebhookEnvelope = {
+type WebhookRequestDescriptor<TPayload> = {
+  webhookId: string;
+  eventId: string;
+  eventType: string;
+  occurredAt: string;
+  payload: TPayload;
+  attempt: number;
+};
+
+export type WebhookEnvelope<TPayload = WebhookDeliveryJob['payload']> = {
   event_id: string;
   event_type: string;
   occurred_at: string;
   tenant_id: string;
-  data: WebhookDeliveryJob['payload'];
+  data: TPayload;
 };
 
 export async function processWebhookDeliveryJob(
@@ -59,22 +68,16 @@ export async function processWebhookDeliveryJob(
   }
 
   const deliveryId = crypto.randomUUID();
-  const envelope: WebhookEnvelope = {
-    event_id: job.eventId,
-    event_type: job.eventType,
-    occurred_at: job.occurredAt,
-    tenant_id: job.tenantId,
-    data: job.payload,
-  };
+  const envelope = buildWebhookEnvelope(job.tenantId, job);
   const requestBody = JSON.stringify(envelope);
   const signature = signRequest(
     signingSecret,
     requestBody,
     Math.floor(Date.now() / 1000),
   );
-  const requestHeaders = buildRequestHeaders({
+  const requestHeaders = buildSignedWebhookRequestHeaders({
     deliveryId,
-    job,
+    request: job,
     signature,
     customHeaders: webhook.customHeaders,
   });
@@ -147,9 +150,22 @@ export async function processWebhookDeliveryJob(
   };
 }
 
-function buildRequestHeaders(input: {
+export function buildWebhookEnvelope<TPayload>(
+  tenantId: string,
+  request: WebhookRequestDescriptor<TPayload>,
+): WebhookEnvelope<TPayload> {
+  return {
+    event_id: request.eventId,
+    event_type: request.eventType,
+    occurred_at: request.occurredAt,
+    tenant_id: tenantId,
+    data: request.payload,
+  };
+}
+
+export function buildSignedWebhookRequestHeaders(input: {
   deliveryId: string;
-  job: WebhookDeliveryJob;
+  request: WebhookRequestDescriptor<unknown>;
   signature: string;
   customHeaders: Record<string, string> | null;
 }): Record<string, string> {
@@ -157,10 +173,10 @@ function buildRequestHeaders(input: {
     ...(input.customHeaders ?? {}),
     'content-type': 'application/json',
     [WEBHOOK_SIGNATURE_HEADER]: input.signature,
-    [WEBHOOK_ID_HEADER]: input.job.webhookId,
-    [EVENT_ID_HEADER]: input.job.eventId,
-    [EVENT_TYPE_HEADER]: input.job.eventType,
+    [WEBHOOK_ID_HEADER]: input.request.webhookId,
+    [EVENT_ID_HEADER]: input.request.eventId,
+    [EVENT_TYPE_HEADER]: input.request.eventType,
     [DELIVERY_ID_HEADER]: input.deliveryId,
-    [DELIVERY_ATTEMPT_HEADER]: String(input.job.attempt),
+    [DELIVERY_ATTEMPT_HEADER]: String(input.request.attempt),
   };
 }
