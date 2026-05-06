@@ -288,3 +288,6 @@ implementation progresses; update earlier entries when something changes.
 - (2026-05-05) **F023 complete.** The public webhook event enum now includes
   `ticket.comment.added`, so webhook create/update validation no longer
   rejects the v1 ticket-comment subscription event.
+- (2026-05-05) **T018 complete.** Added
+  `server/src/lib/api/schemas/__tests__/webhookSchemas.test.ts` to lock in
+  acceptance of the new `ticket.comment.added` enum member.

@@ -104,7 +104,7 @@
   {
     "id": "T018",
     "description": "Unit (vitest, server/src/lib/api/schemas/__tests__/webhookSchemas.test.ts): webhookEventTypeSchema.safeParse('ticket.comment.added').success === true.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F023"]
   },
   {
