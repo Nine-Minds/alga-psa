@@ -438,3 +438,25 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - `server/src/test/unit/unifiedInboundEmailQueueJobProcessor.fetch.test.ts`
 - Command run: `cd server && npx vitest run src/test/unit/unifiedInboundEmailQueueJobProcessor.fetch.test.ts` -> pass (8 tests).
 - Note: shared inbound-email unit tests live outside the current server Vitest include globs in this environment, so direct invocation from root reports `No test files found`; existing shared test files remain the primary coverage artifact for this slice.
+- (2026-05-06) Completed F281 and F282 by validating existing outbound-notification and ticket-detail email-context seams.
+- Implementation evidence:
+  - `server/src/lib/eventBus/subscribers/ticketEmailSubscriber.ts` sends external-contact outbound email when a comment is public and from an internal agent (`isPublicComment && isFromAgent`) and routes through `sendNotificationIfEnabled` (feature-flag/preference-aware) (F281).
+  - `packages/tickets/src/components/ticket/TicketDetails.tsx` renders ticket email context composition (`TicketEmailNotifications`) and inbound-origin metadata labels; detail context surfaces are already wired in MSP ticket detail composition tests (F282).
+- (2026-05-06) Completed F283/F284/F285 with explicit product gating on inbound email webhook, IMAP management, and OAuth routes.
+- Added product assertions on server email routes:
+  - `server/src/app/api/email/oauth/initiate/route.ts`
+  - `server/src/app/api/email/oauth/imap/initiate/route.ts`
+  - `server/src/app/api/email/oauth/imap/callback/route.ts`
+  - `server/src/app/api/email/imap/resync/route.ts`
+  - `server/src/app/api/email/imap/reconnect/route.ts`
+  - Each now calls `assertTenantProductAccess(... capability: 'email_to_ticket', allowedProducts: ['psa', 'algadesk'])`.
+- Added tenant product checks to webhook handlers:
+  - `packages/integrations/src/webhooks/email/handlers/googleWebhookHandler.ts`
+  - `packages/integrations/src/webhooks/email/handlers/microsoftWebhookHandler.ts`
+  - `packages/integrations/src/webhooks/email/imap.ts`
+  - Handlers now fail closed for unknown tenant `product_code` values before enqueueing inbound pointer jobs.
+- Added contract coverage:
+  - `server/src/test/unit/email/algadeskEmailRouteProductGate.contract.test.ts`
+- Commands run:
+  - `cd server && npx vitest run src/test/unit/email/algadeskEmailRouteProductGate.contract.test.ts` -> pass (1 test).
+  - `cd server && npx vitest run src/test/unit/tickets/TicketDetails.emailNotifications.integration.test.ts src/test/unit/notifications/ticketEmailSubscriber.watchers.test.ts` -> pass (8 tests).

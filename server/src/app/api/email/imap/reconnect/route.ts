@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { createTenantKnex } from '@/lib/db';
+import { assertTenantProductAccess } from '@/lib/productAccess';
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,6 +9,11 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    await assertTenantProductAccess({
+      tenantId: user.tenant,
+      capability: 'email_to_ticket',
+      allowedProducts: ['psa', 'algadesk'],
+    });
 
     const body = await request.json();
     const { providerId } = body;

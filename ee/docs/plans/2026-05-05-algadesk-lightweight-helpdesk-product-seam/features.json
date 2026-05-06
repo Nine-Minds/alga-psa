@@ -2242,7 +2242,7 @@
   {
     "id": "F281",
     "description": "Send outbound notification when MSP replies publicly if notifications are enabled.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2250,7 +2250,7 @@
   {
     "id": "F282",
     "description": "Show email thread or delivery context on ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2258,7 +2258,7 @@
   {
     "id": "F283",
     "description": "Product-gate inbound webhook handlers for Algadesk and PSA appropriately.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2266,7 +2266,7 @@
   {
     "id": "F284",
     "description": "Product-gate IMAP polling paths for Algadesk and PSA appropriately.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2274,7 +2274,7 @@
   {
     "id": "F285",
     "description": "Product-gate email OAuth/config routes for allowed email channel use.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]

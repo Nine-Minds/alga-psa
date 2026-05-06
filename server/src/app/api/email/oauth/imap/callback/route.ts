@@ -3,6 +3,7 @@ import { decodeState, validateState } from '@/utils/email/oauthHelpers';
 import { createTenantKnex } from '@/lib/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import axios from 'axios';
+import { assertTenantProductAccess } from '@/lib/productAccess';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,6 +19,11 @@ export async function GET(request: NextRequest) {
     if (!state || !validateState(state)) {
       return NextResponse.json({ error: 'Invalid OAuth state' }, { status: 400 });
     }
+    await assertTenantProductAccess({
+      tenantId: state.tenant,
+      capability: 'email_to_ticket',
+      allowedProducts: ['psa', 'algadesk'],
+    });
 
     if (!state.providerId) {
       return NextResponse.json({ error: 'Missing providerId' }, { status: 400 });
