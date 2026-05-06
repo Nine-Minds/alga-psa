@@ -234,7 +234,7 @@
   {
     "id": "R030",
     "description": "Allow `/client-portal/client-settings` for Algadesk in portal route rules.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -250,7 +250,7 @@
   {
     "id": "R032",
     "description": "Treat `/msp/settings/notifications` as denied or upgrade-boundary for Algadesk unless explicitly narrowed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -258,7 +258,7 @@
   {
     "id": "R033",
     "description": "Treat `/msp/settings/extensions` as denied or upgrade-boundary for Algadesk.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -266,7 +266,7 @@
   {
     "id": "R034",
     "description": "Treat broad `/msp/settings/integrations` and integration callback paths as denied for Algadesk except focused email-channel paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -274,7 +274,7 @@
   {
     "id": "R035",
     "description": "Keep `/msp/settings?tab=email` allowed only for focused Email Channels configuration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -282,7 +282,7 @@
   {
     "id": "R036",
     "description": "Keep `/msp/settings?tab=knowledge-base` allowed for focused KB configuration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -290,7 +290,7 @@
   {
     "id": "R037",
     "description": "Correct Algadesk API KB allowlist to `/api/v1/kb-articles`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -298,7 +298,7 @@
   {
     "id": "R038",
     "description": "Add deny rules for `/api/v1/financial`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -306,7 +306,7 @@
   {
     "id": "R039",
     "description": "Add deny rules for `/api/v1/quotes`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -314,7 +314,7 @@
   {
     "id": "R040",
     "description": "Add deny rules for `/api/v1/contracts` and contract-line route variants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -322,7 +322,7 @@
   {
     "id": "R041",
     "description": "Add deny rules for `/api/v1/services`, `/api/v1/service-types`, and `/api/v1/products`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -330,7 +330,7 @@
   {
     "id": "R042",
     "description": "Add deny rules for `/api/v1/accounting-exports` and accounting integration API families.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -338,7 +338,7 @@
   {
     "id": "R043",
     "description": "Add deny rules for `/api/v1/platform-*`, `/api/v1/admin`, and tenant-management APIs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -346,7 +346,7 @@
   {
     "id": "R044",
     "description": "Add deny rules for `/api/v1/feature-flags` and platform feature flag APIs unless admin-only PSA behavior requires otherwise.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -354,7 +354,7 @@
   {
     "id": "R045",
     "description": "Add deny rules for `/api/v1/documents` while preserving ticket attachment and KB-safe routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -362,7 +362,7 @@
   {
     "id": "R046",
     "description": "Add deny rules for automation/workflow API families.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -370,7 +370,7 @@
   {
     "id": "R047",
     "description": "Add deny rules for AI/chat API families including non-v1 chat routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -378,7 +378,7 @@
   {
     "id": "R048",
     "description": "Add deny rules for assets/RMM route families.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -386,7 +386,7 @@
   {
     "id": "R049",
     "description": "Add deny rules for scheduling/time route families.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -394,7 +394,7 @@
   {
     "id": "R050",
     "description": "Add deny rules for surveys route families.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -402,7 +402,7 @@
   {
     "id": "R051",
     "description": "Add deny rules for extensions route families.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -410,7 +410,7 @@
   {
     "id": "R052",
     "description": "Add representative registry tests for exact allowed Algadesk routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -418,7 +418,7 @@
   {
     "id": "R053",
     "description": "Add representative registry tests for exact denied Algadesk routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -426,7 +426,7 @@
   {
     "id": "R054",
     "description": "Add representative registry tests for unknown Algadesk route/API fail-closed behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -434,7 +434,7 @@
   {
     "id": "R055",
     "description": "Add representative registry tests proving PSA remains allowed for PSA route/API groups.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]

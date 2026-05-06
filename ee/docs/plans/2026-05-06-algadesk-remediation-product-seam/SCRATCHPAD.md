@@ -124,3 +124,10 @@ Working notes for remediating the current Algadesk implementation. This plan exi
 - Standalone chat/email API routes using `assertTenantProductAccess` now convert product-denied errors to structured 403 responses.
 - Validation run (pass): `cd server && npm run typecheck -- --pretty false`.
 - Validation run (pass): `cd server && npx vitest run src/test/unit/productAccess.test.ts src/test/unit/api/apiMiddleware.productAccess.test.ts --reporter=dot`.
+- (2026-05-06) Completed registry correction batch for representative route/API gaps (R030, R032-R055; R031 intentionally left open pending explicit decision on `/client-portal/settings`).
+- MSP settings exclusions now explicitly deny direct settings subroutes for notifications/extensions/integrations and broad `/msp/integrations`.
+- Portal route allowlist now includes `/client-portal/client-settings`.
+- API allowlist KB path corrected to `/api/v1/kb-articles`.
+- Added representative PSA-only API deny prefixes across financial/quotes/contracts/services/accounting/platform/admin/tenant/feature-flags/workflow/chat/assets/scheduling/surveys/extensions/integrations/document families.
+- Validation run (pass): `cd server && npx vitest run src/test/unit/productSurfaceRegistry.test.ts --reporter=dot`.
+- Validation run (pass): `cd server && npm run typecheck -- --pretty false`.

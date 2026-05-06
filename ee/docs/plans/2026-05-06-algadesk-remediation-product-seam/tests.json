@@ -43,7 +43,7 @@
   {
     "id": "RT005",
     "description": "Unit: product registry allows exact Algadesk help-desk routes including client-settings and kb-articles, denies representative PSA-only route families, and fails closed for unknown Algadesk paths.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "R030",
       "R037",

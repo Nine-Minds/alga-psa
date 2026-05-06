@@ -18,12 +18,15 @@ describe('product surface registry', () => {
 
   it('T003: classifies representative Algadesk portal routes correctly', () => {
     expect(resolveProductRouteBehavior('algadesk', '/client-portal/tickets')).toBe('allowed');
+    expect(resolveProductRouteBehavior('algadesk', '/client-portal/client-settings')).toBe('allowed');
     expect(resolveProductRouteBehavior('algadesk', '/client-portal/billing')).toBe('upgrade_boundary');
   });
 
   it('T003: classifies representative API paths and fails closed for unknown API groups', () => {
     expect(resolveProductApiBehavior('algadesk', '/api/v1/tickets')).toBe('allowed');
+    expect(resolveProductApiBehavior('algadesk', '/api/v1/kb-articles')).toBe('allowed');
     expect(resolveProductApiBehavior('algadesk', '/api/v1/billing')).toBe('denied');
+    expect(resolveProductApiBehavior('algadesk', '/api/v1/financial')).toBe('denied');
     expect(resolveProductApiBehavior('algadesk', '/api/v1/unknown-area')).toBe('denied');
   });
 
@@ -68,5 +71,10 @@ describe('product surface registry', () => {
       { href: '/client-portal/billing' },
     ]);
     expect(portalNav).toEqual([{ href: '/client-portal/tickets' }]);
+  });
+
+  it('T003: keeps PSA route and API behavior fully allowed for representative denied Algadesk groups', () => {
+    expect(resolveProductRouteBehavior('psa', '/msp/settings/extensions')).toBe('allowed');
+    expect(resolveProductApiBehavior('psa', '/api/v1/financial')).toBe('allowed');
   });
 });
