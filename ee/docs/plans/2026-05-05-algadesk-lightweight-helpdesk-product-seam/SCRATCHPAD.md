@@ -401,3 +401,10 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - `server/src/test/unit/client-portal/clientPortalProductLayout.contract.test.ts`
   - `packages/client-portal/src/components/layout/ClientPortalSidebar.contract.test.ts`
 - Command run: `cd server && npx vitest run src/test/unit/client-portal/clientPortalProductLayout.contract.test.ts ../packages/client-portal/src/components/layout/ClientPortalSidebar.contract.test.ts` -> pass (8 tests).
+- (2026-05-05) Completed F244-F261 and T014 via client-portal ticketing/shell contract verification.
+- Added `server/src/test/unit/client-portal/algadeskPortalTicketing.contract.test.ts` to validate:
+  - dashboard/ticket list/detail surfaces remain wired
+  - free-form ticket creation inputs and visibility-group board enforcement
+  - portal ticket detail hides internal-comment tab and keeps public reply/status flows
+  - portal ticket pages avoid billing/project navigation links
+- Command run: `cd server && npx vitest run src/test/unit/client-portal/algadeskPortalTicketing.contract.test.ts src/test/unit/client-portal/clientPortalProductLayout.contract.test.ts` -> pass (8 tests).
