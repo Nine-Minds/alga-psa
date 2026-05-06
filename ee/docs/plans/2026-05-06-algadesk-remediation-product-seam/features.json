@@ -242,7 +242,7 @@
   {
     "id": "R031",
     "description": "Keep `/client-portal/settings` behavior only if the route exists or is intentionally supported.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
     ]
@@ -442,7 +442,7 @@
   {
     "id": "R056",
     "description": "Replace raw Algadesk children rendering in MspLayoutClient with a real Algadesk shell component.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk MSP shell remediation"
     ]
@@ -450,7 +450,7 @@
   {
     "id": "R057",
     "description": "Render an Algadesk sidebar in the Algadesk MSP shell.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk MSP shell remediation"
     ]
@@ -458,7 +458,7 @@
   {
     "id": "R058",
     "description": "Render a header/app chrome in the Algadesk MSP shell.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk MSP shell remediation"
     ]
@@ -466,7 +466,7 @@
   {
     "id": "R059",
     "description": "Render a main content container matching normal page layout expectations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk MSP shell remediation"
     ]
@@ -474,7 +474,7 @@
   {
     "id": "R060",
     "description": "Avoid ActivityDrawerProvider in Algadesk shell unless explicitly needed for help desk.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk MSP shell remediation"
     ]
@@ -482,7 +482,7 @@
   {
     "id": "R061",
     "description": "Avoid SchedulingProviderWithCallbacks in Algadesk shell.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk MSP shell remediation"
     ]
@@ -490,7 +490,7 @@
   {
     "id": "R062",
     "description": "Avoid project integration providers in Algadesk shell.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk MSP shell remediation"
     ]
@@ -498,7 +498,7 @@
   {
     "id": "R063",
     "description": "Avoid asset/document full-management providers in Algadesk shell except ticket/KB-safe providers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk MSP shell remediation"
     ]
@@ -506,7 +506,7 @@
   {
     "id": "R064",
     "description": "Avoid AIChatContextProvider in Algadesk shell unless AI is explicitly excluded from UI and provider has no user-facing effect.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk MSP shell remediation"
     ]
@@ -514,7 +514,7 @@
   {
     "id": "R065",
     "description": "Keep TagProvider and required i18n/session/tier/product providers in Algadesk shell.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk MSP shell remediation"
     ]
@@ -538,7 +538,7 @@
   {
     "id": "R068",
     "description": "Keep PSA MspLayoutClient path using DefaultLayout unchanged for PSA tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk MSP shell remediation"
     ]
@@ -546,7 +546,7 @@
   {
     "id": "R069",
     "description": "Add a shell test that Algadesk renders sidebar/header, not only raw children.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk MSP shell remediation"
     ]
@@ -554,7 +554,7 @@
   {
     "id": "R070",
     "description": "Create a server-side helper to resolve current tenant product and route behavior for an explicit pathname.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server-side route enforcement"
     ]
@@ -562,7 +562,7 @@
   {
     "id": "R071",
     "description": "Create a server-side helper to return upgrade boundary/notFound before page data fetching.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server-side route enforcement"
     ]
@@ -570,7 +570,7 @@
   {
     "id": "R072",
     "description": "Apply server-side guard to `/msp/billing` before billing data loads.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server-side route enforcement"
     ]
@@ -578,7 +578,7 @@
   {
     "id": "R073",
     "description": "Apply server-side guard to `/msp/projects` and project child routes before project data loads.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server-side route enforcement"
     ]
@@ -586,7 +586,7 @@
   {
     "id": "R074",
     "description": "Apply server-side guard to `/msp/assets` and asset child routes before asset data loads.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server-side route enforcement"
     ]
@@ -594,7 +594,7 @@
   {
     "id": "R075",
     "description": "Apply server-side guard to scheduling and dispatch pages before schedule data loads.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server-side route enforcement"
     ]
@@ -602,7 +602,7 @@
   {
     "id": "R076",
     "description": "Apply server-side guard to time entry and approvals pages before time data loads.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server-side route enforcement"
     ]
@@ -610,7 +610,7 @@
   {
     "id": "R077",
     "description": "Apply server-side guard to workflow pages before workflow data loads.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server-side route enforcement"
     ]
@@ -618,7 +618,7 @@
   {
     "id": "R078",
     "description": "Apply server-side guard to surveys pages before survey data loads.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server-side route enforcement"
     ]
@@ -626,7 +626,7 @@
   {
     "id": "R079",
     "description": "Apply server-side guard to extensions pages before extension data loads.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server-side route enforcement"
     ]
@@ -634,7 +634,7 @@
   {
     "id": "R080",
     "description": "Apply server-side guard to reports and service request pages before excluded data loads.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server-side route enforcement"
     ]
@@ -642,7 +642,7 @@
   {
     "id": "R081",
     "description": "Apply server-side guard to excluded client portal billing/project/device/document/appointment/service-request/extension pages.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server-side route enforcement"
     ]
@@ -650,7 +650,7 @@
   {
     "id": "R082",
     "description": "Keep client-side ProductRouteBoundary as secondary UI fallback only.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server-side route enforcement"
     ]
@@ -658,7 +658,7 @@
   {
     "id": "R083",
     "description": "Add tests proving excluded page loaders do not call their data actions for Algadesk.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server-side route enforcement"
     ]
@@ -666,7 +666,7 @@
   {
     "id": "R084",
     "description": "Add tests proving representative PSA excluded routes still render for PSA tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server-side route enforcement"
     ]

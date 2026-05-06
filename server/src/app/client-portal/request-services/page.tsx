@@ -7,6 +7,7 @@ import {
 } from './actions';
 import { ServiceRequestCard } from './ServiceRequestCard';
 import { MyRequestsTable, type MyRequestsTableRow } from './my-requests/MyRequestsTable';
+import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
 interface ServiceRequestsPageProps {
   searchParams?: Promise<{
@@ -16,6 +17,14 @@ interface ServiceRequestsPageProps {
 }
 
 export default async function ServiceRequestsPage(props: ServiceRequestsPageProps) {
+  const boundary = await enforceServerProductRoute({
+    pathname: '/client-portal/request-services',
+    scope: 'client-portal',
+  });
+  if (boundary) {
+    return boundary;
+  }
+
   const resolvedSearchParams = props.searchParams ? await props.searchParams : undefined;
   const submittedRequestId =
     typeof resolvedSearchParams?.submitted === 'string' ? resolvedSearchParams.submitted : null;

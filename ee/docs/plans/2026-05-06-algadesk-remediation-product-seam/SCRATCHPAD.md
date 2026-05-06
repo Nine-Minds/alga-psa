@@ -131,3 +131,34 @@ Working notes for remediating the current Algadesk implementation. This plan exi
 - Added representative PSA-only API deny prefixes across financial/quotes/contracts/services/accounting/platform/admin/tenant/feature-flags/workflow/chat/assets/scheduling/surveys/extensions/integrations/document families.
 - Validation run (pass): `cd server && npx vitest run src/test/unit/productSurfaceRegistry.test.ts --reporter=dot`.
 - Validation run (pass): `cd server && npm run typecheck -- --pretty false`.
+- (2026-05-06) Completed `/client-portal/settings` registry decision (R031): removed `/client-portal/settings` from Algadesk allowlist because no corresponding route exists; `/client-portal/client-settings` remains the supported surface.
+- (2026-05-06) Completed Algadesk MSP shell remediation batch (R056-R065, R068-R069).
+- Added `server/src/components/layout/AlgadeskMspShell.tsx` with real shell chrome: product-filtered sidebar, header, notification banner, and main content body.
+- `server/src/app/msp/MspLayoutClient.tsx` now renders `AlgadeskMspShell` for allowed Algadesk routes instead of raw children; PSA tenants continue to render existing `DefaultLayout` path unchanged.
+- Algadesk shell intentionally excludes PSA-heavy providers (`ActivityDrawerProvider`, scheduling/workflow/projects/assets/documents cross-feature providers, and AI chat context wrapper).
+- Validation run (pass): `cd server && npm run typecheck -- --pretty false`.
+- Validation run (pass): `cd server && npx vitest run src/test/unit/layout/MspLayoutClient.productShell.test.tsx src/test/unit/productSurfaceRegistry.test.ts --reporter=dot`.
+- Added RT006 behavior coverage via `server/src/test/unit/layout/MspLayoutClient.productShell.test.tsx` proving Algadesk uses dedicated shell and PSA preserves default layout path.
+- (2026-05-06) Completed server-side route enforcement batch (R070-R084) and aligned route-boundary test coverage (RT007-RT009) plus auth mapping unit coverage (RT002).
+- Added shared server guard helper at `server/src/lib/serverProductRouteGuard.tsx`:
+  - `resolveServerProductRouteBehavior({ pathname })` resolves current tenant product and registry behavior for explicit paths.
+  - `enforceServerProductRoute({ pathname, scope })` fail-closes server rendering by returning upgrade boundary UI or throwing `notFound()` before page data actions run.
+- Applied guard layouts to excluded MSP route families: billing, projects, assets, schedule, technician-dispatch, time-entry, time-sheet-approvals, workflow-editor, workflow-control, surveys, extensions, reports, service-requests.
+- Applied guard layouts to excluded client-portal route families: billing, projects, devices, documents, appointments, request-services, extensions.
+- Added explicit page-level prefetch guards for high-risk data loaders in:
+  - `server/src/app/msp/billing/page.tsx`
+  - `server/src/app/msp/projects/page.tsx`
+  - `server/src/app/msp/assets/page.tsx`
+  - `server/src/app/client-portal/request-services/page.tsx`
+  to ensure early return before heavy server actions in isolated execution paths.
+- Preserved existing PSA behavior while guarding excluded routes:
+  - Restored surveys PSA frame wrapper (`SurveyModuleFrame`) behind guard.
+  - Preserved existing metadata titles for extensions/appointments layouts.
+- Added/updated tests:
+  - `packages/auth/src/lib/nextAuthOptions.productCodeMapping.test.ts` (JWT/session `product_code` + plan/addons/trial mapping)
+  - `server/src/test/unit/product/serverProductRouteGuard.test.tsx` (server route behavior resolution for Algadesk vs PSA)
+  - `server/src/test/unit/app/serverProductRouteGuardPages.test.tsx` (guarded pages do not call excluded data actions)
+  - `server/src/test/unit/productSurfaceRegistry.test.ts` (settings tab and direct settings-route narrowing assertions)
+- Validation run (pass):
+  - `cd server && npm run typecheck -- --pretty false`
+  - `cd server && npx vitest run ../packages/auth/src/lib/nextAuthOptions.productCodeMapping.test.ts src/test/unit/productSurfaceRegistry.test.ts src/test/unit/product/serverProductRouteGuard.test.tsx src/test/unit/app/serverProductRouteGuardPages.test.tsx --reporter=dot`

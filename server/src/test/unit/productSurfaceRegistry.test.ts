@@ -19,6 +19,7 @@ describe('product surface registry', () => {
   it('T003: classifies representative Algadesk portal routes correctly', () => {
     expect(resolveProductRouteBehavior('algadesk', '/client-portal/tickets')).toBe('allowed');
     expect(resolveProductRouteBehavior('algadesk', '/client-portal/client-settings')).toBe('allowed');
+    expect(resolveProductRouteBehavior('algadesk', '/client-portal/settings')).toBe('not_found');
     expect(resolveProductRouteBehavior('algadesk', '/client-portal/billing')).toBe('upgrade_boundary');
   });
 
@@ -71,6 +72,31 @@ describe('product surface registry', () => {
       { href: '/client-portal/billing' },
     ]);
     expect(portalNav).toEqual([{ href: '/client-portal/tickets' }]);
+  });
+
+
+
+  it('T003: narrows Algadesk settings navigation tabs and excludes denied direct settings routes', () => {
+    const filteredSettings = filterMenuSectionsByProduct('algadesk', [
+      {
+        items: [
+          { href: '/msp/settings?tab=email' },
+          { href: '/msp/settings?tab=knowledge-base' },
+          { href: '/msp/settings?tab=integrations' },
+          { href: '/msp/settings/extensions' },
+          { href: '/msp/settings/notifications' },
+        ],
+      },
+    ]);
+
+    expect(filteredSettings).toEqual([
+      {
+        items: [
+          { href: '/msp/settings?tab=email' },
+          { href: '/msp/settings?tab=knowledge-base' },
+        ],
+      },
+    ]);
   });
 
   it('T003: keeps PSA route and API behavior fully allowed for representative denied Algadesk groups', () => {

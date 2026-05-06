@@ -5,6 +5,7 @@ import type { IClient, IProject, ITag } from '@alga-psa/types';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { Metadata } from 'next';
 import type { ProjectListFilters } from '@alga-psa/projects/components/Projects';
+import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
 export const metadata: Metadata = {
   title: 'Projects',
@@ -15,6 +16,11 @@ interface ProjectsPageProps {
 }
 
 export default async function ProjectsPage({ searchParams }: ProjectsPageProps) {
+  const boundary = await enforceServerProductRoute({ pathname: '/msp/projects', scope: 'msp' });
+  if (boundary) {
+    return boundary;
+  }
+
   const [projectsResult, clientsData, params] = await Promise.all([
     getProjects(),
     getAllClientsForProjects() as Promise<IClient[]>,

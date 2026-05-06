@@ -11,7 +11,7 @@
   {
     "id": "RT002",
     "description": "Unit: NextAuth tenant info lookup maps product_code into JWT and session.user while preserving plan, addons, and trial fields.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "R011",
       "R013",
@@ -54,7 +54,7 @@
   {
     "id": "RT006",
     "description": "Component: Algadesk MSP shell renders sidebar, header/app chrome, and main content while excluding full PSA providers; PSA path still renders existing DefaultLayout behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "R056",
       "R057",
@@ -65,7 +65,7 @@
   {
     "id": "RT007",
     "description": "Component: Algadesk settings/navigation exposes only approved settings and direct settings subroutes/tabs for notifications/extensions/integrations are denied or narrowed as specified.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "R032",
       "R033",
@@ -76,7 +76,7 @@
   {
     "id": "RT008",
     "description": "Server-page test: representative excluded MSP routes for billing/projects/assets/workflows do not call data-fetching actions for Algadesk and still render/pass for PSA.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "R072",
       "R073",
@@ -87,7 +87,7 @@
   {
     "id": "RT009",
     "description": "Server-page test: representative excluded client portal routes for billing/projects/documents/request-services are guarded before data fetching, while allowed Algadesk client-settings remains accessible.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "R081",
       "R030"
