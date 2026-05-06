@@ -263,5 +263,19 @@
       "F287",
       "F288"
     ]
+  },
+  {
+    "id": "T025",
+    "description": "Component contract: MSP and portal layout clients apply registry-backed route behavior and render shared product route boundaries for Algadesk upgrade/not-found surfaces while preserving PSA pass-through behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F289",
+      "F290",
+      "F291",
+      "F292",
+      "F305",
+      "F306",
+      "F307"
+    ]
   }
 ]

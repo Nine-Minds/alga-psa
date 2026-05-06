@@ -14,6 +14,8 @@ import { useEffect } from "react";
 import type { Session } from "next-auth";
 import type { SupportedLocale } from "@alga-psa/core/i18n/config";
 import type { ProductCode } from '@alga-psa/types';
+import { resolveProductRouteBehavior } from '@/lib/productSurfaceRegistry';
+import { ProductRouteBoundary } from '@/components/product/ProductRouteBoundary';
 
 interface Props {
   children: React.ReactNode;
@@ -35,6 +37,7 @@ export function MspLayoutClient({
   const router = useRouter();
   const pathname = usePathname();
   const isOnboardingPage = pathname === "/msp/onboarding";
+  const routeBehavior = resolveProductRouteBehavior(productCode, pathname);
 
   useEffect(() => {
     if (needsOnboarding && !isOnboardingPage) {
@@ -56,13 +59,17 @@ export function MspLayoutClient({
               <ClientUIStateProvider
                 initialPageState={{
                   id: 'msp-portal',
-                  title: 'MSP Portal',
+                  title: productCode === 'algadesk' ? 'Algadesk MSP' : 'MSP Portal',
                   components: []
                 }}
               >
                 {isOnboardingPage ? children : (
                   productCode === 'algadesk' ? (
-                    <div data-product-shell="algadesk">{children}</div>
+                    routeBehavior === 'allowed' ? (
+                      <div data-product-shell="algadesk">{children}</div>
+                    ) : (
+                      <ProductRouteBoundary behavior={routeBehavior} scope="msp" />
+                    )
                   ) : (
                     <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
                       {children}

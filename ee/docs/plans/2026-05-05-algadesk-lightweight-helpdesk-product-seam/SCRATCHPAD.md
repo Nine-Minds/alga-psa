@@ -478,3 +478,22 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 
 - `cd server && npx vitest run src/test/unit/settings/algadeskEmailTemplateAutomationBoundary.contract.test.ts src/test/unit/settings/algadeskEmailChannelsComposition.contract.test.ts src/test/unit/settings/algadeskInboundEmailChannelConfiguration.contract.test.ts`
   - Result: pass (4 tests).
+- (2026-05-06) Completed F289-F307 and T025 via shared route-boundary composition in layout clients.
+  - Added reusable branded boundary component:
+    - `server/src/components/product/ProductRouteBoundary.tsx`
+    - Handles both `upgrade_boundary` and `not_found` registry outcomes with scoped dashboard return links for MSP and client portal.
+  - Wired registry-backed gating in MSP layout:
+    - `server/src/app/msp/MspLayoutClient.tsx`
+    - Resolves `resolveProductRouteBehavior(productCode, pathname)` and renders `ProductRouteBoundary` for non-allowed Algadesk routes.
+  - Wired registry-backed gating in client portal layout:
+    - `server/src/app/client-portal/ClientPortalLayoutClient.tsx`
+    - Resolves `resolveProductRouteBehavior(productCode, pathname)` and renders `ProductRouteBoundary` for non-allowed Algadesk routes.
+  - Effect:
+    - Algadesk direct hits to excluded MSP major routes (billing/projects/assets/schedule/dispatch/time/workflows/surveys/extensions/reports/service-requests) now consistently render an upgrade boundary.
+    - Algadesk direct hits to internal/test MSP route groups (`/msp/test*`) resolve to product not-available boundary.
+    - Algadesk direct hits to excluded portal routes (billing/projects/devices/documents/appointments/request-services/extensions) now render portal boundary.
+    - PSA behavior remains unchanged because layout gating applies only when `productCode === 'algadesk'`.
+  - Added contract test `server/src/test/unit/product/productRouteBoundaryComposition.contract.test.ts`.
+
+- `cd server && npx vitest run src/test/unit/product/productRouteBoundaryComposition.contract.test.ts src/test/unit/productSurfaceRegistry.test.ts`
+  - Result: pass (10 tests).

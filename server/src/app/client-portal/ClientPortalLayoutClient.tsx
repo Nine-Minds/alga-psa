@@ -10,6 +10,9 @@ import type { TenantBranding } from "@alga-psa/tenancy/actions";
 import type { SupportedLocale } from "@alga-psa/core/i18n/config";
 import type { ProductCode } from "@alga-psa/types";
 import { ClientPortalDocumentsProvider } from "./ClientPortalDocumentsProvider";
+import { usePathname } from "next/navigation";
+import { resolveProductRouteBehavior } from "@/lib/productSurfaceRegistry";
+import { ProductRouteBoundary } from "@/components/product/ProductRouteBoundary";
 
 interface Props {
   children: React.ReactNode;
@@ -28,6 +31,9 @@ export function ClientPortalLayoutClient({
   initialLocale,
   initialSidebarCollapsed = false,
 }: Props) {
+  const pathname = usePathname();
+  const routeBehavior = resolveProductRouteBehavior(productCode, pathname);
+
   return (
     <AppSessionProvider session={session}>
       <PostHogUserIdentifier />
@@ -38,7 +44,9 @@ export function ClientPortalLayoutClient({
               productCode={productCode}
               initialSidebarCollapsed={initialSidebarCollapsed}
             >
-              {children}
+              {productCode === 'algadesk' && routeBehavior !== 'allowed'
+                ? <ProductRouteBoundary behavior={routeBehavior} scope="client-portal" />
+                : children}
             </ClientPortalLayout>
           </ClientPortalDocumentsProvider>
         </BrandingProvider>
