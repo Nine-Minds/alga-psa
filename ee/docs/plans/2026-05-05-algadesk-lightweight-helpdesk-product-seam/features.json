@@ -1314,7 +1314,7 @@
   {
     "id": "F165",
     "description": "Omit SLA summary card from Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1322,7 +1322,7 @@
   {
     "id": "F166",
     "description": "Omit SLA breach/escalation controls from Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]

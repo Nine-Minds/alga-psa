@@ -90,6 +90,7 @@ export default function MspTicketDetailsContainerClient({
         renderCreateProjectTask={isAlgadeskMode ? undefined : renderCreateProjectTask}
         renderClientDetails={renderClientDetails}
         renderIntervalManagement={isAlgadeskMode ? undefined : renderIntervalManagement}
+        hideSlaStatus={isAlgadeskMode}
       />
     </TicketIntegrationProvider>
   );

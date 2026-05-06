@@ -269,3 +269,15 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 
 - `cd server && npx vitest run src/test/unit/app/msp/tickets/page.productComposition.test.tsx 'src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx'`
   - Result: pass (4 tests).
+- (2026-05-05) Completed F165/F166 by removing SLA status and SLA breach badges from Algadesk ticket detail.
+- Added `hideSlaStatus` composition seam threaded through ticket detail stack:
+  - `packages/tickets/src/components/ticket/TicketInfo.tsx`
+  - `packages/tickets/src/components/ticket/TicketDetails.tsx`
+  - `packages/tickets/src/components/ticket/TicketDetailsContainer.tsx`
+  - `packages/msp-composition/src/tickets/MspTicketDetailsContainerClient.tsx` (sets `hideSlaStatus` when `isAlgadeskMode=true`).
+- Behavior:
+  - Algadesk ticket detail now hides SLA status block and SLA breach indicators.
+  - PSA ticket detail retains existing SLA rendering behavior.
+- Validation:
+  - `src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx` still passes and confirms Algadesk detail composition mode.
+  - A direct package-level TicketDetailsContainer test run is currently blocked in this environment by a pre-existing module-resolution issue (`next-auth` `./lib/env` specifier) under this Vitest context.

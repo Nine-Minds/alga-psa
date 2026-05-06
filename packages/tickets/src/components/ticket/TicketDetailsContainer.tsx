@@ -66,6 +66,7 @@ interface TicketDetailsContainerProps {
   renderCreateProjectTask?: React.ComponentProps<typeof TicketDetails>['renderCreateProjectTask'];
   renderClientDetails?: React.ComponentProps<typeof TicketDetails>['renderClientDetails'];
   renderIntervalManagement?: React.ComponentProps<typeof TicketDetails>['renderIntervalManagement'];
+  hideSlaStatus?: boolean;
 }
 
 export default function TicketDetailsContainer({
@@ -76,6 +77,7 @@ export default function TicketDetailsContainer({
   renderCreateProjectTask,
   renderClientDetails,
   renderIntervalManagement,
+  hideSlaStatus = false,
 }: TicketDetailsContainerProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -242,10 +244,11 @@ export default function TicketDetailsContainer({
             isSubmitting={isSubmitting}
           surveySummaryCard={surveySummaryCard}
           associatedAssets={associatedAssets}
-          renderContactDetails={renderContactDetails}
+            renderContactDetails={renderContactDetails}
           renderCreateProjectTask={renderCreateProjectTask}
             renderClientDetails={renderClientDetails}
             renderIntervalManagement={renderIntervalManagement}
+            hideSlaStatus={hideSlaStatus}
         />
         </Suspense>
       </div>

@@ -81,6 +81,7 @@ interface TicketInfoProps {
   onClipboardImageUploaded?: () => Promise<void> | void;
   onOpenEmailNotificationLogs?: () => void;
   titleRef?: React.Ref<HTMLHeadingElement>;
+  hideSlaStatus?: boolean;
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -115,6 +116,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   onClipboardImageUploaded,
   onOpenEmailNotificationLogs,
   titleRef,
+  hideSlaStatus = false,
 }) => {
   const { data: session } = useSession();
   const { t } = useTranslation('features/tickets');
@@ -795,6 +797,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     resolutionRemainingMinutes?: number;
     isPaused: boolean;
   } | null => {
+    if (hideSlaStatus) {
+      return null;
+    }
     if (!ticket.sla_policy_id) {
       return null;
     }
@@ -850,7 +855,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       resolutionRemainingMinutes,
       isPaused
     };
-  }, [ticket.sla_policy_id, ticket.sla_response_at, ticket.sla_response_due_at,
+  }, [hideSlaStatus, ticket.sla_policy_id, ticket.sla_response_at, ticket.sla_response_due_at,
       ticket.sla_resolution_at, ticket.sla_resolution_due_at, ticket.sla_paused_at,
       ticket.sla_started_at, ticket.entered_at]);
 

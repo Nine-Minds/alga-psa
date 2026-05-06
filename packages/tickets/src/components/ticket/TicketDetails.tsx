@@ -172,6 +172,7 @@ interface TicketDetailsProps {
      * Shows auto-tracked time intervals below the ticket timer.
      */
     renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
+    hideSlaStatus?: boolean;
 }
 
 const TicketDetails: React.FC<TicketDetailsProps> = ({
@@ -214,7 +215,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     renderContactDetails,
     renderCreateProjectTask,
     renderClientDetails,
-    renderIntervalManagement
+    renderIntervalManagement,
+    hideSlaStatus = false
 }) => {
     const { t } = useTranslation('features/tickets');
     const { data: session } = useSession();
@@ -2220,6 +2222,7 @@ const handleClose = () => {
                                     }}
                                     onClipboardImageUploaded={refreshTicketDocuments}
                                     onOpenEmailNotificationLogs={() => setIsEmailNotificationLogsDrawerOpen(true)}
+                                    hideSlaStatus={hideSlaStatus}
                                     additionalAgents={additionalAgents.map(a => ({
                                         user_id: a.additional_user_id || a.assigned_to,
                                         name: availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))
