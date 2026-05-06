@@ -239,5 +239,20 @@
     "featureIds": [
       "F263"
     ]
+  },
+  {
+    "id": "T023",
+    "description": "Component contract: email-channel defaults support board/category/priority mapping and active state, and provider cards surface connection/webhook/sync/error health context for email-to-ticket operations.",
+    "implemented": true,
+    "featureIds": [
+      "F264",
+      "F265",
+      "F266",
+      "F267",
+      "F268",
+      "F269",
+      "F270",
+      "F271"
+    ]
   }
 ]

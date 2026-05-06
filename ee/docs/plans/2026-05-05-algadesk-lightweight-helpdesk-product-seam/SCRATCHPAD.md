@@ -419,3 +419,9 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - provider persistence contract includes `provider_type`, `mailbox`, `is_active`, and `inbound_ticket_defaults_id`
 - Command run: `cd server && npx vitest run src/test/unit/settings/algadeskInboundEmailChannelConfiguration.contract.test.ts src/test/unit/settings/algadeskEmailChannelsComposition.contract.test.ts` -> pass (2 tests).
 - Note: legacy `EmailProviderConfiguration` component tests currently fail in this environment due to pre-existing DB/mocking issues (ECONNREFUSED + missing mock export for `getInboundTicketDefaults`); product-seam contracts were added to keep this plan slice verifiable without DB coupling.
+- (2026-05-05) Completed F264-F271 and T023 using existing email-channel form/status seams plus contract coverage.
+- Added `server/src/test/unit/settings/algadeskEmailChannelMappingsAndHealth.contract.test.ts` validating:
+  - outbound identity seam persists mailbox-based channel identity
+  - inbound defaults form includes board/category/priority mapping + active toggle
+  - provider card exposes connection status, last-sync health, webhook-expiry context, and last error state
+- Command run: `cd server && npx vitest run src/test/unit/settings/algadeskEmailChannelsComposition.contract.test.ts src/test/unit/settings/algadeskInboundEmailChannelConfiguration.contract.test.ts src/test/unit/settings/algadeskEmailChannelMappingsAndHealth.contract.test.ts` -> pass (3 tests).

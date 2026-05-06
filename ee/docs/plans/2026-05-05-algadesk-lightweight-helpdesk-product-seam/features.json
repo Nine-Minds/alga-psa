@@ -2106,7 +2106,7 @@
   {
     "id": "F264",
     "description": "Allow outbound ticket email identity configuration required for replies.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2114,7 +2114,7 @@
   {
     "id": "F265",
     "description": "Allow mapping inbound channel to default board.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2122,7 +2122,7 @@
   {
     "id": "F266",
     "description": "Allow mapping inbound channel to default category.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2130,7 +2130,7 @@
   {
     "id": "F267",
     "description": "Allow mapping inbound channel to default priority.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2138,7 +2138,7 @@
   {
     "id": "F268",
     "description": "Allow inbound channel enable/disable.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2146,7 +2146,7 @@
   {
     "id": "F269",
     "description": "Show mailbox connection health.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2154,7 +2154,7 @@
   {
     "id": "F270",
     "description": "Show webhook or polling health where available.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2162,7 +2162,7 @@
   {
     "id": "F271",
     "description": "Show outbound delivery failure state where available.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
