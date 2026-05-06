@@ -56,7 +56,7 @@
   {
     "id": "T010",
     "description": "Integration (vitest + real Redis, server/src/test/integration/apiRateLimit.tenantIsolation.test.ts): exhausting tenant A's bucket does not affect tenant B's bucket for the same logical apiKeyId value.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {

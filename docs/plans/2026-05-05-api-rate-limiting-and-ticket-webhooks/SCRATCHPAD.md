@@ -627,3 +627,7 @@ implementation progresses; update earlier entries when something changes.
   `apiRateLimit.headers.test.ts` harness to swap API key identities within one
   tenant and prove bucket isolation: with a 5-token config, key A throttles on
   request 6 while key B still gets a 200 and its own `remaining=4` header.
+- (2026-05-06) **T010 complete.** The same harness now also forces the
+  tenant-scoped API-key auth branch via `x-tenant-id` and proves the bucket key
+  includes tenant: exhausting tenant A with a shared `api_key_id` no longer
+  affects tenant B, which still succeeds with its own `remaining=4` header.

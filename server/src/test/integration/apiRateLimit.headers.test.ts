@@ -74,11 +74,16 @@ class TestTicketController extends ApiBaseController {
   }
 }
 
-function makeRequest() {
+function makeRequest(apiKey: string = 'test-api-key', tenantId?: string) {
+  const headers = new Headers({
+    'x-api-key': apiKey,
+  });
+  if (tenantId) {
+    headers.set('x-tenant-id', tenantId);
+  }
+
   return new NextRequest('http://localhost/api/v1/tickets', {
-    headers: {
-      'x-api-key': 'test-api-key',
-    },
+    headers,
   });
 }
 
@@ -110,12 +115,30 @@ describe('API rate limit headers', () => {
         user_id: '22222222-2222-2222-2222-222222222222',
       };
     });
-    testState.validateApiKeyForTenantMock.mockResolvedValue(null);
-    testState.findUserByIdForApiMock.mockResolvedValue({
-      user_id: '22222222-2222-2222-2222-222222222222',
-      tenant: '11111111-1111-1111-1111-111111111111',
-      user_type: 'internal',
+    testState.validateApiKeyForTenantMock.mockImplementation(async (_apiKey: string, tenantId: string) => {
+      if (tenantId === '11111111-1111-1111-1111-111111111111') {
+        return {
+          tenant: tenantId,
+          api_key_id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+          user_id: '22222222-2222-2222-2222-222222222222',
+        };
+      }
+
+      if (tenantId === '33333333-3333-3333-3333-333333333333') {
+        return {
+          tenant: tenantId,
+          api_key_id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
+          user_id: '44444444-4444-4444-4444-444444444444',
+        };
+      }
+
+      return null;
     });
+    testState.findUserByIdForApiMock.mockImplementation(async (userId: string, tenantId: string) => ({
+      user_id: userId,
+      tenant: tenantId,
+      user_type: 'internal',
+    }));
     testState.runWithTenantMock.mockImplementation(async (_tenant: string, callback: () => Promise<unknown>) => callback());
     testState.hasPermissionMock.mockResolvedValue(true);
     testState.apiRateLimitConfigGetterMock.mockResolvedValue({ maxTokens: 120, refillRate: 1 });
@@ -202,6 +225,31 @@ describe('API rate limit headers', () => {
     });
     const unaffected = await handler(secondKeyRequest);
 
+    expect(unaffected.status).toBe(200);
+    expect(unaffected.headers.get('X-RateLimit-Limit')).toBe('5');
+    expect(unaffected.headers.get('X-RateLimit-Remaining')).toBe('4');
+  });
+
+  it('T010: isolates buckets across tenants even when the api_key_id value matches', async () => {
+    TokenBucketRateLimiter.resetInstance();
+    testState.apiRateLimitConfigGetterMock.mockResolvedValue({ maxTokens: 5, refillRate: 1 });
+    await TokenBucketRateLimiter.getInstance().initialize(
+      async () => createMockRedis(),
+      { api: async () => ({ maxTokens: 5, refillRate: 1 }) },
+    );
+
+    const controller = new TestTicketController();
+    const handler = controller.list();
+    const tenantA = '11111111-1111-1111-1111-111111111111';
+    const tenantB = '33333333-3333-3333-3333-333333333333';
+
+    for (let attempt = 1; attempt <= 5; attempt += 1) {
+      expect((await handler(makeRequest('shared-api-key', tenantA))).status).toBe(200);
+    }
+
+    expect((await handler(makeRequest('shared-api-key', tenantA))).status).toBe(429);
+
+    const unaffected = await handler(makeRequest('shared-api-key', tenantB));
     expect(unaffected.status).toBe(200);
     expect(unaffected.headers.get('X-RateLimit-Limit')).toBe('5');
     expect(unaffected.headers.get('X-RateLimit-Remaining')).toBe('4');
