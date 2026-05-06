@@ -16,6 +16,7 @@ const temporalWorkerChartPath = path.join(repoRoot, 'ee', 'helm', 'temporal-work
 const temporalProfileValuesPath = path.join(repoRoot, 'ee', 'appliance', 'flux', 'profiles', 'talos-single-node', 'values', 'temporal.talos-single-node.yaml');
 const temporalWorkerProfileValuesPath = path.join(repoRoot, 'ee', 'appliance', 'flux', 'profiles', 'talos-single-node', 'values', 'temporal-worker.talos-single-node.yaml');
 const fluxReleaseDir = path.join(repoRoot, 'ee', 'appliance', 'flux', 'base', 'releases');
+const applianceStatusManifestPath = path.join(repoRoot, 'ee', 'appliance', 'flux', 'base', 'platform', 'appliance-status.yaml');
 
 function run(command, args, env = process.env) {
   return spawnSync(command, args, { cwd: repoRoot, encoding: 'utf8', env });
@@ -213,7 +214,15 @@ test('T006 Flux HelmReleases retry transient single-node install stalls', () => 
   }
 });
 
-test('T007/T008 install flow sanity: payload copy and disk-first marker are present in generated installer inputs', () => {
+test('T007 platform appliance-status does not bind host port 8080 used by the Ubuntu host service', () => {
+  const docs = parseAllDocuments(fs.readFileSync(applianceStatusManifestPath, 'utf8')).map((doc) => doc.toJSON()).filter(Boolean);
+  const deployment = docs.find((doc) => doc.kind === 'Deployment' && doc.metadata?.name === 'appliance-status');
+  assert.ok(deployment);
+  assert.notEqual(deployment.spec.template.spec.hostNetwork, true);
+  assert.equal(deployment.spec.template.spec.dnsPolicy, 'ClusterFirst');
+});
+
+test('T008/T009 install flow sanity: payload copy and disk-first marker are present in generated installer inputs', () => {
   const userData = parse(fs.readFileSync(userDataPath, 'utf8'));
   const lateCommands = userData.autoinstall['late-commands'];
   const build = runBuildWithFakeXorriso();
