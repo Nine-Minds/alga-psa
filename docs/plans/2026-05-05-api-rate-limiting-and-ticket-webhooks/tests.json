@@ -98,7 +98,7 @@
   {
     "id": "T017",
     "description": "Integration (vitest + real Postgres, server/src/test/integration/apiRateLimit.dbActions.test.ts): setApiRateLimitForKey writes the row and invalidates the cache (subsequent enforce call sees new limit immediately, not after 30s); clearApiRateLimitForKey reverts to tenant default.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {

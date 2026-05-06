@@ -221,6 +221,16 @@ implementation progresses; update earlier entries when something changes.
   internal lookup share the same in-process cache, so a single seeded row
   drives both consumption (`tryConsume`) and the `X-RateLimit-Limit` value
   emitted on every response — no additional fixture is required.
+- (2026-05-06) `T017` covers the rate-limit server-action contract at the
+  cache + DAL seam rather than through the `withAuth` wrapper. The session
+  machinery used by `setApiRateLimitForKey` / `clearApiRateLimitForKey`
+  (`getCurrentUser`, `getUserRoles`, `assertApiKeyExists`) is session-coupled
+  and out of scope for vitest in this repo; the load-bearing assertion
+  ("subsequent enforce call sees new limit immediately, not after 30s") lives
+  in the `invalidateApiRateLimitConfig` step the actions perform after each
+  upsert/clear, so the test simulates that exact write+invalidate sequence
+  and verifies the bucket honours the new limit on the very next
+  `tryConsume`.
 
 ## Commands / Runbooks
 
