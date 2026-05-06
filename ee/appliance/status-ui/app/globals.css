@@ -3,42 +3,50 @@
   --color-card: 255 255 255;
   --color-primary-50: 239 246 255;
   --color-primary-100: 219 234 254;
+  --color-primary-200: 191 219 254;
+  --color-primary-400: 96 165 250;
   --color-primary-500: 59 130 246;
   --color-primary-700: 29 78 216;
+  --color-primary-900: 30 58 138;
   --color-border-100: 241 245 249;
   --color-border-200: 226 232 240;
   --color-border-300: 203 213 225;
+  --color-text-400: 148 163 184;
   --color-text-500: 100 116 139;
   --color-text-700: 51 65 85;
   --color-text-900: 15 23 42;
   --color-success: 22 163 74;
   --color-warning: 217 119 6;
   --color-error: 220 38 38;
+  --badge-success-bg: 240 253 244;
+  --badge-success-border: 187 247 208;
+  --badge-success-text: 21 128 61;
+  --badge-warning-bg: 255 251 235;
+  --badge-warning-border: 253 230 138;
+  --badge-warning-text: 180 83 9;
+  --badge-error-bg: 254 242 242;
+  --badge-error-border: 254 202 202;
+  --badge-error-text: 185 28 28;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
-html,
+html, body { min-height: 100%; margin: 0; }
+
 body {
-  min-height: 100%;
-  margin: 0;
-}
-
-body {
-  background: rgb(var(--color-background));
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.14), transparent 34rem),
+    linear-gradient(180deg, rgb(var(--color-background)), rgb(241 245 249));
   color: rgb(var(--color-text-900));
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   line-height: 1.45;
 }
 
-button,
-input,
-textarea,
-select {
-  font: inherit;
-}
+button, input, textarea, select { font: inherit; }
+
+button { cursor: pointer; }
+
+button:disabled { cursor: not-allowed; opacity: 0.65; }
 
 code {
   border: 1px solid rgb(var(--color-border-200));
@@ -46,3 +54,5 @@ code {
   background: rgb(var(--color-border-100));
   padding: 2px 5px;
 }
+
+a { color: rgb(var(--color-primary-700)); }

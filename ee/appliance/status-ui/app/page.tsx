@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import styles from './status.module.css';
 
 type Blocker = {
@@ -12,38 +12,10 @@ type Blocker = {
   loginBlocking?: boolean;
 };
 
-type PodRow = {
-  namespace: string;
-  name: string;
-  status: string;
-  readyText: string;
-  restarts: number;
-  ageSeconds?: number | null;
-  nodeName?: string | null;
-  containers?: string[];
-};
-
-type UpdateJob = {
-  name?: string | null;
-  action?: string | null;
-  channel?: string | null;
-  state?: string;
-  createdAt?: string | null;
-  startedAt?: string | null;
-  completedAt?: string | null;
-};
-
-type UpdateStatus = {
-  latest?: UpdateJob | null;
-  active?: UpdateJob[];
-  history?: UpdateJob[];
-  logs?: { available?: boolean; lines?: string[]; pod?: string | null; container?: string | null };
-};
-
 type StatusResponse = {
   status?: string;
   timestamp?: string;
-  rollup?: { state?: string; message?: string; nextAction?: string };
+  rollup?: { state?: string; message?: string; nextAction?: string } | null;
   currentPhase?: string;
   urls?: { statusUrl?: string | null; loginUrl?: string | null };
   activeOperations?: Array<{
@@ -69,6 +41,8 @@ type StatusResponse = {
     selectedChannel?: string | null;
     gitRevision?: string | null;
   };
+  installState?: { status?: string; phase?: string; lastAction?: string; updatedAt?: string };
+  diagnostics?: Array<{ name?: string; ok?: boolean; status?: number; command?: string; stdout?: string; stderr?: string }>;
 };
 
 function formatSeconds(value?: number | null) {
@@ -79,8 +53,9 @@ function formatSeconds(value?: number | null) {
 
 function badgeClass(value?: string) {
   const normalized = value || 'unknown';
-  if (['fully_healthy', 'ready_to_log_in', 'ready_with_background_issues', 'healthy', 'Running', 'Succeeded'].includes(normalized)) return styles.ready;
-  if (['installing', 'progressing', 'unknown', 'Pending', 'ContainerCreating', 'PodInitializing', 'degraded'].includes(normalized)) return styles.installing;
+  if (['fully_healthy', 'ready_to_log_in', 'ready_with_background_issues', 'healthy', 'Running', 'Succeeded', 'ready'].includes(normalized)) return styles.ready;
+  if (['installing', 'progressing', 'unknown', 'Pending', 'ContainerCreating', 'PodInitializing', 'degraded', 'setup-queued'].includes(normalized)) return styles.installing;
+  if (['warning', 'background'].includes(normalized)) return styles.warning;
   return styles.failed;
 }
 
@@ -94,29 +69,21 @@ function withToken(path: string, query: string) {
   return path.includes('?') ? `${path}&${query.slice(1)}` : `${path}${query}`;
 }
 
-const INITIAL_LOG_LINES = 300;
-const LOG_LOAD_INCREMENT = 300;
-const MAX_LOG_LINES = 5000;
+function SkeletonCard({ full = false }: { full?: boolean }) {
+  return (
+    <article className={`${styles.card} ${full ? styles.full : ''}`} aria-busy="true">
+      <div className={`${styles.skeleton} ${styles.skeletonTitle}`} />
+      <div className={`${styles.skeleton} ${styles.skeletonLine}`} />
+      <div className={`${styles.skeleton} ${styles.skeletonShort}`} />
+      <div className={`${styles.skeleton} ${styles.skeletonLine}`} />
+    </article>
+  );
+}
 
 export default function StatusPage() {
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'updates' | 'pods' | 'diagnostics'>('overview');
-  const [namespaceScope, setNamespaceScope] = useState('appliance');
-  const [pods, setPods] = useState<PodRow[]>([]);
-  const [selectedPod, setSelectedPod] = useState<PodRow | null>(null);
-  const [selectedContainer, setSelectedContainer] = useState('');
-  const [podLog, setPodLog] = useState<string[]>([]);
-  const [podLogTailLines, setPodLogTailLines] = useState(INITIAL_LOG_LINES);
-  const [loadingOlderLogs, setLoadingOlderLogs] = useState(false);
-  const [podStatus, setPodStatus] = useState('Loading pods...');
-  const [logStatus, setLogStatus] = useState('Select a pod to view logs.');
-  const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null);
-  const [updateChannel, setUpdateChannel] = useState('stable');
-  const [updateMessage, setUpdateMessage] = useState('');
-  const [updateBusy, setUpdateBusy] = useState(false);
-  const logPreRef = useRef<HTMLPreElement | null>(null);
-  const pendingScrollRestoreRef = useRef<{ previousHeight: number } | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'diagnostics'>('overview');
   const query = useMemo(tokenQuery, []);
 
   useEffect(() => {
@@ -124,7 +91,7 @@ export default function StatusPage() {
     async function load() {
       try {
         const response = await fetch(`/api/status${query}`, { cache: 'no-store' });
-        if (!response.ok) throw new Error('Unauthorized or status API unavailable');
+        if (!response.ok) throw new Error(response.status === 401 ? 'Unauthorized: check the setup token.' : 'Status API unavailable.');
         const data = (await response.json()) as StatusResponse;
         if (!cancelled) {
           setStatus(data);
@@ -135,360 +102,128 @@ export default function StatusPage() {
       }
     }
     load();
-    const timer = setInterval(load, 5000);
+    const timer = setInterval(load, 15000);
     return () => {
       cancelled = true;
       clearInterval(timer);
     };
   }, [query]);
 
-  useEffect(() => {
-    const selected = status?.release?.selectedChannel || status?.release?.channel;
-    if (selected === 'stable' || selected === 'nightly') setUpdateChannel(selected);
-  }, [status?.release?.channel, status?.release?.selectedChannel]);
-
-  useEffect(() => {
-    if (activeTab !== 'updates') return undefined;
-    let cancelled = false;
-    async function loadUpdateStatus() {
-      try {
-        const response = await fetch(withToken('/api/update/status', query), { cache: 'no-store' });
-        if (!response.ok) throw new Error('Unable to load update status');
-        const data = (await response.json()) as UpdateStatus;
-        if (!cancelled) setUpdateStatus(data);
-      } catch (err) {
-        if (!cancelled) setUpdateMessage(err instanceof Error ? err.message : String(err));
-      }
-    }
-    loadUpdateStatus();
-    const timer = setInterval(loadUpdateStatus, 5000);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [activeTab, query]);
-
-  useEffect(() => {
-    if (activeTab !== 'pods') return undefined;
-    let cancelled = false;
-    async function loadPods() {
-      try {
-        const response = await fetch(withToken(`/api/pods?namespace=${encodeURIComponent(namespaceScope)}`, query), { cache: 'no-store' });
-        if (!response.ok) throw new Error('Unable to load pods');
-        const data = (await response.json()) as { pods?: PodRow[] };
-        if (!cancelled) {
-          const rows = data.pods || [];
-          setPods(rows);
-          setPodStatus(`${rows.length} pods loaded.`);
-          if (selectedPod && !rows.some((pod) => pod.namespace === selectedPod.namespace && pod.name === selectedPod.name)) {
-            setSelectedPod(null);
-            setPodLog([]);
-            setPodLogTailLines(INITIAL_LOG_LINES);
-            setLogStatus('Select a pod to view logs.');
-          }
-        }
-      } catch (err) {
-        if (!cancelled) setPodStatus(err instanceof Error ? err.message : String(err));
-      }
-    }
-    loadPods();
-    const timer = setInterval(loadPods, 5000);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [activeTab, namespaceScope, query, selectedPod]);
-
-  useEffect(() => {
-    if (activeTab !== 'pods' || !selectedPod) return undefined;
-    let cancelled = false;
-    async function loadLogs() {
-      const pod = selectedPod;
-      if (!pod) return;
-      const container = selectedContainer || pod.containers?.[0] || '';
-      const params = new URLSearchParams({
-        namespace: pod.namespace,
-        pod: pod.name,
-        container,
-        tailLines: String(podLogTailLines),
-      });
-      try {
-        const response = await fetch(withToken(`/api/pods/logs?${params.toString()}`, query), { cache: 'no-store' });
-        if (!response.ok) throw new Error('Unable to load pod logs');
-        const data = (await response.json()) as { available?: boolean; lines?: string[] };
-        if (!cancelled) {
-          setPodLog(data.lines || []);
-          const lineCount = data.lines?.length || 0;
-          const limitMessage = podLogTailLines >= MAX_LOG_LINES ? ' Reached log history limit.' : '';
-          setLogStatus(`${data.available ? `Loaded ${lineCount} log lines` : 'No logs available'} for ${pod.namespace}/${pod.name}${container ? ` / ${container}` : ''}.${limitMessage}`);
-          const restore = pendingScrollRestoreRef.current;
-          if (restore) {
-            pendingScrollRestoreRef.current = null;
-            requestAnimationFrame(() => {
-              const pre = logPreRef.current;
-              if (pre) {
-                pre.scrollTop = Math.max(0, pre.scrollHeight - restore.previousHeight);
-              }
-            });
-          }
-        }
-      } catch (err) {
-        if (!cancelled) setLogStatus(err instanceof Error ? err.message : String(err));
-      } finally {
-        if (!cancelled) setLoadingOlderLogs(false);
-      }
-    }
-    loadLogs();
-    const timer = setInterval(loadLogs, 5000);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [activeTab, podLogTailLines, query, selectedContainer, selectedPod]);
-
-  const state = status?.rollup?.state || status?.status || 'loading';
+  const state = status?.rollup?.state || status?.status || status?.installState?.status || 'loading';
   const operations = status?.activeOperations || [];
   const logs = status?.bootstrap?.logs;
   const detectedError = logs?.detectedErrors?.at(-1);
 
-  function choosePod(pod: PodRow) {
-    setSelectedPod(pod);
-    setSelectedContainer(pod.containers?.[0] || '');
-    setPodLog([]);
-    setPodLogTailLines(INITIAL_LOG_LINES);
-    pendingScrollRestoreRef.current = null;
-    setLogStatus(`Loading logs for ${pod.namespace}/${pod.name}...`);
-  }
-
-  function chooseContainer(container: string) {
-    setSelectedContainer(container);
-    setPodLog([]);
-    setPodLogTailLines(INITIAL_LOG_LINES);
-    pendingScrollRestoreRef.current = null;
-    if (selectedPod) {
-      setLogStatus(`Loading logs for ${selectedPod.namespace}/${selectedPod.name}${container ? ` / ${container}` : ''}...`);
-    }
-  }
-
-  async function startUpdate(action: 'check' | 'apply') {
-    setUpdateBusy(true);
-    setUpdateMessage(action === 'check' ? 'Starting update check…' : `Starting ${updateChannel} upgrade…`);
-    try {
-      const response = await fetch(withToken(`/api/update/${action === 'check' ? 'check' : 'apply'}`, query), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: action === 'apply' ? JSON.stringify({ channel: updateChannel }) : '{}',
-      });
-      const data = (await response.json()) as { status?: UpdateStatus; error?: string };
-      if (!response.ok) {
-        if (response.status === 409 && data.status) setUpdateStatus(data.status);
-        throw new Error(data.error || (response.status === 409 ? 'Another update job is already running.' : 'Unable to start update job'));
-      }
-      setUpdateMessage(action === 'check' ? 'Update check submitted.' : 'Upgrade submitted. Progress will appear below.');
-      const statusResponse = await fetch(withToken('/api/update/status', query), { cache: 'no-store' });
-      if (statusResponse.ok) setUpdateStatus(await statusResponse.json() as UpdateStatus);
-    } catch (err) {
-      setUpdateMessage(err instanceof Error ? err.message : String(err));
-    } finally {
-      setUpdateBusy(false);
-    }
-  }
-
-  function handleLogScroll() {
-    const pre = logPreRef.current;
-    if (!pre || loadingOlderLogs || podLogTailLines >= MAX_LOG_LINES || pre.scrollTop > 0) return;
-    pendingScrollRestoreRef.current = { previousHeight: pre.scrollHeight };
-    setLoadingOlderLogs(true);
-    setPodLogTailLines((current) => Math.min(MAX_LOG_LINES, current + LOG_LOAD_INCREMENT));
-  }
-
   return (
     <main className={styles.shell}>
+      <header className={styles.topbar}>
+        <div className={styles.brand}><span className={styles.logo}>A</span><span>Alga PSA Appliance</span></div>
+        <nav className={styles.nav} aria-label="Appliance pages">
+          <a href={withToken('/setup/', query)}>Setup</a>
+          <a href={withToken('/', query)}>Status</a>
+        </nav>
+      </header>
+
       <section className={styles.hero}>
-        <div className={styles.eyebrow}>Alga PSA Appliance</div>
-        <h1>Install status</h1>
-        <p>{error || status?.rollup?.message || 'Loading status...'}</p>
+        <div className={styles.eyebrow}>Install status</div>
+        <h1>Bringing your appliance online</h1>
+        <p>{error || status?.rollup?.message || status?.installState?.lastAction || 'Loading live install status…'}</p>
       </section>
 
       <nav className={styles.tabs} aria-label="Appliance status tabs">
-        <button className={activeTab === 'overview' ? styles.activeTab : ''} onClick={() => setActiveTab('overview')}>Overview</button>
-        <button className={activeTab === 'updates' ? styles.activeTab : ''} onClick={() => setActiveTab('updates')}>Updates</button>
-        <button className={activeTab === 'pods' ? styles.activeTab : ''} onClick={() => setActiveTab('pods')}>Pods</button>
-        <button className={activeTab === 'diagnostics' ? styles.activeTab : ''} onClick={() => setActiveTab('diagnostics')}>Diagnostics</button>
+        <button id="status-tab-overview" className={activeTab === 'overview' ? styles.activeTab : ''} onClick={() => setActiveTab('overview')}>Overview</button>
+        <button id="status-tab-diagnostics" className={activeTab === 'diagnostics' ? styles.activeTab : ''} onClick={() => setActiveTab('diagnostics')}>Diagnostics</button>
       </nav>
 
       {activeTab === 'overview' ? (
         <section className={styles.grid}>
-          <article className={`${styles.card} ${styles.overview}`}>
-            <h2>Overview</h2>
-            <dl className={styles.kv}>
-              <div><dt>Install state</dt><dd><span className={`${styles.badge} ${badgeClass(state)}`}>{state}</span></dd></div>
-              <div><dt>Current phase</dt><dd>{status?.currentPhase || state}</dd></div>
-              <div><dt>Login URL</dt><dd>{status?.urls?.loginUrl || 'Not available yet'}</dd></div>
-              <div><dt>Next action</dt><dd>{status?.rollup?.nextAction || '-'}</dd></div>
-            </dl>
-          </article>
+          {!status && !error ? <><SkeletonCard /><SkeletonCard /><SkeletonCard full /></> : null}
 
-          <article className={`${styles.card} ${styles.operation}`}>
-            <h2>Current operation</h2>
-            {operations.length === 0 ? <p className={styles.muted}>No active image pull or long-running operation detected.</p> : operations.map((op, index) => (
-              <div className={styles.operationBox} key={`${op.component}-${index}`}>
-                <strong>{op.component || 'component'}</strong>
-                <p>{op.message}</p>
-                <p><code>{op.image || 'unknown image'}</code></p>
-                <p className={styles.muted}>Estimated size: {op.estimatedSizeHuman || 'unknown'} · elapsed {formatSeconds(op.elapsedSeconds)}</p>
-                <p className={styles.muted}>Pull progress: {op.progressAvailable ? `${op.progressPercent}%` : 'not available from Kubernetes'}</p>
-              </div>
-            ))}
-          </article>
+          {status ? (
+            <>
+              <article className={`${styles.card} ${styles.overview}`}>
+                <h2>Overview</h2>
+                <dl className={styles.kv}>
+                  <div><dt>Install state</dt><dd><span className={`${styles.badge} ${badgeClass(state)}`}>{state}</span></dd></div>
+                  <div><dt>Current phase</dt><dd>{status.currentPhase || status.installState?.phase || state}</dd></div>
+                  <div><dt>Last action</dt><dd>{status.installState?.lastAction || status.rollup?.nextAction || '-'}</dd></div>
+                  <div><dt>Login URL</dt><dd>{status.urls?.loginUrl || 'Not available yet'}</dd></div>
+                </dl>
+              </article>
 
-          <article className={`${styles.card} ${styles.full}`}>
-            <h2>Readiness tiers</h2>
-            <div className={styles.tiers}>
-              {Object.entries(status?.tiers || {}).map(([name, tier]) => (
-                <div className={styles.tier} key={name}>
-                  <strong>{name}</strong>
-                  <span className={`${styles.badge} ${badgeClass(tier.status)}`}>{tier.ready ? 'ready' : 'not ready'}</span>
-                  <span className={styles.muted}>{tier.status}</span>
-                </div>
-              ))}
-            </div>
-          </article>
+              <article className={`${styles.card} ${styles.operation}`}>
+                <h2>Current operation</h2>
+                {operations.length === 0 ? <p className={styles.muted}>No active image pull or long-running operation detected.</p> : operations.map((op, index) => (
+                  <div className={styles.operationBox} key={`${op.component}-${index}`}>
+                    <strong>{op.component || 'component'}</strong>
+                    <p>{op.message}</p>
+                    <p><code>{op.image || 'unknown image'}</code></p>
+                    <p className={styles.muted}>Estimated size: {op.estimatedSizeHuman || 'unknown'} · elapsed {formatSeconds(op.elapsedSeconds)}</p>
+                    <p className={styles.muted}>Pull progress: {op.progressAvailable ? `${op.progressPercent}%` : 'not available from Kubernetes'}</p>
+                  </div>
+                ))}
+              </article>
 
-          <article className={styles.card}>
-            <h2>Blockers</h2>
-            {(status?.topBlockers || []).length === 0 ? <p className={styles.muted}>No action-required blockers detected.</p> : status?.topBlockers?.map((blocker, index) => (
-              <div className={`${styles.blocker} ${blocker.loginBlocking === false ? styles.backgroundBlocker : ''}`} key={`${blocker.component}-${index}`}>
-                <strong>{blocker.component || blocker.layer}</strong>
-                <p>{blocker.reason}</p>
-                <p className={styles.muted}>{blocker.nextAction}</p>
-                {blocker.loginBlocking === false ? <p className={styles.muted}>background / non-login-blocking</p> : null}
-              </div>
-            ))}
-          </article>
-
-          <article className={styles.card}>
-            <h2>Bootstrap log</h2>
-            {logs?.available ? (
-              <>
-                <p className={styles.muted}>{logs.pod} / {logs.container}</p>
-                {detectedError ? <div className={styles.blocker}><strong>Detected error</strong><p>{detectedError}</p></div> : null}
-                <pre className={styles.log}>{(logs.tail || []).join('\n')}</pre>
-              </>
-            ) : <p className={styles.muted}>{status?.bootstrap?.job?.name ? `No log excerpt available for ${status.bootstrap.job.name}.` : 'No bootstrap job log available yet.'}</p>}
-          </article>
-
-          <article className={`${styles.card} ${styles.full}`}>
-            <h2>Recent events</h2>
-            <div className={styles.events}>
-              {(status?.recentEvents || []).slice(-8).reverse().map((event, index) => (
-                <div className={styles.event} key={`${event.reason}-${index}`}>
-                  <strong>{event.type} {event.reason}</strong>
-                  <span>{event.namespace} {event.involvedObject}</span>
-                  <p>{event.message}</p>
-                </div>
-              ))}
-            </div>
-          </article>
-        </section>
-      ) : null}
-
-      {activeTab === 'updates' ? (
-        <section className={styles.grid}>
-          <article className={`${styles.card} ${styles.full}`}>
-            <h2>Updates</h2>
-            <dl className={styles.kv}>
-              <div><dt>Selected channel</dt><dd>{status?.release?.selectedChannel || status?.release?.channel || 'unknown'}</dd></div>
-              <div><dt>Resolved release</dt><dd>{status?.release?.selectedReleaseVersion || 'unknown'}</dd></div>
-              <div><dt>Flux revision</dt><dd>{status?.release?.gitRevision || 'unknown'}</dd></div>
-            </dl>
-            <div className={styles.toolbar}>
-              <label className={styles.muted}>Channel{' '}
-                <select value={updateChannel} onChange={(event) => setUpdateChannel(event.target.value)} disabled={updateBusy}>
-                  <option value="stable">stable</option>
-                  <option value="nightly">nightly</option>
-                </select>
-              </label>
-              <button className={styles.actionButton} onClick={() => startUpdate('check')} disabled={updateBusy}>Check for updates</button>
-              <button className={styles.actionButton} onClick={() => startUpdate('apply')} disabled={updateBusy}>Apply channel upgrade</button>
-            </div>
-            {updateMessage ? <p className={styles.muted}>{updateMessage}</p> : null}
-          </article>
-          <article className={`${styles.card} ${styles.full}`}>
-            <h2>Update job</h2>
-            {updateStatus?.latest ? (
-              <dl className={styles.kv}>
-                <div><dt>Job</dt><dd>{updateStatus.latest.name}</dd></div>
-                <div><dt>Action</dt><dd>{updateStatus.latest.action || '-'}</dd></div>
-                <div><dt>Channel</dt><dd>{updateStatus.latest.channel || '-'}</dd></div>
-                <div><dt>State</dt><dd><span className={`${styles.badge} ${badgeClass(updateStatus.latest.state)}`}>{updateStatus.latest.state}</span></dd></div>
-                <div><dt>Started</dt><dd>{updateStatus.latest.startedAt || updateStatus.latest.createdAt || '-'}</dd></div>
-              </dl>
-            ) : <p className={styles.muted}>No update job has run yet.</p>}
-            {updateStatus?.logs?.available ? <pre className={styles.log}>{(updateStatus.logs.lines || []).join('\n')}</pre> : null}
-          </article>
-        </section>
-      ) : null}
-
-      {activeTab === 'pods' ? (
-        <section className={styles.grid}>
-          <article className={`${styles.card} ${styles.full}`}>
-            <div className={styles.toolbar}>
-              <h2>Pods</h2>
-              <label className={styles.muted}>Namespace{' '}
-                <select value={namespaceScope} onChange={(event) => setNamespaceScope(event.target.value)}>
-                  <option value="appliance">Appliance namespaces</option>
-                  <option value="all">All namespaces</option>
-                  <option value="msp">msp</option>
-                  <option value="alga-system">alga-system</option>
-                  <option value="appliance-system">appliance-system</option>
-                  <option value="flux-system">flux-system</option>
-                  <option value="local-path-storage">local-path-storage</option>
-                  <option value="kube-system">kube-system</option>
-                </select>
-              </label>
-            </div>
-            <p className={styles.muted}>{podStatus}</p>
-            <div className={styles.tableWrap}>
-              <table>
-                <thead><tr><th>Namespace</th><th>Pod</th><th>Status</th><th>Ready</th><th>Restarts</th><th>Age</th><th>Node</th></tr></thead>
-                <tbody>
-                  {pods.map((pod) => (
-                    <tr key={`${pod.namespace}/${pod.name}`} onClick={() => choosePod(pod)} className={selectedPod?.namespace === pod.namespace && selectedPod?.name === pod.name ? styles.selectedRow : ''}>
-                      <td>{pod.namespace}</td>
-                      <td>{pod.name}</td>
-                      <td><span className={`${styles.badge} ${badgeClass(pod.status)}`}>{pod.status}</span></td>
-                      <td>{pod.readyText}</td>
-                      <td>{pod.restarts}</td>
-                      <td>{formatSeconds(pod.ageSeconds)}</td>
-                      <td>{pod.nodeName || '-'}</td>
-                    </tr>
+              <article className={`${styles.card} ${styles.full}`}>
+                <h2>Readiness tiers</h2>
+                <div className={styles.tiers}>
+                  {Object.entries(status.tiers || {}).length === 0 ? <p className={styles.muted}>Readiness data is still loading.</p> : null}
+                  {Object.entries(status.tiers || {}).map(([name, tier]) => (
+                    <div className={styles.tier} key={name}>
+                      <strong>{name}</strong>
+                      <span className={`${styles.badge} ${badgeClass(tier.status)}`}>{tier.ready ? 'ready' : 'not ready'}</span>
+                      <span className={styles.muted}>{tier.status}</span>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          </article>
-          <article className={`${styles.card} ${styles.full}`}>
-            <div className={styles.toolbar}>
-              <h2>{selectedPod ? `Logs: ${selectedPod.namespace}/${selectedPod.name}` : 'Pod logs'}</h2>
-              <label className={styles.muted}>Container{' '}
-                <select value={selectedContainer} onChange={(event) => chooseContainer(event.target.value)} disabled={!selectedPod}>
-                  {(selectedPod?.containers || []).map((container) => <option key={container} value={container}>{container}</option>)}
-                </select>
-              </label>
-            </div>
-            <p className={styles.muted}>{loadingOlderLogs ? 'Loading previous 300 log lines… ' : ''}{logStatus}</p>
-            {selectedPod ? <pre ref={logPreRef} onScroll={handleLogScroll} className={styles.log}>{podLog.join('\n')}</pre> : null}
-          </article>
+                </div>
+              </article>
+
+              <article className={styles.card}>
+                <h2>Blockers</h2>
+                {(status.topBlockers || []).length === 0 ? <p className={styles.muted}>No action-required blockers detected.</p> : status.topBlockers?.map((blocker, index) => (
+                  <div className={`${styles.blocker} ${blocker.loginBlocking === false ? styles.backgroundBlocker : ''}`} key={`${blocker.component}-${index}`}>
+                    <strong>{blocker.component || blocker.layer}</strong>
+                    <p>{blocker.reason}</p>
+                    <p className={styles.muted}>{blocker.nextAction}</p>
+                    {blocker.loginBlocking === false ? <p className={styles.muted}>background / non-login-blocking</p> : null}
+                  </div>
+                ))}
+              </article>
+
+              <article className={styles.card}>
+                <h2>Bootstrap log</h2>
+                {logs?.available ? (
+                  <>
+                    <p className={styles.muted}>{logs.pod} / {logs.container}</p>
+                    {detectedError ? <div className={styles.blocker}><strong>Detected error</strong><p>{detectedError}</p></div> : null}
+                    <pre className={styles.log}>{(logs.tail || []).join('\n')}</pre>
+                  </>
+                ) : <p className={styles.muted}>{status.bootstrap?.job?.name ? `No log excerpt available for ${status.bootstrap.job.name}.` : 'No bootstrap job log available yet.'}</p>}
+              </article>
+
+              <article className={`${styles.card} ${styles.full}`}>
+                <h2>Recent events</h2>
+                <div className={styles.events}>
+                  {(status.recentEvents || []).length === 0 ? <p className={styles.muted}>No recent Kubernetes events loaded yet.</p> : null}
+                  {(status.recentEvents || []).slice(-8).reverse().map((event, index) => (
+                    <div className={styles.event} key={`${event.reason}-${index}`}>
+                      <strong>{event.type} {event.reason}</strong>
+                      <span>{event.namespace} {event.involvedObject}</span>
+                      <p>{event.message}</p>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            </>
+          ) : null}
         </section>
       ) : null}
 
       {activeTab === 'diagnostics' ? (
         <section className={styles.grid}>
-          <article className={`${styles.card} ${styles.full}`}>
-            <h2>Diagnostics</h2>
-            <pre className={styles.log}>{JSON.stringify(status, null, 2)}</pre>
-          </article>
+          {!status && !error ? <SkeletonCard full /> : null}
+          {error ? <article className={`${styles.card} ${styles.full}`}><h2>Diagnostics unavailable</h2><p className={styles.muted}>{error}</p></article> : null}
+          {status ? <article className={`${styles.card} ${styles.full}`}><h2>Raw diagnostics</h2><pre className={styles.log}>{JSON.stringify(status, null, 2)}</pre></article> : null}
         </section>
       ) : null}
     </main>

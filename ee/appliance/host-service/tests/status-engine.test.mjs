@@ -28,6 +28,12 @@ kube-system pod-b Running
 TXT
   exit 0
 fi
+if [[ "$*" == *"-n msp get jobs --no-headers"* ]]; then
+  exit 0
+fi
+if [[ "$*" == *"-n alga-system get helmreleases"* ]]; then
+  exit 0
+fi
 exit 1
 `);
   fs.chmodSync(kubectlPath, 0o755);
@@ -106,6 +112,64 @@ exit 1
     assert.equal(snapshot.tiers.backgroundReady, false);
     assert.equal(snapshot.tiers.backgroundIssues.length, 1);
     assert.equal(snapshot.failures.some((failure) => failure.category === 'background-services'), true);
+  } finally {
+    process.env.PATH = originalPath;
+  }
+});
+
+test('non-ready HelmReleases block fullyHealthy even when pods are running', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-hr-'));
+  const stateFile = path.join(tmp, 'install-state.json');
+  const fakeBin = path.join(tmp, 'bin');
+  fs.mkdirSync(fakeBin, { recursive: true });
+
+  fs.writeFileSync(stateFile, JSON.stringify({ phase: 'app-readiness', status: 'release-config-complete' }));
+
+  const kubectlPath = path.join(fakeBin, 'kubectl');
+  fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
+if [[ "$*" == *"get nodes -o json"* ]]; then
+  cat <<'JSON'
+{"items":[{"metadata":{"name":"node-1"},"status":{"conditions":[{"type":"Ready","status":"True"}]}}]}
+JSON
+  exit 0
+fi
+if [[ "$*" == *"get pods -A --no-headers"* ]]; then
+  cat <<'TXT'
+msp alga-core-abc Running
+msp workflow-worker-xyz Running
+TXT
+  exit 0
+fi
+if [[ "$*" == *"-n msp get jobs --no-headers"* ]]; then
+  cat <<'TXT'
+alga-core-bootstrap 1/1 1 1m
+TXT
+  exit 0
+fi
+if [[ "$*" == *"-n alga-system get helmreleases"* ]]; then
+  cat <<'TXT'
+alga-core 1h True Helm install succeeded
+workflow-worker 1h False Helm install failed for release msp/workflow-worker
+TXT
+  exit 0
+fi
+exit 1
+`);
+  fs.chmodSync(kubectlPath, 0o755);
+
+  const originalPath = process.env.PATH;
+  process.env.PATH = `${fakeBin}:${originalPath}`;
+  try {
+    const snapshot = collectStatusSnapshot({
+      stateFile,
+      kubeconfigPath: '/tmp/k3s.yaml',
+      kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
+    });
+
+    assert.equal(snapshot.tiers.loginReady, true);
+    assert.equal(snapshot.tiers.backgroundReady, false);
+    assert.equal(snapshot.tiers.fullyHealthy, false);
+    assert.equal(snapshot.failures.some((failure) => failure.category === 'flux'), true);
   } finally {
     process.env.PATH = originalPath;
   }

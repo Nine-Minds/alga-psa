@@ -11,6 +11,7 @@ import { persistMaintenanceMetadata } from './metadata-engine.mjs';
 const DEFAULT_SETUP_FILE = '/etc/alga-appliance/setup-inputs.json';
 const DEFAULT_STATE_FILE = '/var/lib/alga-appliance/install-state.json';
 const DEFAULT_RESOLV_CONF = '/etc/resolv.conf';
+const DEFAULT_RELEASES_DIR = '/opt/alga-appliance/releases';
 
 function isValidIpv4(value) {
   const parts = value.split('.');
@@ -61,6 +62,18 @@ function readChannelRelease(channelData) {
   return {
     releaseVersion,
     repoBranch: repoBranch || 'main'
+  };
+}
+
+function applyRepoBranchOverride(releaseSelection, inputs) {
+  const requestedBranch = (inputs.repoBranch || '').trim();
+  if (!requestedBranch) {
+    return releaseSelection;
+  }
+
+  return {
+    ...releaseSelection,
+    repoBranch: requestedBranch
   };
 }
 
@@ -720,6 +733,8 @@ export async function resolveChannelMetadata(inputs, options = {}) {
   const normalizedRepoUrl = normalizeGithubRepoUrl(inputs.repoUrl);
   const repo = extractRepoParts(normalizedRepoUrl);
   const branch = (inputs.repoBranch || 'main').trim() || 'main';
+  const releasesDir = options.releasesDir || DEFAULT_RELEASES_DIR;
+  const localChannelFile = path.join(releasesDir, 'channels', `${inputs.channel}.json`);
   const channelUrl = `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${branch}/ee/appliance/releases/channels/${inputs.channel}.json`;
 
   writeInstallState({
@@ -732,6 +747,8 @@ export async function resolveChannelMetadata(inputs, options = {}) {
   let channelData;
   if (options.channelMetadataOverride) {
     channelData = options.channelMetadataOverride;
+  } else if (fs.existsSync(localChannelFile)) {
+    channelData = JSON.parse(fs.readFileSync(localChannelFile, 'utf8'));
   } else {
     const response = await httpsRequest(channelUrl, timeoutMs, resolverServersForInputs(inputs, options.resolvConfPath || DEFAULT_RESOLV_CONF));
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -755,7 +772,7 @@ export async function resolveChannelMetadata(inputs, options = {}) {
 
   let releaseSelection;
   try {
-    releaseSelection = readChannelRelease(channelData);
+    releaseSelection = applyRepoBranchOverride(readChannelRelease(channelData), inputs);
   } catch (error) {
     const failure = preflightFailure(
       'github-release-source',
@@ -809,6 +826,9 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
   const releaseVersion = releaseSelection.releaseVersion;
   const tempDir = options.runtimeValuesDir || fs.mkdtempSync(path.join(os.tmpdir(), 'alga-runtime-values-'));
   const valuesDir = path.join(tempDir, 'values');
+  const releasesDir = options.releasesDir || DEFAULT_RELEASES_DIR;
+  const localReleaseFile = path.join(releasesDir, releaseVersion, 'release.json');
+  const localFluxDir = options.fluxDir || '/opt/alga-appliance/flux';
 
   writeInstallState({
     status: 'runtime-values-running',
@@ -822,7 +842,9 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     const lookupServers = resolverServersForInputs(inputs, options.resolvConfPath || DEFAULT_RESOLV_CONF);
     const releaseBody = options.releaseManifestOverride
       ? JSON.stringify(options.releaseManifestOverride)
-      : await fetchGithubText(repo, branch, `ee/appliance/releases/${releaseVersion}/release.json`, timeoutMs, lookupServers);
+      : fs.existsSync(localReleaseFile)
+        ? fs.readFileSync(localReleaseFile, 'utf8')
+        : await fetchGithubText(repo, branch, `ee/appliance/releases/${releaseVersion}/release.json`, timeoutMs, lookupServers);
     releaseManifest = JSON.parse(releaseBody);
   } catch (error) {
     const failure = preflightFailure(
@@ -844,7 +866,10 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     for (const name of names) {
       const key = `${name}.${profile}.yaml`;
       const override = options.profileValuesOverride?.[key];
-      values[key] = override ?? await fetchGithubText(repo, branch, `ee/appliance/flux/profiles/${profile}/values/${key}`, timeoutMs, resolverServersForInputs(inputs, options.resolvConfPath || DEFAULT_RESOLV_CONF));
+      const localProfileValuesFile = path.join(localFluxDir, 'profiles', profile, 'values', key);
+      values[key] = override
+        ?? (fs.existsSync(localProfileValuesFile) ? fs.readFileSync(localProfileValuesFile, 'utf8') : null)
+        ?? await fetchGithubText(repo, branch, `ee/appliance/flux/profiles/${profile}/values/${key}`, timeoutMs, resolverServersForInputs(inputs, options.resolvConfPath || DEFAULT_RESOLV_CONF));
     }
 
     const images = releaseManifest.app?.images || {};
@@ -1104,7 +1129,7 @@ export async function runSetupWorkflow(inputs, options = {}) {
     return releaseSelection;
   }
 
-  const runtimeValuesResult = await applyRuntimeValuesAndReleaseSelection(inputs, releaseSelection, { ...options, bootstrapMode: options.bootstrapMode || 'fresh' });
+  const runtimeValuesResult = await applyRuntimeValuesAndReleaseSelection(inputs, releaseSelection, { ...options, bootstrapMode: options.bootstrapMode || 'recover' });
   if (!runtimeValuesResult.ok) {
     return runtimeValuesResult;
   }

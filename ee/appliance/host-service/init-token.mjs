@@ -16,8 +16,12 @@ try {
   // Best-effort in local dev; installer creates root-owned dirs in production.
 }
 
+function generateToken() {
+  return Array.from({ length: 5 }, () => String(crypto.randomInt(0, 10_000)).padStart(4, '0')).join('-');
+}
+
 if (!fs.existsSync(tokenFile)) {
-  const token = crypto.randomBytes(24).toString('base64url');
+  const token = generateToken();
   fs.writeFileSync(tokenFile, `${token}\n`, { mode: 0o600 });
 }
 

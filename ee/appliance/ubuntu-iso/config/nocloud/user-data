@@ -1,6 +1,9 @@
 #cloud-config
 autoinstall:
   version: 1
+  interactive-sections:
+    - network
+    - storage
   locale: en_US.UTF-8
   keyboard:
     layout: us
@@ -46,7 +49,10 @@ autoinstall:
     - curtin in-target --target=/target -- chmod 0750 /etc/alga-appliance /var/lib/alga-appliance /var/log/alga-appliance
     - curtin in-target --target=/target -- find /opt/alga-appliance -type f -name '*.sh' -exec chmod 0755 {} \;
     - curtin in-target --target=/target -- chmod 0755 /opt/alga-appliance/appliance
+    - curtin in-target --target=/target -- bash -lc 'if command -v vgs >/dev/null 2>&1 && command -v lvextend >/dev/null 2>&1 && vgs --noheadings -o vg_free --units b --nosuffix ubuntu-vg 2>/dev/null | awk '\''{ exit !($1 > 0) }'\''; then lvextend -r -l +100%FREE /dev/ubuntu-vg/ubuntu-lv || true; fi'
     - curtin in-target --target=/target -- passwd -l alga-admin
+    - mkdir -p /target/etc/alga-appliance
+    - touch /target/etc/alga-appliance/booted-from-disk
     - curtin in-target --target=/target -- bash -lc 'if [ -f /etc/systemd/system/alga-appliance.service ]; then systemctl enable alga-appliance.service; fi'
     - curtin in-target --target=/target -- bash -lc 'if [ -f /etc/systemd/system/alga-appliance-console.service ]; then systemctl enable alga-appliance-console.service; fi'
 

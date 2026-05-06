@@ -3,6 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+WORK_DIR="${ALGA_APPLIANCE_ISO_WORK_DIR:-$ROOT_DIR/work}"
+OUTPUT_DIR="${ALGA_APPLIANCE_ISO_OUTPUT_DIR:-$ROOT_DIR/output}"
 
 usage() {
   cat <<USAGE
@@ -70,8 +72,8 @@ fi
 for required_dir in \
   "$ROOT_DIR/config/nocloud" \
   "$ROOT_DIR/overlay" \
-  "$ROOT_DIR/work" \
-  "$ROOT_DIR/output"; do
+  "$WORK_DIR" \
+  "$OUTPUT_DIR"; do
   if [[ ! -d "$required_dir" ]]; then
     echo "Missing required directory: $required_dir" >&2
     exit 1
@@ -93,7 +95,7 @@ if [[ ! -x "$STAGE_SCRIPT" ]]; then
   exit 1
 fi
 
-OUTPUT_ISO="$ROOT_DIR/output/alga-appliance-ubuntu-${RELEASE_VERSION}.iso"
+OUTPUT_ISO="$OUTPUT_DIR/alga-appliance-ubuntu-${RELEASE_VERSION}.iso"
 OUTPUT_SHA="$OUTPUT_ISO.sha256"
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
@@ -120,7 +122,7 @@ if ! command -v xorriso >/dev/null 2>&1; then
   exit 1
 fi
 
-ISO_WORK="$ROOT_DIR/work/iso-root"
+ISO_WORK="$WORK_DIR/iso-root"
 rm -rf "$ISO_WORK"
 mkdir -p "$ISO_WORK"
 
@@ -130,15 +132,42 @@ chmod -R u+w "$ISO_WORK"
 rm -rf "$ISO_WORK/nocloud" "$ISO_WORK/alga-overlay"
 cp -R "$ROOT_DIR/config/nocloud" "$ISO_WORK/nocloud"
 cp -R "$ROOT_DIR/overlay" "$ISO_WORK/alga-overlay"
+mkdir -p "$ISO_WORK/.disk"
+printf 'AlgaPSA Install\n' > "$ISO_WORK/.disk/info"
 
 for grub_file in "$ISO_WORK/boot/grub/grub.cfg" "$ISO_WORK/boot/grub/loopback.cfg"; do
   if [[ -f "$grub_file" ]]; then
     python3 - "$grub_file" <<'PY'
+import re
 import sys
 from pathlib import Path
+
 path = Path(sys.argv[1])
 text = path.read_text()
 needle = 'autoinstall ds=nocloud\\;s=/cdrom/nocloud/'
+boot_marker = '/etc/alga-appliance/booted-from-disk'
+boot_entry = f'''set timeout_style=menu
+set timeout=5
+set default=0
+
+menuentry "AlgaPSA Install" {{
+	search --no-floppy --file --set=alga_root {boot_marker}
+	if [ -n "$alga_root" ]; then
+		set root=$alga_root
+		configfile /boot/grub/grub.cfg
+	else
+		set gfxpayload=keep
+		linux /casper/vmlinuz {needle} ---
+		initrd /casper/initrd
+	fi
+}}
+
+'''
+
+text = re.sub(r'^set timeout=\d+\s*\n', '', text, count=0, flags=re.M)
+if 'menuentry "AlgaPSA Install"' not in text:
+    text = boot_entry + text
+
 out = []
 for line in text.splitlines():
     stripped = line.lstrip()
@@ -155,7 +184,7 @@ done
 
 rm -f "$OUTPUT_ISO" "$OUTPUT_SHA"
 xorriso -as mkisofs \
-  -r -V ALGA_UBUNTU \
+  -r -V ALGAPSA_INSTALL \
   -o "$OUTPUT_ISO" \
   -J -joliet-long -l -iso-level 3 \
   -c boot.catalog \
