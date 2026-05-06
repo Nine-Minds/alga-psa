@@ -236,7 +236,7 @@
   {
     "id": "F040",
     "description": "Implement maybeAutoDisable(webhook): if all deliveries in the past 24h failed, set webhook.is_active=false and webhook.auto_disabled_at=now(); email the owning user via the existing notification path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {

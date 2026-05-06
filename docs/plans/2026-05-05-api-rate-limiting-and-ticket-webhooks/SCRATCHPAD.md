@@ -147,6 +147,10 @@ implementation progresses; update earlier entries when something changes.
   outcomes. The queue handles atomic `zRem` claims, caps active work at 50
   in-process jobs, and re-enqueues attempts 2..5 with
   `computeBackoff(attempt)`.
+- (2026-05-05) Auto-disable must follow a continuous failure streak, not just
+  "some failures in the last day." `maybeAutoDisable()` therefore keys off
+  the first non-delivered attempt since `last_success_at` and disables only
+  once that streak has remained all-failure for 24 hours.
 
 ## Commands / Runbooks
 
@@ -176,6 +180,7 @@ implementation progresses; update earlier entries when something changes.
   `cd server && npx tsx -e "import('./src/lib/eventBus/subscribers/webhook/webhookTicketPayload.ts').then(() => console.log('payload-ok'))"`
 - (2026-05-05) Smoke-load the webhook subscriber + queue storage layer:
   `cd server && npx tsx -e "import('./src/lib/webhooks/processWebhookDeliveryJob.ts').then(() => console.log('processor-ok'))"`
+  `cd server && npx tsx -e "import('./src/lib/webhooks/autoDisable.ts').then(() => console.log('auto-disable-ok'))"`
   `cd server && npx tsx -e "import('./src/lib/webhooks/WebhookDeliveryQueue.ts').then(() => console.log('queue-ok'))"`
   `cd server && npx tsx -e "import('./src/lib/eventBus/subscribers/webhookSubscriber.ts').then(() => console.log('subscriber-ok'))"`
 - (2026-05-05) `cd server && npx tsc --noEmit --pretty false` currently OOMs
@@ -469,3 +474,9 @@ implementation progresses; update earlier entries when something changes.
   delivery queue with `getRedisClient` plus a real
   `processWebhookDeliveryJob()` callback, and the existing SIGTERM/SIGINT
   cleanup path now shuts the queue down alongside the email retry queues.
+- (2026-05-05) **F040 complete.** Added
+  `server/src/lib/webhooks/autoDisable.ts` and wired it into
+  `processWebhookDeliveryJob()`. Failed deliveries now advance the webhook's
+  rolling stats, and once the first failure since the last success has aged
+  past 24 hours the webhook is auto-disabled exactly once and the owning user
+  receives a direct notification email via the system email service.

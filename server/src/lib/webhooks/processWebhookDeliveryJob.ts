@@ -6,6 +6,7 @@ import {
   WebhookDeliveryJob,
   type WebhookDeliveryProcessResult,
 } from './WebhookDeliveryQueue';
+import { maybeAutoDisable } from './autoDisable';
 import { computeBackoff } from './backoff';
 import { performWebhookDeliveryRequest } from './delivery';
 import { WEBHOOK_SIGNATURE_HEADER, signRequest } from './sign';
@@ -117,12 +118,16 @@ export async function processWebhookDeliveryJob(
     completedAt,
   });
 
-  await webhookModel.updateStats({
+  const updatedWebhook = await webhookModel.updateStats({
     tenant: job.tenantId,
     webhookId: job.webhookId,
     succeeded: deliveryResult.success,
     deliveredAt: completedAt,
   });
+
+  if (!deliveryResult.success && updatedWebhook) {
+    await maybeAutoDisable(updatedWebhook);
+  }
 
   if (deliveryResult.success) {
     return { outcome: 'delivered' };
