@@ -60,6 +60,7 @@ import ImportExportSettings from '@/components/settings/import-export/ImportExpo
 import ExtensionManagement from '@/components/settings/extensions/ExtensionManagement';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from '@alga-psa/integrations/email/settings/entry';
+import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
 // Removed import: import { getCurrentUser } from '@alga-psa/users/actions';
 import { ProjectSettings } from '@alga-psa/projects/components';
 
@@ -301,7 +302,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
             <CardDescription>{t('email.description')}</CardDescription>
           </CardHeader>
           <CardContent>
-            <EmailSettings />
+            {isAlgadesk ? <EmailProviderConfiguration /> : <EmailSettings />}
           </CardContent>
         </Card>
       ),

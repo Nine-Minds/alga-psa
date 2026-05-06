@@ -223,5 +223,13 @@
       "F335",
       "F354"
     ]
+  },
+  {
+    "id": "T021",
+    "description": "Component contract: Algadesk email settings tab uses focused EmailProviderConfiguration composition instead of broad legacy EmailSettings surface.",
+    "implemented": true,
+    "featureIds": [
+      "F262"
+    ]
   }
 ]

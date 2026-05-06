@@ -2090,7 +2090,7 @@
   {
     "id": "F262",
     "description": "Render focused Email Channels settings for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]

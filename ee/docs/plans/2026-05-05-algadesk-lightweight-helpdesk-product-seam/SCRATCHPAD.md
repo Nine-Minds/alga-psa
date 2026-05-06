@@ -408,3 +408,8 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - portal ticket detail hides internal-comment tab and keeps public reply/status flows
   - portal ticket pages avoid billing/project navigation links
 - Command run: `cd server && npx vitest run src/test/unit/client-portal/algadeskPortalTicketing.contract.test.ts src/test/unit/client-portal/clientPortalProductLayout.contract.test.ts` -> pass (8 tests).
+- (2026-05-05) Completed F262 and T021 with focused Algadesk Email Channels settings composition.
+- Updated `server/src/components/settings/SettingsPage.tsx` email tab rendering:
+  - Algadesk now uses `EmailProviderConfiguration` (inbound mailbox/channel-focused settings surface).
+  - PSA retains existing `EmailSettings` composition unchanged.
+- Added `server/src/test/unit/settings/algadeskEmailChannelsComposition.contract.test.ts` to assert product-aware composition switch in settings.
