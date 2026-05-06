@@ -1162,7 +1162,7 @@
   {
     "id": "F146",
     "description": "Show ticket title and core metadata in Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1170,7 +1170,7 @@
   {
     "id": "F147",
     "description": "Show board in Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1178,7 +1178,7 @@
   {
     "id": "F148",
     "description": "Show status in Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1186,7 +1186,7 @@
   {
     "id": "F149",
     "description": "Show priority in Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1194,7 +1194,7 @@
   {
     "id": "F150",
     "description": "Show category in Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1202,7 +1202,7 @@
   {
     "id": "F151",
     "description": "Show assigned user and team controls in Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1210,7 +1210,7 @@
   {
     "id": "F152",
     "description": "Show client and contact context in Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1218,7 +1218,7 @@
   {
     "id": "F153",
     "description": "Show tags in Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1226,7 +1226,7 @@
   {
     "id": "F154",
     "description": "Show response state controls in Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1234,7 +1234,7 @@
   {
     "id": "F155",
     "description": "Show ticket origin badge in Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1242,7 +1242,7 @@
   {
     "id": "F156",
     "description": "Show conversation/comments in Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1250,7 +1250,7 @@
   {
     "id": "F157",
     "description": "Support internal comments in Algadesk ticket detail for MSP users.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1258,7 +1258,7 @@
   {
     "id": "F158",
     "description": "Support public replies in Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1266,7 +1266,7 @@
   {
     "id": "F159",
     "description": "Support comment reactions if already core ticket behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1274,7 +1274,7 @@
   {
     "id": "F160",
     "description": "Support rich-text ticket descriptions in Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1282,7 +1282,7 @@
   {
     "id": "F161",
     "description": "Support rich-text comments in Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1290,7 +1290,7 @@
   {
     "id": "F162",
     "description": "Support ticket attachments in Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1298,7 +1298,7 @@
   {
     "id": "F163",
     "description": "Support clipboard image attachment uploads in Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1306,7 +1306,7 @@
   {
     "id": "F164",
     "description": "Show email conversation or delivery context in Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1394,7 +1394,7 @@
   {
     "id": "F175",
     "description": "Keep permission checks for ticket update actions in Algadesk ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket detail composition"
     ]
@@ -1402,7 +1402,7 @@
   {
     "id": "F176",
     "description": "Create Algadesk-safe quick-add ticket composition.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket forms and reference data"
     ]
@@ -1410,7 +1410,7 @@
   {
     "id": "F177",
     "description": "Allow client selection in Algadesk ticket create form.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket forms and reference data"
     ]
@@ -1418,7 +1418,7 @@
   {
     "id": "F178",
     "description": "Allow contact selection in Algadesk ticket create form.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket forms and reference data"
     ]
@@ -1426,7 +1426,7 @@
   {
     "id": "F179",
     "description": "Allow board selection in Algadesk ticket create form.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket forms and reference data"
     ]
@@ -1434,7 +1434,7 @@
   {
     "id": "F180",
     "description": "Allow status defaults in Algadesk ticket create form.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket forms and reference data"
     ]
@@ -1442,7 +1442,7 @@
   {
     "id": "F181",
     "description": "Allow priority selection in Algadesk ticket create form.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket forms and reference data"
     ]
@@ -1450,7 +1450,7 @@
   {
     "id": "F182",
     "description": "Allow category selection in Algadesk ticket create form.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket forms and reference data"
     ]
@@ -1458,7 +1458,7 @@
   {
     "id": "F183",
     "description": "Allow team assignment in Algadesk ticket create form.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket forms and reference data"
     ]
@@ -1466,7 +1466,7 @@
   {
     "id": "F184",
     "description": "Allow user assignment in Algadesk ticket create form.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket forms and reference data"
     ]
@@ -1474,7 +1474,7 @@
   {
     "id": "F185",
     "description": "Allow attachments in Algadesk ticket create form.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket forms and reference data"
     ]
@@ -1482,7 +1482,7 @@
   {
     "id": "F186",
     "description": "Disallow asset prefill banners in Algadesk ticket create form.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket forms and reference data"
     ]
@@ -1490,7 +1490,7 @@
   {
     "id": "F187",
     "description": "Disallow project/task fields in Algadesk ticket create form.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket forms and reference data"
     ]
@@ -1498,7 +1498,7 @@
   {
     "id": "F188",
     "description": "Disallow time-entry defaults in Algadesk ticket create form.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket forms and reference data"
     ]
@@ -1506,7 +1506,7 @@
   {
     "id": "F189",
     "description": "Keep board/status/priority/category management accessible through allowed ticket settings.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket forms and reference data"
     ]

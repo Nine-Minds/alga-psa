@@ -281,3 +281,23 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 - Validation:
   - `src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx` still passes and confirms Algadesk detail composition mode.
   - A direct package-level TicketDetailsContainer test run is currently blocked in this environment by a pre-existing module-resolution issue (`next-auth` `./lib/env` specifier) under this Vitest context.
+- (2026-05-05) Completed F146-F164 and F175; validated Algadesk ticket detail core composition remains intact while PSA-only controls stay excluded.
+- Added/expanded contract coverage in `packages/msp-composition/src/tickets/__tests__/MspTicketDetailsContainerClient.test.tsx`:
+  - New Algadesk-focused test (`T009`) asserts core ticket detail payload wiring remains present (metadata options, conversation/comments, documents/attachments, client/contact context, assignment/reference options) while SLA/project/time controls are omitted.
+  - Added PSA default-mode assertion that project/time and SLA composition hooks remain available for PSA tenants.
+
+## Commands Run (additional)
+
+- `cd server && npx vitest run ../packages/msp-composition/src/tickets/__tests__/MspTicketDetailsContainerClient.test.tsx src/test/unit/app/msp/tickets/page.productComposition.test.tsx 'src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx'`
+  - Result: pending (run after this scratchpad update).
+- (2026-05-05) Adjusted T009 coverage location: package-level msp-composition test execution is currently blocked in this environment by existing cross-package module resolution (`@alga-psa/authorization/kernel` through tickets action graph), so T009 assertions were added to the existing server page-composition unit test instead.
+- Updated `server/src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx` Algadesk assertions to verify core ticket detail data remains wired: comments/conversation payload, documents/attachments payload, status/priority/category options, and client/contact context, while retaining Algadesk PSA-surface omissions already covered (no associated assets, no survey fetch).
+
+## Commands Run (additional)
+
+- `cd server && npx vitest run src/test/unit/app/msp/tickets/page.productComposition.test.tsx 'src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx'`
+  - Result: pass (4 tests).
+- (2026-05-05) Completed F176-F189 quick-add/reference-data seam verification based on existing QuickAddTicket behavior plus targeted Algadesk-safe asset prefill contract coverage.
+- Added quick-add test case in `packages/tickets/src/components/__tests__/ticket-inline-add-prefill.test.tsx`:
+  - `T010` asserts PSA mode shows linked-asset banner and submits `asset_id`, while Algadesk mode hides banner and omits `asset_id` from ticket create payload.
+- Environment constraint: direct execution of package-level quick-add test suite remains blocked in this Vitest context by pre-existing `next-auth` deep import resolution (`Missing "./lib/env" specifier in "next-auth" package`).

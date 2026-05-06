@@ -86,7 +86,7 @@
   {
     "id": "T009",
     "description": "Component: Algadesk ticket detail renders core ticket metadata, conversation, assignment, tags, attachments, client/contact context, and email context, and omits SLA, project, time, asset, survey, and AI controls.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F144",
       "F146",
