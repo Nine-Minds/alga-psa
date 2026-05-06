@@ -212,7 +212,7 @@
   {
     "id": "F036",
     "description": "Register webhookSubscriber in server/src/lib/eventBus/subscribers/index.ts alongside ticketEmail / projectEmail / etc.; provide registerWebhookSubscriber and unregisterWebhookSubscriber lifecycle hooks.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {

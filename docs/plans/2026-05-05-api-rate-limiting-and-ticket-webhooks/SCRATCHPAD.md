@@ -137,6 +137,11 @@ implementation progresses; update earlier entries when something changes.
   poller lands. I added `WebhookDeliveryQueue.enqueue()` as the initial Redis
   storage contract now, and the later F037 work will extend that same class
   with claim/process/retry behavior instead of swapping subscriber behavior.
+- (2026-05-05) Importing `server/src/lib/eventBus/subscribers/index.ts`
+  through `tsx` drags a large app/UI graph and currently trips the same
+  unrelated `react-day-picker/src/style.css` loader issue seen with broad
+  `initializeApp` smoke imports. The narrower `webhookSubscriber.ts` module
+  import remains the useful compile smoke for webhook subscriber changes.
 
 ## Commands / Runbooks
 
@@ -443,3 +448,7 @@ implementation progresses; update earlier entries when something changes.
   introduced the initial `server/src/lib/webhooks/WebhookDeliveryQueue.ts`
   storage contract so the subscriber already targets the eventual Redis ZSET
   queue instead of a temporary inline-delivery path.
+- (2026-05-05) **F036 complete.** Registered the webhook subscriber in
+  `server/src/lib/eventBus/subscribers/index.ts` so the existing
+  register-all / unregister-all lifecycle now includes webhook ticket events
+  alongside the other subscriber families.
