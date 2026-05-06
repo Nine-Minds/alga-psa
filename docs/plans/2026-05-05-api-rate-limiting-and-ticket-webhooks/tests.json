@@ -38,7 +38,7 @@
   {
     "id": "T007",
     "description": "Integration (vitest + real Redis, server/src/test/integration/apiRateLimit.headers.test.ts): with maxTokens=120, refillRate=1, hit a TicketController-backed route 121 times under one (tenant, apiKeyId); call #121 returns 429 with Retry-After (integer seconds), X-RateLimit-Limit=120, X-RateLimit-Remaining=0, X-RateLimit-Reset (ISO8601 in the future), and body envelope { error: { code: 'RATE_LIMITED', details: { retry_after_ms, remaining: 0 } } }.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F012", "F016", "F017"]
   },
   {

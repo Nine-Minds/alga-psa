@@ -210,6 +210,11 @@ implementation progresses; update earlier entries when something changes.
   validation path for F047 is therefore `git diff --check` plus a direct smoke
   import of the new server-action module, matching the earlier UI validation
   limitation already documented for this repo.
+- (2026-05-06) The first API rate-limit integration harness now uses a minimal
+  `ApiBaseController` subclass plus mocked auth/RBAC/data-service edges. That
+  keeps `T007` focused on the shared authenticate/throttle/response path
+  without having to pull the full tickets stack or a database-backed route into
+  the fixture.
 
 ## Commands / Runbooks
 
@@ -607,3 +612,9 @@ implementation progresses; update earlier entries when something changes.
   `server/src/components/settings/security/SecuritySettingsPage.tsx`. The DAL
   now also exposes tenant-scoped webhook listing and paginated delivery
   history helpers for the UI.
+- (2026-05-06) **T007 complete.** Added
+  `server/src/test/integration/apiRateLimit.headers.test.ts`, which drives the
+  real `ApiBaseController.list()` auth path 121 times under one tenant/API key
+  and asserts the 121st response is a 429 with `Retry-After`,
+  `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and the
+  expected `RATE_LIMITED` error envelope details.
