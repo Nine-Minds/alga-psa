@@ -645,3 +645,8 @@ implementation progresses; update earlier entries when something changes.
   `X-RateLimit-Remaining=-1`, and the mocked logger proves the
   `api_rate_limit_redis_unavailable_total` metric payload is emitted on the
   fail-open path.
+- (2026-05-06) **T014 complete.** The rate-limit harness now also imports the
+  shared middleware wrappers and proves bucket sharing across all three auth
+  surfaces: after five mixed requests through `ApiBaseController`,
+  `withApiKeyAuth`, and `withAuth`, the next request on each surface returns
+  429 from the same `(tenant, api_key_id)` bucket.

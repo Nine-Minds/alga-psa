@@ -80,7 +80,7 @@
   {
     "id": "T014",
     "description": "Integration (vitest + real Redis, server/src/test/integration/apiRateLimit.authSurfaces.test.ts): exhaust the bucket via three different routes — one ApiBaseController-backed (e.g., /api/v1/tickets), one withApiKeyAuth-wrapped (e.g., /api/v1/service-types), and one withAuth-wrapped (/api/v1/test-auth) — all three return 429 from the same shared bucket.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F017", "F018"]
   },
   {

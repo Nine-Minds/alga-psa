@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import {
   TokenBucketRateLimiter,
   type TokenBucketRedisClient,
@@ -9,6 +9,8 @@ const testState = vi.hoisted(() => ({
   validateApiKeyAnyTenantMock: vi.fn(),
   validateApiKeyForTenantMock: vi.fn(),
   findUserByIdForApiMock: vi.fn(),
+  validateApiKeyMock: vi.fn(),
+  findUserByIdMock: vi.fn(),
   runWithTenantMock: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
   hasPermissionMock: vi.fn(async () => true),
   apiRateLimitConfigGetterMock: vi.fn(async () => ({ maxTokens: 120, refillRate: 1 })),
@@ -27,6 +29,16 @@ vi.mock('@/lib/services/apiKeyServiceForApi', () => ({
 
 vi.mock('@alga-psa/users/actions', () => ({
   findUserByIdForApi: (...args: unknown[]) => testState.findUserByIdForApiMock(...args),
+}));
+
+vi.mock('@alga-psa/auth', () => ({
+  ApiKeyService: {
+    validateApiKey: (...args: unknown[]) => testState.validateApiKeyMock(...args),
+  },
+}));
+
+vi.mock('@alga-psa/user-composition/actions', () => ({
+  findUserById: (...args: unknown[]) => testState.findUserByIdMock(...args),
 }));
 
 vi.mock('@/lib/db', () => ({
@@ -55,6 +67,11 @@ vi.mock('@alga-psa/core/logger', () => ({
 }));
 
 import { ApiBaseController } from '@/lib/api/controllers/ApiBaseController';
+import {
+  createSuccessResponse,
+  withApiKeyAuth,
+  withAuth,
+} from '@/lib/api/middleware/apiMiddleware';
 
 function createMockRedis(): TokenBucketRedisClient & { data: Map<string, string> } {
   const data = new Map<string, string>();
@@ -124,6 +141,8 @@ describe('API rate limit headers', () => {
     testState.validateApiKeyAnyTenantMock.mockReset();
     testState.validateApiKeyForTenantMock.mockReset();
     testState.findUserByIdForApiMock.mockReset();
+    testState.validateApiKeyMock.mockReset();
+    testState.findUserByIdMock.mockReset();
     testState.runWithTenantMock.mockReset();
     testState.hasPermissionMock.mockReset();
     testState.apiRateLimitConfigGetterMock.mockReset();
@@ -171,6 +190,16 @@ describe('API rate limit headers', () => {
       tenant: tenantId,
       user_type: 'internal',
     }));
+    testState.validateApiKeyMock.mockResolvedValue({
+      tenant: '11111111-1111-1111-1111-111111111111',
+      api_key_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      user_id: '22222222-2222-2222-2222-222222222222',
+    });
+    testState.findUserByIdMock.mockResolvedValue({
+      user_id: '22222222-2222-2222-2222-222222222222',
+      tenant: '11111111-1111-1111-1111-111111111111',
+      user_type: 'internal',
+    });
     testState.runWithTenantMock.mockImplementation(async (_tenant: string, callback: () => Promise<unknown>) => callback());
     testState.hasPermissionMock.mockResolvedValue(true);
     testState.apiRateLimitConfigGetterMock.mockResolvedValue({ maxTokens: 120, refillRate: 1 });
@@ -362,5 +391,32 @@ describe('API rate limit headers', () => {
         pathname: '/api/v1/tickets',
       }),
     );
+  });
+
+  it('T014: shares one bucket across ApiBaseController, withApiKeyAuth, and withAuth', async () => {
+    TokenBucketRateLimiter.resetInstance();
+    testState.apiRateLimitConfigGetterMock.mockResolvedValue({ maxTokens: 5, refillRate: 1 });
+    await TokenBucketRateLimiter.getInstance().initialize(
+      async () => createMockRedis(),
+      { api: async () => ({ maxTokens: 5, refillRate: 1 }) },
+    );
+
+    const controllerHandler = new TestTicketController().list();
+    const apiKeyAuthHandler = withApiKeyAuth()(
+      async (req) => createSuccessResponse({ surface: 'withApiKeyAuth' }, 200, undefined, req),
+    );
+    const authHandler = await withAuth(
+      async (req) => createSuccessResponse({ surface: 'withAuth' }, 200, undefined, req),
+    );
+
+    expect((await controllerHandler(makeRequest())).status).toBe(200);
+    expect((await controllerHandler(makeRequest())).status).toBe(200);
+    expect((await apiKeyAuthHandler(makeRequest())).status).toBe(200);
+    expect((await apiKeyAuthHandler(makeRequest())).status).toBe(200);
+    expect((await authHandler(makeRequest())).status).toBe(200);
+
+    expect((await controllerHandler(makeRequest())).status).toBe(429);
+    expect((await apiKeyAuthHandler(makeRequest())).status).toBe(429);
+    expect((await authHandler(makeRequest())).status).toBe(429);
   });
 });
