@@ -482,7 +482,7 @@
   {
     "id": "F061",
     "description": "Resolve tenant product in the MSP layout server component.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -490,7 +490,7 @@
   {
     "id": "F062",
     "description": "Render existing PSA layout for PSA tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -498,7 +498,7 @@
   {
     "id": "F063",
     "description": "Render Algadesk layout for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -506,7 +506,7 @@
   {
     "id": "F064",
     "description": "Move SLA integration registration out of MSP layout module scope.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -514,7 +514,7 @@
   {
     "id": "F065",
     "description": "Register SLA integrations only for PSA composition paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -522,7 +522,7 @@
   {
     "id": "F066",
     "description": "Move schedule-entry integration registration out of MSP layout module scope.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -530,7 +530,7 @@
   {
     "id": "F067",
     "description": "Register schedule-entry integrations only for PSA composition paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]

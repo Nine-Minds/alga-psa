@@ -154,3 +154,7 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
     - Source imports do not reference blocked package domains.
 - (2026-05-05) Command run: `cd server && npx vitest run src/test/unit/algadeskCompositionDependencyGuard.test.ts`.
   - Result: pass (2 tests).
+- (2026-05-05) Completed F061-F067 MSP layout seam increment:
+  - `server/src/app/msp/layout.tsx` now resolves `productCode` via `getCurrentTenantProduct()` and passes it to the client layout.
+  - Moved SLA/schedule integration registration out of module scope and gated registration to PSA-only (`productCode === 'psa'`).
+  - `server/src/app/msp/MspLayoutClient.tsx` now branches shell rendering by product: PSA keeps `DefaultLayout`; Algadesk uses a distinct shell path (`data-product-shell="algadesk"`) without forcing full PSA layout providers.

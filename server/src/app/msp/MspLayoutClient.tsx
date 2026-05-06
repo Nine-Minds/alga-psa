@@ -13,10 +13,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import type { Session } from "next-auth";
 import type { SupportedLocale } from "@alga-psa/core/i18n/config";
+import type { ProductCode } from '@alga-psa/types';
 
 interface Props {
   children: React.ReactNode;
   session: Session | null;
+  productCode: ProductCode;
   needsOnboarding: boolean;
   initialSidebarCollapsed: boolean;
   initialLocale?: SupportedLocale | null;
@@ -25,6 +27,7 @@ interface Props {
 export function MspLayoutClient({
   children,
   session,
+  productCode,
   needsOnboarding,
   initialSidebarCollapsed,
   initialLocale,
@@ -58,9 +61,13 @@ export function MspLayoutClient({
                 }}
               >
                 {isOnboardingPage ? children : (
-                  <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
-                    {children}
-                  </DefaultLayout>
+                  productCode === 'algadesk' ? (
+                    <div data-product-shell="algadesk">{children}</div>
+                  ) : (
+                    <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
+                      {children}
+                    </DefaultLayout>
+                  )
                 )}
               </ClientUIStateProvider>
             </AIChatContextProvider>
