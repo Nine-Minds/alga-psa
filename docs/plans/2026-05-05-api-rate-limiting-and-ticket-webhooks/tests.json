@@ -158,31 +158,31 @@
   {
     "id": "T027",
     "description": "Integration (vitest + real Redis + http server returning 500, server/src/test/integration/webhookDelivery.retries.test.ts): a delivery to a 500-returning stub triggers 5 attempts; using vitest fake timers, advance through 1m, 5m, 30m, 2h, 12h and assert each attempt fires once and webhook_deliveries.attempt_number progresses 1..5; after the 5th failure the row status becomes 'abandoned' and the ZSET item is removed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F037", "F039"]
   },
   {
     "id": "T028",
     "description": "Integration (vitest + fake timers, server/src/test/integration/webhookDelivery.autoDisable.test.ts): with a stub that always returns 500, advance 24h of attempts across multiple events; webhook.is_active becomes false, webhook.auto_disabled_at is set, and an email notification was queued for the owning user.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F040"]
   },
   {
     "id": "T029",
     "description": "Integration (vitest + real Redis, server/src/test/integration/webhookDelivery.perWebhookRateLimit.test.ts): with webhook.rate_limit_per_min=10, enqueue 30 deliveries simultaneously; assert exactly 10 deliveries fire within the first second and the remaining 20 are re-zAdd-ed with deliverAt scores in the future (asserted by reading the ZSET).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F031", "F037"]
   },
   {
     "id": "T030",
     "description": "Integration (vitest + 2 simulated workers, server/src/test/integration/webhookDelivery.zsetAtomicity.test.ts): two WebhookDeliveryQueue.process() invocations on the same job (simulating two pods racing). Exactly one zRem returns 1; the other returns 0 and the second worker exits without calling performWebhookDelivery (verified by spy).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F037"]
   },
   {
     "id": "T031",
     "description": "Integration (vitest, server/src/test/integration/webhookDelivery.ssrf.test.ts): a webhook with url=http://127.0.0.1 fails with an SSRF error before any HTTP socket is opened (spy on undici/fetch confirms zero invocations); the same URL is accepted with WEBHOOK_SSRF_ALLOW_PRIVATE=true.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F028", "F029"]
   },
   {

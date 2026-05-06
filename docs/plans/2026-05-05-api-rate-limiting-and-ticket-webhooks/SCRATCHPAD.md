@@ -247,6 +247,27 @@ implementation progresses; update earlier entries when something changes.
   `TICKET_ASSIGNED` event. `webhookModel.listForEventType` then proves the
   query is scoped to the publishing tenant and `WebhookDeliveryQueue.enqueue`
   is spied to verify only the matching-tenant webhook gets a job.
+- (2026-05-06) `T027` skips `vi.useFakeTimers` in favour of
+  fast-forwarding the mock-Redis ZSET scores between iterations
+  (`fastForwardAll()`); the queue's claim/process cycle is what matters and
+  it's already deterministic once `checkIntervalMs` is set to `999_999`. A
+  small `waitFor` polling helper drains in-flight deliveries between
+  attempts. This keeps the retry-cadence assertion ("score equals
+  `now + computeBackoff(attempt)`") honest without the cross-test
+  contamination fake timers tend to introduce.
+- (2026-05-06) `T030` simulates two pods racing on the same job by
+  initializing two `WebhookDeliveryQueue` instances against the same shared
+  mock Redis (clear `(WebhookDeliveryQueue as any).instance = null` between
+  the two `getInstance()` calls). A custom processor spy passed to
+  `initialize()` lets the test assert "exactly one of the two workers ran
+  the processor" without spinning up the full delivery stack.
+- (2026-05-06) `T031` mocks `undici` at the package boundary so
+  `assertSafeWebhookTarget` can be exercised end-to-end through
+  `performWebhookDeliveryRequest`. The blocked path proves the SSRF guard
+  fires before `fetch` is reached (spy unused) and returns
+  `error_type='ssrf'`; the bypassed path proves the override path lets the
+  fetch through. The `Agent` constructor is mocked alongside `fetch` so
+  `verify_ssl=false` paths don't touch the real undici Agent.
 
 ## Commands / Runbooks
 
