@@ -425,3 +425,16 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - inbound defaults form includes board/category/priority mapping + active toggle
   - provider card exposes connection status, last-sync health, webhook-expiry context, and last error state
 - Command run: `cd server && npx vitest run src/test/unit/settings/algadeskEmailChannelsComposition.contract.test.ts src/test/unit/settings/algadeskInboundEmailChannelConfiguration.contract.test.ts src/test/unit/settings/algadeskEmailChannelMappingsAndHealth.contract.test.ts` -> pass (3 tests).
+- (2026-05-06) Completed F272-F280 by validating existing unified inbound email processing implementation already satisfies the feature slice.
+- Implementation evidence in `shared/services/email/processInboundEmailInApp.ts`:
+  - Creates new tickets from inbound email and maps destination defaults (`board_id`, `category_id`, `priority_id`) via `resolveEffectiveInboundTicketDefaults` + `createTicketFromEmail` (F272/F273/F274/F275).
+  - Resolves sender contact when possible and applies fallback behavior for unknown senders (domain/client fallback + unmatched sender metadata) (F276/F277).
+  - Adds public comments for inbound replies through reply-token/thread-header matching via `createCommentFromEmail` (F278).
+  - Persists message/thread identifiers in ticket/comment metadata and uses them for thread lookup/idempotency (F279).
+  - Dedupes repeated inbound events by pre-create checks for existing ticket/comment message IDs (F280).
+- Coverage references already present in shared tests:
+  - `shared/services/email/__tests__/processInboundEmailInApp.test.ts`
+  - `shared/services/email/__tests__/processInboundEmailInApp.additionalPaths.test.ts`
+  - `server/src/test/unit/unifiedInboundEmailQueueJobProcessor.fetch.test.ts`
+- Command run: `cd server && npx vitest run src/test/unit/unifiedInboundEmailQueueJobProcessor.fetch.test.ts` -> pass (8 tests).
+- Note: shared inbound-email unit tests live outside the current server Vitest include globs in this environment, so direct invocation from root reports `No test files found`; existing shared test files remain the primary coverage artifact for this slice.

@@ -2170,7 +2170,7 @@
   {
     "id": "F272",
     "description": "Create a ticket from a new inbound email message.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2178,7 +2178,7 @@
   {
     "id": "F273",
     "description": "Assign inbound email-created ticket to mapped board.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2186,7 +2186,7 @@
   {
     "id": "F274",
     "description": "Assign inbound email-created ticket to mapped category when configured.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2194,7 +2194,7 @@
   {
     "id": "F275",
     "description": "Assign inbound email-created ticket to mapped priority when configured.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2202,7 +2202,7 @@
   {
     "id": "F276",
     "description": "Resolve inbound sender to an existing contact when possible.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2210,7 +2210,7 @@
   {
     "id": "F277",
     "description": "Create or handle unknown inbound senders according to existing support rules.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2218,7 +2218,7 @@
   {
     "id": "F278",
     "description": "Add a public ticket comment from an inbound reply.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2226,7 +2226,7 @@
   {
     "id": "F279",
     "description": "Preserve email thread identifiers for dedupe.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
@@ -2234,7 +2234,7 @@
   {
     "id": "F280",
     "description": "Prevent duplicate tickets/comments from repeated email events.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
