@@ -114,7 +114,7 @@
   {
     "id": "F015",
     "description": "Expose a client-safe product context or hook for composition decisions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product entitlement and resolution"
     ]

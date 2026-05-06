@@ -98,3 +98,5 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 
 - Repository `test:local` script currently passes an invalid flag to the installed `dotenv` CLI (`-e ../.env.localtest`), so direct `vitest` invocation was used.
 - DB-backed integration test is present and meaningful, but executing it requires a running test Postgres instance.
+- (2026-05-05) Completed F015 by introducing client-safe product context in `server/src/context/ProductContext.tsx` and wiring it into `server/src/app/msp/MspLayoutClient.tsx`.
+- Added unit coverage for product context resolution in `server/src/test/unit/context/ProductContext.test.tsx`.

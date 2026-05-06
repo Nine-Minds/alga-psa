@@ -8,6 +8,7 @@ import { ClientUIStateProvider } from "@alga-psa/ui/ui-reflection/ClientUIStateP
 import { I18nWrapper } from "@alga-psa/tenancy/components";
 import { AIChatContextProvider } from '@product/chat/context';
 import { TierProvider } from "@/context/TierContext";
+import { ProductProvider } from "@/context/ProductContext";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import type { Session } from "next-auth";
@@ -44,26 +45,28 @@ export function MspLayoutClient({
 
   const content = (
     <AppSessionProvider session={session}>
-      <TierProvider>
-        <PostHogUserIdentifier />
-        <TagProvider>
-          <AIChatContextProvider>
-            <ClientUIStateProvider
-              initialPageState={{
-                id: 'msp-portal',
-                title: 'MSP Portal',
-                components: []
-              }}
-            >
-              {isOnboardingPage ? children : (
-                <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
-                  {children}
-                </DefaultLayout>
-              )}
-            </ClientUIStateProvider>
-          </AIChatContextProvider>
-        </TagProvider>
-      </TierProvider>
+      <ProductProvider>
+        <TierProvider>
+          <PostHogUserIdentifier />
+          <TagProvider>
+            <AIChatContextProvider>
+              <ClientUIStateProvider
+                initialPageState={{
+                  id: 'msp-portal',
+                  title: 'MSP Portal',
+                  components: []
+                }}
+              >
+                {isOnboardingPage ? children : (
+                  <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
+                    {children}
+                  </DefaultLayout>
+                )}
+              </ClientUIStateProvider>
+            </AIChatContextProvider>
+          </TagProvider>
+        </TierProvider>
+      </ProductProvider>
     </AppSessionProvider>
   );
 
