@@ -19,6 +19,7 @@ import {
   webhookSubscriptionSchema,
   webhookTemplateSchema,
   webhookEventSchema,
+  webhookEventTypeSchema,
   webhookSignatureSchema,
   CreateWebhookData,
   UpdateWebhookData,
@@ -576,15 +577,18 @@ export class ApiWebhookController {
           const url = new URL(apiRequest.url);
           const pathParts = url.pathname.split('/');
           const deliveryId = pathParts[pathParts.length - 1]; // Last part is delivery_id
-          
-          // TODO: Implement getDeliveryDetails method in WebhookService
-          const delivery = { data: { id: deliveryId, status: 'delivered', timestamp: new Date().toISOString() } }; // Temporary stub
+          const webhookId = await this.extractIdFromPath(apiRequest);
+          const delivery = await webhookModel.getDeliveryById(
+            apiRequest.context!.tenant,
+            webhookId,
+            deliveryId,
+          );
           
           if (!delivery) {
             throw new NotFoundError('Delivery not found');
           }
 
-          return createSuccessResponse(delivery.data);
+          return createSuccessResponse(delivery);
         });
       } catch (error) {
         return handleApiError(error);
@@ -779,11 +783,37 @@ export class ApiWebhookController {
           await this.checkPermission(apiRequest, 'read');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const webhook = await webhookModel.getById(id, apiRequest.context!.tenant);
+          if (!webhook) {
+            throw new NotFoundError('Webhook not found');
+          }
+
+          const successRate = webhook.totalDeliveries > 0
+            ? webhook.successfulDeliveries / webhook.totalDeliveries
+            : 1;
+          const status =
+            !webhook.isActive || webhook.autoDisabledAt
+              ? 'disabled'
+              : webhook.lastFailureAt
+                && (!webhook.lastSuccessAt || webhook.lastFailureAt > webhook.lastSuccessAt)
+                ? 'failing'
+                : 'healthy';
+          const health = {
+            webhook_id: webhook.webhookId,
+            status,
+            is_active: webhook.isActive,
+            auto_disabled_at: webhook.autoDisabledAt,
+            total_deliveries: webhook.totalDeliveries,
+            successful_deliveries: webhook.successfulDeliveries,
+            failed_deliveries: webhook.failedDeliveries,
+            success_rate: successRate,
+            last_delivery_at: webhook.lastDeliveryAt,
+            last_success_at: webhook.lastSuccessAt,
+            last_failure_at: webhook.lastFailureAt,
+            checked_at: new Date().toISOString(),
+          };
           
-          // TODO: Implement getWebhookHealth method in WebhookService
-          const health = { data: { status: 'healthy', last_check: new Date().toISOString() } }; // Temporary stub
-          
-          return createSuccessResponse(health.data);
+          return createSuccessResponse(health);
         });
       } catch (error) {
         return handleApiError(error);
@@ -879,11 +909,15 @@ export class ApiWebhookController {
           await this.checkPermission(apiRequest, 'read');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const webhook = await webhookModel.getById(id, apiRequest.context!.tenant);
+          if (!webhook) {
+            throw new NotFoundError('Webhook not found');
+          }
           
-          // TODO: Implement getWebhookSubscriptions method in WebhookService
-          const subscriptions = { data: [] }; // Temporary stub
-          
-          return createSuccessResponse(subscriptions.data);
+          return createSuccessResponse({
+            webhook_id: webhook.webhookId,
+            event_types: webhook.eventTypes,
+          });
         });
       } catch (error) {
         return handleApiError(error);
@@ -1358,10 +1392,9 @@ export class ApiWebhookController {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
-          // TODO: Implement listAvailableEvents method in WebhookService
-          const events = { data: ['ticket.created', 'ticket.updated', 'invoice.created'] }; // Temporary stub
+          const events = [...webhookEventTypeSchema.options];
           
-          return createSuccessResponse(events.data);
+          return createSuccessResponse(events);
         });
       } catch (error) {
         return handleApiError(error);

@@ -150,6 +150,11 @@ implementation progresses; update earlier entries when something changes.
   direct `secret_vault_path` input and a safer `webhook_id` lookup. Both
   paths resolve to the same tenant secret provider and use the shared
   `verifyWebhookSignature()` helper after normalizing the header format.
+- (2026-05-05) The remaining read-side webhook controller stubs can stay thin:
+  delivery details come straight from `webhook_deliveries`, health derives
+  from the webhook stats columns already maintained by the delivery processor,
+  subscriptions are just `webhook.event_types`, and available events come
+  from `webhookEventTypeSchema.options`.
 - (2026-05-05) `WebhookDeliveryQueue` now owns the retry loop contract:
   processors now return explicit `delivered` / `retry` / `abandoned`
   outcomes. The queue handles atomic `zRem` claims, caps active work at 50
@@ -514,3 +519,9 @@ implementation progresses; update earlier entries when something changes.
   `secret_vault_path`, normalizes split signature inputs into the
   `t=...,v1=...` header format when needed, and returns the real HMAC match
   result instead of the old always-true stub.
+- (2026-05-05) **F044 complete.** Replaced four controller TODOs:
+  `getDelivery()` now loads a concrete `webhook_deliveries` row via
+  `webhookModel.getDeliveryById()`, `getHealth()` derives a stable health
+  summary from the webhook stats columns, `getSubscriptions()` returns the
+  stored `event_types` for the webhook, and `listEvents()` returns the public
+  enum from `webhookEventTypeSchema`.

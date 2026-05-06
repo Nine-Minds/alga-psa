@@ -476,6 +476,23 @@ async function recordDelivery(
   return mapDeliveryRow(row);
 }
 
+async function getDeliveryById(
+  tenant: string,
+  webhookId: string,
+  deliveryId: string,
+): Promise<WebhookDeliveryRecord | null> {
+  const knex = await getConnection(tenant);
+  const row = await knex(WEBHOOK_DELIVERIES_TABLE)
+    .where({
+      tenant,
+      webhook_id: webhookId,
+      delivery_id: deliveryId,
+    })
+    .first();
+
+  return row ? mapDeliveryRow(row) : null;
+}
+
 async function updateStats(
   input: UpdateWebhookStatsInput,
 ): Promise<WebhookRecord | null> {
@@ -551,6 +568,7 @@ export const webhookModel = {
   update,
   delete: deleteWebhook,
   recordDelivery,
+  getDeliveryById,
   updateStats,
   markAbandoned,
   getSigningSecret,

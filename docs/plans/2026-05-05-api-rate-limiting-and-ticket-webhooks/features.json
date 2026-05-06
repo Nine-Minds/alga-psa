@@ -266,7 +266,7 @@
   {
     "id": "F044",
     "description": "Implement controller endpoints getDeliveryDetails (line 575), getWebhookHealth (line 778), getWebhookSubscriptions (line 878 — return webhook.event_types), and listAvailableEvents (line 1298 — return the public enum).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes", "Functional Requirements"]
   },
   {
