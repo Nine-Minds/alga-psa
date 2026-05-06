@@ -538,7 +538,7 @@
   {
     "id": "F068",
     "description": "Create Algadesk sidebar menu configuration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -546,7 +546,7 @@
   {
     "id": "F069",
     "description": "Show Dashboard navigation item for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -554,7 +554,7 @@
   {
     "id": "F070",
     "description": "Show Tickets navigation item for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -562,7 +562,7 @@
   {
     "id": "F071",
     "description": "Show Clients navigation item for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -570,7 +570,7 @@
   {
     "id": "F072",
     "description": "Show Contacts navigation item for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -578,7 +578,7 @@
   {
     "id": "F073",
     "description": "Show Knowledge Base navigation item for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -586,7 +586,7 @@
   {
     "id": "F074",
     "description": "Show allowed Settings navigation for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -594,7 +594,7 @@
   {
     "id": "F075",
     "description": "Hide User Activities from Algadesk navigation unless explicitly allowed later.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -602,7 +602,7 @@
   {
     "id": "F076",
     "description": "Hide Service Requests from Algadesk navigation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -610,7 +610,7 @@
   {
     "id": "F077",
     "description": "Hide Surveys from Algadesk navigation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -618,7 +618,7 @@
   {
     "id": "F078",
     "description": "Hide Projects from Algadesk navigation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -626,7 +626,7 @@
   {
     "id": "F079",
     "description": "Hide Documents module from Algadesk navigation except KB entry.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -634,7 +634,7 @@
   {
     "id": "F080",
     "description": "Hide Assets from Algadesk navigation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -642,7 +642,7 @@
   {
     "id": "F081",
     "description": "Hide Time Management from Algadesk navigation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -650,7 +650,7 @@
   {
     "id": "F082",
     "description": "Hide Billing from Algadesk navigation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -658,7 +658,7 @@
   {
     "id": "F083",
     "description": "Hide Schedule and Technician Dispatch from Algadesk navigation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -666,7 +666,7 @@
   {
     "id": "F084",
     "description": "Hide Workflows from Algadesk navigation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -674,7 +674,7 @@
   {
     "id": "F085",
     "description": "Hide System Monitoring product links from Algadesk navigation except email channel health surfaces.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -682,7 +682,7 @@
   {
     "id": "F086",
     "description": "Hide Extensions from Algadesk navigation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]
@@ -690,7 +690,7 @@
   {
     "id": "F087",
     "description": "Keep PSA sidebar behavior unchanged for PSA tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "MSP shell and navigation"
     ]

@@ -12,6 +12,8 @@ import {
 } from '@/config/menuConfig';
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
 import { useTier } from '@/context/TierContext';
+import { useProduct } from '@/context/ProductContext';
+import { filterMenuSectionsByProduct } from '@/lib/productSurfaceRegistry';
 
 export function filterMenuItemsByFeatureAccess(
   items: readonly MenuItem[],
@@ -55,6 +57,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const { hasFeature } = useTier();
+  const { productCode } = useProduct();
 
   useEffect(() => {
     if (!useNavigationSections) return;
@@ -109,8 +112,11 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       }).filter((item): item is MenuItem => item !== null)
     }));
 
-    return filterNavigationSectionsByFeatureAccess(filteredSections, hasFeature);
-  }, [canWorkflowAdmin, useNavigationSections, hasFeature]);
+    return filterMenuSectionsByProduct(
+      productCode,
+      filterNavigationSectionsByFeatureAccess(filteredSections, hasFeature),
+    );
+  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode]);
 
   return (
     <Sidebar

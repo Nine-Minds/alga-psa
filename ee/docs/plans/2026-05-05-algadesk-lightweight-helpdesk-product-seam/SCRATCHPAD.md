@@ -158,3 +158,9 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - `server/src/app/msp/layout.tsx` now resolves `productCode` via `getCurrentTenantProduct()` and passes it to the client layout.
   - Moved SLA/schedule integration registration out of module scope and gated registration to PSA-only (`productCode === 'psa'`).
   - `server/src/app/msp/MspLayoutClient.tsx` now branches shell rendering by product: PSA keeps `DefaultLayout`; Algadesk uses a distinct shell path (`data-product-shell="algadesk"`) without forcing full PSA layout providers.
+- (2026-05-05) Completed F068-F087 by product-filtering sidebar navigation through the registry helper:
+  - Updated `server/src/components/layout/SidebarWithFeatureFlags.tsx` to apply `filterMenuSectionsByProduct(productCode, ...)` using `ProductContext`.
+  - Algadesk now keeps only route-allowed main navigation entries from the existing menu config, which removes PSA-only areas (billing/projects/assets/schedule/time/workflows/surveys/extensions/service-requests, etc.) while keeping dashboard/tickets/clients/contacts/KB/settings/profile/security.
+  - PSA tenant behavior remains unchanged (`productCode: psa` keeps full allowed menu set).
+- (2026-05-05) Command run: `cd server && npx vitest run src/test/unit/productSurfaceRegistry.test.ts`.
+  - Result: pass (7 tests).
