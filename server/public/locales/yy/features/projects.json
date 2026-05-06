@@ -623,22 +623,22 @@
       "tags": "55555"
     },
     "fallbackPhaseLabel": "55555",
-    "fallbackPhaseHelp": "55555",
-    "fallbackPhaseCreateDefault": "55555",
+    "fallbackPhaseHelp": "55555 {{count}} 55555",
+    "fallbackPhaseCreateDefault": "55555 {{name}} 55555",
     "fallbackStatusLabel": "55555",
-    "fallbackStatusHelp": "55555",
+    "fallbackStatusHelp": "55555 {{count}} 55555",
     "rowResultsTitle": "55555",
     "rowFilterLabel": "55555",
-    "rowFilterAll": "55555",
-    "rowFilterImported": "55555",
-    "rowFilterSkipped": "55555",
-    "rowsToBeSkippedCount": "55555",
+    "rowFilterAll": "55555 {{count}} 55555",
+    "rowFilterImported": "55555 {{count}} 55555",
+    "rowFilterSkipped": "55555 {{count}} 55555",
+    "rowsToBeSkippedCount": "55555 {{count}} 55555",
     "rowsToBeSkippedHelp": "55555",
     "statusUnmatchedSuffix": "55555",
     "statusUnmatchedTooltip": "55555",
     "statusFallbackSuffix": "55555",
     "statusFallbackTooltip": "55555",
-    "inPhaseBadge": "55555"
+    "inPhaseBadge": "55555 {{phase}} 55555"
   },
   "dialogs": {
     "moveTask": {
