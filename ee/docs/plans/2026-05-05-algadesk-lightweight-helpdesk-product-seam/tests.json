@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "DB-backed integration: migrating product_code defaults existing and new tenants to psa, accepts algadesk, and rejects invalid product codes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F005",
@@ -12,7 +12,7 @@
   {
     "id": "T002",
     "description": "Unit: product resolver and assertion helpers return psa defaults, allow Algadesk capabilities, and throw structured ProductAccessError for denied capabilities.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F012",

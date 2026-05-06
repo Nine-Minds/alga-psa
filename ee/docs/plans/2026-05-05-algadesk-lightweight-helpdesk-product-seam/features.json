@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Define shared product code constants for psa and algadesk.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product entitlement and resolution"
     ]
@@ -10,7 +10,7 @@
   {
     "id": "F002",
     "description": "Expose a ProductCode TypeScript type from shared package exports.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product entitlement and resolution"
     ]
@@ -18,7 +18,7 @@
   {
     "id": "F003",
     "description": "Add tenant interface support for product_code without replacing plan.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product entitlement and resolution"
     ]
@@ -26,7 +26,7 @@
   {
     "id": "F004",
     "description": "Add a tenants.product_code migration with default psa for existing tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product entitlement and resolution"
     ]
@@ -34,7 +34,7 @@
   {
     "id": "F005",
     "description": "Backfill existing tenants to product_code psa during migration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product entitlement and resolution"
     ]
@@ -42,7 +42,7 @@
   {
     "id": "F006",
     "description": "Add database validation for allowed product_code values.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product entitlement and resolution"
     ]
@@ -50,7 +50,7 @@
   {
     "id": "F007",
     "description": "Resolve missing product_code values as psa for backward compatibility during rollout.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product entitlement and resolution"
     ]
@@ -58,7 +58,7 @@
   {
     "id": "F008",
     "description": "Fail closed for unknown non-null product_code values in product access helpers.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product entitlement and resolution"
     ]
@@ -66,7 +66,7 @@
   {
     "id": "F009",
     "description": "Implement getTenantProduct for explicit tenant IDs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product entitlement and resolution"
     ]
@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "Implement getCurrentTenantProduct for session/current tenant resolution.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product entitlement and resolution"
     ]
@@ -82,7 +82,7 @@
   {
     "id": "F011",
     "description": "Implement ProductAccessError with stable status and code fields.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product entitlement and resolution"
     ]
@@ -90,7 +90,7 @@
   {
     "id": "F012",
     "description": "Implement assertProductAccess for capability checks.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product entitlement and resolution"
     ]
@@ -98,7 +98,7 @@
   {
     "id": "F013",
     "description": "Implement assertTenantProductAccess for API-key and worker contexts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product entitlement and resolution"
     ]
@@ -106,7 +106,7 @@
   {
     "id": "F014",
     "description": "Expose a server-safe product access helper for App Router pages.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product entitlement and resolution"
     ]

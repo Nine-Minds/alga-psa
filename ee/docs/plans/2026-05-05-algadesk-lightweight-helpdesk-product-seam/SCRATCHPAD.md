@@ -57,3 +57,44 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 - Which inbound email providers/settings are required for launch versus later?
 - Should `/desk/*` aliases be added immediately after v1 or only when marketing requires them?
 - Should Algadesk have product-specific naming in app chrome or inherit existing Alga branding with Algadesk labels?
+
+## Implementation Log
+
+- (2026-05-05) Completed F001-F014 in one entitlement/access foundation slice.
+- Added shared product constants/types/resolution in `packages/types/src/constants/productCodes.ts` and exported via `packages/types/src/constants/index.ts`.
+- Added tenant interface support for product code in:
+  - `packages/types/src/interfaces/tenant.interface.ts`
+  - `server/src/interfaces/tenant.interface.tsx`
+- Added tenant schema migration `server/migrations/20260505140000_add_tenant_product_code.cjs`:
+  - Adds `tenants.product_code`
+  - Backfills NULL/empty values to `psa`
+  - Adds CHECK constraint (`psa|algadesk`)
+  - Sets NOT NULL + default `psa`
+  - Down migration drops constraint + column
+- Added server product helpers and structured error in `server/src/lib/productAccess.ts`:
+  - `ProductAccessError` with stable `status=403` and `code=PRODUCT_ACCESS_DENIED`
+  - `getTenantProduct`, `getCurrentTenantProduct`
+  - `assertProductAccess`, `assertTenantProductAccess`
+  - Unknown non-null `product_code` now fail-closed via `ProductAccessError`.
+
+## Tests Added
+
+- T001: `server/src/test/integration/tenantProductCodeMigration.integration.test.ts`
+  - Verifies migration adds `product_code`, enforces default/not-null, allows `algadesk`, rejects invalid values.
+- T002: `server/src/test/unit/productAccess.test.ts`
+  - Verifies resolver defaults, algadesk pass-through, fail-closed unknown values, and structured denial error behavior.
+- Additional type/unit coverage:
+  - `packages/types/src/constants/productCodes.test.ts`
+  - `packages/types/src/interfaces/tenant.interface.typecheck.test.ts` (added `product_code` assertion)
+
+## Commands Run
+
+- `cd server && npx vitest run ../packages/types/src/constants/productCodes.test.ts ../packages/types/src/interfaces/tenant.interface.typecheck.test.ts src/test/unit/productAccess.test.ts`
+  - Result: pass (15 tests)
+- `cd server && npx vitest run ../packages/types/src/constants/productCodes.test.ts ../packages/types/src/interfaces/tenant.interface.typecheck.test.ts src/test/unit/productAccess.test.ts src/test/integration/tenantProductCodeMigration.integration.test.ts`
+  - Result: integration suite could not run in this environment because Postgres was not reachable on `localhost:5432` (`ECONNREFUSED`).
+
+## Gotchas
+
+- Repository `test:local` script currently passes an invalid flag to the installed `dotenv` CLI (`-e ../.env.localtest`), so direct `vitest` invocation was used.
+- DB-backed integration test is present and meaningful, but executing it requires a running test Postgres instance.
