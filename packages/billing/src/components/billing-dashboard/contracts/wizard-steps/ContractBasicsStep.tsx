@@ -713,8 +713,8 @@ export function ContractBasicsStep({
 
             <div className="space-y-2">
               <Label htmlFor="po_amount">{t('wizardBasics.po.amountLabel', { defaultValue: 'PO Amount' })}</Label>
-              <div className="flex h-10 items-center rounded-md border border-[rgb(var(--color-border-400))] shadow-sm focus-within:border-transparent focus-within:ring-2 focus-within:ring-[rgb(var(--color-primary-500))]">
-                <span className="shrink-0 pl-3 pr-1 text-[rgb(var(--color-text-400))]">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--color-text-400))]">
                   {currencySymbol}
                 </span>
                 <Input
@@ -743,7 +743,7 @@ export function ContractBasicsStep({
                   placeholder={
                     currencyMeta.fractionDigits === 0 ? '0' : `0.${'0'.repeat(currencyMeta.fractionDigits)}`
                   }
-                  className="h-full rounded-none border-0 py-0 pl-1 pr-3 shadow-none focus:border-transparent focus:ring-0"
+                  className="pl-10"
                 />
               </div>
               <p className="text-xs text-[rgb(var(--color-text-400))]">

@@ -32,15 +32,41 @@ export type RecurringAuthoringPreview = {
   materializedPeriods: RecurringAuthoringPreviewPeriod[];
 };
 
-function resolvePreviewBillingFrequency(value: string | undefined): Extract<
+type ClientPreviewBillingFrequency = BillingCycleType;
+type ContractPreviewBillingFrequency = Extract<
   BillingCycleType,
-  'monthly' | 'quarterly' | 'annually'
-> {
+  'monthly' | 'quarterly' | 'semi-annually' | 'annually'
+>;
+
+function resolveClientPreviewBillingFrequency(value: string | undefined): ClientPreviewBillingFrequency {
+  switch (value) {
+    case 'weekly':
+      return 'weekly';
+    case 'bi-weekly':
+      return 'bi-weekly';
+    case 'quarterly':
+      return 'quarterly';
+    case 'semi-annually':
+      return 'semi-annually';
+    case 'annually':
+      return 'annually';
+    case 'monthly':
+    default:
+      return 'monthly';
+  }
+}
+
+function resolveContractPreviewBillingFrequency(value: string | undefined): ContractPreviewBillingFrequency {
   switch (value) {
     case 'quarterly':
       return 'quarterly';
+    case 'semi-annually':
+      return 'semi-annually';
     case 'annually':
       return 'annually';
+    case 'weekly':
+    case 'bi-weekly':
+    case 'monthly':
     default:
       return 'monthly';
   }
@@ -66,7 +92,7 @@ function buildPreviewSourceObligation(cadenceOwner: 'client' | 'contract'): IPer
 function buildMaterializedPreviewPeriods(input: {
   cadenceOwner: 'client' | 'contract';
   billingTiming: 'arrears' | 'advance';
-  billingFrequency: Extract<BillingCycleType, 'monthly' | 'quarterly' | 'annually'>;
+  billingFrequency: string | undefined;
   t: TFunction;
 }): RecurringAuthoringPreviewPeriod[] {
   const duePosition = input.billingTiming === 'advance' ? 'advance' : 'arrears';
@@ -76,7 +102,7 @@ function buildMaterializedPreviewPeriods(input: {
     ? materializeContractCadenceServicePeriods({
         asOf: CONTRACT_PREVIEW_AS_OF,
         materializedAt: CONTRACT_PREVIEW_AS_OF,
-        billingCycle: input.billingFrequency,
+        billingCycle: resolveContractPreviewBillingFrequency(input.billingFrequency),
         anchorDate: CONTRACT_PREVIEW_AS_OF,
         sourceObligation,
         duePosition,
@@ -88,7 +114,7 @@ function buildMaterializedPreviewPeriods(input: {
     : materializeClientCadenceServicePeriods({
         asOf: CLIENT_PREVIEW_AS_OF,
         materializedAt: CLIENT_PREVIEW_AS_OF,
-        billingCycle: input.billingFrequency,
+        billingCycle: resolveClientPreviewBillingFrequency(input.billingFrequency),
         sourceObligation,
         duePosition,
         sourceRuleVersion: 'preview:v1',
@@ -118,7 +144,7 @@ export function getRecurringAuthoringPreview(
   const cadenceOwner = input.cadenceOwner === 'contract' ? 'contract' : 'client';
   const billingTiming = input.billingTiming === 'advance' ? 'advance' : 'arrears';
   const enableProration = Boolean(input.enableProration);
-  const billingFrequency = resolvePreviewBillingFrequency(input.billingFrequency);
+  const billingFrequency = input.billingFrequency;
 
   return {
     cadenceOwnerLabel:
