@@ -1,0 +1,2850 @@
+[
+  {
+    "id": "F001",
+    "description": "Define shared product code constants for psa and algadesk.",
+    "implemented": false,
+    "prdRefs": [
+      "Product entitlement and resolution"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Expose a ProductCode TypeScript type from shared package exports.",
+    "implemented": false,
+    "prdRefs": [
+      "Product entitlement and resolution"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Add tenant interface support for product_code without replacing plan.",
+    "implemented": false,
+    "prdRefs": [
+      "Product entitlement and resolution"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Add a tenants.product_code migration with default psa for existing tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Product entitlement and resolution"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Backfill existing tenants to product_code psa during migration.",
+    "implemented": false,
+    "prdRefs": [
+      "Product entitlement and resolution"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Add database validation for allowed product_code values.",
+    "implemented": false,
+    "prdRefs": [
+      "Product entitlement and resolution"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Resolve missing product_code values as psa for backward compatibility during rollout.",
+    "implemented": false,
+    "prdRefs": [
+      "Product entitlement and resolution"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Fail closed for unknown non-null product_code values in product access helpers.",
+    "implemented": false,
+    "prdRefs": [
+      "Product entitlement and resolution"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Implement getTenantProduct for explicit tenant IDs.",
+    "implemented": false,
+    "prdRefs": [
+      "Product entitlement and resolution"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Implement getCurrentTenantProduct for session/current tenant resolution.",
+    "implemented": false,
+    "prdRefs": [
+      "Product entitlement and resolution"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Implement ProductAccessError with stable status and code fields.",
+    "implemented": false,
+    "prdRefs": [
+      "Product entitlement and resolution"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Implement assertProductAccess for capability checks.",
+    "implemented": false,
+    "prdRefs": [
+      "Product entitlement and resolution"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Implement assertTenantProductAccess for API-key and worker contexts.",
+    "implemented": false,
+    "prdRefs": [
+      "Product entitlement and resolution"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Expose a server-safe product access helper for App Router pages.",
+    "implemented": false,
+    "prdRefs": [
+      "Product entitlement and resolution"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Expose a client-safe product context or hook for composition decisions.",
+    "implemented": false,
+    "prdRefs": [
+      "Product entitlement and resolution"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Keep tier resolution unchanged when product_code is added.",
+    "implemented": false,
+    "prdRefs": [
+      "Product entitlement and resolution"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Keep add-on resolution unchanged when product_code is added.",
+    "implemented": false,
+    "prdRefs": [
+      "Product entitlement and resolution"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Document that product access, RBAC, tiers, and add-ons are independent checks.",
+    "implemented": false,
+    "prdRefs": [
+      "Product entitlement and resolution"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Create an authoritative product surface registry module.",
+    "implemented": false,
+    "prdRefs": [
+      "Product surface registry"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Represent Algadesk capabilities in the registry.",
+    "implemented": false,
+    "prdRefs": [
+      "Product surface registry"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Represent PSA capabilities in the registry.",
+    "implemented": false,
+    "prdRefs": [
+      "Product surface registry"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Classify MSP route groups as allowed, upgrade-boundary, or not-found for Algadesk.",
+    "implemented": false,
+    "prdRefs": [
+      "Product surface registry"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Classify client portal route groups as allowed, upgrade-boundary, or not-found for Algadesk.",
+    "implemented": false,
+    "prdRefs": [
+      "Product surface registry"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Classify API groups as allowed or denied for Algadesk.",
+    "implemented": false,
+    "prdRefs": [
+      "Product surface registry"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Classify metadata/OpenAPI visibility by product.",
+    "implemented": false,
+    "prdRefs": [
+      "Product surface registry"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Provide matcher helpers for static route prefixes.",
+    "implemented": false,
+    "prdRefs": [
+      "Product surface registry"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Provide matcher helpers for dynamic route patterns.",
+    "implemented": false,
+    "prdRefs": [
+      "Product surface registry"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Provide helper to resolve product route behavior for a pathname.",
+    "implemented": false,
+    "prdRefs": [
+      "Product surface registry"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Provide helper to resolve product API behavior for a request path.",
+    "implemented": false,
+    "prdRefs": [
+      "Product surface registry"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Provide helper to filter menu sections by product.",
+    "implemented": false,
+    "prdRefs": [
+      "Product surface registry"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Provide helper to filter portal navigation by product.",
+    "implemented": false,
+    "prdRefs": [
+      "Product surface registry"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Default unknown route groups to denied for Algadesk.",
+    "implemented": false,
+    "prdRefs": [
+      "Product surface registry"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Allow future desk aliases to map to the same Algadesk route groups.",
+    "implemented": false,
+    "prdRefs": [
+      "Product surface registry"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Keep registry pure and testable without database access.",
+    "implemented": false,
+    "prdRefs": [
+      "Product surface registry"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Add optional product_code input to tenant creation utilities.",
+    "implemented": false,
+    "prdRefs": [
+      "Provisioning and tenant lifecycle"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Default tenant creation utilities to psa when product_code is omitted.",
+    "implemented": false,
+    "prdRefs": [
+      "Provisioning and tenant lifecycle"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Allow dev/test fixtures to create Algadesk tenants explicitly.",
+    "implemented": false,
+    "prdRefs": [
+      "Provisioning and tenant lifecycle"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Allow provisioning APIs to preserve or set product_code.",
+    "implemented": false,
+    "prdRefs": [
+      "Provisioning and tenant lifecycle"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Ensure Stripe tier mapping does not overwrite product_code.",
+    "implemented": false,
+    "prdRefs": [
+      "Provisioning and tenant lifecycle"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Ensure mobile or IAP tier transitions do not overwrite product_code.",
+    "implemented": false,
+    "prdRefs": [
+      "Provisioning and tenant lifecycle"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Expose product_code in admin/debug tenant views only where appropriate.",
+    "implemented": false,
+    "prdRefs": [
+      "Provisioning and tenant lifecycle"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Add migration rollback behavior that safely removes product_code.",
+    "implemented": false,
+    "prdRefs": [
+      "Provisioning and tenant lifecycle"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Create @alga-psa/algadesk-composition package scaffold.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk composition package"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Add package exports for MSP composition entrypoints.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk composition package"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Add package exports for client portal composition entrypoints.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk composition package"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Add package exports for ticket composition entrypoints.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk composition package"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Add package exports for client/contact composition entrypoints.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk composition package"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Add package exports for settings composition entrypoints.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk composition package"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Add package exports for KB composition entrypoints.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk composition package"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Restrict package dependencies to Algadesk-allowed domains.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk composition package"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Add dependency guard test that fails on billing imports.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk composition package"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Add dependency guard test that fails on project imports.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk composition package"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Add dependency guard test that fails on asset/RMM imports.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk composition package"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Add dependency guard test that fails on scheduling/time imports.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk composition package"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Add dependency guard test that fails on SLA imports.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk composition package"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "Add dependency guard test that fails on workflow imports.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk composition package"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "Add dependency guard test that fails on survey imports.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk composition package"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Add dependency guard test that fails on extension imports.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk composition package"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Add dependency guard test that fails on AI/chat imports.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk composition package"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Provide shared Algadesk provider stack primitives.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk composition package"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Resolve tenant product in the MSP layout server component.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Render existing PSA layout for PSA tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "Render Algadesk layout for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Move SLA integration registration out of MSP layout module scope.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "Register SLA integrations only for PSA composition paths.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "Move schedule-entry integration registration out of MSP layout module scope.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F067",
+    "description": "Register schedule-entry integrations only for PSA composition paths.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F068",
+    "description": "Create Algadesk sidebar menu configuration.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F069",
+    "description": "Show Dashboard navigation item for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "Show Tickets navigation item for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "Show Clients navigation item for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "Show Contacts navigation item for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "Show Knowledge Base navigation item for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "Show allowed Settings navigation for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Hide User Activities from Algadesk navigation unless explicitly allowed later.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Hide Service Requests from Algadesk navigation.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Hide Surveys from Algadesk navigation.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Hide Projects from Algadesk navigation.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Hide Documents module from Algadesk navigation except KB entry.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Hide Assets from Algadesk navigation.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "Hide Time Management from Algadesk navigation.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "Hide Billing from Algadesk navigation.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "Hide Schedule and Technician Dispatch from Algadesk navigation.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "Hide Workflows from Algadesk navigation.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F085",
+    "description": "Hide System Monitoring product links from Algadesk navigation except email channel health surfaces.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F086",
+    "description": "Hide Extensions from Algadesk navigation.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F087",
+    "description": "Keep PSA sidebar behavior unchanged for PSA tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F088",
+    "description": "Use Algadesk branding labels in MSP shell where product name appears.",
+    "implemented": false,
+    "prdRefs": [
+      "MSP shell and navigation"
+    ]
+  },
+  {
+    "id": "F089",
+    "description": "Create Algadesk dashboard page composition.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk dashboard"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "Show open ticket count on Algadesk dashboard.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk dashboard"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "Show ticket aging summary on Algadesk dashboard.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk dashboard"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "Show awaiting customer ticket summary on Algadesk dashboard.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk dashboard"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "Show awaiting internal ticket summary on Algadesk dashboard.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk dashboard"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "Show recently updated tickets on Algadesk dashboard.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk dashboard"
+    ]
+  },
+  {
+    "id": "F095",
+    "description": "Show email channel health summary on Algadesk dashboard.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk dashboard"
+    ]
+  },
+  {
+    "id": "F096",
+    "description": "Link dashboard ticket cards only to Algadesk-allowed ticket routes.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk dashboard"
+    ]
+  },
+  {
+    "id": "F097",
+    "description": "Exclude billing widgets from Algadesk dashboard.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk dashboard"
+    ]
+  },
+  {
+    "id": "F098",
+    "description": "Exclude project widgets from Algadesk dashboard.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk dashboard"
+    ]
+  },
+  {
+    "id": "F099",
+    "description": "Exclude asset widgets from Algadesk dashboard.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk dashboard"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "Exclude time/scheduling widgets from Algadesk dashboard.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk dashboard"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "Exclude workflow widgets from Algadesk dashboard.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk dashboard"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "Exclude AI/chat widgets from Algadesk dashboard.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk dashboard"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "Create Algadesk settings page composition.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "Expose General settings tab for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F105",
+    "description": "Expose Users settings tab for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F106",
+    "description": "Expose Teams settings tab for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F107",
+    "description": "Expose Ticketing settings tab for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F108",
+    "description": "Expose Email Channels settings tab for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F109",
+    "description": "Expose Client Portal settings tab for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F110",
+    "description": "Expose Knowledge Base settings tab for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F111",
+    "description": "Expose Profile or route users to profile settings as appropriate.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F112",
+    "description": "Expose Security settings as appropriate for MSP users.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F113",
+    "description": "Hide Language tab only if it is not part of Algadesk launch scope.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F114",
+    "description": "Hide SLA settings for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F115",
+    "description": "Hide Projects settings for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F116",
+    "description": "Hide Interactions settings if support interactions are excluded.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F117",
+    "description": "Hide Time Entry settings for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F118",
+    "description": "Hide Billing settings for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F119",
+    "description": "Hide broad Notifications settings if only ticket/email settings are included.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F120",
+    "description": "Hide broad Integrations settings except focused email channel entry.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F121",
+    "description": "Hide Extensions settings for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F122",
+    "description": "Hide Experimental Features settings for Algadesk tenants unless explicitly retained.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F123",
+    "description": "Reject excluded settings tabs on direct URL access.",
+    "implemented": false,
+    "prdRefs": [
+      "Algadesk settings"
+    ]
+  },
+  {
+    "id": "F124",
+    "description": "Render Algadesk ticket list for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F125",
+    "description": "Keep existing PSA ticket list for PSA tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F126",
+    "description": "Preserve board filtering in Algadesk ticket list.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F127",
+    "description": "Preserve status filtering in Algadesk ticket list.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F128",
+    "description": "Preserve priority filtering in Algadesk ticket list.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F129",
+    "description": "Preserve category filtering in Algadesk ticket list.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F130",
+    "description": "Preserve client filtering in Algadesk ticket list.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F131",
+    "description": "Preserve search filtering in Algadesk ticket list.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F132",
+    "description": "Preserve tag filtering in Algadesk ticket list.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F133",
+    "description": "Preserve assignee filtering in Algadesk ticket list.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F134",
+    "description": "Preserve team filtering in Algadesk ticket list.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F135",
+    "description": "Preserve unassigned filtering in Algadesk ticket list.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F136",
+    "description": "Preserve due date filtering in Algadesk ticket list.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F137",
+    "description": "Preserve response state filtering in Algadesk ticket list.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F138",
+    "description": "Remove SLA status filtering from Algadesk ticket list.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F139",
+    "description": "Preserve ticket sorting in Algadesk ticket list.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F140",
+    "description": "Preserve ticket pagination in Algadesk ticket list.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F141",
+    "description": "Preserve bulk move behavior only for allowed board/status/category operations.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F142",
+    "description": "Ensure ticket list links resolve to Algadesk ticket detail composition.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F143",
+    "description": "Ensure quick-add ticket opens an Algadesk-safe ticket form.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket list composition"
+    ]
+  },
+  {
+    "id": "F144",
+    "description": "Render Algadesk ticket detail for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F145",
+    "description": "Keep existing PSA ticket detail for PSA tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F146",
+    "description": "Show ticket title and core metadata in Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F147",
+    "description": "Show board in Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F148",
+    "description": "Show status in Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F149",
+    "description": "Show priority in Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F150",
+    "description": "Show category in Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F151",
+    "description": "Show assigned user and team controls in Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F152",
+    "description": "Show client and contact context in Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F153",
+    "description": "Show tags in Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F154",
+    "description": "Show response state controls in Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F155",
+    "description": "Show ticket origin badge in Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F156",
+    "description": "Show conversation/comments in Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F157",
+    "description": "Support internal comments in Algadesk ticket detail for MSP users.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F158",
+    "description": "Support public replies in Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F159",
+    "description": "Support comment reactions if already core ticket behavior.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F160",
+    "description": "Support rich-text ticket descriptions in Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F161",
+    "description": "Support rich-text comments in Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F162",
+    "description": "Support ticket attachments in Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F163",
+    "description": "Support clipboard image attachment uploads in Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F164",
+    "description": "Show email conversation or delivery context in Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F165",
+    "description": "Omit SLA summary card from Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F166",
+    "description": "Omit SLA breach/escalation controls from Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F167",
+    "description": "Omit project task creation from Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F168",
+    "description": "Omit project task linking from Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F169",
+    "description": "Omit linked project task badge from Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F170",
+    "description": "Omit interval/time management from Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F171",
+    "description": "Omit time entry controls from Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F172",
+    "description": "Omit asset association panels from Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F173",
+    "description": "Omit survey summary card from Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F174",
+    "description": "Omit AI assistant controls from Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F175",
+    "description": "Keep permission checks for ticket update actions in Algadesk ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket detail composition"
+    ]
+  },
+  {
+    "id": "F176",
+    "description": "Create Algadesk-safe quick-add ticket composition.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket forms and reference data"
+    ]
+  },
+  {
+    "id": "F177",
+    "description": "Allow client selection in Algadesk ticket create form.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket forms and reference data"
+    ]
+  },
+  {
+    "id": "F178",
+    "description": "Allow contact selection in Algadesk ticket create form.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket forms and reference data"
+    ]
+  },
+  {
+    "id": "F179",
+    "description": "Allow board selection in Algadesk ticket create form.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket forms and reference data"
+    ]
+  },
+  {
+    "id": "F180",
+    "description": "Allow status defaults in Algadesk ticket create form.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket forms and reference data"
+    ]
+  },
+  {
+    "id": "F181",
+    "description": "Allow priority selection in Algadesk ticket create form.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket forms and reference data"
+    ]
+  },
+  {
+    "id": "F182",
+    "description": "Allow category selection in Algadesk ticket create form.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket forms and reference data"
+    ]
+  },
+  {
+    "id": "F183",
+    "description": "Allow team assignment in Algadesk ticket create form.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket forms and reference data"
+    ]
+  },
+  {
+    "id": "F184",
+    "description": "Allow user assignment in Algadesk ticket create form.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket forms and reference data"
+    ]
+  },
+  {
+    "id": "F185",
+    "description": "Allow attachments in Algadesk ticket create form.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket forms and reference data"
+    ]
+  },
+  {
+    "id": "F186",
+    "description": "Disallow asset prefill banners in Algadesk ticket create form.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket forms and reference data"
+    ]
+  },
+  {
+    "id": "F187",
+    "description": "Disallow project/task fields in Algadesk ticket create form.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket forms and reference data"
+    ]
+  },
+  {
+    "id": "F188",
+    "description": "Disallow time-entry defaults in Algadesk ticket create form.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket forms and reference data"
+    ]
+  },
+  {
+    "id": "F189",
+    "description": "Keep board/status/priority/category management accessible through allowed ticket settings.",
+    "implemented": false,
+    "prdRefs": [
+      "Ticket forms and reference data"
+    ]
+  },
+  {
+    "id": "F190",
+    "description": "Render Algadesk clients list for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F191",
+    "description": "Render Algadesk client detail for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F192",
+    "description": "Render Algadesk contacts list for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F193",
+    "description": "Render Algadesk contact detail for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F194",
+    "description": "Allow client create/edit/delete according to RBAC.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F195",
+    "description": "Allow contact create/edit/delete according to RBAC.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F196",
+    "description": "Allow client location management according to RBAC.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F197",
+    "description": "Allow contact phone number management according to RBAC.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F198",
+    "description": "Allow contact additional email address management according to RBAC.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F199",
+    "description": "Show client tickets on Algadesk client detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F200",
+    "description": "Show contact tickets on Algadesk contact detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F201",
+    "description": "Show support-relevant client/contact notes if retained for v1.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F202",
+    "description": "Hide contract authoring on Algadesk client detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F203",
+    "description": "Hide contract line management on Algadesk client detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F204",
+    "description": "Hide billing configuration on Algadesk client detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F205",
+    "description": "Hide tax settings on Algadesk client detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F206",
+    "description": "Hide service catalog links from Algadesk client detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F207",
+    "description": "Hide client assets from Algadesk client detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F208",
+    "description": "Hide client projects from Algadesk client detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F209",
+    "description": "Hide client document library from Algadesk client detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F210",
+    "description": "Hide client survey summaries from Algadesk client detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F211",
+    "description": "Use Algadesk-safe client cross-feature provider callbacks.",
+    "implemented": false,
+    "prdRefs": [
+      "Clients and contacts"
+    ]
+  },
+  {
+    "id": "F212",
+    "description": "Render Algadesk knowledge base page for MSP users.",
+    "implemented": false,
+    "prdRefs": [
+      "Knowledge base and attachments"
+    ]
+  },
+  {
+    "id": "F213",
+    "description": "Render Algadesk knowledge base page for portal users.",
+    "implemented": false,
+    "prdRefs": [
+      "Knowledge base and attachments"
+    ]
+  },
+  {
+    "id": "F214",
+    "description": "Allow KB article listing for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Knowledge base and attachments"
+    ]
+  },
+  {
+    "id": "F215",
+    "description": "Allow KB article viewing for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Knowledge base and attachments"
+    ]
+  },
+  {
+    "id": "F216",
+    "description": "Allow KB article create/edit according to RBAC.",
+    "implemented": false,
+    "prdRefs": [
+      "Knowledge base and attachments"
+    ]
+  },
+  {
+    "id": "F217",
+    "description": "Allow KB article publish/unpublish according to RBAC.",
+    "implemented": false,
+    "prdRefs": [
+      "Knowledge base and attachments"
+    ]
+  },
+  {
+    "id": "F218",
+    "description": "Prevent Algadesk KB pages from linking to full document management.",
+    "implemented": false,
+    "prdRefs": [
+      "Knowledge base and attachments"
+    ]
+  },
+  {
+    "id": "F219",
+    "description": "Provide ticket-attachment upload provider for Algadesk ticket components.",
+    "implemented": false,
+    "prdRefs": [
+      "Knowledge base and attachments"
+    ]
+  },
+  {
+    "id": "F220",
+    "description": "Provide ticket-attachment delete provider for Algadesk ticket components.",
+    "implemented": false,
+    "prdRefs": [
+      "Knowledge base and attachments"
+    ]
+  },
+  {
+    "id": "F221",
+    "description": "Provide ticket-attachment download/view provider for Algadesk ticket components.",
+    "implemented": false,
+    "prdRefs": [
+      "Knowledge base and attachments"
+    ]
+  },
+  {
+    "id": "F222",
+    "description": "Prevent Algadesk attachment components from exposing folder selection.",
+    "implemented": false,
+    "prdRefs": [
+      "Knowledge base and attachments"
+    ]
+  },
+  {
+    "id": "F223",
+    "description": "Prevent Algadesk attachment components from exposing broad document sharing.",
+    "implemented": false,
+    "prdRefs": [
+      "Knowledge base and attachments"
+    ]
+  },
+  {
+    "id": "F224",
+    "description": "Prevent Algadesk attachment components from exposing project/client document surfaces.",
+    "implemented": false,
+    "prdRefs": [
+      "Knowledge base and attachments"
+    ]
+  },
+  {
+    "id": "F225",
+    "description": "Keep rich-text image uploads tied to ticket/comment context.",
+    "implemented": false,
+    "prdRefs": [
+      "Knowledge base and attachments"
+    ]
+  },
+  {
+    "id": "F226",
+    "description": "Keep attachment authorization scoped to ticket visibility.",
+    "implemented": false,
+    "prdRefs": [
+      "Knowledge base and attachments"
+    ]
+  },
+  {
+    "id": "F227",
+    "description": "Resolve tenant product in client portal layout.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal shell"
+    ]
+  },
+  {
+    "id": "F228",
+    "description": "Render existing PSA portal layout for PSA tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal shell"
+    ]
+  },
+  {
+    "id": "F229",
+    "description": "Render Algadesk portal layout for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal shell"
+    ]
+  },
+  {
+    "id": "F230",
+    "description": "Create Algadesk portal sidebar.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal shell"
+    ]
+  },
+  {
+    "id": "F231",
+    "description": "Show portal Dashboard link for Algadesk contacts.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal shell"
+    ]
+  },
+  {
+    "id": "F232",
+    "description": "Show portal Tickets link for Algadesk contacts.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal shell"
+    ]
+  },
+  {
+    "id": "F233",
+    "description": "Show portal Knowledge Base link for Algadesk contacts.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal shell"
+    ]
+  },
+  {
+    "id": "F234",
+    "description": "Show portal Profile link for Algadesk contacts.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal shell"
+    ]
+  },
+  {
+    "id": "F235",
+    "description": "Show portal Client Settings link where permitted.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal shell"
+    ]
+  },
+  {
+    "id": "F236",
+    "description": "Hide portal Billing link for Algadesk contacts.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal shell"
+    ]
+  },
+  {
+    "id": "F237",
+    "description": "Hide portal Projects link for Algadesk contacts.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal shell"
+    ]
+  },
+  {
+    "id": "F238",
+    "description": "Hide portal Devices/assets link for Algadesk contacts.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal shell"
+    ]
+  },
+  {
+    "id": "F239",
+    "description": "Hide portal Documents link for Algadesk contacts.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal shell"
+    ]
+  },
+  {
+    "id": "F240",
+    "description": "Hide portal Appointments link for Algadesk contacts.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal shell"
+    ]
+  },
+  {
+    "id": "F241",
+    "description": "Hide portal Service Requests link for Algadesk contacts.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal shell"
+    ]
+  },
+  {
+    "id": "F242",
+    "description": "Hide portal Extensions link for Algadesk contacts.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal shell"
+    ]
+  },
+  {
+    "id": "F243",
+    "description": "Keep portal authentication behavior unchanged.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal shell"
+    ]
+  },
+  {
+    "id": "F244",
+    "description": "Render Algadesk portal dashboard for portal contacts.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal ticketing"
+    ]
+  },
+  {
+    "id": "F245",
+    "description": "Render Algadesk portal ticket list.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal ticketing"
+    ]
+  },
+  {
+    "id": "F246",
+    "description": "Render Algadesk portal ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal ticketing"
+    ]
+  },
+  {
+    "id": "F247",
+    "description": "Render free-form portal ticket creation form.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal ticketing"
+    ]
+  },
+  {
+    "id": "F248",
+    "description": "Allow portal contacts to submit subject/title.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal ticketing"
+    ]
+  },
+  {
+    "id": "F249",
+    "description": "Allow portal contacts to submit description.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal ticketing"
+    ]
+  },
+  {
+    "id": "F250",
+    "description": "Allow portal contacts to add attachments.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal ticketing"
+    ]
+  },
+  {
+    "id": "F251",
+    "description": "Allow portal contacts to pick allowed board/category fields only if exposed by existing portal rules.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal ticketing"
+    ]
+  },
+  {
+    "id": "F252",
+    "description": "Prevent portal contacts from submitting service request definition forms.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal ticketing"
+    ]
+  },
+  {
+    "id": "F253",
+    "description": "Show portal ticket status.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal ticketing"
+    ]
+  },
+  {
+    "id": "F254",
+    "description": "Show portal ticket public conversation.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal ticketing"
+    ]
+  },
+  {
+    "id": "F255",
+    "description": "Hide internal comments from portal contacts.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal ticketing"
+    ]
+  },
+  {
+    "id": "F256",
+    "description": "Allow portal contacts to reply to tickets.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal ticketing"
+    ]
+  },
+  {
+    "id": "F257",
+    "description": "Preserve existing board visibility group enforcement.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal ticketing"
+    ]
+  },
+  {
+    "id": "F258",
+    "description": "Preserve portal ticket detail authorization.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal ticketing"
+    ]
+  },
+  {
+    "id": "F259",
+    "description": "Preserve portal ticket dashboard filtering by visible boards.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal ticketing"
+    ]
+  },
+  {
+    "id": "F260",
+    "description": "Prevent portal ticket pages from linking to billing or project pages.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal ticketing"
+    ]
+  },
+  {
+    "id": "F261",
+    "description": "Keep PSA portal ticket behavior unchanged for PSA tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Client portal ticketing"
+    ]
+  },
+  {
+    "id": "F262",
+    "description": "Render focused Email Channels settings for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F263",
+    "description": "Allow inbound support mailbox/channel configuration.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F264",
+    "description": "Allow outbound ticket email identity configuration required for replies.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F265",
+    "description": "Allow mapping inbound channel to default board.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F266",
+    "description": "Allow mapping inbound channel to default category.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F267",
+    "description": "Allow mapping inbound channel to default priority.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F268",
+    "description": "Allow inbound channel enable/disable.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F269",
+    "description": "Show mailbox connection health.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F270",
+    "description": "Show webhook or polling health where available.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F271",
+    "description": "Show outbound delivery failure state where available.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F272",
+    "description": "Create a ticket from a new inbound email message.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F273",
+    "description": "Assign inbound email-created ticket to mapped board.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F274",
+    "description": "Assign inbound email-created ticket to mapped category when configured.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F275",
+    "description": "Assign inbound email-created ticket to mapped priority when configured.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F276",
+    "description": "Resolve inbound sender to an existing contact when possible.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F277",
+    "description": "Create or handle unknown inbound senders according to existing support rules.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F278",
+    "description": "Add a public ticket comment from an inbound reply.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F279",
+    "description": "Preserve email thread identifiers for dedupe.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F280",
+    "description": "Prevent duplicate tickets/comments from repeated email events.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F281",
+    "description": "Send outbound notification when MSP replies publicly if notifications are enabled.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F282",
+    "description": "Show email thread or delivery context on ticket detail.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F283",
+    "description": "Product-gate inbound webhook handlers for Algadesk and PSA appropriately.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F284",
+    "description": "Product-gate IMAP polling paths for Algadesk and PSA appropriately.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F285",
+    "description": "Product-gate email OAuth/config routes for allowed email channel use.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F286",
+    "description": "Hide broad integrations settings unrelated to email channels.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F287",
+    "description": "Hide workflow-driven email automation surfaces for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F288",
+    "description": "Hide survey/billing/project email template surfaces for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "Email-to-ticket"
+    ]
+  },
+  {
+    "id": "F289",
+    "description": "Create a reusable branded product-denied or upgrade boundary component.",
+    "implemented": false,
+    "prdRefs": [
+      "Browser route boundaries"
+    ]
+  },
+  {
+    "id": "F290",
+    "description": "Use registry-backed boundary helpers in MSP pages.",
+    "implemented": false,
+    "prdRefs": [
+      "Browser route boundaries"
+    ]
+  },
+  {
+    "id": "F291",
+    "description": "Use registry-backed boundary helpers in portal pages.",
+    "implemented": false,
+    "prdRefs": [
+      "Browser route boundaries"
+    ]
+  },
+  {
+    "id": "F292",
+    "description": "Show upgrade boundary for Algadesk direct hits to /msp/billing.",
+    "implemented": false,
+    "prdRefs": [
+      "Browser route boundaries"
+    ]
+  },
+  {
+    "id": "F293",
+    "description": "Show upgrade boundary for Algadesk direct hits to /msp/projects.",
+    "implemented": false,
+    "prdRefs": [
+      "Browser route boundaries"
+    ]
+  },
+  {
+    "id": "F294",
+    "description": "Show upgrade boundary for Algadesk direct hits to /msp/assets.",
+    "implemented": false,
+    "prdRefs": [
+      "Browser route boundaries"
+    ]
+  },
+  {
+    "id": "F295",
+    "description": "Show upgrade boundary for Algadesk direct hits to /msp/schedule.",
+    "implemented": false,
+    "prdRefs": [
+      "Browser route boundaries"
+    ]
+  },
+  {
+    "id": "F296",
+    "description": "Show upgrade boundary for Algadesk direct hits to /msp/technician-dispatch.",
+    "implemented": false,
+    "prdRefs": [
+      "Browser route boundaries"
+    ]
+  },
+  {
+    "id": "F297",
+    "description": "Show upgrade boundary for Algadesk direct hits to /msp/time-entry.",
+    "implemented": false,
+    "prdRefs": [
+      "Browser route boundaries"
+    ]
+  },
+  {
+    "id": "F298",
+    "description": "Show upgrade boundary for Algadesk direct hits to /msp/time-sheet-approvals.",
+    "implemented": false,
+    "prdRefs": [
+      "Browser route boundaries"
+    ]
+  },
+  {
+    "id": "F299",
+    "description": "Show upgrade boundary for Algadesk direct hits to /msp/workflow-editor.",
+    "implemented": false,
+    "prdRefs": [
+      "Browser route boundaries"
+    ]
+  },
+  {
+    "id": "F300",
+    "description": "Show upgrade boundary for Algadesk direct hits to /msp/workflow-control.",
+    "implemented": false,
+    "prdRefs": [
+      "Browser route boundaries"
+    ]
+  },
+  {
+    "id": "F301",
+    "description": "Show upgrade boundary for Algadesk direct hits to /msp/surveys.",
+    "implemented": false,
+    "prdRefs": [
+      "Browser route boundaries"
+    ]
+  },
+  {
+    "id": "F302",
+    "description": "Show upgrade boundary for Algadesk direct hits to /msp/extensions.",
+    "implemented": false,
+    "prdRefs": [
+      "Browser route boundaries"
+    ]
+  },
+  {
+    "id": "F303",
+    "description": "Show upgrade boundary for Algadesk direct hits to /msp/reports.",
+    "implemented": false,
+    "prdRefs": [
+      "Browser route boundaries"
+    ]
+  },
+  {
+    "id": "F304",
+    "description": "Show upgrade boundary for Algadesk direct hits to /msp/service-requests.",
+    "implemented": false,
+    "prdRefs": [
+      "Browser route boundaries"
+    ]
+  },
+  {
+    "id": "F305",
+    "description": "Return not-found/product-denied for Algadesk direct hits to internal/test routes.",
+    "implemented": false,
+    "prdRefs": [
+      "Browser route boundaries"
+    ]
+  },
+  {
+    "id": "F306",
+    "description": "Show portal upgrade/not-found boundary for excluded portal billing/projects/devices/documents/appointments/service-request routes.",
+    "implemented": false,
+    "prdRefs": [
+      "Browser route boundaries"
+    ]
+  },
+  {
+    "id": "F307",
+    "description": "Keep PSA direct route behavior unchanged.",
+    "implemented": false,
+    "prdRefs": [
+      "Browser route boundaries"
+    ]
+  },
+  {
+    "id": "F308",
+    "description": "Add product access check to ApiBaseController after tenant resolution.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F309",
+    "description": "Return structured product-denied response for denied Algadesk API groups.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F310",
+    "description": "Allow Algadesk API access to ticket CRUD routes.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F311",
+    "description": "Allow Algadesk API access to ticket comment routes.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F312",
+    "description": "Allow Algadesk API access to ticket assignment routes.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F313",
+    "description": "Allow Algadesk API access to ticket attachment/document routes.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F314",
+    "description": "Allow Algadesk API access to boards routes.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F315",
+    "description": "Allow Algadesk API access to statuses routes.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F316",
+    "description": "Allow Algadesk API access to priorities routes.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F317",
+    "description": "Allow Algadesk API access to ticket categories routes.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F318",
+    "description": "Allow Algadesk API access to clients routes.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F319",
+    "description": "Allow Algadesk API access to contacts routes.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F320",
+    "description": "Allow Algadesk API access to users/teams/roles/permissions needed for admin and assignment.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F321",
+    "description": "Allow Algadesk API access to tags routes.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F322",
+    "description": "Allow Algadesk API access to KB article routes.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F323",
+    "description": "Allow Algadesk API access to email-to-ticket configuration and webhook paths.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F324",
+    "description": "Deny Algadesk API access to billing analytics, financial, invoices, quotes, contracts, contract lines, services, service types, products, and accounting exports.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F325",
+    "description": "Deny Algadesk API access to projects routes.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F326",
+    "description": "Deny Algadesk API access to assets and RMM routes.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F327",
+    "description": "Deny Algadesk API access to schedules, time entries, time sheets, and time periods.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F328",
+    "description": "Deny Algadesk API access to automation/workflow/webhook routes outside allowed email.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F329",
+    "description": "Deny Algadesk API access to extensions routes.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F330",
+    "description": "Deny Algadesk API access to AI/chat routes.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F331",
+    "description": "Deny Algadesk API access to surveys routes.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F332",
+    "description": "Deny Algadesk API access to full document-management routes.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F333",
+    "description": "Filter API endpoint metadata for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F334",
+    "description": "Filter OpenAPI output for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F335",
+    "description": "Filter API docs output for Algadesk tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F336",
+    "description": "Keep PSA API behavior unchanged for PSA tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "API and metadata boundaries"
+    ]
+  },
+  {
+    "id": "F337",
+    "description": "Add product assertions to representative billing server actions.",
+    "implemented": false,
+    "prdRefs": [
+      "Server action boundaries"
+    ]
+  },
+  {
+    "id": "F338",
+    "description": "Add product assertions to representative project server actions.",
+    "implemented": false,
+    "prdRefs": [
+      "Server action boundaries"
+    ]
+  },
+  {
+    "id": "F339",
+    "description": "Add product assertions to representative scheduling/time server actions.",
+    "implemented": false,
+    "prdRefs": [
+      "Server action boundaries"
+    ]
+  },
+  {
+    "id": "F340",
+    "description": "Add product assertions to representative asset/RMM server actions.",
+    "implemented": false,
+    "prdRefs": [
+      "Server action boundaries"
+    ]
+  },
+  {
+    "id": "F341",
+    "description": "Add product assertions to representative workflow server actions.",
+    "implemented": false,
+    "prdRefs": [
+      "Server action boundaries"
+    ]
+  },
+  {
+    "id": "F342",
+    "description": "Add product assertions to representative survey server actions.",
+    "implemented": false,
+    "prdRefs": [
+      "Server action boundaries"
+    ]
+  },
+  {
+    "id": "F343",
+    "description": "Add product assertions to representative extension server actions.",
+    "implemented": false,
+    "prdRefs": [
+      "Server action boundaries"
+    ]
+  },
+  {
+    "id": "F344",
+    "description": "Add product assertions to representative AI/chat server actions.",
+    "implemented": false,
+    "prdRefs": [
+      "Server action boundaries"
+    ]
+  },
+  {
+    "id": "F345",
+    "description": "Add product assertions to full document-management server actions that are not ticket attachment or KB safe.",
+    "implemented": false,
+    "prdRefs": [
+      "Server action boundaries"
+    ]
+  },
+  {
+    "id": "F346",
+    "description": "Avoid importing denied server action modules from Algadesk composition.",
+    "implemented": false,
+    "prdRefs": [
+      "Server action boundaries"
+    ]
+  },
+  {
+    "id": "F347",
+    "description": "Use structured ProductAccessError for denied server actions.",
+    "implemented": false,
+    "prdRefs": [
+      "Server action boundaries"
+    ]
+  },
+  {
+    "id": "F348",
+    "description": "Keep PSA server action behavior unchanged.",
+    "implemented": false,
+    "prdRefs": [
+      "Server action boundaries"
+    ]
+  },
+  {
+    "id": "F349",
+    "description": "Preserve existing PSA dashboard for PSA tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "PSA preservation and future aliases"
+    ]
+  },
+  {
+    "id": "F350",
+    "description": "Preserve existing PSA settings for PSA tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "PSA preservation and future aliases"
+    ]
+  },
+  {
+    "id": "F351",
+    "description": "Preserve existing PSA ticket composition for PSA tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "PSA preservation and future aliases"
+    ]
+  },
+  {
+    "id": "F352",
+    "description": "Preserve existing PSA client/contact composition for PSA tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "PSA preservation and future aliases"
+    ]
+  },
+  {
+    "id": "F353",
+    "description": "Preserve existing PSA portal composition for PSA tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "PSA preservation and future aliases"
+    ]
+  },
+  {
+    "id": "F354",
+    "description": "Preserve existing PSA API metadata for PSA tenants.",
+    "implemented": false,
+    "prdRefs": [
+      "PSA preservation and future aliases"
+    ]
+  },
+  {
+    "id": "F355",
+    "description": "Keep route registry capable of mapping future /desk aliases.",
+    "implemented": false,
+    "prdRefs": [
+      "PSA preservation and future aliases"
+    ]
+  },
+  {
+    "id": "F356",
+    "description": "Do not require /desk aliases for initial Algadesk launch.",
+    "implemented": false,
+    "prdRefs": [
+      "PSA preservation and future aliases"
+    ]
+  }
+]
