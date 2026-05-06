@@ -15,6 +15,7 @@ const temporalChartPath = path.join(repoRoot, 'ee', 'helm', 'temporal');
 const temporalWorkerChartPath = path.join(repoRoot, 'ee', 'helm', 'temporal-worker');
 const temporalProfileValuesPath = path.join(repoRoot, 'ee', 'appliance', 'flux', 'profiles', 'talos-single-node', 'values', 'temporal.talos-single-node.yaml');
 const temporalWorkerProfileValuesPath = path.join(repoRoot, 'ee', 'appliance', 'flux', 'profiles', 'talos-single-node', 'values', 'temporal-worker.talos-single-node.yaml');
+const fluxReleaseDir = path.join(repoRoot, 'ee', 'appliance', 'flux', 'base', 'releases');
 
 function run(command, args, env = process.env) {
   return spawnSync(command, args, { cwd: repoRoot, encoding: 'utf8', env });
@@ -204,7 +205,15 @@ test('T005 temporal-worker profile injects NEXTAUTH_SECRET from alga-core secret
   });
 });
 
-test('T006/T007 install flow sanity: payload copy and disk-first marker are present in generated installer inputs', () => {
+test('T006 Flux HelmReleases retry transient single-node install stalls', () => {
+  for (const file of fs.readdirSync(fluxReleaseDir).filter((name) => name.endsWith('.yaml'))) {
+    const doc = parse(fs.readFileSync(path.join(fluxReleaseDir, file), 'utf8'));
+    assert.ok(doc.spec.install.remediation.retries >= 1, `${file} install retries`);
+    assert.ok(doc.spec.upgrade.remediation.retries >= 1, `${file} upgrade retries`);
+  }
+});
+
+test('T007/T008 install flow sanity: payload copy and disk-first marker are present in generated installer inputs', () => {
   const userData = parse(fs.readFileSync(userDataPath, 'utf8'));
   const lateCommands = userData.autoinstall['late-commands'];
   const build = runBuildWithFakeXorriso();
