@@ -182,6 +182,7 @@ interface TicketDetailsProps {
         documentIds: string[];
     }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
     resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
+    disableAttachmentFolderSelection?: boolean;
 }
 
 const TicketDetails: React.FC<TicketDetailsProps> = ({
@@ -229,6 +230,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     uploadTicketAttachmentAction,
     deleteDraftTicketAttachmentImagesAction,
     resolveTicketAttachmentViewUrl,
+    disableAttachmentFolderSelection = false,
 }) => {
     const { t } = useTranslation('features/tickets');
     const { data: session } = useSession();
@@ -2293,6 +2295,7 @@ const handleClose = () => {
                                 id={`${id}-documents-section`}
                                 ticketId={ticket.ticket_id || ''}
                                 initialDocuments={documents}
+                                forceUploadToRoot={disableAttachmentFolderSelection}
                                 onDocumentCreated={async () => {
                                     router.refresh();
                                 }}

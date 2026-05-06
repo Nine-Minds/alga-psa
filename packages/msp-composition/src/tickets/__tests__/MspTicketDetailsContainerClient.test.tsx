@@ -77,5 +77,34 @@ describe('MspTicketDetailsContainerClient', () => {
     expect(typeof lastTicketDetailsContainerProps.uploadTicketAttachmentAction).toBe('function');
     expect(typeof lastTicketDetailsContainerProps.deleteDraftTicketAttachmentImagesAction).toBe('function');
     expect(typeof lastTicketDetailsContainerProps.resolveTicketAttachmentViewUrl).toBe('function');
+    expect(lastTicketDetailsContainerProps.disableAttachmentFolderSelection).toBe(false);
+  });
+
+  it('disables ticket attachment folder selection in Algadesk mode', () => {
+    render(
+      <MspTicketDetailsContainerClient
+        isAlgadeskMode
+        ticketData={{
+          ticket: { ticket_id: 'ticket-1' },
+          comments: [],
+          documents: [],
+          client: null,
+          contacts: [],
+          contactInfo: null,
+          createdByUser: null,
+          board: null,
+          additionalAgents: [],
+          availableAgents: [],
+          userMap: {},
+          options: { status: [], agent: [], board: [], priority: [] },
+          categories: [],
+          clients: [],
+          locations: [],
+          agentSchedules: []
+        }}
+      />
+    );
+
+    expect(lastTicketDetailsContainerProps.disableAttachmentFolderSelection).toBe(true);
   });
 });

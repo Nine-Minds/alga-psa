@@ -76,6 +76,7 @@ interface TicketDetailsContainerProps {
     documentIds: string[];
   }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
   resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
+  disableAttachmentFolderSelection?: boolean;
 }
 
 export default function TicketDetailsContainer({
@@ -90,6 +91,7 @@ export default function TicketDetailsContainer({
   uploadTicketAttachmentAction,
   deleteDraftTicketAttachmentImagesAction,
   resolveTicketAttachmentViewUrl,
+  disableAttachmentFolderSelection = false,
 }: TicketDetailsContainerProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -264,6 +266,7 @@ export default function TicketDetailsContainer({
             uploadTicketAttachmentAction={uploadTicketAttachmentAction}
             deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
             resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
+            disableAttachmentFolderSelection={disableAttachmentFolderSelection}
         />
         </Suspense>
       </div>

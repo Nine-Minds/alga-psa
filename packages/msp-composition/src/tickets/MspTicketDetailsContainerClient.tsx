@@ -99,6 +99,7 @@ export default function MspTicketDetailsContainerClient({
         uploadTicketAttachmentAction={uploadTicketAttachmentDocument}
         deleteDraftTicketAttachmentImagesAction={deleteDraftClipboardImages}
         resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
+        disableAttachmentFolderSelection={isAlgadeskMode}
       />
     </TicketIntegrationProvider>
   );

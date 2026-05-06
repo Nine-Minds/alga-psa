@@ -94,6 +94,8 @@ interface DocumentsProps {
   namespace?: DocumentsNamespace;
   /** Override the default folder-fetching function (e.g. for client portal) */
   getFoldersFn?: () => Promise<string[]>;
+  /** Skip folder chooser and upload directly into root scope. */
+  forceUploadToRoot?: boolean;
 }
 
 const Documents = ({
@@ -110,7 +112,8 @@ const Documents = ({
   searchTermFromParent = '',
   filters,
   namespace = 'common',
-  getFoldersFn
+  getFoldersFn,
+  forceUploadToRoot = false
 }: DocumentsProps): React.JSX.Element => {
   const { t } = useTranslation(namespace);
   const documentKeyPrefix = namespace === 'common' ? 'documents.' : '';
@@ -1864,6 +1867,7 @@ const Documents = ({
                   userId={userId}
                   entityId={entityId}
                   entityType={entityType}
+                  folderPath={forceUploadToRoot ? null : undefined}
                   onUploadComplete={async () => {
                     setShowUpload(false);
                     // Refresh the documents list (triggers router.refresh() in entity mode)

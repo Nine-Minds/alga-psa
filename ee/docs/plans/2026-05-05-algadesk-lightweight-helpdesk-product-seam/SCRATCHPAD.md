@@ -368,3 +368,8 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 - Added `resolveTicketAttachmentViewUrl` in `packages/msp-composition/src/tickets/composedClipboardActions.ts` and threaded it through ticket detail composition (`TicketDetailsContainer` -> `TicketDetails` -> `TicketInfo`/`TicketConversation`) into `useTicketRichTextUploadSession`.
 - `useTicketRichTextUploadSession` now accepts `resolveDocumentViewUrl` so Algadesk ticket components can resolve attachment URLs via composition rather than hardcoded URL construction in component logic.
 - Added hook-level coverage in `packages/tickets/src/components/ticket/useTicketRichTextUploadSession.test.tsx` to assert injected URL-resolver behavior.
+- (2026-05-05) Completed F222 by disabling folder selection for Algadesk ticket attachment uploads.
+- Added composition flag `disableAttachmentFolderSelection` (set to `isAlgadeskMode`) through ticket detail composition to ticket documents section.
+- Added `forceUploadToRoot` support in documents component wiring so entity-mode uploads bypass folder chooser when this flag is enabled.
+- Added contract coverage: `server/src/test/unit/tickets/algadeskAttachmentComposition.contract.test.ts`.
+- Command run: `cd server && npx vitest run src/test/unit/tickets/algadeskAttachmentComposition.contract.test.ts ../packages/tickets/src/components/ticket/useTicketRichTextUploadSession.test.tsx src/test/unit/app/msp/tickets/page.productComposition.test.tsx 'src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx'` -> pass (12 tests).

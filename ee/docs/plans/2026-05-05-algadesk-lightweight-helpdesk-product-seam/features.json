@@ -1770,7 +1770,7 @@
   {
     "id": "F222",
     "description": "Prevent Algadesk attachment components from exposing folder selection.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Knowledge base and attachments"
     ]
