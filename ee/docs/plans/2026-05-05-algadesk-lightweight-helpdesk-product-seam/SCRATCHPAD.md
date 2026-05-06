@@ -460,3 +460,6 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 - Commands run:
   - `cd server && npx vitest run src/test/unit/email/algadeskEmailRouteProductGate.contract.test.ts` -> pass (1 test).
   - `cd server && npx vitest run src/test/unit/tickets/TicketDetails.emailNotifications.integration.test.ts src/test/unit/notifications/ticketEmailSubscriber.watchers.test.ts` -> pass (8 tests).
+- (2026-05-06) Completed F286 by verification of existing settings-product filtering:
+  - `server/src/lib/settingsProductTabs.ts` excludes broad `integrations` tab for Algadesk.
+  - `server/src/components/settings/SettingsPage.tsx` applies product-tab allowlist and keeps focused `email` tab for channel configuration.

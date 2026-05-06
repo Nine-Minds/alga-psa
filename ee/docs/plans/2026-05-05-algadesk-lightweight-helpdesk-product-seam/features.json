@@ -2282,7 +2282,7 @@
   {
     "id": "F286",
     "description": "Hide broad integrations settings unrelated to email channels.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
