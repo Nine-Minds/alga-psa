@@ -182,3 +182,15 @@ Working notes for remediating the current Algadesk implementation. This plan exi
   - `cd server && npm run typecheck -- --pretty false`
   - `cd server && npx vitest run src/test/unit/api/apiBaseController.productAccess.contract.test.ts src/test/unit/api/apiControllerProductAccessCoverage.contract.test.ts --reporter=dot`
   - `cd server && npx vitest run src/test/unit/api/apiControllerProductAccessCoverage.contract.test.ts src/test/unit/api/apiMiddleware.productAccess.test.ts --reporter=dot`
+- (2026-05-06) Completed standalone extension/integration guard pass (R096).
+- Added shared helper `server/src/lib/api/standaloneProductGuards.ts` to enforce tenant session product checks and normalize product-denied responses via `toProductAccessDeniedResponse`.
+- Added PSA-only product guards to extension standalone routes:
+  - `server/src/app/api/ext/[extensionId]/[[...path]]/route.ts`
+  - `server/src/app/api/ext-proxy/[extensionId]/[[...path]]/route.ts`
+  - `server/src/app/api/v1/extensions/install/route.ts`
+  - `server/src/app/api/v1/extensions/uninstall/route.ts`
+  - `server/src/app/api/extensions/[extensionId]/sync/route.ts`
+- Added PSA-only product guards to Entra integration standalone wrappers under `server/src/app/api/integrations/entra/**/route.ts` before EE route delegation.
+- Added static contract coverage: `server/src/test/unit/api/standaloneExtensionIntegrationProductAccess.contract.test.ts`.
+- Validation run (pass): `cd server && npm run typecheck -- --pretty false`.
+- Validation run (pass): `cd server && npx vitest run src/test/unit/api/standaloneExtensionIntegrationProductAccess.contract.test.ts --reporter=dot`.

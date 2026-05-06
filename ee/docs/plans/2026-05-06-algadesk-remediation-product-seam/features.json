@@ -762,7 +762,7 @@
   {
     "id": "R096",
     "description": "Add product guards to standalone extension and integration API routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API enforcement remediation"
     ]
