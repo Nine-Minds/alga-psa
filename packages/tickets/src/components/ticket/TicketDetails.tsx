@@ -358,6 +358,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [availableAgents, setAvailableAgents] = useState<IUserWithRoles[]>(initialAvailableAgents);
     const [additionalAgents, setAdditionalAgents] = useState<ITicketResource[]>(initialAdditionalAgents);
 
+    const additionalAgentsForInfo = useMemo(() => {
+        return additionalAgents.map(a => {
+            const userId = a.additional_user_id || a.assigned_to;
+            const agent = availableAgents.find(u => u.user_id === userId);
+            return {
+                user_id: userId,
+                name: agent ? `${agent.first_name} ${agent.last_name || ''}`.trim() : '',
+            };
+        });
+    }, [additionalAgents, availableAgents]);
+
     const [newCommentContent, setNewCommentContent] = useState<PartialBlock[]>([{
         type: "paragraph",
         props: {
@@ -2220,12 +2231,7 @@ const handleClose = () => {
                                     }}
                                     onClipboardImageUploaded={refreshTicketDocuments}
                                     onOpenEmailNotificationLogs={() => setIsEmailNotificationLogsDrawerOpen(true)}
-                                    additionalAgents={additionalAgents.map(a => ({
-                                        user_id: a.additional_user_id || a.assigned_to,
-                                        name: availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))
-                                            ? `${availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))!.first_name} ${availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))!.last_name || ''}`.trim()
-                                            : ''
-                                    }))}
+                                    additionalAgents={additionalAgentsForInfo}
                                 />
                             </div>
                         </Suspense>
