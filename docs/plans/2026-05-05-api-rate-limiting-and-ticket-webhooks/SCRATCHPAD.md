@@ -78,6 +78,9 @@ implementation progresses; update earlier entries when something changes.
   secrets, `signing_secret_vault_path` therefore acts as stored metadata; the
   DAL resolves the actual secret by taking the basename of the stored path and
   calling `getTenantSecret(tenant, basename(path))`.
+- (2026-05-05) `undici` is already available in the server runtime, so the
+  real webhook transport can use `undici.fetch` + `Agent` for the
+  `verify_ssl=false` path without introducing a new dependency.
 - (2026-05-05) `ApiBaseController.authenticate` is **not** the universal
   hook point — `withApiKeyAuth` and `withAuth` in `apiMiddleware.ts:144,201`
   are independent paths, and the NM Store branch in `withApiKeyAuth`
@@ -132,6 +135,8 @@ implementation progresses; update earlier entries when something changes.
   manual review.
 - (2026-05-05) Smoke-import the webhook DAL after edits:
   `cd server && npx tsx -e "import('./src/lib/webhooks/webhookModel.ts').then(() => console.log('ok'))"`
+- (2026-05-05) Smoke-import the webhook delivery transport after edits:
+  `cd server && npx tsx -e "import('./src/lib/webhooks/delivery.ts').then(() => console.log('delivery-ok'))"`
 
 ## Links / References
 
@@ -157,6 +162,8 @@ implementation progresses; update earlier entries when something changes.
     — `webhook_secret_vault_path` precedent.
   - `server/src/lib/webhooks/webhookModel.ts` — tenant-scoped webhook DAL and
     signing-secret resolution helpers.
+  - `server/src/lib/webhooks/delivery.ts` — shared outbound HTTP transport
+    for webhook delivery with timeout/TLS/error classification.
 
 ## Open Questions
 
@@ -322,3 +329,10 @@ implementation progresses; update earlier entries when something changes.
   to `webhook_deliveries`, stats updates increment the rolling counters on
   `webhooks`, and `getSigningSecret()` resolves the stored path-style
   reference back to the tenant secret name.
+- (2026-05-05) **F028 complete.** Added
+  `server/src/lib/webhooks/delivery.ts` and rewired
+  `WebhookService.performWebhookDelivery()` to use it. Deliveries now perform
+  a real `undici.fetch` call with a 10s timeout, preserve response status and
+  headers, truncate stored response bodies to 8 KB, classify DNS/connect/TLS/
+  timeout failures, and disable certificate verification only when
+  `verify_ssl=false`.

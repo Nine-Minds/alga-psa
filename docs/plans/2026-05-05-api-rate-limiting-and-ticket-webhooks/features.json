@@ -164,7 +164,7 @@
   {
     "id": "F028",
     "description": "Replace the mocked WebhookService.performWebhookDelivery (line 950) with a real HTTP call (undici/node:fetch), 10s timeout, capturing status/response headers/truncated body (8KB), and surfacing distinct error types for DNS/connect/TLS errors. Honor verify_ssl.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {

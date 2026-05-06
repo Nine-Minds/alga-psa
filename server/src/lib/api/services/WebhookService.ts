@@ -31,6 +31,7 @@ import {
   generateCollectionLinks, 
   addHateoasLinks 
 } from '../utils/responseHelpers';
+import { performWebhookDeliveryRequest } from '../../webhooks/delivery';
 
 export class WebhookService {
   constructor(
@@ -962,29 +963,10 @@ export class WebhookService {
     response_headers?: Record<string, string>;
     response_body?: string;
     error_message?: string;
+    error_type?: 'dns' | 'connect' | 'tls' | 'timeout' | 'unknown';
     duration_ms?: number;
   }> {
-    // Mock implementation - would make actual HTTP request
-    const startTime = Date.now();
-    
-    try {
-      // Simulate HTTP request
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      return {
-        success: true,
-        status_code: 200,
-        response_headers: { 'content-type': 'application/json' },
-        response_body: '{"success": true}',
-        duration_ms: Date.now() - startTime
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error_message: error instanceof Error ? error.message : String(error),
-        duration_ms: Date.now() - startTime
-      };
-    }
+    return performWebhookDeliveryRequest(config);
   }
 
   private eventMatchesFilters(event: WebhookEvent, filter?: EventFilter): boolean {
