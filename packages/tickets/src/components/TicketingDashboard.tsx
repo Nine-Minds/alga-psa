@@ -89,6 +89,7 @@ interface TicketingDashboardProps {
   initialTeams?: ITeam[];
   canUpdateTickets?: boolean;
   allowSlaStatusFilter?: boolean;
+  useAlgadeskQuickAddForm?: boolean;
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -148,6 +149,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialTeams = [],
   canUpdateTickets = true,
   allowSlaStatusFilter = true,
+  useAlgadeskQuickAddForm = false,
 }) => {
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
@@ -1865,6 +1867,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         open={isQuickAddOpen}
         onOpenChange={setIsQuickAddOpen}
         onTicketAdded={handleTicketAdded}
+        isAlgadeskMode={useAlgadeskQuickAddForm}
       />
       <DeleteEntityDialog
         id={`${id}-delete-ticket-dialog`}

@@ -1138,7 +1138,7 @@
   {
     "id": "F143",
     "description": "Ensure quick-add ticket opens an Algadesk-safe ticket form.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]

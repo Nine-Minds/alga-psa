@@ -258,3 +258,14 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 
 - `cd server && npx vitest run src/test/unit/app/msp/tickets/page.productComposition.test.tsx 'src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx'`
   - Result: pass (4 tests).
+- (2026-05-05) Completed F143 with explicit Algadesk quick-add form composition wiring from MSP ticket list.
+- Added product-aware quick-add flag flow:
+  - `server/src/app/msp/tickets/page.tsx` now passes `useAlgadeskQuickAddForm` based on tenant product.
+  - `packages/tickets/src/components/TicketingDashboardContainer.tsx` and `packages/tickets/src/components/TicketingDashboard.tsx` thread the flag into `QuickAddTicket`.
+  - `packages/tickets/src/components/QuickAddTicket.tsx` now supports `isAlgadeskMode` and fail-closes asset-prefill linkage in Algadesk mode (`asset_id` not submitted, asset banner hidden).
+- Updated test `server/src/test/unit/app/msp/tickets/page.productComposition.test.tsx` to assert Algadesk receives quick-add safe composition flag while PSA does not.
+
+## Commands Run (additional)
+
+- `cd server && npx vitest run src/test/unit/app/msp/tickets/page.productComposition.test.tsx 'src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx'`
+  - Result: pass (4 tests).
