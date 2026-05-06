@@ -215,6 +215,12 @@ implementation progresses; update earlier entries when something changes.
   keeps `T007` focused on the shared authenticate/throttle/response path
   without having to pull the full tickets stack or a database-backed route into
   the fixture.
+- (2026-05-06) `T016` exercises the per-key override path by spying on
+  `apiRateLimitSettingsReadOps.getForKey` and wiring the bucket to the *real*
+  `apiRateLimitConfigGetter`. Both the limit-header lookup and the bucket's
+  internal lookup share the same in-process cache, so a single seeded row
+  drives both consumption (`tryConsume`) and the `X-RateLimit-Limit` value
+  emitted on every response — no additional fixture is required.
 
 ## Commands / Runbooks
 

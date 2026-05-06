@@ -92,7 +92,7 @@
   {
     "id": "T016",
     "description": "Integration (vitest + real Postgres + real Redis, server/src/test/integration/apiRateLimit.dbOverride.test.ts): seed an api_rate_limit_settings row (tenant='tA', api_key_id='k1', max_tokens=3, refill_per_min=60); call #4 with K1 returns 429; call #1 with a different key in tenant 'tA' returns 200 (uses tenant default = 120 since no (tA, NULL) row).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F009", "F010", "F012"]
   },
   {
