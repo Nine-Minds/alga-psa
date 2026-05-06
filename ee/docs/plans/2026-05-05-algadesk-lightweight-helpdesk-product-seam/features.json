@@ -986,7 +986,7 @@
   {
     "id": "F124",
     "description": "Render Algadesk ticket list for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]
@@ -994,7 +994,7 @@
   {
     "id": "F125",
     "description": "Keep existing PSA ticket list for PSA tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]
@@ -1002,7 +1002,7 @@
   {
     "id": "F126",
     "description": "Preserve board filtering in Algadesk ticket list.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]
@@ -1010,7 +1010,7 @@
   {
     "id": "F127",
     "description": "Preserve status filtering in Algadesk ticket list.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]
@@ -1018,7 +1018,7 @@
   {
     "id": "F128",
     "description": "Preserve priority filtering in Algadesk ticket list.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]
@@ -1026,7 +1026,7 @@
   {
     "id": "F129",
     "description": "Preserve category filtering in Algadesk ticket list.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]
@@ -1034,7 +1034,7 @@
   {
     "id": "F130",
     "description": "Preserve client filtering in Algadesk ticket list.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]
@@ -1042,7 +1042,7 @@
   {
     "id": "F131",
     "description": "Preserve search filtering in Algadesk ticket list.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]
@@ -1050,7 +1050,7 @@
   {
     "id": "F132",
     "description": "Preserve tag filtering in Algadesk ticket list.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]
@@ -1058,7 +1058,7 @@
   {
     "id": "F133",
     "description": "Preserve assignee filtering in Algadesk ticket list.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]
@@ -1066,7 +1066,7 @@
   {
     "id": "F134",
     "description": "Preserve team filtering in Algadesk ticket list.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]
@@ -1074,7 +1074,7 @@
   {
     "id": "F135",
     "description": "Preserve unassigned filtering in Algadesk ticket list.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]
@@ -1082,7 +1082,7 @@
   {
     "id": "F136",
     "description": "Preserve due date filtering in Algadesk ticket list.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]
@@ -1090,7 +1090,7 @@
   {
     "id": "F137",
     "description": "Preserve response state filtering in Algadesk ticket list.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]
@@ -1098,7 +1098,7 @@
   {
     "id": "F138",
     "description": "Remove SLA status filtering from Algadesk ticket list.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]
@@ -1106,7 +1106,7 @@
   {
     "id": "F139",
     "description": "Preserve ticket sorting in Algadesk ticket list.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]
@@ -1114,7 +1114,7 @@
   {
     "id": "F140",
     "description": "Preserve ticket pagination in Algadesk ticket list.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Ticket list composition"
     ]

@@ -47,7 +47,7 @@ function decodeCsvParam(value: string | null): string[] | undefined {
   return decoded.length > 0 ? decoded : undefined;
 }
 
-function parseTicketListStateFromSearch(search: string): {
+function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = true): {
   filters: Partial<ITicketListFilters>;
   page: number;
   pageSize: number;
@@ -74,7 +74,7 @@ function parseTicketListStateFromSearch(search: string): {
     : undefined;
 
   const slaStatusRaw = params.get('slaStatusFilter');
-  const slaStatusFilter = slaStatusRaw && ALLOWED_SLA_STATUS_FILTERS.has(slaStatusRaw)
+  const slaStatusFilter = allowSlaStatusFilter && slaStatusRaw && ALLOWED_SLA_STATUS_FILTERS.has(slaStatusRaw)
     ? (slaStatusRaw as ITicketListFilters['slaStatusFilter'])
     : undefined;
 
@@ -136,6 +136,7 @@ interface TicketingDashboardContainerProps {
   initialFormOptions?: TicketFormOptions | null;
   canUpdateTickets?: boolean;
   renderClientDetails?: React.ComponentProps<typeof TicketingDashboard>['renderClientDetails'];
+  allowSlaStatusFilter?: boolean;
 }
 
 export default function TicketingDashboardContainer({
@@ -149,6 +150,7 @@ export default function TicketingDashboardContainer({
   initialFormOptions,
   canUpdateTickets,
   renderClientDetails,
+  allowSlaStatusFilter = true,
 }: TicketingDashboardContainerProps) {
   const { t } = useTranslation('features/tickets');
   const initialStatusId = initialFilters?.statusId ?? TICKET_STATUS_FILTER_OPEN;
@@ -275,7 +277,7 @@ export default function TicketingDashboardContainer({
     if (filters.responseState && filters.responseState !== 'all') {
       params.set('responseState', filters.responseState);
     }
-    if (filters.slaStatusFilter && filters.slaStatusFilter !== 'all') {
+    if (allowSlaStatusFilter && filters.slaStatusFilter && filters.slaStatusFilter !== 'all') {
       params.set('slaStatusFilter', filters.slaStatusFilter);
     }
     if (filters.bundleView && filters.bundleView !== 'bundled') {
@@ -324,7 +326,7 @@ export default function TicketingDashboardContainer({
         dueDateFrom: filters.dueDateFrom || undefined,
         dueDateTo: filters.dueDateTo || undefined,
         responseState: filters.responseState || undefined,
-        slaStatusFilter: filters.slaStatusFilter || undefined,
+        slaStatusFilter: allowSlaStatusFilter ? (filters.slaStatusFilter || undefined) : undefined,
         sortBy: effectiveSortBy,
         sortDirection: effectiveSortDirection,
         bundleView: filters.bundleView || 'bundled'
@@ -365,7 +367,7 @@ export default function TicketingDashboardContainer({
         setIsLoading(false);
       }
     }
-  }, [currentUser, sortBy, sortDirection, t]);
+  }, [allowSlaStatusFilter, currentUser, sortBy, sortDirection, t]);
 
   // Refs to avoid putting activeFilters/fetchTickets in the storedPageSize effect deps.
   // These values are needed when the effect fires, but changes to them should NOT re-trigger it.
@@ -382,7 +384,7 @@ export default function TicketingDashboardContainer({
 
     isSyncingFromHistoryRef.current = true;
     try {
-      const parsed = parseTicketListStateFromSearch(normalizedSearch);
+      const parsed = parseTicketListStateFromSearch(normalizedSearch, allowSlaStatusFilter);
       setCurrentPage(parsed.page);
       setPageSize(parsed.pageSize);
       setSortBy(parsed.sortBy);
@@ -396,7 +398,7 @@ export default function TicketingDashboardContainer({
     } finally {
       isSyncingFromHistoryRef.current = false;
     }
-  }, [fetchTickets]);
+  }, [allowSlaStatusFilter, fetchTickets]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -604,6 +606,7 @@ export default function TicketingDashboardContainer({
       initialTicketTags={ticketMetadata.ticketTags}
       initialTeams={initialTeams}
       canUpdateTickets={canUpdateTickets}
+      allowSlaStatusFilter={allowSlaStatusFilter}
     />
   );
 }

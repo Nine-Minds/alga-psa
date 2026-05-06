@@ -88,6 +88,7 @@ interface TicketingDashboardProps {
   initialTicketTags?: Record<string, ITag[]>;
   initialTeams?: ITeam[];
   canUpdateTickets?: boolean;
+  allowSlaStatusFilter?: boolean;
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -146,6 +147,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialTicketTags = {},
   initialTeams = [],
   canUpdateTickets = true,
+  allowSlaStatusFilter = true,
 }) => {
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
@@ -222,7 +224,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     return dateStr ? new Date(dateStr) : undefined;
   }, [filterValues.dueDateFrom, filterValues.dueDateTo]);
   const selectedResponseState = (filterValues.responseState ?? 'all') as 'awaiting_client' | 'awaiting_internal' | 'none' | 'all';
-  const selectedSlaStatus = filterValues.slaStatusFilter ?? 'all';
+  const selectedSlaStatus = allowSlaStatusFilter ? (filterValues.slaStatusFilter ?? 'all') : 'all';
   const bundleView = (filterValues.bundleView ?? 'bundled') as 'bundled' | 'individual';
   const [ticketListDensityLevel, setTicketListDensityLevel] = useState<TicketListDensityPreset>(50);
 
@@ -250,8 +252,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       includeUnassigned ||
       selectedDueDateFilter !== 'all' ||
       selectedResponseState !== 'all' ||
-      selectedSlaStatus !== 'all';
-  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, selectedSlaStatus]);
+      (allowSlaStatusFilter && selectedSlaStatus !== 'all');
+  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus]);
 
   const handleTableSortChange = useCallback((columnId: string, direction: 'asc' | 'desc') => {
     if (columnId === sortBy && direction === sortDirection) {
@@ -431,7 +433,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (f.responseState && f.responseState !== 'all') {
       params.set('responseState', f.responseState);
     }
-    if (f.slaStatusFilter && f.slaStatusFilter !== 'all') {
+    if (allowSlaStatusFilter && f.slaStatusFilter && f.slaStatusFilter !== 'all') {
       params.set('slaStatusFilter', f.slaStatusFilter);
     }
     if (f.tags && f.tags.length > 0) {
@@ -447,7 +449,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (pageSize !== 10) params.set('pageSize', String(pageSize));
 
     return params.toString();
-  }, [filterValues, sortBy, sortDirection, currentPage, pageSize]);
+  }, [allowSlaStatusFilter, filterValues, sortBy, sortDirection, currentPage, pageSize]);
 
   const resetDeleteState = () => {
     setTicketToDelete(null);
@@ -809,7 +811,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         includeUnassigned: includeUnassigned || undefined,
         dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
         responseState: selectedResponseState !== 'all' ? selectedResponseState : undefined,
-        slaStatusFilter: selectedSlaStatus !== 'all' ? selectedSlaStatus as ITicketListFilters['slaStatusFilter'] : undefined,
+        slaStatusFilter: allowSlaStatusFilter && selectedSlaStatus !== 'all' ? selectedSlaStatus as ITicketListFilters['slaStatusFilter'] : undefined,
         bundleView,
       };
       const allIds = await getAllMatchingTicketIds(filters);
@@ -825,7 +827,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     selectedBoard, selectedStatus, selectedPriority, selectedCategories,
     selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
     selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
-    selectedResponseState, selectedSlaStatus, bundleView, selectableTicketIds,
+    selectedResponseState, allowSlaStatusFilter, selectedSlaStatus, bundleView, selectableTicketIds,
   ]);
 
   const handleBulkMoveBoardChange = useCallback(async (boardId: string) => {
@@ -1313,7 +1315,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     includeUnassigned: includeUnassigned || undefined,
     dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
     responseState: selectedResponseState !== 'all' ? selectedResponseState : undefined,
-    slaStatusFilter: selectedSlaStatus !== 'all' ? selectedSlaStatus as ITicketListFilters['slaStatusFilter'] : undefined,
+    slaStatusFilter: allowSlaStatusFilter && selectedSlaStatus !== 'all' ? selectedSlaStatus as ITicketListFilters['slaStatusFilter'] : undefined,
     sortBy,
     sortDirection,
     bundleView,
@@ -1321,7 +1323,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     selectedBoard, selectedStatus, selectedPriority, selectedCategories,
     selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
     selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
-    selectedResponseState, selectedSlaStatus, sortBy, sortDirection, bundleView,
+    selectedResponseState, allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView,
   ]);
 
   const handleTicketAdded = useCallback((newTicket: ITicket) => {
@@ -1663,20 +1665,22 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     />
                   )}
                 </div>
-                <CustomSelect
-                  data-automation-id={`${id}-sla-status-filter`}
-                  options={[
-                    { value: 'all', label: t('dashboard.filters.allSlaStatus', 'All SLA Status') },
-                    { value: 'has_sla', label: t('dashboard.filters.hasSla', 'Has SLA') },
-                    { value: 'no_sla', label: t('dashboard.filters.noSla', 'No SLA') },
-                    { value: 'on_track', label: t('dashboard.filters.onTrack', 'On Track') },
-                    { value: 'breached', label: t('dashboard.filters.breached', 'Breached') },
-                    { value: 'paused', label: t('dashboard.filters.paused', 'Paused') },
-                  ]}
-                  value={selectedSlaStatus}
-                  onValueChange={(value) => onFilterChange({ slaStatusFilter: value !== 'all' ? value as ITicketListFilters['slaStatusFilter'] : undefined })}
-                  placeholder={t('dashboard.filters.slaStatus', 'SLA Status')}
-                />
+                {allowSlaStatusFilter && (
+                  <CustomSelect
+                    data-automation-id={`${id}-sla-status-filter`}
+                    options={[
+                      { value: 'all', label: t('dashboard.filters.allSlaStatus', 'All SLA Status') },
+                      { value: 'has_sla', label: t('dashboard.filters.hasSla', 'Has SLA') },
+                      { value: 'no_sla', label: t('dashboard.filters.noSla', 'No SLA') },
+                      { value: 'on_track', label: t('dashboard.filters.onTrack', 'On Track') },
+                      { value: 'breached', label: t('dashboard.filters.breached', 'Breached') },
+                      { value: 'paused', label: t('dashboard.filters.paused', 'Paused') },
+                    ]}
+                    value={selectedSlaStatus}
+                    onValueChange={(value) => onFilterChange({ slaStatusFilter: value !== 'all' ? value as ITicketListFilters['slaStatusFilter'] : undefined })}
+                    placeholder={t('dashboard.filters.slaStatus', 'SLA Status')}
+                  />
+                )}
               </div>
 
               {/* Row 2: Category, search, tags, reset, bundled, density */}

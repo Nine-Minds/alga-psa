@@ -217,3 +217,20 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 
 - `cd server && npx vitest run src/test/unit/settings/settingsProductTabs.test.ts src/test/unit/productSurfaceRegistry.test.ts src/test/unit/layout/SidebarWithFeatureFlags.productShell.test.tsx`
   - Result: pass (11 tests).
+- (2026-05-05) Completed F124-F140 and T008 with product-aware ticket list composition.
+- Added Algadesk-safe SLA filter seam in ticket list stack:
+  - `server/src/app/msp/tickets/page.tsx`
+  - `packages/tickets/src/components/TicketingDashboardContainer.tsx`
+  - `packages/tickets/src/components/TicketingDashboard.tsx`
+- Behavior:
+  - Algadesk tenants now render ticket list with `allowSlaStatusFilter=false` and URL `slaStatusFilter` is ignored.
+  - PSA tenants keep existing SLA filter behavior.
+  - Core ticket list filters (board/status/priority/category/client/search/tags/assignee/team/unassigned/due-date/response-state), sorting, and pagination remain unchanged.
+- Added test coverage:
+  - `server/src/test/unit/app/msp/tickets/page.productComposition.test.tsx`
+  - Asserts Algadesk disables SLA filter composition while PSA preserves it.
+
+## Commands Run (additional)
+
+- `cd server && npx vitest run src/test/unit/app/msp/tickets/page.productComposition.test.tsx src/test/unit/productSurfaceRegistry.test.ts src/test/unit/layout/SidebarWithFeatureFlags.productShell.test.tsx`
+  - Result: pass (11 tests).

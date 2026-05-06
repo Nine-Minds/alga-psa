@@ -75,7 +75,7 @@
   {
     "id": "T008",
     "description": "Component/integration: Algadesk ticket list preserves core filtering, sorting, pagination, and quick-add behavior while removing SLA status filtering.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F124",
       "F126",

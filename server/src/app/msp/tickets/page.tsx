@@ -9,6 +9,7 @@ import {
   TICKET_STATUS_FILTER_OPEN,
 } from '@alga-psa/tickets/lib';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { getCurrentTenantProduct } from '@/lib/productAccess';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -22,6 +23,8 @@ interface TicketsPageProps {
 export default async function TicketsPage({ searchParams }: TicketsPageProps) {
   try {
     const user = await getCurrentUser();
+    const productCode = await getCurrentTenantProduct();
+    const allowSlaStatusFilter = productCode === 'psa';
     if (!user) {
       // In dev, redirect unauthenticated users to login
       // This avoids rendering a 200 with an error message
@@ -110,7 +113,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         filtersFromURL.responseState = params.responseState as ITicketListFilters['responseState'];
       }
     }
-    if (params?.slaStatusFilter && typeof params.slaStatusFilter === 'string') {
+    if (allowSlaStatusFilter && params?.slaStatusFilter && typeof params.slaStatusFilter === 'string') {
       const allowedSlaStatuses = ['all', 'has_sla', 'no_sla', 'on_track', 'breached', 'paused'] as const;
       if ((allowedSlaStatuses as readonly string[]).includes(params.slaStatusFilter)) {
         filtersFromURL.slaStatusFilter = params.slaStatusFilter as ITicketListFilters['slaStatusFilter'];
@@ -204,6 +207,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
           displaySettings={displaySettings}
           initialTeams={teams}
           canUpdateTickets={canUpdateTickets}
+          allowSlaStatusFilter={allowSlaStatusFilter}
         />
       </div>
     );
