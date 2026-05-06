@@ -413,3 +413,9 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - Algadesk now uses `EmailProviderConfiguration` (inbound mailbox/channel-focused settings surface).
   - PSA retains existing `EmailSettings` composition unchanged.
 - Added `server/src/test/unit/settings/algadeskEmailChannelsComposition.contract.test.ts` to assert product-aware composition switch in settings.
+- (2026-05-05) Completed F263 and T022 by validating existing inbound mailbox/channel configuration seams.
+- Added `server/src/test/unit/settings/algadeskInboundEmailChannelConfiguration.contract.test.ts` asserting:
+  - inbound provider setup UI covers Gmail/Microsoft/IMAP mailbox channel configuration
+  - provider persistence contract includes `provider_type`, `mailbox`, `is_active`, and `inbound_ticket_defaults_id`
+- Command run: `cd server && npx vitest run src/test/unit/settings/algadeskInboundEmailChannelConfiguration.contract.test.ts src/test/unit/settings/algadeskEmailChannelsComposition.contract.test.ts` -> pass (2 tests).
+- Note: legacy `EmailProviderConfiguration` component tests currently fail in this environment due to pre-existing DB/mocking issues (ECONNREFUSED + missing mock export for `getInboundTicketDefaults`); product-seam contracts were added to keep this plan slice verifiable without DB coupling.

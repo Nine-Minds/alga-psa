@@ -231,5 +231,13 @@
     "featureIds": [
       "F262"
     ]
+  },
+  {
+    "id": "T022",
+    "description": "Component contract: inbound email provider configuration supports mailbox/channel setup and persisted defaults mapping fields for Algadesk email channels.",
+    "implemented": true,
+    "featureIds": [
+      "F263"
+    ]
   }
 ]

@@ -2098,7 +2098,7 @@
   {
     "id": "F263",
     "description": "Allow inbound support mailbox/channel configuration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Email-to-ticket"
     ]
