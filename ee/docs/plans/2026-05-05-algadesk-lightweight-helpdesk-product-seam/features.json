@@ -122,7 +122,7 @@
   {
     "id": "F016",
     "description": "Keep tier resolution unchanged when product_code is added.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product entitlement and resolution"
     ]
@@ -130,7 +130,7 @@
   {
     "id": "F017",
     "description": "Keep add-on resolution unchanged when product_code is added.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product entitlement and resolution"
     ]
@@ -138,7 +138,7 @@
   {
     "id": "F018",
     "description": "Document that product access, RBAC, tiers, and add-ons are independent checks.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Product entitlement and resolution"
     ]

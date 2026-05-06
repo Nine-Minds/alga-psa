@@ -4,6 +4,8 @@ import {
   isValidProductCode,
   resolveProductCode,
 } from './productCodes';
+import { resolveTier } from './tenantTiers';
+import { tenantHasAddOn } from './addOns';
 
 describe('productCodes', () => {
   it('exports supported product codes', () => {
@@ -29,5 +31,12 @@ describe('productCodes', () => {
 
   it('fails closed for unknown non-null values', () => {
     expect(resolveProductCode('desk')).toEqual({ productCode: 'psa', isMisconfigured: true });
+  });
+
+  it('does not alter existing tier or add-on resolution behavior', () => {
+    expect(resolveTier('premium')).toEqual({ tier: 'premium', isMisconfigured: false });
+    expect(resolveTier('invalid')).toEqual({ tier: 'pro', isMisconfigured: true });
+    expect(tenantHasAddOn(['ai_assistant'], 'ai_assistant')).toBe(true);
+    expect(tenantHasAddOn([], 'ai_assistant')).toBe(false);
   });
 });

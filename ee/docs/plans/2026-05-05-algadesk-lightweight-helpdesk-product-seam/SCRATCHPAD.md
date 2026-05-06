@@ -100,3 +100,9 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 - DB-backed integration test is present and meaningful, but executing it requires a running test Postgres instance.
 - (2026-05-05) Completed F015 by introducing client-safe product context in `server/src/context/ProductContext.tsx` and wiring it into `server/src/app/msp/MspLayoutClient.tsx`.
 - Added unit coverage for product context resolution in `server/src/test/unit/context/ProductContext.test.tsx`.
+- (2026-05-05) Completed F016/F017/F018 compatibility/docs pass.
+- Added explicit orthogonality documentation comments in:
+  - `packages/types/src/constants/tenantTiers.ts`
+  - `packages/types/src/constants/addOns.ts`
+  - `server/src/lib/productAccess.ts`
+- Added regression assertion in `packages/types/src/constants/productCodes.test.ts` that product entitlement work does not alter tier or add-on resolution behavior.
