@@ -306,3 +306,30 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 - `server/src/app/msp/clients/[id]/page.tsx` now resolves tenant product and passes `isAlgadeskMode` into `ClientDetails`; Algadesk path skips document fetch and survey-summary fetch.
 - `packages/clients/src/components/clients/ClientDetails.tsx` now filters tabs in Algadesk mode to remove PSA-only client surfaces (`assets`, `billing`, `billing-dashboard`, `documents`, `tax-settings`) and suppresses survey summary card rendering.
 - Added unit coverage: `server/src/test/unit/app/msp/clients/[id]/page.productComposition.test.tsx` verifying Algadesk vs PSA composition behavior (document/survey fetch suppression and mode flag propagation).
+- (2026-05-05) Completed F194/F195/F196/F197/F198/F199/F200/F201 and T012 with a client/contact composition safety pass for Algadesk.
+- Product-aware contact detail composition:
+  - Updated `server/src/app/msp/contacts/[id]/page.tsx` to resolve tenant product and pass `isAlgadeskMode` into contact detail.
+  - Algadesk path now skips document fetch even on direct `?tab=documents` requests.
+- Updated `packages/clients/src/components/contacts/ContactDetails.tsx` with `isAlgadeskMode` prop and Algadesk tab filtering that removes the documents tab while preserving details/tickets/notes and existing CRUD/contact-edit surfaces.
+- Added unit coverage:
+  - `server/src/test/unit/app/msp/contacts/[id]/page.productComposition.test.tsx` verifies Algadesk vs PSA contact detail behavior (document fetch suppressed for Algadesk, preserved for PSA).
+  - `server/src/test/unit/clients/algadeskClientContactComposition.contract.test.ts` verifies client/contact CRUD + support context wiring remains intact for Algadesk composition (client/contact tickets, client locations, contact phone numbers, additional emails, notes), and confirms contact detail page product-safe mode wiring.
+
+## Commands Run (additional)
+
+- `cd server && npx vitest run 'src/test/unit/app/msp/clients/[id]/page.productComposition.test.tsx' 'src/test/unit/app/msp/contacts/[id]/page.productComposition.test.tsx' src/test/unit/clients/algadeskClientContactComposition.contract.test.ts`
+  - Result: pass (7 tests).
+  - Note: test run emits existing Next request-scope warnings from `getServerTranslation` cookie detection in this unit context; assertions still pass.
+- (2026-05-05) Completed F206/F208/F211 with tighter Algadesk-safe client detail composition gating.
+- Updated `packages/clients/src/components/clients/ClientDetails.tsx`:
+  - Added `shouldRenderPsaOnlyClientSurfaces` guard to avoid invoking excluded cross-feature callbacks in Algadesk mode.
+  - Guarded excluded tab callback execution for client assets and client documents so Algadesk mode does not execute those callbacks before tab filtering.
+  - Expanded Algadesk excluded tab set to fail-closed for client `projects` and service catalog aliases (`service-catalog`, `services`) in addition to existing excluded domains.
+- Updated static contract coverage in `server/src/test/unit/clients/algadeskClientContactComposition.contract.test.ts` to assert:
+  - explicit exclusion tokens for projects/service catalog
+  - PSA-only callback guard presence in client detail composition.
+
+## Commands Run (additional)
+
+- `cd server && npx vitest run src/test/unit/clients/algadeskClientContactComposition.contract.test.ts 'src/test/unit/app/msp/clients/[id]/page.productComposition.test.tsx'`
+  - Result: pass (5 tests).

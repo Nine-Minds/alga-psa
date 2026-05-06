@@ -269,6 +269,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     entraClientSyncFlag.enabled,
     editedClient
   );
+  const shouldRenderPsaOnlyClientSurfaces = !isAlgadeskMode;
 
   const fetchEntraSyncRunStatus = useCallback(async (runId: string): Promise<string | null> => {
     const response = await fetch(`/api/integrations/entra/sync/runs/${encodeURIComponent(runId)}`, {
@@ -1459,7 +1460,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     {
       id: 'assets',
       label: t('clientDetails.assets', { defaultValue: 'Assets' }),
-      content: renderClientAssets({ clientId: client.client_id }),
+      content: shouldRenderPsaOnlyClientSurfaces ? renderClientAssets({ clientId: client.client_id }) : null,
     },
     {
       id: 'billing',
@@ -1499,21 +1500,23 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       id: 'documents',
       label: t('clientDetails.documents', { defaultValue: 'Documents' }),
       content: (
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          {currentUser ? renderDocuments({
-              id: `${id}-documents`,
-              documents,
-              gridColumns: 3,
-              userId: currentUser.user_id,
-              entityId: client.client_id,
-              entityType: 'client',
-              onDocumentCreated: async () => {
-                memoizedRouter.refresh();
-              },
-          }) : (
-            <div>{t('common.states.loading', { defaultValue: 'Loading...' })}</div>
-          )}
-        </div>
+        shouldRenderPsaOnlyClientSurfaces ? (
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            {currentUser ? renderDocuments({
+                id: `${id}-documents`,
+                documents,
+                gridColumns: 3,
+                userId: currentUser.user_id,
+                entityId: client.client_id,
+                entityType: 'client',
+                onDocumentCreated: async () => {
+                  memoizedRouter.refresh();
+                },
+            }) : (
+              <div>{t('common.states.loading', { defaultValue: 'Loading...' })}</div>
+            )}
+          </div>
+        ) : null
       )
     },
     {
@@ -1659,7 +1662,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       return baseTabContent;
     }
 
-    const excludedTabs = new Set(['assets', 'billing', 'billing-dashboard', 'documents', 'tax-settings']);
+    const excludedTabs = new Set([
+      'assets',
+      'billing',
+      'billing-dashboard',
+      'documents',
+      'tax-settings',
+      'projects',
+      'service-catalog',
+      'services',
+    ]);
     return baseTabContent.filter((tab) => !excludedTabs.has(tab.id));
   }, [baseTabContent, isAlgadeskMode]);
 

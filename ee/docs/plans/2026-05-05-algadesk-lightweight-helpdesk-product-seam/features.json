@@ -1546,7 +1546,7 @@
   {
     "id": "F194",
     "description": "Allow client create/edit/delete according to RBAC.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1554,7 +1554,7 @@
   {
     "id": "F195",
     "description": "Allow contact create/edit/delete according to RBAC.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1562,7 +1562,7 @@
   {
     "id": "F196",
     "description": "Allow client location management according to RBAC.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1570,7 +1570,7 @@
   {
     "id": "F197",
     "description": "Allow contact phone number management according to RBAC.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1578,7 +1578,7 @@
   {
     "id": "F198",
     "description": "Allow contact additional email address management according to RBAC.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1586,7 +1586,7 @@
   {
     "id": "F199",
     "description": "Show client tickets on Algadesk client detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1594,7 +1594,7 @@
   {
     "id": "F200",
     "description": "Show contact tickets on Algadesk contact detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1602,7 +1602,7 @@
   {
     "id": "F201",
     "description": "Show support-relevant client/contact notes if retained for v1.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1642,7 +1642,7 @@
   {
     "id": "F206",
     "description": "Hide service catalog links from Algadesk client detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1658,7 +1658,7 @@
   {
     "id": "F208",
     "description": "Hide client projects from Algadesk client detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1682,7 +1682,7 @@
   {
     "id": "F211",
     "description": "Use Algadesk-safe client cross-feature provider callbacks.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
