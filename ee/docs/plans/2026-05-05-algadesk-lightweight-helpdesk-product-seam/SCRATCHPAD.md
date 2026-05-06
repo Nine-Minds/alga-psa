@@ -539,3 +539,27 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 
 - `cd server && npx vitest run src/test/unit/product/serverActionProductAccess.contract.test.ts src/test/unit/productAccess.test.ts`
   - Result: pass (9 tests).
+- (2026-05-06) Completed F343/F344 with extension and AI/chat boundary assertions.
+- Added extension product gates (`extension_actions`) in EE action surfaces:
+  - `ee/server/src/lib/actions/extMenuActions.ts`
+  - `ee/server/src/lib/actions/extensionDomainActions.ts`
+  - `ee/server/src/lib/actions/installDomainActions.ts`
+- Added AI/chat product gates (`ai_chat`) in representative chat server endpoints:
+  - `server/src/app/api/chat/v1/execute/route.ts`
+  - `server/src/app/api/chat/v1/completions/route.ts`
+  - `server/src/app/api/chat/v1/completions/stream/route.ts`
+  - Each now requires session tenant and asserts PSA-only product access.
+- Updated product access contract test to include extension and AI/chat representative files:
+  - `server/src/test/unit/product/serverActionProductAccess.contract.test.ts`
+
+## Commands Run (additional)
+
+- `cd server && npx vitest run src/test/unit/product/serverActionProductAccess.contract.test.ts`
+  - Result: pass (2 tests).
+- (2026-05-06) Completed F349/F350/F351/F352/F353 via explicit PSA-preservation contract coverage.
+- Added `server/src/test/unit/product/psaPreservation.contract.test.ts` to assert PSA fallback branches remain in:
+  - MSP dashboard/settings/tickets/client-detail composition files
+  - client portal sidebar default PSA composition branch
+- Command run:
+  - `cd server && npx vitest run src/test/unit/product/psaPreservation.contract.test.ts src/test/unit/product/serverActionProductAccess.contract.test.ts`
+  - Result: pass (4 tests).

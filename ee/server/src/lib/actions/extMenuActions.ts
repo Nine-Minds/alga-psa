@@ -1,6 +1,7 @@
 "use server";
 
 import { createTenantKnex } from '@/lib/db';
+import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
 
 export type AppMenuItem = {
   id: string;    // registry_id
@@ -14,6 +15,7 @@ export type AppMenuItem = {
 export async function listAppMenuItemsForTenant(): Promise<AppMenuItem[]> {
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) throw new Error('Tenant not found');
+  await assertPsaOnlyTenantAccess(tenant, 'extension_actions');
 
   // Query: enabled installs where extension_version.ui contains hooks.appMenu.label (non-empty)
   const rows = await knex('tenant_extension_install as ti')
@@ -32,4 +34,3 @@ export async function listAppMenuItemsForTenant(): Promise<AppMenuItem[]> {
     .map((r: any) => ({ id: String(r.id), label: String(r.label || '') }))
     .filter((r) => r.label.length > 0);
 }
-

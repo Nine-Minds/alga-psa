@@ -2738,7 +2738,7 @@
   {
     "id": "F343",
     "description": "Add product assertions to representative extension server actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server action boundaries"
     ]
@@ -2746,7 +2746,7 @@
   {
     "id": "F344",
     "description": "Add product assertions to representative AI/chat server actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server action boundaries"
     ]
@@ -2786,7 +2786,7 @@
   {
     "id": "F349",
     "description": "Preserve existing PSA dashboard for PSA tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PSA preservation and future aliases"
     ]
@@ -2794,7 +2794,7 @@
   {
     "id": "F350",
     "description": "Preserve existing PSA settings for PSA tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PSA preservation and future aliases"
     ]
@@ -2802,7 +2802,7 @@
   {
     "id": "F351",
     "description": "Preserve existing PSA ticket composition for PSA tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PSA preservation and future aliases"
     ]
@@ -2810,7 +2810,7 @@
   {
     "id": "F352",
     "description": "Preserve existing PSA client/contact composition for PSA tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PSA preservation and future aliases"
     ]
@@ -2818,7 +2818,7 @@
   {
     "id": "F353",
     "description": "Preserve existing PSA portal composition for PSA tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PSA preservation and future aliases"
     ]
