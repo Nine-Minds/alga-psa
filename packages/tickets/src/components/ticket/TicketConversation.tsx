@@ -77,6 +77,14 @@ interface TicketConversationProps {
   externalComments?: Array<IComment & { child_ticket_id?: string; child_ticket_number?: string; child_ticket_title?: string; child_client_name?: string }>;
   closedStatusOptions?: { value: string; label: string }[];
   onClipboardImageUploaded?: () => Promise<void> | void;
+  uploadTicketAttachmentAction?: (
+    formData: FormData,
+    params: { userId: string; ticketId: string }
+  ) => Promise<any>;
+  deleteDraftTicketAttachmentImagesAction?: (input: {
+    ticketId: string;
+    documentIds: string[];
+  }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
   defaultNewestFirst?: boolean;
   canViewCommentMetadataDebug?: boolean;
 }
@@ -112,6 +120,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   externalComments = [],
   closedStatusOptions = [],
   onClipboardImageUploaded,
+  uploadTicketAttachmentAction,
+  deleteDraftTicketAttachmentImagesAction,
   defaultNewestFirst = false,
   canViewCommentMetadataDebug = false,
 }) => {
@@ -142,6 +152,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     trackDraftUploads: true,
     onDocumentsChanged: onClipboardImageUploaded,
     onDiscard: discardComposeEditor,
+    uploadDocumentAction: uploadTicketAttachmentAction,
+    deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,
     deleteDocumentFn: deleteDocument,
   });
 
@@ -152,6 +164,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     trackDraftUploads: false,
     onDocumentsChanged: onClipboardImageUploaded,
     onDiscard: onClose,
+    uploadDocumentAction: uploadTicketAttachmentAction,
+    deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,
     deleteDocumentFn: deleteDocument,
   });
 

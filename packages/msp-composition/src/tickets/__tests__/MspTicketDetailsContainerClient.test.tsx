@@ -49,4 +49,32 @@ describe('MspTicketDetailsContainerClient', () => {
     const node = renderCreateProjectTask({ ticket: { ticket_id: 'ticket-1' } });
     expect(node.props['data-testid']).toBe('create-task-dialog');
   });
+
+  it('wires a composed ticket attachment upload action into ticket details', () => {
+    render(
+      <MspTicketDetailsContainerClient
+        ticketData={{
+          ticket: { ticket_id: 'ticket-1' },
+          comments: [],
+          documents: [],
+          client: null,
+          contacts: [],
+          contactInfo: null,
+          createdByUser: null,
+          board: null,
+          additionalAgents: [],
+          availableAgents: [],
+          userMap: {},
+          options: { status: [], agent: [], board: [], priority: [] },
+          categories: [],
+          clients: [],
+          locations: [],
+          agentSchedules: []
+        }}
+      />
+    );
+
+    expect(typeof lastTicketDetailsContainerProps.uploadTicketAttachmentAction).toBe('function');
+    expect(typeof lastTicketDetailsContainerProps.deleteDraftTicketAttachmentImagesAction).toBe('function');
+  });
 });

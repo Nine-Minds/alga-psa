@@ -67,6 +67,14 @@ interface TicketDetailsContainerProps {
   renderClientDetails?: React.ComponentProps<typeof TicketDetails>['renderClientDetails'];
   renderIntervalManagement?: React.ComponentProps<typeof TicketDetails>['renderIntervalManagement'];
   hideSlaStatus?: boolean;
+  uploadTicketAttachmentAction?: (
+    formData: FormData,
+    params: { userId: string; ticketId: string }
+  ) => Promise<any>;
+  deleteDraftTicketAttachmentImagesAction?: (input: {
+    ticketId: string;
+    documentIds: string[];
+  }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
 }
 
 export default function TicketDetailsContainer({
@@ -78,6 +86,8 @@ export default function TicketDetailsContainer({
   renderClientDetails,
   renderIntervalManagement,
   hideSlaStatus = false,
+  uploadTicketAttachmentAction,
+  deleteDraftTicketAttachmentImagesAction,
 }: TicketDetailsContainerProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -249,6 +259,8 @@ export default function TicketDetailsContainer({
             renderClientDetails={renderClientDetails}
             renderIntervalManagement={renderIntervalManagement}
             hideSlaStatus={hideSlaStatus}
+            uploadTicketAttachmentAction={uploadTicketAttachmentAction}
+            deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
         />
         </Suspense>
       </div>

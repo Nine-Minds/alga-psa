@@ -79,6 +79,14 @@ interface TicketInfoProps {
   onAssignTeam?: (teamId: string) => Promise<void>;
   onRemoveTeamAssignment?: () => Promise<void>;
   onClipboardImageUploaded?: () => Promise<void> | void;
+  uploadTicketAttachmentAction?: (
+    formData: FormData,
+    params: { userId: string; ticketId: string }
+  ) => Promise<any>;
+  deleteDraftTicketAttachmentImagesAction?: (input: {
+    ticketId: string;
+    documentIds: string[];
+  }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
   onOpenEmailNotificationLogs?: () => void;
   titleRef?: React.Ref<HTMLHeadingElement>;
   hideSlaStatus?: boolean;
@@ -114,6 +122,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   onAssignTeam,
   onRemoveTeamAssignment,
   onClipboardImageUploaded,
+  uploadTicketAttachmentAction,
+  deleteDraftTicketAttachmentImagesAction,
   onOpenEmailNotificationLogs,
   titleRef,
   hideSlaStatus = false,
@@ -458,6 +468,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     trackDraftUploads: true,
     onDocumentsChanged: onClipboardImageUploaded,
     onDiscard: discardDescriptionEdit,
+    uploadDocumentAction: uploadTicketAttachmentAction,
+    deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,
     deleteDocumentFn: deleteDocument,
   });
 

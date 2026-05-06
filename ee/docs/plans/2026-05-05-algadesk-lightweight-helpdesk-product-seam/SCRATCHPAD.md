@@ -344,3 +344,23 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 
 - `cd server && npx vitest run src/test/unit/kb/algadeskKnowledgeBase.contract.test.ts`
   - Result: pass (3 tests).
+- (2026-05-05) Completed F219 by introducing a composed ticket-attachment upload provider seam for ticket rich-text flows.
+- Added composed upload provider in `packages/msp-composition/src/tickets/composedClipboardActions.ts`:
+  - `uploadTicketAttachmentDocument(formData, { userId, ticketId })` delegates to documents upload action from composition layer.
+- Threaded upload provider through ticket detail composition chain:
+  - `packages/msp-composition/src/tickets/MspTicketDetailsContainerClient.tsx`
+  - `packages/tickets/src/components/ticket/TicketDetailsContainer.tsx`
+  - `packages/tickets/src/components/ticket/TicketDetails.tsx`
+  - `packages/tickets/src/components/ticket/TicketInfo.tsx`
+  - `packages/tickets/src/components/ticket/TicketConversation.tsx`
+- Result: ticket description/comment clipboard image uploads can be provided by composition injection rather than relying on ticket components to directly resolve document upload actions.
+- (2026-05-05) Completed F220 by introducing a composed ticket-attachment draft-delete provider seam.
+- Threaded a delete-provider callback through ticket detail composition (`TicketDetailsContainer` -> `TicketDetails` -> `TicketInfo`/`TicketConversation`) and wired `deleteDraftClipboardImages` from msp-composition.
+- Result: Algadesk ticket clipboard-draft cleanup now uses composition-provided delete action wiring instead of relying only on local fallback behavior.
+
+## Commands Run (additional)
+
+- `cd server && npx vitest run ../packages/tickets/src/components/ticket/useTicketRichTextUploadSession.test.tsx src/test/unit/app/msp/tickets/page.productComposition.test.tsx 'src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx'`
+  - Result: pass (9 tests).
+- `cd server && npx vitest run ../packages/msp-composition/src/tickets/__tests__/MspTicketDetailsContainerClient.test.tsx src/test/unit/app/msp/tickets/page.productComposition.test.tsx 'src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx'`
+  - Result: package test blocked by existing Vitest mock/export mismatch in this environment (`@alga-psa/auth` mock missing `withAuthCheck`); server page-composition tests still pass.

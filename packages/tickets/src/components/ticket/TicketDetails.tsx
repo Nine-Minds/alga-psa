@@ -173,6 +173,14 @@ interface TicketDetailsProps {
      */
     renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
     hideSlaStatus?: boolean;
+    uploadTicketAttachmentAction?: (
+        formData: FormData,
+        params: { userId: string; ticketId: string }
+    ) => Promise<any>;
+    deleteDraftTicketAttachmentImagesAction?: (input: {
+        ticketId: string;
+        documentIds: string[];
+    }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
 }
 
 const TicketDetails: React.FC<TicketDetailsProps> = ({
@@ -216,7 +224,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     renderCreateProjectTask,
     renderClientDetails,
     renderIntervalManagement,
-    hideSlaStatus = false
+    hideSlaStatus = false,
+    uploadTicketAttachmentAction,
+    deleteDraftTicketAttachmentImagesAction,
 }) => {
     const { t } = useTranslation('features/tickets');
     const { data: session } = useSession();
@@ -2221,6 +2231,8 @@ const handleClose = () => {
                                         await handleRemoveTeamAssignment('remove_all');
                                     }}
                                     onClipboardImageUploaded={refreshTicketDocuments}
+                                    uploadTicketAttachmentAction={uploadTicketAttachmentAction}
+                                    deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
                                     onOpenEmailNotificationLogs={() => setIsEmailNotificationLogsDrawerOpen(true)}
                                     hideSlaStatus={hideSlaStatus}
                                     additionalAgents={additionalAgents.map(a => ({
@@ -2264,6 +2276,8 @@ const handleClose = () => {
                                     hideInternalTab={false}
                                     externalComments={bundle?.isBundleMaster ? aggregatedChildClientComments : []}
                                     onClipboardImageUploaded={refreshTicketDocuments}
+                                    uploadTicketAttachmentAction={uploadTicketAttachmentAction}
+                                    deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
                                     defaultNewestFirst
                                     canViewCommentMetadataDebug={canViewCommentMetadataDebug}
                                 />
