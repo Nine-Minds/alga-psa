@@ -519,3 +519,23 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 
 - `cd server && npx vitest run src/test/unit/api/apiMetadataController.productVisibility.contract.test.ts src/test/unit/api/apiBaseController.productAccess.contract.test.ts src/test/unit/productSurfaceRegistry.test.ts`
   - Result: pass (9 tests).
+- (2026-05-06) Completed F337/F338/F339/F340/F341/F342/F345/F346/F347/F348 and alias completion F355/F356 with representative server-action product assertions.
+- Added shared guard `shared/services/productAccessGuard.ts`:
+  - `assertPsaOnlyTenantAccess(tenantId, capability)` resolves tenant `product_code` from admin DB and fail-closes non-PSA or misconfigured tenants.
+  - Includes structured `ProductAccessError` (`status=403`, `code=PRODUCT_ACCESS_DENIED`).
+- Added PSA-only guard calls in representative excluded-domain server actions:
+  - Billing: `packages/billing/src/actions/taxRateActions.ts`
+  - Projects: `packages/projects/src/actions/projectTaskExportActions.ts`
+  - Scheduling/time: `packages/scheduling/src/actions/timeEntryTicketActions.ts`
+  - Assets/RMM: `packages/assets/src/actions/clientLookupActions.ts`
+  - Workflow: `server/src/lib/actions/workflow-bundle-v1-actions.ts`
+  - Surveys: `packages/surveys/src/actions/survey-actions/surveyMetricsActions.ts`
+  - Full document-management: `packages/documents/src/actions/shareLinkActions.ts`
+- Added contract coverage `server/src/test/unit/product/serverActionProductAccess.contract.test.ts` to assert representative guards remain present and guard uses structured ProductAccessError fields.
+- F346 rationale: existing `algadesk-composition` dependency guard already blocks imports of excluded domains (including extensions) from Algadesk composition package, satisfying “avoid importing denied server action modules from Algadesk composition” at package-boundary level.
+- F355/F356 rationale: route registry already maps optional `/desk/*` aliases without requiring aliases for launch via `normalizePathname` in `server/src/lib/productSurfaceRegistry.ts`.
+
+## Commands Run (additional)
+
+- `cd server && npx vitest run src/test/unit/product/serverActionProductAccess.contract.test.ts src/test/unit/productAccess.test.ts`
+  - Result: pass (9 tests).

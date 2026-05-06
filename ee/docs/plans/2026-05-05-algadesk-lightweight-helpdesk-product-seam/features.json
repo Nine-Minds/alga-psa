@@ -2690,7 +2690,7 @@
   {
     "id": "F337",
     "description": "Add product assertions to representative billing server actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server action boundaries"
     ]
@@ -2698,7 +2698,7 @@
   {
     "id": "F338",
     "description": "Add product assertions to representative project server actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server action boundaries"
     ]
@@ -2706,7 +2706,7 @@
   {
     "id": "F339",
     "description": "Add product assertions to representative scheduling/time server actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server action boundaries"
     ]
@@ -2714,7 +2714,7 @@
   {
     "id": "F340",
     "description": "Add product assertions to representative asset/RMM server actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server action boundaries"
     ]
@@ -2722,7 +2722,7 @@
   {
     "id": "F341",
     "description": "Add product assertions to representative workflow server actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server action boundaries"
     ]
@@ -2730,7 +2730,7 @@
   {
     "id": "F342",
     "description": "Add product assertions to representative survey server actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server action boundaries"
     ]
@@ -2754,7 +2754,7 @@
   {
     "id": "F345",
     "description": "Add product assertions to full document-management server actions that are not ticket attachment or KB safe.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server action boundaries"
     ]
@@ -2762,7 +2762,7 @@
   {
     "id": "F346",
     "description": "Avoid importing denied server action modules from Algadesk composition.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server action boundaries"
     ]
@@ -2770,7 +2770,7 @@
   {
     "id": "F347",
     "description": "Use structured ProductAccessError for denied server actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server action boundaries"
     ]
@@ -2778,7 +2778,7 @@
   {
     "id": "F348",
     "description": "Keep PSA server action behavior unchanged.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Server action boundaries"
     ]
@@ -2834,7 +2834,7 @@
   {
     "id": "F355",
     "description": "Keep route registry capable of mapping future /desk aliases.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PSA preservation and future aliases"
     ]
@@ -2842,7 +2842,7 @@
   {
     "id": "F356",
     "description": "Do not require /desk aliases for initial Algadesk launch.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "PSA preservation and future aliases"
     ]
