@@ -1,4 +1,5 @@
 import { Agent, fetch } from 'undici';
+import { assertSafeWebhookTarget } from './ssrf';
 
 const REQUEST_TIMEOUT_MS = 10_000;
 const MAX_CAPTURED_BODY_CHARS = 8 * 1024;
@@ -6,6 +7,7 @@ const MAX_CAPTURED_BODY_CHARS = 8 * 1024;
 export type WebhookDeliveryErrorType =
   | 'dns'
   | 'connect'
+  | 'ssrf'
   | 'tls'
   | 'timeout'
   | 'unknown';
@@ -126,6 +128,8 @@ export async function performWebhookDeliveryRequest(
       });
 
   try {
+    await assertSafeWebhookTarget(request.url);
+
     const response = await fetch(request.url, {
       method,
       headers: normalizeHeaders(request.headers),
@@ -144,14 +148,18 @@ export async function performWebhookDeliveryRequest(
       duration_ms: Date.now() - startedAt,
     };
   } catch (error) {
+    const errorType =
+      error instanceof Error && error.name === 'UnsafeWebhookTargetError'
+        ? 'ssrf'
+        : classifyDeliveryError(error);
+
     return {
       success: false,
       error_message: formatErrorMessage(error),
-      error_type: classifyDeliveryError(error),
+      error_type: errorType,
       duration_ms: Date.now() - startedAt,
     };
   } finally {
     await dispatcher?.close();
   }
 }
-

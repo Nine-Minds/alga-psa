@@ -81,6 +81,10 @@ implementation progresses; update earlier entries when something changes.
 - (2026-05-05) `undici` is already available in the server runtime, so the
   real webhook transport can use `undici.fetch` + `Agent` for the
   `verify_ssl=false` path without introducing a new dependency.
+- (2026-05-05) Node's `net.BlockList` is sufficient for the required SSRF
+  address classes. The helper now blocks RFC1918, loopback, link-local, and
+  CGNAT IPv4 ranges plus `::1` and `fe80::/10`, and it short-circuits all of
+  those checks when `WEBHOOK_SSRF_ALLOW_PRIVATE=true`.
 - (2026-05-05) `ApiBaseController.authenticate` is **not** the universal
   hook point — `withApiKeyAuth` and `withAuth` in `apiMiddleware.ts:144,201`
   are independent paths, and the NM Store branch in `withApiKeyAuth`
@@ -137,6 +141,8 @@ implementation progresses; update earlier entries when something changes.
   `cd server && npx tsx -e "import('./src/lib/webhooks/webhookModel.ts').then(() => console.log('ok'))"`
 - (2026-05-05) Smoke-import the webhook delivery transport after edits:
   `cd server && npx tsx -e "import('./src/lib/webhooks/delivery.ts').then(() => console.log('delivery-ok'))"`
+- (2026-05-05) Quick SSRF helper smoke:
+  `cd server && npx tsx -e "import('./src/lib/webhooks/ssrf.ts').then(async ({ assertSafeWebhookTarget }) => { await assertSafeWebhookTarget('https://example.com'); console.log('public-ok'); try { await assertSafeWebhookTarget('http://127.0.0.1'); process.exit(1); } catch (error) { console.log((error && error.name) || 'error'); } })"`
 
 ## Links / References
 
@@ -164,6 +170,8 @@ implementation progresses; update earlier entries when something changes.
     signing-secret resolution helpers.
   - `server/src/lib/webhooks/delivery.ts` — shared outbound HTTP transport
     for webhook delivery with timeout/TLS/error classification.
+  - `server/src/lib/webhooks/ssrf.ts` — outbound target validation for
+    webhook delivery and test-send flows.
 
 ## Open Questions
 
@@ -336,3 +344,9 @@ implementation progresses; update earlier entries when something changes.
   headers, truncate stored response bodies to 8 KB, classify DNS/connect/TLS/
   timeout failures, and disable certificate verification only when
   `verify_ssl=false`.
+- (2026-05-05) **F029 complete.** Added
+  `server/src/lib/webhooks/ssrf.ts` and enforced it in the shared delivery
+  transport before any outbound fetch. Targets must now use `http(s)`,
+  reject `localhost`/loopback/private/link-local/CGNAT destinations after DNS
+  resolution, and only bypass those checks when
+  `WEBHOOK_SSRF_ALLOW_PRIVATE=true`.

@@ -963,7 +963,7 @@ export class WebhookService {
     response_headers?: Record<string, string>;
     response_body?: string;
     error_message?: string;
-    error_type?: 'dns' | 'connect' | 'tls' | 'timeout' | 'unknown';
+    error_type?: 'dns' | 'connect' | 'ssrf' | 'tls' | 'timeout' | 'unknown';
     duration_ms?: number;
   }> {
     return performWebhookDeliveryRequest(config);

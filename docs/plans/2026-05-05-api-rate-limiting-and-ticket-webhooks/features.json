@@ -170,7 +170,7 @@
   {
     "id": "F029",
     "description": "Add an assertSafeWebhookTarget(url) helper that DNS-resolves the hostname and rejects RFC1918 (10/8, 172.16/12, 192.168/16), loopback (127/8, ::1), link-local (169.254/16, fe80::/10), CGNAT (100.64/10), non-http(s) schemes, and http://localhost variants. Allow override via WEBHOOK_SSRF_ALLOW_PRIVATE=true.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Security / Permissions"]
   },
   {
