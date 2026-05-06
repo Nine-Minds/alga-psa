@@ -1514,7 +1514,7 @@
   {
     "id": "F190",
     "description": "Render Algadesk clients list for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1522,7 +1522,7 @@
   {
     "id": "F191",
     "description": "Render Algadesk client detail for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1530,7 +1530,7 @@
   {
     "id": "F192",
     "description": "Render Algadesk contacts list for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1538,7 +1538,7 @@
   {
     "id": "F193",
     "description": "Render Algadesk contact detail for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1610,7 +1610,7 @@
   {
     "id": "F202",
     "description": "Hide contract authoring on Algadesk client detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1618,7 +1618,7 @@
   {
     "id": "F203",
     "description": "Hide contract line management on Algadesk client detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1626,7 +1626,7 @@
   {
     "id": "F204",
     "description": "Hide billing configuration on Algadesk client detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1634,7 +1634,7 @@
   {
     "id": "F205",
     "description": "Hide tax settings on Algadesk client detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1650,7 +1650,7 @@
   {
     "id": "F207",
     "description": "Hide client assets from Algadesk client detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1666,7 +1666,7 @@
   {
     "id": "F209",
     "description": "Hide client document library from Algadesk client detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]
@@ -1674,7 +1674,7 @@
   {
     "id": "F210",
     "description": "Hide client survey summaries from Algadesk client detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Clients and contacts"
     ]

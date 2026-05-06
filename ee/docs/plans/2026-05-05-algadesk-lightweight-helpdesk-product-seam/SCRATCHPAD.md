@@ -301,3 +301,8 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 - Added quick-add test case in `packages/tickets/src/components/__tests__/ticket-inline-add-prefill.test.tsx`:
   - `T010` asserts PSA mode shows linked-asset banner and submits `asset_id`, while Algadesk mode hides banner and omits `asset_id` from ticket create payload.
 - Environment constraint: direct execution of package-level quick-add test suite remains blocked in this Vitest context by pre-existing `next-auth` deep import resolution (`Missing "./lib/env" specifier in "next-auth" package`).
+- (2026-05-05) Completed F190-F193 by verification: existing shared MSP clients/contacts list+detail routes already render for Algadesk tenants and are explicitly allowlisted in `productSurfaceRegistry` (`/msp/clients`, `/msp/contacts`). No additional composition fork required for these four baseline renderability items.
+- (2026-05-05) Completed client-detail exclusion slice for Algadesk: F202/F203/F204/F205/F207/F209/F210.
+- `server/src/app/msp/clients/[id]/page.tsx` now resolves tenant product and passes `isAlgadeskMode` into `ClientDetails`; Algadesk path skips document fetch and survey-summary fetch.
+- `packages/clients/src/components/clients/ClientDetails.tsx` now filters tabs in Algadesk mode to remove PSA-only client surfaces (`assets`, `billing`, `billing-dashboard`, `documents`, `tax-settings`) and suppresses survey summary card rendering.
+- Added unit coverage: `server/src/test/unit/app/msp/clients/[id]/page.productComposition.test.tsx` verifying Algadesk vs PSA composition behavior (document/survey fetch suppression and mode flag propagation).
