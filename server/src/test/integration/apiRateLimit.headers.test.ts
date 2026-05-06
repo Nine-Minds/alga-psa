@@ -71,6 +71,17 @@ function createMockRedis(): TokenBucketRedisClient & { data: Map<string, string>
   };
 }
 
+function createBrokenRedis(): TokenBucketRedisClient {
+  return {
+    async get() {
+      throw new Error('redis unavailable');
+    },
+    async set() {
+      throw new Error('redis unavailable');
+    },
+  };
+}
+
 class TestTicketController extends ApiBaseController {
   constructor() {
     super(
@@ -322,6 +333,33 @@ describe('API rate limit headers', () => {
         tenant: '11111111-1111-1111-1111-111111111111',
         api_key_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
         retry_after_ms: expect.any(Number),
+      }),
+    );
+  });
+
+  it('T013: fails open when Redis operations throw and emits redis-unavailable metrics', async () => {
+    TokenBucketRateLimiter.resetInstance();
+    await TokenBucketRateLimiter.getInstance().initialize(
+      async () => createBrokenRedis(),
+      { api: async () => ({ maxTokens: 120, refillRate: 1 }) },
+    );
+
+    const controller = new TestTicketController();
+    const handler = controller.list();
+
+    for (let attempt = 1; attempt <= 200; attempt += 1) {
+      const response = await handler(makeRequest());
+      expect(response.status).toBe(200);
+      expect(response.headers.get('X-RateLimit-Limit')).toBe('120');
+      expect(response.headers.get('X-RateLimit-Remaining')).toBe('-1');
+    }
+
+    expect(testState.loggerWarnMock).toHaveBeenCalledWith(
+      '[metric] api_rate_limit_redis_unavailable_total',
+      expect.objectContaining({
+        tenant: '11111111-1111-1111-1111-111111111111',
+        api_key_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        pathname: '/api/v1/tickets',
       }),
     );
   });

@@ -74,7 +74,7 @@
   {
     "id": "T013",
     "description": "Integration (vitest + real Redis, server/src/test/integration/apiRateLimit.failOpen.test.ts): stop the Redis client (connection.disconnect or a mock that throws), make 200 calls, all return 200 with X-RateLimit-Remaining=-1; api_rate_limit_redis_unavailable_total counter incremented.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012", "F049"]
   },
   {

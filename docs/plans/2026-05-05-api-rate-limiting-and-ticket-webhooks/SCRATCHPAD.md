@@ -640,3 +640,8 @@ implementation progresses; update earlier entries when something changes.
   `RATE_LIMIT_ENFORCE=false`, the 121st request now stays 200 with
   `remaining=0`, and the test asserts the structured throttle WARN still
   carries `tenant`, `api_key_id`, and `retry_after_ms`.
+- (2026-05-06) **T013 complete.** Added a broken-Redis branch to the same
+  harness: 200 authenticated requests now stay 200 with
+  `X-RateLimit-Remaining=-1`, and the mocked logger proves the
+  `api_rate_limit_redis_unavailable_total` metric payload is emitted on the
+  fail-open path.
