@@ -563,3 +563,21 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 - Command run:
   - `cd server && npx vitest run src/test/unit/product/psaPreservation.contract.test.ts src/test/unit/product/serverActionProductAccess.contract.test.ts`
   - Result: pass (4 tests).
+- (2026-05-06) Completed T010 with DB-backed Algadesk ticket create/update integration coverage plus RBAC enforcement contract assertions.
+  - Added `server/src/test/integration/algadeskTicketCrudRbac.integration.test.ts`:
+    - Creates an Algadesk-flagged tenant fixture and verifies ticket creation with client/contact/board/category/priority/assignee fields using `TicketModel.createTicket`.
+    - Verifies status + `response_state` update (`awaiting_client`) using `TicketModel.updateTicket`.
+    - Verifies persisted ticket row contains expected create/update values.
+    - Adds static assertions that `packages/tickets/src/actions/ticketActions.ts` retains explicit RBAC `hasPermission` checks and permission-denied error paths for create/update flows.
+  - Command run:
+    - `cd server && npx vitest run src/test/integration/algadeskTicketCrudRbac.integration.test.ts`
+    - Result: suite execution blocked in this environment by missing local Postgres (`ECONNREFUSED` on `localhost:5432`), consistent with existing DB-backed integration constraints.
+- (2026-05-06) Completed T011 with DB-backed Algadesk ticket-attachment draft cleanup integration and composition-boundary assertions.
+  - Added `server/src/test/integration/algadeskTicketAttachmentDrafts.integration.test.ts`:
+    - Seeds Algadesk tenant/ticket/documents and validates `deleteDraftClipboardImages` deletes only ticket-scoped image drafts without cross-entity associations.
+    - Verifies blocked deletion reason (`has_other_associations`) for attachments also linked to non-ticket entities.
+    - Verifies RBAC denial path for document delete permission.
+    - Asserts Algadesk composition/document component source keeps folder-selection/share/linking restrictions (`disableAttachmentFolderSelection`, `disableAttachmentSharing`, `disableAttachmentLinking`, and guarded `Documents` behaviors).
+  - Command run:
+    - `cd server && npx vitest run src/test/integration/algadeskTicketAttachmentDrafts.integration.test.ts`
+    - Result: suite execution blocked in this environment by missing local Postgres (`ECONNREFUSED` on `localhost:5432`), consistent with existing DB-backed integration constraints.

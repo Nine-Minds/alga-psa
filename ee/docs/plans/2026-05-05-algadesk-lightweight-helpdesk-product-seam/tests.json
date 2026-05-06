@@ -103,7 +103,7 @@
   {
     "id": "T010",
     "description": "DB-backed integration: Algadesk MSP user can create a ticket with client/contact/board/category/priority/assignment and then update status and response state with RBAC enforced.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F176",
       "F177",
@@ -115,7 +115,7 @@
   {
     "id": "T011",
     "description": "DB-backed integration: ticket attachments and rich-text image uploads work for Algadesk tickets without exposing folder selection, broad sharing, project documents, or client document library surfaces.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F219",
       "F222",
