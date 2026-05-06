@@ -154,4 +154,13 @@ describe('API rate limit headers', () => {
     });
     expect(body.error.details.retry_after_ms).toBeGreaterThan(0);
   });
+
+  it('T008: emits success X-RateLimit headers on allowed requests', async () => {
+    const controller = new TestTicketController();
+    const response = await controller.list()(makeRequest());
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('X-RateLimit-Limit')).toBe('120');
+    expect(response.headers.get('X-RateLimit-Remaining')).toBe('119');
+  });
 });

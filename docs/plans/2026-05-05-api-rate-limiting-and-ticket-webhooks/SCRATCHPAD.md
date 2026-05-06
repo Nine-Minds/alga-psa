@@ -618,3 +618,8 @@ implementation progresses; update earlier entries when something changes.
   and asserts the 121st response is a 429 with `Retry-After`,
   `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`, and the
   expected `RATE_LIMITED` error envelope details.
+- (2026-05-06) **T008 complete.** Extended
+  `server/src/test/integration/apiRateLimit.headers.test.ts` with the success
+  case assertion: an allowed authenticated request now proves
+  `X-RateLimit-Limit=120` and `X-RateLimit-Remaining=119` are attached on the
+  200 response from the same controller path.

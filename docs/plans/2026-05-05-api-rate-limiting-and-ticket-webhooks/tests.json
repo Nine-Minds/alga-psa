@@ -44,7 +44,7 @@
   {
     "id": "T008",
     "description": "Integration (vitest + real Redis, server/src/test/integration/apiRateLimit.successHeaders.test.ts): a successful authenticated GET returns X-RateLimit-Limit and X-RateLimit-Remaining headers reflecting the bucket state at decision time.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F019"]
   },
   {
