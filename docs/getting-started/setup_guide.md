@@ -100,6 +100,8 @@ cp .env.example server/.env
 2. Open `server/.env` in your editor and confirm these core settings (adjust as needed):
    - `DB_TYPE=postgres` (required)
    - `DB_USER_ADMIN=postgres`
+   - `DB_NAME_HOCUSPOCUS=hocuspocus`
+   - `DB_USER_HOCUSPOCUS=hocuspocus_user`
    - `HOST=http://localhost:3000` (use your public domain in production)
    - `LOG_LEVEL=INFO`
    - `LOG_IS_FORMAT_JSON=false`

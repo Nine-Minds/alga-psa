@@ -29,7 +29,8 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
       DB_PORT: ${PGBOUNCER_PORT:-6432}
-      DB_USER_HOCUSPOCUS: ${DB_USER_HOCUSPOCUS:-app_user}
+      DB_NAME_HOCUSPOCUS: ${DB_NAME_HOCUSPOCUS:-hocuspocus}
+      DB_USER_HOCUSPOCUS: ${DB_USER_HOCUSPOCUS:-hocuspocus_user}
       DB_PASSWORD_HOCUSPOCUS: ${DB_PASSWORD_HOCUSPOCUS}
       REQUIRE_HOCUSPOCUS: ${REQUIRE_HOCUSPOCUS:-false}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
@@ -100,7 +101,9 @@ services:
       EDITION: community
       NODE_OPTIONS: --experimental-vm-modules
       DB_NAME_SERVER: server
+      DB_NAME_HOCUSPOCUS: ${DB_NAME_HOCUSPOCUS:-hocuspocus}
       DB_USER_SERVER: app_user
+      DB_USER_HOCUSPOCUS: ${DB_USER_HOCUSPOCUS:-hocuspocus_user}
       DB_USER_ADMIN: ${DB_USER_ADMIN:-postgres}
       PGBOSS_DATABASE: server
       VERSION: ${VERSION}
@@ -155,6 +158,7 @@ services:
     secrets:
       - postgres_password
       - db_password_server
+      - db_password_hocuspocus
     networks:
       - app-network
     depends_on:
@@ -321,8 +325,10 @@ services:
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       DB_TYPE: ${DB_TYPE:-postgres}
-      DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
-      DB_PORT: ${PGBOUNCER_PORT:-6432}
+      DB_HOST: ${DB_HOST_ADMIN:-postgres}
+      DB_PORT: ${DB_PORT_ADMIN:-5432}
+      DB_NAME_HOCUSPOCUS: ${DB_NAME_HOCUSPOCUS:-hocuspocus}
+      DB_USER_HOCUSPOCUS: ${DB_USER_HOCUSPOCUS:-hocuspocus_user}
     secrets:
       - db_password_hocuspocus
       - redis_password

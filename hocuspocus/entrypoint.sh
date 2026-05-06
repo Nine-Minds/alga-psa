@@ -116,7 +116,7 @@ main() {
     wait_for_redis
 
     log "Starting Hocuspocus..."
-    npm start
+    exec gosu nodejs npm start
 }
 
 # Execute main function
