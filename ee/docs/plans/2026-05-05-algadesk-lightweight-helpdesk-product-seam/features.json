@@ -322,7 +322,7 @@
   {
     "id": "F041",
     "description": "Expose product_code in admin/debug tenant views only where appropriate.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Provisioning and tenant lifecycle"
     ]
@@ -330,7 +330,7 @@
   {
     "id": "F042",
     "description": "Add migration rollback behavior that safely removes product_code.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Provisioning and tenant lifecycle"
     ]

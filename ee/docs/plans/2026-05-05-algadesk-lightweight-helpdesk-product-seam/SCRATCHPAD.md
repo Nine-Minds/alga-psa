@@ -132,3 +132,5 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - Added focused IAP transition guard test `ee/server/src/__tests__/unit/stripeService.productCodePreservation.test.ts`.
 - (2026-05-05) Command run: `cd ee/server && npx vitest run src/__tests__/unit/stripeService.tierPricing.test.ts src/__tests__/unit/stripeService.productCodePreservation.test.ts`.
   - Result: failed before test execution in this environment due to module resolution (`Cannot find package '@/lib/db/db'`) from `ee/server` Vitest context.
+- (2026-05-05) Completed F041 by exposing `product_code` in admin-only tenant listing response at `ee/server/src/app/api/v1/tenant-management/tenants/route.ts`.
+- (2026-05-05) Completed F042: existing down migration in `server/migrations/20260505140000_add_tenant_product_code.cjs` already safely drops product-code constraint then column when present.
