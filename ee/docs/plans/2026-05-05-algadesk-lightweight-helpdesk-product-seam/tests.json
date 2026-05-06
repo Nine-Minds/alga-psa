@@ -32,7 +32,7 @@
   {
     "id": "T004",
     "description": "Static dependency guard: @alga-psa/algadesk-composition cannot depend on or import billing, projects, assets, scheduling, SLA, workflows, surveys, extensions, AI/chat, or reporting packages.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043",
       "F051",

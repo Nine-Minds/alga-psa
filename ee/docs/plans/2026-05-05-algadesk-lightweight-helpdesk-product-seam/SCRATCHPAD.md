@@ -134,3 +134,23 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - Result: failed before test execution in this environment due to module resolution (`Cannot find package '@/lib/db/db'`) from `ee/server` Vitest context.
 - (2026-05-05) Completed F041 by exposing `product_code` in admin-only tenant listing response at `ee/server/src/app/api/v1/tenant-management/tenants/route.ts`.
 - (2026-05-05) Completed F042: existing down migration in `server/migrations/20260505140000_add_tenant_product_code.cjs` already safely drops product-code constraint then column when present.
+- (2026-05-05) Completed F043-F060 and T004 with new `@alga-psa/algadesk-composition` scaffold:
+  - Added package scaffold and exports in:
+    - `packages/algadesk-composition/package.json`
+    - `packages/algadesk-composition/project.json`
+    - `packages/algadesk-composition/src/index.ts`
+  - Added focused composition entrypoints for MSP, portal, tickets, clients/contacts, settings, KB, and providers in:
+    - `packages/algadesk-composition/src/msp/index.ts`
+    - `packages/algadesk-composition/src/portal/index.ts`
+    - `packages/algadesk-composition/src/tickets/index.ts`
+    - `packages/algadesk-composition/src/clients/index.ts`
+    - `packages/algadesk-composition/src/settings/index.ts`
+    - `packages/algadesk-composition/src/kb/index.ts`
+    - `packages/algadesk-composition/src/providers/index.ts`
+  - Dependencies intentionally constrained to `@alga-psa/types` only.
+  - Added static guard test `server/src/test/unit/algadeskCompositionDependencyGuard.test.ts` asserting:
+    - Package exists with required exports.
+    - Package dependencies exclude blocked domains (billing/projects/assets/scheduling/SLA/workflows/surveys/extensions/AI/reporting).
+    - Source imports do not reference blocked package domains.
+- (2026-05-05) Command run: `cd server && npx vitest run src/test/unit/algadeskCompositionDependencyGuard.test.ts`.
+  - Result: pass (2 tests).
