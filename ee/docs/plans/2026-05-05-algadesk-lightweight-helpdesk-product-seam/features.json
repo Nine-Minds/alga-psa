@@ -1794,7 +1794,7 @@
   {
     "id": "F225",
     "description": "Keep rich-text image uploads tied to ticket/comment context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Knowledge base and attachments"
     ]

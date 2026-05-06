@@ -128,6 +128,10 @@ describe('useTicketRichTextUploadSession', () => {
     });
 
     expect(firstUrl).toBe('/api/documents/view/file-1');
+    expect(uploadDocumentAction).toHaveBeenCalledWith(expect.any(FormData), {
+      userId: 'user-1',
+      ticketId: 'ticket-1',
+    });
     await waitFor(() => expect(result.current.draftClipboardImages).toHaveLength(1));
     expect(onDocumentsChanged).toHaveBeenCalledTimes(2);
 

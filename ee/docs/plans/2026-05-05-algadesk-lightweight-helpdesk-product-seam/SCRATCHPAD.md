@@ -381,3 +381,6 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - `disableAttachmentSharing` / `disableAttachmentLinking` set from `isAlgadeskMode` in `MspTicketDetailsContainerClient`.
 - Updated static contract assertions in `server/src/test/unit/tickets/algadeskAttachmentComposition.contract.test.ts`.
 - Command run: `cd server && npx vitest run src/test/unit/tickets/algadeskAttachmentComposition.contract.test.ts ../packages/tickets/src/components/ticket/useTicketRichTextUploadSession.test.tsx src/test/unit/app/msp/tickets/page.productComposition.test.tsx 'src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx'` -> pass (12 tests).
+- (2026-05-05) Completed F225 by asserting rich-text image uploads remain ticket/comment scoped.
+- Expanded `useTicketRichTextUploadSession` test coverage to verify uploads are invoked with explicit `{ userId, ticketId }` metadata.
+- Command run: `cd server && npx vitest run ../packages/tickets/src/components/ticket/useTicketRichTextUploadSession.test.tsx src/test/unit/tickets/algadeskAttachmentComposition.contract.test.ts` -> pass (8 tests).
