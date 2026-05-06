@@ -149,7 +149,7 @@
   {
     "id": "T014",
     "description": "Component: Algadesk client portal sidebar exposes only dashboard, tickets, knowledge base, profile, and client settings while hiding billing, projects, devices/assets, documents, appointments, service requests, and extensions.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F229",
       "F230",

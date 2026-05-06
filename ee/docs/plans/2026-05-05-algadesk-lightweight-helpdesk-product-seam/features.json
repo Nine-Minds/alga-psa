@@ -1946,7 +1946,7 @@
   {
     "id": "F244",
     "description": "Render Algadesk portal dashboard for portal contacts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Client portal ticketing"
     ]
@@ -1954,7 +1954,7 @@
   {
     "id": "F245",
     "description": "Render Algadesk portal ticket list.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Client portal ticketing"
     ]
@@ -1962,7 +1962,7 @@
   {
     "id": "F246",
     "description": "Render Algadesk portal ticket detail.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Client portal ticketing"
     ]
@@ -1970,7 +1970,7 @@
   {
     "id": "F247",
     "description": "Render free-form portal ticket creation form.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Client portal ticketing"
     ]
@@ -1978,7 +1978,7 @@
   {
     "id": "F248",
     "description": "Allow portal contacts to submit subject/title.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Client portal ticketing"
     ]
@@ -1986,7 +1986,7 @@
   {
     "id": "F249",
     "description": "Allow portal contacts to submit description.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Client portal ticketing"
     ]
@@ -1994,7 +1994,7 @@
   {
     "id": "F250",
     "description": "Allow portal contacts to add attachments.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Client portal ticketing"
     ]
@@ -2002,7 +2002,7 @@
   {
     "id": "F251",
     "description": "Allow portal contacts to pick allowed board/category fields only if exposed by existing portal rules.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Client portal ticketing"
     ]
@@ -2010,7 +2010,7 @@
   {
     "id": "F252",
     "description": "Prevent portal contacts from submitting service request definition forms.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Client portal ticketing"
     ]
@@ -2018,7 +2018,7 @@
   {
     "id": "F253",
     "description": "Show portal ticket status.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Client portal ticketing"
     ]
@@ -2026,7 +2026,7 @@
   {
     "id": "F254",
     "description": "Show portal ticket public conversation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Client portal ticketing"
     ]
@@ -2034,7 +2034,7 @@
   {
     "id": "F255",
     "description": "Hide internal comments from portal contacts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Client portal ticketing"
     ]
@@ -2042,7 +2042,7 @@
   {
     "id": "F256",
     "description": "Allow portal contacts to reply to tickets.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Client portal ticketing"
     ]
@@ -2050,7 +2050,7 @@
   {
     "id": "F257",
     "description": "Preserve existing board visibility group enforcement.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Client portal ticketing"
     ]
@@ -2058,7 +2058,7 @@
   {
     "id": "F258",
     "description": "Preserve portal ticket detail authorization.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Client portal ticketing"
     ]
@@ -2066,7 +2066,7 @@
   {
     "id": "F259",
     "description": "Preserve portal ticket dashboard filtering by visible boards.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Client portal ticketing"
     ]
@@ -2074,7 +2074,7 @@
   {
     "id": "F260",
     "description": "Prevent portal ticket pages from linking to billing or project pages.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Client portal ticketing"
     ]
@@ -2082,7 +2082,7 @@
   {
     "id": "F261",
     "description": "Keep PSA portal ticket behavior unchanged for PSA tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Client portal ticketing"
     ]
