@@ -674,7 +674,7 @@
   {
     "id": "R085",
     "description": "Centralize product API enforcement in authenticate/context creation or another unavoidable API controller path.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API enforcement remediation"
     ]
@@ -682,7 +682,7 @@
   {
     "id": "R086",
     "description": "Remove reliance on individual base CRUD methods for product API enforcement.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API enforcement remediation"
     ]
@@ -690,7 +690,7 @@
   {
     "id": "R087",
     "description": "Audit overridden controller methods for product enforcement coverage.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API enforcement remediation"
     ]
@@ -698,7 +698,7 @@
   {
     "id": "R088",
     "description": "Ensure ApiProjectController overridden list/get/task methods cannot bypass product API gate.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API enforcement remediation"
     ]
@@ -706,7 +706,7 @@
   {
     "id": "R089",
     "description": "Ensure financial controller methods cannot bypass product API gate.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API enforcement remediation"
     ]
@@ -714,7 +714,7 @@
   {
     "id": "R090",
     "description": "Ensure invoice controller methods cannot bypass product API gate.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API enforcement remediation"
     ]
@@ -722,7 +722,7 @@
   {
     "id": "R091",
     "description": "Ensure quote controller methods cannot bypass product API gate.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API enforcement remediation"
     ]
@@ -730,7 +730,7 @@
   {
     "id": "R092",
     "description": "Ensure asset/RMM controller methods cannot bypass product API gate.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API enforcement remediation"
     ]
@@ -738,7 +738,7 @@
   {
     "id": "R093",
     "description": "Ensure custom tag/client/contact methods preserve allowed Algadesk behavior while still passing product gate.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API enforcement remediation"
     ]
@@ -746,7 +746,7 @@
   {
     "id": "R094",
     "description": "Add product guards to standalone chat API routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API enforcement remediation"
     ]
@@ -754,7 +754,7 @@
   {
     "id": "R095",
     "description": "Add product guards to standalone email routes while preserving allowed email-to-ticket paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API enforcement remediation"
     ]

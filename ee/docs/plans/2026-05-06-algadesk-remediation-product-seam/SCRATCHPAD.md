@@ -169,3 +169,16 @@ Working notes for remediating the current Algadesk implementation. This plan exi
   - `cd server && npm run typecheck -- --pretty false`
   - `cd server && npx vitest run src/test/unit/api/apiBaseController.productAccess.contract.test.ts src/test/unit/api/apiControllerProductAccessCoverage.contract.test.ts --reporter=dot`
 - Audit finding (blocks R092/R093): `server/src/lib/api/controllers/ApiClientController.ts` still performs manual API-key auth/context wiring instead of using base `authenticate()`, so product gate enforcement there is not yet centralized. This needs a follow-up refactor (and likely matching treatment for any similar manual-auth custom controllers) before marking custom client/contact/tag coverage fully complete.
+- (2026-05-06) Completed API enforcement continuation for asset + custom client surfaces (R092-R093).
+- `ApiClientController` custom methods (`stats`, `getContacts`, `createLocation`, `getLocations`) now use `await this.authenticate(req)` and shared `checkPermission(...)` inside tenant context, removing duplicated manual API-key auth paths that bypassed centralized product gating.
+- `ApiAssetController` now enforces product access via `requireAllowedContext(req)` at every endpoint method; helper resolves tenant product via `getTenantProduct`, evaluates `resolveProductApiBehavior`, and throws `ProductAccessError` on denied paths before service calls.
+- Added/updated contract coverage in `server/src/test/unit/api/apiControllerProductAccessCoverage.contract.test.ts` for client authenticate path and asset explicit product gate helper usage.
+- (2026-05-06) Completed standalone chat/email guard reconciliation (R094-R095).
+- Added product guard checks to legacy chat streaming routes:
+  - `server/src/app/api/chat/stream/[...slug]/route.ts`
+  - `server/src/app/api/chat/stream/title/route.ts`
+  Both now resolve session tenant, require tenant presence, enforce `assertTenantProductAccess({ capability: 'ai_chat', allowedProducts: ['psa'] })`, and map denial via `toProductAccessDeniedResponse`.
+- Verification runs (pass):
+  - `cd server && npm run typecheck -- --pretty false`
+  - `cd server && npx vitest run src/test/unit/api/apiBaseController.productAccess.contract.test.ts src/test/unit/api/apiControllerProductAccessCoverage.contract.test.ts --reporter=dot`
+  - `cd server && npx vitest run src/test/unit/api/apiControllerProductAccessCoverage.contract.test.ts src/test/unit/api/apiMiddleware.productAccess.test.ts --reporter=dot`
