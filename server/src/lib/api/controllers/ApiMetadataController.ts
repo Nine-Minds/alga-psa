@@ -142,6 +142,51 @@ export class ApiMetadataController extends ApiBaseController {
     };
   }
 
+  private collectSchemaRefs(value: unknown, refs: Set<string>): void {
+    if (!value || typeof value !== 'object') {
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((item) => this.collectSchemaRefs(item, refs));
+      return;
+    }
+
+    const record = value as Record<string, unknown>;
+    const refValue = typeof record.$ref === 'string' ? record.$ref : null;
+    if (refValue?.startsWith('#/components/schemas/')) {
+      refs.add(refValue.replace('#/components/schemas/', ''));
+    }
+
+    Object.values(record).forEach((entry) => this.collectSchemaRefs(entry, refs));
+  }
+
+  private filterOpenApiSchemasByVisiblePaths(
+    productCode: Awaited<ReturnType<typeof this.getApiMetadataProductCode>>,
+    spec: Record<string, any>,
+  ): Record<string, any> {
+    if (productCode === 'psa') {
+      return spec;
+    }
+
+    const filteredPaths = spec.paths ?? {};
+    const referencedSchemas = new Set<string>();
+    this.collectSchemaRefs(filteredPaths, referencedSchemas);
+
+    const allSchemas = (spec.components?.schemas ?? {}) as Record<string, any>;
+    const filteredSchemas = Object.fromEntries(
+      Object.entries(allSchemas).filter(([schemaName]) => referencedSchemas.has(schemaName)),
+    );
+
+    return {
+      ...spec,
+      components: {
+        ...(spec.components ?? {}),
+        schemas: filteredSchemas,
+      },
+    };
+  }
+
   // ============================================================================
   // API ENDPOINT DISCOVERY
   // ============================================================================
@@ -302,11 +347,13 @@ export class ApiMetadataController extends ApiBaseController {
             ? 'application/x-yaml' 
             : 'application/json';
 
+          const filteredSpec = this.filterOpenApiSchemasByVisiblePaths(productCode, {
+            ...validatedResult.data,
+            paths: filteredPaths,
+          });
+
           return NextResponse.json(
-            {
-              ...validatedResult.data,
-              paths: filteredPaths,
-            },
+            filteredSpec,
             {
               status: 200,
               headers: {

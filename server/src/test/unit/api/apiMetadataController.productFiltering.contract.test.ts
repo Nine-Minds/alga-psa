@@ -15,6 +15,8 @@ describe('ApiMetadataController product filtering contract', () => {
     expect(source).toContain('isApiVisibleInMetadata(productCode, endpoint.path)');
     expect(source).toContain('const filteredPaths = Object.fromEntries');
     expect(source).toContain('isApiVisibleInMetadata(productCode, apiPath)');
+    expect(source).toContain('filterOpenApiSchemasByVisiblePaths');
+    expect(source).toContain("refValue?.startsWith('#/components/schemas/')");
   });
 
   it('filters permissions and stats payloads by product-aware visibility', () => {

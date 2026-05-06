@@ -214,3 +214,9 @@ Working notes for remediating the current Algadesk implementation. This plan exi
 - Added contract guardrail: `server/src/test/unit/api/apiMetadataController.productFiltering.contract.test.ts`.
 - Validation run (pass): `cd server && npm run typecheck -- --pretty false`.
 - Validation run (pass): `cd server && npx vitest run src/test/unit/api/apiMetadataController.productFiltering.contract.test.ts --reporter=dot`.
+- (2026-05-06) Completed OpenAPI schema pruning and PSA-preservation follow-up (R105-R107).
+- Added `filterOpenApiSchemasByVisiblePaths` in `ApiMetadataController` to keep only schemas referenced by product-visible OpenAPI paths for Algadesk.
+- Shared schemas intentionally still visible for Algadesk are those transitively referenced by allowed endpoints; unreferenced PSA-only schemas are pruned.
+- PSA metadata/OpenAPI remains unchanged (`productCode === 'psa'` bypasses path/schema/permission/stats reductions).
+- Validation run (pass): `cd server && npm run typecheck -- --pretty false`.
+- Validation run (pass): `cd server && npx vitest run src/test/unit/api/apiMetadataController.productFiltering.contract.test.ts --reporter=dot`.

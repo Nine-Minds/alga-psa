@@ -834,7 +834,7 @@
   {
     "id": "R105",
     "description": "Filter schemas/models that are exclusively PSA-only from Algadesk metadata where feasible.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Metadata and OpenAPI remediation"
     ]
@@ -842,7 +842,7 @@
   {
     "id": "R106",
     "description": "Document any shared schemas intentionally still visible to Algadesk.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Metadata and OpenAPI remediation"
     ]
@@ -850,7 +850,7 @@
   {
     "id": "R107",
     "description": "Preserve complete PSA metadata/OpenAPI output for PSA tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Metadata and OpenAPI remediation"
     ]
