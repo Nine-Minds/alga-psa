@@ -254,7 +254,7 @@
   {
     "id": "F042",
     "description": "Implement controller endpoint rotateWebhookSecret (currently a TODO at ApiWebhookController.ts:1202): generate crypto.randomBytes(32).toString('base64url'), store via secret provider, replace signing_secret_vault_path, return plaintext once.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Security / Permissions"]
   },
   {

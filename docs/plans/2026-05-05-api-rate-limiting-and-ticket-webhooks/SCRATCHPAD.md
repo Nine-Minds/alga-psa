@@ -142,6 +142,10 @@ implementation progresses; update earlier entries when something changes.
   unrelated `react-day-picker/src/style.css` loader issue seen with broad
   `initializeApp` smoke imports. The narrower `webhookSubscriber.ts` module
   import remains the useful compile smoke for webhook subscriber changes.
+- (2026-05-05) `ApiWebhookController.ts` imports can hit that same broad
+  `.css` loader issue under `tsx`. For controller TODO replacements, the
+  narrower DAL/helper module smokes plus `git diff --check` are the reliable
+  local validation path unless we run the full server test suite.
 - (2026-05-05) `WebhookDeliveryQueue` now owns the retry loop contract:
   processors now return explicit `delivered` / `retry` / `abandoned`
   outcomes. The queue handles atomic `zRem` claims, caps active work at 50
@@ -496,3 +500,8 @@ implementation progresses; update earlier entries when something changes.
   `event_filter.entity_ids` before enqueueing jobs: when a webhook row carries
   a non-empty allowlist, only matching ticket IDs are queued. Missing/empty
   allowlists still receive all matching event types.
+- (2026-05-05) **F042 complete.** `ApiWebhookController.rotateSecret()` now
+  performs a real secret rotation: it generates a 32-byte base64url secret,
+  updates the webhook through `webhookModel.update(..., { signingSecret })`,
+  and returns the plaintext once in the response instead of the old timestamp
+  stub.

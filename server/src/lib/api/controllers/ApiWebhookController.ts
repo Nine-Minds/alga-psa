@@ -3,6 +3,7 @@
  * Simplified version with proper API key authentication for webhook management
  */
 
+import crypto from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { WebhookService } from '../services/WebhookService';
 import { 
@@ -50,6 +51,7 @@ import {
   handleApiError
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
+import { webhookModel } from '../../webhooks/webhookModel';
 
 export class ApiWebhookController {
   private webhookService: WebhookService;
@@ -1198,11 +1200,19 @@ export class ApiWebhookController {
           await this.checkPermission(apiRequest, 'manage_security');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const newSecret = crypto.randomBytes(32).toString('base64url');
+          const updatedWebhook = await webhookModel.update(id, apiRequest.context!.tenant, {
+            signingSecret: newSecret,
+          });
+
+          if (!updatedWebhook) {
+            throw new NotFoundError('Webhook not found');
+          }
           
-          // TODO: Implement rotateWebhookSecret method in WebhookService
-          const result = { data: { secret: 'new_secret_' + Date.now() } }; // Temporary stub
-          
-          return createSuccessResponse(result.data);
+          return createSuccessResponse({
+            webhook_id: id,
+            signing_secret: newSecret,
+          });
         });
       } catch (error) {
         return handleApiError(error);
