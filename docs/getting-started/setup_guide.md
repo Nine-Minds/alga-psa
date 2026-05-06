@@ -35,7 +35,7 @@ This guide provides step-by-step instructions for setting up the PSA system usin
    ```bash
    ./scripts/set-image-tag.sh
    ```
-   This checks for a published CE image matching the current `HEAD` short SHA. If it exists, the script pulls it and writes `.env.image` alongside `server/.env` with `ALGA_IMAGE_TAG=<sha>`. If no matching image exists, the script builds the CE image locally from the current checkout, tags it with that same SHA, and writes `.env.image`. If the worktree has uncommitted changes, the script builds locally with a `<sha>-local` tag so the image cannot be confused with the published commit image. Re-run the script whenever you upgrade or switch commits.
+   This checks for a published CE image matching the current `HEAD` short SHA. If it exists, the script pulls it and writes `.env.image` alongside `server/.env` with `ALGA_IMAGE_TAG=<sha>`. If no matching image exists, the script builds the CE image locally from the current checkout, tags it with that same SHA, and writes `.env.image`. If the worktree has uncommitted changes, the script builds locally with a `<sha>-local` tag so the image cannot be confused with the published commit image. Re-run the script whenever you upgrade or switch commits. If the local image build needs a larger Node.js heap, run `NEXT_BUILD_MAX_OLD_SPACE_SIZE=16384 ./scripts/set-image-tag.sh`.
 2. Create required directories:
    ```bash
    mkdir -p secrets
