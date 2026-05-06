@@ -110,7 +110,7 @@
   {
     "id": "T019",
     "description": "Unit (vitest, server/src/lib/eventBus/subscribers/webhook/__tests__/webhookEventMap.test.ts): a table-driven test asserts each TICKET_* internal event maps to the documented public event(s); unknown event types return [].",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F032"]
   },
   {
