@@ -160,7 +160,7 @@
   {
     "id": "T015",
     "description": "Playwright: Algadesk portal happy path logs in, creates a free-form ticket with attachment, views technician response, replies publicly, and validates internal comments remain hidden.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F247",
       "F250",
@@ -171,7 +171,7 @@
   {
     "id": "T016",
     "description": "DB-backed integration: inbound email creates a ticket using configured board/category/priority mapping and resolves sender/contact when possible.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F263",
       "F265",
@@ -182,7 +182,7 @@
   {
     "id": "T017",
     "description": "DB-backed integration: inbound reply adds one public ticket comment, preserves thread metadata, and dedupes repeated email events.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F278",
       "F279",
@@ -192,7 +192,7 @@
   {
     "id": "T018",
     "description": "Route boundary smoke: Algadesk direct browser hits to billing, projects, assets, schedule/dispatch, time, workflows, surveys, extensions, reports, and service requests show upgrade/not-found behavior; PSA direct hits still render normally.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F292",
       "F293",
@@ -203,7 +203,7 @@
   {
     "id": "T019",
     "description": "API integration: Algadesk API key can access allowed ticket/client/contact/KB/email endpoints and receives structured product-denied responses for representative billing, projects, assets, time, workflows, extensions, AI, surveys, and full-document endpoints.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F308",
       "F310",
@@ -216,7 +216,7 @@
   {
     "id": "T020",
     "description": "API discovery integration: Algadesk metadata/OpenAPI/docs omit denied PSA endpoints while PSA metadata/OpenAPI/docs remain complete.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F333",
       "F334",

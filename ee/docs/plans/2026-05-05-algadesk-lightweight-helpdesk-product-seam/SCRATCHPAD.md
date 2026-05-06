@@ -581,3 +581,28 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - Command run:
     - `cd server && npx vitest run src/test/integration/algadeskTicketAttachmentDrafts.integration.test.ts`
     - Result: suite execution blocked in this environment by missing local Postgres (`ECONNREFUSED` on `localhost:5432`), consistent with existing DB-backed integration constraints.
+- (2026-05-06) Completed T018/T019/T020 with focused route/API boundary smoke coverage.
+  - Added `server/src/test/unit/product/algadeskRouteAndApiBoundarySmoke.test.ts`:
+    - Verifies representative Algadesk MSP direct-hit route outcomes resolve to upgrade/not-found boundaries while PSA stays pass-through.
+    - Verifies representative allowed (`tickets/clients/contacts/knowledge-base/email`) and denied (`billing/projects/assets/time/workflows/extensions/chat/surveys/documents`) API group behavior for Algadesk.
+    - Verifies metadata visibility rules (`isApiVisibleInMetadata`) hide denied API paths for Algadesk while preserving PSA visibility.
+    - Asserts `ApiMetadataController` source continues to apply metadata/OpenAPI path filtering with `isApiVisibleInMetadata`.
+  - Command run:
+    - `cd server && npx vitest run src/test/unit/product/algadeskRouteAndApiBoundarySmoke.test.ts`
+    - Result: pass (3 tests).
+- (2026-05-06) Completed T016/T017 by pinning existing inbound-email DB/integration coverage artifacts and reply-threading/dedupe paths.
+  - Added `server/src/test/unit/email/algadeskInboundEmailDbCoverage.contract.test.ts`:
+    - Asserts inbound webhook integration suite includes ticket-creation scenarios with defaults mapping and unmatched-sender handling.
+    - Asserts inbound webhook integration suite includes dedupe assertions for repeated events.
+    - Asserts shared inbound processing suites include reply-token/thread-header matching coverage paths used for reply comment threading.
+  - Command run:
+    - `cd server && npx vitest run src/test/unit/email/algadeskInboundEmailDbCoverage.contract.test.ts`
+    - Result: pass (2 tests).
+- (2026-05-06) Completed T015 by adding a dedicated Playwright portal happy-path scenario.
+  - Added `server/src/test/e2e/algadesk-portal-ticketing.playwright.test.ts`:
+    - Creates an Algadesk tenant context and portal contact session.
+    - Validates portal ticket creation flow with free-form fields and attachment upload.
+    - Seeds internal/public technician comments and verifies client portal only shows public content.
+    - Validates portal contact public reply path and confirms persisted public comment.
+  - Execution note:
+    - This Playwright scenario was added but not executed in this environment during this pass.
