@@ -1690,7 +1690,7 @@
   {
     "id": "F212",
     "description": "Render Algadesk knowledge base page for MSP users.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Knowledge base and attachments"
     ]
@@ -1698,7 +1698,7 @@
   {
     "id": "F213",
     "description": "Render Algadesk knowledge base page for portal users.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Knowledge base and attachments"
     ]
@@ -1706,7 +1706,7 @@
   {
     "id": "F214",
     "description": "Allow KB article listing for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Knowledge base and attachments"
     ]
@@ -1714,7 +1714,7 @@
   {
     "id": "F215",
     "description": "Allow KB article viewing for Algadesk tenants.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Knowledge base and attachments"
     ]
@@ -1722,7 +1722,7 @@
   {
     "id": "F216",
     "description": "Allow KB article create/edit according to RBAC.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Knowledge base and attachments"
     ]
@@ -1730,7 +1730,7 @@
   {
     "id": "F217",
     "description": "Allow KB article publish/unpublish according to RBAC.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Knowledge base and attachments"
     ]
@@ -1738,7 +1738,7 @@
   {
     "id": "F218",
     "description": "Prevent Algadesk KB pages from linking to full document management.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Knowledge base and attachments"
     ]

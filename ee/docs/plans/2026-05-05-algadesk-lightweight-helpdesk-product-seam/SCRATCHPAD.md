@@ -333,3 +333,14 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 
 - `cd server && npx vitest run src/test/unit/clients/algadeskClientContactComposition.contract.test.ts 'src/test/unit/app/msp/clients/[id]/page.productComposition.test.tsx'`
   - Result: pass (5 tests).
+- (2026-05-05) Completed F212-F218 and T013 with KB composition/API contract coverage.
+- Added `server/src/test/unit/kb/algadeskKnowledgeBase.contract.test.ts`:
+  - Verifies MSP and portal KB page compositions are wired (`/msp/knowledge-base`, `/client-portal/knowledge-base`).
+  - Verifies KB list/view/create/edit/publish surfaces are exposed via API route handlers (`kb-articles` list/item/publish/archive routes).
+  - Verifies KB UI components do not link to full document-library routes (`/msp/documents`, `/client-portal/documents`).
+- Scope note: this is confidence-building contract coverage (static/route-surface) consistent with plan non-goal of exhaustive per-feature integration.
+
+## Commands Run (additional)
+
+- `cd server && npx vitest run src/test/unit/kb/algadeskKnowledgeBase.contract.test.ts`
+  - Result: pass (3 tests).

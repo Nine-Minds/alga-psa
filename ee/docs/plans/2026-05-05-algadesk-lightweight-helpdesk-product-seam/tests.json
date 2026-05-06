@@ -125,7 +125,7 @@
   {
     "id": "T012",
     "description": "Component/integration: Algadesk client and contact views expose CRUD/support ticket context while hiding contracts, billing config, tax, service catalog, assets, projects, documents, and surveys.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F191",
       "F194",
@@ -138,7 +138,7 @@
   {
     "id": "T013",
     "description": "Integration: Algadesk MSP and portal KB pages can list/view articles and MSP users can create/edit/publish according to RBAC without linking to full document management.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F212",
       "F213",
