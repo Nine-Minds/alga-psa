@@ -770,7 +770,7 @@
   {
     "id": "R097",
     "description": "Return structured 403 PRODUCT_ACCESS_DENIED for denied Algadesk API requests.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API enforcement remediation"
     ]

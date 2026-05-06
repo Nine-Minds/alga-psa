@@ -194,3 +194,6 @@ Working notes for remediating the current Algadesk implementation. This plan exi
 - Added static contract coverage: `server/src/test/unit/api/standaloneExtensionIntegrationProductAccess.contract.test.ts`.
 - Validation run (pass): `cd server && npm run typecheck -- --pretty false`.
 - Validation run (pass): `cd server && npx vitest run src/test/unit/api/standaloneExtensionIntegrationProductAccess.contract.test.ts --reporter=dot`.
+- (2026-05-06) Completed structured product-denied response normalization for standalone extension/integration guards (R097).
+- Added behavior test `server/src/test/unit/api/standaloneProductGuards.test.ts` proving denied product access returns `403` with `error.code = PRODUCT_ACCESS_DENIED` and capability/product details.
+- Validation run (pass): `cd server && npx vitest run src/test/unit/api/standaloneProductGuards.test.ts --reporter=dot`.
