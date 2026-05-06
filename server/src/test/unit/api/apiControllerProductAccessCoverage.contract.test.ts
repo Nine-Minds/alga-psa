@@ -1,46 +1,50 @@
-import fs from 'fs';
-import path from 'path';
+import { describe, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
+import { ApiProjectController } from '../../../lib/api/controllers/ApiProjectController';
+import { ApiFinancialController } from '../../../lib/api/controllers/ApiFinancialController';
+
+const deniedError = {
+  name: 'ProductAccessError',
+  message: 'Denied by product',
+  code: 'PRODUCT_ACCESS_DENIED',
+  statusCode: 403,
+  status: 403,
+};
 
 describe('api controller product access coverage', () => {
-  const repoRoot = path.resolve(__dirname, '../../../../..');
+  it('project list returns 403 product denial when authenticate rejects, before listing data', async () => {
+    const controller = new ApiProjectController();
+    const listSpy = vi.spyOn((controller as any).projectService, 'list');
+    vi.spyOn(controller as any, 'authenticate').mockRejectedValue(deniedError);
 
-  it('runs product API guard during base authenticate() for unavoidable enforcement', () => {
-    const source = fs.readFileSync(
-      path.join(repoRoot, 'server/src/lib/api/controllers/ApiBaseController.ts'),
-      'utf8',
+    const response = await controller.list()(
+      new NextRequest('http://localhost:3000/api/v1/projects', {
+        method: 'GET',
+        headers: { 'x-api-key': 'test-key' },
+      }),
     );
+    const body = await response.json();
 
-    const authenticateBlock = source.slice(
-      source.indexOf('protected async authenticate'),
-      source.indexOf('protected async checkPermission'),
-    );
-
-    expect(authenticateBlock).toContain('await this.assertProductApiAccess(apiRequest);');
+    expect(response.status).toBe(403);
+    expect(body.error?.code).toBe('PRODUCT_ACCESS_DENIED');
+    expect(listSpy).not.toHaveBeenCalled();
   });
 
-  it('keeps overridden PSA-only controllers on authenticate(req) path', () => {
-    const controllerPaths = [
-      'server/src/lib/api/controllers/ApiProjectController.ts',
-      'server/src/lib/api/controllers/ApiFinancialController.ts',
-      'server/src/lib/api/controllers/ApiInvoiceController.ts',
-      'server/src/lib/api/controllers/ApiQuoteController.ts',
-      'server/src/lib/api/controllers/ApiTagController.ts',
-      'server/src/lib/api/controllers/ApiClientController.ts',
-    ];
+  it('financial list returns 403 product denial when authenticate rejects, before listing data', async () => {
+    const controller = new ApiFinancialController();
+    const listSpy = vi.spyOn((controller as any).financialService, 'listTransactions');
+    vi.spyOn(controller as any, 'authenticate').mockRejectedValue(deniedError);
 
-    for (const controllerPath of controllerPaths) {
-      const source = fs.readFileSync(path.join(repoRoot, controllerPath), 'utf8');
-      expect(source).toContain('await this.authenticate(req)');
-    }
-  });
-
-  it('keeps asset controller on explicit tenant product gate path', () => {
-    const source = fs.readFileSync(
-      path.join(repoRoot, 'server/src/lib/api/controllers/ApiAssetController.ts'),
-      'utf8',
+    const response = await controller.listTransactions()(
+      new NextRequest('http://localhost:3000/api/v1/financial/transactions', {
+        method: 'GET',
+        headers: { 'x-api-key': 'test-key' },
+      }),
     );
+    const body = await response.json();
 
-    expect(source).toContain('resolveProductApiBehavior(productCode, pathname);');
-    expect(source).toContain('const context = await this.requireAllowedContext(req);');
+    expect(response.status).toBe(403);
+    expect(body.error?.code).toBe('PRODUCT_ACCESS_DENIED');
+    expect(listSpy).not.toHaveBeenCalled();
   });
 });

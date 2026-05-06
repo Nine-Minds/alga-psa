@@ -606,3 +606,4 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
     - Validates portal contact public reply path and confirms persisted public comment.
   - Execution note:
     - This Playwright scenario was added but not executed in this environment during this pass.
+- (2026-05-06) Supersession note: remediation implementation tracking is now authoritative in `ee/docs/plans/2026-05-06-algadesk-remediation-product-seam/` until all remediation blockers are resolved.

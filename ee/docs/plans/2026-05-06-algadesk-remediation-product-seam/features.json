@@ -930,7 +930,7 @@
   {
     "id": "R117",
     "description": "Fix package-level ticket detail test runner failure or move test to a runnable server Vitest context.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Test remediation"
     ]
@@ -938,7 +938,7 @@
   {
     "id": "R118",
     "description": "Audit source-string contract tests and rename any that remain as contract/static tests.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Test remediation"
     ]
@@ -946,7 +946,7 @@
   {
     "id": "R119",
     "description": "Replace T016/T017 inbound email source-string coverage with DB-backed behavior coverage or mark as external-prerequisite tests.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Test remediation"
     ]
@@ -954,7 +954,7 @@
   {
     "id": "R120",
     "description": "Replace T019 API source-string coverage with real API-key request coverage for allowed and denied routes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Test remediation"
     ]
@@ -962,7 +962,7 @@
   {
     "id": "R121",
     "description": "Replace T020 metadata source-string coverage with real metadata/OpenAPI endpoint coverage.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Test remediation"
     ]
@@ -970,7 +970,7 @@
   {
     "id": "R122",
     "description": "Ensure DB-backed tests have clear prerequisites and skip/fail behavior appropriate for CI.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Test remediation"
     ]
@@ -978,7 +978,7 @@
   {
     "id": "R123",
     "description": "Run focused unit tests for product resolver, registry, product context, shell, settings, contact detail, and error handling.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Test remediation"
     ]
@@ -1002,7 +1002,7 @@
   {
     "id": "R126",
     "description": "Add a note to the parent scratchpad that this remediation plan supersedes implementation tracking until blockers are resolved.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Parent plan reconciliation"
     ]

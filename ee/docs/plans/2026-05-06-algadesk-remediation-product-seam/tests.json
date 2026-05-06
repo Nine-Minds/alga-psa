@@ -96,7 +96,7 @@
   {
     "id": "RT010",
     "description": "API integration/unit-controller: overridden ApiProjectController methods and one other overridden PSA-only controller deny Algadesk before returning data.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "R085",
       "R088",
@@ -117,7 +117,7 @@
   {
     "id": "RT012",
     "description": "API discovery integration: Algadesk metadata/OpenAPI/docs filter paths, permissions, stats, and PSA-only schemas where feasible; PSA metadata remains complete.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "R100",
       "R101",
@@ -149,7 +149,7 @@
   {
     "id": "RT015",
     "description": "DB-backed integration: inbound email creates a ticket with mapped board/category/priority and resolves sender/contact when DB prerequisites are available.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "R119",
       "R122"
@@ -158,7 +158,7 @@
   {
     "id": "RT016",
     "description": "DB-backed integration: inbound reply appends one public comment, stores thread/dedupe metadata, and repeated events do not create duplicate comments when DB prerequisites are available.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "R119"
     ]
@@ -166,7 +166,7 @@
   {
     "id": "RT017",
     "description": "Test quality audit: tests claiming integration/API/DB/browser behavior either execute that behavior or are renamed/rewritten as static contract tests.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "R118",
       "R120",

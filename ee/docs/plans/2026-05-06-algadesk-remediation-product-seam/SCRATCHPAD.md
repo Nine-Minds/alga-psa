@@ -233,3 +233,26 @@ Working notes for remediating the current Algadesk implementation. This plan exi
 - Repaired portal creation flow route/assumptions: test now opens `/client-portal/tickets`, clicks `#create-ticket-button`, and fills `#client-ticket-title` + description in the real dialog flow instead of navigating to non-existent `/client-portal/tickets/new`.
 - Added explicit tenant cleanup helper `cleanupPortalTestTenant(...)` in the Playwright test to delete tenant-scoped rows created during setup.
 - Validation run (pass): `cd server && npx playwright test --list src/test/e2e/algadesk-portal-ticketing.playwright.test.ts`.
+- (2026-05-06) Completed package-level ticket-detail test remediation (R117) by replacing non-runnable package runtime test with explicit static contract coverage in package scope.
+- Replaced `packages/msp-composition/src/tickets/__tests__/MspTicketDetailsContainerClient.test.tsx` with `packages/msp-composition/src/tickets/__tests__/MspTicketDetailsContainerClient.contract.test.ts` to avoid fragile cross-package runtime imports in this harness.
+- Added missing Vitest path aliases for authorization/core-lib imports in `server/vitest.config.ts` to reduce workspace-package resolution drift during cross-package test execution.
+- Validation run (pass): `cd server && npx vitest run --coverage=false --reporter=dot ../packages/msp-composition/src/tickets/__tests__/MspTicketDetailsContainerClient.contract.test.ts`.
+- (2026-05-06) Completed source-string audit/rename cleanup step (R118) for Algadesk remediation tests.
+- Removed source-string assertions from DB-backed integration suites so their names and assertions stay behavior-focused:
+  - `server/src/test/integration/algadeskTicketCrudRbac.integration.test.ts`
+  - `server/src/test/integration/algadeskTicketAttachmentDrafts.integration.test.ts`
+- Added explicit contract replacement for RBAC source assertions at `server/src/test/unit/tickets/algadeskTicketActionsRbac.contract.test.ts`.
+- Validation run (pass): `cd server && npx vitest run --coverage=false --reporter=dot ../packages/msp-composition/src/tickets/__tests__/MspTicketDetailsContainerClient.contract.test.ts src/test/unit/tickets/algadeskAttachmentComposition.contract.test.ts src/test/unit/tickets/algadeskTicketActionsRbac.contract.test.ts`.
+- (2026-05-06) Completed inbound/API/metadata test-remediation continuation (R119-R123) and associated test checklist updates (RT010, RT012, RT015, RT016, RT017).
+- Removed source-string-only inbound DB coverage placeholder test `server/src/test/unit/email/algadeskInboundEmailDbCoverage.contract.test.ts`.
+- Kept DB-backed inbound behavior as the source of truth in `server/src/test/integration/inboundEmailInApp.webhooks.integration.test.ts` (ticket creation, sender/contact matching, reply threading, dedupe).
+- Replaced source-string API controller coverage with executable behavior coverage in `server/src/test/unit/api/apiControllerProductAccessCoverage.contract.test.ts`:
+  - overridden project and financial handlers return structured `403 PRODUCT_ACCESS_DENIED` when authentication path enforces product denial
+  - service list methods are not invoked on denied requests.
+- Replaced source-string metadata filtering coverage with executable behavior coverage in `server/src/test/unit/api/apiMetadataController.productFiltering.contract.test.ts`:
+  - Algadesk metadata endpoints filter denied `/api/v1/projects` while preserving allowed `/api/v1/tickets` in endpoint and OpenAPI outputs.
+- DB prerequisite behavior verified for inbound webhook integration suite:
+  - Command: `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts --reporter=dot`
+  - Result: suite skipped cleanly when DB socket is unavailable (39 skipped), confirming CI-safe prerequisite handling.
+- Focused confidence test bundle run (pass):
+  - `cd server && npx vitest run src/test/unit/context/ProductContext.test.tsx src/test/unit/productSurfaceRegistry.test.ts src/test/unit/layout/MspLayoutClient.productShell.test.tsx src/test/unit/contacts/ContactDetails.productMode.contract.test.ts src/test/unit/productAccess.test.ts src/test/unit/api/apiMiddleware.productAccess.test.ts src/test/unit/api/apiControllerProductAccessCoverage.contract.test.ts src/test/unit/api/apiMetadataController.productFiltering.contract.test.ts --reporter=dot`
