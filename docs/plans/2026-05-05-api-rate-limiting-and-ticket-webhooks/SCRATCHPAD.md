@@ -231,6 +231,22 @@ implementation progresses; update earlier entries when something changes.
   upsert/clear, so the test simulates that exact write+invalidate sequence
   and verifies the bucket honours the new limit on the very next
   `tryConsume`.
+- (2026-05-06) Reusable webhook delivery test fixture: in-memory mock Redis
+  implementing `RedisClientLike` with full ZSET semantics (`zAdd`/`zRem`/
+  `zRangeByScore`/`zCard`) plus an ephemeral `node:http` stub server keyed
+  off `WEBHOOK_SSRF_ALLOW_PRIVATE=true`. The webhook model + autoDisable are
+  mocked at the module boundary and the queue is given a 999_999 ms
+  `checkIntervalMs` so the `setInterval` poller never races a manual
+  `queue.process()` call. `(WebhookDeliveryQueue as any).instance = null` is
+  required between tests to reset the singleton; the public API has no
+  `resetInstance`.
+- (2026-05-06) `T026` exercises tenant isolation at the subscriber/event-bus
+  seam without standing up a real Redis-backed event bus: mocking
+  `@/lib/eventBus` to a stub that records `subscribe()` callbacks lets the
+  test invoke the captured handler directly with a forged
+  `TICKET_ASSIGNED` event. `webhookModel.listForEventType` then proves the
+  query is scoped to the publishing tenant and `WebhookDeliveryQueue.enqueue`
+  is spied to verify only the matching-tenant webhook gets a job.
 
 ## Commands / Runbooks
 

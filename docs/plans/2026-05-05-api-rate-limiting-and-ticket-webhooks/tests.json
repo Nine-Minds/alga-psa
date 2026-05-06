@@ -146,13 +146,13 @@
   {
     "id": "T025",
     "description": "Integration (vitest + real Redis + ephemeral http server, server/src/test/integration/webhookDelivery.happyPath.test.ts): create a webhook subscribed to ticket.assigned in tenant A; publishEvent({ eventType:'TICKET_ASSIGNED', payload:{ tenantId:'A', ticket_id, ... } }); wait for the WebhookDeliveryQueue poller; assert (a) the stub HTTP server receives one POST, (b) the body has the documented envelope { event_id, event_type:'ticket.assigned', occurred_at, tenant_id:'A', data }, (c) X-Alga-Signature header verifies, (d) a webhook_deliveries row exists with status='delivered' and attempt_number=1.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024", "F025", "F026", "F027", "F028", "F030", "F032", "F033", "F035", "F036", "F037", "F038"]
   },
   {
     "id": "T026",
     "description": "Integration (vitest + real Redis + ephemeral http server, server/src/test/integration/webhookDelivery.tenantIsolation.test.ts): two webhooks — A subscribed to ticket.assigned in tenant TA, B subscribed in tenant TB. Publish TICKET_ASSIGNED with tenantId=TA. Assert webhook A is called once, webhook B is never called, no webhook_deliveries row is created in tenant TB.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F035"]
   },
   {
