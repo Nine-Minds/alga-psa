@@ -2,7 +2,7 @@
   {
     "id": "RT001",
     "description": "Validation: `cd server && npm run typecheck -- --pretty false` passes after auth/session and sidebar type remediation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "R023",
       "R066"
@@ -22,7 +22,7 @@
   {
     "id": "RT003",
     "description": "Component/unit: ProductProvider resolves Algadesk sessions as isAlgadesk and PSA sessions as isPsa, including documented fallback behavior for missing product_code.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "R021",
       "R022",

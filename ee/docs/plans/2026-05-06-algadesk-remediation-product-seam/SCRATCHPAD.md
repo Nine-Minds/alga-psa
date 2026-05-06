@@ -101,3 +101,19 @@ Working notes for remediating the current Algadesk implementation. This plan exi
 - Should Algadesk shell be a minimal wrapper around existing Sidebar/Header primitives or a new product-specific shell component?
 - Should parent plan implemented booleans be reset or annotated as superseded?
 - Which inbound email provider path is the minimum runnable behavior test for remediation?
+
+## Remediation Execution Log
+
+- (2026-05-06) Completed hygiene baseline items R001-R005.
+- (2026-05-06) Isolated local-secret/local-env noise by intentionally leaving `.env.localtest` modified and excluding it from staged remediation commits.
+- (2026-05-06) Isolated lockfile drift by intentionally leaving `package-lock.json` unstaged pending explicit dependency intent.
+- (2026-05-06) Removed transient review artifact `progress.md`.
+- (2026-05-06) Established commit hygiene runbook: stage by explicit path only, verify with `git status --short` before each commit.
+- (2026-05-06) Reconfirmed reviewed range/blockers in this scratchpad and PRD remain the active remediation baseline.
+- (2026-05-06) Completed auth/session/type remediation batch (R006-R023) plus sidebar typing fixes (R066-R067).
+- Shared NextAuth augmentation now owns `product_code`; server local augmentation reduced to shared import only to avoid declaration drift.
+- `fetchTenantSubscriptionInfo` now selects and returns `tenants.product_code`; JWT callback sets/refreshes `token.product_code`; session callback maps to `session.user.product_code` with PSA fallback for rollout compatibility.
+- `ProductProvider` now reads typed `session.user.product_code` directly (no unsafe cast).
+- `filterMenuSectionsByProduct` generic was relaxed to accept structural section types without requiring `Record<string, unknown>`, resolving `SidebarWithFeatureFlags` type errors.
+- Validation run (pass): `cd server && npm run typecheck -- --pretty false`.
+- Validation run (pass): `cd server && npx vitest run src/test/unit/context/ProductContext.test.tsx --reporter=dot`.

@@ -190,7 +190,7 @@ export function isApiVisibleInMetadata(productCode: ProductCode, path: string): 
 }
 
 type MenuLikeItem = { href?: string; subItems?: MenuLikeItem[] };
-type MenuLikeSection<T extends MenuLikeItem> = { items: T[] } & Record<string, unknown>;
+type MenuLikeSection<T extends MenuLikeItem> = { items: T[] };
 
 function includeByHref(productCode: ProductCode, href?: string): boolean {
   if (!href || href.startsWith('http')) return true;

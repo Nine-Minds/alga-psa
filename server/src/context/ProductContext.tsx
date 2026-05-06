@@ -23,7 +23,7 @@ export function ProductProvider({ children }: ProductProviderProps) {
   const isLoading = status === 'loading';
 
   const { productCode, isMisconfigured } = useMemo(() => {
-    return resolveProductCode((session?.user as { product_code?: string } | undefined)?.product_code);
+    return resolveProductCode(session?.user?.product_code);
   }, [session?.user]);
 
   const value = useMemo<ProductContextValue>(

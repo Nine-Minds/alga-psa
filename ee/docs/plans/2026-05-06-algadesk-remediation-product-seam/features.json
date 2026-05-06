@@ -2,7 +2,7 @@
   {
     "id": "R001",
     "description": "Revert or isolate `.env.localtest` credential changes before committing remediation work.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Hygiene and baseline"
     ]
@@ -10,7 +10,7 @@
   {
     "id": "R002",
     "description": "Revert or justify `package-lock.json` package version regressions before committing remediation work.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Hygiene and baseline"
     ]
@@ -18,7 +18,7 @@
   {
     "id": "R003",
     "description": "Remove or deliberately commit only relevant review artifacts; do not accidentally commit transient `progress.md`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Hygiene and baseline"
     ]
@@ -26,7 +26,7 @@
   {
     "id": "R004",
     "description": "Record the current reviewed commit range and blockers in the remediation scratchpad.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Hygiene and baseline"
     ]
@@ -34,7 +34,7 @@
   {
     "id": "R005",
     "description": "Establish a clean git status baseline for remediation commits excluding unrelated local changes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Hygiene and baseline"
     ]
@@ -42,7 +42,7 @@
   {
     "id": "R006",
     "description": "Move product_code NextAuth type augmentation to the shared auth package type declaration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
     ]
@@ -50,7 +50,7 @@
   {
     "id": "R007",
     "description": "Remove conflicting product_code declaration from server-only NextAuth augmentation or make it exactly match the shared declaration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
     ]
@@ -58,7 +58,7 @@
   {
     "id": "R008",
     "description": "Add product_code to JWT type augmentation consistently.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
     ]
@@ -66,7 +66,7 @@
   {
     "id": "R009",
     "description": "Add product_code to Session.user type augmentation consistently.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
     ]
@@ -74,7 +74,7 @@
   {
     "id": "R010",
     "description": "Add product_code to ExtendedUser or local auth runtime user shape where token/session mapping requires it.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
     ]
@@ -82,7 +82,7 @@
   {
     "id": "R011",
     "description": "Select product_code from tenants in tenant subscription/product info lookup.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
     ]
@@ -90,7 +90,7 @@
   {
     "id": "R012",
     "description": "Return product_code from fetchTenantSubscriptionInfo or equivalent auth helper.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
     ]
@@ -98,7 +98,7 @@
   {
     "id": "R013",
     "description": "Set token.product_code on initial sign-in for tenant users.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
     ]
@@ -106,7 +106,7 @@
   {
     "id": "R014",
     "description": "Refresh token.product_code on periodic tenant info refresh.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
     ]
@@ -114,7 +114,7 @@
   {
     "id": "R015",
     "description": "Map token.product_code into session.user.product_code in session callback.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
     ]
@@ -122,7 +122,7 @@
   {
     "id": "R016",
     "description": "Preserve existing plan mapping in auth callbacks.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
     ]
@@ -130,7 +130,7 @@
   {
     "id": "R017",
     "description": "Preserve existing addons mapping in auth callbacks.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
     ]
@@ -138,7 +138,7 @@
   {
     "id": "R018",
     "description": "Preserve existing trial fields in auth callbacks.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
     ]
@@ -146,7 +146,7 @@
   {
     "id": "R019",
     "description": "Make ProductProvider resolve Algadesk from session without unsafe casts where possible.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
     ]
@@ -154,7 +154,7 @@
   {
     "id": "R020",
     "description": "Define safe fallback behavior for sessions without product_code during rollout.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
     ]
@@ -162,7 +162,7 @@
   {
     "id": "R021",
     "description": "Add unit coverage proving an Algadesk session resolves `useProduct().isAlgadesk` true.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
     ]
@@ -170,7 +170,7 @@
   {
     "id": "R022",
     "description": "Add regression coverage proving a PSA session resolves `useProduct().isPsa` true.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
     ]
@@ -178,7 +178,7 @@
   {
     "id": "R023",
     "description": "Run server typecheck after auth/session fixes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
     ]
@@ -522,7 +522,7 @@
   {
     "id": "R066",
     "description": "Fix SidebarWithFeatureFlags generic return types so filtered sections typecheck as NavigationSection arrays.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk MSP shell remediation"
     ]
@@ -530,7 +530,7 @@
   {
     "id": "R067",
     "description": "Ensure product-filtered settings sections typecheck without unsafe broad casts.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Algadesk MSP shell remediation"
     ]

@@ -10,6 +10,7 @@ declare module 'next-auth' {
     clientId?: string;
     contactId?: string;
     plan?: string;
+    product_code?: 'psa' | 'algadesk';
     addons?: string[];
     max_concurrent_sessions?: number;
     two_factor_enabled?: boolean;
@@ -40,6 +41,7 @@ declare module 'next-auth' {
       clientId?: string;
       contactId?: string;
       plan?: string;
+      product_code?: 'psa' | 'algadesk';
       addons?: string[];
       trial_end?: string | null;
       subscription_status?: string | null;
@@ -63,6 +65,7 @@ declare module 'next-auth' {
     clientId?: string;
     contactId?: string;
     plan?: string;
+    product_code?: 'psa' | 'algadesk';
     addons?: string[];
     trial_end?: string | null;
     subscription_status?: string | null;

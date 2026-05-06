@@ -121,7 +121,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
-    return filterMenuSectionsByProduct(productCode, settingsNavigationSections as unknown as NavigationSection[]);
+    return filterMenuSectionsByProduct(productCode, settingsNavigationSections);
   }, [productCode]);
 
   return (
