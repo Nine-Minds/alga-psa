@@ -278,3 +278,10 @@ implementation progresses; update earlier entries when something changes.
   `api_rate_limit_settings` model for reads/writes, and invalidate the
   in-process API rate-limit config cache immediately after every write so UI
   updates do not wait on the 30s TTL.
+- (2026-05-05) **F022 complete.** `AdminApiKeysSetup` now loads each key's
+  effective API rate-limit settings plus live bucket state and renders a new
+  "Rate Limit" column with inline override editing and reset. The column
+  shows the effective burst / refill values, the config source
+  (per-key override vs tenant default vs hard default), and the current
+  remaining tokens from `TokenBucketRateLimiter.getState('api', tenant,
+  apiKeyId)`.

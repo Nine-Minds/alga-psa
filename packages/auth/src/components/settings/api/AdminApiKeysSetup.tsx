@@ -10,7 +10,15 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import type { ColumnDefinition } from '@alga-psa/types';
-import { adminListApiKeys, adminDeactivateApiKey } from '@alga-psa/auth/actions';
+import {
+  adminListApiKeys,
+  adminDeactivateApiKey,
+  clearApiRateLimitForKey,
+  getApiRateLimitForKey,
+  setApiRateLimitForKey,
+  type ApiRateLimitSettingsValue,
+  type ApiRateLimitSettingsView,
+} from '@alga-psa/auth/actions';
 import { Search, RotateCcw } from 'lucide-react';
 
 export interface AdminApiKey {
@@ -51,6 +59,10 @@ AdminSearchInput.displayName = 'AdminSearchInput';
 
 export default function AdminApiKeysSetup() {
   const [apiKeys, setApiKeys] = useState<AdminApiKey[]>([]);
+  const [rateLimitsByKey, setRateLimitsByKey] = useState<Record<string, ApiRateLimitSettingsView>>({});
+  const [rateLimitDrafts, setRateLimitDrafts] = useState<Record<string, ApiRateLimitSettingsValue>>({});
+  const [editingRateLimitKeyId, setEditingRateLimitKeyId] = useState<string | null>(null);
+  const [savingRateLimitKeyId, setSavingRateLimitKeyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Pagination state
@@ -123,6 +135,30 @@ export default function AdminApiKeysSetup() {
     loadApiKeys();
   }, []);
 
+  const seedRateLimitDraft = useCallback((view: ApiRateLimitSettingsView) => {
+    setRateLimitDrafts((previous) => ({
+      ...previous,
+      [view.apiKeyId]: view.override ?? view.effective,
+    }));
+  }, []);
+
+  const loadRateLimits = useCallback(async (keys: AdminApiKey[]) => {
+    if (keys.length === 0) {
+      setRateLimitsByKey({});
+      setRateLimitDrafts({});
+      return;
+    }
+
+    const views = await Promise.all(keys.map((key) => getApiRateLimitForKey(key.api_key_id)));
+    const nextViews = Object.fromEntries(views.map((view) => [view.apiKeyId, view]));
+    const nextDrafts = Object.fromEntries(
+      views.map((view) => [view.apiKeyId, view.override ?? view.effective]),
+    );
+
+    setRateLimitsByKey(nextViews);
+    setRateLimitDrafts(nextDrafts);
+  }, []);
+
   const loadApiKeys = async () => {
     try {
       const keysRaw = await adminListApiKeys();
@@ -133,6 +169,7 @@ export default function AdminApiKeysSetup() {
         last_used_at: key.last_used_at ? new Date(key.last_used_at) : null,
         expires_at: key.expires_at ? new Date(key.expires_at) : null,
       }));
+      await loadRateLimits(formattedKeys);
       setApiKeys(formattedKeys);
       setError(null);
     } catch (error) {
@@ -140,6 +177,70 @@ export default function AdminApiKeysSetup() {
       setError('Failed to load API keys. Please ensure you have admin privileges.');
     }
   };
+
+  const handleRateLimitDraftChange = useCallback((
+    apiKeyId: string,
+    field: keyof ApiRateLimitSettingsValue,
+    value: string,
+  ) => {
+    const parsed = Number.parseInt(value, 10);
+    setRateLimitDrafts((previous) => ({
+      ...previous,
+      [apiKeyId]: {
+        ...(previous[apiKeyId] ?? { maxTokens: 120, refillPerMin: 60 }),
+        [field]: Number.isFinite(parsed) ? parsed : 0,
+      },
+    }));
+  }, []);
+
+  const handleEditRateLimit = useCallback((view: ApiRateLimitSettingsView) => {
+    seedRateLimitDraft(view);
+    setEditingRateLimitKeyId(view.apiKeyId);
+  }, [seedRateLimitDraft]);
+
+  const handleCancelRateLimitEdit = useCallback((view: ApiRateLimitSettingsView) => {
+    seedRateLimitDraft(view);
+    setEditingRateLimitKeyId(null);
+  }, [seedRateLimitDraft]);
+
+  const handleSaveRateLimit = useCallback(async (apiKeyId: string) => {
+    const draft = rateLimitDrafts[apiKeyId];
+    if (!draft) {
+      return;
+    }
+
+    try {
+      setSavingRateLimitKeyId(apiKeyId);
+      const updatedView = await setApiRateLimitForKey(apiKeyId, draft);
+      setRateLimitsByKey((previous) => ({ ...previous, [apiKeyId]: updatedView }));
+      seedRateLimitDraft(updatedView);
+      setEditingRateLimitKeyId(null);
+      setError(null);
+    } catch (error) {
+      console.error('Failed to save API rate limit override:', error);
+      setError('Failed to save API rate limit override.');
+    } finally {
+      setSavingRateLimitKeyId(null);
+    }
+  }, [rateLimitDrafts, seedRateLimitDraft]);
+
+  const handleClearRateLimit = useCallback(async (apiKeyId: string) => {
+    try {
+      setSavingRateLimitKeyId(apiKeyId);
+      const updatedView = await clearApiRateLimitForKey(apiKeyId);
+      setRateLimitsByKey((previous) => ({ ...previous, [apiKeyId]: updatedView }));
+      seedRateLimitDraft(updatedView);
+      if (editingRateLimitKeyId === apiKeyId) {
+        setEditingRateLimitKeyId(null);
+      }
+      setError(null);
+    } catch (error) {
+      console.error('Failed to clear API rate limit override:', error);
+      setError('Failed to clear API rate limit override.');
+    } finally {
+      setSavingRateLimitKeyId(null);
+    }
+  }, [editingRateLimitKeyId, seedRateLimitDraft]);
 
   const handleDeactivateKey = async (keyId: string) => {
     try {
@@ -186,6 +287,120 @@ export default function AdminApiKeysSetup() {
       render: (value: Date | null) => value ? new Date(value).toLocaleString() : 'Never',
     },
     {
+      title: 'Rate Limit',
+      dataIndex: 'api_key_id',
+      width: '25%',
+      render: (_: string, record: AdminApiKey) => {
+        const view = rateLimitsByKey[record.api_key_id];
+        if (!view) {
+          return <span className="text-sm text-gray-500">Loading…</span>;
+        }
+
+        const draft = rateLimitDrafts[record.api_key_id] ?? view.override ?? view.effective;
+        const isEditing = editingRateLimitKeyId === record.api_key_id;
+        const isSaving = savingRateLimitKeyId === record.api_key_id;
+        const sourceLabel =
+          view.source === 'key'
+            ? 'Override'
+            : view.source === 'tenant'
+              ? 'Tenant default'
+              : 'System default';
+
+        return (
+          <div className="space-y-2 text-sm">
+            <div>
+              <div className="font-medium">
+                {view.effective.maxTokens} burst / {view.effective.refillPerMin} per min
+              </div>
+              <div className="text-gray-500">
+                Source: {sourceLabel}
+                {view.bucketState
+                  ? ` • Remaining: ${view.bucketState.remaining}/${view.bucketState.maxTokens}`
+                  : ' • Remaining: unavailable'}
+              </div>
+            </div>
+
+            {isEditing ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    id={`api-rate-limit-max-tokens-${record.api_key_id}`}
+                    type="number"
+                    min={1}
+                    value={String(draft.maxTokens)}
+                    onChange={(event) =>
+                      handleRateLimitDraftChange(record.api_key_id, 'maxTokens', event.target.value)
+                    }
+                  />
+                  <Input
+                    id={`api-rate-limit-refill-${record.api_key_id}`}
+                    type="number"
+                    min={1}
+                    value={String(draft.refillPerMin)}
+                    onChange={(event) =>
+                      handleRateLimitDraftChange(record.api_key_id, 'refillPerMin', event.target.value)
+                    }
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    id={`save-api-rate-limit-${record.api_key_id}`}
+                    size="sm"
+                    onClick={() => handleSaveRateLimit(record.api_key_id)}
+                    disabled={isSaving}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    id={`cancel-api-rate-limit-${record.api_key_id}`}
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleCancelRateLimitEdit(view)}
+                    disabled={isSaving}
+                  >
+                    Cancel
+                  </Button>
+                  {view.override ? (
+                    <Button
+                      id={`reset-api-rate-limit-${record.api_key_id}`}
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleClearRateLimit(record.api_key_id)}
+                      disabled={isSaving}
+                    >
+                      Reset
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Button
+                  id={`edit-api-rate-limit-${record.api_key_id}`}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleEditRateLimit(view)}
+                >
+                  {view.override ? 'Edit' : 'Override'}
+                </Button>
+                {view.override ? (
+                  <Button
+                    id={`clear-api-rate-limit-${record.api_key_id}`}
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleClearRateLimit(record.api_key_id)}
+                    disabled={isSaving}
+                  >
+                    Reset
+                  </Button>
+                ) : null}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
       title: 'Status',
       dataIndex: 'active',
       width: '10%',
@@ -212,7 +427,18 @@ export default function AdminApiKeysSetup() {
         ) : null
       ),
     }
-  ], [handleDeactivateKey]);
+  ], [
+    editingRateLimitKeyId,
+    handleCancelRateLimitEdit,
+    handleClearRateLimit,
+    handleDeactivateKey,
+    handleEditRateLimit,
+    handleRateLimitDraftChange,
+    handleSaveRateLimit,
+    rateLimitDrafts,
+    rateLimitsByKey,
+    savingRateLimitKeyId,
+  ]);
 
   return (
     <div className="space-y-6">

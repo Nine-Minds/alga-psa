@@ -128,7 +128,7 @@
   {
     "id": "F022",
     "description": "Add a Rate Limit column + inline edit form to AdminApiKeysSetup; show effective per-key limit, override input, and current remaining tokens via TokenBucketRateLimiter.getState.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {

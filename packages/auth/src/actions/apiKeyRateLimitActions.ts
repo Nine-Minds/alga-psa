@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import { createTenantKnex } from '@alga-psa/db';
 import { IRole } from '@alga-psa/types';
+import { TokenBucketRateLimiter } from '@alga-psa/email';
 
 import { withAuth } from '../lib/withAuth';
 import { getUserRoles } from './policyActions';
@@ -32,6 +33,10 @@ export interface ApiRateLimitSettingsView {
   override: ApiRateLimitSettingsValue | null;
   tenantDefault: ApiRateLimitSettingsValue | null;
   effective: ApiRateLimitSettingsValue;
+  bucketState: {
+    remaining: number;
+    maxTokens: number;
+  } | null;
   source: 'key' | 'tenant' | 'default';
 }
 
@@ -71,10 +76,11 @@ async function buildApiRateLimitSettingsView(
   tenant: string,
   apiKeyId: string,
 ): Promise<ApiRateLimitSettingsView> {
-  const [override, tenantDefault, effective] = await Promise.all([
+  const [override, tenantDefault, effective, bucketState] = await Promise.all([
     getApiRateLimitSettingsRow(tenant, apiKeyId),
     getApiRateLimitSettingsRow(tenant, null),
     resolveApiRateLimitConfig(tenant, apiKeyId),
+    TokenBucketRateLimiter.getInstance().getState('api', tenant, apiKeyId),
   ]);
 
   const effectiveValue: ApiRateLimitSettingsValue = {
@@ -87,6 +93,12 @@ async function buildApiRateLimitSettingsView(
     override: mapSettingsRow(override),
     tenantDefault: mapSettingsRow(tenantDefault),
     effective: effectiveValue,
+    bucketState: bucketState
+      ? {
+          remaining: bucketState.tokens,
+          maxTokens: bucketState.maxTokens,
+        }
+      : null,
     source: override ? 'key' : tenantDefault ? 'tenant' : 'default',
   };
 }
