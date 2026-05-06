@@ -155,6 +155,10 @@ implementation progresses; update earlier entries when something changes.
   `webhookSchemas.ts` already exposed `event_filter.entity_ids`, but the
   `webhooks` table migration and `webhookModel` never persisted `event_filter`
   at all. The subscriber-side entity filter needs that durable field first.
+- (2026-05-05) The v1 subscriber filter stops at `event_filter.entity_ids`.
+  Generic `conditions`, `tags`, and `entity_types` remain schema-only for now
+  per the PRD; the enqueue path simply treats an empty/missing `entity_ids`
+  list as "match all."
 
 ## Commands / Runbooks
 
@@ -488,3 +492,7 @@ implementation progresses; update earlier entries when something changes.
   `server/src/lib/webhooks/webhookModel.ts` so webhook rows now persist and
   return `event_filter` JSON. That closes the storage gap under
   `event_filter.entity_ids` before the subscriber starts enforcing it.
+- (2026-05-05) **F041 complete.** `webhookSubscriber.ts` now enforces
+  `event_filter.entity_ids` before enqueueing jobs: when a webhook row carries
+  a non-empty allowlist, only matching ticket IDs are queued. Missing/empty
+  allowlists still receive all matching event types.

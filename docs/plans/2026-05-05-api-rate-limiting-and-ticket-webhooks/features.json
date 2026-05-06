@@ -248,7 +248,7 @@
   {
     "id": "F041",
     "description": "Implement webhook subscription filtering by entity_ids — when a webhook row has filter.entity_ids set, drop events whose entity_id is not in the set. Skip generic conditions for v1.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Open Questions", "Functional Requirements"]
   },
   {

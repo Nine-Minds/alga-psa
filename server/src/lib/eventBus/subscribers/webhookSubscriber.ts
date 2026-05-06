@@ -69,7 +69,11 @@ async function handleTicketEvent(event: unknown): Promise<void> {
         continue;
       }
 
-      for (const subscriber of subscribers) {
+      const matchingSubscribers = subscribers.filter((subscriber) =>
+        matchesEntityIdFilter(subscriber.eventFilter, internalEvent.payload.ticketId),
+      );
+
+      for (const subscriber of matchingSubscribers) {
         await WebhookDeliveryQueue.getInstance().enqueue({
           webhookId: subscriber.webhookId,
           eventId: internalEvent.id,
@@ -134,4 +138,17 @@ function toTicketWebhookSourceEvent(event: unknown): TicketWebhookBusEvent | nul
     eventType: candidate.eventType as TicketWebhookInternalEvent,
     payload: candidate.payload,
   };
+}
+
+function matchesEntityIdFilter(
+  eventFilter: Record<string, unknown> | null,
+  entityId: string,
+): boolean {
+  const entityIds = eventFilter?.entity_ids;
+
+  if (!Array.isArray(entityIds) || entityIds.length === 0) {
+    return true;
+  }
+
+  return entityIds.includes(entityId);
 }
