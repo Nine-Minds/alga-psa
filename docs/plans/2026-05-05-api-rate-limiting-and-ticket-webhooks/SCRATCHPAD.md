@@ -129,6 +129,10 @@ implementation progresses; update earlier entries when something changes.
   includes `payload.comment.{content,author,isInternal}` but not a persisted
   comment timestamp. The webhook payload builder therefore uses
   `payload.occurredAt` / event timestamp for `comment.timestamp`.
+- (2026-05-05) `TICKET_STATUS_CHANGED` payloads may arrive in either the new
+  domain shape (`previousStatusId`) or an older `changes.status_id.from`
+  style. The webhook payload builder now accepts both so subscriber output
+  stays stable across publishers while the event vocabulary converges.
 
 ## Commands / Runbooks
 
@@ -419,3 +423,8 @@ implementation progresses; update earlier entries when something changes.
   `ticket.comment.added` comment metadata without attachments, resolves tags
   from `tag_mappings`, and caches the base `(tenant,ticket_id)` snapshot for
   60 seconds so a multi-subscriber fan-out does not repeat the same joins.
+- (2026-05-05) **F034 complete.** `ticket.status_changed` payloads from
+  `webhookTicketPayload.ts` now include `previous_status_id` plus a
+  tenant-scoped lookup of `previous_status_name`, using either
+  `payload.previousStatusId` or the older `payload.changes.status_id.from`
+  compatible shape when deriving the prior status.

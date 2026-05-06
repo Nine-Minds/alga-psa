@@ -46,6 +46,8 @@ export type TicketWebhookPayload = {
   due_date: string | null;
   tags: string[];
   url: string;
+  previous_status_id?: string | null;
+  previous_status_name?: string | null;
   changes?: Record<string, NormalizedWebhookChange>;
   comment?: TicketWebhookCommentPayload;
 };
@@ -113,6 +115,14 @@ export async function buildTicketWebhookPayload(
     ...basePayload,
     tags: [...basePayload.tags],
   };
+
+  if (internalEvent.eventType === 'TICKET_STATUS_CHANGED') {
+    const previousStatusId = resolvePreviousStatusId(internalEvent);
+    if (previousStatusId) {
+      payload.previous_status_id = previousStatusId;
+      payload.previous_status_name = await fetchStatusName(knex, tenantId, previousStatusId);
+    }
+  }
 
   const changes = normalizeChanges((internalEvent.payload as { changes?: unknown }).changes);
   if (changes && internalEvent.eventType === 'TICKET_UPDATED') {
@@ -273,6 +283,22 @@ async function fetchTicketTags(
   return tags.map((tag) => tag.tag_text).filter(Boolean);
 }
 
+async function fetchStatusName(
+  knex: Knex,
+  tenantId: string,
+  statusId: string
+): Promise<string | null> {
+  const row = await knex('statuses')
+    .select('name')
+    .where({
+      tenant: tenantId,
+      status_id: statusId,
+    })
+    .first<{ name: string | null }>();
+
+  return row?.name ?? null;
+}
+
 function normalizeChanges(
   changes: unknown
 ): Record<string, NormalizedWebhookChange> | undefined {
@@ -326,6 +352,34 @@ function normalizeCommentPayload(
     timestamp: resolveOccurredAt(internalEvent),
     is_internal: Boolean(candidate.isInternal),
   };
+}
+
+function resolvePreviousStatusId(internalEvent: TicketWebhookSourceEvent): string | undefined {
+  const payload = internalEvent.payload as {
+    previousStatusId?: unknown;
+    changes?: {
+      status_id?: {
+        from?: unknown;
+        previous?: unknown;
+        old?: unknown;
+      };
+    };
+  };
+
+  if (typeof payload.previousStatusId === 'string' && payload.previousStatusId.length > 0) {
+    return payload.previousStatusId;
+  }
+
+  const previousFromChanges =
+    payload.changes?.status_id?.from
+    ?? payload.changes?.status_id?.previous
+    ?? payload.changes?.status_id?.old;
+
+  if (typeof previousFromChanges === 'string' && previousFromChanges.length > 0) {
+    return previousFromChanges;
+  }
+
+  return undefined;
 }
 
 function resolveOccurredAt(internalEvent: TicketWebhookSourceEvent): string {

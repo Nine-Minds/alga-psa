@@ -200,7 +200,7 @@
   {
     "id": "F034",
     "description": "Include `previous_status_id` and `previous_status_name` in `ticket.status_changed` payloads, derived from TICKET_STATUS_CHANGED.payload.changes when available.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Open Questions", "Functional Requirements"]
   },
   {
