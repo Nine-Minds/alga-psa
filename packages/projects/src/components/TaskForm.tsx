@@ -211,6 +211,11 @@ export default function TaskForm({
   const [dragOverChecklistId, setDragOverChecklistId] = useState<string | null>(null);
   const [checklistDropPosition, setChecklistDropPosition] = useState<'before' | 'after' | null>(null);
   const [recentlyDroppedChecklistId, setRecentlyDroppedChecklistId] = useState<string | null>(null);
+  // Tracks whether the latest mousedown landed inside a checklist drag handle.
+  // dragstart fires on the wrapper (the draggable element) and its e.target is
+  // the wrapper, not the original mousedown target — so we capture that origin
+  // here on mousedown and use it to gate dragstart.
+  const checklistDragOriginIsHandleRef = useRef(false);
   const [isCrossProjectMove, setIsCrossProjectMove] = useState<boolean>(false);
   const [selectedDuplicatePhaseId, setSelectedDuplicatePhaseId] = useState<string | null>(null);
   const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false); // State for duplicate dialog
@@ -1148,9 +1153,9 @@ export default function TaskForm({
   };
 
   const handleChecklistDragStart = (e: React.DragEvent, id: string) => {
-    setDraggedChecklistId(id);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', id);
+    requestAnimationFrame(() => setDraggedChecklistId(id));
   };
 
   const handleChecklistDragOver = (e: React.DragEvent, id: string) => {
@@ -1808,13 +1813,29 @@ export default function TaskForm({
                     return (
                       <div
                         key={item.checklist_item_id}
+                        draggable
+                        onMouseDown={(e) => {
+                          const target = e.target as HTMLElement | null;
+                          checklistDragOriginIsHandleRef.current =
+                            !!target && !!target.closest(`.${checklistDnd.dragHandle}`);
+                        }}
+                        onDragStart={(e) => {
+                          if (!checklistDragOriginIsHandleRef.current) {
+                            e.preventDefault();
+                            return;
+                          }
+                          handleChecklistDragStart(e, item.checklist_item_id);
+                        }}
                         onDragOver={(e) => handleChecklistDragOver(e, item.checklist_item_id)}
                         onDrop={(e) => handleChecklistDrop(e, item.checklist_item_id)}
-                        onDragEnd={resetChecklistDragState}
+                        onDragEnd={() => {
+                          checklistDragOriginIsHandleRef.current = false;
+                          resetChecklistDragState();
+                        }}
                       >
-                        {isEditingChecklist && !isAnyDragging && (
+                        {isEditingChecklist && (
                           <div
-                            className={checklistDnd.insertZone}
+                            className={`${checklistDnd.insertZone} ${isAnyDragging ? checklistDnd.insertZoneHidden : ''}`}
                             role="button"
                             tabIndex={-1}
                             title={taskFormT('insertChecklistItem', 'Insert item here')}
@@ -1840,8 +1861,6 @@ export default function TaskForm({
                           } ${isEntering ? checklistDnd.entering : ''}`}
                         >
                           <div
-                            draggable
-                            onDragStart={(e) => handleChecklistDragStart(e, item.checklist_item_id)}
                             className={`${checklistDnd.dragHandle} cursor-grab text-gray-400 flex-none`}
                             title={taskFormT('reorderChecklistItem', 'Drag to reorder')}
                             aria-label={taskFormT('reorderChecklistItem', 'Drag to reorder')}

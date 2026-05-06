@@ -78,6 +78,15 @@
   opacity: 1;
 }
 
+/* While a drag is in progress, hide the insert zone *without* unmounting it.
+ * Conditionally removing it from the DOM at dragstart time mutates the
+ * dragged wrapper's children and the browser silently cancels the drag
+ * (only first few items appear draggable). Keep it in the tree but inert. */
+.insertZoneHidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 /* Position the line/button above the zone center so they sit visually
  * between the two rows (in the space-y-2 gap area), not glued to the row below. */
 .insertZoneLine {
