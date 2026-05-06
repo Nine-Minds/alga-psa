@@ -106,22 +106,30 @@ describe('migrations smoke (T037)', () => {
     expect(sql).toMatch(/pending|retrying/);
   });
 
-  it('Citus distribute migrations distribute all three tables on the tenant column', () => {
-    const rateLimitDistribute = readMigration(
-      'ee/server/migrations/citus/20260505123100_distribute_api_rate_limit_settings.cjs',
+  it('create migrations inline a Citus check + create_distributed_table on tenant for all three tables', () => {
+    // Both create migrations follow the established repo pattern (asset_facts,
+    // workflow_step_usage_periods, etc.): a single .cjs that creates the
+    // table, checks pg_extension for Citus, and conditionally calls
+    // create_distributed_table. `exports.config = { transaction: false }`
+    // is required so create_distributed_table doesn't run inside a tx.
+    const rateLimitMigration = readMigration(
+      'server/migrations/20260505123000_create_api_rate_limit_settings.cjs',
     );
-    // api_rate_limit_settings calls create_distributed_table directly.
-    expect(rateLimitDistribute).toMatch(
+    expect(rateLimitMigration).toMatch(/extname\s*=\s*['"]citus['"]/);
+    expect(rateLimitMigration).toMatch(
       /create_distributed_table\(\s*['"]api_rate_limit_settings['"]\s*,\s*['"]tenant['"]/,
     );
+    expect(rateLimitMigration).toMatch(/transaction:\s*false/);
 
-    // webhooks/webhook_deliveries go through a `distributeTable(knex, '<table>')`
-    // helper that wraps create_distributed_table('<table>', 'tenant', ...).
-    const webhookDistribute = readMigration(
-      'ee/server/migrations/citus/20260505140100_distribute_webhook_tables.cjs',
+    const webhookMigration = readMigration(
+      'server/migrations/20260505140000_create_webhook_tables.cjs',
     );
-    expect(webhookDistribute).toMatch(/distributeTable\(\s*knex\s*,\s*['"]webhooks['"]/);
-    expect(webhookDistribute).toMatch(/distributeTable\(\s*knex\s*,\s*['"]webhook_deliveries['"]/);
-    expect(webhookDistribute).toMatch(/create_distributed_table\([^)]*['"]tenant['"]/);
+    expect(webhookMigration).toMatch(/extname\s*=\s*['"]citus['"]/);
+    // The migration loops over both tables and interpolates the name into
+    // the create_distributed_table call. Assert the loop covers both tables
+    // and that the template literal pins the distribution key to tenant.
+    expect(webhookMigration).toMatch(/['"]webhooks['"]\s*,\s*['"]webhook_deliveries['"]/);
+    expect(webhookMigration).toMatch(/create_distributed_table[^)]*tenant/);
+    expect(webhookMigration).toMatch(/transaction:\s*false/);
   });
 });

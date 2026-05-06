@@ -49,7 +49,7 @@
   },
   {
     "id": "F009",
-    "description": "Add a Citus distribute-table .cjs migration under ee/server/migrations/citus that calls create_distributed_table('api_rate_limit_settings', 'tenant').",
+    "description": "In the same create migration, gate on `pg_extension WHERE extname='citus'` and call create_distributed_table('api_rate_limit_settings', 'tenant', colocate_with => 'tenants') when present. `exports.config = { transaction: false }` so the call doesn't run inside a tx (matches the current repo pattern in 20260429133000_create_asset_facts_table.cjs).",
     "implemented": true,
     "prdRefs": ["Data / API / Integrations", "Rollout / Migration"]
   },
@@ -151,7 +151,7 @@
   },
   {
     "id": "F026",
-    "description": "Add a Citus distribute-table .cjs migration calling create_distributed_table('webhooks','tenant') and create_distributed_table('webhook_deliveries','tenant').",
+    "description": "In the same create migration, gate on Citus and call create_distributed_table('webhooks','tenant', colocate_with => 'tenants') + create_distributed_table('webhook_deliveries','tenant', colocate_with => 'tenants') under a `transaction: false` config (matches the current repo pattern).",
     "implemented": true,
     "prdRefs": ["Data / API / Integrations", "Rollout / Migration"]
   },

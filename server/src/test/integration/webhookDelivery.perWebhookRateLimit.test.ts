@@ -136,7 +136,7 @@ describe('webhookDelivery per-webhook rate limit (T029)', () => {
     webhookModelState.getSigningSecretMock.mockResolvedValue('shh');
 
     TokenBucketRateLimiter.resetInstance();
-    (WebhookDeliveryQueue as any).instance = null;
+    WebhookDeliveryQueue.resetInstance();
     redis = createMockRedis();
 
     await TokenBucketRateLimiter.getInstance().initialize(
@@ -163,7 +163,7 @@ describe('webhookDelivery per-webhook rate limit (T029)', () => {
 
   afterEach(async () => {
     await WebhookDeliveryQueue.getInstance().shutdown();
-    (WebhookDeliveryQueue as any).instance = null;
+    WebhookDeliveryQueue.resetInstance();
     TokenBucketRateLimiter.resetInstance();
     await stub.close();
     if (originalAllowPrivate === undefined) {

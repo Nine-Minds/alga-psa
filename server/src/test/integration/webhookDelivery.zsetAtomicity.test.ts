@@ -66,7 +66,7 @@ describe('webhookDelivery ZSET atomicity (T030)', () => {
 
   beforeEach(() => {
     redis = createMockRedis();
-    (WebhookDeliveryQueue as any).instance = null;
+    WebhookDeliveryQueue.resetInstance();
   });
 
   afterEach(async () => {
@@ -76,7 +76,7 @@ describe('webhookDelivery ZSET atomicity (T030)', () => {
     } catch {
       // queue may have already been replaced
     }
-    (WebhookDeliveryQueue as any).instance = null;
+    WebhookDeliveryQueue.resetInstance();
   });
 
   it('two racing workers on the same job: one zRem wins, the other exits without invoking the processor', async () => {
@@ -88,7 +88,7 @@ describe('webhookDelivery ZSET atomicity (T030)', () => {
 
     // Detach the singleton so we can mint a second worker that shares the same Redis state
     // (simulating two pods running side-by-side).
-    (WebhookDeliveryQueue as any).instance = null;
+    WebhookDeliveryQueue.resetInstance();
 
     const workerB = WebhookDeliveryQueue.getInstance({ checkIntervalMs: 999_999 });
     await workerB.initialize(async () => redis, processorSpy);

@@ -47,9 +47,16 @@ export type WebhookDeliveryProcessor = (
   job: WebhookDeliveryJob,
 ) => Promise<WebhookDeliveryProcessResult>;
 
-export class WebhookDeliveryQueue {
-  private static instance: WebhookDeliveryQueue | null = null;
+// Pin the singleton on globalThis so Next.js dev (Turbopack) cannot end up
+// with two parallel instances when the module is loaded through different
+// runtime contexts (instrumentation hook vs. route handler).
+const WEBHOOK_QUEUE_GLOBAL_KEY = '__alga_webhook_delivery_queue__';
 
+type WebhookQueueGlobal = typeof globalThis & {
+  [WEBHOOK_QUEUE_GLOBAL_KEY]?: WebhookDeliveryQueue;
+};
+
+export class WebhookDeliveryQueue {
   private redis: RedisClientLike | null = null;
   private redisGetter: RedisClientGetter | null = null;
   private processingInterval: NodeJS.Timeout | null = null;
@@ -69,11 +76,12 @@ export class WebhookDeliveryQueue {
   }
 
   static getInstance(config?: Partial<WebhookDeliveryQueueConfig>): WebhookDeliveryQueue {
-    if (!WebhookDeliveryQueue.instance) {
-      WebhookDeliveryQueue.instance = new WebhookDeliveryQueue(config);
+    const g = globalThis as WebhookQueueGlobal;
+    if (!g[WEBHOOK_QUEUE_GLOBAL_KEY]) {
+      g[WEBHOOK_QUEUE_GLOBAL_KEY] = new WebhookDeliveryQueue(config);
     }
 
-    return WebhookDeliveryQueue.instance;
+    return g[WEBHOOK_QUEUE_GLOBAL_KEY]!;
   }
 
   async initialize(redisGetter: RedisClientGetter, processor: WebhookDeliveryProcessor): Promise<void> {
@@ -155,6 +163,12 @@ export class WebhookDeliveryQueue {
     this.isProcessing = false;
     this.inFlightJobs.clear();
     this.isShuttingDown = false;
+    delete (globalThis as WebhookQueueGlobal)[WEBHOOK_QUEUE_GLOBAL_KEY];
+  }
+
+  /** For tests: drop the singleton so the next getInstance() returns a fresh one. */
+  static resetInstance(): void {
+    delete (globalThis as WebhookQueueGlobal)[WEBHOOK_QUEUE_GLOBAL_KEY];
   }
 
   async process(): Promise<void> {

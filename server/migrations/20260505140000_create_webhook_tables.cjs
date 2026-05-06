@@ -77,6 +77,33 @@ exports.up = async function up(knex) {
     ON webhook_deliveries (tenant, next_retry_at)
     WHERE status IN ('pending', 'retrying')
   `);
+
+  const citusEnabled = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1
+      FROM pg_extension
+      WHERE extname = 'citus'
+    ) AS enabled;
+  `);
+
+  if (!citusEnabled.rows?.[0]?.enabled) {
+    console.warn('[create_webhook_tables] Skipping create_distributed_table (Citus extension unavailable)');
+    return;
+  }
+
+  for (const tableName of ['webhooks', 'webhook_deliveries']) {
+    const alreadyDistributed = await knex.raw(`
+      SELECT EXISTS (
+        SELECT 1
+        FROM pg_dist_partition
+        WHERE logicalrelid = '${tableName}'::regclass
+      ) AS is_distributed;
+    `);
+
+    if (!alreadyDistributed.rows?.[0]?.is_distributed) {
+      await knex.raw(`SELECT create_distributed_table('${tableName}', 'tenant', colocate_with => 'tenants')`);
+    }
+  }
 };
 
 /**
@@ -87,3 +114,6 @@ exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('webhook_deliveries');
   await knex.schema.dropTableIfExists('webhooks');
 };
+
+// create_distributed_table cannot run inside a transaction block.
+exports.config = { transaction: false };

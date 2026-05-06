@@ -153,7 +153,7 @@ describe('webhookDelivery happy path (T025)', () => {
     webhookModelState.getSigningSecretMock.mockResolvedValue(SIGNING_SECRET);
 
     TokenBucketRateLimiter.resetInstance();
-    (WebhookDeliveryQueue as any).instance = null;
+    WebhookDeliveryQueue.resetInstance();
 
     const redis = createMockRedis();
     await TokenBucketRateLimiter.getInstance().initialize(
@@ -181,7 +181,7 @@ describe('webhookDelivery happy path (T025)', () => {
 
   afterEach(async () => {
     await WebhookDeliveryQueue.getInstance().shutdown();
-    (WebhookDeliveryQueue as any).instance = null;
+    WebhookDeliveryQueue.resetInstance();
     TokenBucketRateLimiter.resetInstance();
     await stub.close();
     if (originalAllowPrivate === undefined) {

@@ -72,8 +72,16 @@ const DEFAULT_BUCKET_CONFIG: BucketConfig = {
  * - Tenant-level: `alga-psa:ratelimit:bucket:{namespace}:{tenantId}`
  * - Subject-level: `alga-psa:ratelimit:bucket:{namespace}:{tenantId}:{subjectId}`
  */
+// Pin the singleton on globalThis so Next.js dev (Turbopack) cannot end up
+// with two parallel instances when the module is loaded through different
+// runtime contexts (instrumentation hook vs. route handler).
+const TOKEN_BUCKET_GLOBAL_KEY = '__alga_token_bucket_rate_limiter__';
+
+type TokenBucketGlobal = typeof globalThis & {
+  [TOKEN_BUCKET_GLOBAL_KEY]?: TokenBucketRateLimiter;
+};
+
 export class TokenBucketRateLimiter {
-  private static instance: TokenBucketRateLimiter | null = null;
   private redis: TokenBucketRedisClient | null = null;
   private configGetters: Record<string, BucketConfigGetter> = {};
   private isInitialized = false;
@@ -90,10 +98,11 @@ export class TokenBucketRateLimiter {
    * Get singleton instance
    */
   static getInstance(): TokenBucketRateLimiter {
-    if (!TokenBucketRateLimiter.instance) {
-      TokenBucketRateLimiter.instance = new TokenBucketRateLimiter();
+    const g = globalThis as TokenBucketGlobal;
+    if (!g[TOKEN_BUCKET_GLOBAL_KEY]) {
+      g[TOKEN_BUCKET_GLOBAL_KEY] = new TokenBucketRateLimiter();
     }
-    return TokenBucketRateLimiter.instance;
+    return g[TOKEN_BUCKET_GLOBAL_KEY]!;
   }
 
   /**
@@ -314,7 +323,7 @@ export class TokenBucketRateLimiter {
    * Reset the singleton instance (for testing)
    */
   static resetInstance(): void {
-    TokenBucketRateLimiter.instance = null;
+    delete (globalThis as TokenBucketGlobal)[TOKEN_BUCKET_GLOBAL_KEY];
   }
 
   /**
@@ -324,7 +333,7 @@ export class TokenBucketRateLimiter {
     this.isInitialized = false;
     this.redis = null;
     this.configGetters = {};
-    TokenBucketRateLimiter.instance = null;
+    delete (globalThis as TokenBucketGlobal)[TOKEN_BUCKET_GLOBAL_KEY];
     logger.info('[TokenBucketRateLimiter] Shutdown complete');
   }
 }
