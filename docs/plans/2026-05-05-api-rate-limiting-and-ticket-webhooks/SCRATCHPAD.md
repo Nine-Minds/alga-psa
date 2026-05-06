@@ -635,3 +635,8 @@ implementation progresses; update earlier entries when something changes.
   to drive an exhausted bucket and then swap only the request pathname to a
   bypassed route (`/api/v1/meta/health`). Those calls stay 200 and the next
   ticket-path request is still 429, proving bypasses do not consume tokens.
+- (2026-05-06) **T012 complete.** Added observation-mode coverage to the same
+  rate-limit integration file by mocking the shared logger: with
+  `RATE_LIMIT_ENFORCE=false`, the 121st request now stays 200 with
+  `remaining=0`, and the test asserts the structured throttle WARN still
+  carries `tenant`, `api_key_id`, and `retry_after_ms`.

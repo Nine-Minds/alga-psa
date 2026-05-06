@@ -12,6 +12,10 @@ const testState = vi.hoisted(() => ({
   runWithTenantMock: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
   hasPermissionMock: vi.fn(async () => true),
   apiRateLimitConfigGetterMock: vi.fn(async () => ({ maxTokens: 120, refillRate: 1 })),
+  loggerWarnMock: vi.fn(),
+  loggerInfoMock: vi.fn(),
+  loggerDebugMock: vi.fn(),
+  loggerErrorMock: vi.fn(),
 }));
 
 vi.mock('@/lib/services/apiKeyServiceForApi', () => ({
@@ -39,6 +43,15 @@ vi.mock('@/lib/db/db', () => ({
 
 vi.mock('@/lib/api/rateLimit/apiRateLimitConfigGetter', () => ({
   apiRateLimitConfigGetter: (...args: unknown[]) => testState.apiRateLimitConfigGetterMock(...args),
+}));
+
+vi.mock('@alga-psa/core/logger', () => ({
+  default: {
+    warn: (...args: unknown[]) => testState.loggerWarnMock(...args),
+    info: (...args: unknown[]) => testState.loggerInfoMock(...args),
+    debug: (...args: unknown[]) => testState.loggerDebugMock(...args),
+    error: (...args: unknown[]) => testState.loggerErrorMock(...args),
+  },
 }));
 
 import { ApiBaseController } from '@/lib/api/controllers/ApiBaseController';
@@ -103,6 +116,10 @@ describe('API rate limit headers', () => {
     testState.runWithTenantMock.mockReset();
     testState.hasPermissionMock.mockReset();
     testState.apiRateLimitConfigGetterMock.mockReset();
+    testState.loggerWarnMock.mockReset();
+    testState.loggerInfoMock.mockReset();
+    testState.loggerDebugMock.mockReset();
+    testState.loggerErrorMock.mockReset();
 
     testState.validateApiKeyAnyTenantMock.mockImplementation(async (apiKey: string) => {
       if (apiKey === 'second-api-key') {
@@ -283,5 +300,29 @@ describe('API rate limit headers', () => {
     }
 
     expect((await handler(makeRequest())).status).toBe(429);
+  });
+
+  it('T012: observation mode returns 200 while still logging the throttle event', async () => {
+    process.env.RATE_LIMIT_ENFORCE = 'false';
+    const controller = new TestTicketController();
+    const handler = controller.list();
+
+    let finalResponse: Response | null = null;
+    for (let attempt = 1; attempt <= 121; attempt += 1) {
+      finalResponse = await handler(makeRequest());
+    }
+
+    expect(finalResponse).not.toBeNull();
+    expect(finalResponse!.status).toBe(200);
+    expect(finalResponse!.headers.get('X-RateLimit-Limit')).toBe('120');
+    expect(finalResponse!.headers.get('X-RateLimit-Remaining')).toBe('0');
+    expect(testState.loggerWarnMock).toHaveBeenCalledWith(
+      '[api-rate-limit] request throttled',
+      expect.objectContaining({
+        tenant: '11111111-1111-1111-1111-111111111111',
+        api_key_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+        retry_after_ms: expect.any(Number),
+      }),
+    );
   });
 });

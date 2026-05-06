@@ -68,7 +68,7 @@
   {
     "id": "T012",
     "description": "Integration (vitest + real Redis, server/src/test/integration/apiRateLimit.observation.test.ts): with RATE_LIMIT_ENFORCE=false, the 121st call returns 200 with X-RateLimit-Remaining=0 AND a structured WARN log line is emitted containing tenant, api_key_id, retry_after_ms.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013", "F049"]
   },
   {
