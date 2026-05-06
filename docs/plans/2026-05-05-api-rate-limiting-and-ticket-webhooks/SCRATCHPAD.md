@@ -124,6 +124,11 @@ implementation progresses; update earlier entries when something changes.
   `TICKET_UNASSIGNED`, `TICKET_QUEUE_CHANGED`, `TICKET_TAGS_CHANGED`,
   `TICKET_RESPONSE_STATE_CHANGED`, `TICKET_ADDITIONAL_AGENT_ASSIGNED` exist
   in `EVENT_TYPES` but are deferred to v2 (rolled into `ticket.updated`).
+- (2026-05-05) `TICKET_COMMENT_ADDED` currently reaches subscribers through
+  the legacy `TicketEventPayloadSchema` shape from `TicketService`: it
+  includes `payload.comment.{content,author,isInternal}` but not a persisted
+  comment timestamp. The webhook payload builder therefore uses
+  `payload.occurredAt` / event timestamp for `comment.timestamp`.
 
 ## Commands / Runbooks
 
@@ -149,6 +154,8 @@ implementation progresses; update earlier entries when something changes.
   `cd server && npx vitest run --coverage.enabled=false src/lib/api/rateLimit/__tests__/configGetter.cache.test.ts src/lib/api/rateLimit/__tests__/configGetter.invalidate.test.ts src/lib/api/rateLimit/__tests__/configGetter.fallback.test.ts`
 - (2026-05-05) Run the API rate-limit enforcement helper tests:
   `cd server && npx vitest run --coverage.enabled=false src/lib/api/rateLimit/__tests__/enforce.test.ts src/test/unit/api/apiMiddleware.responseHeaders.test.ts`
+- (2026-05-05) Smoke-load the webhook payload builder:
+  `cd server && npx tsx -e "import('./src/lib/eventBus/subscribers/webhook/webhookTicketPayload.ts').then(() => console.log('payload-ok'))"`
 - (2026-05-05) `cd server && npx tsc --noEmit --pretty false` currently OOMs
   in this repo, and even targeted `tsc` entrypoint checks surface existing
   package-resolution / JSX-config errors unrelated to this feature slice, so
@@ -405,3 +412,10 @@ implementation progresses; update earlier entries when something changes.
   `TokenBucketRateLimiter.tryConsume('webhook-out', tenant, webhookId)`.
   The delivery path now applies the shared per-webhook bucket instead of the
   mocked `webhook.rate_limit.enabled` branch.
+- (2026-05-05) **F033 complete.** Added
+  `server/src/lib/eventBus/subscribers/webhook/webhookTicketPayload.ts`,
+  which builds the PRD's curated ticket snapshot for webhook fan-out,
+  normalizes `ticket.updated` change diffs, includes
+  `ticket.comment.added` comment metadata without attachments, resolves tags
+  from `tag_mappings`, and caches the base `(tenant,ticket_id)` snapshot for
+  60 seconds so a multi-subscriber fan-out does not repeat the same joins.

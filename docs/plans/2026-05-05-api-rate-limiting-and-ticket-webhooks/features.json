@@ -194,7 +194,7 @@
   {
     "id": "F033",
     "description": "Implement buildTicketWebhookPayload(internalEvent, knex) in server/src/lib/eventBus/subscribers/webhook/webhookTicketPayload.ts with the curated field set from PRD §Functional Requirements; include short-lived in-memory cache (60s TTL) keyed by ticket_id+tenant to avoid N joins on fan-out.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements", "Non-functional Requirements"]
   },
   {
