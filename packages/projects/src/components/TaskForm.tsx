@@ -1834,23 +1834,24 @@ export default function TaskForm({
                         }}
                       >
                         {isEditingChecklist && (
-                          <div
-                            className={`${checklistDnd.insertZone} ${isAnyDragging ? checklistDnd.insertZoneHidden : ''}`}
-                            role="button"
-                            tabIndex={-1}
-                            title={taskFormT('insertChecklistItem', 'Insert item here')}
-                            aria-label={taskFormT('insertChecklistItem', 'Insert item here')}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const newId = addChecklistItem(index);
-                              setEditingChecklistItemId(newId);
-                            }}
-                          >
-                            <div className={checklistDnd.insertZoneLine} />
-                            <div className={checklistDnd.insertZoneButton}>
-                              <Plus className="h-3 w-3" />
+                          <Tooltip content={taskFormT('insertChecklistItem', 'Insert item here')}>
+                            <div
+                              className={`${checklistDnd.insertZone} ${isAnyDragging ? checklistDnd.insertZoneHidden : ''}`}
+                              role="button"
+                              tabIndex={-1}
+                              aria-label={taskFormT('insertChecklistItem', 'Insert item here')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newId = addChecklistItem(index);
+                                setEditingChecklistItemId(newId);
+                              }}
+                            >
+                              <div className={checklistDnd.insertZoneLine} />
+                              <div className={checklistDnd.insertZoneButton}>
+                                <Plus className="h-3 w-3" />
+                              </div>
                             </div>
-                          </div>
+                          </Tooltip>
                         )}
                         {isDropTarget && checklistDropPosition === 'before' && (
                           <div className={`${checklistDnd.dropPlaceholder} ${checklistDnd.visible}`} />
@@ -1860,13 +1861,14 @@ export default function TaskForm({
                             isDragging ? checklistDnd.dragging : ''
                           } ${isEntering ? checklistDnd.entering : ''}`}
                         >
-                          <div
-                            className={`${checklistDnd.dragHandle} cursor-grab text-gray-400 flex-none`}
-                            title={taskFormT('reorderChecklistItem', 'Drag to reorder')}
-                            aria-label={taskFormT('reorderChecklistItem', 'Drag to reorder')}
-                          >
-                            <GripVertical className="h-4 w-4" />
-                          </div>
+                          <Tooltip content={taskFormT('reorderChecklistItem', 'Drag to reorder')}>
+                            <div
+                              className={`${checklistDnd.dragHandle} cursor-grab text-gray-400 flex-none`}
+                              aria-label={taskFormT('reorderChecklistItem', 'Drag to reorder')}
+                            >
+                              <GripVertical className="h-4 w-4" />
+                            </div>
+                          </Tooltip>
                         <Checkbox
                           checked={item.completed}
                           onChange={(e) => updateChecklistItem(index, 'completed', e.target.checked)}
@@ -1896,33 +1898,35 @@ export default function TaskForm({
                         )}
                         <div className="flex items-center gap-1 shrink-0">
                           {!isItemEditing && (
+                            <Tooltip content={taskFormT('editChecklistItem', 'Edit checklist item')}>
+                              <Button
+                                id={`edit-checklist-${item.checklist_item_id}`}
+                                type="button"
+                                variant="icon"
+                                size="icon"
+                                onClick={() => setEditingChecklistItemId(item.checklist_item_id)}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                            </Tooltip>
+                          )}
+                          <Tooltip content={taskFormT('removeChecklistItem', 'Remove checklist item')}>
                             <Button
-                              id={`edit-checklist-${item.checklist_item_id}`}
+                              id={`remove-checklist-${item.checklist_item_id}`}
                               type="button"
                               variant="icon"
                               size="icon"
-                              onClick={() => setEditingChecklistItemId(item.checklist_item_id)}
-                              title={taskFormT('editChecklistItem', 'Edit checklist item')}
+                              // Fire on mousedown (with preventDefault) so the textarea's
+                              // blur handler doesn't unmount this button before click fires.
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                removeChecklistItem(index);
+                              }}
+                              className="text-destructive hover:text-destructive"
                             >
-                              <Pencil className="h-3.5 w-3.5" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
-                          )}
-                          <Button
-                            id={`remove-checklist-${item.checklist_item_id}`}
-                            type="button"
-                            variant="icon"
-                            size="icon"
-                            // Fire on mousedown (with preventDefault) so the textarea's
-                            // blur handler doesn't unmount this button before click fires.
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              removeChecklistItem(index);
-                            }}
-                            className="text-destructive hover:text-destructive"
-                            title={taskFormT('removeChecklistItem', 'Remove checklist item')}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          </Tooltip>
                         </div>
                         </div>
                         {isDropTarget && checklistDropPosition === 'after' && (
@@ -1932,23 +1936,24 @@ export default function TaskForm({
                     );
                   })}
                   {isEditingChecklist && checklistItems.length > 0 && draggedChecklistId === null && (
-                    <div
-                      className={checklistDnd.insertZone}
-                      role="button"
-                      tabIndex={-1}
-                      title={taskFormT('insertChecklistItem', 'Insert item here')}
-                      aria-label={taskFormT('insertChecklistItem', 'Insert item here')}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const newId = addChecklistItem(checklistItems.length);
-                        setEditingChecklistItemId(newId);
-                      }}
-                    >
-                      <div className={checklistDnd.insertZoneLine} />
-                      <div className={checklistDnd.insertZoneButton}>
-                        <Plus className="h-3 w-3" />
+                    <Tooltip content={taskFormT('insertChecklistItem', 'Insert item here')}>
+                      <div
+                        className={checklistDnd.insertZone}
+                        role="button"
+                        tabIndex={-1}
+                        aria-label={taskFormT('insertChecklistItem', 'Insert item here')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newId = addChecklistItem(checklistItems.length);
+                          setEditingChecklistItemId(newId);
+                        }}
+                      >
+                        <div className={checklistDnd.insertZoneLine} />
+                        <div className={checklistDnd.insertZoneButton}>
+                          <Plus className="h-3 w-3" />
+                        </div>
                       </div>
-                    </div>
+                    </Tooltip>
                   )}
                 </div>
 
