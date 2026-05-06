@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ZodError, z } from 'zod';
-import { handleApiError, UnauthorizedError, ValidationError } from '@/lib/api/middleware/apiMiddleware';
-import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
+import { handleApiError, ValidationError } from '@/lib/api/middleware/apiMiddleware';
+import { authenticateApiKeyRequest } from '@/lib/api/middleware/apiAuthMiddleware';
+import { appendRateLimitHeaders } from '@/lib/api/rateLimit/responseHeaders';
 import { getConnection } from '@/lib/db/db';
 
 /**
@@ -16,34 +17,22 @@ import { getConnection } from '@/lib/db/db';
  * the UI because it scopes to the mobile view only.
  */
 
-async function authenticate(req: NextRequest): Promise<{ tenant: string; userId: string }> {
-  let apiKey = req.headers.get('x-api-key');
-  if (!apiKey) {
-    const authHeader = req.headers.get('authorization');
-    if (authHeader?.startsWith('Bearer ')) apiKey = authHeader.slice(7);
-  }
-  if (!apiKey) throw new UnauthorizedError('API key required');
-
-  const tenantId = req.headers.get('x-tenant-id');
-  const keyRecord = tenantId
-    ? await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId)
-    : await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-  if (!keyRecord) throw new UnauthorizedError('Invalid API key');
-  return { tenant: keyRecord.tenant, userId: keyRecord.user_id };
-}
-
 const postSchema = z.object({
   mutedUserId: z.string().uuid(),
 });
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
-    const { tenant, userId } = await authenticate(req);
+    const apiRequest = await authenticateApiKeyRequest(req, { allowBearerToken: true });
+    const { tenant, userId } = apiRequest.context!;
     const knex = await getConnection(null);
     const rows = await knex('user_content_mutes')
       .where({ tenant, user_id: userId })
       .select<{ muted_user_id: string }[]>(['muted_user_id']);
-    return NextResponse.json({ mutedUserIds: rows.map((r) => r.muted_user_id) });
+    return appendRateLimitHeaders(
+      NextResponse.json({ mutedUserIds: rows.map((r) => r.muted_user_id) }),
+      apiRequest,
+    );
   } catch (error) {
     return handleApiError(error);
   }
@@ -51,7 +40,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const { tenant, userId } = await authenticate(req);
+    const apiRequest = await authenticateApiKeyRequest(req, { allowBearerToken: true });
+    const { tenant, userId } = apiRequest.context!;
     const body = await req.json().catch(() => ({}));
     const parsed = postSchema.parse(body);
 
@@ -69,7 +59,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       .onConflict(['tenant', 'user_id', 'muted_user_id'])
       .ignore();
 
-    return NextResponse.json({ ok: true });
+    return appendRateLimitHeaders(NextResponse.json({ ok: true }), apiRequest);
   } catch (error) {
     if (error instanceof ZodError) {
       return handleApiError(new ValidationError('Validation failed', error.errors));

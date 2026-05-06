@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z, ZodError } from 'zod';
-import { handleApiError, ValidationError, UnauthorizedError } from '@/lib/api/middleware/apiMiddleware';
-import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
+import { handleApiError, ValidationError } from '@/lib/api/middleware/apiMiddleware';
+import { authenticateApiKeyRequest } from '@/lib/api/middleware/apiAuthMiddleware';
+import { appendRateLimitHeaders } from '@/lib/api/rateLimit/responseHeaders';
 import { upsertPushToken, deactivatePushToken } from '@/lib/pushNotifications/pushTokenService';
 
 const registerSchema = z.object({
@@ -15,27 +16,10 @@ const unregisterSchema = z.object({
   deviceId: z.string().min(1),
 });
 
-async function authenticate(req: NextRequest): Promise<{ tenant: string; userId: string }> {
-  const apiKey = req.headers.get('x-api-key');
-  if (!apiKey) throw new UnauthorizedError('API key required');
-
-  const tenantId = req.headers.get('x-tenant-id');
-  let keyRecord;
-
-  if (tenantId) {
-    keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
-  } else {
-    keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-  }
-
-  if (!keyRecord) throw new UnauthorizedError('Invalid API key');
-
-  return { tenant: keyRecord.tenant, userId: keyRecord.user_id };
-}
-
 export async function PUT(req: NextRequest): Promise<NextResponse> {
   try {
-    const { tenant, userId } = await authenticate(req);
+    const apiRequest = await authenticateApiKeyRequest(req);
+    const { tenant, userId } = apiRequest.context!;
     const body = await req.json().catch(() => ({}));
     const parsed = registerSchema.parse(body);
 
@@ -48,7 +32,7 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
       parsed.appVersion,
     );
 
-    return NextResponse.json({ ok: true });
+    return appendRateLimitHeaders(NextResponse.json({ ok: true }), apiRequest);
   } catch (error) {
     if (error instanceof ZodError) {
       return handleApiError(new ValidationError('Validation failed', error.errors));
@@ -59,13 +43,14 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
 
 export async function DELETE(req: NextRequest): Promise<NextResponse> {
   try {
-    const { tenant, userId } = await authenticate(req);
+    const apiRequest = await authenticateApiKeyRequest(req);
+    const { tenant, userId } = apiRequest.context!;
     const body = await req.json().catch(() => ({}));
     const parsed = unregisterSchema.parse(body);
 
     await deactivatePushToken(tenant, userId, parsed.deviceId);
 
-    return NextResponse.json({ ok: true });
+    return appendRateLimitHeaders(NextResponse.json({ ok: true }), apiRequest);
   } catch (error) {
     if (error instanceof ZodError) {
       return handleApiError(new ValidationError('Validation failed', error.errors));

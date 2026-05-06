@@ -14,6 +14,78 @@ import {
 } from './apiMiddleware';
 import { enforceApiRateLimit } from '../rateLimit/enforce';
 
+export interface AuthenticateApiKeyRequestOptions {
+  allowBearerToken?: boolean;
+}
+
+function extractApiKeyFromRequest(
+  req: NextRequest,
+  options: AuthenticateApiKeyRequestOptions = {},
+): string | null {
+  const headerApiKey = req.headers.get('x-api-key');
+  if (headerApiKey) {
+    return headerApiKey;
+  }
+
+  if (!options.allowBearerToken) {
+    return null;
+  }
+
+  const authHeader = req.headers.get('authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    return authHeader.slice(7);
+  }
+
+  return null;
+}
+
+export async function authenticateApiKeyRequest(
+  req: NextRequest,
+  options: AuthenticateApiKeyRequestOptions = {},
+): Promise<ApiRequest> {
+  const apiKey = extractApiKeyFromRequest(req, options);
+
+  if (!apiKey) {
+    throw new UnauthorizedError('API key required');
+  }
+
+  let tenantId = req.headers.get('x-tenant-id');
+  let keyRecord;
+
+  if (tenantId) {
+    keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+  } else {
+    keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+    if (keyRecord) {
+      tenantId = keyRecord.tenant;
+    }
+  }
+
+  if (!keyRecord) {
+    throw new UnauthorizedError('Invalid API key');
+  }
+
+  if (!tenantId) {
+    throw new UnauthorizedError('Tenant ID not found');
+  }
+
+  const user = await findUserByIdForApi(keyRecord.user_id, tenantId);
+  if (!user) {
+    throw new UnauthorizedError('User not found');
+  }
+
+  const apiRequest = req as ApiRequest;
+  apiRequest.context = {
+    userId: keyRecord.user_id,
+    tenant: keyRecord.tenant,
+    user,
+    apiKeyId: keyRecord.api_key_id,
+  };
+  apiRequest.context.rateLimit = await enforceApiRateLimit(apiRequest, apiRequest.context);
+
+  return apiRequest;
+}
+
 /**
  * Enhanced authentication middleware that properly handles API key auth
  */
@@ -22,54 +94,10 @@ export async function withApiKeyAuth(
 ) {
   return async (req: NextRequest): Promise<NextResponse> => {
     try {
-      const apiKey = req.headers.get('x-api-key');
-      
-      if (!apiKey) {
-        throw new UnauthorizedError('API key required');
-      }
-
-      // First, try to get tenant from header
-      let tenantId = req.headers.get('x-tenant-id');
-      let keyRecord;
-
-      if (tenantId) {
-        // If tenant is provided, validate key for that specific tenant
-        keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
-      } else {
-        // Otherwise, search across all tenants
-        keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-        if (keyRecord) {
-          tenantId = keyRecord.tenant;
-        }
-      }
-      
-      if (!keyRecord) {
-        throw new UnauthorizedError('Invalid API key');
-      }
-
-      // Now we have a valid key and tenant, get the user within tenant context
-      if (!tenantId) {
-        throw new UnauthorizedError('Tenant ID not found');
-      }
-      
-      const user = await findUserByIdForApi(keyRecord.user_id, tenantId);
-
-      if (!user) {
-        throw new UnauthorizedError('User not found');
-      }
-
-      // Create an extended request with context
-      const apiRequest = req as ApiRequest;
-      apiRequest.context = {
-        userId: keyRecord.user_id,
-        tenant: keyRecord.tenant,
-        user,
-        apiKeyId: keyRecord.api_key_id,
-      };
-      apiRequest.context.rateLimit = await enforceApiRateLimit(apiRequest, apiRequest.context);
+      const apiRequest = await authenticateApiKeyRequest(req);
 
       // Run the handler within the tenant context
-      return await runWithTenant(tenantId, async () => {
+      return await runWithTenant(apiRequest.context!.tenant, async () => {
         return await handler(apiRequest);
       });
     } catch (error) {

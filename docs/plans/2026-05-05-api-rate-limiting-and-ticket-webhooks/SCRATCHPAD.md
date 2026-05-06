@@ -83,6 +83,13 @@ implementation progresses; update earlier entries when something changes.
   `server/src/lib/api/middleware/apiAuthMiddleware.ts`. Rate-limit wiring has
   to cover that legacy wrapper too or the planned cross-surface test would
   split buckets by middleware implementation.
+- (2026-05-05) Several `/api/v1` route families still bypassed the three
+  shared auth surfaces even after F018: asset routes and contract-line routes
+  were calling controllers that expect `req.context` but never authenticated,
+  and a handful of direct route handlers (`tickets/priorities`,
+  `tickets/statuses`, ticket comment reactions, storage routes, and several
+  mobile moderation/push/account routes) were validating API keys inline
+  without invoking the limiter.
 - (2026-05-05) Internal event vocabulary is much larger than the v1 public
   surface. `TICKET_REOPENED`, `TICKET_ESCALATED`, `TICKET_PRIORITY_CHANGED`,
   `TICKET_UNASSIGNED`, `TICKET_QUEUE_CHANGED`, `TICKET_TAGS_CHANGED`,
@@ -113,6 +120,11 @@ implementation progresses; update earlier entries when something changes.
   `cd server && npx vitest run --coverage.enabled=false src/lib/api/rateLimit/__tests__/configGetter.cache.test.ts src/lib/api/rateLimit/__tests__/configGetter.invalidate.test.ts src/lib/api/rateLimit/__tests__/configGetter.fallback.test.ts`
 - (2026-05-05) Run the API rate-limit enforcement helper tests:
   `cd server && npx vitest run --coverage.enabled=false src/lib/api/rateLimit/__tests__/enforce.test.ts src/test/unit/api/apiMiddleware.responseHeaders.test.ts`
+- (2026-05-05) `cd server && npx tsc --noEmit --pretty false` currently OOMs
+  in this repo, and even targeted `tsc` entrypoint checks surface existing
+  package-resolution / JSX-config errors unrelated to this feature slice, so
+  compile verification here is limited to focused runtime/unit checks plus
+  manual review.
 
 ## Links / References
 
@@ -248,3 +260,13 @@ implementation progresses; update earlier entries when something changes.
   `X-RateLimit-Remaining` automatically when the passed request carries
   `context.rateLimit`, and the generic `ApiBaseController` create/update
   paths now pass `apiRequest` through to the helper.
+- (2026-05-05) **F020 complete.** Added reusable legacy auth helpers:
+  `authenticateApiKeyRequest()` for inline API-key handlers,
+  `withApiKeyRouteAuth()` for route files that need `req.context`, and
+  `appendRateLimitHeaders()` for direct `NextResponse` routes. Wrapped the
+  entire asset and contract-line `/api/v1` route families so they now
+  authenticate through the shared legacy middleware and emit rate-limit
+  headers. I also migrated the remaining direct `/api/v1` handlers that were
+  doing inline API-key validation (ticket priorities/statuses/reactions,
+  storage routes, and the non-mobile-auth mobile moderation/push/account
+  routes) onto the shared helper so they consume the same `api` bucket.

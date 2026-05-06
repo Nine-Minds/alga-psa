@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { handleApiError, UnauthorizedError } from '@/lib/api/middleware/apiMiddleware';
-import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
+import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
+import { authenticateApiKeyRequest } from '@/lib/api/middleware/apiAuthMiddleware';
+import { appendRateLimitHeaders } from '@/lib/api/rateLimit/responseHeaders';
 import { getConnection } from '@/lib/db/db';
 import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowClient';
 import { decryptAppleRefreshToken, revokeAppleRefreshToken } from '@/lib/mobileAuth/appleSignIn';
@@ -20,29 +21,10 @@ import { decryptAppleRefreshToken, revokeAppleRefreshToken } from '@/lib/mobileA
  *    client can show them.
  */
 
-async function authenticate(req: NextRequest): Promise<{ tenant: string; userId: string }> {
-  let apiKey = req.headers.get('x-api-key');
-  if (!apiKey) {
-    // Also accept Bearer token (mobile client sends accessToken via Authorization header)
-    const authHeader = req.headers.get('authorization');
-    if (authHeader?.startsWith('Bearer ')) {
-      apiKey = authHeader.slice(7);
-    }
-  }
-  if (!apiKey) throw new UnauthorizedError('API key required');
-
-  const tenantId = req.headers.get('x-tenant-id');
-  const keyRecord = tenantId
-    ? await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId)
-    : await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-
-  if (!keyRecord) throw new UnauthorizedError('Invalid API key');
-  return { tenant: keyRecord.tenant, userId: keyRecord.user_id };
-}
-
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const { tenant, userId } = await authenticate(req);
+    const apiRequest = await authenticateApiKeyRequest(req, { allowBearerToken: true });
+    const { tenant, userId } = apiRequest.context!;
 
     const knex = await getConnection(null);
 
@@ -54,7 +36,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }>();
 
     if (!tenantRow) {
-      return NextResponse.json({ ok: true, deleted: false, reason: 'tenant not found' });
+      return appendRateLimitHeaders(
+        NextResponse.json({ ok: true, deleted: false, reason: 'tenant not found' }),
+        apiRequest,
+      );
     }
 
     const otherInternalUsers = await knex('users')
@@ -122,7 +107,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       }
     }
 
-    return NextResponse.json({
+    return appendRateLimitHeaders(NextResponse.json({
       ok: true,
       deleted: true,
       tenantDeleted: Boolean(tenantDeletionWorkflowId),
@@ -131,7 +116,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       // cancel their Apple subscription themselves.
       subscriptionCancellationInstructions:
         'To stop future Apple charges, open the Settings app on your iPhone → tap your name → Subscriptions → Alga PSA → Cancel Subscription.',
-    });
+    }), apiRequest);
   } catch (error) {
     return handleApiError(error);
   }

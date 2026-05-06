@@ -116,7 +116,7 @@
   {
     "id": "F020",
     "description": "Audit /api/v1/* routes that bypass all three auth surfaces (no controller, no withApiKeyAuth, no withAuth) and add enforceApiRateLimit to any that should be protected. Remove the 501-stub /api/v1/rbac/audit/route.ts from this scope (already a stub).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {
