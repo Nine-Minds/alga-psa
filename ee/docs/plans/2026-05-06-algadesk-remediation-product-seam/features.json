@@ -994,7 +994,7 @@
   {
     "id": "R125",
     "description": "Run Playwright list and at least one smoke execution path when browser environment is available.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Test remediation"
     ]
@@ -1010,7 +1010,7 @@
   {
     "id": "R127",
     "description": "Reset or correct parent tests.json implemented booleans for tests proven non-runnable or source-only if the team chooses to keep parent status authoritative.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Parent plan reconciliation"
     ]
@@ -1018,7 +1018,7 @@
   {
     "id": "R128",
     "description": "Reset or correct parent features.json implemented booleans for features contradicted by remediation blockers if the team chooses to keep parent status authoritative.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Parent plan reconciliation"
     ]
@@ -1026,7 +1026,7 @@
   {
     "id": "R129",
     "description": "Keep this remediation features.json entirely false until fixes are verified.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Parent plan reconciliation"
     ]
@@ -1034,7 +1034,7 @@
   {
     "id": "R130",
     "description": "Keep this remediation tests.json entirely false until tests are verified.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Parent plan reconciliation"
     ]

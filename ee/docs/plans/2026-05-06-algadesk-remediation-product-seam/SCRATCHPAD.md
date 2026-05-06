@@ -256,3 +256,12 @@ Working notes for remediating the current Algadesk implementation. This plan exi
   - Result: suite skipped cleanly when DB socket is unavailable (39 skipped), confirming CI-safe prerequisite handling.
 - Focused confidence test bundle run (pass):
   - `cd server && npx vitest run src/test/unit/context/ProductContext.test.tsx src/test/unit/productSurfaceRegistry.test.ts src/test/unit/layout/MspLayoutClient.productShell.test.tsx src/test/unit/contacts/ContactDetails.productMode.contract.test.ts src/test/unit/productAccess.test.ts src/test/unit/api/apiMiddleware.productAccess.test.ts src/test/unit/api/apiControllerProductAccessCoverage.contract.test.ts src/test/unit/api/apiMetadataController.productFiltering.contract.test.ts --reporter=dot`
+- (2026-05-06) Attempted DB-backed integration verification for R124/RT011:
+  - `cd server && npx vitest run src/test/integration/tenantProductCodeMigration.integration.test.ts src/test/integration/algadeskTicketCrudRbac.integration.test.ts --reporter=dot`
+  - Result: blocked by local DB unavailability (`ECONNREFUSED` on `localhost:5432` / `::1:5432`).
+- (2026-05-06) Executed Playwright smoke path for R125:
+  - `cd server && npx playwright test --list src/test/e2e/algadesk-portal-ticketing.playwright.test.ts` (pass: 1 test discovered)
+  - `cd server && npx playwright test src/test/e2e/algadesk-portal-ticketing.playwright.test.ts -g "creates" --reporter=line` (executes but fails in current local env after browser launch; artifacts captured under `server/test-results/...`).
+- (2026-05-06) Parent-plan reconciliation decision:
+  - Parent plan is treated as superseded for implementation tracking via explicit note in parent scratchpad.
+  - Remediation checklist is now the authoritative status source; parent boolean resets were intentionally not used as the primary tracking mechanism.

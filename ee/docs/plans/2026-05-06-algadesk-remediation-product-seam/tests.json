@@ -176,7 +176,7 @@
   {
     "id": "RT018",
     "description": "Plan status audit: parent plan is annotated as superseded or its implemented booleans are corrected; remediation checklist remains honest with verified items only.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "R126",
       "R127",
