@@ -139,7 +139,7 @@
   {
     "id": "RT014",
     "description": "Playwright smoke repair: Algadesk portal ticket test uses real helper signatures, real ticket creation route/flow, cleans up data, and can at least list and compile under the configured Playwright project.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "R114",
       "R115",

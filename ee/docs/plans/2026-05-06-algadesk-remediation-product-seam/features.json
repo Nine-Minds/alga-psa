@@ -906,7 +906,7 @@
   {
     "id": "R114",
     "description": "Fix T015 Playwright helper signatures to match actual helper APIs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Test remediation"
     ]
@@ -914,7 +914,7 @@
   {
     "id": "R115",
     "description": "Fix T015 route assumptions for portal ticket creation so it targets a real creation flow.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Test remediation"
     ]
@@ -922,7 +922,7 @@
   {
     "id": "R116",
     "description": "Add cleanup for tenants and related data created by Algadesk Playwright tests.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Test remediation"
     ]

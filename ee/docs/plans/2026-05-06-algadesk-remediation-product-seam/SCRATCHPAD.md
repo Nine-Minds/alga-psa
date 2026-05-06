@@ -228,3 +228,8 @@ Working notes for remediating the current Algadesk implementation. This plan exi
   - `server/src/test/unit/app/msp/contacts/[id]/page.productComposition.test.tsx` for Algadesk-vs-PSA document fetch behavior.
   - `server/src/test/unit/contacts/ContactDetails.productMode.contract.test.ts` for Algadesk documents-tab suppression contract.
 - Validation run (pass): `cd server && npx vitest run 'src/test/unit/app/msp/contacts/[id]/page.productComposition.test.tsx' src/test/unit/contacts/ContactDetails.productMode.contract.test.ts --reporter=dot`.
+- (2026-05-06) Completed Playwright T015 remediation items (R114-R116) and RT014.
+- Fixed helper signature usage in `server/src/test/e2e/algadesk-portal-ticketing.playwright.test.ts` by calling `setupClientAuthSession(page, userId, email, tenantId, baseUrl)`.
+- Repaired portal creation flow route/assumptions: test now opens `/client-portal/tickets`, clicks `#create-ticket-button`, and fills `#client-ticket-title` + description in the real dialog flow instead of navigating to non-existent `/client-portal/tickets/new`.
+- Added explicit tenant cleanup helper `cleanupPortalTestTenant(...)` in the Playwright test to delete tenant-scoped rows created during setup.
+- Validation run (pass): `cd server && npx playwright test --list src/test/e2e/algadesk-portal-ticketing.playwright.test.ts`.

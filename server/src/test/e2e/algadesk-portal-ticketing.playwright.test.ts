@@ -20,6 +20,30 @@ const TEST_CONFIG = {
   baseUrl: getBaseUrl(),
 };
 
+async function cleanupPortalTestTenant(db: ReturnType<typeof createTestDbConnection>, tenantId: string): Promise<void> {
+  // Delete child records first for SQLite/Postgres compatibility in local runs.
+  const tablesInDeleteOrder = [
+    'comments',
+    'ticket_documents',
+    'tickets',
+    'contacts',
+    'users',
+    'clients',
+    'statuses',
+    'priorities',
+    'boards',
+    'tenants',
+  ];
+
+  for (const table of tablesInDeleteOrder) {
+    try {
+      await db(table).where({ tenant: tenantId }).del();
+    } catch (error) {
+      console.warn(`[T015 cleanup] Failed deleting ${table} rows for tenant ${tenantId}`, error);
+    }
+  }
+}
+
 test.describe('Algadesk portal ticketing happy path', () => {
   test('T015: portal contact creates ticket with attachment, sees technician public reply, replies, and cannot see internal comments', async ({ page }) => {
     test.setTimeout(300000);
@@ -56,21 +80,23 @@ test.describe('Algadesk portal ticketing happy path', () => {
         lastName: 'Contact',
       });
 
-      await setupClientAuthSession(page, {
-        baseUrl: TEST_CONFIG.baseUrl,
+      await setupClientAuthSession(
+        page,
+        portalUser.userId,
+        portalContactEmail,
         tenantId,
-        userId: portalUser.userId,
-        contactId: portalUser.contactId,
-        clientId: client.client_id,
-      });
+        TEST_CONFIG.baseUrl,
+      );
 
-      await page.goto(`${TEST_CONFIG.baseUrl}/client-portal/tickets/new`, {
+      await page.goto(`${TEST_CONFIG.baseUrl}/client-portal/tickets`, {
         waitUntil: 'domcontentloaded',
       });
 
       const subject = `Portal Happy Path ${uuidv4().slice(0, 6)}`;
-      await page.getByLabel(/subject|title/i).first().fill(subject);
-      await page.getByLabel(/description/i).first().fill('Client-visible issue details from portal contact');
+      await page.locator('#create-ticket-button').click();
+      await page.locator('#client-ticket-title').fill(subject);
+      await page.getByText(/description/i).first().click();
+      await page.keyboard.type('Client-visible issue details from portal contact');
 
       const attachmentInput = page.locator('input[type="file"]').first();
       await attachmentInput.setInputFiles(uploadPath);
@@ -136,6 +162,9 @@ test.describe('Algadesk portal ticketing happy path', () => {
 
       expect(portalReply).toBeTruthy();
     } finally {
+      if (tenantData?.tenant?.tenantId) {
+        await cleanupPortalTestTenant(db, tenantData.tenant.tenantId);
+      }
       await fs.rm(uploadPath, { force: true }).catch(() => undefined);
       await db.destroy().catch(() => undefined);
     }
