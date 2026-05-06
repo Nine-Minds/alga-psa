@@ -384,3 +384,6 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 - (2026-05-05) Completed F225 by asserting rich-text image uploads remain ticket/comment scoped.
 - Expanded `useTicketRichTextUploadSession` test coverage to verify uploads are invoked with explicit `{ userId, ticketId }` metadata.
 - Command run: `cd server && npx vitest run ../packages/tickets/src/components/ticket/useTicketRichTextUploadSession.test.tsx src/test/unit/tickets/algadeskAttachmentComposition.contract.test.ts` -> pass (8 tests).
+- (2026-05-05) Completed F226 by strengthening/validating ticket-attachment authorization contract coverage.
+- Updated `packages/tickets/src/actions/comment-actions/clipboardImageDraftActions.contract.test.ts` assertions to match current injected delete implementation (`input.deleteDocumentFn(...)`) and explicit ticket-association check.
+- Command run: `cd server && npx vitest run ../packages/tickets/src/actions/comment-actions/clipboardImageDraftActions.contract.test.ts ../packages/tickets/src/components/ticket/useTicketRichTextUploadSession.test.tsx` -> pass (10 tests).
