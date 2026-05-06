@@ -32,6 +32,7 @@ import {
   createPaginatedResponse,
   handleApiError
 } from '../middleware/apiMiddleware';
+import type { ApiPermissionInfo, ApiStats } from '../schemas/metadataSchemas';
 import { ZodError } from 'zod';
 import { getTenantProduct } from '@/lib/productAccess';
 import { isApiVisibleInMetadata } from '@/lib/productSurfaceRegistry';
@@ -82,6 +83,63 @@ export class ApiMetadataController extends ApiBaseController {
 
   private async getApiMetadataProductCode(tenantId: string) {
     return getTenantProduct(tenantId);
+  }
+
+  private filterPermissionsForProduct(
+    productCode: Awaited<ReturnType<typeof this.getApiMetadataProductCode>>,
+    permissions: ApiPermissionInfo[],
+  ): ApiPermissionInfo[] {
+    if (productCode === 'psa') {
+      return permissions;
+    }
+
+    return permissions
+      .map((permission) => ({
+        ...permission,
+        endpoints: permission.endpoints.filter((endpoint) => endpoint.startsWith('/api/') && isApiVisibleInMetadata(productCode, endpoint)),
+      }))
+      .filter((permission) => permission.endpoints.length > 0);
+  }
+
+  private filterStatsForProduct(
+    productCode: Awaited<ReturnType<typeof this.getApiMetadataProductCode>>,
+    stats: ApiStats,
+    visibleEndpoints: Array<{ path: string; method: string }>,
+    visiblePermissionsCount: number,
+  ): ApiStats {
+    if (productCode === 'psa') {
+      return stats;
+    }
+
+    const visibleByMethod: Record<string, number> = {};
+    const visibleByCategory: Record<string, number> = {};
+    const visiblePaths = visibleEndpoints.map((endpoint) => endpoint.path);
+
+    visiblePaths.forEach((path) => {
+      if (path.includes('/tickets')) {
+        visibleByCategory.Tickets = (visibleByCategory.Tickets ?? 0) + 1;
+      } else if (path.includes('/clients') || path.includes('/contacts')) {
+        visibleByCategory.Clients = (visibleByCategory.Clients ?? 0) + 1;
+      } else if (path.includes('/kb-articles')) {
+        visibleByCategory['Knowledge Base'] = (visibleByCategory['Knowledge Base'] ?? 0) + 1;
+      } else if (path.includes('/email')) {
+        visibleByCategory.Email = (visibleByCategory.Email ?? 0) + 1;
+      } else {
+        visibleByCategory.Other = (visibleByCategory.Other ?? 0) + 1;
+      }
+    });
+
+    visibleEndpoints.forEach(({ method }) => {
+      visibleByMethod[method] = (visibleByMethod[method] ?? 0) + 1;
+    });
+
+    return {
+      ...stats,
+      totalEndpoints: visibleEndpoints.length,
+      endpointsByCategory: visibleByCategory,
+      endpointsByMethod: visibleByMethod,
+      totalPermissions: visiblePermissionsCount,
+    };
   }
 
   // ============================================================================
@@ -186,8 +244,19 @@ export class ApiMetadataController extends ApiBaseController {
 
           const result = await this.metadataService.getApiPermissions(apiRequest.context!.tenant);
           const validatedResult = apiPermissionsResponseSchema.parse(result);
+          const productCode = await this.getApiMetadataProductCode(apiRequest.context!.tenant);
+          const visiblePermissions = this.filterPermissionsForProduct(
+            productCode,
+            validatedResult.data.permissions,
+          );
+          const categories = [...new Set(visiblePermissions.map((permission) => permission.category))].sort();
 
-          return createSuccessResponse(validatedResult.data, 200, {
+          return createSuccessResponse({
+            ...validatedResult.data,
+            permissions: visiblePermissions,
+            totalPermissions: visiblePermissions.length,
+            categories,
+          }, 200, {
             message: 'API permissions retrieved successfully'
           });
         });
@@ -308,8 +377,31 @@ export class ApiMetadataController extends ApiBaseController {
 
           const result = await this.metadataService.getApiStats(apiRequest.context!.tenant, period);
           const validatedResult = apiStatsResponseSchema.parse(result);
+          const productCode = await this.getApiMetadataProductCode(apiRequest.context!.tenant);
+          const endpointsResult = await this.metadataService.getApiEndpoints(
+            {
+              format: 'json',
+              includeExamples: false,
+              includeSchemas: false,
+            },
+            apiRequest.context!.tenant,
+          );
+          const visibleEndpoints = endpointsResult.data.endpoints
+            .map((endpoint) => ({ path: endpoint.path, method: endpoint.method }))
+            .filter((endpoint) => isApiVisibleInMetadata(productCode, endpoint.path));
+          const permissionsResult = await this.metadataService.getApiPermissions(apiRequest.context!.tenant);
+          const visiblePermissions = this.filterPermissionsForProduct(
+            productCode,
+            permissionsResult.data.permissions,
+          );
+          const filteredStats = this.filterStatsForProduct(
+            productCode,
+            validatedResult.data,
+            visibleEndpoints,
+            visiblePermissions.length,
+          );
 
-          return createSuccessResponse(validatedResult.data, 200, {
+          return createSuccessResponse(filteredStats, 200, {
             message: 'API statistics retrieved successfully',
             ...validatedResult.meta
           });

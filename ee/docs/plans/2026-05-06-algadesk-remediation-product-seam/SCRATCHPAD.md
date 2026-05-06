@@ -205,3 +205,12 @@ Working notes for remediating the current Algadesk implementation. This plan exi
 - (2026-05-06) Completed representative PSA API regression checks (R099).
 - Added PSA assertions in `server/src/test/unit/productSurfaceRegistry.test.ts` for `/api/email/oauth/initiate` and `/api/integrations/entra/connect` to ensure PSA remains allowed while Algadesk remains constrained.
 - Validation run (pass): `cd server && npx vitest run src/test/unit/productSurfaceRegistry.test.ts --reporter=dot`.
+- (2026-05-06) Completed metadata/OpenAPI filtering pass for endpoint/path/permission/stats outputs (R100-R104).
+- `ApiMetadataController` now product-filters:
+  - endpoint metadata lists (`/meta/endpoints`) via `isApiVisibleInMetadata`
+  - OpenAPI `paths` (`/meta/openapi`) via `isApiVisibleInMetadata`
+  - permission metadata (`/meta/permissions`) via `filterPermissionsForProduct`
+  - stats totals/categories/method counts (`/meta/stats`) from product-visible endpoint subsets and filtered permissions.
+- Added contract guardrail: `server/src/test/unit/api/apiMetadataController.productFiltering.contract.test.ts`.
+- Validation run (pass): `cd server && npm run typecheck -- --pretty false`.
+- Validation run (pass): `cd server && npx vitest run src/test/unit/api/apiMetadataController.productFiltering.contract.test.ts --reporter=dot`.

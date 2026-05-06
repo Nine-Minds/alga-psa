@@ -794,7 +794,7 @@
   {
     "id": "R100",
     "description": "Filter API endpoint metadata by product for Algadesk.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Metadata and OpenAPI remediation"
     ]
@@ -802,7 +802,7 @@
   {
     "id": "R101",
     "description": "Filter OpenAPI paths by product for Algadesk.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Metadata and OpenAPI remediation"
     ]
@@ -810,7 +810,7 @@
   {
     "id": "R102",
     "description": "Filter API docs output by product for Algadesk.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Metadata and OpenAPI remediation"
     ]
@@ -818,7 +818,7 @@
   {
     "id": "R103",
     "description": "Filter generated permission metadata by product for Algadesk.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Metadata and OpenAPI remediation"
     ]
@@ -826,7 +826,7 @@
   {
     "id": "R104",
     "description": "Filter metadata stats/counts so Algadesk counts only visible endpoints/schemas/permissions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Metadata and OpenAPI remediation"
     ]
