@@ -101,7 +101,11 @@ CRYPTO_ALGORITHM=aes-256-gcm
 #### Hocuspocus Settings
 ```
 HOCUSPOCUS_PORT=1234
-HOCUSPOCUS_URL=ws://localhost:1234
+# Browser-facing WebSocket URL. Must be NEXT_PUBLIC_* (read by client code,
+# baked in at build time). In production the client auto-derives
+# wss://<host>/hocuspocus and your reverse proxy must route /hocuspocus to
+# the hocuspocus container on port 1234 — see setup_guide.md.
+NEXT_PUBLIC_HOCUSPOCUS_URL=ws://localhost:1234
 REQUIRE_HOCUSPOCUS=false  # Optional: Set to "true" to require hocuspocus
 ```
 
