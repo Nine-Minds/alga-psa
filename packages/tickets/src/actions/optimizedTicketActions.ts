@@ -53,6 +53,7 @@ import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { buildTicketResolutionSlaStageCompletionEvent } from '../lib/workflowTicketSlaStageEvents';
+import { diffTicketFields, publishTicketUpdate } from '../lib/liveUpdates';
 import {
   parseTicketStatusFilterValue,
   shouldApplyOpenOnlyStatusFilter,
@@ -69,6 +70,22 @@ function getEmailEventChannel(): string {
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into tickets.
+}
+
+function formatLiveUpdateDisplayName(user: Pick<IUserWithRoles, 'first_name' | 'last_name' | 'username'>): string {
+  return `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username || 'Unknown User';
+}
+
+function toIsoTimestamp(value: unknown, fallback: string): string {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (typeof value === 'string' && value.length > 0) {
+    return value;
+  }
+
+  return fallback;
 }
 
 async function resolveAuthorizationSubjectForUser(
@@ -1830,6 +1847,7 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
     // Check if we're updating the assigned_to field
     const isChangingAssignment = 'assigned_to' in updateData &&
                                 updateData.assigned_to !== currentTicket.assigned_to;
+    const updatedFields = diffTicketFields(currentTicket, updateData as Record<string, unknown>);
     const isBoardChange =
       'board_id' in updateData &&
       !!updateData.board_id &&
@@ -2159,6 +2177,17 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
       });
     }
 
+    await publishTicketUpdate({
+      tenantId: tenant,
+      ticketId: id,
+      updatedFields,
+      updatedBy: {
+        userId: user.user_id,
+        displayName: formatLiveUpdateDisplayName(user),
+      },
+      updatedAt: toIsoTimestamp(updatedTicket.updated_at, occurredAt),
+    });
+
     // Publish response state change event if response_state was explicitly changed
     if ('response_state' in updateData && updateData.response_state !== currentTicket.response_state) {
       try {
@@ -2184,19 +2213,44 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
       .first();
 
     if (bundleSettings?.mode === 'sync_updates') {
-      const propagate: Record<string, any> = {};
+      const propagateFields: Record<string, any> = {};
       for (const key of ['status_id', 'assigned_to', 'priority_id', 'closed_by', 'closed_at']) {
         if (Object.prototype.hasOwnProperty.call(updateData, key)) {
-          propagate[key] = (updateData as any)[key];
+          propagateFields[key] = (updateData as any)[key];
         }
       }
 
-      if (Object.keys(propagate).length > 0) {
+      if (Object.keys(propagateFields).length > 0) {
+        const childTickets = await trx('tickets')
+          .where({ tenant, master_ticket_id: id })
+          .select(['ticket_id', ...Object.keys(propagateFields)]);
+
+        const childPublishes = childTickets
+          .map((childTicket: Record<string, unknown>) => ({
+            ticketId: childTicket.ticket_id as string,
+            updatedFields: diffTicketFields(childTicket, propagateFields),
+          }))
+          .filter((childPublish) => childPublish.updatedFields.length > 0);
+
+        const propagate: Record<string, any> = { ...propagateFields };
         propagate.updated_by = user.user_id;
         propagate.updated_at = new Date().toISOString();
         await trx('tickets')
           .where({ tenant, master_ticket_id: id })
           .update(propagate);
+
+        for (const childPublish of childPublishes) {
+          await publishTicketUpdate({
+            tenantId: tenant,
+            ticketId: childPublish.ticketId,
+            updatedFields: childPublish.updatedFields,
+            updatedBy: {
+              userId: user.user_id,
+              displayName: formatLiveUpdateDisplayName(user),
+            },
+            updatedAt: propagate.updated_at,
+          });
+        }
       }
     }
 

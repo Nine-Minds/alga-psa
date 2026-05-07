@@ -2,43 +2,43 @@
   {
     "id": "T001",
     "description": "Unit: `diffTicketFields` returns only changed field names; ignores unchanged fields; handles null↔value transitions; handles JSONB column equality (per CLAUDE.md JSONB rule).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
     "id": "T002",
     "description": "Unit: `publishTicketUpdate` writes JSON to the correct Redis channel `<prefix>ticket-updates:<tenant>:<ticketId>` with the expected payload shape.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {
     "id": "T003",
     "description": "Unit: `publishTicketUpdate` swallows Redis errors (logs, does not throw); caller's update transaction is unaffected.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {
     "id": "T004",
     "description": "Integration: a successful `updateTicketWithCache` call results in exactly one Redis publish on the matching channel containing only the fields that actually changed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003", "F002"]
   },
   {
     "id": "T005",
     "description": "Integration: a failed `updateTicketWithCache` (validation error / permission error) results in zero Redis publishes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
     "id": "T006",
     "description": "Integration: bundled-parent ticket sync-propagation publishes one message per affected child on the child's channel.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
     "id": "T007",
     "description": "Integration: when `LIVE_TICKET_UPDATES_DISABLED=1`, `updateTicketWithCache` succeeds with zero Redis publishes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F033"]
   },
   {

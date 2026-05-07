@@ -41,6 +41,10 @@ Working notes during planning + implementation. Append freely; curate when secti
 8. Bundled-children sync propagate (L2124–2143) ← **also publish for each child**
 9. revalidatePath (L2145)
 
+- **2026-05-07 implementation note — current code uses workflow events, not a standalone `publishEvent('TICKET_UPDATED')`.** The live-update publish needs to sit after the existing workflow-event branch so it runs for regular updates, closures, and assignments from the same transaction path.
+- **2026-05-07 implementation note — child sync is a bulk SQL update with no returned rows.** To publish one message per affected child, we need to read matching child rows before the bulk update, diff each child against the propagated workflow subset, then publish only for children whose propagated fields actually changed.
+- **2026-05-07 implementation note — `updatedFields` should come from normalized/derived update data, not raw request payload.** This ensures null normalization and ITIL-driven `priority_id` recomputes are reflected in the broadcast without leaking unrelated denormalized row maintenance like `updated_at`.
+
 ### Ticket UI structure
 - `TicketDetails.tsx` — container, ~2400 lines, orchestrates panels.
 - `TicketDetailsContainer.tsx` — wraps with providers; this is where we add `TicketLiveProvider`.
@@ -85,6 +89,18 @@ npm run test:unit -- packages/tickets
 # Playwright E2E (regression + new live tests)
 npm run test:e2e
 ```
+
+## Implementation Log
+
+- **2026-05-07 — Phase 1 server publish slice complete (`F001`/`F002`/`F003`/`F004`/`F033`).**
+  Added [liveUpdates.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/tickets/src/lib/liveUpdates.ts) with the Redis channel helper, normalized field diffing, and a best-effort publish path guarded by `LIVE_TICKET_UPDATES_DISABLED=1`.
+  Wired [optimizedTicketActions.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/tickets/src/actions/optimizedTicketActions.ts) to compute `updatedFields` from normalized update data, publish one parent-ticket invalidation after the workflow-event branch, and publish one message per affected bundled child during sync propagation.
+- **2026-05-07 — Phase 1 tests complete (`T001`–`T007`).**
+  Added [liveUpdates.test.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/tickets/src/lib/liveUpdates.test.ts) for diff semantics, Redis channel/payload shape, and publish error swallowing.
+  Added [optimizedTicketActions.liveUpdates.test.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/tickets/src/actions/optimizedTicketActions.liveUpdates.test.ts) for parent publish, zero-publish failure behavior, bundled-child propagation, and the server-side kill-switch path.
+- **2026-05-07 — Verification runbook used.**
+  `npx vitest run --config vitest.config.ts src/lib/liveUpdates.test.ts src/actions/optimizedTicketActions.liveUpdates.test.ts` from `packages/tickets`
+  `npm -w @alga-psa/tickets run typecheck`
 
 ## Links / Refs
 
