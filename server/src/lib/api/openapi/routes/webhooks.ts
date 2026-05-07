@@ -1,7 +1,12 @@
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
+import type { ApiResponseSpec } from '../types';
 
 export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const tag = 'Webhooks';
+
+  // ---------------------------------------------------------------------------
+  // Path / query parameters
+  // ---------------------------------------------------------------------------
 
   const WebhookIdParam = registry.registerSchema(
     'WebhookIdParamV1',
@@ -14,7 +19,10 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     'WebhookDeliveryParamsV1',
     zOpenApi.object({
       id: zOpenApi.string().uuid().describe('Webhook UUID from webhooks.webhook_id.'),
-      delivery_id: zOpenApi.string().describe('Webhook delivery identifier extracted from URL path segment.'),
+      delivery_id: zOpenApi
+        .string()
+        .uuid()
+        .describe('Delivery UUID from webhook_deliveries.delivery_id (URL-derived).'),
     }),
   );
 
@@ -54,20 +62,73 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       page: zOpenApi.string().optional(),
       limit: zOpenApi.string().optional(),
-      status: zOpenApi.enum(['pending', 'delivered', 'failed', 'retrying', 'abandoned']).optional(),
+      status: zOpenApi
+        .enum(['pending', 'delivered', 'failed', 'retrying', 'abandoned'])
+        .optional(),
       from_date: zOpenApi.string().datetime().optional(),
       to_date: zOpenApi.string().datetime().optional(),
     }),
   );
 
-  const WebhookExportQuery = registry.registerSchema(
-    'WebhookExportQueryV1',
-    zOpenApi.object({
-      format: zOpenApi.enum(['json', 'csv', 'yaml']).optional(),
-      include_secrets: zOpenApi.enum(['true', 'false']).optional(),
-      webhook_ids: zOpenApi.string().optional().describe('Controller schema expects UUID array; URL parser currently supplies raw strings.'),
-    }),
-  );
+  // ---------------------------------------------------------------------------
+  // Request bodies
+  // ---------------------------------------------------------------------------
+
+  const TicketWebhookEvent = zOpenApi
+    .enum([
+      'ticket.created',
+      'ticket.updated',
+      'ticket.status_changed',
+      'ticket.assigned',
+      'ticket.closed',
+      'ticket.comment.added',
+    ])
+    .describe('Ticket-domain webhook events emitted by the eventBus subscriber.');
+
+  const WebhookEventType = zOpenApi.enum([
+    'ticket.created',
+    'ticket.updated',
+    'ticket.status_changed',
+    'ticket.assigned',
+    'ticket.closed',
+    'ticket.comment.added',
+    'project.created',
+    'project.updated',
+    'project.completed',
+    'project.task.created',
+    'project.task.updated',
+    'project.task.completed',
+    'client.created',
+    'client.updated',
+    'contact.created',
+    'contact.updated',
+    'time.entry.created',
+    'time.entry.updated',
+    'time.entry.approved',
+    'invoice.created',
+    'invoice.finalized',
+    'invoice.sent',
+    'invoice.paid',
+    'asset.created',
+    'asset.updated',
+    'asset.maintenance.scheduled',
+    'asset.maintenance.completed',
+    'system.backup.completed',
+    'system.backup.failed',
+    'system.maintenance.started',
+    'system.maintenance.completed',
+    'workflow.execution.started',
+    'workflow.execution.completed',
+    'workflow.execution.failed',
+    'custom.event',
+  ]);
+
+  const PayloadFieldsByEntity = zOpenApi
+    .record(zOpenApi.string(), zOpenApi.array(zOpenApi.string()).nullable())
+    .nullable()
+    .describe(
+      'Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Validated against WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in webhookSchemas.',
+    );
 
   const CreateWebhookBody = registry.registerSchema(
     'CreateWebhookBodyV1',
@@ -76,12 +137,13 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       description: zOpenApi.string().optional(),
       url: zOpenApi.string().url(),
       method: zOpenApi.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']).optional(),
-      event_types: zOpenApi.array(zOpenApi.string()).min(1),
+      event_types: zOpenApi.array(WebhookEventType).min(1),
       security: zOpenApi.record(zOpenApi.unknown()).optional(),
       payload_format: zOpenApi.enum(['json', 'xml', 'form_data', 'custom']).optional(),
       content_type: zOpenApi.string().optional(),
       custom_headers: zOpenApi.record(zOpenApi.string()).optional(),
       event_filter: zOpenApi.record(zOpenApi.unknown()).optional(),
+      payload_fields: PayloadFieldsByEntity.optional(),
       payload_transformation: zOpenApi.record(zOpenApi.unknown()).optional(),
       retry_config: zOpenApi.record(zOpenApi.unknown()).optional(),
       is_active: zOpenApi.boolean().optional(),
@@ -98,29 +160,9 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     'WebhookTestBodyV1',
     zOpenApi.object({
       webhook_id: zOpenApi.string().uuid().optional(),
-      test_event_type: zOpenApi.string(),
+      test_event_type: WebhookEventType,
       test_payload: zOpenApi.record(zOpenApi.unknown()).optional(),
       override_url: zOpenApi.string().url().optional(),
-    }),
-  );
-
-  const BulkWebhookBody = registry.registerSchema(
-    'BulkWebhookBodyV1',
-    zOpenApi.object({
-      webhook_ids: zOpenApi.array(zOpenApi.string().uuid()).min(1).max(100),
-      operation: zOpenApi.enum(['activate', 'deactivate', 'delete', 'test']),
-      test_event_type: zOpenApi.string().optional(),
-    }),
-  );
-
-  const WebhookSubscriptionBody = registry.registerSchema(
-    'WebhookSubscriptionBodyV1',
-    zOpenApi.object({
-      entity_type: zOpenApi.string(),
-      entity_id: zOpenApi.string().uuid().optional(),
-      event_types: zOpenApi.array(zOpenApi.string()).min(1),
-      is_active: zOpenApi.boolean().optional(),
-      expires_at: zOpenApi.string().optional(),
     }),
   );
 
@@ -132,7 +174,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       category: zOpenApi.string(),
       default_config: zOpenApi.record(zOpenApi.unknown()),
       required_fields: zOpenApi.array(zOpenApi.string()).optional(),
-      supported_events: zOpenApi.array(zOpenApi.string()).optional(),
+      supported_events: zOpenApi.array(WebhookEventType).optional(),
       is_system_template: zOpenApi.boolean().optional(),
     }),
   );
@@ -146,47 +188,41 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
-  const WebhookTransformBody = registry.registerSchema(
-    'WebhookTransformBodyV1',
-    zOpenApi.object({
-      sample_event: zOpenApi.record(zOpenApi.unknown()),
-      transformation: zOpenApi
-        .object({
-          template: zOpenApi.string().optional(),
-          include_fields: zOpenApi.array(zOpenApi.string()).optional(),
-          exclude_fields: zOpenApi.array(zOpenApi.string()).optional(),
-          custom_fields: zOpenApi.record(zOpenApi.unknown()).optional(),
-        })
-        .optional(),
-    }),
-  );
-
-  const WebhookFilterTestBody = registry.registerSchema(
-    'WebhookFilterTestBodyV1',
-    zOpenApi.object({
-      sample_event: zOpenApi.record(zOpenApi.unknown()),
-      filter: zOpenApi
-        .object({
-          entity_types: zOpenApi.array(zOpenApi.string()).optional(),
-          entity_ids: zOpenApi.array(zOpenApi.string().uuid()).optional(),
-          conditions: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).optional(),
-          tags: zOpenApi.array(zOpenApi.string()).optional(),
-        })
-        .optional(),
-    }),
-  );
-
   const WebhookSignatureBody = registry.registerSchema(
     'WebhookSignatureBodyV1',
-    zOpenApi.object({
-      algorithm: zOpenApi.enum(['sha1', 'sha256', 'sha512']),
-      signature: zOpenApi.string(),
-      timestamp: zOpenApi.number().optional(),
-      body: zOpenApi.string(),
-    }),
+    zOpenApi
+      .object({
+        algorithm: zOpenApi
+          .enum(['sha1', 'sha256', 'sha512'])
+          .describe('Only sha256 is currently honored; other values yield valid=false.'),
+        signature: zOpenApi
+          .string()
+          .describe(
+            'Either the raw v1 signature, or the canonical "t=<unix>,v1=<sig>" header value. When raw and a timestamp is supplied, the controller assembles the canonical form before verifying.',
+          ),
+        timestamp: zOpenApi
+          .number()
+          .optional()
+          .describe('Unix-seconds timestamp paired with a raw v1 signature.'),
+        body: zOpenApi.string().describe('Exact request body bytes to verify against.'),
+        webhook_id: zOpenApi
+          .string()
+          .uuid()
+          .optional()
+          .describe('Resolves the signing secret from webhooks.signing_secret_vault_path.'),
+        secret_vault_path: zOpenApi
+          .string()
+          .optional()
+          .describe(
+            'Vault key (basename of secret_vault_path) used when no webhook_id is supplied. webhook_id or secret_vault_path is required.',
+          ),
+      })
+      .describe('Verification request: webhook_id OR secret_vault_path is required.'),
   );
 
-  const WebhookEventBody = registry.registerSchema('WebhookEventBodyV1', zOpenApi.record(zOpenApi.unknown()));
+  // ---------------------------------------------------------------------------
+  // Concrete response schemas
+  // ---------------------------------------------------------------------------
 
   const ApiError = registry.registerSchema(
     'WebhookApiErrorV1',
@@ -199,21 +235,198 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
-  const ApiSuccess = registry.registerSchema(
-    'WebhookApiSuccessV1',
+  const WebhookRecord = registry.registerSchema(
+    'WebhookRecordV1',
     zOpenApi.object({
-      data: zOpenApi.union([
-        zOpenApi.record(zOpenApi.unknown()),
-        zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
-      ]),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      webhook_id: zOpenApi.string().uuid(),
+      tenant: zOpenApi.string().uuid(),
+      name: zOpenApi.string(),
+      description: zOpenApi.string().nullable(),
+      url: zOpenApi.string(),
+      method: zOpenApi.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
+      event_types: zOpenApi.array(WebhookEventType),
+      security: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
+      payload_format: zOpenApi.enum(['json', 'xml', 'form_data', 'custom']).optional(),
+      content_type: zOpenApi.string().optional(),
+      custom_headers: zOpenApi.record(zOpenApi.string()).nullable(),
+      event_filter: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
+      payload_fields: PayloadFieldsByEntity.optional(),
+      payload_transformation: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
+      retry_config: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
+      is_active: zOpenApi.boolean(),
+      is_test_mode: zOpenApi.boolean().optional(),
+      verify_ssl: zOpenApi.boolean(),
+      total_deliveries: zOpenApi.number().int(),
+      successful_deliveries: zOpenApi.number().int(),
+      failed_deliveries: zOpenApi.number().int(),
+      last_delivery_at: zOpenApi.string().datetime().nullable().optional(),
+      last_success_at: zOpenApi.string().datetime().nullable().optional(),
+      last_failure_at: zOpenApi.string().datetime().nullable().optional(),
+      auto_disabled_at: zOpenApi.string().datetime().nullable().optional(),
+      created_at: zOpenApi.string().datetime(),
+      updated_at: zOpenApi.string().datetime(),
+      tags: zOpenApi.array(zOpenApi.string()).optional(),
     }),
   );
 
-  const ApiPaginated = registry.registerSchema(
-    'WebhookApiPaginatedV1',
+  const WebhookDeliveryRecord = registry.registerSchema(
+    'WebhookDeliveryRecordV1',
     zOpenApi.object({
-      data: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+      tenant: zOpenApi.string().uuid(),
+      delivery_id: zOpenApi.string().uuid(),
+      webhook_id: zOpenApi.string().uuid(),
+      event_id: zOpenApi.string(),
+      event_type: zOpenApi.string(),
+      request_headers: zOpenApi.record(zOpenApi.string()).nullable(),
+      request_body: zOpenApi.unknown().nullable(),
+      response_status_code: zOpenApi.number().int().nullable(),
+      response_headers: zOpenApi.record(zOpenApi.string()).nullable(),
+      response_body: zOpenApi.string().nullable(),
+      status: zOpenApi.enum(['pending', 'delivered', 'failed', 'retrying', 'abandoned']),
+      attempt_number: zOpenApi.number().int(),
+      duration_ms: zOpenApi.number().int().nullable(),
+      error_message: zOpenApi.string().nullable(),
+      next_retry_at: zOpenApi.string().datetime().nullable(),
+      is_test: zOpenApi.boolean(),
+      attempted_at: zOpenApi.string().datetime(),
+      completed_at: zOpenApi.string().datetime().nullable(),
+    }),
+  );
+
+  const WebhookHealth = registry.registerSchema(
+    'WebhookHealthV1',
+    zOpenApi.object({
+      webhook_id: zOpenApi.string().uuid(),
+      status: zOpenApi.enum(['healthy', 'failing', 'disabled']),
+      is_active: zOpenApi.boolean(),
+      auto_disabled_at: zOpenApi.string().datetime().nullable(),
+      total_deliveries: zOpenApi.number().int(),
+      successful_deliveries: zOpenApi.number().int(),
+      failed_deliveries: zOpenApi.number().int(),
+      success_rate: zOpenApi
+        .number()
+        .describe('Fraction in [0,1]; 1 when there are no deliveries yet.'),
+      last_delivery_at: zOpenApi.string().datetime().nullable(),
+      last_success_at: zOpenApi.string().datetime().nullable(),
+      last_failure_at: zOpenApi.string().datetime().nullable(),
+      checked_at: zOpenApi.string().datetime(),
+    }),
+  );
+
+  const WebhookTestResult = registry.registerSchema(
+    'WebhookTestResultV1',
+    zOpenApi.object({
+      test_id: zOpenApi.string().uuid().describe('event_id stamped on the test envelope.'),
+      delivery_id: zOpenApi.string().uuid(),
+      success: zOpenApi.boolean(),
+      status_code: zOpenApi.number().int().nullable().optional(),
+      response_time_ms: zOpenApi.number().int().nullable().optional(),
+      response_body: zOpenApi.string().nullable().optional(),
+      error_message: zOpenApi.string().nullable().optional(),
+      tested_at: zOpenApi.string().datetime(),
+    }),
+  );
+
+  const WebhookSecretRotation = registry.registerSchema(
+    'WebhookSecretRotationV1',
+    zOpenApi.object({
+      webhook_id: zOpenApi.string().uuid(),
+      signing_secret: zOpenApi
+        .string()
+        .describe('32-byte base64url secret; only returned at rotation time.'),
+    }),
+  );
+
+  const WebhookSubscriptionsResponse = registry.registerSchema(
+    'WebhookSubscriptionsResponseV1',
+    zOpenApi.object({
+      webhook_id: zOpenApi.string().uuid(),
+      event_types: zOpenApi.array(WebhookEventType),
+    }),
+  );
+
+  const WebhookSignatureValidation = registry.registerSchema(
+    'WebhookSignatureValidationV1',
+    zOpenApi.object({
+      valid: zOpenApi.boolean(),
+    }),
+  );
+
+  const WebhookEventList = registry.registerSchema(
+    'WebhookEventListV1',
+    zOpenApi.array(WebhookEventType),
+  );
+
+  const WebhookAnalyticsResponse = registry.registerSchema(
+    'WebhookAnalyticsResponseV1',
+    zOpenApi.object({
+      webhook_id: zOpenApi.string().uuid().optional(),
+      date_from: zOpenApi.string().datetime(),
+      date_to: zOpenApi.string().datetime(),
+      metrics: zOpenApi.object({
+        total_deliveries: zOpenApi.number().int(),
+        successful_deliveries: zOpenApi.number().int(),
+        failed_deliveries: zOpenApi.number().int(),
+        success_rate: zOpenApi.number(),
+        average_response_time: zOpenApi.number(),
+        deliveries_by_status: zOpenApi.record(zOpenApi.number().int()),
+        deliveries_by_event_type: zOpenApi.record(zOpenApi.number().int()),
+        deliveries_timeline: zOpenApi.array(
+          zOpenApi.object({
+            date: zOpenApi.string(),
+            successful: zOpenApi.number().int(),
+            failed: zOpenApi.number().int(),
+          }),
+        ),
+        response_time_percentiles: zOpenApi
+          .object({
+            p50: zOpenApi.number(),
+            p90: zOpenApi.number(),
+            p95: zOpenApi.number(),
+            p99: zOpenApi.number(),
+          })
+          .optional(),
+      }),
+    }),
+  );
+
+  const WebhookTemplateRecord = registry.registerSchema(
+    'WebhookTemplateRecordV1',
+    zOpenApi.object({
+      template_id: zOpenApi.string().uuid(),
+      name: zOpenApi.string(),
+      description: zOpenApi.string().optional(),
+      category: zOpenApi.string(),
+      default_config: zOpenApi.object({
+        url_template: zOpenApi.string().optional(),
+        method: zOpenApi.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
+        headers: zOpenApi.record(zOpenApi.string()).optional(),
+        payload_template: zOpenApi.string(),
+        security_type: zOpenApi
+          .enum(['none', 'basic_auth', 'bearer_token', 'api_key', 'hmac_signature', 'oauth2'])
+          .optional(),
+      }),
+      required_fields: zOpenApi.array(zOpenApi.string()).optional(),
+      supported_events: zOpenApi.array(WebhookEventType).optional(),
+      is_system_template: zOpenApi.boolean().optional(),
+      created_at: zOpenApi.string().datetime(),
+      updated_at: zOpenApi.string().datetime(),
+      tenant: zOpenApi.string().uuid().nullable().optional(),
+    }),
+  );
+
+  // Generic envelopes (still used for endpoints whose payload is a list/object
+  // we do not need to lock down — e.g. listTemplates, useTemplate result).
+  function successOf(schema: ReturnType<typeof zOpenApi.object> | unknown) {
+    return zOpenApi.object({
+      data: schema as never,
+      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+    });
+  }
+
+  function paginatedOf(itemSchema: unknown) {
+    return zOpenApi.object({
+      data: zOpenApi.array(itemSchema as never),
       pagination: zOpenApi.object({
         page: zOpenApi.number().int(),
         limit: zOpenApi.number().int(),
@@ -223,8 +436,69 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
         hasPrev: zOpenApi.boolean(),
       }),
       meta: zOpenApi.record(zOpenApi.unknown()).optional(),
-    }),
+    });
+  }
+
+  const WebhookListResponse = registry.registerSchema(
+    'WebhookListResponseV1',
+    paginatedOf(WebhookRecord),
   );
+  const WebhookDeliveryListResponse = registry.registerSchema(
+    'WebhookDeliveryListResponseV1',
+    paginatedOf(WebhookDeliveryRecord),
+  );
+  const WebhookEnvelope = registry.registerSchema(
+    'WebhookEnvelopeV1',
+    successOf(WebhookRecord),
+  );
+  const WebhookDeliveryEnvelope = registry.registerSchema(
+    'WebhookDeliveryEnvelopeV1',
+    successOf(WebhookDeliveryRecord),
+  );
+  const WebhookHealthEnvelope = registry.registerSchema(
+    'WebhookHealthEnvelopeV1',
+    successOf(WebhookHealth),
+  );
+  const WebhookTestResultEnvelope = registry.registerSchema(
+    'WebhookTestResultEnvelopeV1',
+    successOf(WebhookTestResult),
+  );
+  const WebhookSecretRotationEnvelope = registry.registerSchema(
+    'WebhookSecretRotationEnvelopeV1',
+    successOf(WebhookSecretRotation),
+  );
+  const WebhookSubscriptionsEnvelope = registry.registerSchema(
+    'WebhookSubscriptionsEnvelopeV1',
+    successOf(WebhookSubscriptionsResponse),
+  );
+  const WebhookSignatureValidationEnvelope = registry.registerSchema(
+    'WebhookSignatureValidationEnvelopeV1',
+    successOf(WebhookSignatureValidation),
+  );
+  const WebhookEventListEnvelope = registry.registerSchema(
+    'WebhookEventListEnvelopeV1',
+    successOf(WebhookEventList),
+  );
+  const WebhookAnalyticsEnvelope = registry.registerSchema(
+    'WebhookAnalyticsEnvelopeV1',
+    successOf(WebhookAnalyticsResponse),
+  );
+  const WebhookTemplateListEnvelope = registry.registerSchema(
+    'WebhookTemplateListEnvelopeV1',
+    successOf(zOpenApi.array(WebhookTemplateRecord)),
+  );
+  const WebhookTemplateEnvelope = registry.registerSchema(
+    'WebhookTemplateEnvelopeV1',
+    successOf(WebhookTemplateRecord),
+  );
+
+  // Suppress unused imports of envelope schemas already registered for the
+  // OpenAPI document; the registry is the consumer.
+  void TicketWebhookEvent;
+
+  // ---------------------------------------------------------------------------
+  // Route registration
+  // ---------------------------------------------------------------------------
 
   const commonExtensions = {
     'x-tenant-scoped': true,
@@ -233,134 +507,154 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     'x-rbac-resource': 'webhook',
   };
 
+  type ResponseSpec = ApiResponseSpec;
+
   function requestFor(path: string, handler: string) {
     const req: Record<string, unknown> = {};
 
     if (path.includes('{id}/deliveries/{delivery_id}')) {
       req.params = WebhookDeliveryParams;
-    } else if (path.includes('{id}') || path.includes('/templates/{id}')) {
+    } else if (path.includes('{id}')) {
       req.params = WebhookIdParam;
     }
 
-    if (['list', 'search'].includes(handler)) req.query = WebhookListQuery;
-    if (['getAnalytics', 'getWebhookAnalytics'].includes(handler)) req.query = WebhookAnalyticsQuery;
+    if (handler === 'list') req.query = WebhookListQuery;
+    if (handler === 'getAnalytics' || handler === 'getWebhookAnalytics') {
+      req.query = WebhookAnalyticsQuery;
+    }
     if (handler === 'getDeliveries') req.query = WebhookDeliveryQuery;
-    if (handler === 'export') req.query = WebhookExportQuery;
 
-    if (['create'].includes(handler)) req.body = { schema: CreateWebhookBody };
-    if (['update'].includes(handler)) req.body = { schema: CreateWebhookBody.partial() };
-    if (['test', 'testById'].includes(handler)) req.body = { schema: WebhookTestBody };
-    if (handler === 'bulkOperation') req.body = { schema: BulkWebhookBody };
-    if (handler === 'createSubscription') req.body = { schema: WebhookSubscriptionBody };
+    if (handler === 'create') req.body = { schema: CreateWebhookBody };
+    if (handler === 'update') req.body = { schema: CreateWebhookBody.partial() };
+    if (handler === 'test' || handler === 'testById') req.body = { schema: WebhookTestBody };
     if (handler === 'createTemplate') req.body = { schema: WebhookTemplateBody };
     if (handler === 'useTemplate') req.body = { schema: WebhookTemplateCreateBody };
-    if (['testTransform', 'testTransformGeneric'].includes(handler)) req.body = { schema: WebhookTransformBody };
-    if (['testFilter', 'testFilterGeneric'].includes(handler)) req.body = { schema: WebhookFilterTestBody };
     if (handler === 'verifySignature') req.body = { schema: WebhookSignatureBody };
-    if (handler === 'triggerEvent') req.body = { schema: WebhookEventBody };
-    if (handler === 'validateGeneric') req.body = { schema: CreateWebhookBody.partial() };
 
     return req;
   }
 
-  function responsesFor(handler: string, path: string) {
-    const responses: Record<number, any> = {
-      400: { description: 'Invalid request payload/query/identifier.', schema: ApiError },
+  function responsesFor(handler: string, successResponse: ResponseSpec): Record<number, ResponseSpec> {
+    const responses: Record<number, ResponseSpec> = {
+      400: { description: 'Invalid request payload, query, or webhook id format.', schema: ApiError },
       401: { description: 'API key missing/invalid or key user missing.', schema: ApiError },
       403: { description: 'Webhook RBAC permission denied.', schema: ApiError },
       500: { description: 'Unexpected webhook operation failure.', schema: ApiError },
     };
 
-    if (handler === 'delete') {
-      responses[204] = { description: 'Webhook deleted.', emptyBody: true };
-      responses[404] = { description: 'Webhook not found.', schema: ApiError };
-      return responses;
+    // 404 surface
+    if (
+      [
+        'getById',
+        'update',
+        'delete',
+        'testById',
+        'getDeliveries',
+        'getDelivery',
+        'retryDelivery',
+        'getWebhookAnalytics',
+        'getHealth',
+        'rotateSecret',
+        'getSubscriptions',
+        'verifySignature',
+        'useTemplate',
+      ].includes(handler)
+    ) {
+      responses[404] = { description: 'Webhook, delivery, template, or signing secret not found.', schema: ApiError };
     }
 
-    if (['getById', 'update', 'validate', 'getWebhookAnalytics', 'getDeliveries', 'getHealth'].includes(handler)) {
-      responses[404] = { description: 'Webhook not found.', schema: ApiError };
+    if (handler === 'create') {
+      responses[409] = { description: 'Webhook already exists.', schema: ApiError };
     }
 
-    if (handler === 'getDelivery') {
-      responses[404] = { description: 'Delivery not found.', schema: ApiError };
-    }
+    const code =
+      handler === 'delete'
+        ? 204
+        : ['create', 'createTemplate', 'useTemplate'].includes(handler)
+          ? 201
+          : 200;
 
-    if (['create', 'createTemplate', 'useTemplate', 'createSubscription'].includes(handler)) {
-      responses[201] = { description: 'Resource created.', schema: ApiSuccess };
-      return responses;
-    }
-
-    if (['list', 'search', 'getDeliveries'].includes(handler)) {
-      responses[200] = { description: 'Paginated data returned.', schema: ApiPaginated };
-    } else {
-      responses[200] = { description: 'Operation succeeded.', schema: ApiSuccess };
-    }
-
-    if (path === '/api/v1/webhooks/subscriptions') {
-      responses[400] = {
-        description:
-          'Current wiring calls ID-dependent methods (`getSubscriptions`/`createSubscription`) on a non-ID path, so extractIdFromPath validates the literal segment `subscriptions` as UUID and returns 400.',
-        schema: ApiError,
-      };
-    }
-
+    responses[code] = successResponse;
     return responses;
   }
 
-  const defs: Array<{
+  type RouteDef = {
     method: 'get' | 'post' | 'put' | 'delete';
     path: string;
     handler: string;
     action: string;
     summary: string;
     description: string;
+    success: ResponseSpec;
     extraExtensions?: Record<string, unknown>;
-  }> = [
-    { method: 'get', path: '/api/v1/webhooks', handler: 'list', action: 'read', summary: 'List webhooks', description: 'Lists webhooks with pagination/filter query fields.' },
-    { method: 'post', path: '/api/v1/webhooks', handler: 'create', action: 'create', summary: 'Create webhook', description: 'Creates a webhook configuration and delivery settings.' },
-    { method: 'get', path: '/api/v1/webhooks/analytics', handler: 'getAnalytics', action: 'analytics', summary: 'Get system webhook analytics', description: 'Returns system-wide webhook analytics for date range.' },
-    { method: 'post', path: '/api/v1/webhooks/bulk', handler: 'bulkOperation', action: 'bulk_update', summary: 'Run bulk webhook operation', description: 'Runs activate/deactivate/delete/test operations over webhook ID list.' },
-    { method: 'get', path: '/api/v1/webhooks/events', handler: 'listEvents', action: 'read', summary: 'List available webhook events', description: 'Returns supported event type list (current controller returns stub values).' },
-    { method: 'post', path: '/api/v1/webhooks/events/trigger', handler: 'triggerEvent', action: 'trigger', summary: 'Trigger webhook event manually', description: 'Triggers a webhook event payload (current controller returns stub result).' },
-    { method: 'get', path: '/api/v1/webhooks/export', handler: 'export', action: 'export', summary: 'Export webhooks', description: 'Exports webhook definitions; query supports format and include_secrets.' },
-    { method: 'post', path: '/api/v1/webhooks/filter/test', handler: 'testFilterGeneric', action: 'test', summary: 'Test generic webhook event filter', description: 'Tests filter logic against sample event without a specific webhook.' },
-    { method: 'get', path: '/api/v1/webhooks/health', handler: 'getSystemHealth', action: 'read', summary: 'Get system webhook health', description: 'Returns system-level webhook health summary (currently stubbed).' },
+  };
+
+  const defs: RouteDef[] = [
     {
       method: 'get',
-      path: '/api/v1/webhooks/search',
+      path: '/api/v1/webhooks',
       handler: 'list',
       action: 'read',
-      summary: 'Search webhooks (currently list wiring)',
-      description: 'Route currently calls ApiWebhookController.list() instead of search(); behaves as list endpoint with standard list filters.',
-      extraExtensions: { 'x-route-to-controller-mismatch': true, 'x-controller-expected': 'ApiWebhookController.search()' },
-    },
-    {
-      method: 'get',
-      path: '/api/v1/webhooks/subscriptions',
-      handler: 'getSubscriptions',
-      action: 'read',
-      summary: 'List webhook subscriptions (global path wiring gap)',
-      description: 'Calls getSubscriptions() on global path; method expects webhook id and currently fails UUID extraction for non-ID route.',
-      extraExtensions: { 'x-route-to-controller-mismatch': true, 'x-id-extraction-gap': true },
+      summary: 'List webhooks',
+      description: 'Lists tenant webhooks with pagination and filter query fields.',
+      success: { description: 'Paginated webhook list.', schema: WebhookListResponse },
     },
     {
       method: 'post',
-      path: '/api/v1/webhooks/subscriptions',
-      handler: 'createSubscription',
-      action: 'manage_subscriptions',
-      summary: 'Create webhook subscription (global path wiring gap)',
-      description: 'Calls createSubscription() on global path; method expects webhook id and currently fails UUID extraction for non-ID route.',
-      extraExtensions: { 'x-route-to-controller-mismatch': true, 'x-id-extraction-gap': true },
+      path: '/api/v1/webhooks',
+      handler: 'create',
+      action: 'create',
+      summary: 'Create webhook',
+      description:
+        'Creates a webhook configuration. Supports per-entity payload_fields allowlists; an undefined or null map yields the full payload.',
+      success: { description: 'Webhook created.', schema: WebhookEnvelope },
     },
-    { method: 'get', path: '/api/v1/webhooks/templates', handler: 'listTemplates', action: 'read', summary: 'List webhook templates', description: 'Returns webhook templates for tenant/system scope.' },
-    { method: 'post', path: '/api/v1/webhooks/templates', handler: 'createTemplate', action: 'system_settings', summary: 'Create webhook template', description: 'Creates a reusable webhook template.' },
+    {
+      method: 'get',
+      path: '/api/v1/webhooks/analytics',
+      handler: 'getAnalytics',
+      action: 'analytics',
+      summary: 'Get system webhook analytics',
+      description: 'Returns aggregated webhook delivery analytics for the tenant over a date window.',
+      success: { description: 'Aggregated analytics returned.', schema: WebhookAnalyticsEnvelope },
+    },
+    {
+      method: 'get',
+      path: '/api/v1/webhooks/events',
+      handler: 'listEvents',
+      action: 'read',
+      summary: 'List available webhook events',
+      description:
+        'Returns the supported webhook event types from webhookEventTypeSchema (ticket.*, project.*, invoice.*, etc.).',
+      success: { description: 'Event type list.', schema: WebhookEventListEnvelope },
+    },
+    {
+      method: 'get',
+      path: '/api/v1/webhooks/templates',
+      handler: 'listTemplates',
+      action: 'read',
+      summary: 'List webhook templates',
+      description: 'Returns webhook templates visible to the tenant (own + system templates).',
+      success: { description: 'Template list.', schema: WebhookTemplateListEnvelope },
+    },
+    {
+      method: 'post',
+      path: '/api/v1/webhooks/templates',
+      handler: 'createTemplate',
+      action: 'system_settings',
+      summary: 'Create webhook template',
+      description: 'Creates a reusable webhook template. Requires system_settings RBAC.',
+      success: { description: 'Template created.', schema: WebhookTemplateEnvelope },
+    },
     {
       method: 'get',
       path: '/api/v1/webhooks/templates/{id}',
       handler: 'getById',
       action: 'read',
       summary: 'Get webhook template detail (webhook getById wiring)',
-      description: 'Template detail route currently delegates to webhook getById/update/delete handlers and therefore operates on webhooks, not template records.',
+      description:
+        'Template detail route delegates to ApiWebhookController.getById() and looks up rows from the webhooks table by the URL id, not webhook_templates. Calling with a true template_id will return 404.',
+      success: { description: 'Webhook detail returned.', schema: WebhookEnvelope },
       extraExtensions: { 'x-route-to-controller-mismatch': true, 'x-controller-method': 'ApiWebhookController.getById()' },
     },
     {
@@ -369,7 +663,9 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       handler: 'update',
       action: 'update',
       summary: 'Update webhook template (webhook update wiring)',
-      description: 'Template update route currently delegates to webhook update() handler.',
+      description:
+        'Template update route delegates to ApiWebhookController.update() and operates on webhooks rows, not webhook_templates.',
+      success: { description: 'Webhook updated.', schema: WebhookEnvelope },
       extraExtensions: { 'x-route-to-controller-mismatch': true, 'x-controller-method': 'ApiWebhookController.update()' },
     },
     {
@@ -378,29 +674,143 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       handler: 'delete',
       action: 'delete',
       summary: 'Delete webhook template (webhook delete wiring)',
-      description: 'Template delete route currently delegates to webhook delete() handler.',
+      description:
+        'Template delete route delegates to ApiWebhookController.delete() and removes a webhooks row, not a webhook_templates row.',
+      success: { description: 'Webhook deleted.', emptyBody: true },
       extraExtensions: { 'x-route-to-controller-mismatch': true, 'x-controller-method': 'ApiWebhookController.delete()' },
     },
-    { method: 'post', path: '/api/v1/webhooks/templates/{id}/create', handler: 'useTemplate', action: 'create', summary: 'Create webhook from template', description: 'Creates webhook configuration from template + override payload.' },
-    { method: 'post', path: '/api/v1/webhooks/test', handler: 'test', action: 'test', summary: 'Test webhook configuration', description: 'Runs test delivery against provided webhook test payload.' },
-    { method: 'post', path: '/api/v1/webhooks/transform/test', handler: 'testTransformGeneric', action: 'test', summary: 'Test generic payload transformation', description: 'Evaluates transformation config against sample event (controller currently returns stub transformation output).' },
-    { method: 'post', path: '/api/v1/webhooks/validate', handler: 'validateGeneric', action: 'read', summary: 'Validate webhook payload configuration', description: 'Validates webhook config payload using controller-side stub validation response.' },
-    { method: 'post', path: '/api/v1/webhooks/verify', handler: 'verifySignature', action: 'verify', summary: 'Verify webhook signature', description: 'Validates signature payload (controller currently returns stub `{ valid: true }`).' },
-    { method: 'delete', path: '/api/v1/webhooks/{id}', handler: 'delete', action: 'delete', summary: 'Delete webhook', description: 'Deletes one webhook by id.' },
-    { method: 'get', path: '/api/v1/webhooks/{id}', handler: 'getById', action: 'read', summary: 'Get webhook', description: 'Gets one webhook by id.' },
-    { method: 'put', path: '/api/v1/webhooks/{id}', handler: 'update', action: 'update', summary: 'Update webhook', description: 'Updates one webhook by id.' },
-    { method: 'get', path: '/api/v1/webhooks/{id}/analytics', handler: 'getWebhookAnalytics', action: 'analytics', summary: 'Get webhook analytics', description: 'Returns analytics for one webhook id and date window.' },
-    { method: 'get', path: '/api/v1/webhooks/{id}/deliveries', handler: 'getDeliveries', action: 'read', summary: 'List webhook deliveries', description: 'Returns paginated delivery history for one webhook id.' },
-    { method: 'get', path: '/api/v1/webhooks/{id}/deliveries/{delivery_id}', handler: 'getDelivery', action: 'read', summary: 'Get delivery detail', description: 'Returns one delivery detail. Controller derives delivery_id from URL segment.' },
-    { method: 'post', path: '/api/v1/webhooks/{id}/deliveries/{delivery_id}/retry', handler: 'retryDelivery', action: 'retry', summary: 'Retry delivery', description: 'Retries failed delivery by URL-derived delivery_id.' },
-    { method: 'post', path: '/api/v1/webhooks/{id}/filter/test', handler: 'testFilter', action: 'test', summary: 'Test webhook filter', description: 'Evaluates filter rules against sample event for one webhook.' },
-    { method: 'get', path: '/api/v1/webhooks/{id}/health', handler: 'getHealth', action: 'read', summary: 'Get webhook health', description: 'Returns health status for one webhook (controller currently returns stub health payload).' },
-    { method: 'post', path: '/api/v1/webhooks/{id}/secret/rotate', handler: 'rotateSecret', action: 'manage_security', summary: 'Rotate webhook secret', description: 'Rotates webhook secret token (controller currently returns stub secret value).' },
-    { method: 'get', path: '/api/v1/webhooks/{id}/subscriptions', handler: 'getSubscriptions', action: 'read', summary: 'List webhook subscriptions', description: 'Returns subscriptions for one webhook id (currently stubbed empty list).' },
-    { method: 'post', path: '/api/v1/webhooks/{id}/subscriptions', handler: 'createSubscription', action: 'manage_subscriptions', summary: 'Create webhook subscription', description: 'Creates subscription under one webhook id (controller currently returns stub created subscription).' },
-    { method: 'post', path: '/api/v1/webhooks/{id}/test', handler: 'testById', action: 'test', summary: 'Test webhook by id', description: 'Runs test delivery for one webhook id.' },
-    { method: 'post', path: '/api/v1/webhooks/{id}/transform/test', handler: 'testTransform', action: 'test', summary: 'Test webhook transformation', description: 'Runs transformation test for one webhook id (controller returns stub transformation output).' },
-    { method: 'post', path: '/api/v1/webhooks/{id}/validate', handler: 'validate', action: 'read', summary: 'Validate webhook by id', description: 'Validates persisted webhook config by id (controller currently returns stub validation result).' },
+    {
+      method: 'post',
+      path: '/api/v1/webhooks/templates/{id}/create',
+      handler: 'useTemplate',
+      action: 'create',
+      summary: 'Create webhook from template',
+      description: 'Instantiates a webhook configuration from a template, merging caller-supplied overrides.',
+      success: { description: 'Webhook created from template.', schema: WebhookEnvelope },
+    },
+    {
+      method: 'post',
+      path: '/api/v1/webhooks/test',
+      handler: 'test',
+      action: 'test',
+      summary: 'Test webhook configuration',
+      description:
+        'Sends a one-off test delivery. Pass webhook_id to reuse stored configuration, or override_url/test_payload for ad-hoc testing.',
+      success: { description: 'Test delivery executed.', schema: WebhookTestResultEnvelope },
+    },
+    {
+      method: 'post',
+      path: '/api/v1/webhooks/verify',
+      handler: 'verifySignature',
+      action: 'verify',
+      summary: 'Verify webhook signature',
+      description:
+        'Verifies an X-Alga-Signature header value against a stored signing secret. Returns { valid: true } only for sha256 with a matching v1 signature.',
+      success: { description: 'Signature verification result.', schema: WebhookSignatureValidationEnvelope },
+    },
+    {
+      method: 'get',
+      path: '/api/v1/webhooks/{id}',
+      handler: 'getById',
+      action: 'read',
+      summary: 'Get webhook',
+      description: 'Returns a single webhook by id.',
+      success: { description: 'Webhook detail.', schema: WebhookEnvelope },
+    },
+    {
+      method: 'put',
+      path: '/api/v1/webhooks/{id}',
+      handler: 'update',
+      action: 'update',
+      summary: 'Update webhook',
+      description: 'Updates a webhook by id. Body accepts the same fields as create, all optional.',
+      success: { description: 'Webhook updated.', schema: WebhookEnvelope },
+    },
+    {
+      method: 'delete',
+      path: '/api/v1/webhooks/{id}',
+      handler: 'delete',
+      action: 'delete',
+      summary: 'Delete webhook',
+      description: 'Deletes a webhook by id.',
+      success: { description: 'Webhook deleted.', emptyBody: true },
+    },
+    {
+      method: 'get',
+      path: '/api/v1/webhooks/{id}/analytics',
+      handler: 'getWebhookAnalytics',
+      action: 'analytics',
+      summary: 'Get webhook analytics',
+      description: 'Returns delivery analytics for a single webhook over a date window.',
+      success: { description: 'Per-webhook analytics returned.', schema: WebhookAnalyticsEnvelope },
+    },
+    {
+      method: 'get',
+      path: '/api/v1/webhooks/{id}/deliveries',
+      handler: 'getDeliveries',
+      action: 'read',
+      summary: 'List webhook deliveries',
+      description: 'Returns paginated delivery history for a webhook id, optionally filtered by status and date window.',
+      success: { description: 'Paginated delivery list.', schema: WebhookDeliveryListResponse },
+    },
+    {
+      method: 'get',
+      path: '/api/v1/webhooks/{id}/deliveries/{delivery_id}',
+      handler: 'getDelivery',
+      action: 'read',
+      summary: 'Get delivery detail',
+      description: 'Returns a single delivery record (request/response payloads, status, retry pointer).',
+      success: { description: 'Delivery detail returned.', schema: WebhookDeliveryEnvelope },
+    },
+    {
+      method: 'post',
+      path: '/api/v1/webhooks/{id}/deliveries/{delivery_id}/retry',
+      handler: 'retryDelivery',
+      action: 'retry',
+      summary: 'Retry delivery',
+      description: 'Re-sends a previously failed delivery and records a new attempt on the same delivery row.',
+      success: { description: 'Retry attempted.', schema: WebhookDeliveryEnvelope },
+    },
+    {
+      method: 'get',
+      path: '/api/v1/webhooks/{id}/health',
+      handler: 'getHealth',
+      action: 'read',
+      summary: 'Get webhook health',
+      description:
+        'Derives status (healthy | failing | disabled), success_rate, and last delivery timestamps from the webhook stats counters.',
+      success: { description: 'Health status returned.', schema: WebhookHealthEnvelope },
+    },
+    {
+      method: 'post',
+      path: '/api/v1/webhooks/{id}/secret/rotate',
+      handler: 'rotateSecret',
+      action: 'manage_security',
+      summary: 'Rotate webhook secret',
+      description:
+        'Generates a new 32-byte base64url signing secret, persists it via webhookModel.update, and returns the secret in the response. The secret is only available at rotation time.',
+      success: { description: 'Secret rotated.', schema: WebhookSecretRotationEnvelope },
+    },
+    {
+      method: 'get',
+      path: '/api/v1/webhooks/{id}/subscriptions',
+      handler: 'getSubscriptions',
+      action: 'read',
+      summary: 'List webhook event subscriptions',
+      description:
+        'Returns the event types the webhook is subscribed to. Subscriptions are stored on the webhooks row (event_types column), not in a separate subscription table.',
+      success: { description: 'Subscription list returned.', schema: WebhookSubscriptionsEnvelope },
+    },
+    {
+      method: 'post',
+      path: '/api/v1/webhooks/{id}/test',
+      handler: 'testById',
+      action: 'test',
+      summary: 'Test webhook by id',
+      description:
+        'Sends a signed test delivery to the webhook URL using the stored signing secret and records the attempt in webhook_deliveries with is_test=true.',
+      success: { description: 'Test delivery executed.', schema: WebhookTestResultEnvelope },
+    },
   ];
 
   for (const def of defs) {
@@ -412,7 +822,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       tags: [tag],
       security: [{ ApiKeyAuth: [] }],
       request: requestFor(def.path, def.handler),
-      responses: responsesFor(def.handler, def.path),
+      responses: responsesFor(def.handler, def.success),
       extensions: {
         ...commonExtensions,
         'x-rbac-action': def.action,
