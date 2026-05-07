@@ -465,24 +465,36 @@ export class EventBus {
       }
 
       const event = eventSchema.parse(rawEvent) as Event;
-      const handler = subscription.handlers.values().next().value as EventHandler | undefined;
+      const handlers = Array.from(subscription.handlers);
 
-      if (handler) {
+      if (handlers.length > 0) {
         const isProcessed = await this.isEventProcessed(event);
         if (!isProcessed) {
-          try {
-            await handler(event);
-            await this.markEventProcessed(event);
-          } catch (error) {
-            logger.error('[EventBus] Error in event handler:', {
-              error,
-              eventType: baseEvent.eventType,
-              handler: handler.name,
-              channel: subscription.channel
-            });
-            // Don't acknowledge message on error to allow retry
+          // Invoke every registered handler for (eventType, channel). Earlier
+          // versions only ran the first handler, which silently dropped any
+          // additional subscribers (e.g. webhooks vs. SLA both listening on
+          // TICKET_COMMENT_ADDED:global). Failures from one handler must not
+          // block the others.
+          let anyFailure = false;
+          for (const handler of handlers) {
+            try {
+              await handler(event);
+            } catch (error) {
+              anyFailure = true;
+              logger.error('[EventBus] Error in event handler:', {
+                error,
+                eventType: baseEvent.eventType,
+                handler: handler.name,
+                channel: subscription.channel
+              });
+            }
+          }
+
+          if (anyFailure) {
+            // Don't acknowledge message on any failure to allow retry.
             return;
           }
+          await this.markEventProcessed(event);
         } else {
           logger.info('[EventBus] Skipping already processed event:', {
             eventId: event.id,

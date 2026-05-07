@@ -11,12 +11,16 @@ import { hasPermission } from '../../auth/rbac';
 import { findUserById } from '@alga-psa/user-composition/actions';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { runAsSystem } from '@alga-psa/db';
+import type { RateLimitDecision } from '../rateLimit/enforce';
+import { enforceApiRateLimit } from '../rateLimit/enforce';
 
 export interface ApiContext {
   userId: string;
   tenant: string;
   user?: any;
   apiKeyId?: string;
+  rateLimitSubjectId?: string;
+  rateLimit?: RateLimitDecision | null;
   kind?: 'system' | 'user';
 }
 
@@ -34,6 +38,7 @@ export interface ApiError extends Error {
   statusCode: number;
   code?: string;
   details?: any;
+  headers?: Record<string, string>;
 }
 
 export class ValidationError extends Error implements ApiError {
@@ -102,6 +107,7 @@ export class TooManyRequestsError extends Error implements ApiError {
   statusCode = 429;
   code = 'RATE_LIMITED';
   details: any;
+  headers?: Record<string, string>;
 
   constructor(message: string = 'Too many requests', details?: any) {
     super(message);
@@ -163,8 +169,10 @@ export function withApiKeyAuth(options: ApiKeyAuthOptions = {}) {
               userId: '00000000-0000-0000-0000-000000000000',
               tenant: tenantId as string,
               user: null,
+              rateLimitSubjectId: 'nm_store',
               kind: 'system'
             };
+            req.context.rateLimit = await enforceApiRateLimit(req, req.context);
             // Ensure system operations are allowed for downstream createSystemContext()
             return await runAsSystem('withApiKeyAuth.system', async () => handler(req));
           }
@@ -183,9 +191,11 @@ export function withApiKeyAuth(options: ApiKeyAuthOptions = {}) {
         req.context = {
           userId: keyRecord.user_id,
           tenant: keyRecord.tenant,
+          apiKeyId: keyRecord.api_key_id,
           user,
           kind: 'user'
         };
+        req.context.rateLimit = await enforceApiRateLimit(req, req.context);
 
         return await handler(req);
       } catch (error) {
@@ -223,8 +233,10 @@ export async function withAuth(handler: (req: ApiRequest) => Promise<NextRespons
       req.context = {
         userId: keyRecord.user_id,
         tenant: keyRecord.tenant,
+        apiKeyId: keyRecord.api_key_id,
         user
       };
+      req.context.rateLimit = await enforceApiRateLimit(req, req.context);
 
       return await handler(req);
     } catch (error) {
@@ -326,7 +338,10 @@ export function handleApiError(error: any): NextResponse {
         message: error.message,
         details: error.details
       }
-    }, { status: explicitStatus });
+    }, {
+      status: explicitStatus,
+      headers: error.headers
+    });
   }
 
   // Handle Zod validation errors
@@ -378,6 +393,7 @@ export function createSuccessResponse(
   status: number = 200,
   metadata?: any,
   request?: NextRequest | URL | string,
+  extraHeaders?: Record<string, string>,
 ): NextResponse {
   // For 204 No Content, return empty response
   if (status === 204) {
@@ -396,8 +412,21 @@ export function createSuccessResponse(
     response.meta = mergedMetadata;
   }
 
+  const rateLimitHeaders =
+    typeof request === 'object' &&
+    request !== null &&
+    'context' in request &&
+    (request as ApiRequest).context?.rateLimit
+      ? {
+          'X-RateLimit-Limit': String((request as ApiRequest).context!.rateLimit!.limit),
+          'X-RateLimit-Remaining': String((request as ApiRequest).context!.rateLimit!.remaining),
+        }
+      : undefined;
+
   const headers: HeadersInit = {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    ...(rateLimitHeaders ?? {}),
+    ...(extraHeaders ?? {})
   };
 
   // Add deprecation warning if metadata indicates deprecated endpoint
@@ -422,6 +451,7 @@ export function createPaginatedResponse(
   limit: number,
   metadata?: any,
   request?: NextRequest | URL | string,
+  extraHeaders?: Record<string, string>,
 ): NextResponse {
   const totalPages = Math.ceil(total / limit);
   const ranged = applyFieldRangeRequests(data, request);
@@ -435,8 +465,21 @@ export function createPaginatedResponse(
     metadata = mergedMetadata;
   }
 
+  const rateLimitHeaders =
+    typeof request === 'object' &&
+    request !== null &&
+    'context' in request &&
+    (request as ApiRequest).context?.rateLimit
+      ? {
+          'X-RateLimit-Limit': String((request as ApiRequest).context!.rateLimit!.limit),
+          'X-RateLimit-Remaining': String((request as ApiRequest).context!.rateLimit!.remaining),
+        }
+      : undefined;
+
   const headers: HeadersInit = {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    ...(rateLimitHeaders ?? {}),
+    ...(extraHeaders ?? {})
   };
 
   // Add deprecation warning if metadata indicates deprecated endpoint

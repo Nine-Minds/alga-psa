@@ -22,7 +22,8 @@ import { validateEmailConfiguration, logEmailConfigWarnings } from './validation
 import { Temporal } from '@js-temporal/polyfill';
 import { JobStatus } from 'server/src/types/job';
 import { initializeNotificationAccumulator, shutdownNotificationAccumulator } from './eventBus/subscribers/ticketEmailSubscriber';
-import { DelayedEmailQueue, TenantEmailService, StaticTemplateProcessor, EmailProviderManager, TokenBucketRateLimiter, BucketConfig, sendPasswordResetEmail, getSystemEmailService } from '@alga-psa/email';
+import { DelayedEmailQueue, TenantEmailService, StaticTemplateProcessor, EmailProviderManager, sendPasswordResetEmail, getSystemEmailService } from '@alga-psa/email';
+import { TokenBucketRateLimiter, type BucketConfig } from '@alga-psa/core/rateLimit';
 import { EventEmailRetryQueue } from './notifications/EventEmailRetryQueue';
 import { registerAuthEmailProvider } from '@alga-psa/auth';
 import { registerWorkflowEmailProvider } from '@alga-psa/workflows/runtime';
@@ -30,6 +31,10 @@ import { registerWorkflowScheduleJobRunner } from '@alga-psa/workflows/lib/jobRu
 import { getRedisClient } from '../config/redisConfig';
 import { registerEnterpriseStorageProviders } from './storage/registerEnterpriseStorageProviders';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { apiRateLimitConfigGetter } from './api/rateLimit/apiRateLimitConfigGetter';
+import { webhookRateLimitConfigGetter } from './webhooks/rateLimitConfig';
+import { WebhookDeliveryQueue } from './webhooks/WebhookDeliveryQueue';
+import { processWebhookDeliveryJob } from './webhooks/processWebhookDeliveryJob';
 
 let isFunctionExecuted = false;
 
@@ -143,27 +148,27 @@ export async function initializeApp() {
     try {
       await TokenBucketRateLimiter.getInstance().initialize(
         getRedisClient,
-        async (tenantId: string): Promise<BucketConfig> => {
-          // Get rate limit from notification_settings for this tenant
-          try {
-            const knex = await getConnection(tenantId);
-            const settings = await knex('notification_settings')
-              .where({ tenant: tenantId })
-              .first();
+        {
+          email: async (tenantId: string): Promise<BucketConfig> => {
+            try {
+              const knex = await getConnection(tenantId);
+              const settings = await knex('notification_settings')
+                .where({ tenant: tenantId })
+                .first();
 
-            const ratePerMinute = settings?.rate_limit_per_minute ?? 60;
+              const ratePerMinute = settings?.rate_limit_per_minute ?? 60;
 
-            // Convert rate per minute to token bucket config:
-            // maxTokens = rate limit (allows burst up to this amount)
-            // refillRate = rate per minute / 60 (tokens per second)
-            return {
-              maxTokens: ratePerMinute,
-              refillRate: ratePerMinute / 60
-            };
-          } catch (error) {
-            logger.warn(`Failed to get rate limit settings for tenant ${tenantId}, using defaults`);
-            return { maxTokens: 60, refillRate: 1 };
-          }
+              return {
+                maxTokens: ratePerMinute,
+                refillRate: ratePerMinute / 60
+              };
+            } catch (error) {
+              logger.warn(`Failed to get email rate limit settings for tenant ${tenantId}, using defaults`);
+              return { maxTokens: 60, refillRate: 1 };
+            }
+          },
+          api: apiRateLimitConfigGetter,
+          'webhook-out': webhookRateLimitConfigGetter
         }
       );
       logger.info('Token bucket rate limiter initialized');
@@ -193,6 +198,16 @@ export async function initializeApp() {
       logger.info('Event email retry queue initialized');
     } catch (error) {
       logger.error('Failed to initialize event email retry queue:', error);
+    }
+
+    try {
+      await WebhookDeliveryQueue.getInstance().initialize(
+        getRedisClient,
+        processWebhookDeliveryJob,
+      );
+      logger.info('Webhook delivery queue initialized');
+    } catch (error) {
+      logger.error('Failed to initialize webhook delivery queue:', error);
     }
 
     // Initialize storage service
@@ -233,6 +248,7 @@ export async function initializeApp() {
         await TokenBucketRateLimiter.getInstance().shutdown();
         await DelayedEmailQueue.getInstance().shutdown();
         await EventEmailRetryQueue.getInstance().shutdown();
+        await WebhookDeliveryQueue.getInstance().shutdown();
         await stopJobRunner();
         await cleanupEventBus();
         process.exit(0);
@@ -243,6 +259,7 @@ export async function initializeApp() {
         await TokenBucketRateLimiter.getInstance().shutdown();
         await DelayedEmailQueue.getInstance().shutdown();
         await EventEmailRetryQueue.getInstance().shutdown();
+        await WebhookDeliveryQueue.getInstance().shutdown();
         await stopJobRunner();
         await cleanupEventBus();
         process.exit(0);

@@ -30,6 +30,10 @@
       "import": "./dist/lib/events/index.js",
       "types": "./src/lib/events/index.ts"
     },
+    "./rateLimit": {
+      "import": "./dist/lib/rateLimit/index.js",
+      "types": "./src/lib/rateLimit/index.ts"
+    },
     "./encryption": {
       "import": "./dist/lib/encryption.js",
       "types": "./src/lib/encryption.ts"

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { handleApiError, UnauthorizedError, ValidationError } from '@/lib/api/middleware/apiMiddleware';
-import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
+import { handleApiError, ValidationError } from '@/lib/api/middleware/apiMiddleware';
+import { authenticateApiKeyRequest } from '@/lib/api/middleware/apiAuthMiddleware';
+import { appendRateLimitHeaders } from '@/lib/api/rateLimit/responseHeaders';
 import { getConnection } from '@/lib/db/db';
 
 /**
@@ -10,22 +11,6 @@ import { getConnection } from '@/lib/db/db';
  * broader rationale and guideline-1.2 context.
  */
 
-async function authenticate(req: NextRequest): Promise<{ tenant: string; userId: string }> {
-  let apiKey = req.headers.get('x-api-key');
-  if (!apiKey) {
-    const authHeader = req.headers.get('authorization');
-    if (authHeader?.startsWith('Bearer ')) apiKey = authHeader.slice(7);
-  }
-  if (!apiKey) throw new UnauthorizedError('API key required');
-
-  const tenantId = req.headers.get('x-tenant-id');
-  const keyRecord = tenantId
-    ? await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId)
-    : await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-  if (!keyRecord) throw new UnauthorizedError('Invalid API key');
-  return { tenant: keyRecord.tenant, userId: keyRecord.user_id };
-}
-
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function DELETE(
@@ -33,7 +18,8 @@ export async function DELETE(
   { params }: { params: Promise<{ userId: string }> },
 ): Promise<NextResponse> {
   try {
-    const { tenant, userId } = await authenticate(req);
+    const apiRequest = await authenticateApiKeyRequest(req, { allowBearerToken: true });
+    const { tenant, userId } = apiRequest.context!;
     const { userId: mutedUserId } = await params;
 
     if (!UUID_RE.test(mutedUserId)) {
@@ -45,7 +31,7 @@ export async function DELETE(
       .where({ tenant, user_id: userId, muted_user_id: mutedUserId })
       .del();
 
-    return NextResponse.json({ ok: true });
+    return appendRateLimitHeaders(NextResponse.json({ ok: true }), apiRequest);
   } catch (error) {
     return handleApiError(error);
   }

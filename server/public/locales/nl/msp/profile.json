@@ -89,7 +89,8 @@
       "permissions": "Machtigingen",
       "userRoles": "Gebruikersrollen",
       "policies": "Beleidsregels",
-      "apiKeys": "API-sleutels"
+      "apiKeys": "API-sleutels",
+      "webhooks": "Webhooks"
     },
     "loading": {
       "roles": "Rolconfiguratie laden...",
@@ -97,6 +98,7 @@
       "userRoles": "Gebruikersrolconfiguratie laden...",
       "policies": "Beleidsregelconfiguratie laden...",
       "apiKeys": "API-sleutelconfiguratie laden...",
+      "webhooks": "Webhookconfiguratie laden...",
       "sso": "SSO-beheertools laden...",
       "sessions": "Actieve sessies laden..."
     },
@@ -181,6 +183,208 @@
         "loading": "Sessies laden...",
         "noMatch": "Geen sessies gevonden die overeenkomen met uw zoekopdracht",
         "noSessions": "Geen actieve sessies gevonden"
+      }
+    },
+    "webhooks": {
+      "title": "Uitgaande webhooks",
+      "description": "Maak ondertekende abonnementen op de levenscyclus van tickets, filter ze op specifieke ticket-ID's, bekijk de afleverhistorie en rouleer geheimen zonder de instellingen te verlaten.",
+      "newWebhook": "Nieuwe webhook",
+      "tabs": {
+        "configuration": "Configuratie",
+        "deliveries": "Leveringen"
+      },
+      "stats": {
+        "total": "Totale webhooks",
+        "active": "Actief",
+        "autoDisabled": "Automatisch uitgeschakeld"
+      },
+      "secret": {
+        "label": "Ondertekeningsgeheim",
+        "warning": "Deze waarde wordt alleen nu getoond. Bewaar hem in de ontvanger voordat u de pagina verlaat.",
+        "copy": "Kopiëren",
+        "copied": "Ondertekeningsgeheim naar klembord gekopieerd",
+        "copyFailed": "Ondertekeningsgeheim kon niet naar klembord worden gekopieerd",
+        "close": "Sluiten",
+        "download": "Downloaden als .txt"
+      },
+      "form": {
+        "createTitle": "Webhook aanmaken",
+        "editTitle": "Webhook bewerken",
+        "helper": "De retry-configuratie wordt opgeslagen als JSON; de afleverfrequentie gebruikt in v1 nog steeds het standaard backoff-schema van het platform.",
+        "name": "Naam",
+        "namePlaceholder": "Feed voor ticket-toewijzing",
+        "url": "URL",
+        "urlPlaceholder": "https://example.com/hooks/alga",
+        "events": "Gebeurtenissen",
+        "customHeaders": "Aangepaste headers",
+        "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
+        "ticketFilter": "Ticketfilter",
+        "ticketFilterPlaceholder": "Eén ticket-UUID per regel. Laat leeg om alle overeenkomende ticketgebeurtenissen te ontvangen.",
+        "retryConfig": "Retry-configuratie (JSON)",
+        "verifySsl": "SSL-certificaten verifiëren",
+        "webhookActive": "Webhook is actief",
+        "save": "Wijzigingen opslaan",
+        "saving": "Opslaan…",
+        "create": "Webhook aanmaken",
+        "clear": "Wissen",
+        "delete": "Verwijderen",
+        "payloadFields": "Geleverde velden",
+        "payloadFieldsHelp": "Alle velden worden standaard verzonden. Vink uit om een veld uit te sluiten van levering. De correlatiesleutel van de entiteit (bijv. ticket_id) is altijd opgenomen.",
+        "payloadFieldsSelectAll": "Alles selecteren",
+        "payloadFieldsClear": "Wissen"
+      },
+      "list": {
+        "title": "Geconfigureerde webhooks",
+        "loading": "Laden…",
+        "configuredCount": "{{count}} geconfigureerd",
+        "empty": "Nog geen webhooks geconfigureerd.",
+        "columns": {
+          "name": "Naam",
+          "status": "Status",
+          "lastDelivery": "Laatste levering",
+          "success": "Succes",
+          "actions": "Acties"
+        },
+        "actions": {
+          "selected": "Geselecteerd",
+          "manage": "Beheren",
+          "pause": "Pauzeren",
+          "resume": "Hervatten",
+          "view": "Bekijken",
+          "edit": "Bewerken"
+        }
+      },
+      "detail": {
+        "summary": "{{total}} leveringen, {{successful}} geslaagd, {{failed}} mislukt.",
+        "sendTest": "Test verzenden",
+        "sending": "Verzenden…",
+        "rotateSecret": "Geheim roteren",
+        "rotating": "Roteren…",
+        "back": "Terug naar webhooks"
+      },
+      "deliveries": {
+        "title": "Afleverhistorie",
+        "page": "Pagina {{page}} van {{total}}",
+        "empty": "Nog geen leveringen geregistreerd.",
+        "columns": {
+          "event": "Gebeurtenis",
+          "status": "Status",
+          "attempted": "Geprobeerd",
+          "response": "Reactie",
+          "action": "Actie"
+        },
+        "testBadge": "Testlevering",
+        "attempt": "Poging {{number}}",
+        "noResponseCode": "n.v.t.",
+        "noResponseBody": "Geen reactie-inhoud vastgelegd.",
+        "retry": "Opnieuw",
+        "previous": "Vorige",
+        "next": "Volgende"
+      },
+      "messages": {
+        "loadFailed": "Webhookinstellingen konden niet worden geladen.",
+        "loadDeliveriesFailed": "Webhookleveringen konden niet worden geladen.",
+        "saveFailed": "Webhook kon niet worden opgeslagen.",
+        "createSuccess": "Webhook aangemaakt.",
+        "updateSuccess": "Webhook bijgewerkt.",
+        "deleteConfirm": "Webhook \"{{name}}\" verwijderen?",
+        "deleteSuccess": "Webhook verwijderd.",
+        "deleteFailed": "Webhook kon niet worden verwijderd.",
+        "testSuccess": "Test succesvol verzonden ({{statusCode}}).",
+        "testFailed": "Test mislukt: {{message}}",
+        "testRunFailed": "Webhooktest kon niet worden verzonden.",
+        "unknownError": "Onbekende fout",
+        "secretRotated": "Ondertekeningsgeheim geroteerd.",
+        "rotateFailed": "Webhookgeheim kon niet worden geroteerd.",
+        "resumed": "Webhook hervat.",
+        "paused": "Webhook gepauzeerd.",
+        "stateChangeFailed": "Webhookstatus kon niet worden bijgewerkt.",
+        "retryQueued": "Opnieuw proberen in wachtrij voor gebeurtenis {{eventId}}.",
+        "retryFailed": "Kon levering niet opnieuw proberen.",
+        "invalidHeaderLine": "Ongeldige headerregel: \"{{line}}\"",
+        "invalidRetryConfig": "De retry-configuratie moet een JSON-object zijn"
+      },
+      "common": {
+        "never": "Nooit"
+      },
+      "health": {
+        "healthy": "gezond",
+        "failing": "falend",
+        "disabled": "uitgeschakeld"
+      },
+      "deliveryStatus": {
+        "delivered": "afgeleverd",
+        "retrying": "opnieuw proberen",
+        "abandoned": "afgebroken",
+        "pending": "in afwachting"
+      }
+    },
+    "apiKeys": {
+      "rateLimit": {
+        "columnTitle": "Snelheidslimiet",
+        "loading": "Laden…",
+        "summary": "{{maxTokens}} burst / {{refillPerMin}} per min",
+        "source": "Bron: {{label}}",
+        "sourceLabels": {
+          "key": "Overschrijving",
+          "tenant": "Standaard van tenant",
+          "system": "Systeemstandaard"
+        },
+        "remaining": " • Resterend: {{remaining}}/{{maxTokens}}",
+        "remainingUnavailable": " • Resterend: niet beschikbaar",
+        "actions": {
+          "edit": "Bewerken",
+          "override": "Overschrijven",
+          "save": "Opslaan",
+          "cancel": "Annuleren",
+          "reset": "Herstellen"
+        },
+        "errors": {
+          "saveFailed": "Kan API-snelheidslimietoverschrijving niet opslaan.",
+          "clearFailed": "Kan API-snelheidslimietoverschrijving niet verwijderen."
+        }
+      },
+      "generate": {
+        "title": "API-sleutel genereren",
+        "description": "Beschrijving",
+        "descriptionPlaceholder": "bijv. Ontwikkelings-API-sleutel",
+        "expiration": "Vervaldatum (optioneel)",
+        "submit": "Nieuwe API-sleutel genereren"
+      },
+      "list": {
+        "title": "Uw API-sleutels",
+        "searchPlaceholder": "Zoeken op beschrijving",
+        "filters": {
+          "allStatuses": "Alle statussen",
+          "active": "Actief",
+          "inactive": "Inactief",
+          "lastUsedAfter": "Laatst gebruikt na",
+          "expiresBefore": "Verloopt voor",
+          "reset": "Herstellen"
+        },
+        "columns": {
+          "description": "Beschrijving",
+          "created": "Aangemaakt",
+          "lastUsed": "Laatst gebruikt",
+          "expires": "Verloopt",
+          "status": "Status",
+          "actions": "Acties"
+        },
+        "never": "Nooit",
+        "status": {
+          "active": "Actief",
+          "inactive": "Inactief"
+        },
+        "deactivate": "Deactiveren"
+      },
+      "newKeyDialog": {
+        "title": "API-sleutel gegenereerd",
+        "warning": "Kopieer uw API-sleutel nu. Om veiligheidsredenen wordt deze niet opnieuw weergegeven.",
+        "copy": "Naar klembord kopiëren",
+        "download": "Downloaden als .txt",
+        "copySuccess": "API-sleutel naar klembord gekopieerd!",
+        "copyFailed": "API-sleutel kopiëren naar klembord mislukt",
+        "downloadFailed": "API-sleutel downloaden mislukt"
       }
     }
   },

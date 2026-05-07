@@ -27,7 +27,8 @@ import {
 } from '@alga-psa/notifications/actions';
 import { InternalNotificationPreferences } from '@alga-psa/notifications/components';
 import { PasswordChangeForm, UserAvatarUpload } from '@alga-psa/users/components';
-import { ApiKeysSetup, SessionManagement } from '@alga-psa/auth/components';
+import { SessionManagement } from '@alga-psa/auth/components';
+import ApiKeysSetup from './ApiKeysSetup';
 import { isCalendarEnterpriseEdition, resolveUserProfileTab } from '@alga-psa/integrations/lib/calendarAvailability';
 import { toast } from 'react-hot-toast';
 import { validateContactName, validateEmailAddress, validatePhoneNumber } from '@alga-psa/validation';

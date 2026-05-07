@@ -3,6 +3,8 @@
  * Simplified version with proper API key authentication for webhook management
  */
 
+import crypto from 'node:crypto';
+import path from 'node:path';
 import { NextRequest, NextResponse } from 'next/server';
 import { WebhookService } from '../services/WebhookService';
 import { 
@@ -17,6 +19,7 @@ import {
   webhookSubscriptionSchema,
   webhookTemplateSchema,
   webhookEventSchema,
+  webhookEventTypeSchema,
   webhookSignatureSchema,
   CreateWebhookData,
   UpdateWebhookData,
@@ -50,6 +53,15 @@ import {
   handleApiError
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
+import { webhookModel } from '../../webhooks/webhookModel';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { verifyWebhookSignature as verifyAlgaWebhookSignature } from '../../webhooks/sign';
+import { signRequest } from '../../webhooks/sign';
+import {
+  buildSignedWebhookRequestHeaders,
+  buildWebhookEnvelope,
+} from '../../webhooks/processWebhookDeliveryJob';
+import { performWebhookDeliveryRequest } from '../../webhooks/delivery';
 import { getTenantProduct, ProductAccessError } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 
@@ -399,14 +411,86 @@ export class ApiWebhookController {
           await this.checkPermission(apiRequest, 'test');
 
           const id = await this.extractIdFromPath(apiRequest);
-          const testData = await this.validateData(apiRequest, webhookTestSchema.partial());
-          
-          const result = await this.webhookService.testWebhook(
-            { ...testData, webhook_id: id },
-            apiRequest.context!.tenant
+          await this.validateData(apiRequest, webhookTestSchema.partial());
+
+          const webhook = await webhookModel.getById(id, apiRequest.context!.tenant);
+          if (!webhook) {
+            throw new NotFoundError('Webhook not found');
+          }
+
+          const signingSecret = await webhookModel.getSigningSecret(id, apiRequest.context!.tenant);
+          if (!signingSecret) {
+            throw new NotFoundError('Webhook signing secret not found');
+          }
+
+          const eventId = crypto.randomUUID();
+          const deliveryId = crypto.randomUUID();
+          const testedAt = new Date();
+          const request = {
+            webhookId: id,
+            eventId,
+            eventType: 'webhook.test',
+            occurredAt: testedAt.toISOString(),
+            payload: {
+              webhook_id: id,
+              webhook_name: webhook.name,
+              is_test: true,
+            },
+            attempt: 1,
+          };
+          const envelope = buildWebhookEnvelope(apiRequest.context!.tenant, request);
+          const requestBody = JSON.stringify(envelope);
+          const signature = signRequest(
+            signingSecret,
+            requestBody,
+            Math.floor(testedAt.getTime() / 1000),
           );
+          const requestHeaders = buildSignedWebhookRequestHeaders({
+            deliveryId,
+            request,
+            signature,
+            customHeaders: webhook.customHeaders,
+          });
+          const deliveryResult = await performWebhookDeliveryRequest({
+            webhook_id: id,
+            url: webhook.url,
+            method: webhook.method,
+            headers: requestHeaders,
+            payload: envelope,
+            verify_ssl: webhook.verifySsl,
+          });
+
+          const delivery = await webhookModel.recordDelivery({
+            tenant: apiRequest.context!.tenant,
+            deliveryId,
+            webhookId: id,
+            eventId,
+            eventType: 'webhook.test',
+            requestHeaders,
+            requestBody: envelope,
+            responseStatusCode: deliveryResult.status_code ?? null,
+            responseHeaders: deliveryResult.response_headers ?? null,
+            responseBody: deliveryResult.response_body ?? null,
+            status: deliveryResult.success ? 'delivered' : 'abandoned',
+            attemptNumber: 1,
+            durationMs: deliveryResult.duration_ms ?? null,
+            errorMessage: deliveryResult.error_message ?? null,
+            nextRetryAt: null,
+            isTest: true,
+            attemptedAt: testedAt,
+            completedAt: testedAt,
+          });
           
-          return createSuccessResponse(result.data);
+          return createSuccessResponse({
+            test_id: eventId,
+            delivery_id: delivery.deliveryId,
+            success: deliveryResult.success,
+            status_code: deliveryResult.status_code,
+            response_time_ms: deliveryResult.duration_ms,
+            response_body: deliveryResult.response_body,
+            error_message: deliveryResult.error_message,
+            tested_at: testedAt.toISOString(),
+          });
         });
       } catch (error) {
         return handleApiError(error);
@@ -579,15 +663,18 @@ export class ApiWebhookController {
           const url = new URL(apiRequest.url);
           const pathParts = url.pathname.split('/');
           const deliveryId = pathParts[pathParts.length - 1]; // Last part is delivery_id
-          
-          // TODO: Implement getDeliveryDetails method in WebhookService
-          const delivery = { data: { id: deliveryId, status: 'delivered', timestamp: new Date().toISOString() } }; // Temporary stub
+          const webhookId = await this.extractIdFromPath(apiRequest);
+          const delivery = await webhookModel.getDeliveryById(
+            apiRequest.context!.tenant,
+            webhookId,
+            deliveryId,
+          );
           
           if (!delivery) {
             throw new NotFoundError('Delivery not found');
           }
 
-          return createSuccessResponse(delivery.data);
+          return createSuccessResponse(delivery);
         });
       } catch (error) {
         return handleApiError(error);
@@ -782,11 +869,37 @@ export class ApiWebhookController {
           await this.checkPermission(apiRequest, 'read');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const webhook = await webhookModel.getById(id, apiRequest.context!.tenant);
+          if (!webhook) {
+            throw new NotFoundError('Webhook not found');
+          }
+
+          const successRate = webhook.totalDeliveries > 0
+            ? webhook.successfulDeliveries / webhook.totalDeliveries
+            : 1;
+          const status =
+            !webhook.isActive || webhook.autoDisabledAt
+              ? 'disabled'
+              : webhook.lastFailureAt
+                && (!webhook.lastSuccessAt || webhook.lastFailureAt > webhook.lastSuccessAt)
+                ? 'failing'
+                : 'healthy';
+          const health = {
+            webhook_id: webhook.webhookId,
+            status,
+            is_active: webhook.isActive,
+            auto_disabled_at: webhook.autoDisabledAt,
+            total_deliveries: webhook.totalDeliveries,
+            successful_deliveries: webhook.successfulDeliveries,
+            failed_deliveries: webhook.failedDeliveries,
+            success_rate: successRate,
+            last_delivery_at: webhook.lastDeliveryAt,
+            last_success_at: webhook.lastSuccessAt,
+            last_failure_at: webhook.lastFailureAt,
+            checked_at: new Date().toISOString(),
+          };
           
-          // TODO: Implement getWebhookHealth method in WebhookService
-          const health = { data: { status: 'healthy', last_check: new Date().toISOString() } }; // Temporary stub
-          
-          return createSuccessResponse(health.data);
+          return createSuccessResponse(health);
         });
       } catch (error) {
         return handleApiError(error);
@@ -882,11 +995,15 @@ export class ApiWebhookController {
           await this.checkPermission(apiRequest, 'read');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const webhook = await webhookModel.getById(id, apiRequest.context!.tenant);
+          if (!webhook) {
+            throw new NotFoundError('Webhook not found');
+          }
           
-          // TODO: Implement getWebhookSubscriptions method in WebhookService
-          const subscriptions = { data: [] }; // Temporary stub
-          
-          return createSuccessResponse(subscriptions.data);
+          return createSuccessResponse({
+            webhook_id: webhook.webhookId,
+            event_types: webhook.eventTypes,
+          });
         });
       } catch (error) {
         return handleApiError(error);
@@ -1179,11 +1296,19 @@ export class ApiWebhookController {
           await this.checkPermission(apiRequest, 'verify');
 
           const signatureData = await this.validateData(apiRequest, webhookSignatureSchema);
+          const secret = await this.resolveWebhookVerificationSecret(
+            apiRequest.context!.tenant,
+            signatureData.webhook_id,
+            signatureData.secret_vault_path,
+          );
+          const signatureHeader = this.normalizeSignatureHeader(
+            signatureData.signature,
+            signatureData.timestamp,
+          );
+          const valid = signatureData.algorithm === 'sha256'
+            && verifyAlgaWebhookSignature(signatureHeader, signatureData.body, secret);
           
-          // TODO: Implement verifyWebhookSignature method in WebhookService
-          const result = { data: { valid: true } }; // Temporary stub
-          
-          return createSuccessResponse(result.data);
+          return createSuccessResponse({ valid });
         });
       } catch (error) {
         return handleApiError(error);
@@ -1206,11 +1331,19 @@ export class ApiWebhookController {
           await this.checkPermission(apiRequest, 'manage_security');
 
           const id = await this.extractIdFromPath(apiRequest);
+          const newSecret = crypto.randomBytes(32).toString('base64url');
+          const updatedWebhook = await webhookModel.update(id, apiRequest.context!.tenant, {
+            signingSecret: newSecret,
+          });
+
+          if (!updatedWebhook) {
+            throw new NotFoundError('Webhook not found');
+          }
           
-          // TODO: Implement rotateWebhookSecret method in WebhookService
-          const result = { data: { secret: 'new_secret_' + Date.now() } }; // Temporary stub
-          
-          return createSuccessResponse(result.data);
+          return createSuccessResponse({
+            webhook_id: id,
+            signing_secret: newSecret,
+          });
         });
       } catch (error) {
         return handleApiError(error);
@@ -1285,6 +1418,48 @@ export class ApiWebhookController {
     };
   }
 
+  private normalizeSignatureHeader(signature: string, timestamp?: number): string {
+    if (signature.includes('v1=')) {
+      return signature;
+    }
+
+    if (typeof timestamp === 'number') {
+      return `t=${timestamp},v1=${signature}`;
+    }
+
+    return signature;
+  }
+
+  private async resolveWebhookVerificationSecret(
+    tenantId: string,
+    webhookId?: string,
+    secretVaultPath?: string,
+  ): Promise<string> {
+    if (webhookId) {
+      const secret = await webhookModel.getSigningSecret(webhookId, tenantId);
+      if (!secret) {
+        throw new NotFoundError('Webhook signing secret not found');
+      }
+      return secret;
+    }
+
+    if (secretVaultPath) {
+      const secretProvider = await getSecretProviderInstance();
+      const secret = await secretProvider.getTenantSecret(
+        tenantId,
+        path.posix.basename(secretVaultPath),
+      );
+
+      if (!secret) {
+        throw new NotFoundError('Webhook signing secret not found');
+      }
+
+      return secret;
+    }
+
+    throw new ValidationError('webhook_id or secret_vault_path is required');
+  }
+
   // ============================================================================
   // WEBHOOK EVENTS AND TRIGGERS
   // ============================================================================
@@ -1303,10 +1478,9 @@ export class ApiWebhookController {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
-          // TODO: Implement listAvailableEvents method in WebhookService
-          const events = { data: ['ticket.created', 'ticket.updated', 'invoice.created'] }; // Temporary stub
+          const events = [...webhookEventTypeSchema.options];
           
-          return createSuccessResponse(events.data);
+          return createSuccessResponse(events);
         });
       } catch (error) {
         return handleApiError(error);

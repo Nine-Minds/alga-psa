@@ -31,6 +31,7 @@ import {
   createPaginatedResponse,
   handleApiError
 } from '../middleware/apiMiddleware';
+import { enforceApiRateLimit } from '../rateLimit/enforce';
 import { getTenantProduct } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 
@@ -96,6 +97,7 @@ export abstract class ApiBaseController {
       user,
       apiKeyId: keyRecord.api_key_id,
     };
+    apiRequest.context.rateLimit = await enforceApiRateLimit(apiRequest, apiRequest.context);
 
     await this.assertProductApiAccess(apiRequest);
 
@@ -321,7 +323,7 @@ export abstract class ApiBaseController {
 
           try {
             const created = await this.service.create(data, apiRequest.context);
-            return createSuccessResponse(created, 201);
+            return createSuccessResponse(created, 201, undefined, apiRequest);
           } catch (error: any) {
             if (error.message && error.message.includes('already exists')) {
               throw new ConflictError(error.message);
@@ -364,7 +366,7 @@ export abstract class ApiBaseController {
             throw new NotFoundError(`${this.options.resource} not found`);
           }
           
-          return createSuccessResponse(updated);
+          return createSuccessResponse(updated, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);

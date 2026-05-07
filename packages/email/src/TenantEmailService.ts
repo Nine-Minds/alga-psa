@@ -17,7 +17,7 @@ import { BaseEmailService, BaseEmailParams, EmailSendResult } from './BaseEmailS
 import { SystemEmailProviderFactory } from './system/SystemEmailProviderFactory';
 import { isEnterprise } from './features';
 import { DelayedEmailQueue } from './DelayedEmailQueue';
-import { TokenBucketRateLimiter } from './TokenBucketRateLimiter';
+import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
 
 export interface SendEmailParams {
   tenantId: string;
@@ -161,7 +161,7 @@ export class TenantEmailService extends BaseEmailService {
     }
 
     try {
-      const result = await rateLimiter.tryConsume(this.tenantId, params.userId);
+      const result = await rateLimiter.tryConsume('email', this.tenantId, params.userId);
 
       if (!result.allowed) {
         return {

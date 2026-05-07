@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import type { Knex } from 'knex';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { findUserByIdForApi } from '@alga-psa/users/actions';
-import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
+import { authenticateApiKeyRequest } from '@/lib/api/middleware/apiAuthMiddleware';
 import { hasPermission } from '@/lib/auth/rbac';
 import { runWithTenant } from '@/lib/db';
 import { StorageServiceError, StorageValidationError } from '@/lib/storage/api/errors';
@@ -24,20 +23,8 @@ export async function resolveStorageAuthContext(req: NextRequest): Promise<Stora
   }
 
   if (apiKey) {
-    let keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-    if (!keyRecord) {
-      throw new StorageServiceError('UNAUTHORIZED', 'Invalid API key');
-    }
-    const tenantId = keyRecord.tenant;
-    if (!tenantId) {
-      throw new StorageServiceError('UNAUTHORIZED', 'Tenant not found for API key');
-    }
-
-    const user = await findUserByIdForApi(keyRecord.user_id, tenantId);
-    if (!user) {
-      throw new StorageServiceError('UNAUTHORIZED', 'User not found for API key');
-    }
-
+    const apiRequest = await authenticateApiKeyRequest(req);
+    const { tenant: tenantId, user } = apiRequest.context!;
     return { tenantId, currentUser: user, authType: 'api-key' };
   }
 

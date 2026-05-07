@@ -89,7 +89,8 @@
       "permissions": "Permisos",
       "userRoles": "Roles de usuario",
       "policies": "Políticas",
-      "apiKeys": "Claves API"
+      "apiKeys": "Claves API",
+      "webhooks": "Webhooks"
     },
     "loading": {
       "roles": "Cargando configuración de roles...",
@@ -97,6 +98,7 @@
       "userRoles": "Cargando configuración de roles de usuario...",
       "policies": "Cargando configuración de políticas...",
       "apiKeys": "Cargando configuración de claves API...",
+      "webhooks": "Cargando configuración de webhooks...",
       "sso": "Cargando herramientas de gestión de SSO...",
       "sessions": "Cargando sesiones activas..."
     },
@@ -181,6 +183,208 @@
         "loading": "Cargando sesiones...",
         "noMatch": "Ninguna sesión coincide con su búsqueda",
         "noSessions": "No se encontraron sesiones activas"
+      }
+    },
+    "webhooks": {
+      "title": "Webhooks salientes",
+      "description": "Cree suscripciones firmadas al ciclo de vida de tickets, fíltrelas por IDs de ticket específicos, inspeccione el historial de entregas y rote secretos sin salir de la configuración.",
+      "newWebhook": "Nuevo webhook",
+      "tabs": {
+        "configuration": "Configuración",
+        "deliveries": "Entregas"
+      },
+      "stats": {
+        "total": "Webhooks totales",
+        "active": "Activos",
+        "autoDisabled": "Deshabilitados automáticamente"
+      },
+      "secret": {
+        "label": "Secreto de firma",
+        "warning": "Este valor solo se muestra ahora. Guárdelo en el receptor antes de salir de la página.",
+        "copy": "Copiar",
+        "copied": "Secreto de firma copiado al portapapeles",
+        "copyFailed": "No se pudo copiar el secreto de firma al portapapeles",
+        "close": "Cerrar",
+        "download": "Descargar como .txt"
+      },
+      "form": {
+        "createTitle": "Crear webhook",
+        "editTitle": "Editar webhook",
+        "helper": "La configuración de reintentos se guarda como JSON; la cadencia de entrega sigue usando el plan de backoff estándar de la plataforma en v1.",
+        "name": "Nombre",
+        "namePlaceholder": "Feed de asignación de tickets",
+        "url": "URL",
+        "urlPlaceholder": "https://example.com/hooks/alga",
+        "events": "Eventos",
+        "customHeaders": "Encabezados personalizados",
+        "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
+        "ticketFilter": "Filtro de tickets",
+        "ticketFilterPlaceholder": "Un UUID de ticket por línea. Deje en blanco para recibir todos los eventos de ticket coincidentes.",
+        "retryConfig": "Configuración de reintentos (JSON)",
+        "verifySsl": "Verificar certificados SSL",
+        "webhookActive": "El webhook está activo",
+        "save": "Guardar cambios",
+        "saving": "Guardando…",
+        "create": "Crear webhook",
+        "clear": "Limpiar",
+        "delete": "Eliminar",
+        "payloadFields": "Campos enviados",
+        "payloadFieldsHelp": "Todos los campos se envían de forma predeterminada. Desmarque para excluir un campo del envío. La clave de correlación de la entidad (p. ej., ticket_id) siempre se incluye.",
+        "payloadFieldsSelectAll": "Seleccionar todo",
+        "payloadFieldsClear": "Limpiar"
+      },
+      "list": {
+        "title": "Webhooks configurados",
+        "loading": "Cargando…",
+        "configuredCount": "{{count}} configurados",
+        "empty": "Aún no hay webhooks configurados.",
+        "columns": {
+          "name": "Nombre",
+          "status": "Estado",
+          "lastDelivery": "Última entrega",
+          "success": "Éxito",
+          "actions": "Acciones"
+        },
+        "actions": {
+          "selected": "Seleccionado",
+          "manage": "Gestionar",
+          "pause": "Pausar",
+          "resume": "Reanudar",
+          "view": "Ver",
+          "edit": "Editar"
+        }
+      },
+      "detail": {
+        "summary": "{{total}} entregas, {{successful}} exitosas, {{failed}} fallidas.",
+        "sendTest": "Enviar prueba",
+        "sending": "Enviando…",
+        "rotateSecret": "Rotar secreto",
+        "rotating": "Rotando…",
+        "back": "Volver a webhooks"
+      },
+      "deliveries": {
+        "title": "Historial de entregas",
+        "page": "Página {{page}} de {{total}}",
+        "empty": "Aún no hay entregas registradas.",
+        "columns": {
+          "event": "Evento",
+          "status": "Estado",
+          "attempted": "Intentado",
+          "response": "Respuesta",
+          "action": "Acción"
+        },
+        "testBadge": "Entrega de prueba",
+        "attempt": "Intento {{number}}",
+        "noResponseCode": "n/d",
+        "noResponseBody": "No se capturó cuerpo de respuesta.",
+        "retry": "Reintentar",
+        "previous": "Anterior",
+        "next": "Siguiente"
+      },
+      "messages": {
+        "loadFailed": "No se pudieron cargar los ajustes de webhook.",
+        "loadDeliveriesFailed": "No se pudieron cargar las entregas del webhook.",
+        "saveFailed": "No se pudo guardar el webhook.",
+        "createSuccess": "Webhook creado.",
+        "updateSuccess": "Webhook actualizado.",
+        "deleteConfirm": "¿Eliminar webhook \"{{name}}\"?",
+        "deleteSuccess": "Webhook eliminado.",
+        "deleteFailed": "No se pudo eliminar el webhook.",
+        "testSuccess": "Prueba enviada con éxito ({{statusCode}}).",
+        "testFailed": "La prueba falló: {{message}}",
+        "testRunFailed": "No se pudo enviar la prueba del webhook.",
+        "unknownError": "Error desconocido",
+        "secretRotated": "Secreto de firma rotado.",
+        "rotateFailed": "No se pudo rotar el secreto del webhook.",
+        "resumed": "Webhook reanudado.",
+        "paused": "Webhook pausado.",
+        "stateChangeFailed": "No se pudo actualizar el estado del webhook.",
+        "retryQueued": "Reintento en cola para el evento {{eventId}}.",
+        "retryFailed": "No se pudo reintentar la entrega.",
+        "invalidHeaderLine": "Línea de encabezado no válida: \"{{line}}\"",
+        "invalidRetryConfig": "La configuración de reintentos debe ser un objeto JSON"
+      },
+      "common": {
+        "never": "Nunca"
+      },
+      "health": {
+        "healthy": "saludable",
+        "failing": "con errores",
+        "disabled": "deshabilitado"
+      },
+      "deliveryStatus": {
+        "delivered": "entregado",
+        "retrying": "reintentando",
+        "abandoned": "abandonado",
+        "pending": "pendiente"
+      }
+    },
+    "apiKeys": {
+      "rateLimit": {
+        "columnTitle": "Límite de tasa",
+        "loading": "Cargando…",
+        "summary": "{{maxTokens}} ráfaga / {{refillPerMin}} por min",
+        "source": "Origen: {{label}}",
+        "sourceLabels": {
+          "key": "Anulación",
+          "tenant": "Predeterminado del tenant",
+          "system": "Predeterminado del sistema"
+        },
+        "remaining": " • Restante: {{remaining}}/{{maxTokens}}",
+        "remainingUnavailable": " • Restante: no disponible",
+        "actions": {
+          "edit": "Editar",
+          "override": "Anular",
+          "save": "Guardar",
+          "cancel": "Cancelar",
+          "reset": "Restablecer"
+        },
+        "errors": {
+          "saveFailed": "No se pudo guardar la anulación del límite de tasa de la API.",
+          "clearFailed": "No se pudo borrar la anulación del límite de tasa de la API."
+        }
+      },
+      "generate": {
+        "title": "Generar clave API",
+        "description": "Descripción",
+        "descriptionPlaceholder": "p. ej., Clave API de desarrollo",
+        "expiration": "Fecha de expiración (opcional)",
+        "submit": "Generar nueva clave API"
+      },
+      "list": {
+        "title": "Sus claves API",
+        "searchPlaceholder": "Buscar por descripción",
+        "filters": {
+          "allStatuses": "Todos los estados",
+          "active": "Activa",
+          "inactive": "Inactiva",
+          "lastUsedAfter": "Usada por última vez después de",
+          "expiresBefore": "Expira antes de",
+          "reset": "Restablecer"
+        },
+        "columns": {
+          "description": "Descripción",
+          "created": "Creada",
+          "lastUsed": "Último uso",
+          "expires": "Expira",
+          "status": "Estado",
+          "actions": "Acciones"
+        },
+        "never": "Nunca",
+        "status": {
+          "active": "Activa",
+          "inactive": "Inactiva"
+        },
+        "deactivate": "Desactivar"
+      },
+      "newKeyDialog": {
+        "title": "Clave API generada",
+        "warning": "Copie su clave API ahora. Por motivos de seguridad, no se mostrará de nuevo.",
+        "copy": "Copiar al portapapeles",
+        "download": "Descargar como .txt",
+        "copySuccess": "¡Clave API copiada al portapapeles!",
+        "copyFailed": "Error al copiar la clave API al portapapeles",
+        "downloadFailed": "Error al descargar la clave API"
       }
     }
   },

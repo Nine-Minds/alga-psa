@@ -5,6 +5,7 @@ import { registerCalendarSyncSubscriber, unregisterCalendarSyncSubscriber } from
 import { registerInternalNotificationSubscriber, unregisterInternalNotificationSubscriber } from './internalNotificationSubscriber';
 import { registerSlaSubscriber, unregisterSlaSubscriber } from './slaSubscriber';
 import { registerSlaNotificationSubscriber, unregisterSlaNotificationSubscriber } from './slaNotificationSubscriber';
+import { registerWebhookSubscriber, unregisterWebhookSubscriber } from './webhookSubscriber';
 
 type SubscriberRegistration = {
   name: string;
@@ -19,6 +20,7 @@ const REGISTRATIONS: SubscriberRegistration[] = [
   { name: 'internalNotification', register: registerInternalNotificationSubscriber },
   { name: 'sla', register: registerSlaSubscriber },
   { name: 'slaNotification', register: registerSlaNotificationSubscriber },
+  { name: 'webhook', register: registerWebhookSubscriber },
 ];
 
 const UNREGISTRATIONS: SubscriberRegistration[] = [
@@ -29,6 +31,7 @@ const UNREGISTRATIONS: SubscriberRegistration[] = [
   { name: 'internalNotification', register: unregisterInternalNotificationSubscriber },
   { name: 'sla', register: unregisterSlaSubscriber },
   { name: 'slaNotification', register: unregisterSlaNotificationSubscriber },
+  { name: 'webhook', register: unregisterWebhookSubscriber },
 ];
 
 // Each subscriber registers in its own try/catch. A transient failure (e.g. a

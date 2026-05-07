@@ -1,9 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
   TokenBucketRateLimiter,
-  type TokenBucketRedisClient,
-  type BucketConfig
-} from '../../../../../packages/email/src/TokenBucketRateLimiter';
+  type TokenBucketRedisClient
+} from '@alga-psa/core/rateLimit';
 
 /**
  * Unit tests for the TokenBucketRateLimiter service.
@@ -77,7 +76,7 @@ describe('TokenBucketRateLimiter', () => {
       const limiter = TokenBucketRateLimiter.getInstance();
       await limiter.initialize(async () => mockRedis);
 
-      const result = await limiter.tryConsume('tenant-1');
+      const result = await limiter.tryConsume('email', 'tenant-1');
 
       expect(result.allowed).toBe(true);
       expect(result.remaining).toBe(59); // Started with 60, consumed 1
@@ -88,16 +87,16 @@ describe('TokenBucketRateLimiter', () => {
       // Use a small bucket for testing
       await limiter.initialize(
         async () => mockRedis,
-        async () => ({ maxTokens: 3, refillRate: 1 })
+        { email: async () => ({ maxTokens: 3, refillRate: 1 }) }
       );
 
       // First 3 requests should succeed
-      expect((await limiter.tryConsume('tenant-1')).allowed).toBe(true);
-      expect((await limiter.tryConsume('tenant-1')).allowed).toBe(true);
-      expect((await limiter.tryConsume('tenant-1')).allowed).toBe(true);
+      expect((await limiter.tryConsume('email', 'tenant-1')).allowed).toBe(true);
+      expect((await limiter.tryConsume('email', 'tenant-1')).allowed).toBe(true);
+      expect((await limiter.tryConsume('email', 'tenant-1')).allowed).toBe(true);
 
       // 4th request should fail
-      const result = await limiter.tryConsume('tenant-1');
+      const result = await limiter.tryConsume('email', 'tenant-1');
       expect(result.allowed).toBe(false);
       expect(result.remaining).toBe(0);
       expect(result.retryAfterMs).toBeGreaterThan(0);
@@ -107,36 +106,36 @@ describe('TokenBucketRateLimiter', () => {
       const limiter = TokenBucketRateLimiter.getInstance();
       await limiter.initialize(
         async () => mockRedis,
-        async () => ({ maxTokens: 2, refillRate: 1 })
+        { email: async () => ({ maxTokens: 2, refillRate: 1 }) }
       );
 
       // Exhaust tenant-1's bucket
-      await limiter.tryConsume('tenant-1');
-      await limiter.tryConsume('tenant-1');
+      await limiter.tryConsume('email', 'tenant-1');
+      await limiter.tryConsume('email', 'tenant-1');
 
       // tenant-1 should be rate limited
-      expect((await limiter.tryConsume('tenant-1')).allowed).toBe(false);
+      expect((await limiter.tryConsume('email', 'tenant-1')).allowed).toBe(false);
 
       // tenant-2 should still have tokens
-      expect((await limiter.tryConsume('tenant-2')).allowed).toBe(true);
+      expect((await limiter.tryConsume('email', 'tenant-2')).allowed).toBe(true);
     });
 
     it('should track tokens separately per user within a tenant', async () => {
       const limiter = TokenBucketRateLimiter.getInstance();
       await limiter.initialize(
         async () => mockRedis,
-        async () => ({ maxTokens: 2, refillRate: 1 })
+        { email: async () => ({ maxTokens: 2, refillRate: 1 }) }
       );
 
       // Exhaust user-1's bucket in tenant-1
-      await limiter.tryConsume('tenant-1', 'user-1');
-      await limiter.tryConsume('tenant-1', 'user-1');
+      await limiter.tryConsume('email', 'tenant-1', 'user-1');
+      await limiter.tryConsume('email', 'tenant-1', 'user-1');
 
       // user-1 should be rate limited
-      expect((await limiter.tryConsume('tenant-1', 'user-1')).allowed).toBe(false);
+      expect((await limiter.tryConsume('email', 'tenant-1', 'user-1')).allowed).toBe(false);
 
       // user-2 in same tenant should still have tokens
-      expect((await limiter.tryConsume('tenant-1', 'user-2')).allowed).toBe(true);
+      expect((await limiter.tryConsume('email', 'tenant-1', 'user-2')).allowed).toBe(true);
     });
   });
 
@@ -145,17 +144,17 @@ describe('TokenBucketRateLimiter', () => {
       const limiter = TokenBucketRateLimiter.getInstance();
       await limiter.initialize(
         async () => mockRedis,
-        async () => ({ maxTokens: 2, refillRate: 10 }) // 10 tokens per second for fast test
+        { email: async () => ({ maxTokens: 2, refillRate: 10 }) } // 10 tokens per second for fast test
       );
 
       // Exhaust bucket
-      await limiter.tryConsume('tenant-1');
-      await limiter.tryConsume('tenant-1');
-      expect((await limiter.tryConsume('tenant-1')).allowed).toBe(false);
+      await limiter.tryConsume('email', 'tenant-1');
+      await limiter.tryConsume('email', 'tenant-1');
+      expect((await limiter.tryConsume('email', 'tenant-1')).allowed).toBe(false);
 
       // Simulate time passing (100ms = 1 token at 10/sec rate)
       // We need to manipulate the stored state to simulate time passing
-      const bucketKey = 'alga-psa:ratelimit:bucket:tenant-1';
+      const bucketKey = 'alga-psa:ratelimit:bucket:email:tenant-1';
       const stateJson = mockRedis._data.get(bucketKey);
       if (stateJson) {
         const state = JSON.parse(stateJson);
@@ -164,7 +163,7 @@ describe('TokenBucketRateLimiter', () => {
       }
 
       // Now should have tokens again
-      const result = await limiter.tryConsume('tenant-1');
+      const result = await limiter.tryConsume('email', 'tenant-1');
       expect(result.allowed).toBe(true);
     });
 
@@ -172,14 +171,14 @@ describe('TokenBucketRateLimiter', () => {
       const limiter = TokenBucketRateLimiter.getInstance();
       await limiter.initialize(
         async () => mockRedis,
-        async () => ({ maxTokens: 5, refillRate: 100 }) // Very fast refill
+        { email: async () => ({ maxTokens: 5, refillRate: 100 }) } // Very fast refill
       );
 
       // Consume one token
-      await limiter.tryConsume('tenant-1');
+      await limiter.tryConsume('email', 'tenant-1');
 
       // Simulate a long time passing
-      const bucketKey = 'alga-psa:ratelimit:bucket:tenant-1';
+      const bucketKey = 'alga-psa:ratelimit:bucket:email:tenant-1';
       const stateJson = mockRedis._data.get(bucketKey);
       if (stateJson) {
         const state = JSON.parse(stateJson);
@@ -188,7 +187,7 @@ describe('TokenBucketRateLimiter', () => {
       }
 
       // Should be capped at maxTokens (5)
-      const stateResult = await limiter.getState('tenant-1');
+      const stateResult = await limiter.getState('email', 'tenant-1');
       expect(stateResult?.tokens).toBe(5);
       expect(stateResult?.maxTokens).toBe(5);
     });
@@ -199,14 +198,14 @@ describe('TokenBucketRateLimiter', () => {
       const limiter = TokenBucketRateLimiter.getInstance();
       await limiter.initialize(
         async () => mockRedis,
-        async () => ({ maxTokens: 1, refillRate: 1 }) // 1 token per second
+        { email: async () => ({ maxTokens: 1, refillRate: 1 }) } // 1 token per second
       );
 
       // Exhaust bucket
-      await limiter.tryConsume('tenant-1');
+      await limiter.tryConsume('email', 'tenant-1');
 
       // Next request should return ~1000ms retry time
-      const result = await limiter.tryConsume('tenant-1');
+      const result = await limiter.tryConsume('email', 'tenant-1');
       expect(result.allowed).toBe(false);
       expect(result.retryAfterMs).toBeGreaterThanOrEqual(900);
       expect(result.retryAfterMs).toBeLessThanOrEqual(1100);
@@ -216,11 +215,11 @@ describe('TokenBucketRateLimiter', () => {
       const limiter = TokenBucketRateLimiter.getInstance();
       await limiter.initialize(
         async () => mockRedis,
-        async () => ({ maxTokens: 1, refillRate: 1 })
+        { email: async () => ({ maxTokens: 1, refillRate: 1 }) }
       );
 
-      await limiter.tryConsume('tenant-1');
-      const result = await limiter.tryConsume('tenant-1');
+      await limiter.tryConsume('email', 'tenant-1');
+      const result = await limiter.tryConsume('email', 'tenant-1');
 
       expect(result.reason).toContain('Rate limit exceeded');
       expect(result.reason).toContain('0 tokens remaining');
@@ -232,7 +231,7 @@ describe('TokenBucketRateLimiter', () => {
       const limiter = TokenBucketRateLimiter.getInstance();
       // Not initialized
 
-      const result = await limiter.tryConsume('tenant-1');
+      const result = await limiter.tryConsume('email', 'tenant-1');
       expect(result.allowed).toBe(true);
       expect(result.remaining).toBe(-1); // Indicates unknown state
     });
@@ -243,14 +242,14 @@ describe('TokenBucketRateLimiter', () => {
       const limiter = TokenBucketRateLimiter.getInstance();
       await limiter.initialize(
         async () => mockRedis,
-        async () => ({ maxTokens: 10, refillRate: 1 })
+        { email: async () => ({ maxTokens: 10, refillRate: 1 }) }
       );
 
       // Consume some tokens
-      await limiter.tryConsume('tenant-1');
-      await limiter.tryConsume('tenant-1');
+      await limiter.tryConsume('email', 'tenant-1');
+      await limiter.tryConsume('email', 'tenant-1');
 
-      const state = await limiter.getState('tenant-1');
+      const state = await limiter.getState('email', 'tenant-1');
       expect(state?.tokens).toBe(8);
       expect(state?.maxTokens).toBe(10);
     });
@@ -259,10 +258,10 @@ describe('TokenBucketRateLimiter', () => {
       const limiter = TokenBucketRateLimiter.getInstance();
       await limiter.initialize(
         async () => mockRedis,
-        async () => ({ maxTokens: 50, refillRate: 1 })
+        { email: async () => ({ maxTokens: 50, refillRate: 1 }) }
       );
 
-      const state = await limiter.getState('new-tenant');
+      const state = await limiter.getState('email', 'new-tenant');
       expect(state?.tokens).toBe(50);
       expect(state?.maxTokens).toBe(50);
     });
@@ -289,17 +288,17 @@ describe('Token Bucket vs Sliding Window Comparison', () => {
       // Configure for 60 tokens max (same as 60/minute rate limit)
       await limiter.initialize(
         async () => mockRedis,
-        async () => ({ maxTokens: 60, refillRate: 1 })
+        { email: async () => ({ maxTokens: 60, refillRate: 1 }) }
       );
 
       // Should allow 60 rapid requests (burst)
       for (let i = 0; i < 60; i++) {
-        const result = await limiter.tryConsume('tenant-1');
+        const result = await limiter.tryConsume('email', 'tenant-1');
         expect(result.allowed).toBe(true);
       }
 
       // 61st should fail
-      const result = await limiter.tryConsume('tenant-1');
+      const result = await limiter.tryConsume('email', 'tenant-1');
       expect(result.allowed).toBe(false);
 
       TokenBucketRateLimiter.resetInstance();
@@ -314,16 +313,16 @@ describe('Token Bucket vs Sliding Window Comparison', () => {
       // 1 token per second = 60 per minute sustained
       await limiter.initialize(
         async () => mockRedis,
-        async () => ({ maxTokens: 60, refillRate: 1 })
+        { email: async () => ({ maxTokens: 60, refillRate: 1 }) }
       );
 
       // Exhaust initial burst
       for (let i = 0; i < 60; i++) {
-        await limiter.tryConsume('tenant-1');
+        await limiter.tryConsume('email', 'tenant-1');
       }
 
       // Simulate 1 second passing
-      const bucketKey = 'alga-psa:ratelimit:bucket:tenant-1';
+      const bucketKey = 'alga-psa:ratelimit:bucket:email:tenant-1';
       const stateJson = mockRedis._data.get(bucketKey);
       if (stateJson) {
         const state = JSON.parse(stateJson);
@@ -332,7 +331,7 @@ describe('Token Bucket vs Sliding Window Comparison', () => {
       }
 
       // Should allow 1 more request (1 token refilled)
-      const result = await limiter.tryConsume('tenant-1');
+      const result = await limiter.tryConsume('email', 'tenant-1');
       expect(result.allowed).toBe(true);
 
       TokenBucketRateLimiter.resetInstance();

@@ -5,10 +5,11 @@
 
 import { ApiAssetController } from '@/lib/api/controllers/ApiAssetController';
 import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
+import { withApiKeyRouteAuth } from '@/lib/api/middleware/withApiKeyRouteAuth';
 
 const controller = new ApiAssetController();
 
-export async function GET(request: Request, { params }: { params: Promise<any> }) {
+export const GET = withApiKeyRouteAuth<{ id: string }>(async (request, { params }) => {
   try {
     const resolvedParams = await params;
     const req = request as any;
@@ -17,9 +18,9 @@ export async function GET(request: Request, { params }: { params: Promise<any> }
   } catch (error) {
     return handleApiError(error);
   }
-}
+});
 
-export async function PUT(request: Request, { params }: { params: Promise<any> }) {
+export const PUT = withApiKeyRouteAuth<{ id: string }>(async (request, { params }) => {
   try {
     const resolvedParams = await params;
     const req = request as any;
@@ -28,9 +29,9 @@ export async function PUT(request: Request, { params }: { params: Promise<any> }
   } catch (error) {
     return handleApiError(error);
   }
-}
+});
 
-export async function DELETE(request: Request, { params }: { params: Promise<any> }) {
+export const DELETE = withApiKeyRouteAuth<{ id: string }>(async (request, { params }) => {
   try {
     const resolvedParams = await params;
     const req = request as any;
@@ -39,7 +40,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<any
   } catch (error) {
     return handleApiError(error);
   }
-}
+});
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

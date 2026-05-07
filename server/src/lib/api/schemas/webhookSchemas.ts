@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { verifyWebhookSignature as verifyAlgaWebhookSignature } from '../../webhooks/sign';
 import { 
   uuidSchema, 
   emailSchema, 
@@ -25,6 +26,7 @@ export const webhookEventTypeSchema = z.enum([
   'ticket.status_changed',
   'ticket.assigned',
   'ticket.closed',
+  'ticket.comment.added',
   'project.created',
   'project.updated',
   'project.completed',
@@ -58,6 +60,125 @@ export const webhookEventTypeSchema = z.enum([
   // Custom events
   'custom.event'
 ]);
+
+/**
+ * Canonical list of selectable fields for ticket-event webhook payloads.
+ * Users pick a subset; whatever they leave out gets stripped before delivery.
+ *
+ * `ticket_id` is intentionally NOT in this list — it's an always-required
+ * correlation key that we never let consumers turn off.
+ *
+ * `comment` and `changes` are GROUP toggles: selecting them includes the
+ * entire sub-object (only present on TICKET_COMMENT_ADDED / TICKET_UPDATED
+ * events anyway), deselecting strips it whole.
+ *
+ * `comments` includes the full thread for the ticket, fetched fresh per event.
+ */
+export const WEBHOOK_TICKET_PAYLOAD_FIELDS = [
+  // Identity (besides ticket_id which is mandatory)
+  'ticket_number',
+  'title',
+  'url',
+  // Status
+  'status_id',
+  'status_name',
+  'is_closed',
+  'previous_status_id',
+  'previous_status_name',
+  // Priority
+  'priority_id',
+  'priority_name',
+  // Client
+  'client_id',
+  'client_name',
+  // Contact
+  'contact_name_id',
+  'contact_name',
+  'contact_email',
+  // Assignment
+  'assigned_to',
+  'assigned_to_name',
+  'assigned_team_id',
+  // Board / Category
+  'board_id',
+  'board_name',
+  'category_id',
+  'subcategory_id',
+  // Timestamps
+  'entered_at',
+  'updated_at',
+  'closed_at',
+  'due_date',
+  // Tags
+  'tags',
+  // Group toggles
+  'comment',
+  'changes',
+  // Full ticket comment thread (separate from `comment`).
+  'comments',
+] as const;
+export type WebhookTicketPayloadField = (typeof WEBHOOK_TICKET_PAYLOAD_FIELDS)[number];
+
+/**
+ * Per-entity payload field registry. Each new entity (project, invoice, …)
+ * registers its own selectable field list here; the server-action validator,
+ * the projection helper, and the UI all read from this single source of
+ * truth, so adding a new entity is purely additive — no schema enum
+ * surgery, no UI rewrite, no flat-list collisions between similarly-named
+ * fields across entities.
+ */
+export const WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY = {
+  ticket: WEBHOOK_TICKET_PAYLOAD_FIELDS,
+} as const satisfies Record<string, readonly string[]>;
+
+export type WebhookPayloadEntity = keyof typeof WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY;
+
+/**
+ * Per-webhook payload field configuration:
+ *   null              — column-level: full payload for every entity (default).
+ *   {}                — same as null (no per-entity overrides).
+ *   { ticket: null }  — full payload for that entity (explicit).
+ *   { ticket: [] }    — required-only (ticket_id + envelope) for that entity.
+ *   { ticket: [a,b] } — only those fields (plus required) for that entity.
+ *
+ * Entities not present in the map fall back to "full payload".
+ */
+export const payloadFieldsByEntitySchema = z
+  .record(z.string(), z.array(z.string()).nullable())
+  .nullable()
+  .superRefine((value, ctx) => {
+    if (!value) return;
+    for (const [entity, fields] of Object.entries(value)) {
+      const allowed = (WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY as Record<string, readonly string[]>)[entity];
+      if (!allowed) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [entity],
+          message: `Unknown webhook entity "${entity}"`,
+        });
+        continue;
+      }
+      if (fields === null) continue;
+      const allowedSet = new Set(allowed);
+      for (const f of fields) {
+        if (!allowedSet.has(f)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: [entity],
+            message: `Unknown field "${f}" for entity "${entity}"`,
+          });
+        }
+      }
+    }
+  });
+
+/**
+ * Derive the entity portion of a public event type ("ticket.created" → "ticket").
+ */
+export function webhookEntityForEventType(publicEventType: string): string {
+  const dot = publicEventType.indexOf('.');
+  return dot > 0 ? publicEventType.slice(0, dot) : publicEventType;
+}
 
 // HTTP methods for webhook endpoints
 export const httpMethodSchema = z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
@@ -166,7 +287,10 @@ export const createWebhookSchema = z.object({
   
   // Event filtering
   event_filter: eventFilterSchema,
-  
+
+  // Per-entity payload field allowlist (null = full payload everywhere).
+  payload_fields: payloadFieldsByEntitySchema.optional(),
+
   // Payload transformation
   payload_transformation: payloadTransformationSchema,
   
@@ -432,7 +556,9 @@ export const webhookSignatureSchema = z.object({
   algorithm: z.enum(['sha1', 'sha256', 'sha512']),
   signature: z.string(),
   timestamp: z.number().optional(),
-  body: z.string()
+  body: z.string(),
+  webhook_id: uuidSchema.optional(),
+  secret_vault_path: z.string().optional()
 });
 
 // Search and filtering schemas
@@ -493,23 +619,11 @@ export function validateWebhookSignature(
   secret: string,
   algorithm: 'sha1' | 'sha256' | 'sha512' = 'sha256'
 ): boolean {
-  const crypto = require('crypto');
-  const expectedSignature = crypto
-    .createHmac(algorithm, secret)
-    .update(payload, 'utf8')
-    .digest('hex');
-  
-  const expectedSignatureWithPrefix = `${algorithm}=${expectedSignature}`;
-  
-  // Use crypto.timingSafeEqual for constant-time comparison
-  const signatureBuffer = Buffer.from(signature);
-  const expectedBuffer = Buffer.from(expectedSignatureWithPrefix);
-  
-  if (signatureBuffer.length !== expectedBuffer.length) {
+  if (algorithm !== 'sha256') {
     return false;
   }
-  
-  return crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
+
+  return verifyAlgaWebhookSignature(signature, payload, secret);
 }
 
 // Default webhook templates
