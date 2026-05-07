@@ -56,6 +56,9 @@ export async function createTenantInDB(
       if (input.plan) {
         tenantData.plan = input.plan;
       }
+      if (input.productCode) {
+        tenantData.product_code = input.productCode;
+      }
 
       // Resolve plan from Stripe price → product → tier
       if (input.stripePriceId) {

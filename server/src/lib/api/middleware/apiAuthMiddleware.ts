@@ -7,6 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApiKeyServiceForApi } from '../../services/apiKeyServiceForApi';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { runWithTenant } from '../../db';
+import { getTenantProduct, ProductAccessError } from '@/lib/productAccess';
+import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 import { 
   ApiRequest, 
   UnauthorizedError,
@@ -64,6 +66,12 @@ export async function withApiKeyAuth(
         tenant: keyRecord.tenant,
         user
       };
+
+      const productCode = await getTenantProduct(apiRequest.context.tenant);
+      const pathname = new URL(req.url).pathname;
+      if (resolveProductApiBehavior(productCode, pathname) === 'denied') {
+        throw new ProductAccessError(`api:${pathname}`, productCode);
+      }
 
       // Run the handler within the tenant context
       return await runWithTenant(tenantId, async () => {

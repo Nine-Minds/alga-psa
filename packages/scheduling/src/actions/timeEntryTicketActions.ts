@@ -19,6 +19,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { resolveManagedSubjectUserIds } from './timeEntryDelegationAuth';
+import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
 
 interface RawRow {
   entry_id: string;
@@ -209,6 +210,7 @@ export const fetchTimeEntriesForTicket = withAuth(async (
   { tenant },
   ticketId: string,
 ): Promise<TicketTimeEntriesSummary> => {
+  await assertPsaOnlyTenantAccess(tenant, 'scheduling_time_actions');
   const { knex: db } = await createTenantKnex();
   return fetchTimeEntriesForTicketCore(user, tenant, db, ticketId);
 });

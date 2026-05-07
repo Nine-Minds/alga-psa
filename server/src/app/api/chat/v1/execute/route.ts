@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
+import { assertPsaChatProductAccess } from '../../productAccess';
 
 const isEnterpriseEdition =
   process.env.NEXT_PUBLIC_EDITION === 'enterprise' ||
@@ -9,6 +10,11 @@ const isEnterpriseEdition =
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
+  const productAccessResponse = await assertPsaChatProductAccess();
+  if (productAccessResponse) {
+    return productAccessResponse;
+  }
+
   if (!isEnterpriseEdition) {
     return new Response(
       JSON.stringify({ error: 'Chat completions are only available in Enterprise Edition' }),

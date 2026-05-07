@@ -4,12 +4,14 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { IClient, IClientLocation } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
+import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
 
 export const getAllClientsForAssets = withAuth(async (
   _user,
   { tenant },
   includeInactive: boolean = true
 ): Promise<IClient[]> => {
+  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -31,6 +33,7 @@ export const getClientByIdForAssets = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<IClient | null> => {
+  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -47,6 +50,7 @@ export const getClientLocationsForAssets = withAuth(async (
   { tenant },
   clientId: string
 ): Promise<IClientLocation[]> => {
+  await assertPsaOnlyTenantAccess(tenant, 'asset_rmm_actions');
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {

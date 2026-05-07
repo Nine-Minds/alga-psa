@@ -197,6 +197,7 @@ interface ClientDetailsProps {
   isInDrawer?: boolean;
   quickView?: boolean;
   surveySummary?: SurveyClientSatisfactionSummary | null;
+  isAlgadeskMode?: boolean;
 }
 
 const ClientDetails: React.FC<ClientDetailsProps> = ({
@@ -206,7 +207,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   contacts = EMPTY_CONTACTS,
   isInDrawer = false,
   quickView = false,
-  surveySummary = null
+  surveySummary = null,
+  isAlgadeskMode = false,
 }) => {
   const { t } = useTranslation('msp/clients');
   const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientTickets, getSlaPolicies } = useClientCrossFeature();
@@ -267,6 +269,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     entraClientSyncFlag.enabled,
     editedClient
   );
+  const shouldRenderPsaOnlyClientSurfaces = !isAlgadeskMode;
 
   const fetchEntraSyncRunStatus = useCallback(async (runId: string): Promise<string | null> => {
     const response = await fetch(`/api/integrations/entra/sync/runs/${encodeURIComponent(runId)}`, {
@@ -1080,7 +1083,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     }
   }, [editedClient.client_id]);
 
-  const tabContent = useMemo(() => [
+  const baseTabContent = useMemo(() => [
     {
       id: 'details',
       label: t('clientDetails.details', { defaultValue: 'Details' }),
@@ -1399,7 +1402,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   isEditing={false}
                 />
               </div>
-              {renderSurveySummaryCard({ summary: surveySummary })}
+              {!isAlgadeskMode ? renderSurveySummaryCard({ summary: surveySummary }) : null}
             </div>
           </div>
           
@@ -1457,7 +1460,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     {
       id: 'assets',
       label: t('clientDetails.assets', { defaultValue: 'Assets' }),
-      content: renderClientAssets({ clientId: client.client_id }),
+      content: shouldRenderPsaOnlyClientSurfaces ? renderClientAssets({ clientId: client.client_id }) : null,
     },
     {
       id: 'billing',
@@ -1497,21 +1500,23 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       id: 'documents',
       label: t('clientDetails.documents', { defaultValue: 'Documents' }),
       content: (
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          {currentUser ? renderDocuments({
-              id: `${id}-documents`,
-              documents,
-              gridColumns: 3,
-              userId: currentUser.user_id,
-              entityId: client.client_id,
-              entityType: 'client',
-              onDocumentCreated: async () => {
-                memoizedRouter.refresh();
-              },
-          }) : (
-            <div>{t('common.states.loading', { defaultValue: 'Loading...' })}</div>
-          )}
-        </div>
+        shouldRenderPsaOnlyClientSurfaces ? (
+          <div className="bg-white p-6 rounded-lg shadow-sm">
+            {currentUser ? renderDocuments({
+                id: `${id}-documents`,
+                documents,
+                gridColumns: 3,
+                userId: currentUser.user_id,
+                entityId: client.client_id,
+                entityType: 'client',
+                onDocumentCreated: async () => {
+                  memoizedRouter.refresh();
+                },
+            }) : (
+              <div>{t('common.states.loading', { defaultValue: 'Loading...' })}</div>
+            )}
+          </div>
+        ) : null
       )
     },
     {
@@ -1651,6 +1656,24 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     memoizedRouter,
     interactions
   ]);
+
+  const tabContent = useMemo(() => {
+    if (!isAlgadeskMode) {
+      return baseTabContent;
+    }
+
+    const excludedTabs = new Set([
+      'assets',
+      'billing',
+      'billing-dashboard',
+      'documents',
+      'tax-settings',
+      'projects',
+      'service-catalog',
+      'services',
+    ]);
+    return baseTabContent.filter((tab) => !excludedTabs.has(tab.id));
+  }, [baseTabContent, isAlgadeskMode]);
 
   return (
     <ReflectionContainer id={id} label={t('clientDetails.title', { defaultValue: 'Client Details' })}>

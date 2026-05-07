@@ -33,6 +33,8 @@ export interface TenantCreationInput {
   // Plan override. Used when the plan cannot be resolved from a Stripe product
   // (e.g. IAP flows), so createTenant can set tenants.plan directly.
   plan?: 'solo' | 'pro' | 'premium';
+  // Optional product entitlement seam, orthogonal to billing tier.
+  productCode?: 'psa' | 'algadesk';
 
   // Apple IAP fields — only set when billingSource === 'apple_iap'.
   appleIap?: AppleIapTenantInput;
@@ -75,6 +77,8 @@ export interface CreateTenantActivityInput {
   // Plan override. Used when plan cannot be resolved from a Stripe product
   // (e.g. IAP flows); set tenants.plan directly if provided.
   plan?: 'solo' | 'pro' | 'premium';
+  // Optional product entitlement seam, orthogonal to billing tier.
+  productCode?: 'psa' | 'algadesk';
 
   // Apple IAP data — only set when billingSource === 'apple_iap'.
   appleIap?: AppleIapTenantInput;

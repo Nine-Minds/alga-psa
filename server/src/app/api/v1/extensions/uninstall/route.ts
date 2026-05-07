@@ -1,5 +1,7 @@
 import type { NextRequest, NextResponse } from 'next/server';
 
+import { assertSessionProductAccess } from '@/lib/api/standaloneProductGuards';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -43,6 +45,14 @@ function eeUnavailable(): Response {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
+  const deniedResponse = await assertSessionProductAccess({
+    capability: 'extensions',
+    allowedProducts: ['psa'],
+  });
+  if (deniedResponse) {
+    return deniedResponse;
+  }
+
   const eeRoute = await loadEeRoute();
   if (!eeRoute?.POST) {
     return eeUnavailable();

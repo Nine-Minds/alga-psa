@@ -7,11 +7,14 @@ import {
   bottomMenuItems,
   menuItems as legacyMenuItems,
   navigationSections as originalSections,
+  settingsNavigationSections,
   type MenuItem,
   type NavigationSection,
 } from '@/config/menuConfig';
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
 import { useTier } from '@/context/TierContext';
+import { useProduct } from '@/context/ProductContext';
+import { filterMenuSectionsByProduct } from '@/lib/productSurfaceRegistry';
 
 export function filterMenuItemsByFeatureAccess(
   items: readonly MenuItem[],
@@ -55,6 +58,8 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const { hasFeature } = useTier();
+  const { productCode } = useProduct();
+  const isAlgadesk = productCode === 'algadesk';
 
   useEffect(() => {
     if (!useNavigationSections) return;
@@ -109,14 +114,24 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       }).filter((item): item is MenuItem => item !== null)
     }));
 
-    return filterNavigationSectionsByFeatureAccess(filteredSections, hasFeature);
-  }, [canWorkflowAdmin, useNavigationSections, hasFeature]);
+    return filterMenuSectionsByProduct(
+      productCode,
+      filterNavigationSectionsByFeatureAccess(filteredSections, hasFeature),
+    );
+  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode]);
+
+  const settingsSections = useMemo<NavigationSection[]>(() => {
+    return filterMenuSectionsByProduct(productCode, settingsNavigationSections);
+  }, [productCode]);
 
   return (
     <Sidebar
       {...props}
       menuSections={menuSections}
       bottomMenuItems={bottomMenuItems}
+      appDisplayName={isAlgadesk ? 'Algadesk' : 'AlgaPSA'}
+      appLogoAlt={isAlgadesk ? 'Algadesk Logo' : 'AlgaPSA Logo'}
+      settingsSectionsOverride={settingsSections}
     />
   );
 }

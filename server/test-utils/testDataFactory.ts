@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import { TenantEntity } from 'server/src/interfaces/index';
 import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
+import type { ProductCode } from '@alga-psa/types';
 
 /**
  * Creates a new tenant in the database
@@ -12,7 +13,8 @@ import { IClient, IClientLocation } from 'server/src/interfaces/client.interface
  */
 export async function createTenant(
   db: Knex,
-  name: string = 'Test Tenant'
+  name: string = 'Test Tenant',
+  options: { productCode?: ProductCode } = {}
 ): Promise<string> {
   const tenantId = uuidv4();
   const now = new Date().toISOString();
@@ -27,7 +29,8 @@ export async function createTenant(
     payment_platform_id: `test-platform-${tenantId.substring(0, 8)}`,
     payment_method_id: `test-method-${tenantId.substring(0, 8)}`,
     auth_service_id: `test-auth-${tenantId.substring(0, 8)}`,
-    plan: 'pro'
+    plan: 'pro',
+    product_code: options.productCode ?? 'psa',
   });
 
   return tenantId;

@@ -11,26 +11,13 @@ import {
   createClientSchema,
   updateClientSchema,
   clientListQuerySchema,
-  createClientLocationSchema,
-  updateClientLocationSchema
+  createClientLocationSchema
 } from '../schemas/client';
-import { 
-  ApiKeyServiceForApi 
-} from '../../services/apiKeyServiceForApi';
-import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { 
   runWithTenant 
 } from '../../db';
-import { 
-  getConnection 
-} from '../../db/db';
-import { 
-  hasPermission 
-} from '../../auth/rbac';
 import {
-  ApiRequest,
-  UnauthorizedError,
-  ForbiddenError,
+  AuthenticatedApiRequest,
   NotFoundError,
   ValidationError,
   createSuccessResponse,
@@ -71,56 +58,12 @@ export class ApiClientController extends ApiBaseController {
   stats() {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
-        // Authenticate
-        const apiKey = req.headers.get('x-api-key');
-        
-        if (!apiKey) {
-          throw new UnauthorizedError('API key required');
-        }
-
-        // Extract tenant ID
-        let tenantId = req.headers.get('x-tenant-id');
-        let keyRecord;
-
-        if (tenantId) {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
-        } else {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-          if (keyRecord) {
-            tenantId = keyRecord.tenant;
-          }
-        }
-        
-        if (!keyRecord) {
-          throw new UnauthorizedError('Invalid API key');
-        }
-
-        // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
-
-        // Create request with context
-        const apiRequest = req as ApiRequest;
-        apiRequest.context = {
-          userId: keyRecord.user_id,
-          tenant: keyRecord.tenant,
-          user
-        };
+        const apiRequest = await this.authenticate(req) as AuthenticatedApiRequest;
 
         // Run within tenant context
-        return await runWithTenant(tenantId!, async () => {
-          // Check permissions
-          const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'client', 'read', knex);
-          if (!hasAccess) {
-            throw new ForbiddenError('Permission denied: Cannot read client');
-          }
-
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
           const stats = await this.clientService.getClientStats(apiRequest.context!);
-          
           return createSuccessResponse(stats);
         });
       } catch (error) {
@@ -135,44 +78,7 @@ export class ApiClientController extends ApiBaseController {
   getContacts() {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
-        // Authenticate
-        const apiKey = req.headers.get('x-api-key');
-        
-        if (!apiKey) {
-          throw new UnauthorizedError('API key required');
-        }
-
-        // Extract tenant ID
-        let tenantId = req.headers.get('x-tenant-id');
-        let keyRecord;
-
-        if (tenantId) {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
-        } else {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-          if (keyRecord) {
-            tenantId = keyRecord.tenant;
-          }
-        }
-        
-        if (!keyRecord) {
-          throw new UnauthorizedError('Invalid API key');
-        }
-
-        // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
-
-        // Create request with context
-        const apiRequest = req as ApiRequest;
-        apiRequest.context = {
-          userId: keyRecord.user_id,
-          tenant: keyRecord.tenant,
-          user
-        };
+        const apiRequest = await this.authenticate(req) as AuthenticatedApiRequest;
 
         // Extract client/client ID from path (support both old and new paths)
         const url = new URL(req.url);
@@ -181,13 +87,8 @@ export class ApiClientController extends ApiBaseController {
         const clientId = pathParts[clientsIndex + 1];
 
         // Run within tenant context
-        return await runWithTenant(tenantId!, async () => {
-          // Check permissions
-          const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'client', 'read', knex);
-          if (!hasAccess) {
-            throw new ForbiddenError('Permission denied: Cannot read client');
-          }
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
 
           // Verify client exists
           const client = await this.clientService.getById(clientId, apiRequest.context!);
@@ -228,44 +129,7 @@ export class ApiClientController extends ApiBaseController {
   createLocation() {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
-        // Authenticate
-        const apiKey = req.headers.get('x-api-key');
-        
-        if (!apiKey) {
-          throw new UnauthorizedError('API key required');
-        }
-
-        // Extract tenant ID
-        let tenantId = req.headers.get('x-tenant-id');
-        let keyRecord;
-
-        if (tenantId) {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
-        } else {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-          if (keyRecord) {
-            tenantId = keyRecord.tenant;
-          }
-        }
-        
-        if (!keyRecord) {
-          throw new UnauthorizedError('Invalid API key');
-        }
-
-        // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
-
-        // Create request with context
-        const apiRequest = req as ApiRequest;
-        apiRequest.context = {
-          userId: keyRecord.user_id,
-          tenant: keyRecord.tenant,
-          user
-        };
+        const apiRequest = await this.authenticate(req) as AuthenticatedApiRequest;
 
         // Extract client/client ID from path (support both old and new paths)
         const url = new URL(req.url);
@@ -274,13 +138,8 @@ export class ApiClientController extends ApiBaseController {
         const clientId = pathParts[clientsIndex + 1];
 
         // Run within tenant context
-        return await runWithTenant(tenantId!, async () => {
-          // Check permissions
-          const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'client', 'update', knex);
-          if (!hasAccess) {
-            throw new ForbiddenError('Permission denied: Cannot update client');
-          }
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
 
           // Verify client exists
           const client = await this.clientService.getById(clientId, apiRequest.context!);
@@ -320,44 +179,7 @@ export class ApiClientController extends ApiBaseController {
   getLocations() {
     return async (req: NextRequest): Promise<NextResponse> => {
       try {
-        // Authenticate
-        const apiKey = req.headers.get('x-api-key');
-        
-        if (!apiKey) {
-          throw new UnauthorizedError('API key required');
-        }
-
-        // Extract tenant ID
-        let tenantId = req.headers.get('x-tenant-id');
-        let keyRecord;
-
-        if (tenantId) {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
-        } else {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-          if (keyRecord) {
-            tenantId = keyRecord.tenant;
-          }
-        }
-        
-        if (!keyRecord) {
-          throw new UnauthorizedError('Invalid API key');
-        }
-
-        // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
-
-        // Create request with context
-        const apiRequest = req as ApiRequest;
-        apiRequest.context = {
-          userId: keyRecord.user_id,
-          tenant: keyRecord.tenant,
-          user
-        };
+        const apiRequest = await this.authenticate(req) as AuthenticatedApiRequest;
 
         // Extract client/client ID from path (support both old and new paths)
         const url = new URL(req.url);
@@ -366,13 +188,8 @@ export class ApiClientController extends ApiBaseController {
         const clientId = pathParts[clientsIndex + 1];
 
         // Run within tenant context
-        return await runWithTenant(tenantId!, async () => {
-          // Check permissions
-          const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'client', 'read', knex);
-          if (!hasAccess) {
-            throw new ForbiddenError('Permission denied: Cannot read client');
-          }
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
 
           // Verify client exists
           const client = await this.clientService.getById(clientId, apiRequest.context!);

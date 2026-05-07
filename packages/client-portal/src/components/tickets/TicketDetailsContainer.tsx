@@ -5,16 +5,17 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { IStatus, ITicketWithDetails } from '@alga-psa/types';
+import type { IStatus, ITicketWithDetails, ProductCode } from '@alga-psa/types';
 import { TicketDetails } from './TicketDetails';
 
 interface TicketDetailsContainerProps {
   ticketId: string;
   ticketData: ITicketWithDetails;
   statuses: IStatus[];
+  productCode?: ProductCode;
 }
 
-export default function TicketDetailsContainer({ ticketId, ticketData, statuses }: TicketDetailsContainerProps) {
+export default function TicketDetailsContainer({ ticketId, ticketData, statuses, productCode = 'psa' }: TicketDetailsContainerProps) {
   const router = useRouter();
   const { t } = useTranslation('features/tickets');
 
@@ -45,6 +46,7 @@ export default function TicketDetailsContainer({ ticketId, ticketData, statuses 
         initialTicket={ticketData}
         initialDocuments={ticketData.documents || []}
         initialStatusOptions={statuses}
+        productCode={productCode}
       />
     </div>
   );

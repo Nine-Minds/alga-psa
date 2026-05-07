@@ -31,6 +31,20 @@ import {
   createPaginatedResponse,
   handleApiError
 } from '../middleware/apiMiddleware';
+import { getTenantProduct } from '@/lib/productAccess';
+import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
+
+class ProductDeniedApiError extends Error {
+  statusCode = 403;
+  code = 'PRODUCT_ACCESS_DENIED';
+  details: Record<string, string>;
+
+  constructor(productCode: string, path: string) {
+    super(`Product '${productCode}' does not allow API access to '${path}'`);
+    this.name = 'ProductDeniedApiError';
+    this.details = { productCode, path };
+  }
+}
 
 export abstract class ApiBaseController {
   constructor(
@@ -83,6 +97,8 @@ export abstract class ApiBaseController {
       apiKeyId: keyRecord.api_key_id,
     };
 
+    await this.assertProductApiAccess(apiRequest);
+
     return apiRequest;
   }
 
@@ -100,6 +116,16 @@ export abstract class ApiBaseController {
     const hasAccess = await hasPermission(req.context.user, this.options.resource, action, knex);
     if (!hasAccess) {
       throw new ForbiddenError(`Permission denied: Cannot ${action} ${this.options.resource}`);
+    }
+  }
+
+  protected async assertProductApiAccess(req: AuthenticatedApiRequest): Promise<void> {
+    const productCode = await getTenantProduct(req.context.tenant);
+    const pathname = new URL(req.url).pathname;
+    const behavior = resolveProductApiBehavior(productCode, pathname);
+
+    if (behavior === 'denied') {
+      throw new ProductDeniedApiError(productCode, pathname);
     }
   }
 
@@ -198,7 +224,6 @@ export abstract class ApiBaseController {
       try {
         // Authenticate
         const apiRequest = await this.authenticate(req);
-        
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
@@ -253,7 +278,6 @@ export abstract class ApiBaseController {
       try {
         // Authenticate
         const apiRequest = await this.authenticate(req);
-        
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
@@ -282,7 +306,6 @@ export abstract class ApiBaseController {
       try {
         // Authenticate
         const apiRequest = await this.authenticate(req);
-        
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
@@ -320,7 +343,6 @@ export abstract class ApiBaseController {
       try {
         // Authenticate
         const apiRequest = await this.authenticate(req);
-        
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
@@ -358,7 +380,6 @@ export abstract class ApiBaseController {
       try {
         // Authenticate
         const apiRequest = await this.authenticate(req);
-        
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions

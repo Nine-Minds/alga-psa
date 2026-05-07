@@ -16,7 +16,9 @@ import {
   FileText,
   CreditCard,
   Settings,
+  User,
 } from 'lucide-react';
+import type { ProductCode } from '@alga-psa/types';
 import { useBranding } from '@alga-psa/tenancy/components';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
@@ -35,6 +37,7 @@ interface SidebarPermissions {
 }
 
 interface SidebarProps {
+  productCode?: ProductCode;
   permissions: SidebarPermissions;
   permissionsLoaded: boolean;
   initialCollapsed?: boolean;
@@ -54,6 +57,7 @@ interface NavSection {
 }
 
 export function ClientPortalSidebar({
+  productCode = 'psa',
   permissions,
   permissionsLoaded,
   initialCollapsed = false,
@@ -90,36 +94,61 @@ export function ClientPortalSidebar({
   };
 
   const sidebarOpen = !collapsed;
+  const isAlgadeskPortal = productCode === 'algadesk';
 
-  const workspaceItems: NavItem[] = [
-    { key: 'dashboard', href: '/client-portal/dashboard', label: t('nav.dashboard', 'Dashboard'), icon: Home },
-    { key: 'tickets', href: '/client-portal/tickets', label: t('nav.tickets', 'Tickets'), icon: MessageSquare },
-    { key: 'request-services', href: '/client-portal/request-services', label: t('nav.requestServices', 'Request Services'), icon: LayoutTemplate },
-    { key: 'projects', href: '/client-portal/projects', label: t('nav.projects', 'Projects'), icon: Layers },
-    { key: 'appointments', href: '/client-portal/appointments', label: t('nav.appointments', 'Appointments'), icon: Calendar },
-    { key: 'devices', href: '/client-portal/devices', label: t('nav.myDevices', 'My devices'), icon: Monitor },
-  ];
+  const workspaceItems: NavItem[] = isAlgadeskPortal
+    ? [
+        { key: 'dashboard', href: '/client-portal/dashboard', label: t('nav.dashboard', 'Dashboard'), icon: Home },
+        { key: 'tickets', href: '/client-portal/tickets', label: t('nav.tickets', 'Tickets'), icon: MessageSquare },
+      ]
+    : [
+        { key: 'dashboard', href: '/client-portal/dashboard', label: t('nav.dashboard', 'Dashboard'), icon: Home },
+        { key: 'tickets', href: '/client-portal/tickets', label: t('nav.tickets', 'Tickets'), icon: MessageSquare },
+        { key: 'request-services', href: '/client-portal/request-services', label: t('nav.requestServices', 'Request Services'), icon: LayoutTemplate },
+        { key: 'projects', href: '/client-portal/projects', label: t('nav.projects', 'Projects'), icon: Layers },
+        { key: 'appointments', href: '/client-portal/appointments', label: t('nav.appointments', 'Appointments'), icon: Calendar },
+        { key: 'devices', href: '/client-portal/devices', label: t('nav.myDevices', 'My devices'), icon: Monitor },
+      ];
 
-  const resourcesItems: NavItem[] = [
-    { key: 'documents', href: '/client-portal/documents', label: t('nav.documents', 'Documents'), icon: FileText },
-    {
-      key: 'knowledge-base',
-      href: '/client-portal/knowledge-base',
-      label: t('nav.knowledgeBase', 'Knowledge Base'),
-      icon: BookOpen,
-    },
-  ];
+  const resourcesItems: NavItem[] = isAlgadeskPortal
+    ? [
+        {
+          key: 'knowledge-base',
+          href: '/client-portal/knowledge-base',
+          label: t('nav.knowledgeBase', 'Knowledge Base'),
+          icon: BookOpen,
+        },
+      ]
+    : [
+        { key: 'documents', href: '/client-portal/documents', label: t('nav.documents', 'Documents'), icon: FileText },
+        {
+          key: 'knowledge-base',
+          href: '/client-portal/knowledge-base',
+          label: t('nav.knowledgeBase', 'Knowledge Base'),
+          icon: BookOpen,
+        },
+      ];
 
   const moreItems: NavItem[] = permissionsLoaded
     ? [
-        ...(permissions.hasBillingAccess
-          ? [{
-              key: 'billing',
-              href: '/client-portal/billing',
-              label: t('nav.billing'),
-              icon: CreditCard,
-            }]
-          : []),
+        {
+          key: 'profile',
+          href: '/client-portal/profile',
+          label: t('nav.profile', 'Profile'),
+          icon: User,
+        },
+        ...(isAlgadeskPortal
+          ? []
+          : [
+              ...(permissions.hasBillingAccess
+                ? [{
+                    key: 'billing',
+                    href: '/client-portal/billing',
+                    label: t('nav.billing'),
+                    icon: CreditCard,
+                  }]
+                : []),
+            ]),
         ...(permissions.hasClientSettingsAccess
           ? [{
               key: 'client-settings',
@@ -239,7 +268,7 @@ export function ClientPortalSidebar({
   };
 
   const visibleSections = sections.filter((s) => s.items.length > 0);
-  const brandLabel = branding?.clientName || 'AlgaPSA';
+  const brandLabel = branding?.clientName || (isAlgadeskPortal ? 'Algadesk' : 'AlgaPSA');
   const transitionClass = transitionsEnabled
     ? 'transition-all duration-300 ease-in-out'
     : '';
@@ -320,7 +349,7 @@ export function ClientPortalSidebar({
             </div>
           )}
 
-          <ClientPortalExtensionsNav sidebarOpen={sidebarOpen} />
+          {!isAlgadeskPortal && <ClientPortalExtensionsNav sidebarOpen={sidebarOpen} />}
         </nav>
 
         {/* Collapse toggle */}
