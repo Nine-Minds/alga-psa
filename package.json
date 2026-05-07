@@ -56,7 +56,8 @@
     "playwright:bootstrap-db": "node --import tsx/esm scripts/bootstrap-playwright-db.ts",
     "test:nx": "vitest run --config tools/nx-tests/vitest.config.ts",
     "affected:test": "NX_DAEMON=false nx affected -t test --output-style=static",
-    "affected:build": "NX_DAEMON=false nx affected -t build --output-style=static"
+    "affected:build": "NX_DAEMON=false nx affected -t build --output-style=static",
+    "guard:hocuspocus-compose-build": "node scripts/guard-hocuspocus-compose-build.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.1",

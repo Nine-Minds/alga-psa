@@ -1,20 +1,24 @@
 version: '3.8'
 
 x-common-config: &common-config
-  build: .
+  # Keep the build context at the repository root because hocuspocus/Dockerfile
+  # copies files using root-relative paths (hocuspocus/package.json, etc.).
+  build:
+    context: ..
+    dockerfile: hocuspocus/Dockerfile
   ports:
     - "${EXPOSE_HOCUSPOCUS_PORT}:1234"
   environment:
-    REDIS_HOST: ${REDIS_HOST}
-    REDIS_PORT: ${REDIS_PORT}
+    REDIS_HOST: ${REDIS_HOST:-redis}
+    REDIS_PORT: ${REDIS_PORT:-6379}
     REDIS_PASSWORD: ${REDIS_PASSWORD}
-    DB_HOST: ${DB_HOST}
-    DB_PORT: ${DB_PORT}
-    DB_NAME: ${DB_NAME_HOCUSPOCUS}
-    DB_USER: ${DB_USER_HOCUSPOCUS}
-    DB_USER_HOCUSPOCUS: ${DB_USER_HOCUSPOCUS}
+    DB_HOST: ${DB_HOST:-postgres}
+    DB_PORT: ${DB_PORT:-5432}
+    DB_NAME: ${DB_NAME_HOCUSPOCUS:-hocuspocus}
+    DB_USER: ${DB_USER_HOCUSPOCUS:-hocuspocus_user}
+    DB_USER_HOCUSPOCUS: ${DB_USER_HOCUSPOCUS:-hocuspocus_user}
     DB_PASSWORD: ${DB_PASSWORD_HOCUSPOCUS}
-    PGDATABASE: ${DB_NAME_HOCUSPOCUS}
+    PGDATABASE: ${DB_NAME_HOCUSPOCUS:-hocuspocus}
     NODE_ENV: ${NODE_ENV:-${APP_ENV:-production}}
     HOCUSPOCUS_PORT: ${HOCUSPOCUS_PORT}
     EXPOSE_HOCUSPOCUS_PORT: ${EXPOSE_HOCUSPOCUS_PORT:-1234}
