@@ -26,7 +26,7 @@
   {
     "id": "F005",
     "description": "Add server env var `HOCUSPOCUS_JWT_SECRET` plumbing (read in both Next.js server actions and Hocuspocus). In dev, fall back to a fixed string with a console warning.",
-    "implemented": true,
+    "implemented": false,
     "prdRefs": ["Security / Permissions"]
   },
   {
@@ -200,7 +200,7 @@
   {
     "id": "F033",
     "description": "Add server-side env-var kill-switch (`LIVE_TICKET_UPDATES_DISABLED=1`) that short-circuits `publishTicketUpdate` to a no-op for incident response.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Rollout / Migration"]
   }
 ]
