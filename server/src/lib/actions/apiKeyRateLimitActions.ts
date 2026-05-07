@@ -5,8 +5,8 @@ import { createTenantKnex } from '@alga-psa/db';
 import { IRole } from '@alga-psa/types';
 import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
 
-import { withAuth } from '../lib/withAuth';
-import { getUserRoles } from './policyActions';
+import { withAuth } from '@alga-psa/auth/withAuth';
+import { getUserRoles } from '@alga-psa/auth/actions';
 import {
   clearForKey as clearApiRateLimitOverride,
   DEFAULT_API_RATE_LIMIT_SETTINGS,

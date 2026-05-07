@@ -1,9 +1,9 @@
 'use server'
 
-import { ApiKeyService } from '../services/apiKeyService';
-import { getUserRoles } from './policyActions';
+import { ApiKeyService } from '@alga-psa/auth';
+import { getUserRoles } from '@alga-psa/auth/actions';
 import { IRole } from '@alga-psa/types';
-import { withAuth } from '../lib/withAuth';
+import { withAuth } from '@alga-psa/auth/withAuth';
 
 /**
  * Create a new API key for the current user

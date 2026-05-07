@@ -34,8 +34,8 @@ import {
   type WebhookDeliveryPage,
   type WebhookDeliveryView,
   type WebhookSettingsView,
-} from '@alga-psa/auth/actions';
-import { WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY } from '@alga-psa/auth/actions/webhookPayloadFields';
+} from '@/lib/actions/webhookActions';
+import { WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY } from '@/lib/actions/webhookPayloadFields';
 
 // Entities live in a static registry; this turns the readonly field arrays
 // into mutable string[] for the UI render layer.

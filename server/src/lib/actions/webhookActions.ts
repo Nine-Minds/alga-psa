@@ -6,8 +6,8 @@ import { createTenantKnex } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { z } from 'zod';
 
-import { getUserRoles } from './policyActions';
-import { withAuth } from '../lib/withAuth';
+import { withAuth } from '@alga-psa/auth/withAuth';
+import { getUserRoles } from '@alga-psa/auth/actions';
 import type { TicketWebhookPayload } from '@/lib/eventBus/subscribers/webhook/webhookTicketPayload';
 import type { TicketWebhookPublicEvent } from '@/lib/eventBus/subscribers/webhook/webhookEventMap';
 import { buildSignedWebhookRequestHeaders, buildWebhookEnvelope } from '@/lib/webhooks/processWebhookDeliveryJob';

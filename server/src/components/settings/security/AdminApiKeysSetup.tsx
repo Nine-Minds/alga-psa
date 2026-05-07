@@ -13,12 +13,14 @@ import type { ColumnDefinition } from '@alga-psa/types';
 import {
   adminListApiKeys,
   adminDeactivateApiKey,
+} from '@/lib/actions/apiKeyActions';
+import {
   clearApiRateLimitForKey,
   getApiRateLimitForKey,
   setApiRateLimitForKey,
   type ApiRateLimitSettingsValue,
   type ApiRateLimitSettingsView,
-} from '@alga-psa/auth/actions';
+} from '@/lib/actions/apiKeyRateLimitActions';
 import { Search, RotateCcw } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 

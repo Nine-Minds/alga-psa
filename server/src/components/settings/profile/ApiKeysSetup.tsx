@@ -12,7 +12,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import type { ColumnDefinition } from '@alga-psa/types';
-import { createApiKey, deactivateApiKey, listApiKeys } from '@alga-psa/auth/actions';
+import { createApiKey, deactivateApiKey, listApiKeys } from '@/lib/actions/apiKeyActions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';

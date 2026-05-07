@@ -55,7 +55,7 @@ function ApiKeysLoading() {
   return <SettingsTabSkeleton title={t('security.tabs.apiKeys', { defaultValue: 'API Keys' })} description={t('security.loading.apiKeys', { defaultValue: 'Loading API key configuration...' })} />;
 }
 
-const AdminApiKeysSetup = dynamic(() => import('@alga-psa/auth/components/settings/api/AdminApiKeysSetup'), {
+const AdminApiKeysSetup = dynamic(() => import('./AdminApiKeysSetup'), {
   loading: ApiKeysLoading,
   ssr: false
 });
@@ -65,7 +65,7 @@ function WebhooksLoading() {
   return <SettingsTabSkeleton title={t('security.tabs.webhooks', { defaultValue: 'Webhooks' })} description={t('security.loading.webhooks', { defaultValue: 'Loading webhook configuration...' })} />;
 }
 
-const AdminWebhooksSetup = dynamic(() => import('@alga-psa/auth/components/settings/api/AdminWebhooksSetup'), {
+const AdminWebhooksSetup = dynamic(() => import('./AdminWebhooksSetup'), {
   loading: WebhooksLoading,
   ssr: false
 });
