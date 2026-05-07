@@ -111,6 +111,17 @@ npm run test:e2e
   Added [TicketUpdatesExtension.test.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/src/test/unit/hocuspocus/TicketUpdatesExtension.test.ts) for Redis pattern subscription, stateless room broadcast, empty-room no-op, and reconnect re-subscribe behavior. This is extension-level coverage rather than a full socket-process integration because the repo’s server test harness does not install the standalone `hocuspocus/` package dependencies.
 - **2026-05-07 — Verification runbook used for the Hocuspocus/auth slice.**
   `npx vitest run --config vitest.config.ts src/test/unit/api/ticketLiveToken.route.test.ts src/test/unit/hocuspocus/tenantValidation.test.ts src/test/unit/hocuspocus/TicketUpdatesExtension.test.ts` from `server`
+- **2026-05-07 — Shared presence UI slice complete (`F011`/`F021`).**
+  Added [PresenceBar.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/ui/src/presence/PresenceBar.tsx) as the shared avatar-chip renderer for collaborative surfaces, including `userId`-based dedupe and hover-name support.
+  Updated [CollaborativeEditor.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/documents/src/components/CollaborativeEditor.tsx) to consume the shared component without changing its room/presence wiring.
+- **2026-05-07 — Shared presence UI tests complete (`T022`/`T023`/`T024`).**
+  Added [PresenceBar.test.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/ui/src/presence/PresenceBar.test.tsx) for unique-user dedupe and hover-title coverage.
+  Updated [CollaborativeEditor.init.test.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/documents/src/components/CollaborativeEditor.init.test.tsx) to assert the lifted presence bar still renders connected users, and refreshed its `@alga-psa/ui/editor` mock to include the existing `AiResponseBlock` export so the regression suite reflects the current editor dependency surface.
+- **2026-05-07 — Verification runbook used for the shared presence UI slice.**
+  `npx vitest run --config vitest.config.ts src/presence/PresenceBar.test.tsx` from `packages/ui`
+  `npx vitest run --config vitest.config.ts --environment jsdom --coverage.enabled false ../packages/documents/src/components/CollaborativeEditor.init.test.tsx` from `server`
+  `npm -w @alga-psa/ui run typecheck`
+  `npm -w @alga-psa/documents run typecheck`
 
 ## Links / Refs
 

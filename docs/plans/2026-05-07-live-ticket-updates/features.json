@@ -62,7 +62,7 @@
   {
     "id": "F011",
     "description": "Lift the presence bar (currently in `packages/documents/src/components/CollaborativeEditor.tsx` L259–305) into `packages/ui/src/presence/PresenceBar.tsx`. Update `CollaborativeEditor` to import from the new location; visual output identical.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["UX / UI Notes"]
   },
   {
@@ -122,7 +122,7 @@
   {
     "id": "F021",
     "description": "Dedupe presence by `userId` in `PresenceBar`: a single user with multiple connections shows once.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-12"]
   },
   {

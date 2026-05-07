@@ -128,19 +128,19 @@
   {
     "id": "T022",
     "description": "Component: `PresenceBar` renders one avatar per unique `userId`, deduping multi-tab.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021", "F011"]
   },
   {
     "id": "T023",
     "description": "Component: `PresenceBar` shows tooltip with display name on hover.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
     "id": "T024",
     "description": "Component: documents `CollaborativeEditor` still renders presence correctly after the lift (regression).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F011"]
   },
   {
