@@ -22,6 +22,14 @@ interface MicrosoftWebhookPayload {
   value: MicrosoftNotification[];
 }
 
+async function assertTenantEmailProductAccess(trx: any, tenantId: string): Promise<void> {
+  const tenant = await trx('tenants').where({ tenant: tenantId }).first('product_code');
+  const productCode = typeof tenant?.product_code === 'string' ? tenant.product_code : 'psa';
+  if (productCode !== 'psa' && productCode !== 'algadesk') {
+    throw new Error(`Product access denied for tenant ${tenantId}`);
+  }
+}
+
 // Handle GET for Microsoft validation handshake
 export async function handleMicrosoftWebhookGet(request: NextRequest) {
   try {
@@ -150,6 +158,7 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
           mailbox: row.mailbox,
           tenant: row.tenant,
         });
+          await assertTenantEmailProductAccess(trx, row.tenant);
 
           // Validate clientState against stored verification token if present
           // Note: MicrosoftGraphAdapter sets clientState to webhook_verification_token (not tenant ID)

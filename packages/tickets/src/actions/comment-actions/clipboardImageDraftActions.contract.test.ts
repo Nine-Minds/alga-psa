@@ -14,7 +14,7 @@ describe('clipboardImageDraftActions contract', () => {
 
     expect(source).toContain('const deletedDocumentIds: string[] = []');
     expect(source).toContain('for (const candidate of evaluation.deletable)');
-    expect(source).toContain('const deleteResult = await deleteDocument(candidate.document_id, user.user_id)');
+    expect(source).toContain('const deleteResult = await input.deleteDocumentFn(candidate.document_id, user.user_id)');
     expect(source).toContain('deletedDocumentIds.push(candidate.document_id)');
   });
 
@@ -30,6 +30,7 @@ describe('clipboardImageDraftActions contract', () => {
     const source = getActionSource();
 
     expect(source).toContain("trx('document_associations')");
+    expect(source).toContain("association.entity_type === 'ticket'");
     expect(source).toContain("reason: 'has_other_associations'");
   });
 

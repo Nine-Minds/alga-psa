@@ -105,6 +105,7 @@ const PROVIDER_COLUMNS = [
   'tenant',
   'provider_type as providerType',
   'provider_name as providerName',
+  'sender_display_name as senderDisplayName',
   'mailbox',
   'is_active as isActive',
   'status',
@@ -125,12 +126,15 @@ async function getOrCreateProvider(
   data: {
     providerType: string;
     providerName: string;
+    senderDisplayName?: string | null;
     mailbox: string;
     isActive: boolean;
     inboundTicketDefaultsId?: string;
   },
   providerId?: string
 ) {
+  const senderDisplayName = normalizeSenderDisplayName(data.senderDisplayName);
+
   if (providerId) {
     // Update existing provider by ID
     const [provider] = await trx('email_providers')
@@ -138,6 +142,7 @@ async function getOrCreateProvider(
       .update({
         provider_type: data.providerType,
         provider_name: data.providerName,
+        sender_display_name: senderDisplayName,
         mailbox: data.mailbox,
         is_active: data.isActive,
         inbound_ticket_defaults_id: data.inboundTicketDefaultsId || null,
@@ -162,6 +167,7 @@ async function getOrCreateProvider(
         .update({
           provider_type: data.providerType,
           provider_name: data.providerName,
+          sender_display_name: senderDisplayName,
           is_active: data.isActive,
           inbound_ticket_defaults_id: data.inboundTicketDefaultsId || null,
           updated_at: trx.fn.now()
@@ -177,6 +183,7 @@ async function getOrCreateProvider(
           tenant,
           provider_type: data.providerType,
           provider_name: data.providerName,
+          sender_display_name: senderDisplayName,
           mailbox: data.mailbox,
           is_active: data.isActive,
           status: 'configuring',
@@ -188,6 +195,25 @@ async function getOrCreateProvider(
       return provider;
     }
   }
+}
+
+// Reject control chars, double-quote, and angle brackets — these can break the
+// `"Name" <email>` formatting downstream and enable header injection if the
+// value reaches an outbound mail header. Server-side guard mirrors the form
+// schema; clients with a stale schema or a non-form caller still get rejected.
+const SENDER_DISPLAY_NAME_FORBIDDEN = /[\x00-\x1F\x7F"<>]/;
+
+function normalizeSenderDisplayName(value?: string | null): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  if (trimmed.length > 255) {
+    throw new Error('Sender display name cannot exceed 255 characters');
+  }
+  if (SENDER_DISPLAY_NAME_FORBIDDEN.test(trimmed)) {
+    throw new Error('Sender display name cannot contain quotes, angle brackets, or line breaks');
+  }
+  return trimmed;
 }
 
 /**
@@ -676,6 +702,7 @@ export const upsertEmailProvider = withAuth(async (
   tenant: string;
   providerType: string;
   providerName: string;
+  senderDisplayName?: string | null;
   mailbox: string;
   isActive: boolean;
   inboundTicketDefaultsId?: string;
@@ -784,6 +811,7 @@ export const createEmailProvider = withAuth(async (
   tenant: string;
   providerType: string;
   providerName: string;
+  senderDisplayName?: string | null;
   mailbox: string;
   isActive: boolean;
   inboundTicketDefaultsId?: string;
@@ -805,6 +833,7 @@ export const updateEmailProvider = withAuth(async (
     tenant: string;
     providerType: string;
     providerName: string;
+    senderDisplayName?: string | null;
     mailbox: string;
     isActive: boolean;
     inboundTicketDefaultsId?: string;

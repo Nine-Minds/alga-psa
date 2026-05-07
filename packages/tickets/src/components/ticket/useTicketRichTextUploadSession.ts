@@ -28,6 +28,7 @@ interface UseTicketRichTextUploadSessionOptions {
     formData: FormData,
     params: { userId: string; ticketId: string }
   ) => Promise<any>;
+  resolveDocumentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
   deleteDraftClipboardImagesAction?: (input: {
     ticketId: string;
     documentIds: string[];
@@ -44,6 +45,7 @@ export function useTicketRichTextUploadSession({
   onDocumentsChanged,
   onDiscard,
   uploadDocumentAction,
+  resolveDocumentViewUrl,
   deleteDraftClipboardImagesAction,
   deleteDocumentFn,
   toastApi = toast,
@@ -154,9 +156,11 @@ export function useTicketRichTextUploadSession({
         sequence,
         mimeType: renamedFile.type,
       });
-      const viewUrl = uploadedDocument.file_id
-        ? `/api/documents/view/${uploadedDocument.file_id}`
-        : `/api/documents/download/${uploadedDocument.document_id}`;
+      const viewUrl = resolveDocumentViewUrl
+        ? resolveDocumentViewUrl(uploadedDocument)
+        : uploadedDocument.file_id
+          ? `/api/documents/view/${uploadedDocument.file_id}`
+          : `/api/documents/download/${uploadedDocument.document_id}`;
 
       if (trackDraftUploads) {
         setDraftClipboardImages((previous) => {
@@ -197,6 +201,7 @@ export function useTicketRichTextUploadSession({
       toastApi,
       trackDraftUploads,
       uploadDocumentAction,
+      resolveDocumentViewUrl,
       userId,
     ]
   );

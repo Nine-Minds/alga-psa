@@ -11,6 +11,7 @@ import { getContactPortalPermissions } from '@alga-psa/auth/actions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AIChatContextBoundary } from '@product/chat/context';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { getCurrentTenantProduct } from '@/lib/productAccess';
 import type { Metadata } from 'next';
 
 const getCachedContact = cache((id: string) => getContactByContactNameId(id));
@@ -37,6 +38,7 @@ const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProp
   const [{ id }, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const tab = typeof resolvedSearchParams.tab === 'string' ? resolvedSearchParams.tab.toLowerCase() : null;
   const { t } = await getServerTranslation(undefined, 'common');
+  const isAlgadesk = (await getCurrentTenantProduct()) === 'algadesk';
 
   try {
     // Fetch user data first for authorization
@@ -69,7 +71,7 @@ const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProp
 
     // Conditionally fetch documents only when on documents tab
     let documents: IDocument[] = [];
-    if (tab === 'documents') {
+    if (!isAlgadesk && tab === 'documents') {
       const documentsResponse = await getDocumentsByEntity(id, 'contact');
       if (!isActionPermissionError(documentsResponse)) {
         documents = Array.isArray(documentsResponse)
@@ -99,6 +101,7 @@ const ContactDetailPage = async ({ params, searchParams }: ContactDetailPageProp
             documents={documents}
             userId={currentUser.user_id}
             userPermissions={permissions}
+            isAlgadeskMode={isAlgadesk}
           />
         </div>
       </AIChatContextBoundary>

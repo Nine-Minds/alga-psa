@@ -1,0 +1,186 @@
+[
+  {
+    "id": "RT001",
+    "description": "Validation: `cd server && npm run typecheck -- --pretty false` passes after auth/session and sidebar type remediation.",
+    "implemented": true,
+    "featureIds": [
+      "R023",
+      "R066"
+    ]
+  },
+  {
+    "id": "RT002",
+    "description": "Unit: NextAuth tenant info lookup maps product_code into JWT and session.user while preserving plan, addons, and trial fields.",
+    "implemented": true,
+    "featureIds": [
+      "R011",
+      "R013",
+      "R015",
+      "R016"
+    ]
+  },
+  {
+    "id": "RT003",
+    "description": "Component/unit: ProductProvider resolves Algadesk sessions as isAlgadesk and PSA sessions as isPsa, including documented fallback behavior for missing product_code.",
+    "implemented": true,
+    "featureIds": [
+      "R021",
+      "R022",
+      "R020"
+    ]
+  },
+  {
+    "id": "RT004",
+    "description": "Unit: product-denied errors consistently return HTTP 403 with code PRODUCT_ACCESS_DENIED through API middleware and representative standalone route handler helpers.",
+    "implemented": true,
+    "featureIds": [
+      "R024",
+      "R026",
+      "R027",
+      "R029"
+    ]
+  },
+  {
+    "id": "RT005",
+    "description": "Unit: product registry allows exact Algadesk help-desk routes including client-settings and kb-articles, denies representative PSA-only route families, and fails closed for unknown Algadesk paths.",
+    "implemented": true,
+    "featureIds": [
+      "R030",
+      "R037",
+      "R053",
+      "R054"
+    ]
+  },
+  {
+    "id": "RT006",
+    "description": "Component: Algadesk MSP shell renders sidebar, header/app chrome, and main content while excluding full PSA providers; PSA path still renders existing DefaultLayout behavior.",
+    "implemented": true,
+    "featureIds": [
+      "R056",
+      "R057",
+      "R058",
+      "R068"
+    ]
+  },
+  {
+    "id": "RT007",
+    "description": "Component: Algadesk settings/navigation exposes only approved settings and direct settings subroutes/tabs for notifications/extensions/integrations are denied or narrowed as specified.",
+    "implemented": true,
+    "featureIds": [
+      "R032",
+      "R033",
+      "R034",
+      "R035"
+    ]
+  },
+  {
+    "id": "RT008",
+    "description": "Server-page test: representative excluded MSP routes for billing/projects/assets/workflows do not call data-fetching actions for Algadesk and still render/pass for PSA.",
+    "implemented": true,
+    "featureIds": [
+      "R072",
+      "R073",
+      "R074",
+      "R083"
+    ]
+  },
+  {
+    "id": "RT009",
+    "description": "Server-page test: representative excluded client portal routes for billing/projects/documents/request-services are guarded before data fetching, while allowed Algadesk client-settings remains accessible.",
+    "implemented": true,
+    "featureIds": [
+      "R081",
+      "R030"
+    ]
+  },
+  {
+    "id": "RT010",
+    "description": "API integration/unit-controller: overridden ApiProjectController methods and one other overridden PSA-only controller deny Algadesk before returning data.",
+    "implemented": true,
+    "featureIds": [
+      "R085",
+      "R088",
+      "R089"
+    ]
+  },
+  {
+    "id": "RT011",
+    "description": "API integration: Algadesk API key can access representative allowed ticket/client/contact/kb/email endpoints and gets structured 403 for representative denied billing/project/asset/time/workflow/AI/document endpoints.",
+    "implemented": true,
+    "featureIds": [
+      "R097",
+      "R098",
+      "R038",
+      "R047"
+    ]
+  },
+  {
+    "id": "RT012",
+    "description": "API discovery integration: Algadesk metadata/OpenAPI/docs filter paths, permissions, stats, and PSA-only schemas where feasible; PSA metadata remains complete.",
+    "implemented": true,
+    "featureIds": [
+      "R100",
+      "R101",
+      "R103",
+      "R107"
+    ]
+  },
+  {
+    "id": "RT013",
+    "description": "Component/server-page: Algadesk contact detail with tab=documents does not fetch documents or render Documents tab, while PSA contact detail still fetches and renders documents.",
+    "implemented": true,
+    "featureIds": [
+      "R109",
+      "R110",
+      "R111",
+      "R112"
+    ]
+  },
+  {
+    "id": "RT014",
+    "description": "Playwright smoke repair: Algadesk portal ticket test uses real helper signatures, real ticket creation route/flow, cleans up data, and can at least list and compile under the configured Playwright project.",
+    "implemented": true,
+    "featureIds": [
+      "R114",
+      "R115",
+      "R116"
+    ]
+  },
+  {
+    "id": "RT015",
+    "description": "DB-backed integration: inbound email creates a ticket with mapped board/category/priority and resolves sender/contact when DB prerequisites are available.",
+    "implemented": true,
+    "featureIds": [
+      "R119",
+      "R122"
+    ]
+  },
+  {
+    "id": "RT016",
+    "description": "DB-backed integration: inbound reply appends one public comment, stores thread/dedupe metadata, and repeated events do not create duplicate comments when DB prerequisites are available.",
+    "implemented": true,
+    "featureIds": [
+      "R119"
+    ]
+  },
+  {
+    "id": "RT017",
+    "description": "Test quality audit: tests claiming integration/API/DB/browser behavior either execute that behavior or are renamed/rewritten as static contract tests.",
+    "implemented": true,
+    "featureIds": [
+      "R118",
+      "R120",
+      "R121"
+    ]
+  },
+  {
+    "id": "RT018",
+    "description": "Plan status audit: parent plan is annotated as superseded or its implemented booleans are corrected; remediation checklist remains honest with verified items only.",
+    "implemented": true,
+    "featureIds": [
+      "R126",
+      "R127",
+      "R129"
+    ]
+  }
+]

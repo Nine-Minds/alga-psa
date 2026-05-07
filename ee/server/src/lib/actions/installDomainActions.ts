@@ -2,6 +2,7 @@
 
 import type { Knex } from 'knex';
 import { getAdminConnection } from '@alga-psa/db/admin';
+import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
 
 function normalizeHost(input?: string | null): string | null {
   if (!input) return null;
@@ -50,6 +51,7 @@ export async function validate(params: { tenant: string; extension: string; hash
   const extension = (params?.extension || '').trim();
   const hash = normalizeHash(params?.hash);
   if (!tenant || !extension || !hash) return { valid: false };
+  await assertPsaOnlyTenantAccess(tenant, 'extension_actions');
 
   const db: Knex = await getAdminConnection();
   const install = await db('tenant_extension_install')

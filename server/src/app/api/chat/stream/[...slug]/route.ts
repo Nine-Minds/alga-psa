@@ -2,6 +2,7 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest } from 'next/server';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
+import { assertPsaChatProductAccess } from '../../productAccess';
 
 // export const runtime = 'edge'; // Temporarily disabled
 
@@ -15,6 +16,11 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const productAccessResponse = await assertPsaChatProductAccess();
+  if (productAccessResponse) {
+    return productAccessResponse;
+  }
+
   if (process.env.EDITION !== 'enterprise') {
     return new Response('Chat streaming is only available in Enterprise Edition', {
       status: 404,

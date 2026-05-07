@@ -23,7 +23,12 @@ import { getInboundTicketDefaults } from '@alga-psa/integrations/actions/email-a
 import { initiateEmailOAuth } from '@alga-psa/integrations/actions/email-actions/oauthActions';
 
 const eeMicrosoftProviderSchema = z.object({
-  providerName: z.string().min(1, 'Provider name is required'),
+  providerName: z.string().min(1, 'Configuration name is required'),
+  senderDisplayName: z
+    .string()
+    .max(255)
+    .refine((value) => !/[\x00-\x1F\x7F"<>]/.test(value), 'Display name cannot contain quotes, angle brackets, or line breaks')
+    .optional(),
   mailbox: z.string().email('Valid email address is required'),
   isActive: z.boolean(),
   autoProcessEmails: z.boolean(),
@@ -71,6 +76,7 @@ export function MicrosoftProviderForm({
     resolver: zodResolver(eeMicrosoftProviderSchema) as any,
     defaultValues: provider && provider.microsoftConfig ? {
       providerName: provider.providerName,
+      senderDisplayName: provider.senderDisplayName || '',
       mailbox: provider.mailbox,
       isActive: provider.isActive,
       autoProcessEmails: provider.microsoftConfig.auto_process_emails ?? true,
@@ -78,6 +84,7 @@ export function MicrosoftProviderForm({
       maxEmailsPerSync: provider.microsoftConfig.max_emails_per_sync ?? 50,
       inboundTicketDefaultsId: (provider as any).inboundTicketDefaultsId || undefined
     } : {
+      senderDisplayName: '',
       isActive: true,
       autoProcessEmails: true,
       folderFilters: '',
@@ -124,6 +131,7 @@ export function MicrosoftProviderForm({
         tenant,
         providerType: 'microsoft',
         providerName: data.providerName,
+        senderDisplayName: data.senderDisplayName?.trim() || null,
         mailbox: data.mailbox,
         isActive: data.isActive,
         inboundTicketDefaultsId: data.inboundTicketDefaultsId,
@@ -190,6 +198,7 @@ export function MicrosoftProviderForm({
           tenant,
           providerType: 'microsoft',
           providerName: formData.providerName,
+          senderDisplayName: formData.senderDisplayName?.trim() || null,
           mailbox: formData.mailbox,
           isActive: formData.isActive,
           inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
@@ -306,13 +315,16 @@ export function MicrosoftProviderForm({
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="providerName">{t('microsoftForm.fields.providerNameLabel')}</Label>
+              <Label htmlFor="providerName">{t('microsoftForm.fields.providerNameLabel', { defaultValue: 'Configuration Name *' })}</Label>
               <Input
                 id="providerName"
                 {...form.register('providerName')}
-                placeholder={t('microsoftForm.fields.providerNamePlaceholder')}
+                placeholder={t('microsoftForm.fields.providerNamePlaceholder', { defaultValue: 'e.g., Support Mailbox (internal)' })}
                 className={hasAttemptedSubmit && form.formState.errors.providerName ? 'border-destructive' : ''}
               />
+              <p className="text-xs text-muted-foreground">
+                {t('microsoftForm.fields.providerNameHelp', { defaultValue: 'Internal name used to identify this configuration. Not shown in outbound emails.' })}
+              </p>
               {form.formState.errors.providerName && (
                 <p className="text-sm text-destructive">{form.formState.errors.providerName.message}</p>
               )}
@@ -331,6 +343,18 @@ export function MicrosoftProviderForm({
                 <p className="text-sm text-destructive">{form.formState.errors.mailbox.message}</p>
               )}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="senderDisplayName">{t('microsoftForm.fields.senderDisplayNameLabel', { defaultValue: 'Sender Display Name' })}</Label>
+            <Input
+              id="senderDisplayName"
+              {...form.register('senderDisplayName')}
+              placeholder={t('microsoftForm.fields.senderDisplayNamePlaceholder', { defaultValue: 'e.g., Acme Support' })}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t('microsoftForm.fields.senderDisplayNameHelp', { defaultValue: 'Display name shown in the From header on outbound ticket emails (replies, closures). Applied only when this mailbox matches the tenant\'s outbound ticketing-from address. Leave blank to fall back to the ticket\'s board name.' })}
+            </p>
           </div>
 
           <div className="flex items-center space-x-2">

@@ -20,6 +20,14 @@ interface ImapWebhookPayload {
   };
 }
 
+async function assertTenantEmailProductAccess(knex: any, tenantId: string): Promise<void> {
+  const tenant = await knex('tenants').where({ tenant: tenantId }).first('product_code');
+  const productCode = typeof tenant?.product_code === 'string' ? tenant.product_code : 'psa';
+  if (productCode !== 'psa' && productCode !== 'algadesk') {
+    throw new Error(`Product access denied for tenant ${tenantId}`);
+  }
+}
+
 function asNonEmptyString(value: unknown): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
@@ -66,6 +74,7 @@ export async function POST(request: NextRequest) {
     if (!provider) {
       return NextResponse.json({ error: 'IMAP provider not found' }, { status: 404 });
     }
+    await assertTenantEmailProductAccess(knex, provider.tenant);
 
     const tenantHint = asNonEmptyString(payload.tenantId) || asNonEmptyString(payload.tenant);
     if (tenantHint && tenantHint !== provider.tenant) {

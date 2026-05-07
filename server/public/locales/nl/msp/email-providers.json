@@ -234,7 +234,7 @@
     },
     "microsoft": {
       "validation": {
-        "providerNameRequired": "Providernaam is vereist",
+        "providerNameRequired": "Configuratienaam is verplicht",
         "emailRequired": "Een geldig e-mailadres is vereist",
         "redirectRequired": "Een geldige omleidings-URI is vereist",
         "authorizeRequiresValid": "Vul alle verplichte velden in voordat u autoriseert",
@@ -244,18 +244,22 @@
         "authorizationFailed": "Autorisatie mislukt"
       },
       "requiredFields": {
-        "providerName": "Naam aanbieder",
+        "providerName": "Configuratienaam",
         "emailAddress": "E-mailadres",
         "redirectUri": "Omleidings-URI"
       },
       "basic": {
         "title": "Basisconfiguratie",
         "description": "Basisinstellingen voor uw Microsoft 365-e-mailprovider",
-        "providerNameLabel": "Naam aanbieder *",
-        "providerNamePlaceholder": "bijvoorbeeld ondersteunings-e-mail",
+        "providerNameLabel": "Configuratienaam *",
+        "providerNamePlaceholder": "bv. Support-postvak (intern)",
         "emailLabel": "E-mailadres *",
         "emailPlaceholder": "support@client.com",
-        "enableProvider": "Schakel deze aanbieder in"
+        "enableProvider": "Schakel deze aanbieder in",
+        "providerNameHelp": "Interne naam gebruikt om deze configuratie te identificeren. Niet zichtbaar in uitgaande e-mails.",
+        "senderDisplayNameLabel": "Weergavenaam afzender",
+        "senderDisplayNamePlaceholder": "bv. Acme Support",
+        "senderDisplayNameHelp": "Weergavenaam in het Van-veld van uitgaande ticket-e-mails (antwoorden, sluitingen). Alleen toegepast wanneer deze mailbox overeenkomt met het uitgaande ticket-verzendadres van de tenant. Laat leeg om de boardnaam van het ticket te gebruiken."
       },
       "oauth": {
         "sectionTitle": "Microsoft OAuth-configuratie",
@@ -279,7 +283,7 @@
     },
     "gmail": {
       "validation": {
-        "providerNameRequired": "Providernaam is vereist",
+        "providerNameRequired": "Configuratienaam is verplicht",
         "gmailAddressRequired": "Een geldig Gmail-adres is vereist",
         "authorizeRequiresValid": "Vul alle verplichte velden in voordat u autoriseert",
         "googleNotConfigured": "Google-integratie is niet geconfigureerd voor deze tenant. Configureer eerst Google en probeer het vervolgens opnieuw.",
@@ -295,17 +299,21 @@
         "settingUp": "Gmail-meldingen instellen..."
       },
       "requiredFields": {
-        "providerName": "Naam aanbieder",
+        "providerName": "Configuratienaam",
         "gmailAddress": "Gmail-adres"
       },
       "basic": {
         "title": "Basisconfiguratie",
         "description": "Basisinstellingen voor uw Gmail-e-mailprovider",
-        "providerNameLabel": "Naam aanbieder *",
-        "providerNamePlaceholder": "Ondersteun bijvoorbeeld Gmail",
+        "providerNameLabel": "Configuratienaam *",
+        "providerNamePlaceholder": "bv. Support-Gmail (intern)",
         "mailboxLabel": "Gmail-adres *",
         "mailboxPlaceholder": "support@client.com",
-        "enableProvider": "Schakel deze aanbieder in"
+        "enableProvider": "Schakel deze aanbieder in",
+        "providerNameHelp": "Interne naam gebruikt om deze configuratie te identificeren. Niet zichtbaar in uitgaande e-mails.",
+        "senderDisplayNameLabel": "Weergavenaam afzender",
+        "senderDisplayNamePlaceholder": "bv. Acme Support",
+        "senderDisplayNameHelp": "Weergavenaam in het Van-veld van uitgaande ticket-e-mails (antwoorden, sluitingen). Alleen toegepast wanneer deze mailbox overeenkomt met het uitgaande ticket-verzendadres van de tenant. Laat leeg om de boardnaam van het ticket te gebruiken."
       },
       "oauth": {
         "sectionTitle": "Google OAuth",
@@ -334,7 +342,7 @@
     },
     "imap": {
       "validation": {
-        "providerNameRequired": "Providernaam is vereist",
+        "providerNameRequired": "Configuratienaam is verplicht",
         "mailboxRequired": "Brievenbus is vereist",
         "mailboxInvalid": "Een geldig postvak is vereist (bijvoorbeeld gebruiker@domein.com, gebruiker@localhost, gebruiker@testserver of gebruiker)",
         "hostRequired": "IMAP-host is vereist",
@@ -344,12 +352,17 @@
       "basic": {
         "title": "Basisinstellingen",
         "description": "Definieer de IMAP-mailboxverbindingsgegevens.",
-        "providerName": "Naam aanbieder",
+        "providerName": "Configuratienaam",
         "mailboxAddress": "Postbusadres",
         "host": "IMAP-host",
         "port": "Haven",
         "useTls": "Gebruik TLS/SSL",
-        "allowStarttls": "Sta STARTTLS-upgrade toe"
+        "allowStarttls": "Sta STARTTLS-upgrade toe",
+        "providerNamePlaceholder": "bv. Support-IMAP (intern)",
+        "providerNameHelp": "Interne naam gebruikt om deze configuratie te identificeren. Niet zichtbaar in uitgaande e-mails.",
+        "senderDisplayName": "Weergavenaam afzender",
+        "senderDisplayNamePlaceholder": "bv. Acme Support",
+        "senderDisplayNameHelp": "Weergavenaam in het Van-veld van uitgaande ticket-e-mails (antwoorden, sluitingen). Alleen toegepast wanneer deze mailbox overeenkomt met het uitgaande ticket-verzendadres van de tenant. Laat leeg om de boardnaam van het ticket te gebruiken."
       },
       "auth": {
         "title": "Authenticatie",
@@ -476,7 +489,7 @@
       }
     },
     "fields": {
-      "providerName": "Naam aanbieder",
+      "providerName": "Configuratienaam",
       "mailboxAddress": "Postbusadres",
       "imapHost": "IMAP-host",
       "port": "Poort",
@@ -496,7 +509,12 @@
       "active": "Actief",
       "ticketDefaultsLabel": "Ticketstandaarden",
       "ticketDefaultsPlaceholder": "Selecteer standaardinstellingen...",
-      "ticketDefaultsEmpty": "Geen standaardinstellingen beschikbaar"
+      "ticketDefaultsEmpty": "Geen standaardinstellingen beschikbaar",
+      "providerNamePlaceholder": "bv. Support-IMAP (intern)",
+      "providerNameHelp": "Interne naam gebruikt om deze configuratie te identificeren. Niet zichtbaar in uitgaande e-mails.",
+      "senderDisplayName": "Weergavenaam afzender",
+      "senderDisplayNamePlaceholder": "bv. Acme Support",
+      "senderDisplayNameHelp": "Weergavenaam in het Van-veld van uitgaande ticket-e-mails (antwoorden, sluitingen). Alleen toegepast wanneer deze mailbox overeenkomt met het uitgaande ticket-verzendadres van de tenant. Laat leeg om de boardnaam van het ticket te gebruiken."
     },
     "authOptions": {
       "password": "Wachtwoord",
@@ -546,8 +564,8 @@
       }
     },
     "fields": {
-      "providerNameLabel": "Naam aanbieder *",
-      "providerNamePlaceholder": "bijv. Support Microsoft 365",
+      "providerNameLabel": "Configuratienaam *",
+      "providerNamePlaceholder": "bv. Support-postvak (intern)",
       "mailboxLabel": "Microsoft 365-adres *",
       "mailboxPlaceholder": "support@client.com",
       "enableProvider": "Schakel deze aanbieder in",
@@ -557,7 +575,11 @@
       "maxEmailsLabel": "Max. e-mails per synchronisatie",
       "maxEmailsHelp": "Maximum aantal e-mails dat per synchronisatie wordt verwerkt (1-1000)",
       "inboundDefaultsLabel": "Standaardwaarden voor inkomende tickets",
-      "inboundDefaultsPlaceholder": "Selecteer standaardwaarden (optioneel)"
+      "inboundDefaultsPlaceholder": "Selecteer standaardwaarden (optioneel)",
+      "providerNameHelp": "Interne naam gebruikt om deze configuratie te identificeren. Niet zichtbaar in uitgaande e-mails.",
+      "senderDisplayNameLabel": "Weergavenaam afzender",
+      "senderDisplayNamePlaceholder": "bv. Acme Support",
+      "senderDisplayNameHelp": "Weergavenaam in het Van-veld van uitgaande ticket-e-mails (antwoorden, sluitingen). Alleen toegepast wanneer deze mailbox overeenkomt met het uitgaande ticket-verzendadres van de tenant. Laat leeg om de boardnaam van het ticket te gebruiken."
     },
     "oauth": {
       "connectionTitle": "Microsoft 365-verbinding",
@@ -596,7 +618,7 @@
     },
     "validation": {
       "requiredFieldsTitle": "Vul de verplichte velden in:",
-      "providerName": "Naam aanbieder",
+      "providerName": "Configuratienaam",
       "mailbox": "Microsoft 365-adres"
     }
   },

@@ -172,6 +172,21 @@ interface TicketDetailsProps {
      * Shows auto-tracked time intervals below the ticket timer.
      */
     renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
+    hideSlaStatus?: boolean;
+    hideTimeEntry?: boolean;
+    hideMaterials?: boolean;
+    uploadTicketAttachmentAction?: (
+        formData: FormData,
+        params: { userId: string; ticketId: string }
+    ) => Promise<any>;
+    deleteDraftTicketAttachmentImagesAction?: (input: {
+        ticketId: string;
+        documentIds: string[];
+    }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
+    resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
+    disableAttachmentFolderSelection?: boolean;
+    disableAttachmentSharing?: boolean;
+    disableAttachmentLinking?: boolean;
 }
 
 const TicketDetails: React.FC<TicketDetailsProps> = ({
@@ -214,7 +229,16 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     renderContactDetails,
     renderCreateProjectTask,
     renderClientDetails,
-    renderIntervalManagement
+    renderIntervalManagement,
+    hideSlaStatus = false,
+    hideTimeEntry = false,
+    hideMaterials = false,
+    uploadTicketAttachmentAction,
+    deleteDraftTicketAttachmentImagesAction,
+    resolveTicketAttachmentViewUrl,
+    disableAttachmentFolderSelection = false,
+    disableAttachmentSharing = false,
+    disableAttachmentLinking = false,
 }) => {
     const { t } = useTranslation('features/tickets');
     const { data: session } = useSession();
@@ -357,6 +381,17 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const [availableAgents, setAvailableAgents] = useState<IUserWithRoles[]>(initialAvailableAgents);
     const [additionalAgents, setAdditionalAgents] = useState<ITicketResource[]>(initialAdditionalAgents);
+
+    const additionalAgentsForInfo = useMemo(() => {
+        return additionalAgents.map(a => {
+            const userId = a.additional_user_id || a.assigned_to;
+            const agent = availableAgents.find(u => u.user_id === userId);
+            return {
+                user_id: userId,
+                name: agent ? `${agent.first_name} ${agent.last_name || ''}`.trim() : '',
+            };
+        });
+    }, [additionalAgents, availableAgents]);
 
     const [newCommentContent, setNewCommentContent] = useState<PartialBlock[]>([{
         type: "paragraph",
@@ -2219,13 +2254,12 @@ const handleClose = () => {
                                         await handleRemoveTeamAssignment('remove_all');
                                     }}
                                     onClipboardImageUploaded={refreshTicketDocuments}
+                                    uploadTicketAttachmentAction={uploadTicketAttachmentAction}
+                                    deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
+                                    resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
                                     onOpenEmailNotificationLogs={() => setIsEmailNotificationLogsDrawerOpen(true)}
-                                    additionalAgents={additionalAgents.map(a => ({
-                                        user_id: a.additional_user_id || a.assigned_to,
-                                        name: availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))
-                                            ? `${availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))!.first_name} ${availableAgents.find(u => u.user_id === (a.additional_user_id || a.assigned_to))!.last_name || ''}`.trim()
-                                            : ''
-                                    }))}
+                                    hideSlaStatus={hideSlaStatus}
+                                    additionalAgents={additionalAgentsForInfo}
                                 />
                             </div>
                         </Suspense>
@@ -2261,6 +2295,9 @@ const handleClose = () => {
                                     hideInternalTab={false}
                                     externalComments={bundle?.isBundleMaster ? aggregatedChildClientComments : []}
                                     onClipboardImageUploaded={refreshTicketDocuments}
+                                    uploadTicketAttachmentAction={uploadTicketAttachmentAction}
+                                    deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
+                                    resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
                                     defaultNewestFirst
                                     canViewCommentMetadataDebug={canViewCommentMetadataDebug}
                                 />
@@ -2272,6 +2309,10 @@ const handleClose = () => {
                                 id={`${id}-documents-section`}
                                 ticketId={ticket.ticket_id || ''}
                                 initialDocuments={documents}
+                                forceUploadToRoot={disableAttachmentFolderSelection}
+                                allowDocumentSharing={!disableAttachmentSharing}
+                                allowLinkExistingDocuments={!disableAttachmentLinking}
+                                allowBlockDocuments={!disableAttachmentLinking}
                                 onDocumentCreated={async () => {
                                     router.refresh();
                                 }}
@@ -2330,6 +2371,8 @@ const handleClose = () => {
                                 allContactsForWatchListLoading={allContactsForWatchListLoading}
                                 onLoadAllContactsForWatchList={handleLoadAllContactsForWatchList}
                                 surveySummaryCard={surveySummaryCard}
+                                    hideTimeEntry={hideTimeEntry}
+                                    hideMaterials={hideMaterials}
                                     renderIntervalManagement={renderIntervalManagement}
                                     onRemoveTeamAssignment={handleRemoveTeamAssignment}
                                     onAssignTeam={handleAssignTeam}

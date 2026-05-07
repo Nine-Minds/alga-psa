@@ -1,0 +1,304 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed integration: migrating product_code defaults existing and new tenants to psa, accepts algadesk, and rejects invalid product codes.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005",
+      "F006"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: product resolver and assertion helpers return psa defaults, allow Algadesk capabilities, and throw structured ProductAccessError for denied capabilities.",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F012",
+      "F011"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: product surface registry classifies representative Algadesk allowed, upgrade-boundary, not-found, and API-denied paths with fail-closed unknown behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F022",
+      "F032"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Static dependency guard: @alga-psa/algadesk-composition cannot depend on or import billing, projects, assets, scheduling, SLA, workflows, surveys, extensions, AI/chat, or reporting packages.",
+    "implemented": true,
+    "featureIds": [
+      "F043",
+      "F051",
+      "F056"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Component: Algadesk MSP shell renders only dashboard, tickets, clients, contacts, knowledge base, and allowed settings/profile/security navigation, while PSA shell remains unchanged.",
+    "implemented": true,
+    "featureIds": [
+      "F063",
+      "F068",
+      "F082",
+      "F087"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Component: Algadesk settings exposes only approved tabs and rejects direct access to excluded tabs such as billing, SLA, projects, time entry, integrations, extensions, and experimental features.",
+    "implemented": true,
+    "featureIds": [
+      "F103",
+      "F107",
+      "F108",
+      "F123"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Component: Algadesk dashboard shows ticket and email-channel health summaries and contains no billing, project, asset, time, workflow, or AI widgets.",
+    "implemented": true,
+    "featureIds": [
+      "F089",
+      "F090",
+      "F095",
+      "F097"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Component/integration: Algadesk ticket list preserves core filtering, sorting, pagination, and quick-add behavior while removing SLA status filtering.",
+    "implemented": true,
+    "featureIds": [
+      "F124",
+      "F126",
+      "F140",
+      "F138"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Component: Algadesk ticket detail renders core ticket metadata, conversation, assignment, tags, attachments, client/contact context, and email context, and omits SLA, project, time, asset, survey, and AI controls.",
+    "implemented": true,
+    "featureIds": [
+      "F144",
+      "F146",
+      "F156",
+      "F164",
+      "F165",
+      "F167",
+      "F171",
+      "F172",
+      "F173",
+      "F174"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "DB-backed integration: Algadesk MSP user can create a ticket with client/contact/board/category/priority/assignment and then update status and response state with RBAC enforced.",
+    "implemented": true,
+    "featureIds": [
+      "F176",
+      "F177",
+      "F179",
+      "F154",
+      "F175"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "DB-backed integration: ticket attachments and rich-text image uploads work for Algadesk tickets without exposing folder selection, broad sharing, project documents, or client document library surfaces.",
+    "implemented": true,
+    "featureIds": [
+      "F219",
+      "F222",
+      "F225"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Component/integration: Algadesk client and contact views expose CRUD/support ticket context while hiding contracts, billing config, tax, service catalog, assets, projects, documents, and surveys.",
+    "implemented": true,
+    "featureIds": [
+      "F191",
+      "F194",
+      "F199",
+      "F202",
+      "F204",
+      "F207"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Integration: Algadesk MSP and portal KB pages can list/view articles and MSP users can create/edit/publish according to RBAC without linking to full document management.",
+    "implemented": true,
+    "featureIds": [
+      "F212",
+      "F213",
+      "F216",
+      "F218"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Component: Algadesk client portal sidebar exposes only dashboard, tickets, knowledge base, profile, and client settings while hiding billing, projects, devices/assets, documents, appointments, service requests, and extensions.",
+    "implemented": true,
+    "featureIds": [
+      "F229",
+      "F230",
+      "F236",
+      "F241"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Playwright: Algadesk portal happy path logs in, creates a free-form ticket with attachment, views technician response, replies publicly, and validates internal comments remain hidden.",
+    "implemented": true,
+    "featureIds": [
+      "F247",
+      "F250",
+      "F254",
+      "F255"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "DB-backed integration: inbound email creates a ticket using configured board/category/priority mapping and resolves sender/contact when possible.",
+    "implemented": true,
+    "featureIds": [
+      "F263",
+      "F265",
+      "F272",
+      "F276"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "DB-backed integration: inbound reply adds one public ticket comment, preserves thread metadata, and dedupes repeated email events.",
+    "implemented": true,
+    "featureIds": [
+      "F278",
+      "F279",
+      "F280"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Route boundary smoke: Algadesk direct browser hits to billing, projects, assets, schedule/dispatch, time, workflows, surveys, extensions, reports, and service requests show upgrade/not-found behavior; PSA direct hits still render normally.",
+    "implemented": true,
+    "featureIds": [
+      "F292",
+      "F293",
+      "F294",
+      "F307"
+    ]
+  },
+  {
+    "id": "T019",
+    "description": "API integration: Algadesk API key can access allowed ticket/client/contact/KB/email endpoints and receives structured product-denied responses for representative billing, projects, assets, time, workflows, extensions, AI, surveys, and full-document endpoints.",
+    "implemented": true,
+    "featureIds": [
+      "F308",
+      "F310",
+      "F318",
+      "F324",
+      "F325",
+      "F330"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "API discovery integration: Algadesk metadata/OpenAPI/docs omit denied PSA endpoints while PSA metadata/OpenAPI/docs remain complete.",
+    "implemented": true,
+    "featureIds": [
+      "F333",
+      "F334",
+      "F335",
+      "F354"
+    ]
+  },
+  {
+    "id": "T021",
+    "description": "Component contract: Algadesk email settings tab uses focused EmailProviderConfiguration composition instead of broad legacy EmailSettings surface.",
+    "implemented": true,
+    "featureIds": [
+      "F262"
+    ]
+  },
+  {
+    "id": "T022",
+    "description": "Component contract: inbound email provider configuration supports mailbox/channel setup and persisted defaults mapping fields for Algadesk email channels.",
+    "implemented": true,
+    "featureIds": [
+      "F263"
+    ]
+  },
+  {
+    "id": "T023",
+    "description": "Component contract: email-channel defaults support board/category/priority mapping and active state, and provider cards surface connection/webhook/sync/error health context for email-to-ticket operations.",
+    "implemented": true,
+    "featureIds": [
+      "F264",
+      "F265",
+      "F266",
+      "F267",
+      "F268",
+      "F269",
+      "F270",
+      "F271"
+    ]
+  },
+  {
+    "id": "T024",
+    "description": "Component contract: Algadesk hides email-template automation surfaces in notifications settings compositions (including direct notifications route), preventing workflow/billing/project/survey template UI exposure.",
+    "implemented": true,
+    "featureIds": [
+      "F287",
+      "F288"
+    ]
+  },
+  {
+    "id": "T025",
+    "description": "Component contract: MSP and portal layout clients apply registry-backed route behavior and render shared product route boundaries for Algadesk upgrade/not-found surfaces while preserving PSA pass-through behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F289",
+      "F290",
+      "F291",
+      "F292",
+      "F305",
+      "F306",
+      "F307"
+    ]
+  },
+  {
+    "id": "T026",
+    "description": "Controller contract: ApiBaseController enforces product API access post-authentication and returns structured PRODUCT_ACCESS_DENIED errors for Algadesk-denied API groups while allowing PSA behavior through registry rules.",
+    "implemented": true,
+    "featureIds": [
+      "F308",
+      "F309",
+      "F310",
+      "F324",
+      "F336"
+    ]
+  },
+  {
+    "id": "T027",
+    "description": "Controller contract: metadata/OpenAPI discovery endpoints filter Algadesk-visible API paths and preserve PSA metadata visibility.",
+    "implemented": true,
+    "featureIds": [
+      "F333",
+      "F334",
+      "F335",
+      "F354"
+    ]
+  }
+]

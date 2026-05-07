@@ -6,6 +6,7 @@ import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
 import { MspLayoutClient } from "./MspLayoutClient";
 import { registerSlaIntegration } from "@alga-psa/msp-composition/tickets/registerSlaIntegration";
 import { registerScheduleEntryIntegration } from "@alga-psa/msp-composition/workflows/registerScheduleEntryIntegration";
+import { getCurrentTenantProduct } from "@/lib/productAccess";
 import type { Metadata } from 'next';
 
 // This template overrides the root layout's template for all /msp/* pages.
@@ -17,10 +18,6 @@ export const metadata: Metadata = {
     default: 'Dashboard | Alga PSA',
   },
 };
-
-// Register SLA service integrations (server-side, avoids bundling nodemailer into client)
-registerSlaIntegration();
-registerScheduleEntryIntegration();
 
 export default async function MspLayout({
   children,
@@ -59,10 +56,18 @@ export default async function MspLayout({
   }
 
   const locale = await getHierarchicalLocaleAction();
+  const productCode = await getCurrentTenantProduct();
+
+  if (productCode === 'psa') {
+    // Keep PSA-only integrations out of Algadesk composition.
+    registerSlaIntegration();
+    registerScheduleEntryIntegration();
+  }
 
   return (
     <MspLayoutClient
       session={session}
+      productCode={productCode}
       needsOnboarding={needsOnboarding}
       initialSidebarCollapsed={initialSidebarCollapsed}
       initialLocale={locale}

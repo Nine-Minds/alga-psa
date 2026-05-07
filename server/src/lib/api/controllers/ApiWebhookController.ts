@@ -62,6 +62,8 @@ import {
   buildWebhookEnvelope,
 } from '../../webhooks/processWebhookDeliveryJob';
 import { performWebhookDeliveryRequest } from '../../webhooks/delivery';
+import { getTenantProduct, ProductAccessError } from '@/lib/productAccess';
+import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 
 export class ApiWebhookController {
   private webhookService: WebhookService;
@@ -117,6 +119,12 @@ export class ApiWebhookController {
       tenant: keyRecord.tenant,
       user
     };
+
+    const productCode = await getTenantProduct(apiRequest.context.tenant);
+    const pathname = new URL(req.url).pathname;
+    if (resolveProductApiBehavior(productCode, pathname) === 'denied') {
+      throw new ProductAccessError(`api:${pathname}`, productCode);
+    }
 
     return apiRequest;
   }

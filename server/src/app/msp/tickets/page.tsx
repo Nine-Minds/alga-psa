@@ -1,5 +1,5 @@
 import { getConsolidatedTicketListData } from '@alga-psa/tickets/actions/optimizedTicketActions';
-import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
+import { getCurrentUser, getCurrentUserPermissions, getUserPreference } from '@alga-psa/user-composition/actions';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { getTeams } from '@alga-psa/teams/actions';
 import type { ITicketListFilters } from '@alga-psa/types';
@@ -9,6 +9,7 @@ import {
   TICKET_STATUS_FILTER_OPEN,
 } from '@alga-psa/tickets/lib';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import { getCurrentTenantProduct } from '@/lib/productAccess';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -22,6 +23,9 @@ interface TicketsPageProps {
 export default async function TicketsPage({ searchParams }: TicketsPageProps) {
   try {
     const user = await getCurrentUser();
+    const productCode = await getCurrentTenantProduct();
+    const allowSlaStatusFilter = productCode === 'psa';
+    const useAlgadeskQuickAddForm = productCode === 'algadesk';
     if (!user) {
       // In dev, redirect unauthenticated users to login
       // This avoids rendering a 200 with an error message
@@ -35,7 +39,20 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
 
     // Parse pagination parameters
     const page = params?.page && typeof params.page === 'string' ? parseInt(params.page, 10) : 1;
-    const pageSize = params?.pageSize && typeof params.pageSize === 'string' ? parseInt(params.pageSize, 10) : 10;
+    let pageSize = 10;
+    if (params?.pageSize && typeof params.pageSize === 'string') {
+      const parsed = parseInt(params.pageSize, 10);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        pageSize = parsed;
+      }
+    } else {
+      // No URL override — honor the user's saved preference so SSR data
+      // matches what the client will display after the preference loads.
+      const saved = await getUserPreference(user!.user_id, 'tickets_list_page_size').catch(() => null);
+      if (typeof saved === 'number' && Number.isFinite(saved) && saved > 0) {
+        pageSize = saved;
+      }
+    }
 
     // Parse search parameters into filter values
     const filtersFromURL: Partial<ITicketListFilters> = {};
@@ -110,7 +127,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         filtersFromURL.responseState = params.responseState as ITicketListFilters['responseState'];
       }
     }
-    if (params?.slaStatusFilter && typeof params.slaStatusFilter === 'string') {
+    if (allowSlaStatusFilter && params?.slaStatusFilter && typeof params.slaStatusFilter === 'string') {
       const allowedSlaStatuses = ['all', 'has_sla', 'no_sla', 'on_track', 'breached', 'paused'] as const;
       if ((allowedSlaStatuses as readonly string[]).includes(params.slaStatusFilter)) {
         filtersFromURL.slaStatusFilter = params.slaStatusFilter as ITicketListFilters['slaStatusFilter'];
@@ -204,6 +221,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
           displaySettings={displaySettings}
           initialTeams={teams}
           canUpdateTickets={canUpdateTickets}
+          allowSlaStatusFilter={allowSlaStatusFilter}
+          useAlgadeskQuickAddForm={useAlgadeskQuickAddForm}
         />
       </div>
     );

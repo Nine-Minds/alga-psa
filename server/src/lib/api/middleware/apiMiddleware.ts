@@ -324,7 +324,14 @@ export function handleApiError(error: any): NextResponse {
     timestamp: new Date().toISOString()
   });
 
-  if (error.statusCode && typeof error.statusCode === 'number') {
+  const explicitStatus =
+    typeof error?.statusCode === 'number'
+      ? error.statusCode
+      : typeof error?.status === 'number'
+        ? error.status
+        : undefined;
+
+  if (typeof explicitStatus === 'number') {
     return NextResponse.json({
       error: {
         code: error.code || 'UNKNOWN_ERROR',
@@ -332,7 +339,7 @@ export function handleApiError(error: any): NextResponse {
         details: error.details
       }
     }, {
-      status: error.statusCode,
+      status: explicitStatus,
       headers: error.headers
     });
   }
