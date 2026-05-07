@@ -15,9 +15,9 @@ import TicketSurveySummaryCard from '@alga-psa/surveys/components/TicketSurveySu
 import { MspClientCrossFeatureProvider } from '../clients/MspClientCrossFeatureProvider';
 import {
   deleteDraftClipboardImages,
-  resolveTicketAttachmentViewUrl,
   uploadTicketAttachmentDocument
 } from './composedClipboardActions';
+import { resolveTicketAttachmentViewUrl } from './ticketAttachmentViewUrl';
 
 type MspTicketDetailsContainerClientProps = Omit<
   React.ComponentProps<typeof TicketDetailsContainer>,
@@ -96,6 +96,8 @@ export default function MspTicketDetailsContainerClient({
         renderClientDetails={renderClientDetails}
         renderIntervalManagement={isAlgadeskMode ? undefined : renderIntervalManagement}
         hideSlaStatus={isAlgadeskMode}
+        hideTimeEntry={isAlgadeskMode}
+        hideMaterials={isAlgadeskMode}
         uploadTicketAttachmentAction={uploadTicketAttachmentDocument}
         deleteDraftTicketAttachmentImagesAction={deleteDraftClipboardImages}
         resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}

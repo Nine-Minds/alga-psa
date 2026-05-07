@@ -268,7 +268,7 @@ export function ClientPortalSidebar({
   };
 
   const visibleSections = sections.filter((s) => s.items.length > 0);
-  const brandLabel = branding?.clientName || 'AlgaPSA';
+  const brandLabel = branding?.clientName || (isAlgadeskPortal ? 'Algadesk' : 'AlgaPSA');
   const transitionClass = transitionsEnabled
     ? 'transition-all duration-300 ease-in-out'
     : '';

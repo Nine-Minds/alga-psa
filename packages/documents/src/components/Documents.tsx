@@ -100,6 +100,8 @@ interface DocumentsProps {
   allowDocumentSharing?: boolean;
   /** Allow linking existing documents from broader document surfaces. */
   allowLinkExistingDocuments?: boolean;
+  /** Allow creating rich-text/block documents from this surface. */
+  allowBlockDocuments?: boolean;
 }
 
 const Documents = ({
@@ -120,6 +122,7 @@ const Documents = ({
   forceUploadToRoot = false,
   allowDocumentSharing = true,
   allowLinkExistingDocuments = true,
+  allowBlockDocuments = true,
 }: DocumentsProps): React.JSX.Element => {
   const { t } = useTranslation(namespace);
   const documentKeyPrefix = namespace === 'common' ? 'documents.' : '';
@@ -1449,6 +1452,7 @@ const Documents = ({
             <div className="flex items-center gap-2">
 
               {/* New Document Button */}
+              {allowBlockDocuments && (
               <Button
                 id={`${id}-new-document-btn`}
                 variant="default"
@@ -1457,6 +1461,7 @@ const Documents = ({
                 <FileText className="w-4 h-4 mr-2" />
                 New Document
               </Button>
+              )}
 
               {/* Upload Button */}
               <Button
@@ -1829,6 +1834,7 @@ const Documents = ({
       <div className="w-full space-y-4">
         <div className="flex justify-between items-center mb-4">
           <div className="flex space-x-2">
+            {allowBlockDocuments && (
             <Button
               id={`${id}-new-document-btn`}
               onClick={handleCreateDocument}
@@ -1837,6 +1843,7 @@ const Documents = ({
               <FileText className="w-4 h-4 mr-2" />
               {tDoc('newDocument', 'New Document')}
             </Button>
+            )}
             <Button
               id={`${id}-upload-btn`}
               onClick={() => {

@@ -524,8 +524,11 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       const clientWithTags = { ...newClient, tags: createdTags };
       onClientAdded(clientWithTags);
       if (options?.openAfterCreate) {
+        const clientDetailPath = `/msp/clients/${newClient.client_id}`;
         onOpenChange(false);
-        router.push(`/msp/clients/${newClient.client_id}`);
+        window.setTimeout(() => {
+          router.push(clientDetailPath);
+        }, 0);
       } else if (options?.addAnother) {
         // Reset form but keep dialog open
         setFormData(initialFormData);

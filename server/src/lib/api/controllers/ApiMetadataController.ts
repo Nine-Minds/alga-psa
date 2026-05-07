@@ -32,7 +32,7 @@ import {
   createPaginatedResponse,
   handleApiError
 } from '../middleware/apiMiddleware';
-import type { ApiPermissionInfo, ApiStats } from '../schemas/metadataSchemas';
+import type { ApiPermissionInfo, ApiSchemaInfo, ApiStats } from '../schemas/metadataSchemas';
 import { ZodError } from 'zod';
 import { getTenantProduct } from '@/lib/productAccess';
 import { isApiVisibleInMetadata } from '@/lib/productSurfaceRegistry';
@@ -106,6 +106,7 @@ export class ApiMetadataController extends ApiBaseController {
     stats: ApiStats,
     visibleEndpoints: Array<{ path: string; method: string }>,
     visiblePermissionsCount: number,
+    visibleSchemasCount: number,
   ): ApiStats {
     if (productCode === 'psa') {
       return stats;
@@ -139,7 +140,61 @@ export class ApiMetadataController extends ApiBaseController {
       endpointsByCategory: visibleByCategory,
       endpointsByMethod: visibleByMethod,
       totalPermissions: visiblePermissionsCount,
+      totalSchemas: visibleSchemasCount,
     };
+  }
+
+  private filterSchemasForProduct(
+    productCode: Awaited<ReturnType<typeof this.getApiMetadataProductCode>>,
+    schemas: ApiSchemaInfo[],
+  ): ApiSchemaInfo[] {
+    if (productCode === 'psa') {
+      return schemas;
+    }
+
+    const deniedSchemaTerms = [
+      'billing',
+      'invoice',
+      'quote',
+      'contract',
+      'project',
+      'asset',
+      'schedule',
+      'timeentry',
+      'time_entry',
+      'timesheet',
+      'time_sheet',
+      'workflow',
+      'survey',
+      'extension',
+      'accounting',
+      'financial',
+      'payment',
+      'tax',
+      'servicecatalog',
+      'service_catalog',
+      'servicetype',
+      'service_type',
+      'product',
+    ];
+
+    return schemas.filter((schema) => {
+      const normalizedName = schema.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      return !deniedSchemaTerms.some((term) => normalizedName.includes(term.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()));
+    });
+  }
+
+  private getSchemaCategories(schemas: ApiSchemaInfo[]): string[] {
+    const categories = new Set<string>();
+    for (const schema of schemas) {
+      const name = schema.name.toLowerCase();
+      if (name.includes('ticket') || name.includes('comment')) categories.add('Tickets');
+      else if (name.includes('client') || name.includes('contact')) categories.add('Clients');
+      else if (name.includes('kb') || name.includes('knowledge')) categories.add('Knowledge Base');
+      else if (name.includes('email')) categories.add('Email');
+      else categories.add('Other');
+    }
+    return [...categories].sort();
   }
 
   private collectSchemaRefs(value: unknown, refs: Set<string>): void {
@@ -255,8 +310,15 @@ export class ApiMetadataController extends ApiBaseController {
 
           const result = await this.metadataService.getApiSchemas(query, apiRequest.context!.tenant);
           const validatedResult = apiSchemasResponseSchema.parse(result);
+          const productCode = await this.getApiMetadataProductCode(apiRequest.context!.tenant);
+          const visibleSchemas = this.filterSchemasForProduct(productCode, validatedResult.data.schemas);
 
-          return createSuccessResponse(validatedResult.data, 200, {
+          return createSuccessResponse({
+            ...validatedResult.data,
+            schemas: visibleSchemas,
+            totalSchemas: visibleSchemas.length,
+            categories: productCode === 'psa' ? validatedResult.data.categories : this.getSchemaCategories(visibleSchemas),
+          }, 200, {
             message: 'API schemas retrieved successfully',
             ...validatedResult.meta
           });
@@ -392,8 +454,31 @@ export class ApiMetadataController extends ApiBaseController {
 
           const result = await this.metadataService.getApiHealth(apiRequest.context!.tenant);
           const validatedResult = apiHealthResponseSchema.parse(result);
+          const productCode = await this.getApiMetadataProductCode(apiRequest.context!.tenant);
+          let data = validatedResult.data;
 
-          return createSuccessResponse(validatedResult.data, 200, {
+          if (productCode !== 'psa' && data.metrics) {
+            const endpointsResult = await this.metadataService.getApiEndpoints(
+              {
+                format: 'json',
+                includeExamples: false,
+                includeSchemas: false,
+              },
+              apiRequest.context!.tenant,
+            );
+            const visibleEndpointCount = endpointsResult.data.endpoints.filter((endpoint) =>
+              isApiVisibleInMetadata(productCode, endpoint.path),
+            ).length;
+            data = {
+              ...data,
+              metrics: {
+                ...data.metrics,
+                totalEndpoints: visibleEndpointCount,
+              },
+            };
+          }
+
+          return createSuccessResponse(data, 200, {
             message: 'API health status retrieved successfully'
           });
         });
@@ -441,11 +526,21 @@ export class ApiMetadataController extends ApiBaseController {
             productCode,
             permissionsResult.data.permissions,
           );
+          const schemasResult = await this.metadataService.getApiSchemas(
+            {
+              format: 'json',
+              includeExamples: false,
+              includeSchemas: true,
+            },
+            apiRequest.context!.tenant,
+          );
+          const visibleSchemas = this.filterSchemasForProduct(productCode, schemasResult.data.schemas);
           const filteredStats = this.filterStatsForProduct(
             productCode,
             validatedResult.data,
             visibleEndpoints,
             visiblePermissions.length,
+            visibleSchemas.length,
           );
 
           return createSuccessResponse(filteredStats, 200, {

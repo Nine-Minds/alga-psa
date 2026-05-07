@@ -24,6 +24,8 @@ interface TicketDocumentsSectionProps {
   allowDocumentSharing?: boolean;
   /** When false, do not expose "link existing documents" picker. */
   allowLinkExistingDocuments?: boolean;
+  /** When false, do not expose rich-text/block document creation. */
+  allowBlockDocuments?: boolean;
 }
 
 const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
@@ -35,6 +37,7 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
   forceUploadToRoot = false,
   allowDocumentSharing = true,
   allowLinkExistingDocuments = true,
+  allowBlockDocuments = true,
 }) => {
   const router = useRouter();
   const { getDocumentByTicketId, renderDocuments } = useDocumentsCrossFeature();
@@ -116,6 +119,7 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
             forceUploadToRoot,
             allowDocumentSharing,
             allowLinkExistingDocuments,
+            allowBlockDocuments,
           })}
         </div>
       </div>

@@ -173,6 +173,8 @@ interface TicketDetailsProps {
      */
     renderIntervalManagement?: (args: { ticketId: string; userId: string }) => React.ReactNode;
     hideSlaStatus?: boolean;
+    hideTimeEntry?: boolean;
+    hideMaterials?: boolean;
     uploadTicketAttachmentAction?: (
         formData: FormData,
         params: { userId: string; ticketId: string }
@@ -229,6 +231,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     renderClientDetails,
     renderIntervalManagement,
     hideSlaStatus = false,
+    hideTimeEntry = false,
+    hideMaterials = false,
     uploadTicketAttachmentAction,
     deleteDraftTicketAttachmentImagesAction,
     resolveTicketAttachmentViewUrl,
@@ -2302,6 +2306,7 @@ const handleClose = () => {
                                 forceUploadToRoot={disableAttachmentFolderSelection}
                                 allowDocumentSharing={!disableAttachmentSharing}
                                 allowLinkExistingDocuments={!disableAttachmentLinking}
+                                allowBlockDocuments={!disableAttachmentLinking}
                                 onDocumentCreated={async () => {
                                     router.refresh();
                                 }}
@@ -2360,6 +2365,8 @@ const handleClose = () => {
                                 allContactsForWatchListLoading={allContactsForWatchListLoading}
                                 onLoadAllContactsForWatchList={handleLoadAllContactsForWatchList}
                                 surveySummaryCard={surveySummaryCard}
+                                    hideTimeEntry={hideTimeEntry}
+                                    hideMaterials={hideMaterials}
                                     renderIntervalManagement={renderIntervalManagement}
                                     onRemoveTeamAssignment={handleRemoveTeamAssignment}
                                     onAssignTeam={handleAssignTeam}

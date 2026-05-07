@@ -340,8 +340,9 @@ export class MetadataService {
   // ============================================================================
 
   private async discoverEndpoints(): Promise<ApiEndpoint[]> {
-    // Check cache first
-    if (this.endpointsCache && (Date.now() - this.cacheTimestamp) < this.cacheTimeout) {
+    // Check cache first. Disable endpoint discovery caching in development so
+    // hot-added route files are reflected in metadata smoke tests immediately.
+    if (process.env.NODE_ENV !== 'development' && this.endpointsCache && (Date.now() - this.cacheTimestamp) < this.cacheTimeout) {
       return this.endpointsCache;
     }
 
@@ -404,7 +405,8 @@ export class MetadataService {
       const httpMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 
       for (const method of httpMethods) {
-        if (content.includes(`export async function ${method}(`)) {
+        const exportsMethod = new RegExp(`export\\s+(?:async\\s+function\\s+${method}\\s*\\(|const\\s+${method}\\s*=)`).test(content);
+        if (exportsMethod) {
           const endpoint: ApiEndpoint = {
             path: routePath,
             method: method as any,

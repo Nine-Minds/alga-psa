@@ -2,8 +2,7 @@ import { NextRequest } from 'next/server';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 import { ADD_ONS } from '@alga-psa/types';
 import { AddOnAccessError, assertAddOnAccess } from '@/lib/tier-gating/assertAddOnAccess';
-import { getSession } from '@alga-psa/auth';
-import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
+import { assertPsaChatProductAccess } from '../../productAccess';
 
 const isEnterpriseEdition =
   process.env.NEXT_PUBLIC_EDITION === 'enterprise' ||
@@ -13,6 +12,11 @@ const isEnterpriseEdition =
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
+  const productAccessResponse = await assertPsaChatProductAccess();
+  if (productAccessResponse) {
+    return productAccessResponse;
+  }
+
   if (!isEnterpriseEdition) {
     return new Response(
       JSON.stringify({ error: 'Chat completions are only available in Enterprise Edition' }),
@@ -32,28 +36,6 @@ export async function POST(req: NextRequest) {
         headers: { 'Content-Type': 'application/json' },
       },
     );
-  }
-
-  const session = await getSession();
-  const tenantId = session?.user?.tenant;
-  if (!tenantId) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  try {
-    await assertTenantProductAccess({
-      tenantId,
-      capability: 'ai_chat',
-      allowedProducts: ['psa'],
-    });
-  } catch (error) {
-    if (isProductAccessError(error)) {
-      return toProductAccessDeniedResponse(error);
-    }
-    throw error;
   }
 
   try {

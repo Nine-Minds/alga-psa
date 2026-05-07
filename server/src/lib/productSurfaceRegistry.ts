@@ -60,6 +60,9 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
       '/msp/billing',
       '/msp/projects',
       '/msp/assets',
+      '/msp/documents',
+      '/msp/jobs',
+      '/msp/user-activities',
       '/msp/schedule',
       '/msp/technician-dispatch',
       '/msp/time-entry',
@@ -103,8 +106,21 @@ export const PORTAL_ROUTE_RULES: readonly RouteRule[] = [
 
 export const API_RULES: readonly ApiRule[] = [
   {
+    group: 'api_ticket_psa_only_subroutes',
+    staticPrefixes: [
+      '/api/v1/tickets/from-asset',
+    ],
+    dynamicPatterns: [
+      /^\/api\/v1\/tickets\/[^/]+\/time-entries(?:\/.*)?$/,
+      /^\/api\/v1\/tickets\/[^/]+\/materials(?:\/.*)?$/,
+    ],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
+    visibleInMetadataByProduct: { psa: true, algadesk: false },
+  },
+  {
     group: 'api_helpdesk_allowed',
     staticPrefixes: [
+      '/api/v1/meta',
       '/api/v1/tickets',
       '/api/v1/comments',
       '/api/v1/clients',

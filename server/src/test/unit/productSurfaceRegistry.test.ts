@@ -28,7 +28,11 @@ describe('product surface registry', () => {
     expect(resolveProductApiBehavior('algadesk', '/api/v1/clients')).toBe('allowed');
     expect(resolveProductApiBehavior('algadesk', '/api/v1/contacts')).toBe('allowed');
     expect(resolveProductApiBehavior('algadesk', '/api/v1/kb-articles')).toBe('allowed');
+    expect(resolveProductApiBehavior('algadesk', '/api/v1/meta/endpoints')).toBe('allowed');
     expect(resolveProductApiBehavior('algadesk', '/api/email/oauth/initiate')).toBe('allowed');
+    expect(resolveProductApiBehavior('algadesk', '/api/v1/tickets/ticket-1/time-entries')).toBe('denied');
+    expect(resolveProductApiBehavior('algadesk', '/api/v1/tickets/ticket-1/materials')).toBe('denied');
+    expect(resolveProductApiBehavior('algadesk', '/api/v1/tickets/from-asset')).toBe('denied');
     expect(resolveProductApiBehavior('algadesk', '/api/v1/billing')).toBe('denied');
     expect(resolveProductApiBehavior('algadesk', '/api/v1/financial')).toBe('denied');
     expect(resolveProductApiBehavior('algadesk', '/api/v1/unknown-area')).toBe('denied');
@@ -36,6 +40,8 @@ describe('product surface registry', () => {
 
   it('T003: filters metadata/OpenAPI visibility by product', () => {
     expect(isApiVisibleInMetadata('algadesk', '/api/v1/tickets')).toBe(true);
+    expect(isApiVisibleInMetadata('algadesk', '/api/v1/meta/endpoints')).toBe(true);
+    expect(isApiVisibleInMetadata('algadesk', '/api/v1/tickets/ticket-1/time-entries')).toBe(false);
     expect(isApiVisibleInMetadata('algadesk', '/api/v1/billing')).toBe(false);
     expect(isApiVisibleInMetadata('algadesk', '/api/v1/unknown-area')).toBe(false);
   });

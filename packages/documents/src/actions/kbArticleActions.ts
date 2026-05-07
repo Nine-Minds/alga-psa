@@ -60,6 +60,11 @@ export interface IArticleFilters {
   tags?: string[];
 }
 
+export interface IKBArticleCategory {
+  id: string;
+  name: string;
+}
+
 const KB_ARTICLE_SELECT_COLUMNS = [
   'article_id',
   'tenant',
@@ -618,6 +623,39 @@ export const completeReview = withAuth(
       });
 
     return true;
+  }
+);
+
+/**
+ * Gets available categories for KB article metadata and filters.
+ */
+export const getKnowledgeBaseCategories = withAuth(
+  async (
+    user,
+    { tenant }
+  ): Promise<IKBArticleCategory[] | ActionPermissionError> => {
+    const { knex } = await createTenantKnex();
+
+    if (!tenant || !(await hasPermission(user, 'document', 'read'))) {
+      return permissionError('Permission denied');
+    }
+
+    const rows = await knex('categories as c')
+      .leftJoin('categories as p', function () {
+        this.on('p.category_id', '=', 'c.parent_category').andOn('p.tenant', '=', 'c.tenant');
+      })
+      .select(
+        'c.category_id as id',
+        'c.category_name as name',
+        'p.category_name as parentName'
+      )
+      .where('c.tenant', tenant)
+      .orderBy('c.category_name', 'asc');
+
+    return rows.map((row: { id: string; name: string; parentName?: string | null }) => ({
+      id: row.id,
+      name: row.parentName ? `${row.parentName} / ${row.name}` : row.name,
+    }));
   }
 );
 

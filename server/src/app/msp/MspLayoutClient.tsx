@@ -1,7 +1,9 @@
 "use client";
 
+import React from "react";
 import { AppSessionProvider } from "@alga-psa/auth/client";
 import DefaultLayout from "@/components/layout/DefaultLayout";
+import AlgadeskMspShell from "@/components/layout/AlgadeskMspShell";
 import { TagProvider } from "@alga-psa/tags/context";
 import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHogUserIdentifier";
 import { ClientUIStateProvider } from "@alga-psa/ui/ui-reflection/ClientUIStateProvider";
@@ -49,35 +51,39 @@ export function MspLayoutClient({
     return null;
   }
 
+  const isAlgadesk = productCode === 'algadesk';
+
   const content = (
     <AppSessionProvider session={session}>
       <ProductProvider>
         <TierProvider>
           <PostHogUserIdentifier />
           <TagProvider>
-            <AIChatContextProvider>
-              <ClientUIStateProvider
-                initialPageState={{
-                  id: 'msp-portal',
-                  title: productCode === 'algadesk' ? 'Algadesk MSP' : 'MSP Portal',
-                  components: []
-                }}
-              >
-                {isOnboardingPage ? children : (
-                  productCode === 'algadesk' ? (
-                    routeBehavior === 'allowed' ? (
-                      <div data-product-shell="algadesk">{children}</div>
-                    ) : (
-                      <ProductRouteBoundary behavior={routeBehavior} scope="msp" />
-                    )
+            <ClientUIStateProvider
+              initialPageState={{
+                id: 'msp-portal',
+                title: isAlgadesk ? 'Algadesk MSP' : 'MSP Portal',
+                components: []
+              }}
+            >
+              {isOnboardingPage ? children : (
+                isAlgadesk ? (
+                  routeBehavior === 'allowed' ? (
+                    <AlgadeskMspShell initialSidebarCollapsed={initialSidebarCollapsed}>
+                      {children}
+                    </AlgadeskMspShell>
                   ) : (
+                    <ProductRouteBoundary behavior={routeBehavior} scope="msp" />
+                  )
+                ) : (
+                  <AIChatContextProvider>
                     <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
                       {children}
                     </DefaultLayout>
-                  )
-                )}
-              </ClientUIStateProvider>
-            </AIChatContextProvider>
+                  </AIChatContextProvider>
+                )
+              )}
+            </ClientUIStateProvider>
           </TagProvider>
         </TierProvider>
       </ProductProvider>

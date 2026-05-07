@@ -20,8 +20,10 @@ import KBImportDialog from './KBImportDialog';
 import {
   IKBArticleWithDocument,
   IArticleFilters,
+  IKBArticleCategory,
   createArticle,
   getArticlesWithTags,
+  getKnowledgeBaseCategories,
 } from '../../actions/kbArticleActions';
 import type { ITag } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
@@ -58,6 +60,7 @@ export default function KnowledgeBasePage({ activeTab = 'articles', aiAssistantE
   const [articles, setArticles] = useState<IKBArticleWithDocument[]>([]);
   const [articleTags, setArticleTags] = useState<Record<string, ITag[]>>({});
   const [availableTags, setAvailableTags] = useState<ITag[]>([]);
+  const [categories, setCategories] = useState<IKBArticleCategory[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -108,6 +111,32 @@ export default function KnowledgeBasePage({ activeTab = 'articles', aiAssistantE
   useEffect(() => {
     fetchArticles();
   }, [fetchArticles, listKey]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCategories = async () => {
+      try {
+        const result = await getKnowledgeBaseCategories();
+        if (typeof result === 'object' && 'code' in result) {
+          toast.error(tRef.current('page.feedback.categoryLoadError', { defaultValue: 'Failed to load categories' }));
+          return;
+        }
+
+        if (isMounted) {
+          setCategories(result as IKBArticleCategory[]);
+        }
+      } catch (error) {
+        handleError(error, tRef.current('page.feedback.categoryLoadError', { defaultValue: 'Failed to load categories' }));
+      }
+    };
+
+    loadCategories();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
@@ -195,7 +224,7 @@ export default function KnowledgeBasePage({ activeTab = 'articles', aiAssistantE
           tenantId={tenantId}
           aiAssistantEnabled={aiAssistantEnabled}
           onBack={handleBack}
-          onSave={handleBack}
+          categories={categories}
         />
       </div>
     );
@@ -263,6 +292,7 @@ export default function KnowledgeBasePage({ activeTab = 'articles', aiAssistantE
               filters={filters}
               onFiltersChange={(f) => { setFilters(f); setCurrentPage(1); }}
               onClearFilters={handleClearFilters}
+              categories={categories}
               availableTags={availableTags}
             />
           </div>

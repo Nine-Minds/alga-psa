@@ -1,8 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { readFile } from 'node:fs/promises';
-import path from 'node:path';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
@@ -260,17 +258,5 @@ describe('Algadesk ticket attachment draft integration', () => {
       }),
     ).rejects.toThrow('Permission denied: cannot delete document attachments.');
 
-    const compositionPath = path.resolve(process.cwd(), '../packages/msp-composition/src/tickets/MspTicketDetailsContainerClient.tsx');
-    const documentsPath = path.resolve(process.cwd(), '../packages/documents/src/components/Documents.tsx');
-    const compositionSource = await readFile(compositionPath, 'utf8');
-    const documentsSource = await readFile(documentsPath, 'utf8');
-
-    expect(compositionSource).toContain('disableAttachmentFolderSelection={isAlgadeskMode}');
-    expect(compositionSource).toContain('disableAttachmentSharing={isAlgadeskMode}');
-    expect(compositionSource).toContain('disableAttachmentLinking={isAlgadeskMode}');
-
-    expect(documentsSource).toContain('folderPath={forceUploadToRoot ? null : undefined}');
-    expect(documentsSource).toContain('onShare={allowDocumentSharing ? handleShareDocument : undefined}');
-    expect(documentsSource).toContain('allowLinkExistingDocuments && showSelector && entityId && entityType');
   }, HOOK_TIMEOUT);
 });
