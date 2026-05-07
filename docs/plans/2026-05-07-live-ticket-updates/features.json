@@ -68,7 +68,7 @@
   {
     "id": "F012",
     "description": "Create `packages/ui/src/presence/FieldConflictBanner.tsx`: takes `{remoteValue, remoteAuthor, remoteAt, onKeepYours, onTakeTheirs}`. Renders inside a field's container with two buttons.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7", "UX / UI Notes"]
   },
   {

@@ -122,6 +122,13 @@ npm run test:e2e
   `npx vitest run --config vitest.config.ts --environment jsdom --coverage.enabled false ../packages/documents/src/components/CollaborativeEditor.init.test.tsx` from `server`
   `npm -w @alga-psa/ui run typecheck`
   `npm -w @alga-psa/documents run typecheck`
+- **2026-05-07 — Conflict banner component slice complete (`F012`).**
+  Added [FieldConflictBanner.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/ui/src/presence/FieldConflictBanner.tsx) as the shared field-local warning surface for live update conflicts, including relative-time formatting and explicit `Keep yours` / `Take theirs` actions.
+- **2026-05-07 — Conflict banner component test complete (`T025`).**
+  Added [FieldConflictBanner.test.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/ui/src/presence/FieldConflictBanner.test.tsx) to cover author/value/timestamp rendering, `role="alert"` semantics via the shared `Alert`, and default focus landing on `Keep yours`.
+- **2026-05-07 — Verification runbook used for the conflict banner slice.**
+  `npx vitest run --config vitest.config.ts src/presence/FieldConflictBanner.test.tsx` from `packages/ui`
+  `npm -w @alga-psa/ui run typecheck`
 
 ## Links / Refs
 

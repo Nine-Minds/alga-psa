@@ -146,7 +146,7 @@
   {
     "id": "T025",
     "description": "Component: `FieldConflictBanner` shows remote value, author display name, and relative timestamp; both buttons are accessible (correct ARIA, focus on Keep yours by default).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F012"]
   },
   {
