@@ -355,6 +355,70 @@ For production deployments:
 3. Update `NEXTAUTH_URL` to use `https://` protocol
 4. Verify OAuth providers (if used) allow your production domain
 
+### Reverse Proxy Configuration
+
+The docker-compose stack runs the Next.js `server` container on port 3000 and
+the `hocuspocus` container (real-time notifications and collaborative editing)
+on port 1234 — separately, with no built-in reverse proxy in front. Your proxy
+must route **two paths** for the application to work fully:
+
+- `/hocuspocus` → `hocuspocus:1234` (with WebSocket upgrade headers)
+- everything else → `server:3000`
+
+If `/hocuspocus` is missing, browsers will show a "Reconnecting to server…"
+indicator on the notifications bell and live notification updates will fall
+back to 30-second polling.
+
+#### nginx
+```nginx
+server {
+    server_name your-domain.com;
+    # ... your SSL/TLS config ...
+
+    location /hocuspocus {
+        proxy_pass http://hocuspocus:1234;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 3600s;   # long-lived WS connections
+        proxy_send_timeout 3600s;
+    }
+
+    location / {
+        proxy_pass http://server:3000;
+        proxy_set_header Host $host;
+        # ... usual headers ...
+    }
+}
+```
+
+#### Caddy
+```
+your-domain.com {
+    reverse_proxy /hocuspocus* hocuspocus:1234
+    reverse_proxy * server:3000
+}
+```
+WebSocket upgrade is automatic in Caddy. Order matters — the `/hocuspocus*`
+matcher must come before the catch-all.
+
+#### Nginx Proxy Manager
+In the proxy host's **Custom Locations** tab, add a location with:
+- Define Location: `/hocuspocus`
+- Scheme: `http`
+- Forward Hostname/IP: the docker host (or hocuspocus container if reachable)
+- Forward Port: `1234`
+
+Make sure **Websockets Support** is enabled on the proxy host. The default
+"Forward Hostname / IP" + "Forward Port" on the Details tab continues to
+serve the catch-all to the `server` container on port 3000.
+
+#### Cloudflare Tunnel
+Add a separate ingress rule for the `/hocuspocus` path pointing to
+`http://hocuspocus:1234`, and ensure WebSockets are enabled in the tunnel
+configuration.
+
 ### Email Configuration for Production
 Update email settings for production notifications:
 ```bash

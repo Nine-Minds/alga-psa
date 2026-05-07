@@ -7,7 +7,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { deleteEntityWithValidation } from '@alga-psa/core';
+import { deleteEntityWithValidation, isEnterprise } from '@alga-psa/core';
 import { hashPassword } from '@alga-psa/core/encryption';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { getUserAvatarUrl } from '@alga-psa/user-composition/lib/avatarUtils';
@@ -314,7 +314,11 @@ export const deleteUser = withAuth(async (
         .where({ default_assigned_to: userId, tenant: tenantId })
         .update({ default_assigned_to: null });
 
-      await trx('platform_notification_recipients').where({ user_id: userId, tenant: tenantId || undefined }).del();
+      if (isEnterprise && (await trx.schema.hasTable('platform_notification_recipients'))) {
+        await trx('platform_notification_recipients')
+          .where({ user_id: userId, tenant: tenantId || undefined })
+          .del();
+      }
       await trx('user_roles').where({ user_id: userId, tenant: tenantId || undefined }).del();
       await trx('user_preferences').where({ user_id: userId, tenant: tenantId || undefined }).del();
 
