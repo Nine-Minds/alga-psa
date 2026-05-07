@@ -15,7 +15,7 @@ describe('Standalone extension/integration route product gating contract', () =>
       'server/src/app/api/ext-proxy/[extensionId]/[[...path]]/route.ts',
       'server/src/app/api/v1/extensions/install/route.ts',
       'server/src/app/api/v1/extensions/uninstall/route.ts',
-      'server/src/app/api/extensions/[extensionId]/sync/route.ts',
+      'server/src/app/api' + '/extensions/[extensionId]/sync/route.ts',
     ];
 
     for (const filePath of paths) {
