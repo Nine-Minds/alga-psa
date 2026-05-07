@@ -56,7 +56,7 @@
     "@alga-psa/scheduling": "*",
     "@alga-psa/types": "*",
     "@hookform/resolvers": "^3.10.0",
-    "axios": "^1.13.6",
+    "axios": "^1.16.0",
     "google-auth-library": "^10.5.0",
     "googleapis": "^169.0.0",
     "lucide-react": "^0.428.0",

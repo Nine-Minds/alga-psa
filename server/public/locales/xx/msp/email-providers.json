@@ -255,7 +255,11 @@
         "providerNamePlaceholder": "11111",
         "emailLabel": "11111",
         "emailPlaceholder": "11111",
-        "enableProvider": "11111"
+        "enableProvider": "11111",
+        "providerNameHelp": "11111",
+        "senderDisplayNameLabel": "11111",
+        "senderDisplayNamePlaceholder": "11111",
+        "senderDisplayNameHelp": "11111"
       },
       "oauth": {
         "sectionTitle": "11111",
@@ -305,7 +309,11 @@
         "providerNamePlaceholder": "11111",
         "mailboxLabel": "11111",
         "mailboxPlaceholder": "11111",
-        "enableProvider": "11111"
+        "enableProvider": "11111",
+        "providerNameHelp": "11111",
+        "senderDisplayNameLabel": "11111",
+        "senderDisplayNamePlaceholder": "11111",
+        "senderDisplayNameHelp": "11111"
       },
       "oauth": {
         "sectionTitle": "11111",
@@ -349,7 +357,12 @@
         "host": "11111",
         "port": "11111",
         "useTls": "11111",
-        "allowStarttls": "11111"
+        "allowStarttls": "11111",
+        "providerNamePlaceholder": "11111",
+        "providerNameHelp": "11111",
+        "senderDisplayName": "11111",
+        "senderDisplayNamePlaceholder": "11111",
+        "senderDisplayNameHelp": "11111"
       },
       "auth": {
         "title": "11111",
@@ -496,7 +509,12 @@
       "active": "11111",
       "ticketDefaultsLabel": "11111",
       "ticketDefaultsPlaceholder": "11111",
-      "ticketDefaultsEmpty": "11111"
+      "ticketDefaultsEmpty": "11111",
+      "providerNamePlaceholder": "11111",
+      "providerNameHelp": "11111",
+      "senderDisplayName": "11111",
+      "senderDisplayNamePlaceholder": "11111",
+      "senderDisplayNameHelp": "11111"
     },
     "authOptions": {
       "password": "11111",
@@ -557,7 +575,11 @@
       "maxEmailsLabel": "11111",
       "maxEmailsHelp": "11111",
       "inboundDefaultsLabel": "11111",
-      "inboundDefaultsPlaceholder": "11111"
+      "inboundDefaultsPlaceholder": "11111",
+      "providerNameHelp": "11111",
+      "senderDisplayNameLabel": "11111",
+      "senderDisplayNamePlaceholder": "11111",
+      "senderDisplayNameHelp": "11111"
     },
     "oauth": {
       "connectionTitle": "11111",

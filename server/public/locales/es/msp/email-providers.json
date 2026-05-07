@@ -234,7 +234,7 @@
     },
     "microsoft": {
       "validation": {
-        "providerNameRequired": "El nombre del proveedor es obligatorio.",
+        "providerNameRequired": "El nombre de configuración es obligatorio",
         "emailRequired": "Se requiere una dirección de correo electrónico válida",
         "redirectRequired": "Se requiere un URI de redireccionamiento válido",
         "authorizeRequiresValid": "Por favor complete todos los campos requeridos antes de autorizar",
@@ -244,18 +244,22 @@
         "authorizationFailed": "Autorización fallida"
       },
       "requiredFields": {
-        "providerName": "Nombre del proveedor",
+        "providerName": "Nombre de configuración",
         "emailAddress": "Dirección de correo electrónico",
         "redirectUri": "URI de redireccionamiento"
       },
       "basic": {
         "title": "Configuración básica",
         "description": "Configuración básica para su proveedor de correo electrónico de Microsoft 365",
-        "providerNameLabel": "Nombre del proveedor *",
-        "providerNamePlaceholder": "por ejemplo, correo electrónico de soporte",
+        "providerNameLabel": "Nombre de configuración *",
+        "providerNamePlaceholder": "p. ej., Buzón de soporte (interno)",
         "emailLabel": "Dirección de correo electrónico *",
         "emailPlaceholder": "soporte@cliente.com",
-        "enableProvider": "Habilitar este proveedor"
+        "enableProvider": "Habilitar este proveedor",
+        "providerNameHelp": "Nombre interno utilizado para identificar esta configuración. No se muestra en los correos salientes.",
+        "senderDisplayNameLabel": "Nombre del remitente",
+        "senderDisplayNamePlaceholder": "p. ej., Soporte Acme",
+        "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjalo en blanco para usar el nombre del tablero del ticket."
       },
       "oauth": {
         "sectionTitle": "Configuración de Microsoft OAuth",
@@ -279,7 +283,7 @@
     },
     "gmail": {
       "validation": {
-        "providerNameRequired": "El nombre del proveedor es obligatorio.",
+        "providerNameRequired": "El nombre de configuración es obligatorio",
         "gmailAddressRequired": "Se requiere una dirección de Gmail válida",
         "authorizeRequiresValid": "Por favor complete todos los campos requeridos antes de autorizar",
         "googleNotConfigured": "La integración de Google no está configurada para este inquilino. Primero configure Google y luego vuelva a intentarlo.",
@@ -295,17 +299,21 @@
         "settingUp": "Configurando notificaciones de Gmail..."
       },
       "requiredFields": {
-        "providerName": "Nombre del proveedor",
+        "providerName": "Nombre de configuración",
         "gmailAddress": "Dirección de Gmail"
       },
       "basic": {
         "title": "Configuración básica",
         "description": "Configuración básica de su proveedor de correo electrónico de Gmail",
-        "providerNameLabel": "Nombre del proveedor *",
-        "providerNamePlaceholder": "por ejemplo, soporte de Gmail",
+        "providerNameLabel": "Nombre de configuración *",
+        "providerNamePlaceholder": "p. ej., Gmail de soporte (interno)",
         "mailboxLabel": "Dirección de Gmail *",
         "mailboxPlaceholder": "soporte@cliente.com",
-        "enableProvider": "Habilitar este proveedor"
+        "enableProvider": "Habilitar este proveedor",
+        "providerNameHelp": "Nombre interno utilizado para identificar esta configuración. No se muestra en los correos salientes.",
+        "senderDisplayNameLabel": "Nombre del remitente",
+        "senderDisplayNamePlaceholder": "p. ej., Soporte Acme",
+        "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjalo en blanco para usar el nombre del tablero del ticket."
       },
       "oauth": {
         "sectionTitle": "OAuth de Google",
@@ -334,7 +342,7 @@
     },
     "imap": {
       "validation": {
-        "providerNameRequired": "El nombre del proveedor es obligatorio.",
+        "providerNameRequired": "El nombre de configuración es obligatorio",
         "mailboxRequired": "Se requiere buzón",
         "mailboxInvalid": "Se requiere un buzón de correo válido (por ejemplo, usuario@dominio.com, usuario@localhost, usuario@servidor de prueba o usuario)",
         "hostRequired": "Se requiere un servidor IMAP",
@@ -344,12 +352,17 @@
       "basic": {
         "title": "Configuraciones básicas",
         "description": "Defina los detalles de conexión del buzón IMAP.",
-        "providerName": "Nombre del proveedor",
+        "providerName": "Nombre de configuración",
         "mailboxAddress": "Dirección del buzón",
         "host": "Anfitrión IMAP",
         "port": "Puerto",
         "useTls": "Usar TLS/SSL",
-        "allowStarttls": "Permitir actualización STARTTLS"
+        "allowStarttls": "Permitir actualización STARTTLS",
+        "providerNamePlaceholder": "p. ej., IMAP de soporte (interno)",
+        "providerNameHelp": "Nombre interno utilizado para identificar esta configuración. No se muestra en los correos salientes.",
+        "senderDisplayName": "Nombre del remitente",
+        "senderDisplayNamePlaceholder": "p. ej., Soporte Acme",
+        "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjalo en blanco para usar el nombre del tablero del ticket."
       },
       "auth": {
         "title": "Autenticación",
@@ -476,7 +489,7 @@
       }
     },
     "fields": {
-      "providerName": "Nombre del proveedor",
+      "providerName": "Nombre de configuración",
       "mailboxAddress": "Dirección del buzón",
       "imapHost": "Host IMAP",
       "port": "Puerto",
@@ -496,7 +509,12 @@
       "active": "Activo",
       "ticketDefaultsLabel": "Valores predeterminados del ticket",
       "ticketDefaultsPlaceholder": "Seleccionar valores predeterminados...",
-      "ticketDefaultsEmpty": "No hay valores predeterminados disponibles"
+      "ticketDefaultsEmpty": "No hay valores predeterminados disponibles",
+      "providerNamePlaceholder": "p. ej., IMAP de soporte (interno)",
+      "providerNameHelp": "Nombre interno utilizado para identificar esta configuración. No se muestra en los correos salientes.",
+      "senderDisplayName": "Nombre del remitente",
+      "senderDisplayNamePlaceholder": "p. ej., Soporte Acme",
+      "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjalo en blanco para usar el nombre del tablero del ticket."
     },
     "authOptions": {
       "password": "Contraseña",
@@ -546,8 +564,8 @@
       }
     },
     "fields": {
-      "providerNameLabel": "Nombre del proveedor *",
-      "providerNamePlaceholder": "p. ej., Soporte Microsoft 365",
+      "providerNameLabel": "Nombre de configuración *",
+      "providerNamePlaceholder": "p. ej., Buzón de soporte (interno)",
       "mailboxLabel": "Dirección de Microsoft 365 *",
       "mailboxPlaceholder": "soporte@cliente.com",
       "enableProvider": "Habilitar este proveedor",
@@ -557,7 +575,11 @@
       "maxEmailsLabel": "Máx. correos por sincronización",
       "maxEmailsHelp": "Número máximo de correos a procesar en cada sincronización (1-1000)",
       "inboundDefaultsLabel": "Valores predeterminados de tickets entrantes",
-      "inboundDefaultsPlaceholder": "Seleccionar valores predeterminados (opcional)"
+      "inboundDefaultsPlaceholder": "Seleccionar valores predeterminados (opcional)",
+      "providerNameHelp": "Nombre interno utilizado para identificar esta configuración. No se muestra en los correos salientes.",
+      "senderDisplayNameLabel": "Nombre del remitente",
+      "senderDisplayNamePlaceholder": "p. ej., Soporte Acme",
+      "senderDisplayNameHelp": "Nombre que se muestra en el encabezado De de los correos salientes de tickets (respuestas, cierres). Solo se aplica cuando este buzón coincide con la dirección de envío saliente del inquilino. Déjalo en blanco para usar el nombre del tablero del ticket."
     },
     "oauth": {
       "connectionTitle": "Conexión con Microsoft 365",
@@ -596,7 +618,7 @@
     },
     "validation": {
       "requiredFieldsTitle": "Por favor complete los campos requeridos:",
-      "providerName": "Nombre del proveedor",
+      "providerName": "Nombre de configuración",
       "mailbox": "Dirección de Microsoft 365"
     }
   },

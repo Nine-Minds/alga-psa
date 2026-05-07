@@ -234,7 +234,7 @@
     },
     "microsoft": {
       "validation": {
-        "providerNameRequired": "Il nome del fornitore è obbligatorio",
+        "providerNameRequired": "Il nome della configurazione è obbligatorio",
         "emailRequired": "È richiesto un indirizzo email valido",
         "redirectRequired": "È richiesto un URI di reindirizzamento valido",
         "authorizeRequiresValid": "Si prega di compilare tutti i campi obbligatori prima di autorizzare",
@@ -244,18 +244,22 @@
         "authorizationFailed": "Autorizzazione fallita"
       },
       "requiredFields": {
-        "providerName": "Nome del fornitore",
+        "providerName": "Nome configurazione",
         "emailAddress": "Indirizzo e-mail",
         "redirectUri": "URI di reindirizzamento"
       },
       "basic": {
         "title": "Configurazione di base",
         "description": "Impostazioni di base per il provider di posta elettronica Microsoft 365",
-        "providerNameLabel": "Nome del fornitore *",
-        "providerNamePlaceholder": "ad esempio, e-mail di supporto",
+        "providerNameLabel": "Nome configurazione *",
+        "providerNamePlaceholder": "es. Mailbox di supporto (interna)",
         "emailLabel": "Indirizzo e-mail *",
         "emailPlaceholder": "support@client.com",
-        "enableProvider": "Abilita questo fornitore"
+        "enableProvider": "Abilita questo fornitore",
+        "providerNameHelp": "Nome interno usato per identificare questa configurazione. Non viene mostrato nelle email in uscita.",
+        "senderDisplayNameLabel": "Nome visualizzato del mittente",
+        "senderDisplayNamePlaceholder": "es. Acme Support",
+        "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della board del ticket."
       },
       "oauth": {
         "sectionTitle": "Configurazione Microsoft OAuth",
@@ -279,7 +283,7 @@
     },
     "gmail": {
       "validation": {
-        "providerNameRequired": "Il nome del fornitore è obbligatorio",
+        "providerNameRequired": "Il nome della configurazione è obbligatorio",
         "gmailAddressRequired": "È richiesto un indirizzo Gmail valido",
         "authorizeRequiresValid": "Si prega di compilare tutti i campi obbligatori prima di autorizzare",
         "googleNotConfigured": "L'integrazione di Google non è configurata per questo tenant. Configura prima Google, poi riprova.",
@@ -295,17 +299,21 @@
         "settingUp": "Configurazione delle notifiche di Gmail..."
       },
       "requiredFields": {
-        "providerName": "Nome del fornitore",
+        "providerName": "Nome configurazione",
         "gmailAddress": "Indirizzo Gmail"
       },
       "basic": {
         "title": "Configurazione di base",
         "description": "Impostazioni di base per il tuo provider di posta elettronica Gmail",
-        "providerNameLabel": "Nome del fornitore *",
-        "providerNamePlaceholder": "ad esempio, Supporta Gmail",
+        "providerNameLabel": "Nome configurazione *",
+        "providerNamePlaceholder": "es. Gmail di supporto (interno)",
         "mailboxLabel": "Indirizzo Gmail *",
         "mailboxPlaceholder": "support@client.com",
-        "enableProvider": "Abilita questo fornitore"
+        "enableProvider": "Abilita questo fornitore",
+        "providerNameHelp": "Nome interno usato per identificare questa configurazione. Non viene mostrato nelle email in uscita.",
+        "senderDisplayNameLabel": "Nome visualizzato del mittente",
+        "senderDisplayNamePlaceholder": "es. Acme Support",
+        "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della board del ticket."
       },
       "oauth": {
         "sectionTitle": "Google OAuth",
@@ -334,7 +342,7 @@
     },
     "imap": {
       "validation": {
-        "providerNameRequired": "Il nome del fornitore è obbligatorio",
+        "providerNameRequired": "Il nome della configurazione è obbligatorio",
         "mailboxRequired": "La casella di posta è obbligatoria",
         "mailboxInvalid": "È richiesta una casella di posta valida (ad esempio utente@dominio.com, utente@localhost, utente@test-server o utente)",
         "hostRequired": "L'host IMAP è obbligatorio",
@@ -344,12 +352,17 @@
       "basic": {
         "title": "Impostazioni di base",
         "description": "Definisci i dettagli di connessione alla casella di posta IMAP.",
-        "providerName": "Nome del fornitore",
+        "providerName": "Nome configurazione",
         "mailboxAddress": "Indirizzo della casella di posta",
         "host": "Host IMAP",
         "port": "Porta",
         "useTls": "Utilizza TLS/SSL",
-        "allowStarttls": "Consenti aggiornamento STARTTLS"
+        "allowStarttls": "Consenti aggiornamento STARTTLS",
+        "providerNamePlaceholder": "es. IMAP di supporto (interno)",
+        "providerNameHelp": "Nome interno usato per identificare questa configurazione. Non viene mostrato nelle email in uscita.",
+        "senderDisplayName": "Nome visualizzato del mittente",
+        "senderDisplayNamePlaceholder": "es. Acme Support",
+        "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della board del ticket."
       },
       "auth": {
         "title": "Autenticazione",
@@ -476,7 +489,7 @@
       }
     },
     "fields": {
-      "providerName": "Nome del fornitore",
+      "providerName": "Nome configurazione",
       "mailboxAddress": "Indirizzo della casella di posta",
       "imapHost": "Host IMAP",
       "port": "Porta",
@@ -496,7 +509,12 @@
       "active": "Attivo",
       "ticketDefaultsLabel": "Impostazioni predefinite dei ticket",
       "ticketDefaultsPlaceholder": "Seleziona valori predefiniti...",
-      "ticketDefaultsEmpty": "Nessuna impostazione predefinita disponibile"
+      "ticketDefaultsEmpty": "Nessuna impostazione predefinita disponibile",
+      "providerNamePlaceholder": "es. IMAP di supporto (interno)",
+      "providerNameHelp": "Nome interno usato per identificare questa configurazione. Non viene mostrato nelle email in uscita.",
+      "senderDisplayName": "Nome visualizzato del mittente",
+      "senderDisplayNamePlaceholder": "es. Acme Support",
+      "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della board del ticket."
     },
     "authOptions": {
       "password": "Password",
@@ -546,8 +564,8 @@
       }
     },
     "fields": {
-      "providerNameLabel": "Nome del fornitore *",
-      "providerNamePlaceholder": "ad esempio, Supporto Microsoft 365",
+      "providerNameLabel": "Nome configurazione *",
+      "providerNamePlaceholder": "es. Mailbox di supporto (interna)",
       "mailboxLabel": "Indirizzo Microsoft 365 *",
       "mailboxPlaceholder": "support@client.com",
       "enableProvider": "Abilita questo fornitore",
@@ -557,7 +575,11 @@
       "maxEmailsLabel": "Numero massimo di email per sincronizzazione",
       "maxEmailsHelp": "Numero massimo di email da elaborare in ogni sincronizzazione (1-1000)",
       "inboundDefaultsLabel": "Impostazioni predefinite dei ticket in entrata",
-      "inboundDefaultsPlaceholder": "Seleziona valori predefiniti (facoltativo)"
+      "inboundDefaultsPlaceholder": "Seleziona valori predefiniti (facoltativo)",
+      "providerNameHelp": "Nome interno usato per identificare questa configurazione. Non viene mostrato nelle email in uscita.",
+      "senderDisplayNameLabel": "Nome visualizzato del mittente",
+      "senderDisplayNamePlaceholder": "es. Acme Support",
+      "senderDisplayNameHelp": "Nome visualizzato nel campo Da delle email di ticket in uscita (risposte, chiusure). Applicato solo quando questa casella corrisponde all'indirizzo di invio in uscita del tenant. Lascia vuoto per usare il nome della board del ticket."
     },
     "oauth": {
       "connectionTitle": "Connessione Microsoft 365",
@@ -596,7 +618,7 @@
     },
     "validation": {
       "requiredFieldsTitle": "Si prega di compilare i campi richiesti:",
-      "providerName": "Nome del fornitore",
+      "providerName": "Nome configurazione",
       "mailbox": "Indirizzo Microsoft 365"
     }
   },

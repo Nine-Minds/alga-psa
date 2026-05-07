@@ -560,14 +560,14 @@ export function registerEmailAttachmentActions(actionRegistry: LegacyActionRegis
         return (claim as { claimed: false; result: Record<string, any> }).result;
       }
 
-      if ((contentId || isInline) && !allowInlineProcessing) {
+      if (isInline && !allowInlineProcessing) {
         await markProcessedAttachment(knex, {
           tenant,
           providerId,
           emailId,
           attachmentId,
           status: 'skipped',
-          errorMessage: 'Inline/CID attachments are skipped by default',
+          errorMessage: 'Inline attachments are handled via embedded extraction',
         });
         return { success: true, skipped: true, reason: 'inline' };
       }
