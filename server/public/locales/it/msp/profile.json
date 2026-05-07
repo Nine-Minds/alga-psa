@@ -343,6 +343,48 @@
           "saveFailed": "Impossibile salvare la sovrascrittura del limite di frequenza API.",
           "clearFailed": "Impossibile rimuovere la sovrascrittura del limite di frequenza API."
         }
+      },
+      "generate": {
+        "title": "Genera chiave API",
+        "description": "Descrizione",
+        "descriptionPlaceholder": "es. Chiave API di sviluppo",
+        "expiration": "Data di scadenza (facoltativa)",
+        "submit": "Genera nuova chiave API"
+      },
+      "list": {
+        "title": "Le tue chiavi API",
+        "searchPlaceholder": "Cerca per descrizione",
+        "filters": {
+          "allStatuses": "Tutti gli stati",
+          "active": "Attiva",
+          "inactive": "Inattiva",
+          "lastUsedAfter": "Ultimo utilizzo dopo",
+          "expiresBefore": "Scade prima del",
+          "reset": "Reimposta"
+        },
+        "columns": {
+          "description": "Descrizione",
+          "created": "Creata",
+          "lastUsed": "Ultimo utilizzo",
+          "expires": "Scade",
+          "status": "Stato",
+          "actions": "Azioni"
+        },
+        "never": "Mai",
+        "status": {
+          "active": "Attiva",
+          "inactive": "Inattiva"
+        },
+        "deactivate": "Disattiva"
+      },
+      "newKeyDialog": {
+        "title": "Chiave API generata",
+        "warning": "Copia subito la tua chiave API. Per motivi di sicurezza, non verrà mostrata di nuovo.",
+        "copy": "Copia negli appunti",
+        "download": "Scarica come .txt",
+        "copySuccess": "Chiave API copiata negli appunti!",
+        "copyFailed": "Impossibile copiare la chiave API negli appunti",
+        "downloadFailed": "Impossibile scaricare la chiave API"
       }
     }
   },

@@ -343,6 +343,48 @@
           "saveFailed": "Nie udało się zapisać nadpisania limitu żądań API.",
           "clearFailed": "Nie udało się usunąć nadpisania limitu żądań API."
         }
+      },
+      "generate": {
+        "title": "Wygeneruj klucz API",
+        "description": "Opis",
+        "descriptionPlaceholder": "np. Klucz API do rozwoju",
+        "expiration": "Data wygaśnięcia (opcjonalnie)",
+        "submit": "Wygeneruj nowy klucz API"
+      },
+      "list": {
+        "title": "Twoje klucze API",
+        "searchPlaceholder": "Szukaj po opisie",
+        "filters": {
+          "allStatuses": "Wszystkie statusy",
+          "active": "Aktywny",
+          "inactive": "Nieaktywny",
+          "lastUsedAfter": "Ostatnio użyty po",
+          "expiresBefore": "Wygasa przed",
+          "reset": "Resetuj"
+        },
+        "columns": {
+          "description": "Opis",
+          "created": "Utworzony",
+          "lastUsed": "Ostatnio użyty",
+          "expires": "Wygasa",
+          "status": "Status",
+          "actions": "Akcje"
+        },
+        "never": "Nigdy",
+        "status": {
+          "active": "Aktywny",
+          "inactive": "Nieaktywny"
+        },
+        "deactivate": "Dezaktywuj"
+      },
+      "newKeyDialog": {
+        "title": "Klucz API wygenerowany",
+        "warning": "Skopiuj swój klucz API teraz. Ze względów bezpieczeństwa nie zostanie on ponownie wyświetlony.",
+        "copy": "Kopiuj do schowka",
+        "download": "Pobierz jako .txt",
+        "copySuccess": "Klucz API skopiowany do schowka!",
+        "copyFailed": "Nie udało się skopiować klucza API do schowka",
+        "downloadFailed": "Nie udało się pobrać klucza API"
       }
     }
   },

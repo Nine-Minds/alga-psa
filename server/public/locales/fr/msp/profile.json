@@ -343,6 +343,48 @@
           "saveFailed": "Impossible d'enregistrer le remplacement de la limite de débit de l'API.",
           "clearFailed": "Impossible de supprimer le remplacement de la limite de débit de l'API."
         }
+      },
+      "generate": {
+        "title": "Générer une clé API",
+        "description": "Description",
+        "descriptionPlaceholder": "p. ex. Clé API de développement",
+        "expiration": "Date d'expiration (facultatif)",
+        "submit": "Générer une nouvelle clé API"
+      },
+      "list": {
+        "title": "Vos clés API",
+        "searchPlaceholder": "Rechercher par description",
+        "filters": {
+          "allStatuses": "Tous les statuts",
+          "active": "Active",
+          "inactive": "Inactive",
+          "lastUsedAfter": "Dernière utilisation après",
+          "expiresBefore": "Expire avant",
+          "reset": "Réinitialiser"
+        },
+        "columns": {
+          "description": "Description",
+          "created": "Créée",
+          "lastUsed": "Dernière utilisation",
+          "expires": "Expiration",
+          "status": "Statut",
+          "actions": "Actions"
+        },
+        "never": "Jamais",
+        "status": {
+          "active": "Active",
+          "inactive": "Inactive"
+        },
+        "deactivate": "Désactiver"
+      },
+      "newKeyDialog": {
+        "title": "Clé API générée",
+        "warning": "Veuillez copier votre clé API maintenant. Pour des raisons de sécurité, elle ne sera plus affichée.",
+        "copy": "Copier dans le presse-papiers",
+        "download": "Télécharger en .txt",
+        "copySuccess": "Clé API copiée dans le presse-papiers !",
+        "copyFailed": "Échec de la copie de la clé API dans le presse-papiers",
+        "downloadFailed": "Échec du téléchargement de la clé API"
       }
     }
   },

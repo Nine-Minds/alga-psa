@@ -3,6 +3,7 @@
 // Auth-owned API key management UI.
 
 import { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -52,6 +53,7 @@ const SearchInput = memo(({
 SearchInput.displayName = 'SearchInput';
 
 export default function ApiKeysSetup() {
+  const { t } = useTranslation('msp/profile');
   const [description, setDescription] = useState('');
   const [expirationDate, setExpirationDate] = useState('');
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
@@ -176,46 +178,46 @@ export default function ApiKeysSetup() {
       document.body.removeChild(anchor);
       URL.revokeObjectURL(downloadUrl);
     } catch (error) {
-      handleError(error, 'Failed to download API key');
+      handleError(error, t('security.apiKeys.newKeyDialog.downloadFailed', 'Failed to download API key'));
     }
-  }, [newKeyValue]);
+  }, [newKeyValue, t]);
 
   const columns: ColumnDefinition<ApiKey>[] = useMemo(() => [
     {
-      title: 'Description',
+      title: t('security.apiKeys.list.columns.description', 'Description'),
       dataIndex: 'description',
       width: '20%',
     },
     {
-      title: 'Created',
+      title: t('security.apiKeys.list.columns.created', 'Created'),
       dataIndex: 'created_at',
       width: '20%',
       render: (value: Date) => new Date(value).toLocaleString(),
     },
     {
-      title: 'Last Used',
+      title: t('security.apiKeys.list.columns.lastUsed', 'Last Used'),
       dataIndex: 'last_used_at',
       width: '20%',
-      render: (value: Date | null) => value ? new Date(value).toLocaleString() : 'Never',
+      render: (value: Date | null) => value ? new Date(value).toLocaleString() : t('security.apiKeys.list.never', 'Never'),
     },
     {
-      title: 'Expires',
+      title: t('security.apiKeys.list.columns.expires', 'Expires'),
       dataIndex: 'expires_at',
       width: '20%',
-      render: (value: Date | null) => value ? new Date(value).toLocaleString() : 'Never',
+      render: (value: Date | null) => value ? new Date(value).toLocaleString() : t('security.apiKeys.list.never', 'Never'),
     },
     {
-      title: 'Status',
+      title: t('security.apiKeys.list.columns.status', 'Status'),
       dataIndex: 'active',
       width: '10%',
       render: (value: boolean) => (
         <span className={`px-2 py-1 rounded text-sm ${value ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-          {value ? 'Active' : 'Inactive'}
+          {value ? t('security.apiKeys.list.status.active', 'Active') : t('security.apiKeys.list.status.inactive', 'Inactive')}
         </span>
       ),
     },
     {
-      title: 'Actions',
+      title: t('security.apiKeys.list.columns.actions', 'Actions'),
       dataIndex: 'actions',
       width: '10%',
       render: (_: any, record: ApiKey) => (
@@ -226,30 +228,30 @@ export default function ApiKeysSetup() {
             onClick={() => handleDeactivateKey(record.api_key_id)}
             className="text-sm"
           >
-            Deactivate
+            {t('security.apiKeys.list.deactivate', 'Deactivate')}
           </Button>
         ) : null
       ),
     }
-  ], [handleDeactivateKey]);
+  ], [handleDeactivateKey, t]);
 
   return (
     <div className="space-y-6">
       <Card className="p-6">
-        <h2 className="text-2xl font-semibold mb-4">Generate API Key</h2>
+        <h2 className="text-2xl font-semibold mb-4">{t('security.apiKeys.generate.title', 'Generate API Key')}</h2>
         <div className="space-y-4 mb-6">
           <div>
-            <Label htmlFor="api-key-description">Description</Label>
+            <Label htmlFor="api-key-description">{t('security.apiKeys.generate.description', 'Description')}</Label>
             <Input
               id="api-key-description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="e.g., Development API Key"
+              placeholder={t('security.apiKeys.generate.descriptionPlaceholder', 'e.g., Development API Key')}
               className="mt-1"
             />
           </div>
           <div>
-            <Label htmlFor="api-key-expiration">Expiration Date (Optional)</Label>
+            <Label htmlFor="api-key-expiration">{t('security.apiKeys.generate.expiration', 'Expiration Date (Optional)')}</Label>
             <Input
               id="api-key-expiration"
               type="datetime-local"
@@ -263,18 +265,18 @@ export default function ApiKeysSetup() {
             onClick={handleCreateKey}
             disabled={!description}
           >
-            Generate New API Key
+            {t('security.apiKeys.generate.submit', 'Generate New API Key')}
           </Button>
         </div>
       </Card>
 
       <Card className="p-6">
-        <h2 className="text-2xl font-semibold mb-4">Your API Keys</h2>
+        <h2 className="text-2xl font-semibold mb-4">{t('security.apiKeys.list.title', 'Your API Keys')}</h2>
         <div className="flex items-center mb-4 gap-4 flex-wrap">
           <SearchInput
             value={searchInput}
             onChange={handleSearchInputChange}
-            placeholder="Search by description"
+            placeholder={t('security.apiKeys.list.searchPlaceholder', 'Search by description')}
           />
           <div className="w-48 shrink-0">
             <CustomSelect
@@ -285,9 +287,9 @@ export default function ApiKeysSetup() {
                 setCurrentPage(1);
               }}
               options={[
-                { value: 'all', label: 'All Statuses' },
-                { value: 'active', label: 'Active' },
-                { value: 'inactive', label: 'Inactive' },
+                { value: 'all', label: t('security.apiKeys.list.filters.allStatuses', 'All Statuses') },
+                { value: 'active', label: t('security.apiKeys.list.filters.active', 'Active') },
+                { value: 'inactive', label: t('security.apiKeys.list.filters.inactive', 'Inactive') },
               ]}
             />
           </div>
@@ -300,7 +302,7 @@ export default function ApiKeysSetup() {
                 setCurrentPage(1);
               }}
               clearable
-              placeholder="Last used after"
+              placeholder={t('security.apiKeys.list.filters.lastUsedAfter', 'Last used after')}
             />
           </div>
           <div className="w-48 shrink-0">
@@ -312,7 +314,7 @@ export default function ApiKeysSetup() {
                 setCurrentPage(1);
               }}
               clearable
-              placeholder="Expires before"
+              placeholder={t('security.apiKeys.list.filters.expiresBefore', 'Expires before')}
             />
           </div>
           <Button
@@ -324,7 +326,7 @@ export default function ApiKeysSetup() {
             disabled={!isFiltered}
           >
             <RotateCcw size={14} />
-            Reset
+            {t('security.apiKeys.list.filters.reset', 'Reset')}
           </Button>
         </div>
         <DataTable
@@ -339,15 +341,15 @@ export default function ApiKeysSetup() {
         />
       </Card>
 
-      <Dialog 
-        isOpen={showNewKeyDialog} 
-        onClose={() => setShowNewKeyDialog(false)} 
-        title="API Key Generated"
+      <Dialog
+        isOpen={showNewKeyDialog}
+        onClose={() => setShowNewKeyDialog(false)}
+        title={t('security.apiKeys.newKeyDialog.title', 'API Key Generated')}
       >
         <DialogContent>
           <div className="space-y-4">
             <p className="text-sm text-gray-500">
-              Please copy your API key now. For security reasons, it will not be shown again.
+              {t('security.apiKeys.newKeyDialog.warning', 'Please copy your API key now. For security reasons, it will not be shown again.')}
             </p>
             <div className="p-4 bg-gray-50 rounded-md">
               <code className="text-sm break-all">{newKeyValue}</code>
@@ -358,14 +360,14 @@ export default function ApiKeysSetup() {
                 onClick={async () => {
                   try {
                     await navigator.clipboard.writeText(newKeyValue);
-                    toast.success('API key copied to clipboard!');
+                    toast.success(t('security.apiKeys.newKeyDialog.copySuccess', 'API key copied to clipboard!'));
                   } catch (error) {
-                    handleError(error, 'Failed to copy API key to clipboard');
+                    handleError(error, t('security.apiKeys.newKeyDialog.copyFailed', 'Failed to copy API key to clipboard'));
                   }
                 }}
                 className="w-full"
               >
-                Copy to Clipboard
+                {t('security.apiKeys.newKeyDialog.copy', 'Copy to Clipboard')}
               </Button>
               <Button
                 id="download-api-key-button"
@@ -373,7 +375,7 @@ export default function ApiKeysSetup() {
                 variant="outline"
                 className="w-full"
               >
-                Download as .txt
+                {t('security.apiKeys.newKeyDialog.download', 'Download as .txt')}
               </Button>
             </div>
           </div>

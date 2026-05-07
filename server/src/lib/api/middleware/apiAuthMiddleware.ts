@@ -98,7 +98,7 @@ export async function withApiKeyAuth(
     try {
       const apiRequest = await authenticateApiKeyRequest(req);
 
-      const productCode = await getTenantProduct(apiRequest.context.tenant);
+      const productCode = await getTenantProduct(apiRequest.context!.tenant);
       const pathname = new URL(req.url).pathname;
       if (resolveProductApiBehavior(productCode, pathname) === 'denied') {
         throw new ProductAccessError(`api:${pathname}`, productCode);

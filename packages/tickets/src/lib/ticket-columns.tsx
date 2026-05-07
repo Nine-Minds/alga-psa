@@ -631,7 +631,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                 onSelect={() => onDeleteClick(record.ticket_id as string, record.title || record.ticket_number)}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Delete
+                {t('actions.delete', 'Delete')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

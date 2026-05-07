@@ -343,6 +343,48 @@
           "saveFailed": "Failed to save API rate limit override.",
           "clearFailed": "Failed to clear API rate limit override."
         }
+      },
+      "generate": {
+        "title": "Gerar chave de API",
+        "description": "Descrição",
+        "descriptionPlaceholder": "ex.: Chave de API de desenvolvimento",
+        "expiration": "Data de expiração (opcional)",
+        "submit": "Gerar nova chave de API"
+      },
+      "list": {
+        "title": "Suas chaves de API",
+        "searchPlaceholder": "Pesquisar por descrição",
+        "filters": {
+          "allStatuses": "Todos os status",
+          "active": "Ativa",
+          "inactive": "Inativa",
+          "lastUsedAfter": "Último uso após",
+          "expiresBefore": "Expira antes de",
+          "reset": "Redefinir"
+        },
+        "columns": {
+          "description": "Descrição",
+          "created": "Criada",
+          "lastUsed": "Último uso",
+          "expires": "Expira",
+          "status": "Status",
+          "actions": "Ações"
+        },
+        "never": "Nunca",
+        "status": {
+          "active": "Ativa",
+          "inactive": "Inativa"
+        },
+        "deactivate": "Desativar"
+      },
+      "newKeyDialog": {
+        "title": "Chave de API gerada",
+        "warning": "Copie sua chave de API agora. Por motivos de segurança, ela não será exibida novamente.",
+        "copy": "Copiar para a área de transferência",
+        "download": "Baixar como .txt",
+        "copySuccess": "Chave de API copiada para a área de transferência!",
+        "copyFailed": "Falha ao copiar a chave de API para a área de transferência",
+        "downloadFailed": "Falha ao baixar a chave de API"
       }
     }
   },

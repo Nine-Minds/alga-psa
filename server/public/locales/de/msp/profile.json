@@ -343,6 +343,48 @@
           "saveFailed": "API-Ratenlimit-Außerkraftsetzung konnte nicht gespeichert werden.",
           "clearFailed": "API-Ratenlimit-Außerkraftsetzung konnte nicht entfernt werden."
         }
+      },
+      "generate": {
+        "title": "API-Schlüssel generieren",
+        "description": "Beschreibung",
+        "descriptionPlaceholder": "z. B. Entwicklungs-API-Schlüssel",
+        "expiration": "Ablaufdatum (optional)",
+        "submit": "Neuen API-Schlüssel generieren"
+      },
+      "list": {
+        "title": "Ihre API-Schlüssel",
+        "searchPlaceholder": "Nach Beschreibung suchen",
+        "filters": {
+          "allStatuses": "Alle Status",
+          "active": "Aktiv",
+          "inactive": "Inaktiv",
+          "lastUsedAfter": "Zuletzt verwendet nach",
+          "expiresBefore": "Läuft ab vor",
+          "reset": "Zurücksetzen"
+        },
+        "columns": {
+          "description": "Beschreibung",
+          "created": "Erstellt",
+          "lastUsed": "Zuletzt verwendet",
+          "expires": "Läuft ab",
+          "status": "Status",
+          "actions": "Aktionen"
+        },
+        "never": "Nie",
+        "status": {
+          "active": "Aktiv",
+          "inactive": "Inaktiv"
+        },
+        "deactivate": "Deaktivieren"
+      },
+      "newKeyDialog": {
+        "title": "API-Schlüssel generiert",
+        "warning": "Bitte kopieren Sie Ihren API-Schlüssel jetzt. Aus Sicherheitsgründen wird er nicht erneut angezeigt.",
+        "copy": "In die Zwischenablage kopieren",
+        "download": "Als .txt herunterladen",
+        "copySuccess": "API-Schlüssel in die Zwischenablage kopiert!",
+        "copyFailed": "Kopieren des API-Schlüssels in die Zwischenablage fehlgeschlagen",
+        "downloadFailed": "Herunterladen des API-Schlüssels fehlgeschlagen"
       }
     }
   },

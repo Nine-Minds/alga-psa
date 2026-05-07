@@ -343,6 +343,48 @@
           "saveFailed": "11111",
           "clearFailed": "11111"
         }
+      },
+      "generate": {
+        "title": "11111",
+        "description": "11111",
+        "descriptionPlaceholder": "11111",
+        "expiration": "11111",
+        "submit": "11111"
+      },
+      "list": {
+        "title": "11111",
+        "searchPlaceholder": "11111",
+        "filters": {
+          "allStatuses": "11111",
+          "active": "11111",
+          "inactive": "11111",
+          "lastUsedAfter": "11111",
+          "expiresBefore": "11111",
+          "reset": "11111"
+        },
+        "columns": {
+          "description": "11111",
+          "created": "11111",
+          "lastUsed": "11111",
+          "expires": "11111",
+          "status": "11111",
+          "actions": "11111"
+        },
+        "never": "11111",
+        "status": {
+          "active": "11111",
+          "inactive": "11111"
+        },
+        "deactivate": "11111"
+      },
+      "newKeyDialog": {
+        "title": "11111",
+        "warning": "11111",
+        "copy": "11111",
+        "download": "11111",
+        "copySuccess": "11111",
+        "copyFailed": "11111",
+        "downloadFailed": "11111"
       }
     }
   },

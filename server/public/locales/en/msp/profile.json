@@ -343,6 +343,48 @@
           "saveFailed": "Failed to save API rate limit override.",
           "clearFailed": "Failed to clear API rate limit override."
         }
+      },
+      "generate": {
+        "title": "Generate API Key",
+        "description": "Description",
+        "descriptionPlaceholder": "e.g., Development API Key",
+        "expiration": "Expiration Date (Optional)",
+        "submit": "Generate New API Key"
+      },
+      "list": {
+        "title": "Your API Keys",
+        "searchPlaceholder": "Search by description",
+        "filters": {
+          "allStatuses": "All Statuses",
+          "active": "Active",
+          "inactive": "Inactive",
+          "lastUsedAfter": "Last used after",
+          "expiresBefore": "Expires before",
+          "reset": "Reset"
+        },
+        "columns": {
+          "description": "Description",
+          "created": "Created",
+          "lastUsed": "Last Used",
+          "expires": "Expires",
+          "status": "Status",
+          "actions": "Actions"
+        },
+        "never": "Never",
+        "status": {
+          "active": "Active",
+          "inactive": "Inactive"
+        },
+        "deactivate": "Deactivate"
+      },
+      "newKeyDialog": {
+        "title": "API Key Generated",
+        "warning": "Please copy your API key now. For security reasons, it will not be shown again.",
+        "copy": "Copy to Clipboard",
+        "download": "Download as .txt",
+        "copySuccess": "API key copied to clipboard!",
+        "copyFailed": "Failed to copy API key to clipboard",
+        "downloadFailed": "Failed to download API key"
       }
     }
   },

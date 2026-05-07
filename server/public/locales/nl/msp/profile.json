@@ -343,6 +343,48 @@
           "saveFailed": "Kan API-snelheidslimietoverschrijving niet opslaan.",
           "clearFailed": "Kan API-snelheidslimietoverschrijving niet verwijderen."
         }
+      },
+      "generate": {
+        "title": "API-sleutel genereren",
+        "description": "Beschrijving",
+        "descriptionPlaceholder": "bijv. Ontwikkelings-API-sleutel",
+        "expiration": "Vervaldatum (optioneel)",
+        "submit": "Nieuwe API-sleutel genereren"
+      },
+      "list": {
+        "title": "Uw API-sleutels",
+        "searchPlaceholder": "Zoeken op beschrijving",
+        "filters": {
+          "allStatuses": "Alle statussen",
+          "active": "Actief",
+          "inactive": "Inactief",
+          "lastUsedAfter": "Laatst gebruikt na",
+          "expiresBefore": "Verloopt voor",
+          "reset": "Herstellen"
+        },
+        "columns": {
+          "description": "Beschrijving",
+          "created": "Aangemaakt",
+          "lastUsed": "Laatst gebruikt",
+          "expires": "Verloopt",
+          "status": "Status",
+          "actions": "Acties"
+        },
+        "never": "Nooit",
+        "status": {
+          "active": "Actief",
+          "inactive": "Inactief"
+        },
+        "deactivate": "Deactiveren"
+      },
+      "newKeyDialog": {
+        "title": "API-sleutel gegenereerd",
+        "warning": "Kopieer uw API-sleutel nu. Om veiligheidsredenen wordt deze niet opnieuw weergegeven.",
+        "copy": "Naar klembord kopiëren",
+        "download": "Downloaden als .txt",
+        "copySuccess": "API-sleutel naar klembord gekopieerd!",
+        "copyFailed": "API-sleutel kopiëren naar klembord mislukt",
+        "downloadFailed": "API-sleutel downloaden mislukt"
       }
     }
   },

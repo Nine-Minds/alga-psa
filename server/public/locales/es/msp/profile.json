@@ -343,6 +343,48 @@
           "saveFailed": "No se pudo guardar la anulación del límite de tasa de la API.",
           "clearFailed": "No se pudo borrar la anulación del límite de tasa de la API."
         }
+      },
+      "generate": {
+        "title": "Generar clave API",
+        "description": "Descripción",
+        "descriptionPlaceholder": "p. ej., Clave API de desarrollo",
+        "expiration": "Fecha de expiración (opcional)",
+        "submit": "Generar nueva clave API"
+      },
+      "list": {
+        "title": "Sus claves API",
+        "searchPlaceholder": "Buscar por descripción",
+        "filters": {
+          "allStatuses": "Todos los estados",
+          "active": "Activa",
+          "inactive": "Inactiva",
+          "lastUsedAfter": "Usada por última vez después de",
+          "expiresBefore": "Expira antes de",
+          "reset": "Restablecer"
+        },
+        "columns": {
+          "description": "Descripción",
+          "created": "Creada",
+          "lastUsed": "Último uso",
+          "expires": "Expira",
+          "status": "Estado",
+          "actions": "Acciones"
+        },
+        "never": "Nunca",
+        "status": {
+          "active": "Activa",
+          "inactive": "Inactiva"
+        },
+        "deactivate": "Desactivar"
+      },
+      "newKeyDialog": {
+        "title": "Clave API generada",
+        "warning": "Copie su clave API ahora. Por motivos de seguridad, no se mostrará de nuevo.",
+        "copy": "Copiar al portapapeles",
+        "download": "Descargar como .txt",
+        "copySuccess": "¡Clave API copiada al portapapeles!",
+        "copyFailed": "Error al copiar la clave API al portapapeles",
+        "downloadFailed": "Error al descargar la clave API"
       }
     }
   },
