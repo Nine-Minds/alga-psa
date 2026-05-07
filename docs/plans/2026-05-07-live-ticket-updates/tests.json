@@ -152,49 +152,49 @@
   {
     "id": "T026",
     "description": "Hook: `useTicketLive` requests a token, opens a provider, transitions `connectionStatus` connecting → connected on successful WS handshake.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013"]
   },
   {
     "id": "T027",
     "description": "Hook: `useTicketLive` JWT refresh fires at ~80% of TTL; updated token is passed to the provider.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
     "id": "T028",
     "description": "Hook: refresh-endpoint failure transitions `connectionStatus` to `unavailable` and stops further auto-retries.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F014"]
   },
   {
     "id": "T029",
     "description": "Hook: WS disconnect triggers exponential reconnect (1s, 2s, 4s, 8s, 16s caps at 30s).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
     "id": "T030",
     "description": "Hook: after 5 failed reconnect attempts, `connectionStatus` becomes `unavailable` and no further retries fire.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F015"]
   },
   {
     "id": "T031",
     "description": "Hook: successful reconnect after a drop fires exactly one ticket refetch.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F016"]
   },
   {
     "id": "T032",
     "description": "Hook: `setEditingField('status_id')` updates awareness; `setEditingField(null)` clears it.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F013", "F029"]
   },
   {
     "id": "T033",
     "description": "Component: connection-status indicator hidden when connected; shows 'Live updates offline — reconnecting…' when reconnecting; shows 'Live updates unavailable' when permanently failed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F020"]
   },
   {
@@ -278,7 +278,7 @@
   {
     "id": "T045",
     "description": "Component: with feature flag `live-ticket-updates` off, `useTicketLive` does not mount, no token request fires, no presence renders, ticket page behaves identically to today.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F032"]
   },
   {

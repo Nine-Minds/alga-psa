@@ -42,7 +42,7 @@ import { findCommentsByTicketId, deleteComment, createComment, updateComment, fi
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
 import { updateTicketWithCache } from "../../actions/optimizedTicketActions";
-import { updateTicket } from "../../actions/ticketActions";
+import { getTicketById, updateTicket } from "../../actions/ticketActions";
 import { getTicketStatuses } from "@alga-psa/reference-data/actions";
 import { getAllPriorities } from "@alga-psa/reference-data/actions";
 import { addTicketResource, getTicketResources, removeTicketResource, assignTeamToTicket, removeTeamFromTicket } from "@alga-psa/tickets/actions";
@@ -51,6 +51,7 @@ import AgentScheduleDrawer from "./AgentScheduleDrawer";
 import { Button } from "@alga-psa/ui/components/Button";
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Input } from "@alga-psa/ui/components/Input";
+import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
 import { ExternalLink, Mail } from 'lucide-react';
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
@@ -63,6 +64,7 @@ import { ResponseStateBadge } from '@alga-psa/ui/components';
 import TicketNavigation from './TicketNavigation';
 import TicketOriginBadge from '../TicketOriginBadge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useTicketLiveContext } from './TicketLiveProvider';
 import { buildTicketTimeEntryContext, createTicketTimeEntryOnComplete } from '../../lib/timeEntryContext';
 import { getTicketOrigin } from '../../lib/ticketOrigin';
 import {
@@ -241,6 +243,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     disableAttachmentLinking = false,
 }) => {
     const { t } = useTranslation('features/tickets');
+    const ticketLive = useTicketLiveContext();
     const { data: session } = useSession();
     const [hasHydrated, setHasHydrated] = useState(false);
     const [canViewCommentMetadataDebug, setCanViewCommentMetadataDebug] = useState(false);
@@ -338,6 +341,19 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         other: t('origin.other', 'Created via Other'),
     }), [t]);
 
+    const refreshTicketSnapshot = useCallback(async () => {
+        if (!ticket.ticket_id) {
+            return;
+        }
+
+        try {
+            const latestTicket = await getTicketById(ticket.ticket_id);
+            setTicket(latestTicket);
+        } catch (error) {
+            console.warn('Failed to refresh live ticket snapshot', error);
+        }
+    }, [ticket.ticket_id]);
+
     useEffect(() => {
         setBundle(initialBundle);
     }, [initialBundle]);
@@ -346,6 +362,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         setBoard(initialBoard);
         setSavedBoardId(initialBoard?.board_id ?? initialTicket.board_id ?? null);
     }, [initialBoard, initialTicket.board_id]);
+
+    useEffect(() => {
+        if (!ticketLive.enabled || ticketLive.reconnectVersion === 0) {
+            return;
+        }
+
+        void refreshTicketSnapshot();
+    }, [refreshTicketSnapshot, ticketLive.enabled, ticketLive.reconnectVersion]);
 
     useEffect(() => {
         let cancelled = false;
@@ -1912,6 +1936,19 @@ const handleClose = () => {
         );
     }
 
+    const livePresenceUsers = ticketLive.presence.map((user) => ({
+        id: user.userId,
+        name: user.displayName,
+        avatarUrl: user.avatarUrl ?? null,
+        color: user.color,
+    }));
+
+    const connectionStatusLabel = ticketLive.connectionStatus === 'reconnecting'
+        ? 'Live updates offline — reconnecting…'
+        : ticketLive.connectionStatus === 'unavailable'
+            ? 'Live updates unavailable'
+            : null;
+
     return (
         <ReflectionContainer id={id} label={`Ticket Details - ${ticket.ticket_number}`}>
             <div className="bg-gray-100 dark:bg-gray-900">
@@ -1966,6 +2003,18 @@ const handleClose = () => {
                         >
                             {ticket.title}
                         </h1>
+                        {ticketLive.enabled ? (
+                            <div className="flex flex-wrap items-center gap-3 text-sm">
+                                {ticketLive.connectionStatus === 'connected' && livePresenceUsers.length > 0 ? (
+                                    <PresenceBar users={livePresenceUsers} />
+                                ) : null}
+                                {connectionStatusLabel ? (
+                                    <span className="text-xs font-medium text-amber-700" data-testid="ticket-live-connection-status">
+                                        {connectionStatusLabel}
+                                    </span>
+                                ) : null}
+                            </div>
+                        ) : null}
                     </div>
                 </div>
 

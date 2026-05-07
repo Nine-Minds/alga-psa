@@ -129,6 +129,18 @@ npm run test:e2e
 - **2026-05-07 — Verification runbook used for the conflict banner slice.**
   `npx vitest run --config vitest.config.ts src/presence/FieldConflictBanner.test.tsx` from `packages/ui`
   `npm -w @alga-psa/ui run typecheck`
+- **2026-05-07 — Ticket live hook/provider foundation complete (`F013`–`F020`, `F032`).**
+  Added [useTicketLive.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/tickets/src/hooks/useTicketLive.ts) for ticket-room token fetch, JWT refresh, manual reconnect/backoff, stateless message parsing, awareness presence, and per-field editing state updates.
+  Added [TicketLiveProvider.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/tickets/src/components/ticket/TicketLiveProvider.tsx) and wrapped [TicketDetailsContainer.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/tickets/src/components/ticket/TicketDetailsContainer.tsx) behind the `live-ticket-updates` feature flag so unauthenticated/flag-off sessions stay on the existing REST-only path.
+  Updated [TicketDetails.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/tickets/src/components/ticket/TicketDetails.tsx) to render the shared presence bar + connection status indicator in the header and to apply a one-shot ticket snapshot refresh after reconnect via `getTicketById`.
+  Extended [yjs-config.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/ui/src/editor/yjs-config.ts) so ticket live rooms can opt out of Hocuspocus' built-in infinite reconnect loop and let the hook own retry policy explicitly.
+- **2026-05-07 — Ticket live hook/provider tests complete (`T026`–`T033`, `T045`).**
+  Added [useTicketLive.test.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/tickets/src/hooks/useTicketLive.test.tsx) for token fetch, 80%-TTL refresh, refresh failure degradation, exponential reconnect backoff, five-attempt cutoff, reconnect callback, and awareness editing-field updates.
+  Extended [TicketDetails.liveTimerPolicy.test.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/tickets/src/components/ticket/__tests__/TicketDetails.liveTimerPolicy.test.tsx) with connection-indicator coverage and reconnect-triggered ticket refresh coverage.
+  Extended [TicketDetailsContainerCreateTask.test.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/tickets/src/components/ticket/__tests__/TicketDetailsContainerCreateTask.test.tsx) with the feature-flag-off regression that proves the live provider does not mount.
+- **2026-05-07 — Verification runbook used for the ticket live hook/provider slice.**
+  `npx vitest run --config vitest.config.ts --environment jsdom --coverage.enabled false ../packages/tickets/src/hooks/useTicketLive.test.tsx ../packages/tickets/src/components/ticket/__tests__/TicketDetails.liveTimerPolicy.test.tsx ../packages/tickets/src/components/ticket/__tests__/TicketDetailsContainerCreateTask.test.tsx` from `server`
+  `npm -w @alga-psa/tickets run typecheck`
 
 ## Links / Refs
 

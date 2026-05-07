@@ -74,49 +74,49 @@
   {
     "id": "F013",
     "description": "Create `packages/tickets/src/hooks/useTicketLive.ts`: fetches live token, calls `createYjsProvider('ticket:<tenant>:<id>', { token })`, exposes `presence`, `connectionStatus` (connected | reconnecting | unavailable), `setEditingField(field|null)`, and `onRemoteUpdate` callback registration.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4", "FR-5", "FR-9"]
   },
   {
     "id": "F014",
     "description": "Implement automatic JWT refresh in `useTicketLive`: refresh at 80% of TTL; on refresh failure, transition to `unavailable` connectionStatus.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Security / Permissions"]
   },
   {
     "id": "F015",
     "description": "Implement reconnect-with-backoff in `useTicketLive`: start 1s, exponential, cap 30s, give up after 5 failed reconnects (transition to `unavailable`).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-10"]
   },
   {
     "id": "F016",
     "description": "On WebSocket reconnect after a drop, `useTicketLive` triggers a single ticket refetch to catch missed updates.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-11"]
   },
   {
     "id": "F017",
     "description": "Create `packages/tickets/src/components/ticket/TicketLiveProvider.tsx`: React context that owns `useTicketLive` and exposes presence + remote-update events to descendant components.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4"]
   },
   {
     "id": "F018",
     "description": "Wrap `TicketDetails` in `TicketLiveProvider` from `TicketDetailsContainer.tsx`. No-op render if user is unauthenticated or feature flag is off.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-4", "Rollout / Migration"]
   },
   {
     "id": "F019",
     "description": "Render `PresenceBar` in `TicketDetails.tsx` header next to the title. Visible only when `connectionStatus === 'connected'` and at least one peer is present.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-5", "UX / UI Notes"]
   },
   {
     "id": "F020",
     "description": "Render connection-status indicator in `TicketDetails.tsx` header: hidden when connected; shows 'Live updates offline — reconnecting…' while reconnecting; shows 'Live updates unavailable' on permanent failure.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-10", "UX / UI Notes"]
   },
   {
@@ -194,7 +194,7 @@
   {
     "id": "F032",
     "description": "Gate the entire live layer behind PostHog feature flag `live-ticket-updates` per `alga-feature-flags` conventions. When off: no `useTicketLive` mount, no token request, no presence; ticket page behaves as today.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Rollout / Migration"]
   },
   {
