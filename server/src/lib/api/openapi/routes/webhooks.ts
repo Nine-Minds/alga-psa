@@ -71,57 +71,67 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   );
 
   // ---------------------------------------------------------------------------
-  // Request bodies
+  // Reusable enums (registered so refs survive serialization)
   // ---------------------------------------------------------------------------
 
-  const TicketWebhookEvent = zOpenApi
-    .enum([
+  const TicketWebhookEvent = registry.registerSchema(
+    'TicketWebhookEventV1',
+    zOpenApi
+      .enum([
+        'ticket.created',
+        'ticket.updated',
+        'ticket.status_changed',
+        'ticket.assigned',
+        'ticket.closed',
+        'ticket.comment.added',
+      ])
+      .describe('Ticket-domain webhook events emitted by the eventBus subscriber.'),
+  );
+
+  const WebhookEventType = registry.registerSchema(
+    'WebhookEventTypeV1',
+    zOpenApi.enum([
       'ticket.created',
       'ticket.updated',
       'ticket.status_changed',
       'ticket.assigned',
       'ticket.closed',
       'ticket.comment.added',
-    ])
-    .describe('Ticket-domain webhook events emitted by the eventBus subscriber.');
+      'project.created',
+      'project.updated',
+      'project.completed',
+      'project.task.created',
+      'project.task.updated',
+      'project.task.completed',
+      'client.created',
+      'client.updated',
+      'contact.created',
+      'contact.updated',
+      'time.entry.created',
+      'time.entry.updated',
+      'time.entry.approved',
+      'invoice.created',
+      'invoice.finalized',
+      'invoice.sent',
+      'invoice.paid',
+      'asset.created',
+      'asset.updated',
+      'asset.maintenance.scheduled',
+      'asset.maintenance.completed',
+      'system.backup.completed',
+      'system.backup.failed',
+      'system.maintenance.started',
+      'system.maintenance.completed',
+      'workflow.execution.started',
+      'workflow.execution.completed',
+      'workflow.execution.failed',
+      'custom.event',
+    ]),
+  );
 
-  const WebhookEventType = zOpenApi.enum([
-    'ticket.created',
-    'ticket.updated',
-    'ticket.status_changed',
-    'ticket.assigned',
-    'ticket.closed',
-    'ticket.comment.added',
-    'project.created',
-    'project.updated',
-    'project.completed',
-    'project.task.created',
-    'project.task.updated',
-    'project.task.completed',
-    'client.created',
-    'client.updated',
-    'contact.created',
-    'contact.updated',
-    'time.entry.created',
-    'time.entry.updated',
-    'time.entry.approved',
-    'invoice.created',
-    'invoice.finalized',
-    'invoice.sent',
-    'invoice.paid',
-    'asset.created',
-    'asset.updated',
-    'asset.maintenance.scheduled',
-    'asset.maintenance.completed',
-    'system.backup.completed',
-    'system.backup.failed',
-    'system.maintenance.started',
-    'system.maintenance.completed',
-    'workflow.execution.started',
-    'workflow.execution.completed',
-    'workflow.execution.failed',
-    'custom.event',
-  ]);
+  // ---------------------------------------------------------------------------
+  // Request bodies
+  // ---------------------------------------------------------------------------
 
   const PayloadFieldsByEntity = zOpenApi
     .record(zOpenApi.string(), zOpenApi.array(zOpenApi.string()).nullable())
@@ -492,9 +502,211 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     successOf(WebhookTemplateRecord),
   );
 
-  // Suppress unused imports of envelope schemas already registered for the
-  // OpenAPI document; the registry is the consumer.
-  void TicketWebhookEvent;
+  // ---------------------------------------------------------------------------
+  // Outbound delivery (OpenAPI 3.1 `webhooks:` block) — declares what
+  // *consumers* receive at their URL, not what the management API consumes.
+  // ---------------------------------------------------------------------------
+
+  const TicketChangeEntry = registry.registerSchema(
+    'TicketWebhookChangeEntryV1',
+    zOpenApi.object({
+      previous: zOpenApi.unknown().nullable(),
+      new: zOpenApi.unknown().nullable(),
+    }),
+  );
+
+  const TicketCommentBlock = registry.registerSchema(
+    'TicketWebhookCommentBlockV1',
+    zOpenApi.object({
+      text: zOpenApi.string(),
+      author: zOpenApi.string().nullable(),
+      timestamp: zOpenApi.string().datetime(),
+      is_internal: zOpenApi.boolean(),
+    }),
+  );
+
+  const TicketCommentsEntry = registry.registerSchema(
+    'TicketWebhookCommentsEntryV1',
+    zOpenApi.object({
+      comment_id: zOpenApi.string().uuid(),
+      text: zOpenApi.string(),
+      author: zOpenApi.string().nullable(),
+      is_internal: zOpenApi.boolean(),
+      is_resolution: zOpenApi.boolean(),
+      created_at: zOpenApi.string().datetime(),
+      updated_at: zOpenApi.string().datetime().nullable(),
+    }),
+  );
+
+  // Full ticket payload superset; per-event events use this with documented
+  // additions/restrictions noted in their description.
+  const TicketWebhookData = registry.registerSchema(
+    'TicketWebhookDataV1',
+    zOpenApi.object({
+      ticket_id: zOpenApi.string().uuid().describe('Always present; the correlation key.'),
+      ticket_number: zOpenApi.string().nullable().optional(),
+      title: zOpenApi.string().nullable().optional(),
+      url: zOpenApi.string().url().optional(),
+      status_id: zOpenApi.string().uuid().nullable().optional(),
+      status_name: zOpenApi.string().nullable().optional(),
+      is_closed: zOpenApi.boolean().optional(),
+      previous_status_id: zOpenApi
+        .string()
+        .uuid()
+        .nullable()
+        .optional()
+        .describe('Only populated on ticket.status_changed.'),
+      previous_status_name: zOpenApi
+        .string()
+        .nullable()
+        .optional()
+        .describe('Only populated on ticket.status_changed.'),
+      priority_id: zOpenApi.string().uuid().nullable().optional(),
+      priority_name: zOpenApi.string().nullable().optional(),
+      client_id: zOpenApi.string().uuid().nullable().optional(),
+      client_name: zOpenApi.string().nullable().optional(),
+      contact_name_id: zOpenApi.string().uuid().nullable().optional(),
+      contact_name: zOpenApi.string().nullable().optional(),
+      contact_email: zOpenApi.string().nullable().optional(),
+      assigned_to: zOpenApi.string().uuid().nullable().optional(),
+      assigned_to_name: zOpenApi.string().nullable().optional(),
+      assigned_team_id: zOpenApi.string().uuid().nullable().optional(),
+      board_id: zOpenApi.string().uuid().nullable().optional(),
+      board_name: zOpenApi.string().nullable().optional(),
+      category_id: zOpenApi.string().uuid().nullable().optional(),
+      subcategory_id: zOpenApi.string().uuid().nullable().optional(),
+      entered_at: zOpenApi.string().datetime().nullable().optional(),
+      updated_at: zOpenApi.string().datetime().nullable().optional(),
+      closed_at: zOpenApi.string().datetime().nullable().optional(),
+      due_date: zOpenApi.string().nullable().optional(),
+      tags: zOpenApi.array(zOpenApi.string()).optional(),
+      changes: zOpenApi
+        .record(TicketChangeEntry)
+        .optional()
+        .describe('Field-level diff. Only on ticket.updated.'),
+      comment: TicketCommentBlock.optional().describe(
+        'Newly-added comment. Only on ticket.comment.added. Attachments are never included.',
+      ),
+      comments: zOpenApi
+        .array(TicketCommentsEntry)
+        .optional()
+        .describe(
+          'Full comment thread, oldest first. Only included when the webhook subscription opted into the `comments` field.',
+        ),
+    }),
+  );
+
+  function envelopeFor(eventValue: string, dataSchema: ReturnType<typeof zOpenApi.object>) {
+    return zOpenApi.object({
+      event_id: zOpenApi.string().uuid(),
+      event_type: zOpenApi.literal(eventValue),
+      occurred_at: zOpenApi.string().datetime(),
+      tenant_id: zOpenApi.string().uuid(),
+      data: dataSchema,
+    });
+  }
+
+  const WebhookOutboundHeaders = registry.registerSchema(
+    'WebhookOutboundHeadersV1',
+    zOpenApi.object({
+      'x-alga-signature': zOpenApi
+        .string()
+        .describe('`t=<unix-seconds>,v1=<hex-hmac-sha256>` over `${timestamp}.${raw_body}`.'),
+      'x-alga-webhook-id': zOpenApi.string().uuid(),
+      'x-alga-event-id': zOpenApi.string().uuid(),
+      'x-alga-event-type': WebhookEventType,
+      'x-alga-delivery-id': zOpenApi.string().uuid(),
+      'x-alga-delivery-attempt': zOpenApi.string().describe('Stringified attempt count, starts at 1.'),
+    }),
+  );
+
+  const TicketCreatedEnvelope = registry.registerSchema(
+    'TicketCreatedDeliveryV1',
+    envelopeFor('ticket.created', TicketWebhookData),
+  );
+  const TicketUpdatedEnvelope = registry.registerSchema(
+    'TicketUpdatedDeliveryV1',
+    envelopeFor('ticket.updated', TicketWebhookData),
+  );
+  const TicketStatusChangedEnvelope = registry.registerSchema(
+    'TicketStatusChangedDeliveryV1',
+    envelopeFor('ticket.status_changed', TicketWebhookData),
+  );
+  const TicketAssignedEnvelope = registry.registerSchema(
+    'TicketAssignedDeliveryV1',
+    envelopeFor('ticket.assigned', TicketWebhookData),
+  );
+  const TicketClosedEnvelope = registry.registerSchema(
+    'TicketClosedDeliveryV1',
+    envelopeFor('ticket.closed', TicketWebhookData),
+  );
+  const TicketCommentAddedEnvelope = registry.registerSchema(
+    'TicketCommentAddedDeliveryV1',
+    envelopeFor('ticket.comment.added', TicketWebhookData),
+  );
+
+  const outboundDefs: Array<{ event: string; envelope: unknown; description: string }> = [
+    {
+      event: 'ticket.created',
+      envelope: TicketCreatedEnvelope,
+      description:
+        'Emitted when a ticket is first created. `data.changes` and `data.comment` are not included on this event.',
+    },
+    {
+      event: 'ticket.updated',
+      envelope: TicketUpdatedEnvelope,
+      description:
+        'Emitted when a ticket is updated. `data.changes` is a record keyed by changed field name with `{previous, new}` entries.',
+    },
+    {
+      event: 'ticket.status_changed',
+      envelope: TicketStatusChangedEnvelope,
+      description:
+        'Emitted when a ticket status changes. `data.previous_status_id` / `previous_status_name` are populated.',
+    },
+    {
+      event: 'ticket.assigned',
+      envelope: TicketAssignedEnvelope,
+      description:
+        'Emitted when a ticket assignment changes (assigned_to or assigned_team_id).',
+    },
+    {
+      event: 'ticket.closed',
+      envelope: TicketClosedEnvelope,
+      description:
+        'Emitted when a ticket transitions to a closed status. `data.is_closed` is true and `data.closed_at` is set.',
+    },
+    {
+      event: 'ticket.comment.added',
+      envelope: TicketCommentAddedEnvelope,
+      description:
+        'Emitted when a comment is added to a ticket. `data.comment` carries the new comment block; attachments are never included.',
+    },
+  ];
+
+  for (const def of outboundDefs) {
+    registry.registerWebhook({
+      method: 'post',
+      path: def.event,
+      summary: `Outbound delivery: ${def.event}`,
+      description: `${def.description} Delivered with HMAC-SHA256 signature header X-Alga-Signature, and the X-Alga-* metadata headers. Retried with backoff (1m, 5m, 30m, 2h, 12h) before being abandoned.`,
+      tags: [tag],
+      request: {
+        headers: WebhookOutboundHeaders,
+        body: { schema: def.envelope, description: 'Signed JSON envelope.' },
+      },
+      responses: {
+        200: { description: 'Endpoint accepted the delivery (any 2xx is treated as success).' },
+        410: {
+          description: 'Endpoint indicates the resource is permanently gone; webhook will be auto-disabled.',
+        },
+      },
+      extensions: {
+        'x-alga-event-type': def.event,
+        'x-rbac-resource': 'webhook',
+      },
+    });
+  }
 
   // ---------------------------------------------------------------------------
   // Route registration
