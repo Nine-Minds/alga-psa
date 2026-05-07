@@ -1,6 +1,6 @@
 services:
-  # The upstream `hocuspocus/docker-compose.yaml` sets `build: .` relative to that file (i.e. build context = `./hocuspocus`),
-  # but `hocuspocus/Dockerfile` expects repo-root build context so it can `COPY hocuspocus/...`.
+  # Keep this override aligned with hocuspocus/docker-compose.yaml: the Dockerfile
+  # expects repository-root context so it can `COPY hocuspocus/...`.
   hocuspocus:
     build:
       context: .

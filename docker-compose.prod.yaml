@@ -11,6 +11,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build
+      args:
+        NEXT_BUILD_MAX_OLD_SPACE_SIZE: ${NEXT_BUILD_MAX_OLD_SPACE_SIZE:-12288}
 
   setup:
     environment:

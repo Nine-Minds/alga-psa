@@ -10,11 +10,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build
+      args:
+        NEXT_BUILD_MAX_OLD_SPACE_SIZE: ${NEXT_BUILD_MAX_OLD_SPACE_SIZE:-12288}
     environment:
       EDITION: community
       DB_NAME: server
       PGBOSS_DATABASE: server
       DB_NAME_SERVER: server
+      DB_NAME_HOCUSPOCUS: ${DB_NAME_HOCUSPOCUS:-hocuspocus}
       DB_USER_SERVER: app_user
       DB_USER_ADMIN: ${DB_USER_ADMIN:-postgres}
       VERSION: ${VERSION}
@@ -85,11 +88,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build
+      args:
+        NEXT_BUILD_MAX_OLD_SPACE_SIZE: ${NEXT_BUILD_MAX_OLD_SPACE_SIZE:-12288}
     environment:
       EDITION: community
       NODE_OPTIONS: --experimental-vm-modules
       DB_NAME_SERVER: server
+      DB_NAME_HOCUSPOCUS: ${DB_NAME_HOCUSPOCUS:-hocuspocus}
       DB_USER_SERVER: app_user
+      DB_USER_HOCUSPOCUS: ${DB_USER_HOCUSPOCUS:-hocuspocus_user}
       DB_USER_ADMIN: ${DB_USER_ADMIN:-postgres}
       PGBOSS_DATABASE: server
       VERSION: ${VERSION}
@@ -98,9 +105,9 @@ services:
       NODE_ENV: ${APP_ENV:-development}
       HOST: ${HOST}
       DB_TYPE: ${DB_TYPE:-postgres}
-      DB_HOST: ${PGBOUNCER_HOST:-pgbouncer} # Changed to pgbouncer
-      DB_PORT: ${PGBOUNCER_PORT:-6432} # Changed to pgbouncer port
-      # Ensure admin operations talk directly to Postgres even if DB_HOST points to PgBouncer
+      DB_HOST: ${DB_HOST_ADMIN:-postgres}
+      DB_PORT: ${DB_PORT_ADMIN:-5432}
+      # Ensure admin operations talk directly to Postgres even if app traffic points to PgBouncer
       DB_HOST_ADMIN: ${DB_HOST_ADMIN:-postgres}
       DB_PORT_ADMIN: ${DB_PORT_ADMIN:-5432}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
@@ -135,6 +142,7 @@ services:
     secrets:
       - postgres_password
       - db_password_server
+      - db_password_hocuspocus
     networks:
       - app-network
     depends_on:
@@ -292,8 +300,8 @@ services:
       service: hocuspocus
     container_name: ${APP_NAME:-sebastian}_hocuspocus_ce
     build:
-      context: ./hocuspocus
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: hocuspocus/Dockerfile
     environment:
       VERSION: ${VERSION}
       APP_NAME: ${APP_NAME}
@@ -305,6 +313,8 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: postgres
       DB_PORT: 5432
+      DB_NAME_HOCUSPOCUS: ${DB_NAME_HOCUSPOCUS:-hocuspocus}
+      DB_USER_HOCUSPOCUS: ${DB_USER_HOCUSPOCUS:-hocuspocus_user}
       AI_DOCUMENT_API_URL: ${AI_DOCUMENT_API_URL:-http://host.docker.internal:3000/api/v1/ai/document-assist}
       AI_DOCUMENT_API_KEY: ${AI_DOCUMENT_API_KEY:-}
     secrets:
