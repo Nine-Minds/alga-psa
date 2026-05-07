@@ -1,3 +1,4 @@
+import type { ZodTypeAny } from 'zod';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import type { ApiResponseSpec } from '../types';
 
@@ -645,7 +646,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     envelopeFor('ticket.comment.added', TicketWebhookData),
   );
 
-  const outboundDefs: Array<{ event: string; envelope: unknown; description: string }> = [
+  const outboundDefs: Array<{ event: string; envelope: ZodTypeAny; description: string }> = [
     {
       event: 'ticket.created',
       envelope: TicketCreatedEnvelope,
