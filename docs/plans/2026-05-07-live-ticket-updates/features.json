@@ -26,37 +26,37 @@
   {
     "id": "F005",
     "description": "Add server env var `HOCUSPOCUS_JWT_SECRET` plumbing (read in both Next.js server actions and Hocuspocus). In dev, fall back to a fixed string with a console warning.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Security / Permissions"]
   },
   {
     "id": "F006",
     "description": "Add server endpoint `GET /api/tickets/:id/live-token` that runs `withAuth`, calls `assertTicketReadAllowed`, and returns a JWT signed with `HOCUSPOCUS_JWT_SECRET` containing `{tenantId, userId, ticketId, exp ≤ 5 min, iat, jti}`.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3", "Security / Permissions"]
   },
   {
     "id": "F007",
     "description": "Extend `hocuspocus/tenantValidation.js` with `parseTicketRoom(roomName)` for the `ticket:<tenant>:<ticketId>` shape.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3"]
   },
   {
     "id": "F008",
     "description": "Update `validateDocumentRoomAccess` to handle the `ticket:` prefix: parse, extract `token` from request query params, verify JWT signature/expiry/claims, assert tenant and ticketId match the room. Reject on any mismatch.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-3", "Security / Permissions"]
   },
   {
     "id": "F009",
     "description": "Create `hocuspocus/TicketUpdatesExtension.js` modeled on `NotificationExtension.js`: `onConfigure` connects a Redis subscriber, pattern-subscribes to `<redisPrefix>ticket-updates:*`, on message broadcasts to room `ticket:<tenant>:<id>` via Hocuspocus stateless message API.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2"]
   },
   {
     "id": "F010",
     "description": "Register `TicketUpdatesExtension` in `hocuspocus/server.js` extensions list, mirroring how `NotificationExtension` is registered.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-2"]
   },
   {

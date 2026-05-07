@@ -44,85 +44,85 @@
   {
     "id": "T008",
     "description": "Unit: `/api/tickets/:id/live-token` returns 401 when unauthenticated.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
     "id": "T009",
     "description": "Unit: `/api/tickets/:id/live-token` returns 403 when the user lacks read access (e.g., board not visible to client-portal user).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
     "id": "T010",
     "description": "Unit: `/api/tickets/:id/live-token` returns a JWT whose claims include `{tenantId, userId, ticketId}` and `exp - iat ≤ 5 min`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
     "id": "T011",
     "description": "Unit: JWT signed with the wrong secret is rejected by `tenantValidation.js` JWT verification.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
     "id": "T012",
     "description": "Unit: expired JWT is rejected by `tenantValidation.js`.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
     "id": "T013",
     "description": "Unit: JWT for tenant X presented to room `ticket:Y:abc` is rejected.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
     "id": "T014",
     "description": "Unit: JWT for ticket A presented to room `ticket:T:B` is rejected.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
     "id": "T015",
     "description": "Unit: `parseTicketRoom('ticket:tenant1:abc-123')` returns `{tenantId:'tenant1', ticketId:'abc-123'}`; malformed names return null.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
     "id": "T016",
     "description": "Unit: `validateDocumentRoomAccess` continues to bypass `notifications:` rooms unchanged after the ticket-room addition (regression).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
     "id": "T017",
     "description": "Unit: `validateDocumentRoomAccess` continues to handle `document:` rooms unchanged (regression).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
     "id": "T018",
     "description": "Integration (Hocuspocus): a Redis publish to `<prefix>ticket-updates:T:1` triggers a stateless broadcast in room `ticket:T:1`; clients connected to that room receive the message.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
     "id": "T019",
     "description": "Integration (Hocuspocus): a Redis publish for a room with no connected clients is a no-op (no error, no leak).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
     "id": "T020",
     "description": "Integration (Hocuspocus): killing the Redis subscriber connection and reconnecting resumes pattern subscription without restart.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F009"]
   },
   {
     "id": "T021",
     "description": "Direct WebSocket probe: connecting with a token for tenant X to room `ticket:Y:*` is rejected at handshake.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F009"]
   },
   {

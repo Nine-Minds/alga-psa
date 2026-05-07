@@ -3,6 +3,7 @@ import { Redis } from '@hocuspocus/extension-redis'
 import { Database } from '@hocuspocus/extension-database'
 import { Logger } from '@hocuspocus/extension-logger'
 import { NotificationExtension } from './NotificationExtension.js'
+import { TicketUpdatesExtension } from './TicketUpdatesExtension.js'
 import { AiParticipantExtension } from './AiParticipantExtension.js'
 import { validateDocumentRoomAccess } from './tenantValidation.js'
 
@@ -40,6 +41,13 @@ const server = Server.configure({
             password: getEnvOrFail('DB_PASSWORD_HOCUSPOCUS', 'sebastian123'),
         }),
         new NotificationExtension({
+            redisHost: process.env.REDIS_HOST || 'localhost',
+            redisPort: process.env.REDIS_PORT || 6379,
+            redisUsername: process.env.REDIS_USERNAME || 'default',
+            redisPassword: getEnvOrFail('REDIS_PASSWORD', 'sebastian123'),
+            redisPrefix: process.env.REDIS_PREFIX || 'alga-psa:'
+        }),
+        new TicketUpdatesExtension({
             redisHost: process.env.REDIS_HOST || 'localhost',
             redisPort: process.env.REDIS_PORT || 6379,
             redisUsername: process.env.REDIS_USERNAME || 'default',

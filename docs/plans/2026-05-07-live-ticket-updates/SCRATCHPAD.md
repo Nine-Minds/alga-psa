@@ -101,6 +101,16 @@ npm run test:e2e
 - **2026-05-07 — Verification runbook used.**
   `npx vitest run --config vitest.config.ts src/lib/liveUpdates.test.ts src/actions/optimizedTicketActions.liveUpdates.test.ts` from `packages/tickets`
   `npm -w @alga-psa/tickets run typecheck`
+- **2026-05-07 — Phase 1 Hocuspocus/auth slice complete (`F005`–`F010`).**
+  Added [hocuspocusJwt.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/src/lib/hocuspocusJwt.ts) and [hocuspocusJwtSecret.js](/Users/natalliabukhtsik/Desktop/projects/bigmac/hocuspocus/hocuspocusJwtSecret.js) for shared dev-fallback secret behavior, plus [route.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/src/app/api/tickets/[id]/live-token/route.ts) to mint 5-minute ticket-room JWTs after a real ticket read check via `getTicketById`.
+  Extended [tenantValidation.js](/Users/natalliabukhtsik/Desktop/projects/bigmac/hocuspocus/tenantValidation.js) with `parseTicketRoom()` and JWT-based ticket-room validation, and added [TicketUpdatesExtension.js](/Users/natalliabukhtsik/Desktop/projects/bigmac/hocuspocus/TicketUpdatesExtension.js) plus [server.js](/Users/natalliabukhtsik/Desktop/projects/bigmac/hocuspocus/server.js) wiring for Redis pattern-subscribe -> `broadcastStateless()` room fanout.
+  Added `jsonwebtoken` to [hocuspocus/package.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/hocuspocus/package.json) because the standalone Hocuspocus package needs to verify ticket-room JWTs at runtime.
+- **2026-05-07 — Phase 1 Hocuspocus/auth tests complete (`T008`–`T021`).**
+  Added [ticketLiveToken.route.test.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/src/test/unit/api/ticketLiveToken.route.test.ts) for 401/403/success token issuance coverage.
+  Added [tenantValidation.test.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/src/test/unit/hocuspocus/tenantValidation.test.ts) for ticket-room parsing, JWT verification failures, and document/notification regressions.
+  Added [TicketUpdatesExtension.test.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/src/test/unit/hocuspocus/TicketUpdatesExtension.test.ts) for Redis pattern subscription, stateless room broadcast, empty-room no-op, and reconnect re-subscribe behavior. This is extension-level coverage rather than a full socket-process integration because the repo’s server test harness does not install the standalone `hocuspocus/` package dependencies.
+- **2026-05-07 — Verification runbook used for the Hocuspocus/auth slice.**
+  `npx vitest run --config vitest.config.ts src/test/unit/api/ticketLiveToken.route.test.ts src/test/unit/hocuspocus/tenantValidation.test.ts src/test/unit/hocuspocus/TicketUpdatesExtension.test.ts` from `server`
 
 ## Links / Refs
 
