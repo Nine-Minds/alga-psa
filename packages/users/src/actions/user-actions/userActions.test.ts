@@ -10,6 +10,15 @@ const upsertMock = vi.hoisted(() => vi.fn());
 const userUpdateMock = vi.hoisted(() => vi.fn());
 const getUserWithRolesMock = vi.hoisted(() => vi.fn());
 const isInReportsToChainMock = vi.hoisted(() => vi.fn());
+const isEnterpriseRef = vi.hoisted(() => ({ value: false }));
+const deleteEntityWithValidationMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@alga-psa/core', () => ({
+  get isEnterprise() {
+    return isEnterpriseRef.value;
+  },
+  deleteEntityWithValidation: deleteEntityWithValidationMock,
+}));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: (...args: any[]) => any) => {
@@ -347,5 +356,245 @@ describe('addUser', () => {
 
     expect(result).toMatchObject({ success: true });
     expect(userUpdateMock).toHaveBeenCalled();
+  });
+});
+
+// CE-side tables present in the deleteUser cleanup lists.
+// Verified against a live dev DB on 2026-05-08; updates to the cleanup list
+// in userActions.ts must keep this set in sync.
+const CE_CLEANUP_TABLES: ReadonlySet<string> = new Set([
+  // null lists
+  'boards', 'workflow_tasks', 'comments', 'client_contracts',
+  'contract_pricing_schedules', 'contract_template_pricing_schedules',
+  'escalation_managers', 'external_files', 'external_tax_imports',
+  'invoice_template_assignments', 'project_tasks', 'projects',
+  'quote_activities', 'quote_document_template_assignments', 'quote_items',
+  'quotes', 'service_categories', 'sla_audit_log', 'statuses', 'tag_mappings',
+  'task_resources', 'ticket_resources', 'time_entries', 'time_sheets',
+  'authorization_bundles', 'authorization_bundle_revisions',
+  'authorization_bundle_assignments', 'authorization_bundle_rules',
+  // reassign lists
+  'asset_associations', 'asset_document_associations', 'asset_history',
+  'asset_maintenance_history', 'asset_maintenance_schedules',
+  'asset_service_history', 'asset_ticket_associations', 'categories',
+  'document_content', 'documents', 'impacts', 'priorities', 'severities',
+  'urgencies', 'project_templates', 'tenant_telemetry_settings',
+  // delete lists
+  'sessions', 'password_reset_tokens', 'user_notification_preferences',
+  'user_internal_notification_preferences', 'internal_notifications',
+  'notification_logs', 'mobile_push_tokens', 'portal_domain_session_otts',
+  'telemetry_consent_log', 'calendar_providers', 'team_members',
+  'schedule_entry_assignees', 'comment_reactions', 'project_task_comment_reactions',
+  'project_task_comments', 'project_template_task_resources', 'time_sheet_comments',
+  'user_roles', 'user_preferences', 'import_jobs',
+  'user_activity_group_items', 'user_activity_groups',
+  // Always present in both editions:
+  'users', 'clients',
+]);
+
+const EE_ONLY_TABLES: ReadonlyArray<string> = [
+  'platform_notification_recipients',
+  'user_auth_accounts',
+  'chats',
+];
+
+// Tables previously dropped by migrations. If deleteUser ever references
+// them again it'll FK-violate against a non-existent relation in production.
+const REMOVED_TABLES: ReadonlyArray<string> = [
+  'file_references',           // dropped 20241101210327
+  'company_email_settings',    // dropped 20250811143629
+];
+
+interface RecordedOp {
+  table: string;
+  op: 'update' | 'del' | 'first';
+  values?: Record<string, unknown>;
+}
+
+function makeFakeTrx(present: ReadonlySet<string>) {
+  const ops: RecordedOp[] = [];
+
+  function builder(table: string) {
+    if (!present.has(table)) {
+      throw new Error(`relation "${table}" does not exist`);
+    }
+
+    const chain = {
+      where: (_criteria: Record<string, unknown>) => chain,
+      whereIn: (_column: string, _sub: unknown) => chain,
+      orWhere: (_criteria: Record<string, unknown>) => chain,
+      update: async (values: Record<string, unknown>) => {
+        ops.push({ table, op: 'update', values });
+        return 0;
+      },
+      del: async () => {
+        ops.push({ table, op: 'del' });
+        // Mock the final users-row delete returning a positive count so
+        // deleteUser doesn't think the row was missing.
+        return table === 'users' ? 1 : 0;
+      },
+      delete: async () => {
+        ops.push({ table, op: 'del' });
+        return table === 'users' ? 1 : 0;
+      },
+      first: async () => {
+        ops.push({ table, op: 'first' });
+        // assignedClient lookup returns null (no FK to clients)
+        return null;
+      },
+    };
+    return chain;
+  }
+
+  const trx: any = builder;
+  trx.schema = {
+    hasTable: async (name: string) => present.has(name),
+  };
+  trx.fn = { now: () => '2026-05-08T00:00:00.000Z' };
+
+  return { trx, ops };
+}
+
+describe('deleteUser', () => {
+  // Matches the withAuth mock at the top of the file.
+  const ACTOR_USER_ID = 'user-1';
+  const TARGET_USER_ID = 'target-user';
+
+  beforeEach(() => {
+    vi.resetModules();
+    createTenantKnexMock.mockReset();
+    withTransactionMock.mockReset();
+    hasPermissionMock.mockReset();
+    revalidatePathMock.mockReset();
+    deleteEntityWithValidationMock.mockReset();
+
+    hasPermissionMock.mockResolvedValue(true);
+    revalidatePathMock.mockReturnValue(undefined);
+
+    isEnterpriseRef.value = false;
+  });
+
+  async function loadDeleteUser() {
+    const mod = await import('./userActions');
+    return mod.deleteUser as (userId: string) => Promise<any>;
+  }
+
+  /**
+   * Drives deleteUser end-to-end against a fake trx that throws
+   * "relation does not exist" for any table not in `present`. Returns the
+   * recorded operation log so each test can assert on the touched tables.
+   */
+  async function runDeleteUser(present: ReadonlySet<string>) {
+    const { trx, ops } = makeFakeTrx(present);
+
+    createTenantKnexMock.mockResolvedValue({ knex: trx });
+    withTransactionMock.mockImplementation(
+      async (_db: unknown, cb: (t: unknown) => Promise<unknown>) => cb(trx)
+    );
+    deleteEntityWithValidationMock.mockImplementation(
+      async (
+        _entity: string,
+        _id: string,
+        _knex: unknown,
+        tenant: string,
+        performDelete: (t: unknown, tenantId: string) => Promise<void>
+      ) => {
+        await performDelete(trx, tenant);
+        return { canDelete: true, dependencies: [], alternatives: [], deleted: true };
+      }
+    );
+
+    const deleteUser = await loadDeleteUser();
+    const result = await deleteUser(TARGET_USER_ID);
+    return { result, ops };
+  }
+
+  it('CE: cleans up every CE table without referencing dropped tables', async () => {
+    isEnterpriseRef.value = false;
+
+    // CE schema: every CE cleanup table present, EE tables absent.
+    const ceSchema = new Set(CE_CLEANUP_TABLES);
+    const { result, ops } = await runDeleteUser(ceSchema);
+
+    expect(result).toMatchObject({ success: true, deleted: true });
+
+    const touched = new Set(ops.map((o) => o.table));
+    // Every CE cleanup table should appear at least once in the op log.
+    for (const table of CE_CLEANUP_TABLES) {
+      expect(touched, `expected to touch ${table} on CE`).toContain(table);
+    }
+    // EE-only tables must not be touched at all on CE.
+    for (const table of EE_ONLY_TABLES) {
+      expect(touched, `${table} is EE-only and should be skipped on CE`).not.toContain(table);
+    }
+    // Regression: dropped tables must not be referenced.
+    for (const table of REMOVED_TABLES) {
+      expect(touched, `${table} was dropped and must not be referenced`).not.toContain(table);
+    }
+  });
+
+  it('EE: also cleans EE-only tables when present', async () => {
+    isEnterpriseRef.value = true;
+
+    const eeSchema = new Set([...CE_CLEANUP_TABLES, ...EE_ONLY_TABLES]);
+    const { result, ops } = await runDeleteUser(eeSchema);
+
+    expect(result).toMatchObject({ success: true, deleted: true });
+
+    const touched = new Set(ops.map((o) => o.table));
+    for (const table of EE_ONLY_TABLES) {
+      expect(touched, `expected to touch EE-only ${table} on EE`).toContain(table);
+    }
+    for (const table of REMOVED_TABLES) {
+      expect(touched).not.toContain(table);
+    }
+  });
+
+  it('EE with EE-only tables absent: hasTable guard prevents the call', async () => {
+    isEnterpriseRef.value = true;
+
+    // EE flag on, but the EE-specific tables aren't in the schema (older
+    // tenant or partial migration state). The hasTable guard inside
+    // deleteUser must skip those operations rather than throw.
+    const ceSchema = new Set(CE_CLEANUP_TABLES);
+    const { result, ops } = await runDeleteUser(ceSchema);
+
+    expect(result).toMatchObject({ success: true, deleted: true });
+
+    const touched = new Set(ops.map((o) => o.table));
+    for (const table of EE_ONLY_TABLES) {
+      expect(touched, `${table} missing → guard should skip it`).not.toContain(table);
+    }
+  });
+
+  it('refuses self-deletion before any cleanup runs', async () => {
+    const { trx } = makeFakeTrx(new Set(CE_CLEANUP_TABLES));
+    createTenantKnexMock.mockResolvedValue({ knex: trx });
+    withTransactionMock.mockImplementation(
+      async (_db: unknown, cb: (t: unknown) => Promise<unknown>) => cb(trx)
+    );
+
+    const deleteUser = await loadDeleteUser();
+    const result = await deleteUser(ACTOR_USER_ID);
+
+    expect(result).toMatchObject({
+      success: false,
+      canDelete: false,
+      code: 'VALIDATION_FAILED',
+      message: 'Users cannot delete themselves.',
+    });
+    // Must not have invoked the cleanup callback.
+    expect(deleteEntityWithValidationMock).not.toHaveBeenCalled();
+  });
+
+  it('reassigns NOT-NULL audit columns to the deleting actor', async () => {
+    isEnterpriseRef.value = false;
+
+    const { ops } = await runDeleteUser(new Set(CE_CLEANUP_TABLES));
+
+    // documents.created_by is the canonical regression case from prod.
+    const docOp = ops.find((o) => o.table === 'documents' && o.op === 'update');
+    expect(docOp).toBeTruthy();
+    expect(docOp!.values).toEqual({ created_by: ACTOR_USER_ID });
   });
 });
