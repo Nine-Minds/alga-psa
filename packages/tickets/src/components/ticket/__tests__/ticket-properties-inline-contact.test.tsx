@@ -171,6 +171,9 @@ vi.mock('../TicketWatchListCard', () => ({
 
 vi.mock('@alga-psa/ui/context', () => ({
   useRegisterUnsavedChanges: vi.fn(),
+  useSchedulingCallbacks: () => ({
+    fetchTimeEntriesForTicket: vi.fn().mockResolvedValue({ entries: [], totalMinutes: 0 }),
+  }),
   useQuickAddClient: () => ({
     renderQuickAddContact: ({
       isOpen,

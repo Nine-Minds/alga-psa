@@ -188,6 +188,7 @@ vi.mock('../../../actions/ticketDisplaySettings', () => ({
 
 vi.mock('../../../actions/clientLookupActions', () => ({
   getAllActiveContacts: vi.fn().mockResolvedValue([]),
+  getClientLocations: vi.fn().mockResolvedValue([]),
   getContactByContactNameId: vi.fn().mockResolvedValue(null),
   getContactsByClient: vi.fn().mockResolvedValue([]),
   getClientById: vi.fn().mockResolvedValue(null),

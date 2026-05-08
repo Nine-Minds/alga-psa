@@ -40,7 +40,7 @@ import { findUserById, getCurrentUser, getCurrentUserPermissions } from "@alga-p
 import { findBoardById } from "@alga-psa/tickets/actions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "@alga-psa/tickets/actions";
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
+import { getAllActiveContacts, getClientLocations, getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
 import { updateTicketWithCache } from "../../actions/optimizedTicketActions";
 import { getTicketById, updateTicket } from "../../actions/ticketActions";
 import { getTicketStatuses } from "@alga-psa/reference-data/actions";
@@ -88,11 +88,15 @@ import {
 } from '../../lib/commentImageDocuments';
 import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 import { hasAdminSettingsViewAccess } from './commentMetadataDebug';
+import { normalizeTicketLiveField, type TicketLiveConflictState } from './ticketLiveFields';
 
 interface PendingCommentDelete {
     commentId: string;
     imageDocuments: CommentImageDocumentReference[];
 }
+
+const LIVE_UPDATE_REFETCH_DEBOUNCE_MS = 200;
+const LIVE_UPDATE_HIGHLIGHT_MS = 600;
 
 interface TicketDetailsProps {
     id?: string; // Made optional to maintain backward compatibility
@@ -248,6 +252,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [hasHydrated, setHasHydrated] = useState(false);
     const [canViewCommentMetadataDebug, setCanViewCommentMetadataDebug] = useState(false);
     const { getDocumentByTicketId, deleteDocument } = useDocumentsCrossFeature();
+    const router = useRouter();
 
     useEffect(() => {
         setHasHydrated(true);
@@ -340,19 +345,316 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         api: t('origin.api', 'Created via API'),
         other: t('origin.other', 'Created via Other'),
     }), [t]);
+    const [ticketInfoDirtyFields, setTicketInfoDirtyFields] = useState<string[]>([]);
+    const [ticketPropertiesDirtyFields, setTicketPropertiesDirtyFields] = useState<string[]>([]);
+    const [liveHighlightedFields, setLiveHighlightedFields] = useState<string[]>([]);
+    const [liveFieldConflicts, setLiveFieldConflicts] = useState<Partial<Record<string, TicketLiveConflictState>>>({});
+    const [livePendingFieldVersion, setLivePendingFieldVersion] = useState(0);
+    const ticketInfoDirtyFieldsRef = useRef<string[]>([]);
+    const ticketPropertiesDirtyFieldsRef = useRef<string[]>([]);
+    const pendingLiveNetworkFieldsRef = useRef<Set<string>>(new Set());
+    const pendingRemoteUpdateRef = useRef<{
+        updatedFields: string[];
+        updatedBy: { userId: string; displayName: string };
+        updatedAt: string;
+    } | null>(null);
+    const remoteUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const liveHighlightTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
 
-    const refreshTicketSnapshot = useCallback(async () => {
-        if (!ticket.ticket_id) {
+    const runWithPendingLiveFields = useCallback(async <T,>(fields: string[], fn: () => Promise<T>): Promise<T> => {
+        const normalizedFields = Array.from(new Set(fields.map((field) => normalizeTicketLiveField(field))));
+
+        for (const field of normalizedFields) {
+            pendingLiveNetworkFieldsRef.current.add(field);
+        }
+        setLivePendingFieldVersion((current) => current + 1);
+
+        try {
+            return await fn();
+        } finally {
+            for (const field of normalizedFields) {
+                pendingLiveNetworkFieldsRef.current.delete(field);
+            }
+            setLivePendingFieldVersion((current) => current + 1);
+        }
+    }, []);
+
+    const liveDirtyFieldSet = useMemo(() => {
+        const fields = new Set<string>();
+
+        for (const field of ticketInfoDirtyFields) {
+            fields.add(normalizeTicketLiveField(field));
+        }
+        for (const field of ticketPropertiesDirtyFields) {
+            fields.add(normalizeTicketLiveField(field));
+        }
+        for (const field of pendingLiveNetworkFieldsRef.current) {
+            fields.add(normalizeTicketLiveField(field));
+        }
+
+        return fields;
+    }, [livePendingFieldVersion, ticketInfoDirtyFields, ticketPropertiesDirtyFields]);
+
+    useEffect(() => {
+        ticketInfoDirtyFieldsRef.current = ticketInfoDirtyFields;
+    }, [ticketInfoDirtyFields]);
+
+    useEffect(() => {
+        ticketPropertiesDirtyFieldsRef.current = ticketPropertiesDirtyFields;
+    }, [ticketPropertiesDirtyFields]);
+
+    const clearRemoteUpdateTimer = useCallback(() => {
+        if (remoteUpdateTimerRef.current) {
+            clearTimeout(remoteUpdateTimerRef.current);
+            remoteUpdateTimerRef.current = null;
+        }
+    }, []);
+
+    const highlightLiveFields = useCallback((fields: string[]) => {
+        const normalizedFields = Array.from(new Set(fields.map((field) => normalizeTicketLiveField(field))));
+
+        if (normalizedFields.length === 0) {
             return;
+        }
+
+        setLiveHighlightedFields((current) => Array.from(new Set([...current, ...normalizedFields])));
+
+        for (const field of normalizedFields) {
+            if (liveHighlightTimersRef.current[field]) {
+                clearTimeout(liveHighlightTimersRef.current[field]);
+            }
+
+            liveHighlightTimersRef.current[field] = setTimeout(() => {
+                setLiveHighlightedFields((current) => current.filter((currentField) => currentField !== field));
+                delete liveHighlightTimersRef.current[field];
+            }, LIVE_UPDATE_HIGHLIGHT_MS);
+        }
+    }, []);
+
+    const getLiveFieldLabel = useCallback((field: string) => {
+        switch (normalizeTicketLiveField(field)) {
+            case 'title':
+                return t('fields.title', 'title').toLowerCase();
+            case 'status_id':
+                return t('fields.status', 'status').toLowerCase();
+            case 'priority_id':
+                return t('fields.priority', 'priority').toLowerCase();
+            case 'assigned_to':
+                return t('fields.assignedTo', 'assigned to').toLowerCase();
+            case 'board_id':
+                return t('info.board', 'board').toLowerCase();
+            case 'category_id':
+                return t('fields.category', 'category').toLowerCase();
+            case 'itil_impact':
+                return t('itil.impact', 'impact').toLowerCase();
+            case 'itil_urgency':
+                return t('itil.urgency', 'urgency').toLowerCase();
+            case 'client_id':
+                return t('fields.client', 'client').toLowerCase();
+            case 'contact_name_id':
+                return t('properties.contact', 'contact').toLowerCase();
+            case 'location_id':
+                return t('properties.location', 'location').toLowerCase();
+            case 'response_state':
+                return t('fields.responseState', 'response state').toLowerCase();
+            case 'due_date':
+                return t('fields.dueDate', 'due date').toLowerCase();
+            default:
+                return normalizeTicketLiveField(field).replace(/_/g, ' ');
+        }
+    }, [t]);
+
+    const isRemoteUpdateAccessError = useCallback((error: unknown) => {
+        if (isActionPermissionError(error)) {
+            return true;
+        }
+
+        if (error instanceof Error) {
+            return /403|forbidden|permission denied/i.test(error.message);
+        }
+
+        if (typeof error === 'string') {
+            return /403|forbidden|permission denied/i.test(error);
+        }
+
+        return false;
+    }, []);
+
+    const clearLiveFieldConflict = useCallback((field: string) => {
+        setLiveFieldConflicts((current) => {
+            if (!current[field]) {
+                return current;
+            }
+
+            const next = { ...current };
+            delete next[field];
+            return next;
+        });
+    }, []);
+
+    const handleKeepLiveConflict = useCallback((field: string) => {
+        clearLiveFieldConflict(field);
+    }, [clearLiveFieldConflict]);
+
+    const handleTakeLiveConflict = useCallback((field: string) => {
+        clearLiveFieldConflict(field);
+        highlightLiveFields([field]);
+    }, [clearLiveFieldConflict, highlightLiveFields]);
+
+    const refreshTicketSnapshot = useCallback(async (updatedFields: string[] = []) => {
+        if (!ticket.ticket_id) {
+            return { refreshed: false as const };
         }
 
         try {
             const latestTicket = await getTicketById(ticket.ticket_id);
+            const normalizedUpdatedFields = new Set(updatedFields.map((field) => normalizeTicketLiveField(field)));
+
             setTicket(latestTicket);
+            setItilImpact(latestTicket.itil_impact || undefined);
+            setItilUrgency(latestTicket.itil_urgency || undefined);
+            setSavedBoardId(latestTicket.board_id ?? null);
+
+            const shouldRefreshClientContext =
+                normalizedUpdatedFields.has('client_id') || latestTicket.client_id !== ticket.client_id;
+            const shouldRefreshContactContext =
+                normalizedUpdatedFields.has('contact_name_id') || latestTicket.contact_name_id !== ticket.contact_name_id;
+            const shouldRefreshLocationContext =
+                normalizedUpdatedFields.has('location_id') || latestTicket.location_id !== ticket.location_id;
+
+            if (shouldRefreshClientContext) {
+                if (!latestTicket.client_id) {
+                    setClient(null);
+                    setContacts([]);
+                    setLocations([]);
+                    setContactInfo(null);
+                } else {
+                    const [latestClient, latestContacts, latestLocations] = await Promise.all([
+                        getClientById(latestTicket.client_id),
+                        getContactsByClient(latestTicket.client_id),
+                        getClientLocations(latestTicket.client_id),
+                    ]);
+
+                    setClient(latestClient);
+                    setContacts(latestContacts || []);
+                    setLocations(latestLocations || []);
+                    setContactInfo(
+                        latestTicket.contact_name_id
+                            ? await getContactByContactNameId(latestTicket.contact_name_id)
+                            : null
+                    );
+                }
+            } else {
+                if (shouldRefreshContactContext) {
+                    setContactInfo(
+                        latestTicket.contact_name_id
+                            ? await getContactByContactNameId(latestTicket.contact_name_id)
+                            : null
+                    );
+                }
+
+                if (shouldRefreshLocationContext && latestTicket.client_id) {
+                    setLocations(await getClientLocations(latestTicket.client_id));
+                }
+            }
+
+            return { refreshed: true as const, latestTicket };
         } catch (error) {
+            if (isRemoteUpdateAccessError(error)) {
+                router.push('/msp/tickets');
+                return { refreshed: false as const, redirected: true as const };
+            }
+
             console.warn('Failed to refresh live ticket snapshot', error);
+            return { refreshed: false as const, error };
         }
-    }, [ticket.ticket_id]);
+    }, [
+        getClientLocations,
+        getContactByContactNameId,
+        getClientById,
+        getContactsByClient,
+        isRemoteUpdateAccessError,
+        router,
+        ticket.client_id,
+        ticket.contact_name_id,
+        ticket.location_id,
+        ticket.ticket_id,
+    ]);
+
+    const flushPendingRemoteUpdate = useCallback(async () => {
+        const pendingUpdate = pendingRemoteUpdateRef.current;
+        pendingRemoteUpdateRef.current = null;
+        remoteUpdateTimerRef.current = null;
+
+        if (!pendingUpdate || pendingUpdate.updatedFields.length === 0) {
+            return;
+        }
+
+        const dirtyFields = new Set<string>();
+
+        for (const field of ticketInfoDirtyFieldsRef.current) {
+            dirtyFields.add(normalizeTicketLiveField(field));
+        }
+        for (const field of ticketPropertiesDirtyFieldsRef.current) {
+            dirtyFields.add(normalizeTicketLiveField(field));
+        }
+        for (const field of pendingLiveNetworkFieldsRef.current) {
+            dirtyFields.add(normalizeTicketLiveField(field));
+        }
+
+        const updatedFields = Array.from(new Set(pendingUpdate.updatedFields.map((field) => normalizeTicketLiveField(field))));
+        const overlappingFields = updatedFields.filter((field) => dirtyFields.has(field));
+        const nonOverlappingFields = updatedFields.filter((field) => !dirtyFields.has(field));
+
+        const refreshResult = await refreshTicketSnapshot(pendingUpdate.updatedFields);
+        if (!refreshResult.refreshed) {
+            return;
+        }
+
+        if (nonOverlappingFields.length > 0) {
+            highlightLiveFields(nonOverlappingFields);
+        }
+
+        if (overlappingFields.length > 0) {
+            setLiveFieldConflicts((current) => {
+                const next = { ...current };
+
+                for (const field of overlappingFields) {
+                    next[field] = {
+                        updatedFields: pendingUpdate.updatedFields.filter(
+                            (updatedField) => normalizeTicketLiveField(updatedField) === field
+                        ),
+                        updatedBy: pendingUpdate.updatedBy,
+                        updatedAt: pendingUpdate.updatedAt,
+                    };
+                }
+
+                return next;
+            });
+            return;
+        }
+
+        if (dirtyFields.size > 0 && nonOverlappingFields.length > 0) {
+            toast.success(`${pendingUpdate.updatedBy.displayName} updated ${getLiveFieldLabel(nonOverlappingFields[0])}`);
+        }
+    }, [getLiveFieldLabel, highlightLiveFields, refreshTicketSnapshot]);
+
+    const queueRemoteUpdate = useCallback((update: { updatedFields: string[]; updatedBy: { userId: string; displayName: string }; updatedAt: string }) => {
+        const currentPendingUpdate = pendingRemoteUpdateRef.current;
+
+        pendingRemoteUpdateRef.current = currentPendingUpdate
+            ? {
+                updatedFields: Array.from(new Set([...currentPendingUpdate.updatedFields, ...update.updatedFields])),
+                updatedBy: update.updatedBy,
+                updatedAt: update.updatedAt,
+            }
+            : update;
+
+        clearRemoteUpdateTimer();
+        remoteUpdateTimerRef.current = setTimeout(() => {
+            void flushPendingRemoteUpdate();
+        }, LIVE_UPDATE_REFETCH_DEBOUNCE_MS);
+    }, [clearRemoteUpdateTimer, flushPendingRemoteUpdate]);
 
     useEffect(() => {
         setBundle(initialBundle);
@@ -370,6 +672,39 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
         void refreshTicketSnapshot();
     }, [refreshTicketSnapshot, ticketLive.enabled, ticketLive.reconnectVersion]);
+
+    useEffect(() => {
+        const remoteUpdate = ticketLive.lastRemoteUpdate;
+        if (!ticketLive.enabled || !remoteUpdate || remoteUpdate.updatedBy.userId === userId) {
+            return;
+        }
+
+        queueRemoteUpdate(remoteUpdate);
+    }, [queueRemoteUpdate, ticketLive.enabled, ticketLive.lastRemoteUpdate, userId]);
+
+    useEffect(() => {
+        return () => {
+            clearRemoteUpdateTimer();
+
+            for (const timer of Object.values(liveHighlightTimersRef.current)) {
+                clearTimeout(timer);
+            }
+
+            liveHighlightTimersRef.current = {};
+        };
+    }, [clearRemoteUpdateTimer]);
+
+    useEffect(() => {
+        setLiveFieldConflicts((current) => {
+            const nextEntries = Object.entries(current).filter(([field]) => liveDirtyFieldSet.has(field));
+
+            if (nextEntries.length === Object.keys(current).length) {
+                return current;
+            }
+
+            return Object.fromEntries(nextEntries);
+        });
+    }, [liveDirtyFieldSet]);
 
     useEffect(() => {
         let cancelled = false;
@@ -483,7 +818,6 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const { openDrawer, closeDrawer, replaceDrawer } = useDrawer();
     const { launchTimeEntry, deleteTimeEntry } = useSchedulingCallbacks();
-    const router = useRouter();
     // Create a single instance of the service
     const intervalService = useMemo(() => new IntervalTrackingService(), []);
 
@@ -933,42 +1267,44 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         setTicket(prevTicket => ({ ...prevTicket, [field]: normalizedValue }));
 
         try {
-            // Use the optimized handler if provided
-            if (onTicketUpdate) {
-                await onTicketUpdate(field, normalizedValue);
-                if (field === 'board_id') {
-                    setSavedBoardId(normalizedValue);
-                }
-                
-                // If we're changing the assigned_to field, we need to handle additional resources
-                // This will be handled by the container component and passed back in props
-            } else {
-                // Fallback to the original implementation if no optimized handler is provided
-                const result = await updateTicket(ticket.ticket_id || '', { [field]: normalizedValue });
-                
-                if (result === 'success') {
-                    console.log(`${field} changed to: ${normalizedValue}`);
+            await runWithPendingLiveFields([field], async () => {
+                // Use the optimized handler if provided
+                if (onTicketUpdate) {
+                    await onTicketUpdate(field, normalizedValue);
                     if (field === 'board_id') {
                         setSavedBoardId(normalizedValue);
                     }
-                    
-                    // If we're changing the assigned_to field, refresh the additional resources
-                    if (field === 'assigned_to') {
-                        try {
-                            // Refresh the additional resources
-                            const resources = await getTicketResources(ticket.ticket_id!);
-                            setAdditionalAgents(resources);
-                            console.log('Additional resources refreshed after assignment change');
-                        } catch (resourceError) {
-                            console.error('Error refreshing additional resources:', resourceError);
-                        }
-                    }
+
+                    // If we're changing the assigned_to field, we need to handle additional resources
+                    // This will be handled by the container component and passed back in props
                 } else {
-                    console.error(`Failed to update ticket ${field}`);
-                    // Revert to previous value on failure
-                    setTicket(prevTicket => ({ ...prevTicket, [field]: previousValue }));
+                    // Fallback to the original implementation if no optimized handler is provided
+                    const result = await updateTicket(ticket.ticket_id || '', { [field]: normalizedValue });
+
+                    if (result === 'success') {
+                        console.log(`${field} changed to: ${normalizedValue}`);
+                        if (field === 'board_id') {
+                            setSavedBoardId(normalizedValue);
+                        }
+
+                        // If we're changing the assigned_to field, refresh the additional resources
+                        if (field === 'assigned_to') {
+                            try {
+                                // Refresh the additional resources
+                                const resources = await getTicketResources(ticket.ticket_id!);
+                                setAdditionalAgents(resources);
+                                console.log('Additional resources refreshed after assignment change');
+                            } catch (resourceError) {
+                                console.error('Error refreshing additional resources:', resourceError);
+                            }
+                        }
+                    } else {
+                        console.error(`Failed to update ticket ${field}`);
+                        // Revert to previous value on failure
+                        setTicket(prevTicket => ({ ...prevTicket, [field]: previousValue }));
+                    }
                 }
-            }
+            });
         } catch (error) {
             console.error(`Error updating ticket ${field}:`, error);
             // Revert to previous value on error
@@ -1495,7 +1831,7 @@ const handleClose = () => {
 
     const handleContactChange = async (newContactId: string | null) => {
         try {
-            await updateTicket(ticket.ticket_id!, { contact_name_id: newContactId });
+            await runWithPendingLiveFields(['contact_name_id'], () => updateTicket(ticket.ticket_id!, { contact_name_id: newContactId }));
             
             if (newContactId) {
                 const contactData = await getContactByContactNameId(newContactId);
@@ -1539,7 +1875,7 @@ const handleClose = () => {
 
             // NOTE: Category management is now unified through the CategoryPicker
 
-            await updateTicketWithCache(ticket.ticket_id!, updateData);
+            await runWithPendingLiveFields([field], () => updateTicketWithCache(ticket.ticket_id!, updateData));
 
             // Update local ticket state to reflect the change
             setTicket(prevTicket => ({
@@ -1565,7 +1901,7 @@ const handleClose = () => {
     const handleBatchSaveChanges = useCallback(async (changes: Record<string, unknown>): Promise<boolean> => {
         // If we have a batch handler from container, use it
         if (onBatchTicketUpdate) {
-            const success = await onBatchTicketUpdate(changes);
+            const success = await runWithPendingLiveFields(Object.keys(changes), () => onBatchTicketUpdate(changes));
             if (success) {
                 // Update local ticket state with the saved changes
                 setTicket(prevTicket => ({
@@ -1591,30 +1927,26 @@ const handleClose = () => {
             console.error('Error in batch save:', error);
             return false;
         }
-    }, [onBatchTicketUpdate, handleItilFieldChange]);
+    }, [handleItilFieldChange, onBatchTicketUpdate, runWithPendingLiveFields]);
 
     const handleClientChange = async (newClientId: string) => {
         try {
-            await updateTicket(ticket.ticket_id!, {
+            await runWithPendingLiveFields(['client_id', 'contact_name_id', 'location_id'], () => updateTicket(ticket.ticket_id!, {
                 client_id: newClientId,
                 contact_name_id: null, // Reset contact when client changes
                 location_id: null // Reset location when client changes
-            });
+            }));
             
-            const [clientData, contactsData] = await Promise.all([
+            const [clientData, contactsData, locationData] = await Promise.all([
                 getClientById(newClientId),
-                getContactsByClient(newClientId)
+                getContactsByClient(newClientId),
+                getClientLocations(newClientId),
             ]);
             
             setClient(clientData);
             setContacts(contactsData || []);
+            setLocations(locationData || []);
             setContactInfo(null); // Reset contact info
-            
-            // Update locations for the new client
-            if (newClientId) {
-                // TODO: Fetch locations for the new client
-                // For now, we'll rely on the parent component to provide updated locations
-            }
 
             setIsChangeClientDialogOpen(false);
             toast.success(t('messages.clientUpdated'));
@@ -1625,9 +1957,9 @@ const handleClose = () => {
     
     const handleLocationChange = async (newLocationId: string | null) => {
         try {
-            await updateTicket(ticket.ticket_id!, {
+            await runWithPendingLiveFields(['location_id'], () => updateTicket(ticket.ticket_id!, {
                 location_id: newLocationId
-            });
+            }));
             
             // Update the ticket state with the new location
             setTicket(prevTicket => ({
@@ -2309,6 +2641,12 @@ const handleClose = () => {
                                     onOpenEmailNotificationLogs={() => setIsEmailNotificationLogsDrawerOpen(true)}
                                     hideSlaStatus={hideSlaStatus}
                                     additionalAgents={additionalAgentsForInfo}
+                                    onLiveDirtyFieldsChange={setTicketInfoDirtyFields}
+                                    liveHighlightedFields={liveHighlightedFields}
+                                    liveFieldConflicts={liveFieldConflicts}
+                                    liveFrozenFields={Object.keys(liveFieldConflicts)}
+                                    onKeepLiveConflict={handleKeepLiveConflict}
+                                    onTakeLiveConflict={handleTakeLiveConflict}
                                 />
                             </div>
                         </Suspense>
@@ -2429,6 +2767,12 @@ const handleClose = () => {
                                     timeEntriesRefreshKey={timeEntriesRefreshKey}
                                     onEditTimeEntry={handleEditTimeEntry}
                                     onDeleteTimeEntry={handleRequestDeleteTimeEntry}
+                                    onLiveDirtyFieldsChange={setTicketPropertiesDirtyFields}
+                                    liveHighlightedFields={liveHighlightedFields}
+                                    liveFieldConflicts={liveFieldConflicts}
+                                    liveFrozenFields={Object.keys(liveFieldConflicts)}
+                                    onKeepLiveConflict={handleKeepLiveConflict}
+                                    onTakeLiveConflict={handleTakeLiveConflict}
                                 />
                         </Suspense>
                         

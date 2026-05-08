@@ -128,43 +128,43 @@
   {
     "id": "F022",
     "description": "Implement `onRemoteUpdate` handler in `TicketDetails.tsx`: intersect `updatedFields` against `pendingRequestRef` queue + component dirty-field set to classify into silent / toast / conflict paths.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6", "FR-7", "FR-8"]
   },
   {
     "id": "F023",
     "description": "Silent refetch path: when no overlap with local unsaved state, refetch ticket and update component state. Briefly highlight changed fields (~600ms fade).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6"]
   },
   {
     "id": "F024",
     "description": "Debounce burst refetches at 200ms: multiple updates within the window collapse into a single refetch.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-6", "Failure modes"]
   },
   {
     "id": "F025",
     "description": "Toast-on-non-overlap path: when remote update touches different fields than local pending, show a passing toast `'{Name} updated {field}'` and refetch silently; preserve local pending changes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-8"]
   },
   {
     "id": "F026",
     "description": "Conflict-banner path: when remote update touches a field with local unsaved state, freeze that field, render `FieldConflictBanner` inside it with remote value/author/timestamp.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7"]
   },
   {
     "id": "F027",
     "description": "Conflict-banner Keep yours: keep local pending value, clear banner, unfreeze field. Local value remains queued for next save (may overwrite remote — accepted tradeoff per PRD).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7"]
   },
   {
     "id": "F028",
     "description": "Conflict-banner Take theirs: drop local pending value, refetch, set field to remote value, clear banner, unfreeze.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-7"]
   },
   {
@@ -188,7 +188,7 @@
   {
     "id": "F031",
     "description": "Permission revocation handling: if a refetch following a remote-update message returns 403, redirect away from the ticket detail page (or show a no-access view).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-13"]
   },
   {

@@ -41,6 +41,8 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { FieldConflictBanner } from '@alga-psa/ui/presence/FieldConflictBanner';
+import type { TicketLiveConflictState } from './ticketLiveFields';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -100,6 +102,12 @@ interface TicketPropertiesProps {
   onDeleteTimeEntry?: (entry: { entry_id: string; user_name: string | null }) => void;
   hideTimeEntry?: boolean;
   hideMaterials?: boolean;
+  onLiveDirtyFieldsChange?: (fields: string[]) => void;
+  liveHighlightedFields?: string[];
+  liveFrozenFields?: string[];
+  liveFieldConflicts?: Partial<Record<string, TicketLiveConflictState>>;
+  onKeepLiveConflict?: (field: string) => void;
+  onTakeLiveConflict?: (field: string) => void;
 }
 
 // Helper function to format location display
@@ -187,6 +195,12 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onDeleteTimeEntry,
   hideTimeEntry = false,
   hideMaterials = false,
+  onLiveDirtyFieldsChange,
+  liveHighlightedFields = [],
+  liveFrozenFields = [],
+  liveFieldConflicts = {},
+  onKeepLiveConflict,
+  onTakeLiveConflict,
 }) => {
   const { openDrawer } = useDrawer();
   const { renderQuickAddContact } = useQuickAddClient();
@@ -213,6 +227,8 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [appointmentRequests, setAppointmentRequests] = useState<any[]>([]);
   const [showAppointmentTooltip, setShowAppointmentTooltip] = useState(false);
   const [isRemoveTeamDialogOpen, setIsRemoveTeamDialogOpen] = useState(false);
+  const highlightedFieldSet = React.useMemo(() => new Set(liveHighlightedFields), [liveHighlightedFields]);
+  const frozenFieldSet = React.useMemo(() => new Set(liveFrozenFields), [liveFrozenFields]);
 
   useEffect(() => {
     setPickerContacts(contacts);
@@ -231,6 +247,94 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   useRegisterUnsavedChanges(`ticket-properties-contact-${id}`, hasUnsavedContactChanges);
   useRegisterUnsavedChanges(`ticket-properties-client-${id}`, hasUnsavedClientChanges);
   useRegisterUnsavedChanges(`ticket-properties-location-${id}`, hasUnsavedLocationChanges);
+
+  useEffect(() => {
+    const dirtyFields: string[] = [];
+
+    if (hasUnsavedContactChanges) {
+      dirtyFields.push('contact_name_id');
+    }
+    if (hasUnsavedClientChanges) {
+      dirtyFields.push('client_id');
+    }
+    if (hasUnsavedLocationChanges) {
+      dirtyFields.push('location_id');
+    }
+
+    onLiveDirtyFieldsChange?.(dirtyFields);
+  }, [hasUnsavedClientChanges, hasUnsavedContactChanges, hasUnsavedLocationChanges, onLiveDirtyFieldsChange]);
+
+  useEffect(() => {
+    return () => {
+      onLiveDirtyFieldsChange?.([]);
+    };
+  }, [onLiveDirtyFieldsChange]);
+
+  const isFieldHighlighted = React.useCallback((field: string) => highlightedFieldSet.has(field), [highlightedFieldSet]);
+
+  const isFieldFrozen = React.useCallback((field: string) => {
+    return frozenFieldSet.has(field) || Boolean(liveFieldConflicts[field]);
+  }, [frozenFieldSet, liveFieldConflicts]);
+
+  const getFieldContainerClassName = React.useCallback((field: string) => {
+    const classes = ['rounded-lg transition-colors duration-[600ms]'];
+
+    if (isFieldHighlighted(field)) {
+      classes.push('bg-sky-50 ring-1 ring-sky-200 px-3 py-2');
+    }
+
+    if (isFieldFrozen(field)) {
+      classes.push('opacity-80');
+    }
+
+    return classes.join(' ');
+  }, [isFieldFrozen, isFieldHighlighted]);
+
+  const handleKeepLiveConflict = React.useCallback((field: string) => {
+    onKeepLiveConflict?.(field);
+  }, [onKeepLiveConflict]);
+
+  const handleTakeLiveConflict = React.useCallback((field: string) => {
+    switch (field) {
+      case 'contact_name_id':
+        setShowContactPicker(false);
+        setSelectedContactId(null);
+        break;
+      case 'client_id':
+        setShowClientPicker(false);
+        setSelectedClientId(null);
+        break;
+      case 'location_id':
+        setShowLocationPicker(false);
+        setSelectedLocationId(null);
+        break;
+      default:
+        break;
+    }
+
+    onTakeLiveConflict?.(field);
+  }, [onTakeLiveConflict]);
+
+  const getConflictRemoteValue = React.useCallback((field: string): React.ReactNode => {
+    switch (field) {
+      case 'contact_name_id':
+        return contactInfo?.full_name || t('properties.noContactSelected', 'No contact selected');
+      case 'client_id':
+        return client?.client_name || t('properties.notAvailable', 'N/A');
+      case 'location_id': {
+        const unnamedLocationLabel = t('quickAdd.unnamedLocation', 'Unnamed Location');
+        if (ticket.location) {
+          return formatLocationDisplay(ticket.location, unnamedLocationLabel);
+        }
+        const defaultLocation = locations.find((location) => location.is_default);
+        return defaultLocation
+          ? `${formatLocationDisplay(defaultLocation, unnamedLocationLabel)} ${t('properties.defaultSuffix', '(Default)')}`
+          : t('properties.noLocationSpecified', 'No location specified');
+      }
+      default:
+        return t('properties.notAvailable', 'N/A');
+    }
+  }, [client?.client_name, contactInfo?.full_name, locations, t, ticket.location]);
 
   const uniqueClientsForPicker = React.useMemo(() => {
     if (!clients) return [];
@@ -521,7 +625,12 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         headerIcon={<Building className="w-5 h-5" />}
       >
         <div className="space-y-2">
-          <div>
+          <div
+            className={getFieldContainerClassName('contact_name_id')}
+            data-live-field="contact_name_id"
+            data-live-highlighted={isFieldHighlighted('contact_name_id') ? 'true' : undefined}
+            data-live-conflict={liveFieldConflicts.contact_name_id ? 'true' : undefined}
+          >
             <h5 className="font-bold">{t('properties.contact', 'Contact')}</h5>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -547,6 +656,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                     size="sm"
                     onClick={() => setShowContactPicker(!showContactPicker)}
                     className="p-1 h-auto"
+                    disabled={isFieldFrozen('contact_name_id')}
                   >
                     <Edit2 className="h-3 w-3" />
                   </Button>
@@ -558,6 +668,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                     size="sm"
                     onClick={() => onChangeContact(null)}
                     className="p-1 h-auto text-red-500 hover:text-red-700"
+                    disabled={isFieldFrozen('contact_name_id')}
                   >
                     <X className="h-3 w-3" />
                   </Button>
@@ -585,6 +696,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                         setShowContactPicker(false);
                         setSelectedContactId(null);
                       }}
+                      disabled={isFieldFrozen('contact_name_id')}
                     >
                       {t('actions.cancel', 'Cancel')}
                     </Button>
@@ -596,6 +708,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                         onChangeContact(selectedContactId);
                         setShowContactPicker(false);
                       }}
+                      disabled={isFieldFrozen('contact_name_id')}
                     >
                       {t('actions.save', 'Save')}
                     </Button>
@@ -603,6 +716,15 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 </div>
               )}
             </div>
+            {liveFieldConflicts.contact_name_id ? (
+              <FieldConflictBanner
+                remoteAuthor={liveFieldConflicts.contact_name_id.updatedBy.displayName}
+                remoteAt={liveFieldConflicts.contact_name_id.updatedAt}
+                remoteValue={getConflictRemoteValue('contact_name_id')}
+                onKeepYours={() => handleKeepLiveConflict('contact_name_id')}
+                onTakeTheirs={() => handleTakeLiveConflict('contact_name_id')}
+              />
+            ) : null}
           </div>
           {renderQuickAddContact({
             isOpen: isQuickAddContactOpen,
@@ -645,7 +767,12 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               })()}
             </p>
           </div>
-          <div>
+          <div
+            className={getFieldContainerClassName('client_id')}
+            data-live-field="client_id"
+            data-live-highlighted={isFieldHighlighted('client_id') ? 'true' : undefined}
+            data-live-conflict={liveFieldConflicts.client_id ? 'true' : undefined}
+          >
             <h5 className="font-bold">{t('fields.client', 'Client')}</h5>
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
@@ -669,6 +796,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                   size="sm"
                   onClick={() => setShowClientPicker(!showClientPicker)}
                   className="p-1 h-auto"
+                  disabled={isFieldFrozen('client_id')}
                 >
                   <Edit2 className="h-3 w-3" />
                 </Button>
@@ -699,6 +827,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                         setShowClientPicker(false);
                         setSelectedClientId(null);
                       }}
+                      disabled={isFieldFrozen('client_id')}
                     >
                       {t('actions.cancel', 'Cancel')}
                     </Button>
@@ -712,6 +841,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                         }
                         setShowClientPicker(false);
                       }}
+                      disabled={isFieldFrozen('client_id')}
                     >
                       {t('actions.save', 'Save')}
                     </Button>
@@ -719,9 +849,23 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 </div>
               )}
             </div>
+            {liveFieldConflicts.client_id ? (
+              <FieldConflictBanner
+                remoteAuthor={liveFieldConflicts.client_id.updatedBy.displayName}
+                remoteAt={liveFieldConflicts.client_id.updatedAt}
+                remoteValue={getConflictRemoteValue('client_id')}
+                onKeepYours={() => handleKeepLiveConflict('client_id')}
+                onTakeTheirs={() => handleTakeLiveConflict('client_id')}
+              />
+            ) : null}
           </div>
           {client && locations.length > 0 && (
-            <div>
+            <div
+              className={getFieldContainerClassName('location_id')}
+              data-live-field="location_id"
+              data-live-highlighted={isFieldHighlighted('location_id') ? 'true' : undefined}
+              data-live-conflict={liveFieldConflicts.location_id ? 'true' : undefined}
+            >
               <h5 className="font-bold">{t('properties.location', 'Location')}</h5>
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
@@ -748,6 +892,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                     size="sm"
                     onClick={() => setShowLocationPicker(!showLocationPicker)}
                     className="p-1 h-auto"
+                    disabled={isFieldFrozen('location_id')}
                   >
                     <Edit2 className="h-3 w-3" />
                   </Button>
@@ -770,6 +915,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                       ]}
                       placeholder={t('properties.selectLocation', 'Select location')}
                       className="w-full"
+                      disabled={isFieldFrozen('location_id')}
                     />
                     <div className="flex justify-end space-x-2">
                       <Button
@@ -780,6 +926,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                           setShowLocationPicker(false);
                           setSelectedLocationId(null);
                         }}
+                        disabled={isFieldFrozen('location_id')}
                       >
                         {t('actions.cancel', 'Cancel')}
                       </Button>
@@ -793,6 +940,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                           }
                           setShowLocationPicker(false);
                         }}
+                        disabled={isFieldFrozen('location_id')}
                       >
                         {t('actions.save', 'Save')}
                       </Button>
@@ -800,6 +948,15 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                   </div>
                 )}
               </div>
+              {liveFieldConflicts.location_id ? (
+                <FieldConflictBanner
+                  remoteAuthor={liveFieldConflicts.location_id.updatedBy.displayName}
+                  remoteAt={liveFieldConflicts.location_id.updatedAt}
+                  remoteValue={getConflictRemoteValue('location_id')}
+                  onKeepYours={() => handleKeepLiveConflict('location_id')}
+                  onTakeTheirs={() => handleTakeLiveConflict('location_id')}
+                />
+              ) : null}
             </div>
           )}
           <div>

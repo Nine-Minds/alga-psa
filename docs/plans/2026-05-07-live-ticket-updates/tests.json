@@ -200,37 +200,37 @@
   {
     "id": "T034",
     "description": "Component (TicketDetails remote-update routing): no-overlap path → silent refetch; field highlights ~600ms; no toast.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022", "F023"]
   },
   {
     "id": "T035",
     "description": "Component: 5 update messages within 200ms collapse into a single refetch (debounce).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F024"]
   },
   {
     "id": "T036",
     "description": "Component: non-overlap with unsaved local change → toast '{Name} updated {field}'; local pending change preserved.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F025"]
   },
   {
     "id": "T037",
     "description": "Component: same-field overlap with unsaved local change → field freezes, banner appears with remote value/author/timestamp.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F026"]
   },
   {
     "id": "T038",
     "description": "Component: Keep yours → banner clears, field unfreezes, local pending value retained, no immediate save fired.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F027"]
   },
   {
     "id": "T039",
     "description": "Component: Take theirs → banner clears, field unfreezes, local pending value dropped, field shows remote value (verified after refetch).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F028"]
   },
   {
@@ -272,7 +272,7 @@
   {
     "id": "T044",
     "description": "Component: refetch returning 403 after a remote-update message redirects away from the ticket page.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F031"]
   },
   {
