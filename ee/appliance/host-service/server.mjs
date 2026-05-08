@@ -240,7 +240,11 @@ const server = http.createServer(async (req, res) => {
         updatedAt: new Date().toISOString()
       }, null, 2)}\n`, { mode: 0o600 });
       queueSetupWorkflow();
-      jsonResponse(res, 202, { ok: true, redirectTo: `/?token=${encodeURIComponent(providedToken)}` });
+      jsonResponse(res, 202, {
+        ok: true,
+        redirectTo: `/?token=${encodeURIComponent(providedToken)}`,
+        acceptedInputs: setupInputs
+      });
     } catch (error) {
       jsonResponse(res, 400, { error: error instanceof Error ? error.message : 'Invalid setup inputs.' });
     }

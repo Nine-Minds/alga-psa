@@ -30,6 +30,26 @@ Expected outputs:
 - `output/alga-appliance-ubuntu-<release-version>.iso`
 - `output/alga-appliance-ubuntu-<release-version>.sha256`
 
+## Preflight Gate Before UTM Smoke
+
+Before spending time on a fresh UTM install, run the fail-fast appliance smoke preflight against the exact branch and ISO you intend to test:
+
+```bash
+node ee/appliance/ubuntu-iso/scripts/preflight-appliance-smoke.mjs \
+  --repo-branch feature/on-premise-email-processing \
+  --iso /Volumes/Extreme\ SSD/alga-appliance-smoke/iso-output/alga-appliance-ubuntu-smoke-YYYYMMDD-roundNN.iso
+```
+
+The preflight intentionally validates both sides of the install contract:
+
+- local source files that are baked into the ISO;
+- the selected remote Flux branch that the appliance will reconcile;
+- the ISO overlay artifacts actually present on the image.
+
+It fails if the smoke branch is blank, if the selected remote branch is stale or missing local HEAD, if HelmRelease retry policy is absent, if `appliance-status` binds the host network, if alga-core lacks a long first-install `progressDeadlineSeconds`, or if the packaged setup UI/API cannot preserve the support `repoBranch` override.
+
+Use `--allow-channel-branch` only when intentionally validating a published channel branch. Use `--allow-unpushed` only for local exploratory checks; do not use it as a release/smoke gate.
+
 ## Current Status
 
 This commit establishes the layout and build interface (`F001`).

@@ -78,13 +78,22 @@ export default function SetupPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const payload = {
+      channel: String(formData.get('channel') || channel),
+      appHostname: String(formData.get('appHostname') || ''),
+      dnsMode: String(formData.get('dnsMode') || dnsMode),
+      dnsServers: String(formData.get('dnsServers') || ''),
+      repoUrl: String(formData.get('repoUrl') || repoUrl),
+      repoBranch: String(formData.get('repoBranch') || ''),
+    };
     setBusy(true);
     setError(null);
     try {
       const response = await fetch(withToken('/api/setup', query), {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ channel, appHostname, dnsMode, dnsServers, repoUrl, repoBranch }),
+        body: JSON.stringify(payload),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || 'Unable to save setup.');
@@ -138,7 +147,7 @@ export default function SetupPage() {
             <div className={styles.formGrid}>
               <div className={styles.field}>
                 <label htmlFor="setup-channel">Release channel</label>
-                <select id="setup-channel" value={channel} onChange={(event) => setChannel(event.target.value)} disabled={busy || !config}>
+                <select id="setup-channel" name="channel" value={channel} onChange={(event) => setChannel(event.target.value)} disabled={busy || !config}>
                   <option value="stable">stable (recommended)</option>
                   <option value="nightly">nightly (testing/support-directed)</option>
                 </select>
@@ -147,13 +156,13 @@ export default function SetupPage() {
 
               <div className={styles.field}>
                 <label htmlFor="setup-app-hostname">App URL / hostname</label>
-                <input id="setup-app-hostname" value={appHostname} onChange={(event) => setAppHostname(event.target.value)} placeholder="psa.example.com" disabled={busy || !config} />
+                <input id="setup-app-hostname" name="appHostname" value={appHostname} onChange={(event) => setAppHostname(event.target.value)} placeholder="psa.example.com" disabled={busy || !config} />
                 <span className={styles.helpText}>Use the hostname users will enter in their browser.</span>
               </div>
 
               <div className={styles.field}>
                 <label htmlFor="setup-dns-mode">DNS mode</label>
-                <select id="setup-dns-mode" value={dnsMode} onChange={(event) => setDnsMode(event.target.value)} disabled={busy || !config}>
+                <select id="setup-dns-mode" name="dnsMode" value={dnsMode} onChange={(event) => setDnsMode(event.target.value)} disabled={busy || !config}>
                   <option value="system">Use DHCP/system resolvers</option>
                   <option value="custom">Use custom DNS servers</option>
                 </select>
@@ -162,19 +171,19 @@ export default function SetupPage() {
 
               <div className={styles.field}>
                 <label htmlFor="setup-dns-servers">Custom DNS servers</label>
-                <input id="setup-dns-servers" value={dnsServers} onChange={(event) => setDnsServers(event.target.value)} placeholder="8.8.8.8,8.8.4.4" disabled={busy || !config || dnsMode !== 'custom'} />
+                <input id="setup-dns-servers" name="dnsServers" value={dnsServers} onChange={(event) => setDnsServers(event.target.value)} placeholder="8.8.8.8,8.8.4.4" disabled={busy || !config || dnsMode !== 'custom'} />
                 <span className={styles.helpText}>Comma-separated IPv4 addresses. Required only for custom DNS.</span>
               </div>
 
               <div className={styles.field}>
                 <label htmlFor="setup-repo-url">Repo URL override</label>
-                <input id="setup-repo-url" value={repoUrl} onChange={(event) => setRepoUrl(event.target.value)} disabled={busy || !config} />
+                <input id="setup-repo-url" name="repoUrl" value={repoUrl} onChange={(event) => setRepoUrl(event.target.value)} disabled={busy || !config} />
                 <span className={styles.helpText}>Support/testing only.</span>
               </div>
 
               <div className={styles.field}>
                 <label htmlFor="setup-repo-branch">Repo branch override</label>
-                <input id="setup-repo-branch" value={repoBranch} onChange={(event) => setRepoBranch(event.target.value)} placeholder="main" disabled={busy || !config} />
+                <input id="setup-repo-branch" name="repoBranch" value={repoBranch} onChange={(event) => setRepoBranch(event.target.value)} placeholder="main" disabled={busy || !config} />
                 <span className={styles.helpText}>Leave blank to use the selected release channel.</span>
               </div>
             </div>

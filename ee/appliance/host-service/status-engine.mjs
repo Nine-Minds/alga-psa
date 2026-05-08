@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
 
 const DEFAULT_STATE_FILE = '/var/lib/alga-appliance/install-state.json';
+const DEFAULT_SETUP_INPUTS_FILE = '/etc/alga-appliance/setup-inputs.json';
+const DEFAULT_RELEASE_SELECTION_FILE = '/etc/alga-appliance/release-selection.json';
 const DEFAULT_KUBECONFIG = '/etc/rancher/k3s/k3s.yaml';
 const DEFAULT_COMMAND_TIMEOUT_MS = 5_000;
 const MAX_DIAGNOSTIC_BYTES = 64 * 1024;
@@ -267,10 +269,14 @@ function deriveReadiness(installState, nodes, podLines, jobLines, helmLines, hel
 
 export function collectStatusSnapshot(options = {}) {
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
+  const setupInputsFile = options.setupInputsFile || DEFAULT_SETUP_INPUTS_FILE;
+  const releaseSelectionFile = options.releaseSelectionFile || DEFAULT_RELEASE_SELECTION_FILE;
   const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
   const kubectlPrefix = options.kubectlPrefix || `kubectl --request-timeout=5s --kubeconfig ${kubeconfigPath}`;
 
   const installState = readJsonFile(stateFile);
+  const setupInputs = readJsonFile(setupInputsFile);
+  const releaseSelection = readJsonFile(releaseSelectionFile);
   const nodeResult = runCommand(`${kubectlPrefix} get nodes -o json`, { timeoutMs: 6_000 });
   const podResult = runCommand(`${kubectlPrefix} get pods -A --no-headers`, { timeoutMs: 6_000 });
   const jobResult = runCommand(`${kubectlPrefix} -n msp get jobs --no-headers`, { timeoutMs: 6_000 });
@@ -312,6 +318,8 @@ export function collectStatusSnapshot(options = {}) {
 
   return {
     source: 'ubuntu-host-service',
+    setupInputs,
+    releaseSelection,
     installState,
     currentPhase: installState?.phase || 'setup',
     status: installState?.status || 'unknown',

@@ -11,7 +11,11 @@ test('collectStatusSnapshot reads local state and kubeconfig-driven kubectl outp
   const fakeBin = path.join(tmp, 'bin');
   fs.mkdirSync(fakeBin, { recursive: true });
 
+  const setupInputsFile = path.join(tmp, 'setup-inputs.json');
+  const releaseSelectionFile = path.join(tmp, 'release-selection.json');
   fs.writeFileSync(stateFile, JSON.stringify({ phase: 'flux', status: 'flux-source-complete' }));
+  fs.writeFileSync(setupInputsFile, JSON.stringify({ channel: 'stable', repoBranch: 'feature/on-premise-email-processing' }));
+  fs.writeFileSync(releaseSelectionFile, JSON.stringify({ selectedChannel: 'stable', repoBranch: 'feature/on-premise-email-processing' }));
 
   const kubectlPath = path.join(fakeBin, 'kubectl');
   fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
@@ -43,12 +47,16 @@ exit 1
   try {
     const snapshot = collectStatusSnapshot({
       stateFile,
+      setupInputsFile,
+      releaseSelectionFile,
       kubeconfigPath: '/tmp/k3s.yaml',
       kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
     });
 
     assert.equal(snapshot.currentPhase, 'flux');
     assert.equal(snapshot.status, 'flux-source-complete');
+    assert.equal(snapshot.setupInputs.repoBranch, 'feature/on-premise-email-processing');
+    assert.equal(snapshot.releaseSelection.repoBranch, 'feature/on-premise-email-processing');
     assert.equal(snapshot.kubernetes.nodes.length, 1);
     assert.equal(snapshot.kubernetes.nodes[0].ready, true);
     assert.equal(snapshot.kubernetes.podCount, 2);

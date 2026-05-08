@@ -29,6 +29,7 @@ server:
     tag: latest
   hostNetwork: true
   replicaCount: 1
+  progressDeadlineSeconds: 2400
   service:
     type: ClusterIP
     port: 3000

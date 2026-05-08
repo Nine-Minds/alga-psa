@@ -11,6 +11,7 @@ const buildScript = path.join(repoRoot, 'ee', 'appliance', 'ubuntu-iso', 'script
 const userDataPath = path.join(repoRoot, 'ee', 'appliance', 'ubuntu-iso', 'config', 'nocloud', 'user-data');
 const overlayRoot = path.join(repoRoot, 'ee', 'appliance', 'ubuntu-iso', 'overlay', 'opt', 'alga-appliance');
 const storageManifestPath = path.join(repoRoot, 'ee', 'appliance', 'manifests', 'local-path-storage.yaml');
+const algaCoreChartPath = path.join(repoRoot, 'helm');
 const temporalChartPath = path.join(repoRoot, 'ee', 'helm', 'temporal');
 const temporalWorkerChartPath = path.join(repoRoot, 'ee', 'helm', 'temporal-worker');
 const temporalProfileValuesPath = path.join(repoRoot, 'ee', 'appliance', 'flux', 'profiles', 'talos-single-node', 'values', 'temporal.talos-single-node.yaml');
@@ -206,7 +207,14 @@ test('T005 temporal-worker profile injects NEXTAUTH_SECRET from alga-core secret
   });
 });
 
-test('T006 Flux HelmReleases retry transient single-node install stalls', () => {
+test('T006 alga-core appliance profile gives the app Deployment a first-install-safe progress deadline', () => {
+  const docs = helmTemplate(algaCoreChartPath, path.join(repoRoot, 'ee', 'appliance', 'flux', 'profiles', 'talos-single-node', 'values', 'alga-core.talos-single-node.yaml'));
+  const deployment = docs.find((doc) => doc.kind === 'Deployment' && doc.metadata?.name === 'test-release-sebastian');
+  assert.ok(deployment);
+  assert.ok(deployment.spec.progressDeadlineSeconds >= 1800);
+});
+
+test('T007 Flux HelmReleases retry transient single-node install stalls', () => {
   for (const file of fs.readdirSync(fluxReleaseDir).filter((name) => name.endsWith('.yaml'))) {
     const doc = parse(fs.readFileSync(path.join(fluxReleaseDir, file), 'utf8'));
     assert.ok(doc.spec.install.remediation.retries >= 1, `${file} install retries`);
@@ -214,7 +222,7 @@ test('T006 Flux HelmReleases retry transient single-node install stalls', () => 
   }
 });
 
-test('T007 platform appliance-status does not bind host port 8080 used by the Ubuntu host service', () => {
+test('T008 platform appliance-status does not bind host port 8080 used by the Ubuntu host service', () => {
   const docs = parseAllDocuments(fs.readFileSync(applianceStatusManifestPath, 'utf8')).map((doc) => doc.toJSON()).filter(Boolean);
   const deployment = docs.find((doc) => doc.kind === 'Deployment' && doc.metadata?.name === 'appliance-status');
   assert.ok(deployment);
@@ -222,7 +230,7 @@ test('T007 platform appliance-status does not bind host port 8080 used by the Ub
   assert.equal(deployment.spec.template.spec.dnsPolicy, 'ClusterFirst');
 });
 
-test('T008/T009 install flow sanity: payload copy and disk-first marker are present in generated installer inputs', () => {
+test('T009/T010 install flow sanity: payload copy and disk-first marker are present in generated installer inputs', () => {
   const userData = parse(fs.readFileSync(userDataPath, 'utf8'));
   const lateCommands = userData.autoinstall['late-commands'];
   const build = runBuildWithFakeXorriso();

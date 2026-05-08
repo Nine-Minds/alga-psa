@@ -272,12 +272,12 @@ async function dnsLookup(hostname, servers) {
 }
 
 export function validateSetupInputs(raw) {
-  const channel = raw.channel || 'stable';
-  const appHostname = raw.appHostname || '';
-  const dnsMode = raw.dnsMode || 'system';
-  const dnsServers = raw.dnsServers || '';
-  const repoUrl = raw.repoUrl || 'https://github.com/Nine-Minds/alga-psa.git';
-  const repoBranch = raw.repoBranch || '';
+  const channel = String(raw.channel || 'stable').trim();
+  const appHostname = String(raw.appHostname || '').trim();
+  const dnsMode = String(raw.dnsMode || 'system').trim();
+  const dnsServers = String(raw.dnsServers || '').trim();
+  const repoUrl = String(raw.repoUrl || 'https://github.com/Nine-Minds/alga-psa.git').trim();
+  const repoBranch = String(raw.repoBranch || '').trim();
 
   if (!['stable', 'nightly'].includes(channel)) {
     throw new Error('Invalid channel. Use stable or nightly.');

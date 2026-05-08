@@ -125,11 +125,23 @@ test('T003 first-boot smoke: console output and host web service health', async 
     const submit = await httpRequest('http://127.0.0.1:18081/api/setup?token=token-123', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ channel: 'stable', dnsMode: 'system', repoUrl: 'https://github.com/Nine-Minds/alga-psa.git' })
+      body: JSON.stringify({
+        channel: 'stable',
+        appHostname: 'alga.example.com',
+        dnsMode: 'system',
+        repoUrl: 'https://github.com/Nine-Minds/alga-psa.git',
+        repoBranch: 'feature/on-premise-email-processing'
+      })
     });
     assert.equal(submit.statusCode, 202);
-    assert.equal(JSON.parse(submit.body).ok, true);
-    assert.equal(JSON.parse(fs.readFileSync(path.join(tmp, 'setup-inputs.json'), 'utf8')).channel, 'stable');
+    const submitBody = JSON.parse(submit.body);
+    assert.equal(submitBody.ok, true);
+    assert.equal(submitBody.acceptedInputs.appHostname, 'alga.example.com');
+    assert.equal(submitBody.acceptedInputs.repoBranch, 'feature/on-premise-email-processing');
+    const persistedSetupInputs = JSON.parse(fs.readFileSync(path.join(tmp, 'setup-inputs.json'), 'utf8'));
+    assert.equal(persistedSetupInputs.channel, 'stable');
+    assert.equal(persistedSetupInputs.appHostname, 'alga.example.com');
+    assert.equal(persistedSetupInputs.repoBranch, 'feature/on-premise-email-processing');
     assert.equal(JSON.parse(fs.readFileSync(path.join(tmp, 'install-state.json'), 'utf8')).status, 'setup-queued');
 
     const statusPage = await httpGet('http://127.0.0.1:18081/?token=token-123');

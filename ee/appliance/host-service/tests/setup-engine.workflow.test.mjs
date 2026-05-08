@@ -129,6 +129,37 @@ test('resolveChannelMetadata honors support repoBranch override over channel bra
   assert.equal(result.repoBranch, 'feature/on-premise-email-processing');
 });
 
+test('applyFluxSource applies the resolved support branch override to Flux', async () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-flux-source-override-'));
+  const stateFile = path.join(tmp, 'state', 'install-state.json');
+  const manifestPath = path.join(tmp, 'manifest.yaml');
+  const inputs = {
+    channel: 'stable',
+    repoUrl: 'https://github.com/Nine-Minds/alga-psa.git',
+    repoBranch: 'feature/on-premise-email-processing'
+  };
+
+  const releaseSelection = await resolveChannelMetadata(inputs, {
+    stateFile,
+    channelMetadataOverride: {
+      channel: 'stable',
+      releaseVersion: '1.0-rc5.1',
+      repoBranch: 'release/1.0-rc5'
+    }
+  });
+  assert.equal(releaseSelection.ok, true);
+
+  const result = applyFluxSource(inputs, releaseSelection, {
+    stateFile,
+    fluxSourceApplyCommand: `cat > ${manifestPath}`
+  });
+
+  assert.equal(result.ok, true);
+  const manifest = fs.readFileSync(manifestPath, 'utf8');
+  assert.match(manifest, /branch: feature\/on-premise-email-processing/);
+  assert.doesNotMatch(manifest, /branch: release\/1\.0-rc5/);
+});
+
 test('applyFluxSource normalizes SSH GitHub URL to HTTPS for Flux source', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-appliance-flux-source-'));
   const stateFile = path.join(tmp, 'state', 'install-state.json');
