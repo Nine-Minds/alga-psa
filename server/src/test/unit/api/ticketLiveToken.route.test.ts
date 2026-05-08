@@ -72,4 +72,19 @@ describe('ticket live-token route', () => {
     expect(typeof decoded.jti).toBe('string');
     expect((decoded.exp ?? 0) - (decoded.iat ?? 0)).toBeLessThanOrEqual(5 * 60);
   });
+
+  it('T054: refuses to mint a live token for a same-tenant ticket the user cannot access', async () => {
+    getCurrentUserMock.mockResolvedValue({
+      user_id: 'user-1',
+      tenant: 'tenant-1',
+    });
+    getTicketByIdMock.mockRejectedValue(new Error('Permission denied: Cannot view ticket'));
+
+    const { GET } = await import('../../../app/api/tickets/[id]/live-token/route');
+    const response = await GET(new Request('http://localhost/api/tickets/ticket-secret/live-token') as any, {
+      params: Promise.resolve({ id: 'ticket-secret' }),
+    });
+
+    expect(response.status).toBe(403);
+  });
 });

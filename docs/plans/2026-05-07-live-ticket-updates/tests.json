@@ -332,19 +332,19 @@
   {
     "id": "T054",
     "description": "Security: a user from tenant X cannot enumerate or join `ticket:Y:*` rooms via direct WS probe even with a token (T021 verifies tenant; this verifies they can't substitute another ticketId within their own tenant either if access is missing).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F008"]
   },
   {
     "id": "T055",
     "description": "Security: presence awareness payload contains only userId, displayName, avatarUrl, color, editingField — no email, no role, no permissions snapshot.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005", "F013"]
   },
   {
     "id": "T056",
     "description": "Security: Redis broadcast payload contains only field names + author metadata + timestamp — no field values. Inspect channel during T046.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {

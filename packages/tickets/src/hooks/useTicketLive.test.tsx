@@ -389,4 +389,45 @@ describe('useTicketLive', () => {
     }));
     expect((providers[0]?.awareness.setLocalStateField as any).mock.calls.at(-1)?.[1]).not.toHaveProperty('editingField');
   });
+
+  it('T055: awareness payload only includes the live presence allowlist fields', async () => {
+    const { useTicketLive } = await loadHook();
+    const { result } = renderHook(() =>
+      useTicketLive({
+        tenantId: 'tenant-1',
+        ticketId: 'ticket-1',
+        currentUser: {
+          userId: 'user-1',
+          displayName: 'Alice Example',
+          avatarUrl: 'https://example.com/avatar.png',
+          email: 'alice@example.com',
+          role: 'admin',
+        } as any,
+      })
+    );
+
+    await flushAsyncWork();
+    expect(createYjsProvider).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      providers[0]?.emit('status', { status: 'connected' });
+    });
+
+    act(() => {
+      result.current.setEditingField('status_id');
+    });
+
+    const payload = (providers[0]?.awareness.setLocalStateField as any).mock.calls.at(-1)?.[1];
+
+    expect(payload).toEqual({
+      userId: 'user-1',
+      displayName: 'Alice Example',
+      avatarUrl: 'https://example.com/avatar.png',
+      color: expect.any(String),
+      editingField: 'status_id',
+    });
+    expect(payload).not.toHaveProperty('email');
+    expect(payload).not.toHaveProperty('role');
+    expect(payload).not.toHaveProperty('permissions');
+  });
 });

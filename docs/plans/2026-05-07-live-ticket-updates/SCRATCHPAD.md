@@ -177,6 +177,11 @@ npm run test:e2e
   `npm run typecheck --workspace=ee/server`
   `PW_WEBSERVER=false NEXT_PUBLIC_DISABLE_FEATURE_FLAGS=false NEXT_PUBLIC_FORCE_FEATURE_FLAGS=live-ticket-updates:true PLAYWRIGHT_SKIP_WORKFLOW_WORKER=true npx playwright test ee/server/src/__tests__/integration/ticket-live-updates.playwright.test.ts --grep "T046|T048|T049|T050|T051|T059" --project=chromium --list` from `ee/server`
   `NEXT_PUBLIC_DISABLE_FEATURE_FLAGS=false NEXT_PUBLIC_FORCE_FEATURE_FLAGS=live-ticket-updates:true PLAYWRIGHT_SKIP_WORKFLOW_WORKER=true npx playwright test src/__tests__/integration/ticket-live-updates.playwright.test.ts --project=chromium` from `ee/server` reached Docker/Hocuspocus/app startup, but the run is currently blocked before test execution by an unrelated Next app boot failure resolving `@alga-psa/core/rateLimit` from `server` instrumentation / `packages/email`.
+- **2026-05-08 — Security/unit coverage complete (`T054`, `T055`, `T056`).**
+  Confirmed the pre-existing dirty test additions were valid and left them in place: [ticketLiveToken.route.test.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/server/src/test/unit/api/ticketLiveToken.route.test.ts) now covers same-tenant denied-token issuance, [useTicketLive.test.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/tickets/src/hooks/useTicketLive.test.tsx) asserts the awareness allowlist excludes email/role/permissions, and [liveUpdates.test.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/tickets/src/lib/liveUpdates.test.ts) asserts Redis payloads contain field names plus author/timestamp only.
+- **2026-05-08 — Verification runbook used for the security/unit slice.**
+  `npx vitest run --config vitest.config.ts src/test/unit/api/ticketLiveToken.route.test.ts` from `server`
+  `npx vitest run --config vitest.config.ts src/hooks/useTicketLive.test.tsx src/lib/liveUpdates.test.ts` from `packages/tickets`
 
 ## Links / Refs
 

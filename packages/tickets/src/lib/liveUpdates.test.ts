@@ -104,4 +104,33 @@ describe('live ticket update helpers', () => {
 
     warnSpy.mockRestore();
   });
+
+  it('T056: publishTicketUpdate payload contains only field names and update metadata', async () => {
+    await publishTicketUpdate({
+      tenantId: 'tenant-1',
+      ticketId: 'ticket-9',
+      updatedFields: ['title'],
+      updatedBy: {
+        userId: 'user-1',
+        displayName: 'Pat Agent',
+      },
+      updatedAt: '2026-05-07T12:00:00.000Z',
+    });
+
+    const [, payloadJson] = publishMock.mock.calls.at(-1) ?? [];
+    const payload = JSON.parse(payloadJson);
+
+    expect(payload).toEqual({
+      updatedFields: ['title'],
+      updatedBy: {
+        userId: 'user-1',
+        displayName: 'Pat Agent',
+      },
+      updatedAt: '2026-05-07T12:00:00.000Z',
+    });
+    expect(payload).not.toHaveProperty('remoteValue');
+    expect(payload).not.toHaveProperty('title');
+    expect(JSON.stringify(payload)).not.toContain('Original');
+    expect(JSON.stringify(payload)).not.toContain('Resolved');
+  });
 });
