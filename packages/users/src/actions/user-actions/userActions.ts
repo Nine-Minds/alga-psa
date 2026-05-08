@@ -300,40 +300,173 @@ export const deleteUser = withAuth(async (
       };
     }
 
+    if (user.user_id === userId) {
+      return {
+        success: false,
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: 'Users cannot delete themselves.',
+        dependencies: [],
+        alternatives: []
+      };
+    }
+
     const result = await deleteEntityWithValidation('user', userId, db, tenant, async (trx, tenantId) => {
-      // Clear reports_to references so subordinates don't point to a deleted user
+      const tenantOrUndef = tenantId || undefined;
+      const actorId = user.user_id;
+
+      // Citus does not enforce ON DELETE SET NULL / CASCADE on distributed
+      // tables, so every FK pointing at users(tenant, user_id) must be
+      // cleared explicitly here regardless of what the migration declared.
+
+      // ── Self-FK on users ──────────────────────────────────────────────
       await trx('users')
-        .where({ reports_to: userId, tenant: tenantId || undefined })
+        .where({ reports_to: userId, tenant: tenantOrUndef })
         .update({ reports_to: null });
 
-      await trx('workflow_tasks')
-        .where({ completed_by: userId, tenant: tenantId || undefined })
-        .update({ completed_by: null });
-
-      await trx('boards')
-        .where({ default_assigned_to: userId, tenant: tenantId })
-        .update({ default_assigned_to: null });
-
-      if (isEnterprise && (await trx.schema.hasTable('platform_notification_recipients'))) {
-        await trx('platform_notification_recipients')
-          .where({ user_id: userId, tenant: tenantId || undefined })
-          .del();
+      // ── Audit / owner columns (nullable) → SET NULL ───────────────────
+      const nullColumns: ReadonlyArray<readonly [string, string]> = [
+        ['boards', 'default_assigned_to'],
+        ['boards', 'manager_user_id'],
+        ['workflow_tasks', 'completed_by'],
+        ['comments', 'user_id'],
+        ['client_contracts', 'assigned_to'],
+        ['client_contracts', 'last_action_by'],
+        ['contract_pricing_schedules', 'created_by'],
+        ['contract_pricing_schedules', 'updated_by'],
+        ['contract_template_pricing_schedules', 'created_by'],
+        ['contract_template_pricing_schedules', 'updated_by'],
+        ['escalation_managers', 'manager_user_id'],
+        ['external_files', 'deleted_by_id'],
+        ['external_tax_imports', 'imported_by'],
+        ['invoice_template_assignments', 'created_by'],
+        ['project_tasks', 'assigned_to'],
+        ['projects', 'assigned_to'],
+        ['quote_activities', 'performed_by'],
+        ['quote_document_template_assignments', 'created_by'],
+        ['quote_items', 'created_by'],
+        ['quote_items', 'updated_by'],
+        ['quotes', 'accepted_by'],
+        ['quotes', 'created_by'],
+        ['quotes', 'updated_by'],
+        ['service_categories', 'created_by'],
+        ['service_categories', 'updated_by'],
+        ['sla_audit_log', 'triggered_by'],
+        ['statuses', 'created_by'],
+        ['tag_mappings', 'created_by'],
+        ['task_resources', 'additional_user_id'],
+        ['ticket_resources', 'additional_user_id'],
+        ['time_entries', 'created_by'],
+        ['time_entries', 'updated_by'],
+        ['time_sheets', 'approved_by'],
+        ['authorization_bundles', 'created_by'],
+        ['authorization_bundles', 'updated_by'],
+        ['authorization_bundle_revisions', 'created_by'],
+        ['authorization_bundle_revisions', 'updated_by'],
+        ['authorization_bundle_revisions', 'published_by'],
+        ['authorization_bundle_assignments', 'created_by'],
+        ['authorization_bundle_assignments', 'updated_by'],
+        ['authorization_bundle_rules', 'created_by'],
+      ];
+      for (const [table, column] of nullColumns) {
+        await trx(table)
+          .where({ [column]: userId, tenant: tenantOrUndef })
+          .update({ [column]: null });
       }
-      await trx('user_roles').where({ user_id: userId, tenant: tenantId || undefined }).del();
-      await trx('user_preferences').where({ user_id: userId, tenant: tenantId || undefined }).del();
 
-      // Delete activity group items before groups (items.group_id → groups)
+      // ── Audit columns (NOT NULL) → reassign to deleting actor ─────────
+      // The row holds content other users still see (documents, lookups,
+      // history). Reassigning preserves the row; the audit trail loses
+      // some fidelity but no data is lost.
+      const reassignColumns: ReadonlyArray<readonly [string, string]> = [
+        ['asset_associations', 'created_by'],
+        ['asset_document_associations', 'created_by'],
+        ['asset_history', 'changed_by'],
+        ['asset_maintenance_history', 'performed_by'],
+        ['asset_maintenance_schedules', 'created_by'],
+        ['asset_service_history', 'performed_by'],
+        ['asset_ticket_associations', 'created_by'],
+        ['categories', 'created_by'],
+        ['document_content', 'created_by_id'],
+        ['document_content', 'updated_by_id'],
+        ['documents', 'created_by'],
+        ['external_files', 'uploaded_by_id'],
+        ['file_references', 'created_by'],
+        ['impacts', 'created_by'],
+        ['priorities', 'created_by'],
+        ['severities', 'created_by'],
+        ['urgencies', 'created_by'],
+        ['project_templates', 'created_by'],
+        ['tenant_telemetry_settings', 'updated_by'],
+      ];
+      for (const [table, column] of reassignColumns) {
+        await trx(table)
+          .where({ [column]: userId, tenant: tenantOrUndef })
+          .update({ [column]: actorId });
+      }
+
+      // ── User-scoped rows → DELETE ─────────────────────────────────────
+      // Rows that have no meaning without the user.
+      const deleteByUserId = [
+        'sessions',
+        'password_reset_tokens',
+        'user_notification_preferences',
+        'user_internal_notification_preferences',
+        'internal_notifications',
+        'notification_logs',
+        'mobile_push_tokens',
+        'portal_domain_session_otts',
+        'telemetry_consent_log',
+        'calendar_providers',
+        'company_email_settings',
+        'team_members',
+        'schedule_entry_assignees',
+        'comment_reactions',
+        'project_task_comment_reactions',
+        'project_task_comments',
+        'project_template_task_resources',
+        'time_sheet_comments',
+        'user_roles',
+        'user_preferences',
+      ];
+      for (const table of deleteByUserId) {
+        await trx(table).where({ user_id: userId, tenant: tenantOrUndef }).del();
+      }
+
+      // import_jobs uses created_by, not user_id
+      await trx('import_jobs').where({ created_by: userId, tenant: tenantOrUndef }).del();
+
+      // Activity group items must precede groups (items.group_id → groups).
       await trx('user_activity_group_items')
-        .where({ tenant: tenantId || undefined })
+        .where({ tenant: tenantOrUndef })
         .whereIn('group_id', function () {
           this.select('group_id')
             .from('user_activity_groups')
-            .where({ user_id: userId, tenant: tenantId || undefined });
+            .where({ user_id: userId, tenant: tenantOrUndef });
         })
         .del();
-      await trx('user_activity_groups').where({ user_id: userId, tenant: tenantId || undefined }).del();
+      await trx('user_activity_groups').where({ user_id: userId, tenant: tenantOrUndef }).del();
 
-      const deleted = await trx('users').where({ user_id: userId, tenant: tenantId || undefined }).del();
+      // ── EE-only tables (guarded) ──────────────────────────────────────
+      if (isEnterprise) {
+        if (await trx.schema.hasTable('platform_notification_recipients')) {
+          await trx('platform_notification_recipients')
+            .where({ user_id: userId, tenant: tenantOrUndef })
+            .del();
+        }
+        if (await trx.schema.hasTable('user_auth_accounts')) {
+          await trx('user_auth_accounts')
+            .where({ user_id: userId, tenant: tenantOrUndef })
+            .del();
+        }
+        if (await trx.schema.hasTable('chats')) {
+          await trx('chats')
+            .where({ user_id: userId, tenant: tenantOrUndef })
+            .update({ user_id: null });
+        }
+      }
+
+      const deleted = await trx('users').where({ user_id: userId, tenant: tenantOrUndef }).del();
       if (!deleted || deleted === 0) {
         throw new Error('User record not found or could not be deleted');
       }

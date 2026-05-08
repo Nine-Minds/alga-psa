@@ -1004,17 +1004,46 @@ export const deleteAsset = withAuth(async (
                 throw new Error('Asset not found');
             }
 
+            // Citus does not enforce ON DELETE CASCADE across distributed
+            // tables, so every FK pointing at assets must be cleared
+            // explicitly here regardless of the migration's onDelete clause.
+
             await deleteExtensionData(trx, tenantId, asset_id, asset.asset_type);
+            // Asset-type may be wrong/null on stale rows; sweep every known
+            // extension subtype table so the asset row can actually delete.
+            for (const subtypeTable of [
+                'workstation_assets',
+                'server_assets',
+                'mobile_device_assets',
+                'network_device_assets',
+                'printer_assets',
+            ]) {
+                await trx(subtypeTable).where({ tenant: tenantId, asset_id }).delete();
+            }
 
             await trx('asset_history').where({ tenant: tenantId, asset_id }).delete();
             await trx('asset_maintenance_history').where({ tenant: tenantId, asset_id }).delete();
             await trx('asset_maintenance_schedules').where({ tenant: tenantId, asset_id }).delete();
+            await trx('asset_maintenance_notifications').where({ tenant: tenantId, asset_id }).delete();
+            await trx('asset_ticket_associations').where({ tenant: tenantId, asset_id }).delete();
+            await trx('asset_service_history').where({ tenant: tenantId, asset_id }).delete();
+            await trx('asset_document_associations').where({ tenant: tenantId, asset_id }).delete();
+            if (await trx.schema.hasTable('asset_facts')) {
+                await trx('asset_facts').where({ tenant: tenantId, asset_id }).delete();
+            }
+            if (await trx.schema.hasTable('asset_software')) {
+                await trx('asset_software').where({ tenant: tenantId, asset_id }).delete();
+            }
             await trx('asset_relationships')
                 .where({ tenant: tenantId, parent_asset_id: asset_id })
                 .orWhere({ tenant: tenantId, child_asset_id: asset_id })
                 .delete();
             await trx('asset_associations').where({ tenant: tenantId, asset_id }).delete();
             await trx('document_associations')
+                .where({ tenant: tenantId, entity_type: 'asset', entity_id: asset_id })
+                .delete();
+            // Polymorphic link table — no FK, but otherwise leaves dangling rows.
+            await trx('ticket_entity_links')
                 .where({ tenant: tenantId, entity_type: 'asset', entity_id: asset_id })
                 .delete();
             await trx('tenant_external_entity_mappings')
