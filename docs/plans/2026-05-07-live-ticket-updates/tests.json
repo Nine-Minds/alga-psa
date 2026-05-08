@@ -266,7 +266,7 @@
   {
     "id": "T059",
     "description": "E2E: B saves a title change; A sees the new title within ~500ms without reload (verifies title flows through the same save-time broadcast as dropdown fields).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002", "F003", "F022", "F023"]
   },
   {

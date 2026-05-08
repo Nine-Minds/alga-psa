@@ -159,6 +159,17 @@ npm run test:e2e
 - **2026-05-08 — Verification runbook used for the editing-indicator slice.**
   `npx vitest run --config vitest.config.ts --environment jsdom --coverage.enabled false src/components/ticket/__tests__/TicketInfo.liveEditing.test.tsx src/components/ticket/__tests__/TicketDetails.remoteUpdates.test.tsx src/components/ticket/__tests__/TicketDetails.liveTimerPolicy.test.tsx src/components/ticket/TicketInfo.boardChangeStatusReselection.test.tsx src/components/ticket/__tests__/ticket-properties-inline-contact.test.tsx src/components/ticket/__tests__/TicketProperties.liveTimerPolicy.test.tsx` from `packages/tickets`
   `npm -w @alga-psa/tickets run typecheck`
+- **2026-05-08 — Playwright live-ticket harness + `T059` title broadcast spec complete.**
+  Added [ticket-live-updates.playwright.test.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/ee/server/src/__tests__/integration/ticket-live-updates.playwright.test.ts) with shared tenant/user/ticket seed helpers and the first live browser spec covering cross-user title propagation without reload.
+  Updated [docker-compose.playwright-workflow-deps.yml](/Users/natalliabukhtsik/Desktop/projects/bigmac/docker-compose.playwright-workflow-deps.yml) and [playwright.config.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/ee/server/playwright.config.ts) so Playwright can boot an authenticated Redis plus a real Hocuspocus container on a reserved port, and so targeted runs can skip the unrelated workflow-worker image via `PLAYWRIGHT_SKIP_WORKFLOW_WORKER=true`.
+  Refreshed [hocuspocus/package-lock.json](/Users/natalliabukhtsik/Desktop/projects/bigmac/hocuspocus/package-lock.json) after the earlier `jsonwebtoken` dependency addition; without that lockfile sync the Hocuspocus Docker image could not build (`npm ci` failed).
+- **2026-05-08 — Verification runbook used for the Playwright title-live slice.**
+  `PLAYWRIGHT_DB_PORT=55439 REDIS_PORT=56379 PLAYWRIGHT_HOCUSPOCUS_PORT=51234 REDIS_PASSWORD=sebastian123 HOCUSPOCUS_JWT_SECRET=dev-hocuspocus-jwt-secret docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-live-ticket-smoke up -d --wait --wait-timeout 60 postgres-playwright redis-playwright`
+  `PLAYWRIGHT_DB_HOST=localhost PLAYWRIGHT_DB_PORT=55439 PLAYWRIGHT_DB_NAME=alga_contract_wizard_test PLAYWRIGHT_DB_ADMIN_USER=postgres PLAYWRIGHT_DB_ADMIN_PASSWORD=postpass123 PLAYWRIGHT_DB_APP_USER=app_user PLAYWRIGHT_DB_APP_PASSWORD=postpass123 node --import tsx/esm scripts/bootstrap-playwright-db.ts`
+  `PLAYWRIGHT_DB_PORT=55439 REDIS_PORT=56379 PLAYWRIGHT_HOCUSPOCUS_PORT=51234 REDIS_PASSWORD=sebastian123 HOCUSPOCUS_JWT_SECRET=dev-hocuspocus-jwt-secret docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-live-ticket-smoke up -d --build --wait --wait-timeout 120 hocuspocus-playwright`
+  `PW_WEBSERVER=false NEXT_PUBLIC_DISABLE_FEATURE_FLAGS=false NEXT_PUBLIC_FORCE_FEATURE_FLAGS=live-ticket-updates:true PLAYWRIGHT_SKIP_WORKFLOW_WORKER=true npx playwright test ee/server/src/__tests__/integration/ticket-live-updates.playwright.test.ts --grep T059 --project=chromium --list` from `ee/server`
+  `npm run typecheck --workspace=ee/server`
+  Full Playwright execution remained blocked after implementation because the local Docker daemon became unavailable (`Cannot connect to the Docker daemon at unix:///Users/natalliabukhtsik/.orbstack/run/docker.sock`) after the harness smoke run; the spec is implemented and discovered, but I could not complete a browser execution in this environment.
 
 ## Links / Refs
 
