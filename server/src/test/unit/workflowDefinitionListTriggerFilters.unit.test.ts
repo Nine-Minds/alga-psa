@@ -59,6 +59,9 @@ const knexMock: any = vi.fn((table: string) => {
   throw new Error(`Unexpected table ${table}`);
 });
 knexMock.raw = vi.fn((sql: string) => sql);
+knexMock.schema = {
+  hasTable: vi.fn(async (table: string) => table === 'tenant_workflow_schedule')
+};
 
 vi.mock('@alga-psa/core', () => ({
   deleteEntityWithValidation: vi.fn()
@@ -86,6 +89,7 @@ import { listWorkflowDefinitionsPagedAction } from '@alga-psa/workflows/actions/
 
 describe('Workflow definition list trigger filters', () => {
   beforeEach(() => {
+    knexMock.schema.hasTable.mockResolvedValue(true);
     const totalBuilder = createBuilder({ firstResult: { count: '1' } });
     const activeBuilder = createBuilder({ firstResult: { count: '0' } });
     const draftBuilder = createBuilder({ firstResult: { count: '1' } });
@@ -110,6 +114,17 @@ describe('Workflow definition list trigger filters', () => {
     builderQueue = [countQueryBuilder, itemsQueryBuilder, countBase];
     knexMock.mockClear();
     knexMock.raw.mockClear();
+  });
+
+  it('skips schedule-state lookup when the optional schedule table is unavailable', async () => {
+    knexMock.schema.hasTable.mockResolvedValue(false);
+
+    await listWorkflowDefinitionsPagedAction({
+      page: 1,
+      pageSize: 20,
+    });
+
+    expect(knexMock).not.toHaveBeenCalledWith('tenant_workflow_schedule');
   });
 
   it('T016: workflows with one-time schedule triggers are filtered and reported via trigger.type=schedule', async () => {
