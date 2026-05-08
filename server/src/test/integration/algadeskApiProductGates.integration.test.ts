@@ -16,7 +16,7 @@ describe('algadesk API key product gates (integration)', () => {
     await db?.destroy();
   });
 
-  it('RT011: allows representative Algadesk endpoints and denies PSA-only endpoints with structured 403', async () => {
+  it('RT011: allows representative AlgaDesk endpoints and denies PSA-only endpoints with structured 403', async () => {
     process.env.DB_NAME_SERVER = 'test_database';
     process.env.DB_HOST = 'localhost';
     process.env.DB_PORT = '5432';
@@ -48,8 +48,8 @@ describe('algadesk API key product gates (integration)', () => {
     await db('tenants').insert({
       tenant: tenantId,
       ...(Object.prototype.hasOwnProperty.call(tenantColumns, 'company_name')
-        ? { company_name: 'Algadesk RT011 Tenant' }
-        : { client_name: 'Algadesk RT011 Tenant' }),
+        ? { company_name: 'AlgaDesk RT011 Tenant' }
+        : { client_name: 'AlgaDesk RT011 Tenant' }),
       email: `tenant-${tenantId.slice(0, 8)}@example.com`,
       product_code: 'algadesk',
       ...(Object.prototype.hasOwnProperty.call(tenantColumns, 'created_at') ? { created_at: db.fn.now() } : {}),

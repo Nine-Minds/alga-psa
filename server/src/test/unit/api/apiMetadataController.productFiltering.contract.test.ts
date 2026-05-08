@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 import { ApiMetadataController } from '../../../lib/api/controllers/ApiMetadataController';
 
 describe('ApiMetadataController product filtering contract', () => {
-  it('filters endpoints and openapi payloads for Algadesk while preserving allowed API surfaces', async () => {
+  it('filters endpoints and openapi payloads for AlgaDesk while preserving allowed API surfaces', async () => {
     const controller = new ApiMetadataController();
     vi.spyOn(controller as any, 'authenticate').mockResolvedValue(
       Object.assign(new NextRequest('http://localhost:3000/api/v1/meta/endpoints', { headers: { 'x-api-key': 'k' } }), {

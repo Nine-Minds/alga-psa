@@ -15,7 +15,7 @@ import MspContactTickets from './MspContactTickets';
 
 const renderNothing = () => null;
 
-export function AlgadeskClientCrossFeatureProvider({ children }: { children: ReactNode }) {
+export function AlgaDeskClientCrossFeatureProvider({ children }: { children: ReactNode }) {
   const renderQuickAddTicket = useCallback(
     (props: QuickAddTicketRenderProps) => (
       <QuickAddTicket
@@ -26,7 +26,7 @@ export function AlgadeskClientCrossFeatureProvider({ children }: { children: Rea
         prefilledClient={props.prefilledClient}
         prefilledContact={props.prefilledContact}
         prefilledDescription={props.prefilledDescription}
-        isAlgadeskMode
+        isAlgaDeskMode
       />
     ),
     []

@@ -7,12 +7,12 @@ const sourcePath = path.resolve(
   '../../../../../packages/clients/src/components/contacts/ContactDetails.tsx',
 );
 
-describe('ContactDetails Algadesk product mode contract', () => {
-  it('hides documents tab when isAlgadeskMode is enabled', () => {
+describe('ContactDetails AlgaDesk product mode contract', () => {
+  it('hides documents tab when isAlgaDeskMode is enabled', () => {
     const source = readFileSync(sourcePath, 'utf8');
 
-    expect(source).toContain('isAlgadeskMode?: boolean;');
-    expect(source).toContain('isAlgadeskMode = false');
+    expect(source).toContain('isAlgaDeskMode?: boolean;');
+    expect(source).toContain('isAlgaDeskMode = false');
     expect(source).toContain("baseTabContent.filter((tab) => tab.id !== 'documents')");
   });
 });

@@ -3,7 +3,7 @@
 import React from "react";
 import { AppSessionProvider } from "@alga-psa/auth/client";
 import DefaultLayout from "@/components/layout/DefaultLayout";
-import AlgadeskMspShell from "@/components/layout/AlgadeskMspShell";
+import AlgaDeskMspShell from "@/components/layout/AlgaDeskMspShell";
 import { TagProvider } from "@alga-psa/tags/context";
 import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHogUserIdentifier";
 import { ClientUIStateProvider } from "@alga-psa/ui/ui-reflection/ClientUIStateProvider";
@@ -90,7 +90,7 @@ export function MspLayoutClient({
     return null;
   }
 
-  const isAlgadesk = productCode === 'algadesk';
+  const isAlgaDesk = productCode === 'algadesk';
 
   const content = (
     <AppSessionProvider session={session}>
@@ -101,16 +101,16 @@ export function MspLayoutClient({
             <ClientUIStateProvider
               initialPageState={{
                 id: 'msp-portal',
-                title: isAlgadesk ? 'Algadesk MSP' : 'MSP Portal',
+                title: isAlgaDesk ? 'AlgaDesk MSP' : 'MSP Portal',
                 components: []
               }}
             >
               {isOnboardingPage ? children : (
-                isAlgadesk ? (
+                isAlgaDesk ? (
                   routeBehavior === 'allowed' ? (
-                    <AlgadeskMspShell initialSidebarCollapsed={initialSidebarCollapsed}>
+                    <AlgaDeskMspShell initialSidebarCollapsed={initialSidebarCollapsed}>
                       {children}
-                    </AlgadeskMspShell>
+                    </AlgaDeskMspShell>
                   ) : (
                     <ProductRouteBoundary behavior={routeBehavior} scope="msp" />
                   )

@@ -64,7 +64,7 @@
     "shell": {
       "title": "Setup Your System",
       "description": "Let's get your workspace configured and ready to use.",
-      "algadeskTitle": "Set Up Algadesk",
+      "algadeskTitle": "Set Up AlgaDesk",
       "algadeskDescription": "Configure your help desk workspace, clients, and ticketing defaults."
     }
   },

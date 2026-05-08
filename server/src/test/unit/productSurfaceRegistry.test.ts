@@ -10,13 +10,13 @@ import {
 } from '../../lib/productSurfaceRegistry';
 
 describe('product surface registry', () => {
-  it('T003: classifies representative Algadesk MSP routes as allowed, upgrade-boundary, and not-found', () => {
+  it('T003: classifies representative AlgaDesk MSP routes as allowed, upgrade-boundary, and not-found', () => {
     expect(resolveProductRouteBehavior('algadesk', '/msp/tickets')).toBe('allowed');
     expect(resolveProductRouteBehavior('algadesk', '/msp/billing')).toBe('upgrade_boundary');
     expect(resolveProductRouteBehavior('algadesk', '/msp/test/ui-kit')).toBe('not_found');
   });
 
-  it('T003: classifies representative Algadesk portal routes correctly', () => {
+  it('T003: classifies representative AlgaDesk portal routes correctly', () => {
     expect(resolveProductRouteBehavior('algadesk', '/client-portal/tickets')).toBe('allowed');
     expect(resolveProductRouteBehavior('algadesk', '/client-portal/client-settings')).toBe('allowed');
     expect(resolveProductRouteBehavior('algadesk', '/client-portal/settings')).toBe('not_found');
@@ -85,7 +85,7 @@ describe('product surface registry', () => {
 
 
 
-  it('T003: narrows Algadesk settings navigation tabs and excludes denied direct settings routes', () => {
+  it('T003: narrows AlgaDesk settings navigation tabs and excludes denied direct settings routes', () => {
     const filteredSettings = filterMenuSectionsByProduct('algadesk', [
       {
         items: [
@@ -108,7 +108,7 @@ describe('product surface registry', () => {
     ]);
   });
 
-  it('T003: keeps PSA route and API behavior fully allowed for representative denied Algadesk groups', () => {
+  it('T003: keeps PSA route and API behavior fully allowed for representative denied AlgaDesk groups', () => {
     expect(resolveProductRouteBehavior('psa', '/msp/settings/extensions')).toBe('allowed');
     expect(resolveProductApiBehavior('psa', '/api/v1/financial')).toBe('allowed');
     expect(resolveProductApiBehavior('psa', '/api/email/oauth/initiate')).toBe('allowed');

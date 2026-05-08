@@ -145,7 +145,7 @@
   },
   {
     "id": "R019",
-    "description": "Make ProductProvider resolve Algadesk from session without unsafe casts where possible.",
+    "description": "Make ProductProvider resolve AlgaDesk from session without unsafe casts where possible.",
     "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
@@ -161,7 +161,7 @@
   },
   {
     "id": "R021",
-    "description": "Add unit coverage proving an Algadesk session resolves `useProduct().isAlgadesk` true.",
+    "description": "Add unit coverage proving an AlgaDesk session resolves `useProduct().isAlgaDesk` true.",
     "implemented": true,
     "prdRefs": [
       "TypeScript and auth session"
@@ -233,7 +233,7 @@
   },
   {
     "id": "R030",
-    "description": "Allow `/client-portal/client-settings` for Algadesk in portal route rules.",
+    "description": "Allow `/client-portal/client-settings` for AlgaDesk in portal route rules.",
     "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
@@ -249,7 +249,7 @@
   },
   {
     "id": "R032",
-    "description": "Treat `/msp/settings/notifications` as denied or upgrade-boundary for Algadesk unless explicitly narrowed.",
+    "description": "Treat `/msp/settings/notifications` as denied or upgrade-boundary for AlgaDesk unless explicitly narrowed.",
     "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
@@ -257,7 +257,7 @@
   },
   {
     "id": "R033",
-    "description": "Treat `/msp/settings/extensions` as denied or upgrade-boundary for Algadesk.",
+    "description": "Treat `/msp/settings/extensions` as denied or upgrade-boundary for AlgaDesk.",
     "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
@@ -265,7 +265,7 @@
   },
   {
     "id": "R034",
-    "description": "Treat broad `/msp/settings/integrations` and integration callback paths as denied for Algadesk except focused email-channel paths.",
+    "description": "Treat broad `/msp/settings/integrations` and integration callback paths as denied for AlgaDesk except focused email-channel paths.",
     "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
@@ -289,7 +289,7 @@
   },
   {
     "id": "R037",
-    "description": "Correct Algadesk API KB allowlist to `/api/v1/kb-articles`.",
+    "description": "Correct AlgaDesk API KB allowlist to `/api/v1/kb-articles`.",
     "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
@@ -409,7 +409,7 @@
   },
   {
     "id": "R052",
-    "description": "Add representative registry tests for exact allowed Algadesk routes.",
+    "description": "Add representative registry tests for exact allowed AlgaDesk routes.",
     "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
@@ -417,7 +417,7 @@
   },
   {
     "id": "R053",
-    "description": "Add representative registry tests for exact denied Algadesk routes.",
+    "description": "Add representative registry tests for exact denied AlgaDesk routes.",
     "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
@@ -425,7 +425,7 @@
   },
   {
     "id": "R054",
-    "description": "Add representative registry tests for unknown Algadesk route/API fail-closed behavior.",
+    "description": "Add representative registry tests for unknown AlgaDesk route/API fail-closed behavior.",
     "implemented": true,
     "prdRefs": [
       "Product surface registry correction"
@@ -441,26 +441,26 @@
   },
   {
     "id": "R056",
-    "description": "Replace raw Algadesk children rendering in MspLayoutClient with a real Algadesk shell component.",
+    "description": "Replace raw AlgaDesk children rendering in MspLayoutClient with a real AlgaDesk shell component.",
     "implemented": true,
     "prdRefs": [
-      "Algadesk MSP shell remediation"
+      "AlgaDesk MSP shell remediation"
     ]
   },
   {
     "id": "R057",
-    "description": "Render an Algadesk sidebar in the Algadesk MSP shell.",
+    "description": "Render an AlgaDesk sidebar in the AlgaDesk MSP shell.",
     "implemented": true,
     "prdRefs": [
-      "Algadesk MSP shell remediation"
+      "AlgaDesk MSP shell remediation"
     ]
   },
   {
     "id": "R058",
-    "description": "Render a header/app chrome in the Algadesk MSP shell.",
+    "description": "Render a header/app chrome in the AlgaDesk MSP shell.",
     "implemented": true,
     "prdRefs": [
-      "Algadesk MSP shell remediation"
+      "AlgaDesk MSP shell remediation"
     ]
   },
   {
@@ -468,55 +468,55 @@
     "description": "Render a main content container matching normal page layout expectations.",
     "implemented": true,
     "prdRefs": [
-      "Algadesk MSP shell remediation"
+      "AlgaDesk MSP shell remediation"
     ]
   },
   {
     "id": "R060",
-    "description": "Avoid ActivityDrawerProvider in Algadesk shell unless explicitly needed for help desk.",
+    "description": "Avoid ActivityDrawerProvider in AlgaDesk shell unless explicitly needed for help desk.",
     "implemented": true,
     "prdRefs": [
-      "Algadesk MSP shell remediation"
+      "AlgaDesk MSP shell remediation"
     ]
   },
   {
     "id": "R061",
-    "description": "Avoid SchedulingProviderWithCallbacks in Algadesk shell.",
+    "description": "Avoid SchedulingProviderWithCallbacks in AlgaDesk shell.",
     "implemented": true,
     "prdRefs": [
-      "Algadesk MSP shell remediation"
+      "AlgaDesk MSP shell remediation"
     ]
   },
   {
     "id": "R062",
-    "description": "Avoid project integration providers in Algadesk shell.",
+    "description": "Avoid project integration providers in AlgaDesk shell.",
     "implemented": true,
     "prdRefs": [
-      "Algadesk MSP shell remediation"
+      "AlgaDesk MSP shell remediation"
     ]
   },
   {
     "id": "R063",
-    "description": "Avoid asset/document full-management providers in Algadesk shell except ticket/KB-safe providers.",
+    "description": "Avoid asset/document full-management providers in AlgaDesk shell except ticket/KB-safe providers.",
     "implemented": true,
     "prdRefs": [
-      "Algadesk MSP shell remediation"
+      "AlgaDesk MSP shell remediation"
     ]
   },
   {
     "id": "R064",
-    "description": "Avoid AIChatContextProvider in Algadesk shell unless AI is explicitly excluded from UI and provider has no user-facing effect.",
+    "description": "Avoid AIChatContextProvider in AlgaDesk shell unless AI is explicitly excluded from UI and provider has no user-facing effect.",
     "implemented": true,
     "prdRefs": [
-      "Algadesk MSP shell remediation"
+      "AlgaDesk MSP shell remediation"
     ]
   },
   {
     "id": "R065",
-    "description": "Keep TagProvider and required i18n/session/tier/product providers in Algadesk shell.",
+    "description": "Keep TagProvider and required i18n/session/tier/product providers in AlgaDesk shell.",
     "implemented": true,
     "prdRefs": [
-      "Algadesk MSP shell remediation"
+      "AlgaDesk MSP shell remediation"
     ]
   },
   {
@@ -524,7 +524,7 @@
     "description": "Fix SidebarWithFeatureFlags generic return types so filtered sections typecheck as NavigationSection arrays.",
     "implemented": true,
     "prdRefs": [
-      "Algadesk MSP shell remediation"
+      "AlgaDesk MSP shell remediation"
     ]
   },
   {
@@ -532,7 +532,7 @@
     "description": "Ensure product-filtered settings sections typecheck without unsafe broad casts.",
     "implemented": true,
     "prdRefs": [
-      "Algadesk MSP shell remediation"
+      "AlgaDesk MSP shell remediation"
     ]
   },
   {
@@ -540,15 +540,15 @@
     "description": "Keep PSA MspLayoutClient path using DefaultLayout unchanged for PSA tenants.",
     "implemented": true,
     "prdRefs": [
-      "Algadesk MSP shell remediation"
+      "AlgaDesk MSP shell remediation"
     ]
   },
   {
     "id": "R069",
-    "description": "Add a shell test that Algadesk renders sidebar/header, not only raw children.",
+    "description": "Add a shell test that AlgaDesk renders sidebar/header, not only raw children.",
     "implemented": true,
     "prdRefs": [
-      "Algadesk MSP shell remediation"
+      "AlgaDesk MSP shell remediation"
     ]
   },
   {
@@ -657,7 +657,7 @@
   },
   {
     "id": "R083",
-    "description": "Add tests proving excluded page loaders do not call their data actions for Algadesk.",
+    "description": "Add tests proving excluded page loaders do not call their data actions for AlgaDesk.",
     "implemented": true,
     "prdRefs": [
       "Server-side route enforcement"
@@ -737,7 +737,7 @@
   },
   {
     "id": "R093",
-    "description": "Ensure custom tag/client/contact methods preserve allowed Algadesk behavior while still passing product gate.",
+    "description": "Ensure custom tag/client/contact methods preserve allowed AlgaDesk behavior while still passing product gate.",
     "implemented": true,
     "prdRefs": [
       "API enforcement remediation"
@@ -769,7 +769,7 @@
   },
   {
     "id": "R097",
-    "description": "Return structured 403 PRODUCT_ACCESS_DENIED for denied Algadesk API requests.",
+    "description": "Return structured 403 PRODUCT_ACCESS_DENIED for denied AlgaDesk API requests.",
     "implemented": true,
     "prdRefs": [
       "API enforcement remediation"
@@ -777,7 +777,7 @@
   },
   {
     "id": "R098",
-    "description": "Keep allowed Algadesk ticket/client/contact/KB/email APIs functional.",
+    "description": "Keep allowed AlgaDesk ticket/client/contact/KB/email APIs functional.",
     "implemented": true,
     "prdRefs": [
       "API enforcement remediation"
@@ -793,7 +793,7 @@
   },
   {
     "id": "R100",
-    "description": "Filter API endpoint metadata by product for Algadesk.",
+    "description": "Filter API endpoint metadata by product for AlgaDesk.",
     "implemented": true,
     "prdRefs": [
       "Metadata and OpenAPI remediation"
@@ -801,7 +801,7 @@
   },
   {
     "id": "R101",
-    "description": "Filter OpenAPI paths by product for Algadesk.",
+    "description": "Filter OpenAPI paths by product for AlgaDesk.",
     "implemented": true,
     "prdRefs": [
       "Metadata and OpenAPI remediation"
@@ -809,7 +809,7 @@
   },
   {
     "id": "R102",
-    "description": "Filter API docs output by product for Algadesk.",
+    "description": "Filter API docs output by product for AlgaDesk.",
     "implemented": true,
     "prdRefs": [
       "Metadata and OpenAPI remediation"
@@ -817,7 +817,7 @@
   },
   {
     "id": "R103",
-    "description": "Filter generated permission metadata by product for Algadesk.",
+    "description": "Filter generated permission metadata by product for AlgaDesk.",
     "implemented": true,
     "prdRefs": [
       "Metadata and OpenAPI remediation"
@@ -825,7 +825,7 @@
   },
   {
     "id": "R104",
-    "description": "Filter metadata stats/counts so Algadesk counts only visible endpoints/schemas/permissions.",
+    "description": "Filter metadata stats/counts so AlgaDesk counts only visible endpoints/schemas/permissions.",
     "implemented": true,
     "prdRefs": [
       "Metadata and OpenAPI remediation"
@@ -833,7 +833,7 @@
   },
   {
     "id": "R105",
-    "description": "Filter schemas/models that are exclusively PSA-only from Algadesk metadata where feasible.",
+    "description": "Filter schemas/models that are exclusively PSA-only from AlgaDesk metadata where feasible.",
     "implemented": true,
     "prdRefs": [
       "Metadata and OpenAPI remediation"
@@ -841,7 +841,7 @@
   },
   {
     "id": "R106",
-    "description": "Document any shared schemas intentionally still visible to Algadesk.",
+    "description": "Document any shared schemas intentionally still visible to AlgaDesk.",
     "implemented": true,
     "prdRefs": [
       "Metadata and OpenAPI remediation"
@@ -857,7 +857,7 @@
   },
   {
     "id": "R108",
-    "description": "Integrate relevant contact-detail Algadesk mode changes from the current uncommitted working tree.",
+    "description": "Integrate relevant contact-detail AlgaDesk mode changes from the current uncommitted working tree.",
     "implemented": true,
     "prdRefs": [
       "Contact and document leak remediation"
@@ -865,7 +865,7 @@
   },
   {
     "id": "R109",
-    "description": "Prevent Algadesk `/msp/contacts/[id]?tab=documents` from fetching contact documents.",
+    "description": "Prevent AlgaDesk `/msp/contacts/[id]?tab=documents` from fetching contact documents.",
     "implemented": true,
     "prdRefs": [
       "Contact and document leak remediation"
@@ -873,7 +873,7 @@
   },
   {
     "id": "R110",
-    "description": "Prevent Algadesk ContactDetails from rendering the Documents tab.",
+    "description": "Prevent AlgaDesk ContactDetails from rendering the Documents tab.",
     "implemented": true,
     "prdRefs": [
       "Contact and document leak remediation"
@@ -897,7 +897,7 @@
   },
   {
     "id": "R113",
-    "description": "Add product composition tests for Algadesk and PSA contact detail behavior.",
+    "description": "Add product composition tests for AlgaDesk and PSA contact detail behavior.",
     "implemented": true,
     "prdRefs": [
       "Contact and document leak remediation"
@@ -921,7 +921,7 @@
   },
   {
     "id": "R116",
-    "description": "Add cleanup for tenants and related data created by Algadesk Playwright tests.",
+    "description": "Add cleanup for tenants and related data created by AlgaDesk Playwright tests.",
     "implemented": true,
     "prdRefs": [
       "Test remediation"

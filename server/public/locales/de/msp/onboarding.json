@@ -64,7 +64,7 @@
     "shell": {
       "title": "System einrichten",
       "description": "Lassen Sie uns Ihren Arbeitsbereich konfigurieren und einsatzbereit machen.",
-      "algadeskTitle": "Algadesk einrichten",
+      "algadeskTitle": "AlgaDesk einrichten",
       "algadeskDescription": "Konfigurieren Sie Ihren Helpdesk-Arbeitsbereich, Kunden und Ticketing-Standardeinstellungen."
     }
   },

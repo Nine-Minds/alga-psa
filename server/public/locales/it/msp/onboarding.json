@@ -64,7 +64,7 @@
     "shell": {
       "title": "Configura il tuo sistema",
       "description": "Configuriamo il tuo workspace e lo rendiamo pronto all'uso.",
-      "algadeskTitle": "Configura Algadesk",
+      "algadeskTitle": "Configura AlgaDesk",
       "algadeskDescription": "Configura l’area di lavoro dell’help desk, i clienti e le impostazioni predefinite dei ticket."
     }
   },

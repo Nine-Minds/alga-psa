@@ -197,7 +197,7 @@ interface ClientDetailsProps {
   isInDrawer?: boolean;
   quickView?: boolean;
   surveySummary?: SurveyClientSatisfactionSummary | null;
-  isAlgadeskMode?: boolean;
+  isAlgaDeskMode?: boolean;
 }
 
 const ClientDetails: React.FC<ClientDetailsProps> = ({
@@ -208,7 +208,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   isInDrawer = false,
   quickView = false,
   surveySummary = null,
-  isAlgadeskMode = false,
+  isAlgaDeskMode = false,
 }) => {
   const { t } = useTranslation('msp/clients');
   const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientTickets, getSlaPolicies } = useClientCrossFeature();
@@ -269,7 +269,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     entraClientSyncFlag.enabled,
     editedClient
   );
-  const shouldRenderPsaOnlyClientSurfaces = !isAlgadeskMode;
+  const shouldRenderPsaOnlyClientSurfaces = !isAlgaDeskMode;
 
   const fetchEntraSyncRunStatus = useCallback(async (runId: string): Promise<string | null> => {
     const response = await fetch(`/api/integrations/entra/sync/runs/${encodeURIComponent(runId)}`, {
@@ -1402,7 +1402,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                   isEditing={false}
                 />
               </div>
-              {!isAlgadeskMode ? renderSurveySummaryCard({ summary: surveySummary }) : null}
+              {!isAlgaDeskMode ? renderSurveySummaryCard({ summary: surveySummary }) : null}
             </div>
           </div>
           
@@ -1658,7 +1658,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   ]);
 
   const tabContent = useMemo(() => {
-    if (!isAlgadeskMode) {
+    if (!isAlgaDeskMode) {
       return baseTabContent;
     }
 
@@ -1673,7 +1673,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       'services',
     ]);
     return baseTabContent.filter((tab) => !excludedTabs.has(tab.id));
-  }, [baseTabContent, isAlgadeskMode]);
+  }, [baseTabContent, isAlgaDeskMode]);
 
   return (
     <ReflectionContainer id={id} label={t('clientDetails.title', { defaultValue: 'Client Details' })}>

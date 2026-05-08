@@ -8,8 +8,8 @@ import {
   resolveProductRouteBehavior,
 } from '../../../lib/productSurfaceRegistry';
 
-describe('Algadesk route/API boundary smoke', () => {
-  it('T018: Algadesk excluded MSP routes resolve to upgrade/not-found boundaries while PSA remains allowed', () => {
+describe('AlgaDesk route/API boundary smoke', () => {
+  it('T018: AlgaDesk excluded MSP routes resolve to upgrade/not-found boundaries while PSA remains allowed', () => {
     const algadeskUpgradeRoutes = [
       '/msp/billing',
       '/msp/projects',
@@ -33,7 +33,7 @@ describe('Algadesk route/API boundary smoke', () => {
     expect(resolveProductRouteBehavior('psa', '/msp/test/ui-kit')).toBe('allowed');
   });
 
-  it('T019: Algadesk API boundary allows ticket/client/contact/KB/email and denies representative PSA-only groups', () => {
+  it('T019: AlgaDesk API boundary allows ticket/client/contact/KB/email and denies representative PSA-only groups', () => {
     const allowedApiPaths = [
       '/api/v1/tickets',
       '/api/v1/clients',
@@ -63,7 +63,7 @@ describe('Algadesk route/API boundary smoke', () => {
     }
   });
 
-  it('T020: Algadesk metadata/OpenAPI visibility omits denied PSA endpoints while PSA keeps visibility', () => {
+  it('T020: AlgaDesk metadata/OpenAPI visibility omits denied PSA endpoints while PSA keeps visibility', () => {
     expect(isApiVisibleInMetadata('algadesk', '/api/v1/tickets')).toBe(true);
     expect(isApiVisibleInMetadata('algadesk', '/api/v1/billing-dashboard')).toBe(false);
     expect(isApiVisibleInMetadata('psa', '/api/v1/tickets')).toBe(true);

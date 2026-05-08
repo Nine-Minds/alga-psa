@@ -1,4 +1,4 @@
-# Scratchpad — Algadesk Product Seam Remediation
+# Scratchpad — AlgaDesk Product Seam Remediation
 
 - Plan slug: `2026-05-06-algadesk-remediation-product-seam`
 - Created: `2026-05-06`
@@ -7,19 +7,19 @@
 
 ## What This Is
 
-Working notes for remediating the current Algadesk implementation. This plan exists because the branch has meaningful product-seam work but is not merge-ready. Use this folder as the source of truth for the remediation job.
+Working notes for remediating the current AlgaDesk implementation. This plan exists because the branch has meaningful product-seam work but is not merge-ready. Use this folder as the source of truth for the remediation job.
 
 ## Decisions Carried Forward from Parent Plan
 
-- (2026-05-05) Algadesk is an orthogonal product entitlement, not a new PSA tier.
-- (2026-05-05) Algadesk includes email-to-ticket and ticket reply/update by email.
-- (2026-05-05) Algadesk includes ticket attachments and KB only, not full document management.
-- (2026-05-05) Algadesk includes free-form ticket creation only, not service request forms/catalog in v1.
-- (2026-05-05) Algadesk excludes SLA module in v1.
+- (2026-05-05) AlgaDesk is an orthogonal product entitlement, not a new PSA tier.
+- (2026-05-05) AlgaDesk includes email-to-ticket and ticket reply/update by email.
+- (2026-05-05) AlgaDesk includes ticket attachments and KB only, not full document management.
+- (2026-05-05) AlgaDesk includes free-form ticket creation only, not service request forms/catalog in v1.
+- (2026-05-05) AlgaDesk excludes SLA module in v1.
 - (2026-05-05) Direct browser access behavior is mixed: branded upgrade boundaries for major human-facing PSA areas, product-denied/not-found for internal/API-only routes.
 - (2026-05-05) Current routes remain canonical for v1; `/desk/*` aliases can be added later.
 - (2026-05-05) Existing background workers/services may remain separate runtime processes for email.
-- (2026-05-05) Product seam should be high quality via Algadesk-specific composition, not menu-only hiding.
+- (2026-05-05) Product seam should be high quality via AlgaDesk-specific composition, not menu-only hiding.
 - (2026-05-06) Remediation should not expand product scope; it should make the current implementation safe, compile, and prove the critical seams.
 
 ## Key Review Findings to Remediate
@@ -27,8 +27,8 @@ Working notes for remediating the current Algadesk implementation. This plan exi
 - (2026-05-06) Typecheck fails:
   - `server/src/components/layout/SidebarWithFeatureFlags.tsx`
   - `server/src/types/next-auth.ts`
-- (2026-05-06) `ProductProvider` reads `session.user.product_code`, but `packages/auth/src/lib/nextAuthOptions.ts` does not fetch/map `product_code`; Algadesk client UI can resolve as PSA.
-- (2026-05-06) `server/src/app/msp/MspLayoutClient.tsx` renders raw children for Algadesk instead of a real sidebar/header shell.
+- (2026-05-06) `ProductProvider` reads `session.user.product_code`, but `packages/auth/src/lib/nextAuthOptions.ts` does not fetch/map `product_code`; AlgaDesk client UI can resolve as PSA.
+- (2026-05-06) `server/src/app/msp/MspLayoutClient.tsx` renders raw children for AlgaDesk instead of a real sidebar/header shell.
 - (2026-05-06) MSP and portal route boundaries are client-side only, so excluded server pages may execute data fetching before boundary UI.
 - (2026-05-06) API product enforcement in `ApiBaseController` is bypassed by overridden controllers such as `ApiProjectController.list()`.
 - (2026-05-06) Product registry gaps/inconsistencies:
@@ -42,7 +42,7 @@ Working notes for remediating the current Algadesk implementation. This plan exi
 - (2026-05-06) Several tests are source-string contracts, not the behavior/integration coverage their descriptions claim.
 - (2026-05-06) Current uncommitted `.env.localtest` contains plaintext DB credentials and must not be committed.
 - (2026-05-06) Current uncommitted `package-lock.json` appears to regress package versions and should be reverted unless intentionally required.
-- (2026-05-06) Current uncommitted contact-detail changes appear relevant: hide contact documents for Algadesk and avoid fetching documents on `tab=documents`.
+- (2026-05-06) Current uncommitted contact-detail changes appear relevant: hide contact documents for AlgaDesk and avoid fetching documents on `tab=documents`.
 
 ## Commands / Validation Run During Review
 
@@ -98,7 +98,7 @@ Working notes for remediating the current Algadesk implementation. This plan exi
 ## Open Questions
 
 - Should server route enforcement be middleware-first, page-helper-first, or both?
-- Should Algadesk shell be a minimal wrapper around existing Sidebar/Header primitives or a new product-specific shell component?
+- Should AlgaDesk shell be a minimal wrapper around existing Sidebar/Header primitives or a new product-specific shell component?
 - Should parent plan implemented booleans be reset or annotated as superseded?
 - Which inbound email provider path is the minimum runnable behavior test for remediation?
 
@@ -131,14 +131,14 @@ Working notes for remediating the current Algadesk implementation. This plan exi
 - Added representative PSA-only API deny prefixes across financial/quotes/contracts/services/accounting/platform/admin/tenant/feature-flags/workflow/chat/assets/scheduling/surveys/extensions/integrations/document families.
 - Validation run (pass): `cd server && npx vitest run src/test/unit/productSurfaceRegistry.test.ts --reporter=dot`.
 - Validation run (pass): `cd server && npm run typecheck -- --pretty false`.
-- (2026-05-06) Completed `/client-portal/settings` registry decision (R031): removed `/client-portal/settings` from Algadesk allowlist because no corresponding route exists; `/client-portal/client-settings` remains the supported surface.
-- (2026-05-06) Completed Algadesk MSP shell remediation batch (R056-R065, R068-R069).
-- Added `server/src/components/layout/AlgadeskMspShell.tsx` with real shell chrome: product-filtered sidebar, header, notification banner, and main content body.
-- `server/src/app/msp/MspLayoutClient.tsx` now renders `AlgadeskMspShell` for allowed Algadesk routes instead of raw children; PSA tenants continue to render existing `DefaultLayout` path unchanged.
-- Algadesk shell intentionally excludes PSA-heavy providers (`ActivityDrawerProvider`, scheduling/workflow/projects/assets/documents cross-feature providers, and AI chat context wrapper).
+- (2026-05-06) Completed `/client-portal/settings` registry decision (R031): removed `/client-portal/settings` from AlgaDesk allowlist because no corresponding route exists; `/client-portal/client-settings` remains the supported surface.
+- (2026-05-06) Completed AlgaDesk MSP shell remediation batch (R056-R065, R068-R069).
+- Added `server/src/components/layout/AlgaDeskMspShell.tsx` with real shell chrome: product-filtered sidebar, header, notification banner, and main content body.
+- `server/src/app/msp/MspLayoutClient.tsx` now renders `AlgaDeskMspShell` for allowed AlgaDesk routes instead of raw children; PSA tenants continue to render existing `DefaultLayout` path unchanged.
+- AlgaDesk shell intentionally excludes PSA-heavy providers (`ActivityDrawerProvider`, scheduling/workflow/projects/assets/documents cross-feature providers, and AI chat context wrapper).
 - Validation run (pass): `cd server && npm run typecheck -- --pretty false`.
 - Validation run (pass): `cd server && npx vitest run src/test/unit/layout/MspLayoutClient.productShell.test.tsx src/test/unit/productSurfaceRegistry.test.ts --reporter=dot`.
-- Added RT006 behavior coverage via `server/src/test/unit/layout/MspLayoutClient.productShell.test.tsx` proving Algadesk uses dedicated shell and PSA preserves default layout path.
+- Added RT006 behavior coverage via `server/src/test/unit/layout/MspLayoutClient.productShell.test.tsx` proving AlgaDesk uses dedicated shell and PSA preserves default layout path.
 - (2026-05-06) Completed server-side route enforcement batch (R070-R084) and aligned route-boundary test coverage (RT007-RT009) plus auth mapping unit coverage (RT002).
 - Added shared server guard helper at `server/src/lib/serverProductRouteGuard.tsx`:
   - `resolveServerProductRouteBehavior({ pathname })` resolves current tenant product and registry behavior for explicit paths.
@@ -156,7 +156,7 @@ Working notes for remediating the current Algadesk implementation. This plan exi
   - Preserved existing metadata titles for extensions/appointments layouts.
 - Added/updated tests:
   - `packages/auth/src/lib/nextAuthOptions.productCodeMapping.test.ts` (JWT/session `product_code` + plan/addons/trial mapping)
-  - `server/src/test/unit/product/serverProductRouteGuard.test.tsx` (server route behavior resolution for Algadesk vs PSA)
+  - `server/src/test/unit/product/serverProductRouteGuard.test.tsx` (server route behavior resolution for AlgaDesk vs PSA)
   - `server/src/test/unit/app/serverProductRouteGuardPages.test.tsx` (guarded pages do not call excluded data actions)
   - `server/src/test/unit/productSurfaceRegistry.test.ts` (settings tab and direct settings-route narrowing assertions)
 - Validation run (pass):
@@ -198,12 +198,12 @@ Working notes for remediating the current Algadesk implementation. This plan exi
 - Added behavior test `server/src/test/unit/api/standaloneProductGuards.test.ts` proving denied product access returns `403` with `error.code = PRODUCT_ACCESS_DENIED` and capability/product details.
 - Validation run (pass): `cd server && npx vitest run src/test/unit/api/standaloneProductGuards.test.ts --reporter=dot`.
 - (2026-05-06) Completed representative allowed-API continuity checks (R098).
-- Expanded `server/src/test/unit/productSurfaceRegistry.test.ts` to assert Algadesk allow behavior for `/api/v1/clients`, `/api/v1/contacts`, and `/api/email/oauth/initiate` in addition to existing ticket/KB checks.
-- Updated `server/src/lib/productSurfaceRegistry.ts` allowlist to include `/api/email/oauth` and `/api/email/imap` paths as Algadesk-allowed email channel APIs.
+- Expanded `server/src/test/unit/productSurfaceRegistry.test.ts` to assert AlgaDesk allow behavior for `/api/v1/clients`, `/api/v1/contacts`, and `/api/email/oauth/initiate` in addition to existing ticket/KB checks.
+- Updated `server/src/lib/productSurfaceRegistry.ts` allowlist to include `/api/email/oauth` and `/api/email/imap` paths as AlgaDesk-allowed email channel APIs.
 - Validation run (pass): `cd server && npx vitest run src/test/unit/productSurfaceRegistry.test.ts --reporter=dot`.
 - DB-backed integration verification for allowed ticket endpoints remains environment-blocked locally (`ECONNREFUSED` on Postgres :5432) and is tracked for later DB-available pass under RT011/RT124.
 - (2026-05-06) Completed representative PSA API regression checks (R099).
-- Added PSA assertions in `server/src/test/unit/productSurfaceRegistry.test.ts` for `/api/email/oauth/initiate` and `/api/integrations/entra/connect` to ensure PSA remains allowed while Algadesk remains constrained.
+- Added PSA assertions in `server/src/test/unit/productSurfaceRegistry.test.ts` for `/api/email/oauth/initiate` and `/api/integrations/entra/connect` to ensure PSA remains allowed while AlgaDesk remains constrained.
 - Validation run (pass): `cd server && npx vitest run src/test/unit/productSurfaceRegistry.test.ts --reporter=dot`.
 - (2026-05-06) Completed metadata/OpenAPI filtering pass for endpoint/path/permission/stats outputs (R100-R104).
 - `ApiMetadataController` now product-filters:
@@ -215,18 +215,18 @@ Working notes for remediating the current Algadesk implementation. This plan exi
 - Validation run (pass): `cd server && npm run typecheck -- --pretty false`.
 - Validation run (pass): `cd server && npx vitest run src/test/unit/api/apiMetadataController.productFiltering.contract.test.ts --reporter=dot`.
 - (2026-05-06) Completed OpenAPI schema pruning and PSA-preservation follow-up (R105-R107).
-- Added `filterOpenApiSchemasByVisiblePaths` in `ApiMetadataController` to keep only schemas referenced by product-visible OpenAPI paths for Algadesk.
-- Shared schemas intentionally still visible for Algadesk are those transitively referenced by allowed endpoints; unreferenced PSA-only schemas are pruned.
+- Added `filterOpenApiSchemasByVisiblePaths` in `ApiMetadataController` to keep only schemas referenced by product-visible OpenAPI paths for AlgaDesk.
+- Shared schemas intentionally still visible for AlgaDesk are those transitively referenced by allowed endpoints; unreferenced PSA-only schemas are pruned.
 - PSA metadata/OpenAPI remains unchanged (`productCode === 'psa'` bypasses path/schema/permission/stats reductions).
 - Validation run (pass): `cd server && npm run typecheck -- --pretty false`.
 - Validation run (pass): `cd server && npx vitest run src/test/unit/api/apiMetadataController.productFiltering.contract.test.ts --reporter=dot`.
 - (2026-05-06) Completed contact/document leak remediation (R108-R113) and corresponding test item RT013.
 - Integrated product-aware contact composition changes:
-  - `server/src/app/msp/contacts/[id]/page.tsx` now resolves tenant product and skips `getDocumentsByEntity` for Algadesk on `tab=documents`.
-  - `packages/clients/src/components/contacts/ContactDetails.tsx` adds `isAlgadeskMode` and hides the Documents tab in Algadesk mode.
+  - `server/src/app/msp/contacts/[id]/page.tsx` now resolves tenant product and skips `getDocumentsByEntity` for AlgaDesk on `tab=documents`.
+  - `packages/clients/src/components/contacts/ContactDetails.tsx` adds `isAlgaDeskMode` and hides the Documents tab in AlgaDesk mode.
 - Added/updated tests:
-  - `server/src/test/unit/app/msp/contacts/[id]/page.productComposition.test.tsx` for Algadesk-vs-PSA document fetch behavior.
-  - `server/src/test/unit/contacts/ContactDetails.productMode.contract.test.ts` for Algadesk documents-tab suppression contract.
+  - `server/src/test/unit/app/msp/contacts/[id]/page.productComposition.test.tsx` for AlgaDesk-vs-PSA document fetch behavior.
+  - `server/src/test/unit/contacts/ContactDetails.productMode.contract.test.ts` for AlgaDesk documents-tab suppression contract.
 - Validation run (pass): `cd server && npx vitest run 'src/test/unit/app/msp/contacts/[id]/page.productComposition.test.tsx' src/test/unit/contacts/ContactDetails.productMode.contract.test.ts --reporter=dot`.
 - (2026-05-06) Completed Playwright T015 remediation items (R114-R116) and RT014.
 - Fixed helper signature usage in `server/src/test/e2e/algadesk-portal-ticketing.playwright.test.ts` by calling `setupClientAuthSession(page, userId, email, tenantId, baseUrl)`.
@@ -237,7 +237,7 @@ Working notes for remediating the current Algadesk implementation. This plan exi
 - Replaced `packages/msp-composition/src/tickets/__tests__/MspTicketDetailsContainerClient.test.tsx` with `packages/msp-composition/src/tickets/__tests__/MspTicketDetailsContainerClient.contract.test.ts` to avoid fragile cross-package runtime imports in this harness.
 - Added missing Vitest path aliases for authorization/core-lib imports in `server/vitest.config.ts` to reduce workspace-package resolution drift during cross-package test execution.
 - Validation run (pass): `cd server && npx vitest run --coverage=false --reporter=dot ../packages/msp-composition/src/tickets/__tests__/MspTicketDetailsContainerClient.contract.test.ts`.
-- (2026-05-06) Completed source-string audit/rename cleanup step (R118) for Algadesk remediation tests.
+- (2026-05-06) Completed source-string audit/rename cleanup step (R118) for AlgaDesk remediation tests.
 - Removed source-string assertions from DB-backed integration suites so their names and assertions stay behavior-focused:
   - `server/src/test/integration/algadeskTicketCrudRbac.integration.test.ts`
   - `server/src/test/integration/algadeskTicketAttachmentDrafts.integration.test.ts`
@@ -250,7 +250,7 @@ Working notes for remediating the current Algadesk implementation. This plan exi
   - overridden project and financial handlers return structured `403 PRODUCT_ACCESS_DENIED` when authentication path enforces product denial
   - service list methods are not invoked on denied requests.
 - Replaced source-string metadata filtering coverage with executable behavior coverage in `server/src/test/unit/api/apiMetadataController.productFiltering.contract.test.ts`:
-  - Algadesk metadata endpoints filter denied `/api/v1/projects` while preserving allowed `/api/v1/tickets` in endpoint and OpenAPI outputs.
+  - AlgaDesk metadata endpoints filter denied `/api/v1/projects` while preserving allowed `/api/v1/tickets` in endpoint and OpenAPI outputs.
 - DB prerequisite behavior verified for inbound webhook integration suite:
   - Command: `cd server && npx vitest run src/test/integration/inboundEmailInApp.webhooks.integration.test.ts --reporter=dot`
   - Result: suite skipped cleanly when DB socket is unavailable (39 skipped), confirming CI-safe prerequisite handling.

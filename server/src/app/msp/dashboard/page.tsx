@@ -1,8 +1,8 @@
 import { Suspense } from 'react';
 import DashboardContainer from '@/components/dashboard/DashboardContainer';
-import AlgadeskDashboard from '@/components/dashboard/AlgadeskDashboard';
+import AlgaDeskDashboard from '@/components/dashboard/AlgaDeskDashboard';
 import { getDashboardMobileAppCardDismissedAction } from '@/lib/actions/dashboardMobileAppActions';
-import { getAlgadeskDashboardSummary } from '@/lib/actions/algadeskDashboardActions';
+import { getAlgaDeskDashboardSummary } from '@/lib/actions/algadeskDashboardActions';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
 import { DashboardOnboardingSkeleton, DashboardOnboardingSlot } from '@alga-psa/onboarding/components';
 import { isEnterprise } from '@/lib/features';
@@ -18,8 +18,8 @@ async function DashboardPage() {
   const productCode = await getCurrentTenantProduct();
 
   if (productCode === 'algadesk') {
-    const summary = await getAlgadeskDashboardSummary();
-    return <AlgadeskDashboard summary={summary} />;
+    const summary = await getAlgaDeskDashboardSummary();
+    return <AlgaDeskDashboard summary={summary} />;
   }
 
   const mobileAppCardDismissed = await getDashboardMobileAppCardDismissedAction().catch(() => false);

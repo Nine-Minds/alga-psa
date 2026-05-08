@@ -8,7 +8,7 @@ function read(relPath: string): string {
   return fs.readFileSync(path.join(repoRoot, relPath), 'utf8');
 }
 
-describe('Algadesk email route product gates', () => {
+describe('AlgaDesk email route product gates', () => {
   it('F283/F284/F285: email webhook, IMAP, and OAuth routes assert product access', () => {
     const oauthInitiate = read('server/src/app/api/email/oauth/initiate/route.ts');
     const imapOauthInitiate = read('server/src/app/api/email/oauth/imap/initiate/route.ts');

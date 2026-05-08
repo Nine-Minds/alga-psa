@@ -146,7 +146,7 @@ interface ContactDetailsProps {
     canUpdateRoles: boolean;
     canRead: boolean;
   };
-  isAlgadeskMode?: boolean;
+  isAlgaDeskMode?: boolean;
 }
 
 const ContactDetails: React.FC<ContactDetailsProps> = ({
@@ -160,7 +160,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   onDocumentCreated,
   onContactUpdated,
   onChangesSaved,
-  isAlgadeskMode = false,
+  isAlgaDeskMode = false,
   userPermissions = {
     canInvite: false,
     canUpdateRoles: false,
@@ -831,7 +831,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     }
   ];
 
-  const tabContent = isAlgadeskMode
+  const tabContent = isAlgaDeskMode
     ? baseTabContent.filter((tab) => tab.id !== 'documents')
     : baseTabContent;
 

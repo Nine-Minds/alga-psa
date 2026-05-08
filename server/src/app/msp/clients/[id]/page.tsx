@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
-  const isAlgadesk = (await getCurrentTenantProduct()) === 'algadesk';
+  const isAlgaDesk = (await getCurrentTenantProduct()) === 'algadesk';
 
   try {
     // First check if client exists (uses React.cache — deduped with generateMetadata)
@@ -40,9 +40,9 @@ const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
 
     // Fetch additional data in parallel
     const [documentsResult, contacts, surveySummary] = await Promise.all([
-      isAlgadesk ? Promise.resolve([]) : getDocumentByClientId(id),
+      isAlgaDesk ? Promise.resolve([]) : getDocumentByClientId(id),
       getContactsByClient(id, 'all'),
-      (isAlgadesk ? Promise.resolve(null) : getSurveyClientSummary(id)).catch((error) => {
+      (isAlgaDesk ? Promise.resolve(null) : getSurveyClientSummary(id)).catch((error) => {
         console.error('[ClientPage] Failed to load survey summary', error);
         return null;
       })
@@ -70,7 +70,7 @@ const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
             contacts={contacts}
             isInDrawer={false}
             surveySummary={surveySummary}
-            isAlgadeskMode={isAlgadesk}
+            isAlgaDeskMode={isAlgaDesk}
           />
         </div>
       </AIChatContextBoundary>

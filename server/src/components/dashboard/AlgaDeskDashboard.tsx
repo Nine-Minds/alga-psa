@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import type { AlgadeskDashboardSummary } from '@/lib/actions/algadeskDashboardActions';
+import type { AlgaDeskDashboardSummary } from '@/lib/actions/algadeskDashboardActions';
 
-interface AlgadeskDashboardProps {
-  summary: AlgadeskDashboardSummary;
+interface AlgaDeskDashboardProps {
+  summary: AlgaDeskDashboardSummary;
 }
 
 function MetricCard({ title, value, href }: { title: string; value: number; href?: string }) {
@@ -16,12 +16,12 @@ function MetricCard({ title, value, href }: { title: string; value: number; href
   return href ? <Link href={href}>{content}</Link> : content;
 }
 
-export default function AlgadeskDashboard({ summary }: AlgadeskDashboardProps) {
+export default function AlgaDeskDashboard({ summary }: AlgaDeskDashboardProps) {
   return (
     <div className="min-h-screen p-6" data-automation-id="algadesk-dashboard">
       <div className="mx-auto max-w-7xl space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-[rgb(var(--color-text-900))]">Algadesk Dashboard</h1>
+          <h1 className="text-3xl font-bold text-[rgb(var(--color-text-900))]">AlgaDesk Dashboard</h1>
           <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
             Ticket workload and email-channel health.
           </p>
