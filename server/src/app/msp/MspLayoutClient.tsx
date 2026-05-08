@@ -8,11 +8,12 @@ import { TagProvider } from "@alga-psa/tags/context";
 import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHogUserIdentifier";
 import { ClientUIStateProvider } from "@alga-psa/ui/ui-reflection/ClientUIStateProvider";
 import { I18nWrapper } from "@alga-psa/tenancy/components";
+import { getTenantSettings } from "@alga-psa/tenancy/actions";
 import { AIChatContextProvider } from '@product/chat/context';
 import { TierProvider } from "@/context/TierContext";
 import { ProductProvider } from "@/context/ProductContext";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { Session } from "next-auth";
 import type { SupportedLocale } from "@alga-psa/core/i18n/config";
 import type { ProductCode } from '@alga-psa/types';
@@ -40,14 +41,52 @@ export function MspLayoutClient({
   const pathname = usePathname();
   const isOnboardingPage = pathname === "/msp/onboarding";
   const routeBehavior = resolveProductRouteBehavior(productCode, pathname);
+  const sessionTenant = session?.user?.tenant;
+  const [clientNeedsOnboarding, setClientNeedsOnboarding] = useState(false);
+  const shouldForceOnboarding = needsOnboarding || clientNeedsOnboarding;
 
   useEffect(() => {
-    if (needsOnboarding && !isOnboardingPage) {
+    if (shouldForceOnboarding && !isOnboardingPage) {
       router.replace("/msp/onboarding");
     }
-  }, [needsOnboarding, isOnboardingPage, router]);
+  }, [shouldForceOnboarding, isOnboardingPage, router]);
 
-  if (needsOnboarding && !isOnboardingPage) {
+  useEffect(() => {
+    let isCancelled = false;
+
+    setClientNeedsOnboarding(false);
+
+    if (needsOnboarding || isOnboardingPage || !sessionTenant) {
+      return () => {
+        isCancelled = true;
+      };
+    }
+
+    void getTenantSettings()
+      .then((settings) => {
+        if (isCancelled || !settings) {
+          return;
+        }
+
+        const hasOnboardingFlags =
+          Object.prototype.hasOwnProperty.call(settings, 'onboarding_completed') &&
+          Object.prototype.hasOwnProperty.call(settings, 'onboarding_skipped');
+
+        if (hasOnboardingFlags && !settings.onboarding_completed && !settings.onboarding_skipped) {
+          setClientNeedsOnboarding(true);
+          router.replace('/msp/onboarding');
+        }
+      })
+      .catch((error) => {
+        console.error('Error checking onboarding status:', error);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [needsOnboarding, isOnboardingPage, sessionTenant, router]);
+
+  if (shouldForceOnboarding && !isOnboardingPage) {
     return null;
   }
 

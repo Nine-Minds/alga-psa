@@ -35,7 +35,8 @@
       "addClient": "Add Client",
       "clientContact": "Client Contact",
       "billing": "Billing",
-      "ticketing": "Ticketing"
+      "ticketing": "Ticketing",
+      "algadeskWorkspace": "Workspace"
     },
     "errors": {
       "saveClientInfo": "Failed to save client info",
@@ -62,7 +63,9 @@
     },
     "shell": {
       "title": "Setup Your System",
-      "description": "Let's get your workspace configured and ready to use."
+      "description": "Let's get your workspace configured and ready to use.",
+      "algadeskTitle": "Set Up Algadesk",
+      "algadeskDescription": "Configure your help desk workspace, clients, and ticketing defaults."
     }
   },
   "addClientStep": {
