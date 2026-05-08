@@ -326,7 +326,7 @@
   {
     "id": "T053",
     "description": "E2E (regression): all existing ticket Playwright tests pass unchanged with the feature flag off.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F032"]
   },
   {

@@ -197,6 +197,10 @@ npm run test:e2e
   `npm -w @alga-psa/workflows run typecheck`
   `NEXT_PUBLIC_DISABLE_FEATURE_FLAGS=false NEXT_PUBLIC_FORCE_FEATURE_FLAGS=live-ticket-updates:true npx playwright test src/__tests__/integration/workflow-ticket-created-add-comment.playwright.test.ts --project=chromium --workers=1` from `ee/server`
   `npm run test:playwright:ticket-regression:live-on` from `ee/server`
+- **2026-05-08 — Ticket regression suite with live updates disabled completed (`T053`).**
+  Reused the same repaired Playwright workflow harness from `T052` and verified that the existing ticket regression bundle still passes unchanged when the `live-ticket-updates` flag is forced off, so the live layer remains additive rather than entangling the baseline ticket behavior.
+- **2026-05-08 — Verification runbook used for `T053`.**
+  `npm run test:playwright:ticket-regression:live-off` from `ee/server`
 
 ## Links / Refs
 
