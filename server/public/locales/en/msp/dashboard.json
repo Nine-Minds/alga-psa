@@ -10,6 +10,33 @@
     "titleCommunity": "Welcome back",
     "descriptionCommunity": "Jump into tickets, scheduling, projects, and reporting from your dashboard."
   },
+  "algadesk": {
+    "welcome": {
+      "title": "Welcome to AlgaDesk",
+      "description": "Track ticket workload, monitor email-channel health, and stay on top of every conversation."
+    },
+    "metrics": {
+      "openTickets": "Open tickets",
+      "awaitingCustomer": "Awaiting customer",
+      "awaitingInternal": "Awaiting internal",
+      "activeEmailChannels": "Active email channels"
+    },
+    "aging": {
+      "title": "Ticket aging",
+      "under2Days": "Under 2 days",
+      "days2To7": "2 to 7 days",
+      "over7Days": "Over 7 days"
+    },
+    "emailHealth": {
+      "title": "Email channel health",
+      "summary": "{{healthy}} of {{active}} active channels are connected.",
+      "totalConfigured": "Total configured channels: {{total}}"
+    },
+    "recentTickets": {
+      "title": "Recently updated tickets",
+      "empty": "No recent ticket activity."
+    }
+  },
   "features": {
     "heading": "Platform Features",
     "comingSoon": "Coming soon!",

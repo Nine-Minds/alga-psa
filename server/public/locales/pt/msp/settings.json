@@ -1358,107 +1358,6 @@
       "sso": "Loading SSO management tools...",
       "sessions": "Loading active sessions..."
     },
-    "ssoBulk": {
-      "loading": {
-        "title": "SSO",
-        "description": "A carregar ferramentas de atribuição em massa de SSO..."
-      },
-      "autoLink": {
-        "title": "Configurar SSO automaticamente para novos utilizadores internos",
-        "description": "Ative esta opção para aprovisionar imediatamente cada nova conta de colaborador com o seu fornecedor de SSO empresarial, dispensando o início de sessão por palavra-passe.",
-        "body": "Quando ativado, os novos utilizadores MSP podem iniciar sessão com Google ou Microsoft utilizando o seu email profissional. Não terão de associar manualmente a conta.",
-        "toggleLabel": "Alternar associação automática de SSO",
-        "disabledInfo": "Ative esta opção para que colaboradores novos e existentes possam dispensar o fluxo \"Conectar SSO\" quando o seu email já corresponde a um fornecedor configurado. Continuaremos a registar todas as associações automáticas."
-      },
-      "bulk": {
-        "title": "Atribuição em Massa de SSO",
-        "description": "Selecione utilizadores internos da lista abaixo e associe-os a um fornecedor Google ou Microsoft configurado. Use a pré-visualização para confirmar o impacto antes de executar.",
-        "noProviders": "Ainda não existem fornecedores SSO configurados. Adicione credenciais OAuth para continuar com as atribuições em massa."
-      },
-      "errors": {
-        "loadProviders": "Não foi possível carregar a configuração do fornecedor SSO.",
-        "updatePreferences": "Não foi possível atualizar as preferências de SSO."
-      },
-      "form": {
-        "title": "Escolher fornecedor e selecionar utilizadores",
-        "description": "Escolha o fornecedor SSO configurado para a sua equipa e, em seguida, pesquise e selecione os utilizadores a associar.",
-        "providerLabel": "Fornecedor",
-        "notConfigured": "Não configurado",
-        "providerNotConfiguredAlert": "Forneça credenciais OAuth para este fornecedor antes de associar contas.",
-        "actionLabel": "Ação",
-        "linkSelected": "Associar utilizadores selecionados",
-        "unlinkSelected": "Desassociar utilizadores selecionados",
-        "actionPlaceholder": "Selecionar ação em massa de SSO",
-        "actionDescription": "Associar adiciona o fornecedor a cada utilizador selecionado. Desassociar remove o fornecedor para que o utilizador volte ao início de sessão por palavra-passe/TOTP até voltar a associar.",
-        "searchLabel": "Procurar utilizadores internos",
-        "searchPlaceholder": "Pesquisar por email ou nome",
-        "noneSelected": "Ainda não há utilizadores selecionados.",
-        "selected_one": "{{count}} utilizador selecionado.",
-        "selected_other": "{{count}} utilizadores selecionados.",
-        "clearSelection": "Limpar seleção",
-        "loadingUsers": "A carregar utilizadores...",
-        "noMatch": "Nenhum utilizador corresponde a esta pesquisa.",
-        "noUsers": "Não foram encontrados utilizadores internos.",
-        "clientPortalComing": "As atribuições em massa do portal do cliente estarão disponíveis em breve. Por agora, esta ferramenta aplica-se apenas a utilizadores MSP internos.",
-        "loadUsersFailed": "Não foi possível carregar os utilizadores atribuíveis.",
-        "actions": {
-          "previewLink": "Pré-visualizar atribuição",
-          "previewUnlink": "Pré-visualizar desassociação",
-          "link": "Associar contas",
-          "unlink": "Desassociar contas",
-          "preparingPreview": "A preparar pré-visualização…",
-          "linking": "A associar contas…",
-          "unlinking": "A desassociar contas…",
-          "bulkLabel": "Ações de SSO em massa {{location}}"
-        },
-        "table": {
-          "email": "Email",
-          "id": "ID",
-          "name": "Nome",
-          "status": "Estado",
-          "active": "Ativo",
-          "inactive": "Inativo",
-          "linkedProviders": "Fornecedores associados",
-          "unlinked": "Não associado",
-          "lastLogin": "Último início de sessão"
-        },
-        "toast": {
-          "providerRequiredTitle": "Fornecedor obrigatório",
-          "providerRequiredDescription": "Selecione um fornecedor configurado antes de continuar.",
-          "noUsersTitle": "Nenhum utilizador selecionado",
-          "noUsersDescription": "Selecione pelo menos um utilizador da tabela.",
-          "failedTitle": "Atribuição em massa falhou",
-          "failedDescription": "Não foi possível processar a atribuição em massa de SSO.",
-          "linkCompleteTitle": "Associação concluída",
-          "unlinkCompleteTitle": "Desassociação concluída",
-          "previewReadyTitle": "Pré-visualização pronta",
-          "linkedCount": "Associadas {{count}} contas via {{provider}}.",
-          "unlinkedCount": "Desassociadas {{count}} contas via {{provider}}.",
-          "previewUnlink_one": "Pré-visualização pronta. Iremos desassociar {{count}} utilizador selecionado.",
-          "previewUnlink_other": "Pré-visualização pronta. Iremos desassociar {{count}} utilizadores selecionados.",
-          "previewLink": "Pré-visualização pronta. Reveja o resumo antes de associar contas."
-        },
-        "results": {
-          "completeTitle": "Atribuição concluída",
-          "previewTitle": "Resultados da pré-visualização",
-          "noneMatched": "Nenhum dos utilizadores selecionados corresponde aos filtros atuais.",
-          "processed_one": "Processado {{count}} utilizador.",
-          "processed_other": "Processados {{count}} utilizadores.",
-          "candidatesSelected": "{{count}} selecionados",
-          "unlinked": "Desassociados",
-          "wouldUnlink": "Seriam desassociados",
-          "linked": "Associados",
-          "wouldLink": "Seriam associados",
-          "alreadyUnlinked": "Já não associados",
-          "alreadyLinked": "Já associados",
-          "skippedInactive": "Ignorados (inativos)"
-        },
-        "providerNames": {
-          "google": "Google Workspace",
-          "microsoft": "Microsoft 365"
-        }
-      }
-    },
     "userRoles": {
       "title": "Assign Roles to Users",
       "description": {
@@ -1537,6 +1436,107 @@
         "loading": "Loading sessions...",
         "noMatch": "No sessions match your search",
         "noSessions": "No active sessions found"
+      }
+    }
+  },
+  "ssoBulk": {
+    "loading": {
+      "title": "SSO",
+      "description": "A carregar ferramentas de atribuição em massa de SSO..."
+    },
+    "autoLink": {
+      "title": "Configurar SSO automaticamente para novos utilizadores internos",
+      "description": "Ative esta opção para aprovisionar imediatamente cada nova conta de colaborador com o seu fornecedor de SSO empresarial, dispensando o início de sessão por palavra-passe.",
+      "body": "Quando ativado, os novos utilizadores MSP podem iniciar sessão com Google ou Microsoft utilizando o seu email profissional. Não terão de associar manualmente a conta.",
+      "toggleLabel": "Alternar associação automática de SSO",
+      "disabledInfo": "Ative esta opção para que colaboradores novos e existentes possam dispensar o fluxo \"Conectar SSO\" quando o seu email já corresponde a um fornecedor configurado. Continuaremos a registar todas as associações automáticas."
+    },
+    "bulk": {
+      "title": "Atribuição em Massa de SSO",
+      "description": "Selecione utilizadores internos da lista abaixo e associe-os a um fornecedor Google ou Microsoft configurado. Use a pré-visualização para confirmar o impacto antes de executar.",
+      "noProviders": "Ainda não existem fornecedores SSO configurados. Adicione credenciais OAuth para continuar com as atribuições em massa."
+    },
+    "errors": {
+      "loadProviders": "Não foi possível carregar a configuração do fornecedor SSO.",
+      "updatePreferences": "Não foi possível atualizar as preferências de SSO."
+    },
+    "form": {
+      "title": "Escolher fornecedor e selecionar utilizadores",
+      "description": "Escolha o fornecedor SSO configurado para a sua equipa e, em seguida, pesquise e selecione os utilizadores a associar.",
+      "providerLabel": "Fornecedor",
+      "notConfigured": "Não configurado",
+      "providerNotConfiguredAlert": "Forneça credenciais OAuth para este fornecedor antes de associar contas.",
+      "actionLabel": "Ação",
+      "linkSelected": "Associar utilizadores selecionados",
+      "unlinkSelected": "Desassociar utilizadores selecionados",
+      "actionPlaceholder": "Selecionar ação em massa de SSO",
+      "actionDescription": "Associar adiciona o fornecedor a cada utilizador selecionado. Desassociar remove o fornecedor para que o utilizador volte ao início de sessão por palavra-passe/TOTP até voltar a associar.",
+      "searchLabel": "Procurar utilizadores internos",
+      "searchPlaceholder": "Pesquisar por email ou nome",
+      "noneSelected": "Ainda não há utilizadores selecionados.",
+      "selected_one": "{{count}} utilizador selecionado.",
+      "selected_other": "{{count}} utilizadores selecionados.",
+      "clearSelection": "Limpar seleção",
+      "loadingUsers": "A carregar utilizadores...",
+      "noMatch": "Nenhum utilizador corresponde a esta pesquisa.",
+      "noUsers": "Não foram encontrados utilizadores internos.",
+      "clientPortalComing": "As atribuições em massa do portal do cliente estarão disponíveis em breve. Por agora, esta ferramenta aplica-se apenas a utilizadores MSP internos.",
+      "loadUsersFailed": "Não foi possível carregar os utilizadores atribuíveis.",
+      "actions": {
+        "previewLink": "Pré-visualizar atribuição",
+        "previewUnlink": "Pré-visualizar desassociação",
+        "link": "Associar contas",
+        "unlink": "Desassociar contas",
+        "preparingPreview": "A preparar pré-visualização…",
+        "linking": "A associar contas…",
+        "unlinking": "A desassociar contas…",
+        "bulkLabel": "Ações de SSO em massa {{location}}"
+      },
+      "table": {
+        "email": "Email",
+        "id": "ID",
+        "name": "Nome",
+        "status": "Estado",
+        "active": "Ativo",
+        "inactive": "Inativo",
+        "linkedProviders": "Fornecedores associados",
+        "unlinked": "Não associado",
+        "lastLogin": "Último início de sessão"
+      },
+      "toast": {
+        "providerRequiredTitle": "Fornecedor obrigatório",
+        "providerRequiredDescription": "Selecione um fornecedor configurado antes de continuar.",
+        "noUsersTitle": "Nenhum utilizador selecionado",
+        "noUsersDescription": "Selecione pelo menos um utilizador da tabela.",
+        "failedTitle": "Atribuição em massa falhou",
+        "failedDescription": "Não foi possível processar a atribuição em massa de SSO.",
+        "linkCompleteTitle": "Associação concluída",
+        "unlinkCompleteTitle": "Desassociação concluída",
+        "previewReadyTitle": "Pré-visualização pronta",
+        "linkedCount": "Associadas {{count}} contas via {{provider}}.",
+        "unlinkedCount": "Desassociadas {{count}} contas via {{provider}}.",
+        "previewUnlink_one": "Pré-visualização pronta. Iremos desassociar {{count}} utilizador selecionado.",
+        "previewUnlink_other": "Pré-visualização pronta. Iremos desassociar {{count}} utilizadores selecionados.",
+        "previewLink": "Pré-visualização pronta. Reveja o resumo antes de associar contas."
+      },
+      "results": {
+        "completeTitle": "Atribuição concluída",
+        "previewTitle": "Resultados da pré-visualização",
+        "noneMatched": "Nenhum dos utilizadores selecionados corresponde aos filtros atuais.",
+        "processed_one": "Processado {{count}} utilizador.",
+        "processed_other": "Processados {{count}} utilizadores.",
+        "candidatesSelected": "{{count}} selecionados",
+        "unlinked": "Desassociados",
+        "wouldUnlink": "Seriam desassociados",
+        "linked": "Associados",
+        "wouldLink": "Seriam associados",
+        "alreadyUnlinked": "Já não associados",
+        "alreadyLinked": "Já associados",
+        "skippedInactive": "Ignorados (inativos)"
+      },
+      "providerNames": {
+        "google": "Google Workspace",
+        "microsoft": "Microsoft 365"
       }
     }
   },

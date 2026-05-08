@@ -39,7 +39,6 @@ const ViewSwitcher = <T extends string>({
             onClick={() => onChange(option.value)}
             className="rounded-none border-0 h-full"
             aria-pressed={isActive}
-            title={`Switch to ${option.label} view`}
             disabled={option.disabled}
           >
             {IconComponent && <IconComponent className="h-4 w-4 mr-2" />}

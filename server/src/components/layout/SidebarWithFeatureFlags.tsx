@@ -129,8 +129,8 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       {...props}
       menuSections={menuSections}
       bottomMenuItems={bottomMenuItems}
-      appDisplayName={isAlgadesk ? 'Algadesk' : 'AlgaPSA'}
-      appLogoAlt={isAlgadesk ? 'Algadesk Logo' : 'AlgaPSA Logo'}
+      appDisplayName={isAlgadesk ? 'AlgaDesk' : 'AlgaPSA'}
+      appLogoAlt={isAlgadesk ? 'AlgaDesk Logo' : 'AlgaPSA Logo'}
       settingsSectionsOverride={settingsSections}
     />
   );

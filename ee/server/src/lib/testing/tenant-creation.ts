@@ -34,6 +34,7 @@ export interface TenantCreationInput {
   companyName?: string;
   clientName?: string;
   contractLine?: string;
+  productCode?: 'psa' | 'algadesk';
 }
 
 export interface TenantCreationResult {
@@ -61,18 +62,22 @@ export interface CreateAdminUserResult {
  */
 export async function createTenant(
   db: Knex,
-  input: { tenantName: string; email: string; clientName?: string }
+  input: { tenantName: string; email: string; clientName?: string; productCode?: 'psa' | 'algadesk' }
 ): Promise<CreateTenantResult> {
   return await db.transaction(async (trx) => {
     // Create tenant first
     const tenantCompanyName = input.clientName ?? input.tenantName;
+    const tenantInsert: Record<string, unknown> = {
+      client_name: tenantCompanyName,
+      email: input.email,
+      created_at: new Date(),
+      updated_at: new Date()
+    };
+    if (input.productCode) {
+      tenantInsert.product_code = input.productCode;
+    }
     const tenantResult = await trx('tenants')
-      .insert({
-        client_name: tenantCompanyName,
-        email: input.email,
-        created_at: new Date(),
-        updated_at: new Date()
-      })
+      .insert(tenantInsert)
       .returning('tenant');
     
     const tenantId = tenantResult[0].tenant || tenantResult[0];
@@ -246,6 +251,7 @@ export async function createTenantComplete(
       tenantName: input.tenantName,
       email: input.adminUser.email,
       clientName: input.clientName,
+      productCode: input.productCode,
     });
 
     // Step 2: Create admin user

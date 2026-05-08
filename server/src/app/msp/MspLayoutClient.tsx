@@ -62,7 +62,7 @@ export function MspLayoutClient({
             <ClientUIStateProvider
               initialPageState={{
                 id: 'msp-portal',
-                title: isAlgadesk ? 'Algadesk MSP' : 'MSP Portal',
+                title: isAlgadesk ? 'AlgaDesk MSP' : 'MSP Portal',
                 components: []
               }}
             >

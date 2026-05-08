@@ -1358,107 +1358,6 @@
       "sso": "Chargement des outils de gestion SSO...",
       "sessions": "Chargement des sessions actives..."
     },
-    "ssoBulk": {
-      "loading": {
-        "title": "SSO",
-        "description": "Chargement des outils d'attribution SSO en masse..."
-      },
-      "autoLink": {
-        "title": "Configurer automatiquement le SSO pour les nouveaux utilisateurs internes",
-        "description": "Activez cette option pour provisionner immédiatement chaque nouveau compte du personnel avec votre fournisseur SSO d'entreprise, afin qu'ils n'aient jamais besoin d'une connexion par mot de passe.",
-        "body": "Lorsque cette option est activée, les utilisateurs MSP nouvellement ajoutés peuvent se connecter avec Google ou Microsoft en utilisant leur adresse e-mail professionnelle. Ils n'auront pas à lier manuellement leur compte.",
-        "toggleLabel": "Activer la correspondance SSO automatique",
-        "disabledInfo": "Activez cette option pour permettre au personnel nouveau et existant d'éviter le flux « Connecter SSO » lorsque leur e-mail correspond déjà à un fournisseur configuré. Nous enregistrerons toujours chaque liaison automatique."
-      },
-      "bulk": {
-        "title": "Attribution SSO en masse",
-        "description": "Sélectionnez les utilisateurs internes dans la liste ci-dessous et liez-les à un fournisseur Google ou Microsoft configuré. Utilisez l'aperçu pour vérifier l'impact avant l'exécution.",
-        "noProviders": "Aucun fournisseur SSO n'est encore configuré. Ajoutez des identifiants OAuth pour continuer avec les attributions en masse."
-      },
-      "errors": {
-        "loadProviders": "Impossible de charger la configuration du fournisseur SSO.",
-        "updatePreferences": "Impossible de mettre à jour les préférences SSO."
-      },
-      "form": {
-        "title": "Choisir un fournisseur et sélectionner les utilisateurs",
-        "description": "Choisissez le fournisseur SSO configuré pour votre personnel, puis recherchez et sélectionnez les utilisateurs à lier.",
-        "providerLabel": "Fournisseur",
-        "notConfigured": "Non configuré",
-        "providerNotConfiguredAlert": "Fournissez des identifiants OAuth pour ce fournisseur avant de lier des comptes.",
-        "actionLabel": "Action",
-        "linkSelected": "Lier les utilisateurs sélectionnés",
-        "unlinkSelected": "Délier les utilisateurs sélectionnés",
-        "actionPlaceholder": "Sélectionner une action SSO en masse",
-        "actionDescription": "La liaison ajoute le fournisseur à chaque utilisateur sélectionné. La déliaison supprime le fournisseur afin que l'utilisateur revienne à la connexion par mot de passe/TOTP jusqu'à ce qu'il se relie.",
-        "searchLabel": "Rechercher des utilisateurs internes",
-        "searchPlaceholder": "Rechercher par e-mail ou par nom",
-        "noneSelected": "Aucun utilisateur sélectionné pour le moment.",
-        "selected_one": "{{count}} utilisateur sélectionné.",
-        "selected_other": "{{count}} utilisateurs sélectionnés.",
-        "clearSelection": "Effacer la sélection",
-        "loadingUsers": "Chargement des utilisateurs...",
-        "noMatch": "Aucun utilisateur ne correspond à cette recherche.",
-        "noUsers": "Aucun utilisateur interne trouvé.",
-        "clientPortalComing": "Les attributions en masse pour le portail client arrivent bientôt. Pour l'instant, cet outil ne s'applique qu'aux utilisateurs MSP internes.",
-        "loadUsersFailed": "Impossible de charger les utilisateurs assignables.",
-        "actions": {
-          "previewLink": "Aperçu de l'attribution",
-          "previewUnlink": "Aperçu de la déliaison",
-          "link": "Lier les comptes",
-          "unlink": "Délier les comptes",
-          "preparingPreview": "Préparation de l'aperçu…",
-          "linking": "Liaison des comptes…",
-          "unlinking": "Déliaison des comptes…",
-          "bulkLabel": "Actions SSO en masse {{location}}"
-        },
-        "table": {
-          "email": "Email",
-          "id": "ID",
-          "name": "Nom",
-          "status": "Statut",
-          "active": "Actif",
-          "inactive": "Inactif",
-          "linkedProviders": "Fournisseurs liés",
-          "unlinked": "Non lié",
-          "lastLogin": "Dernière connexion"
-        },
-        "toast": {
-          "providerRequiredTitle": "Fournisseur requis",
-          "providerRequiredDescription": "Sélectionnez un fournisseur configuré avant de continuer.",
-          "noUsersTitle": "Aucun utilisateur sélectionné",
-          "noUsersDescription": "Sélectionnez au moins un utilisateur dans le tableau.",
-          "failedTitle": "Échec de l'attribution en masse",
-          "failedDescription": "Impossible de traiter l'attribution SSO en masse.",
-          "linkCompleteTitle": "Liaison terminée",
-          "unlinkCompleteTitle": "Déliaison terminée",
-          "previewReadyTitle": "Aperçu prêt",
-          "linkedCount": "{{count}} comptes liés via {{provider}}.",
-          "unlinkedCount": "{{count}} comptes déliés via {{provider}}.",
-          "previewUnlink_one": "Aperçu prêt. Nous délierons {{count}} utilisateur sélectionné.",
-          "previewUnlink_other": "Aperçu prêt. Nous délierons {{count}} utilisateurs sélectionnés.",
-          "previewLink": "Aperçu prêt. Vérifiez le résumé avant de lier les comptes."
-        },
-        "results": {
-          "completeTitle": "Attribution terminée",
-          "previewTitle": "Résultats de l'aperçu",
-          "noneMatched": "Aucun des utilisateurs sélectionnés ne correspond aux filtres actuels.",
-          "processed_one": "{{count}} utilisateur traité.",
-          "processed_other": "{{count}} utilisateurs traités.",
-          "candidatesSelected": "{{count}} sélectionnés",
-          "unlinked": "Non liés",
-          "wouldUnlink": "Seraient déliés",
-          "linked": "Liés",
-          "wouldLink": "Seraient liés",
-          "alreadyUnlinked": "Déjà déliés",
-          "alreadyLinked": "Déjà liés",
-          "skippedInactive": "Ignorés (inactifs)"
-        },
-        "providerNames": {
-          "google": "Google Workspace",
-          "microsoft": "Microsoft 365"
-        }
-      }
-    },
     "userRoles": {
       "title": "Attribuer des rôles aux utilisateurs",
       "description": {
@@ -1537,6 +1436,107 @@
         "loading": "Chargement des sessions...",
         "noMatch": "Aucune session ne correspond à votre recherche",
         "noSessions": "Aucune session active trouvée"
+      }
+    }
+  },
+  "ssoBulk": {
+    "loading": {
+      "title": "SSO",
+      "description": "Chargement des outils d'attribution SSO en masse..."
+    },
+    "autoLink": {
+      "title": "Configurer automatiquement le SSO pour les nouveaux utilisateurs internes",
+      "description": "Activez cette option pour provisionner immédiatement chaque nouveau compte du personnel avec votre fournisseur SSO d'entreprise, afin qu'ils n'aient jamais besoin d'une connexion par mot de passe.",
+      "body": "Lorsque cette option est activée, les utilisateurs MSP nouvellement ajoutés peuvent se connecter avec Google ou Microsoft en utilisant leur adresse e-mail professionnelle. Ils n'auront pas à lier manuellement leur compte.",
+      "toggleLabel": "Activer la correspondance SSO automatique",
+      "disabledInfo": "Activez cette option pour permettre au personnel nouveau et existant d'éviter le flux « Connecter SSO » lorsque leur e-mail correspond déjà à un fournisseur configuré. Nous enregistrerons toujours chaque liaison automatique."
+    },
+    "bulk": {
+      "title": "Attribution SSO en masse",
+      "description": "Sélectionnez les utilisateurs internes dans la liste ci-dessous et liez-les à un fournisseur Google ou Microsoft configuré. Utilisez l'aperçu pour vérifier l'impact avant l'exécution.",
+      "noProviders": "Aucun fournisseur SSO n'est encore configuré. Ajoutez des identifiants OAuth pour continuer avec les attributions en masse."
+    },
+    "errors": {
+      "loadProviders": "Impossible de charger la configuration du fournisseur SSO.",
+      "updatePreferences": "Impossible de mettre à jour les préférences SSO."
+    },
+    "form": {
+      "title": "Choisir un fournisseur et sélectionner les utilisateurs",
+      "description": "Choisissez le fournisseur SSO configuré pour votre personnel, puis recherchez et sélectionnez les utilisateurs à lier.",
+      "providerLabel": "Fournisseur",
+      "notConfigured": "Non configuré",
+      "providerNotConfiguredAlert": "Fournissez des identifiants OAuth pour ce fournisseur avant de lier des comptes.",
+      "actionLabel": "Action",
+      "linkSelected": "Lier les utilisateurs sélectionnés",
+      "unlinkSelected": "Délier les utilisateurs sélectionnés",
+      "actionPlaceholder": "Sélectionner une action SSO en masse",
+      "actionDescription": "La liaison ajoute le fournisseur à chaque utilisateur sélectionné. La déliaison supprime le fournisseur afin que l'utilisateur revienne à la connexion par mot de passe/TOTP jusqu'à ce qu'il se relie.",
+      "searchLabel": "Rechercher des utilisateurs internes",
+      "searchPlaceholder": "Rechercher par e-mail ou par nom",
+      "noneSelected": "Aucun utilisateur sélectionné pour le moment.",
+      "selected_one": "{{count}} utilisateur sélectionné.",
+      "selected_other": "{{count}} utilisateurs sélectionnés.",
+      "clearSelection": "Effacer la sélection",
+      "loadingUsers": "Chargement des utilisateurs...",
+      "noMatch": "Aucun utilisateur ne correspond à cette recherche.",
+      "noUsers": "Aucun utilisateur interne trouvé.",
+      "clientPortalComing": "Les attributions en masse pour le portail client arrivent bientôt. Pour l'instant, cet outil ne s'applique qu'aux utilisateurs MSP internes.",
+      "loadUsersFailed": "Impossible de charger les utilisateurs assignables.",
+      "actions": {
+        "previewLink": "Aperçu de l'attribution",
+        "previewUnlink": "Aperçu de la déliaison",
+        "link": "Lier les comptes",
+        "unlink": "Délier les comptes",
+        "preparingPreview": "Préparation de l'aperçu…",
+        "linking": "Liaison des comptes…",
+        "unlinking": "Déliaison des comptes…",
+        "bulkLabel": "Actions SSO en masse {{location}}"
+      },
+      "table": {
+        "email": "Email",
+        "id": "ID",
+        "name": "Nom",
+        "status": "Statut",
+        "active": "Actif",
+        "inactive": "Inactif",
+        "linkedProviders": "Fournisseurs liés",
+        "unlinked": "Non lié",
+        "lastLogin": "Dernière connexion"
+      },
+      "toast": {
+        "providerRequiredTitle": "Fournisseur requis",
+        "providerRequiredDescription": "Sélectionnez un fournisseur configuré avant de continuer.",
+        "noUsersTitle": "Aucun utilisateur sélectionné",
+        "noUsersDescription": "Sélectionnez au moins un utilisateur dans le tableau.",
+        "failedTitle": "Échec de l'attribution en masse",
+        "failedDescription": "Impossible de traiter l'attribution SSO en masse.",
+        "linkCompleteTitle": "Liaison terminée",
+        "unlinkCompleteTitle": "Déliaison terminée",
+        "previewReadyTitle": "Aperçu prêt",
+        "linkedCount": "{{count}} comptes liés via {{provider}}.",
+        "unlinkedCount": "{{count}} comptes déliés via {{provider}}.",
+        "previewUnlink_one": "Aperçu prêt. Nous délierons {{count}} utilisateur sélectionné.",
+        "previewUnlink_other": "Aperçu prêt. Nous délierons {{count}} utilisateurs sélectionnés.",
+        "previewLink": "Aperçu prêt. Vérifiez le résumé avant de lier les comptes."
+      },
+      "results": {
+        "completeTitle": "Attribution terminée",
+        "previewTitle": "Résultats de l'aperçu",
+        "noneMatched": "Aucun des utilisateurs sélectionnés ne correspond aux filtres actuels.",
+        "processed_one": "{{count}} utilisateur traité.",
+        "processed_other": "{{count}} utilisateurs traités.",
+        "candidatesSelected": "{{count}} sélectionnés",
+        "unlinked": "Non liés",
+        "wouldUnlink": "Seraient déliés",
+        "linked": "Liés",
+        "wouldLink": "Seraient liés",
+        "alreadyUnlinked": "Déjà déliés",
+        "alreadyLinked": "Déjà liés",
+        "skippedInactive": "Ignorés (inactifs)"
+      },
+      "providerNames": {
+        "google": "Google Workspace",
+        "microsoft": "Microsoft 365"
       }
     }
   },

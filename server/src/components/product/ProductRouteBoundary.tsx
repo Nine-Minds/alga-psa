@@ -19,9 +19,9 @@ export function ProductRouteBoundary({ behavior, scope }: ProductRouteBoundaryPr
   const isUpgradeBoundary = behavior === 'upgrade_boundary';
   const title = isUpgradeBoundary ? 'Available in Alga PSA' : 'Page not available';
   const description = isUpgradeBoundary
-    ? 'This area is part of the full Alga PSA product. Algadesk includes focused help desk functionality only.'
+    ? 'This area is part of the full Alga PSA product. AlgaDesk includes focused help desk functionality only.'
     : 'This page is not available in your current product experience.';
-  const cta = isUpgradeBoundary ? 'Return to Algadesk dashboard' : 'Go to dashboard';
+  const cta = isUpgradeBoundary ? 'Return to AlgaDesk dashboard' : 'Go to dashboard';
   const homeHref = SCOPE_HOME[scope];
 
   return (
