@@ -102,6 +102,23 @@ async function initI18next(locale: SupportedLocale, namespaces: string[] = []) {
 }
 
 /**
+ * Optional injected resolver. When set, `getServerLocale()` (called without
+ * explicit options) defers to this function so server-side rendering uses the
+ * same DB-prefs-aware chain as the client (user pref → client → tenant →
+ * default). The resolver lives outside `@alga-psa/ui` to avoid a circular
+ * dependency on `@alga-psa/tenancy`; the server app registers it from its
+ * Next.js `instrumentation.ts` hook via `registerServerLocaleResolver`.
+ */
+type ServerLocaleResolver = () => Promise<SupportedLocale | null | undefined>;
+let registeredServerLocaleResolver: ServerLocaleResolver | null = null;
+
+export function registerServerLocaleResolver(
+  resolver: ServerLocaleResolver | null,
+): void {
+  registeredServerLocaleResolver = resolver;
+}
+
+/**
  * Server-side locale detection with proper fallback chain
  * Cached per request for performance
  */
@@ -112,29 +129,25 @@ export const getServerLocale = cache(
     clientId?: string;
   }): Promise<SupportedLocale> => {
     try {
-      // 0. When called without explicit options, defer to the same hierarchical
-      // resolver the client side uses (user_pref → client → tenant → default).
-      // This keeps server- and client-rendered translations in agreement and
-      // prevents a stale `locale` cookie from overriding the user's stored DB
-      // preference. Dynamic-imported to avoid a build-time cycle with
-      // @alga-psa/tenancy.
-      if (!options) {
+      // 0. When called without explicit options, defer to the registered
+      // hierarchical resolver if the host app provided one. This keeps
+      // server- and client-rendered translations in agreement and prevents a
+      // stale `locale` cookie from overriding the user's stored DB
+      // preference.
+      if (!options && registeredServerLocaleResolver) {
         try {
-          const mod: any = await import('@alga-psa/tenancy/actions');
-          if (typeof mod?.getHierarchicalLocaleAction === 'function') {
-            const hierarchical = await mod.getHierarchicalLocaleAction();
-            if (hierarchical && isSupportedLocale(hierarchical)) {
-              return hierarchical;
-            }
+          const resolved = await registeredServerLocaleResolver();
+          if (resolved && isSupportedLocale(resolved)) {
+            return resolved;
           }
-        } catch {
-          // Tenancy package unavailable in this runtime; fall through to the
-          // legacy cookie/Accept-Language chain below.
+        } catch (error) {
+          console.error('Server locale resolver failed:', error);
+          // fall through to the legacy cookie/Accept-Language chain below
         }
       }
 
       // 1. Check cookie (user's explicit device-level choice). Only consulted
-      // when explicit options are passed or hierarchical resolution failed.
+      // when explicit options are passed or no resolver returned a value.
       const cookieStore = await cookies();
       const localeCookie = cookieStore.get(LOCALE_CONFIG.cookie.name)?.value;
       if (localeCookie && isSupportedLocale(localeCookie)) {

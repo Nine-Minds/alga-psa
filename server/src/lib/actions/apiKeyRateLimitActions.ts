@@ -9,8 +9,10 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { getUserRoles } from '@alga-psa/auth/actions';
 import {
   clearForKey as clearApiRateLimitOverride,
+  DEFAULT_API_RATE_LIMIT_CONFIG,
   DEFAULT_API_RATE_LIMIT_SETTINGS,
   getForKey as getApiRateLimitSettingsRow,
+  getForKeys as getApiRateLimitSettingsRows,
   type ApiRateLimitSettingsRow,
   resolveApiRateLimitConfig,
   upsertForKey,
@@ -108,6 +110,65 @@ export const getApiRateLimitForKey = withAuth(async (user, { tenant }, apiKeyId:
   await assertApiKeyExists(tenant, apiKeyId);
   return buildApiRateLimitSettingsView(tenant, apiKeyId);
 });
+
+export const getApiRateLimitsForKeys = withAuth(
+  async (user, { tenant }, apiKeyIds: string[]): Promise<ApiRateLimitSettingsView[]> => {
+    await assertTenantAdmin(user.user_id);
+
+    if (apiKeyIds.length === 0) {
+      return [];
+    }
+
+    const uniqueIds = Array.from(new Set(apiKeyIds));
+
+    const { knex } = await createTenantKnex(tenant);
+    const existingRows = await knex('api_keys')
+      .select('api_key_id')
+      .where({ tenant })
+      .whereIn('api_key_id', uniqueIds);
+    const existingIds = new Set(existingRows.map((row: { api_key_id: string }) => row.api_key_id));
+
+    const validIds = uniqueIds.filter((id) => existingIds.has(id));
+    if (validIds.length === 0) {
+      return [];
+    }
+
+    const { overrides, tenantDefault } = await getApiRateLimitSettingsRows(tenant, validIds);
+
+    const limiter = TokenBucketRateLimiter.getInstance();
+    const bucketStates = await Promise.all(
+      validIds.map((apiKeyId) => limiter.getState('api', tenant, apiKeyId)),
+    );
+
+    const tenantDefaultValue = mapSettingsRow(tenantDefault);
+
+    return validIds.map((apiKeyId, index) => {
+      const overrideRow = overrides.get(apiKeyId) ?? null;
+      const overrideValue = mapSettingsRow(overrideRow);
+
+      const effectiveSource = overrideRow ?? tenantDefault;
+      const effective: ApiRateLimitSettingsValue = effectiveSource
+        ? { maxTokens: effectiveSource.maxTokens, refillPerMin: effectiveSource.refillPerMin }
+        : {
+            maxTokens: DEFAULT_API_RATE_LIMIT_CONFIG.maxTokens,
+            refillPerMin: Math.round(DEFAULT_API_RATE_LIMIT_CONFIG.refillRate * 60),
+          };
+
+      const bucketState = bucketStates[index];
+
+      return {
+        apiKeyId,
+        override: overrideValue,
+        tenantDefault: tenantDefaultValue,
+        effective,
+        bucketState: bucketState
+          ? { remaining: bucketState.tokens, maxTokens: bucketState.maxTokens }
+          : null,
+        source: overrideRow ? 'key' : tenantDefault ? 'tenant' : 'default',
+      };
+    });
+  },
+);
 
 export const setApiRateLimitForKey = withAuth(
   async (user, { tenant }, apiKeyId: string, input: ApiRateLimitSettingsValue) => {

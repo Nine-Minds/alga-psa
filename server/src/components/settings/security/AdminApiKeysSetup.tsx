@@ -16,7 +16,7 @@ import {
 } from '@/lib/actions/apiKeyActions';
 import {
   clearApiRateLimitForKey,
-  getApiRateLimitForKey,
+  getApiRateLimitsForKeys,
   setApiRateLimitForKey,
   type ApiRateLimitSettingsValue,
   type ApiRateLimitSettingsView,
@@ -153,7 +153,7 @@ export default function AdminApiKeysSetup() {
       return;
     }
 
-    const views = await Promise.all(keys.map((key) => getApiRateLimitForKey(key.api_key_id)));
+    const views = await getApiRateLimitsForKeys(keys.map((key) => key.api_key_id));
     const nextViews = Object.fromEntries(views.map((view) => [view.apiKeyId, view]));
     const nextDrafts = Object.fromEntries(
       views.map((view) => [view.apiKeyId, view.override ?? view.effective]),
