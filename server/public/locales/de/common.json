@@ -1053,7 +1053,10 @@
       "unknownError": "Unbekannter Fehler aufgetreten",
       "templateNotFoundDetail": "Die gesuchte Vorlage existiert nicht oder wurde gelöscht.",
       "teamLeadAccessDetail": "Um Zeiterfassungen für Ihre Teammitglieder zu genehmigen, müssen Sie ein Teamleiter sein.",
-      "teamsTabEnableHint": "Bitten Sie einen PSA-Administrator, die Teams-Integration für diesen Mandanten zu aktivieren, bevor Sie den Tab erneut öffnen."
+      "teamsTabEnableHint": "Bitten Sie einen PSA-Administrator, die Teams-Integration für diesen Mandanten zu aktivieren, bevor Sie den Tab erneut öffnen.",
+      "teamsSetupNotFinished": "Teams-Einrichtung nicht abgeschlossen",
+      "teamsSetupNotFinishedHint": "Bitten Sie einen PSA-Administrator, die Teams-Einrichtung abzuschließen, und öffnen Sie dann den persönlichen Tab erneut.",
+      "teamsTabAdminHint": "Bitten Sie einen PSA-Administrator, die Teams-Einrichtung abzuschließen, und öffnen Sie dann den Tab erneut."
     },
     "actions": {
       "tryAgain": "Erneut versuchen",
@@ -1073,6 +1076,48 @@
       "slaSettings": "SLA-Einstellungen",
       "documentEditor": "Dokumenten-Editor",
       "accountManagement": "Kontoverwaltung"
+    },
+    "teamsTab": {
+      "signedInAs": "Angemeldet als {{name}}",
+      "openInFullPsa": "In vollständiger PSA öffnen",
+      "iframeTitle": "{{destination}} in Alga PSA",
+      "fullPsaHint": "Verwenden Sie \"In vollständiger PSA öffnen\", um mehr Kontext anzuzeigen, als eine Teams-Karte bietet.",
+      "fallback": {
+        "label": "Angeforderter Datensatz nicht verfügbar:",
+        "showingInstead": "Ihre Teams-Arbeitsliste wird statt {{destination}} angezeigt."
+      },
+      "entrySource": {
+        "bot": "Aus einem Teams-Bot-Ergebnis geöffnet.",
+        "messageExtension": "Aus einem Teams-Nachrichtenerweiterungsergebnis geöffnet.",
+        "notification": "Aus einer Teams-Aktivitätsbenachrichtigung geöffnet."
+      },
+      "destinations": {
+        "myWork": {
+          "title": "Meine Arbeit",
+          "summary": "Ihr persönlicher Teams-Tab ist bereit, Ihre PSA-Arbeitswarteschlange zu laden."
+        },
+        "ticket": {
+          "title": "Ticket {{ticketId}}",
+          "summary": "Sie öffnen Ticket {{ticketId}} aus Teams."
+        },
+        "projectTask": {
+          "title": "Projektaufgabe {{taskId}}",
+          "summary": "Sie öffnen Aufgabe {{taskId}} im Projekt {{projectId}}."
+        },
+        "approval": {
+          "title": "Genehmigung {{approvalId}}",
+          "summary": "Sie öffnen Genehmigung {{approvalId}} aus Teams."
+        },
+        "timeEntry": {
+          "title": "Zeiteintrag {{entryId}}",
+          "summary": "Sie öffnen Zeiteintrag {{entryId}} aus Teams."
+        },
+        "contact": {
+          "title": "Kontakt {{contactId}}",
+          "summary": "Sie öffnen Kontakt {{contactId}} aus Teams.",
+          "summaryWithClient": "Sie öffnen Kontakt {{contactId}} für Kunde {{clientId}} aus Teams."
+        }
+      }
     }
   },
   "feedback": {

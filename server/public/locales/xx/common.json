@@ -1046,6 +1046,9 @@
       "teamLeadAccessRequired": "11111",
       "teamsTabUnavailable": "11111",
       "teamsSignInUnavailable": "11111",
+      "teamsSetupNotFinished": "11111",
+      "teamsSetupNotFinishedHint": "11111",
+      "teamsTabAdminHint": "11111",
       "assetNotFound": "11111",
       "contactNotFound": "11111",
       "templateNotFound": "11111",
@@ -1073,6 +1076,48 @@
       "slaSettings": "11111",
       "documentEditor": "11111",
       "accountManagement": "11111"
+    },
+    "teamsTab": {
+      "signedInAs": "11111 {{name}} 11111",
+      "openInFullPsa": "11111",
+      "iframeTitle": "11111 {{destination}} 11111",
+      "fullPsaHint": "11111",
+      "fallback": {
+        "label": "11111",
+        "showingInstead": "11111 {{destination}} 11111"
+      },
+      "entrySource": {
+        "bot": "11111",
+        "messageExtension": "11111",
+        "notification": "11111"
+      },
+      "destinations": {
+        "myWork": {
+          "title": "11111",
+          "summary": "11111"
+        },
+        "ticket": {
+          "title": "11111 {{ticketId}} 11111",
+          "summary": "11111 {{ticketId}} 11111"
+        },
+        "projectTask": {
+          "title": "11111 {{taskId}} 11111",
+          "summary": "11111 {{taskId}} 11111 {{projectId}} 11111"
+        },
+        "approval": {
+          "title": "11111 {{approvalId}} 11111",
+          "summary": "11111 {{approvalId}} 11111"
+        },
+        "timeEntry": {
+          "title": "11111 {{entryId}} 11111",
+          "summary": "11111 {{entryId}} 11111"
+        },
+        "contact": {
+          "title": "11111 {{contactId}} 11111",
+          "summary": "11111 {{contactId}} 11111",
+          "summaryWithClient": "11111 {{contactId}} 11111 {{clientId}} 11111"
+        }
+      }
     }
   },
   "feedback": {

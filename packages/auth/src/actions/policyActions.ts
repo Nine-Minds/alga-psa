@@ -213,6 +213,38 @@ export const getUserRoles = withAuth(async (_user, { tenant }, userId: string): 
     });
 });
 
+export const getUserRolesBatch = withAuth(
+    async (_user, { tenant }, userIds: string[]): Promise<Record<string, IRole[]>> => {
+        if (userIds.length === 0) {
+            return {};
+        }
+
+        const uniqueUserIds = Array.from(new Set(userIds));
+        const { knex: db } = await createTenantKnex();
+
+        return withTransaction(db, async (trx: Knex.Transaction) => {
+            const rows = await trx('user_roles')
+                .join('roles', function() {
+                    this.on('user_roles.role_id', '=', 'roles.role_id')
+                        .andOn('user_roles.tenant', '=', 'roles.tenant');
+                })
+                .where({ 'user_roles.tenant': tenant })
+                .whereIn('user_roles.user_id', uniqueUserIds)
+                .select<Array<IRole & { user_id: string }>>('roles.*', 'user_roles.user_id');
+
+            const grouped: Record<string, IRole[]> = {};
+            for (const userId of uniqueUserIds) {
+                grouped[userId] = [];
+            }
+            for (const row of rows) {
+                const { user_id, ...role } = row;
+                grouped[user_id].push(role as IRole);
+            }
+            return grouped;
+        });
+    },
+);
+
 // User-Attribute actions
 export const getUserAttributes = withAuth(async (_user, { tenant }, userId: string): Promise<Partial<IUserWithRoles>> => {
     const { knex: db } = await createTenantKnex();

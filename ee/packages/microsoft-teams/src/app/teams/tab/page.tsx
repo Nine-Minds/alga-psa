@@ -1,11 +1,12 @@
 import { Card } from '@alga-psa/ui/components/Card';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import type { TFunction } from 'i18next';
 import { getTeamsAvailability, type TeamsAvailability } from '../../../lib/teams/teamsAvailability';
 import { buildTeamsReauthPath } from '../../../lib/teams/buildTeamsReauthUrl';
 import { buildTeamsFullPsaUrl } from '../../../lib/teams/buildTeamsFullPsaUrl';
 import { resolveTeamsTabAccessState } from '../../../lib/teams/resolveTeamsTabAccessState';
 import { resolveTeamsTabAuthState } from '../../../lib/teams/resolveTeamsTabAuthState';
 import {
-  describeTeamsTabDestination,
   resolveTeamsTabEntrySource,
   type TeamsTabEntrySource,
   type TeamsTabDestination,
@@ -56,92 +57,152 @@ function buildTeamsTabCallbackUrl(params?: Record<string, string | string[] | un
   return suffix ? `/teams/tab?${suffix}` : '/teams/tab';
 }
 
-function renderAvailabilityCard(availability: Extract<TeamsAvailability, { enabled: false }>) {
+function describeDestinationLocalized(
+  t: TFunction,
+  destination: TeamsTabDestination
+): { title: string; summary: string } {
+  switch (destination.type) {
+    case 'ticket':
+      return {
+        title: t('pages.teamsTab.destinations.ticket.title', { ticketId: destination.ticketId }),
+        summary: t('pages.teamsTab.destinations.ticket.summary', { ticketId: destination.ticketId }),
+      };
+    case 'project_task':
+      return {
+        title: t('pages.teamsTab.destinations.projectTask.title', { taskId: destination.taskId }),
+        summary: t('pages.teamsTab.destinations.projectTask.summary', {
+          taskId: destination.taskId,
+          projectId: destination.projectId,
+        }),
+      };
+    case 'approval':
+      return {
+        title: t('pages.teamsTab.destinations.approval.title', { approvalId: destination.approvalId }),
+        summary: t('pages.teamsTab.destinations.approval.summary', { approvalId: destination.approvalId }),
+      };
+    case 'time_entry':
+      return {
+        title: t('pages.teamsTab.destinations.timeEntry.title', { entryId: destination.entryId }),
+        summary: t('pages.teamsTab.destinations.timeEntry.summary', { entryId: destination.entryId }),
+      };
+    case 'contact':
+      return {
+        title: t('pages.teamsTab.destinations.contact.title', { contactId: destination.contactId }),
+        summary: destination.clientId
+          ? t('pages.teamsTab.destinations.contact.summaryWithClient', {
+              contactId: destination.contactId,
+              clientId: destination.clientId,
+            })
+          : t('pages.teamsTab.destinations.contact.summary', { contactId: destination.contactId }),
+      };
+    case 'my_work':
+    default:
+      return {
+        title: t('pages.teamsTab.destinations.myWork.title'),
+        summary: t('pages.teamsTab.destinations.myWork.summary'),
+      };
+  }
+}
+
+async function renderAvailabilityCard(availability: Extract<TeamsAvailability, { enabled: false }>) {
+  const { t } = await getServerTranslation(undefined, 'common');
   return (
     <Card className="m-6 p-6 text-sm text-gray-700">
       <div className="space-y-2">
-        <h1 className="text-lg font-semibold text-gray-900">Teams tab unavailable</h1>
+        <h1 className="text-lg font-semibold text-gray-900">{t('pages.errors.teamsTabUnavailable')}</h1>
         <p>{availability.message}</p>
-        <p>Ask a PSA administrator to enable Teams for this tenant before reopening the personal tab.</p>
+        <p>{t('pages.errors.teamsTabEnableHint')}</p>
       </div>
     </Card>
   );
 }
 
-function renderTeamsTabShell(options: {
+async function renderTeamsTabShell(options: {
   state: Extract<Awaited<ReturnType<typeof resolveTeamsTabAuthState>>, { status: 'ready' }>;
   destination: TeamsTabDestination;
   entrySource: TeamsTabEntrySource;
   requestedDestination?: TeamsTabDestination;
   fallbackMessage?: string;
 }) {
-  const destinationCopy = describeTeamsTabDestination(options.destination);
+  const { t } = await getServerTranslation(undefined, 'common');
+  const destinationCopy = describeDestinationLocalized(t, options.destination);
   const requestedDestination = options.requestedDestination || options.destination;
-  const requestedDestinationCopy = describeTeamsTabDestination(requestedDestination);
+  const requestedDestinationCopy = describeDestinationLocalized(t, requestedDestination);
   const isFallback = requestedDestination.type !== options.destination.type;
   const fullPsaUrl = buildTeamsFullPsaUrl(requestedDestination);
   const embeddedPsaUrl = !isFallback ? fullPsaUrl : null;
+  const signedInAs = options.state.userName || options.state.userEmail || options.state.userId;
 
   return (
     <div
-      className="mx-auto max-w-3xl p-6"
+      className="flex h-screen w-full flex-col bg-gray-50"
       data-teams-tab-state="ready"
       data-teams-tab-destination={options.destination.type}
       data-teams-tab-entry-source={options.entrySource}
       data-teams-tab-requested-destination={requestedDestination.type}
       data-teams-tab-fallback={isFallback ? options.destination.type : undefined}
     >
-      <div className="space-y-3 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="space-y-1">
-          <p className="text-xs font-medium uppercase tracking-wide text-teal-700">Microsoft Teams</p>
-          <h1 className="text-2xl font-semibold text-gray-900">{destinationCopy.title}</h1>
+      <header className="flex shrink-0 items-center justify-between gap-4 border-b border-gray-200 bg-white px-4 py-2">
+        <div className="min-w-0">
+          <h1 className="truncate text-sm font-semibold text-gray-900">{destinationCopy.title}</h1>
+          <p className="truncate text-xs text-gray-500">
+            {t('pages.teamsTab.signedInAs', { name: signedInAs })}
+          </p>
         </div>
-        {options.fallbackMessage ? (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            <p className="font-medium">Requested Teams record unavailable</p>
-            <p>{options.fallbackMessage}</p>
-            <p>You landed on your Teams work list instead of {requestedDestinationCopy.title.toLowerCase()}.</p>
-          </div>
-        ) : null}
-        <p className="text-sm text-gray-600">
-          Signed in as {options.state.userName || options.state.userEmail || options.state.userId} for tenant{' '}
-          {options.state.tenantId}.
-        </p>
-        {options.entrySource === 'bot' ? (
-          <p className="text-sm text-gray-600">This record was opened from a Teams bot result.</p>
-        ) : null}
-        {options.entrySource === 'message_extension' ? (
-          <p className="text-sm text-gray-600">This record was opened from a Teams message extension result.</p>
-        ) : null}
-        {options.entrySource === 'notification' ? (
-          <p className="text-sm text-gray-600">This record was opened from a Teams activity notification.</p>
-        ) : null}
-        <p className="text-sm text-gray-600">
-          Teams tab SSO is active with Microsoft profile {options.state.profileId}. {destinationCopy.summary}
-        </p>
         {fullPsaUrl ? (
-          <div className="space-y-2">
-            <a
-              className="inline-flex items-center rounded-md border border-teal-200 px-3 py-2 text-sm font-medium text-teal-700 hover:bg-teal-50"
-              data-teams-open-full-psa={fullPsaUrl}
-              href={fullPsaUrl}
-            >
-              Open in full PSA
-            </a>
-            <p className="text-sm text-gray-600">
-              Use the full PSA view when this workflow needs more context than a Teams card or quick action can provide.
-            </p>
-          </div>
+          <a
+            className="inline-flex shrink-0 items-center rounded-md border border-teal-200 px-3 py-1.5 text-xs font-medium text-teal-700 hover:bg-teal-50"
+            data-teams-open-full-psa={fullPsaUrl}
+            href={fullPsaUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t('pages.teamsTab.openInFullPsa')}
+          </a>
         ) : null}
-        {embeddedPsaUrl ? (
-          <iframe
-            className="min-h-[720px] w-full rounded-lg border border-gray-200 bg-white"
-            data-teams-embedded-psa={embeddedPsaUrl}
-            src={embeddedPsaUrl}
-            title={`${requestedDestinationCopy.title} in Alga PSA`}
-          />
-        ) : null}
-      </div>
+      </header>
+
+      {options.fallbackMessage ? (
+        <div className="shrink-0 border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-900">
+          <span className="font-medium">{t('pages.teamsTab.fallback.label')} </span>
+          <span>{options.fallbackMessage}</span>
+          <span>
+            {' '}
+            {t('pages.teamsTab.fallback.showingInstead', {
+              destination: requestedDestinationCopy.title.toLowerCase(),
+            })}
+          </span>
+        </div>
+      ) : null}
+
+      {embeddedPsaUrl ? (
+        <iframe
+          className="w-full flex-1 border-0 bg-white"
+          data-teams-embedded-psa={embeddedPsaUrl}
+          src={embeddedPsaUrl}
+          title={t('pages.teamsTab.iframeTitle', { destination: requestedDestinationCopy.title })}
+        />
+      ) : (
+        <div className="flex flex-1 items-center justify-center p-6">
+          <Card className="max-w-lg p-6 text-sm text-gray-700">
+            <div className="space-y-2">
+              <p>{destinationCopy.summary}</p>
+              {options.entrySource === 'bot' ? (
+                <p className="text-gray-500">{t('pages.teamsTab.entrySource.bot')}</p>
+              ) : null}
+              {options.entrySource === 'message_extension' ? (
+                <p className="text-gray-500">{t('pages.teamsTab.entrySource.messageExtension')}</p>
+              ) : null}
+              {options.entrySource === 'notification' ? (
+                <p className="text-gray-500">{t('pages.teamsTab.entrySource.notification')}</p>
+              ) : null}
+              {fullPsaUrl ? (
+                <p className="text-gray-500">{t('pages.teamsTab.fullPsaHint')}</p>
+              ) : null}
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
@@ -155,7 +216,7 @@ export default async function TeamsTabPage({ searchParams }: TeamsTabPageProps) 
   if (expectedTenantId) {
     const availability = await getTeamsAvailability({ tenantId: expectedTenantId });
     if (availability.enabled === false) {
-      return renderAvailabilityCard(availability);
+      return await renderAvailabilityCard(availability);
     }
   }
 
@@ -187,21 +248,24 @@ export default async function TeamsTabPage({ searchParams }: TeamsTabPageProps) 
     userId: state.status === 'ready' ? state.userId : undefined,
   });
   if (availability.enabled === false) {
-    return renderAvailabilityCard(availability);
+    return await renderAvailabilityCard(availability);
   }
 
   if (state.status !== 'ready') {
+    const { t } = await getServerTranslation(undefined, 'common');
     return (
       <Card className="m-6 p-6 text-sm text-gray-700">
         <div className="space-y-2">
           <h1 className="text-lg font-semibold text-gray-900">
-            {state.status === 'not_configured' ? 'Teams setup not finished' : 'Teams tab unavailable'}
+            {state.status === 'not_configured'
+              ? t('pages.errors.teamsSetupNotFinished')
+              : t('pages.errors.teamsTabUnavailable')}
           </h1>
           <p>{state.message}</p>
           <p>
             {state.status === 'not_configured'
-              ? 'Ask a PSA administrator to finish Teams setup and then reopen the personal tab.'
-              : 'Ask a PSA administrator to finish Teams setup, then reopen the tab.'}
+              ? t('pages.errors.teamsSetupNotFinishedHint')
+              : t('pages.errors.teamsTabAdminHint')}
           </p>
         </div>
       </Card>
@@ -210,7 +274,7 @@ export default async function TeamsTabPage({ searchParams }: TeamsTabPageProps) 
 
   const accessState = await resolveTeamsTabAccessState(state, destination);
   if (accessState.status !== 'ready') {
-    return renderTeamsTabShell({
+    return await renderTeamsTabShell({
       state,
       destination: { type: 'my_work' },
       entrySource,
@@ -219,7 +283,7 @@ export default async function TeamsTabPage({ searchParams }: TeamsTabPageProps) 
     });
   }
 
-  return renderTeamsTabShell({ state, destination, entrySource });
+  return await renderTeamsTabShell({ state, destination, entrySource });
 }
 
 export const dynamic = 'force-dynamic';

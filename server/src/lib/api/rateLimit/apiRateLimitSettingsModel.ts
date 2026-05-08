@@ -59,8 +59,41 @@ async function loadForKey(
   return row ? mapRow(row) : null;
 }
 
+async function loadForKeys(
+  tenant: string,
+  apiKeyIds: string[],
+): Promise<{
+  overrides: Map<string, ApiRateLimitSettingsRow>;
+  tenantDefault: ApiRateLimitSettingsRow | null;
+}> {
+  const knex = await getConnection(tenant);
+  const rows = await knex(TABLE_NAME)
+    .where({ tenant })
+    .andWhere((builder) => {
+      builder.whereNull('api_key_id');
+      if (apiKeyIds.length > 0) {
+        builder.orWhereIn('api_key_id', apiKeyIds);
+      }
+    });
+
+  const overrides = new Map<string, ApiRateLimitSettingsRow>();
+  let tenantDefault: ApiRateLimitSettingsRow | null = null;
+
+  for (const raw of rows) {
+    const mapped = mapRow(raw);
+    if (mapped.apiKeyId == null) {
+      tenantDefault = mapped;
+    } else {
+      overrides.set(mapped.apiKeyId, mapped);
+    }
+  }
+
+  return { overrides, tenantDefault };
+}
+
 export const apiRateLimitSettingsReadOps = {
   getForKey: loadForKey,
+  getForKeys: loadForKeys,
 };
 
 export async function getForKey(
@@ -68,6 +101,16 @@ export async function getForKey(
   apiKeyId?: string | null,
 ): Promise<ApiRateLimitSettingsRow | null> {
   return apiRateLimitSettingsReadOps.getForKey(tenant, apiKeyId);
+}
+
+export async function getForKeys(
+  tenant: string,
+  apiKeyIds: string[],
+): Promise<{
+  overrides: Map<string, ApiRateLimitSettingsRow>;
+  tenantDefault: ApiRateLimitSettingsRow | null;
+}> {
+  return apiRateLimitSettingsReadOps.getForKeys(tenant, apiKeyIds);
 }
 
 export async function upsertForKey(
