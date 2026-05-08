@@ -29,3 +29,15 @@ db:
   adminPasswordSecret:
     name: db-credentials
     key: DB_PASSWORD_SUPERUSER
+
+livenessProbe:
+  enabled: false
+
+readinessProbe:
+  enabled: false
+
+extraEnv:
+  - name: TEMPORAL_ADDRESS
+    value: temporal-frontend.msp.svc.cluster.local:7233
+  - name: TEMPORAL_NAMESPACE
+    value: default

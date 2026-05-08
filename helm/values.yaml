@@ -67,6 +67,7 @@ server:
   serverActionsBodyLimit: "200mb"
   pullPolicy: Always
   replicaCount: 2
+  progressDeadlineSeconds: null
   service:
     type: "ClusterIP"
     port: 3000

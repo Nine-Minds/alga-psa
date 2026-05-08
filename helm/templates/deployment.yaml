@@ -8,6 +8,9 @@ metadata:
     {{- include "sebastian.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.server.replicaCount }}
+  {{- if .Values.server.progressDeadlineSeconds }}
+  progressDeadlineSeconds: {{ .Values.server.progressDeadlineSeconds }}
+  {{- end }}
   {{- if .Values.server.hostNetwork }}
   strategy:
     type: Recreate

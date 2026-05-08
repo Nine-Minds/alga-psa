@@ -88,6 +88,7 @@ vault:
 
 # Health check probe configuration
 livenessProbe:
+  enabled: true
   initialDelaySeconds: 30
   periodSeconds: 30
   timeoutSeconds: 10
@@ -95,6 +96,7 @@ livenessProbe:
   successThreshold: 1
 
 readinessProbe:
+  enabled: true
   initialDelaySeconds: 15
   periodSeconds: 10
   timeoutSeconds: 5

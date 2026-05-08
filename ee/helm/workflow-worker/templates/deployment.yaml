@@ -191,6 +191,7 @@ spec:
               containerPort: {{ .Values.service.port }}
               protocol: TCP
 
+          {{- if .Values.livenessProbe.enabled }}
           livenessProbe:
             httpGet:
               path: /health
@@ -200,7 +201,9 @@ spec:
             timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
             successThreshold: {{ .Values.livenessProbe.successThreshold | default 1 }}
             failureThreshold: {{ .Values.livenessProbe.failureThreshold | default 3 }}
+          {{- end }}
 
+          {{- if .Values.readinessProbe.enabled }}
           readinessProbe:
             httpGet:
               path: /health
@@ -210,6 +213,7 @@ spec:
             timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
             successThreshold: {{ .Values.readinessProbe.successThreshold | default 1 }}
             failureThreshold: {{ .Values.readinessProbe.failureThreshold | default 3 }}
+          {{- end }}
 
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
