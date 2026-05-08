@@ -1358,107 +1358,6 @@
       "sso": "Caricamento strumenti di gestione SSO...",
       "sessions": "Caricamento sessioni attive..."
     },
-    "ssoBulk": {
-      "loading": {
-        "title": "SSO",
-        "description": "Caricamento degli strumenti di assegnazione SSO in blocco..."
-      },
-      "autoLink": {
-        "title": "Configuri automaticamente l'SSO per i nuovi utenti interni",
-        "description": "Attivi questa opzione per provisionare immediatamente ogni nuovo account del personale con il Suo provider SSO aziendale, in modo che non sia mai necessario un accesso basato su password.",
-        "body": "Quando è attivata, gli utenti MSP appena aggiunti possono accedere con Google o Microsoft utilizzando la loro email aziendale. Non dovranno collegare manualmente il proprio account.",
-        "toggleLabel": "Attiva/disattiva la corrispondenza SSO automatica",
-        "disabledInfo": "Attivi questo interruttore per consentire al personale nuovo ed esistente di saltare il flusso “Connetti SSO” quando la loro email corrisponde già a un provider configurato. Registreremo comunque ogni collegamento automatico."
-      },
-      "bulk": {
-        "title": "Assegnazione SSO in blocco",
-        "description": "Selezioni gli utenti interni dall'elenco sottostante e li colleghi a un provider Google o Microsoft configurato. Utilizzi l'anteprima per verificare l'impatto prima dell'esecuzione.",
-        "noProviders": "Nessun provider SSO è ancora configurato. Aggiunga le credenziali OAuth per continuare con le assegnazioni in blocco."
-      },
-      "errors": {
-        "loadProviders": "Impossibile caricare la configurazione del provider SSO.",
-        "updatePreferences": "Impossibile aggiornare le preferenze SSO."
-      },
-      "form": {
-        "title": "Scelga il provider e selezioni gli utenti",
-        "description": "Selezioni il provider SSO configurato per il Suo personale, quindi cerchi e selezioni gli utenti che devono essere collegati.",
-        "providerLabel": "Provider",
-        "notConfigured": "Non configurato",
-        "providerNotConfiguredAlert": "Fornisca le credenziali OAuth per questo provider prima di collegare gli account.",
-        "actionLabel": "Azione",
-        "linkSelected": "Collega utenti selezionati",
-        "unlinkSelected": "Scollega utenti selezionati",
-        "actionPlaceholder": "Selezioni l'azione SSO in blocco",
-        "actionDescription": "Il collegamento aggiunge il provider a ciascun utente selezionato. Lo scollegamento rimuove il provider, quindi l'utente torna all'accesso con password/TOTP fino al prossimo collegamento.",
-        "searchLabel": "Trovi utenti interni",
-        "searchPlaceholder": "Cerchi per email o nome",
-        "noneSelected": "Nessun utente ancora selezionato.",
-        "selected_one": "{{count}} utente selezionato.",
-        "selected_other": "{{count}} utenti selezionati.",
-        "clearSelection": "Cancella selezione",
-        "loadingUsers": "Caricamento utenti...",
-        "noMatch": "Nessun utente corrisponde a questa ricerca.",
-        "noUsers": "Nessun utente interno trovato.",
-        "clientPortalComing": "Le assegnazioni in blocco per il portale clienti arriveranno presto. Per ora, questo strumento si applica solo agli utenti MSP interni.",
-        "loadUsersFailed": "Impossibile caricare gli utenti assegnabili.",
-        "actions": {
-          "previewLink": "Anteprima assegnazione",
-          "previewUnlink": "Anteprima scollegamento",
-          "link": "Collega account",
-          "unlink": "Scollega account",
-          "preparingPreview": "Preparazione anteprima…",
-          "linking": "Collegamento account…",
-          "unlinking": "Scollegamento account…",
-          "bulkLabel": "Azioni SSO in blocco {{location}}"
-        },
-        "table": {
-          "email": "Email",
-          "id": "ID",
-          "name": "Nome",
-          "status": "Stato",
-          "active": "Attivo",
-          "inactive": "Inattivo",
-          "linkedProviders": "Provider collegati",
-          "unlinked": "Scollegato",
-          "lastLogin": "Ultimo accesso"
-        },
-        "toast": {
-          "providerRequiredTitle": "Provider richiesto",
-          "providerRequiredDescription": "Selezioni un provider configurato prima di continuare.",
-          "noUsersTitle": "Nessun utente selezionato",
-          "noUsersDescription": "Selezioni almeno un utente dalla tabella.",
-          "failedTitle": "Assegnazione in blocco non riuscita",
-          "failedDescription": "Impossibile elaborare l'assegnazione SSO in blocco.",
-          "linkCompleteTitle": "Collegamento completato",
-          "unlinkCompleteTitle": "Scollegamento completato",
-          "previewReadyTitle": "Anteprima pronta",
-          "linkedCount": "Collegati {{count}} account tramite {{provider}}.",
-          "unlinkedCount": "Scollegati {{count}} account tramite {{provider}}.",
-          "previewUnlink_one": "Anteprima pronta. Scolleghemo {{count}} utente selezionato.",
-          "previewUnlink_other": "Anteprima pronta. Scolleghemo {{count}} utenti selezionati.",
-          "previewLink": "Anteprima pronta. Esamini il riepilogo prima di collegare gli account."
-        },
-        "results": {
-          "completeTitle": "Assegnazione completata",
-          "previewTitle": "Risultati anteprima",
-          "noneMatched": "Nessuno degli utenti selezionati corrisponde ai filtri attuali.",
-          "processed_one": "Elaborato {{count}} utente.",
-          "processed_other": "Elaborati {{count}} utenti.",
-          "candidatesSelected": "{{count}} selezionati",
-          "unlinked": "Scollegati",
-          "wouldUnlink": "Verrebbero scollegati",
-          "linked": "Collegati",
-          "wouldLink": "Verrebbero collegati",
-          "alreadyUnlinked": "Già scollegati",
-          "alreadyLinked": "Già collegati",
-          "skippedInactive": "Saltati (inattivi)"
-        },
-        "providerNames": {
-          "google": "Google Workspace",
-          "microsoft": "Microsoft 365"
-        }
-      }
-    },
     "userRoles": {
       "title": "Assegna ruoli agli utenti",
       "description": {
@@ -1537,6 +1436,107 @@
         "loading": "Caricamento sessioni...",
         "noMatch": "Nessuna sessione corrisponde alla Sua ricerca",
         "noSessions": "Nessuna sessione attiva trovata"
+      }
+    }
+  },
+  "ssoBulk": {
+    "loading": {
+      "title": "SSO",
+      "description": "Caricamento degli strumenti di assegnazione SSO in blocco..."
+    },
+    "autoLink": {
+      "title": "Configuri automaticamente l'SSO per i nuovi utenti interni",
+      "description": "Attivi questa opzione per provisionare immediatamente ogni nuovo account del personale con il Suo provider SSO aziendale, in modo che non sia mai necessario un accesso basato su password.",
+      "body": "Quando è attivata, gli utenti MSP appena aggiunti possono accedere con Google o Microsoft utilizzando la loro email aziendale. Non dovranno collegare manualmente il proprio account.",
+      "toggleLabel": "Attiva/disattiva la corrispondenza SSO automatica",
+      "disabledInfo": "Attivi questo interruttore per consentire al personale nuovo ed esistente di saltare il flusso “Connetti SSO” quando la loro email corrisponde già a un provider configurato. Registreremo comunque ogni collegamento automatico."
+    },
+    "bulk": {
+      "title": "Assegnazione SSO in blocco",
+      "description": "Selezioni gli utenti interni dall'elenco sottostante e li colleghi a un provider Google o Microsoft configurato. Utilizzi l'anteprima per verificare l'impatto prima dell'esecuzione.",
+      "noProviders": "Nessun provider SSO è ancora configurato. Aggiunga le credenziali OAuth per continuare con le assegnazioni in blocco."
+    },
+    "errors": {
+      "loadProviders": "Impossibile caricare la configurazione del provider SSO.",
+      "updatePreferences": "Impossibile aggiornare le preferenze SSO."
+    },
+    "form": {
+      "title": "Scelga il provider e selezioni gli utenti",
+      "description": "Selezioni il provider SSO configurato per il Suo personale, quindi cerchi e selezioni gli utenti che devono essere collegati.",
+      "providerLabel": "Provider",
+      "notConfigured": "Non configurato",
+      "providerNotConfiguredAlert": "Fornisca le credenziali OAuth per questo provider prima di collegare gli account.",
+      "actionLabel": "Azione",
+      "linkSelected": "Collega utenti selezionati",
+      "unlinkSelected": "Scollega utenti selezionati",
+      "actionPlaceholder": "Selezioni l'azione SSO in blocco",
+      "actionDescription": "Il collegamento aggiunge il provider a ciascun utente selezionato. Lo scollegamento rimuove il provider, quindi l'utente torna all'accesso con password/TOTP fino al prossimo collegamento.",
+      "searchLabel": "Trovi utenti interni",
+      "searchPlaceholder": "Cerchi per email o nome",
+      "noneSelected": "Nessun utente ancora selezionato.",
+      "selected_one": "{{count}} utente selezionato.",
+      "selected_other": "{{count}} utenti selezionati.",
+      "clearSelection": "Cancella selezione",
+      "loadingUsers": "Caricamento utenti...",
+      "noMatch": "Nessun utente corrisponde a questa ricerca.",
+      "noUsers": "Nessun utente interno trovato.",
+      "clientPortalComing": "Le assegnazioni in blocco per il portale clienti arriveranno presto. Per ora, questo strumento si applica solo agli utenti MSP interni.",
+      "loadUsersFailed": "Impossibile caricare gli utenti assegnabili.",
+      "actions": {
+        "previewLink": "Anteprima assegnazione",
+        "previewUnlink": "Anteprima scollegamento",
+        "link": "Collega account",
+        "unlink": "Scollega account",
+        "preparingPreview": "Preparazione anteprima…",
+        "linking": "Collegamento account…",
+        "unlinking": "Scollegamento account…",
+        "bulkLabel": "Azioni SSO in blocco {{location}}"
+      },
+      "table": {
+        "email": "Email",
+        "id": "ID",
+        "name": "Nome",
+        "status": "Stato",
+        "active": "Attivo",
+        "inactive": "Inattivo",
+        "linkedProviders": "Provider collegati",
+        "unlinked": "Scollegato",
+        "lastLogin": "Ultimo accesso"
+      },
+      "toast": {
+        "providerRequiredTitle": "Provider richiesto",
+        "providerRequiredDescription": "Selezioni un provider configurato prima di continuare.",
+        "noUsersTitle": "Nessun utente selezionato",
+        "noUsersDescription": "Selezioni almeno un utente dalla tabella.",
+        "failedTitle": "Assegnazione in blocco non riuscita",
+        "failedDescription": "Impossibile elaborare l'assegnazione SSO in blocco.",
+        "linkCompleteTitle": "Collegamento completato",
+        "unlinkCompleteTitle": "Scollegamento completato",
+        "previewReadyTitle": "Anteprima pronta",
+        "linkedCount": "Collegati {{count}} account tramite {{provider}}.",
+        "unlinkedCount": "Scollegati {{count}} account tramite {{provider}}.",
+        "previewUnlink_one": "Anteprima pronta. Scolleghemo {{count}} utente selezionato.",
+        "previewUnlink_other": "Anteprima pronta. Scolleghemo {{count}} utenti selezionati.",
+        "previewLink": "Anteprima pronta. Esamini il riepilogo prima di collegare gli account."
+      },
+      "results": {
+        "completeTitle": "Assegnazione completata",
+        "previewTitle": "Risultati anteprima",
+        "noneMatched": "Nessuno degli utenti selezionati corrisponde ai filtri attuali.",
+        "processed_one": "Elaborato {{count}} utente.",
+        "processed_other": "Elaborati {{count}} utenti.",
+        "candidatesSelected": "{{count}} selezionati",
+        "unlinked": "Scollegati",
+        "wouldUnlink": "Verrebbero scollegati",
+        "linked": "Collegati",
+        "wouldLink": "Verrebbero collegati",
+        "alreadyUnlinked": "Già scollegati",
+        "alreadyLinked": "Già collegati",
+        "skippedInactive": "Saltati (inattivi)"
+      },
+      "providerNames": {
+        "google": "Google Workspace",
+        "microsoft": "Microsoft 365"
       }
     }
   },

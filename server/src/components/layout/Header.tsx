@@ -33,6 +33,7 @@ import type { JobMetrics } from '@alga-psa/jobs/actions';
 import { getQueueMetricsAction } from '@alga-psa/jobs/actions';
 import { analytics } from '@alga-psa/analytics/client';
 import { QuickCreateDialog, QuickCreateType } from './QuickCreateDialog';
+import { useProduct } from '@/context/ProductContext';
 import { ThemeToggle } from '@alga-psa/ui/components/ThemeToggle';
 import { TrialBanner } from './TrialBanner';
 import { PaymentFailedBanner } from './PaymentFailedBanner';
@@ -179,9 +180,19 @@ const TenantBadge: React.FC<{
   );
 };
 
+const ALGADESK_QUICK_CREATE_TYPES: ReadonlySet<QuickCreateType> = new Set([
+  'ticket',
+  'client',
+  'contact',
+]);
+
 const QuickCreateMenu: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
   const [activeQuickCreate, setActiveQuickCreate] = useState<QuickCreateType>(null);
-  const translatedOptions = quickCreateOptions.map((option) => ({
+  const { isAlgadesk } = useProduct();
+  const visibleOptions = isAlgadesk
+    ? quickCreateOptions.filter((option) => ALGADESK_QUICK_CREATE_TYPES.has(option.type))
+    : quickCreateOptions;
+  const translatedOptions = visibleOptions.map((option) => ({
     ...option,
     label: t(option.labelKey, { defaultValue: option.labelDefault }),
     description: t(option.descriptionKey, { defaultValue: option.descriptionDefault }),

@@ -10,6 +10,33 @@
     "titleCommunity": "55555",
     "descriptionCommunity": "55555"
   },
+  "algadesk": {
+    "welcome": {
+      "title": "55555",
+      "description": "55555"
+    },
+    "metrics": {
+      "openTickets": "55555",
+      "awaitingCustomer": "55555",
+      "awaitingInternal": "55555",
+      "activeEmailChannels": "55555"
+    },
+    "aging": {
+      "title": "55555",
+      "under2Days": "55555",
+      "days2To7": "55555",
+      "over7Days": "55555"
+    },
+    "emailHealth": {
+      "title": "55555",
+      "summary": "55555 {{healthy}} 55555 {{active}} 55555",
+      "totalConfigured": "55555 {{total}} 55555"
+    },
+    "recentTickets": {
+      "title": "55555",
+      "empty": "55555"
+    }
+  },
   "features": {
     "heading": "55555",
     "comingSoon": "55555",

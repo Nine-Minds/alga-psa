@@ -30,6 +30,7 @@ import { PasswordChangeForm, UserAvatarUpload } from '@alga-psa/users/components
 import { SessionManagement } from '@alga-psa/auth/components';
 import ApiKeysSetup from './ApiKeysSetup';
 import { isCalendarEnterpriseEdition, resolveUserProfileTab } from '@alga-psa/integrations/lib/calendarAvailability';
+import { useProduct } from '@/context/ProductContext';
 import { toast } from 'react-hot-toast';
 import { validateContactName, validateEmailAddress, validatePhoneNumber } from '@alga-psa/validation';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
@@ -88,7 +89,8 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const { t } = useTranslation('msp/profile');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
-  const isCalendarTabAvailable = isCalendarEnterpriseEdition();
+  const { isAlgadesk } = useProduct();
+  const isCalendarTabAvailable = isCalendarEnterpriseEdition() && !isAlgadesk;
   
   const [user, setUser] = useState<IUserWithRoles | null>(null);
   const [loading, setLoading] = useState(true);

@@ -8,21 +8,14 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { Button } from '@alga-psa/ui/components/Button';
 import { usePerformanceTracking } from '@alga-psa/analytics/client';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { HiddenCardsExtrasProvider, type ExtraHiddenItem } from '@alga-psa/onboarding/components';
 import { isEnterprise } from '@/lib/features';
 import MobileAppCard from '@/components/dashboard/MobileAppCard';
+import WelcomeBanner from '@/components/dashboard/WelcomeBanner';
 import {
   dismissDashboardMobileAppCardAction,
   restoreDashboardMobileAppCardAction,
 } from '@/lib/actions/dashboardMobileAppActions';
-
-function getGreetingKey(): 'morning' | 'afternoon' | 'evening' {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'morning';
-  if (hour < 18) return 'afternoon';
-  return 'evening';
-}
 
 // App shell: dashboard landing container (server-owned, uses analytics).
 import {
@@ -32,7 +25,6 @@ import {
   HeartPulse,
   ClipboardList,
   Calendar,
-  Sparkles,
   RotateCcw,
 } from 'lucide-react';
 
@@ -152,66 +144,9 @@ const FeatureCard = ({ icon: Icon, title, description, analyticsName }: FeatureC
   );
 };
 
-interface BannerProps {
-  greeting?: string;
-  title: string;
-  description: string;
-}
-
-function EnterpriseWelcomeBanner({ greeting, title, description }: BannerProps) {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-r from-violet-600 to-cyan-500 px-6 py-5 shadow-[0_10px_30px_rgba(2,6,23,0.12)]">
-      <div className="flex items-start gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20">
-          <Sparkles className="h-5 w-5 text-white" />
-        </div>
-        <div className="min-w-0">
-          {greeting && (
-            <div className="text-xs font-medium uppercase tracking-wider text-white/80">
-              {greeting}
-            </div>
-          )}
-          <h1 className="text-xl font-semibold tracking-tight text-white sm:text-2xl">
-            {title}
-          </h1>
-          <p className="mt-1 text-sm text-white/80">
-            {description}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CommunityWelcomeBanner({ greeting, title, description }: BannerProps) {
-  return (
-    <div className="overflow-hidden rounded-2xl border border-[rgb(var(--color-border-200))] bg-white px-6 py-5 shadow-sm">
-      <div className="flex items-start gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl ring-1 ring-[rgb(var(--color-border-200))] bg-[rgb(var(--color-primary-50))]">
-          <Sparkles className="h-5 w-5" style={{ color: 'rgb(var(--color-primary-500))' }} />
-        </div>
-        <div className="min-w-0">
-          {greeting && (
-            <div className="text-xs font-medium uppercase tracking-wider" style={{ color: 'rgb(var(--color-text-500))' }}>
-              {greeting}
-            </div>
-          )}
-          <h1 className="text-xl font-semibold tracking-tight" style={{ color: 'rgb(var(--color-text-900))' }}>
-            {title}
-          </h1>
-          <p className="mt-1 text-sm" style={{ color: 'rgb(var(--color-text-500))' }}>
-            {description}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 const WelcomeDashboard = ({ onboardingSection, initialMobileAppCardDismissed = false }: DashboardContainerProps) => {
   const posthog = usePostHog();
   const { t } = useTranslation('msp/dashboard');
-  const [firstName, setFirstName] = useState<string>('');
   const [mobileDismissed, setMobileDismissed] = useState(initialMobileAppCardDismissed);
   const [isMobilePending, startMobileTransition] = useTransition();
 
@@ -271,30 +206,6 @@ const WelcomeDashboard = ({ onboardingSection, initialMobileAppCardDismissed = f
     });
   }, [posthog]);
 
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        const user = await getCurrentUser();
-        if (mounted) setFirstName(user?.first_name || '');
-      } catch {
-        /* ignore — banner falls back to non-personalized greeting */
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const greetingPart = t(`greeting.${getGreetingKey()}`, {
-    defaultValue: getGreetingKey() === 'morning'
-      ? 'Good morning'
-      : getGreetingKey() === 'afternoon'
-        ? 'Good afternoon'
-        : 'Good evening',
-  });
-  const greetingLine = firstName ? `${greetingPart}, ${firstName}` : greetingPart;
-
   const translatedFeatureCards = featureCards.map((feature) => ({
     ...feature,
     title: t(feature.titleKey, { defaultValue: feature.titleDefault }),
@@ -319,19 +230,11 @@ const WelcomeDashboard = ({ onboardingSection, initialMobileAppCardDismissed = f
       <div className="min-h-screen p-6">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col gap-8">
-              {isEnterprise ? (
-                <EnterpriseWelcomeBanner
-                  greeting={greetingLine}
-                  title={welcomeTitle}
-                  description={welcomeDescription}
-                />
-              ) : (
-                <CommunityWelcomeBanner
-                  greeting={greetingLine}
-                  title={welcomeCommunityTitle}
-                  description={welcomeCommunityDescription}
-                />
-              )}
+              <WelcomeBanner
+                variant={isEnterprise ? 'gradient' : 'plain'}
+                title={isEnterprise ? welcomeTitle : welcomeCommunityTitle}
+                description={isEnterprise ? welcomeDescription : welcomeCommunityDescription}
+              />
 
               {isEnterprise ? (
                 <HiddenCardsExtrasProvider value={mobileExtras}>

@@ -5,6 +5,33 @@
     "titleCommunity": "Bentornato",
     "descriptionCommunity": "Accedi rapidamente a ticket, pianificazione, progetti e report dalla dashboard."
   },
+  "algadesk": {
+    "welcome": {
+      "title": "Benvenuto in AlgaDesk",
+      "description": "Monitora il carico di ticket, lo stato dei canali e-mail e tieni sotto controllo ogni conversazione."
+    },
+    "metrics": {
+      "openTickets": "Ticket aperti",
+      "awaitingCustomer": "In attesa del cliente",
+      "awaitingInternal": "In attesa interna",
+      "activeEmailChannels": "Canali e-mail attivi"
+    },
+    "aging": {
+      "title": "Anzianità ticket",
+      "under2Days": "Meno di 2 giorni",
+      "days2To7": "Da 2 a 7 giorni",
+      "over7Days": "Oltre 7 giorni"
+    },
+    "emailHealth": {
+      "title": "Stato dei canali e-mail",
+      "summary": "{{healthy}} di {{active}} canali attivi sono connessi.",
+      "totalConfigured": "Canali configurati in totale: {{total}}"
+    },
+    "recentTickets": {
+      "title": "Ticket aggiornati di recente",
+      "empty": "Nessuna attività recente sui ticket."
+    }
+  },
   "features": {
     "heading": "Funzionalità della piattaforma",
     "comingSoon": "In arrivo!",
