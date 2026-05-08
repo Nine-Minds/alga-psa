@@ -59,7 +59,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const session = await auth(request);
+    const session = await auth();
     const sessionUser = session?.user as { id?: string; tenant?: string } | undefined;
 
     let tenantId = sessionUser?.tenant ?? null;

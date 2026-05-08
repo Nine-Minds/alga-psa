@@ -9,7 +9,7 @@ import { withAuth } from "@alga-psa/auth";
 import { revalidatePath } from "next/cache";
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
+import { publishTicketUpdate } from '@alga-psa/event-bus/ticket-live-updates';
 
 function formatLiveUpdateDisplayName(user: any): string {
   return `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || 'Workflow';

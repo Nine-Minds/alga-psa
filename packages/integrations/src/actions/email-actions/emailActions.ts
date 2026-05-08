@@ -3,7 +3,7 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
+import { publishTicketUpdate } from '@alga-psa/event-bus/ticket-live-updates';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import {

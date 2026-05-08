@@ -232,7 +232,7 @@ vi.mock('../../../actions/comment-actions/clipboardImageDraftActions', () => ({
 
 vi.mock('../TicketInfo', () => ({
   __esModule: true,
-  default: ({
+  default: function TicketInfoMock({
     ticket,
     onLiveDirtyFieldsChange,
     liveHighlightedFields = [],
@@ -246,7 +246,7 @@ vi.mock('../TicketInfo', () => ({
     liveFieldConflicts?: Record<string, unknown>;
     onKeepLiveConflict?: (field: string) => void;
     onTakeLiveConflict?: (field: string) => void;
-  }) => {
+  }) {
     React.useEffect(() => {
       onLiveDirtyFieldsChange?.(ticketInfoDirtyFields);
       return () => onLiveDirtyFieldsChange?.([]);
@@ -299,11 +299,11 @@ vi.mock('../TicketInfo', () => ({
 
 vi.mock('../TicketProperties', () => ({
   __esModule: true,
-  default: ({
+  default: function TicketPropertiesMock({
     onLiveDirtyFieldsChange,
   }: {
     onLiveDirtyFieldsChange?: (fields: string[]) => void;
-  }) => {
+  }) {
     React.useEffect(() => {
       onLiveDirtyFieldsChange?.(ticketPropertiesDirtyFields);
       return () => onLiveDirtyFieldsChange?.([]);
