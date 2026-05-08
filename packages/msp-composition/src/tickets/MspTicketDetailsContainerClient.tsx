@@ -24,12 +24,12 @@ type MspTicketDetailsContainerClientProps = Omit<
   'renderContactDetails' | 'renderClientDetails' | 'renderIntervalManagement' | 'surveySummaryCard'
 > & {
   surveySummary?: SurveyTicketSatisfactionSummary | null;
-  isAlgadeskMode?: boolean;
+  isAlgaDeskMode?: boolean;
 };
 
 export default function MspTicketDetailsContainerClient({
   surveySummary,
-  isAlgadeskMode = false,
+  isAlgaDeskMode = false,
   ...props
 }: MspTicketDetailsContainerClientProps) {
   const ticketIntegrationValue = useTicketIntegrationValue();
@@ -87,23 +87,24 @@ export default function MspTicketDetailsContainerClient({
       <TicketDetailsContainer
         {...props}
         surveySummaryCard={
-          !isAlgadeskMode && surveySummary !== undefined
+          !isAlgaDeskMode && surveySummary !== undefined
             ? <TicketSurveySummaryCard summary={surveySummary} />
             : undefined
         }
         renderContactDetails={renderContactDetails}
-        renderCreateProjectTask={isAlgadeskMode ? undefined : renderCreateProjectTask}
+        renderCreateProjectTask={isAlgaDeskMode ? undefined : renderCreateProjectTask}
         renderClientDetails={renderClientDetails}
-        renderIntervalManagement={isAlgadeskMode ? undefined : renderIntervalManagement}
-        hideSlaStatus={isAlgadeskMode}
-        hideTimeEntry={isAlgadeskMode}
-        hideMaterials={isAlgadeskMode}
+        renderIntervalManagement={isAlgaDeskMode ? undefined : renderIntervalManagement}
+        hideSlaStatus={isAlgaDeskMode}
+        hideTimeEntry={isAlgaDeskMode}
+        hideMaterials={isAlgaDeskMode}
         uploadTicketAttachmentAction={uploadTicketAttachmentDocument}
         deleteDraftTicketAttachmentImagesAction={deleteDraftClipboardImages}
         resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
-        disableAttachmentFolderSelection={isAlgadeskMode}
-        disableAttachmentSharing={isAlgadeskMode}
-        disableAttachmentLinking={isAlgadeskMode}
+        disableAttachmentFolderSelection={isAlgaDeskMode}
+        disableAttachmentSharing={isAlgaDeskMode}
+        disableAttachmentLinking={isAlgaDeskMode}
+        disableAgentSchedule={isAlgaDeskMode}
       />
     </TicketIntegrationProvider>
   );

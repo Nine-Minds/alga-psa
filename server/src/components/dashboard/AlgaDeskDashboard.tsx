@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { AlgadeskDashboardSummary } from '@/lib/actions/algadeskDashboardActions';
+import type { AlgaDeskDashboardSummary } from '@/lib/actions/algadeskDashboardActions';
 import WelcomeBanner from '@/components/dashboard/WelcomeBanner';
 import { isEnterprise } from '@/lib/features';
 
-interface AlgadeskDashboardProps {
-  summary: AlgadeskDashboardSummary;
+interface AlgaDeskDashboardProps {
+  summary: AlgaDeskDashboardSummary;
 }
 
 function MetricCard({ title, value, href }: { title: string; value: number; href?: string }) {
@@ -21,7 +21,7 @@ function MetricCard({ title, value, href }: { title: string; value: number; href
   return href ? <Link href={href}>{content}</Link> : content;
 }
 
-export default function AlgadeskDashboard({ summary }: AlgadeskDashboardProps) {
+export default function AlgaDeskDashboard({ summary }: AlgaDeskDashboardProps) {
   const { t } = useTranslation('msp/dashboard');
 
   return (

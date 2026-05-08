@@ -70,12 +70,12 @@ describe('MSP client detail page product composition', () => {
     getSurveyClientSummaryMock.mockResolvedValue({ score: null });
   });
 
-  it('routes Algadesk tenants through Algadesk-safe client detail mode', async () => {
+  it('routes AlgaDesk tenants through AlgaDesk-safe client detail mode', async () => {
     getCurrentTenantProductMock.mockResolvedValue('algadesk');
 
     const props = await getRenderedClientDetailProps();
 
-    expect(props.isAlgadeskMode).toBe(true);
+    expect(props.isAlgaDeskMode).toBe(true);
     expect(props.documents).toEqual([]);
     expect(getDocumentByClientIdMock).not.toHaveBeenCalled();
     expect(getSurveyClientSummaryMock).not.toHaveBeenCalled();
@@ -86,7 +86,7 @@ describe('MSP client detail page product composition', () => {
 
     const props = await getRenderedClientDetailProps();
 
-    expect(props.isAlgadeskMode).toBe(false);
+    expect(props.isAlgaDeskMode).toBe(false);
     expect(props.documents).toEqual([{ document_id: 'doc-1' }]);
     expect(getDocumentByClientIdMock).toHaveBeenCalledWith('client-1');
     expect(getSurveyClientSummaryMock).toHaveBeenCalledWith('client-1');

@@ -4,14 +4,14 @@ import path from 'path';
 
 const SOURCE_PATH = path.resolve(
   __dirname,
-  '../../../components/dashboard/AlgadeskDashboard.tsx',
+  '../../../components/dashboard/AlgaDeskDashboard.tsx',
 );
 
 function readSource(): string {
   return fs.readFileSync(SOURCE_PATH, 'utf8');
 }
 
-describe('Algadesk dashboard contract', () => {
+describe('AlgaDesk dashboard contract', () => {
   it('T007: includes ticket and email summaries', () => {
     const source = readSource();
     expect(source).toContain('Open tickets');

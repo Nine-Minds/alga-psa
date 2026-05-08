@@ -1,35 +1,35 @@
-# Scratchpad — Algadesk Lightweight Help Desk Product Seam
+# Scratchpad — AlgaDesk Lightweight Help Desk Product Seam
 
 - Plan slug: `2026-05-05-algadesk-lightweight-helpdesk-product-seam`
 - Created: `2026-05-05`
 
 ## What This Is
 
-Working notes for the Algadesk product seam plan. Keep this updated as implementation discovers constraints, changes scope, or adds runbooks.
+Working notes for the AlgaDesk product seam plan. Keep this updated as implementation discovers constraints, changes scope, or adds runbooks.
 
 ## Decisions
 
-- (2026-05-05) Algadesk is an orthogonal product entitlement, not a new PSA tier. Rationale: product surface and price/package ladder should evolve independently.
-- (2026-05-05) Algadesk includes email-to-ticket and ticket reply/update by email. Rationale: a help desk without email is too weak as an MSP wedge product.
-- (2026-05-05) Algadesk includes ticket attachments and KB only, not full document management.
-- (2026-05-05) Algadesk includes free-form ticket creation only, not service request forms/catalog in v1.
-- (2026-05-05) Algadesk excludes SLA module in v1 while preserving ticket data-model compatibility for possible later lightweight targets.
+- (2026-05-05) AlgaDesk is an orthogonal product entitlement, not a new PSA tier. Rationale: product surface and price/package ladder should evolve independently.
+- (2026-05-05) AlgaDesk includes email-to-ticket and ticket reply/update by email. Rationale: a help desk without email is too weak as an MSP wedge product.
+- (2026-05-05) AlgaDesk includes ticket attachments and KB only, not full document management.
+- (2026-05-05) AlgaDesk includes free-form ticket creation only, not service request forms/catalog in v1.
+- (2026-05-05) AlgaDesk excludes SLA module in v1 while preserving ticket data-model compatibility for possible later lightweight targets.
 - (2026-05-05) Direct browser access behavior is mixed: branded upgrade boundaries for major human-facing PSA areas, product-denied/not-found for internal/API-only routes.
 - (2026-05-05) Current routes remain canonical for v1; `/desk/*` aliases can be added later.
 - (2026-05-05) Existing background workers/services may remain separate runtime processes for email. The seam is licensed product surface, not forcing all work into one process.
-- (2026-05-05) Product seam should be high quality via Algadesk-specific composition, not menu-only hiding.
+- (2026-05-05) Product seam should be high quality via AlgaDesk-specific composition, not menu-only hiding.
 - (2026-05-05) Plan structure intentionally uses many feature checklist items (150+) to express intent and a smaller confidence-building test suite (~20) instead of comprehensive one-test-per-feature coverage.
 
 ## Discoveries / Constraints
 
 - (2026-05-05) Existing tier model is rank-based around `solo`, `pro`, and `premium`; it does not model product surface.
 - (2026-05-05) Existing sidebar filtering supports `requiredFeature`, but route/API enforcement is not product-aware today.
-- (2026-05-05) `server/src/components/layout/DefaultLayout.tsx` imports full PSA cross-feature providers for workflows, scheduling, projects, assets, documents, msp-composition, and chat. Algadesk needs a separate shell/provider stack.
+- (2026-05-05) `server/src/components/layout/DefaultLayout.tsx` imports full PSA cross-feature providers for workflows, scheduling, projects, assets, documents, msp-composition, and chat. AlgaDesk needs a separate shell/provider stack.
 - (2026-05-05) `server/src/app/msp/layout.tsx` registers SLA and schedule-entry integrations at module scope. This must move behind PSA-only registration or become product-aware.
-- (2026-05-05) `packages/client-portal` has broad barrels/actions/components that include billing/projects/documents/devices/appointments/notifications. Algadesk portal needs narrowed entrypoints/composition.
+- (2026-05-05) `packages/client-portal` has broad barrels/actions/components that include billing/projects/documents/devices/appointments/notifications. AlgaDesk portal needs narrowed entrypoints/composition.
 - (2026-05-05) `packages/tickets` is relatively clean but still has hard/dynamic seams around email notifications and document uploads that need provider injection or narrowed exports.
 - (2026-05-05) Most v1 APIs share `ApiBaseController`; it is the main insertion point for product access after tenant resolution.
-- (2026-05-05) API metadata/OpenAPI must be filtered by product; otherwise Algadesk API clients will discover unusable PSA endpoints.
+- (2026-05-05) API metadata/OpenAPI must be filtered by product; otherwise AlgaDesk API clients will discover unusable PSA endpoints.
 
 ## Commands / Runbooks
 
@@ -53,10 +53,10 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 ## Open Questions
 
 - What exact branded copy and CTA should the upgrade boundary use?
-- Should Algadesk retain client/contact notes and interactions in v1?
+- Should AlgaDesk retain client/contact notes and interactions in v1?
 - Which inbound email providers/settings are required for launch versus later?
 - Should `/desk/*` aliases be added immediately after v1 or only when marketing requires them?
-- Should Algadesk have product-specific naming in app chrome or inherit existing Alga branding with Algadesk labels?
+- Should AlgaDesk have product-specific naming in app chrome or inherit existing Alga branding with AlgaDesk labels?
 
 ## Implementation Log
 
@@ -114,11 +114,11 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - Static/dynamic matcher helpers
   - Path behavior resolvers for routes and APIs
   - Menu + portal navigation filtering helpers
-  - Fail-closed unknown behavior for Algadesk
+  - Fail-closed unknown behavior for AlgaDesk
   - `/desk/*` alias normalization mapped to MSP route groups
 - Added `server/src/test/unit/productSurfaceRegistry.test.ts` to validate representative route/API classifications and fail-closed behavior.
 - (2026-05-05) Completed F035/F036/F037 by extending `server/test-utils/testDataFactory.ts#createTenant` with optional `productCode` input and default `product_code: 'psa'`.
-- Added/update contract test `server/src/test/unit/testDataFactory.test.ts` to enforce default + explicit Algadesk fixture support.
+- Added/update contract test `server/src/test/unit/testDataFactory.test.ts` to enforce default + explicit AlgaDesk fixture support.
 - (2026-05-05) Completed F038 by threading optional product entitlement through provisioning flows:
   - Added `productCode?: 'psa' | 'algadesk'` to EE tenant creation interfaces in `ee/server/src/interfaces/tenant.interfaces.ts` and `ee/temporal-workflows/src/types/workflow-types.ts`.
   - Passed `productCode` through workflow activity invocation in `ee/temporal-workflows/src/workflows/tenant-creation-workflow.ts`.
@@ -157,78 +157,78 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 - (2026-05-05) Completed F061-F067 MSP layout seam increment:
   - `server/src/app/msp/layout.tsx` now resolves `productCode` via `getCurrentTenantProduct()` and passes it to the client layout.
   - Moved SLA/schedule integration registration out of module scope and gated registration to PSA-only (`productCode === 'psa'`).
-  - `server/src/app/msp/MspLayoutClient.tsx` now branches shell rendering by product: PSA keeps `DefaultLayout`; Algadesk uses a distinct shell path (`data-product-shell="algadesk"`) without forcing full PSA layout providers.
+  - `server/src/app/msp/MspLayoutClient.tsx` now branches shell rendering by product: PSA keeps `DefaultLayout`; AlgaDesk uses a distinct shell path (`data-product-shell="algadesk"`) without forcing full PSA layout providers.
 - (2026-05-05) Completed F068-F087 by product-filtering sidebar navigation through the registry helper:
   - Updated `server/src/components/layout/SidebarWithFeatureFlags.tsx` to apply `filterMenuSectionsByProduct(productCode, ...)` using `ProductContext`.
-  - Algadesk now keeps only route-allowed main navigation entries from the existing menu config, which removes PSA-only areas (billing/projects/assets/schedule/time/workflows/surveys/extensions/service-requests, etc.) while keeping dashboard/tickets/clients/contacts/KB/settings/profile/security.
+  - AlgaDesk now keeps only route-allowed main navigation entries from the existing menu config, which removes PSA-only areas (billing/projects/assets/schedule/time/workflows/surveys/extensions/service-requests, etc.) while keeping dashboard/tickets/clients/contacts/KB/settings/profile/security.
   - PSA tenant behavior remains unchanged (`productCode: psa` keeps full allowed menu set).
 - (2026-05-05) Command run: `cd server && npx vitest run src/test/unit/productSurfaceRegistry.test.ts`.
   - Result: pass (7 tests).
 - (2026-05-05) Completed F088 by making MSP shell branding product-aware without changing PSA shell behavior:
   - `server/src/components/layout/Sidebar.tsx` now accepts `appDisplayName` and `appLogoAlt` props (defaults preserve PSA).
-  - `server/src/components/layout/SidebarWithFeatureFlags.tsx` sets Algadesk branding labels when `productCode === 'algadesk'`.
-  - `server/src/app/msp/MspLayoutClient.tsx` uses product-aware client UI shell title (`Algadesk MSP` vs `MSP Portal`).
+  - `server/src/components/layout/SidebarWithFeatureFlags.tsx` sets AlgaDesk branding labels when `productCode === 'algadesk'`.
+  - `server/src/app/msp/MspLayoutClient.tsx` uses product-aware client UI shell title (`AlgaDesk MSP` vs `MSP Portal`).
 - (2026-05-05) Completed T005 with component coverage in `server/src/test/unit/layout/SidebarWithFeatureFlags.productShell.test.tsx`:
-  - Asserts Algadesk shell filters out blocked modules and uses Algadesk branding labels.
+  - Asserts AlgaDesk shell filters out blocked modules and uses AlgaDesk branding labels.
   - Asserts PSA shell still includes representative PSA modules and uses AlgaPSA branding labels.
 - (2026-05-05) Command run: `cd server && npx vitest run src/test/unit/layout/SidebarWithFeatureFlags.productShell.test.tsx`.
   - Result: pass (2 tests).
-- (2026-05-05) Completed F089-F102 and T007 with an Algadesk-specific dashboard composition.
+- (2026-05-05) Completed F089-F102 and T007 with an AlgaDesk-specific dashboard composition.
 - Added dashboard data action `server/src/lib/actions/algadeskDashboardActions.ts` with tenant-scoped summaries for:
   - open ticket count
   - awaiting customer / awaiting internal counts
   - ticket aging buckets (<2d, 2-7d, >7d)
   - recently updated tickets
   - email channel health summary from `email_providers`
-- Added Algadesk dashboard UI `server/src/components/dashboard/AlgadeskDashboard.tsx` with helpdesk-only cards/sections and no PSA-only widgets.
-- Updated `server/src/app/msp/dashboard/page.tsx` to resolve tenant product and render Algadesk dashboard for `algadesk` while preserving existing PSA dashboard behavior.
-- (2026-05-05) Completed F103-F109 and F111-F123 plus T006 with Algadesk settings tab composition narrowing.
+- Added AlgaDesk dashboard UI `server/src/components/dashboard/AlgaDeskDashboard.tsx` with helpdesk-only cards/sections and no PSA-only widgets.
+- Updated `server/src/app/msp/dashboard/page.tsx` to resolve tenant product and render AlgaDesk dashboard for `algadesk` while preserving existing PSA dashboard behavior.
+- (2026-05-05) Completed F103-F109 and F111-F123 plus T006 with AlgaDesk settings tab composition narrowing.
 - Added product-aware settings tab allowlist helper: `server/src/lib/settingsProductTabs.ts`.
 - Updated `server/src/components/settings/SettingsPage.tsx` to:
   - resolve current product via `useProduct()`
-  - filter available tabs to Algadesk-approved scope (general/users/teams/ticketing/email/client-portal)
+  - filter available tabs to AlgaDesk-approved scope (general/users/teams/ticketing/email/client-portal)
   - fail closed to `general` when excluded `tab` query params are requested.
 - Updated sidebar settings mode filtering:
   - `server/src/components/layout/Sidebar.tsx` accepts `settingsSectionsOverride`.
   - `server/src/components/layout/SidebarWithFeatureFlags.tsx` passes product-filtered settings sections.
 - Updated registry behavior in `server/src/lib/productSurfaceRegistry.ts`:
-  - added explicit Algadesk `not_found` route behavior for `/msp/settings/sla`
-  - added Algadesk query-tab filtering for `/msp/settings?tab=...` links in menu filtering.
+  - added explicit AlgaDesk `not_found` route behavior for `/msp/settings/sla`
+  - added AlgaDesk query-tab filtering for `/msp/settings?tab=...` links in menu filtering.
 
 ## Tests Added
 
 - T006: `server/src/test/unit/settings/settingsProductTabs.test.ts`
-  - Asserts Algadesk-approved settings tabs are present and excluded tabs (billing/SLA/projects/time-entry/integrations/extensions/experimental) are not allowed.
-- T007: `server/src/test/unit/dashboard/AlgadeskDashboard.contract.test.ts`
-  - Asserts Algadesk dashboard contains ticket/email summary sections and excludes PSA-only widget labels.
+  - Asserts AlgaDesk-approved settings tabs are present and excluded tabs (billing/SLA/projects/time-entry/integrations/extensions/experimental) are not allowed.
+- T007: `server/src/test/unit/dashboard/AlgaDeskDashboard.contract.test.ts`
+  - Asserts AlgaDesk dashboard contains ticket/email summary sections and excludes PSA-only widget labels.
 
 ## Commands Run
 
-- `cd server && npx vitest run src/test/unit/dashboard/AlgadeskDashboard.contract.test.ts src/test/unit/settings/settingsProductTabs.test.ts src/test/unit/layout/SidebarWithFeatureFlags.productShell.test.tsx src/test/unit/productSurfaceRegistry.test.ts`
+- `cd server && npx vitest run src/test/unit/dashboard/AlgaDeskDashboard.contract.test.ts src/test/unit/settings/settingsProductTabs.test.ts src/test/unit/layout/SidebarWithFeatureFlags.productShell.test.tsx src/test/unit/productSurfaceRegistry.test.ts`
   - Result: pass (13 tests).
-- (2026-05-05) Completed F110 by adding an explicit Knowledge Base settings entry for Algadesk.
+- (2026-05-05) Completed F110 by adding an explicit Knowledge Base settings entry for AlgaDesk.
 - Added `knowledge-base` settings tab in `server/src/components/settings/SettingsPage.tsx` with focused KB management handoff link to `/msp/knowledge-base`.
 - Added settings nav item in `server/src/config/menuConfig.ts` and extended product allowlists for `knowledge-base` in:
   - `server/src/lib/settingsProductTabs.ts`
   - `server/src/lib/productSurfaceRegistry.ts`
-- Updated T006 assertion coverage to include Algadesk KB tab allowlist expectation.
+- Updated T006 assertion coverage to include AlgaDesk KB tab allowlist expectation.
 
 ## Commands Run (additional)
 
 - `cd server && npx vitest run src/test/unit/settings/settingsProductTabs.test.ts src/test/unit/productSurfaceRegistry.test.ts src/test/unit/layout/SidebarWithFeatureFlags.productShell.test.tsx`
   - Result: pass (11 tests).
 - (2026-05-05) Completed F124-F140 and T008 with product-aware ticket list composition.
-- Added Algadesk-safe SLA filter seam in ticket list stack:
+- Added AlgaDesk-safe SLA filter seam in ticket list stack:
   - `server/src/app/msp/tickets/page.tsx`
   - `packages/tickets/src/components/TicketingDashboardContainer.tsx`
   - `packages/tickets/src/components/TicketingDashboard.tsx`
 - Behavior:
-  - Algadesk tenants now render ticket list with `allowSlaStatusFilter=false` and URL `slaStatusFilter` is ignored.
+  - AlgaDesk tenants now render ticket list with `allowSlaStatusFilter=false` and URL `slaStatusFilter` is ignored.
   - PSA tenants keep existing SLA filter behavior.
   - Core ticket list filters (board/status/priority/category/client/search/tags/assignee/team/unassigned/due-date/response-state), sorting, and pagination remain unchanged.
 - Added test coverage:
   - `server/src/test/unit/app/msp/tickets/page.productComposition.test.tsx`
-  - Asserts Algadesk disables SLA filter composition while PSA preserves it.
+  - Asserts AlgaDesk disables SLA filter composition while PSA preserves it.
 
 ## Commands Run (additional)
 
@@ -238,52 +238,52 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 - Current ticket bulk move path already only accepts `destinationBoardId` + `destinationStatusId` (`packages/tickets/src/components/TicketingDashboard.tsx`, `packages/tickets/src/actions/ticketActions.ts`), with board/status validation server-side and no bulk move hooks for excluded PSA operations.
 - (2026-05-05) Completed F142/F144/F145 with product-aware ticket detail composition routing.
 - Updated `server/src/app/msp/tickets/[id]/page.tsx` to resolve tenant product and branch details mode:
-  - Algadesk path disables survey fetch, omits associated assets panel, bypasses AI chat boundary, and passes `isAlgadeskMode=true`.
+  - AlgaDesk path disables survey fetch, omits associated assets panel, bypasses AI chat boundary, and passes `isAlgaDeskMode=true`.
   - PSA path preserves existing behavior.
-- Updated `packages/msp-composition/src/tickets/MspTicketDetailsContainerClient.tsx` with `isAlgadeskMode`:
-  - Omits project task create/link/badge composition hooks in Algadesk mode (F167/F168/F169).
-  - Omits interval/time management composition hooks in Algadesk mode (F170/F171).
-  - Omits survey summary card in Algadesk mode (F173).
+- Updated `packages/msp-composition/src/tickets/MspTicketDetailsContainerClient.tsx` with `isAlgaDeskMode`:
+  - Omits project task create/link/badge composition hooks in AlgaDesk mode (F167/F168/F169).
+  - Omits interval/time management composition hooks in AlgaDesk mode (F170/F171).
+  - Omits survey summary card in AlgaDesk mode (F173).
 - Combined with detail-page associated-assets omission and AI boundary bypass:
-  - Omits associated assets panel in Algadesk mode (F172).
-  - Removes AI detail context wrapper in Algadesk mode (F174).
+  - Omits associated assets panel in AlgaDesk mode (F172).
+  - Removes AI detail context wrapper in AlgaDesk mode (F174).
 
 ## Tests Added
 
 - `server/src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx`
-  - Asserts Algadesk detail path sets `isAlgadeskMode=true` and omits associated assets.
+  - Asserts AlgaDesk detail path sets `isAlgaDeskMode=true` and omits associated assets.
   - Asserts PSA detail path remains in standard mode and keeps survey summary fetch behavior.
 
 ## Commands Run (additional)
 
 - `cd server && npx vitest run src/test/unit/app/msp/tickets/page.productComposition.test.tsx 'src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx'`
   - Result: pass (4 tests).
-- (2026-05-05) Completed F143 with explicit Algadesk quick-add form composition wiring from MSP ticket list.
+- (2026-05-05) Completed F143 with explicit AlgaDesk quick-add form composition wiring from MSP ticket list.
 - Added product-aware quick-add flag flow:
-  - `server/src/app/msp/tickets/page.tsx` now passes `useAlgadeskQuickAddForm` based on tenant product.
+  - `server/src/app/msp/tickets/page.tsx` now passes `useAlgaDeskQuickAddForm` based on tenant product.
   - `packages/tickets/src/components/TicketingDashboardContainer.tsx` and `packages/tickets/src/components/TicketingDashboard.tsx` thread the flag into `QuickAddTicket`.
-  - `packages/tickets/src/components/QuickAddTicket.tsx` now supports `isAlgadeskMode` and fail-closes asset-prefill linkage in Algadesk mode (`asset_id` not submitted, asset banner hidden).
-- Updated test `server/src/test/unit/app/msp/tickets/page.productComposition.test.tsx` to assert Algadesk receives quick-add safe composition flag while PSA does not.
+  - `packages/tickets/src/components/QuickAddTicket.tsx` now supports `isAlgaDeskMode` and fail-closes asset-prefill linkage in AlgaDesk mode (`asset_id` not submitted, asset banner hidden).
+- Updated test `server/src/test/unit/app/msp/tickets/page.productComposition.test.tsx` to assert AlgaDesk receives quick-add safe composition flag while PSA does not.
 
 ## Commands Run (additional)
 
 - `cd server && npx vitest run src/test/unit/app/msp/tickets/page.productComposition.test.tsx 'src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx'`
   - Result: pass (4 tests).
-- (2026-05-05) Completed F165/F166 by removing SLA status and SLA breach badges from Algadesk ticket detail.
+- (2026-05-05) Completed F165/F166 by removing SLA status and SLA breach badges from AlgaDesk ticket detail.
 - Added `hideSlaStatus` composition seam threaded through ticket detail stack:
   - `packages/tickets/src/components/ticket/TicketInfo.tsx`
   - `packages/tickets/src/components/ticket/TicketDetails.tsx`
   - `packages/tickets/src/components/ticket/TicketDetailsContainer.tsx`
-  - `packages/msp-composition/src/tickets/MspTicketDetailsContainerClient.tsx` (sets `hideSlaStatus` when `isAlgadeskMode=true`).
+  - `packages/msp-composition/src/tickets/MspTicketDetailsContainerClient.tsx` (sets `hideSlaStatus` when `isAlgaDeskMode=true`).
 - Behavior:
-  - Algadesk ticket detail now hides SLA status block and SLA breach indicators.
+  - AlgaDesk ticket detail now hides SLA status block and SLA breach indicators.
   - PSA ticket detail retains existing SLA rendering behavior.
 - Validation:
-  - `src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx` still passes and confirms Algadesk detail composition mode.
+  - `src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx` still passes and confirms AlgaDesk detail composition mode.
   - A direct package-level TicketDetailsContainer test run is currently blocked in this environment by a pre-existing module-resolution issue (`next-auth` `./lib/env` specifier) under this Vitest context.
-- (2026-05-05) Completed F146-F164 and F175; validated Algadesk ticket detail core composition remains intact while PSA-only controls stay excluded.
+- (2026-05-05) Completed F146-F164 and F175; validated AlgaDesk ticket detail core composition remains intact while PSA-only controls stay excluded.
 - Added/expanded contract coverage in `packages/msp-composition/src/tickets/__tests__/MspTicketDetailsContainerClient.test.tsx`:
-  - New Algadesk-focused test (`T009`) asserts core ticket detail payload wiring remains present (metadata options, conversation/comments, documents/attachments, client/contact context, assignment/reference options) while SLA/project/time controls are omitted.
+  - New AlgaDesk-focused test (`T009`) asserts core ticket detail payload wiring remains present (metadata options, conversation/comments, documents/attachments, client/contact context, assignment/reference options) while SLA/project/time controls are omitted.
   - Added PSA default-mode assertion that project/time and SLA composition hooks remain available for PSA tenants.
 
 ## Commands Run (additional)
@@ -291,40 +291,40 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 - `cd server && npx vitest run ../packages/msp-composition/src/tickets/__tests__/MspTicketDetailsContainerClient.test.tsx src/test/unit/app/msp/tickets/page.productComposition.test.tsx 'src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx'`
   - Result: pending (run after this scratchpad update).
 - (2026-05-05) Adjusted T009 coverage location: package-level msp-composition test execution is currently blocked in this environment by existing cross-package module resolution (`@alga-psa/authorization/kernel` through tickets action graph), so T009 assertions were added to the existing server page-composition unit test instead.
-- Updated `server/src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx` Algadesk assertions to verify core ticket detail data remains wired: comments/conversation payload, documents/attachments payload, status/priority/category options, and client/contact context, while retaining Algadesk PSA-surface omissions already covered (no associated assets, no survey fetch).
+- Updated `server/src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx` AlgaDesk assertions to verify core ticket detail data remains wired: comments/conversation payload, documents/attachments payload, status/priority/category options, and client/contact context, while retaining AlgaDesk PSA-surface omissions already covered (no associated assets, no survey fetch).
 
 ## Commands Run (additional)
 
 - `cd server && npx vitest run src/test/unit/app/msp/tickets/page.productComposition.test.tsx 'src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx'`
   - Result: pass (4 tests).
-- (2026-05-05) Completed F176-F189 quick-add/reference-data seam verification based on existing QuickAddTicket behavior plus targeted Algadesk-safe asset prefill contract coverage.
+- (2026-05-05) Completed F176-F189 quick-add/reference-data seam verification based on existing QuickAddTicket behavior plus targeted AlgaDesk-safe asset prefill contract coverage.
 - Added quick-add test case in `packages/tickets/src/components/__tests__/ticket-inline-add-prefill.test.tsx`:
-  - `T010` asserts PSA mode shows linked-asset banner and submits `asset_id`, while Algadesk mode hides banner and omits `asset_id` from ticket create payload.
+  - `T010` asserts PSA mode shows linked-asset banner and submits `asset_id`, while AlgaDesk mode hides banner and omits `asset_id` from ticket create payload.
 - Environment constraint: direct execution of package-level quick-add test suite remains blocked in this Vitest context by pre-existing `next-auth` deep import resolution (`Missing "./lib/env" specifier in "next-auth" package`).
-- (2026-05-05) Completed F190-F193 by verification: existing shared MSP clients/contacts list+detail routes already render for Algadesk tenants and are explicitly allowlisted in `productSurfaceRegistry` (`/msp/clients`, `/msp/contacts`). No additional composition fork required for these four baseline renderability items.
-- (2026-05-05) Completed client-detail exclusion slice for Algadesk: F202/F203/F204/F205/F207/F209/F210.
-- `server/src/app/msp/clients/[id]/page.tsx` now resolves tenant product and passes `isAlgadeskMode` into `ClientDetails`; Algadesk path skips document fetch and survey-summary fetch.
-- `packages/clients/src/components/clients/ClientDetails.tsx` now filters tabs in Algadesk mode to remove PSA-only client surfaces (`assets`, `billing`, `billing-dashboard`, `documents`, `tax-settings`) and suppresses survey summary card rendering.
-- Added unit coverage: `server/src/test/unit/app/msp/clients/[id]/page.productComposition.test.tsx` verifying Algadesk vs PSA composition behavior (document/survey fetch suppression and mode flag propagation).
-- (2026-05-05) Completed F194/F195/F196/F197/F198/F199/F200/F201 and T012 with a client/contact composition safety pass for Algadesk.
+- (2026-05-05) Completed F190-F193 by verification: existing shared MSP clients/contacts list+detail routes already render for AlgaDesk tenants and are explicitly allowlisted in `productSurfaceRegistry` (`/msp/clients`, `/msp/contacts`). No additional composition fork required for these four baseline renderability items.
+- (2026-05-05) Completed client-detail exclusion slice for AlgaDesk: F202/F203/F204/F205/F207/F209/F210.
+- `server/src/app/msp/clients/[id]/page.tsx` now resolves tenant product and passes `isAlgaDeskMode` into `ClientDetails`; AlgaDesk path skips document fetch and survey-summary fetch.
+- `packages/clients/src/components/clients/ClientDetails.tsx` now filters tabs in AlgaDesk mode to remove PSA-only client surfaces (`assets`, `billing`, `billing-dashboard`, `documents`, `tax-settings`) and suppresses survey summary card rendering.
+- Added unit coverage: `server/src/test/unit/app/msp/clients/[id]/page.productComposition.test.tsx` verifying AlgaDesk vs PSA composition behavior (document/survey fetch suppression and mode flag propagation).
+- (2026-05-05) Completed F194/F195/F196/F197/F198/F199/F200/F201 and T012 with a client/contact composition safety pass for AlgaDesk.
 - Product-aware contact detail composition:
-  - Updated `server/src/app/msp/contacts/[id]/page.tsx` to resolve tenant product and pass `isAlgadeskMode` into contact detail.
-  - Algadesk path now skips document fetch even on direct `?tab=documents` requests.
-- Updated `packages/clients/src/components/contacts/ContactDetails.tsx` with `isAlgadeskMode` prop and Algadesk tab filtering that removes the documents tab while preserving details/tickets/notes and existing CRUD/contact-edit surfaces.
+  - Updated `server/src/app/msp/contacts/[id]/page.tsx` to resolve tenant product and pass `isAlgaDeskMode` into contact detail.
+  - AlgaDesk path now skips document fetch even on direct `?tab=documents` requests.
+- Updated `packages/clients/src/components/contacts/ContactDetails.tsx` with `isAlgaDeskMode` prop and AlgaDesk tab filtering that removes the documents tab while preserving details/tickets/notes and existing CRUD/contact-edit surfaces.
 - Added unit coverage:
-  - `server/src/test/unit/app/msp/contacts/[id]/page.productComposition.test.tsx` verifies Algadesk vs PSA contact detail behavior (document fetch suppressed for Algadesk, preserved for PSA).
-  - `server/src/test/unit/clients/algadeskClientContactComposition.contract.test.ts` verifies client/contact CRUD + support context wiring remains intact for Algadesk composition (client/contact tickets, client locations, contact phone numbers, additional emails, notes), and confirms contact detail page product-safe mode wiring.
+  - `server/src/test/unit/app/msp/contacts/[id]/page.productComposition.test.tsx` verifies AlgaDesk vs PSA contact detail behavior (document fetch suppressed for AlgaDesk, preserved for PSA).
+  - `server/src/test/unit/clients/algadeskClientContactComposition.contract.test.ts` verifies client/contact CRUD + support context wiring remains intact for AlgaDesk composition (client/contact tickets, client locations, contact phone numbers, additional emails, notes), and confirms contact detail page product-safe mode wiring.
 
 ## Commands Run (additional)
 
 - `cd server && npx vitest run 'src/test/unit/app/msp/clients/[id]/page.productComposition.test.tsx' 'src/test/unit/app/msp/contacts/[id]/page.productComposition.test.tsx' src/test/unit/clients/algadeskClientContactComposition.contract.test.ts`
   - Result: pass (7 tests).
   - Note: test run emits existing Next request-scope warnings from `getServerTranslation` cookie detection in this unit context; assertions still pass.
-- (2026-05-05) Completed F206/F208/F211 with tighter Algadesk-safe client detail composition gating.
+- (2026-05-05) Completed F206/F208/F211 with tighter AlgaDesk-safe client detail composition gating.
 - Updated `packages/clients/src/components/clients/ClientDetails.tsx`:
-  - Added `shouldRenderPsaOnlyClientSurfaces` guard to avoid invoking excluded cross-feature callbacks in Algadesk mode.
-  - Guarded excluded tab callback execution for client assets and client documents so Algadesk mode does not execute those callbacks before tab filtering.
-  - Expanded Algadesk excluded tab set to fail-closed for client `projects` and service catalog aliases (`service-catalog`, `services`) in addition to existing excluded domains.
+  - Added `shouldRenderPsaOnlyClientSurfaces` guard to avoid invoking excluded cross-feature callbacks in AlgaDesk mode.
+  - Guarded excluded tab callback execution for client assets and client documents so AlgaDesk mode does not execute those callbacks before tab filtering.
+  - Expanded AlgaDesk excluded tab set to fail-closed for client `projects` and service catalog aliases (`service-catalog`, `services`) in addition to existing excluded domains.
 - Updated static contract coverage in `server/src/test/unit/clients/algadeskClientContactComposition.contract.test.ts` to assert:
   - explicit exclusion tokens for projects/service catalog
   - PSA-only callback guard presence in client detail composition.
@@ -356,7 +356,7 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 - Result: ticket description/comment clipboard image uploads can be provided by composition injection rather than relying on ticket components to directly resolve document upload actions.
 - (2026-05-05) Completed F220 by introducing a composed ticket-attachment draft-delete provider seam.
 - Threaded a delete-provider callback through ticket detail composition (`TicketDetailsContainer` -> `TicketDetails` -> `TicketInfo`/`TicketConversation`) and wired `deleteDraftClipboardImages` from msp-composition.
-- Result: Algadesk ticket clipboard-draft cleanup now uses composition-provided delete action wiring instead of relying only on local fallback behavior.
+- Result: AlgaDesk ticket clipboard-draft cleanup now uses composition-provided delete action wiring instead of relying only on local fallback behavior.
 
 ## Commands Run (additional)
 
@@ -366,19 +366,19 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - Result: package test blocked by existing Vitest mock/export mismatch in this environment (`@alga-psa/auth` mock missing `withAuthCheck`); server page-composition tests still pass.
 - (2026-05-05) Completed F221 by introducing a composed ticket-attachment view/download URL resolver seam.
 - Added `resolveTicketAttachmentViewUrl` in `packages/msp-composition/src/tickets/composedClipboardActions.ts` and threaded it through ticket detail composition (`TicketDetailsContainer` -> `TicketDetails` -> `TicketInfo`/`TicketConversation`) into `useTicketRichTextUploadSession`.
-- `useTicketRichTextUploadSession` now accepts `resolveDocumentViewUrl` so Algadesk ticket components can resolve attachment URLs via composition rather than hardcoded URL construction in component logic.
+- `useTicketRichTextUploadSession` now accepts `resolveDocumentViewUrl` so AlgaDesk ticket components can resolve attachment URLs via composition rather than hardcoded URL construction in component logic.
 - Added hook-level coverage in `packages/tickets/src/components/ticket/useTicketRichTextUploadSession.test.tsx` to assert injected URL-resolver behavior.
-- (2026-05-05) Completed F222 by disabling folder selection for Algadesk ticket attachment uploads.
-- Added composition flag `disableAttachmentFolderSelection` (set to `isAlgadeskMode`) through ticket detail composition to ticket documents section.
+- (2026-05-05) Completed F222 by disabling folder selection for AlgaDesk ticket attachment uploads.
+- Added composition flag `disableAttachmentFolderSelection` (set to `isAlgaDeskMode`) through ticket detail composition to ticket documents section.
 - Added `forceUploadToRoot` support in documents component wiring so entity-mode uploads bypass folder chooser when this flag is enabled.
 - Added contract coverage: `server/src/test/unit/tickets/algadeskAttachmentComposition.contract.test.ts`.
 - Command run: `cd server && npx vitest run src/test/unit/tickets/algadeskAttachmentComposition.contract.test.ts ../packages/tickets/src/components/ticket/useTicketRichTextUploadSession.test.tsx src/test/unit/app/msp/tickets/page.productComposition.test.tsx 'src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx'` -> pass (12 tests).
-- (2026-05-05) Completed F223/F224 by gating Algadesk ticket attachment surfaces away from broad document management affordances.
+- (2026-05-05) Completed F223/F224 by gating AlgaDesk ticket attachment surfaces away from broad document management affordances.
 - Added documents component controls:
   - `allowDocumentSharing` to suppress share-link dialog/actions.
   - `allowLinkExistingDocuments` to suppress "link existing documents" picker in entity mode.
-- Threaded Algadesk-safe flags through ticket detail composition and ticket documents section:
-  - `disableAttachmentSharing` / `disableAttachmentLinking` set from `isAlgadeskMode` in `MspTicketDetailsContainerClient`.
+- Threaded AlgaDesk-safe flags through ticket detail composition and ticket documents section:
+  - `disableAttachmentSharing` / `disableAttachmentLinking` set from `isAlgaDeskMode` in `MspTicketDetailsContainerClient`.
 - Updated static contract assertions in `server/src/test/unit/tickets/algadeskAttachmentComposition.contract.test.ts`.
 - Command run: `cd server && npx vitest run src/test/unit/tickets/algadeskAttachmentComposition.contract.test.ts ../packages/tickets/src/components/ticket/useTicketRichTextUploadSession.test.tsx src/test/unit/app/msp/tickets/page.productComposition.test.tsx 'src/test/unit/app/msp/tickets/[id]/page.productComposition.test.tsx'` -> pass (12 tests).
 - (2026-05-05) Completed F225 by asserting rich-text image uploads remain ticket/comment scoped.
@@ -393,7 +393,7 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - `server/src/app/client-portal/ClientPortalLayoutClient.tsx` now passes `productCode` to `ClientPortalLayout`.
 - Client portal shell updates:
   - `packages/client-portal/src/components/layout/ClientPortalLayout.tsx` now threads `productCode` to sidebar and marks shell root with `data-product-shell`.
-  - `packages/client-portal/src/components/layout/ClientPortalSidebar.tsx` now applies Algadesk-specific nav composition:
+  - `packages/client-portal/src/components/layout/ClientPortalSidebar.tsx` now applies AlgaDesk-specific nav composition:
     - keeps dashboard/tickets/knowledge-base/profile and client settings (when permitted)
     - hides billing/projects/devices/documents/appointments/request-services/extensions
     - keeps PSA behavior unchanged by default (`productCode='psa'`).
@@ -408,9 +408,9 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - portal ticket detail hides internal-comment tab and keeps public reply/status flows
   - portal ticket pages avoid billing/project navigation links
 - Command run: `cd server && npx vitest run src/test/unit/client-portal/algadeskPortalTicketing.contract.test.ts src/test/unit/client-portal/clientPortalProductLayout.contract.test.ts` -> pass (8 tests).
-- (2026-05-05) Completed F262 and T021 with focused Algadesk Email Channels settings composition.
+- (2026-05-05) Completed F262 and T021 with focused AlgaDesk Email Channels settings composition.
 - Updated `server/src/components/settings/SettingsPage.tsx` email tab rendering:
-  - Algadesk now uses `EmailProviderConfiguration` (inbound mailbox/channel-focused settings surface).
+  - AlgaDesk now uses `EmailProviderConfiguration` (inbound mailbox/channel-focused settings surface).
   - PSA retains existing `EmailSettings` composition unchanged.
 - Added `server/src/test/unit/settings/algadeskEmailChannelsComposition.contract.test.ts` to assert product-aware composition switch in settings.
 - (2026-05-05) Completed F263 and T022 by validating existing inbound mailbox/channel configuration seams.
@@ -461,18 +461,18 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - `cd server && npx vitest run src/test/unit/email/algadeskEmailRouteProductGate.contract.test.ts` -> pass (1 test).
   - `cd server && npx vitest run src/test/unit/tickets/TicketDetails.emailNotifications.integration.test.ts src/test/unit/notifications/ticketEmailSubscriber.watchers.test.ts` -> pass (8 tests).
 - (2026-05-06) Completed F286 by verification of existing settings-product filtering:
-  - `server/src/lib/settingsProductTabs.ts` excludes broad `integrations` tab for Algadesk.
+  - `server/src/lib/settingsProductTabs.ts` excludes broad `integrations` tab for AlgaDesk.
   - `server/src/components/settings/SettingsPage.tsx` applies product-tab allowlist and keeps focused `email` tab for channel configuration.
-- (2026-05-06) Completed F287/F288 by product-gating notifications email-template surfaces for Algadesk.
+- (2026-05-06) Completed F287/F288 by product-gating notifications email-template surfaces for AlgaDesk.
   - Updated `server/src/components/settings/general/NotificationsTab.tsx`:
-    - Added product-aware email tab allowlist for Algadesk (`settings`, `categories`, `telemetry`).
-    - Removed `email-templates` tab from Algadesk composition while preserving PSA behavior.
-    - Sanitized direct `section=email-templates` query access by restricting valid tabs in Algadesk mode.
+    - Added product-aware email tab allowlist for AlgaDesk (`settings`, `categories`, `telemetry`).
+    - Removed `email-templates` tab from AlgaDesk composition while preserving PSA behavior.
+    - Sanitized direct `section=email-templates` query access by restricting valid tabs in AlgaDesk mode.
   - Updated `server/src/app/msp/settings/notifications/page.tsx`:
-    - Added product-aware email tab allowlist for Algadesk (`settings`, `categories`).
-    - Removed `email-templates` tab from direct notifications route in Algadesk mode while preserving PSA behavior.
-    - Sanitized direct `tab=email-templates` query access by restricting valid tabs in Algadesk mode.
-  - Added contract test T024: `server/src/test/unit/settings/algadeskEmailTemplateAutomationBoundary.contract.test.ts` asserting Algadesk-specific tab gating in both compositions.
+    - Added product-aware email tab allowlist for AlgaDesk (`settings`, `categories`).
+    - Removed `email-templates` tab from direct notifications route in AlgaDesk mode while preserving PSA behavior.
+    - Sanitized direct `tab=email-templates` query access by restricting valid tabs in AlgaDesk mode.
+  - Added contract test T024: `server/src/test/unit/settings/algadeskEmailTemplateAutomationBoundary.contract.test.ts` asserting AlgaDesk-specific tab gating in both compositions.
 
 ## Commands Run (additional)
 
@@ -484,14 +484,14 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
     - Handles both `upgrade_boundary` and `not_found` registry outcomes with scoped dashboard return links for MSP and client portal.
   - Wired registry-backed gating in MSP layout:
     - `server/src/app/msp/MspLayoutClient.tsx`
-    - Resolves `resolveProductRouteBehavior(productCode, pathname)` and renders `ProductRouteBoundary` for non-allowed Algadesk routes.
+    - Resolves `resolveProductRouteBehavior(productCode, pathname)` and renders `ProductRouteBoundary` for non-allowed AlgaDesk routes.
   - Wired registry-backed gating in client portal layout:
     - `server/src/app/client-portal/ClientPortalLayoutClient.tsx`
-    - Resolves `resolveProductRouteBehavior(productCode, pathname)` and renders `ProductRouteBoundary` for non-allowed Algadesk routes.
+    - Resolves `resolveProductRouteBehavior(productCode, pathname)` and renders `ProductRouteBoundary` for non-allowed AlgaDesk routes.
   - Effect:
-    - Algadesk direct hits to excluded MSP major routes (billing/projects/assets/schedule/dispatch/time/workflows/surveys/extensions/reports/service-requests) now consistently render an upgrade boundary.
-    - Algadesk direct hits to internal/test MSP route groups (`/msp/test*`) resolve to product not-available boundary.
-    - Algadesk direct hits to excluded portal routes (billing/projects/devices/documents/appointments/request-services/extensions) now render portal boundary.
+    - AlgaDesk direct hits to excluded MSP major routes (billing/projects/assets/schedule/dispatch/time/workflows/surveys/extensions/reports/service-requests) now consistently render an upgrade boundary.
+    - AlgaDesk direct hits to internal/test MSP route groups (`/msp/test*`) resolve to product not-available boundary.
+    - AlgaDesk direct hits to excluded portal routes (billing/projects/devices/documents/appointments/request-services/extensions) now render portal boundary.
     - PSA behavior remains unchanged because layout gating applies only when `productCode === 'algadesk'`.
   - Added contract test `server/src/test/unit/product/productRouteBoundaryComposition.contract.test.ts`.
 
@@ -501,7 +501,7 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - Updated `server/src/lib/api/controllers/ApiBaseController.ts`:
     - Added `assertProductApiAccess()` invoked immediately after authentication in list/get/create/update/delete handlers.
     - Resolves tenant product via `getTenantProduct(...)` and API behavior via `resolveProductApiBehavior(...)`.
-    - Added structured `ProductDeniedApiError` (`statusCode: 403`, `code: PRODUCT_ACCESS_DENIED`) for denied Algadesk API groups.
+    - Added structured `ProductDeniedApiError` (`statusCode: 403`, `code: PRODUCT_ACCESS_DENIED`) for denied AlgaDesk API groups.
   - Result: API-key paths that use `ApiBaseController` now enforce product boundary centrally while preserving existing PSA behavior (`psa` routes continue as allowed by registry).
   - Added contract test T026:
     - `server/src/test/unit/api/apiBaseController.productAccess.contract.test.ts`.
@@ -532,7 +532,7 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - Surveys: `packages/surveys/src/actions/survey-actions/surveyMetricsActions.ts`
   - Full document-management: `packages/documents/src/actions/shareLinkActions.ts`
 - Added contract coverage `server/src/test/unit/product/serverActionProductAccess.contract.test.ts` to assert representative guards remain present and guard uses structured ProductAccessError fields.
-- F346 rationale: existing `algadesk-composition` dependency guard already blocks imports of excluded domains (including extensions) from Algadesk composition package, satisfying “avoid importing denied server action modules from Algadesk composition” at package-boundary level.
+- F346 rationale: existing `algadesk-composition` dependency guard already blocks imports of excluded domains (including extensions) from AlgaDesk composition package, satisfying “avoid importing denied server action modules from AlgaDesk composition” at package-boundary level.
 - F355/F356 rationale: route registry already maps optional `/desk/*` aliases without requiring aliases for launch via `normalizePathname` in `server/src/lib/productSurfaceRegistry.ts`.
 
 ## Commands Run (additional)
@@ -563,29 +563,29 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 - Command run:
   - `cd server && npx vitest run src/test/unit/product/psaPreservation.contract.test.ts src/test/unit/product/serverActionProductAccess.contract.test.ts`
   - Result: pass (4 tests).
-- (2026-05-06) Completed T010 with DB-backed Algadesk ticket create/update integration coverage plus RBAC enforcement contract assertions.
+- (2026-05-06) Completed T010 with DB-backed AlgaDesk ticket create/update integration coverage plus RBAC enforcement contract assertions.
   - Added `server/src/test/integration/algadeskTicketCrudRbac.integration.test.ts`:
-    - Creates an Algadesk-flagged tenant fixture and verifies ticket creation with client/contact/board/category/priority/assignee fields using `TicketModel.createTicket`.
+    - Creates an AlgaDesk-flagged tenant fixture and verifies ticket creation with client/contact/board/category/priority/assignee fields using `TicketModel.createTicket`.
     - Verifies status + `response_state` update (`awaiting_client`) using `TicketModel.updateTicket`.
     - Verifies persisted ticket row contains expected create/update values.
     - Adds static assertions that `packages/tickets/src/actions/ticketActions.ts` retains explicit RBAC `hasPermission` checks and permission-denied error paths for create/update flows.
   - Command run:
     - `cd server && npx vitest run src/test/integration/algadeskTicketCrudRbac.integration.test.ts`
     - Result: suite execution blocked in this environment by missing local Postgres (`ECONNREFUSED` on `localhost:5432`), consistent with existing DB-backed integration constraints.
-- (2026-05-06) Completed T011 with DB-backed Algadesk ticket-attachment draft cleanup integration and composition-boundary assertions.
+- (2026-05-06) Completed T011 with DB-backed AlgaDesk ticket-attachment draft cleanup integration and composition-boundary assertions.
   - Added `server/src/test/integration/algadeskTicketAttachmentDrafts.integration.test.ts`:
-    - Seeds Algadesk tenant/ticket/documents and validates `deleteDraftClipboardImages` deletes only ticket-scoped image drafts without cross-entity associations.
+    - Seeds AlgaDesk tenant/ticket/documents and validates `deleteDraftClipboardImages` deletes only ticket-scoped image drafts without cross-entity associations.
     - Verifies blocked deletion reason (`has_other_associations`) for attachments also linked to non-ticket entities.
     - Verifies RBAC denial path for document delete permission.
-    - Asserts Algadesk composition/document component source keeps folder-selection/share/linking restrictions (`disableAttachmentFolderSelection`, `disableAttachmentSharing`, `disableAttachmentLinking`, and guarded `Documents` behaviors).
+    - Asserts AlgaDesk composition/document component source keeps folder-selection/share/linking restrictions (`disableAttachmentFolderSelection`, `disableAttachmentSharing`, `disableAttachmentLinking`, and guarded `Documents` behaviors).
   - Command run:
     - `cd server && npx vitest run src/test/integration/algadeskTicketAttachmentDrafts.integration.test.ts`
     - Result: suite execution blocked in this environment by missing local Postgres (`ECONNREFUSED` on `localhost:5432`), consistent with existing DB-backed integration constraints.
 - (2026-05-06) Completed T018/T019/T020 with focused route/API boundary smoke coverage.
   - Added `server/src/test/unit/product/algadeskRouteAndApiBoundarySmoke.test.ts`:
-    - Verifies representative Algadesk MSP direct-hit route outcomes resolve to upgrade/not-found boundaries while PSA stays pass-through.
-    - Verifies representative allowed (`tickets/clients/contacts/knowledge-base/email`) and denied (`billing/projects/assets/time/workflows/extensions/chat/surveys/documents`) API group behavior for Algadesk.
-    - Verifies metadata visibility rules (`isApiVisibleInMetadata`) hide denied API paths for Algadesk while preserving PSA visibility.
+    - Verifies representative AlgaDesk MSP direct-hit route outcomes resolve to upgrade/not-found boundaries while PSA stays pass-through.
+    - Verifies representative allowed (`tickets/clients/contacts/knowledge-base/email`) and denied (`billing/projects/assets/time/workflows/extensions/chat/surveys/documents`) API group behavior for AlgaDesk.
+    - Verifies metadata visibility rules (`isApiVisibleInMetadata`) hide denied API paths for AlgaDesk while preserving PSA visibility.
     - Asserts `ApiMetadataController` source continues to apply metadata/OpenAPI path filtering with `isApiVisibleInMetadata`.
   - Command run:
     - `cd server && npx vitest run src/test/unit/product/algadeskRouteAndApiBoundarySmoke.test.ts`
@@ -600,7 +600,7 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
     - Result: pass (2 tests).
 - (2026-05-06) Completed T015 by adding a dedicated Playwright portal happy-path scenario.
   - Added `server/src/test/e2e/algadesk-portal-ticketing.playwright.test.ts`:
-    - Creates an Algadesk tenant context and portal contact session.
+    - Creates an AlgaDesk tenant context and portal contact session.
     - Validates portal ticket creation flow with free-form fields and attachment upload.
     - Seeds internal/public technician comments and verifies client portal only shows public content.
     - Validates portal contact public reply path and confirms persisted public comment.
@@ -612,38 +612,38 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 
 - Environment: local Next dev server at `http://localhost:3234` from worktree `feature/algadesk-lightweight-ticketing`.
 - Seed/login accounts validated:
-  - Algadesk MSP/internal: `glinda@emeraldcity.oz` / `TestPassword123!` on Oz tenant `2313304f-0253-48fb-8a34-af237f9d1111` after setting `tenants.product_code='algadesk'` for smoke coverage.
-  - Algadesk client portal: `casey.client.admin@example.com` / `TestPassword123!` linked to Acme Managed Services.
-  - Smoke Tenant B MSP admin also validated for Algadesk shell reachability (`algadesk.admin@emeraldcity.oz`), but its portal ticket list still failed due local fixture/setup drift, so Oz remained the richer browser-smoke tenant.
+  - AlgaDesk MSP/internal: `glinda@emeraldcity.oz` / `TestPassword123!` on Oz tenant `2313304f-0253-48fb-8a34-af237f9d1111` after setting `tenants.product_code='algadesk'` for smoke coverage.
+  - AlgaDesk client portal: `casey.client.admin@example.com` / `TestPassword123!` linked to Acme Managed Services.
+  - Smoke Tenant B MSP admin also validated for AlgaDesk shell reachability (`algadesk.admin@emeraldcity.oz`), but its portal ticket list still failed due local fixture/setup drift, so Oz remained the richer browser-smoke tenant.
 - Fixed smoke blockers found during browser execution:
   - Split client-safe ticket attachment URL resolution out of a `'use server'` action file into `packages/msp-composition/src/tickets/ticketAttachmentViewUrl.ts`.
-  - Added `DrawerProvider` / `DrawerOutlet` and documents cross-feature provider to `server/src/components/layout/AlgadeskMspShell.tsx` so Algadesk ticket detail can render.
-  - Hid Algadesk-excluded MSP ticket detail surfaces: SLA status, project task action, time entry/timer controls, materials, surveys, asset panels, link-existing-documents, share/folder choices, and rich-text document creation. Upload-file ticket attachments remain visible.
-  - Narrowed Algadesk client portal dashboard/details surfaces: dashboard now shows ticket-focused content only, portal sidebar fallback brand is `Algadesk`, portal ticket detail hides appointment requests plus document linking/rich-text document creation while retaining upload-file attachments.
+  - Added `DrawerProvider` / `DrawerOutlet` and documents cross-feature provider to `server/src/components/layout/AlgaDeskMspShell.tsx` so AlgaDesk ticket detail can render.
+  - Hid AlgaDesk-excluded MSP ticket detail surfaces: SLA status, project task action, time entry/timer controls, materials, surveys, asset panels, link-existing-documents, share/folder choices, and rich-text document creation. Upload-file ticket attachments remain visible.
+  - Narrowed AlgaDesk client portal dashboard/details surfaces: dashboard now shows ticket-focused content only, portal sidebar fallback brand is `AlgaDesk`, portal ticket detail hides appointment requests plus document linking/rich-text document creation while retaining upload-file attachments.
 - Browser evidence:
-  - `/msp/dashboard` renders Algadesk shell/nav only: Home, Tickets, Clients, Contacts, Documents -> Knowledge Base, Settings, Support.
+  - `/msp/dashboard` renders AlgaDesk shell/nav only: Home, Tickets, Clients, Contacts, Documents -> Knowledge Base, Settings, Support.
   - `/msp/tickets` renders list/quick-add with no SLA filter text.
-  - Created MSP ticket `TIC001012` (`2cd4d8bd-3ea1-4efe-9dd8-6c2cce6f7cdc`) titled `Algadesk smoke MSP quick add 1778088619540`.
+  - Created MSP ticket `TIC001012` (`2cd4d8bd-3ea1-4efe-9dd8-6c2cce6f7cdc`) titled `AlgaDesk smoke MSP quick add 1778088619540`.
   - MSP ticket detail after fixes contains Upload File attachment support and no `SLA`, `Time Entry`, `Ticket Timer`, `Add Time Entry`, `Materials`, `Project Task`, `Asset`, `Survey`, `AI`, `Link Documents`, or `New Document` text.
   - Portal dashboard after fixes contains Open Support Tickets + ticket recent activity only; no `Open Projects`, `Service requests`, `Upcoming visits`, `Active devices`, billing/projects/devices/documents nav labels, or appointment CTA.
-  - Created portal ticket `TIC001013` (`8fbde819-48d2-4efa-bbb5-be702711a026`) titled `Algadesk portal smoke ticket 1778089095962`.
+  - Created portal ticket `TIC001013` (`8fbde819-48d2-4efa-bbb5-be702711a026`) titled `AlgaDesk portal smoke ticket 1778089095962`.
   - Portal ticket detail after fixes contains Upload File attachment support and no `Link Documents`, `New Document`, `Appointment`, `Projects`, `Devices`, `Billing`, or `Internal` text.
   - Direct-hit excluded routes `/msp/billing`, `/msp/projects`, `/msp/assets`, `/client-portal/billing`, `/client-portal/projects`, `/client-portal/devices`, `/client-portal/documents`, and `/client-portal/request-services` show the branded Alga PSA upgrade boundary.
   - PSA control tenant `Smoke Tenant A 1777158361` (`smoke-a-1777158361@example.test`) still renders the full AlgaPSA MSP shell with PSA modules such as Billing, Projects, Assets, Time Management, Schedule, Workflows, and Extensions.
-- Batch 1 test 1 `/msp/tickets` result: PASS for page load, `Ticketing Dashboard`, Add/Import/Export controls, assignee/status/response/priority/due-date/category/search/density controls. Observed status control text is `All open statuses` with aria-label `Select Status`; search is present as placeholder `Search tickets...`. `SLA Status` is intentionally absent for Algadesk per PRD/T008 (`allowSlaStatusFilter=false`), so any smoke expectation requiring SLA Status should be corrected for Algadesk.
-- Batch 1 test 2 `/msp/tickets` Algadev result: PASS after clean Algadesk MSP session. Sidebar brand is `Algadesk`; top-level nav is Home, Tickets, Clients, Contacts, Documents, Settings, Support; Documents expands to Knowledge Base. PSA-only nav labels are absent: User Activities, Service Requests, Surveys, Projects, Assets, Time Management, Billing, Schedule, Technician Dispatch, Workflows, System Monitoring, Extensions. Note: the existing Algadev browser had a stale pre-clean-session shell until sign-out/sign-in; after clean login it rendered the correct Algadesk shell.
-- Batch 1 test 3 `/msp/tickets` Algadev result: PASS. Inspected Algadesk sidebar with Documents expanded (Knowledge Base only) and Settings expanded (General, Profile, Security only). Normal navigation does not expose User Activities, Service Requests, Surveys, Projects, All Documents, Assets, Time Management, Time Entry, Approvals, Billing, Schedule, Technician Dispatch, Workflows, Control Panel, Workflow Editor, System Monitoring, Job Monitoring, Extensions, or Reports.
+- Batch 1 test 1 `/msp/tickets` result: PASS for page load, `Ticketing Dashboard`, Add/Import/Export controls, assignee/status/response/priority/due-date/category/search/density controls. Observed status control text is `All open statuses` with aria-label `Select Status`; search is present as placeholder `Search tickets...`. `SLA Status` is intentionally absent for AlgaDesk per PRD/T008 (`allowSlaStatusFilter=false`), so any smoke expectation requiring SLA Status should be corrected for AlgaDesk.
+- Batch 1 test 2 `/msp/tickets` Algadev result: PASS after clean AlgaDesk MSP session. Sidebar brand is `AlgaDesk`; top-level nav is Home, Tickets, Clients, Contacts, Documents, Settings, Support; Documents expands to Knowledge Base. PSA-only nav labels are absent: User Activities, Service Requests, Surveys, Projects, Assets, Time Management, Billing, Schedule, Technician Dispatch, Workflows, System Monitoring, Extensions. Note: the existing Algadev browser had a stale pre-clean-session shell until sign-out/sign-in; after clean login it rendered the correct AlgaDesk shell.
+- Batch 1 test 3 `/msp/tickets` Algadev result: PASS. Inspected AlgaDesk sidebar with Documents expanded (Knowledge Base only) and Settings expanded (General, Profile, Security only). Normal navigation does not expose User Activities, Service Requests, Surveys, Projects, All Documents, Assets, Time Management, Time Entry, Approvals, Billing, Schedule, Technician Dispatch, Workflows, Control Panel, Workflow Editor, System Monitoring, Job Monitoring, Extensions, or Reports.
 - Batch 1 test 4 `/msp/settings` Algadev result: PASS. Settings shell shows reduced support-relevant sections only: Organization & Access (General, Users, Teams, Client Portal), Work Management (Ticketing, Knowledge Base), Communication (Email). Settings links do not include SLA, Projects, Interactions, Time Entry, Billing, Notifications, Integrations, Extensions, Import/Export, Secrets, or Experimental Features. Representative direct query attempts (`?tab=billing`, `sla`, `projects`, `interactions`, `time-entry`, `notifications`, `integrations`, `extensions`, `import-export`, `secrets`, `experimental-features`) all fell back to General Settings.
-- Batch 1 test 5 Algadev allowed MSP destination result: PASS. Opened `/msp/tickets`, `/msp/clients`, `/msp/contacts`, `/msp/knowledge-base`, and `/msp/settings` as Algadesk MSP user. None showed product-boundary or not-found errors. `/msp/tickets` showed `Ticketing Dashboard`. `/msp/clients` showed `+ Create Client`, `Actions`, `Status Filter`, `Client Type Filter`, and a `Search clients` input placeholder. `/msp/contacts`, `/msp/knowledge-base`, and `/msp/settings` loaded their allowed operator pages normally.
-- Batch 1 test 6 `/msp/clients` Algadev result: PASS with one implementation fix. List page shows `+ Create Client`, `Actions`, `Search clients` input, `Active Clients`, `All Types`, and table columns Name, Created, Type, Phone, Address, Account Manager, URL, Tags, Actions. Actions menu exposes `Upload CSV` and `Download CSV` when opened by keyboard. Status/type dropdown option text is present for Active Clients / Inactive Clients / All Clients and All Types / Companies / Individuals. Client detail initially failed with `useClientCrossFeature must be used within a ClientCrossFeatureProvider`; fixed by adding an Algadesk-safe client cross-feature provider to the Algadesk shell. After fix, opening Acme Managed Services loads the client detail support surface without product-boundary/not-found error and without Billing/Projects/Assets/Contracts/Surveys surfaces.
+- Batch 1 test 5 Algadev allowed MSP destination result: PASS. Opened `/msp/tickets`, `/msp/clients`, `/msp/contacts`, `/msp/knowledge-base`, and `/msp/settings` as AlgaDesk MSP user. None showed product-boundary or not-found errors. `/msp/tickets` showed `Ticketing Dashboard`. `/msp/clients` showed `+ Create Client`, `Actions`, `Status Filter`, `Client Type Filter`, and a `Search clients` input placeholder. `/msp/contacts`, `/msp/knowledge-base`, and `/msp/settings` loaded their allowed operator pages normally.
+- Batch 1 test 6 `/msp/clients` Algadev result: PASS with one implementation fix. List page shows `+ Create Client`, `Actions`, `Search clients` input, `Active Clients`, `All Types`, and table columns Name, Created, Type, Phone, Address, Account Manager, URL, Tags, Actions. Actions menu exposes `Upload CSV` and `Download CSV` when opened by keyboard. Status/type dropdown option text is present for Active Clients / Inactive Clients / All Clients and All Types / Companies / Individuals. Client detail initially failed with `useClientCrossFeature must be used within a ClientCrossFeatureProvider`; fixed by adding an AlgaDesk-safe client cross-feature provider to the AlgaDesk shell. After fix, opening Acme Managed Services loads the client detail support surface without product-boundary/not-found error and without Billing/Projects/Assets/Contracts/Surveys surfaces.
 - Batch 1 test 7 `/msp/tickets` Algadev result: PASS. Typed `printer` into `Search tickets...` (input accepted value), toggled `Bundled` to individual view (`?bundleView=individual`), navigated to `/msp/clients`, returned to `/msp/tickets`, and refreshed. The app did not blank, redirect-loop, or show product-boundary/product-denied/unexpected error text; `/msp/tickets` returned to the `Ticketing Dashboard` operator surface after navigation and refresh. Note: the search text cleared when toggling bundled view because that control updates route state; this did not affect stability.
 
 ## Smoke Notes — 2026-05-06 Phase 4 Client Portal Ticketing
 
 - Environment: local app `http://localhost:3234`, Algadev browser pane `b08fcb86-3dd1-49a2-8a3d-0b1135b88ec1`.
-- Portal contact: `casey.client.admin@example.com` on Algadesk tenant `2313304f-0253-48fb-8a34-af237f9d1111` (`2313309d1111` portal slug).
+- Portal contact: `casey.client.admin@example.com` on AlgaDesk tenant `2313304f-0253-48fb-8a34-af237f9d1111` (`2313309d1111` portal slug).
 - Phase 4 tests 2-9 result: PASS.
-  - Portal navigation exposes Algadesk support items only: Dashboard, Tickets, Knowledge Base, Profile, and permission-gated Client Settings. It does not show Request Services, Projects, Appointments, My devices, Documents, Extensions, or Billing.
+  - Portal navigation exposes AlgaDesk support items only: Dashboard, Tickets, Knowledge Base, Profile, and permission-gated Client Settings. It does not show Request Services, Projects, Appointments, My devices, Documents, Extensions, or Billing.
   - `/client-portal/tickets` controls present: Select Status (`All Statuses`), Response Status (`All Response Statuses`), All Priorities, Filter by category, Search tickets..., Reset, and Create Support Ticket. Reset is present and becomes visible once a filter/search is active.
   - Ticket table columns present: Ticket Number, Title, Status, Priority, Due Date, Assigned To, Created, Last Updated.
   - Create Support Ticket dialog opens with title input, rich text description editor, board selector, priority selector, Cancel, and Create Ticket. Board auto-selected to the only visible board (`Acme Support Board`); priority choices included Whimsical Wish, Curious Conundrum, and Enchanted Emergency.
@@ -670,13 +670,13 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 ## Smoke Notes — 2026-05-06 Phase 5 Email Preflight
 
 - Environment: local app `http://localhost:3234`, Algadev browser pane `b08fcb86-3dd1-49a2-8a3d-0b1135b88ec1`.
-- Signed in as Algadesk MSP/internal user `glinda@emeraldcity.oz` on tenant `2313304f-0253-48fb-8a34-af237f9d1111`.
+- Signed in as AlgaDesk MSP/internal user `glinda@emeraldcity.oz` on tenant `2313304f-0253-48fb-8a34-af237f9d1111`.
 - Phase 5 preflight:
   - Unique subject reserved: `Smoke Email Cannot Print 2026-05-06-001`.
   - Known client/contact candidate with non-example email: `Alice in Wonderland <alice@wonderland.com>` for client `Bravo Retail Group`.
   - Email provider already configured for the tenant: IMAP provider `Local EML HTML parsing test 1777127896556`, mailbox `support@nineminds.com`, active=true, status=`connected`.
 - Phase 5 test 1 result: PASS.
-  - Opened `/msp/settings?tab=email` as Algadesk MSP admin.
+  - Opened `/msp/settings?tab=email` as AlgaDesk MSP admin.
   - Settings sidebar includes Communication → Email.
   - Email configuration page loaded without product-boundary/PSA-only block.
   - Page shows `Email Provider Configuration`, inbound setup copy, `Add Email Provider`, and existing provider summary `Gmail: 0 · IMAP: 1`, `Email Providers (1)`, `support@nineminds.com`, `IMAP`, `Connected`, `Active`.
@@ -698,7 +698,7 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - Test 13: Added internal note with `Marked as Internal`: `Smoke internal note: Do not email the customer with spooler credentials; confirm printer admin password rotation first.` It appeared under Internal and was absent from Client.
   - Test 14: Added resolution-marked comment: `Smoke email resolution: Cleared the printer queue and confirmed the test page printed successfully after restarting the spooler.` It appeared under Resolution. No close status was selected, so ticket status remained `Curious Beginning`.
   - Test 15: Simulated unknown sender inbound email (live SMTP/IMAP not running) from `unknown.sender.20260506@outside-smoke.invalid` with subject `Smoke Unknown Sender Email 2026-05-06-001`. The system created catch-all/defaults ticket `TIC001017` (`0b5e0a7b-bf3a-4039-894d-90dc4113a99c`) with client `Bravo Retail Group`, no contact, and `ticket_origin='inbound_email'`; no crash/loss.
-  - Test 16: Inspected email-created `TIC001016` detail. It remained within Algadesk helpdesk scope: ticket origin badge, support ticket fields, comments, and upload-focused Documents section. PSA-only surfaces/actions were absent: Time Entry, Add Time Entry, Ticket Timer, Materials, Asset(s), Project Task, Link Documents, New Document, Share, Folder, Block Document, SLA Status, Survey Summary, and AI.
+  - Test 16: Inspected email-created `TIC001016` detail. It remained within AlgaDesk helpdesk scope: ticket origin badge, support ticket fields, comments, and upload-focused Documents section. PSA-only surfaces/actions were absent: Time Entry, Add Time Entry, Ticket Timer, Materials, Asset(s), Project Task, Link Documents, New Document, Share, Folder, Block Document, SLA Status, Survey Summary, and AI.
 
 ## Smoke Notes — 2026-05-06 Phase 6 Attachment Preflight
 
@@ -706,10 +706,10 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - `/tmp/algadesk-smoke-attachments/smoke-screenshot.png`
   - `/tmp/algadesk-smoke-attachments/smoke-log.txt`
 - Selected existing shared-access tickets:
-  - MSP-created ticket: `TIC001014` (`c9d2e1b1-f290-4b0a-b6b0-56bbba6611b0`), Acme Managed Services, visible to Algadesk MSP and previously visible in Casey's client portal list.
+  - MSP-created ticket: `TIC001014` (`c9d2e1b1-f290-4b0a-b6b0-56bbba6611b0`), Acme Managed Services, visible to AlgaDesk MSP and previously visible in Casey's client portal list.
   - Portal-created ticket: `TIC001015` (`e26eebb4-e63e-4bb8-b702-57d0dca5fd40`), created by Casey portal contact and visible to MSP.
 - Phase 6 test 1 result: PASS.
-  - As Algadesk MSP agent, opened `/msp/tickets/c9d2e1b1-f290-4b0a-b6b0-56bbba6611b0`.
+  - As AlgaDesk MSP agent, opened `/msp/tickets/c9d2e1b1-f290-4b0a-b6b0-56bbba6611b0`.
   - Ticket detail shows an in-ticket `Documents` section with `Upload File`.
   - This is the ticket attachment area, not the full `/msp/documents` document-management module. Full module signals were absent from the ticket detail: `All Documents`, `Document Management`, `Folders`, `Storage Usage`, `Knowledge Base Articles`.
 - Phase 6 tests 2-7 result: PASS.
@@ -718,25 +718,25 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - Test 4: Uploaded document card shows real metadata: name `smoke-screenshot.png`, uploader/date `Paula Policy Admin • 5/6/2026`, `Type: image/png`, visibility badge `Internal`, file type `image/png`, and size `0.1 KB`. Ticket-level actions present by button id: download (`download-document-a65af5b8-4c06-4c33-88ee-83edda4392fa-button`), detach/disassociate (`disassociate-document-a65af5b8-4c06-4c33-88ee-83edda4392fa-button`), and delete (`delete-document-a65af5b8-4c06-4c33-88ee-83edda4392fa-button`).
   - Test 5: Download endpoint for the uploaded document returned HTTP 200 with `content-type: image/png`, `content-disposition: attachment; filename="smoke-screenshot.png"; filename*=UTF-8''smoke-screenshot.png`, and 68 byte blob size. Browser download click did not create a visible file in `~/Downloads` in this harness, so endpoint/content-disposition was used as download evidence.
   - Test 6: Documents section allows `Upload File` and does not show full document creation/linking actions `New Document` or `Link Documents`.
-  - Test 7: Uploaded document card actions do not include `Share`; Algadesk ticket attachment card did not expose full PSA document sharing.
+  - Test 7: Uploaded document card actions do not include `Share`; AlgaDesk ticket attachment card did not expose full PSA document sharing.
 - Phase 6 tests 8-15 result: PASS.
   - Test 8: On MSP-uploaded `smoke-screenshot.png`, clicked detach/disassociate. Confirmation dialog appeared with title `Detach Document` and buttons `Cancel` / `Detach`. Confirming `Detach` removed the attachment from `TIC001014`. Re-uploaded `smoke-screenshot.png` afterward for visibility/scope checks; new document id `ce16ebba-66ef-4efb-87fb-f8bf4b37f17c`, visibility `Internal`.
-  - Test 9: As Casey in the Algadesk client portal, opened `/client-portal/tickets/c9d2e1b1-f290-4b0a-b6b0-56bbba6611b0`; ticket detail shows a ticket-level `Documents` section with `Upload File`.
+  - Test 9: As Casey in the AlgaDesk client portal, opened `/client-portal/tickets/c9d2e1b1-f290-4b0a-b6b0-56bbba6611b0`; ticket detail shows a ticket-level `Documents` section with `Upload File`.
   - Test 10: In portal Documents section, clicked `Upload File`; upload panel showed `Drag and drop your files here, or`, `Browse Files`, and `Cancel`. Uploaded `smoke-log.txt`; it appeared in the ticket Documents grid with name `smoke-log.txt`, uploader/date, `Type: text/plain`, and size `0.1 KB`. Upload completed quickly, so transient uploading text was not captured.
   - Test 11: Portal attachment download endpoint `/api/documents/download/cd377ec9-acd6-42d1-a9a4-4a6cbdc3c084` returned HTTP 200 with `content-type: text/plain`, `content-disposition: attachment; filename="smoke-log.txt"; filename*=UTF-8''smoke-log.txt`, size 59 bytes, and expected file text.
   - Test 12: Portal ticket Documents section allows `Upload File` and download for `smoke-log.txt`; it does not show `Link Documents`, `New Document`, `Share`, blocking controls, folder/all-documents/document-library/document-management/storage controls, or broader document-library controls.
-  - Test 13: As Algadesk MSP, reopened `TIC001014`; ticket Documents section retained scoped attachments `smoke-log.txt` and `smoke-screenshot.png`. Direct `/msp/documents` showed product boundary `Available in Alga PSA` and did not render document-management module controls.
+  - Test 13: As AlgaDesk MSP, reopened `TIC001014`; ticket Documents section retained scoped attachments `smoke-log.txt` and `smoke-screenshot.png`. Direct `/msp/documents` showed product boundary `Available in Alga PSA` and did not render document-management module controls.
   - Test 14: As Casey portal user, direct `/client-portal/documents` showed product boundary `Available in Alga PSA` and did not render the PSA document library.
-  - Test 15: Attachment visibility was consistent. MSP-uploaded `smoke-screenshot.png` is marked `Internal` and did not appear in the client portal view of `TIC001014`; portal-uploaded `smoke-log.txt` is client-visible and appeared in both portal and MSP ticket Documents sections. MSP cards still show visibility state controls/badges (`Internal` / `Client visible`) in Algadesk, as expected by the smoke note.
+  - Test 15: Attachment visibility was consistent. MSP-uploaded `smoke-screenshot.png` is marked `Internal` and did not appear in the client portal view of `TIC001014`; portal-uploaded `smoke-log.txt` is client-visible and appeared in both portal and MSP ticket Documents sections. MSP cards still show visibility state controls/badges (`Internal` / `Client visible`) in AlgaDesk, as expected by the smoke note.
 
 ## Smoke Notes — 2026-05-06 Phase 7 Knowledge Base Preflight
 
-- Prepared three KB articles with unique prefix `ALGADESK-KB-SMOKE` on Algadesk tenant `2313304f-0253-48fb-8a34-af237f9d1111`:
+- Prepared three KB articles with unique prefix `ALGADESK-KB-SMOKE` on AlgaDesk tenant `2313304f-0253-48fb-8a34-af237f9d1111`:
   - `ALGADESK-KB-SMOKE Draft Internal 2026-05-06-001`: status `draft`, audience `internal`, client-visible false.
   - `ALGADESK-KB-SMOKE Published Client 2026-05-06-001`: status `published`, audience `client`, client-visible true.
   - `ALGADESK-KB-SMOKE Published Public 2026-05-06-001`: status `published`, audience `public`, client-visible true.
 - Phase 7 test 1 result: PASS.
-  - As Algadesk MSP user `glinda@emeraldcity.oz`, opened `/msp/knowledge-base`.
+  - As AlgaDesk MSP user `glinda@emeraldcity.oz`, opened `/msp/knowledge-base`.
   - Page shows `Knowledge Base` with subtitle `Create and manage knowledge base articles`.
   - Tabs show `Articles` and `Review Dashboard`.
   - Page is not blocked by product boundary and lists the prepared smoke articles in `Knowledge Base Articles`.
@@ -774,64 +774,64 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
   - Test 15: Opened published article detail from portal. Detail showed title, `How-To` type badge, `1 views`, and `Was this article helpful?`. Clicking `Yes` accepted feedback and changed prompt to `Thank you for your feedback!`; MSP editor controls/buttons were absent.
   - Test 16: Portal searches for `ALGADESK-KB-SMOKE Hidden Internal Published`, `ALGADESK-KB-SMOKE Hidden Client Draft`, and `ALGADESK-KB-SMOKE Hidden Client Archived` each returned `0 articles` / `No articles found`.
   - Test 17: Portal KB pagination showed `Previous`, `Page 1 of 2`, and `Next`; clicking Next moved to `Page 2 of 2`, clicking Previous returned to `Page 1 of 2`, and neither page exposed hidden/internal/draft/review articles.
-  - Test 18: As Algadesk MSP user, `/msp/knowledge-base` remained allowed. Direct `/msp/documents` showed product boundary `Available in Alga PSA` and did not expose full document-management controls (`Document Management`, `All Documents`, `Storage Usage`, `Folders`).
+  - Test 18: As AlgaDesk MSP user, `/msp/knowledge-base` remained allowed. Direct `/msp/documents` showed product boundary `Available in Alga PSA` and did not expose full document-management controls (`Document Management`, `All Documents`, `Storage Usage`, `Folders`).
   - Validation: `npx eslint packages/documents/src/actions/kbArticleActions.ts packages/documents/src/components/kb/KnowledgeBasePage.tsx packages/documents/src/components/kb/KBArticleEditor.tsx --quiet` passed.
 - Phase 8 preflight + test 1 result: PASS after smoke API-key permission preflight.
-  - Created a local Algadesk tenant API key for tenant `2313304f-0253-48fb-8a34-af237f9d1111` owned by broad-permission MSP user `241a34f1-950c-45ce-994a-47b8ebd7e6dc` (`glinda@emeraldcity.oz`). Plaintext key intentionally not recorded here.
+  - Created a local AlgaDesk tenant API key for tenant `2313304f-0253-48fb-8a34-af237f9d1111` owned by broad-permission MSP user `241a34f1-950c-45ce-994a-47b8ebd7e6dc` (`glinda@emeraldcity.oz`). Plaintext key intentionally not recorded here.
   - Preflight gap: the Admin role did not have `metadata:read`, so metadata endpoints initially returned `403 Permission denied: Cannot read metadata`. Added tenant permission `metadata/read` and assigned it to the tenant Admin role for the smoke DB.
   - Revalidated metadata endpoints with `x-api-key` and `x-tenant-id` headers against `http://localhost:3234`:
     - `GET /api/v1/meta/endpoints`: `200`, JSON top-level `data` and `meta`; data keys include `endpoints`, `totalEndpoints`, `categories`, `version`, `lastUpdated`.
     - `GET /api/v1/meta/schemas`: `200`, JSON top-level `data` and `meta`; data keys include `schemas`, `totalSchemas`, `categories`.
     - `GET /api/v1/meta/permissions`: `200`, JSON top-level `data` and `meta`; data keys include `permissions`, `totalPermissions`, `categories`.
-    - `GET /api/v1/meta/openapi`: `200`, OpenAPI JSON top-level `openapi`, `info`, `servers`, `paths`, `components`, `security`, `tags`; filtered Algadesk spec had 15 paths.
+    - `GET /api/v1/meta/openapi`: `200`, OpenAPI JSON top-level `openapi`, `info`, `servers`, `paths`, `components`, `security`, `tags`; filtered AlgaDesk spec had 15 paths.
     - `GET /api/v1/meta/health`: `200`, JSON top-level `data` and `meta`; data keys include `status`, `version`, `timestamp`, `uptime`, `services`, `metrics`.
     - `GET /api/v1/meta/stats`: `200`, JSON top-level `data` and `meta`; data keys include `totalEndpoints`, `endpointsByCategory`, `endpointsByMethod`, `totalSchemas`, `totalPermissions`, `coverage`.
 - Phase 8 tests 2-12 result: PASS after API metadata/product-boundary fixes.
   - Fixes made:
     - `server/src/lib/api/services/MetadataService.ts`: endpoint discovery now detects `export const GET = ...` style route handlers in addition to `export async function GET(...)`; development endpoint discovery cache is bypassed so hot-added route files appear immediately in smoke metadata.
-    - Added minimal API-key-authenticated top-level route stubs for `/api/v1/billing`, `/api/v1/workflows`, `/api/v1/documents`, `/api/v1/financial`, `/api/v1/comments`, and `/api/v1/email` so product-boundary and metadata behavior is explicit at those paths. For PSA tenants these stubs return ordinary `404 NOT_FOUND`; for Algadesk the product gate returns `403 PRODUCT_ACCESS_DENIED` before the stub handler.
-    - Wrapped `/api/v1/assets` and `/api/v1/contracts` top-level routes with API-key auth/product gating so Algadesk denial happens before controller context/validation failures.
-    - Added a GET handler to `/api/v1/tickets/from-asset` that goes through API-key auth/product gating, returning product denial for Algadesk before normal method behavior.
-  - Test 2: `/api/v1/meta/endpoints` listed Algadesk-visible APIs including `/api/v1/tickets`, `/api/v1/clients`, `/api/v1/contacts`, `/api/v1/kb-articles`, `/api/v1/comments`, `/api/v1/boards`, `/api/v1/statuses`, `/api/v1/priorities`, `/api/v1/tags`, `/api/v1/users`, `/api/v1/teams`, `/api/v1/email`, and `/api/v1/meta/*`. PSA-only prefixes were absent: billing, projects, assets, time-entries, documents, workflows, surveys, financial, contracts, quotes.
-  - Test 3: `data.totalEndpoints === data.endpoints.length` (`137 === 137`), with 92 unique visible paths; count reflects the filtered Algadesk list rather than PSA-wide discovery.
+    - Added minimal API-key-authenticated top-level route stubs for `/api/v1/billing`, `/api/v1/workflows`, `/api/v1/documents`, `/api/v1/financial`, `/api/v1/comments`, and `/api/v1/email` so product-boundary and metadata behavior is explicit at those paths. For PSA tenants these stubs return ordinary `404 NOT_FOUND`; for AlgaDesk the product gate returns `403 PRODUCT_ACCESS_DENIED` before the stub handler.
+    - Wrapped `/api/v1/assets` and `/api/v1/contracts` top-level routes with API-key auth/product gating so AlgaDesk denial happens before controller context/validation failures.
+    - Added a GET handler to `/api/v1/tickets/from-asset` that goes through API-key auth/product gating, returning product denial for AlgaDesk before normal method behavior.
+  - Test 2: `/api/v1/meta/endpoints` listed AlgaDesk-visible APIs including `/api/v1/tickets`, `/api/v1/clients`, `/api/v1/contacts`, `/api/v1/kb-articles`, `/api/v1/comments`, `/api/v1/boards`, `/api/v1/statuses`, `/api/v1/priorities`, `/api/v1/tags`, `/api/v1/users`, `/api/v1/teams`, `/api/v1/email`, and `/api/v1/meta/*`. PSA-only prefixes were absent: billing, projects, assets, time-entries, documents, workflows, surveys, financial, contracts, quotes.
+  - Test 3: `data.totalEndpoints === data.endpoints.length` (`137 === 137`), with 92 unique visible paths; count reflects the filtered AlgaDesk list rather than PSA-wide discovery.
   - Test 4: `/api/v1/meta/openapi` included `/api/v1/tickets`; pruned paths omitted PSA-only prefixes `/api/v1/billing`, `/api/v1/projects`, `/api/v1/assets`, and `/api/v1/documents`. Filtered OpenAPI path count: 92.
   - Test 5: `/api/v1/meta/schemas` categories were limited to `Clients`, `Email`, `Knowledge Base`, `Other`, and `Tickets`. Schema name scan found zero matches for denied terms: billing, invoice, quote, contract, project, asset, workflow, survey, accounting, financial, payment, tax, service catalog, service type, product.
-  - Test 6: `/api/v1/meta/stats` reflected Algadesk-visible metadata: `totalEndpoints=137`, categories `Other=88`, `Clients=17`, `Email=1`, `Knowledge Base=12`, `Tickets=19`; methods `GET=65`, `PUT=21`, `DELETE=22`, `POST=29`; `totalPermissions=39`, `totalSchemas=302`.
+  - Test 6: `/api/v1/meta/stats` reflected AlgaDesk-visible metadata: `totalEndpoints=137`, categories `Other=88`, `Clients=17`, `Email=1`, `Knowledge Base=12`, `Tickets=19`; methods `GET=65`, `PUT=21`, `DELETE=22`, `POST=29`; `totalPermissions=39`, `totalSchemas=302`.
   - Test 7: `/api/v1/meta/health` `data.metrics.totalEndpoints` matched the filtered visible endpoint count (`137`).
   - Test 8: Representative allowed helpdesk APIs all returned normal success (`200`) and not product denial: `/api/v1/tickets`, `/api/v1/clients`, `/api/v1/contacts`, `/api/v1/kb-articles`, `/api/v1/boards`, `/api/v1/statuses`, `/api/v1/priorities`, `/api/v1/tags`.
   - Test 9: Representative PSA-only APIs all returned `403 PRODUCT_ACCESS_DENIED`: `/api/v1/billing`, `/api/v1/projects`, `/api/v1/assets`, `/api/v1/time-entries`, `/api/v1/workflows`, `/api/v1/documents`, `/api/v1/financial`, `/api/v1/contracts`, `/api/v1/quotes`, `/api/v1/service-types`.
   - Test 10: PSA-only ticket subroutes returned `403 PRODUCT_ACCESS_DENIED`: `/api/v1/tickets/from-asset`, `/api/v1/tickets/c9d2e1b1-f290-4b0a-b6b0-56bbba6611b0/time-entries`, `/api/v1/tickets/c9d2e1b1-f290-4b0a-b6b0-56bbba6611b0/materials`.
   - Test 11: Denied endpoints with intentionally invalid/incomplete parameters still returned product denial first, not validation leaks: `/api/v1/service-types?billing_method=bogus` and `/api/v1/assets?page=not-a-number` both returned `403 PRODUCT_ACCESS_DENIED`.
-  - Test 12: PSA regression key/tenant was prepared for Smoke Tenant A (`d4bc19b0-f113-408a-a3b1-be2d44cae4a6`). Added `metadata/read` to its Admin role for metadata smoke. PSA calls were not blocked by Algadesk rules: `/api/v1/meta/endpoints` returned `200`; `/api/v1/billing` returned ordinary `404 NOT_FOUND`; `/api/v1/projects` and `/api/v1/assets` returned `200`; `/api/v1/tickets/c9d2e1b1-f290-4b0a-b6b0-56bbba6611b0/time-entries` returned ordinary `404 NOT_FOUND` because the Algadesk ticket id does not exist in the PSA tenant.
+  - Test 12: PSA regression key/tenant was prepared for Smoke Tenant A (`d4bc19b0-f113-408a-a3b1-be2d44cae4a6`). Added `metadata/read` to its Admin role for metadata smoke. PSA calls were not blocked by AlgaDesk rules: `/api/v1/meta/endpoints` returned `200`; `/api/v1/billing` returned ordinary `404 NOT_FOUND`; `/api/v1/projects` and `/api/v1/assets` returned `200`; `/api/v1/tickets/c9d2e1b1-f290-4b0a-b6b0-56bbba6611b0/time-entries` returned ordinary `404 NOT_FOUND` because the AlgaDesk ticket id does not exist in the PSA tenant.
   - Validation: `npx eslint server/src/lib/api/services/MetadataService.ts server/src/app/api/v1/assets/route.ts server/src/app/api/v1/contracts/route.ts server/src/app/api/v1/tickets/from-asset/route.ts server/src/app/api/v1/billing/route.ts server/src/app/api/v1/workflows/route.ts server/src/app/api/v1/documents/route.ts server/src/app/api/v1/financial/route.ts server/src/app/api/v1/comments/route.ts server/src/app/api/v1/email/route.ts --quiet` passed.
 - Phase 9 preflight + test 1 result: PASS.
-  - Prepared Algadesk Solo by updating Oz tenant `2313304f-0253-48fb-8a34-af237f9d1111` to `product_code='algadesk'`, `plan='solo'`.
+  - Prepared AlgaDesk Solo by updating Oz tenant `2313304f-0253-48fb-8a34-af237f9d1111` to `product_code='algadesk'`, `plan='solo'`.
   - Per preflight guidance, used a fresh MSP sign-in after the entitlement/tier change. Signed in as `glinda@emeraldcity.oz` and opened `/msp/tickets`.
-  - `/msp/tickets` rendered the Algadesk shell: sidebar/header branding showed `Algadesk`, not `Alga PSA` / `AlgaPSA`; product-boundary copy was absent; ticket dashboard/list controls were accessible (`Ticketing Dashboard`, `Add Ticket`, ticket rows visible).
-  - Core helpdesk route access under Algadesk Solo validated:
-    - `/msp/tickets`: accessible, Algadesk shell, ticket list visible.
-    - `/msp/clients`: accessible, Algadesk shell, client cards/list visible.
-    - `/msp/contacts`: accessible, Algadesk shell, contacts table visible.
-    - `/msp/knowledge-base`: accessible, Algadesk shell, KB article list visible.
+  - `/msp/tickets` rendered the AlgaDesk shell: sidebar/header branding showed `AlgaDesk`, not `Alga PSA` / `AlgaPSA`; product-boundary copy was absent; ticket dashboard/list controls were accessible (`Ticketing Dashboard`, `Add Ticket`, ticket rows visible).
+  - Core helpdesk route access under AlgaDesk Solo validated:
+    - `/msp/tickets`: accessible, AlgaDesk shell, ticket list visible.
+    - `/msp/clients`: accessible, AlgaDesk shell, client cards/list visible.
+    - `/msp/contacts`: accessible, AlgaDesk shell, contacts table visible.
+    - `/msp/knowledge-base`: accessible, AlgaDesk shell, KB article list visible.
 - Phase 9 tests 2-8 result: PASS.
   - Prepared same-tier comparison state:
-    - Oz tenant `2313304f-0253-48fb-8a34-af237f9d1111` was set to `product_code='algadesk'`, `plan='pro'` for Algadesk Pro validation.
+    - Oz tenant `2313304f-0253-48fb-8a34-af237f9d1111` was set to `product_code='algadesk'`, `plan='pro'` for AlgaDesk Pro validation.
     - Smoke Tenant A `d4bc19b0-f113-408a-a3b1-be2d44cae4a6` was set to `product_code='psa'`, `plan='pro'` for PSA preflight. For browser shell comparison, also toggled Oz between `algadesk/pro` and `psa/pro` while keeping the same active user/session, isolating `product_code` with `plan` unchanged.
-  - Test 2: With Oz set to `product_code='algadesk'`, `plan='pro'`, `/msp/tickets` still rendered the Algadesk shell (`Algadesk` branding, not `AlgaPSA` / full PSA sidebar). Increasing tier from solo to pro did not reveal the PSA shell.
+  - Test 2: With Oz set to `product_code='algadesk'`, `plan='pro'`, `/msp/tickets` still rendered the AlgaDesk shell (`AlgaDesk` branding, not `AlgaPSA` / full PSA sidebar). Increasing tier from solo to pro did not reveal the PSA shell.
   - Test 3: Same-tier product comparison at `plan='pro'`:
-    - With `product_code='algadesk'`, `/msp/tickets` rendered Algadesk shell with focused nav (`Home`, `Tickets`, `Clients`, `Contacts`, `Documents`, `Settings`, `Support`).
+    - With `product_code='algadesk'`, `/msp/tickets` rendered AlgaDesk shell with focused nav (`Home`, `Tickets`, `Clients`, `Contacts`, `Documents`, `Settings`, `Support`).
     - With the same tenant/plan changed to `product_code='psa'`, `/msp/tickets` rendered the AlgaPSA shell with full PSA nav (`User Activities`, `Service Requests`, `Surveys`, `Projects`, `Documents`, `Assets`, `Time Management`, `Billing`, `Schedule`, `Technician Dispatch`, `Workflows`, `System Monitoring`, `Extensions`, etc.). Difference was driven by `product_code`, not `plan`.
-  - Test 4: With Oz restored to `product_code='algadesk'`, `plan='pro'`, direct `/msp/billing` showed product boundary text: `Available in Alga PSA`, `This area is part of the full Alga PSA product. Algadesk includes focused help desk functionality only.`, and `Return to Algadesk dashboard`.
-  - Test 5: With `product_code='psa'`, `plan='pro'`, PSA routes were not product-blocked: `/msp/billing`, `/msp/projects`, and `/msp/assets` did not show the Algadesk boundary and rendered ordinary PSA surfaces under AlgaPSA branding.
+  - Test 4: With Oz restored to `product_code='algadesk'`, `plan='pro'`, direct `/msp/billing` showed product boundary text: `Available in Alga PSA`, `This area is part of the full Alga PSA product. AlgaDesk includes focused help desk functionality only.`, and `Return to AlgaDesk dashboard`.
+  - Test 5: With `product_code='psa'`, `plan='pro'`, PSA routes were not product-blocked: `/msp/billing`, `/msp/projects`, and `/msp/assets` did not show the AlgaDesk boundary and rendered ordinary PSA surfaces under AlgaPSA branding.
   - Test 6: With `product_code='algadesk'`, `plan='pro'`, `/msp/settings` remained product-filtered. Visible settings groups/tabs were limited to `General`, `Users`, `Teams`, `Client Portal`, `Ticketing`, `Knowledge Base`, and `Email`. PSA-only settings such as `SLA`, `Projects`, `Time Entry`, `Billing`, `Notifications`, `Secrets`, `Import/Export`, `Integrations`, `Extensions`, and experimental/broad PSA settings were absent.
-  - Test 7: With `product_code='psa'`, `plan='pro'`, `/msp/settings` was not reduced to the Algadesk allowlist. PSA settings showed broad groups including `Language`, `SLA`, `Projects`, `Interactions`, `Time Entry`, `Billing`, `Notifications`, `Secrets`, `Import/Export`, `Integrations`, `Extensions`, and `Experimental Features`; no Algadesk product boundary.
+  - Test 7: With `product_code='psa'`, `plan='pro'`, `/msp/settings` was not reduced to the AlgaDesk allowlist. PSA settings showed broad groups including `Language`, `SLA`, `Projects`, `Interactions`, `Time Entry`, `Billing`, `Notifications`, `Secrets`, `Import/Export`, `Integrations`, `Extensions`, and `Experimental Features`; no AlgaDesk product boundary.
   - Test 8: With `product_code='algadesk'`, `plan='pro'`, `/msp/settings?tab=email` rendered focused helpdesk email-channel configuration: `Email Configuration`, `Providers`, `Defaults`, `Email Provider Configuration`, `Configure Gmail or IMAP providers to receive and process inbound emails as tickets`, and `Add Email Provider`. Full PSA email-template automation controls were not present in the observed surface.
 - Phase 9 tests 9-12 result: PASS.
   - Test 9: Product boundary and tier boundary are visually distinct.
     - After the app was restarted in enterprise mode, set Oz tenant `2313304f-0253-48fb-8a34-af237f9d1111` to `product_code='psa'`, `plan='solo'` and opened `/msp/settings?tab=integrations&category=communication`.
     - PSA tier-gated feature showed tier upgrade notice copy: `Microsoft Teams requires Pro`, Pro upgrade description, and `View Plans` CTA.
-    - The same page did not show Algadesk product-boundary copy (`Available in Alga PSA` / `Return to Algadesk dashboard`).
-    - Compared against Algadesk `/msp/billing`, which shows product-boundary copy: `Available in Alga PSA`, focused-helpdesk-only description, and `Return to Algadesk dashboard`.
+    - The same page did not show AlgaDesk product-boundary copy (`Available in Alga PSA` / `Return to AlgaDesk dashboard`).
+    - Compared against AlgaDesk `/msp/billing`, which shows product-boundary copy: `Available in Alga PSA`, focused-helpdesk-only description, and `Return to AlgaDesk dashboard`.
   - Test 10: API denial is product-based, not tier-based.
     - Created a temporary local API key for Oz tenant and deleted it after validation; plaintext key was not recorded.
     - With `product_code='algadesk'`, called `GET /api/v1/projects` with `x-api-key` and `x-tenant-id` after setting each tier:
@@ -840,26 +840,26 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
       - `plan='premium'`: HTTP 403, `error.code='PRODUCT_ACCESS_DENIED'`.
     - Denial stayed product-based while `product_code='algadesk'`, regardless of tier.
   - Test 11: Changing only `product_code` changes product behavior after fresh session.
-    - Started from Oz `product_code='algadesk'`, `plan='pro'`; fresh MSP sign-in to `/msp/tickets` rendered Algadesk shell.
+    - Started from Oz `product_code='algadesk'`, `plan='pro'`; fresh MSP sign-in to `/msp/tickets` rendered AlgaDesk shell.
     - Changed only product to `product_code='psa'` while leaving `plan='pro'`; performed CSRF-backed signout and fresh MSP sign-in.
     - `/msp/tickets` then rendered AlgaPSA shell/full PSA nav (`User Activities`, `Service Requests`, `Surveys`, `Projects`, `Assets`, `Time Management`, `Billing`, `Schedule`, `Technician Dispatch`, `Workflows`, `System Monitoring`, `Extensions`, etc.).
-    - `/msp/billing` rendered ordinary PSA billing surface under AlgaPSA branding and did not show the Algadesk product boundary.
+    - `/msp/billing` rendered ordinary PSA billing surface under AlgaPSA branding and did not show the AlgaDesk product boundary.
   - Test 12: Changing only plan does not change product behavior.
     - Started from Oz `product_code='algadesk'`, `plan='solo'`; changed only tier to `plan='premium'`; performed CSRF-backed signout and fresh MSP sign-in.
-    - `/msp/tickets` still rendered Algadesk shell and working helpdesk ticket list (`Ticketing Dashboard`, `Add Ticket`, ticket rows visible).
-    - `/msp/billing` still rendered the Algadesk product boundary (`Available in Alga PSA`, focused-helpdesk-only copy, `Return to Algadesk dashboard`).
-    - `/msp/clients` still worked as a core helpdesk route under Algadesk shell.
-  - EE note: Test 9 required enterprise mode only to expose a visible tier-gated PSA integration card (`Microsoft Teams requires Pro`). The Algadesk product shell/boundary behavior itself is driven by `product_code`, not EE.
+    - `/msp/tickets` still rendered AlgaDesk shell and working helpdesk ticket list (`Ticketing Dashboard`, `Add Ticket`, ticket rows visible).
+    - `/msp/billing` still rendered the AlgaDesk product boundary (`Available in Alga PSA`, focused-helpdesk-only copy, `Return to AlgaDesk dashboard`).
+    - `/msp/clients` still worked as a core helpdesk route under AlgaDesk shell.
+  - EE note: Test 9 required enterprise mode only to expose a visible tier-gated PSA integration card (`Microsoft Teams requires Pro`). The AlgaDesk product shell/boundary behavior itself is driven by `product_code`, not EE.
 - Phase 10 preflight + test 1 result: PASS.
   - Prepared Oz tenant `2313304f-0253-48fb-8a34-af237f9d1111` as PSA regression tenant with `product_code='psa'`, `plan='pro'`.
   - Per preflight, used broad-permission MSP admin `glinda@emeraldcity.oz` and performed a fresh MSP sign-in to `/msp/dashboard`.
-  - `/msp/dashboard` rendered PSA shell branding: body/sidebar started with `AlgaPSA`, not `Algadesk`.
+  - `/msp/dashboard` rendered PSA shell branding: body/sidebar started with `AlgaPSA`, not `AlgaDesk`.
   - Full PSA navigation was visible: `User Activities`, `Tickets`, `Service Requests`, `Surveys`, `Projects`, `Clients`, `Contacts`, `Documents`, `Assets`, `Time Management`, `Billing`, `Schedule`, `Technician Dispatch`, `Workflows`, `System Monitoring`, `Extensions`, `Settings`, and `Support`.
   - Dashboard content loaded normally (`GOOD EVENING, PAULA`, MSP command center/onboarding cards, platform feature cards).
 - Phase 10 tests 2-7 result: PASS.
   - Test 2: PSA navigation still includes PSA modules.
     - Under Oz `product_code='psa'`, `plan='pro'`, PSA shell/sidebar showed `AlgaPSA` and full PSA nav including `Tickets`, `Projects`, `Documents`, `Assets`, `Time Management`, `Billing`, `Schedule`, `Workflows`, and `Extensions`.
-    - Product-boundary copy (`Available in Alga PSA` / `Return to Algadesk dashboard`) was absent from the PSA shell and from checked PSA module routes (`/msp/tickets`, `/msp/documents`, `/msp/assets`, `/msp/billing`).
+    - Product-boundary copy (`Available in Alga PSA` / `Return to AlgaDesk dashboard`) was absent from the PSA shell and from checked PSA module routes (`/msp/tickets`, `/msp/documents`, `/msp/assets`, `/msp/billing`).
   - Test 3: `/msp/tickets` loaded the PSA ticket dashboard and included SLA Status filtering. Opening the SLA filter showed options: `All SLA Status`, `Has SLA`, `No SLA`, `On Track`, `Breached`, and `Paused`.
   - Tests 4-5: Opened PSA ticket detail `/msp/tickets/c9d2e1b1-f290-4b0a-b6b0-56bbba6611b0` (`TIC001014`). Ticket detail exposed:
     - `Time Entry`, `Add Time Entry`, timer controls, and `Tracked Intervals` with interval rows.
@@ -869,21 +869,21 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
     - `Customer Feedback` section was visible.
     - `Associated Assets` and `Add Asset` controls were visible.
     - Local Oz tenant currently has no `sla_policies` rows and no tickets with `sla_policy_id`, so no detail-page SLA Status panel was available to validate with live SLA data; SLA surface availability was still confirmed through the PSA ticket list SLA filter in test 3.
-  - Test 7: `/msp/documents` loaded full PSA document-management surface under AlgaPSA branding with filters, document type/entity/user/client-visibility/date/sort controls, `Show All Documents`, `Clear Filters`, `New Document`, `Upload`, `New Folder`, grid/list toggles, and folder tree. No Algadesk product boundary was shown.
+  - Test 7: `/msp/documents` loaded full PSA document-management surface under AlgaPSA branding with filters, document type/entity/user/client-visibility/date/sort controls, `Show All Documents`, `Clear Filters`, `New Document`, `Upload`, `New Folder`, grid/list toggles, and folder tree. No AlgaDesk product boundary was shown.
     - Document card actions were also present in the PSA ticket document section for existing associated docs: `New Document`, `Upload File`, `Link Documents`, visibility toggle, download, share (`share-document-*` buttons), disassociate, and delete.
 - Phase 10 tests 8-15 result: PASS with AI entitlement caveat.
   - Preflight remained Oz tenant `2313304f-0253-48fb-8a34-af237f9d1111` as `product_code='psa'`, `plan='pro'` with broad-permission MSP admin `glinda@emeraldcity.oz`.
-  - Test 8: `/msp/projects` loaded as a normal PSA page under AlgaPSA shell. Visible labels included `Projects`, `All Projects`, `Create from Template`, `Add Project`, `Active projects`, and project rows. No Algadesk product boundary.
-  - Test 9: `/msp/billing` loaded normal PSA billing surface under AlgaPSA shell. Visible billing areas included `Billing`, `Client Contracts`, `Billing Cycles`, `Reports`, `Accounting Exports`, `Quotes`, `Service Catalog`, `Products`, and `Tax Rates`. No Algadesk product boundary.
-  - Test 10: `/msp/assets` loaded normal PSA asset dashboard under AlgaPSA shell. Visible labels included `Assets`, `Asset Dashboard Client`, `Refresh data`, `Add Asset`, asset metrics, and asset rows. Asset detail `/msp/assets/11111111-1111-1111-1111-111111111111` (`Ruby Slippers Server`) loaded with PSA asset sections: `Service History`, `Software`, `Maintenance`, `Related Assets`, `Documents & Passwords`, `Audit Log`, and `Create Ticket`. No Algadesk product boundary.
-  - Test 11: PSA workflow/extensions routes remained reachable and did not show Algadesk product boundary:
+  - Test 8: `/msp/projects` loaded as a normal PSA page under AlgaPSA shell. Visible labels included `Projects`, `All Projects`, `Create from Template`, `Add Project`, `Active projects`, and project rows. No AlgaDesk product boundary.
+  - Test 9: `/msp/billing` loaded normal PSA billing surface under AlgaPSA shell. Visible billing areas included `Billing`, `Client Contracts`, `Billing Cycles`, `Reports`, `Accounting Exports`, `Quotes`, `Service Catalog`, `Products`, and `Tax Rates`. No AlgaDesk product boundary.
+  - Test 10: `/msp/assets` loaded normal PSA asset dashboard under AlgaPSA shell. Visible labels included `Assets`, `Asset Dashboard Client`, `Refresh data`, `Add Asset`, asset metrics, and asset rows. Asset detail `/msp/assets/11111111-1111-1111-1111-111111111111` (`Ruby Slippers Server`) loaded with PSA asset sections: `Service History`, `Software`, `Maintenance`, `Related Assets`, `Documents & Passwords`, `Audit Log`, and `Create Ticket`. No AlgaDesk product boundary.
+  - Test 11: PSA workflow/extensions routes remained reachable and did not show AlgaDesk product boundary:
     - `/msp/workflow-editor` loaded `Workflow Editor`, `Workflows`, `Event Catalog`, `New Workflow`, status/trigger filters, and workflow rows.
     - `/msp/workflow-control` loaded `Workflow Control Panel`, `Schedules`, `Runs`, `Events`, `Event Catalog`, `Dead Letter`, run metrics, filters, `Run now`, `Export CSV`, and run rows.
     - `/msp/extensions` loaded `Extension Management`, `Manage`, `Install`, and normal no-extensions-installed messaging.
-  - Test 12: `/msp/settings` was not reduced to Algadesk tabs. PSA settings showed broad groups/tabs: `Language`, `SLA`, `Projects`, `Interactions`, `Time Entry`, `Billing`, `Notifications`, `Secrets`, `Import/Export`, `Integrations`, `Extensions`, and `Experimental Features`, in addition to shared settings. No Algadesk filtering/boundary.
+  - Test 12: `/msp/settings` was not reduced to AlgaDesk tabs. PSA settings showed broad groups/tabs: `Language`, `SLA`, `Projects`, `Interactions`, `Time Entry`, `Billing`, `Notifications`, `Secrets`, `Import/Export`, `Integrations`, `Extensions`, and `Experimental Features`, in addition to shared settings. No AlgaDesk filtering/boundary.
   - Test 13: AI/chat entitlement caveat.
     - Local Oz PSA tenant is not AI-expected by default: `tenant_settings.settings.experimentalFeatures.aiAssistant` was `false` and there was no active `ai_assistant` add-on. The platform also gates activation behind the `ai-assistant-activation` feature flag, so this tenant is not a canonical live AI-entitled tenant for smoke.
-    - Code seam checked: `server/src/app/msp/MspLayoutClient.tsx` wraps non-Algadesk (`product_code='psa'`) MSP pages with `AIChatContextProvider` and `DefaultLayout`; Algadesk uses `AlgadeskMspShell` without that provider. This confirms the Algadesk AI-free shell branch does not remove the PSA AIChatContextProvider path.
+    - Code seam checked: `server/src/app/msp/MspLayoutClient.tsx` wraps non-AlgaDesk (`product_code='psa'`) MSP pages with `AIChatContextProvider` and `DefaultLayout`; AlgaDesk uses `AlgaDeskMspShell` without that provider. This confirms the AlgaDesk AI-free shell branch does not remove the PSA AIChatContextProvider path.
   - Test 14: Created a temporary PSA API key for Oz and deleted it after validation; plaintext key was not recorded. PSA metadata remained full:
     - `GET /api/v1/meta/endpoints`: 200, `totalEndpoints=629` endpoint-method entries. Included PSA-only paths such as `/api/v1/billing`, `/api/v1/projects`, `/api/v1/assets`, `/api/v1/documents`, `/api/v1/time-entries`, `/api/v1/workflows`, `/api/v1/contracts`, `/api/v1/quotes`, `/api/v1/tickets/{id}/time-entries`, `/api/v1/tickets/{id}/materials`, and QuickBooks integration paths under `/api/v1/integrations/quickbooks/...`.
     - `GET /api/v1/meta/schemas`: 200 with broad schema categories including `Administration`, `Automation`, `Core Business`, `Financial`, `Operations`, and `Other`.
@@ -899,34 +899,34 @@ Working notes for the Algadesk product seam plan. Keep this updated as implement
 - Phase 11 preflight + test 1 result: PASS for shell/account isolation, with Documents-nav caveat.
   - Prepared separate tenants:
     - PSA tenant: Smoke Tenant A `d4bc19b0-f113-408a-a3b1-be2d44cae4a6`, `product_code='psa'`, `plan='pro'`, MSP user `smoke-a-1777158361@example.test`.
-    - Algadesk tenant: Oz `2313304f-0253-48fb-8a34-af237f9d1111`, `product_code='algadesk'`, `plan='pro'`, MSP user `glinda@emeraldcity.oz`; existing portal contact and inbound email/provider setup remain on this tenant from earlier phases.
-    - Password hashes for the PSA and Algadesk MSP users were reset to the standard local smoke password for fresh sign-in.
+    - AlgaDesk tenant: Oz `2313304f-0253-48fb-8a34-af237f9d1111`, `product_code='algadesk'`, `plan='pro'`, MSP user `glinda@emeraldcity.oz`; existing portal contact and inbound email/provider setup remain on this tenant from earlier phases.
+    - Password hashes for the PSA and AlgaDesk MSP users were reset to the standard local smoke password for fresh sign-in.
   - Started as PSA MSP user `smoke-a-1777158361@example.test`, fresh sign-in to `/msp/dashboard`.
-    - Confirmed shell started with `AlgaPSA`, not `Algadesk`.
+    - Confirmed shell started with `AlgaPSA`, not `AlgaDesk`.
     - PSA sidebar included full modules: `Tickets`, `Projects`, `Documents`, `Assets`, `Time Management`, `Billing`, `Schedule`, `Workflows`, `Extensions`.
     - Active tenant shown in page body was PSA Smoke Tenant A `d4bc19b0-f113-408a-a3b1-be2d44cae4a6`.
   - Performed CSRF-backed signout and verified `/api/auth/session` returned `{}` before switching users.
-  - Signed in as Algadesk MSP user `glinda@emeraldcity.oz`, opened `/msp/tickets`.
-    - Confirmed shell started with `Algadesk`, not `AlgaPSA`.
-    - PSA-only sidebar items were absent: `Projects`, `Assets`, `Time Management`, `Billing`, `Schedule`, `Workflows`, and `Extensions` were not in the Algadesk sidebar.
-    - Ticket dashboard loaded under Algadesk shell with no product-boundary copy.
-  - Caveat: The Algadesk sidebar still includes `Documents` (`Algadesk`, `Home`, `Tickets`, `Clients`, `Contacts`, `Documents`, `Settings`, `Support`). Earlier phases treated this as current Algadesk shell behavior while `/msp/documents` itself is product-boundary constrained. If Phase 11 expects `Documents` to be absent from the sidebar, this is the remaining mismatch; no PSA shell state leaked otherwise.
+  - Signed in as AlgaDesk MSP user `glinda@emeraldcity.oz`, opened `/msp/tickets`.
+    - Confirmed shell started with `AlgaDesk`, not `AlgaPSA`.
+    - PSA-only sidebar items were absent: `Projects`, `Assets`, `Time Management`, `Billing`, `Schedule`, `Workflows`, and `Extensions` were not in the AlgaDesk sidebar.
+    - Ticket dashboard loaded under AlgaDesk shell with no product-boundary copy.
+  - Caveat: The AlgaDesk sidebar still includes `Documents` (`AlgaDesk`, `Home`, `Tickets`, `Clients`, `Contacts`, `Documents`, `Settings`, `Support`). Earlier phases treated this as current AlgaDesk shell behavior while `/msp/documents` itself is product-boundary constrained. If Phase 11 expects `Documents` to be absent from the sidebar, this is the remaining mismatch; no PSA shell state leaked otherwise.
 
 ### Phase 11 continuation evidence — final isolation and email flow (2026-05-06)
 
 Validated Phase 11 tests 2–12 against local `http://localhost:3234` using Algadev browser pane `15cc65a7-69d6-41c6-a33b-1e86c67b9697` plus direct DB/API checks where local email/download plumbing is not available.
 
-- **Test 2 — PSA does not inherit reduced Algadesk shell:** passed.
-  - Starting Algadesk MSP session showed `Algadesk` shell with reduced nav: Home, Tickets, Clients, Contacts, Documents, Settings, Support.
+- **Test 2 — PSA does not inherit reduced AlgaDesk shell:** passed.
+  - Starting AlgaDesk MSP session showed `AlgaDesk` shell with reduced nav: Home, Tickets, Clients, Contacts, Documents, Settings, Support.
   - After CSRF/json signout and PSA MSP sign-in (`smoke-a-1777158361@example.test`), `/msp/dashboard` showed `AlgaPSA` and restored PSA nav: Projects, Billing, Documents, Assets, Time Management, Schedule, Workflows, Extensions.
 - **Test 3 — product boundary survives refresh:** passed.
-  - Algadesk `/msp/billing` showed `Available in Alga PSA` + `Return to Algadesk dashboard` after refresh.
-  - Algadesk `/msp/tickets` showed Algadesk shell and Ticketing Dashboard before/after refresh; no stale PSA shell or redirect loop.
+  - AlgaDesk `/msp/billing` showed `Available in Alga PSA` + `Return to AlgaDesk dashboard` after refresh.
+  - AlgaDesk `/msp/tickets` showed AlgaDesk shell and Ticketing Dashboard before/after refresh; no stale PSA shell or redirect loop.
 - **Test 4 — same-name ticket search remains tenant-isolated:** passed.
   - Created PSA ticket `PSAISO-0506-001` titled `PSA-ISOLATION-SMOKE same-name` in tenant `d4bc19b0-f113-408a-a3b1-be2d44cae4a6`.
-  - Created Algadesk ticket `TIC001018` titled `ALGADESK-ISOLATION-SMOKE same-name` in tenant `2313304f-0253-48fb-8a34-af237f9d1111`.
-  - Algadesk Ticketing Dashboard search for `ISOLATION-SMOKE same-name` returned only `TIC001018`; PSA title absent.
-  - PSA Ticketing Dashboard search returned only `PSAISO-0506-001`; Algadesk title absent.
+  - Created AlgaDesk ticket `TIC001018` titled `ALGADESK-ISOLATION-SMOKE same-name` in tenant `2313304f-0253-48fb-8a34-af237f9d1111`.
+  - AlgaDesk Ticketing Dashboard search for `ISOLATION-SMOKE same-name` returned only `TIC001018`; PSA title absent.
+  - PSA Ticketing Dashboard search returned only `PSAISO-0506-001`; AlgaDesk title absent.
   - DB check showed one tenant-scoped row for each title and tenant-local comments/clients.
 - **Test 5 — client portal contact visibility:** passed with one automation caveat.
   - Casey client portal session at `/client-portal/tickets` showed only Acme/Oz-visible tickets; PSA ticket title absent and Smoke Tenant B absent.
@@ -934,10 +934,10 @@ Validated Phase 11 tests 2–12 against local `http://localhost:3234` using Alga
   - Portal then showed `TIC001019` / `ALGADESK-PORTAL-ISOLATION-SMOKE created from portal`; PSA tenant ticket remained absent.
 - **Tests 6–8 — API, metadata, and browser boundaries align:** passed.
   - Temporary local API keys were created and then deactivated; plaintext keys intentionally not recorded.
-  - Algadesk key + Oz tenant: `/api/v1/tickets` => `200`, `/api/v1/projects` => `403 PRODUCT_ACCESS_DENIED`.
-  - PSA key + Smoke Tenant A: `/api/v1/tickets` => `200`, `/api/v1/projects` => `200` (no Algadesk denial).
-  - Algadesk `/api/v1/meta/endpoints` omitted `/api/v1/projects`; direct `/api/v1/projects` denied.
-  - Browser Algadesk `/msp/projects` showed `Available in Alga PSA`; API and metadata matched that boundary decision.
+  - AlgaDesk key + Oz tenant: `/api/v1/tickets` => `200`, `/api/v1/projects` => `403 PRODUCT_ACCESS_DENIED`.
+  - PSA key + Smoke Tenant A: `/api/v1/tickets` => `200`, `/api/v1/projects` => `200` (no AlgaDesk denial).
+  - AlgaDesk `/api/v1/meta/endpoints` omitted `/api/v1/projects`; direct `/api/v1/projects` denied.
+  - Browser AlgaDesk `/msp/projects` showed `Available in Alga PSA`; API and metadata matched that boundary decision.
 - **Tests 9–10 — inbound email and customer reply:** passed via local workflow/DB simulation because GreenMail SMTP/IMAP ports are not running locally.
   - Created inbound-email ticket `TIC001020`, ID `2a14a419-cb45-4ab5-baee-55277baca455`, title `ALGADESK-FINAL-SMOKE printer down`, origin/source `inbound_email`/`email`, client/contact Acme + Casey.
   - MSP UI showed `Created via Inbound Email` and initial comment label/content `Received via Inbound Email`.
@@ -948,5 +948,5 @@ Validated Phase 11 tests 2–12 against local `http://localhost:3234` using Alga
   - Client portal detail for same ticket showed the MSP public reply and inbound customer comments, and did **not** show `Internal-only note`.
 - **Test 12 — resolve/final state visible in portal without PSA fields:** passed.
   - Updated `TIC001020` to board-valid final status `Magical Resolution` and `is_closed=true`.
-  - MSP refresh showed final status, inbound/email labels, public reply, and no Algadesk-hidden PSA surfaces (`Time Entry`, `Materials`, `Billing`, `Projects`, `Associated Assets`).
+  - MSP refresh showed final status, inbound/email labels, public reply, and no AlgaDesk-hidden PSA surfaces (`Time Entry`, `Materials`, `Billing`, `Projects`, `Associated Assets`).
   - Client portal refresh for the same ticket showed `Magical Resolution`, `Created via Inbound Email`, final public reply, inbound customer comments, internal note hidden, and no PSA-only fields required.

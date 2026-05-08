@@ -8,17 +8,17 @@ import Body from './Body';
 import { PlatformNotificationBanner } from './PlatformNotificationBanner';
 import { DrawerProvider, DrawerOutlet } from '@alga-psa/ui';
 import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/documents';
-import { AlgadeskClientCrossFeatureProvider } from '@alga-psa/msp-composition/clients';
+import { AlgaDeskClientCrossFeatureProvider } from '@alga-psa/msp-composition/clients';
 
-interface AlgadeskMspShellProps {
+interface AlgaDeskMspShellProps {
   children: React.ReactNode;
   initialSidebarCollapsed?: boolean;
 }
 
-export default function AlgadeskMspShell({
+export default function AlgaDeskMspShell({
   children,
   initialSidebarCollapsed = false,
-}: AlgadeskMspShellProps): React.JSX.Element {
+}: AlgaDeskMspShellProps): React.JSX.Element {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(initialSidebarCollapsed);
@@ -60,7 +60,7 @@ export default function AlgadeskMspShell({
   return (
     <DrawerProvider>
       <MspDocumentsCrossFeatureProvider>
-        <AlgadeskClientCrossFeatureProvider>
+        <AlgaDeskClientCrossFeatureProvider>
       <div className="flex h-screen overflow-hidden bg-gray-100" data-product-shell="algadesk">
         <SidebarWithFeatureFlags
           sidebarOpen={sidebarOpen}
@@ -83,7 +83,7 @@ export default function AlgadeskMspShell({
         </div>
       </div>
       <DrawerOutlet />
-        </AlgadeskClientCrossFeatureProvider>
+        </AlgaDeskClientCrossFeatureProvider>
       </MspDocumentsCrossFeatureProvider>
     </DrawerProvider>
   );

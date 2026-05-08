@@ -20,7 +20,7 @@
   },
   {
     "id": "F003",
-    "description": "Hide the Billing step for Algadesk tenants so setupBilling cannot be reached through wizard navigation.",
+    "description": "Hide the Billing step for AlgaDesk tenants so setupBilling cannot be reached through wizard navigation.",
     "implemented": true,
     "prdRefs": [
       "Goals 3",
@@ -38,7 +38,7 @@
   },
   {
     "id": "F005",
-    "description": "Keep Algadesk help-desk setup steps available and skippable where optional: team members, first client, client contact, and ticketing configuration.",
+    "description": "Keep AlgaDesk help-desk setup steps available and skippable where optional: team members, first client, client contact, and ticketing configuration.",
     "implemented": true,
     "prdRefs": [
       "Goals 4",
@@ -47,7 +47,7 @@
   },
   {
     "id": "F006",
-    "description": "Use Algadesk/help-desk-oriented title and description copy in the onboarding shell for Algadesk tenants.",
+    "description": "Use AlgaDesk/help-desk-oriented title and description copy in the onboarding shell for AlgaDesk tenants.",
     "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
@@ -56,7 +56,7 @@
   },
   {
     "id": "F007",
-    "description": "Retain current onboarding completion and ticketing-default validation behavior for both PSA and Algadesk.",
+    "description": "Retain current onboarding completion and ticketing-default validation behavior for both PSA and AlgaDesk.",
     "implemented": true,
     "prdRefs": [
       "Goals 5",
@@ -75,7 +75,7 @@
   },
   {
     "id": "F009",
-    "description": "Add Algadesk onboarding wizard shell and step translation keys to all onboarding locale files.",
+    "description": "Add AlgaDesk onboarding wizard shell and step translation keys to all onboarding locale files.",
     "implemented": true,
     "prdRefs": [
       "UX / UI Notes",

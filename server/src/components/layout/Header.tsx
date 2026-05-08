@@ -188,8 +188,8 @@ const ALGADESK_QUICK_CREATE_TYPES: ReadonlySet<QuickCreateType> = new Set([
 
 const QuickCreateMenu: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
   const [activeQuickCreate, setActiveQuickCreate] = useState<QuickCreateType>(null);
-  const { isAlgadesk } = useProduct();
-  const visibleOptions = isAlgadesk
+  const { isAlgaDesk } = useProduct();
+  const visibleOptions = isAlgaDesk
     ? quickCreateOptions.filter((option) => ALGADESK_QUICK_CREATE_TYPES.has(option.type))
     : quickCreateOptions;
   const translatedOptions = visibleOptions.map((option) => ({

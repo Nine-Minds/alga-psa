@@ -8,7 +8,7 @@ interface ProductContextValue {
   productCode: ProductCode;
   isMisconfigured: boolean;
   isPsa: boolean;
-  isAlgadesk: boolean;
+  isAlgaDesk: boolean;
   isLoading: boolean;
 }
 
@@ -31,7 +31,7 @@ export function ProductProvider({ children }: ProductProviderProps) {
       productCode,
       isMisconfigured,
       isPsa: productCode === 'psa',
-      isAlgadesk: productCode === 'algadesk',
+      isAlgaDesk: productCode === 'algadesk',
       isLoading,
     }),
     [isLoading, isMisconfigured, productCode],

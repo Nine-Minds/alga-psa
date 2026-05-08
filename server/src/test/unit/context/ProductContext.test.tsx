@@ -50,7 +50,7 @@ describe('ProductContext', () => {
 
     const { result } = renderHook(() => useProduct(), { wrapper });
     expect(result.current.productCode).toBe('algadesk');
-    expect(result.current.isAlgadesk).toBe(true);
+    expect(result.current.isAlgaDesk).toBe(true);
   });
 
   it('fails closed to psa and marks misconfigured for unknown product code', () => {

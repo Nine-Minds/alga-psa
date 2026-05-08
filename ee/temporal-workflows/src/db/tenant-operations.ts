@@ -10,6 +10,7 @@ import type {
 import { updateSubscriptionMetadata } from '../services/stripe-service.js';
 import { getSecret } from '@alga-psa/core/secrets';
 import { tierFromStripeProduct } from '@ee/lib/stripe/stripeTierMapping.js';
+import { normalizeProductCode } from './product-bootstrap-resolver.js';
 
 const logger = () => Context.current().log;
 
@@ -57,7 +58,7 @@ export async function createTenantInDB(
         tenantData.plan = input.plan;
       }
       if (input.productCode) {
-        tenantData.product_code = input.productCode;
+        tenantData.product_code = normalizeProductCode(input.productCode);
       }
 
       // Resolve plan from Stripe price → product → tier

@@ -6,7 +6,7 @@ function readTicketActionsSource(): string {
   return fs.readFileSync(path.resolve(process.cwd(), '../packages/tickets/src/actions/ticketActions.ts'), 'utf8');
 }
 
-describe('Algadesk ticket actions RBAC contracts', () => {
+describe('AlgaDesk ticket actions RBAC contracts', () => {
   it('keeps create/update permission checks and denied messages in ticket actions', () => {
     const source = readTicketActionsSource();
 

@@ -1,6 +1,6 @@
 import type { ProductCode } from '@alga-psa/types';
 
-const ALGADESK_ALLOWED_SETTINGS_TABS = [
+const ALGA_DESK_ALLOWED_SETTINGS_TABS = [
   'general',
   'users',
   'teams',
@@ -14,7 +14,7 @@ const ALGADESK_ALLOWED_SETTINGS_TABS = [
 
 export function getAllowedSettingsTabIds(productCode: ProductCode): Set<string> {
   if (productCode === 'algadesk') {
-    return new Set(ALGADESK_ALLOWED_SETTINGS_TABS);
+    return new Set(ALGA_DESK_ALLOWED_SETTINGS_TABS);
   }
 
   return new Set();

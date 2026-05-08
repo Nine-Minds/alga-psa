@@ -114,6 +114,10 @@ async function getStripeConfig() {
   const earlyAdoptersBaseAnnualPriceId = process.env.STRIPE_EARLY_ADOPTERS_BASE_ANNUAL_PRICE_ID || null;
   const earlyAdoptersUserAnnualPriceId = process.env.STRIPE_EARLY_ADOPTERS_USER_ANNUAL_PRICE_ID || null;
 
+  // AlgaDesk prices (per-user only; product_code seam, not a tenant tier)
+  const algadeskUserPriceId = process.env.STRIPE_ALGADESK_USER_PRICE_ID || null;
+  const algadeskUserAnnualPriceId = process.env.STRIPE_ALGADESK_USER_ANNUAL_PRICE_ID || null;
+
   if (!secretKey) {
     throw new Error('STRIPE_SECRET_KEY not found in secrets or environment');
   }
@@ -153,6 +157,8 @@ async function getStripeConfig() {
     earlyAdoptersUserPriceId,
     earlyAdoptersBaseAnnualPriceId,
     earlyAdoptersUserAnnualPriceId,
+    algadeskUserPriceId,
+    algadeskUserAnnualPriceId,
   };
 }
 
@@ -903,32 +909,45 @@ export class StripeService {
     // Get or import customer
     const customer = await this.getOrImportCustomer(tenantId);
 
-    // Resolve line items: use tier-specific base+user pricing if configured,
-    // otherwise fall back to legacy single per-user price
+    // Resolve line items: AlgaDesk uses per-user-only pricing (no base fee);
+    // otherwise use tier-specific base+user pricing if configured,
+    // falling back to legacy single per-user price.
     const knex = await getConnection(tenantId);
-    const tenant = await knex('tenants').where('tenant', tenantId).select('plan').first();
-    const tierPrices = tenant?.plan ? this.getTierPriceIds(tenant.plan, interval) : null;
+    const tenant = await knex('tenants').where('tenant', tenantId).select('plan', 'product_code').first();
 
     let line_items: Stripe.Checkout.SessionCreateParams.LineItem[];
 
-    if (tierPrices) {
-      line_items = this.buildTierLineItems(
-        tierPrices,
-        quantity,
-        this.getIncludedUsersForTier(tenant.plan),
-      );
-      logger.info(
-        `[StripeService] Using ${tierPrices.userPriceId ? 'multi-item' : 'flat-rate'} checkout (tier: ${tenant.plan}, interval: ${interval})`
-      );
-    } else {
-      // Legacy single-item: per-user only
-      if (!this.config.licensePriceId) {
-        throw new Error('STRIPE_LICENSE_PRICE_ID environment variable is not configured');
+    if (tenant?.product_code === 'algadesk') {
+      const algadeskPriceId = this.getAlgadeskUserPriceId(interval);
+      if (!algadeskPriceId) {
+        throw new Error(
+          `STRIPE_ALGADESK_USER_${interval === 'year' ? 'ANNUAL_' : ''}PRICE_ID environment variable is not configured`,
+        );
       }
-      line_items = [
-        { price: this.config.licensePriceId, quantity },
-      ];
-      logger.info(`[StripeService] Using legacy single-item checkout`);
+      line_items = [{ price: algadeskPriceId, quantity }];
+      logger.info(`[StripeService] Using AlgaDesk per-user-only checkout (interval: ${interval})`);
+    } else {
+      const tierPrices = tenant?.plan ? this.getTierPriceIds(tenant.plan, interval) : null;
+
+      if (tierPrices) {
+        line_items = this.buildTierLineItems(
+          tierPrices,
+          quantity,
+          this.getIncludedUsersForTier(tenant.plan),
+        );
+        logger.info(
+          `[StripeService] Using ${tierPrices.userPriceId ? 'multi-item' : 'flat-rate'} checkout (tier: ${tenant.plan}, interval: ${interval})`
+        );
+      } else {
+        // Legacy single-item: per-user only
+        if (!this.config.licensePriceId) {
+          throw new Error('STRIPE_LICENSE_PRICE_ID environment variable is not configured');
+        }
+        line_items = [
+          { price: this.config.licensePriceId, quantity },
+        ];
+        logger.info(`[StripeService] Using legacy single-item checkout`);
+      }
     }
 
     // Create checkout session in embedded mode
@@ -1606,6 +1625,20 @@ export class StripeService {
     return null;
   }
 
+  /**
+   * Get the AlgaDesk per-user price ID for a given interval.
+   * AlgaDesk uses per-user-only pricing — there is no base fee.
+   * Returns null if the corresponding env var is not configured.
+   */
+  private getAlgadeskUserPriceId(
+    interval: 'month' | 'year' = 'month',
+  ): string | null {
+    if (interval === 'year') {
+      return this.config.algadeskUserAnnualPriceId ?? this.config.algadeskUserPriceId;
+    }
+    return this.config.algadeskUserPriceId;
+  }
+
   private getAddOnPriceId(
     addOn: AddOnKey,
     interval: 'month' | 'year' = 'month'
@@ -1725,6 +1758,8 @@ export class StripeService {
     if (this.config.premiumUserPriceId) ids.push(this.config.premiumUserPriceId);
     if (this.config.earlyAdoptersUserPriceId) ids.push(this.config.earlyAdoptersUserPriceId);
     if (this.config.earlyAdoptersUserAnnualPriceId) ids.push(this.config.earlyAdoptersUserAnnualPriceId);
+    if (this.config.algadeskUserPriceId) ids.push(this.config.algadeskUserPriceId);
+    if (this.config.algadeskUserAnnualPriceId) ids.push(this.config.algadeskUserAnnualPriceId);
     return ids;
   }
 

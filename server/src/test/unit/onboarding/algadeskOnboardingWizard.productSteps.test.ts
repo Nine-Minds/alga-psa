@@ -7,7 +7,7 @@ import {
   getOnboardingWizardStepIndexes,
 } from '@alga-psa/onboarding/lib';
 
-describe('Algadesk onboarding wizard product steps', () => {
+describe('AlgaDesk onboarding wizard product steps', () => {
   it('preserves the full PSA wizard step list', () => {
     const stepIndexes = getOnboardingWizardStepIndexes('psa');
 
@@ -23,7 +23,7 @@ describe('Algadesk onboarding wizard product steps', () => {
     expect(getOnboardingWizardRequiredStepPositions('psa')).toEqual([0, 5]);
   });
 
-  it('removes Billing from Algadesk while keeping help-desk setup and required ticketing', () => {
+  it('removes Billing from AlgaDesk while keeping help-desk setup and required ticketing', () => {
     const stepIndexes = getOnboardingWizardStepIndexes('algadesk');
     const stepLabels = stepIndexes.map((index) => ONBOARDING_WIZARD_STEPS[index]);
 
@@ -38,18 +38,18 @@ describe('Algadesk onboarding wizard product steps', () => {
     expect(getOnboardingWizardRequiredStepPositions('algadesk')).toEqual([0, 4]);
   });
 
-  it('keeps Algadesk-specific wizard shell copy in the shared wizard source', () => {
+  it('keeps AlgaDesk-specific wizard shell copy in the shared wizard source', () => {
     const source = readFileSync(
       join(process.cwd(), '../packages/onboarding/src/components/OnboardingWizard.tsx'),
       'utf8'
     );
 
     expect(source).toContain("onboardingWizard.shell.algadeskTitle");
-    expect(source).toContain('Set Up Algadesk');
+    expect(source).toContain('Set Up AlgaDesk');
     expect(source).toContain('Configure your help desk workspace, clients, and ticketing defaults.');
   });
 
-  it('defines Algadesk onboarding translation keys for every locale', () => {
+  it('defines AlgaDesk onboarding translation keys for every locale', () => {
     const localesRoot = join(process.cwd(), 'public/locales');
     const locales = readdirSync(localesRoot);
 

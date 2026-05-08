@@ -65,7 +65,7 @@ export function OnboardingWizard({
   const activeStepIndexes = getOnboardingWizardStepIndexes(productCode);
   const requiredStepPositions = getOnboardingWizardRequiredStepPositions(productCode);
   const currentOriginalStepIndex = activeStepIndexes[currentStep] ?? activeStepIndexes[0] ?? 0;
-  const isAlgadesk = productCode === 'algadesk';
+  const isAlgaDesk = productCode === 'algadesk';
 
   const [wizardData, setWizardData] = useState<WizardData>({
     // MSP Company Info
@@ -119,8 +119,8 @@ export function OnboardingWizard({
   };
 
   const translatedStepLabelsByOriginalIndex = [
-    t(isAlgadesk ? 'onboardingWizard.steps.algadeskWorkspace' : 'onboardingWizard.steps.clientInfo', {
-      defaultValue: isAlgadesk ? 'Workspace' : 'Client Info'
+    t(isAlgaDesk ? 'onboardingWizard.steps.algadeskWorkspace' : 'onboardingWizard.steps.clientInfo', {
+      defaultValue: isAlgaDesk ? 'Workspace' : 'Client Info'
     }),
     t('onboardingWizard.steps.teamMembers', {
       defaultValue: 'Team Members'
@@ -602,13 +602,13 @@ export function OnboardingWizard({
         <div className="mx-auto max-w-5xl px-4 py-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">
-              {t(isAlgadesk ? 'onboardingWizard.shell.algadeskTitle' : 'onboardingWizard.shell.title', {
-                defaultValue: isAlgadesk ? 'Set Up Algadesk' : 'Setup Your System'
+              {t(isAlgaDesk ? 'onboardingWizard.shell.algadeskTitle' : 'onboardingWizard.shell.title', {
+                defaultValue: isAlgaDesk ? 'Set Up AlgaDesk' : 'Setup Your System'
               })}
             </h1>
             <p className="mt-2 text-lg text-gray-600">
-              {t(isAlgadesk ? 'onboardingWizard.shell.algadeskDescription' : 'onboardingWizard.shell.description', {
-                defaultValue: isAlgadesk
+              {t(isAlgaDesk ? 'onboardingWizard.shell.algadeskDescription' : 'onboardingWizard.shell.description', {
+                defaultValue: isAlgaDesk
                   ? 'Configure your help desk workspace, clients, and ticketing defaults.'
                   : 'Let\'s get your workspace configured and ready to use.'
               })}
@@ -627,8 +627,8 @@ export function OnboardingWizard({
     <Dialog
       isOpen={open}
       onClose={() => onOpenChange?.(false)}
-      title={t(isAlgadesk ? 'onboardingWizard.shell.algadeskTitle' : 'onboardingWizard.shell.title', {
-        defaultValue: isAlgadesk ? 'Set Up Algadesk' : 'Setup Your System'
+      title={t(isAlgaDesk ? 'onboardingWizard.shell.algadeskTitle' : 'onboardingWizard.shell.title', {
+        defaultValue: isAlgaDesk ? 'Set Up AlgaDesk' : 'Setup Your System'
       })}
       className="max-w-4xl"
       footer={wizardNavigation}

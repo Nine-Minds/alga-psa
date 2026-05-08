@@ -3,7 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
 
-export interface AlgadeskDashboardSummary {
+export interface AlgaDeskDashboardSummary {
   openTickets: number;
   awaitingCustomer: number;
   awaitingInternal: number;
@@ -25,7 +25,7 @@ export interface AlgadeskDashboardSummary {
   };
 }
 
-export const getAlgadeskDashboardSummary = withAuth(async (_user, { tenant }): Promise<AlgadeskDashboardSummary> => {
+export const getAlgaDeskDashboardSummary = withAuth(async (_user, { tenant }): Promise<AlgaDeskDashboardSummary> => {
   const { knex } = await createTenantKnex();
 
   const [openRow, awaitingCustomerRow, awaitingInternalRow, agingRows, recentRows, emailRows] = await Promise.all([
