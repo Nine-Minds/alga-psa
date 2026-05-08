@@ -267,6 +267,7 @@ export function useTicketLive({
 
       const { provider, ydoc } = createYjsProvider(roomName, {
         token: nextToken.token,
+        parameters: { token: nextToken.token },
         connect: false,
         preserveConnection: false,
         maxAttempts: 1,

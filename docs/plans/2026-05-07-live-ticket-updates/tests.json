@@ -350,7 +350,7 @@
   {
     "id": "T057",
     "description": "Performance smoke: in dev, save → remote-client-applied latency P95 ≤ 500ms over 50 saves (manual stopwatch acceptable; not a CI gate).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003", "F009", "F023"]
   }
 ]

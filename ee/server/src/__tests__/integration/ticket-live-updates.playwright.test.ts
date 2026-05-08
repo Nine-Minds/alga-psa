@@ -22,6 +22,10 @@ const LIVE_UPDATES_ENABLED =
   (process.env.NEXT_PUBLIC_FORCE_FEATURE_FLAGS ?? '')
     .split(',')
     .some((entry) => entry.trim() === 'live-ticket-updates:true');
+const LIVE_TICKET_PERF_SMOKE = process.env.LIVE_TICKET_PERF_SMOKE === 'true';
+const LIVE_TICKET_PERF_ITERATIONS = Number.parseInt(process.env.LIVE_TICKET_PERF_ITERATIONS ?? '50', 10);
+const LIVE_TICKET_PERF_THRESHOLD_MS = Number.parseInt(process.env.LIVE_TICKET_PERF_THRESHOLD_MS ?? '500', 10);
+const LIVE_TICKET_PERF_STRICT = process.env.LIVE_TICKET_PERF_STRICT === 'true';
 const PROJECT_ROOT = path.resolve(__dirname, '../../../../..');
 const PLAYWRIGHT_DOCKER_ENV_FILE = fs.existsSync(path.resolve(PROJECT_ROOT, 'ee/server/.env'))
   ? 'ee/server/.env'
@@ -259,7 +263,9 @@ async function createTicket(db: Knex, params: {
 async function openTicket(page: Page, ticketId: string): Promise<void> {
   await page.goto(`${BASE_URL}/msp/tickets/${ticketId}`);
   await expect(page.locator('#ticket-details-container')).toBeVisible({ timeout: 30_000 });
-  await expect(page.locator('#ticket-details-container h1').first()).toBeVisible({ timeout: 30_000 });
+  const titleField = page.locator('[data-live-field="title"]').first();
+  await expect(titleField).toBeVisible({ timeout: 30_000 });
+  await expect(titleField.locator('h1, input')).toBeVisible({ timeout: 30_000 });
 }
 
 async function expectPresenceForPeer(page: Page, peerName: string): Promise<void> {
@@ -295,6 +301,12 @@ async function expectTicketFieldValue(page: Page, fieldName: string, expectedTex
   await expect(getTicketField(page, fieldName).getByRole('combobox')).toContainText(expectedText, { timeout: 10_000 });
 }
 
+function calculateP95(latenciesMs: number[]): number {
+  const sorted = [...latenciesMs].sort((left, right) => left - right);
+  const p95Index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(sorted.length * 0.95) - 1));
+  return sorted[p95Index];
+}
+
 type LiveTicketScenario = {
   contextA: BrowserContext;
   contextB: BrowserContext;
@@ -308,7 +320,12 @@ type LiveTicketScenario = {
   dispose: () => Promise<void>;
 };
 
-async function createLiveTicketScenario(browser: Browser, title = 'Original live title'): Promise<LiveTicketScenario> {
+async function createLiveTicketScenario(
+  browser: Browser,
+  title = 'Original live title',
+  options: { waitForPresence?: boolean } = {}
+): Promise<LiveTicketScenario> {
+  const { waitForPresence = true } = options;
   const db = createTestDbConnection();
   let tenantData: TenantTestData | null = null;
   let contextA: BrowserContext | null = null;
@@ -337,6 +354,9 @@ async function createLiveTicketScenario(browser: Browser, title = 'Original live
             { resource: 'ticket', action: 'read' },
             { resource: 'ticket', action: 'update' },
             { resource: 'user', action: 'read' },
+            { resource: 'asset', action: 'read' },
+            { resource: 'user_settings', action: 'read' },
+            { resource: 'project', action: 'read' },
           ],
         },
       ],
@@ -372,10 +392,12 @@ async function createLiveTicketScenario(browser: Browser, title = 'Original live
       openTicket(pageB, ticketId),
     ]);
 
-    await Promise.all([
-      expectPresenceForPeer(pageA, 'Editor Two'),
-      expectPresenceForPeer(pageB, 'Editor One'),
-    ]);
+    if (waitForPresence) {
+      await Promise.all([
+        expectPresenceForPeer(pageA, 'Editor Two'),
+        expectPresenceForPeer(pageB, 'Editor One'),
+      ]);
+    }
 
     return {
       contextA,
@@ -439,7 +461,7 @@ test.describe('Ticket live updates (Playwright)', () => {
 
       const liveUpdateStartedAt = Date.now();
       await selectTicketFieldOption(pageB, 'status_id', refs.pendingStatusName);
-      await pageB.locator('#ticket-details-save-changes-btn').click();
+      await pageB.locator('#ticket-details-info-save-changes-btn').click();
 
       await expect.poll(async () => {
         return (await getTicketField(pageA, 'status_id').getAttribute('data-live-highlighted')) === 'true' &&
@@ -546,7 +568,7 @@ test.describe('Ticket live updates (Playwright)', () => {
       await selectTicketFieldOption(pageA, 'status_id', refs.pendingStatusName);
 
       await selectTicketFieldOption(pageB, 'status_id', refs.resolvedStatusName);
-      await pageB.locator('#ticket-details-save-changes-btn').click();
+      await pageB.locator('#ticket-details-info-save-changes-btn').click();
 
       await expect(getTicketField(pageA, 'status_id')).toHaveAttribute('data-live-conflict', 'true', { timeout: 5_000 });
       await expect(pageA.getByRole('alert')).toContainText('Editor Two', { timeout: 5_000 });
@@ -572,7 +594,7 @@ test.describe('Ticket live updates (Playwright)', () => {
 
       await selectTicketFieldOption(pageA, 'status_id', refs.pendingStatusName);
       await selectTicketFieldOption(pageB, 'priority_id', refs.elevatedPriorityName);
-      await pageB.locator('#ticket-details-save-changes-btn').click();
+      await pageB.locator('#ticket-details-info-save-changes-btn').click();
 
       await expect(pageA.getByText('Editor Two updated priority', { exact: true })).toBeVisible({ timeout: 5_000 });
       await expectTicketFieldValue(pageA, 'status_id', refs.pendingStatusName);
@@ -631,6 +653,78 @@ test.describe('Ticket live updates (Playwright)', () => {
 
       expect(Date.now() - liveUpdateStartedAt).toBeLessThanOrEqual(1500);
       await expect(pageA).toHaveURL(`${BASE_URL}/msp/tickets/${scenario.ticketId}`);
+    } finally {
+      await scenario.dispose();
+    }
+  });
+
+  test('T057: performance smoke reports remote update latency over 50 saves', async ({ browser }) => {
+    test.skip(!LIVE_TICKET_PERF_SMOKE, 'Set LIVE_TICKET_PERF_SMOKE=true to run the perf smoke');
+    test.setTimeout(300_000);
+
+    const scenario = await createLiveTicketScenario(browser, 'Original live title', { waitForPresence: false });
+
+    try {
+      const { pageA, pageB, refs } = scenario;
+      const saveChangesButton = pageB.locator('#ticket-details-info-save-changes-btn');
+
+      const saveNextStatusAndWaitForRemoteApply = async (): Promise<number> => {
+        const currentStatusText = (await getTicketField(pageB, 'status_id').getByRole('combobox').textContent()) ?? '';
+        const nextStatusName = currentStatusText.includes(refs.pendingStatusName)
+          ? refs.resolvedStatusName
+          : refs.pendingStatusName;
+
+        await selectTicketFieldOption(pageB, 'status_id', nextStatusName);
+        await expect(saveChangesButton).toBeVisible({ timeout: 10_000 });
+        await expect(saveChangesButton).toBeEnabled({ timeout: 10_000 });
+
+        const startedAt = Date.now();
+        await saveChangesButton.click();
+
+        await expect
+          .poll(async () => {
+            return (await getTicketField(pageA, 'status_id').getByRole('combobox').textContent())?.includes(nextStatusName);
+          }, {
+            timeout: 5_000,
+            intervals: [25, 50, 75, 100, 150, 200],
+          })
+          .toBe(true);
+
+        return Date.now() - startedAt;
+      };
+
+      await saveNextStatusAndWaitForRemoteApply();
+
+      const latenciesMs: number[] = [];
+      for (let iteration = 0; iteration < LIVE_TICKET_PERF_ITERATIONS; iteration += 1) {
+        latenciesMs.push(await saveNextStatusAndWaitForRemoteApply());
+      }
+
+      const p95Ms = calculateP95(latenciesMs);
+      console.log(
+        JSON.stringify({
+          metric: 'ticket-live-update-latency',
+          measuredFrom: 'ui-save-click',
+          iterations: latenciesMs.length,
+          p95Ms,
+          minMs: Math.min(...latenciesMs),
+          maxMs: Math.max(...latenciesMs),
+          thresholdMs: LIVE_TICKET_PERF_THRESHOLD_MS,
+          strict: LIVE_TICKET_PERF_STRICT,
+          latenciesMs,
+        })
+      );
+
+      expect(latenciesMs).toHaveLength(LIVE_TICKET_PERF_ITERATIONS);
+      expect(latenciesMs.every((latencyMs) => Number.isFinite(latencyMs) && latencyMs > 0)).toBe(true);
+
+      if (LIVE_TICKET_PERF_STRICT) {
+        expect(p95Ms).toBeLessThanOrEqual(LIVE_TICKET_PERF_THRESHOLD_MS);
+      } else if (p95Ms > LIVE_TICKET_PERF_THRESHOLD_MS) {
+        console.warn(
+          `[ticket-live-perf] P95 ${p95Ms}ms exceeded ${LIVE_TICKET_PERF_THRESHOLD_MS}ms in local smoke mode; rerun with LIVE_TICKET_PERF_STRICT=true to enforce.`
+        );
+      }
     } finally {
       await scenario.dispose();
     }

@@ -289,10 +289,18 @@ test('Ticket bundling: list toggle, bundling, grouping, and child banners', asyn
     await page.locator('[data-automation-id="ticketing-dashboard-bundle-master-select"]').click();
     await page.getByRole('option', { name: masterNumber }).click();
     await page.locator('[data-automation-id="ticketing-dashboard-bundle-confirm"]').click();
+    await expect(page.locator('[data-automation-id="ticketing-dashboard-bundle-dialog-dialog"]')).toBeHidden({ timeout: 15_000 });
+    await waitForDialogOverlaysToClear(page);
+    await page.waitForLoadState('networkidle', { timeout: 30_000 });
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 60_000 });
+    await waitForTicketsTableIdle(page);
+    await waitForUIState(page);
 
     // In bundled view, child ticket row is hidden.
     await expect(page.getByText(childNumber, { exact: false })).toBeHidden({ timeout: 10_000 });
-    await expect(page.getByText(`Bundle · 1`)).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.getByRole('row', { name: new RegExp(`${masterNumber}.*Bundle · 1`) })
+    ).toBeVisible({ timeout: 10_000 });
 
     // Search by child number returns the master in bundled view.
     await page.locator('[data-automation-id="ticketing-dashboard-search-tickets-input"]').fill(childNumber);
@@ -300,7 +308,7 @@ test('Ticket bundling: list toggle, bundling, grouping, and child banners', asyn
     await expect(page.getByText(masterNumber)).toBeVisible({ timeout: 10_000 });
 
     // Switch to individual view and expand bundle to see child.
-    await page.getByRole('switch', { name: 'Bundled view' }).click();
+    await page.getByRole('switch', { name: 'Bundled' }).click();
     await page.waitForURL(/bundleView=individual/, { timeout: 30_000 });
     await waitForTicketsTableIdle(page);
     await page.waitForLoadState('networkidle', { timeout: 30_000 }); // settle client-side effects
@@ -308,16 +316,14 @@ test('Ticket bundling: list toggle, bundling, grouping, and child banners', asyn
     await page.locator('[data-automation-id="ticketing-dashboard-search-tickets-input"]').fill('');
     await waitForTicketsTableIdle(page);
     await expect(page.getByText(masterNumber)).toBeVisible({ timeout: 10_000 });
-
-    // Expand.
-    await page.getByRole('button', { name: 'Toggle bundle children' }).first().click();
     await expect(page.getByText(childNumber)).toBeVisible({ timeout: 10_000 });
 
     // Child row shows bundled indicator referencing master.
     await expect(page.getByText(`Bundled → ${masterNumber}`)).toBeVisible({ timeout: 10_000 });
 
     // Open child and verify child banner.
-    await page.getByText(childNumber).first().click();
+    await page.getByRole('link', { name: childNumber, exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(`/msp/tickets/${childId}(?:\\?.*)?$`), { timeout: 15_000 });
     await expect(page.locator('#ticket-bundle-child-banner')).toBeVisible({ timeout: 15_000 });
   } finally {
     await db.destroy().catch(() => undefined);

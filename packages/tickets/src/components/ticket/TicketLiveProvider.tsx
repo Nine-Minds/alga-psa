@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import {
   useTicketLive,
   type TicketLiveConnectionStatus,
@@ -49,15 +49,16 @@ export function TicketLiveProvider({
 }: TicketLiveProviderProps) {
   const [lastRemoteUpdate, setLastRemoteUpdate] = useState<TicketLiveRemoteUpdate | null>(null);
   const [reconnectVersion, setReconnectVersion] = useState(0);
+  const handleReconnect = useCallback(() => {
+    setReconnectVersion((value) => value + 1);
+  }, []);
 
   const { presence, connectionStatus, setEditingField } = useTicketLive({
     tenantId,
     ticketId,
     currentUser,
     onRemoteUpdate: setLastRemoteUpdate,
-    onReconnect: () => {
-      setReconnectVersion((value) => value + 1);
-    },
+    onReconnect: handleReconnect,
   });
 
   const value = useMemo<TicketLiveContextValue>(() => ({
