@@ -112,7 +112,29 @@ export const getServerLocale = cache(
     clientId?: string;
   }): Promise<SupportedLocale> => {
     try {
-      // 1. Check cookie (user's explicit choice)
+      // 0. When called without explicit options, defer to the same hierarchical
+      // resolver the client side uses (user_pref → client → tenant → default).
+      // This keeps server- and client-rendered translations in agreement and
+      // prevents a stale `locale` cookie from overriding the user's stored DB
+      // preference. Dynamic-imported to avoid a build-time cycle with
+      // @alga-psa/tenancy.
+      if (!options) {
+        try {
+          const mod: any = await import('@alga-psa/tenancy/actions');
+          if (typeof mod?.getHierarchicalLocaleAction === 'function') {
+            const hierarchical = await mod.getHierarchicalLocaleAction();
+            if (hierarchical && isSupportedLocale(hierarchical)) {
+              return hierarchical;
+            }
+          }
+        } catch {
+          // Tenancy package unavailable in this runtime; fall through to the
+          // legacy cookie/Accept-Language chain below.
+        }
+      }
+
+      // 1. Check cookie (user's explicit device-level choice). Only consulted
+      // when explicit options are passed or hierarchical resolution failed.
       const cookieStore = await cookies();
       const localeCookie = cookieStore.get(LOCALE_CONFIG.cookie.name)?.value;
       if (localeCookie && isSupportedLocale(localeCookie)) {
