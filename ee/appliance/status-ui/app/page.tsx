@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import styles from './status.module.css';
 
 type RawTierMap = Record<string, boolean | { ready?: boolean; status?: string }>;
@@ -37,6 +37,7 @@ type Pod = {
 };
 
 type Tab = 'overview' | 'deployments' | 'pods' | 'logs' | 'diagnostics';
+type LogLoadOptions = { preserveScroll?: boolean; scrollToEnd?: boolean };
 
 function tokenQuery() {
   if (typeof window === 'undefined') return '';
@@ -94,11 +95,22 @@ function ageFrom(date?: string | null) {
   return `${Math.floor(seconds / 86400)}d`;
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function highlightLine(line: string, search: string) {
   if (!search) return line;
-  const idx = line.toLowerCase().indexOf(search.toLowerCase());
-  if (idx < 0) return line;
-  return <>{line.slice(0, idx)}<mark>{line.slice(idx, idx + search.length)}</mark>{line.slice(idx + search.length)}</>;
+  const parts = line.split(new RegExp(`(${escapeRegExp(search)})`, 'ig'));
+  return <>{parts.map((part, index) => part.toLowerCase() === search.toLowerCase() ? <mark key={index}>{part}</mark> : part)}</>;
+}
+
+function SkeletonRows({ rows = 6, columns = 6 }: { rows?: number; columns?: number }) {
+  return <>{Array.from({ length: rows }).map((_, row) => <tr key={row} className={styles.skeletonRow}>{Array.from({ length: columns }).map((__, col) => <td key={col}><span className={styles.skeletonCell} /></td>)}</tr>)}</>;
+}
+
+function SkeletonBlock({ lines = 6 }: { lines?: number }) {
+  return <div className={styles.skeletonBlock}>{Array.from({ length: lines }).map((_, index) => <span key={index} className={styles.skeletonLineDark} />)}</div>;
 }
 
 export default function StatusPage() {
@@ -116,11 +128,18 @@ export default function StatusPage() {
   const [podFilter, setPodFilter] = useState('');
   const [logFilter, setLogFilter] = useState('');
   const [logSearch, setLogSearch] = useState('');
+  const [activeMatch, setActiveMatch] = useState(0);
   const [logTail, setLogTail] = useState(200);
   const [logLines, setLogLines] = useState<string[]>([]);
   const [logError, setLogError] = useState<string | null>(null);
+  const [loadingStatus, setLoadingStatus] = useState(true);
+  const [loadingNamespaces, setLoadingNamespaces] = useState(true);
+  const [loadingDeployments, setLoadingDeployments] = useState(false);
+  const [loadingPods, setLoadingPods] = useState(false);
   const [loadingLogs, setLoadingLogs] = useState(false);
   const logPaneRef = useRef<HTMLPreElement | null>(null);
+  const lineRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const pendingLogScroll = useRef<null | { mode: 'preserve' | 'end'; previousScrollHeight: number; previousScrollTop: number }>(null);
 
   useEffect(() => {
     setQuery(tokenQuery());
@@ -128,6 +147,7 @@ export default function StatusPage() {
 
   const loadStatus = useCallback(async () => {
     if (!query) return;
+    setLoadingStatus(true);
     try {
       const response = await fetch(apiPath('/api/status', query), { cache: 'no-store' });
       if (!response.ok) throw new Error(response.status === 401 ? 'Unauthorized: check the setup token.' : 'Status API unavailable.');
@@ -135,21 +155,26 @@ export default function StatusPage() {
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoadingStatus(false);
     }
   }, [query]);
 
   const loadNamespaces = useCallback(async () => {
     if (!query) return;
+    setLoadingNamespaces(true);
     try {
       const response = await fetch(apiPath('/api/k8s/namespaces', query), { cache: 'no-store' });
       if (!response.ok) return;
       const data = await response.json();
       setNamespaces(data.namespaces || []);
     } catch { /* cluster may not exist yet */ }
+    finally { setLoadingNamespaces(false); }
   }, [query]);
 
   const loadPods = useCallback(async () => {
     if (!query) return;
+    setLoadingPods(true);
     try {
       const response = await fetch(apiPath('/api/k8s/pods', query, { namespace }), { cache: 'no-store' });
       if (!response.ok) return;
@@ -161,28 +186,53 @@ export default function StatusPage() {
         setSelectedContainer(nextPods[0].containers?.[0]?.name || '');
       }
     } catch { /* ignore transient Kubernetes failures */ }
+    finally { setLoadingPods(false); }
   }, [namespace, query, selectedPod]);
 
   const loadDeployments = useCallback(async () => {
     if (!query) return;
+    setLoadingDeployments(true);
     try {
       const response = await fetch(apiPath('/api/k8s/deployments', query, { namespace }), { cache: 'no-store' });
       if (!response.ok) return;
       const data = await response.json();
       setDeployments(data.deployments || []);
     } catch { /* ignore transient Kubernetes failures */ }
+    finally { setLoadingDeployments(false); }
   }, [namespace, query]);
 
-  const loadLogs = useCallback(async (tail = logTail) => {
+  function applyPendingLogScroll() {
+    const pending = pendingLogScroll.current;
+    const pane = logPaneRef.current;
+    if (!pending || !pane) return;
+    if (pending.mode === 'end') {
+      pane.scrollTop = pane.scrollHeight;
+    } else {
+      pane.scrollTop = pane.scrollHeight - pending.previousScrollHeight + pending.previousScrollTop;
+    }
+    pendingLogScroll.current = null;
+  }
+
+  const loadLogs = useCallback(async (tail = logTail, options: LogLoadOptions = {}) => {
     if (!query || !selectedPod) return;
+    const pane = logPaneRef.current;
+    const previousScrollHeight = pane?.scrollHeight || 0;
+    const previousScrollTop = pane?.scrollTop || 0;
     setLoadingLogs(true);
     try {
       setLogError(null);
       const response = await fetch(apiPath('/api/k8s/logs', query, { namespace, pod: selectedPod, container: selectedContainer, tail }), { cache: 'no-store' });
       if (!response.ok) throw new Error((await response.json()).error || 'Unable to read logs.');
       const data = await response.json();
+      if (options.preserveScroll) {
+        pendingLogScroll.current = { mode: 'preserve', previousScrollHeight, previousScrollTop };
+      } else if (options.scrollToEnd) {
+        pendingLogScroll.current = { mode: 'end', previousScrollHeight, previousScrollTop };
+      }
       setLogLines(data.lines || []);
       setLogTail(tail);
+      window.setTimeout(applyPendingLogScroll, 50);
+      window.setTimeout(applyPendingLogScroll, 250);
     } catch (err) {
       setLogError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -203,21 +253,42 @@ export default function StatusPage() {
   }, [activeTab, loadDeployments, loadPods]);
 
   useEffect(() => {
-    if (activeTab === 'logs') loadLogs(200);
+    if (activeTab === 'logs') loadLogs(200, { scrollToEnd: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, namespace, selectedPod, selectedContainer]);
+
+  useEffect(() => {
+    requestAnimationFrame(applyPendingLogScroll);
+  }, [logLines, loadingLogs, activeTab]);
 
   const selectedPodData = pods.find((pod) => pod.name === selectedPod);
   const visibleDeployments = deployments.filter((deployment) => `${deployment.namespace}/${deployment.name} ${deployment.images?.join(' ')}`.toLowerCase().includes(deploymentFilter.toLowerCase()));
   const visiblePods = pods.filter((pod) => `${pod.namespace}/${pod.name} ${pod.phase} ${pod.containers.map((c) => c.image).join(' ')}`.toLowerCase().includes(podFilter.toLowerCase()));
   const filteredLogLines = logLines.filter((line) => !logFilter || line.toLowerCase().includes(logFilter.toLowerCase()));
-  const searchMatches = logSearch ? filteredLogLines.filter((line) => line.toLowerCase().includes(logSearch.toLowerCase())).length : 0;
+  const matchLineIndexes = useMemo(() => logSearch ? filteredLogLines.reduce<number[]>((matches, line, index) => {
+    if (line.toLowerCase().includes(logSearch.toLowerCase())) matches.push(index);
+    return matches;
+  }, []) : [], [filteredLogLines, logSearch]);
+  const searchMatches = matchLineIndexes.length;
   const state = status?.rollup?.state || status?.status || status?.installState?.status || 'loading';
+
+  useEffect(() => {
+    setActiveMatch(0);
+  }, [logSearch, logFilter, logLines]);
 
   function handleLogScroll() {
     const pane = logPaneRef.current;
     if (!pane || loadingLogs || pane.scrollTop > 80 || logTail >= 10000) return;
-    loadLogs(logTail + 200);
+    loadLogs(logTail + 200, { preserveScroll: true });
+  }
+
+  function jumpMatch(direction: 1 | -1) {
+    if (searchMatches === 0) return;
+    const next = (activeMatch + direction + searchMatches) % searchMatches;
+    setActiveMatch(next);
+    window.setTimeout(() => {
+      lineRefs.current[matchLineIndexes[next]]?.scrollIntoView({ block: 'center' });
+    }, 0);
   }
 
   return (
@@ -245,24 +316,24 @@ export default function StatusPage() {
           <div className={styles.grid}>
             <article className={`${styles.panel} ${styles.wide}`}>
               <h2>Install overview</h2>
-              <dl className={styles.kv}>
+              {loadingStatus && !status ? <SkeletonBlock lines={4} /> : <dl className={styles.kv}>
                 <div><dt>Current phase</dt><dd>{status?.currentPhase || status?.installState?.phase || 'loading'}</dd></div>
                 <div><dt>Last action</dt><dd>{status?.installState?.lastAction || status?.rollup?.nextAction || '—'}</dd></div>
                 <div><dt>Login URL</dt><dd>{status?.urls?.loginUrl || 'Not available yet'}</dd></div>
                 <div><dt>Cluster objects</dt><dd>{status?.kubernetes?.podCount ?? 0} pods · {status?.kubernetes?.helmReleaseCount ?? 0} releases</dd></div>
-              </dl>
+              </dl>}
             </article>
 
             <article className={styles.panel}>
               <h2>Readiness tiers</h2>
-              <div className={styles.tiers}>{tierEntries(status).map(([name, tier]) => (
+              {loadingStatus && !status ? <SkeletonBlock lines={6} /> : <div className={styles.tiers}>{tierEntries(status).map(([name, tier]) => (
                 <div className={styles.tier} key={name}><strong>{name}</strong><span className={`${styles.badge} ${badgeClass(tier.ready)}`}>{tier.ready ? 'ready' : 'not ready'}</span><small>{tier.status}</small></div>
-              ))}</div>
+              ))}</div>}
             </article>
 
             <article className={styles.panel}>
               <h2>Blockers</h2>
-              {blockers(status).length === 0 ? <p className={styles.muted}>No action-required blockers detected from the live API.</p> : blockers(status).map((blocker, index) => (
+              {loadingStatus && !status ? <SkeletonBlock lines={3} /> : blockers(status).length === 0 ? <p className={styles.muted}>No action-required blockers detected from the live API.</p> : blockers(status).map((blocker, index) => (
                 <div className={`${styles.blocker} ${blocker.loginBlocking === false ? styles.backgroundBlocker : ''}`} key={index}>
                   <strong>{blocker.component || blocker.layer}</strong><p>{blocker.reason}</p><small>{blocker.nextAction}</small>
                 </div>
@@ -271,24 +342,24 @@ export default function StatusPage() {
 
             <article className={styles.panel}>
               <h2>Active operations</h2>
-              {(status?.activeOperations || []).length === 0 ? <p className={styles.muted}>No active image pull or long-running pod operation detected.</p> : status?.activeOperations?.map((op, index) => (
+              {loadingStatus && !status ? <SkeletonBlock lines={3} /> : (status?.activeOperations || []).length === 0 ? <p className={styles.muted}>No active image pull or long-running pod operation detected.</p> : status?.activeOperations?.map((op, index) => (
                 <div className={styles.operation} key={index}><strong>{op.component}</strong><p>{op.message}</p></div>
               ))}
             </article>
 
             <article className={`${styles.panel} ${styles.wide}`}>
               <h2>Recent Kubernetes events</h2>
-              <div className={styles.eventList}>{(status?.recentEvents || []).slice(-10).reverse().map((event, index) => (
+              {loadingStatus && !status ? <SkeletonBlock lines={5} /> : <div className={styles.eventList}>{(status?.recentEvents || []).slice(-10).reverse().map((event, index) => (
                 <div className={styles.event} key={index}><b>{event.type} {event.reason}</b><span>{event.namespace} · {event.involvedObject}</span><p>{event.message}</p></div>
-              ))}{(status?.recentEvents || []).length === 0 ? <p className={styles.muted}>Kubernetes events are not available yet.</p> : null}</div>
+              ))}{(status?.recentEvents || []).length === 0 ? <p className={styles.muted}>Kubernetes events are not available yet.</p> : null}</div>}
             </article>
           </div>
         ) : null}
 
         {activeTab === 'deployments' ? (
           <section className={styles.panel}>
-            <Toolbar namespace={namespace} namespaces={namespaces} onNamespace={setNamespace} filter={deploymentFilter} onFilter={setDeploymentFilter} onRefresh={loadDeployments} />
-            <div className={styles.tableWrap}><table><thead><tr><th>Deployment</th><th>Ready</th><th>Revision</th><th>Strategy</th><th>Images</th><th>History</th></tr></thead><tbody>{visibleDeployments.map((deployment) => (
+            <Toolbar namespace={namespace} namespaces={namespaces} loadingNamespaces={loadingNamespaces} onNamespace={setNamespace} filter={deploymentFilter} onFilter={setDeploymentFilter} onRefresh={loadDeployments} />
+            <div className={styles.tableWrap}><table><thead><tr><th>Deployment</th><th>Ready</th><th>Revision</th><th>Strategy</th><th>Images</th><th>History</th></tr></thead><tbody>{loadingDeployments ? <SkeletonRows columns={6} rows={7} /> : visibleDeployments.length === 0 ? <tr><td colSpan={6} className={styles.emptyCell}>No deployments found.</td></tr> : visibleDeployments.map((deployment) => (
               <tr key={`${deployment.namespace}/${deployment.name}`}><td><b>{deployment.name}</b><small>{deployment.namespace}</small></td><td><span className={`${styles.badge} ${badgeClass(deployment.readyReplicas === deployment.replicas)}`}>{deployment.readyReplicas}/{deployment.replicas}</span></td><td>{deployment.revision || '—'}</td><td>{deployment.strategy}</td><td>{deployment.images?.map((image) => <code key={image}>{image}</code>)}</td><td><div className={styles.history}>{deployment.replicaSets?.slice(0, 4).map((rs) => <span key={rs.name}>r{rs.revision || '?'} {rs.readyReplicas}/{rs.replicas} · {ageFrom(rs.createdAt)}</span>)}</div></td></tr>
             ))}</tbody></table></div>
           </section>
@@ -296,8 +367,8 @@ export default function StatusPage() {
 
         {activeTab === 'pods' ? (
           <section className={styles.panel}>
-            <Toolbar namespace={namespace} namespaces={namespaces} onNamespace={setNamespace} filter={podFilter} onFilter={setPodFilter} onRefresh={loadPods} />
-            <div className={styles.tableWrap}><table><thead><tr><th>Pod</th><th>Status</th><th>Ready</th><th>Restarts</th><th>Node/IP</th><th>Containers</th></tr></thead><tbody>{visiblePods.map((pod) => (
+            <Toolbar namespace={namespace} namespaces={namespaces} loadingNamespaces={loadingNamespaces} onNamespace={setNamespace} filter={podFilter} onFilter={setPodFilter} onRefresh={loadPods} />
+            <div className={styles.tableWrap}><table><thead><tr><th>Pod</th><th>Status</th><th>Ready</th><th>Restarts</th><th>Node/IP</th><th>Containers</th></tr></thead><tbody>{loadingPods ? <SkeletonRows columns={6} rows={8} /> : visiblePods.length === 0 ? <tr><td colSpan={6} className={styles.emptyCell}>No pods found.</td></tr> : visiblePods.map((pod) => (
               <tr key={`${pod.namespace}/${pod.name}`} onClick={() => { setNamespace(pod.namespace); setSelectedPod(pod.name); setSelectedContainer(pod.containers[0]?.name || ''); setActiveTab('logs'); }}><td><b>{pod.name}</b><small>{pod.namespace}</small></td><td><span className={`${styles.badge} ${badgeClass(pod.phase)}`}>{pod.phase}</span></td><td>{pod.readyContainers}/{pod.totalContainers}</td><td>{pod.restarts}</td><td><small>{pod.node || '—'}<br />{pod.podIP || '—'}</small></td><td>{pod.containers.map((container) => <code key={container.name}>{container.name}</code>)}</td></tr>
             ))}</tbody></table></div>
           </section>
@@ -306,30 +377,37 @@ export default function StatusPage() {
         {activeTab === 'logs' ? (
           <section className={styles.panel}>
             <div className={styles.logControls}>
-              <select value={namespace} onChange={(event) => { setNamespace(event.target.value); setSelectedPod(''); }}><option value="msp">msp</option>{namespaces.filter((ns) => ns.name !== 'msp').map((ns) => <option key={ns.name} value={ns.name}>{ns.name}</option>)}</select>
-              <select value={selectedPod} onChange={(event) => { setSelectedPod(event.target.value); setSelectedContainer(''); }}>{pods.map((pod) => <option key={pod.name} value={pod.name}>{pod.name}</option>)}</select>
-              <select value={selectedContainer} onChange={(event) => setSelectedContainer(event.target.value)}>{(selectedPodData?.containers || []).map((container) => <option key={container.name} value={container.name}>{container.name}</option>)}</select>
-              <button onClick={() => loadLogs(logTail)}>Refresh</button>
+              <select value={namespace} disabled={loadingNamespaces} onChange={(event) => { setNamespace(event.target.value); setSelectedPod(''); }}><option value="msp">msp</option>{namespaces.filter((ns) => ns.name !== 'msp').map((ns) => <option key={ns.name} value={ns.name}>{ns.name}</option>)}</select>
+              <select value={selectedPod} disabled={loadingPods} onChange={(event) => { setSelectedPod(event.target.value); setSelectedContainer(''); }}>{pods.map((pod) => <option key={pod.name} value={pod.name}>{pod.name}</option>)}</select>
+              <select value={selectedContainer} disabled={loadingPods || !selectedPodData} onChange={(event) => setSelectedContainer(event.target.value)}>{(selectedPodData?.containers || []).map((container) => <option key={container.name} value={container.name}>{container.name}</option>)}</select>
+              <button onClick={() => loadLogs(logTail, { scrollToEnd: true })}>Refresh</button>
               <span className={styles.muted}>tail {logTail} · scroll up for older lines</span>
             </div>
             <div className={styles.logControls}>
               <input value={logFilter} onChange={(event) => setLogFilter(event.target.value)} placeholder="Filter visible log lines" />
               <input value={logSearch} onChange={(event) => setLogSearch(event.target.value)} placeholder="Search and highlight" />
-              <span className={styles.matchCount}>{searchMatches} matches</span>
+              <button disabled={searchMatches === 0} onClick={() => jumpMatch(-1)}>Previous</button>
+              <button disabled={searchMatches === 0} onClick={() => jumpMatch(1)}>Next</button>
+              <span className={styles.matchCount}>{searchMatches ? `${activeMatch + 1}/${searchMatches}` : '0 matches'}</span>
             </div>
             {logError ? <div className={styles.alert}>{logError}</div> : null}
-            <pre className={styles.logPane} ref={logPaneRef} onScroll={handleLogScroll}>{filteredLogLines.map((line, index) => <div key={`${index}-${line.slice(0, 20)}`} className={logSearch && line.toLowerCase().includes(logSearch.toLowerCase()) ? styles.matchLine : ''}>{highlightLine(line, logSearch)}</div>)}</pre>
+            {loadingLogs && logLines.length === 0 ? <div className={styles.logPane}><SkeletonBlock lines={18} /></div> : <pre className={styles.logPane} ref={logPaneRef} onScroll={handleLogScroll}>{filteredLogLines.map((line, index) => {
+              const matchIndex = matchLineIndexes.indexOf(index);
+              const isMatch = matchIndex >= 0;
+              const isActive = isMatch && matchIndex === activeMatch;
+              return <div ref={(el) => { lineRefs.current[index] = el; }} key={`${index}-${line.slice(0, 20)}`} className={`${isMatch ? styles.matchLine : ''} ${isActive ? styles.activeMatchLine : ''}`}>{highlightLine(line, logSearch)}</div>;
+            })}</pre>}
           </section>
         ) : null}
 
         {activeTab === 'diagnostics' ? (
-          <section className={styles.panel}><h2>Raw status payload</h2><pre className={styles.raw}>{JSON.stringify(status || { error }, null, 2)}</pre></section>
+          <section className={styles.panel}><h2>Raw status payload</h2>{loadingStatus && !status ? <SkeletonBlock lines={16} /> : <pre className={styles.raw}>{JSON.stringify(status || { error }, null, 2)}</pre>}</section>
         ) : null}
       </section>
     </main>
   );
 }
 
-function Toolbar({ namespace, namespaces, onNamespace, filter, onFilter, onRefresh }: { namespace: string; namespaces: NamespaceItem[]; onNamespace: (value: string) => void; filter: string; onFilter: (value: string) => void; onRefresh: () => void }) {
-  return <div className={styles.toolbar}><select value={namespace} onChange={(event) => onNamespace(event.target.value)}><option value="all">all namespaces</option><option value="msp">msp</option>{namespaces.filter((ns) => ns.name !== 'msp').map((ns) => <option key={ns.name} value={ns.name}>{ns.name}</option>)}</select><input value={filter} onChange={(event) => onFilter(event.target.value)} placeholder="Filter by name, image, state…" /><button onClick={onRefresh}>Refresh</button></div>;
+function Toolbar({ namespace, namespaces, loadingNamespaces, onNamespace, filter, onFilter, onRefresh }: { namespace: string; namespaces: NamespaceItem[]; loadingNamespaces?: boolean; onNamespace: (value: string) => void; filter: string; onFilter: (value: string) => void; onRefresh: () => void }) {
+  return <div className={styles.toolbar}><select value={namespace} disabled={loadingNamespaces} onChange={(event) => onNamespace(event.target.value)}><option value="all">all namespaces</option><option value="msp">msp</option>{namespaces.filter((ns) => ns.name !== 'msp').map((ns) => <option key={ns.name} value={ns.name}>{ns.name}</option>)}</select><input value={filter} onChange={(event) => onFilter(event.target.value)} placeholder="Filter by name, image, state…" /><button onClick={onRefresh}>Refresh</button></div>;
 }

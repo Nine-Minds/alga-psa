@@ -80,7 +80,6 @@ function contentTypeFor(file) {
 function safeStaticFileForPathname(pathname) {
   if (!fs.existsSync(staticUiDir)) return null;
   const normalized = path.posix.normalize(decodeURIComponent(pathname));
-  if (normalized.includes('..')) return null;
 
   const candidates = [];
   if (normalized === '/') {

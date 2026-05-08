@@ -34,8 +34,8 @@
 html, body { min-height: 100%; margin: 0; }
 
 body {
-  background: #08111f;
-  color: rgb(var(--color-text-900));
+  background: #050914;
+  color: #dbe7f5;
   font-family: ui-sans-serif, "Aptos", "Segoe UI Variable", "Helvetica Neue", sans-serif;
   line-height: 1.45;
 }
@@ -47,10 +47,11 @@ button { cursor: pointer; }
 button:disabled { cursor: not-allowed; opacity: 0.65; }
 
 code {
-  border: 1px solid rgb(var(--color-border-200));
+  border: 1px solid rgba(96, 165, 250, 0.24);
   border-radius: 6px;
-  background: rgb(var(--color-border-100));
+  background: rgba(15, 23, 42, 0.86);
+  color: #bfdbfe;
   padding: 2px 5px;
 }
 
-a { color: rgb(var(--color-primary-700)); }
+a { color: #93c5fd; }
