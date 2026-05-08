@@ -65,7 +65,10 @@ const activities = proxyActivities<{
     clientId?: string;
     contractLine?: string;
   }): Promise<SetupTenantDataActivityResult>;
-  run_onboarding_seeds(tenantId: string): Promise<{ success: boolean; seedsApplied: string[] }>;
+  run_onboarding_seeds(input: {
+    tenantId: string;
+    productCode?: 'psa' | 'algadesk';
+  }): Promise<{ success: boolean; seedsApplied: string[] }>;
   sendWelcomeEmail(input: SendWelcomeEmailActivityInput): Promise<SendWelcomeEmailActivityResult>;
   rollbackTenant(tenantId: string): Promise<void>;
   rollbackUser(userId: string, tenantId: string): Promise<void>;
@@ -278,8 +281,14 @@ export async function tenantCreationWorkflow(
       throw new Error(`Workflow cancelled: ${cancelReason}`);
     }
 
-    log.info('Running onboarding seeds for tenant');
-    const seedsResult = await activities.run_onboarding_seeds(tenantResult.tenantId);
+    log.info('Running onboarding seeds for tenant', {
+      tenantId: tenantResult.tenantId,
+      productCode: input.productCode,
+    });
+    const seedsResult = await activities.run_onboarding_seeds({
+      tenantId: tenantResult.tenantId,
+      productCode: input.productCode,
+    });
     
     workflowState.progress = 50;
     log.info('Onboarding seeds completed', { seedsApplied: seedsResult.seedsApplied });
