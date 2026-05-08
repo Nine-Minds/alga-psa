@@ -7,9 +7,9 @@ const currentDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(currentDir, '../../../../..');
 
 describe('tenant creation product bootstrap wiring', () => {
-  it('passes tenantCreationWorkflow productCode to run_onboarding_seeds', () => {
+  it('passes tenant creation productCode to run_onboarding_seeds', () => {
     const source = fs.readFileSync(
-      path.join(repoRoot, 'ee/temporal-workflows/src/workflows/tenant-creation-workflow.ts'),
+      path.join(repoRoot, 'ee/temporal-workflows/src/workflows/shared/tenant-creation-steps.ts'),
       'utf8',
     );
 

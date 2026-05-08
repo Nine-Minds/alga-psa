@@ -137,6 +137,7 @@ export interface SendWelcomeEmailActivityInput {
   temporaryPassword: string;
   clientName?: string;
   companyName?: string;
+  productCode?: 'psa' | 'algadesk';
 }
 
 export interface SendWelcomeEmailActivityResult {

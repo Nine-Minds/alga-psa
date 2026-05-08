@@ -89,8 +89,8 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const { t } = useTranslation('msp/profile');
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
-  const { isAlgadesk } = useProduct();
-  const isCalendarTabAvailable = isCalendarEnterpriseEdition() && !isAlgadesk;
+  const { isAlgaDesk } = useProduct();
+  const isCalendarTabAvailable = isCalendarEnterpriseEdition() && !isAlgaDesk;
   
   const [user, setUser] = useState<IUserWithRoles | null>(null);
   const [loading, setLoading] = useState(true);

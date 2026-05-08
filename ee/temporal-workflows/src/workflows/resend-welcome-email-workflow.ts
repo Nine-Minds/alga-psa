@@ -79,6 +79,7 @@ export async function resendWelcomeEmailWorkflow(
         lastName: user.last_name,
       },
       temporaryPassword,
+      productCode: tenant.product_code,
     });
 
     if (!emailResult.emailSent) {

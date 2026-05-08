@@ -2,9 +2,9 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Header from '../../../components/layout/Header';
 
@@ -13,6 +13,7 @@ const signOut = vi.fn();
 const themeToggleSpy = vi.fn();
 let pathname = '/msp/tickets';
 let translations: Record<string, string> = {};
+let isAlgaDeskProduct = false;
 
 const interpolate = (template: string, values: Record<string, unknown> = {}) =>
   template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_match, key) => String(values[key] ?? ''));
@@ -153,12 +154,27 @@ vi.mock('@alga-psa/analytics/client', () => ({
   },
 }));
 
+vi.mock('../../../context/ProductContext', () => ({
+  useProduct: () => ({
+    productCode: isAlgaDeskProduct ? 'algadesk' : 'psa',
+    isMisconfigured: false,
+    isPsa: !isAlgaDeskProduct,
+    isAlgaDesk: isAlgaDeskProduct,
+    isLoading: false,
+  }),
+}));
+
 describe('Header i18n wiring', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   beforeEach(() => {
     pathname = '/msp/tickets';
     routerPush.mockReset();
     signOut.mockReset();
     themeToggleSpy.mockReset();
+    isAlgaDeskProduct = false;
     translations = {
       'header.quickCreate.ariaLabel': 'Ouvrir creation rapide',
       'header.quickCreate.title': 'Creation rapide',

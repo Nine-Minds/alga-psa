@@ -140,7 +140,7 @@ const TICKET_STATUS_VALIDATION_KEYS: Record<ManagedTicketStatusValidationCode, s
 
 const BoardsSettings: React.FC = () => {
   const { t } = useTranslation('msp/settings');
-  const { isAlgadesk } = useProduct();
+  const { isAlgaDesk } = useProduct();
   const createEmptyFormData = () => ({
     board_name: '',
     description: '',
@@ -1093,7 +1093,7 @@ const BoardsSettings: React.FC = () => {
                 {t('ticketing.boards.fields.defaultAssignedAgent.help')}
               </p>
             </div>
-            {!isAlgadesk && (
+            {!isAlgaDesk && (
               <div>
                 <Label htmlFor="sla-policy-picker">{t('ticketing.boards.fields.slaPolicy.label')}</Label>
                 <CustomSelect

@@ -81,6 +81,7 @@ interface TicketDetailsContainerProps {
   disableAttachmentFolderSelection?: boolean;
   disableAttachmentSharing?: boolean;
   disableAttachmentLinking?: boolean;
+  disableAgentSchedule?: boolean;
 }
 
 export default function TicketDetailsContainer({
@@ -100,6 +101,7 @@ export default function TicketDetailsContainer({
   disableAttachmentFolderSelection = false,
   disableAttachmentSharing = false,
   disableAttachmentLinking = false,
+  disableAgentSchedule = false,
 }: TicketDetailsContainerProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -279,6 +281,7 @@ export default function TicketDetailsContainer({
             disableAttachmentFolderSelection={disableAttachmentFolderSelection}
             disableAttachmentSharing={disableAttachmentSharing}
             disableAttachmentLinking={disableAttachmentLinking}
+            disableAgentSchedule={disableAgentSchedule}
         />
         </Suspense>
       </div>

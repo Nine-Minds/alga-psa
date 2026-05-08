@@ -104,6 +104,7 @@ export default function MspTicketDetailsContainerClient({
         disableAttachmentFolderSelection={isAlgaDeskMode}
         disableAttachmentSharing={isAlgaDeskMode}
         disableAttachmentLinking={isAlgaDeskMode}
+        disableAgentSchedule={isAlgaDeskMode}
       />
     </TicketIntegrationProvider>
   );

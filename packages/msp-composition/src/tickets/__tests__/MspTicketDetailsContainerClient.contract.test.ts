@@ -12,6 +12,7 @@ describe('MspTicketDetailsContainerClient static contracts', () => {
 
     expect(source).toContain('renderCreateProjectTask={isAlgaDeskMode ? undefined : renderCreateProjectTask}');
     expect(source).toContain('renderIntervalManagement={isAlgaDeskMode ? undefined : renderIntervalManagement}');
+    expect(source).toContain('disableAgentSchedule={isAlgaDeskMode}');
   });
 
   it('keeps AlgaDesk attachment restrictions wired in component composition', () => {
