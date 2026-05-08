@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import styles from '../status.module.css';
 
 type SetupConfig = {
@@ -41,7 +41,7 @@ function SkeletonCard() {
 }
 
 export default function SetupPage() {
-  const query = useMemo(tokenQuery, []);
+  const [query, setQuery] = useState('');
   const [config, setConfig] = useState<SetupConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -53,6 +53,11 @@ export default function SetupPage() {
   const [repoBranch, setRepoBranch] = useState('');
 
   useEffect(() => {
+    setQuery(tokenQuery());
+  }, []);
+
+  useEffect(() => {
+    if (!query) return;
     let cancelled = false;
     async function loadConfig() {
       try {

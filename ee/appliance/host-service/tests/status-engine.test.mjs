@@ -68,6 +68,69 @@ exit 1
   }
 });
 
+test('collectStatusSnapshot includes UI contract fields for live status page', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-ui-contract-'));
+  const stateFile = path.join(tmp, 'install-state.json');
+  const fakeBin = path.join(tmp, 'bin');
+  fs.mkdirSync(fakeBin, { recursive: true });
+  fs.writeFileSync(stateFile, JSON.stringify({ phase: 'github-release-source', status: 'release-config-complete', lastAction: 'Release selection persisted.' }));
+
+  const kubectlPath = path.join(fakeBin, 'kubectl');
+  fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
+if [[ "$*" == *"get nodes -o json"* ]]; then
+  cat <<'JSON'
+{"items":[{"metadata":{"name":"node-1"},"status":{"conditions":[{"type":"Ready","status":"True"}]}}]}
+JSON
+  exit 0
+fi
+if [[ "$*" == *"get pods -A --no-headers"* ]]; then
+  cat <<'TXT'
+msp alga-core-abc Running
+msp temporal-worker-xyz CrashLoopBackOff
+TXT
+  exit 0
+fi
+if [[ "$*" == *"-n msp get jobs --no-headers"* ]]; then
+  cat <<'TXT'
+alga-core-bootstrap 1/1 1 1m
+TXT
+  exit 0
+fi
+if [[ "$*" == *"-n alga-system get helmreleases"* ]]; then
+  cat <<'TXT'
+alga-core 1h True Helm install succeeded
+temporal-worker 1h False Helm install failed
+TXT
+  exit 0
+fi
+if [[ "$*" == *"get events -A -o json"* ]]; then
+  echo '{"items":[]}'
+  exit 0
+fi
+exit 1
+`);
+  fs.chmodSync(kubectlPath, 0o755);
+
+  const originalPath = process.env.PATH;
+  process.env.PATH = `${fakeBin}:${originalPath}`;
+  try {
+    const snapshot = collectStatusSnapshot({
+      stateFile,
+      kubeconfigPath: '/tmp/k3s.yaml',
+      kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
+    });
+
+    assert.equal(snapshot.readinessTiers.platformReady.ready, true);
+    assert.equal(snapshot.readinessTiers.backgroundReady.ready, false);
+    assert.equal(snapshot.topBlockers.length >= 1, true);
+    assert.equal(typeof snapshot.rollup.state, 'string');
+    assert.equal(Array.isArray(snapshot.recentEvents), true);
+    assert.equal(Array.isArray(snapshot.activeOperations), true);
+  } finally {
+    process.env.PATH = originalPath;
+  }
+});
+
 test('loginReady remains true when background service has issues', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-bg-'));
   const stateFile = path.join(tmp, 'install-state.json');

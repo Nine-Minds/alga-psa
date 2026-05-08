@@ -3,7 +3,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { URL } from 'node:url';
 import { collectStatusSnapshot } from './status-engine.mjs';
 import { persistSetupInputs, validateSetupInputs } from './setup-engine.mjs';
@@ -14,6 +14,7 @@ const port = Number(process.env.ALGA_APPLIANCE_PORT || 8080);
 const stateFile = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
 const tokenFile = process.env.ALGA_APPLIANCE_TOKEN_FILE || '/var/lib/alga-appliance/setup-token';
 const setupInputsFile = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/etc/alga-appliance/setup-inputs.json';
+const kubeconfigPath = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3s/k3s.yaml';
 const staticUiDir = process.env.ALGA_APPLIANCE_STATUS_UI_DIR || '/opt/alga-appliance/status-ui/dist';
 const STATUS_CACHE_TTL_MS = Number(process.env.ALGA_APPLIANCE_STATUS_CACHE_TTL_MS || 10_000);
 let cachedStatusSnapshot = null;
@@ -159,6 +160,117 @@ function queueSetupWorkflow() {
   child.unref();
 }
 
+function shellQuote(value) {
+  return `'${String(value).replaceAll("'", "'\\''")}'`;
+}
+
+function runCommand(command, timeoutMs = 10_000) {
+  const result = spawnSync('sh', ['-c', command], {
+    env: process.env,
+    encoding: 'utf8',
+    timeout: timeoutMs
+  });
+  const timedOut = result.error?.code === 'ETIMEDOUT';
+  return {
+    ok: result.status === 0,
+    status: timedOut ? 124 : (result.status ?? 1),
+    stdout: result.stdout || '',
+    stderr: timedOut ? `${result.stderr || ''}\nCommand timed out after ${timeoutMs}ms.` : (result.stderr || '')
+  };
+}
+
+function kubectlCommand(args) {
+  return `kubectl --request-timeout=8s --kubeconfig ${shellQuote(kubeconfigPath)} ${args}`;
+}
+
+function runKubectlJson(args, timeoutMs = 10_000) {
+  const result = runCommand(kubectlCommand(`${args} -o json`), timeoutMs);
+  if (!result.ok) return { ...result, value: null };
+  try {
+    return { ...result, value: JSON.parse(result.stdout || '{}') };
+  } catch (error) {
+    return { ...result, ok: false, status: 1, value: null, stderr: error instanceof Error ? error.message : 'Invalid JSON from kubectl.' };
+  }
+}
+
+function validKubeName(value) {
+  return typeof value === 'string' && /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(value);
+}
+
+function validContainerName(value) {
+  return typeof value === 'string' && /^[A-Za-z0-9_.-]+$/.test(value);
+}
+
+function namespaceFlag(namespace) {
+  if (!namespace || namespace === 'all' || namespace === '_all') return '-A';
+  if (!validKubeName(namespace)) return null;
+  return `-n ${shellQuote(namespace)}`;
+}
+
+function summarizeDeployment(item, replicaSets = []) {
+  const labels = item.spec?.selector?.matchLabels || {};
+  const deploymentName = item.metadata?.name || '';
+  const deploymentUid = item.metadata?.uid || '';
+  const deploymentNamespace = item.metadata?.namespace || 'default';
+  const relatedReplicaSets = replicaSets.filter((rs) => {
+    if ((rs.metadata?.namespace || 'default') !== deploymentNamespace) return false;
+    const owners = rs.metadata?.ownerReferences || [];
+    if (owners.length > 0) {
+      return owners.some((owner) => owner.kind === 'Deployment' && (owner.uid === deploymentUid || owner.name === deploymentName));
+    }
+    const rsLabels = rs.metadata?.labels || {};
+    return Object.entries(labels).every(([key, value]) => rsLabels[key] === value);
+  });
+  return {
+    namespace: item.metadata?.namespace || 'default',
+    name: item.metadata?.name || 'unknown',
+    readyReplicas: item.status?.readyReplicas || 0,
+    replicas: item.status?.replicas || item.spec?.replicas || 0,
+    updatedReplicas: item.status?.updatedReplicas || 0,
+    availableReplicas: item.status?.availableReplicas || 0,
+    generation: item.metadata?.generation || 0,
+    observedGeneration: item.status?.observedGeneration || 0,
+    createdAt: item.metadata?.creationTimestamp || null,
+    strategy: item.spec?.strategy?.type || 'Unknown',
+    conditions: item.status?.conditions || [],
+    images: [...new Set((item.spec?.template?.spec?.containers || []).map((container) => container.image).filter(Boolean))],
+    revision: item.metadata?.annotations?.['deployment.kubernetes.io/revision'] || null,
+    replicaSets: relatedReplicaSets.map((rs) => ({
+      name: rs.metadata?.name || 'unknown',
+      revision: rs.metadata?.annotations?.['deployment.kubernetes.io/revision'] || null,
+      replicas: rs.status?.replicas || 0,
+      readyReplicas: rs.status?.readyReplicas || 0,
+      availableReplicas: rs.status?.availableReplicas || 0,
+      createdAt: rs.metadata?.creationTimestamp || null,
+      images: [...new Set((rs.spec?.template?.spec?.containers || []).map((container) => container.image).filter(Boolean))]
+    })).sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+  };
+}
+
+function summarizePod(item) {
+  const statuses = item.status?.containerStatuses || [];
+  return {
+    namespace: item.metadata?.namespace || 'default',
+    name: item.metadata?.name || 'unknown',
+    phase: item.status?.phase || 'Unknown',
+    reason: item.status?.reason || null,
+    ready: statuses.length > 0 && statuses.every((status) => status.ready),
+    readyContainers: statuses.filter((status) => status.ready).length,
+    totalContainers: (item.spec?.containers || []).length,
+    restarts: statuses.reduce((sum, status) => sum + (status.restartCount || 0), 0),
+    node: item.spec?.nodeName || null,
+    podIP: item.status?.podIP || null,
+    createdAt: item.metadata?.creationTimestamp || null,
+    containers: (item.spec?.containers || []).map((container) => ({
+      name: container.name,
+      image: container.image,
+      ready: statuses.find((status) => status.name === container.name)?.ready || false,
+      restarts: statuses.find((status) => status.name === container.name)?.restartCount || 0,
+      state: statuses.find((status) => status.name === container.name)?.state || null
+    }))
+  };
+}
+
 function tokenHelpHtml() {
   return `<p>The setup/status token and temporary local admin password are printed on the VM console and persisted in the login banner.</p>
     <p>If the console was cleared, press Enter or reopen the VM console to display the banner again.</p>
@@ -271,6 +383,104 @@ const server = http.createServer(async (req, res) => {
     }
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(JSON.stringify(snapshot));
+    return;
+  }
+
+  if (url.pathname === '/api/k8s/namespaces') {
+    const providedToken = url.searchParams.get('token') || '';
+    if (!setupToken || providedToken !== setupToken) {
+      jsonResponse(res, 401, { error: 'Unauthorized: valid status token required.' });
+      return;
+    }
+    const result = runKubectlJson('get namespaces', 10_000);
+    if (!result.ok) {
+      jsonResponse(res, 502, { error: result.stderr || result.stdout || 'Unable to list namespaces.' });
+      return;
+    }
+    jsonResponse(res, 200, {
+      namespaces: (result.value?.items || []).map((item) => ({
+        name: item.metadata?.name || 'unknown',
+        phase: item.status?.phase || 'Unknown',
+        createdAt: item.metadata?.creationTimestamp || null
+      })).sort((a, b) => a.name.localeCompare(b.name))
+    });
+    return;
+  }
+
+  if (url.pathname === '/api/k8s/deployments') {
+    const providedToken = url.searchParams.get('token') || '';
+    if (!setupToken || providedToken !== setupToken) {
+      jsonResponse(res, 401, { error: 'Unauthorized: valid status token required.' });
+      return;
+    }
+    const nsFlag = namespaceFlag(url.searchParams.get('namespace') || 'msp');
+    if (!nsFlag) {
+      jsonResponse(res, 400, { error: 'Invalid namespace.' });
+      return;
+    }
+    const deployments = runKubectlJson(`${nsFlag} get deployments`, 12_000);
+    const replicaSets = runKubectlJson(`${nsFlag} get replicasets`, 12_000);
+    if (!deployments.ok) {
+      jsonResponse(res, 502, { error: deployments.stderr || deployments.stdout || 'Unable to list deployments.' });
+      return;
+    }
+    jsonResponse(res, 200, {
+      namespace: url.searchParams.get('namespace') || 'msp',
+      deployments: (deployments.value?.items || []).map((item) => summarizeDeployment(item, replicaSets.value?.items || []))
+        .sort((a, b) => `${a.namespace}/${a.name}`.localeCompare(`${b.namespace}/${b.name}`))
+    });
+    return;
+  }
+
+  if (url.pathname === '/api/k8s/pods') {
+    const providedToken = url.searchParams.get('token') || '';
+    if (!setupToken || providedToken !== setupToken) {
+      jsonResponse(res, 401, { error: 'Unauthorized: valid status token required.' });
+      return;
+    }
+    const nsFlag = namespaceFlag(url.searchParams.get('namespace') || 'msp');
+    if (!nsFlag) {
+      jsonResponse(res, 400, { error: 'Invalid namespace.' });
+      return;
+    }
+    const pods = runKubectlJson(`${nsFlag} get pods`, 12_000);
+    if (!pods.ok) {
+      jsonResponse(res, 502, { error: pods.stderr || pods.stdout || 'Unable to list pods.' });
+      return;
+    }
+    jsonResponse(res, 200, {
+      namespace: url.searchParams.get('namespace') || 'msp',
+      pods: (pods.value?.items || []).map(summarizePod)
+        .sort((a, b) => `${a.namespace}/${a.name}`.localeCompare(`${b.namespace}/${b.name}`))
+    });
+    return;
+  }
+
+  if (url.pathname === '/api/k8s/logs') {
+    const providedToken = url.searchParams.get('token') || '';
+    if (!setupToken || providedToken !== setupToken) {
+      jsonResponse(res, 401, { error: 'Unauthorized: valid status token required.' });
+      return;
+    }
+    const namespace = url.searchParams.get('namespace') || 'msp';
+    const pod = url.searchParams.get('pod') || '';
+    const container = url.searchParams.get('container') || '';
+    const tail = Math.max(1, Math.min(10_000, Number(url.searchParams.get('tail') || 200)));
+    const previous = url.searchParams.get('previous') === '1';
+    if (!validKubeName(namespace) || !validKubeName(pod) || (container && !validContainerName(container))) {
+      jsonResponse(res, 400, { error: 'Invalid namespace, pod, or container.' });
+      return;
+    }
+    const containerArg = container ? ` -c ${shellQuote(container)}` : '';
+    const previousArg = previous ? ' --previous' : '';
+    const result = runCommand(kubectlCommand(`-n ${shellQuote(namespace)} logs ${shellQuote(pod)}${containerArg} --tail=${tail}${previousArg}`), 15_000);
+    if (!result.ok) {
+      jsonResponse(res, 502, { error: result.stderr || result.stdout || 'Unable to read logs.' });
+      return;
+    }
+    const lines = result.stdout.split(/\r?\n/);
+    if (lines.at(-1) === '') lines.pop();
+    jsonResponse(res, 200, { namespace, pod, container: container || null, tail, previous, lines });
     return;
   }
 

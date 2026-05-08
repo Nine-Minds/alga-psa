@@ -267,6 +267,151 @@ function deriveReadiness(installState, nodes, podLines, jobLines, helmLines, hel
   };
 }
 
+function tierStatus(ready, waitingStatus = 'waiting') {
+  return ready ? 'ready' : waitingStatus;
+}
+
+function normalizeReadinessTiers(tiers) {
+  return {
+    platformReady: {
+      ready: tiers.platformReady,
+      status: tierStatus(tiers.platformReady, 'waiting_for_kubernetes')
+    },
+    coreReady: {
+      ready: tiers.coreReady,
+      status: tierStatus(tiers.coreReady, tiers.platformReady ? 'waiting_for_core' : 'blocked_by_platform')
+    },
+    bootstrapReady: {
+      ready: tiers.bootstrapReady,
+      status: tierStatus(tiers.bootstrapReady, tiers.coreReady ? 'waiting_for_bootstrap' : 'blocked_by_core')
+    },
+    loginReady: {
+      ready: tiers.loginReady,
+      status: tierStatus(tiers.loginReady, tiers.bootstrapReady ? 'ready' : 'blocked_by_bootstrap')
+    },
+    backgroundReady: {
+      ready: tiers.backgroundReady,
+      status: tiers.backgroundReady ? 'ready' : 'degraded_background_services'
+    },
+    fullyHealthy: {
+      ready: tiers.fullyHealthy,
+      status: tiers.fullyHealthy ? 'ready' : 'not_fully_healthy'
+    }
+  };
+}
+
+function blockerFromFailure(failure) {
+  const isBackground = failure.category === 'background-services';
+  return {
+    severity: isBackground ? 'background' : 'critical',
+    component: failure.category,
+    layer: failure.phase,
+    reason: failure.suspectedCause || failure.lastAction || 'Unknown blocker.',
+    nextAction: failure.suggestedNextStep || guidanceForCategory(failure.category),
+    loginBlocking: !isBackground
+  };
+}
+
+function rollupFromState(installState, tiers, failures) {
+  if (tiers.fullyHealthy) {
+    return {
+      state: 'fully_healthy',
+      message: 'All appliance services are healthy.',
+      nextAction: 'Open the Alga PSA login URL.'
+    };
+  }
+
+  if (tiers.loginReady) {
+    return {
+      state: tiers.backgroundReady ? 'ready_to_log_in' : 'ready_with_background_issues',
+      message: tiers.backgroundReady
+        ? 'The core application is ready for login.'
+        : 'The core application is ready, but background services still need attention.',
+      nextAction: tiers.backgroundReady ? 'Open the login URL.' : 'Review background service health.'
+    };
+  }
+
+  const criticalFailure = failures.find((failure) => failure.category !== 'background-services');
+  if (criticalFailure) {
+    return {
+      state: 'blocked',
+      message: criticalFailure.suspectedCause || criticalFailure.lastAction || 'Installation is blocked.',
+      nextAction: criticalFailure.suggestedNextStep || guidanceForCategory(criticalFailure.category)
+    };
+  }
+
+  if (!tiers.platformReady) {
+    return {
+      state: 'installing',
+      message: 'Waiting for Kubernetes to become reachable.',
+      nextAction: 'Watch k3s/Flux startup progress.'
+    };
+  }
+
+  return {
+    state: 'installing',
+    message: installState?.lastAction || 'Installation is progressing.',
+    nextAction: 'Wait for Flux and Helm releases to finish reconciling.'
+  };
+}
+
+function parseEventsJson(output) {
+  try {
+    const parsed = JSON.parse(output || '{}');
+    return (parsed.items || []).map((item) => ({
+      type: item.type || 'Normal',
+      reason: item.reason || 'Event',
+      namespace: item.metadata?.namespace || item.involvedObject?.namespace || 'default',
+      involvedObject: item.involvedObject
+        ? `${item.involvedObject.kind || 'Object'}/${item.involvedObject.name || 'unknown'}`
+        : 'Object/unknown',
+      message: item.message || '',
+      timestamp: item.lastTimestamp || item.eventTime || item.metadata?.creationTimestamp || null
+    })).sort((a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')));
+  } catch {
+    return [];
+  }
+}
+
+function deriveActiveOperations(podLines) {
+  return podLines
+    .filter((line) => /\b(ContainerCreating|PodInitializing|Pending|ImagePullBackOff|ErrImagePull|CrashLoopBackOff)\b/i.test(line))
+    .slice(0, 8)
+    .map((line) => {
+      const fields = line.trim().split(/\s+/);
+      const namespace = fields[0] || 'unknown';
+      const pod = fields[1] || 'unknown';
+      const status = fields[3] || fields[2] || 'unknown';
+      return {
+        component: `${namespace}/${pod}`,
+        image: null,
+        message: `${pod} is ${status}.`,
+        estimatedSizeHuman: null,
+        elapsedSeconds: null,
+        progressAvailable: false,
+        progressPercent: null
+      };
+    });
+}
+
+function deriveBootstrapInfo(jobLines) {
+  const jobLine = jobLines.find((line) => line.toLowerCase().includes('bootstrap'));
+  if (!jobLine) {
+    return {
+      job: { name: null, state: 'not_created', failed: false, completed: false },
+      logs: { available: false, pod: null, container: null, tail: [], detectedErrors: [] }
+    };
+  }
+  const fields = jobLine.split(/\s+/);
+  const name = fields[0];
+  const completed = /\s1\/1\s/.test(jobLine);
+  const failed = /failed/i.test(jobLine);
+  return {
+    job: { name, state: completed ? 'completed' : failed ? 'failed' : 'running', failed, completed },
+    logs: { available: false, pod: null, container: null, tail: [], detectedErrors: [] }
+  };
+}
+
 export function collectStatusSnapshot(options = {}) {
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
   const setupInputsFile = options.setupInputsFile || DEFAULT_SETUP_INPUTS_FILE;
@@ -281,6 +426,7 @@ export function collectStatusSnapshot(options = {}) {
   const podResult = runCommand(`${kubectlPrefix} get pods -A --no-headers`, { timeoutMs: 6_000 });
   const jobResult = runCommand(`${kubectlPrefix} -n msp get jobs --no-headers`, { timeoutMs: 6_000 });
   const helmResult = runCommand(`${kubectlPrefix} -n alga-system get helmreleases.helm.toolkit.fluxcd.io --no-headers`, { timeoutMs: 6_000 });
+  const eventsResult = runCommand(`${kubectlPrefix} get events -A -o json`, { timeoutMs: 6_000 });
   const diagnostics = options.includeDiagnostics === true ? collectDiagnostics(kubectlPrefix) : [];
 
   let nodes = [];
@@ -315,6 +461,12 @@ export function collectStatusSnapshot(options = {}) {
   ];
   const tiers = deriveReadiness(installState, nodes, podLines, jobLines, helmLines, helmIssues, warnings);
   const failures = deriveFailureSummary(installState, podLines, helmIssues, warnings);
+  const readinessTiers = normalizeReadinessTiers(tiers);
+  const rollup = rollupFromState(installState, tiers, failures);
+  const topBlockers = failures.map(blockerFromFailure);
+  const recentEvents = eventsResult.ok ? parseEventsJson(eventsResult.stdout).slice(-40) : [];
+  const activeOperations = deriveActiveOperations(podLines);
+  const bootstrap = deriveBootstrapInfo(jobLines);
 
   return {
     source: 'ubuntu-host-service',
@@ -326,6 +478,17 @@ export function collectStatusSnapshot(options = {}) {
     kubeconfigPath,
     tiers,
     failures,
+    readinessTiers,
+    rollup,
+    topBlockers,
+    recentEvents,
+    activeOperations,
+    bootstrap,
+    urls: {
+      loginUrl: setupInputs?.appHostname ? `https://${String(setupInputs.appHostname).replace(/^https?:\/\//i, '')}` : null,
+      statusUrl: null
+    },
+    release: releaseSelection,
     kubernetes: {
       nodes,
       podCount: podLines.length,
