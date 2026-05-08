@@ -170,6 +170,13 @@ npm run test:e2e
   `PW_WEBSERVER=false NEXT_PUBLIC_DISABLE_FEATURE_FLAGS=false NEXT_PUBLIC_FORCE_FEATURE_FLAGS=live-ticket-updates:true PLAYWRIGHT_SKIP_WORKFLOW_WORKER=true npx playwright test ee/server/src/__tests__/integration/ticket-live-updates.playwright.test.ts --grep T059 --project=chromium --list` from `ee/server`
   `npm run typecheck --workspace=ee/server`
   Full Playwright execution remained blocked after implementation because the local Docker daemon became unavailable (`Cannot connect to the Docker daemon at unix:///Users/natalliabukhtsik/.orbstack/run/docker.sock`) after the harness smoke run; the spec is implemented and discovered, but I could not complete a browser execution in this environment.
+- **2026-05-08 — Playwright live-update behavior coverage expanded (`T046`, `T048`, `T049`, `T050`, `T051`).**
+  Extended [ticket-live-updates.playwright.test.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/ee/server/src/__tests__/integration/ticket-live-updates.playwright.test.ts) with reusable two-user ticket-room setup, board-scoped status seeding (`Open` / `On Hold` / `Resolved`), and priority seeding (`Normal` / `High`) so the live-update browser cases can drive real field changes without fixture coupling.
+  Added E2E specs for silent remote status refresh while preserving a local title draft, peer editing indicator show/clear on status focus, same-field conflict resolution via **Take theirs**, non-overlapping priority toast preservation, and multi-tab presence dedupe observed from another user.
+- **2026-05-08 — Verification runbook used for the expanded Playwright live-update slice.**
+  `npm run typecheck --workspace=ee/server`
+  `PW_WEBSERVER=false NEXT_PUBLIC_DISABLE_FEATURE_FLAGS=false NEXT_PUBLIC_FORCE_FEATURE_FLAGS=live-ticket-updates:true PLAYWRIGHT_SKIP_WORKFLOW_WORKER=true npx playwright test ee/server/src/__tests__/integration/ticket-live-updates.playwright.test.ts --grep "T046|T048|T049|T050|T051|T059" --project=chromium --list` from `ee/server`
+  `NEXT_PUBLIC_DISABLE_FEATURE_FLAGS=false NEXT_PUBLIC_FORCE_FEATURE_FLAGS=live-ticket-updates:true PLAYWRIGHT_SKIP_WORKFLOW_WORKER=true npx playwright test src/__tests__/integration/ticket-live-updates.playwright.test.ts --project=chromium` from `ee/server` reached Docker/Hocuspocus/app startup, but the run is currently blocked before test execution by an unrelated Next app boot failure resolving `@alga-psa/core/rateLimit` from `server` instrumentation / `packages/email`.
 
 ## Links / Refs
 

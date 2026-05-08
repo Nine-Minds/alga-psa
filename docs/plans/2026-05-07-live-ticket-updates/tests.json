@@ -284,7 +284,7 @@
   {
     "id": "T046",
     "description": "E2E: two browsers, two users, one ticket — B saves status; A's status updates within 500ms without reload; A's other unsaved fields preserved.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003", "F009", "F022", "F023"]
   },
   {
@@ -296,25 +296,25 @@
   {
     "id": "T048",
     "description": "E2E: A focuses status; B sees indicator; A blurs; indicator clears.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F029", "F030"]
   },
   {
     "id": "T049",
     "description": "E2E: A has unsaved status='On Hold'; B saves status='Resolved'; A sees conflict banner; A clicks Take theirs → field shows 'Resolved'; A's other unsaved fields untouched.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022", "F026", "F028"]
   },
   {
     "id": "T050",
     "description": "E2E: A has unsaved status='On Hold'; B saves priority='High'; A sees toast '{B's name} updated priority'; status field still shows A's pending 'On Hold'; priority shows 'High'.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F022", "F025"]
   },
   {
     "id": "T051",
     "description": "E2E: One user opens the ticket in two tabs; presence shows that user once.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F021"]
   },
   {

@@ -1,4 +1,4 @@
-import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -23,7 +23,13 @@ const LIVE_UPDATES_ENABLED =
 type TicketRefs = {
   boardId: string;
   statusId: string;
+  pendingStatusId: string;
+  pendingStatusName: string;
+  resolvedStatusId: string;
+  resolvedStatusName: string;
   priorityId: string;
+  elevatedPriorityId: string;
+  elevatedPriorityName: string;
 };
 
 type InternalUserSeed = {
@@ -82,6 +88,7 @@ async function createInternalUserLikeAdmin(
 }
 
 async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: string): Promise<TicketRefs> {
+  const statusColumns = await db('statuses').columnInfo();
   let board = await db('boards').where({ tenant: tenantId }).first<{ board_id: string }>('board_id');
   if (!board?.board_id) {
     const boardId = uuidv4();
@@ -99,35 +106,54 @@ async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: str
     board = { board_id: boardId };
   }
 
-  let status = await db('statuses')
-    .where({ tenant: tenantId })
-    .andWhere(function () {
-      this.where('item_type', 'ticket').orWhere('status_type', 'ticket');
-    })
-    .orderBy('is_default', 'desc')
-    .orderBy('order_number', 'asc')
-    .first<{ status_id: string }>('status_id');
+  const statusScope = (query: Knex.QueryBuilder) => {
+    query.where({ tenant: tenantId });
 
-  if (!status?.status_id) {
+    if (Object.prototype.hasOwnProperty.call(statusColumns, 'board_id')) {
+      query.andWhere({ board_id: board.board_id });
+    }
+
+    query.andWhere(function () {
+      this.where('item_type', 'ticket').orWhere('status_type', 'ticket');
+    });
+  };
+
+  async function ensureStatus(name: string, orderNumber: number, isDefault = false): Promise<{ status_id: string; name: string }> {
+    const existing = await db('statuses')
+      .modify(statusScope)
+      .andWhere({ name })
+      .first<{ status_id: string; name: string }>('status_id', 'name');
+
+    if (existing?.status_id) {
+      return existing;
+    }
+
     const statusId = uuidv4();
     await db('statuses').insert({
       tenant: tenantId,
       status_id: statusId,
-      name: 'Open',
+      ...(Object.prototype.hasOwnProperty.call(statusColumns, 'board_id') ? { board_id: board.board_id } : {}),
+      name,
       status_type: 'ticket',
-      order_number: 1,
+      item_type: 'ticket',
+      order_number: orderNumber,
       created_by: createdByUserId,
       created_at: db.fn.now(),
       is_closed: false,
-      is_default: true,
+      is_default: isDefault,
     });
-    status = { status_id: statusId };
+
+    return { status_id: statusId, name };
   }
+
+  const primaryStatus = await ensureStatus('Open', 1, true);
+  const pendingStatus = await ensureStatus('On Hold', 2);
+  const resolvedStatus = await ensureStatus('Resolved', 3);
 
   let priority = await db('priorities')
     .where({ tenant: tenantId })
     .orderBy('order_number', 'asc')
-    .first<{ priority_id: string }>('priority_id');
+    .first<{ priority_id: string; priority_name: string }>('priority_id', 'priority_name');
 
   if (!priority?.priority_id) {
     const priorityId = uuidv4();
@@ -141,13 +167,38 @@ async function ensureTicketRefs(db: Knex, tenantId: string, createdByUserId: str
       item_type: 'ticket',
       color: '#64748b',
     });
-    priority = { priority_id: priorityId };
+    priority = { priority_id: priorityId, priority_name: 'Normal' };
+  }
+
+  let elevatedPriority = await db('priorities')
+    .where({ tenant: tenantId, priority_name: 'High' })
+    .first<{ priority_id: string; priority_name: string }>('priority_id', 'priority_name');
+
+  if (!elevatedPriority?.priority_id) {
+    const priorityId = uuidv4();
+    await db('priorities').insert({
+      tenant: tenantId,
+      priority_id: priorityId,
+      priority_name: 'High',
+      created_by: createdByUserId,
+      created_at: db.fn.now(),
+      order_number: 20,
+      item_type: 'ticket',
+      color: '#ef4444',
+    });
+    elevatedPriority = { priority_id: priorityId, priority_name: 'High' };
   }
 
   return {
     boardId: board.board_id,
-    statusId: status.status_id,
+    statusId: primaryStatus.status_id,
+    pendingStatusId: pendingStatus.status_id,
+    pendingStatusName: pendingStatus.name,
+    resolvedStatusId: resolvedStatus.status_id,
+    resolvedStatusName: resolvedStatus.name,
     priorityId: priority.priority_id,
+    elevatedPriorityId: elevatedPriority.priority_id,
+    elevatedPriorityName: elevatedPriority.priority_name,
   };
 }
 
@@ -211,6 +262,133 @@ async function expectPresenceForPeer(page: Page, peerName: string): Promise<void
   await expect(page.getByTestId('ticket-live-connection-status')).toHaveCount(0);
 }
 
+async function selectTicketFieldOption(page: Page, fieldName: string, optionText: string): Promise<void> {
+  const field = page.locator(`[data-live-field="${fieldName}"]`);
+  await field.getByRole('combobox').click();
+  await expect(page.getByRole('option', { name: optionText, exact: true })).toBeVisible({ timeout: 10_000 });
+  await page.getByRole('option', { name: optionText, exact: true }).click();
+}
+
+function getTicketField(page: Page, fieldName: string) {
+  return page.locator(`[data-live-field="${fieldName}"]`);
+}
+
+async function expectTicketFieldValue(page: Page, fieldName: string, expectedText: string): Promise<void> {
+  await expect(getTicketField(page, fieldName).getByRole('combobox')).toContainText(expectedText, { timeout: 10_000 });
+}
+
+type LiveTicketScenario = {
+  contextA: BrowserContext;
+  contextB: BrowserContext;
+  db: Knex;
+  pageA: Page;
+  pageB: Page;
+  peerUser: InternalUserSeed;
+  refs: TicketRefs;
+  tenantData: TenantTestData;
+  ticketId: string;
+  dispose: () => Promise<void>;
+};
+
+async function createLiveTicketScenario(browser: Browser, title = 'Original live title'): Promise<LiveTicketScenario> {
+  const db = createTestDbConnection();
+  let tenantData: TenantTestData | null = null;
+  let contextA: BrowserContext | null = null;
+  let contextB: BrowserContext | null = null;
+
+  try {
+    contextA = await browser.newContext();
+    contextB = await browser.newContext();
+
+    const pageA = await contextA.newPage();
+
+    tenantData = await createTenantAndLogin(db, pageA, {
+      tenantOptions: {
+        tenantName: `Live Ticket Tenant ${uuidv4().slice(0, 6)}`,
+        adminUser: {
+          firstName: 'Editor',
+          lastName: 'One',
+          email: `editor-one-${uuidv4().slice(0, 6)}@example.com`,
+        },
+      },
+      completeOnboarding: { completedAt: new Date() },
+      permissions: [
+        {
+          roleName: 'Admin',
+          permissions: [
+            { resource: 'ticket', action: 'read' },
+            { resource: 'ticket', action: 'update' },
+            { resource: 'user', action: 'read' },
+          ],
+        },
+      ],
+    });
+
+    const peerUser = await createInternalUserLikeAdmin(db, tenantData, {
+      firstName: 'Editor',
+      lastName: 'Two',
+      emailPrefix: 'editor-two',
+    });
+
+    const refs = await ensureTicketRefs(db, tenantData.tenant.tenantId, tenantData.adminUser.userId);
+    const contactId = await createContact(
+      db,
+      tenantData.tenant.tenantId,
+      tenantData.client!.clientId,
+      'Live Ticket Contact'
+    );
+    const ticketId = await createTicket(db, {
+      tenantId: tenantData.tenant.tenantId,
+      clientId: tenantData.client!.clientId,
+      boardId: refs.boardId,
+      statusId: refs.statusId,
+      priorityId: refs.priorityId,
+      title,
+      contactId,
+    });
+
+    const pageB = await openContextWithUser(contextB, tenantData, peerUser);
+
+    await Promise.all([
+      openTicket(pageA, ticketId),
+      openTicket(pageB, ticketId),
+    ]);
+
+    await Promise.all([
+      expectPresenceForPeer(pageA, 'Editor Two'),
+      expectPresenceForPeer(pageB, 'Editor One'),
+    ]);
+
+    return {
+      contextA,
+      contextB,
+      db,
+      pageA,
+      pageB,
+      peerUser,
+      refs,
+      tenantData,
+      ticketId,
+      dispose: async () => {
+        await contextA?.close().catch(() => undefined);
+        await contextB?.close().catch(() => undefined);
+        if (tenantData) {
+          await db('tenants').where({ tenant: tenantData.tenant.tenantId }).del().catch(() => undefined);
+        }
+        await db.destroy();
+      },
+    };
+  } catch (error) {
+    await contextA?.close().catch(() => undefined);
+    await contextB?.close().catch(() => undefined);
+    if (tenantData) {
+      await db('tenants').where({ tenant: tenantData.tenant.tenantId }).del().catch(() => undefined);
+    }
+    await db.destroy();
+    throw error;
+  }
+}
+
 async function openContextWithUser(browserContext: BrowserContext, tenantData: TenantTestData, user: InternalUserSeed) {
   const page = await browserContext.newPage();
   await setupAuthenticatedSession(page, tenantData, {
@@ -229,76 +407,140 @@ async function openContextWithUser(browserContext: BrowserContext, tenantData: T
 test.describe('Ticket live updates (Playwright)', () => {
   test.skip(!LIVE_UPDATES_ENABLED, 'Set NEXT_PUBLIC_DISABLE_FEATURE_FLAGS=false and NEXT_PUBLIC_FORCE_FEATURE_FLAGS=live-ticket-updates:true');
 
+  test('T046: B saves status and A refreshes without losing a local title draft', async ({ browser }) => {
+    test.setTimeout(300_000);
+
+    const scenario = await createLiveTicketScenario(browser);
+
+    try {
+      const { pageA, pageB, refs } = scenario;
+      const localDraftTitle = `Draft title ${uuidv4().slice(0, 4)}`;
+
+      await pageA.getByTitle('Edit title').click();
+      await pageA.locator('#ticket-details-title-input').fill(localDraftTitle);
+
+      const liveUpdateStartedAt = Date.now();
+      await selectTicketFieldOption(pageB, 'status_id', refs.pendingStatusName);
+      await pageB.locator('#ticket-details-save-changes-btn').click();
+
+      await expect.poll(async () => {
+        return (await getTicketField(pageA, 'status_id').getAttribute('data-live-highlighted')) === 'true' &&
+          (await getTicketField(pageA, 'status_id').getByRole('combobox').textContent())?.includes(refs.pendingStatusName) &&
+          (await pageA.locator('#ticket-details-title-input').inputValue()) === localDraftTitle;
+      }, {
+        timeout: 2_000,
+        intervals: [50, 100, 150, 200],
+      }).toBe(true);
+
+      expect(Date.now() - liveUpdateStartedAt).toBeLessThanOrEqual(2_000);
+      await expect(pageA.locator('#ticket-details-title-input')).toHaveValue(localDraftTitle);
+      await expect(pageA).toHaveURL(`${BASE_URL}/msp/tickets/${scenario.ticketId}`);
+    } finally {
+      await scenario.dispose();
+    }
+  });
+
+  test('T048: focus indicator appears on a peer while status is being edited and clears on blur', async ({ browser }) => {
+    test.setTimeout(300_000);
+
+    const scenario = await createLiveTicketScenario(browser);
+
+    try {
+      const { pageA, pageB } = scenario;
+
+      await getTicketField(pageA, 'status_id').getByRole('combobox').click();
+
+      await expect(getTicketField(pageB, 'status_id')).toHaveAttribute('data-live-editing', 'true', { timeout: 5_000 });
+      await expect(pageB.getByText('Editor One is editing', { exact: true })).toBeVisible({ timeout: 5_000 });
+
+      await pageA.locator('#ticket-details-container h1').first().click();
+
+      await expect(getTicketField(pageB, 'status_id')).not.toHaveAttribute('data-live-editing', 'true', { timeout: 5_000 });
+      await expect(pageB.getByText('Editor One is editing', { exact: true })).toHaveCount(0);
+    } finally {
+      await scenario.dispose();
+    }
+  });
+
+  test('T049: same-field status conflict shows a banner and Take theirs applies the remote value', async ({ browser }) => {
+    test.setTimeout(300_000);
+
+    const scenario = await createLiveTicketScenario(browser);
+
+    try {
+      const { pageA, pageB, refs } = scenario;
+      const localDraftTitle = `Conflict draft ${uuidv4().slice(0, 4)}`;
+
+      await pageA.getByTitle('Edit title').click();
+      await pageA.locator('#ticket-details-title-input').fill(localDraftTitle);
+      await selectTicketFieldOption(pageA, 'status_id', refs.pendingStatusName);
+
+      await selectTicketFieldOption(pageB, 'status_id', refs.resolvedStatusName);
+      await pageB.locator('#ticket-details-save-changes-btn').click();
+
+      await expect(getTicketField(pageA, 'status_id')).toHaveAttribute('data-live-conflict', 'true', { timeout: 5_000 });
+      await expect(pageA.getByRole('alert')).toContainText('Editor Two', { timeout: 5_000 });
+      await expect(pageA.getByRole('alert')).toContainText(refs.resolvedStatusName);
+
+      await pageA.getByRole('button', { name: 'Take theirs', exact: true }).click();
+
+      await expect(getTicketField(pageA, 'status_id')).not.toHaveAttribute('data-live-conflict', 'true', { timeout: 5_000 });
+      await expectTicketFieldValue(pageA, 'status_id', refs.resolvedStatusName);
+      await expect(pageA.locator('#ticket-details-title-input')).toHaveValue(localDraftTitle);
+    } finally {
+      await scenario.dispose();
+    }
+  });
+
+  test('T050: non-overlapping remote update keeps the local status draft and shows a toast', async ({ browser }) => {
+    test.setTimeout(300_000);
+
+    const scenario = await createLiveTicketScenario(browser);
+
+    try {
+      const { pageA, pageB, refs } = scenario;
+
+      await selectTicketFieldOption(pageA, 'status_id', refs.pendingStatusName);
+      await selectTicketFieldOption(pageB, 'priority_id', refs.elevatedPriorityName);
+      await pageB.locator('#ticket-details-save-changes-btn').click();
+
+      await expect(pageA.getByText('Editor Two updated priority', { exact: true })).toBeVisible({ timeout: 5_000 });
+      await expectTicketFieldValue(pageA, 'status_id', refs.pendingStatusName);
+      await expectTicketFieldValue(pageA, 'priority_id', refs.elevatedPriorityName);
+    } finally {
+      await scenario.dispose();
+    }
+  });
+
+  test('T051: opening the same ticket in two tabs only shows one presence avatar per user', async ({ browser }) => {
+    test.setTimeout(300_000);
+
+    const scenario = await createLiveTicketScenario(browser);
+
+    try {
+      const { contextA, pageB, ticketId } = scenario;
+      const pageASecond = await contextA.newPage();
+
+      try {
+        await openTicket(pageASecond, ticketId);
+        await expect(pageB.locator('[data-testid="presence-user"][title="Editor One"]')).toHaveCount(1, {
+          timeout: 20_000,
+        });
+      } finally {
+        await pageASecond.close().catch(() => undefined);
+      }
+    } finally {
+      await scenario.dispose();
+    }
+  });
+
   test('T059: B saves a title change and A sees it without a reload', async ({ browser }) => {
     test.setTimeout(300_000);
 
-    const db = createTestDbConnection();
-    let tenantData: TenantTestData | null = null;
-    let contextA: BrowserContext | null = null;
-    let contextB: BrowserContext | null = null;
+    const scenario = await createLiveTicketScenario(browser);
 
     try {
-      contextA = await browser.newContext();
-      contextB = await browser.newContext();
-
-      const pageA = await contextA.newPage();
-
-      tenantData = await createTenantAndLogin(db, pageA, {
-        tenantOptions: {
-          tenantName: `Live Ticket Tenant ${uuidv4().slice(0, 6)}`,
-          adminUser: {
-            firstName: 'Editor',
-            lastName: 'One',
-            email: `editor-one-${uuidv4().slice(0, 6)}@example.com`,
-          },
-        },
-        completeOnboarding: { completedAt: new Date() },
-        permissions: [
-          {
-            roleName: 'Admin',
-            permissions: [
-              { resource: 'ticket', action: 'read' },
-              { resource: 'ticket', action: 'update' },
-              { resource: 'user', action: 'read' },
-            ],
-          },
-        ],
-      });
-
-      const peerUser = await createInternalUserLikeAdmin(db, tenantData, {
-        firstName: 'Editor',
-        lastName: 'Two',
-        emailPrefix: 'editor-two',
-      });
-
-      const refs = await ensureTicketRefs(db, tenantData.tenant.tenantId, tenantData.adminUser.userId);
-      const contactId = await createContact(
-        db,
-        tenantData.tenant.tenantId,
-        tenantData.client!.clientId,
-        'Live Ticket Contact'
-      );
-      const ticketId = await createTicket(db, {
-        tenantId: tenantData.tenant.tenantId,
-        clientId: tenantData.client!.clientId,
-        boardId: refs.boardId,
-        statusId: refs.statusId,
-        priorityId: refs.priorityId,
-        title: 'Original live title',
-        contactId,
-      });
-
-      const pageB = await openContextWithUser(contextB, tenantData, peerUser);
-
-      await Promise.all([
-        openTicket(pageA, ticketId),
-        openTicket(pageB, ticketId),
-      ]);
-
-      await Promise.all([
-        expectPresenceForPeer(pageA, 'Editor Two'),
-        expectPresenceForPeer(pageB, 'Editor One'),
-      ]);
+      const { pageA, pageB } = scenario;
 
       const updatedTitle = `Updated live title ${uuidv4().slice(0, 4)}`;
 
@@ -318,15 +560,9 @@ test.describe('Ticket live updates (Playwright)', () => {
         .toBe(updatedTitle);
 
       expect(Date.now() - liveUpdateStartedAt).toBeLessThanOrEqual(1500);
-      await expect(pageA).toHaveURL(`${BASE_URL}/msp/tickets/${ticketId}`);
+      await expect(pageA).toHaveURL(`${BASE_URL}/msp/tickets/${scenario.ticketId}`);
     } finally {
-      await contextA?.close().catch(() => undefined);
-      await contextB?.close().catch(() => undefined);
-
-      if (tenantData) {
-        await db('tenants').where({ tenant: tenantData.tenant.tenantId }).del().catch(() => undefined);
-      }
-      await db.destroy();
+      await scenario.dispose();
     }
   });
 });
