@@ -20,6 +20,10 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
       return interpolate(template, options);
     },
   }),
+  useI18n: () => ({
+    locale: 'en',
+    setLocale: vi.fn(),
+  }),
 }));
 
 vi.mock('@alga-psa/validation', () => ({
