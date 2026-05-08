@@ -236,31 +236,31 @@
   {
     "id": "T040",
     "description": "Component: focusing status dropdown sets `awareness.editingField='status_id'`; blurring clears it.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F029"]
   },
   {
     "id": "T041",
     "description": "Component: when remote awareness has `editingField='priority_id'`, the priority field on this client renders dimmed with '{Name} is editing' caption.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030"]
   },
   {
     "id": "T042",
     "description": "Component: indicator clears within ~2s after the remote user blurs the field.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030"]
   },
   {
     "id": "T043",
     "description": "Component: A and B both focused on status simultaneously — each sees the other's indicator; neither field is hard-locked (still selectable).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F030"]
   },
   {
     "id": "T058",
     "description": "Component: focusing the title input sets `awareness.editingField='title'`; on a remote client, title shows a caption pill next to the input (no dim); pill clears on blur.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F029", "F034"]
   },
   {

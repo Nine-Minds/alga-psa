@@ -170,19 +170,19 @@
   {
     "id": "F029",
     "description": "Wire `setEditingField` on focus/blur of editable fields in `TicketInfo.tsx` and `TicketProperties.tsx`. Field set: title, status, priority, ITIL impact, ITIL urgency, board, category, assignee, client, contact, location.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9"]
   },
   {
     "id": "F030",
     "description": "Render 'X is editing' indicator on dropdown-shaped fields (status, priority, ITIL impact, ITIL urgency, board, category, assignee, client, contact, location) when at least one remote awareness has matching `editingField`: dim the control + caption beneath. No hard lock.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9"]
   },
   {
     "id": "F034",
     "description": "Render 'X is editing' indicator on the title text input as a caption pill near the control (no dim) when at least one remote awareness has `editingField='title'`. No hard lock.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["FR-9"]
   },
   {

@@ -395,6 +395,29 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         return fields;
     }, [livePendingFieldVersion, ticketInfoDirtyFields, ticketPropertiesDirtyFields]);
 
+    const liveEditingUsers = useMemo(() => {
+        const editingUsersByField: Partial<Record<string, string[]>> = {};
+        const seenByField = new Map<string, Set<string>>();
+
+        for (const presenceUser of ticketLive.presence) {
+            if (!presenceUser.editingField) {
+                continue;
+            }
+
+            const field = normalizeTicketLiveField(presenceUser.editingField);
+            const seenUsers = seenByField.get(field) ?? new Set<string>();
+            if (seenUsers.has(presenceUser.userId)) {
+                continue;
+            }
+
+            seenUsers.add(presenceUser.userId);
+            seenByField.set(field, seenUsers);
+            editingUsersByField[field] = [...(editingUsersByField[field] ?? []), presenceUser.displayName];
+        }
+
+        return editingUsersByField;
+    }, [ticketLive.presence]);
+
     useEffect(() => {
         ticketInfoDirtyFieldsRef.current = ticketInfoDirtyFields;
     }, [ticketInfoDirtyFields]);
@@ -2647,6 +2670,8 @@ const handleClose = () => {
                                     liveFrozenFields={Object.keys(liveFieldConflicts)}
                                     onKeepLiveConflict={handleKeepLiveConflict}
                                     onTakeLiveConflict={handleTakeLiveConflict}
+                                    liveEditingUsers={liveEditingUsers}
+                                    onLiveEditingFieldChange={ticketLive.setEditingField}
                                 />
                             </div>
                         </Suspense>
@@ -2773,6 +2798,8 @@ const handleClose = () => {
                                     liveFrozenFields={Object.keys(liveFieldConflicts)}
                                     onKeepLiveConflict={handleKeepLiveConflict}
                                     onTakeLiveConflict={handleTakeLiveConflict}
+                                    liveEditingUsers={liveEditingUsers}
+                                    onLiveEditingFieldChange={ticketLive.setEditingField}
                                 />
                         </Suspense>
                         

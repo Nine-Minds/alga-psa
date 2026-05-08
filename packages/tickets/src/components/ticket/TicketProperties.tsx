@@ -108,6 +108,8 @@ interface TicketPropertiesProps {
   liveFieldConflicts?: Partial<Record<string, TicketLiveConflictState>>;
   onKeepLiveConflict?: (field: string) => void;
   onTakeLiveConflict?: (field: string) => void;
+  liveEditingUsers?: Partial<Record<string, string[]>>;
+  onLiveEditingFieldChange?: (field: string | null) => void;
 }
 
 // Helper function to format location display
@@ -201,6 +203,8 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   liveFieldConflicts = {},
   onKeepLiveConflict,
   onTakeLiveConflict,
+  liveEditingUsers = {},
+  onLiveEditingFieldChange,
 }) => {
   const { openDrawer } = useDrawer();
   const { renderQuickAddContact } = useQuickAddClient();
@@ -289,6 +293,36 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
 
     return classes.join(' ');
   }, [isFieldFrozen, isFieldHighlighted]);
+
+  const getEditingUsersForField = React.useCallback((field: string) => liveEditingUsers[field] ?? [], [liveEditingUsers]);
+
+  const getEditingCaption = React.useCallback((field: string) => {
+    const editingUsers = getEditingUsersForField(field);
+    if (editingUsers.length === 0) {
+      return null;
+    }
+
+    if (editingUsers.length === 1) {
+      return `${editingUsers[0]} is editing`;
+    }
+
+    return `${editingUsers[0]} and ${editingUsers.length - 1} other${editingUsers.length === 2 ? '' : 's'} are editing`;
+  }, [getEditingUsersForField]);
+
+  const isFieldRemotelyEdited = React.useCallback((field: string) => {
+    return getEditingUsersForField(field).length > 0;
+  }, [getEditingUsersForField]);
+
+  const createEditingFieldHandlers = React.useCallback((field: string) => ({
+    onFocusCapture: () => {
+      onLiveEditingFieldChange?.(field);
+    },
+    onBlurCapture: (event: React.FocusEvent<HTMLElement>) => {
+      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+        onLiveEditingFieldChange?.(null);
+      }
+    },
+  }), [onLiveEditingFieldChange]);
 
   const handleKeepLiveConflict = React.useCallback((field: string) => {
     onKeepLiveConflict?.(field);
@@ -630,10 +664,12 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             data-live-field="contact_name_id"
             data-live-highlighted={isFieldHighlighted('contact_name_id') ? 'true' : undefined}
             data-live-conflict={liveFieldConflicts.contact_name_id ? 'true' : undefined}
+            data-live-editing={isFieldRemotelyEdited('contact_name_id') ? 'true' : undefined}
+            {...createEditingFieldHandlers('contact_name_id')}
           >
             <h5 className="font-bold">{t('properties.contact', 'Contact')}</h5>
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
+              <div className={`flex items-center justify-between transition-opacity ${isFieldRemotelyEdited('contact_name_id') ? 'opacity-60' : ''}`}>
                 <div className="flex items-center space-x-2">
                   {contactInfo && (
                     <ContactAvatar
@@ -716,6 +752,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 </div>
               )}
             </div>
+            {getEditingCaption('contact_name_id') ? (
+              <p className="mt-2 text-xs text-slate-500">{getEditingCaption('contact_name_id')}</p>
+            ) : null}
             {liveFieldConflicts.contact_name_id ? (
               <FieldConflictBanner
                 remoteAuthor={liveFieldConflicts.contact_name_id.updatedBy.displayName}
@@ -772,10 +811,12 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             data-live-field="client_id"
             data-live-highlighted={isFieldHighlighted('client_id') ? 'true' : undefined}
             data-live-conflict={liveFieldConflicts.client_id ? 'true' : undefined}
+            data-live-editing={isFieldRemotelyEdited('client_id') ? 'true' : undefined}
+            {...createEditingFieldHandlers('client_id')}
           >
             <h5 className="font-bold">{t('fields.client', 'Client')}</h5>
             <div className="space-y-2">
-              <div className="flex items-center space-x-2">
+              <div className={`flex items-center space-x-2 transition-opacity ${isFieldRemotelyEdited('client_id') ? 'opacity-60' : ''}`}>
                 {client && (
                   <ClientAvatar
                     clientId={client.client_id}
@@ -849,6 +890,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 </div>
               )}
             </div>
+            {getEditingCaption('client_id') ? (
+              <p className="mt-2 text-xs text-slate-500">{getEditingCaption('client_id')}</p>
+            ) : null}
             {liveFieldConflicts.client_id ? (
               <FieldConflictBanner
                 remoteAuthor={liveFieldConflicts.client_id.updatedBy.displayName}
@@ -865,10 +909,12 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               data-live-field="location_id"
               data-live-highlighted={isFieldHighlighted('location_id') ? 'true' : undefined}
               data-live-conflict={liveFieldConflicts.location_id ? 'true' : undefined}
+              data-live-editing={isFieldRemotelyEdited('location_id') ? 'true' : undefined}
+              {...createEditingFieldHandlers('location_id')}
             >
               <h5 className="font-bold">{t('properties.location', 'Location')}</h5>
               <div className="space-y-2">
-                <div className="flex items-center space-x-2">
+                <div className={`flex items-center space-x-2 transition-opacity ${isFieldRemotelyEdited('location_id') ? 'opacity-60' : ''}`}>
                   <p className="text-sm">
                     {(() => {
                       const unnamedLocationLabel = t('quickAdd.unnamedLocation', 'Unnamed Location');
@@ -948,6 +994,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                   </div>
                 )}
               </div>
+              {getEditingCaption('location_id') ? (
+                <p className="mt-2 text-xs text-slate-500">{getEditingCaption('location_id')}</p>
+              ) : null}
               {liveFieldConflicts.location_id ? (
                 <FieldConflictBanner
                   remoteAuthor={liveFieldConflicts.location_id.updatedBy.displayName}

@@ -150,6 +150,15 @@ npm run test:e2e
 - **2026-05-08 — Verification runbook used for the remote-update routing/conflict slice.**
   `npx vitest run --config vitest.config.ts --environment jsdom --coverage.enabled false src/components/ticket/__tests__/TicketDetails.remoteUpdates.test.tsx src/components/ticket/__tests__/TicketDetails.liveTimerPolicy.test.tsx src/components/ticket/TicketInfo.boardChangeStatusReselection.test.tsx src/components/ticket/__tests__/ticket-properties-inline-contact.test.tsx src/components/ticket/__tests__/TicketProperties.liveTimerPolicy.test.tsx` from `packages/tickets`
   `npm -w @alga-psa/tickets run typecheck`
+- **2026-05-08 — Editing-indicator slice complete (`F029`/`F030`/`F034`).**
+  Extended [TicketDetails.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/tickets/src/components/ticket/TicketDetails.tsx) to normalize remote awareness by field and pass the resulting editing-user map plus `setEditingField` into the ticket forms.
+  Updated [TicketInfo.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/tickets/src/components/ticket/TicketInfo.tsx) to report title/status/priority/ITIL/board/category/assignee focus + blur transitions, dim dropdown-style controls when a peer is editing them, and render the title-specific caption-pill indicator without dimming the title row.
+  Updated [TicketProperties.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/tickets/src/components/ticket/TicketProperties.tsx) to apply the same focus + caption treatment to client/contact/location editing surfaces so the right-panel structured fields participate in live awareness too.
+- **2026-05-08 — Editing-indicator tests complete (`T040`–`T043`, `T058`).**
+  Added [TicketInfo.liveEditing.test.tsx](/Users/natalliabukhtsik/Desktop/projects/bigmac/packages/tickets/src/components/ticket/__tests__/TicketInfo.liveEditing.test.tsx) for status focus/blur awareness updates, remote priority dim+caption rendering, indicator clearing on rerendered awareness loss, non-hard-lock behavior during simultaneous status focus, and the title caption-pill variant.
+- **2026-05-08 — Verification runbook used for the editing-indicator slice.**
+  `npx vitest run --config vitest.config.ts --environment jsdom --coverage.enabled false src/components/ticket/__tests__/TicketInfo.liveEditing.test.tsx src/components/ticket/__tests__/TicketDetails.remoteUpdates.test.tsx src/components/ticket/__tests__/TicketDetails.liveTimerPolicy.test.tsx src/components/ticket/TicketInfo.boardChangeStatusReselection.test.tsx src/components/ticket/__tests__/ticket-properties-inline-contact.test.tsx src/components/ticket/__tests__/TicketProperties.liveTimerPolicy.test.tsx` from `packages/tickets`
+  `npm -w @alga-psa/tickets run typecheck`
 
 ## Links / Refs
 
