@@ -151,10 +151,14 @@ test('T001 build smoke: remastered ISO is branded and includes the offline appli
 
 test('T002 installer config sanity: network and storage remain user-confirmed before install actions', () => {
   const userData = parse(fs.readFileSync(userDataPath, 'utf8'));
+  const lateCommands = userData.autoinstall['late-commands'];
 
   assert.deepEqual(userData.autoinstall['interactive-sections'], ['network', 'storage']);
   assert.equal(userData.autoinstall.storage.layout.name, 'direct');
   assert.equal(userData.autoinstall.storage.layout['sizing-policy'], 'all');
+  assert.equal(userData.autoinstall.ssh['install-server'], true);
+  assert.equal(userData.autoinstall.ssh['allow-pw'], true);
+  assert.equal(lateCommands.some((command) => command.includes('passwd -l alga-admin')), false);
 });
 
 test('T003 storage manifest avoids k3s default local-path RBAC collisions and grants configmap access', () => {
