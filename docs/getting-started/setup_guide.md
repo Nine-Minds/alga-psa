@@ -31,11 +31,11 @@ This guide provides step-by-step instructions for setting up the PSA system usin
 
 ## Initial Setup
 
-1. Pin the prebuilt container image to the same release:
+1. Resolve the container image for the current checkout:
    ```bash
    ./scripts/set-image-tag.sh
    ```
-   This writes `.env.image` alongside `server/.env` with `ALGA_IMAGE_TAG=<your-tag>`, ensuring Docker Compose pulls the matching prebuilt image. Re-run the script whenever you upgrade or switch commits.
+   This checks for a published CE image matching the current `HEAD` short SHA. If it exists, the script pulls it and writes `.env.image` alongside `server/.env` with `ALGA_IMAGE_TAG=<sha>`. If no matching image exists, the script builds the CE image locally from the current checkout, tags it with that same SHA, and writes `.env.image`. If the worktree has uncommitted changes, the script builds locally with a `<sha>-local` tag so the image cannot be confused with the published commit image. Re-run the script whenever you upgrade or switch commits. If the local image build needs a larger Node.js heap, run `NEXT_BUILD_MAX_OLD_SPACE_SIZE=16384 ./scripts/set-image-tag.sh`.
 2. Create required directories:
    ```bash
    mkdir -p secrets
@@ -100,6 +100,8 @@ cp .env.example server/.env
 2. Open `server/.env` in your editor and confirm these core settings (adjust as needed):
    - `DB_TYPE=postgres` (required)
    - `DB_USER_ADMIN=postgres`
+   - `DB_NAME_HOCUSPOCUS=hocuspocus`
+   - `DB_USER_HOCUSPOCUS=hocuspocus_user`
    - `HOST=http://localhost:3000` (use your public domain in production)
    - `LOG_LEVEL=INFO`
    - `LOG_IS_FORMAT_JSON=false`
@@ -151,7 +153,7 @@ sebastian_server_ce  | 2025-02-10 15:12:23 [INFO   ]: **************************
 
 > Copy the credentials before stopping the logs. After you sign in, update the password for production use.
 
-The CE stack now includes the `workflow-worker` service by default, giving you a production-like asynchronous processing setup without additional compose overrides. The `ALGA_IMAGE_TAG` value determines which prebuilt image is retrieved; compose does not fall back to `latest` unless you leave the variable unset.
+The CE stack now includes the `workflow-worker` service by default, giving you a production-like asynchronous processing setup without additional compose overrides. The `ALGA_IMAGE_TAG` value determines which server image is used; `./scripts/set-image-tag.sh` ensures it matches the current checkout by either pulling the published image for `HEAD` or building that image locally.
 
 ## Production Setup (Persistent Storage)
 
@@ -353,6 +355,70 @@ For production deployments:
 3. Update `NEXTAUTH_URL` to use `https://` protocol
 4. Verify OAuth providers (if used) allow your production domain
 
+### Reverse Proxy Configuration
+
+The docker-compose stack runs the Next.js `server` container on port 3000 and
+the `hocuspocus` container (real-time notifications and collaborative editing)
+on port 1234 — separately, with no built-in reverse proxy in front. Your proxy
+must route **two paths** for the application to work fully:
+
+- `/hocuspocus` → `hocuspocus:1234` (with WebSocket upgrade headers)
+- everything else → `server:3000`
+
+If `/hocuspocus` is missing, browsers will show a "Reconnecting to server…"
+indicator on the notifications bell and live notification updates will fall
+back to 30-second polling.
+
+#### nginx
+```nginx
+server {
+    server_name your-domain.com;
+    # ... your SSL/TLS config ...
+
+    location /hocuspocus {
+        proxy_pass http://hocuspocus:1234;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 3600s;   # long-lived WS connections
+        proxy_send_timeout 3600s;
+    }
+
+    location / {
+        proxy_pass http://server:3000;
+        proxy_set_header Host $host;
+        # ... usual headers ...
+    }
+}
+```
+
+#### Caddy
+```
+your-domain.com {
+    reverse_proxy /hocuspocus* hocuspocus:1234
+    reverse_proxy * server:3000
+}
+```
+WebSocket upgrade is automatic in Caddy. Order matters — the `/hocuspocus*`
+matcher must come before the catch-all.
+
+#### Nginx Proxy Manager
+In the proxy host's **Custom Locations** tab, add a location with:
+- Define Location: `/hocuspocus`
+- Scheme: `http`
+- Forward Hostname/IP: the docker host (or hocuspocus container if reachable)
+- Forward Port: `1234`
+
+Make sure **Websockets Support** is enabled on the proxy host. The default
+"Forward Hostname / IP" + "Forward Port" on the Details tab continues to
+serve the catch-all to the `server` container on port 3000.
+
+#### Cloudflare Tunnel
+Add a separate ingress rule for the `/hocuspocus` path pointing to
+`http://hocuspocus:1234`, and ensure WebSockets are enabled in the tunnel
+configuration.
+
 ### Email Configuration for Production
 Update email settings for production notifications:
 ```bash
@@ -387,12 +453,10 @@ When upgrading from a previous version:
    git checkout <release-branch>
    ```
 
-3. Run `./scripts/set-image-tag.sh` again so `.env.image` updates to the new release tag or short commit.
+3. Run `./scripts/set-image-tag.sh` again so `.env.image` updates to the new checkout SHA, pulling the matching published image when available or building it locally when it is not.
 
-4. Pull the new images and restart the stack:
+4. Restart the stack. The image has already been pulled or built by `./scripts/set-image-tag.sh`:
    ```bash
-   docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
-     --env-file server/.env --env-file .env.image pull
    docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
      --env-file server/.env --env-file .env.image down
    docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \

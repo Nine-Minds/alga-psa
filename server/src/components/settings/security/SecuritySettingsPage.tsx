@@ -55,8 +55,18 @@ function ApiKeysLoading() {
   return <SettingsTabSkeleton title={t('security.tabs.apiKeys', { defaultValue: 'API Keys' })} description={t('security.loading.apiKeys', { defaultValue: 'Loading API key configuration...' })} />;
 }
 
-const AdminApiKeysSetup = dynamic(() => import('@alga-psa/auth/components/settings/api/AdminApiKeysSetup'), {
+const AdminApiKeysSetup = dynamic(() => import('./AdminApiKeysSetup'), {
   loading: ApiKeysLoading,
+  ssr: false
+});
+
+function WebhooksLoading() {
+  const { t } = useTranslation('msp/profile');
+  return <SettingsTabSkeleton title={t('security.tabs.webhooks', { defaultValue: 'Webhooks' })} description={t('security.loading.webhooks', { defaultValue: 'Loading webhook configuration...' })} />;
+}
+
+const AdminWebhooksSetup = dynamic(() => import('./AdminWebhooksSetup'), {
+  loading: WebhooksLoading,
   ssr: false
 });
 
@@ -89,7 +99,7 @@ const AdminSessionManagement = dynamic(() => import('./AdminSessionManagement'),
   ssr: false
 });
 
-const SECURITY_TAB_IDS = ['roles', 'sessions', 'single-sign-on', 'permissions', 'user-roles', 'policies', 'api-keys'] as const;
+const SECURITY_TAB_IDS = ['roles', 'sessions', 'single-sign-on', 'permissions', 'user-roles', 'policies', 'api-keys', 'webhooks'] as const;
 const DEFAULT_SECURITY_TAB = 'roles';
 
 const SecuritySettingsPage = (): React.JSX.Element => {
@@ -178,6 +188,15 @@ const SecuritySettingsPage = (): React.JSX.Element => {
       content: (
         <Suspense fallback={<ApiKeysLoading />}>
           <AdminApiKeysSetup />
+        </Suspense>
+      ),
+    },
+    {
+      id: 'webhooks',
+      label: t('security.tabs.webhooks', { defaultValue: 'Webhooks' }),
+      content: (
+        <Suspense fallback={<WebhooksLoading />}>
+          <AdminWebhooksSetup />
         </Suspense>
       ),
     },

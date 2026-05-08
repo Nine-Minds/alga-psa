@@ -1,0 +1,521 @@
+import type { Knex } from 'knex';
+import type { TaggedEntityType } from '@alga-psa/types';
+import TagMapping from '@alga-psa/tags/models/tagMapping';
+import type { TicketWebhookInternalEvent as TicketWebhookInternalEventType } from './webhookEventMap';
+
+const TICKET_WEBHOOK_CACHE_TTL_MS = 60_000;
+const TICKET_WEBHOOK_CACHE_MAX_ENTRIES = 256;
+const TICKET_TAGGED_ENTITY_TYPE: TaggedEntityType = 'ticket';
+
+type NormalizedWebhookChange = {
+  previous: unknown;
+  new: unknown;
+};
+
+type TicketWebhookCommentPayload = {
+  text: string;
+  author: string | null;
+  timestamp: string;
+  is_internal: boolean;
+};
+
+type TicketWebhookCommentsEntry = {
+  comment_id: string;
+  text: string;
+  author: string | null;
+  is_internal: boolean;
+  is_resolution: boolean;
+  created_at: string;
+  updated_at: string | null;
+};
+
+export type TicketWebhookPayload = {
+  ticket_id: string;
+  ticket_number: string | null;
+  title: string | null;
+  status_id: string | null;
+  status_name: string | null;
+  priority_id: string | null;
+  priority_name: string | null;
+  client_id: string | null;
+  client_name: string | null;
+  contact_name_id: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  assigned_to: string | null;
+  assigned_to_name: string | null;
+  assigned_team_id: string | null;
+  board_id: string | null;
+  board_name: string | null;
+  category_id: string | null;
+  subcategory_id: string | null;
+  is_closed: boolean;
+  entered_at: string | null;
+  updated_at: string | null;
+  closed_at: string | null;
+  due_date: string | null;
+  tags: string[];
+  url: string;
+  previous_status_id?: string | null;
+  previous_status_name?: string | null;
+  changes?: Record<string, NormalizedWebhookChange>;
+  comment?: TicketWebhookCommentPayload;
+  /**
+   * Full thread for this ticket. Only populated when the subscriber
+   * requested the `comments` field. Ordered oldest → newest.
+   */
+  comments?: TicketWebhookCommentsEntry[];
+};
+
+type CachedTicketWebhookPayload = Omit<TicketWebhookPayload, 'changes' | 'comment'>;
+
+type TicketWebhookRow = {
+  ticket_id: string;
+  ticket_number: string | null;
+  title: string | null;
+  status_id: string | null;
+  status_name: string | null;
+  priority_id: string | null;
+  priority_name: string | null;
+  client_id: string | null;
+  client_name: string | null;
+  contact_name_id: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  assigned_to: string | null;
+  assigned_to_name: string | null;
+  assigned_team_id: string | null;
+  board_id: string | null;
+  board_name: string | null;
+  category_id: string | null;
+  subcategory_id: string | null;
+  is_closed: boolean | null;
+  entered_at: string | null;
+  updated_at: string | null;
+  closed_at: string | null;
+  due_date: string | null;
+};
+
+const ticketWebhookCache = new Map<
+  string,
+  { value: CachedTicketWebhookPayload; expiresAt: number }
+>();
+
+export type TicketWebhookSourceEvent = {
+  eventType: TicketWebhookInternalEventType;
+  timestamp?: string;
+  payload: {
+    tenantId: string;
+    ticketId: string;
+    occurredAt?: string;
+    changes?: unknown;
+    comment?: unknown;
+    [key: string]: unknown;
+  };
+};
+
+export async function buildTicketWebhookPayload(
+  internalEvent: TicketWebhookSourceEvent,
+  knex: Knex
+): Promise<TicketWebhookPayload> {
+  const tenantId = internalEvent.payload.tenantId;
+  const ticketId = internalEvent.payload.ticketId;
+
+  if (!tenantId || !ticketId) {
+    throw new Error('Ticket webhook payload requires payload.tenantId and payload.ticketId');
+  }
+
+  const basePayload = await getCachedTicketWebhookPayload(knex, tenantId, ticketId);
+  const payload: TicketWebhookPayload = {
+    ...basePayload,
+    tags: [...basePayload.tags],
+  };
+
+  if (internalEvent.eventType === 'TICKET_STATUS_CHANGED') {
+    const previousStatusId = resolvePreviousStatusId(internalEvent);
+    if (previousStatusId) {
+      payload.previous_status_id = previousStatusId;
+      payload.previous_status_name = await fetchStatusName(knex, tenantId, previousStatusId);
+    }
+  }
+
+  const changes = normalizeChanges((internalEvent.payload as { changes?: unknown }).changes);
+  if (changes && internalEvent.eventType === 'TICKET_UPDATED') {
+    payload.changes = changes;
+  }
+
+  const comment = normalizeCommentPayload(internalEvent);
+  if (comment) {
+    payload.comment = comment;
+  }
+
+  return payload;
+}
+
+export function clearTicketWebhookPayloadCache(): void {
+  ticketWebhookCache.clear();
+}
+
+/**
+ * Per-entity always-required correlation keys. These never get stripped
+ * regardless of the user's allowlist.
+ */
+const ALWAYS_INCLUDED_KEYS_BY_ENTITY: Record<string, readonly string[]> = {
+  ticket: ['ticket_id'],
+};
+
+/**
+ * Project a fully-built webhook payload down to a per-subscriber field
+ * allowlist for the given entity. Returns the original payload unchanged
+ * when `allowedFields` is null (the default — no filtering, full payload).
+ *
+ * The entity's correlation key (e.g. `ticket_id` for tickets) is always
+ * retained regardless of whether the consumer included it in their
+ * selection.
+ */
+export function projectWebhookPayload<T extends Record<string, unknown>>(
+  entity: string,
+  payload: T,
+  allowedFields: string[] | null,
+): T {
+  if (allowedFields === null) {
+    return payload;
+  }
+
+  const allowed = new Set<string>(allowedFields);
+  for (const key of ALWAYS_INCLUDED_KEYS_BY_ENTITY[entity] ?? []) {
+    allowed.add(key);
+  }
+
+  const projected: Record<string, unknown> = {};
+  for (const key of Object.keys(payload)) {
+    if (allowed.has(key)) {
+      projected[key] = payload[key];
+    }
+  }
+
+  return projected as T;
+}
+
+/**
+ * @deprecated Use `projectWebhookPayload('ticket', payload, allowedFields)`.
+ * Kept as a thin shim so callers and tests can migrate without churn.
+ */
+export function projectTicketWebhookPayload(
+  payload: TicketWebhookPayload,
+  allowedFields: string[] | null,
+): TicketWebhookPayload {
+  return projectWebhookPayload('ticket', payload, allowedFields);
+}
+
+async function getCachedTicketWebhookPayload(
+  knex: Knex,
+  tenantId: string,
+  ticketId: string
+): Promise<CachedTicketWebhookPayload> {
+  const cacheKey = `${tenantId}:${ticketId}`;
+  const now = Date.now();
+  const cached = ticketWebhookCache.get(cacheKey);
+
+  if (cached && cached.expiresAt > now) {
+    return cached.value;
+  }
+
+  const value = await fetchTicketWebhookPayload(knex, tenantId, ticketId);
+  ticketWebhookCache.set(cacheKey, {
+    value,
+    expiresAt: now + TICKET_WEBHOOK_CACHE_TTL_MS,
+  });
+
+  if (ticketWebhookCache.size > TICKET_WEBHOOK_CACHE_MAX_ENTRIES) {
+    for (const [key, entry] of ticketWebhookCache) {
+      if (entry.expiresAt <= now) {
+        ticketWebhookCache.delete(key);
+      }
+    }
+  }
+
+  return value;
+}
+
+async function fetchTicketWebhookPayload(
+  knex: Knex,
+  tenantId: string,
+  ticketId: string
+): Promise<CachedTicketWebhookPayload> {
+  const [ticket, tags] = await Promise.all([
+    fetchTicketWebhookRow(knex, tenantId, ticketId),
+    fetchTicketTags(knex, tenantId, ticketId),
+  ]);
+
+  if (!ticket) {
+    throw new Error(`Ticket ${ticketId} not found for tenant ${tenantId}`);
+  }
+
+  return {
+    ticket_id: ticket.ticket_id,
+    ticket_number: ticket.ticket_number ?? null,
+    title: ticket.title ?? null,
+    status_id: ticket.status_id ?? null,
+    status_name: ticket.status_name ?? null,
+    priority_id: ticket.priority_id ?? null,
+    priority_name: ticket.priority_name ?? null,
+    client_id: ticket.client_id ?? null,
+    client_name: ticket.client_name ?? null,
+    contact_name_id: ticket.contact_name_id ?? null,
+    contact_name: ticket.contact_name ?? null,
+    contact_email: ticket.contact_email ?? null,
+    assigned_to: ticket.assigned_to ?? null,
+    assigned_to_name: ticket.assigned_to_name ?? null,
+    assigned_team_id: ticket.assigned_team_id ?? null,
+    board_id: ticket.board_id ?? null,
+    board_name: ticket.board_name ?? null,
+    category_id: ticket.category_id ?? null,
+    subcategory_id: ticket.subcategory_id ?? null,
+    is_closed: Boolean(ticket.is_closed),
+    entered_at: ticket.entered_at ?? null,
+    updated_at: ticket.updated_at ?? null,
+    closed_at: ticket.closed_at ?? null,
+    due_date: ticket.due_date ?? null,
+    tags,
+    url: buildTicketUrl(ticket.ticket_id),
+  };
+}
+
+async function fetchTicketWebhookRow(
+  knex: Knex,
+  tenantId: string,
+  ticketId: string
+): Promise<TicketWebhookRow | undefined> {
+  return knex('tickets as t')
+    .leftJoin('clients as c', function joinClients() {
+      this.on('t.client_id', '=', 'c.client_id').andOn('t.tenant', '=', 'c.tenant');
+    })
+    .leftJoin('contacts as co', function joinContacts() {
+      this.on('t.contact_name_id', '=', 'co.contact_name_id').andOn('t.tenant', '=', 'co.tenant');
+    })
+    .leftJoin('statuses as s', function joinStatuses() {
+      this.on('t.status_id', '=', 's.status_id').andOn('t.tenant', '=', 's.tenant');
+    })
+    .leftJoin('priorities as p', function joinPriorities() {
+      this.on('t.priority_id', '=', 'p.priority_id').andOn('t.tenant', '=', 'p.tenant');
+    })
+    .leftJoin('users as au', function joinAssignedUsers() {
+      this.on('t.assigned_to', '=', 'au.user_id').andOn('t.tenant', '=', 'au.tenant');
+    })
+    .leftJoin('boards as b', function joinBoards() {
+      this.on('t.board_id', '=', 'b.board_id').andOn('t.tenant', '=', 'b.tenant');
+    })
+    .select(
+      't.ticket_id',
+      't.ticket_number',
+      't.title',
+      't.status_id',
+      's.name as status_name',
+      't.priority_id',
+      'p.priority_name',
+      't.client_id',
+      'c.client_name',
+      't.contact_name_id',
+      'co.full_name as contact_name',
+      'co.email as contact_email',
+      't.assigned_to',
+      knex.raw(
+        "NULLIF(TRIM(CONCAT(COALESCE(au.first_name, ''), ' ', COALESCE(au.last_name, ''))), '') as assigned_to_name"
+      ),
+      't.assigned_team_id',
+      't.board_id',
+      'b.board_name',
+      't.category_id',
+      't.subcategory_id',
+      knex.raw('COALESCE(t.is_closed, s.is_closed, false) as is_closed'),
+      't.entered_at',
+      't.updated_at',
+      't.closed_at',
+      't.due_date'
+    )
+    .where({
+      't.tenant': tenantId,
+      't.ticket_id': ticketId,
+    })
+    .first();
+}
+
+async function fetchTicketTags(
+  knex: Knex,
+  tenantId: string,
+  ticketId: string
+): Promise<string[]> {
+  const tags = await TagMapping.getByEntity(knex, tenantId, ticketId, TICKET_TAGGED_ENTITY_TYPE);
+  return tags.map((tag) => tag.tag_text).filter(Boolean);
+}
+
+async function fetchStatusName(
+  knex: Knex,
+  tenantId: string,
+  statusId: string
+): Promise<string | null> {
+  const row = await knex('statuses')
+    .select('name')
+    .where({
+      tenant: tenantId,
+      status_id: statusId,
+    })
+    .first<{ name: string | null }>();
+
+  return row?.name ?? null;
+}
+
+/**
+ * Fetch the full comment thread for a ticket. Used by the webhook subscriber
+ * when at least one matching webhook has the `comments` field selected.
+ *
+ * Lives outside the per-ticket payload cache because comments change on
+ * every TICKET_COMMENT_ADDED — caching them inside the 60s base payload
+ * would let stale threads slip out for a full minute after each new entry.
+ */
+export async function fetchTicketCommentsForWebhook(
+  knex: Knex,
+  tenantId: string,
+  ticketId: string,
+): Promise<TicketWebhookCommentsEntry[]> {
+  const rows = await knex('comments as c')
+    .leftJoin('users as u', function joinUsers() {
+      this.on('c.user_id', '=', 'u.user_id').andOn('c.tenant', '=', 'u.tenant');
+    })
+    .select(
+      'c.comment_id',
+      'c.note',
+      'c.markdown_content',
+      'c.is_internal',
+      'c.is_resolution',
+      'c.created_at',
+      'c.updated_at',
+      knex.raw(
+        "NULLIF(TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))), '') as author_name",
+      ),
+    )
+    .where({
+      'c.tenant': tenantId,
+      'c.ticket_id': ticketId,
+    })
+    .orderBy('c.created_at', 'asc');
+
+  return rows.map((row: any) => ({
+    comment_id: row.comment_id,
+    text: typeof row.markdown_content === 'string' && row.markdown_content.length > 0
+      ? row.markdown_content
+      : (typeof row.note === 'string' ? row.note : ''),
+    author: row.author_name ?? null,
+    is_internal: Boolean(row.is_internal),
+    is_resolution: Boolean(row.is_resolution),
+    created_at: row.created_at instanceof Date
+      ? row.created_at.toISOString()
+      : String(row.created_at),
+    updated_at: row.updated_at
+      ? (row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at))
+      : null,
+  }));
+}
+
+function normalizeChanges(
+  changes: unknown
+): Record<string, NormalizedWebhookChange> | undefined {
+  if (!changes || typeof changes !== 'object' || Array.isArray(changes)) {
+    return undefined;
+  }
+
+  const normalizedEntries = Object.entries(changes).flatMap(([field, value]) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return [];
+    }
+
+    const candidate = value as { previous?: unknown; old?: unknown; new?: unknown };
+    const previous = candidate.previous ?? candidate.old;
+
+    if (!('new' in candidate)) {
+      return [];
+    }
+
+    return [[field, { previous, new: candidate.new }] as const];
+  });
+
+  if (normalizedEntries.length === 0) {
+    return undefined;
+  }
+
+  return Object.fromEntries(normalizedEntries);
+}
+
+function normalizeCommentPayload(
+  internalEvent: TicketWebhookSourceEvent
+): TicketWebhookCommentPayload | undefined {
+  if (internalEvent.eventType !== 'TICKET_COMMENT_ADDED') {
+    return undefined;
+  }
+
+  const comment = (internalEvent.payload as { comment?: unknown }).comment;
+  if (!comment || typeof comment !== 'object' || Array.isArray(comment)) {
+    return undefined;
+  }
+
+  const candidate = comment as {
+    content?: unknown;
+    author?: unknown;
+    isInternal?: unknown;
+  };
+
+  return {
+    text: typeof candidate.content === 'string' ? candidate.content : '',
+    author: typeof candidate.author === 'string' ? candidate.author : null,
+    timestamp: resolveOccurredAt(internalEvent),
+    is_internal: Boolean(candidate.isInternal),
+  };
+}
+
+function resolvePreviousStatusId(internalEvent: TicketWebhookSourceEvent): string | undefined {
+  const payload = internalEvent.payload as {
+    previousStatusId?: unknown;
+    changes?: {
+      status_id?: {
+        from?: unknown;
+        previous?: unknown;
+        old?: unknown;
+      };
+    };
+  };
+
+  if (typeof payload.previousStatusId === 'string' && payload.previousStatusId.length > 0) {
+    return payload.previousStatusId;
+  }
+
+  const previousFromChanges =
+    payload.changes?.status_id?.from
+    ?? payload.changes?.status_id?.previous
+    ?? payload.changes?.status_id?.old;
+
+  if (typeof previousFromChanges === 'string' && previousFromChanges.length > 0) {
+    return previousFromChanges;
+  }
+
+  return undefined;
+}
+
+function resolveOccurredAt(internalEvent: TicketWebhookSourceEvent): string {
+  const payload = internalEvent.payload as { occurredAt?: unknown };
+
+  if (typeof payload.occurredAt === 'string' && payload.occurredAt.length > 0) {
+    return payload.occurredAt;
+  }
+
+  if (typeof internalEvent.timestamp === 'string' && internalEvent.timestamp.length > 0) {
+    return internalEvent.timestamp;
+  }
+
+  return new Date().toISOString();
+}
+
+function buildTicketUrl(ticketId: string): string {
+  const baseUrl = (process.env.NEXTAUTH_URL || 'http://localhost:3000').replace(/\/+$/, '');
+  return `${baseUrl}/msp/tickets/${ticketId}`;
+}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getStorageServiceForTenant } from '@/lib/storage/api/factory';
+import { appendRateLimitHeaders } from '@/lib/api/rateLimit/responseHeaders';
 import { ensureStoragePermission, mapStorageError, resolveStorageAuthContext } from '../../../../utils';
 
 const deleteQuerySchema = z.object({
@@ -28,7 +29,7 @@ export async function GET(
       'Cache-Control': 'no-store',
       Vary: 'authorization,x-api-key,if-revision-match',
     };
-    return NextResponse.json(result, { status: 200, headers });
+    return appendRateLimitHeaders(NextResponse.json(result, { status: 200, headers }), req as any);
   } catch (error) {
     return mapStorageError(error);
   }
@@ -58,7 +59,7 @@ export async function PUT(
       'Cache-Control': 'no-store',
       Vary: 'authorization,x-api-key',
     };
-    return NextResponse.json(result, { status: 200, headers });
+    return appendRateLimitHeaders(NextResponse.json(result, { status: 200, headers }), req as any);
   } catch (error) {
     return mapStorageError(error);
   }
@@ -78,13 +79,13 @@ export async function DELETE(
     await ensureStoragePermission('write', authContext, knex);
 
     await service.delete({ namespace: params.namespace, key: params.key, ifRevision: input.ifRevision });
-    return new NextResponse(null, {
+    return appendRateLimitHeaders(new NextResponse(null, {
       status: 204,
       headers: {
         'Cache-Control': 'no-store',
         Vary: 'authorization,x-api-key,if-revision-match',
       },
-    });
+    }), req as any);
   } catch (error) {
     return mapStorageError(error);
   }

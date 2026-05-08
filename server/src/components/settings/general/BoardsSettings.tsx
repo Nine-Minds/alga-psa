@@ -40,6 +40,7 @@ import {
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useProduct } from '@/context/ProductContext';
 
 type TicketStatusSeedMode = 'copy_existing' | 'create_inline';
 type ManagedTicketStatus = {
@@ -139,6 +140,7 @@ const TICKET_STATUS_VALIDATION_KEYS: Record<ManagedTicketStatusValidationCode, s
 
 const BoardsSettings: React.FC = () => {
   const { t } = useTranslation('msp/settings');
+  const { isAlgadesk } = useProduct();
   const createEmptyFormData = () => ({
     board_name: '',
     description: '',
@@ -1091,25 +1093,27 @@ const BoardsSettings: React.FC = () => {
                 {t('ticketing.boards.fields.defaultAssignedAgent.help')}
               </p>
             </div>
-            <div>
-              <Label htmlFor="sla-policy-picker">{t('ticketing.boards.fields.slaPolicy.label')}</Label>
-              <CustomSelect
-                id="sla-policy-picker"
-                value={formData.sla_policy_id}
-                onValueChange={(value) => setFormData({ ...formData, sla_policy_id: value })}
-                options={[
-                  { value: '', label: t('ticketing.boards.fields.slaPolicy.none') },
-                  ...slaPolicies.map((policy): SelectOption => ({
-                    value: policy.sla_policy_id,
-                    label: policy.policy_name + (policy.is_default ? ' (Default)' : '')
-                  }))
-                ]}
-                placeholder={t('ticketing.boards.fields.slaPolicy.placeholder')}
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                {t('ticketing.boards.fields.slaPolicy.help')}
-              </p>
-            </div>
+            {!isAlgadesk && (
+              <div>
+                <Label htmlFor="sla-policy-picker">{t('ticketing.boards.fields.slaPolicy.label')}</Label>
+                <CustomSelect
+                  id="sla-policy-picker"
+                  value={formData.sla_policy_id}
+                  onValueChange={(value) => setFormData({ ...formData, sla_policy_id: value })}
+                  options={[
+                    { value: '', label: t('ticketing.boards.fields.slaPolicy.none') },
+                    ...slaPolicies.map((policy): SelectOption => ({
+                      value: policy.sla_policy_id,
+                      label: policy.policy_name + (policy.is_default ? ' (Default)' : '')
+                    }))
+                  ]}
+                  placeholder={t('ticketing.boards.fields.slaPolicy.placeholder')}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t('ticketing.boards.fields.slaPolicy.help')}
+                </p>
+              </div>
+            )}
             <div>
               <Label htmlFor="board-manager-picker">{t('ticketing.boards.fields.boardManager.label')}</Label>
               <UserPicker

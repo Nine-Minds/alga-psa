@@ -20,5 +20,19 @@ export async function register() {
     } catch (error) {
       console.error('Failed to initialize application:', error);
     }
+
+    // Wire the DB-prefs-aware locale resolver into @alga-psa/ui's server i18n.
+    // Done here (instead of at the @alga-psa/ui level) to avoid a
+    // ui→tenancy circular dependency; tenancy already depends on ui.
+    try {
+      const [{ registerServerLocaleResolver }, { getHierarchicalLocaleAction }] =
+        await Promise.all([
+          import('@alga-psa/ui/lib/i18n/serverOnly'),
+          import('@alga-psa/tenancy/actions'),
+        ]);
+      registerServerLocaleResolver(() => getHierarchicalLocaleAction());
+    } catch (error) {
+      console.error('Failed to register server locale resolver:', error);
+    }
   }
 }

@@ -1,22 +1,71 @@
 edition,route_path,methods,route_file,controller,controller_import,controller_file
+CE,/api/accounting/csv/export,POST,server/src/app/api/accounting/csv/export/route.ts,ApiCSVAccountingController,../../../../../lib/api/controllers/ApiCSVAccountingController,server/src/lib/api/controllers/ApiCSVAccountingController.ts
+CE,/api/accounting/csv/import/tax,POST,server/src/app/api/accounting/csv/import/tax/route.ts,ApiCSVAccountingController,../../../../../../lib/api/controllers/ApiCSVAccountingController,server/src/lib/api/controllers/ApiCSVAccountingController.ts
+CE,/api/accounting/csv/import/tax/history,GET,server/src/app/api/accounting/csv/import/tax/history/route.ts,ApiCSVAccountingController,../../../../../../../lib/api/controllers/ApiCSVAccountingController,server/src/lib/api/controllers/ApiCSVAccountingController.ts
+CE,/api/accounting/csv/import/tax/rollback/{importId},POST,server/src/app/api/accounting/csv/import/tax/rollback/[importId]/route.ts,ApiCSVAccountingController,../../../../../../../../lib/api/controllers/ApiCSVAccountingController,server/src/lib/api/controllers/ApiCSVAccountingController.ts
+CE,/api/accounting/csv/import/tax/template,GET,server/src/app/api/accounting/csv/import/tax/template/route.ts,ApiCSVAccountingController,../../../../../../../lib/api/controllers/ApiCSVAccountingController,server/src/lib/api/controllers/ApiCSVAccountingController.ts
+CE,/api/accounting/exports,GET POST,server/src/app/api/accounting/exports/route.ts,ApiAccountingExportController,../../../../lib/api/controllers/ApiAccountingExportController,server/src/lib/api/controllers/ApiAccountingExportController.ts
+CE,/api/accounting/exports/locks/invoice/reset,POST,server/src/app/api/accounting/exports/locks/invoice/reset/route.ts,ApiAccountingExportController,../../../../../../../lib/api/controllers/ApiAccountingExportController,server/src/lib/api/controllers/ApiAccountingExportController.ts
+CE,/api/accounting/exports/preview,POST,server/src/app/api/accounting/exports/preview/route.ts,ApiAccountingExportController,../../../../../lib/api/controllers/ApiAccountingExportController,server/src/lib/api/controllers/ApiAccountingExportController.ts
+CE,/api/accounting/exports/{batchId},GET PATCH,server/src/app/api/accounting/exports/[batchId]/route.ts,ApiAccountingExportController,../../../../../lib/api/controllers/ApiAccountingExportController,server/src/lib/api/controllers/ApiAccountingExportController.ts
+CE,/api/accounting/exports/{batchId}/download,POST,server/src/app/api/accounting/exports/[batchId]/download/route.ts,ApiAccountingExportController,../../../../../../lib/api/controllers/ApiAccountingExportController,server/src/lib/api/controllers/ApiAccountingExportController.ts
+CE,/api/accounting/exports/{batchId}/errors,POST,server/src/app/api/accounting/exports/[batchId]/errors/route.ts,ApiAccountingExportController,../../../../../../lib/api/controllers/ApiAccountingExportController,server/src/lib/api/controllers/ApiAccountingExportController.ts
+CE,/api/accounting/exports/{batchId}/execute,POST,server/src/app/api/accounting/exports/[batchId]/execute/route.ts,ApiAccountingExportController,../../../../../../lib/api/controllers/ApiAccountingExportController,server/src/lib/api/controllers/ApiAccountingExportController.ts
+CE,/api/accounting/exports/{batchId}/lines,POST,server/src/app/api/accounting/exports/[batchId]/lines/route.ts,ApiAccountingExportController,../../../../../../lib/api/controllers/ApiAccountingExportController,server/src/lib/api/controllers/ApiAccountingExportController.ts
+CE,/api/auth/e2e/google/authorize,GET,server/src/app/api/auth/e2e/google/authorize/route.ts,,,
+CE,/api/auth/e2e/google/complete,GET,server/src/app/api/auth/e2e/google/complete/route.ts,,,
+CE,/api/auth/e2e/google/token,POST,server/src/app/api/auth/e2e/google/token/route.ts,,,
+CE,/api/auth/e2e/google/userinfo,GET,server/src/app/api/auth/e2e/google/userinfo/route.ts,,,
+CE,/api/auth/google/calendar/callback,GET,server/src/app/api/auth/google/calendar/callback/route.ts,,,
 CE,/api/auth/google/callback,GET,server/src/app/api/auth/google/callback/route.ts,,,
+CE,/api/auth/microsoft/calendar/callback,GET,server/src/app/api/auth/microsoft/calendar/callback/route.ts,,,
 CE,/api/auth/microsoft/callback,GET,server/src/app/api/auth/microsoft/callback/route.ts,,,
+CE,/api/auth/microsoft/entra/callback,GET,server/src/app/api/auth/microsoft/entra/callback/route.ts,,,
+CE,/api/auth/msp/remember-email,POST,server/src/app/api/auth/msp/remember-email/route.ts,,,
+CE,/api/auth/msp/sso/discover,POST,server/src/app/api/auth/msp/sso/discover/route.ts,,,
+CE,/api/auth/msp/sso/resolve,POST,server/src/app/api/auth/msp/sso/resolve/route.ts,,,
 CE,/api/auth/session,GET,server/src/app/api/auth/session/route.ts,,,
+CE,/api/auth/sessions,DELETE GET,server/src/app/api/auth/sessions/route.ts,,,
+CE,/api/auth/sessions/all,GET,server/src/app/api/auth/sessions/all/route.ts,,,
+CE,/api/auth/sessions/{sessionId},DELETE,server/src/app/api/auth/sessions/[sessionId]/route.ts,,,
 CE,/api/auth/validate-api-key,POST,server/src/app/api/auth/validate-api-key/route.ts,,,
 CE,/api/auth/validate-token,POST,server/src/app/api/auth/validate-token/route.ts,,,
 CE,/api/auth/{nextauth},GET POST,server/src/app/api/auth/[...nextauth]/route.ts,,,
+CE,/api/billing/check-tenant,GET,server/src/app/api/billing/check-tenant/route.ts,,,
 CE,/api/billing/licence-count,GET POST,server/src/app/api/billing/licence-count/route.ts,,,
+CE,/api/calendar/appointment/{id},GET,server/src/app/api/calendar/appointment/[id]/route.ts,,,
+CE,/api/calendar/webhooks/google,GET OPTIONS POST,server/src/app/api/calendar/webhooks/google/route.ts,,,
+CE,/api/calendar/webhooks/microsoft,GET OPTIONS POST,server/src/app/api/calendar/webhooks/microsoft/route.ts,,,
 CE,/api/chat/stream/title,POST,server/src/app/api/chat/stream/title/route.ts,,,
 CE,/api/chat/stream/{slug},GET POST,server/src/app/api/chat/stream/[...slug]/route.ts,,,
+CE,/api/chat/v1/completions,POST,server/src/app/api/chat/v1/completions/route.ts,,,
+CE,/api/chat/v1/completions/stream,POST,server/src/app/api/chat/v1/completions/stream/route.ts,,,
+CE,/api/chat/v1/execute,POST,server/src/app/api/chat/v1/execute/route.ts,,,
+CE,/api/client-portal/domain-session,OPTIONS POST,server/src/app/api/client-portal/domain-session/route.ts,,,
+CE,/api/clients,GET,server/src/app/api/clients/route.ts,,,
 CE,/api/documents/download/{fileId},GET,server/src/app/api/documents/download/[fileId]/route.ts,,,
 CE,/api/documents/view/{fileId},GET,server/src/app/api/documents/view/[fileId]/route.ts,,,
+CE,/api/documents/{documentId}/content,GET,server/src/app/api/documents/[documentId]/content/route.ts,,,
 CE,/api/documents/{documentId}/download,GET,server/src/app/api/documents/[documentId]/download/route.ts,,,
+CE,/api/documents/{documentId}/preview,GET,server/src/app/api/documents/[documentId]/preview/route.ts,,,
+CE,/api/documents/{documentId}/thumbnail,GET,server/src/app/api/documents/[documentId]/thumbnail/route.ts,,,
+CE,/api/email/imap/reconnect,POST,server/src/app/api/email/imap/reconnect/route.ts,,,
+CE,/api/email/imap/resync,POST,server/src/app/api/email/imap/resync/route.ts,,,
+CE,/api/email/oauth/imap/callback,GET,server/src/app/api/email/oauth/imap/callback/route.ts,,,
+CE,/api/email/oauth/imap/initiate,POST,server/src/app/api/email/oauth/imap/initiate/route.ts,,,
 CE,/api/email/oauth/initiate,POST,server/src/app/api/email/oauth/initiate/route.ts,,,
 CE,/api/email/refresh-watch,POST,server/src/app/api/email/refresh-watch/route.ts,,,
-CE,/api/email/webhooks/google,OPTIONS POST,server/src/app/api/email/webhooks/google/route.ts,,,
-CE,/api/email/webhooks/microsoft,GET OPTIONS POST,server/src/app/api/email/webhooks/microsoft/route.ts,,,
+CE,/api/email/webhooks/google,POST,server/src/app/api/email/webhooks/google/route.ts,,,
+CE,/api/email/webhooks/imap,POST,server/src/app/api/email/webhooks/imap/route.ts,,,
+CE,/api/email/webhooks/microsoft,GET POST,server/src/app/api/email/webhooks/microsoft/route.ts,,,
+CE,/api/email/webhooks/resend,POST,server/src/app/api/email/webhooks/resend/route.ts,,,
 CE,/api/email/webhooks/test,POST,server/src/app/api/email/webhooks/test/route.ts,,,
-CE,/api/ext/{extensionId}/{path},DELETE GET PATCH POST PUT,server/src/app/api/ext/[extensionId]/[...path]/route.ts,AbortController,,
+CE,/api/ext-bundles/abort,POST,server/src/app/api/ext-bundles/abort/route.ts,,,
+CE,/api/ext-bundles/finalize,POST,server/src/app/api/ext-bundles/finalize/route.ts,,,
+CE,/api/ext-bundles/upload-proxy,POST,server/src/app/api/ext-bundles/upload-proxy/route.ts,,,
+CE,/api/ext-debug/stream,GET POST,server/src/app/api/ext-debug/stream/route.ts,,,
+CE,/api/ext-proxy/{extensionId}/{path},DELETE GET PATCH POST PUT,server/src/app/api/ext-proxy/[extensionId]/[[...path]]/route.ts,,,
+CE,/api/ext/{extensionId}/{path},DELETE GET OPTIONS PATCH POST PUT,server/src/app/api/ext/[extensionId]/[[...path]]/route.ts,AbortController,,
 CE,/api/extensions/softwareone/agreements,GET POST,server/src/app/api/extensions/softwareone/agreements/route.ts,,,
 CE,/api/extensions/softwareone/agreements/{id},GET,server/src/app/api/extensions/softwareone/agreements/[id]/route.ts,,,
 CE,/api/extensions/softwareone/statements,GET POST,server/src/app/api/extensions/softwareone/statements/route.ts,,,
@@ -32,13 +81,68 @@ CE,/api/extensions/{extensionId}/sync,POST,server/src/app/api/extensions/[extens
 CE,/api/files/{fileId}/download,GET,server/src/app/api/files/[fileId]/download/route.ts,,,
 CE,/api/health,GET,server/src/app/api/health/route.ts,,,
 CE,/api/healthz,GET,server/src/app/api/healthz/route.ts,,,
+CE,/api/import/approve,POST,server/src/app/api/import/approve/route.ts,,,
+CE,/api/import/details,GET,server/src/app/api/import/details/route.ts,,,
+CE,/api/import/history,GET,server/src/app/api/import/history/route.ts,,,
+CE,/api/import/mapping,GET,server/src/app/api/import/mapping/route.ts,,,
+CE,/api/import/preview,POST,server/src/app/api/import/preview/route.ts,,,
+CE,/api/import/sources,GET,server/src/app/api/import/sources/route.ts,,,
 CE,/api/installs/lookup-by-host,GET,server/src/app/api/installs/lookup-by-host/route.ts,,,
 CE,/api/installs/validate,GET,server/src/app/api/installs/validate/route.ts,,,
+CE,/api/integrations/entra,GET OPTIONS,server/src/app/api/integrations/entra/route.ts,,,
+CE,/api/integrations/entra/connect,OPTIONS POST,server/src/app/api/integrations/entra/connect/route.ts,,,
+CE,/api/integrations/entra/disconnect,OPTIONS POST,server/src/app/api/integrations/entra/disconnect/route.ts,,,
+CE,/api/integrations/entra/discovery,OPTIONS POST,server/src/app/api/integrations/entra/discovery/route.ts,,,
+CE,/api/integrations/entra/mappings/confirm,OPTIONS POST,server/src/app/api/integrations/entra/mappings/confirm/route.ts,,,
+CE,/api/integrations/entra/mappings/preview,GET OPTIONS,server/src/app/api/integrations/entra/mappings/preview/route.ts,,,
+CE,/api/integrations/entra/mappings/remap,OPTIONS POST,server/src/app/api/integrations/entra/mappings/remap/route.ts,,,
+CE,/api/integrations/entra/mappings/unmap,OPTIONS POST,server/src/app/api/integrations/entra/mappings/unmap/route.ts,,,
+CE,/api/integrations/entra/sync,OPTIONS POST,server/src/app/api/integrations/entra/sync/route.ts,,,
+CE,/api/integrations/entra/sync/runs,GET OPTIONS,server/src/app/api/integrations/entra/sync/runs/route.ts,,,
+CE,/api/integrations/entra/sync/runs/{runId},GET OPTIONS,server/src/app/api/integrations/entra/sync/runs/[runId]/route.ts,,,
+CE,/api/integrations/entra/validate-cipp,OPTIONS POST,server/src/app/api/integrations/entra/validate-cipp/route.ts,,,
+CE,/api/integrations/entra/validate-direct,OPTIONS POST,server/src/app/api/integrations/entra/validate-direct/route.ts,,,
+CE,/api/integrations/ninjaone/callback,GET,server/src/app/api/integrations/ninjaone/callback/route.ts,,,
 CE,/api/integrations/qbo/callback,GET,server/src/app/api/integrations/qbo/callback/route.ts,,,
 CE,/api/integrations/qbo/connect,GET,server/src/app/api/integrations/qbo/connect/route.ts,,,
-CE,/api/integrations/qbo/status,GET,server/src/app/api/integrations/qbo/status/route.ts,,,
+CE,/api/integrations/xero/callback,GET,server/src/app/api/integrations/xero/callback/route.ts,,,
+CE,/api/integrations/xero/connect,GET,server/src/app/api/integrations/xero/connect/route.ts,,,
+CE,/api/internal/check-tenant-email,POST,server/src/app/api/internal/check-tenant-email/route.ts,,,
+CE,/api/internal/ext-clients/install/{installId},POST,server/src/app/api/internal/ext-clients/install/[installId]/route.ts,,,
+CE,/api/internal/ext-invoicing/install/{installId},POST,server/src/app/api/internal/ext-invoicing/install/[installId]/route.ts,,,
+CE,/api/internal/ext-runner/install-config,POST,server/src/app/api/internal/ext-runner/install-config/route.ts,,,
+CE,/api/internal/ext-scheduler/install/{installId},POST,server/src/app/api/internal/ext-scheduler/install/[installId]/route.ts,,,
+CE,/api/internal/ext-services/install/{installId},POST,server/src/app/api/internal/ext-services/install/[installId]/route.ts,,,
+CE,/api/internal/ext-storage/install/{installId},POST,server/src/app/api/internal/ext-storage/install/[installId]/route.ts,,,
+CE,/api/projects,GET,server/src/app/api/projects/route.ts,,,
+CE,/api/projects/templates,GET POST,server/src/app/api/projects/templates/route.ts,,,
+CE,/api/projects/templates/categories,GET,server/src/app/api/projects/templates/categories/route.ts,,,
+CE,/api/projects/templates/{templateId},DELETE GET PATCH,server/src/app/api/projects/templates/[templateId]/route.ts,,,
+CE,/api/projects/templates/{templateId}/apply,POST,server/src/app/api/projects/templates/[templateId]/apply/route.ts,,,
+CE,/api/projects/templates/{templateId}/duplicate,POST,server/src/app/api/projects/templates/[templateId]/duplicate/route.ts,,,
+CE,/api/public/appointment-request,POST,server/src/app/api/public/appointment-request/route.ts,,,
+CE,/api/public/appointment-request/available-dates,GET,server/src/app/api/public/appointment-request/available-dates/route.ts,,,
+CE,/api/public/appointment-request/available-services,GET,server/src/app/api/public/appointment-request/available-services/route.ts,,,
+CE,/api/public/appointment-request/available-slots,GET,server/src/app/api/public/appointment-request/available-slots/route.ts,,,
 CE,/api/readyz,GET,server/src/app/api/readyz/route.ts,,,
+CE,/api/secrets,GET POST,server/src/app/api/secrets/route.ts,,,
+CE,/api/secrets/{name},DELETE GET HEAD PATCH,server/src/app/api/secrets/[name]/route.ts,,,
+CE,/api/share/{token},GET,server/src/app/api/share/[token]/route.ts,,,
+CE,/api/share/{token}/info,GET,server/src/app/api/share/[token]/info/route.ts,,,
+CE,/api/teams/auth/callback/bot,GET OPTIONS,server/src/app/api/teams/auth/callback/bot/route.ts,,,
+CE,/api/teams/auth/callback/message-extension,GET OPTIONS,server/src/app/api/teams/auth/callback/message-extension/route.ts,,,
+CE,/api/teams/auth/callback/tab,GET OPTIONS,server/src/app/api/teams/auth/callback/tab/route.ts,,,
+CE,/api/teams/bot/messages,OPTIONS POST,server/src/app/api/teams/bot/messages/route.ts,,,
+CE,/api/teams/message-extension/query,OPTIONS POST,server/src/app/api/teams/message-extension/query/route.ts,,,
+CE,/api/teams/package,GET OPTIONS POST,server/src/app/api/teams/package/route.ts,,,
+CE,/api/teams/package/download,GET OPTIONS,server/src/app/api/teams/package/download/route.ts,,,
+CE,/api/teams/quick-actions,OPTIONS POST,server/src/app/api/teams/quick-actions/route.ts,,,
+CE,/api/v1/accounting-exports/xero-csv/client-export,GET,server/src/app/api/v1/accounting-exports/xero-csv/client-export/route.ts,,,
+CE,/api/v1/accounting-exports/xero-csv/client-import,POST,server/src/app/api/v1/accounting-exports/xero-csv/client-import/route.ts,,,
+CE,/api/v1/accounting-exports/xero-csv/tax-import,POST,server/src/app/api/v1/accounting-exports/xero-csv/tax-import/route.ts,,,
+CE,/api/v1/accounting-exports/{batchId}/download,GET,server/src/app/api/v1/accounting-exports/[batchId]/download/route.ts,,,
 CE,/api/v1/admin/telemetry-settings,GET POST,server/src/app/api/v1/admin/telemetry-settings/route.ts,,,
+CE,/api/v1/ai/document-assist,POST,server/src/app/api/v1/ai/document-assist/route.ts,,,
 CE,/api/v1/assets,GET POST,server/src/app/api/v1/assets/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/bulk-status,PUT,server/src/app/api/v1/assets/bulk-status/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/bulk-update,PUT,server/src/app/api/v1/assets/bulk-update/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
@@ -53,7 +157,15 @@ CE,/api/v1/assets/{id}/documents,GET POST,server/src/app/api/v1/assets/[id]/docu
 CE,/api/v1/assets/{id}/history,GET,server/src/app/api/v1/assets/[id]/history/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/{id}/maintenance,GET POST,server/src/app/api/v1/assets/[id]/maintenance/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/{id}/maintenance/record,POST,server/src/app/api/v1/assets/[id]/maintenance/record/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
+CE,/api/v1/assets/{id}/notes,DELETE GET PUT,server/src/app/api/v1/assets/[id]/notes/route.ts,,,
 CE,/api/v1/assets/{id}/relationships,GET POST,server/src/app/api/v1/assets/[id]/relationships/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
+CE,/api/v1/assets/{id}/rmm,GET,server/src/app/api/v1/assets/[id]/rmm/route.ts,,,
+CE,/api/v1/assets/{id}/rmm/reboot,POST,server/src/app/api/v1/assets/[id]/rmm/reboot/route.ts,,,
+CE,/api/v1/assets/{id}/rmm/refresh,POST,server/src/app/api/v1/assets/[id]/rmm/refresh/route.ts,,,
+CE,/api/v1/assets/{id}/rmm/remote-control,GET,server/src/app/api/v1/assets/[id]/rmm/remote-control/route.ts,,,
+CE,/api/v1/assets/{id}/rmm/script,POST,server/src/app/api/v1/assets/[id]/rmm/script/route.ts,,,
+CE,/api/v1/assets/{id}/software,GET,server/src/app/api/v1/assets/[id]/software/route.ts,,,
+CE,/api/v1/assets/{id}/summary,GET,server/src/app/api/v1/assets/[id]/summary/route.ts,,,
 CE,/api/v1/automation/executions,GET,server/src/app/api/v1/automation/executions/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
 CE,/api/v1/automation/executions/{id},GET,server/src/app/api/v1/automation/executions/[id]/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
 CE,/api/v1/automation/executions/{id}/retry,POST,server/src/app/api/v1/automation/executions/[id]/retry/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
@@ -68,7 +180,37 @@ CE,/api/v1/automation/statistics,GET,server/src/app/api/v1/automation/statistics
 CE,/api/v1/automation/templates,GET POST,server/src/app/api/v1/automation/templates/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
 CE,/api/v1/automation/templates/{id},GET,server/src/app/api/v1/automation/templates/[id]/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
 CE,/api/v1/automation/templates/{id}/use,POST,server/src/app/api/v1/automation/templates/[id]/use/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
+CE,/api/v1/billing,GET,server/src/app/api/v1/billing/route.ts,,,
 CE,/api/v1/billing-analytics/overview,GET,server/src/app/api/v1/billing-analytics/overview/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
+CE,/api/v1/boards,GET POST,server/src/app/api/v1/boards/route.ts,ApiBoardController,@/lib/api/controllers/ApiBoardController,server/src/lib/api/controllers/ApiBoardController.ts
+CE,/api/v1/boards/{id},DELETE GET PUT,server/src/app/api/v1/boards/[id]/route.ts,ApiBoardController,@/lib/api/controllers/ApiBoardController,server/src/lib/api/controllers/ApiBoardController.ts
+CE,/api/v1/categories/analytics,GET,server/src/app/api/v1/categories/analytics/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
+CE,/api/v1/categories/bulk/delete,POST,server/src/app/api/v1/categories/bulk/delete/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
+CE,/api/v1/categories/search,GET,server/src/app/api/v1/categories/search/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
+CE,/api/v1/categories/service,GET POST,server/src/app/api/v1/categories/service/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
+CE,/api/v1/categories/service/{id},DELETE GET PUT,server/src/app/api/v1/categories/service/[id]/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
+CE,/api/v1/categories/ticket,GET POST,server/src/app/api/v1/categories/ticket/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
+CE,/api/v1/categories/ticket/move,POST,server/src/app/api/v1/categories/ticket/move/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
+CE,/api/v1/categories/ticket/tree,GET,server/src/app/api/v1/categories/ticket/tree/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
+CE,/api/v1/categories/ticket/tree/{boardId},GET,server/src/app/api/v1/categories/ticket/tree/[boardId]/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
+CE,/api/v1/categories/ticket/{id},DELETE GET PUT,server/src/app/api/v1/categories/ticket/[id]/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
+CE,/api/v1/client-contract-lines,GET POST,server/src/app/api/v1/client-contract-lines/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
+CE,/api/v1/client-contract-lines/{id},DELETE,server/src/app/api/v1/client-contract-lines/[id]/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
+CE,/api/v1/clients,GET POST,server/src/app/api/v1/clients/route.ts,ApiClientController,@/lib/api/controllers/ApiClientController,server/src/lib/api/controllers/ApiClientController.ts
+CE,/api/v1/clients/stats,GET,server/src/app/api/v1/clients/stats/route.ts,ApiClientController,@/lib/api/controllers/ApiClientController,server/src/lib/api/controllers/ApiClientController.ts
+CE,/api/v1/clients/{id},DELETE GET PUT,server/src/app/api/v1/clients/[id]/route.ts,ApiClientController,@/lib/api/controllers/ApiClientController,server/src/lib/api/controllers/ApiClientController.ts
+CE,/api/v1/clients/{id}/contacts,GET,server/src/app/api/v1/clients/[id]/contacts/route.ts,ApiClientController,@/lib/api/controllers/ApiClientController,server/src/lib/api/controllers/ApiClientController.ts
+CE,/api/v1/clients/{id}/locations,GET POST,server/src/app/api/v1/clients/[id]/locations/route.ts,ApiClientController,@/lib/api/controllers/ApiClientController,server/src/lib/api/controllers/ApiClientController.ts
+CE,/api/v1/comments,GET,server/src/app/api/v1/comments/route.ts,,,
+CE,/api/v1/company-contract-lines,GET POST,server/src/app/api/v1/company-contract-lines/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
+CE,/api/v1/company-contract-lines/{id},DELETE,server/src/app/api/v1/company-contract-lines/[id]/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
+CE,/api/v1/contacts,GET POST,server/src/app/api/v1/contacts/route.ts,ApiContactController,server/src/lib/api/controllers/ApiContactController,server/src/lib/api/controllers/ApiContactController.ts
+CE,/api/v1/contacts/export,GET,server/src/app/api/v1/contacts/export/route.ts,ApiContactController,server/src/lib/api/controllers/ApiContactController,server/src/lib/api/controllers/ApiContactController.ts
+CE,/api/v1/contacts/search,GET,server/src/app/api/v1/contacts/search/route.ts,ApiContactController,server/src/lib/api/controllers/ApiContactController,server/src/lib/api/controllers/ApiContactController.ts
+CE,/api/v1/contacts/stats,GET,server/src/app/api/v1/contacts/stats/route.ts,ApiContactController,server/src/lib/api/controllers/ApiContactController,server/src/lib/api/controllers/ApiContactController.ts
+CE,/api/v1/contacts/{id},DELETE GET PUT,server/src/app/api/v1/contacts/[id]/route.ts,ApiContactController,server/src/lib/api/controllers/ApiContactController,server/src/lib/api/controllers/ApiContactController.ts
+CE,/api/v1/contract-line-templates,POST,server/src/app/api/v1/contract-line-templates/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
+CE,/api/v1/contract-line-templates/{id}/create-contract-line,POST,server/src/app/api/v1/contract-line-templates/[id]/create-contract-line/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
 CE,/api/v1/contract-lines,GET POST,server/src/app/api/v1/contract-lines/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
 CE,/api/v1/contract-lines/bulk,DELETE POST PUT,server/src/app/api/v1/contract-lines/bulk/route.ts,ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
 CE,/api/v1/contract-lines/bulk/add-services,POST,server/src/app/api/v1/contract-lines/bulk/add-services/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
@@ -84,30 +226,16 @@ CE,/api/v1/contract-lines/{id}/fixed-config,GET PUT,server/src/app/api/v1/contra
 CE,/api/v1/contract-lines/{id}/services,GET POST,server/src/app/api/v1/contract-lines/[id]/services/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
 CE,/api/v1/contract-lines/{id}/services/{serviceId},DELETE GET PUT,server/src/app/api/v1/contract-lines/[id]/services/[serviceId]/route.ts,ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
 CE,/api/v1/contract-lines/{id}/usage-metrics,GET,server/src/app/api/v1/contract-lines/[id]/usage-metrics/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
-CE,/api/v1/categories/analytics,GET,server/src/app/api/v1/categories/analytics/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
-CE,/api/v1/categories/bulk/delete,POST,server/src/app/api/v1/categories/bulk/delete/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
-CE,/api/v1/categories/search,GET,server/src/app/api/v1/categories/search/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
-CE,/api/v1/categories/service,GET POST,server/src/app/api/v1/categories/service/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
-CE,/api/v1/categories/service/{id},DELETE GET PUT,server/src/app/api/v1/categories/service/[id]/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
-CE,/api/v1/categories/ticket,GET POST,server/src/app/api/v1/categories/ticket/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
-CE,/api/v1/categories/ticket/move,POST,server/src/app/api/v1/categories/ticket/move/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
-CE,/api/v1/categories/ticket/tree,GET,server/src/app/api/v1/categories/ticket/tree/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
-CE,/api/v1/categories/ticket/tree/{boardId},GET,server/src/app/api/v1/categories/ticket/tree/[boardId]/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
-CE,/api/v1/categories/ticket/{id},DELETE GET PUT,server/src/app/api/v1/categories/ticket/[id]/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
-CE,/api/v1/clients,GET POST,server/src/app/api/v1/clients/route.ts,ApiClientController,@/lib/api/controllers/ApiClientController,server/src/lib/api/controllers/ApiClientController.ts
-CE,/api/v1/clients/stats,GET,server/src/app/api/v1/clients/stats/route.ts,ApiClientController,@/lib/api/controllers/ApiClientController,server/src/lib/api/controllers/ApiClientController.ts
-CE,/api/v1/clients/{id},DELETE GET PUT,server/src/app/api/v1/clients/[id]/route.ts,ApiClientController,@/lib/api/controllers/ApiClientController,server/src/lib/api/controllers/ApiClientController.ts
-CE,/api/v1/clients/{id}/contacts,GET,server/src/app/api/v1/clients/[id]/contacts/route.ts,ApiClientController,@/lib/api/controllers/ApiClientController,server/src/lib/api/controllers/ApiClientController.ts
-CE,/api/v1/clients/{id}/locations,GET POST,server/src/app/api/v1/clients/[id]/locations/route.ts,ApiClientController,@/lib/api/controllers/ApiClientController,server/src/lib/api/controllers/ApiClientController.ts
-CE,/api/v1/client-contract-lines,GET POST,server/src/app/api/v1/client-contract-lines/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
-CE,/api/v1/client-contract-lines/{id},DELETE,server/src/app/api/v1/client-contract-lines/[id]/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
-CE,/api/v1/contacts,GET POST,server/src/app/api/v1/contacts/route.ts,ApiContactController,server/src/lib/api/controllers/ApiContactController,server/src/lib/api/controllers/ApiContactController.ts
-CE,/api/v1/contacts/export,GET,server/src/app/api/v1/contacts/export/route.ts,ApiContactController,server/src/lib/api/controllers/ApiContactController,server/src/lib/api/controllers/ApiContactController.ts
-CE,/api/v1/contacts/search,GET,server/src/app/api/v1/contacts/search/route.ts,ApiContactController,server/src/lib/api/controllers/ApiContactController,server/src/lib/api/controllers/ApiContactController.ts
-CE,/api/v1/contacts/stats,GET,server/src/app/api/v1/contacts/stats/route.ts,ApiContactController,server/src/lib/api/controllers/ApiContactController,server/src/lib/api/controllers/ApiContactController.ts
-CE,/api/v1/contacts/{id},DELETE GET PUT,server/src/app/api/v1/contacts/[id]/route.ts,ApiContactController,server/src/lib/api/controllers/ApiContactController,server/src/lib/api/controllers/ApiContactController.ts
+CE,/api/v1/contracts,GET POST,server/src/app/api/v1/contracts/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
+CE,/api/v1/contracts/{contractId}/contract-lines,POST,server/src/app/api/v1/contracts/[contractId]/contract-lines/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
+CE,/api/v1/contracts/{contractId}/contract-lines/{contractLineId},DELETE,server/src/app/api/v1/contracts/[contractId]/contract-lines/[contractLineId]/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
+CE,/api/v1/documents,GET,server/src/app/api/v1/documents/route.ts,,,
+CE,/api/v1/email,GET,server/src/app/api/v1/email/route.ts,,,
+CE,/api/v1/extensions/install,POST,server/src/app/api/v1/extensions/install/route.ts,,,
+CE,/api/v1/extensions/uninstall,POST,server/src/app/api/v1/extensions/uninstall/route.ts,,,
 CE,/api/v1/feature-access,POST,server/src/app/api/v1/feature-access/route.ts,ApiPermissionController,@/lib/api/controllers/ApiPermissionController,server/src/lib/api/controllers/ApiPermissionController.ts
 CE,/api/v1/feature-flags,GET POST,server/src/app/api/v1/feature-flags/route.ts,,,
+CE,/api/v1/financial,GET,server/src/app/api/v1/financial/route.ts,,,
 CE,/api/v1/financial/billing/calculate,POST,server/src/app/api/v1/financial/billing/calculate/route.ts,ApiFinancialController,server/src/lib/api/controllers/ApiFinancialController,server/src/lib/api/controllers/ApiFinancialController.ts
 CE,/api/v1/financial/billing/payment-terms,GET,server/src/app/api/v1/financial/billing/payment-terms/route.ts,ApiFinancialController,server/src/lib/api/controllers/ApiFinancialController,server/src/lib/api/controllers/ApiFinancialController.ts
 CE,/api/v1/financial/bulk/credits,POST,server/src/app/api/v1/financial/bulk/credits/route.ts,ApiFinancialController,server/src/lib/api/controllers/ApiFinancialController,server/src/lib/api/controllers/ApiFinancialController.ts
@@ -188,6 +316,14 @@ CE,/api/v1/invoices/{id}/reject,POST,server/src/app/api/v1/invoices/[id]/reject/
 CE,/api/v1/invoices/{id}/send,POST,server/src/app/api/v1/invoices/[id]/send/route.ts,ApiInvoiceController,server/src/lib/api/controllers/ApiInvoiceController,server/src/lib/api/controllers/ApiInvoiceController.ts
 CE,/api/v1/invoices/{id}/tax,POST,server/src/app/api/v1/invoices/[id]/tax/route.ts,ApiInvoiceController,server/src/lib/api/controllers/ApiInvoiceController,server/src/lib/api/controllers/ApiInvoiceController.ts
 CE,/api/v1/invoices/{id}/transactions,GET,server/src/app/api/v1/invoices/[id]/transactions/route.ts,ApiInvoiceController,server/src/lib/api/controllers/ApiInvoiceController,server/src/lib/api/controllers/ApiInvoiceController.ts
+CE,/api/v1/kb-articles,GET POST,server/src/app/api/v1/kb-articles/route.ts,ApiKbArticleController,@/lib/api/controllers/ApiKbArticleController,server/src/lib/api/controllers/ApiKbArticleController.ts
+CE,/api/v1/kb-articles/categories,GET,server/src/app/api/v1/kb-articles/categories/route.ts,ApiKbArticleController,@/lib/api/controllers/ApiKbArticleController,server/src/lib/api/controllers/ApiKbArticleController.ts
+CE,/api/v1/kb-articles/from-ticket/{ticketId},POST,server/src/app/api/v1/kb-articles/from-ticket/[ticketId]/route.ts,ApiKbArticleController,@/lib/api/controllers/ApiKbArticleController,server/src/lib/api/controllers/ApiKbArticleController.ts
+CE,/api/v1/kb-articles/templates,GET,server/src/app/api/v1/kb-articles/templates/route.ts,ApiKbArticleController,@/lib/api/controllers/ApiKbArticleController,server/src/lib/api/controllers/ApiKbArticleController.ts
+CE,/api/v1/kb-articles/{id},DELETE GET PUT,server/src/app/api/v1/kb-articles/[id]/route.ts,ApiKbArticleController,@/lib/api/controllers/ApiKbArticleController,server/src/lib/api/controllers/ApiKbArticleController.ts
+CE,/api/v1/kb-articles/{id}/archive,POST,server/src/app/api/v1/kb-articles/[id]/archive/route.ts,ApiKbArticleController,@/lib/api/controllers/ApiKbArticleController,server/src/lib/api/controllers/ApiKbArticleController.ts
+CE,/api/v1/kb-articles/{id}/content,GET PUT,server/src/app/api/v1/kb-articles/[id]/content/route.ts,ApiKbArticleController,@/lib/api/controllers/ApiKbArticleController,server/src/lib/api/controllers/ApiKbArticleController.ts
+CE,/api/v1/kb-articles/{id}/publish,POST,server/src/app/api/v1/kb-articles/[id]/publish/route.ts,ApiKbArticleController,@/lib/api/controllers/ApiKbArticleController,server/src/lib/api/controllers/ApiKbArticleController.ts
 CE,/api/v1/meta/docs,GET,server/src/app/api/v1/meta/docs/route.ts,ApiMetadataController,@/lib/api/controllers/ApiMetadataController,server/src/lib/api/controllers/ApiMetadataController.ts
 CE,/api/v1/meta/endpoints,GET,server/src/app/api/v1/meta/endpoints/route.ts,ApiMetadataController,@/lib/api/controllers/ApiMetadataController,server/src/lib/api/controllers/ApiMetadataController.ts
 CE,/api/v1/meta/health,GET,server/src/app/api/v1/meta/health/route.ts,ApiMetadataController,@/lib/api/controllers/ApiMetadataController,server/src/lib/api/controllers/ApiMetadataController.ts
@@ -196,16 +332,45 @@ CE,/api/v1/meta/permissions,GET,server/src/app/api/v1/meta/permissions/route.ts,
 CE,/api/v1/meta/schemas,GET,server/src/app/api/v1/meta/schemas/route.ts,ApiMetadataController,@/lib/api/controllers/ApiMetadataController,server/src/lib/api/controllers/ApiMetadataController.ts
 CE,/api/v1/meta/sdk,GET,server/src/app/api/v1/meta/sdk/route.ts,ApiMetadataController,@/lib/api/controllers/ApiMetadataController,server/src/lib/api/controllers/ApiMetadataController.ts
 CE,/api/v1/meta/stats,GET,server/src/app/api/v1/meta/stats/route.ts,ApiMetadataController,@/lib/api/controllers/ApiMetadataController,server/src/lib/api/controllers/ApiMetadataController.ts
+CE,/api/v1/mobile/account/delete,POST,server/src/app/api/v1/mobile/account/delete/route.ts,,,
+CE,/api/v1/mobile/auth/apple,POST,server/src/app/api/v1/mobile/auth/apple/route.ts,,,
+CE,/api/v1/mobile/auth/apple/link,DELETE GET POST,server/src/app/api/v1/mobile/auth/apple/link/route.ts,,,
+CE,/api/v1/mobile/auth/apple/notifications,POST,server/src/app/api/v1/mobile/auth/apple/notifications/route.ts,,,
+CE,/api/v1/mobile/auth/capabilities,GET,server/src/app/api/v1/mobile/auth/capabilities/route.ts,,,
+CE,/api/v1/mobile/auth/exchange,POST,server/src/app/api/v1/mobile/auth/exchange/route.ts,,,
+CE,/api/v1/mobile/auth/refresh,POST,server/src/app/api/v1/mobile/auth/refresh/route.ts,,,
+CE,/api/v1/mobile/auth/revoke,POST,server/src/app/api/v1/mobile/auth/revoke/route.ts,,,
+CE,/api/v1/mobile/iap/check-email,POST,server/src/app/api/v1/mobile/iap/check-email/route.ts,,,
+CE,/api/v1/mobile/iap/notifications,POST,server/src/app/api/v1/mobile/iap/notifications/route.ts,,,
+CE,/api/v1/mobile/iap/provision,POST,server/src/app/api/v1/mobile/iap/provision/route.ts,,,
+CE,/api/v1/mobile/iap/restore,POST,server/src/app/api/v1/mobile/iap/restore/route.ts,,,
+CE,/api/v1/mobile/moderation/mutes,GET POST,server/src/app/api/v1/mobile/moderation/mutes/route.ts,,,
+CE,/api/v1/mobile/moderation/mutes/{userId},DELETE,server/src/app/api/v1/mobile/moderation/mutes/[userId]/route.ts,,,
+CE,/api/v1/mobile/moderation/report,POST,server/src/app/api/v1/mobile/moderation/report/route.ts,,,
+CE,/api/v1/mobile/push-token,DELETE PUT,server/src/app/api/v1/mobile/push-token/route.ts,,,
 CE,/api/v1/permission-checks,POST,server/src/app/api/v1/permission-checks/route.ts,ApiPermissionController,@/lib/api/controllers/ApiPermissionController,server/src/lib/api/controllers/ApiPermissionController.ts
 CE,/api/v1/permissions,GET POST,server/src/app/api/v1/permissions/route.ts,ApiPermissionController,@/lib/api/controllers/ApiPermissionController,server/src/lib/api/controllers/ApiPermissionController.ts
 CE,/api/v1/permissions/categories,GET,server/src/app/api/v1/permissions/categories/route.ts,ApiPermissionController,@/lib/api/controllers/ApiPermissionController,server/src/lib/api/controllers/ApiPermissionController.ts
 CE,/api/v1/permissions/{id},DELETE GET PUT,server/src/app/api/v1/permissions/[id]/route.ts,ApiPermissionController,@/lib/api/controllers/ApiPermissionController,server/src/lib/api/controllers/ApiPermissionController.ts
 CE,/api/v1/permissions/{id}/roles,GET,server/src/app/api/v1/permissions/[id]/roles/route.ts,ApiPermissionController,@/lib/api/controllers/ApiPermissionController,server/src/lib/api/controllers/ApiPermissionController.ts
-CE,/api/v1/contracts,GET POST,server/src/app/api/v1/contracts/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractController,server/src/lib/api/controllers/ApiContractLineController.ts
-CE,/api/v1/contracts/{contractId}/contract-lines,POST,server/src/app/api/v1/contracts/[contractId]/contract-lines/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
-CE,/api/v1/contracts/{contractId}/contract-lines/{contractLineId},DELETE,server/src/app/api/v1/contracts/[contractId]/contract-lines/[contractLineId]/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
-CE,/api/v1/contract-line-templates,POST,server/src/app/api/v1/contract-line-templates/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
-CE,/api/v1/contract-line-templates/{id}/create-contract-line,POST,server/src/app/api/v1/contract-line-templates/[id]/create-contract-line/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
+CE,/api/v1/platform-feature-flags,GET OPTIONS POST,server/src/app/api/v1/platform-feature-flags/route.ts,,,
+CE,/api/v1/platform-feature-flags/{flagId},DELETE GET OPTIONS PATCH POST,server/src/app/api/v1/platform-feature-flags/[flagId]/route.ts,,,
+CE,/api/v1/platform-feature-flags/{flagId}/tenants,OPTIONS POST,server/src/app/api/v1/platform-feature-flags/[flagId]/tenants/route.ts,,,
+CE,/api/v1/platform-notifications,GET OPTIONS POST,server/src/app/api/v1/platform-notifications/route.ts,,,
+CE,/api/v1/platform-notifications/resolve-recipients,OPTIONS POST,server/src/app/api/v1/platform-notifications/resolve-recipients/route.ts,,,
+CE,/api/v1/platform-notifications/{notificationId},DELETE GET OPTIONS POST PUT,server/src/app/api/v1/platform-notifications/[notificationId]/route.ts,,,
+CE,/api/v1/platform-notifications/{notificationId}/reads,GET OPTIONS,server/src/app/api/v1/platform-notifications/[notificationId]/reads/route.ts,,,
+CE,/api/v1/platform-notifications/{notificationId}/stats,GET OPTIONS,server/src/app/api/v1/platform-notifications/[notificationId]/stats/route.ts,,,
+CE,/api/v1/platform-reports,GET OPTIONS POST,server/src/app/api/v1/platform-reports/route.ts,,,
+CE,/api/v1/platform-reports/access,OPTIONS POST,server/src/app/api/v1/platform-reports/access/route.ts,,,
+CE,/api/v1/platform-reports/audit,GET OPTIONS,server/src/app/api/v1/platform-reports/audit/route.ts,,,
+CE,/api/v1/platform-reports/schema,GET OPTIONS,server/src/app/api/v1/platform-reports/schema/route.ts,,,
+CE,/api/v1/platform-reports/{reportId},DELETE GET OPTIONS POST PUT,server/src/app/api/v1/platform-reports/[reportId]/route.ts,,,
+CE,/api/v1/platform-reports/{reportId}/execute,OPTIONS POST,server/src/app/api/v1/platform-reports/[reportId]/execute/route.ts,,,
+CE,/api/v1/priorities,GET,server/src/app/api/v1/priorities/route.ts,ApiPriorityController,@/lib/api/controllers/ApiPriorityController,server/src/lib/api/controllers/ApiPriorityController.ts
+CE,/api/v1/priorities/{id},GET,server/src/app/api/v1/priorities/[id]/route.ts,ApiPriorityController,@/lib/api/controllers/ApiPriorityController,server/src/lib/api/controllers/ApiPriorityController.ts
+CE,/api/v1/products,GET POST,server/src/app/api/v1/products/route.ts,ApiProductController,@/lib/api/controllers/ApiProductController,server/src/lib/api/controllers/ApiProductController.ts
+CE,/api/v1/products/{id},DELETE GET PUT,server/src/app/api/v1/products/[id]/route.ts,ApiProductController,@/lib/api/controllers/ApiProductController,server/src/lib/api/controllers/ApiProductController.ts
 CE,/api/v1/projects,GET POST,server/src/app/api/v1/projects/route.ts,ApiProjectController,@/lib/api/controllers/ApiProjectController,server/src/lib/api/controllers/ApiProjectController.ts
 CE,/api/v1/projects/bulk-assign,PUT,server/src/app/api/v1/projects/bulk-assign/route.ts,ApiProjectController,@/lib/api/controllers/ApiProjectController,server/src/lib/api/controllers/ApiProjectController.ts
 CE,/api/v1/projects/bulk-status,PUT,server/src/app/api/v1/projects/bulk-status/route.ts,ApiProjectController,@/lib/api/controllers/ApiProjectController,server/src/lib/api/controllers/ApiProjectController.ts
@@ -218,7 +383,8 @@ CE,/api/v1/projects/tasks/{taskId}/checklist,GET POST,server/src/app/api/v1/proj
 CE,/api/v1/projects/{id},DELETE GET PUT,server/src/app/api/v1/projects/[id]/route.ts,ApiProjectController,@/lib/api/controllers/ApiProjectController,server/src/lib/api/controllers/ApiProjectController.ts
 CE,/api/v1/projects/{id}/phases,GET POST,server/src/app/api/v1/projects/[id]/phases/route.ts,ApiProjectController,@/lib/api/controllers/ApiProjectController,server/src/lib/api/controllers/ApiProjectController.ts
 CE,/api/v1/projects/{id}/phases/{phaseId},DELETE PUT,server/src/app/api/v1/projects/[id]/phases/[phaseId]/route.ts,ApiProjectController,@/lib/api/controllers/ApiProjectController,server/src/lib/api/controllers/ApiProjectController.ts
-CE,/api/v1/projects/{id}/phases/{phaseId}/tasks,GET,server/src/app/api/v1/projects/[id]/phases/[phaseId]/tasks/route.ts,ApiProjectController,@/lib/api/controllers/ApiProjectController,server/src/lib/api/controllers/ApiProjectController.ts
+CE,/api/v1/projects/{id}/phases/{phaseId}/tasks,GET POST,server/src/app/api/v1/projects/[id]/phases/[phaseId]/tasks/route.ts,ApiProjectController,@/lib/api/controllers/ApiProjectController,server/src/lib/api/controllers/ApiProjectController.ts
+CE,/api/v1/projects/{id}/task-status-mappings,GET,server/src/app/api/v1/projects/[id]/task-status-mappings/route.ts,ApiProjectController,@/lib/api/controllers/ApiProjectController,server/src/lib/api/controllers/ApiProjectController.ts
 CE,/api/v1/projects/{id}/tasks,GET,server/src/app/api/v1/projects/[id]/tasks/route.ts,ApiProjectController,@/lib/api/controllers/ApiProjectController,server/src/lib/api/controllers/ApiProjectController.ts
 CE,/api/v1/projects/{id}/tickets,GET,server/src/app/api/v1/projects/[id]/tickets/route.ts,ApiProjectController,@/lib/api/controllers/ApiProjectController,server/src/lib/api/controllers/ApiProjectController.ts
 CE,/api/v1/quickbooks/accounts,GET,server/src/app/api/v1/quickbooks/accounts/route.ts,ApiQuickBooksController,@/lib/api/controllers/ApiQuickBooksController,server/src/lib/api/controllers/ApiQuickBooksController.ts
@@ -252,6 +418,21 @@ CE,/api/v1/quickbooks/sync/{sync_id}/retry,POST,server/src/app/api/v1/quickbooks
 CE,/api/v1/quickbooks/tax-codes,GET,server/src/app/api/v1/quickbooks/tax-codes/route.ts,ApiQuickBooksController,@/lib/api/controllers/ApiQuickBooksController,server/src/lib/api/controllers/ApiQuickBooksController.ts
 CE,/api/v1/quickbooks/tax-codes/mappings,GET PUT,server/src/app/api/v1/quickbooks/tax-codes/mappings/route.ts,ApiQuickBooksController,@/lib/api/controllers/ApiQuickBooksController,server/src/lib/api/controllers/ApiQuickBooksController.ts
 CE,/api/v1/quickbooks/terms,GET,server/src/app/api/v1/quickbooks/terms/route.ts,ApiQuickBooksController,@/lib/api/controllers/ApiQuickBooksController,server/src/lib/api/controllers/ApiQuickBooksController.ts
+CE,/api/v1/quotes,GET POST,server/src/app/api/v1/quotes/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
+CE,/api/v1/quotes/{id},DELETE GET PUT,server/src/app/api/v1/quotes/[id]/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
+CE,/api/v1/quotes/{id}/activities,GET,server/src/app/api/v1/quotes/[id]/activities/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
+CE,/api/v1/quotes/{id}/approve,POST,server/src/app/api/v1/quotes/[id]/approve/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
+CE,/api/v1/quotes/{id}/convert,POST,server/src/app/api/v1/quotes/[id]/convert/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
+CE,/api/v1/quotes/{id}/convert/preview,GET,server/src/app/api/v1/quotes/[id]/convert/preview/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
+CE,/api/v1/quotes/{id}/items,GET POST,server/src/app/api/v1/quotes/[id]/items/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
+CE,/api/v1/quotes/{id}/items/reorder,POST,server/src/app/api/v1/quotes/[id]/items/reorder/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
+CE,/api/v1/quotes/{id}/items/{itemId},DELETE PUT,server/src/app/api/v1/quotes/[id]/items/[itemId]/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
+CE,/api/v1/quotes/{id}/remind,POST,server/src/app/api/v1/quotes/[id]/remind/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
+CE,/api/v1/quotes/{id}/request-changes,POST,server/src/app/api/v1/quotes/[id]/request-changes/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
+CE,/api/v1/quotes/{id}/resend,POST,server/src/app/api/v1/quotes/[id]/resend/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
+CE,/api/v1/quotes/{id}/revisions,GET POST,server/src/app/api/v1/quotes/[id]/revisions/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
+CE,/api/v1/quotes/{id}/send,POST,server/src/app/api/v1/quotes/[id]/send/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
+CE,/api/v1/quotes/{id}/submit-for-approval,POST,server/src/app/api/v1/quotes/[id]/submit-for-approval/route.ts,ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController,server/src/lib/api/controllers/ApiQuoteController.ts
 CE,/api/v1/rbac/analytics,GET,server/src/app/api/v1/rbac/analytics/route.ts,ApiRoleController,@/lib/api/controllers/ApiRoleController,server/src/lib/api/controllers/ApiRoleController.ts
 CE,/api/v1/rbac/audit,GET,server/src/app/api/v1/rbac/audit/route.ts,,,
 CE,/api/v1/roles,GET POST,server/src/app/api/v1/roles/route.ts,ApiRoleController,@/lib/api/controllers/ApiRoleController,server/src/lib/api/controllers/ApiRoleController.ts
@@ -264,6 +445,15 @@ CE,/api/v1/schedules,GET POST,server/src/app/api/v1/schedules/route.ts,ApiTimeSh
 CE,/api/v1/schedules/search,GET,server/src/app/api/v1/schedules/search/route.ts,ApiTimeSheetController,server/src/lib/api/controllers/ApiTimeSheetController,server/src/lib/api/controllers/ApiTimeSheetController.ts
 CE,/api/v1/schedules/{id},DELETE GET PUT,server/src/app/api/v1/schedules/[id]/route.ts,ApiTimeSheetController,server/src/lib/api/controllers/ApiTimeSheetController,server/src/lib/api/controllers/ApiTimeSheetController.ts
 CE,/api/v1/schedules/{id}/conflicts,GET,server/src/app/api/v1/schedules/[id]/conflicts/route.ts,ApiTimeSheetController,server/src/lib/api/controllers/ApiTimeSheetController,server/src/lib/api/controllers/ApiTimeSheetController.ts
+CE,/api/v1/service-types,GET,server/src/app/api/v1/service-types/route.ts,,,
+CE,/api/v1/service-types/{id},GET,server/src/app/api/v1/service-types/[id]/route.ts,,,
+CE,/api/v1/services,GET POST,server/src/app/api/v1/services/route.ts,ApiServiceController,@/lib/api/controllers/ApiServiceController,server/src/lib/api/controllers/ApiServiceController.ts
+CE,/api/v1/services/{id},DELETE GET PUT,server/src/app/api/v1/services/[id]/route.ts,ApiServiceController,@/lib/api/controllers/ApiServiceController,server/src/lib/api/controllers/ApiServiceController.ts
+CE,/api/v1/software/search,GET,server/src/app/api/v1/software/search/route.ts,,,
+CE,/api/v1/statuses,GET POST,server/src/app/api/v1/statuses/route.ts,ApiStatusController,@/lib/api/controllers/ApiStatusController,server/src/lib/api/controllers/ApiStatusController.ts
+CE,/api/v1/statuses/{id},DELETE GET PUT,server/src/app/api/v1/statuses/[id]/route.ts,ApiStatusController,@/lib/api/controllers/ApiStatusController,server/src/lib/api/controllers/ApiStatusController.ts
+CE,/api/v1/storage/namespaces/{namespace}/records,GET POST,server/src/app/api/v1/storage/namespaces/[namespace]/records/route.ts,,,
+CE,/api/v1/storage/namespaces/{namespace}/records/{key},DELETE GET PUT,server/src/app/api/v1/storage/namespaces/[namespace]/records/[key]/route.ts,,,
 CE,/api/v1/tags,GET POST,server/src/app/api/v1/tags/route.ts,ApiTagController,@/lib/api/controllers/ApiTagController,server/src/lib/api/controllers/ApiTagController.ts
 CE,/api/v1/tags/analytics,GET,server/src/app/api/v1/tags/analytics/route.ts,ApiTagController,@/lib/api/controllers/ApiTagController,server/src/lib/api/controllers/ApiTagController.ts
 CE,/api/v1/tags/bulk,DELETE POST,server/src/app/api/v1/tags/bulk/route.ts,ApiTagController,@/lib/api/controllers/ApiTagController,server/src/lib/api/controllers/ApiTagController.ts
@@ -292,15 +482,35 @@ CE,/api/v1/teams/{id}/members/{userId},DELETE,server/src/app/api/v1/teams/[id]/m
 CE,/api/v1/teams/{id}/permissions,GET POST,server/src/app/api/v1/teams/[id]/permissions/route.ts,ApiTeamController,@/lib/api/controllers/ApiTeamController,server/src/lib/api/controllers/ApiTeamController.ts
 CE,/api/v1/teams/{id}/permissions/{permissionId},DELETE,server/src/app/api/v1/teams/[id]/permissions/[permissionId]/route.ts,ApiTeamController,@/lib/api/controllers/ApiTeamController,server/src/lib/api/controllers/ApiTeamController.ts
 CE,/api/v1/teams/{id}/projects,GET,server/src/app/api/v1/teams/[id]/projects/route.ts,ApiTeamController,@/lib/api/controllers/ApiTeamController,server/src/lib/api/controllers/ApiTeamController.ts
+CE,/api/v1/tenant-management/audit,GET,server/src/app/api/v1/tenant-management/audit/route.ts,,,
+CE,/api/v1/tenant-management/confirm-deletion,POST,server/src/app/api/v1/tenant-management/confirm-deletion/route.ts,,,
+CE,/api/v1/tenant-management/create-tenant,POST,server/src/app/api/v1/tenant-management/create-tenant/route.ts,,,
+CE,/api/v1/tenant-management/export-tenant,POST,server/src/app/api/v1/tenant-management/export-tenant/route.ts,,,
+CE,/api/v1/tenant-management/exports,GET,server/src/app/api/v1/tenant-management/exports/route.ts,,,
+CE,/api/v1/tenant-management/exports/{exportId}/download-url,POST,server/src/app/api/v1/tenant-management/exports/[exportId]/download-url/route.ts,,,
+CE,/api/v1/tenant-management/pending-deletions,GET,server/src/app/api/v1/tenant-management/pending-deletions/route.ts,,,
+CE,/api/v1/tenant-management/resend-welcome-email,POST,server/src/app/api/v1/tenant-management/resend-welcome-email/route.ts,,,
+CE,/api/v1/tenant-management/rollback-deletion,POST,server/src/app/api/v1/tenant-management/rollback-deletion/route.ts,,,
+CE,/api/v1/tenant-management/start-deletion,POST,server/src/app/api/v1/tenant-management/start-deletion/route.ts,,,
+CE,/api/v1/tenant-management/start-premium-trial,POST,server/src/app/api/v1/tenant-management/start-premium-trial/route.ts,,,
+CE,/api/v1/tenant-management/tenants,GET,server/src/app/api/v1/tenant-management/tenants/route.ts,,,
 CE,/api/v1/test-auth,GET,server/src/app/api/v1/test-auth/route.ts,,,
 CE,/api/v1/tickets,GET POST,server/src/app/api/v1/tickets/route.ts,ApiTicketController,@/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
-CE,/api/v1/tickets/from-asset,POST,server/src/app/api/v1/tickets/from-asset/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
+CE,/api/v1/tickets/from-asset,GET POST,server/src/app/api/v1/tickets/from-asset/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
+CE,/api/v1/tickets/priorities,GET,server/src/app/api/v1/tickets/priorities/route.ts,,,
 CE,/api/v1/tickets/search,GET,server/src/app/api/v1/tickets/search/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
 CE,/api/v1/tickets/stats,GET,server/src/app/api/v1/tickets/stats/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
+CE,/api/v1/tickets/statuses,GET,server/src/app/api/v1/tickets/statuses/route.ts,,,
 CE,/api/v1/tickets/{id},DELETE GET PUT,server/src/app/api/v1/tickets/[id]/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
 CE,/api/v1/tickets/{id}/assignment,PUT,server/src/app/api/v1/tickets/[id]/assignment/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
 CE,/api/v1/tickets/{id}/comments,GET POST,server/src/app/api/v1/tickets/[id]/comments/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
+CE,/api/v1/tickets/{id}/comments/{commentId},PUT,server/src/app/api/v1/tickets/[id]/comments/[commentId]/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
+CE,/api/v1/tickets/{id}/comments/{commentId}/reactions,POST,server/src/app/api/v1/tickets/[id]/comments/[commentId]/reactions/route.ts,,,
+CE,/api/v1/tickets/{id}/documents,GET POST,server/src/app/api/v1/tickets/[id]/documents/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
+CE,/api/v1/tickets/{id}/documents/{documentId},DELETE GET,server/src/app/api/v1/tickets/[id]/documents/[documentId]/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
+CE,/api/v1/tickets/{id}/materials,GET POST,server/src/app/api/v1/tickets/[id]/materials/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
 CE,/api/v1/tickets/{id}/status,PUT,server/src/app/api/v1/tickets/[id]/status/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
+CE,/api/v1/tickets/{id}/time-entries,GET,server/src/app/api/v1/tickets/[id]/time-entries/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
 CE,/api/v1/time-entries,GET POST,server/src/app/api/v1/time-entries/route.ts,ApiTimeEntryController,@/lib/api/controllers/ApiTimeEntryController,server/src/lib/api/controllers/ApiTimeEntryController.ts
 CE,/api/v1/time-entries/active-session,GET,server/src/app/api/v1/time-entries/active-session/route.ts,ApiTimeEntryController,@/lib/api/controllers/ApiTimeEntryController,server/src/lib/api/controllers/ApiTimeEntryController.ts
 CE,/api/v1/time-entries/approve,POST,server/src/app/api/v1/time-entries/approve/route.ts,ApiTimeEntryController,@/lib/api/controllers/ApiTimeEntryController,server/src/lib/api/controllers/ApiTimeEntryController.ts
@@ -354,64 +564,141 @@ CE,/api/v1/users/{id}/teams,GET POST,server/src/app/api/v1/users/[id]/teams/rout
 CE,/api/v1/users/{id}/teams/{teamId},DELETE,server/src/app/api/v1/users/[id]/teams/[teamId]/route.ts,ApiUserController,@/lib/api/controllers/ApiUserController,server/src/lib/api/controllers/ApiUserController.ts
 CE,/api/v1/webhooks,GET POST,server/src/app/api/v1/webhooks/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
 CE,/api/v1/webhooks/analytics,GET,server/src/app/api/v1/webhooks/analytics/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
-CE,/api/v1/webhooks/bulk,POST,server/src/app/api/v1/webhooks/bulk/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
 CE,/api/v1/webhooks/events,GET,server/src/app/api/v1/webhooks/events/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
-CE,/api/v1/webhooks/events/trigger,POST,server/src/app/api/v1/webhooks/events/trigger/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
-CE,/api/v1/webhooks/export,GET,server/src/app/api/v1/webhooks/export/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
-CE,/api/v1/webhooks/filter/test,POST,server/src/app/api/v1/webhooks/filter/test/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
-CE,/api/v1/webhooks/health,GET,server/src/app/api/v1/webhooks/health/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
-CE,/api/v1/webhooks/search,GET,server/src/app/api/v1/webhooks/search/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
-CE,/api/v1/webhooks/subscriptions,GET POST,server/src/app/api/v1/webhooks/subscriptions/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
 CE,/api/v1/webhooks/templates,GET POST,server/src/app/api/v1/webhooks/templates/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
 CE,/api/v1/webhooks/templates/{id},DELETE GET PUT,server/src/app/api/v1/webhooks/templates/[id]/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
 CE,/api/v1/webhooks/templates/{id}/create,POST,server/src/app/api/v1/webhooks/templates/[id]/create/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
 CE,/api/v1/webhooks/test,POST,server/src/app/api/v1/webhooks/test/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
-CE,/api/v1/webhooks/transform/test,POST,server/src/app/api/v1/webhooks/transform/test/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
-CE,/api/v1/webhooks/validate,POST,server/src/app/api/v1/webhooks/validate/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
 CE,/api/v1/webhooks/verify,POST,server/src/app/api/v1/webhooks/verify/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
 CE,/api/v1/webhooks/{id},DELETE GET PUT,server/src/app/api/v1/webhooks/[id]/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
 CE,/api/v1/webhooks/{id}/analytics,GET,server/src/app/api/v1/webhooks/[id]/analytics/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
 CE,/api/v1/webhooks/{id}/deliveries,GET,server/src/app/api/v1/webhooks/[id]/deliveries/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
 CE,/api/v1/webhooks/{id}/deliveries/{delivery_id},GET,server/src/app/api/v1/webhooks/[id]/deliveries/[delivery_id]/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
 CE,/api/v1/webhooks/{id}/deliveries/{delivery_id}/retry,POST,server/src/app/api/v1/webhooks/[id]/deliveries/[delivery_id]/retry/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
-CE,/api/v1/webhooks/{id}/filter/test,POST,server/src/app/api/v1/webhooks/[id]/filter/test/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
 CE,/api/v1/webhooks/{id}/health,GET,server/src/app/api/v1/webhooks/[id]/health/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
 CE,/api/v1/webhooks/{id}/secret/rotate,POST,server/src/app/api/v1/webhooks/[id]/secret/rotate/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
-CE,/api/v1/webhooks/{id}/subscriptions,GET POST,server/src/app/api/v1/webhooks/[id]/subscriptions/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
+CE,/api/v1/webhooks/{id}/subscriptions,GET,server/src/app/api/v1/webhooks/[id]/subscriptions/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
 CE,/api/v1/webhooks/{id}/test,POST,server/src/app/api/v1/webhooks/[id]/test/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
-CE,/api/v1/webhooks/{id}/transform/test,POST,server/src/app/api/v1/webhooks/[id]/transform/test/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
-CE,/api/v1/webhooks/{id}/validate,POST,server/src/app/api/v1/webhooks/[id]/validate/route.ts,ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController,server/src/lib/api/controllers/ApiWebhookController.ts
-CE,/api/v1/workflows,GET POST,server/src/app/api/v1/workflows/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/analytics,GET,server/src/app/api/v1/workflows/analytics/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/events,GET POST,server/src/app/api/v1/workflows/events/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/events/{id},GET,server/src/app/api/v1/workflows/events/[id]/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/executions,GET POST,server/src/app/api/v1/workflows/executions/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/executions/bulk,POST,server/src/app/api/v1/workflows/executions/bulk/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/executions/bulk-action,POST,server/src/app/api/v1/workflows/executions/bulk-action/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/executions/{id},GET PUT,server/src/app/api/v1/workflows/executions/[id]/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/executions/{id}/cancel,POST,server/src/app/api/v1/workflows/executions/[id]/cancel/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/executions/{id}/pause,POST,server/src/app/api/v1/workflows/executions/[id]/pause/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/executions/{id}/restart,POST,server/src/app/api/v1/workflows/executions/[id]/restart/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/executions/{id}/resume,POST,server/src/app/api/v1/workflows/executions/[id]/resume/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/export,GET,server/src/app/api/v1/workflows/export/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/import,POST,server/src/app/api/v1/workflows/import/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/search,GET,server/src/app/api/v1/workflows/search/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/tasks,GET POST,server/src/app/api/v1/workflows/tasks/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/tasks/bulk-assign,POST,server/src/app/api/v1/workflows/tasks/bulk-assign/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/tasks/{id},GET PUT,server/src/app/api/v1/workflows/tasks/[id]/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/tasks/{id}/claim,POST,server/src/app/api/v1/workflows/tasks/[id]/claim/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/tasks/{id}/complete,POST,server/src/app/api/v1/workflows/tasks/[id]/complete/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/templates,GET POST,server/src/app/api/v1/workflows/templates/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/templates/{id},DELETE GET PUT,server/src/app/api/v1/workflows/templates/[id]/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-CE,/api/v1/workflows/{id},DELETE GET PUT,server/src/app/api/v1/workflows/[id]/route.ts,ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController,server/src/lib/api/controllers/ApiWorkflowController.ts
-EE,/api/ext-contracts/abort,POST,ee/server/src/app/api/ext-contracts/abort/route.ts,,,
-EE,/api/ext-contracts/finalize,POST,ee/server/src/app/api/ext-contracts/finalize/route.ts,,,
-EE,/api/ext-contracts/upload-proxy,POST,ee/server/src/app/api/ext-contracts/upload-proxy/route.ts,,,
-EE,/api/ext/{extensionId}/{path},DELETE GET PATCH POST PUT,ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts,AbortController,,
+CE,/api/v1/workflows,GET,server/src/app/api/v1/workflows/route.ts,,,
+CE,/api/webhooks/ninjaone,GET OPTIONS POST,server/src/app/api/webhooks/ninjaone/route.ts,,,
+CE,/api/webhooks/stripe,POST,server/src/app/api/webhooks/stripe/route.ts,,,
+CE,/api/webhooks/stripe/payments,POST,server/src/app/api/webhooks/stripe/payments/route.ts,,,
+CE,/api/webhooks/tacticalrmm,OPTIONS POST,server/src/app/api/webhooks/tacticalrmm/route.ts,,,
+CE,/api/workflow-definitions,GET POST,server/src/app/api/workflow-definitions/route.ts,,,
+CE,/api/workflow-definitions/import,POST,server/src/app/api/workflow-definitions/import/route.ts,,,
+CE,/api/workflow-definitions/{workflowId}/audit,GET,server/src/app/api/workflow-definitions/[workflowId]/audit/route.ts,,,
+CE,/api/workflow-definitions/{workflowId}/audit/export,GET,server/src/app/api/workflow-definitions/[workflowId]/audit/export/route.ts,,,
+CE,/api/workflow-definitions/{workflowId}/export,GET,server/src/app/api/workflow-definitions/[workflowId]/export/route.ts,,,
+CE,/api/workflow-definitions/{workflowId}/metadata,PUT,server/src/app/api/workflow-definitions/[workflowId]/metadata/route.ts,,,
+CE,/api/workflow-definitions/{workflowId}/versions,GET,server/src/app/api/workflow-definitions/[workflowId]/versions/route.ts,,,
+CE,/api/workflow-definitions/{workflowId}/{version},GET PUT,server/src/app/api/workflow-definitions/[workflowId]/[version]/route.ts,,,
+CE,/api/workflow-definitions/{workflowId}/{version}/publish,POST,server/src/app/api/workflow-definitions/[workflowId]/[version]/publish/route.ts,,,
+CE,/api/workflow-runs,GET POST,server/src/app/api/workflow-runs/route.ts,,,
+CE,/api/workflow-runs/dead-letter,GET,server/src/app/api/workflow-runs/dead-letter/route.ts,,,
+CE,/api/workflow-runs/export,GET,server/src/app/api/workflow-runs/export/route.ts,,,
+CE,/api/workflow-runs/latest,GET,server/src/app/api/workflow-runs/latest/route.ts,,,
+CE,/api/workflow-runs/summary,GET,server/src/app/api/workflow-runs/summary/route.ts,,,
+CE,/api/workflow-runs/{runId},GET,server/src/app/api/workflow-runs/[runId]/route.ts,,,
+CE,/api/workflow-runs/{runId}/audit,GET,server/src/app/api/workflow-runs/[runId]/audit/route.ts,,,
+CE,/api/workflow-runs/{runId}/audit/export,GET,server/src/app/api/workflow-runs/[runId]/audit/export/route.ts,,,
+CE,/api/workflow-runs/{runId}/cancel,POST,server/src/app/api/workflow-runs/[runId]/cancel/route.ts,,,
+CE,/api/workflow-runs/{runId}/export,GET,server/src/app/api/workflow-runs/[runId]/export/route.ts,,,
+CE,/api/workflow-runs/{runId}/replay,POST,server/src/app/api/workflow-runs/[runId]/replay/route.ts,,,
+CE,/api/workflow-runs/{runId}/requeue,POST,server/src/app/api/workflow-runs/[runId]/requeue/route.ts,,,
+CE,/api/workflow-runs/{runId}/resume,POST,server/src/app/api/workflow-runs/[runId]/resume/route.ts,,,
+CE,/api/workflow-runs/{runId}/retry,POST,server/src/app/api/workflow-runs/[runId]/retry/route.ts,,,
+CE,/api/workflow-runs/{runId}/steps,GET,server/src/app/api/workflow-runs/[runId]/steps/route.ts,,,
+CE,/api/workflow-runs/{runId}/summary,GET,server/src/app/api/workflow-runs/[runId]/summary/route.ts,,,
+CE,/api/workflow-runs/{runId}/timeline,GET,server/src/app/api/workflow-runs/[runId]/timeline/route.ts,,,
+CE,/api/workflow/events,GET POST,server/src/app/api/workflow/events/route.ts,,,
+CE,/api/workflow/events/export,GET,server/src/app/api/workflow/events/export/route.ts,,,
+CE,/api/workflow/events/summary,GET,server/src/app/api/workflow/events/summary/route.ts,,,
+CE,/api/workflow/events/{eventId},GET,server/src/app/api/workflow/events/[eventId]/route.ts,,,
+CE,/api/workflow/registry/actions,GET,server/src/app/api/workflow/registry/actions/route.ts,,,
+CE,/api/workflow/registry/designer-catalog,GET,server/src/app/api/workflow/registry/designer-catalog/route.ts,,,
+CE,/api/workflow/registry/nodes,GET,server/src/app/api/workflow/registry/nodes/route.ts,,,
+CE,/api/workflow/registry/schemas/{schemaRef},GET,server/src/app/api/workflow/registry/schemas/[schemaRef]/route.ts,,,
+EE,/api/auth/google/calendar/callback,GET,ee/server/src/app/api/auth/google/calendar/callback/route.ts,,,
+EE,/api/auth/microsoft/calendar/callback,GET,ee/server/src/app/api/auth/microsoft/calendar/callback/route.ts,,,
+EE,/api/auth/microsoft/entra/callback,GET,ee/server/src/app/api/auth/microsoft/entra/callback/route.ts,,,
+EE,/api/calendar/webhooks/google,GET OPTIONS POST,ee/server/src/app/api/calendar/webhooks/google/route.ts,,,
+EE,/api/calendar/webhooks/microsoft,GET OPTIONS POST,ee/server/src/app/api/calendar/webhooks/microsoft/route.ts,,,
+EE,/api/ext-bundles/abort,POST,ee/server/src/app/api/ext-bundles/abort/route.ts,,,
+EE,/api/ext-bundles/finalize,POST,ee/server/src/app/api/ext-bundles/finalize/route.ts,,,
+EE,/api/ext-bundles/upload-proxy,POST,ee/server/src/app/api/ext-bundles/upload-proxy/route.ts,,,
+EE,/api/ext-debug/stream,GET,ee/server/src/app/api/ext-debug/stream/route.ts,,,
+EE,/api/ext-storage/install/{installId}/{namespace}/records,GET POST,ee/server/src/app/api/ext-storage/install/[installId]/[namespace]/records/route.ts,,,
+EE,/api/ext-storage/install/{installId}/{namespace}/records/{key},DELETE GET PUT,ee/server/src/app/api/ext-storage/install/[installId]/[namespace]/records/[key]/route.ts,,,
 EE,/api/extensions/install-info,GET,ee/server/src/app/api/extensions/install-info/route.ts,,,
 EE,/api/extensions/registry-db-check,GET,ee/server/src/app/api/extensions/registry-db-check/route.ts,,,
 EE,/api/extensions/reprovision,POST,ee/server/src/app/api/extensions/reprovision/route.ts,,,
+EE,/api/extensions/{registryId}/endpoints,GET,ee/server/src/app/api/extensions/[registryId]/endpoints/route.ts,,,
+EE,/api/extensions/{registryId}/schedules,GET POST,ee/server/src/app/api/extensions/[registryId]/schedules/route.ts,,,
+EE,/api/extensions/{registryId}/schedules/{scheduleId},DELETE GET PATCH,ee/server/src/app/api/extensions/[registryId]/schedules/[scheduleId]/route.ts,,,
+EE,/api/extensions/{registryId}/schedules/{scheduleId}/run-now,POST,ee/server/src/app/api/extensions/[registryId]/schedules/[scheduleId]/run-now/route.ts,,,
 EE,/api/installs/lookup-by-host,GET,ee/server/src/app/api/installs/lookup-by-host/route.ts,,,
 EE,/api/installs/validate,GET,ee/server/src/app/api/installs/validate/route.ts,,,
+EE,/api/integrations/entra,GET,ee/server/src/app/api/integrations/entra/route.ts,,,
+EE,/api/integrations/entra/connect,POST,ee/server/src/app/api/integrations/entra/connect/route.ts,,,
+EE,/api/integrations/entra/disconnect,POST,ee/server/src/app/api/integrations/entra/disconnect/route.ts,,,
+EE,/api/integrations/entra/discovery,POST,ee/server/src/app/api/integrations/entra/discovery/route.ts,,,
+EE,/api/integrations/entra/mappings/confirm,POST,ee/server/src/app/api/integrations/entra/mappings/confirm/route.ts,,,
+EE,/api/integrations/entra/mappings/preview,GET,ee/server/src/app/api/integrations/entra/mappings/preview/route.ts,,,
+EE,/api/integrations/entra/mappings/remap,POST,ee/server/src/app/api/integrations/entra/mappings/remap/route.ts,,,
+EE,/api/integrations/entra/mappings/unmap,POST,ee/server/src/app/api/integrations/entra/mappings/unmap/route.ts,,,
+EE,/api/integrations/entra/reconciliation-queue,GET,ee/server/src/app/api/integrations/entra/reconciliation-queue/route.ts,,,
+EE,/api/integrations/entra/reconciliation-queue/resolve-existing,POST,ee/server/src/app/api/integrations/entra/reconciliation-queue/resolve-existing/route.ts,,,
+EE,/api/integrations/entra/reconciliation-queue/resolve-new,POST,ee/server/src/app/api/integrations/entra/reconciliation-queue/resolve-new/route.ts,,,
+EE,/api/integrations/entra/sync,POST,ee/server/src/app/api/integrations/entra/sync/route.ts,,,
+EE,/api/integrations/entra/sync/runs,GET,ee/server/src/app/api/integrations/entra/sync/runs/route.ts,,,
+EE,/api/integrations/entra/sync/runs/{runId},GET,ee/server/src/app/api/integrations/entra/sync/runs/[runId]/route.ts,,,
+EE,/api/integrations/entra/validate-cipp,POST,ee/server/src/app/api/integrations/entra/validate-cipp/route.ts,,,
+EE,/api/integrations/entra/validate-direct,POST,ee/server/src/app/api/integrations/entra/validate-direct/route.ts,,,
+EE,/api/integrations/ninjaone/callback,GET,ee/server/src/app/api/integrations/ninjaone/callback/route.ts,,,
+EE,/api/internal/ext-clients/install/{installId},POST,ee/server/src/app/api/internal/ext-clients/install/[installId]/route.ts,,,
+EE,/api/internal/ext-invoicing/install/{installId},POST,ee/server/src/app/api/internal/ext-invoicing/install/[installId]/route.ts,,,
+EE,/api/internal/ext-runner/install-config,POST,ee/server/src/app/api/internal/ext-runner/install-config/route.ts,,,
+EE,/api/internal/ext-scheduler/install/{installId},POST,ee/server/src/app/api/internal/ext-scheduler/install/[installId]/route.ts,,,
+EE,/api/internal/ext-services/install/{installId},POST,ee/server/src/app/api/internal/ext-services/install/[installId]/route.ts,,,
+EE,/api/internal/ext-storage/install/{installId},POST,ee/server/src/app/api/internal/ext-storage/install/[installId]/route.ts,,,
 EE,/api/provisioning/tenants,POST,ee/server/src/app/api/provisioning/tenants/route.ts,,,
+EE,/api/teams/auth/callback/bot,GET,ee/server/src/app/api/teams/auth/callback/bot/route.ts,,,
+EE,/api/teams/auth/callback/message-extension,GET,ee/server/src/app/api/teams/auth/callback/message-extension/route.ts,,,
+EE,/api/teams/auth/callback/tab,GET,ee/server/src/app/api/teams/auth/callback/tab/route.ts,,,
+EE,/api/teams/bot/messages,POST,ee/server/src/app/api/teams/bot/messages/route.ts,,,
+EE,/api/teams/message-extension/query,POST,ee/server/src/app/api/teams/message-extension/query/route.ts,,,
+EE,/api/teams/package,GET OPTIONS POST,ee/server/src/app/api/teams/package/route.ts,,,
+EE,/api/teams/package/download,GET OPTIONS,ee/server/src/app/api/teams/package/download/route.ts,,,
+EE,/api/teams/quick-actions,POST,ee/server/src/app/api/teams/quick-actions/route.ts,,,
 EE,/api/v1/auth/verify,POST,ee/server/src/app/api/v1/auth/verify/route.ts,,,
+EE,/api/v1/extensions/install,POST,ee/server/src/app/api/v1/extensions/install/route.ts,,,
+EE,/api/v1/extensions/uninstall,POST,ee/server/src/app/api/v1/extensions/uninstall/route.ts,,,
+EE,/api/v1/extensions/update,POST,ee/server/src/app/api/v1/extensions/update/route.ts,,,
+EE,/api/v1/platform-feature-flags,GET OPTIONS POST,ee/server/src/app/api/v1/platform-feature-flags/route.ts,,,
+EE,/api/v1/platform-feature-flags/{flagId},DELETE GET OPTIONS PATCH POST,ee/server/src/app/api/v1/platform-feature-flags/[flagId]/route.ts,,,
+EE,/api/v1/platform-feature-flags/{flagId}/tenants,OPTIONS POST,ee/server/src/app/api/v1/platform-feature-flags/[flagId]/tenants/route.ts,,,
+EE,/api/v1/platform-notifications,GET POST,ee/server/src/app/api/v1/platform-notifications/route.ts,,,
+EE,/api/v1/platform-notifications/resolve-recipients,POST,ee/server/src/app/api/v1/platform-notifications/resolve-recipients/route.ts,,,
+EE,/api/v1/platform-notifications/{notificationId},DELETE GET POST PUT,ee/server/src/app/api/v1/platform-notifications/[notificationId]/route.ts,,,
+EE,/api/v1/platform-notifications/{notificationId}/reads,GET,ee/server/src/app/api/v1/platform-notifications/[notificationId]/reads/route.ts,,,
+EE,/api/v1/platform-notifications/{notificationId}/stats,GET,ee/server/src/app/api/v1/platform-notifications/[notificationId]/stats/route.ts,,,
+EE,/api/v1/platform-reports,GET POST,ee/server/src/app/api/v1/platform-reports/route.ts,,,
+EE,/api/v1/platform-reports/access,POST,ee/server/src/app/api/v1/platform-reports/access/route.ts,,,
+EE,/api/v1/platform-reports/audit,GET,ee/server/src/app/api/v1/platform-reports/audit/route.ts,,,
+EE,/api/v1/platform-reports/schema,GET,ee/server/src/app/api/v1/platform-reports/schema/route.ts,,,
+EE,/api/v1/platform-reports/{reportId},DELETE GET POST PUT,ee/server/src/app/api/v1/platform-reports/[reportId]/route.ts,,,
+EE,/api/v1/platform-reports/{reportId}/execute,POST,ee/server/src/app/api/v1/platform-reports/[reportId]/execute/route.ts,,,
+EE,/api/v1/tenant-management/audit,GET,ee/server/src/app/api/v1/tenant-management/audit/route.ts,,,
+EE,/api/v1/tenant-management/confirm-deletion,POST,ee/server/src/app/api/v1/tenant-management/confirm-deletion/route.ts,,,
+EE,/api/v1/tenant-management/create-tenant,POST,ee/server/src/app/api/v1/tenant-management/create-tenant/route.ts,,,
+EE,/api/v1/tenant-management/export-status,GET,ee/server/src/app/api/v1/tenant-management/export-status/route.ts,,,
+EE,/api/v1/tenant-management/export-tenant,POST,ee/server/src/app/api/v1/tenant-management/export-tenant/route.ts,,,
+EE,/api/v1/tenant-management/exports,GET,ee/server/src/app/api/v1/tenant-management/exports/route.ts,,,
+EE,/api/v1/tenant-management/exports/{exportId}/download-url,POST,ee/server/src/app/api/v1/tenant-management/exports/[exportId]/download-url/route.ts,,,
+EE,/api/v1/tenant-management/pending-deletions,GET,ee/server/src/app/api/v1/tenant-management/pending-deletions/route.ts,,,
+EE,/api/v1/tenant-management/resend-welcome-email,POST,ee/server/src/app/api/v1/tenant-management/resend-welcome-email/route.ts,,,
+EE,/api/v1/tenant-management/rollback-deletion,POST,ee/server/src/app/api/v1/tenant-management/rollback-deletion/route.ts,,,
+EE,/api/v1/tenant-management/start-deletion,POST,ee/server/src/app/api/v1/tenant-management/start-deletion/route.ts,,,
+EE,/api/v1/tenant-management/start-premium-trial,POST,ee/server/src/app/api/v1/tenant-management/start-premium-trial/route.ts,,,
+EE,/api/v1/tenant-management/tenants,GET,ee/server/src/app/api/v1/tenant-management/tenants/route.ts,,,
+EE,/api/webhooks/ninjaone,GET OPTIONS POST,ee/server/src/app/api/webhooks/ninjaone/route.ts,,,

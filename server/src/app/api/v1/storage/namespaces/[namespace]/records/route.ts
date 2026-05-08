@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getStorageServiceForTenant } from '@/lib/storage/api/factory';
 import type { StorageBulkPutRequest, StorageListRequest } from '@/lib/storage/api/types';
+import { appendRateLimitHeaders } from '@/lib/api/rateLimit/responseHeaders';
 import { ensureStoragePermission, mapStorageError, resolveStorageAuthContext } from '../../../utils';
 
 const listQuerySchema = z.object({
@@ -46,13 +47,13 @@ export async function GET(req: NextRequest, { params }: { params: { namespace: s
     };
 
     const result = await service.list(request);
-    return NextResponse.json(result, {
+    return appendRateLimitHeaders(NextResponse.json(result, {
       status: 200,
       headers: {
         'Cache-Control': 'no-store',
         Vary: 'authorization,x-api-key',
       },
-    });
+    }), req as any);
   } catch (error) {
     return mapStorageError(error);
   }
@@ -71,13 +72,13 @@ export async function POST(req: NextRequest, { params }: { params: { namespace: 
     };
 
     const result = await service.bulkPut(request);
-    return NextResponse.json(result, {
+    return appendRateLimitHeaders(NextResponse.json(result, {
       status: 200,
       headers: {
         'Cache-Control': 'no-store',
         Vary: 'authorization,x-api-key',
       },
-    });
+    }), req as any);
   } catch (error) {
     return mapStorageError(error);
   }

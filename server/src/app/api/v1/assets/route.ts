@@ -3,21 +3,27 @@
  * Path: /api/v1/assets
  */
 
-import { NextRequest } from 'next/server';
 import { ApiAssetController } from '@/lib/api/controllers/ApiAssetController';
-import { withApiKeyAuth } from '@/lib/api/middleware/apiAuthMiddleware';
+import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
+import { withApiKeyRouteAuth } from '@/lib/api/middleware/withApiKeyRouteAuth';
 
 const controller = new ApiAssetController();
 
-export async function GET(request: NextRequest) {
-  const handler = await withApiKeyAuth(async (req) => controller.list(req as any));
-  return handler(request);
-}
+export const GET = withApiKeyRouteAuth(async (request) => {
+  try {
+    return await controller.list(request as any);
+  } catch (error) {
+    return handleApiError(error);
+  }
+});
 
-export async function POST(request: NextRequest) {
-  const handler = await withApiKeyAuth(async (req) => controller.create(req as any));
-  return handler(request);
-}
+export const POST = withApiKeyRouteAuth(async (request) => {
+  try {
+    return await controller.create(request as any);
+  } catch (error) {
+    return handleApiError(error);
+  }
+});
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

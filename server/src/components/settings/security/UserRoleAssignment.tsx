@@ -8,7 +8,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@alga-psa/ui/components/Card';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
-import { assignRoleToUser, removeRoleFromUser, getRoles, getUserRoles } from '@alga-psa/auth/actions';
+import { assignRoleToUser, removeRoleFromUser, getRoles, getUserRoles, getUserRolesBatch } from '@alga-psa/auth/actions';
 import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import type { IRole, IUserWithRoles } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -46,10 +46,12 @@ export default function UserRoleAssignment() {
     try {
       const fetchedUsers = await getAllUsers();
       setUsers(fetchedUsers);
-      // Fetch roles for each user
-      fetchedUsers.forEach(user => {
-        fetchUserRoles(user.user_id);
-      });
+      if (fetchedUsers.length > 0) {
+        const rolesByUser = await getUserRolesBatch(fetchedUsers.map(u => u.user_id));
+        setUserRoles(rolesByUser);
+      } else {
+        setUserRoles({});
+      }
     } catch (error) {
       console.error('Error fetching users:', error);
     }

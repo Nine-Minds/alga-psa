@@ -6,8 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
-import { findUserByIdForApi } from '@alga-psa/users/actions';
+import { authenticateApiKeyRequest } from '@/lib/api/middleware/apiAuthMiddleware';
 import { runWithTenant } from '@/lib/db';
 import { hasPermission } from '@/lib/auth/rbac';
 import { getConnection } from '@/lib/db/db';
@@ -15,7 +14,6 @@ import { validateEmoji } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import {
   ForbiddenError,
-  UnauthorizedError,
   createSuccessResponse,
   handleApiError,
 } from '@/lib/api/middleware/apiMiddleware';
@@ -26,23 +24,8 @@ export const POST = async (
 ): Promise<NextResponse> => {
   try {
     const { commentId } = await params;
-    const apiKey = req.headers.get('x-api-key');
-    if (!apiKey) throw new UnauthorizedError('API key required');
-
-    let tenantId = req.headers.get('x-tenant-id');
-    let keyRecord;
-
-    if (tenantId) {
-      keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
-    } else {
-      keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-      if (keyRecord) tenantId = keyRecord.tenant;
-    }
-
-    if (!keyRecord || !tenantId) throw new UnauthorizedError('Invalid API key');
-
-    const user = await findUserByIdForApi(keyRecord.user_id, tenantId);
-    if (!user) throw new UnauthorizedError('User not found');
+    const apiRequest = await authenticateApiKeyRequest(req);
+    const { tenant: tenantId, userId, user } = apiRequest.context!;
 
     return await runWithTenant(tenantId, async () => {
       const canRead = await hasPermission(user, 'ticket', 'read');
@@ -53,7 +36,6 @@ export const POST = async (
       validateEmoji(emoji);
 
       const knex = await getConnection(tenantId);
-      const userId = keyRecord.user_id;
 
       const result = await withTransaction(knex, async (trx) => {
         const existing = await trx('comment_reactions')
@@ -73,7 +55,7 @@ export const POST = async (
         return { added: true };
       });
 
-      return createSuccessResponse(result);
+      return createSuccessResponse(result, 200, undefined, apiRequest);
     });
   } catch (error) {
     return handleApiError(error);

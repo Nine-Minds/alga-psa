@@ -42,7 +42,7 @@
     "dev:sdk": "npm -w sdk/alga-client-sdk run dev",
     "start:workflow-worker": "cd services/workflow-worker && npm run start",
     "dev:workflow-worker": "cd services/workflow-worker && npm run dev",
-    "create-tenant": "cd server && npm run create-tenant",
+    "create-tenant": "cd server && npm run create-tenant --",
     "rollback-tenant": "cd server && npm run rollback-tenant",
     "lint": "eslint \"{server,ee/server,ee/packages,shared,services,packages}/**/*.{js,mjs,cjs,ts,jsx,tsx}\"",
     "guard:temporal-packaging-contract": "node scripts/check-temporal-worker-packaging-contract.mjs",
@@ -56,7 +56,8 @@
     "playwright:bootstrap-db": "node --import tsx/esm scripts/bootstrap-playwright-db.ts",
     "test:nx": "vitest run --config tools/nx-tests/vitest.config.ts",
     "affected:test": "NX_DAEMON=false nx affected -t test --output-style=static",
-    "affected:build": "NX_DAEMON=false nx affected -t build --output-style=static"
+    "affected:build": "NX_DAEMON=false nx affected -t build --output-style=static",
+    "guard:hocuspocus-compose-build": "node scripts/guard-hocuspocus-compose-build.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.1",

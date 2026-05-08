@@ -68,6 +68,36 @@ export class ApiOpenApiRegistry {
     this.registry.registerPath(pathConfig as any);
   }
 
+  /**
+   * Register an outbound webhook operation under the OpenAPI 3.1
+   * top-level `webhooks:` block. Path is the event name (e.g. `ticket.created`).
+   */
+  registerWebhook(route: ApiRouteSpec): void {
+    if (!this.shouldIncludeRoute(route)) {
+      return;
+    }
+
+    const request = this.buildRequest(route);
+    const responses = this.buildResponses(route.responses);
+    const extensions = this.buildExtensions(route);
+
+    const config = {
+      method: route.method,
+      path: route.path,
+      summary: route.summary,
+      description: route.description,
+      operationId: route.operationId,
+      deprecated: route.deprecated,
+      tags: route.tags,
+      security: route.security,
+      request,
+      responses,
+      extensions,
+    };
+
+    this.registry.registerWebhook(config as any);
+  }
+
   buildDocument(options: DocumentBuildOptions) {
     const generator = new OpenApiGeneratorV31(this.registry.definitions);
 

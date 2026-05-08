@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     redis-tools \
     curl \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app/hocuspocus
@@ -32,7 +33,9 @@ RUN chmod +x ./entrypoint.sh
 # Set ownership to the non-root user
 RUN chown -R nodejs:nodejs /app
 
-USER nodejs
+# The entrypoint starts as root so it can read Docker secret files that are
+# intentionally chmod 600 on the host, then drops to nodejs before launching
+# the Hocuspocus Node process.
 
 EXPOSE 1234
 

@@ -4,7 +4,7 @@
  * CLI script to create a new tenant with onboarding seeds
  */
 
-import { createTenantComplete } from '@enterprise/lib/testing/tenant-creation';
+import { createTenantComplete } from '../../ee/server/src/lib/testing/tenant-creation';
 import knex from 'knex';
 import { parse } from 'ts-command-line-args';
 import * as dotenv from 'dotenv';
@@ -25,6 +25,7 @@ interface Args {
   clientName?: string;
   companyName?: string;
   password?: string;
+  productCode?: string;
   help?: boolean;
 }
 
@@ -37,6 +38,7 @@ const args = parse<Args>(
     clientName: { type: String, optional: true, description: 'Client name (defaults to tenant name)' },
     companyName: { type: String, optional: true, description: 'Company name (defaults to tenant name)' },
     password: { type: String, optional: true, description: 'Admin password (generated if not provided)' },
+    productCode: { type: String, optional: true, description: 'Product code: psa (default) or algadesk' },
     help: { type: Boolean, optional: true, alias: 'h', description: 'Show help' }
   },
   {
@@ -73,6 +75,14 @@ async function main() {
     const resolvedCompanyName = args.companyName ?? args.clientName ?? args.tenant;
     const resolvedClientName = args.clientName ?? args.companyName ?? args.tenant;
 
+    let productCode: 'psa' | 'algadesk' | undefined;
+    if (args.productCode !== undefined) {
+      if (args.productCode !== 'psa' && args.productCode !== 'algadesk') {
+        throw new Error(`Invalid productCode "${args.productCode}". Must be "psa" or "algadesk".`);
+      }
+      productCode = args.productCode;
+    }
+
     const result = await createTenantComplete(db, {
       tenantName: args.tenant,
       adminUser: {
@@ -81,7 +91,8 @@ async function main() {
         email: args.email
       },
       companyName: resolvedCompanyName,
-      clientName: resolvedClientName
+      clientName: resolvedClientName,
+      productCode
     });
 
     console.log('\n✅ Tenant created successfully!');
@@ -89,6 +100,7 @@ async function main() {
     console.log(`Admin User ID: ${result.adminUserId}`);
     console.log(`Client ID: ${result.clientId}`);
     console.log(`Admin Email: ${args.email}`);
+    console.log(`Product Code: ${productCode ?? '(default)'}`);
     console.log(`Temporary Password: ${result.temporaryPassword}`);
 
   } catch (error) {

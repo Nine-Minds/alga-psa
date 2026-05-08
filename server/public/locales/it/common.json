@@ -1053,7 +1053,10 @@
       "unknownError": "Si è verificato un errore sconosciuto",
       "templateNotFoundDetail": "Il modello che stai cercando non esiste o è stato eliminato.",
       "teamLeadAccessDetail": "Per approvare i fogli di presenza dei membri del tuo team, devi essere un team lead.",
-      "teamsTabEnableHint": "Chiedi a un amministratore PSA di abilitare l'integrazione Teams per questo tenant prima di riaprire la scheda."
+      "teamsTabEnableHint": "Chiedi a un amministratore PSA di abilitare l'integrazione Teams per questo tenant prima di riaprire la scheda.",
+      "teamsSetupNotFinished": "Configurazione Teams non completata",
+      "teamsSetupNotFinishedHint": "Chiedi a un amministratore PSA di completare la configurazione Teams e poi riapri la scheda personale.",
+      "teamsTabAdminHint": "Chiedi a un amministratore PSA di completare la configurazione Teams e poi riapri la scheda."
     },
     "actions": {
       "tryAgain": "Riprova",
@@ -1073,6 +1076,48 @@
       "slaSettings": "Impostazioni SLA",
       "documentEditor": "Editor documenti",
       "accountManagement": "Gestione account"
+    },
+    "teamsTab": {
+      "signedInAs": "Connesso come {{name}}",
+      "openInFullPsa": "Apri in PSA completo",
+      "iframeTitle": "{{destination}} in Alga PSA",
+      "fullPsaHint": "Usa «Apri in PSA completo» per più contesto di quanto possa mostrare una scheda Teams.",
+      "fallback": {
+        "label": "Record richiesto non disponibile:",
+        "showingInstead": "Visualizzazione del tuo elenco di lavoro Teams invece di {{destination}}."
+      },
+      "entrySource": {
+        "bot": "Aperto da un risultato del bot Teams.",
+        "messageExtension": "Aperto da un risultato dell'estensione messaggi Teams.",
+        "notification": "Aperto da una notifica di attività Teams."
+      },
+      "destinations": {
+        "myWork": {
+          "title": "Il mio lavoro",
+          "summary": "La tua scheda personale Teams è pronta a caricare la coda di lavoro PSA."
+        },
+        "ticket": {
+          "title": "Ticket {{ticketId}}",
+          "summary": "Stai aprendo il ticket {{ticketId}} da Teams."
+        },
+        "projectTask": {
+          "title": "Attività del progetto {{taskId}}",
+          "summary": "Stai aprendo l'attività {{taskId}} nel progetto {{projectId}}."
+        },
+        "approval": {
+          "title": "Approvazione {{approvalId}}",
+          "summary": "Stai aprendo l'approvazione {{approvalId}} da Teams."
+        },
+        "timeEntry": {
+          "title": "Voce di tempo {{entryId}}",
+          "summary": "Stai aprendo la voce di tempo {{entryId}} da Teams."
+        },
+        "contact": {
+          "title": "Contatto {{contactId}}",
+          "summary": "Stai aprendo il contatto {{contactId}} da Teams.",
+          "summaryWithClient": "Stai aprendo il contatto {{contactId}} per il cliente {{clientId}} da Teams."
+        }
+      }
     }
   },
   "feedback": {
