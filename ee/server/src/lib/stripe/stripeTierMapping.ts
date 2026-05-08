@@ -23,6 +23,10 @@ export const STRIPE_PRODUCT_TIER_MAP: Record<string, TenantTier> = {
   'alga-psa-solo': 'solo',
   'alga-psa-pro': 'pro',
   'alga-psa-premium': 'premium',
+
+  // AlgaDesk product (per-user pricing only; tier is orthogonal to product_code)
+  'alga-desk': 'pro',
+  'alga-desk-annual': 'pro',
 } as const;
 
 /**

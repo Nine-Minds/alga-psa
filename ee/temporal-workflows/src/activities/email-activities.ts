@@ -73,6 +73,93 @@ const COLORS = {
   warningText: "#92400e",
 };
 
+interface WelcomeEmailCopy {
+  subject: string;
+  headerTitle: string;
+  taglineText: string;
+  mspCardEmoji: string;
+  mspCardTitle: string;
+  mspCardDescription: string;
+  mspButtonLabel: string;
+  nextSteps: [string, string, string, string];
+  textHeaderTitle: string;
+  textMspCardTitle: string;
+  textMspCardDescription: string;
+  textNextSteps: [string, string, string, string];
+  textProductName: string;
+}
+
+const PSA_WELCOME_COPY: WelcomeEmailCopy = {
+  subject: 'Welcome to Alga PSA - Your Account is Ready',
+  headerTitle: 'Welcome to Alga PSA!',
+  taglineText:
+    'Say goodbye to scattered tools, manual workarounds, and overly complex systems. Alga PSA by Nine Minds brings everything together in one powerful platform — intuitive, user-focused, and built to grow with your business.',
+  mspCardEmoji: '🏢',
+  mspCardTitle: 'MSP Management Portal',
+  mspCardDescription:
+    'Your main dashboard for managing your MSP business operations, including tickets, projects, and team management.',
+  mspButtonLabel: 'MSP Portal →',
+  nextSteps: [
+    'Visit the <a href="${defaultLoginUrl}" style="color: #8a4dea; text-decoration: underline;"> MSP Portal</a>',
+    'Enter your email and temporary password',
+    'Complete the onboarding wizard and set your new password',
+    'Start transforming your business with Alga PSA',
+  ],
+  textHeaderTitle: 'Welcome to Alga PSA!',
+  textMspCardTitle: '🏢 MSP MANAGEMENT PORTAL',
+  textMspCardDescription:
+    'Your main dashboard for managing your MSP business operations, including tickets, projects, and team management.',
+  textNextSteps: [
+    'Visit the MSP Portal: ${defaultLoginUrl}',
+    'Enter your email and temporary password',
+    'Complete the onboarding wizard and set your new password',
+    'Start transforming your business with Alga PSA',
+  ],
+  textProductName: 'Alga PSA',
+};
+
+const ALGADESK_WELCOME_COPY: WelcomeEmailCopy = {
+  subject: 'Welcome to AlgaDesk - Your Account is Ready',
+  headerTitle: 'Welcome to AlgaDesk!',
+  taglineText:
+    'AlgaDesk gives your team a focused help desk: email-to-ticket, a knowledge base, and a client portal — without the overhead of a full PSA. Everything you need to respond fast and keep clients informed.',
+  mspCardEmoji: '🎫',
+  mspCardTitle: 'AlgaDesk Help Desk',
+  mspCardDescription:
+    'Access your tickets, knowledge base, and client management. This is where your team works day-to-day.',
+  mspButtonLabel: 'Open AlgaDesk →',
+  nextSteps: [
+    'Sign in and finish the onboarding wizard',
+    'Connect your support inbox so emails become tickets',
+    'Add your team members',
+    'Add your first client and contact',
+  ],
+  textHeaderTitle: 'Welcome to AlgaDesk!',
+  textMspCardTitle: '🎫 ALGADESK HELP DESK',
+  textMspCardDescription:
+    'Access your tickets, knowledge base, and client management. This is where your team works day-to-day.',
+  textNextSteps: [
+    'Sign in and finish the onboarding wizard: ${defaultLoginUrl}',
+    'Connect your support inbox so emails become tickets',
+    'Add your team members',
+    'Add your first client and contact',
+  ],
+  textProductName: 'AlgaDesk',
+};
+
+function selectWelcomeCopy(productCode?: 'psa' | 'algadesk'): WelcomeEmailCopy {
+  return productCode === 'algadesk' ? ALGADESK_WELCOME_COPY : PSA_WELCOME_COPY;
+}
+
+/**
+ * Interpolate ${defaultLoginUrl} occurrences within a copy fragment.
+ * Each copy bundle uses literal `${defaultLoginUrl}` markers so the rendered
+ * template can substitute the resolved URL without per-product builders.
+ */
+function interpolateLoginUrl(value: string, defaultLoginUrl: string): string {
+  return value.replaceAll('${defaultLoginUrl}', defaultLoginUrl);
+}
+
 /**
  * Create welcome email content
  */
@@ -82,6 +169,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
   textBody: string;
 } {
   const { tenantId, tenantName, adminUser, temporaryPassword } = input;
+  const copy = selectWelcomeCopy(input.productCode);
   const tenantSlug = buildTenantPortalSlug(tenantId);
   const defaultLoginUrl = process.env.APPLICATION_URL || process.env.NEXTAUTH_URL || "";
   const trimmedBaseUrl = defaultLoginUrl.replace(/\/$/, "");
@@ -104,7 +192,22 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
 
   const currentYear = new Date().getFullYear();
 
-  const subject = `Welcome to Alga PSA - Your Account is Ready`;
+  const subject = copy.subject;
+
+  const nextStepsRowsHtml = copy.nextSteps
+    .map(
+      (step, index) => `
+                        <tr>
+                          <td style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 12px; line-height: 1.6; font-size: 15px;">
+                            <b style="color: #8a4dea;">${index + 1}.</b> ${interpolateLoginUrl(step, defaultLoginUrl)}
+                          </td>
+                        </tr>`
+    )
+    .join('');
+
+  const nextStepsTextLines = copy.textNextSteps
+    .map((step, index) => `${index + 1}. ${interpolateLoginUrl(step, defaultLoginUrl)}`)
+    .join('\n');
 
   const htmlBody = `
   <!DOCTYPE html>
@@ -118,7 +221,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
     <!--[if !mso]><!-->
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <!--<![endif]-->
-    <title>Welcome to Alga PSA</title>
+    <title>${copy.headerTitle}</title>
     <!--[if mso]>
     <xml>
       <o:OfficeDocumentSettings>
@@ -192,7 +295,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse;">
                     <tr>
                       <td align="center" bgcolor="#8a4dea" class="rounded-top" style="background: linear-gradient(135deg, #8a4dea 0%, #a366f0 100%); background-color: #8a4dea; padding: 40px 24px; text-align: center; border-radius: 12px 12px 0 0;">
-                        <h1 style="font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; font-size: 32px; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2;">Welcome to Alga PSA!</h1>
+                        <h1 style="font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; font-size: 32px; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2;">${copy.headerTitle}</h1>
                         <p style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; color: #ffffff; margin: 0; opacity: 0.95;">Your account has been successfully created</p>
                       </td>
                     </tr>
@@ -211,7 +314,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; border-radius: 6px; overflow: hidden;">
                               <tr>
                                 <td bgcolor="#faf8ff" class="tagline-box" style="background-color: #faf8ff; border-left: 4px solid #8a4dea; padding: 20px 24px; border-radius: 6px;">
-                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; line-height: 1.7; font-size: 15px; font-style: italic;">Say goodbye to scattered tools, manual workarounds, and overly complex systems. Alga PSA by Nine Minds brings everything together in one powerful platform — intuitive, user-focused, and built to grow with your business.</p>
+                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; line-height: 1.7; font-size: 15px; font-style: italic;">${copy.taglineText}</p>
                                 </td>
                               </tr>
                             </table>
@@ -229,8 +332,8 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; border-radius: 8px; overflow: hidden;">
                               <tr>
                                 <td bgcolor="#f8f4ff" style="background-color: #f8f4ff; padding: 24px; border: 1px solid #e9e5f5; border-left: 4px solid #8a4dea; border-radius: 8px;">
-                                  <h4 style="color: #8a4dea; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0;">🏢 MSP Management Portal</h4>
-                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0; line-height: 1.6; font-size: 14px;">Your main dashboard for managing your MSP business operations, including tickets, projects, and team management.</p>
+                                  <h4 style="color: #8a4dea; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0;">${copy.mspCardEmoji} ${copy.mspCardTitle}</h4>
+                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0; line-height: 1.6; font-size: 14px;">${copy.mspCardDescription}</p>
                                   <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 8px 0; font-size: 14px;"><b style="color: #0f172a; font-weight: 600;">Login URL:</b> <a href="${defaultLoginUrl}" style="color: #8a4dea; text-decoration: underline;">${defaultLoginUrl}</a></p>
                                 </td>
                               </tr>
@@ -305,7 +408,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                                     <w:anchorlock/>
                                     <center>
                                   <![endif]-->
-                                  <a href="${defaultLoginUrl}" class="button-hover rounded" style="background-color:#8a4dea;color:#ffffff;display:inline-block;padding:14px 28px;font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;font-weight:600;text-align:center;text-decoration:none;border-radius:8px;-webkit-text-size-adjust:none;mso-hide:all;"> MSP Portal →</a>
+                                  <a href="${defaultLoginUrl}" class="button-hover rounded" style="background-color:#8a4dea;color:#ffffff;display:inline-block;padding:14px 28px;font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;font-weight:600;text-align:center;text-decoration:none;border-radius:8px;-webkit-text-size-adjust:none;mso-hide:all;"> ${copy.mspButtonLabel}</a>
                                   <!--[if mso]>
                                     </center>
                                   </v:roundrect>
@@ -344,27 +447,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                       </table>
 
                       <h3 style="color: #0f172a; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 16px 0;">What's Next?</h3>
-                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse; margin-bottom: 24px;">
-                        <tr>
-                          <td style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 12px; line-height: 1.6; font-size: 15px;">
-                            <b style="color: #8a4dea;">1.</b> Visit the <a href="${defaultLoginUrl}" style="color: #8a4dea; text-decoration: underline;"> MSP Portal</a>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 12px; line-height: 1.6; font-size: 15px;">
-                            <b style="color: #8a4dea;">2.</b> Enter your email and temporary password
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 12px; line-height: 1.6; font-size: 15px;">
-                            <b style="color: #8a4dea;">3.</b> Complete the onboarding wizard and set your new password
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 12px; line-height: 1.6; font-size: 15px;">
-                            <b style="color: #8a4dea;">4.</b> Start transforming your business with Alga PSA
-                          </td>
-                        </tr>
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse; margin-bottom: 24px;">${nextStepsRowsHtml}
                       </table>
 
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse; margin: 24px 0;">
@@ -402,7 +485,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
 </html>`;
 
   const textBody = `
-Welcome to Alga PSA!
+${copy.textHeaderTitle}
 
 Hello ${adminUser.firstName} ${adminUser.lastName},
 
@@ -410,8 +493,8 @@ Congratulations! Your new account for "${tenantName}" has been successfully set 
 
 YOUR TWO PORTAL ACCESS:
 
-🏢 MSP MANAGEMENT PORTAL
-Your main dashboard for managing your MSP business operations, including tickets, projects, and team management.
+${copy.textMspCardTitle}
+${copy.textMspCardDescription}
 Login URL: ${defaultLoginUrl}
 
 👥 NINE MINDS PORTAL
@@ -427,10 +510,7 @@ IMPORTANT SECURITY INFORMATION:
 - You will be required to create a new password when you sign in
 
 What's Next?
-1. Visit the MSP Portal: ${defaultLoginUrl}
-2. Enter your email and temporary password
-3. Complete the onboarding wizard and set your new password
-4. Start transforming your business with Alga PSA
+${nextStepsTextLines}
 
 Need help?
 If you have any questions or need assistance getting started, please don't hesitate to contact our support team.
