@@ -1,11 +1,9 @@
-import { getSecret } from '@alga-psa/core/secrets';
-
 const DEV_HOCUSPOCUS_JWT_SECRET = 'dev-hocuspocus-jwt-secret';
 
 let hasWarnedAboutDevSecret = false;
 
 export async function getHocuspocusJwtSecret(): Promise<string> {
-  const configuredSecret = await getSecret('hocuspocus_jwt_secret', 'HOCUSPOCUS_JWT_SECRET', '');
+  const configuredSecret = process.env.HOCUSPOCUS_JWT_SECRET || '';
 
   if (configuredSecret) {
     return configuredSecret;

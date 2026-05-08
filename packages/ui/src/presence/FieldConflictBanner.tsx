@@ -4,6 +4,7 @@ import React, { useId } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Alert, AlertDescription } from '../components/Alert';
 import { Button } from '../components/Button';
+import { useTranslation } from '../lib/i18n/client';
 
 export interface FieldConflictBannerProps {
   remoteValue: React.ReactNode;
@@ -18,6 +19,13 @@ function formatRelativeTimestamp(remoteAt: string | Date) {
   return formatDistanceToNow(new Date(remoteAt), { addSuffix: true });
 }
 
+function interpolate(template: string, values: Record<string, string>) {
+  return Object.entries(values).reduce(
+    (message, [key, value]) => message.replaceAll(`{{${key}}}`, value),
+    template
+  );
+}
+
 export function FieldConflictBanner({
   remoteValue,
   remoteAuthor,
@@ -26,9 +34,14 @@ export function FieldConflictBanner({
   onTakeTheirs,
   className = '',
 }: FieldConflictBannerProps) {
+  const { t } = useTranslation('common');
   const reactId = useId();
   const buttonIdBase = reactId.replace(/:/g, '-');
   const relativeTimestamp = formatRelativeTimestamp(remoteAt);
+  const changedFieldMessage = interpolate(
+    t('presence.conflict.changedField', '{{author}} just changed this field {{time}}.'),
+    { author: remoteAuthor, time: relativeTimestamp }
+  );
 
   return (
     <Alert
@@ -38,10 +51,11 @@ export function FieldConflictBanner({
       <AlertDescription className="space-y-3">
         <div className="space-y-1">
           <p className="font-medium text-[rgb(var(--color-text-900))]">
-            {remoteAuthor} just changed this field {relativeTimestamp}.
+            {changedFieldMessage}
           </p>
           <p className="text-[rgb(var(--color-text-700))]">
-            Remote value: <span className="font-medium text-[rgb(var(--color-text-900))]">{remoteValue}</span>
+            {t('presence.conflict.remoteValue', 'Remote value:')}{' '}
+            <span className="font-medium text-[rgb(var(--color-text-900))]">{remoteValue}</span>
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -51,7 +65,7 @@ export function FieldConflictBanner({
             autoFocus
             onClick={onKeepYours}
           >
-            Keep yours
+            {t('presence.conflict.keepYours', 'Keep yours')}
           </Button>
           <Button
             id={`${buttonIdBase}-take-theirs`}
@@ -59,7 +73,7 @@ export function FieldConflictBanner({
             variant="outline"
             onClick={onTakeTheirs}
           >
-            Take theirs
+            {t('presence.conflict.takeTheirs', 'Take theirs')}
           </Button>
         </div>
       </AlertDescription>

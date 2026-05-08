@@ -13,11 +13,21 @@ vi.mock('@alga-psa/event-bus', () => ({
   getRedisConfig: () => getRedisConfigMock(),
 }));
 
-import { diffTicketFields, getTicketUpdateChannel, publishTicketUpdate } from './liveUpdates';
+import {
+  diffTicketFields,
+  getTicketUpdateChannel,
+  publishTicketUpdate,
+  resetTicketUpdatePublisherClientForTests,
+  setTicketUpdateEventBusLoaderForTests,
+} from './liveUpdates';
 
 describe('live ticket update helpers', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await resetTicketUpdatePublisherClientForTests();
     vi.clearAllMocks();
+    setTicketUpdateEventBusLoaderForTests(async () => ({
+      getRedisClient: () => getRedisClientMock(),
+    }));
     delete process.env.LIVE_TICKET_UPDATES_DISABLED;
   });
 
@@ -76,10 +86,38 @@ describe('live ticket update helpers', () => {
         updatedAt: '2026-05-07T12:00:00.000Z',
       })
     );
-    expect(disconnectMock).toHaveBeenCalledTimes(1);
+    expect(disconnectMock).not.toHaveBeenCalled();
   });
 
-  it('T003: publishTicketUpdate swallows Redis publish errors', async () => {
+  it('T003: publishTicketUpdate reuses the Redis publisher client across successful publishes', async () => {
+    await publishTicketUpdate({
+      tenantId: 'tenant-1',
+      ticketId: 'ticket-9',
+      updatedFields: ['status_id'],
+      updatedBy: {
+        userId: 'user-1',
+        displayName: 'Pat Agent',
+      },
+      updatedAt: '2026-05-07T12:00:00.000Z',
+    });
+
+    await publishTicketUpdate({
+      tenantId: 'tenant-1',
+      ticketId: 'ticket-9',
+      updatedFields: ['priority_id'],
+      updatedBy: {
+        userId: 'user-1',
+        displayName: 'Pat Agent',
+      },
+      updatedAt: '2026-05-07T12:01:00.000Z',
+    });
+
+    expect(getRedisClientMock).toHaveBeenCalledTimes(1);
+    expect(publishMock).toHaveBeenCalledTimes(2);
+    expect(disconnectMock).not.toHaveBeenCalled();
+  });
+
+  it('T004: publishTicketUpdate swallows Redis publish errors and resets the cached client', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     publishMock.mockRejectedValueOnce(new Error('redis is down'));
 
@@ -101,6 +139,19 @@ describe('live ticket update helpers', () => {
       expect.any(Error)
     );
     expect(disconnectMock).toHaveBeenCalledTimes(1);
+
+    await publishTicketUpdate({
+      tenantId: 'tenant-1',
+      ticketId: 'ticket-9',
+      updatedFields: ['priority_id'],
+      updatedBy: {
+        userId: 'user-1',
+        displayName: 'Pat Agent',
+      },
+      updatedAt: '2026-05-07T12:01:00.000Z',
+    });
+
+    expect(getRedisClientMock).toHaveBeenCalledTimes(2);
 
     warnSpy.mockRestore();
   });

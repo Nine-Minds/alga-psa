@@ -1,5 +1,3 @@
-import { getRedisClient, getRedisConfig } from '@alga-psa/event-bus';
-
 export interface TicketLiveUpdateActor {
   userId: string;
   displayName: string;
@@ -14,6 +12,33 @@ export interface PublishTicketUpdateParams {
 }
 
 const TICKET_UPDATE_CHANNEL_PREFIX = 'ticket-updates:';
+
+interface RedisPublisherClient {
+  publish(channel: string, message: string): Promise<unknown>;
+  disconnect(): Promise<unknown>;
+}
+
+interface EventBusRedisModule {
+  getRedisClient(): Promise<RedisPublisherClient>;
+}
+
+let publisherClientPromise: Promise<RedisPublisherClient> | null = null;
+let eventBusRedisModuleLoader = defaultEventBusRedisModuleLoader;
+
+function defaultEventBusRedisModuleLoader(): Promise<EventBusRedisModule> {
+  return import('@alga-psa/event-bus');
+}
+
+export function setTicketUpdateEventBusLoaderForTests(
+  loader: (() => Promise<EventBusRedisModule>) | null
+): void {
+  eventBusRedisModuleLoader = loader ?? defaultEventBusRedisModuleLoader;
+  publisherClientPromise = null;
+}
+
+function getRedisPrefix(): string {
+  return process.env.REDIS_PREFIX || 'alga-psa:';
+}
 
 function normalizeJsonbValue(value: unknown): unknown {
   if (Array.isArray(value)) {
@@ -56,8 +81,35 @@ export function diffTicketFields(
 }
 
 export function getTicketUpdateChannel(tenantId: string, ticketId: string): string {
-  const config = getRedisConfig();
-  return `${config.prefix}${TICKET_UPDATE_CHANNEL_PREFIX}${tenantId}:${ticketId}`;
+  return `${getRedisPrefix()}${TICKET_UPDATE_CHANNEL_PREFIX}${tenantId}:${ticketId}`;
+}
+
+async function getTicketUpdatePublisherClient(): Promise<RedisPublisherClient> {
+  if (!publisherClientPromise) {
+    publisherClientPromise = eventBusRedisModuleLoader().then(({ getRedisClient }) => getRedisClient());
+  }
+
+  return publisherClientPromise;
+}
+
+async function resetTicketUpdatePublisherClient(): Promise<void> {
+  const clientPromise = publisherClientPromise;
+  publisherClientPromise = null;
+
+  if (!clientPromise) {
+    return;
+  }
+
+  try {
+    const client = await clientPromise;
+    await client.disconnect();
+  } catch {
+    // Ignore disconnect/reset errors for best-effort pub/sub publishing.
+  }
+}
+
+export async function resetTicketUpdatePublisherClientForTests(): Promise<void> {
+  await resetTicketUpdatePublisherClient();
 }
 
 export async function publishTicketUpdate(params: PublishTicketUpdateParams): Promise<void> {
@@ -69,10 +121,8 @@ export async function publishTicketUpdate(params: PublishTicketUpdateParams): Pr
     return;
   }
 
-  let client: Awaited<ReturnType<typeof getRedisClient>> | null = null;
-
   try {
-    client = await getRedisClient();
+    const client = await getTicketUpdatePublisherClient();
     await client.publish(
       getTicketUpdateChannel(params.tenantId, params.ticketId),
       JSON.stringify({
@@ -83,13 +133,6 @@ export async function publishTicketUpdate(params: PublishTicketUpdateParams): Pr
     );
   } catch (error) {
     console.warn('[publishTicketUpdate] Failed to publish live ticket update:', error);
-  } finally {
-    if (client) {
-      try {
-        await client.disconnect();
-      } catch {
-        // Ignore disconnect errors for best-effort pub/sub publishing.
-      }
-    }
+    await resetTicketUpdatePublisherClient();
   }
 }

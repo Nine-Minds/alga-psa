@@ -14,6 +14,11 @@ import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions
 import { withAuth } from '@alga-psa/auth';
 import { buildTicketCommunicationWorkflowEvents } from '../../lib/workflowTicketCommunicationEvents';
 import { isResponseStateTrackingEnabled } from '../../lib/responseStateSettings';
+import { publishTicketUpdate } from '../../lib/liveUpdates';
+
+function formatLiveUpdateDisplayName(user: any): string {
+  return `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || 'Unknown User';
+}
 
 /**
  * Helper function to determine the new response state based on comment properties
@@ -116,7 +121,7 @@ export const findCommentById = withAuth(async (_user, { tenant }, commentId: str
   }
 });
 
-export const createComment = withAuth(async (_user, { tenant }, comment: Omit<IComment, 'tenant'>): Promise<string> => {
+export const createComment = withAuth(async (user, { tenant }, comment: Omit<IComment, 'tenant'>): Promise<string> => {
   try {
     console.log(`[createComment] Starting with comment:`, {
       note_length: comment.note ? comment.note.length : 0,
@@ -299,6 +304,19 @@ export const createComment = withAuth(async (_user, { tenant }, comment: Omit<IC
         await maybeReopenBundleMasterFromChildReply(trx, commentTenant, comment.ticket_id!, comment.user_id ?? null);
       }
 
+      if (comment.ticket_id && commentTenant) {
+        await publishTicketUpdate({
+          tenantId: commentTenant,
+          ticketId: comment.ticket_id,
+          updatedFields: ['comments'],
+          updatedBy: {
+            userId: user?.user_id ?? comment.user_id ?? 'unknown',
+            displayName: formatLiveUpdateDisplayName(user),
+          },
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
       return commentId;
     });
   } catch (error) {
@@ -307,7 +325,7 @@ export const createComment = withAuth(async (_user, { tenant }, comment: Omit<IC
   }
 });
 
-export const updateComment = withAuth(async (_user, { tenant }, id: string, comment: Partial<IComment>) => {
+export const updateComment = withAuth(async (user, { tenant }, id: string, comment: Partial<IComment>) => {
   console.log(`[updateComment] Starting update for comment ID: ${id}`, {
     commentData: {
       ...comment,
@@ -468,6 +486,19 @@ export const updateComment = withAuth(async (_user, { tenant }, id: string, comm
           // Don't throw - allow comment update to succeed even if event publishing fails
         }
       }
+
+      if (updatedComment?.ticket_id && commentTenant) {
+        await publishTicketUpdate({
+          tenantId: commentTenant,
+          ticketId: updatedComment.ticket_id,
+          updatedFields: ['comments'],
+          updatedBy: {
+            userId: user?.user_id ?? comment.user_id ?? existingComment.user_id ?? 'unknown',
+            displayName: formatLiveUpdateDisplayName(user),
+          },
+          updatedAt: new Date().toISOString(),
+        });
+      }
     });
   } catch (error) {
     console.error(`[updateComment] Failed to update comment with ID ${id}:`, error);
@@ -476,7 +507,7 @@ export const updateComment = withAuth(async (_user, { tenant }, id: string, comm
   }
 });
 
-export const deleteComment = withAuth(async (_user, _ctx, id: string) => {
+export const deleteComment = withAuth(async (user, _ctx, id: string) => {
   const { knex: db } = await createTenantKnex();
   try {
     await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -500,6 +531,19 @@ export const deleteComment = withAuth(async (_user, _ctx, id: string) => {
         .update({ comment_id: null });
 
       await Comment.delete(trx, tenant, id);
+
+      if (existingComment?.ticket_id) {
+        await publishTicketUpdate({
+          tenantId: tenant,
+          ticketId: existingComment.ticket_id,
+          updatedFields: ['comments'],
+          updatedBy: {
+            userId: user?.user_id ?? existingComment.user_id ?? 'unknown',
+            displayName: formatLiveUpdateDisplayName(user),
+          },
+          updatedAt: new Date().toISOString(),
+        });
+      }
     });
   } catch (error) {
     console.error(`Failed to delete comment with id ${id}:`, error);

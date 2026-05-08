@@ -1127,5 +1127,17 @@
       "hrs": "h",
       "min": "min"
     }
+  },
+  "liveUpdates": {
+    "editing": {
+      "single": "{{name}} está editando",
+      "multiple_one": "{{name}} e {{count}} outra pessoa estão editando",
+      "multiple_other": "{{name}} e {{count}} outras pessoas estão editando"
+    },
+    "remoteFieldUpdated": "{{name}} atualizou {{field}}",
+    "connection": {
+      "reconnecting": "Atualizações ao vivo offline - reconectando...",
+      "unavailable": "Atualizações ao vivo indisponíveis"
+    }
   }
 }

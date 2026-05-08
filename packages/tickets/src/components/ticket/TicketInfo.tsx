@@ -642,11 +642,19 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     }
 
     if (editingUsers.length === 1) {
-      return `${editingUsers[0]} is editing`;
+      return t('liveUpdates.editing.single', '{{name}} is editing')
+        .replace('{{name}}', editingUsers[0]);
     }
 
-    return `${editingUsers[0]} and ${editingUsers.length - 1} other${editingUsers.length === 2 ? '' : 's'} are editing`;
-  }, [getEditingUsersForField]);
+    return t(
+      editingUsers.length === 2 ? 'liveUpdates.editing.multiple_one' : 'liveUpdates.editing.multiple_other',
+      editingUsers.length === 2
+        ? '{{name}} and {{count}} other are editing'
+        : '{{name}} and {{count}} others are editing'
+    )
+      .replace('{{name}}', editingUsers[0])
+      .replace('{{count}}', String(editingUsers.length - 1));
+  }, [getEditingUsersForField, t]);
 
   const isFieldRemotelyEdited = useCallback((field: string) => {
     return getEditingUsersForField(field).length > 0;

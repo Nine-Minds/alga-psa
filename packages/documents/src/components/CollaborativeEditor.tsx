@@ -392,7 +392,6 @@ export function CollaborativeEditor({
       <div className={styles.header}>
         <PresenceBar
           users={connectedUsers}
-          emptyText="No one else is editing"
           showNames
           className={styles.presenceBar}
         />

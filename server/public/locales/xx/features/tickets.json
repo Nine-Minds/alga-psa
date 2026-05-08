@@ -1127,5 +1127,17 @@
       "hrs": "11111",
       "min": "11111"
     }
+  },
+  "liveUpdates": {
+    "editing": {
+      "single": "11111 {{name}} 11111",
+      "multiple_one": "11111 {{name}} 11111 {{count}} 11111",
+      "multiple_other": "11111 {{name}} 11111 {{count}} 11111"
+    },
+    "remoteFieldUpdated": "11111 {{name}} 11111 {{field}}",
+    "connection": {
+      "reconnecting": "11111",
+      "unavailable": "11111"
+    }
   }
 }

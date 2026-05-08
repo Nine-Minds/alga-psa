@@ -349,6 +349,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [ticketPropertiesDirtyFields, setTicketPropertiesDirtyFields] = useState<string[]>([]);
     const [liveHighlightedFields, setLiveHighlightedFields] = useState<string[]>([]);
     const [liveFieldConflicts, setLiveFieldConflicts] = useState<Partial<Record<string, TicketLiveConflictState>>>({});
+    const [reactionRefreshVersion, setReactionRefreshVersion] = useState(0);
     const [livePendingFieldVersion, setLivePendingFieldVersion] = useState(0);
     const ticketInfoDirtyFieldsRef = useRef<string[]>([]);
     const ticketPropertiesDirtyFieldsRef = useRef<string[]>([]);
@@ -581,6 +582,14 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 }
             }
 
+            if (normalizedUpdatedFields.has('comments')) {
+                setConversations(await findCommentsByTicketId(ticket.ticket_id));
+            }
+
+            if (normalizedUpdatedFields.has('comment_reactions')) {
+                setReactionRefreshVersion((value) => value + 1);
+            }
+
             return { refreshed: true as const, latestTicket };
         } catch (error) {
             if (isRemoteUpdateAccessError(error)) {
@@ -658,9 +667,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
 
         if (dirtyFields.size > 0 && nonOverlappingFields.length > 0) {
-            toast.success(`${pendingUpdate.updatedBy.displayName} updated ${getLiveFieldLabel(nonOverlappingFields[0])}`);
+            toast.success(
+                t('liveUpdates.remoteFieldUpdated', '{{name}} updated {{field}}')
+                    .replace('{{name}}', pendingUpdate.updatedBy.displayName)
+                    .replace('{{field}}', getLiveFieldLabel(nonOverlappingFields[0]))
+            );
         }
-    }, [getLiveFieldLabel, highlightLiveFields, refreshTicketSnapshot]);
+    }, [getLiveFieldLabel, highlightLiveFields, refreshTicketSnapshot, t]);
 
     const queueRemoteUpdate = useCallback((update: { updatedFields: string[]; updatedBy: { userId: string; displayName: string }; updatedAt: string }) => {
         const currentPendingUpdate = pendingRemoteUpdateRef.current;
@@ -2299,9 +2312,9 @@ const handleClose = () => {
     }));
 
     const connectionStatusLabel = ticketLive.connectionStatus === 'reconnecting'
-        ? 'Live updates offline — reconnecting…'
+        ? t('liveUpdates.connection.reconnecting', 'Live updates offline — reconnecting…')
         : ticketLive.connectionStatus === 'unavailable'
-            ? 'Live updates unavailable'
+            ? t('liveUpdates.connection.unavailable', 'Live updates unavailable')
             : null;
 
     return (
@@ -2712,6 +2725,7 @@ const handleClose = () => {
                                     resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
                                     defaultNewestFirst
                                     canViewCommentMetadataDebug={canViewCommentMetadataDebug}
+                                    reactionRefreshVersion={reactionRefreshVersion}
                                 />
                             </div>
                         </Suspense>

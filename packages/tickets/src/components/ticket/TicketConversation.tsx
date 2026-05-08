@@ -88,6 +88,7 @@ interface TicketConversationProps {
   resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
   defaultNewestFirst?: boolean;
   canViewCommentMetadataDebug?: boolean;
+  reactionRefreshVersion?: number;
 }
 
 const ALL_COMMENTS_TAB_ID = 'all-comments';
@@ -126,6 +127,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   resolveTicketAttachmentViewUrl,
   defaultNewestFirst = false,
   canViewCommentMetadataDebug = false,
+  reactionRefreshVersion = 0,
 }) => {
   const { t } = useTranslation('features/tickets');
   const { t: tCore } = useTranslation('common');
@@ -348,7 +350,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         setReactionUserNames(prev => ({ ...prev, ...userNames }));
       })
       .catch((err) => console.error('[TicketConversation] Failed to load reactions:', err));
-  }, [commentIdsKey]);
+  }, [commentIdsKey, reactionRefreshVersion]);
 
   const handleToggleReaction = useCallback(async (commentId: string, emoji: string) => {
     try {

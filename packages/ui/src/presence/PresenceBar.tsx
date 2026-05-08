@@ -2,6 +2,7 @@
 
 import React from 'react';
 import AvatarIcon from '../components/AvatarIcon';
+import { useTranslation } from '../lib/i18n/client';
 
 export interface PresenceBarUser {
   id: string;
@@ -44,17 +45,19 @@ export function dedupePresenceUsers(users: PresenceBarUser[]): PresenceBarUser[]
 
 export function PresenceBar({
   users,
-  emptyText = 'No one else is editing',
+  emptyText,
   showNames = false,
   className = '',
 }: PresenceBarProps) {
+  const { t } = useTranslation('common');
   const dedupedUsers = dedupePresenceUsers(users);
+  const fallbackEmptyText = emptyText ?? t('presence.noOneElseEditing', 'No one else is editing');
 
   return (
     <div className={`flex flex-wrap items-center gap-2 ${className}`.trim()}>
       {dedupedUsers.length === 0 ? (
         <span className="text-sm text-gray-500" data-testid="presence-empty">
-          {emptyText}
+          {fallbackEmptyText}
         </span>
       ) : (
         dedupedUsers.map((user) => {

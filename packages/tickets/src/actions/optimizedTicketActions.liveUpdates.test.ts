@@ -86,6 +86,11 @@ vi.mock('../lib/workflowTicketSlaStageEvents', () => ({
   buildTicketResolutionSlaStageCompletionEvent: vi.fn(() => null),
 }));
 
+import {
+  resetTicketUpdatePublisherClientForTests,
+  setTicketUpdateEventBusLoaderForTests,
+} from '../lib/liveUpdates';
+
 function makeTicket(overrides: Record<string, unknown> = {}) {
   return {
     ticket_id: 'ticket-1',
@@ -220,8 +225,15 @@ function buildTrx(params: {
 }
 
 describe('updateTicketWithCache live updates', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    await resetTicketUpdatePublisherClientForTests();
     vi.clearAllMocks();
+    setTicketUpdateEventBusLoaderForTests(async () => ({
+      getRedisClient: vi.fn(async () => ({
+        publish: publishRedisMock,
+        disconnect: disconnectRedisMock,
+      })),
+    }));
     delete process.env.LIVE_TICKET_UPDATES_DISABLED;
     currentUser = {
       user_id: 'user-1',

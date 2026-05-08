@@ -1077,5 +1077,14 @@
   },
   "feedback": {
     "providePlaceholder": "Per favore fornisci un feedback"
+  },
+  "presence": {
+    "noOneElseEditing": "Nessun altro sta modificando",
+    "conflict": {
+      "changedField": "{{author}} ha appena modificato questo campo {{time}}.",
+      "remoteValue": "Valore remoto:",
+      "keepYours": "Mantieni il tuo",
+      "takeTheirs": "Usa quello remoto"
+    }
   }
 }

@@ -2447,6 +2447,17 @@ export const addTicketCommentWithCache = withAuth(async (
     } catch (eventError) {
       console.error('[addTicketCommentWithCache] Failed to publish workflow ticket message events:', eventError);
     }
+
+    await publishTicketUpdate({
+      tenantId: tenant,
+      ticketId,
+      updatedFields: ['comments'],
+      updatedBy: {
+        userId: user.user_id,
+        displayName: formatLiveUpdateDisplayName(user),
+      },
+      updatedAt: toIsoTimestamp(newComment.created_at, new Date().toISOString()),
+    });
     
     // Track comment analytics
     captureAnalytics('ticket_comment_added', {
