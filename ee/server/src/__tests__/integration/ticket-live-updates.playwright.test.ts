@@ -1,3 +1,6 @@
+import { execSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
 import { expect, test, type Browser, type BrowserContext, type Page } from '@playwright/test';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -19,6 +22,10 @@ const LIVE_UPDATES_ENABLED =
   (process.env.NEXT_PUBLIC_FORCE_FEATURE_FLAGS ?? '')
     .split(',')
     .some((entry) => entry.trim() === 'live-ticket-updates:true');
+const PROJECT_ROOT = path.resolve(__dirname, '../../../../..');
+const PLAYWRIGHT_DOCKER_ENV_FILE = fs.existsSync(path.resolve(PROJECT_ROOT, 'ee/server/.env'))
+  ? 'ee/server/.env'
+  : 'ee/server/.env.test';
 
 type TicketRefs = {
   boardId: string;
@@ -262,6 +269,17 @@ async function expectPresenceForPeer(page: Page, peerName: string): Promise<void
   await expect(page.getByTestId('ticket-live-connection-status')).toHaveCount(0);
 }
 
+function runWorkflowDepsDockerCommand(args: string): void {
+  execSync(
+    `docker compose -f docker-compose.playwright-workflow-deps.yml -p alga-psa-playwright-workflow --env-file ${PLAYWRIGHT_DOCKER_ENV_FILE} ${args}`,
+    {
+      cwd: PROJECT_ROOT,
+      stdio: 'inherit',
+      env: process.env,
+    }
+  );
+}
+
 async function selectTicketFieldOption(page: Page, fieldName: string, optionText: string): Promise<void> {
   const field = page.locator(`[data-live-field="${fieldName}"]`);
   await field.getByRole('combobox').click();
@@ -436,6 +454,58 @@ test.describe('Ticket live updates (Playwright)', () => {
       await expect(pageA.locator('#ticket-details-title-input')).toHaveValue(localDraftTitle);
       await expect(pageA).toHaveURL(`${BASE_URL}/msp/tickets/${scenario.ticketId}`);
     } finally {
+      await scenario.dispose();
+    }
+  });
+
+  test('T047: hocuspocus outage shows offline mode, preserves REST saves, and refetches after reconnect', async ({ browser }) => {
+    test.setTimeout(300_000);
+
+    const scenario = await createLiveTicketScenario(browser);
+    let hocuspocusStopped = false;
+
+    try {
+      const { pageA, pageB } = scenario;
+      const updatedTitle = `Offline-save title ${uuidv4().slice(0, 4)}`;
+      const originalTitle = (await pageA.locator('#ticket-details-container h1').first().textContent())?.trim();
+
+      runWorkflowDepsDockerCommand('stop hocuspocus-playwright');
+      hocuspocusStopped = true;
+
+      await expect(pageA.getByTestId('ticket-live-connection-status')).toHaveText(
+        'Live updates offline — reconnecting…',
+        { timeout: 35_000 }
+      );
+      await expect(pageA.locator('#ticket-details-container')).toBeVisible();
+
+      await pageB.getByTitle('Edit title').click();
+      await pageB.locator('#ticket-details-title-input').fill(updatedTitle);
+      await pageB.locator('#ticket-details-save-title-btn').click();
+      await expect(pageB.locator('#ticket-details-container h1').first()).toHaveText(updatedTitle, { timeout: 10_000 });
+
+      await expect.poll(async () => {
+        return (await pageA.locator('#ticket-details-container h1').first().textContent())?.trim();
+      }, {
+        timeout: 1_500,
+        intervals: [100, 200, 300],
+      }).toBe(originalTitle);
+
+      runWorkflowDepsDockerCommand('up -d --wait --wait-timeout 120 hocuspocus-playwright');
+      hocuspocusStopped = false;
+
+      await expect(pageA.getByTestId('ticket-live-connection-status')).toHaveCount(0, { timeout: 35_000 });
+      await expect
+        .poll(async () => {
+          return (await pageA.locator('#ticket-details-container h1').first().textContent())?.trim();
+        }, {
+          timeout: 35_000,
+          intervals: [250, 500, 1000],
+        })
+        .toBe(updatedTitle);
+    } finally {
+      if (hocuspocusStopped) {
+        runWorkflowDepsDockerCommand('up -d --wait --wait-timeout 120 hocuspocus-playwright');
+      }
       await scenario.dispose();
     }
   });

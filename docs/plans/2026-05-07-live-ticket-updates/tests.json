@@ -290,7 +290,7 @@
   {
     "id": "T047",
     "description": "E2E: kill the Hocuspocus container; ticket page still loads; saves still work; offline indicator visible; bring container back; reconnect within ~30s; indicator clears; one refetch fires.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F010", "F015", "F016", "F020"]
   },
   {

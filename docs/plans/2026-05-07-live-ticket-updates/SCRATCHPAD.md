@@ -182,6 +182,12 @@ npm run test:e2e
 - **2026-05-08 — Verification runbook used for the security/unit slice.**
   `npx vitest run --config vitest.config.ts src/test/unit/api/ticketLiveToken.route.test.ts` from `server`
   `npx vitest run --config vitest.config.ts src/hooks/useTicketLive.test.tsx src/lib/liveUpdates.test.ts` from `packages/tickets`
+- **2026-05-08 — Hocuspocus outage/reconnect spec added (`T047`).**
+  Extended [ticket-live-updates.playwright.test.ts](/Users/natalliabukhtsik/Desktop/projects/bigmac/ee/server/src/__tests__/integration/ticket-live-updates.playwright.test.ts) with Docker-backed helpers that stop and restart the Playwright `hocuspocus-playwright` container in-test, then assert the offline indicator appears, REST title saves still succeed while the socket is down, and the remote title catches up after reconnect.
+- **2026-05-08 — Verification runbook used for the outage/reconnect slice.**
+  `npm run typecheck --workspace=ee/server`
+  `PW_WEBSERVER=false NEXT_PUBLIC_DISABLE_FEATURE_FLAGS=false NEXT_PUBLIC_FORCE_FEATURE_FLAGS=live-ticket-updates:true PLAYWRIGHT_SKIP_WORKFLOW_WORKER=true npx playwright test ee/server/src/__tests__/integration/ticket-live-updates.playwright.test.ts --grep "T047" --project=chromium --list` from `ee/server`
+  Runtime execution remains blocked by the same unrelated Next boot failure resolving `@alga-psa/core/rateLimit`, so only static verification is possible until that upstream issue is fixed.
 
 ## Links / Refs
 
