@@ -516,6 +516,7 @@ export default function SsoBulkAssignmentForm({ providerOptions }: SsoBulkAssign
           <div className="space-y-3">
             <Label className="block text-sm font-medium text-muted-foreground">{t("ssoBulk.form.actionLabel")}</Label>
             <ViewSwitcher
+              className="w-fit"
               currentView={assignmentMode}
               onChange={(value) => {
                 if (value === "link" || value === "unlink") {

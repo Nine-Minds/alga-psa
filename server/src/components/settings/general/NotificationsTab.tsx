@@ -10,11 +10,14 @@ import { NotificationSettings, EmailTemplates, NotificationCategories, InternalN
 import { TelemetrySettings } from "@alga-psa/ui/components/settings/telemetry/TelemetrySettings";
 import { useUnsavedChanges } from "@alga-psa/ui";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useProduct } from '@/context/ProductContext';
 
 type NotificationView = 'email' | 'internal';
 
 const EMAIL_NOTIFICATION_TAB_IDS = ['settings', 'email-templates', 'categories', 'telemetry'] as const;
 const INTERNAL_NOTIFICATION_TAB_IDS = ['categories'] as const;
+
+const ALGADESK_EMAIL_TAB_IDS = ['settings', 'categories', 'telemetry'] as const;
 
 export default function NotificationsTab() {
   return <NotificationsTabContent />;
@@ -25,6 +28,8 @@ function NotificationsTabContent() {
   const searchParams = useSearchParams();
   const viewParam = searchParams?.get('view');
   const sectionParam = searchParams?.get('section');
+  const { productCode } = useProduct();
+  const isAlgadesk = productCode === 'algadesk';
 
   // Determine initial view based on URL parameter
   const getInitialView = (): NotificationView => {
@@ -35,7 +40,9 @@ function NotificationsTabContent() {
   // Determine initial tab based on URL parameter and view
   const getInitialTab = (view: NotificationView): string => {
     const requestedTab = sectionParam?.toLowerCase();
-    const validTabs: readonly string[] = view === 'email' ? EMAIL_NOTIFICATION_TAB_IDS : INTERNAL_NOTIFICATION_TAB_IDS;
+    const validTabs: readonly string[] = view === 'email'
+      ? (isAlgadesk ? ALGADESK_EMAIL_TAB_IDS : EMAIL_NOTIFICATION_TAB_IDS)
+      : INTERNAL_NOTIFICATION_TAB_IDS;
     const defaultTab = view === 'email' ? 'settings' : 'categories';
 
     if (requestedTab && validTabs.includes(requestedTab)) {
@@ -61,7 +68,7 @@ function NotificationsTabContent() {
     } else if (newTab !== currentTab) {
       setCurrentTab(newTab);
     }
-  }, [viewParam, sectionParam, currentView, currentTab]);
+  }, [viewParam, sectionParam, currentView, currentTab, isAlgadesk]);
 
   // Update URL when view or tab changes
   const updateURL = useCallback((view: NotificationView, tabId: string) => {
@@ -136,7 +143,7 @@ function NotificationsTabContent() {
         </Card>
       ),
     },
-    {
+    ...(isAlgadesk ? [] : [{
       id: 'email-templates',
       label: t('notifications.emailTabs.emailTemplates'),
       content: (
@@ -150,7 +157,7 @@ function NotificationsTabContent() {
           </CardContent>
         </Card>
       ),
-    },
+    }]),
     {
       id: 'categories',
       label: t('notifications.emailTabs.categories'),

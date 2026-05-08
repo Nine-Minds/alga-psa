@@ -41,6 +41,7 @@ import {
 } from '../../auth/rbac';
 import {
   ApiRequest,
+  AuthenticatedApiRequest,
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
@@ -53,6 +54,22 @@ import { ZodError } from 'zod';
 
 export class ApiTimeSheetController extends ApiBaseController {
   private timeSheetService: TimeSheetService;
+
+  private async assertManualProductAccess(
+    req: NextRequest,
+    keyRecord: { user_id: string; tenant: string; api_key_id?: string },
+    user: NonNullable<ApiRequest['context']>['user'],
+  ): Promise<AuthenticatedApiRequest> {
+    const apiRequest = req as AuthenticatedApiRequest;
+    apiRequest.context = {
+      userId: keyRecord.user_id,
+      tenant: keyRecord.tenant,
+      user,
+      apiKeyId: keyRecord.api_key_id,
+    };
+    await this.assertProductApiAccess(apiRequest);
+    return apiRequest;
+  }
 
   constructor() {
     const timeSheetService = new TimeSheetService();
@@ -110,6 +127,8 @@ export class ApiTimeSheetController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -184,6 +203,8 @@ export class ApiTimeSheetController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -268,6 +289,8 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new UnauthorizedError('User not found');
         }
 
+        await this.assertManualProductAccess(req, keyRecord, user);
+
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasApprovePermission = await hasPermission(
@@ -350,6 +373,8 @@ export class ApiTimeSheetController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -434,6 +459,8 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new UnauthorizedError('User not found');
         }
 
+        await this.assertManualProductAccess(req, keyRecord, user);
+
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasManagePermission = await hasPermission(
@@ -517,6 +544,8 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new UnauthorizedError('User not found');
         }
 
+        await this.assertManualProductAccess(req, keyRecord, user);
+
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasApprovePermission = await hasPermission(
@@ -598,6 +627,8 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new UnauthorizedError('User not found');
         }
 
+        await this.assertManualProductAccess(req, keyRecord, user);
+
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasReadPermission = await hasPermission(
@@ -668,6 +699,8 @@ export class ApiTimeSheetController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -752,6 +785,8 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new UnauthorizedError('User not found');
         }
 
+        await this.assertManualProductAccess(req, keyRecord, user);
+
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasReadPermission = await hasPermission(
@@ -831,6 +866,8 @@ export class ApiTimeSheetController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -924,6 +961,8 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new UnauthorizedError('User not found');
         }
 
+        await this.assertManualProductAccess(req, keyRecord, user);
+
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasReadPermission = await hasPermission(
@@ -992,6 +1031,8 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new UnauthorizedError('User not found');
         }
 
+        await this.assertManualProductAccess(req, keyRecord, user);
+
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasReadPermission = await hasPermission(
@@ -1057,6 +1098,8 @@ export class ApiTimeSheetController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1131,6 +1174,8 @@ export class ApiTimeSheetController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1209,6 +1254,8 @@ export class ApiTimeSheetController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1292,6 +1339,8 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new UnauthorizedError('User not found');
         }
 
+        await this.assertManualProductAccess(req, keyRecord, user);
+
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasDeletePermission = await hasPermission(
@@ -1361,6 +1410,8 @@ export class ApiTimeSheetController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1443,6 +1494,8 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new UnauthorizedError('User not found');
         }
 
+        await this.assertManualProductAccess(req, keyRecord, user);
+
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasReadPermission = await hasPermission(
@@ -1508,6 +1561,8 @@ export class ApiTimeSheetController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1586,6 +1641,8 @@ export class ApiTimeSheetController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1671,6 +1728,8 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new UnauthorizedError('User not found');
         }
 
+        await this.assertManualProductAccess(req, keyRecord, user);
+
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasReadPermission = await hasPermission(
@@ -1744,6 +1803,8 @@ export class ApiTimeSheetController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1822,6 +1883,8 @@ export class ApiTimeSheetController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1904,6 +1967,8 @@ export class ApiTimeSheetController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);

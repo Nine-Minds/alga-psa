@@ -1396,6 +1396,76 @@ export const assignTeamToProjectTask = withAuth(async (
     }
 });
 
+export type RemoveTeamFromProjectTaskMode = 'remove_all' | 'keep_all' | 'selective';
+
+export interface RemoveTeamFromProjectTaskOptions {
+    mode: RemoveTeamFromProjectTaskMode;
+    keepUserIds?: string[];
+}
+
+export const removeTeamFromProjectTask = withAuth(async (
+    user,
+    { tenant },
+    taskId: string,
+    options: RemoveTeamFromProjectTaskOptions
+): Promise<void> => {
+    try {
+        const {knex: db} = await createTenantKnex();
+        await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'update', trx);
+
+            const task = await trx('project_tasks')
+                .where({ task_id: taskId, tenant })
+                .first();
+            if (!task) {
+                throw new Error('Task not found');
+            }
+            const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
+            if (!projectId) {
+                throw new Error('Project not found for task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+
+            const mode = options.mode;
+            if (mode === 'remove_all') {
+                await trx('task_resources')
+                    .where({ task_id: taskId, tenant, role: 'team_member' })
+                    .delete();
+            } else if (mode === 'selective') {
+                const keepIds = options.keepUserIds ?? [];
+                await trx('task_resources')
+                    .where({ task_id: taskId, tenant, role: 'team_member' })
+                    .whereNotIn('additional_user_id', keepIds)
+                    .delete();
+                // Kept members are now individual agents — clear the team_member role
+                // so they don't get swept up by a future remove_all.
+                if (keepIds.length > 0) {
+                    await trx('task_resources')
+                        .where({ task_id: taskId, tenant, role: 'team_member' })
+                        .whereIn('additional_user_id', keepIds)
+                        .update({ role: null });
+                }
+            } else if (mode === 'keep_all') {
+                // Keep every member but drop the team_member role so the rows are
+                // treated as plain additional agents from now on.
+                await trx('task_resources')
+                    .where({ task_id: taskId, tenant, role: 'team_member' })
+                    .update({ role: null });
+            }
+
+            await trx('project_tasks')
+                .where({ task_id: taskId, tenant })
+                .update({
+                    assigned_team_id: null,
+                    updated_at: new Date()
+                });
+        });
+    } catch (error) {
+        console.error('Error removing team from project task:', error);
+        throw error;
+    }
+});
+
 export const removeTaskResourceAction = withAuth(async (
     user,
     { tenant },
@@ -1870,8 +1940,12 @@ export const duplicateTaskToPhase = withAuth(async (
             if (options?.duplicateAdditionalAssignees) {
                 const originalResources = await ProjectTaskModel.getTaskResources(trx, tenant, originalTaskId);
                 for (const resource of originalResources) {
-                    // addTaskResource expects taskId, userId, role
-                    await ProjectTaskModel.addTaskResource(trx, tenant, newTask.task_id, resource.additional_user_id, resource.role || undefined);
+                    try {
+                        // addTaskResource expects taskId, userId, role
+                        await ProjectTaskModel.addTaskResource(trx, tenant, newTask.task_id, resource.additional_user_id, resource.role || undefined);
+                    } catch (resourceError) {
+                        console.error(`Failed to duplicate task resource for user ${resource.additional_user_id}:`, resourceError);
+                    }
                 }
             }
 

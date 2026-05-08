@@ -200,6 +200,8 @@
     "tasksReorderedSuccess": "Tasks reordered successfully",
     "commentCountsLoadError": "Failed to load comment counts",
     "taskAssigneeUpdatedSuccess": "Task assignee updated successfully!",
+    "teamAssignedSuccess": "Team assigned successfully",
+    "assignTeamFailed": "Failed to assign team",
     "taskDuplicatedSuccess": "Task \"{{taskName}}\" duplicated successfully!",
     "duplicateNoTargetPhase": "Could not find a target phase to duplicate to.",
     "taskNotFound": "Task not found",
@@ -277,6 +279,18 @@
     "agentPendingSave": "Agent will be added when task is saved",
     "teamAssignedSuccess": "Team assigned successfully",
     "assignTeamFailed": "Failed to assign team",
+    "teamRemovedSuccess": "Equipe removida com sucesso",
+    "teamRemoveFailed": "Falha ao remover a atribuição da equipe",
+    "removeTeamAssignment": "Remove team assignment",
+    "switchTeamAssignment": "Switch team assignment",
+    "removeTeamMode": {
+      "removeAll": "Remove all team members",
+      "keepAll": "Keep all team members as individual agents",
+      "selective": "Select individual members to keep/remove",
+      "selectiveHint": "Check members to keep on the task as individual agents. Unchecked members will be removed."
+    },
+    "noTeamMembersFound": "No team members found on this task.",
+    "unnamedUser": "Unnamed User",
     "linkingPartialFailure": "Task created but failed to link some items",
     "tagCreationPartialFailure": "{{count}} tag(s) could not be created",
     "saveFailed": "Failed to save task",
@@ -304,6 +318,10 @@
     "documentCleanupFailure": "{{count}} document{{plural}} could not be deleted and will remain in Documents",
     "ticketCleanupFailure": "{{count}} ticket{{plural}} could not be deleted",
     "checklistItemPlaceholder": "Checklist item",
+    "reorderChecklistItem": "Arrastar para reordenar",
+    "insertChecklistItem": "Inserir item aqui",
+    "editChecklistItem": "Editar item da checklist",
+    "removeChecklistItem": "Remover item da checklist",
     "tagsTitle": "Tags",
     "checklistTitle": "Checklist",
     "createFromTicket": "Create from ticket",
@@ -587,7 +605,8 @@
       "row": "Row",
       "phase": "Phase",
       "task": "Task",
-      "issues": "Issues"
+      "issues": "Issues",
+      "valid": "Válido"
     },
     "fields": {
       "task_name": "Task Name *",
@@ -602,7 +621,24 @@
       "task_type": "Task Type",
       "status": "Status",
       "tags": "Tags"
-    }
+    },
+    "fallbackPhaseLabel": "Fase padrão para tarefas sem phase_name",
+    "fallbackPhaseHelp": "{{count}} linha(s) sem fase. Escolha uma fase existente ou mantenha o padrão para criar uma.",
+    "fallbackPhaseCreateDefault": "Criar nova fase: \"{{name}}\"",
+    "fallbackStatusLabel": "Status padrão para tarefas sem status",
+    "fallbackStatusHelp": "{{count}} linha(s) sem status. O status selecionado será atribuído a essas tarefas.",
+    "rowResultsTitle": "Resultados das linhas",
+    "rowFilterLabel": "Mostrar:",
+    "rowFilterAll": "Todas as linhas ({{count}})",
+    "rowFilterImported": "Serão importadas ({{count}})",
+    "rowFilterSkipped": "Serão ignoradas ({{count}})",
+    "rowsToBeSkippedCount": "{{count}} linha(s) serão ignoradas",
+    "rowsToBeSkippedHelp": "porque falharam na validação. Use o filtro acima para revisá-las.",
+    "statusUnmatchedSuffix": "Sem correspondência",
+    "statusUnmatchedTooltip": "O status não corresponde a nenhum status existente para esta fase. Resolva nas etapas de mapeamento antes de importar.",
+    "statusFallbackSuffix": "Padrão",
+    "statusFallbackTooltip": "Usando o status padrão de fallback para esta fase.",
+    "inPhaseBadge": "em {{phase}}"
   },
   "dialogs": {
     "moveTask": {
@@ -1018,6 +1054,8 @@
       "addChecklistItem": "Add an item",
       "checklistItemPlaceholder": "Checklist item",
       "emptyChecklistItem": "Empty item",
+      "reorderChecklistItem": "Arrastar para reordenar",
+      "insertChecklistItem": "Inserir item aqui",
       "dependencies": "Dependencies",
       "dependenciesHelp": "Define task dependencies to control execution order when project is created",
       "removeDependency": "Remove dependency",

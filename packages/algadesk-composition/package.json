@@ -1,0 +1,45 @@
+{
+  "name": "@alga-psa/algadesk-composition",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "import": "./src/index.ts",
+      "types": "./src/index.ts"
+    },
+    "./msp": {
+      "import": "./src/msp/index.ts",
+      "types": "./src/msp/index.ts"
+    },
+    "./portal": {
+      "import": "./src/portal/index.ts",
+      "types": "./src/portal/index.ts"
+    },
+    "./tickets": {
+      "import": "./src/tickets/index.ts",
+      "types": "./src/tickets/index.ts"
+    },
+    "./clients": {
+      "import": "./src/clients/index.ts",
+      "types": "./src/clients/index.ts"
+    },
+    "./settings": {
+      "import": "./src/settings/index.ts",
+      "types": "./src/settings/index.ts"
+    },
+    "./kb": {
+      "import": "./src/kb/index.ts",
+      "types": "./src/kb/index.ts"
+    },
+    "./providers": {
+      "import": "./src/providers/index.ts",
+      "types": "./src/providers/index.ts"
+    }
+  },
+  "dependencies": {
+    "@alga-psa/types": "*"
+  }
+}

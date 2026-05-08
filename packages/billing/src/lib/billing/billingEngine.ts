@@ -3607,6 +3607,7 @@ export class BillingEngine {
 
         return {
           serviceId: record.service_id,
+          config_id: serviceConfig?.config.config_id,
           serviceName: record.service_name,
           client_contract_line_id: clientContractLine.client_contract_line_id,
           quantity,
@@ -4186,6 +4187,8 @@ export class BillingEngine {
         "sc.service_name",
         "sc.default_rate",
         "sc.tax_rate_id",
+        "sc.unit_of_measure",
+        "sc.billing_method",
         "cls.service_id",
       );
 
@@ -4258,27 +4261,33 @@ export class BillingEngine {
           periodUsage.overageMinutes += recordOverageMinutes;
         }
 
-        const configuredMinutes =
-          bucketConfig.total_minutes ??
-          (bucketConfig.total_hours !== undefined
-            ? Number(bucketConfig.total_hours) * 60
-            : 0);
+        const isUsageBucket =
+          contractLine.contract_line_type === "Usage" ||
+          bucketConfig.billing_method === "usage";
+        const configuredQuantity = isUsageBucket
+          ? Number(bucketConfig.total_minutes ?? 0)
+          : bucketConfig.total_minutes ??
+            (bucketConfig.total_hours !== undefined
+              ? Number(bucketConfig.total_hours) * 60
+              : 0);
 
         const bucketCharges: IBucketCharge[] = [];
         for (const usagePeriod of Array.from(usageByPeriod.values()).sort((a, b) =>
           a.periodStart.localeCompare(b.periodStart),
         )) {
-          let overageMinutes = usagePeriod.overageMinutes;
-          if (!overageMinutes && configuredMinutes) {
-            overageMinutes = Math.max(
+          let overageQuantity = usagePeriod.overageMinutes;
+          if (!overageQuantity && configuredQuantity) {
+            overageQuantity = Math.max(
               0,
-              usagePeriod.minutesUsed - configuredMinutes,
+              usagePeriod.minutesUsed - configuredQuantity,
             );
           }
 
+          const unitsUsed = usagePeriod.minutesUsed;
+          const overageUnits = overageQuantity;
           const hoursUsed = usagePeriod.minutesUsed / 60;
-          const overageHours = overageMinutes / 60;
-          if (overageHours <= 0) {
+          const overageHours = overageQuantity / 60;
+          if ((isUsageBucket ? overageUnits : overageHours) <= 0) {
             continue;
           }
 
@@ -4289,7 +4298,7 @@ export class BillingEngine {
             });
 
           const overageRate = Math.ceil(bucketConfig.overage_rate);
-          const total = Math.ceil(overageHours * overageRate);
+          const total = Math.ceil((isUsageBucket ? overageUnits : overageHours) * overageRate);
 
           let taxAmount = 0;
           let taxRate = 0;
@@ -4330,9 +4339,16 @@ export class BillingEngine {
             hoursUsed: hoursUsed,
             overageHours: overageHours,
             overageRate: overageRate,
+            quantity: isUsageBucket ? overageUnits : undefined,
+            isUsageBucket,
+            unitOfMeasure: bucketConfig.unit_of_measure ?? null,
+            unitsUsed: isUsageBucket ? unitsUsed : undefined,
+            includedUnits: isUsageBucket ? Math.max(0, unitsUsed - overageUnits) : undefined,
+            overageUnits: isUsageBucket ? overageUnits : undefined,
             tax_rate: taxRate,
             tax_region: effectiveTaxRegion,
             serviceId: bucketConfig.service_id,
+            config_id: bucketConfig.config_id,
             tax_amount: taxAmount,
             is_taxable: isTaxable,
             servicePeriodStart: usagePeriod.periodStart,

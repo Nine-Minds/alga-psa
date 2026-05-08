@@ -365,6 +365,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // === LEVEL 9: Configuration and settings ===
   // API and auth
+  // webhook_deliveries references webhooks, so it must be deleted before webhooks.
+  'webhook_deliveries', 'webhooks',
+  // api_rate_limit_settings has no FK to api_keys (only a column), but lives
+  // alongside the API key surface logically.
+  'api_rate_limit_settings',
   'mobile_auth_otts', 'mobile_refresh_tokens',
   'api_keys',
   'portal_domain_session_otts', 'portal_domains',

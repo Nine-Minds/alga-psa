@@ -187,6 +187,10 @@ vi.mock("../features/ticketDetail/components/MaterialsSection", () => ({
   MaterialsSection: (props: Record<string, unknown>) => React.createElement("MockMaterialsSection", props),
 }));
 
+vi.mock("../features/ticketDetail/components/TimeEntriesSection", () => ({
+  TimeEntriesSection: (props: Record<string, unknown>) => React.createElement("MockTimeEntriesSection", props),
+}));
+
 vi.mock("../features/ticketRichText/TicketRichTextEditor", async () => {
   const React = await import("react");
 

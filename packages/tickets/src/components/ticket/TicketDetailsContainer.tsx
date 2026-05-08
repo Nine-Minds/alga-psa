@@ -66,6 +66,21 @@ interface TicketDetailsContainerProps {
   renderCreateProjectTask?: React.ComponentProps<typeof TicketDetails>['renderCreateProjectTask'];
   renderClientDetails?: React.ComponentProps<typeof TicketDetails>['renderClientDetails'];
   renderIntervalManagement?: React.ComponentProps<typeof TicketDetails>['renderIntervalManagement'];
+  hideSlaStatus?: boolean;
+  hideTimeEntry?: boolean;
+  hideMaterials?: boolean;
+  uploadTicketAttachmentAction?: (
+    formData: FormData,
+    params: { userId: string; ticketId: string }
+  ) => Promise<any>;
+  deleteDraftTicketAttachmentImagesAction?: (input: {
+    ticketId: string;
+    documentIds: string[];
+  }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
+  resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
+  disableAttachmentFolderSelection?: boolean;
+  disableAttachmentSharing?: boolean;
+  disableAttachmentLinking?: boolean;
 }
 
 export default function TicketDetailsContainer({
@@ -76,6 +91,15 @@ export default function TicketDetailsContainer({
   renderCreateProjectTask,
   renderClientDetails,
   renderIntervalManagement,
+  hideSlaStatus = false,
+  hideTimeEntry = false,
+  hideMaterials = false,
+  uploadTicketAttachmentAction,
+  deleteDraftTicketAttachmentImagesAction,
+  resolveTicketAttachmentViewUrl,
+  disableAttachmentFolderSelection = false,
+  disableAttachmentSharing = false,
+  disableAttachmentLinking = false,
 }: TicketDetailsContainerProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -242,10 +266,19 @@ export default function TicketDetailsContainer({
             isSubmitting={isSubmitting}
           surveySummaryCard={surveySummaryCard}
           associatedAssets={associatedAssets}
-          renderContactDetails={renderContactDetails}
+            renderContactDetails={renderContactDetails}
           renderCreateProjectTask={renderCreateProjectTask}
             renderClientDetails={renderClientDetails}
             renderIntervalManagement={renderIntervalManagement}
+            hideSlaStatus={hideSlaStatus}
+            hideTimeEntry={hideTimeEntry}
+            hideMaterials={hideMaterials}
+            uploadTicketAttachmentAction={uploadTicketAttachmentAction}
+            deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
+            resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
+            disableAttachmentFolderSelection={disableAttachmentFolderSelection}
+            disableAttachmentSharing={disableAttachmentSharing}
+            disableAttachmentLinking={disableAttachmentLinking}
         />
         </Suspense>
       </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { IProjectPhase, IProjectTask, ITaskChecklistItem, ProjectStatus, IProjectTicketLinkWithDetails, IProjectTaskDependency } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { IPriority } from '@alga-psa/types';
@@ -22,6 +22,7 @@ import {
   removeTaskResourceAction,
   getTaskResourcesAction,
   assignTeamToProjectTask,
+  removeTeamFromProjectTask,
   addTicketLinkAction,
   deleteTaskTicketLinksByTicketIdAction,
   duplicateTaskToPhase,
@@ -38,12 +39,13 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { TextEditor } from '@alga-psa/ui/editor';
 import type { BlockNoteEditor } from '@blocknote/core';
 import { PartialBlock } from '@blocknote/core';
-import { ListChecks, Pencil, Plus, Trash2, Clock, Ticket } from 'lucide-react';
+import { ListChecks, Pencil, Plus, Trash2, Clock, Ticket, GripVertical } from 'lucide-react';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
+import RemoveTeamDialog from './RemoveTeamDialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -76,6 +78,7 @@ import {
   isTaskRichTextEmpty,
 } from '../lib/taskRichText';
 import { useTranslation } from 'react-i18next';
+import checklistDnd from './ChecklistDragDrop.module.css';
 
 type ProjectTreeTypes = 'project' | 'phase' | 'status';
 
@@ -140,6 +143,8 @@ export default function TaskForm({
   const [assignedUser, setAssignedUser] = useState<string | null>(task?.assigned_to ?? prefillData?.assigned_to ?? null);
   const [assignedTeamId, setAssignedTeamId] = useState<string | null>(task?.assigned_team_id ?? null);
   const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
+  const [isRemoveTeamDialogOpen, setIsRemoveTeamDialogOpen] = useState(false);
+  const [pendingSwitchTeamId, setPendingSwitchTeamId] = useState<string | null>(null);
   const [descriptionEditorKey, setDescriptionEditorKey] = useState(0);
   const [selectedPhase, setSelectedPhase] = useState<IProjectPhase>(phase);
   const [showMoveConfirmation, setShowMoveConfirmation] = useState(false);
@@ -206,6 +211,15 @@ export default function TaskForm({
     initialTicketLinkIdsRef.current = new Set(links.map((link) => link.ticket_id));
   }, []);
   const [editingChecklistItemId, setEditingChecklistItemId] = useState<string | null>(null);
+  const [draggedChecklistId, setDraggedChecklistId] = useState<string | null>(null);
+  const [dragOverChecklistId, setDragOverChecklistId] = useState<string | null>(null);
+  const [checklistDropPosition, setChecklistDropPosition] = useState<'before' | 'after' | null>(null);
+  const [recentlyDroppedChecklistId, setRecentlyDroppedChecklistId] = useState<string | null>(null);
+  // Tracks whether the latest mousedown landed inside a checklist drag handle.
+  // dragstart fires on the wrapper (the draggable element) and its e.target is
+  // the wrapper, not the original mousedown target — so we capture that origin
+  // here on mousedown and use it to gate dragstart.
+  const checklistDragOriginIsHandleRef = useRef(false);
   const [isCrossProjectMove, setIsCrossProjectMove] = useState<boolean>(false);
   const [selectedDuplicatePhaseId, setSelectedDuplicatePhaseId] = useState<string | null>(null);
   const [showDuplicateConfirm, setShowDuplicateConfirm] = useState(false); // State for duplicate dialog
@@ -431,6 +445,10 @@ export default function TaskForm({
       .catch(() => setTeamAvatarUrl(null));
   }, [assignedTeamId, teams]);
 
+  const teamMembersOnTask = useMemo(() => {
+    return taskResources.filter(r => r.role === 'team_member');
+  }, [taskResources]);
+
   // Separate effect for loading task dependencies
   useEffect(() => {
     const loadDependencies = async () => {
@@ -627,7 +645,7 @@ export default function TaskForm({
     }
   };
 
-  const handleAssignTeam = async (teamId: string) => {
+  const performTeamAssign = async (teamId: string) => {
     setAssignedTeamId(teamId);
     const team = teams.find(t => t.team_id === teamId);
     const leadId = team?.manager_id || team?.members?.find(member => member.role === 'lead')?.user_id || null;
@@ -668,6 +686,43 @@ export default function TaskForm({
 
       // Replace existing temp resources with team members
       setTempTaskResources(newResources);
+    }
+  };
+
+  const handleAssignTeam = async (teamId: string) => {
+    // If a team is already assigned to an existing task, prompt for the
+    // remove/keep mode before swapping. The existing team's resources are
+    // cleaned per the chosen mode, then the new team is assigned.
+    if (task?.task_id && assignedTeamId && assignedTeamId !== teamId) {
+      setPendingSwitchTeamId(teamId);
+      setIsRemoveTeamDialogOpen(true);
+      return;
+    }
+
+    await performTeamAssign(teamId);
+  };
+
+  const handleRemoveTeamAssignment = async (
+    mode: 'remove_all' | 'keep_all' | 'selective',
+    keepUserIds?: string[]
+  ) => {
+    if (!task?.task_id) {
+      // New task: just clear local state (nothing persisted yet)
+      setAssignedTeamId(null);
+      setTempTaskResources(prev => prev.filter(r => r.role !== 'team_member'));
+      return;
+    }
+    try {
+      await removeTeamFromProjectTask(task.task_id, { mode, keepUserIds });
+      setAssignedTeamId(null);
+      const resources = await getTaskResourcesAction(task.task_id);
+      setTaskResources(resources);
+      setInitialTaskResources(resources);
+      toast.success(taskFormT('teamRemovedSuccess', 'Team removed successfully'));
+    } catch (error) {
+      console.error('Failed to remove team assignment:', error);
+      toast.error(taskFormT('teamRemoveFailed', 'Failed to remove team assignment'));
+      throw error;
     }
   };
 
@@ -773,7 +828,11 @@ export default function TaskForm({
 
         // Save any temporarily stored additional agents (added while task had no primary agent)
         for (const resource of tempTaskResources) {
-          await addTaskResourceAction(taskToUpdate.task_id, resource.additional_user_id);
+          try {
+            await addTaskResourceAction(taskToUpdate.task_id, resource.additional_user_id);
+          } catch (agentError) {
+            console.error(`Failed to add additional agent ${resource.additional_user_id}:`, agentError);
+          }
         }
 
         onSubmit(resultTask);
@@ -807,7 +866,11 @@ export default function TaskForm({
             }
             // Add task resources
             for (const resource of tempTaskResources) {
-              await addTaskResourceAction(resultTask.task_id, resource.additional_user_id);
+              try {
+                await addTaskResourceAction(resultTask.task_id, resource.additional_user_id);
+              } catch (agentError) {
+                console.error(`Failed to add additional agent ${resource.additional_user_id}:`, agentError);
+              }
             }
 
             // Add ticket links using the actual task ID and phase ID
@@ -1091,7 +1154,7 @@ export default function TaskForm({
     setIsEditingChecklist(!isEditingChecklist);
   };
 
-  const addChecklistItem = (): string => {
+  const addChecklistItem = (insertAtIndex?: number): string => {
     const newItemId = `temp-${Date.now()}`;
     const newItem: Omit<ITaskChecklistItem, 'tenant'> = {
       checklist_item_id: newItemId,
@@ -1103,18 +1166,24 @@ export default function TaskForm({
       due_date: null,
       created_at: new Date(),
       updated_at: new Date(),
-      order_number: checklistItems.length + 1,
+      order_number: 0, // recomputed below
     };
-    setChecklistItems((items) => [...items, newItem]);
+    setChecklistItems((items) => {
+      const next = [...items];
+      const at = insertAtIndex === undefined ? next.length : Math.max(0, Math.min(insertAtIndex, next.length));
+      next.splice(at, 0, newItem);
+      return next.map((it, i) => ({ ...it, order_number: i + 1 }));
+    });
     return newItemId;
   };
 
   const handleChecklistItemKeyDown = (
-    e: React.KeyboardEvent<HTMLTextAreaElement>
+    e: React.KeyboardEvent<HTMLTextAreaElement>,
+    index: number
   ) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      const newId = addChecklistItem();
+      const newId = addChecklistItem(index + 1);
       setEditingChecklistItemId(newId);
     }
   };
@@ -1128,6 +1197,61 @@ export default function TaskForm({
   const removeChecklistItem = (index: number) => {
     const updatedItems = checklistItems.filter((_, i) => i !== index);
     setChecklistItems(updatedItems);
+  };
+
+  const resetChecklistDragState = () => {
+    setDraggedChecklistId(null);
+    setDragOverChecklistId(null);
+    setChecklistDropPosition(null);
+  };
+
+  const handleChecklistDragStart = (e: React.DragEvent, id: string) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+    requestAnimationFrame(() => setDraggedChecklistId(id));
+  };
+
+  const handleChecklistDragOver = (e: React.DragEvent, id: string) => {
+    if (!draggedChecklistId || draggedChecklistId === id) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const position: 'before' | 'after' =
+      e.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+    if (dragOverChecklistId !== id || checklistDropPosition !== position) {
+      setDragOverChecklistId(id);
+      setChecklistDropPosition(position);
+    }
+  };
+
+  const handleChecklistDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    const fromId = draggedChecklistId;
+    const position = checklistDropPosition;
+    resetChecklistDragState();
+    if (!fromId || fromId === targetId || position === null) return;
+
+    let didMove = false;
+    setChecklistItems((prev) => {
+      const items = [...prev];
+      const fromIndex = items.findIndex((item) => item.checklist_item_id === fromId);
+      const targetIndex = items.findIndex((item) => item.checklist_item_id === targetId);
+      if (fromIndex === -1 || targetIndex === -1) return prev;
+
+      let insertAt = position === 'after' ? targetIndex + 1 : targetIndex;
+      if (fromIndex < insertAt) insertAt -= 1;
+      if (insertAt === fromIndex) return prev;
+
+      const [moved] = items.splice(fromIndex, 1);
+      items.splice(insertAt, 0, moved);
+      didMove = true;
+      return items.map((it, i) => ({ ...it, order_number: i + 1 }));
+    });
+
+    if (didMove) {
+      setRecentlyDroppedChecklistId(fromId);
+      window.setTimeout(() => setRecentlyDroppedChecklistId((curr) => (curr === fromId ? null : curr)), 400);
+    }
   };
 
   const handleDeleteConfirm = async () => {
@@ -1624,6 +1748,18 @@ export default function TaskForm({
                           size="xs"
                         />
                         <span className="text-xs text-gray-500 truncate">{assignedTeam.team_name}</span>
+                        <button
+                          type="button"
+                          id="task-remove-team-btn"
+                          className="text-xs text-gray-400 hover:text-red-500 ml-1"
+                          onClick={() => {
+                            setPendingSwitchTeamId(null);
+                            setIsRemoveTeamDialogOpen(true);
+                          }}
+                          aria-label={taskFormT('removeTeamAssignment', 'Remove team assignment')}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
                       </div>
                     ) : null;
                   })()}
@@ -1735,8 +1871,69 @@ export default function TaskForm({
                 <div className="flex flex-col space-y-2">
                   {checklistItems.map((item, index): React.JSX.Element => {
                     const isItemEditing = isEditingChecklist || editingChecklistItemId === item.checklist_item_id;
+                    const isDragging = draggedChecklistId === item.checklist_item_id;
+                    const isDropTarget = dragOverChecklistId === item.checklist_item_id && draggedChecklistId !== item.checklist_item_id;
+                    const isEntering = recentlyDroppedChecklistId === item.checklist_item_id;
+                    const isAnyDragging = draggedChecklistId !== null;
                     return (
-                      <div key={index} className="flex items-center gap-2 w-full">
+                      <div
+                        key={item.checklist_item_id}
+                        draggable
+                        onMouseDown={(e) => {
+                          const target = e.target as HTMLElement | null;
+                          checklistDragOriginIsHandleRef.current =
+                            !!target && !!target.closest(`.${checklistDnd.dragHandle}`);
+                        }}
+                        onDragStart={(e) => {
+                          if (!checklistDragOriginIsHandleRef.current) {
+                            e.preventDefault();
+                            return;
+                          }
+                          handleChecklistDragStart(e, item.checklist_item_id);
+                        }}
+                        onDragOver={(e) => handleChecklistDragOver(e, item.checklist_item_id)}
+                        onDrop={(e) => handleChecklistDrop(e, item.checklist_item_id)}
+                        onDragEnd={() => {
+                          checklistDragOriginIsHandleRef.current = false;
+                          resetChecklistDragState();
+                        }}
+                      >
+                        {isEditingChecklist && (
+                          <Tooltip content={taskFormT('insertChecklistItem', 'Insert item here')}>
+                            <div
+                              className={`${checklistDnd.insertZone} ${isAnyDragging ? checklistDnd.insertZoneHidden : ''}`}
+                              role="button"
+                              tabIndex={-1}
+                              aria-label={taskFormT('insertChecklistItem', 'Insert item here')}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newId = addChecklistItem(index);
+                                setEditingChecklistItemId(newId);
+                              }}
+                            >
+                              <div className={checklistDnd.insertZoneLine} />
+                              <div className={checklistDnd.insertZoneButton}>
+                                <Plus className="h-3 w-3" />
+                              </div>
+                            </div>
+                          </Tooltip>
+                        )}
+                        {isDropTarget && checklistDropPosition === 'before' && (
+                          <div className={`${checklistDnd.dropPlaceholder} ${checklistDnd.visible}`} />
+                        )}
+                        <div
+                          className={`flex items-center gap-2 w-full ${checklistDnd.row} ${
+                            isDragging ? checklistDnd.dragging : ''
+                          } ${isEntering ? checklistDnd.entering : ''}`}
+                        >
+                          <Tooltip content={taskFormT('reorderChecklistItem', 'Drag to reorder')}>
+                            <div
+                              className={`${checklistDnd.dragHandle} cursor-grab text-gray-400 flex-none`}
+                              aria-label={taskFormT('reorderChecklistItem', 'Drag to reorder')}
+                            >
+                              <GripVertical className="h-4 w-4" />
+                            </div>
+                          </Tooltip>
                         <Checkbox
                           checked={item.completed}
                           onChange={(e) => updateChecklistItem(index, 'completed', e.target.checked)}
@@ -1753,7 +1950,7 @@ export default function TaskForm({
                               wrapperClassName="!mb-0 !px-0"
                               onBlur={() => setEditingChecklistItemId(null)} // Stop editing when focus is lost
                               autoFocus={editingChecklistItemId === item.checklist_item_id}
-                              onKeyDown={handleChecklistItemKeyDown}
+                              onKeyDown={(e) => handleChecklistItemKeyDown(e, index)}
                             />
                           </div>
                         ) : (
@@ -1766,37 +1963,63 @@ export default function TaskForm({
                         )}
                         <div className="flex items-center gap-1 shrink-0">
                           {!isItemEditing && (
+                            <Tooltip content={taskFormT('editChecklistItem', 'Edit checklist item')}>
+                              <Button
+                                id={`edit-checklist-${item.checklist_item_id}`}
+                                type="button"
+                                variant="icon"
+                                size="icon"
+                                onClick={() => setEditingChecklistItemId(item.checklist_item_id)}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                            </Tooltip>
+                          )}
+                          <Tooltip content={taskFormT('removeChecklistItem', 'Remove checklist item')}>
                             <Button
-                              id={`edit-checklist-${item.checklist_item_id}`}
+                              id={`remove-checklist-${item.checklist_item_id}`}
                               type="button"
                               variant="icon"
                               size="icon"
-                              onClick={() => setEditingChecklistItemId(item.checklist_item_id)}
-                              title={taskFormT('editChecklistItem', 'Edit checklist item')}
+                              // Fire on mousedown (with preventDefault) so the textarea's
+                              // blur handler doesn't unmount this button before click fires.
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                removeChecklistItem(index);
+                              }}
+                              className="text-destructive hover:text-destructive"
                             >
-                              <Pencil className="h-3.5 w-3.5" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
-                          )}
-                          <Button
-                            id={`remove-checklist-${item.checklist_item_id}`}
-                            type="button"
-                            variant="icon"
-                            size="icon"
-                            // Fire on mousedown (with preventDefault) so the textarea's
-                            // blur handler doesn't unmount this button before click fires.
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              removeChecklistItem(index);
-                            }}
-                            className="text-destructive hover:text-destructive"
-                            title={taskFormT('removeChecklistItem', 'Remove checklist item')}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          </Tooltip>
                         </div>
+                        </div>
+                        {isDropTarget && checklistDropPosition === 'after' && (
+                          <div className={`${checklistDnd.dropPlaceholder} ${checklistDnd.visible}`} />
+                        )}
                       </div>
                     );
                   })}
+                  {isEditingChecklist && checklistItems.length > 0 && draggedChecklistId === null && (
+                    <Tooltip content={taskFormT('insertChecklistItem', 'Insert item here')}>
+                      <div
+                        className={checklistDnd.insertZone}
+                        role="button"
+                        tabIndex={-1}
+                        aria-label={taskFormT('insertChecklistItem', 'Insert item here')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const newId = addChecklistItem(checklistItems.length);
+                          setEditingChecklistItemId(newId);
+                        }}
+                      >
+                        <div className={checklistDnd.insertZoneLine} />
+                        <div className={checklistDnd.insertZoneButton}>
+                          <Plus className="h-3 w-3" />
+                        </div>
+                      </div>
+                    </Tooltip>
+                  )}
                 </div>
 
           </div>
@@ -2094,6 +2317,39 @@ export default function TaskForm({
         confirmLabel={taskFormT('discardChanges', 'Discard changes')}
         cancelLabel={taskFormT('continueEditing', 'Continue editing')}
       />
+
+      {assignedTeamId && (
+        <RemoveTeamDialog
+          id="task-form-remove-team-dialog"
+          isOpen={isRemoveTeamDialogOpen}
+          onClose={() => {
+            setPendingSwitchTeamId(null);
+            setIsRemoveTeamDialogOpen(false);
+          }}
+          isSwitching={!!pendingSwitchTeamId}
+          teamMembers={teamMembersOnTask}
+          users={users}
+          onConfirm={async (mode, keepUserIds) => {
+            try {
+              await handleRemoveTeamAssignment(mode, keepUserIds);
+              if (pendingSwitchTeamId) {
+                const nextTeamId = pendingSwitchTeamId;
+                setPendingSwitchTeamId(null);
+                setIsRemoveTeamDialogOpen(false);
+                // Call performTeamAssign directly: handleAssignTeam reads
+                // assignedTeamId from the closure of this render, where it
+                // still holds the previous team id, so the guard would loop.
+                await performTeamAssign(nextTeamId);
+                return;
+              }
+            } catch {
+              return;
+            }
+            setPendingSwitchTeamId(null);
+            setIsRemoveTeamDialogOpen(false);
+          }}
+        />
+      )}
 
     </>
   );

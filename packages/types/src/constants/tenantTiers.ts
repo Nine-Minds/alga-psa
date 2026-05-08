@@ -4,6 +4,9 @@
  * The `plan` column on the `tenants` table is the single source of truth
  * for a tenant's tier. This module provides type-safe access to tier
  * values and utilities for resolving/validating tiers.
+ *
+ * Product entitlement (`tenants.product_code`) is intentionally orthogonal:
+ * changing product must not change tier resolution behavior.
  */
 
 /**

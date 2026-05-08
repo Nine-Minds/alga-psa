@@ -58,6 +58,7 @@ export function GmailProviderForm({
     resolver: zodResolver(gmailProviderSchema) as any,
     defaultValues: provider && provider.googleConfig ? {
       providerName: provider.providerName,
+      senderDisplayName: provider.senderDisplayName || '',
       mailbox: provider.mailbox,
       isActive: provider.isActive,
       autoProcessEmails: provider.googleConfig.auto_process_emails ?? true,
@@ -65,6 +66,7 @@ export function GmailProviderForm({
       maxEmailsPerSync: provider.googleConfig.max_emails_per_sync ?? 50,
       inboundTicketDefaultsId: (provider as any).inboundTicketDefaultsId || undefined
     } : {
+      senderDisplayName: '',
       isActive: true,
       autoProcessEmails: true,
       labelFilters: '',
@@ -141,6 +143,7 @@ export function GmailProviderForm({
         tenant,
         providerType: 'google',
         providerName: data.providerName,
+        senderDisplayName: data.senderDisplayName?.trim() || null,
         mailbox: data.mailbox,
         isActive: data.isActive,
         inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
@@ -223,6 +226,7 @@ export function GmailProviderForm({
           tenant,
           providerType: 'google',
           providerName: formData.providerName,
+          senderDisplayName: formData.senderDisplayName?.trim() || null,
           mailbox: formData.mailbox,
           isActive: formData.isActive,
           inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
@@ -276,7 +280,7 @@ export function GmailProviderForm({
           <AlertDescription>
             <p className="font-medium mb-2">{t('forms.common.validation.requiredFieldsTitle', { defaultValue: 'Please fill in the required fields:' })}</p>
             <ul className="list-disc list-inside space-y-1">
-              {form.formState.errors.providerName && <li>{t('forms.gmail.requiredFields.providerName', { defaultValue: 'Provider Name' })}</li>}
+              {form.formState.errors.providerName && <li>{t('forms.gmail.requiredFields.providerName', { defaultValue: 'Configuration Name' })}</li>}
               {form.formState.errors.mailbox && <li>{t('forms.gmail.requiredFields.gmailAddress', { defaultValue: 'Gmail Address' })}</li>}
             </ul>
           </AlertDescription>

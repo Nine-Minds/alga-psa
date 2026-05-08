@@ -14,9 +14,10 @@ import { TagList } from '@alga-psa/ui/components';
 import { TagManager } from '@alga-psa/tags/components';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
-import UserPicker from '@alga-psa/ui/components/UserPicker';
+import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { useResponsiveColumns, ColumnConfig } from '@alga-psa/ui/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { highlightSearchMatch } from '../lib/searchUtils';
 import { useTranslation } from 'react-i18next';
 
@@ -70,6 +71,8 @@ interface TaskListViewProps {
   onAddTask?: (phaseId: string) => void;
   onTaskTagsChange?: (taskId: string, tags: ITag[]) => void;
   onAssigneeChange?: (taskId: string, newAssigneeId: string | null) => void;
+  onTeamAssign?: (taskId: string, teamId: string) => void | Promise<void>;
+  teams?: import('@alga-psa/types').ITeam[];
   users: any[];
   teamNames?: Record<string, string>;
   teamAvatarUrls?: Record<string, string | null>;
@@ -109,6 +112,8 @@ export default function TaskListView({
   onAddTask,
   onTaskTagsChange,
   onAssigneeChange,
+  onTeamAssign,
+  teams = [],
   users,
   teamNames = {},
   teamAvatarUrls = {},
@@ -1128,14 +1133,17 @@ export default function TaskListView({
                                   <td className="py-3 px-3" onClick={(e) => e.stopPropagation()}>
                                     <div className="flex items-center gap-1.5">
                                       {onAssigneeChange ? (
-                                        <UserPicker
+                                        <UserAndTeamPicker
                                           value={task.assigned_to || ''}
                                           onValueChange={(newAssigneeId) => onAssigneeChange(task.task_id, newAssigneeId)}
+                                          onTeamSelect={onTeamAssign ? (teamId) => onTeamAssign(task.task_id, teamId) : undefined}
                                           size="sm"
                                           users={users.filter(u =>
                                             !resources.some(r => r.additional_user_id === u.user_id)
                                           )}
+                                          teams={teams}
                                           getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                                          getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
                                         />
                                       ) : (
                                         (() => {

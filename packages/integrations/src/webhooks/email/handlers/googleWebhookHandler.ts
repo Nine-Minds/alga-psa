@@ -18,6 +18,16 @@ interface GmailNotification {
   historyId: string;
 }
 
+async function assertTenantEmailProductAccess(knex: any, tenantId: string): Promise<void> {
+  const tenant = await knex('tenants').where({ tenant: tenantId }).first('product_code');
+  const productCode = typeof tenant?.product_code === 'string' ? tenant.product_code : 'psa';
+  if (productCode !== 'psa' && productCode !== 'algadesk') {
+    const error = new Error(`Product access denied for tenant ${tenantId}`) as Error & { status?: number };
+    error.status = 403;
+    throw error;
+  }
+}
+
 function isRetryableWebhookError(error: any): boolean {
   const status = Number(error?.status || error?.statusCode || error?.response?.status);
   if (Number.isFinite(status)) {
@@ -143,6 +153,7 @@ export async function handleGoogleWebhook(request: NextRequest) {
       console.error(`❌ Active Gmail provider not found (subscription=${subscriptionName} email=${notification.emailAddress})`);
       return NextResponse.json({ success: true, message: 'No provider found' });
     }
+    await assertTenantEmailProductAccess(knex, provider.tenant);
 
     console.log(`✅ Found Gmail provider: ${provider.id} for ${notification.emailAddress}`);
 

@@ -6,6 +6,7 @@ import { getTenantInstall, resolveVersion } from 'server/src/lib/extensions/gate
 import { filterRequestHeaders, filterResponseHeaders } from 'server/src/lib/extensions/gateway/headers';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { createTenantKnex } from 'server/src/lib/db';
+import { assertSessionProductAccess } from '@/lib/api/standaloneProductGuards';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -238,6 +239,14 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
   const path = '/' + (resolvedParams.path || []).join('/');
 
   try {
+    const deniedResponse = await assertSessionProductAccess({
+      capability: 'extensions',
+      allowedProducts: ['psa'],
+    });
+    if (deniedResponse) {
+      return deniedResponse;
+    }
+
     const tenantId = await getTenantFromAuth(req);
     console.log('[api/ext] tenant resolved', { tenantId, extensionId, method, elapsed: Date.now() - start });
     await assertAccess(tenantId, extensionId, method, path);

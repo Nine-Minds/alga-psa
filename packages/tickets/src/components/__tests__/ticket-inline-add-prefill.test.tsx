@@ -833,4 +833,41 @@ describe('QuickAddTicket prefills', () => {
     ));
   });
 
+  it('T010: Algadesk quick-add omits asset prefill banner and asset_id submission while PSA preserves both', async () => {
+    const renderQuickAdd = (isAlgadeskMode: boolean) => render(
+      <QuickAddTicket
+        open={true}
+        onOpenChange={() => undefined}
+        onTicketAdded={() => undefined}
+        assetId="asset-123"
+        assetName="Router A"
+        isAlgadeskMode={isAlgadeskMode}
+      />
+    );
+
+    renderQuickAdd(false);
+    await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
+    expect(screen.getByTestId('quick-add-ticket-asset-pill')).toHaveTextContent('Linked asset: Router A');
+    fireEvent.change(screen.getByPlaceholderText('Ticket Title *'), {
+      target: { value: 'PSA asset-linked quick add' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(addTicketMock).toHaveBeenCalled());
+    const psaFormData = addTicketMock.mock.calls[0][0] as FormData;
+    expect(psaFormData.get('asset_id')).toBe('asset-123');
+
+    addTicketMock.mockClear();
+
+    renderQuickAdd(true);
+    await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
+    expect(screen.queryByTestId('quick-add-ticket-asset-pill')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText('Ticket Title *'), {
+      target: { value: 'Algadesk quick add' }
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(addTicketMock).toHaveBeenCalled());
+    const algadeskFormData = addTicketMock.mock.calls[0][0] as FormData;
+    expect(algadeskFormData.get('asset_id')).toBeNull();
+  });
+
 });

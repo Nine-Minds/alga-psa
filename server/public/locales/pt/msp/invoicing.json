@@ -54,6 +54,7 @@
         "expand": "Expandir",
         "collapse": "Colapso"
       },
+      "ready": "Pronto para faturar",
       "canCombine": "Pode combinar em 1 fatura",
       "separate": "Deve faturar separadamente",
       "blocked": "Contém itens bloqueados",

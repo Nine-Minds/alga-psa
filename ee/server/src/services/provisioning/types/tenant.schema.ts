@@ -6,6 +6,7 @@ export const CreateTenantSchema = z.object({
   phone_number: z.string().optional(),
   industry: z.string().optional(),
   plan: z.string().optional(),
+  product_code: z.enum(['psa', 'algadesk']).optional(),
   tax_id_number: z.string().optional()
 });
 
@@ -18,6 +19,7 @@ export const TenantResponseSchema = z.object({
   phone_number: z.string().nullable(),
   industry: z.string().nullable(),
   plan: z.string().nullable(),
+  product_code: z.enum(['psa', 'algadesk']).nullable().optional(),
   tax_id_number: z.string().nullable(),
   created_at: z.date(),
   updated_at: z.date()

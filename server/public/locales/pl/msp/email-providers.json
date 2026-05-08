@@ -234,7 +234,7 @@
     },
     "microsoft": {
       "validation": {
-        "providerNameRequired": "Nazwa dostawcy jest wymagana",
+        "providerNameRequired": "Nazwa konfiguracji jest wymagana",
         "emailRequired": "Wymagany jest prawidłowy adres e-mail",
         "redirectRequired": "Wymagany jest prawidłowy identyfikator URI przekierowania",
         "authorizeRequiresValid": "Przed autoryzacją wypełnij wszystkie wymagane pola",
@@ -244,18 +244,22 @@
         "authorizationFailed": "Autoryzacja nie powiodła się"
       },
       "requiredFields": {
-        "providerName": "Nazwa dostawcy",
+        "providerName": "Nazwa konfiguracji",
         "emailAddress": "Adres e-mail",
         "redirectUri": "URI przekierowania"
       },
       "basic": {
         "title": "Podstawowa konfiguracja",
         "description": "Podstawowe ustawienia dostawcy poczty e-mail Microsoft 365",
-        "providerNameLabel": "Nazwa dostawcy *",
-        "providerNamePlaceholder": "np. e-mail pomocy technicznej",
+        "providerNameLabel": "Nazwa konfiguracji *",
+        "providerNamePlaceholder": "np. Skrzynka wsparcia (wewnętrzna)",
         "emailLabel": "Adres e-mail *",
         "emailPlaceholder": "wsparcie@klient.com",
-        "enableProvider": "Włącz tego dostawcę"
+        "enableProvider": "Włącz tego dostawcę",
+        "providerNameHelp": "Wewnętrzna nazwa służąca do identyfikacji tej konfiguracji. Nie jest pokazywana w wiadomościach wychodzących.",
+        "senderDisplayNameLabel": "Wyświetlana nazwa nadawcy",
+        "senderDisplayNamePlaceholder": "np. Acme Support",
+        "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń najemcy. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
       },
       "oauth": {
         "sectionTitle": "Konfiguracja Microsoft OAuth",
@@ -279,7 +283,7 @@
     },
     "gmail": {
       "validation": {
-        "providerNameRequired": "Nazwa dostawcy jest wymagana",
+        "providerNameRequired": "Nazwa konfiguracji jest wymagana",
         "gmailAddressRequired": "Wymagany jest prawidłowy adres Gmail",
         "authorizeRequiresValid": "Przed autoryzacją wypełnij wszystkie wymagane pola",
         "googleNotConfigured": "Integracja Google nie jest skonfigurowana dla tego dzierżawcy. Najpierw skonfiguruj Google, a następnie spróbuj ponownie.",
@@ -295,17 +299,21 @@
         "settingUp": "Konfigurowanie powiadomień Gmaila..."
       },
       "requiredFields": {
-        "providerName": "Nazwa dostawcy",
+        "providerName": "Nazwa konfiguracji",
         "gmailAddress": "Adres Gmaila"
       },
       "basic": {
         "title": "Podstawowa konfiguracja",
         "description": "Podstawowe ustawienia dostawcy poczty Gmail",
-        "providerNameLabel": "Nazwa dostawcy *",
-        "providerNamePlaceholder": "np. Wsparcie Gmaila",
+        "providerNameLabel": "Nazwa konfiguracji *",
+        "providerNamePlaceholder": "np. Gmail wsparcia (wewnętrzny)",
         "mailboxLabel": "Adres Gmaila *",
         "mailboxPlaceholder": "wsparcie@klient.com",
-        "enableProvider": "Włącz tego dostawcę"
+        "enableProvider": "Włącz tego dostawcę",
+        "providerNameHelp": "Wewnętrzna nazwa służąca do identyfikacji tej konfiguracji. Nie jest pokazywana w wiadomościach wychodzących.",
+        "senderDisplayNameLabel": "Wyświetlana nazwa nadawcy",
+        "senderDisplayNamePlaceholder": "np. Acme Support",
+        "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń najemcy. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
       },
       "oauth": {
         "sectionTitle": "OAuth Google",
@@ -334,7 +342,7 @@
     },
     "imap": {
       "validation": {
-        "providerNameRequired": "Nazwa dostawcy jest wymagana",
+        "providerNameRequired": "Nazwa konfiguracji jest wymagana",
         "mailboxRequired": "Skrzynka pocztowa jest wymagana",
         "mailboxInvalid": "Wymagana jest prawidłowa skrzynka pocztowa (np. użytkownik@domena.com, użytkownik@localhost, użytkownik@serwer testowy lub użytkownik)",
         "hostRequired": "Wymagany jest host IMAP",
@@ -344,12 +352,17 @@
       "basic": {
         "title": "Ustawienia podstawowe",
         "description": "Zdefiniuj szczegóły połączenia ze skrzynką pocztową IMAP.",
-        "providerName": "Nazwa dostawcy",
+        "providerName": "Nazwa konfiguracji",
         "mailboxAddress": "Adres skrzynki pocztowej",
         "host": "Host IMAP",
         "port": "Port",
         "useTls": "Użyj protokołu TLS/SSL",
-        "allowStarttls": "Zezwól na aktualizację STARTTLS"
+        "allowStarttls": "Zezwól na aktualizację STARTTLS",
+        "providerNamePlaceholder": "np. IMAP wsparcia (wewnętrzny)",
+        "providerNameHelp": "Wewnętrzna nazwa służąca do identyfikacji tej konfiguracji. Nie jest pokazywana w wiadomościach wychodzących.",
+        "senderDisplayName": "Wyświetlana nazwa nadawcy",
+        "senderDisplayNamePlaceholder": "np. Acme Support",
+        "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń najemcy. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
       },
       "auth": {
         "title": "Uwierzytelnianie",
@@ -396,7 +409,7 @@
       }
     },
     "fields": {
-      "providerName": "Nazwa dostawcy",
+      "providerName": "Nazwa konfiguracji",
       "mailboxAddress": "Adres skrzynki pocztowej",
       "imapHost": "Host IMAP",
       "port": "Port",
@@ -416,7 +429,12 @@
       "active": "Aktywny",
       "ticketDefaultsLabel": "Domyślne ustawienia zgłoszeń",
       "ticketDefaultsPlaceholder": "Wybierz ustawienia domyślne...",
-      "ticketDefaultsEmpty": "Brak dostępnych ustawień domyślnych"
+      "ticketDefaultsEmpty": "Brak dostępnych ustawień domyślnych",
+      "providerNamePlaceholder": "np. IMAP wsparcia (wewnętrzny)",
+      "providerNameHelp": "Wewnętrzna nazwa służąca do identyfikacji tej konfiguracji. Nie jest pokazywana w wiadomościach wychodzących.",
+      "senderDisplayName": "Wyświetlana nazwa nadawcy",
+      "senderDisplayNamePlaceholder": "np. Acme Support",
+      "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń najemcy. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
     },
     "authOptions": {
       "password": "Hasło",
@@ -466,8 +484,8 @@
       }
     },
     "fields": {
-      "providerNameLabel": "Nazwa dostawcy *",
-      "providerNamePlaceholder": "np. Support Microsoft 365",
+      "providerNameLabel": "Nazwa konfiguracji *",
+      "providerNamePlaceholder": "np. Skrzynka wsparcia (wewnętrzna)",
       "mailboxLabel": "Adres Microsoft 365 *",
       "mailboxPlaceholder": "wsparcie@klient.com",
       "enableProvider": "Włącz tego dostawcę",
@@ -477,7 +495,11 @@
       "maxEmailsLabel": "Maksymalna liczba wiadomości na synchronizację",
       "maxEmailsHelp": "Maksymalna liczba wiadomości do przetworzenia w każdej synchronizacji (1-1000)",
       "inboundDefaultsLabel": "Domyślne ustawienia zgłoszeń przychodzących",
-      "inboundDefaultsPlaceholder": "Wybierz ustawienia domyślne (opcjonalne)"
+      "inboundDefaultsPlaceholder": "Wybierz ustawienia domyślne (opcjonalne)",
+      "providerNameHelp": "Wewnętrzna nazwa służąca do identyfikacji tej konfiguracji. Nie jest pokazywana w wiadomościach wychodzących.",
+      "senderDisplayNameLabel": "Wyświetlana nazwa nadawcy",
+      "senderDisplayNamePlaceholder": "np. Acme Support",
+      "senderDisplayNameHelp": "Wyświetlana nazwa w nagłówku Od w wychodzących wiadomościach zgłoszenia (odpowiedzi, zamknięcia). Stosowana tylko, gdy ta skrzynka odpowiada wychodzącemu adresowi zgłoszeń najemcy. Zostaw puste, aby użyć nazwy tablicy zgłoszenia."
     },
     "oauth": {
       "connectionTitle": "Połączenie Microsoft 365",
@@ -516,7 +538,7 @@
     },
     "validation": {
       "requiredFieldsTitle": "Proszę wypełnić wymagane pola:",
-      "providerName": "Nazwa dostawcy",
+      "providerName": "Nazwa konfiguracji",
       "mailbox": "Adres Microsoft 365"
     }
   },

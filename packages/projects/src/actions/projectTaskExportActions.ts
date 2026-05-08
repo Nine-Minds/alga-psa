@@ -7,6 +7,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions';
 import { Knex } from 'knex';
 import { extractTaskDescriptionText } from '../lib/taskRichText';
+import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
 
 const MAX_EXPORT_ROWS = 10000;
 
@@ -298,6 +299,7 @@ export const exportProjectTasksToCSV = withAuth(async (
   selectedPhaseIds: string[],
   selectedFields?: string[],
 ): Promise<{ csv: string; count: number }> => {
+  await assertPsaOnlyTenantAccess(tenant, 'project_actions');
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {

@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { useContactAvatar } from '@alga-psa/user-composition/hooks';
-import type { IUserWithRoles } from '@alga-psa/types';
+import type { IUserWithRoles, ProductCode } from '@alga-psa/types';
 import {
   checkClientPortalPermissions,
   getSignOutTenantSlug,
@@ -25,14 +25,17 @@ import { resolveClientPortalTitleKey } from './clientPortalRouteTitles';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
+  productCode?: ProductCode;
   initialSidebarCollapsed?: boolean;
 }
 
 function LayoutShell({
   children,
+  productCode,
   initialSidebarCollapsed,
 }: {
   children: ReactNode;
+  productCode: ProductCode;
   initialSidebarCollapsed: boolean;
 }) {
   const [userData, setUserData] = useState<IUserWithRoles | null>(null);
@@ -98,8 +101,9 @@ function LayoutShell({
   }, [pathname, t]);
 
   return (
-    <div className="flex min-h-screen bg-gray-100">
+    <div className="flex min-h-screen bg-gray-100" data-product-shell={productCode}>
       <ClientPortalSidebar
+        productCode={productCode}
         permissions={{
           hasClientSettingsAccess: permissions.hasClientSettingsAccess,
           hasBillingAccess: permissions.hasBillingAccess,
@@ -132,12 +136,16 @@ function LayoutShell({
 
 export default function ClientPortalLayout({
   children,
+  productCode = 'psa',
   initialSidebarCollapsed = false,
 }: ClientPortalLayoutProps) {
   return (
     <DrawerProvider>
       <ClientPortalPageProvider>
-        <LayoutShell initialSidebarCollapsed={initialSidebarCollapsed}>
+        <LayoutShell
+          productCode={productCode}
+          initialSidebarCollapsed={initialSidebarCollapsed}
+        >
           {children}
         </LayoutShell>
       </ClientPortalPageProvider>

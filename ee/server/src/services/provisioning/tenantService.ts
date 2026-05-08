@@ -27,6 +27,7 @@ export class TenantService {
             phone_number: input.phone_number,
             industry: input.industry,
             plan: input.plan,
+            product_code: input.product_code,
             tax_id_number: input.tax_id_number
           })
           .returning('*');
@@ -45,6 +46,7 @@ export class TenantService {
         phone_number: result.phone_number,
         industry: result.industry,
         plan: result.plan,
+        product_code: result.product_code,
         tax_id_number: result.tax_id_number,
         created_at: new Date(result.created_at),
         updated_at: new Date(result.updated_at)

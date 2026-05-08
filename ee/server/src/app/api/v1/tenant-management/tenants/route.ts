@@ -112,6 +112,7 @@ export async function GET(req: NextRequest) {
         't.client_name',
         't.email',
         't.plan',
+        't.product_code',
         't.created_at',
         's.status as subscription_status',
       ])

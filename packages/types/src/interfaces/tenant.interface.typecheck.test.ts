@@ -34,4 +34,19 @@ describe('ITenant interface', () => {
     const noAddonsTenant: ITenant = { ...tenant, addons: undefined };
     expect(noAddonsTenant.addons).toBeUndefined();
   });
+
+  it('ITenant.product_code accepts supported product codes', () => {
+    const tenant: ITenant = {
+      tenant: 'test-tenant',
+      company_name: 'Test Company',
+      email: 'test@example.com',
+      is_inactive: false,
+      product_code: 'psa',
+    };
+
+    expect(tenant.product_code).toBe('psa');
+
+    const algadeskTenant: ITenant = { ...tenant, product_code: 'algadesk' };
+    expect(algadeskTenant.product_code).toBe('algadesk');
+  });
 });

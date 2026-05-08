@@ -8,6 +8,7 @@ import ViewSwitcher, { ViewSwitcherOption } from "@alga-psa/ui/components/ViewSw
 import { Card } from "@alga-psa/ui/components/Card";
 import { UnsavedChangesProvider, useUnsavedChanges } from "@alga-psa/ui";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import { useProduct } from "@/context/ProductContext";
 
 type NotificationView = 'email' | 'internal';
 
@@ -16,6 +17,7 @@ const INTERNAL_NOTIFICATION_TAB_IDS = ['categories-types'] as const;
 
 const DEFAULT_EMAIL_TAB = 'settings';
 const DEFAULT_INTERNAL_TAB = 'categories-types';
+const ALGADESK_EMAIL_TAB_IDS = ['settings', 'categories'] as const;
 
 export default function NotificationsSettingsPage() {
   const { t } = useTranslation('msp/settings');
@@ -35,6 +37,8 @@ function NotificationsSettingsContent() {
   const viewParam = searchParams?.get('view');
   const tabParam = searchParams?.get('tab');
   const { confirmNavigation } = useUnsavedChanges();
+  const { productCode } = useProduct();
+  const isAlgadesk = productCode === 'algadesk';
 
   // Determine initial view and tab from URL
   const getInitialView = (): NotificationView => {
@@ -44,7 +48,9 @@ function NotificationsSettingsContent() {
 
   const getInitialTab = (view: NotificationView): string => {
     const requestedTab = tabParam?.toLowerCase();
-    const validTabs: readonly string[] = view === 'email' ? EMAIL_NOTIFICATION_TAB_IDS : INTERNAL_NOTIFICATION_TAB_IDS;
+    const validTabs: readonly string[] = view === 'email'
+      ? (isAlgadesk ? ALGADESK_EMAIL_TAB_IDS : EMAIL_NOTIFICATION_TAB_IDS)
+      : INTERNAL_NOTIFICATION_TAB_IDS;
     const defaultTab = view === 'email' ? DEFAULT_EMAIL_TAB : DEFAULT_INTERNAL_TAB;
 
     if (requestedTab && validTabs.includes(requestedTab)) {
@@ -69,7 +75,7 @@ function NotificationsSettingsContent() {
     } else if (newTab !== currentTab) {
       setCurrentTab(newTab);
     }
-  }, [viewParam, tabParam, currentView, currentTab]);
+  }, [viewParam, tabParam, currentView, currentTab, isAlgadesk]);
 
   // Update URL helper
   const updateURL = useCallback((view: NotificationView, tabId: string) => {
@@ -135,7 +141,7 @@ function NotificationsSettingsContent() {
         </Suspense>
       ),
     },
-    {
+    ...(isAlgadesk ? [] : [{
       id: 'email-templates',
       label: t('notifications.emailTabs.emailTemplates'),
       content: (
@@ -143,7 +149,7 @@ function NotificationsSettingsContent() {
           <EmailTemplates />
         </Suspense>
       ),
-    },
+    }]),
     {
       id: 'categories',
       label: t('notifications.emailTabs.categories'),

@@ -108,7 +108,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const body = await request.json();
-    const { companyName, firstName, lastName, email, licenseCount } = body;
+    const { companyName, firstName, lastName, email, licenseCount, productCode } = body;
 
     // Validate required fields
     if (!companyName || !firstName || !lastName || !email) {
@@ -169,6 +169,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       companyName,
       clientName: companyName,
       licenseCount: licenseCount || 5,
+      productCode: productCode === 'algadesk' ? 'algadesk' : productCode === 'psa' ? 'psa' : undefined,
       // No checkout session - this is manual creation
     };
 

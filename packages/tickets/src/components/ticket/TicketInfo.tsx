@@ -79,8 +79,18 @@ interface TicketInfoProps {
   onAssignTeam?: (teamId: string) => Promise<void>;
   onRemoveTeamAssignment?: () => Promise<void>;
   onClipboardImageUploaded?: () => Promise<void> | void;
+  uploadTicketAttachmentAction?: (
+    formData: FormData,
+    params: { userId: string; ticketId: string }
+  ) => Promise<any>;
+  deleteDraftTicketAttachmentImagesAction?: (input: {
+    ticketId: string;
+    documentIds: string[];
+  }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
+  resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
   onOpenEmailNotificationLogs?: () => void;
   titleRef?: React.Ref<HTMLHeadingElement>;
+  hideSlaStatus?: boolean;
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -113,8 +123,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   onAssignTeam,
   onRemoveTeamAssignment,
   onClipboardImageUploaded,
+  uploadTicketAttachmentAction,
+  deleteDraftTicketAttachmentImagesAction,
+  resolveTicketAttachmentViewUrl,
   onOpenEmailNotificationLogs,
   titleRef,
+  hideSlaStatus = false,
 }) => {
   const { data: session } = useSession();
   const { t } = useTranslation('features/tickets');
@@ -456,6 +470,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     trackDraftUploads: true,
     onDocumentsChanged: onClipboardImageUploaded,
     onDiscard: discardDescriptionEdit,
+    uploadDocumentAction: uploadTicketAttachmentAction,
+    deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,
+    resolveDocumentViewUrl: resolveTicketAttachmentViewUrl,
     deleteDocumentFn: deleteDocument,
   });
 
@@ -795,6 +812,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     resolutionRemainingMinutes?: number;
     isPaused: boolean;
   } | null => {
+    if (hideSlaStatus) {
+      return null;
+    }
     if (!ticket.sla_policy_id) {
       return null;
     }
@@ -850,7 +870,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       resolutionRemainingMinutes,
       isPaused
     };
-  }, [ticket.sla_policy_id, ticket.sla_response_at, ticket.sla_response_due_at,
+  }, [hideSlaStatus, ticket.sla_policy_id, ticket.sla_response_at, ticket.sla_response_due_at,
       ticket.sla_resolution_at, ticket.sla_resolution_due_at, ticket.sla_paused_at,
       ticket.sla_started_at, ticket.entered_at]);
 

@@ -11,4 +11,12 @@ describe('testDataFactory', () => {
     // Verify the createTenant function sets plan to 'pro'
     expect(content).toContain("plan: 'pro'");
   });
+
+  it('T029: Test data factory defaults product_code to psa and supports explicit algadesk fixtures', () => {
+    const factoryPath = path.resolve(__dirname, '../../../test-utils/testDataFactory.ts');
+    const content = fs.readFileSync(factoryPath, 'utf-8');
+
+    expect(content).toContain("product_code: options.productCode ?? 'psa'");
+    expect(content).toContain('options: { productCode?: ProductCode } = {}');
+  });
 });

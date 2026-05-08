@@ -1053,7 +1053,10 @@
       "unknownError": "Ocurrió un error desconocido",
       "templateNotFoundDetail": "La plantilla que busca no existe o ha sido eliminada.",
       "teamLeadAccessDetail": "Para aprobar hojas de tiempo de los miembros de su equipo, debe ser líder de equipo.",
-      "teamsTabEnableHint": "Pida a un administrador de PSA que habilite la integración de Teams para este tenant antes de volver a abrir la pestaña."
+      "teamsTabEnableHint": "Pida a un administrador de PSA que habilite la integración de Teams para este tenant antes de volver a abrir la pestaña.",
+      "teamsSetupNotFinished": "Configuración de Teams sin finalizar",
+      "teamsSetupNotFinishedHint": "Pida a un administrador de PSA que finalice la configuración de Teams y luego vuelva a abrir la pestaña personal.",
+      "teamsTabAdminHint": "Pida a un administrador de PSA que finalice la configuración de Teams y luego vuelva a abrir la pestaña."
     },
     "actions": {
       "tryAgain": "Reintentar",
@@ -1073,6 +1076,48 @@
       "slaSettings": "Configuración de SLA",
       "documentEditor": "Editor de documentos",
       "accountManagement": "Gestión de cuenta"
+    },
+    "teamsTab": {
+      "signedInAs": "Conectado como {{name}}",
+      "openInFullPsa": "Abrir en PSA completo",
+      "iframeTitle": "{{destination}} en Alga PSA",
+      "fullPsaHint": "Use «Abrir en PSA completo» para obtener más contexto del que puede mostrar una tarjeta de Teams.",
+      "fallback": {
+        "label": "Registro solicitado no disponible:",
+        "showingInstead": "Mostrando su lista de trabajo de Teams en lugar de {{destination}}."
+      },
+      "entrySource": {
+        "bot": "Abierto desde un resultado del bot de Teams.",
+        "messageExtension": "Abierto desde un resultado de la extensión de mensajería de Teams.",
+        "notification": "Abierto desde una notificación de actividad de Teams."
+      },
+      "destinations": {
+        "myWork": {
+          "title": "Mi trabajo",
+          "summary": "Su pestaña personal de Teams está lista para cargar su cola de trabajo de PSA."
+        },
+        "ticket": {
+          "title": "Ticket {{ticketId}}",
+          "summary": "Está abriendo el ticket {{ticketId}} desde Teams."
+        },
+        "projectTask": {
+          "title": "Tarea del proyecto {{taskId}}",
+          "summary": "Está abriendo la tarea {{taskId}} en el proyecto {{projectId}}."
+        },
+        "approval": {
+          "title": "Aprobación {{approvalId}}",
+          "summary": "Está abriendo la aprobación {{approvalId}} desde Teams."
+        },
+        "timeEntry": {
+          "title": "Entrada de tiempo {{entryId}}",
+          "summary": "Está abriendo la entrada de tiempo {{entryId}} desde Teams."
+        },
+        "contact": {
+          "title": "Contacto {{contactId}}",
+          "summary": "Está abriendo el contacto {{contactId}} desde Teams.",
+          "summaryWithClient": "Está abriendo el contacto {{contactId}} para el cliente {{clientId}} desde Teams."
+        }
+      }
     }
   },
   "feedback": {

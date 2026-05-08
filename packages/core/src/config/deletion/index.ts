@@ -410,20 +410,9 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
     entityType: 'asset',
     supportsInactive: true,
     supportsArchive: false,
-    dependencies: [
-      {
-        type: 'maintenance_schedule',
-        table: 'asset_maintenance_schedules',
-        foreignKey: 'asset_id',
-        label: 'maintenance schedule'
-      },
-      {
-        type: 'ticket_entity_link',
-        table: 'ticket_entity_links',
-        label: 'ticket link',
-        countQuery: countTicketEntityLinks('asset')
-      }
-    ]
+    // Maintenance schedules and ticket-entity links are cascaded by
+    // deleteAsset, so they no longer block validation.
+    dependencies: []
   },
   document: {
     entityType: 'document',

@@ -13,7 +13,7 @@ import {
   type RecentActivityType,
   type DashboardMetrics,
 } from '@alga-psa/client-portal/actions';
-import type { Asset } from '@alga-psa/types';
+import type { Asset, ProductCode } from '@alga-psa/types';
 import { RequestAppointmentModal } from '../appointments/RequestAppointmentModal';
 import { ClientAddTicket } from '../tickets/ClientAddTicket';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -194,8 +194,9 @@ function timeAgo(value: string | Date | null | undefined, t: TranslateFn, locale
 const DASHBOARD_PREVIEW_DEVICES = 4;
 const DASHBOARD_PREVIEW_APPOINTMENTS = 3;
 
-export function ClientDashboard() {
+export function ClientDashboard({ productCode = 'psa' }: { productCode?: ProductCode } = {}) {
   const { t, i18n } = useTranslation('client-portal');
+  const isAlgadeskPortal = productCode === 'algadesk';
   const locale = i18n.language || undefined;
   const heroTextColor = useHeroTextColor();
   const heroTextClass = heroTextColor === 'black' ? 'text-black' : 'text-white';
@@ -213,6 +214,20 @@ export function ClientDashboard() {
   const fetchDashboardData = useCallback(async () => {
     setError(false);
     try {
+      if (isAlgadeskPortal) {
+        const [user, metricsData, activityData] = await Promise.all([
+          getCurrentUser(),
+          getDashboardMetrics(),
+          getRecentActivity().catch(() => [] as RecentActivity[]),
+        ]);
+        setFirstName(user?.first_name || '');
+        setMetrics(metricsData);
+        setUpcomingAppointments([]);
+        setActivities((activityData || []).filter((activity) => activity.type === 'ticket'));
+        setDevices([]);
+        return;
+      }
+
       const [user, metricsData, appointmentsResult, activityData, devicesData] = await Promise.all([
         getCurrentUser(),
         getDashboardMetrics(),
@@ -237,7 +252,7 @@ export function ClientDashboard() {
       console.error('Error loading dashboard:', err);
       setError(true);
     }
-  }, []);
+  }, [isAlgadeskPortal]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -321,61 +336,65 @@ export function ClientDashboard() {
         onClick: () => setIsTicketModalOpen(true),
       },
     },
-    {
-      id: 'active-projects',
-      label: t('dashboard.metrics.activeProjects'),
-      value: metrics.activeProjects ?? 0,
-      icon: Layers,
-      href: '/client-portal/projects',
-      hint: t('dashboard.metrics.activeProjectsHint', 'In progress'),
-      description: t(
-        'dashboard.metrics.activeProjectsDescription',
-        'Projects we are delivering for your team.',
-      ),
-    },
-    {
-      id: 'service-requests',
-      label: t('dashboard.metrics.serviceRequests', 'Service requests'),
-      value: metrics.serviceRequests ?? 0,
-      icon: LayoutTemplate,
-      href: '/client-portal/request-services',
-      hint: t('dashboard.metrics.serviceRequestsHint', 'Total submissions'),
-      description: t(
-        'dashboard.metrics.serviceRequestsDescription',
-        'Structured requests you have submitted from the catalog.',
-      ),
-    },
-    {
-      id: 'upcoming-visits',
-      label: t('dashboard.metrics.upcomingVisits', 'Upcoming visits'),
-      value: upcomingAppointments.length,
-      icon: Calendar,
-      href: '/client-portal/appointments',
-      hint: nextAppointmentLabel
-        ? t('dashboard.metrics.nextLabel', { defaultValue: 'Next: {{when}}', when: nextAppointmentLabel })
-        : t('dashboard.metrics.noneScheduled', 'None scheduled'),
-      description: t(
-        'dashboard.metrics.upcomingVisitsDescription',
-        'Scheduled appointments with our technicians.',
-      ),
-      action: {
-        id: 'kpi-upcoming-visits-request',
-        label: t('dashboard.quickActions.requestAppointment', 'Request appointment'),
-        onClick: () => setIsAppointmentModalOpen(true),
-      },
-    },
-    {
-      id: 'active-devices',
-      label: t('dashboard.metrics.activeDevices', 'Active devices'),
-      value: metrics.activeAssets ?? 0,
-      icon: Monitor,
-      href: '/client-portal/devices',
-      hint: t('dashboard.metrics.deviceStatusHint', 'Managed endpoints'),
-      description: t(
-        'dashboard.metrics.activeDevicesDescription',
-        'Endpoints we currently manage and monitor.',
-      ),
-    },
+    ...(!isAlgadeskPortal
+      ? [
+          {
+            id: 'active-projects',
+            label: t('dashboard.metrics.activeProjects'),
+            value: metrics.activeProjects ?? 0,
+            icon: Layers,
+            href: '/client-portal/projects',
+            hint: t('dashboard.metrics.activeProjectsHint', 'In progress'),
+            description: t(
+              'dashboard.metrics.activeProjectsDescription',
+              'Projects we are delivering for your team.',
+            ),
+          },
+          {
+            id: 'service-requests',
+            label: t('dashboard.metrics.serviceRequests', 'Service requests'),
+            value: metrics.serviceRequests ?? 0,
+            icon: LayoutTemplate,
+            href: '/client-portal/request-services',
+            hint: t('dashboard.metrics.serviceRequestsHint', 'Total submissions'),
+            description: t(
+              'dashboard.metrics.serviceRequestsDescription',
+              'Structured requests you have submitted from the catalog.',
+            ),
+          },
+          {
+            id: 'upcoming-visits',
+            label: t('dashboard.metrics.upcomingVisits', 'Upcoming visits'),
+            value: upcomingAppointments.length,
+            icon: Calendar,
+            href: '/client-portal/appointments',
+            hint: nextAppointmentLabel
+              ? t('dashboard.metrics.nextLabel', { defaultValue: 'Next: {{when}}', when: nextAppointmentLabel })
+              : t('dashboard.metrics.noneScheduled', 'None scheduled'),
+            description: t(
+              'dashboard.metrics.upcomingVisitsDescription',
+              'Scheduled appointments with our technicians.',
+            ),
+            action: {
+              id: 'kpi-upcoming-visits-request',
+              label: t('dashboard.quickActions.requestAppointment', 'Request appointment'),
+              onClick: () => setIsAppointmentModalOpen(true),
+            },
+          },
+          {
+            id: 'active-devices',
+            label: t('dashboard.metrics.activeDevices', 'Active devices'),
+            value: metrics.activeAssets ?? 0,
+            icon: Monitor,
+            href: '/client-portal/devices',
+            hint: t('dashboard.metrics.deviceStatusHint', 'Managed endpoints'),
+            description: t(
+              'dashboard.metrics.activeDevicesDescription',
+              'Endpoints we currently manage and monitor.',
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -398,7 +417,7 @@ export function ClientDashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className={isAlgadeskPortal ? 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3' : 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'}>
         {kpiCards.map((card) => {
           const Icon = card.icon;
           return (
@@ -448,7 +467,7 @@ export function ClientDashboard() {
       {/* Activity + side rail (Schedule + Devices) */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
         {/* Recent activity timeline */}
-        <Card className="bg-[rgb(var(--color-card))] lg:col-span-3">
+        <Card className={isAlgadeskPortal ? 'bg-[rgb(var(--color-card))] lg:col-span-4' : 'bg-[rgb(var(--color-card))] lg:col-span-3'}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -474,7 +493,9 @@ export function ClientDashboard() {
           <CardContent className="p-0">
             {activities.length === 0 ? (
               <div className="px-6 pb-6 text-sm text-[rgb(var(--color-text-500))]">
-                {t('dashboard.activity.emptyHint', 'When tickets are updated or invoices arrive, you will see them here.')}
+                {isAlgadeskPortal
+                  ? t('dashboard.activity.algadeskEmptyHint', 'When tickets are updated, you will see them here.')
+                  : t('dashboard.activity.emptyHint', 'When tickets are updated or invoices arrive, you will see them here.')}
               </div>
             ) : (
               <ol className="relative space-y-0">
@@ -516,6 +537,7 @@ export function ClientDashboard() {
         </Card>
 
         {/* Side rail: Schedule + Devices stacked */}
+        {!isAlgadeskPortal && (
         <div className="lg:col-span-1 space-y-4">
         <Card className="bg-[rgb(var(--color-card))]">
           <CardHeader>
@@ -656,13 +678,16 @@ export function ClientDashboard() {
           </CardContent>
         </Card>
         </div>
+        )}
       </div>
 
+      {!isAlgadeskPortal && (
       <RequestAppointmentModal
         open={isAppointmentModalOpen}
         onOpenChange={setIsAppointmentModalOpen}
         onAppointmentRequested={fetchDashboardData}
       />
+      )}
 
       <ClientAddTicket
         open={isTicketModalOpen}

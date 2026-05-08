@@ -30,6 +30,7 @@ import { getInboundTicketDefaults } from '@alga-psa/integrations/actions';
 
 type MicrosoftProviderFormData = {
   providerName: string;
+  senderDisplayName?: string;
   mailbox: string;
   redirectUri: string;
   isActive: boolean;
@@ -66,7 +67,16 @@ export function MicrosoftProviderForm({
   const isEditing = !!provider;
 
   const microsoftProviderSchema = z.object({
-    providerName: z.string().min(1, t('forms.microsoft.validation.providerNameRequired', { defaultValue: 'Provider name is required' })),
+    providerName: z.string().min(1, t('forms.microsoft.validation.providerNameRequired', { defaultValue: 'Configuration name is required' })),
+    senderDisplayName: z
+      .string()
+      .max(255)
+      .refine((value) => !/[\x00-\x1F\x7F"<>]/.test(value), {
+        message: t('forms.microsoft.validation.senderDisplayNameInvalid', {
+          defaultValue: 'Display name cannot contain quotes, angle brackets, or line breaks',
+        }),
+      })
+      .optional(),
     mailbox: z.string().email(t('forms.microsoft.validation.emailRequired', { defaultValue: 'Valid email address is required' })),
     redirectUri: z.string().url(t('forms.microsoft.validation.redirectRequired', { defaultValue: 'Valid redirect URI is required' })),
     isActive: z.boolean(),
@@ -80,6 +90,7 @@ export function MicrosoftProviderForm({
     resolver: zodResolver(microsoftProviderSchema) as any,
     defaultValues: provider && provider.microsoftConfig ? {
       providerName: provider.providerName,
+      senderDisplayName: provider.senderDisplayName || '',
       mailbox: provider.mailbox,
       redirectUri: provider.microsoftConfig.redirect_uri,
       isActive: provider.isActive,
@@ -88,6 +99,7 @@ export function MicrosoftProviderForm({
       maxEmailsPerSync: provider.microsoftConfig.max_emails_per_sync ?? 50,
       inboundTicketDefaultsId: (provider as any).inboundTicketDefaultsId || undefined
     } : {
+      senderDisplayName: '',
       redirectUri: `${window.location.origin}/api/auth/microsoft/callback`,
       isActive: true,
       autoProcessEmails: true,
@@ -149,6 +161,7 @@ export function MicrosoftProviderForm({
         tenant,
         providerType: 'microsoft',
         providerName: data.providerName,
+        senderDisplayName: data.senderDisplayName?.trim() || null,
         mailbox: data.mailbox,
         isActive: data.isActive,
         inboundTicketDefaultsId: data.inboundTicketDefaultsId,
@@ -199,6 +212,7 @@ export function MicrosoftProviderForm({
           tenant,
           providerType: 'microsoft',
           providerName: formData.providerName,
+          senderDisplayName: formData.senderDisplayName?.trim() || null,
           mailbox: formData.mailbox,
           isActive: formData.isActive,
           inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
@@ -285,7 +299,7 @@ export function MicrosoftProviderForm({
           <AlertDescription>
             <p className="font-medium mb-2">{t('forms.common.validation.requiredFieldsTitle', { defaultValue: 'Please fill in the required fields:' })}</p>
             <ul className="list-disc list-inside space-y-1">
-              {form.formState.errors.providerName && <li>{t('forms.microsoft.requiredFields.providerName', { defaultValue: 'Provider Name' })}</li>}
+              {form.formState.errors.providerName && <li>{t('forms.microsoft.requiredFields.providerName', { defaultValue: 'Configuration Name' })}</li>}
               {form.formState.errors.mailbox && <li>{t('forms.microsoft.requiredFields.emailAddress', { defaultValue: 'Email Address' })}</li>}
               {form.formState.errors.redirectUri && <li>{t('forms.microsoft.requiredFields.redirectUri', { defaultValue: 'Redirect URI' })}</li>}
             </ul>
@@ -310,13 +324,16 @@ export function MicrosoftProviderForm({
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="providerName">{t('forms.microsoft.basic.providerNameLabel', { defaultValue: 'Provider Name *' })}</Label>
+              <Label htmlFor="providerName">{t('forms.microsoft.basic.providerNameLabel', { defaultValue: 'Configuration Name *' })}</Label>
               <Input
                 id="providerName"
                 {...form.register('providerName')}
-                placeholder={t('forms.microsoft.basic.providerNamePlaceholder', { defaultValue: 'e.g., Support Email' })}
+                placeholder={t('forms.microsoft.basic.providerNamePlaceholder', { defaultValue: 'e.g., Support Mailbox (internal)' })}
                 className={hasAttemptedSubmit && form.formState.errors.providerName ? 'border-red-500' : ''}
               />
+              <p className="text-xs text-muted-foreground">
+                {t('forms.microsoft.basic.providerNameHelp', { defaultValue: 'Internal name used to identify this configuration. Not shown in outbound emails.' })}
+              </p>
               {form.formState.errors.providerName && (
                 <p className="text-sm text-red-500">{form.formState.errors.providerName.message}</p>
               )}
@@ -335,6 +352,18 @@ export function MicrosoftProviderForm({
                 <p className="text-sm text-red-500">{form.formState.errors.mailbox.message}</p>
               )}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="senderDisplayName">{t('forms.microsoft.basic.senderDisplayNameLabel', { defaultValue: 'Sender Display Name' })}</Label>
+            <Input
+              id="senderDisplayName"
+              {...form.register('senderDisplayName')}
+              placeholder={t('forms.microsoft.basic.senderDisplayNamePlaceholder', { defaultValue: 'e.g., Acme Support' })}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t('forms.microsoft.basic.senderDisplayNameHelp', { defaultValue: 'Display name shown in the From header on outbound ticket emails (replies, closures). Applied only when this mailbox matches the tenant\'s outbound ticketing-from address. Leave blank to fall back to the ticket\'s board name.' })}
+            </p>
           </div>
 
           <div className="flex items-center space-x-2">

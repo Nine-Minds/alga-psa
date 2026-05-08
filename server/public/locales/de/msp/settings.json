@@ -1358,107 +1358,6 @@
       "sso": "SSO-Verwaltungswerkzeuge werden geladen...",
       "sessions": "Aktive Sitzungen werden geladen..."
     },
-    "ssoBulk": {
-      "loading": {
-        "title": "Single Sign-On",
-        "description": "SSO-Massenzuweisungs-Werkzeuge werden geladen..."
-      },
-      "autoLink": {
-        "title": "SSO für neue interne Benutzer automatisch einrichten",
-        "description": "Aktivieren Sie diese Option, um jedem neuen Mitarbeiterkonto sofort Ihren Unternehmens-SSO-Anbieter zuzuweisen, sodass eine passwortbasierte Anmeldung nicht erforderlich ist.",
-        "body": "Wenn aktiviert, können neu hinzugefügte MSP-Benutzer sich mit Google oder Microsoft über ihre geschäftliche E-Mail-Adresse anmelden. Sie müssen ihr Konto nicht manuell verknüpfen.",
-        "toggleLabel": "Automatischen SSO-Abgleich umschalten",
-        "disabledInfo": "Aktivieren Sie diese Option, damit neue und bestehende Mitarbeiter den „SSO verbinden“-Vorgang überspringen können, wenn ihre E-Mail-Adresse bereits mit einem konfigurierten Anbieter übereinstimmt. Wir protokollieren weiterhin jede automatische Verknüpfung."
-      },
-      "bulk": {
-        "title": "SSO-Massenzuweisung",
-        "description": "Wählen Sie interne Benutzer aus der Liste unten aus und verknüpfen Sie sie mit einem konfigurierten Google- oder Microsoft-Anbieter. Verwenden Sie die Vorschau, um die Auswirkungen vor der Ausführung zu überprüfen.",
-        "noProviders": "Es sind noch keine SSO-Anbieter konfiguriert. Fügen Sie OAuth-Anmeldedaten hinzu, um mit Massenzuweisungen fortzufahren."
-      },
-      "errors": {
-        "loadProviders": "SSO-Anbieterkonfiguration konnte nicht geladen werden.",
-        "updatePreferences": "SSO-Einstellungen konnten nicht aktualisiert werden."
-      },
-      "form": {
-        "title": "Anbieter auswählen & Benutzer wählen",
-        "description": "Wählen Sie den konfigurierten SSO-Anbieter für Ihre Mitarbeiter und suchen und wählen Sie dann die zu verknüpfenden Benutzer aus.",
-        "providerLabel": "Anbieter",
-        "notConfigured": "Nicht konfiguriert",
-        "providerNotConfiguredAlert": "Stellen Sie OAuth-Anmeldedaten für diesen Anbieter bereit, bevor Sie Konten verknüpfen.",
-        "actionLabel": "Aktion",
-        "linkSelected": "Ausgewählte Benutzer verknüpfen",
-        "unlinkSelected": "Verknüpfung ausgewählter Benutzer aufheben",
-        "actionPlaceholder": "SSO-Massenaktion auswählen",
-        "actionDescription": "Beim Verknüpfen wird der Anbieter zu jedem ausgewählten Benutzer hinzugefügt. Beim Aufheben der Verknüpfung wird der Anbieter entfernt, sodass der Benutzer wieder zur Passwort-/TOTP-Anmeldung zurückkehrt, bis er erneut verknüpft.",
-        "searchLabel": "Interne Benutzer suchen",
-        "searchPlaceholder": "Nach E-Mail oder Name suchen",
-        "noneSelected": "Noch keine Benutzer ausgewählt.",
-        "selected_one": "{{count}} Benutzer ausgewählt.",
-        "selected_other": "{{count}} Benutzer ausgewählt.",
-        "clearSelection": "Auswahl löschen",
-        "loadingUsers": "Benutzer werden geladen...",
-        "noMatch": "Keine Benutzer entsprechen dieser Suche.",
-        "noUsers": "Keine internen Benutzer gefunden.",
-        "clientPortalComing": "Massenzuweisungen für das Kundenportal sind in Kürze verfügbar. Vorerst gilt dieses Werkzeug nur für interne MSP-Benutzer.",
-        "loadUsersFailed": "Zuweisbare Benutzer konnten nicht geladen werden.",
-        "actions": {
-          "previewLink": "Zuweisung in der Vorschau anzeigen",
-          "previewUnlink": "Aufhebung in der Vorschau anzeigen",
-          "link": "Konten verknüpfen",
-          "unlink": "Verknüpfung der Konten aufheben",
-          "preparingPreview": "Vorschau wird vorbereitet…",
-          "linking": "Konten werden verknüpft…",
-          "unlinking": "Verknüpfung der Konten wird aufgehoben…",
-          "bulkLabel": "SSO-Massenaktionen {{location}}"
-        },
-        "table": {
-          "email": "E-Mail",
-          "id": "ID",
-          "name": "Name",
-          "status": "Status",
-          "active": "Aktiv",
-          "inactive": "Inaktiv",
-          "linkedProviders": "Verknüpfte Anbieter",
-          "unlinked": "Nicht verknüpft",
-          "lastLogin": "Letzte Anmeldung"
-        },
-        "toast": {
-          "providerRequiredTitle": "Anbieter erforderlich",
-          "providerRequiredDescription": "Wählen Sie einen konfigurierten Anbieter aus, bevor Sie fortfahren.",
-          "noUsersTitle": "Keine Benutzer ausgewählt",
-          "noUsersDescription": "Wählen Sie mindestens einen Benutzer aus der Tabelle aus.",
-          "failedTitle": "Massenzuweisung fehlgeschlagen",
-          "failedDescription": "SSO-Massenzuweisung konnte nicht verarbeitet werden.",
-          "linkCompleteTitle": "Verknüpfung abgeschlossen",
-          "unlinkCompleteTitle": "Aufhebung abgeschlossen",
-          "previewReadyTitle": "Vorschau bereit",
-          "linkedCount": "{{count}} Konten über {{provider}} verknüpft.",
-          "unlinkedCount": "Verknüpfung von {{count}} Konten über {{provider}} aufgehoben.",
-          "previewUnlink_one": "Vorschau bereit. Wir heben die Verknüpfung von {{count}} ausgewählten Benutzer auf.",
-          "previewUnlink_other": "Vorschau bereit. Wir heben die Verknüpfung von {{count}} ausgewählten Benutzern auf.",
-          "previewLink": "Vorschau bereit. Überprüfen Sie die Zusammenfassung, bevor Sie Konten verknüpfen."
-        },
-        "results": {
-          "completeTitle": "Zuweisung abgeschlossen",
-          "previewTitle": "Vorschau-Ergebnisse",
-          "noneMatched": "Keiner der ausgewählten Benutzer entsprach den aktuellen Filtern.",
-          "processed_one": "{{count}} Benutzer verarbeitet.",
-          "processed_other": "{{count}} Benutzer verarbeitet.",
-          "candidatesSelected": "{{count}} ausgewählt",
-          "unlinked": "Verknüpfung aufgehoben",
-          "wouldUnlink": "Verknüpfung würde aufgehoben",
-          "linked": "Verknüpft",
-          "wouldLink": "Würde verknüpft",
-          "alreadyUnlinked": "Bereits nicht verknüpft",
-          "alreadyLinked": "Bereits verknüpft",
-          "skippedInactive": "Übersprungen (inaktiv)"
-        },
-        "providerNames": {
-          "google": "Google Workspace",
-          "microsoft": "Microsoft 365"
-        }
-      }
-    },
     "userRoles": {
       "title": "Rollen an Benutzer zuweisen",
       "description": {
@@ -1537,6 +1436,107 @@
         "loading": "Sitzungen werden geladen...",
         "noMatch": "Keine Sitzungen entsprechen Ihrer Suche",
         "noSessions": "Keine aktiven Sitzungen gefunden"
+      }
+    }
+  },
+  "ssoBulk": {
+    "loading": {
+      "title": "Single Sign-On",
+      "description": "SSO-Massenzuweisungs-Werkzeuge werden geladen..."
+    },
+    "autoLink": {
+      "title": "SSO für neue interne Benutzer automatisch einrichten",
+      "description": "Aktivieren Sie diese Option, um jedem neuen Mitarbeiterkonto sofort Ihren Unternehmens-SSO-Anbieter zuzuweisen, sodass eine passwortbasierte Anmeldung nicht erforderlich ist.",
+      "body": "Wenn aktiviert, können neu hinzugefügte MSP-Benutzer sich mit Google oder Microsoft über ihre geschäftliche E-Mail-Adresse anmelden. Sie müssen ihr Konto nicht manuell verknüpfen.",
+      "toggleLabel": "Automatischen SSO-Abgleich umschalten",
+      "disabledInfo": "Aktivieren Sie diese Option, damit neue und bestehende Mitarbeiter den „SSO verbinden“-Vorgang überspringen können, wenn ihre E-Mail-Adresse bereits mit einem konfigurierten Anbieter übereinstimmt. Wir protokollieren weiterhin jede automatische Verknüpfung."
+    },
+    "bulk": {
+      "title": "SSO-Massenzuweisung",
+      "description": "Wählen Sie interne Benutzer aus der Liste unten aus und verknüpfen Sie sie mit einem konfigurierten Google- oder Microsoft-Anbieter. Verwenden Sie die Vorschau, um die Auswirkungen vor der Ausführung zu überprüfen.",
+      "noProviders": "Es sind noch keine SSO-Anbieter konfiguriert. Fügen Sie OAuth-Anmeldedaten hinzu, um mit Massenzuweisungen fortzufahren."
+    },
+    "errors": {
+      "loadProviders": "SSO-Anbieterkonfiguration konnte nicht geladen werden.",
+      "updatePreferences": "SSO-Einstellungen konnten nicht aktualisiert werden."
+    },
+    "form": {
+      "title": "Anbieter auswählen & Benutzer wählen",
+      "description": "Wählen Sie den konfigurierten SSO-Anbieter für Ihre Mitarbeiter und suchen und wählen Sie dann die zu verknüpfenden Benutzer aus.",
+      "providerLabel": "Anbieter",
+      "notConfigured": "Nicht konfiguriert",
+      "providerNotConfiguredAlert": "Stellen Sie OAuth-Anmeldedaten für diesen Anbieter bereit, bevor Sie Konten verknüpfen.",
+      "actionLabel": "Aktion",
+      "linkSelected": "Ausgewählte Benutzer verknüpfen",
+      "unlinkSelected": "Verknüpfung ausgewählter Benutzer aufheben",
+      "actionPlaceholder": "SSO-Massenaktion auswählen",
+      "actionDescription": "Beim Verknüpfen wird der Anbieter zu jedem ausgewählten Benutzer hinzugefügt. Beim Aufheben der Verknüpfung wird der Anbieter entfernt, sodass der Benutzer wieder zur Passwort-/TOTP-Anmeldung zurückkehrt, bis er erneut verknüpft.",
+      "searchLabel": "Interne Benutzer suchen",
+      "searchPlaceholder": "Nach E-Mail oder Name suchen",
+      "noneSelected": "Noch keine Benutzer ausgewählt.",
+      "selected_one": "{{count}} Benutzer ausgewählt.",
+      "selected_other": "{{count}} Benutzer ausgewählt.",
+      "clearSelection": "Auswahl löschen",
+      "loadingUsers": "Benutzer werden geladen...",
+      "noMatch": "Keine Benutzer entsprechen dieser Suche.",
+      "noUsers": "Keine internen Benutzer gefunden.",
+      "clientPortalComing": "Massenzuweisungen für das Kundenportal sind in Kürze verfügbar. Vorerst gilt dieses Werkzeug nur für interne MSP-Benutzer.",
+      "loadUsersFailed": "Zuweisbare Benutzer konnten nicht geladen werden.",
+      "actions": {
+        "previewLink": "Zuweisung in der Vorschau anzeigen",
+        "previewUnlink": "Aufhebung in der Vorschau anzeigen",
+        "link": "Konten verknüpfen",
+        "unlink": "Verknüpfung der Konten aufheben",
+        "preparingPreview": "Vorschau wird vorbereitet…",
+        "linking": "Konten werden verknüpft…",
+        "unlinking": "Verknüpfung der Konten wird aufgehoben…",
+        "bulkLabel": "SSO-Massenaktionen {{location}}"
+      },
+      "table": {
+        "email": "E-Mail",
+        "id": "ID",
+        "name": "Name",
+        "status": "Status",
+        "active": "Aktiv",
+        "inactive": "Inaktiv",
+        "linkedProviders": "Verknüpfte Anbieter",
+        "unlinked": "Nicht verknüpft",
+        "lastLogin": "Letzte Anmeldung"
+      },
+      "toast": {
+        "providerRequiredTitle": "Anbieter erforderlich",
+        "providerRequiredDescription": "Wählen Sie einen konfigurierten Anbieter aus, bevor Sie fortfahren.",
+        "noUsersTitle": "Keine Benutzer ausgewählt",
+        "noUsersDescription": "Wählen Sie mindestens einen Benutzer aus der Tabelle aus.",
+        "failedTitle": "Massenzuweisung fehlgeschlagen",
+        "failedDescription": "SSO-Massenzuweisung konnte nicht verarbeitet werden.",
+        "linkCompleteTitle": "Verknüpfung abgeschlossen",
+        "unlinkCompleteTitle": "Aufhebung abgeschlossen",
+        "previewReadyTitle": "Vorschau bereit",
+        "linkedCount": "{{count}} Konten über {{provider}} verknüpft.",
+        "unlinkedCount": "Verknüpfung von {{count}} Konten über {{provider}} aufgehoben.",
+        "previewUnlink_one": "Vorschau bereit. Wir heben die Verknüpfung von {{count}} ausgewählten Benutzer auf.",
+        "previewUnlink_other": "Vorschau bereit. Wir heben die Verknüpfung von {{count}} ausgewählten Benutzern auf.",
+        "previewLink": "Vorschau bereit. Überprüfen Sie die Zusammenfassung, bevor Sie Konten verknüpfen."
+      },
+      "results": {
+        "completeTitle": "Zuweisung abgeschlossen",
+        "previewTitle": "Vorschau-Ergebnisse",
+        "noneMatched": "Keiner der ausgewählten Benutzer entsprach den aktuellen Filtern.",
+        "processed_one": "{{count}} Benutzer verarbeitet.",
+        "processed_other": "{{count}} Benutzer verarbeitet.",
+        "candidatesSelected": "{{count}} ausgewählt",
+        "unlinked": "Verknüpfung aufgehoben",
+        "wouldUnlink": "Verknüpfung würde aufgehoben",
+        "linked": "Verknüpft",
+        "wouldLink": "Würde verknüpft",
+        "alreadyUnlinked": "Bereits nicht verknüpft",
+        "alreadyLinked": "Bereits verknüpft",
+        "skippedInactive": "Übersprungen (inaktiv)"
+      },
+      "providerNames": {
+        "google": "Google Workspace",
+        "microsoft": "Microsoft 365"
       }
     }
   },

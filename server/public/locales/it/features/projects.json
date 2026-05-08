@@ -200,6 +200,8 @@
     "tasksReorderedSuccess": "Attività riordinate con successo",
     "commentCountsLoadError": "Impossibile caricare i conteggi dei commenti",
     "taskAssigneeUpdatedSuccess": "Assegnatario dell’attività aggiornato con successo!",
+    "teamAssignedSuccess": "Team assegnato con successo",
+    "assignTeamFailed": "Impossibile assegnare il team",
     "taskDuplicatedSuccess": "Attività \"{{taskName}}\" duplicata con successo!",
     "duplicateNoTargetPhase": "Impossibile trovare una fase di destinazione per la duplicazione.",
     "taskNotFound": "Attività non trovata",
@@ -277,6 +279,18 @@
     "agentPendingSave": "L’agente verrà aggiunto al salvataggio dell’attività",
     "teamAssignedSuccess": "Team assegnato con successo",
     "assignTeamFailed": "Impossibile assegnare il team",
+    "teamRemovedSuccess": "Team rimosso con successo",
+    "teamRemoveFailed": "Impossibile rimuovere l'assegnazione del team",
+    "removeTeamAssignment": "Rimuovi assegnazione team",
+    "switchTeamAssignment": "Cambia assegnazione team",
+    "removeTeamMode": {
+      "removeAll": "Rimuovi tutti i membri del team",
+      "keepAll": "Mantieni tutti i membri del team come agenti singoli",
+      "selective": "Seleziona i singoli membri da mantenere/rimuovere",
+      "selectiveHint": "Seleziona i membri da mantenere sull'attività come agenti singoli. I membri non selezionati verranno rimossi."
+    },
+    "noTeamMembersFound": "Nessun membro del team trovato su questa attività.",
+    "unnamedUser": "Utente senza nome",
     "linkingPartialFailure": "Attività creata ma non è stato possibile collegare alcuni elementi",
     "tagCreationPartialFailure": "Impossibile creare {{count}} tag",
     "saveFailed": "Impossibile salvare l'attività",
@@ -304,6 +318,10 @@
     "documentCleanupFailure": "{{count}} document{{plural}} non hanno potuto essere eliminati e rimarranno in Documenti",
     "ticketCleanupFailure": "{{count}} ticket{{plural}} non hanno potuto essere eliminati",
     "checklistItemPlaceholder": "Elemento checklist",
+    "reorderChecklistItem": "Trascina per riordinare",
+    "insertChecklistItem": "Inserisci elemento qui",
+    "editChecklistItem": "Modifica elemento",
+    "removeChecklistItem": "Rimuovi elemento",
     "tagsTitle": "Tag",
     "checklistTitle": "Lista di controllo",
     "createFromTicket": "Crea da ticket",
@@ -587,7 +605,8 @@
       "row": "Riga",
       "phase": "Fase",
       "task": "Attività",
-      "issues": "Problemi"
+      "issues": "Problemi",
+      "valid": "Valido"
     },
     "fields": {
       "task_name": "Nome attività *",
@@ -602,7 +621,24 @@
       "task_type": "Tipo attività",
       "status": "Stato",
       "tags": "Tag"
-    }
+    },
+    "fallbackPhaseLabel": "Fase predefinita per attività senza phase_name",
+    "fallbackPhaseHelp": "{{count}} riga/righe senza fase. Scegli una fase esistente o mantieni il valore predefinito per crearne una.",
+    "fallbackPhaseCreateDefault": "Crea nuova fase: \"{{name}}\"",
+    "fallbackStatusLabel": "Stato predefinito per attività senza stato",
+    "fallbackStatusHelp": "{{count}} riga/righe senza stato. Lo stato selezionato verrà assegnato a tali attività.",
+    "rowResultsTitle": "Risultati delle righe",
+    "rowFilterLabel": "Mostra:",
+    "rowFilterAll": "Tutte le righe ({{count}})",
+    "rowFilterImported": "Saranno importate ({{count}})",
+    "rowFilterSkipped": "Saranno ignorate ({{count}})",
+    "rowsToBeSkippedCount": "{{count}} riga/righe saranno ignorate",
+    "rowsToBeSkippedHelp": "perché non hanno superato la convalida. Usa il filtro sopra per esaminarle.",
+    "statusUnmatchedSuffix": "Non corrispondente",
+    "statusUnmatchedTooltip": "Lo stato non corrisponde a nessuno stato esistente per questa fase. Risolvi nei passaggi di mappatura prima dell'importazione.",
+    "statusFallbackSuffix": "Predefinito",
+    "statusFallbackTooltip": "Utilizzo dello stato di ripiego predefinito per questa fase.",
+    "inPhaseBadge": "in {{phase}}"
   },
   "dialogs": {
     "moveTask": {
@@ -1018,6 +1054,8 @@
       "addChecklistItem": "Aggiungi un elemento",
       "checklistItemPlaceholder": "Elemento checklist",
       "emptyChecklistItem": "Elemento vuoto",
+      "reorderChecklistItem": "Trascina per riordinare",
+      "insertChecklistItem": "Inserisci elemento qui",
       "dependencies": "Dipendenze",
       "dependenciesHelp": "Definisci le dipendenze tra attività per controllare l'ordine di esecuzione alla creazione del progetto",
       "removeDependency": "Rimuovi dipendenza",

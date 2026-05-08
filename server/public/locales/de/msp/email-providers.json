@@ -234,7 +234,7 @@
     },
     "microsoft": {
       "validation": {
-        "providerNameRequired": "Der Name des Anbieters ist erforderlich",
+        "providerNameRequired": "Konfigurationsname ist erforderlich",
         "emailRequired": "Eine gültige E-Mail-Adresse ist erforderlich",
         "redirectRequired": "Ein gültiger Weiterleitungs-URI ist erforderlich",
         "authorizeRequiresValid": "Bitte füllen Sie vor der Autorisierung alle erforderlichen Felder aus",
@@ -244,18 +244,22 @@
         "authorizationFailed": "Die Autorisierung ist fehlgeschlagen"
       },
       "requiredFields": {
-        "providerName": "Anbietername",
+        "providerName": "Konfigurationsname",
         "emailAddress": "E-Mail-Adresse",
         "redirectUri": "Umleitungs-URI"
       },
       "basic": {
         "title": "Grundkonfiguration",
         "description": "Grundeinstellungen für Ihren Microsoft 365-E-Mail-Anbieter",
-        "providerNameLabel": "Anbietername *",
-        "providerNamePlaceholder": "z. B. Support-E-Mail",
+        "providerNameLabel": "Konfigurationsname *",
+        "providerNamePlaceholder": "z. B. Support-Postfach (intern)",
         "emailLabel": "E-Mail-Adresse *",
         "emailPlaceholder": "support@client.com",
-        "enableProvider": "Diesen Anbieter aktivieren"
+        "enableProvider": "Diesen Anbieter aktivieren",
+        "providerNameHelp": "Interner Name zur Identifikation dieser Konfiguration. Wird in ausgehenden E-Mails nicht angezeigt.",
+        "senderDisplayNameLabel": "Anzeigename des Absenders",
+        "senderDisplayNamePlaceholder": "z. B. Acme Support",
+        "senderDisplayNameHelp": "Anzeigename, der im Absenderfeld ausgehender Ticket-E-Mails (Antworten, Abschlüsse) erscheint. Wird nur angewendet, wenn dieses Postfach der ausgehenden Ticketing-Adresse des Mandanten entspricht. Leer lassen, um den Boardnamen des Tickets zu verwenden."
       },
       "oauth": {
         "sectionTitle": "Microsoft OAuth-Konfiguration",
@@ -279,7 +283,7 @@
     },
     "gmail": {
       "validation": {
-        "providerNameRequired": "Der Name des Anbieters ist erforderlich",
+        "providerNameRequired": "Konfigurationsname ist erforderlich",
         "gmailAddressRequired": "Eine gültige Gmail-Adresse ist erforderlich",
         "authorizeRequiresValid": "Bitte füllen Sie vor der Autorisierung alle erforderlichen Felder aus",
         "googleNotConfigured": "Die Google-Integration ist für diesen Mandanten nicht konfiguriert. Konfigurieren Sie zuerst Google und versuchen Sie es dann erneut.",
@@ -295,17 +299,21 @@
         "settingUp": "Gmail-Benachrichtigungen einrichten..."
       },
       "requiredFields": {
-        "providerName": "Anbietername",
+        "providerName": "Konfigurationsname",
         "gmailAddress": "Gmail-Adresse"
       },
       "basic": {
         "title": "Grundkonfiguration",
         "description": "Grundeinstellungen für Ihren Gmail-E-Mail-Anbieter",
-        "providerNameLabel": "Anbietername *",
-        "providerNamePlaceholder": "z. B. Support Gmail",
+        "providerNameLabel": "Konfigurationsname *",
+        "providerNamePlaceholder": "z. B. Support-Gmail (intern)",
         "mailboxLabel": "Gmail-Adresse *",
         "mailboxPlaceholder": "support@client.com",
-        "enableProvider": "Diesen Anbieter aktivieren"
+        "enableProvider": "Diesen Anbieter aktivieren",
+        "providerNameHelp": "Interner Name zur Identifikation dieser Konfiguration. Wird in ausgehenden E-Mails nicht angezeigt.",
+        "senderDisplayNameLabel": "Anzeigename des Absenders",
+        "senderDisplayNamePlaceholder": "z. B. Acme Support",
+        "senderDisplayNameHelp": "Anzeigename, der im Absenderfeld ausgehender Ticket-E-Mails (Antworten, Abschlüsse) erscheint. Wird nur angewendet, wenn dieses Postfach der ausgehenden Ticketing-Adresse des Mandanten entspricht. Leer lassen, um den Boardnamen des Tickets zu verwenden."
       },
       "oauth": {
         "sectionTitle": "Google OAuth",
@@ -334,7 +342,7 @@
     },
     "imap": {
       "validation": {
-        "providerNameRequired": "Der Name des Anbieters ist erforderlich",
+        "providerNameRequired": "Konfigurationsname ist erforderlich",
         "mailboxRequired": "Postfach ist erforderlich",
         "mailboxInvalid": "Gültiges Postfach ist erforderlich (z. B. user@domain.com, user@localhost, user@test-server oder user)",
         "hostRequired": "IMAP-Host ist erforderlich",
@@ -344,12 +352,17 @@
       "basic": {
         "title": "Grundeinstellungen",
         "description": "Definieren Sie die Verbindungsdetails für das IMAP-Postfach.",
-        "providerName": "Anbietername",
+        "providerName": "Konfigurationsname",
         "mailboxAddress": "Postfachadresse",
         "host": "IMAP-Host",
         "port": "Port",
         "useTls": "TLS/SSL verwenden",
-        "allowStarttls": "STARTTLS-Upgrade zulassen"
+        "allowStarttls": "STARTTLS-Upgrade zulassen",
+        "providerNamePlaceholder": "z. B. Support-IMAP (intern)",
+        "providerNameHelp": "Interner Name zur Identifikation dieser Konfiguration. Wird in ausgehenden E-Mails nicht angezeigt.",
+        "senderDisplayName": "Anzeigename des Absenders",
+        "senderDisplayNamePlaceholder": "z. B. Acme Support",
+        "senderDisplayNameHelp": "Anzeigename, der im Absenderfeld ausgehender Ticket-E-Mails (Antworten, Abschlüsse) erscheint. Wird nur angewendet, wenn dieses Postfach der ausgehenden Ticketing-Adresse des Mandanten entspricht. Leer lassen, um den Boardnamen des Tickets zu verwenden."
       },
       "auth": {
         "title": "Authentifizierung",
@@ -476,7 +489,7 @@
       }
     },
     "fields": {
-      "providerName": "Anbietername",
+      "providerName": "Konfigurationsname",
       "mailboxAddress": "Postfachadresse",
       "imapHost": "IMAP-Host",
       "port": "Port",
@@ -496,7 +509,12 @@
       "active": "Aktiv",
       "ticketDefaultsLabel": "Ticket-Standardeinstellungen",
       "ticketDefaultsPlaceholder": "Standardeinstellungen auswählen...",
-      "ticketDefaultsEmpty": "Keine Standardeinstellungen verfügbar"
+      "ticketDefaultsEmpty": "Keine Standardeinstellungen verfügbar",
+      "providerNamePlaceholder": "z. B. Support-IMAP (intern)",
+      "providerNameHelp": "Interner Name zur Identifikation dieser Konfiguration. Wird in ausgehenden E-Mails nicht angezeigt.",
+      "senderDisplayName": "Anzeigename des Absenders",
+      "senderDisplayNamePlaceholder": "z. B. Acme Support",
+      "senderDisplayNameHelp": "Anzeigename, der im Absenderfeld ausgehender Ticket-E-Mails (Antworten, Abschlüsse) erscheint. Wird nur angewendet, wenn dieses Postfach der ausgehenden Ticketing-Adresse des Mandanten entspricht. Leer lassen, um den Boardnamen des Tickets zu verwenden."
     },
     "authOptions": {
       "password": "Passwort",
@@ -546,8 +564,8 @@
       }
     },
     "fields": {
-      "providerNameLabel": "Anbietername *",
-      "providerNamePlaceholder": "z. B. Support Microsoft 365",
+      "providerNameLabel": "Konfigurationsname *",
+      "providerNamePlaceholder": "z. B. Support-Postfach (intern)",
       "mailboxLabel": "Microsoft 365-Adresse *",
       "mailboxPlaceholder": "support@client.com",
       "enableProvider": "Diesen Anbieter aktivieren",
@@ -557,7 +575,11 @@
       "maxEmailsLabel": "Maximale E-Mails pro Synchronisierung",
       "maxEmailsHelp": "Maximale Anzahl der pro Synchronisierung zu verarbeitenden E-Mails (1-1000)",
       "inboundDefaultsLabel": "Standardeinstellungen für eingehende Tickets",
-      "inboundDefaultsPlaceholder": "Standardeinstellungen auswählen (optional)"
+      "inboundDefaultsPlaceholder": "Standardeinstellungen auswählen (optional)",
+      "providerNameHelp": "Interner Name zur Identifikation dieser Konfiguration. Wird in ausgehenden E-Mails nicht angezeigt.",
+      "senderDisplayNameLabel": "Anzeigename des Absenders",
+      "senderDisplayNamePlaceholder": "z. B. Acme Support",
+      "senderDisplayNameHelp": "Anzeigename, der im Absenderfeld ausgehender Ticket-E-Mails (Antworten, Abschlüsse) erscheint. Wird nur angewendet, wenn dieses Postfach der ausgehenden Ticketing-Adresse des Mandanten entspricht. Leer lassen, um den Boardnamen des Tickets zu verwenden."
     },
     "oauth": {
       "connectionTitle": "Microsoft 365-Verbindung",
@@ -596,7 +618,7 @@
     },
     "validation": {
       "requiredFieldsTitle": "Bitte füllen Sie die erforderlichen Felder aus:",
-      "providerName": "Anbietername",
+      "providerName": "Konfigurationsname",
       "mailbox": "Microsoft 365-Adresse"
     }
   },

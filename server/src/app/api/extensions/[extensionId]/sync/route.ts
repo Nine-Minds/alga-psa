@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { assertSessionProductAccess } from '@/lib/api/standaloneProductGuards';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ extensionId: string }> }
 ) {
   try {
+    const deniedResponse = await assertSessionProductAccess({
+      capability: 'extensions',
+      allowedProducts: ['psa'],
+    });
+    if (deniedResponse) {
+      return deniedResponse;
+    }
+
     const resolvedParams = await params;
   const { extensionId } = resolvedParams;
     const body = await request.json();

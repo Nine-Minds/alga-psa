@@ -200,6 +200,8 @@
     "tasksReorderedSuccess": "11111",
     "commentCountsLoadError": "11111",
     "taskAssigneeUpdatedSuccess": "11111",
+    "teamAssignedSuccess": "11111",
+    "assignTeamFailed": "11111",
     "taskDuplicatedSuccess": "11111 {{taskName}} 11111",
     "duplicateNoTargetPhase": "11111",
     "taskNotFound": "11111",
@@ -277,6 +279,18 @@
     "agentPendingSave": "11111",
     "teamAssignedSuccess": "11111",
     "assignTeamFailed": "11111",
+    "teamRemovedSuccess": "11111",
+    "teamRemoveFailed": "11111",
+    "removeTeamAssignment": "11111",
+    "switchTeamAssignment": "11111",
+    "removeTeamMode": {
+      "removeAll": "11111",
+      "keepAll": "11111",
+      "selective": "11111",
+      "selectiveHint": "11111"
+    },
+    "noTeamMembersFound": "11111",
+    "unnamedUser": "11111",
     "linkingPartialFailure": "11111",
     "tagCreationPartialFailure": "11111 {{count}} 11111",
     "saveFailed": "11111",
@@ -304,6 +318,10 @@
     "documentCleanupFailure": "11111 {{count}} 11111 {{plural}} 11111",
     "ticketCleanupFailure": "11111 {{count}} 11111 {{plural}} 11111",
     "checklistItemPlaceholder": "11111",
+    "reorderChecklistItem": "11111",
+    "insertChecklistItem": "11111",
+    "editChecklistItem": "11111",
+    "removeChecklistItem": "11111",
     "tagsTitle": "11111",
     "checklistTitle": "11111",
     "createFromTicket": "11111",
@@ -587,7 +605,8 @@
       "row": "11111",
       "phase": "11111",
       "task": "11111",
-      "issues": "11111"
+      "issues": "11111",
+      "valid": "11111"
     },
     "fields": {
       "task_name": "11111",
@@ -602,7 +621,24 @@
       "task_type": "11111",
       "status": "11111",
       "tags": "11111"
-    }
+    },
+    "fallbackPhaseLabel": "11111",
+    "fallbackPhaseHelp": "11111 {{count}} 11111",
+    "fallbackPhaseCreateDefault": "11111 {{name}} 11111",
+    "fallbackStatusLabel": "11111",
+    "fallbackStatusHelp": "11111 {{count}} 11111",
+    "rowResultsTitle": "11111",
+    "rowFilterLabel": "11111",
+    "rowFilterAll": "11111 {{count}} 11111",
+    "rowFilterImported": "11111 {{count}} 11111",
+    "rowFilterSkipped": "11111 {{count}} 11111",
+    "rowsToBeSkippedCount": "11111 {{count}} 11111",
+    "rowsToBeSkippedHelp": "11111",
+    "statusUnmatchedSuffix": "11111",
+    "statusUnmatchedTooltip": "11111",
+    "statusFallbackSuffix": "11111",
+    "statusFallbackTooltip": "11111",
+    "inPhaseBadge": "11111 {{phase}} 11111"
   },
   "dialogs": {
     "moveTask": {
@@ -1018,6 +1054,8 @@
       "addChecklistItem": "11111",
       "checklistItemPlaceholder": "11111",
       "emptyChecklistItem": "11111",
+      "reorderChecklistItem": "11111",
+      "insertChecklistItem": "11111",
       "dependencies": "11111",
       "dependenciesHelp": "11111",
       "removeDependency": "11111",

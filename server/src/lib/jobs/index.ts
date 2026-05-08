@@ -15,6 +15,7 @@ import { emailWebhookMaintenanceHandler, EmailWebhookMaintenanceJobData } from '
 import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from './handlers/googleGmailWatchRenewalHandler';
 import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from './handlers/processRenewalQueueHandler';
 import { cleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
+import { cleanupWebhookDeliveriesJob, scheduleCleanupWebhookDeliveriesJob } from '../../services/cleanupWebhookDeliveriesJob';
 import { cleanupAiSessionKeysHandler, CleanupAiSessionKeysJobData } from './handlers/cleanupAiSessionKeysHandler';
 import {
   renewMicrosoftCalendarWebhooks,
@@ -154,6 +155,10 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     // Register cleanup temporary forms handler
     jobScheduler.registerJobHandler('cleanup-temporary-workflow-forms', async (job: Job<{ tenantId: string }>) => {
       await cleanupTemporaryFormsJob();
+    });
+
+    jobScheduler.registerJobHandler('cleanup-webhook-deliveries', async () => {
+      await cleanupWebhookDeliveriesJob();
     });
 
     if (process.env.EDITION === 'enterprise') {
@@ -437,6 +442,7 @@ export const scheduleCreditReconciliationJob = async (
 
 // Re-export the cleanup temporary forms scheduling function
 export { scheduleCleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
+export { scheduleCleanupWebhookDeliveriesJob } from '../../services/cleanupWebhookDeliveriesJob';
 
 // Note: Password reset token cleanup is handled automatically during token operations
 // No scheduled job needed since pg-boss is unreliable and auto-cleanup is more efficient

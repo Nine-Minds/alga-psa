@@ -42,7 +42,7 @@
     "dev:sdk": "npm -w sdk/alga-client-sdk run dev",
     "start:workflow-worker": "cd services/workflow-worker && npm run start",
     "dev:workflow-worker": "cd services/workflow-worker && npm run dev",
-    "create-tenant": "cd server && npm run create-tenant",
+    "create-tenant": "cd server && npm run create-tenant --",
     "rollback-tenant": "cd server && npm run rollback-tenant",
     "lint": "eslint \"{server,ee/server,ee/packages,shared,services,packages}/**/*.{js,mjs,cjs,ts,jsx,tsx}\"",
     "guard:temporal-packaging-contract": "node scripts/check-temporal-worker-packaging-contract.mjs",
@@ -116,7 +116,7 @@
     "archiver": "^7.0.1",
     "asc": "^2.1.5",
     "assemblyscript": "^0.27.37",
-    "axios": "^1.13.6",
+    "axios": "^1.16.0",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.0",
     "clean": "^4.0.2",
@@ -298,6 +298,7 @@
     "glob": ">=11.0.0",
     "lodash": ">=4.18.1",
     "@nestjs/core": ">=11.1.18",
-    "mailparser": ">=3.9.8"
+    "mailparser": ">=3.9.8",
+    "axios": "^1.16.0"
   }
 }

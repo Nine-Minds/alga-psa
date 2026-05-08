@@ -33,4 +33,11 @@ describe('ClientPortalSidebar persistence + skeleton contract', () => {
   it('still exposes the request-services link', () => {
     expect(sidebarSource).toMatch(/['"]\/client-portal\/request-services['"]/);
   });
+
+  it('contains explicit Algadesk portal navigation gating', () => {
+    expect(sidebarSource).toContain('const isAlgadeskPortal = productCode === \'algadesk\'');
+    expect(sidebarSource).toContain('/client-portal/knowledge-base');
+    expect(sidebarSource).toContain('/client-portal/profile');
+    expect(sidebarSource).toContain('!isAlgadeskPortal && <ClientPortalExtensionsNav');
+  });
 });

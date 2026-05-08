@@ -12,7 +12,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Link2 } from 'lucide-react';
 import { AssetDetails } from '../assets/AssetDetails';
 import { getClientAssetById } from '@alga-psa/client-portal/actions';
-import type { Asset } from '@alga-psa/types';
+import type { Asset, ProductCode } from '@alga-psa/types';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
 import { getTicketOrigin } from '@alga-psa/tickets/lib/ticketOrigin';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
@@ -52,6 +52,7 @@ interface TicketDetailsProps {
   initialTicket: ITicketWithDetails;
   initialDocuments: IDocument[];
   initialStatusOptions: IStatus[];
+  productCode?: ProductCode;
 }
 
 export function TicketDetails({
@@ -61,11 +62,13 @@ export function TicketDetails({
   asStandalone = false,
   initialTicket,
   initialDocuments,
-  initialStatusOptions
+  initialStatusOptions,
+  productCode = 'psa'
 }: TicketDetailsProps) {
   const { t, i18n } = useTranslation('features/tickets');
   const { t: tCommon } = useTranslation('common');
   const dateLocale = getDateFnsLocale(i18n.language);
+  const isAlgadeskPortal = productCode === 'algadesk';
   // Use pre-fetched data from server component
   const [ticket, setTicket] = useState<ITicketWithDetails>(initialTicket);
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
@@ -167,6 +170,11 @@ export function TicketDetails({
   // Fetch appointment requests for this ticket
   useEffect(() => {
     const fetchAppointments = async () => {
+      if (isAlgadeskPortal) {
+        setAppointments([]);
+        setAppointmentsLoading(false);
+        return;
+      }
       if (!ticketId) return;
       // In dialog mode, only load when open
       if (!asStandalone && !isOpen) return;
@@ -202,7 +210,7 @@ export function TicketDetails({
     };
 
     fetchAppointments();
-  }, [ticketId, isOpen, asStandalone]);
+  }, [ticketId, isOpen, asStandalone, isAlgadeskPortal]);
 
   // Fetch current user on mount (for comment authorship)
   useEffect(() => {
@@ -813,13 +821,17 @@ export function TicketDetails({
                     setDocuments(docs);
                   }}
                   getFoldersFn={getClientFolders}
+                  forceUploadToRoot={isAlgadeskPortal}
+                  allowDocumentSharing={!isAlgadeskPortal}
+                  allowLinkExistingDocuments={!isAlgadeskPortal}
+                  allowBlockDocuments={!isAlgadeskPortal}
                 />
               </Card>
             </div>
           )}
 
           {/* Appointment Requests Section */}
-          {ticket.ticket_id && (
+          {!isAlgadeskPortal && ticket.ticket_id && (
             <div>
               <TicketAppointmentRequests
                 ticketId={ticket.ticket_id}

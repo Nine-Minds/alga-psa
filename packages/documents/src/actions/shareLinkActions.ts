@@ -6,6 +6,7 @@ import { createTenantKnex, getConnection } from '@alga-psa/db';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import bcrypt from 'bcryptjs';
+import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
 
 export type ShareType = 'public' | 'password' | 'portal_authenticated';
 
@@ -109,6 +110,7 @@ export const createShareLink = withAuth(
     { tenant },
     input: ICreateShareLinkInput
   ): Promise<IDocumentShareLink | ActionPermissionError> => {
+    await assertPsaOnlyTenantAccess(tenant, 'document_management_actions');
     const { knex } = await createTenantKnex();
 
     // Check document:share permission (or document:update as fallback)
@@ -175,6 +177,7 @@ export const getShareLinksForDocument = withAuth(
     { tenant },
     documentId: string
   ): Promise<IDocumentShareLink[] | ActionPermissionError> => {
+    await assertPsaOnlyTenantAccess(tenant, 'document_management_actions');
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'read'))) {
@@ -208,6 +211,7 @@ export const revokeShareLink = withAuth(
     { tenant },
     shareId: string
   ): Promise<boolean | ActionPermissionError> => {
+    await assertPsaOnlyTenantAccess(tenant, 'document_management_actions');
     const { knex } = await createTenantKnex();
 
     if (!(await hasPermission(user, 'document', 'update'))) {

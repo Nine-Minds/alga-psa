@@ -54,6 +54,7 @@
         "expand": "Espandere",
         "collapse": "Crollo"
       },
+      "ready": "Pronto per la fatturazione",
       "canCombine": "Può essere combinato in 1 fattura",
       "separate": "Deve fatturare separatamente",
       "blocked": "Contiene elementi bloccati",

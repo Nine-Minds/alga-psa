@@ -71,7 +71,6 @@ interface KBArticleEditorProps {
   tenantId?: string;
   aiAssistantEnabled?: boolean;
   onBack?: () => void;
-  onSave?: () => void;
   categories?: Array<{ id: string; name: string }>;
 }
 
@@ -82,7 +81,6 @@ export default function KBArticleEditor({
   tenantId,
   aiAssistantEnabled = false,
   onBack,
-  onSave,
   categories = [],
 }: KBArticleEditorProps) {
   const { t } = useTranslation('msp/knowledge-base');
@@ -98,6 +96,7 @@ export default function KBArticleEditor({
   const [articleTags, setArticleTags] = useState<ITag[]>([]);
   const [isFallbackMode, setIsFallbackMode] = useState(!userName || !tenantId);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   // Auto-fallback if CollaborativeEditor can't connect within 5 seconds
@@ -216,8 +215,7 @@ export default function KBArticleEditor({
       }
       toast.success(t('editor.feedback.saveSuccess', { defaultValue: 'Article metadata saved' }));
       setHasUnsavedMetadata(false);
-      onSave?.();
-      // Reload article to get updated data
+      // Reload article to get updated data while keeping the editor open.
       await loadArticle();
     } catch (error) {
       handleError(error, t('editor.feedback.saveError', { defaultValue: 'Failed to save article' }));
@@ -262,6 +260,11 @@ export default function KBArticleEditor({
     }
   };
 
+  const handleArchive = async () => {
+    setArchiveDialogOpen(false);
+    await handleStatusChange('archived');
+  };
+
   const handleDelete = async () => {
     if (!article) return;
     setIsDeleting(true);
@@ -275,8 +278,15 @@ export default function KBArticleEditor({
       toast.success(t('editor.feedback.deleteSuccess', { defaultValue: 'Article deleted permanently' }));
       // Close the dialog before navigating so Radix focus-trap doesn't swallow the route change.
       setDeleteDialogOpen(false);
-      router.push('/msp/knowledge-base');
-      router.refresh();
+      setArticle(null);
+      setTimeout(() => {
+        if (onBack) {
+          onBack();
+          return;
+        }
+        router.push('/msp/knowledge-base');
+        router.refresh();
+      }, 0);
     } catch (error) {
       handleError(error, t('editor.feedback.deleteError', { defaultValue: 'Failed to delete article' }));
       setIsDeleting(false);
@@ -375,7 +385,7 @@ export default function KBArticleEditor({
                 id="kb-editor-archive"
                 variant="outline"
                 size="sm"
-                onClick={() => handleStatusChange('archived')}
+                onClick={() => setArchiveDialogOpen(true)}
                 disabled={isSaving}
               >
                 <Archive className="w-4 h-4 mr-2" />
@@ -601,6 +611,22 @@ export default function KBArticleEditor({
           </CardContent>
         </Card>
       </div>
+
+      {/* Archive Confirmation Dialog */}
+      <ConfirmationDialog
+        id="kb-editor-archive-dialog"
+        isOpen={archiveDialogOpen}
+        onClose={() => setArchiveDialogOpen(false)}
+        onConfirm={handleArchive}
+        title={t('editor.dialogs.archive.title', { defaultValue: 'Archive Article' })}
+        message={t('editor.dialogs.archive.message', {
+          defaultValue:
+            'Are you sure you want to archive "{{title}}"? Archived articles are hidden from the client portal and can be deleted permanently later.',
+          title: article.document_name || article.slug,
+        })}
+        confirmLabel={t('editor.actions.archive', { defaultValue: 'Archive' })}
+        isConfirming={isSaving}
+      />
 
       {/* Delete Confirmation Dialog */}
       <ConfirmationDialog

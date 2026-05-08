@@ -27,7 +27,7 @@ import PhaseQuickAdd from './PhaseQuickAdd';
 import TaskListView from './TaskListView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { getProjectTaskStatuses, updatePhase, deletePhase, getProjectTreeData, reorderPhase } from '../actions/projectActions';
-import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getProjectTaskData } from '../actions/projectTaskActions';
+import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getProjectTaskData, assignTeamToProjectTask, removeTeamFromProjectTask } from '../actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { Toaster, toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -48,7 +48,9 @@ import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
 import { useUserPreferencesBatch } from '@alga-psa/user-composition/hooks';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getTeamsBasic, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import type { ITeam } from '@alga-psa/types';
+import RemoveTeamDialog from './RemoveTeamDialog';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
 
@@ -196,8 +198,12 @@ export default function ProjectDetail({
   const [phaseTaskResources, setPhaseTaskResources] = useState<{ [taskId: string]: any[] }>({});
   const [phaseTaskDependencies, setPhaseTaskDependencies] = useState<{ [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } }>({});
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
+  const [teams, setTeams] = useState<ITeam[]>([]);
   const [teamNames, setTeamNames] = useState<Record<string, string>>({});
   const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>({});
+  const [pendingTeamAssign, setPendingTeamAssign] = useState<{ taskId: string; teamId: string } | null>(null);
+  const [pendingTaskTeamMembers, setPendingTaskTeamMembers] = useState<any[]>([]);
+  const [isTeamSwitchDialogOpen, setIsTeamSwitchDialogOpen] = useState(false);
   const [projectPhases, setProjectPhases] = useState<IProjectPhase[]>(phases);
   const [projectStatuses, setProjectStatuses] = useState<ProjectStatus[]>(initialStatuses);
   const [statusVersion, setStatusVersion] = useState(0);
@@ -1195,8 +1201,9 @@ export default function ProjectDetail({
       if (!tenant) return;
 
       try {
-        const allTeams = await getTeamsBasic();
+        const allTeams = await getTeams();
         if (stale) return;
+        setTeams(allTeams);
         const namesMap: Record<string, string> = {};
         allTeams.forEach(team => {
           namesMap[team.team_id] = team.team_name;
@@ -1939,6 +1946,69 @@ export default function ProjectDetail({
     }
   };
 
+  const refreshTaskAfterTeamChange = async (taskId: string) => {
+    const [updatedTask, resources] = await Promise.all([
+      getTaskById(taskId),
+      getTaskResourcesAction(taskId),
+    ]);
+    if (!updatedTask) return;
+    const checklistItems = await getTaskChecklistItems(taskId);
+    const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
+
+    setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
+    setAllProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
+    setPhaseTaskResources(prev => ({ ...prev, [taskId]: resources }));
+  };
+
+  const performTeamAssign = async (taskId: string, teamId: string) => {
+    try {
+      await assignTeamToProjectTask(taskId, teamId);
+      await refreshTaskAfterTeamChange(taskId);
+      toast.success(t('projectDetail.teamAssignedSuccess', 'Team assigned successfully'));
+    } catch (error) {
+      handleError(error, t('projectDetail.assignTeamFailed', 'Failed to assign team'));
+    }
+  };
+
+  const handleTeamAssign = async (taskId: string, teamId: string) => {
+    const task = projectTasks.find(x => x.task_id === taskId) || allProjectTasks.find(x => x.task_id === taskId);
+    if (!task) return;
+    if (task.assigned_team_id === teamId) return;
+
+    if (task.assigned_team_id) {
+      try {
+        const resources = await getTaskResourcesAction(taskId);
+        setPendingTaskTeamMembers(resources.filter((r: any) => r.role === 'team_member'));
+      } catch (error) {
+        console.error('Failed to load task resources for team switch dialog:', error);
+        setPendingTaskTeamMembers([]);
+      }
+      setPendingTeamAssign({ taskId, teamId });
+      setIsTeamSwitchDialogOpen(true);
+      return;
+    }
+
+    await performTeamAssign(taskId, teamId);
+  };
+
+  const handleConfirmTeamSwitch = async (
+    mode: 'remove_all' | 'keep_all' | 'selective',
+    keepUserIds?: string[]
+  ) => {
+    if (!pendingTeamAssign) return;
+    const { taskId, teamId } = pendingTeamAssign;
+    try {
+      await removeTeamFromProjectTask(taskId, { mode, keepUserIds });
+      await performTeamAssign(taskId, teamId);
+    } catch (error) {
+      handleError(error, t('projectDetail.assignTeamFailed', 'Failed to assign team'));
+    } finally {
+      setPendingTeamAssign(null);
+      setPendingTaskTeamMembers([]);
+      setIsTeamSwitchDialogOpen(false);
+    }
+  };
+
   const handleEditPhase = (phase: IProjectPhase) => {
     setEditingPhaseId(phase.phase_id);
     setEditingPhaseName(phase.phase_name);
@@ -2652,6 +2722,8 @@ export default function ProjectDetail({
           }}
           onTaskTagsChange={handleTaskTagsChange}
           onAssigneeChange={(taskId, newAssigneeId) => handleAssigneeChange(taskId, newAssigneeId)}
+          onTeamAssign={handleTeamAssign}
+          teams={teams}
           users={users}
           teamNames={teamNames}
           teamAvatarUrls={teamAvatarUrls}
@@ -2719,6 +2791,8 @@ export default function ProjectDetail({
             onAddCard={handleAddCard}
             onTaskSelected={handleTaskSelected}
             onAssigneeChange={handleAssigneeChange}
+            onTeamAssign={handleTeamAssign}
+            teams={teams}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
             onReorderTasks={handleReorderTasks}
@@ -3079,6 +3153,20 @@ export default function ProjectDetail({
             );
           }
         }}
+      />
+
+      <RemoveTeamDialog
+        id="project-detail-team-switch-dialog"
+        isOpen={isTeamSwitchDialogOpen}
+        onClose={() => {
+          setPendingTeamAssign(null);
+          setPendingTaskTeamMembers([]);
+          setIsTeamSwitchDialogOpen(false);
+        }}
+        isSwitching={true}
+        teamMembers={pendingTaskTeamMembers}
+        users={users}
+        onConfirm={handleConfirmTeamSwitch}
       />
     </div>
   );

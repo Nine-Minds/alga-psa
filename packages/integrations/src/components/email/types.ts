@@ -3,6 +3,12 @@ export interface EmailProvider {
   tenant: string;
   providerType: 'microsoft' | 'google' | 'imap';
   providerName: string;
+  /**
+   * Optional display name shown in the From header on outbound ticket emails
+   * (replies, ticket-closed, etc.). When null, paths that previously hard-coded
+   * `ticket.board_name` continue to use the board name as a fallback.
+   */
+  senderDisplayName?: string | null;
   mailbox: string;
   isActive: boolean;
   status: 'connected' | 'disconnected' | 'error' | 'configuring';

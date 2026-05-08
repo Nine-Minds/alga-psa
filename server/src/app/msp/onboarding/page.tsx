@@ -7,9 +7,11 @@ import { getTenantSettings } from '@alga-psa/tenancy/actions';
 import { getOnboardingInitialData } from '@alga-psa/onboarding/actions';
 import type { WizardData } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useProduct } from '@/context/ProductContext';
 
 export default function OnboardingPage() {
   const { t } = useTranslation('common');
+  const { productCode } = useProduct();
   const router = useRouter();
   const [initialData, setInitialData] = useState<Partial<WizardData>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -99,6 +101,7 @@ export default function OnboardingPage() {
         onComplete={handleComplete}
         fullPage={true}
         isRevisit={isRevisit}
+        productCode={productCode}
       />
     </div>
   );

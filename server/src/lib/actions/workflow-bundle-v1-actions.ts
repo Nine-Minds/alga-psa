@@ -5,6 +5,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { exportWorkflowBundleV1ForWorkflowId } from 'server/src/lib/workflow/bundle/exportWorkflowBundleV1';
 import { importWorkflowBundleV1 } from 'server/src/lib/workflow/bundle/importWorkflowBundleV1';
+import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
 
 const WorkflowIdInput = z.object({ workflowId: z.string().min(1) });
 
@@ -28,6 +29,7 @@ const requireWorkflowPermission = async (
 };
 
 export const exportWorkflowBundleV1Action = withAuth(async (user, { tenant }, input: unknown) => {
+  await assertPsaOnlyTenantAccess(tenant, 'workflow_actions');
   const parsed = WorkflowIdInput.parse(input);
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);
@@ -35,6 +37,7 @@ export const exportWorkflowBundleV1Action = withAuth(async (user, { tenant }, in
 });
 
 export const importWorkflowBundleV1Action = withAuth(async (user, { tenant }, input: unknown) => {
+  await assertPsaOnlyTenantAccess(tenant, 'workflow_actions');
   const parsed = z.object({ bundle: z.unknown(), force: z.boolean().optional() }).parse(input);
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'admin', knex);

@@ -25,5 +25,9 @@ module.exports = {
       ...appJson.expo.web,
       favicon: resolveAsset('favicon.png'),
     },
+    plugins: [
+      ...(appJson.expo.plugins ?? []),
+      './plugins/withAndroidLargeScreenSupport.js',
+    ],
   },
 };

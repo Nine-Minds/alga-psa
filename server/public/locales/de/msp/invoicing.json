@@ -54,6 +54,7 @@
         "expand": "Expandieren",
         "collapse": "Zusammenbruch"
       },
+      "ready": "Bereit zur Rechnungsstellung",
       "canCombine": "Kann zu einer Rechnung zusammengefasst werden",
       "separate": "Muss separat in Rechnung gestellt werden",
       "blocked": "Enthält blockierte Elemente",

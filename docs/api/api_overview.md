@@ -119,6 +119,7 @@ API keys can be managed through the user interface by navigating to your User Pr
 
 ### Community Edition APIs
 - [Future CE APIs will be documented here]
+- [API Rate Limiting And Ticket Webhooks](api-rate-limiting-and-ticket-webhooks.md)
 
 ### Enterprise Edition APIs
 - **Tenant Provisioning API:** Enables partner-driven tenant management. See [tenant_provisioning_api.md](tenant_provisioning_api.md) for details.

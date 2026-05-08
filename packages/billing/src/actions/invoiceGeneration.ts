@@ -122,7 +122,7 @@ function getSingleClientContractIdFromCharges(charges: IBillingCharge[]): string
 // TODO: Move to billingAndTax.ts or a shared utility file
 // Uses local type guards now
 function getChargeQuantity(charge: IBillingCharge): number {
-  if (isBucketCharge(charge)) return charge.overageHours;
+  if (isBucketCharge(charge)) return charge.isUsageBucket ? charge.overageUnits ?? charge.quantity ?? 0 : charge.overageHours;
   if (isFixedPriceCharge(charge) || isUsageBasedCharge(charge)) return charge.quantity;
   if (isTimeBasedCharge(charge)) return charge.duration;
   if (isProductCharge(charge) || isLicenseCharge(charge)) return charge.quantity;
@@ -1293,12 +1293,24 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       const recurringSummary = resolvePreviewRecurringSummary(charge);
       let description = charge.serviceName;
       if (isBucketCharge(charge)) {
-        const hoursIncluded = charge.hoursUsed - charge.overageHours;
         const currencySymbol = getCurrencySymbol(billingResult.currency_code || 'USD');
-        if (charge.overageHours > 0) {
-          description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (${hoursIncluded.toFixed(2)} hrs included + ${charge.overageHours.toFixed(2)} hrs overage @ ${currencySymbol}${(charge.overageRate / 100).toFixed(2)}/hr)`;
+        if (charge.isUsageBucket) {
+          const unitLabel = charge.unitOfMeasure?.trim() || 'units';
+          const unitsUsed = charge.unitsUsed ?? charge.hoursUsed;
+          const overageUnits = charge.overageUnits ?? charge.quantity ?? 0;
+          const unitsIncluded = charge.includedUnits ?? Math.max(0, unitsUsed - overageUnits);
+          if (overageUnits > 0) {
+            description = `${charge.serviceName} - ${unitsUsed.toFixed(2)} ${unitLabel} used (${unitsIncluded.toFixed(2)} ${unitLabel} included + ${overageUnits.toFixed(2)} ${unitLabel} overage @ ${currencySymbol}${(charge.overageRate / 100).toFixed(2)}/${unitLabel})`;
+          } else {
+            description = `${charge.serviceName} - ${unitsUsed.toFixed(2)} ${unitLabel} used (within ${unitsIncluded.toFixed(2)} ${unitLabel} included)`;
+          }
         } else {
-          description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (within ${hoursIncluded.toFixed(2)} hrs included)`;
+          const hoursIncluded = charge.hoursUsed - charge.overageHours;
+          if (charge.overageHours > 0) {
+            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (${hoursIncluded.toFixed(2)} hrs included + ${charge.overageHours.toFixed(2)} hrs overage @ ${currencySymbol}${(charge.overageRate / 100).toFixed(2)}/hr)`;
+          } else {
+            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (within ${hoursIncluded.toFixed(2)} hrs included)`;
+          }
         }
       }
 

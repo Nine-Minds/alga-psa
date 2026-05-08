@@ -38,7 +38,7 @@
     "@temporalio/client": "~1.14.1",
     "@temporalio/worker": "~1.14.1",
     "@temporalio/workflow": "~1.14.1",
-    "axios": "^1.15.0",
+    "axios": "^1.16.0",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "dotenv": "^16.4.5",

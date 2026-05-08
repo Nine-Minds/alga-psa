@@ -33,6 +33,7 @@ interface PersistAttachmentInput {
     providerAttachmentId?: string;
     allowInlineProcessing?: boolean;
   };
+  consumedInlineCids?: Set<string>;
 }
 
 interface PersistOriginalEmailInput {
@@ -591,14 +592,20 @@ async function persistInboundEmailAttachment(input: PersistAttachmentInput): Pro
     return (claim as { claimed: false; result: Record<string, any> }).result;
   }
 
-  if ((contentId || isInline) && !allowInlineProcessing) {
+  const normalizedCid = normalizeContentId(contentId);
+  const consumedInlineCids = input.consumedInlineCids;
+  const isConsumedInline = Boolean(
+    normalizedCid && consumedInlineCids && consumedInlineCids.has(normalizedCid)
+  );
+
+  if (isConsumedInline && !allowInlineProcessing) {
     await markProcessedAttachment(knex, {
       tenantId: input.tenantId,
       providerId: input.providerId,
       emailId: input.emailId,
       attachmentId: input.attachmentId,
       status: 'skipped',
-      errorMessage: 'Inline/CID attachments are skipped by default',
+      errorMessage: 'Inline/CID attachments referenced in body are handled by embedded extraction',
     });
     return { success: true, skipped: true, reason: 'inline' };
   }
@@ -924,6 +931,18 @@ export async function processInboundEmailArtifactsBestEffort(
     }
   }
 
+  const consumedInlineCids = new Set<string>();
+  for (const embedded of embeddedAttachments) {
+    if (embedded.source !== 'cid') continue;
+    const matchedBase = embedded.providerAttachmentId
+      ? baseAttachmentById.get(String(embedded.providerAttachmentId))
+      : undefined;
+    const cid = normalizeContentId((embedded as any).contentId || matchedBase?.contentId);
+    if (cid) {
+      consumedInlineCids.add(cid);
+    }
+  }
+
   const attachmentConcurrency = resolveAttachmentConcurrency(input.maxAttachmentConcurrency);
   await runWithConcurrency(allAttachments, attachmentConcurrency, async (attachment) => {
     try {
@@ -950,6 +969,7 @@ export async function processInboundEmailArtifactsBestEffort(
               : undefined,
           allowInlineProcessing: (attachment as any).allowInlineProcessing ? true : undefined,
         },
+        consumedInlineCids,
       });
 
       const isEmbedded = Boolean((attachment as any).allowInlineProcessing);

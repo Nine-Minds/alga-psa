@@ -20,7 +20,7 @@
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/types": "*",
-    "axios": "^1.13.2",
+    "axios": "^1.16.0",
     "nodemailer": "^8.0.0"
   },
   "devDependencies": {

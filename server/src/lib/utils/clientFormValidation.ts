@@ -629,8 +629,8 @@ export function validateContactName(name: string): string | null {
     return 'Contact name must contain letters';
   }
   
-  // Allow Unicode letters, spaces, hyphens, apostrophes, periods
-  if (!/^[\p{L}\s\-'\.]+$/u.test(nameWithoutEmojis)) {
+  // Allow Unicode letters, numbers, spaces, hyphens, apostrophes, periods
+  if (!/^[\p{L}\p{N}\s\-'\.]+$/u.test(nameWithoutEmojis)) {
     return 'Contact name contains invalid characters';
   }
   

@@ -1046,6 +1046,9 @@
       "teamLeadAccessRequired": "Team lead access required",
       "teamsTabUnavailable": "Teams tab unavailable",
       "teamsSignInUnavailable": "Teams sign-in unavailable",
+      "teamsSetupNotFinished": "Teams setup not finished",
+      "teamsSetupNotFinishedHint": "Ask a PSA administrator to finish Teams setup and then reopen the personal tab.",
+      "teamsTabAdminHint": "Ask a PSA administrator to finish Teams setup, then reopen the tab.",
       "assetNotFound": "Asset not found",
       "contactNotFound": "Contact not found",
       "templateNotFound": "Template not found",
@@ -1073,6 +1076,48 @@
       "slaSettings": "SLA Settings",
       "documentEditor": "Document Editor",
       "accountManagement": "Account Management"
+    },
+    "teamsTab": {
+      "signedInAs": "Signed in as {{name}}",
+      "openInFullPsa": "Open in full PSA",
+      "iframeTitle": "{{destination}} in Alga PSA",
+      "fullPsaHint": "Use \"Open in full PSA\" for richer context than a Teams card can show.",
+      "fallback": {
+        "label": "Requested record unavailable:",
+        "showingInstead": "Showing your Teams work list instead of {{destination}}."
+      },
+      "entrySource": {
+        "bot": "Opened from a Teams bot result.",
+        "messageExtension": "Opened from a Teams message extension result.",
+        "notification": "Opened from a Teams activity notification."
+      },
+      "destinations": {
+        "myWork": {
+          "title": "My work",
+          "summary": "Your Teams personal tab is ready to load your PSA work queue."
+        },
+        "ticket": {
+          "title": "Ticket {{ticketId}}",
+          "summary": "You're opening ticket {{ticketId}} from Teams."
+        },
+        "projectTask": {
+          "title": "Project task {{taskId}}",
+          "summary": "You're opening task {{taskId}} in project {{projectId}}."
+        },
+        "approval": {
+          "title": "Approval {{approvalId}}",
+          "summary": "You're opening approval {{approvalId}} from Teams."
+        },
+        "timeEntry": {
+          "title": "Time entry {{entryId}}",
+          "summary": "You're opening time entry {{entryId}} from Teams."
+        },
+        "contact": {
+          "title": "Contact {{contactId}}",
+          "summary": "You're opening contact {{contactId}} from Teams.",
+          "summaryWithClient": "You're opening contact {{contactId}} for client {{clientId}} from Teams."
+        }
+      }
     }
   },
   "feedback": {

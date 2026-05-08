@@ -23,6 +23,9 @@ import { z } from 'zod';
 import { createApiResponse, createErrorResponse } from '../utils/response';
 import { getHateoasLinks } from '../utils/hateoas';
 import { requireRequestContext } from '../utils/requestContext';
+import { ApiContext } from '../middleware/apiMiddleware';
+import { ProductAccessError, getTenantProduct } from '@/lib/productAccess';
+import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 
 export class ApiAssetController {
   private assetService: AssetService;
@@ -31,12 +34,25 @@ export class ApiAssetController {
     this.assetService = new AssetService();
   }
 
+  private async requireAllowedContext(req: NextRequest): Promise<ApiContext> {
+    const context = requireRequestContext(req);
+    const pathname = new URL(req.url).pathname;
+    const productCode = await getTenantProduct(context.tenant);
+    const behavior = resolveProductApiBehavior(productCode, pathname);
+
+    if (behavior === 'denied') {
+      throw new ProductAccessError(`api_route:${pathname}`, productCode);
+    }
+
+    return context;
+  }
+
   /**
    * GET /api/v2/assets - List assets
    */
   async list(req: NextRequest): Promise<NextResponse> {
     const query = Object.fromEntries(new URL(req.url).searchParams.entries());
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     // Validate query parameters
     const validation = assetListQuerySchema.safeParse(query);
@@ -84,7 +100,7 @@ export class ApiAssetController {
    * GET /api/v2/assets/{id} - Get asset details
    */
   async getById(req: NextRequest, params: { id: string }): Promise<NextResponse> {
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     const asset = await this.assetService.getWithDetails(params.id, context);
     
@@ -107,7 +123,7 @@ export class ApiAssetController {
    */
   async create(req: NextRequest): Promise<NextResponse> {
     const data = await req.json();
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     // Validate request body
     const validation = createAssetWithExtensionSchema.safeParse(data);
@@ -132,7 +148,7 @@ export class ApiAssetController {
    */
   async update(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const data = await req.json();
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     // Validate request body
     const validation = updateAssetSchema.safeParse(data);
@@ -156,7 +172,7 @@ export class ApiAssetController {
    * DELETE /api/v2/assets/{id} - Delete asset
    */
   async delete(req: NextRequest, params: { id: string }): Promise<NextResponse> {
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     await this.assetService.delete(params.id, context);
     
@@ -167,7 +183,7 @@ export class ApiAssetController {
    * GET /api/v2/assets/{id}/relationships - List asset relationships
    */
   async listRelationships(req: NextRequest, params: { id: string }): Promise<NextResponse> {
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     const relationships = await this.assetService.getAssetRelationships(params.id, context);
     
@@ -188,7 +204,7 @@ export class ApiAssetController {
    */
   async createRelationship(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const data = await req.json();
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     // Validate request body
     const validation = createAssetRelationshipSchema.safeParse(data);
@@ -206,7 +222,7 @@ export class ApiAssetController {
    * DELETE /api/v2/assets/relationships/{relationshipId} - Delete asset relationship
    */
   async deleteRelationship(req: NextRequest, params: { relationshipId: string }): Promise<NextResponse> {
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     await this.assetService.deleteRelationship(params.relationshipId, context);
     
@@ -217,7 +233,7 @@ export class ApiAssetController {
    * GET /api/v2/assets/{id}/documents - List asset documents
    */
   async listDocuments(req: NextRequest, params: { id: string }): Promise<NextResponse> {
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     const documents = await this.assetService.getAssetDocuments(params.id, context);
     
@@ -238,7 +254,7 @@ export class ApiAssetController {
    */
   async associateDocument(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const data = await req.json();
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     // Validate request body
     const validation = createAssetDocumentSchema.safeParse(data);
@@ -256,7 +272,7 @@ export class ApiAssetController {
    * DELETE /api/v2/assets/documents/{associationId} - Remove document association
    */
   async removeDocumentAssociation(req: NextRequest, params: { associationId: string }): Promise<NextResponse> {
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     await this.assetService.removeDocumentAssociation(params.associationId, context);
     
@@ -267,7 +283,7 @@ export class ApiAssetController {
    * GET /api/v2/assets/{id}/maintenance - List maintenance schedules
    */
   async listMaintenanceSchedules(req: NextRequest, params: { id: string }): Promise<NextResponse> {
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     const schedules = await this.assetService.getMaintenanceSchedules(params.id, context);
     
@@ -289,7 +305,7 @@ export class ApiAssetController {
    */
   async createMaintenanceSchedule(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const data = await req.json();
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     // Validate request body
     const validation = createMaintenanceScheduleSchema.safeParse(data);
@@ -308,7 +324,7 @@ export class ApiAssetController {
    */
   async updateMaintenanceSchedule(req: NextRequest, params: { scheduleId: string }): Promise<NextResponse> {
     const data = await req.json();
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     // Validate request body
     const validation = updateMaintenanceScheduleSchema.safeParse(data);
@@ -326,7 +342,7 @@ export class ApiAssetController {
    * DELETE /api/v2/assets/maintenance/{scheduleId} - Delete maintenance schedule
    */
   async deleteMaintenanceSchedule(req: NextRequest, params: { scheduleId: string }): Promise<NextResponse> {
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     await this.assetService.deleteMaintenanceSchedule(params.scheduleId, context);
     
@@ -338,7 +354,7 @@ export class ApiAssetController {
    */
   async recordMaintenance(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const data = await req.json();
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     // Validate request body
     const validation = recordMaintenanceSchema.safeParse(data);
@@ -356,7 +372,7 @@ export class ApiAssetController {
    * GET /api/v2/assets/{id}/history - Get maintenance history
    */
   async getMaintenanceHistory(req: NextRequest, params: { id: string }): Promise<NextResponse> {
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     const history = await this.assetService.getMaintenanceHistory(params.id, context);
     
@@ -377,7 +393,7 @@ export class ApiAssetController {
    */
   async search(req: NextRequest): Promise<NextResponse> {
     const query = Object.fromEntries(new URL(req.url).searchParams.entries());
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     // Validate query parameters
     const validation = assetSearchSchema.safeParse(query);
@@ -407,7 +423,7 @@ export class ApiAssetController {
    */
   async export(req: NextRequest): Promise<NextResponse> {
     const query = Object.fromEntries(new URL(req.url).searchParams.entries());
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     // Validate query parameters
     const validation = assetExportQuerySchema.safeParse(query);
@@ -437,7 +453,7 @@ export class ApiAssetController {
    * GET /api/v2/assets/stats - Get asset statistics
    */
   async getStatistics(req: NextRequest): Promise<NextResponse> {
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     const stats = await this.assetService.getStatistics(context);
     
@@ -457,7 +473,7 @@ export class ApiAssetController {
    */
   async bulkUpdate(req: NextRequest): Promise<NextResponse> {
     const data = await req.json();
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     // Validate request body
     const validation = bulkUpdateAssetSchema.safeParse(data);
@@ -484,7 +500,7 @@ export class ApiAssetController {
    */
   async bulkStatusUpdate(req: NextRequest): Promise<NextResponse> {
     const data = await req.json();
-    const context = requireRequestContext(req);
+    const context = await this.requireAllowedContext(req);
     
     // Validate request body
     const validation = bulkAssetStatusSchema.safeParse(data);

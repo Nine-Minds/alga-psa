@@ -4,7 +4,10 @@ import { getClientMetadataHeaders } from "../../../device/clientMetadata";
 import type { TicketDetailDeps } from "../types";
 import { getApiErrorMessage } from "../utils";
 
-export function useTimeEntry(deps: TicketDetailDeps) {
+export function useTimeEntry(
+  deps: TicketDetailDeps,
+  options?: { onCreated?: () => void },
+) {
   const { client, session, ticketId, showToast, t } = deps;
 
   const [timeEntryOpen, setTimeEntryOpen] = useState(false);
@@ -108,6 +111,7 @@ export function useTimeEntry(deps: TicketDetailDeps) {
 
       setTimeEntryOpen(false);
       showToast({ message: t("timeEntry.createdMessage", { minutes: durationMin }), tone: "info" });
+      options?.onCreated?.();
     } finally {
       setTimeEntryUpdating(false);
     }

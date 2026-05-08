@@ -183,7 +183,16 @@ jobs:
           # Build all images needed for e2e tests upfront
           # Excludes: workflow-worker (EE only, not needed for CE e2e)
           # Excludes: hocuspocus (built separately below with repo-root context)
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml build --no-cache \
+          # Note: setup is built here using docker-compose.setup-ubuntu.override.yaml so
+          #       it produces the alga-setup:ubuntu image used by the later "Start setup
+          #       service (Ubuntu build override)" step. That step then starts the
+          #       container without --build to avoid a redundant rebuild.
+          docker-compose -p alga-e2e-test \
+            -f docker-compose.base.yaml \
+            -f docker-compose.ce.yaml \
+            -f docker-compose.prod.yaml \
+            -f docker-compose.setup-ubuntu.override.yaml \
+            build --no-cache \
             server setup email-service
         shell: bash
 
@@ -268,6 +277,10 @@ jobs:
         if: steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Starting setup service"
+          # Image (alga-setup:ubuntu) was already built fresh in the earlier
+          # "Build images with no cache" step using the same override file, so
+          # we start without --build here to avoid a duplicate ~5–10 min rebuild
+          # that previously pushed the job past its 60-minute timeout.
           # Set DB_HOST_ADMIN and DB_PORT_ADMIN to connect directly to postgres for admin operations
           # while keeping DB_HOST and DB_PORT pointing to pgbouncer for migrations/seeds
           DB_HOST_ADMIN=postgres \
@@ -277,7 +290,7 @@ jobs:
             -f docker-compose.ce.yaml \
             -f docker-compose.prod.yaml \
             -f docker-compose.setup-ubuntu.override.yaml \
-            up --build -d setup
+            up -d setup
         shell: bash
 
       - name: Wait for Setup service to complete (Ubuntu build override)

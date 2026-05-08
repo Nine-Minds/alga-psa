@@ -35,6 +35,7 @@ import {
 } from '../../auth/rbac';
 import {
   ApiRequest,
+  AuthenticatedApiRequest,
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
@@ -47,6 +48,22 @@ import { ZodError } from 'zod';
 
 export class ApiTimeEntryController extends ApiBaseController {
   private timeEntryService: TimeEntryService;
+
+  private async assertManualProductAccess(
+    req: NextRequest,
+    keyRecord: { user_id: string; tenant: string; api_key_id?: string },
+    user: NonNullable<ApiRequest['context']>['user'],
+  ): Promise<AuthenticatedApiRequest> {
+    const apiRequest = req as AuthenticatedApiRequest;
+    apiRequest.context = {
+      userId: keyRecord.user_id,
+      tenant: keyRecord.tenant,
+      user,
+      apiKeyId: keyRecord.api_key_id,
+    };
+    await this.assertProductApiAccess(apiRequest);
+    return apiRequest;
+  }
 
   constructor() {
     const timeEntryService = new TimeEntryService();
@@ -104,6 +121,8 @@ export class ApiTimeEntryController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -192,6 +211,8 @@ export class ApiTimeEntryController extends ApiBaseController {
           throw new UnauthorizedError('User not found');
         }
 
+        await this.assertManualProductAccess(req, keyRecord, user);
+
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasReadPermission = await hasPermission(
@@ -261,6 +282,8 @@ export class ApiTimeEntryController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -352,6 +375,8 @@ export class ApiTimeEntryController extends ApiBaseController {
           throw new UnauthorizedError('User not found');
         }
 
+        await this.assertManualProductAccess(req, keyRecord, user);
+
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasCreatePermission = await hasPermission(
@@ -429,6 +454,8 @@ export class ApiTimeEntryController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Extract session ID from path
         const pathParts = req.url.split('/');
@@ -513,6 +540,8 @@ export class ApiTimeEntryController extends ApiBaseController {
           throw new UnauthorizedError('User not found');
         }
 
+        await this.assertManualProductAccess(req, keyRecord, user);
+
         // Get active session within tenant context
         const session = await runWithTenant(tenantId!, async () => {
           return await this.timeEntryService.getActiveSession(user.user_id, {
@@ -565,6 +594,8 @@ export class ApiTimeEntryController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -644,6 +675,8 @@ export class ApiTimeEntryController extends ApiBaseController {
           throw new UnauthorizedError('User not found');
         }
 
+        await this.assertManualProductAccess(req, keyRecord, user);
+
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasApprovePermission = await hasPermission(
@@ -722,6 +755,8 @@ export class ApiTimeEntryController extends ApiBaseController {
           throw new UnauthorizedError('User not found');
         }
 
+        await this.assertManualProductAccess(req, keyRecord, user);
+
         // Get templates within tenant context
         const templates = await runWithTenant(tenantId!, async () => {
           return await this.timeEntryService.getTimeEntryTemplates({
@@ -774,6 +809,8 @@ export class ApiTimeEntryController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -853,6 +890,8 @@ export class ApiTimeEntryController extends ApiBaseController {
           throw new UnauthorizedError('User not found');
         }
 
+        await this.assertManualProductAccess(req, keyRecord, user);
+
         // Check permissions
         const db = await getConnection(tenantId!);
         const hasUpdatePermission = await hasPermission(
@@ -930,6 +969,8 @@ export class ApiTimeEntryController extends ApiBaseController {
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
+
+        await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);

@@ -3,7 +3,7 @@ import {
   isEnterpriseEdition,
   optionsResponse,
 } from '../../../_ceStub';
-
+import { assertSessionProductAccess } from '@/lib/api/standaloneProductGuards';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +35,14 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ runId: string }> }
 ): Promise<Response> {
+  const deniedResponse = await assertSessionProductAccess({
+    capability: 'integrations',
+    allowedProducts: ['psa'],
+  });
+  if (deniedResponse) {
+    return deniedResponse;
+  }
+
   const eeRoute = await loadEeRoute();
   if (!eeRoute?.GET) {
     return eeUnavailable();

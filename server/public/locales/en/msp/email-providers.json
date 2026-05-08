@@ -234,7 +234,7 @@
     },
     "microsoft": {
       "validation": {
-        "providerNameRequired": "Provider name is required",
+        "providerNameRequired": "Configuration name is required",
         "emailRequired": "Valid email address is required",
         "redirectRequired": "Valid redirect URI is required",
         "authorizeRequiresValid": "Please fill in all required fields before authorizing",
@@ -244,18 +244,22 @@
         "authorizationFailed": "Authorization failed"
       },
       "requiredFields": {
-        "providerName": "Provider Name",
+        "providerName": "Configuration Name",
         "emailAddress": "Email Address",
         "redirectUri": "Redirect URI"
       },
       "basic": {
         "title": "Basic Configuration",
         "description": "Basic settings for your Microsoft 365 email provider",
-        "providerNameLabel": "Provider Name *",
-        "providerNamePlaceholder": "e.g., Support Email",
+        "providerNameLabel": "Configuration Name *",
+        "providerNamePlaceholder": "e.g., Support Mailbox (internal)",
         "emailLabel": "Email Address *",
         "emailPlaceholder": "support@client.com",
-        "enableProvider": "Enable this provider"
+        "enableProvider": "Enable this provider",
+        "providerNameHelp": "Internal name used to identify this configuration. Not shown in outbound emails.",
+        "senderDisplayNameLabel": "Sender Display Name",
+        "senderDisplayNamePlaceholder": "e.g., Acme Support",
+        "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails (replies, closures). Applied only when this mailbox matches the tenant's outbound ticketing-from address. Leave blank to fall back to the ticket's board name."
       },
       "oauth": {
         "sectionTitle": "Microsoft OAuth Configuration",
@@ -279,7 +283,7 @@
     },
     "gmail": {
       "validation": {
-        "providerNameRequired": "Provider name is required",
+        "providerNameRequired": "Configuration name is required",
         "gmailAddressRequired": "Valid Gmail address is required",
         "authorizeRequiresValid": "Please fill in all required fields before authorizing",
         "googleNotConfigured": "Google integration is not configured for this tenant. Configure Google first, then retry.",
@@ -295,17 +299,21 @@
         "settingUp": "Setting up Gmail notifications..."
       },
       "requiredFields": {
-        "providerName": "Provider Name",
+        "providerName": "Configuration Name",
         "gmailAddress": "Gmail Address"
       },
       "basic": {
         "title": "Basic Configuration",
         "description": "Basic settings for your Gmail email provider",
-        "providerNameLabel": "Provider Name *",
-        "providerNamePlaceholder": "e.g., Support Gmail",
+        "providerNameLabel": "Configuration Name *",
+        "providerNamePlaceholder": "e.g., Support Gmail (internal)",
         "mailboxLabel": "Gmail Address *",
         "mailboxPlaceholder": "support@client.com",
-        "enableProvider": "Enable this provider"
+        "enableProvider": "Enable this provider",
+        "providerNameHelp": "Internal name used to identify this configuration. Not shown in outbound emails.",
+        "senderDisplayNameLabel": "Sender Display Name",
+        "senderDisplayNamePlaceholder": "e.g., Acme Support",
+        "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails (replies, closures). Applied only when this mailbox matches the tenant's outbound ticketing-from address. Leave blank to fall back to the ticket's board name."
       },
       "oauth": {
         "sectionTitle": "Google OAuth",
@@ -334,7 +342,7 @@
     },
     "imap": {
       "validation": {
-        "providerNameRequired": "Provider name is required",
+        "providerNameRequired": "Configuration name is required",
         "mailboxRequired": "Mailbox is required",
         "mailboxInvalid": "Valid mailbox is required (e.g. user@domain.com, user@localhost, user@test-server, or user)",
         "hostRequired": "IMAP host is required",
@@ -344,12 +352,17 @@
       "basic": {
         "title": "Basic Settings",
         "description": "Define the IMAP mailbox connection details.",
-        "providerName": "Provider Name",
+        "providerName": "Configuration Name",
         "mailboxAddress": "Mailbox Address",
         "host": "IMAP Host",
         "port": "Port",
         "useTls": "Use TLS/SSL",
-        "allowStarttls": "Allow STARTTLS Upgrade"
+        "allowStarttls": "Allow STARTTLS Upgrade",
+        "providerNamePlaceholder": "e.g., Support IMAP (internal)",
+        "providerNameHelp": "Internal name used to identify this configuration. Not shown in outbound emails.",
+        "senderDisplayName": "Sender Display Name",
+        "senderDisplayNamePlaceholder": "e.g., Acme Support",
+        "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails (replies, closures). Applied only when this mailbox matches the tenant's outbound ticketing-from address. Leave blank to fall back to the ticket's board name."
       },
       "auth": {
         "title": "Authentication",
@@ -476,7 +489,7 @@
       }
     },
     "fields": {
-      "providerName": "Provider Name",
+      "providerName": "Configuration Name",
       "mailboxAddress": "Mailbox Address",
       "imapHost": "IMAP Host",
       "port": "Port",
@@ -496,7 +509,12 @@
       "active": "Active",
       "ticketDefaultsLabel": "Ticket Defaults",
       "ticketDefaultsPlaceholder": "Select defaults...",
-      "ticketDefaultsEmpty": "No defaults available"
+      "ticketDefaultsEmpty": "No defaults available",
+      "providerNamePlaceholder": "e.g., Support IMAP (internal)",
+      "providerNameHelp": "Internal name used to identify this configuration. Not shown in outbound emails.",
+      "senderDisplayName": "Sender Display Name",
+      "senderDisplayNamePlaceholder": "e.g., Acme Support",
+      "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails (replies, closures). Applied only when this mailbox matches the tenant's outbound ticketing-from address. Leave blank to fall back to the ticket's board name."
     },
     "authOptions": {
       "password": "Password",
@@ -546,8 +564,8 @@
       }
     },
     "fields": {
-      "providerNameLabel": "Provider Name *",
-      "providerNamePlaceholder": "e.g., Support Microsoft 365",
+      "providerNameLabel": "Configuration Name *",
+      "providerNamePlaceholder": "e.g., Support Mailbox (internal)",
       "mailboxLabel": "Microsoft 365 Address *",
       "mailboxPlaceholder": "support@client.com",
       "enableProvider": "Enable this provider",
@@ -557,7 +575,11 @@
       "maxEmailsLabel": "Max Emails Per Sync",
       "maxEmailsHelp": "Maximum number of emails to process in each sync (1-1000)",
       "inboundDefaultsLabel": "Inbound Ticket Defaults",
-      "inboundDefaultsPlaceholder": "Select defaults (optional)"
+      "inboundDefaultsPlaceholder": "Select defaults (optional)",
+      "providerNameHelp": "Internal name used to identify this configuration. Not shown in outbound emails.",
+      "senderDisplayNameLabel": "Sender Display Name",
+      "senderDisplayNamePlaceholder": "e.g., Acme Support",
+      "senderDisplayNameHelp": "Display name shown in the From header on outbound ticket emails (replies, closures). Applied only when this mailbox matches the tenant's outbound ticketing-from address. Leave blank to fall back to the ticket's board name."
     },
     "oauth": {
       "connectionTitle": "Microsoft 365 Connection",
@@ -596,7 +618,7 @@
     },
     "validation": {
       "requiredFieldsTitle": "Please fill in the required fields:",
-      "providerName": "Provider Name",
+      "providerName": "Configuration Name",
       "mailbox": "Microsoft 365 Address"
     }
   },

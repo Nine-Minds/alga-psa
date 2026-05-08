@@ -28,7 +28,7 @@ export async function authenticateForUnlock(): Promise<{ ok: true } | { ok: fals
   }
 
   const result = await LocalAuthentication.authenticateAsync({
-    promptMessage: "Unlock Alga PSA",
+    promptMessage: "Unlock AlgaPSA",
     cancelLabel: "Cancel",
     disableDeviceFallback: false,
   });

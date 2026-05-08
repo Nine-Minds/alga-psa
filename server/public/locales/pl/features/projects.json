@@ -200,6 +200,8 @@
     "tasksReorderedSuccess": "Pomyślnie zmieniono kolejność zadań",
     "commentCountsLoadError": "Nie udało się załadować liczników komentarzy",
     "taskAssigneeUpdatedSuccess": "Osoba przypisana do zadania została pomyślnie zaktualizowana!",
+    "teamAssignedSuccess": "Zespół został przydzielony pomyślnie",
+    "assignTeamFailed": "Nie udało się przypisać zespołu",
     "taskDuplicatedSuccess": "Zadanie „{{taskName}}” zostało pomyślnie zduplikowane!",
     "duplicateNoTargetPhase": "Nie można znaleźć fazy docelowej do powielenia.",
     "taskNotFound": "Nie znaleziono zadania",
@@ -277,6 +279,18 @@
     "agentPendingSave": "Agent zostanie dodany po zapisaniu zadania",
     "teamAssignedSuccess": "Zespół został przydzielony pomyślnie",
     "assignTeamFailed": "Nie udało się przypisać zespołu",
+    "teamRemovedSuccess": "Pomyślnie usunięto zespół",
+    "teamRemoveFailed": "Nie udało się usunąć przypisania zespołu",
+    "removeTeamAssignment": "Usuń przypisanie zespołu",
+    "switchTeamAssignment": "Zmień przypisanie zespołu",
+    "removeTeamMode": {
+      "removeAll": "Usuń wszystkich członków zespołu",
+      "keepAll": "Zachowaj wszystkich członków zespołu jako pojedynczych agentów",
+      "selective": "Wybierz poszczególnych członków do zachowania/usunięcia",
+      "selectiveHint": "Zaznacz członków, którzy mają pozostać w zadaniu jako indywidualni agenci. Niezaznaczeni członkowie zostaną usunięci."
+    },
+    "noTeamMembersFound": "Nie znaleziono członków zespołu w tym zadaniu.",
+    "unnamedUser": "Nieznany użytkownik",
     "linkingPartialFailure": "Zadanie utworzone, ale nie udało się połączyć niektórych elementów",
     "tagCreationPartialFailure": "Nie można utworzyć {{count}} tag(ów)",
     "saveFailed": "Nie udało się zapisać zadania",
@@ -304,6 +318,10 @@
     "documentCleanupFailure": "Nie można usunąć {{count}} dokumentu{{plural}} i pozostanie on w Dokumentach",
     "ticketCleanupFailure": "Nie można usunąć biletu {{count}}{{plural}}",
     "checklistItemPlaceholder": "Element listy kontrolnej",
+    "reorderChecklistItem": "Przeciągnij, aby zmienić kolejność",
+    "insertChecklistItem": "Wstaw element tutaj",
+    "editChecklistItem": "Edytuj element listy",
+    "removeChecklistItem": "Usuń element listy",
     "tagsTitle": "Tagi",
     "checklistTitle": "Lista kontrolna",
     "createFromTicket": "Utwórz z biletu",
@@ -587,7 +605,8 @@
       "row": "Wiersz",
       "phase": "Faza",
       "task": "Zadanie",
-      "issues": "Problemy"
+      "issues": "Problemy",
+      "valid": "Prawidłowe"
     },
     "fields": {
       "task_name": "Nazwa zadania *",
@@ -602,7 +621,24 @@
       "task_type": "Typ zadania",
       "status": "Status",
       "tags": "Tagi"
-    }
+    },
+    "fallbackPhaseLabel": "Domyślna faza dla zadań bez phase_name",
+    "fallbackPhaseHelp": "{{count}} wiersz(y) bez fazy. Wybierz istniejącą fazę lub pozostaw wartość domyślną, aby utworzyć nową.",
+    "fallbackPhaseCreateDefault": "Utwórz nową fazę: „{{name}}\"",
+    "fallbackStatusLabel": "Domyślny status dla zadań bez statusu",
+    "fallbackStatusHelp": "{{count}} wiersz(y) bez statusu. Wybrany status zostanie przypisany do tych zadań.",
+    "rowResultsTitle": "Wyniki wierszy",
+    "rowFilterLabel": "Pokaż:",
+    "rowFilterAll": "Wszystkie wiersze ({{count}})",
+    "rowFilterImported": "Zostaną zaimportowane ({{count}})",
+    "rowFilterSkipped": "Zostaną pominięte ({{count}})",
+    "rowsToBeSkippedCount": "{{count}} wiersz(y) zostanie pominiętych",
+    "rowsToBeSkippedHelp": "ponieważ nie przeszły walidacji. Użyj filtra powyżej, aby je przejrzeć.",
+    "statusUnmatchedSuffix": "Brak dopasowania",
+    "statusUnmatchedTooltip": "Status nie pasuje do żadnego istniejącego statusu dla tej fazy. Rozwiąż to w krokach mapowania przed importem.",
+    "statusFallbackSuffix": "Domyślny",
+    "statusFallbackTooltip": "Używany jest domyślny status zastępczy dla tej fazy.",
+    "inPhaseBadge": "w {{phase}}"
   },
   "dialogs": {
     "moveTask": {
@@ -1018,6 +1054,8 @@
       "addChecklistItem": "Dodaj element",
       "checklistItemPlaceholder": "Element listy kontrolnej",
       "emptyChecklistItem": "Pusty przedmiot",
+      "reorderChecklistItem": "Przeciągnij, aby zmienić kolejność",
+      "insertChecklistItem": "Wstaw element tutaj",
       "dependencies": "Zależności",
       "dependenciesHelp": "Zdefiniuj zależności zadań, aby kontrolować kolejność wykonywania przy tworzeniu projektu",
       "removeDependency": "Usuń zależność",

@@ -463,14 +463,22 @@ const ProjectTaskModel = {
       if (!tenant) {
         throw new Error('Tenant context is required');
       }
-      
+
       const task = await knexOrTrx('project_tasks')
         .where('task_id', taskId)
         .andWhere('tenant', tenant)
         .first();
-      
+
       if (!task) {
         throw new Error('Task not found');
+      }
+
+      const existingResource = await knexOrTrx('task_resources')
+        .where({ task_id: taskId, additional_user_id: userId, tenant })
+        .first();
+
+      if (existingResource) {
+        throw new Error(`Resource already exists for user ${userId}`);
       }
 
       // assigned_to is guaranteed non-null: either the task already has one,

@@ -18,6 +18,14 @@ interface TicketDocumentsSectionProps {
   onDocumentCreated?: () => Promise<void>;
   /** Override the default folder-fetching function (e.g. for client portal) */
   getFoldersFn?: () => Promise<string[]>;
+  /** When true, bypass folder chooser and upload directly to root ticket scope. */
+  forceUploadToRoot?: boolean;
+  /** When false, do not expose share-link surfaces. */
+  allowDocumentSharing?: boolean;
+  /** When false, do not expose "link existing documents" picker. */
+  allowLinkExistingDocuments?: boolean;
+  /** When false, do not expose rich-text/block document creation. */
+  allowBlockDocuments?: boolean;
 }
 
 const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
@@ -25,7 +33,11 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
   ticketId,
   initialDocuments = [],
   onDocumentCreated,
-  getFoldersFn
+  getFoldersFn,
+  forceUploadToRoot = false,
+  allowDocumentSharing = true,
+  allowLinkExistingDocuments = true,
+  allowBlockDocuments = true,
 }) => {
   const router = useRouter();
   const { getDocumentByTicketId, renderDocuments } = useDocumentsCrossFeature();
@@ -104,6 +116,10 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
             uploadFormRef,
             namespace: 'features/documents',
             getFoldersFn,
+            forceUploadToRoot,
+            allowDocumentSharing,
+            allowLinkExistingDocuments,
+            allowBlockDocuments,
           })}
         </div>
       </div>

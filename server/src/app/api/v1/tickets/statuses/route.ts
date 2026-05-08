@@ -5,14 +5,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
-import { findUserByIdForApi } from '@alga-psa/users/actions';
+import { authenticateApiKeyRequest } from '@/lib/api/middleware/apiAuthMiddleware';
 import { runWithTenant } from '@/lib/db';
 import { hasPermission } from '@/lib/auth/rbac';
 import { getConnection } from '@/lib/db/db';
 import {
   ForbiddenError,
-  UnauthorizedError,
   createSuccessResponse,
   handleApiError,
 } from '@/lib/api/middleware/apiMiddleware';
@@ -23,23 +21,8 @@ const ticketStatusesQuerySchema = z.object({
 
 export const GET = async (req: NextRequest): Promise<NextResponse> => {
   try {
-    const apiKey = req.headers.get('x-api-key');
-    if (!apiKey) throw new UnauthorizedError('API key required');
-
-    let tenantId = req.headers.get('x-tenant-id');
-    let keyRecord;
-
-    if (tenantId) {
-      keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
-    } else {
-      keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-      if (keyRecord) tenantId = keyRecord.tenant;
-    }
-
-    if (!keyRecord || !tenantId) throw new UnauthorizedError('Invalid API key');
-
-    const user = await findUserByIdForApi(keyRecord.user_id, tenantId);
-    if (!user) throw new UnauthorizedError('User not found');
+    const apiRequest = await authenticateApiKeyRequest(req);
+    const { tenant: tenantId, user } = apiRequest.context!;
 
     const query = ticketStatusesQuerySchema.parse({
       board_id: new URL(req.url).searchParams.get('board_id') ?? undefined,
@@ -66,7 +49,7 @@ export const GET = async (req: NextRequest): Promise<NextResponse> => {
         .orderBy('order_number', 'asc')
         .orderBy('name', 'asc');
 
-      return createSuccessResponse(statuses);
+      return createSuccessResponse(statuses, 200, undefined, apiRequest);
     });
   } catch (error) {
     return handleApiError(error);

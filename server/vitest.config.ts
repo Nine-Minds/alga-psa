@@ -57,6 +57,7 @@ export default defineConfig({
       // Explicitly alias the most common @alga-psa/* modules to their source entrypoints for Vitest.
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../packages/core/src/index.ts') },
       { find: /^@alga-psa\/core\/formatters$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/formatters.ts') },
+      { find: /^@alga-psa\/core\/lib\/(.*)$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/$1') },
       { find: /^@alga-psa\/core\/logger$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/logger.ts') },
       { find: /^@alga-psa\/core\/features$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/features.ts') },
       { find: /^@alga-psa\/core\/secrets$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/secrets/index.ts') },
@@ -108,6 +109,8 @@ export default defineConfig({
       { find: /^@alga-psa\/onboarding\/(.*)$/, replacement: path.resolve(__dirname, '../packages/onboarding/src/$1') },
       { find: /^@alga-psa\/tickets$/, replacement: path.resolve(__dirname, '../packages/tickets/src/index.ts') },
       { find: /^@alga-psa\/tickets\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tickets/src/$1') },
+      { find: /^@alga-psa\/authorization$/, replacement: path.resolve(__dirname, '../packages/authorization/src/index.ts') },
+      { find: /^@alga-psa\/authorization\/(.*)$/, replacement: path.resolve(__dirname, '../packages/authorization/src/$1') },
       { find: /^@alga-psa\/reference-data$/, replacement: path.resolve(__dirname, '../packages/reference-data/src/index.ts') },
       { find: /^@alga-psa\/reference-data\/(.*)$/, replacement: path.resolve(__dirname, '../packages/reference-data/src/$1') },
       { find: /^@alga-psa\/jobs$/, replacement: path.resolve(__dirname, '../packages/jobs/src/index.ts') },

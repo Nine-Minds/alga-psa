@@ -54,6 +54,7 @@
         "expand": "Uitbreiden",
         "collapse": "Instorten"
       },
+      "ready": "Klaar om te factureren",
       "canCombine": "Combineerbaar tot 1 factuur",
       "separate": "Moet apart factureren",
       "blocked": "Bevat geblokkeerde items",

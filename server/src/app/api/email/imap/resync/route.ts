@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { createTenantKnex } from '@/lib/db';
+import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,6 +9,11 @@ export async function POST(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    await assertTenantProductAccess({
+      tenantId: user.tenant,
+      capability: 'email_to_ticket',
+      allowedProducts: ['psa', 'algadesk'],
+    });
 
     const body = await request.json();
     const { providerId } = body;
@@ -37,6 +43,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    if (isProductAccessError(error)) {
+      return toProductAccessDeniedResponse(error);
+    }
     console.error('IMAP resync error:', error);
     return NextResponse.json({ error: error.message || 'Failed to resync IMAP provider' }, { status: 500 });
   }

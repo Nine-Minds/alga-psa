@@ -526,6 +526,7 @@ describe('StripeService tier pricing', () => {
         plan: 'pro',
       }),
     );
+    expect(tenantUpdates[0]?.values).not.toHaveProperty('product_code');
   });
 
   it('downgrades Pro subscriptions to a single Solo flat-rate item when only one user is active', async () => {
@@ -600,6 +601,7 @@ describe('StripeService tier pricing', () => {
         licensed_user_count: 1,
       }),
     );
+    expect(tenantUpdates[0]?.values).not.toHaveProperty('product_code');
   });
 
   it('blocks Pro to Solo downgrade when more than one active user remains', async () => {
@@ -705,6 +707,7 @@ describe('StripeService tier pricing', () => {
         plan: 'solo',
       }),
     );
+    expect(tenantUpdates[0]?.values).not.toHaveProperty('product_code');
   });
 
   it('resolves the user-facing total for a Pro multi-item subscription.updated webhook', async () => {
@@ -776,6 +779,7 @@ describe('StripeService tier pricing', () => {
         plan: 'pro',
       }),
     );
+    expect(tenantUpdates[0]?.values).not.toHaveProperty('product_code');
   });
 
   it('subtracts the included seat when increasing a Pro multi-item subscription', async () => {

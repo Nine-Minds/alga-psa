@@ -255,7 +255,11 @@
         "providerNamePlaceholder": "55555",
         "emailLabel": "55555",
         "emailPlaceholder": "55555",
-        "enableProvider": "55555"
+        "enableProvider": "55555",
+        "providerNameHelp": "55555",
+        "senderDisplayNameLabel": "55555",
+        "senderDisplayNamePlaceholder": "55555",
+        "senderDisplayNameHelp": "55555"
       },
       "oauth": {
         "sectionTitle": "55555",
@@ -305,7 +309,11 @@
         "providerNamePlaceholder": "55555",
         "mailboxLabel": "55555",
         "mailboxPlaceholder": "55555",
-        "enableProvider": "55555"
+        "enableProvider": "55555",
+        "providerNameHelp": "55555",
+        "senderDisplayNameLabel": "55555",
+        "senderDisplayNamePlaceholder": "55555",
+        "senderDisplayNameHelp": "55555"
       },
       "oauth": {
         "sectionTitle": "55555",
@@ -349,7 +357,12 @@
         "host": "55555",
         "port": "55555",
         "useTls": "55555",
-        "allowStarttls": "55555"
+        "allowStarttls": "55555",
+        "providerNamePlaceholder": "55555",
+        "providerNameHelp": "55555",
+        "senderDisplayName": "55555",
+        "senderDisplayNamePlaceholder": "55555",
+        "senderDisplayNameHelp": "55555"
       },
       "auth": {
         "title": "55555",
@@ -496,7 +509,12 @@
       "active": "55555",
       "ticketDefaultsLabel": "55555",
       "ticketDefaultsPlaceholder": "55555",
-      "ticketDefaultsEmpty": "55555"
+      "ticketDefaultsEmpty": "55555",
+      "providerNamePlaceholder": "55555",
+      "providerNameHelp": "55555",
+      "senderDisplayName": "55555",
+      "senderDisplayNamePlaceholder": "55555",
+      "senderDisplayNameHelp": "55555"
     },
     "authOptions": {
       "password": "55555",
@@ -557,7 +575,11 @@
       "maxEmailsLabel": "55555",
       "maxEmailsHelp": "55555",
       "inboundDefaultsLabel": "55555",
-      "inboundDefaultsPlaceholder": "55555"
+      "inboundDefaultsPlaceholder": "55555",
+      "providerNameHelp": "55555",
+      "senderDisplayNameLabel": "55555",
+      "senderDisplayNamePlaceholder": "55555",
+      "senderDisplayNameHelp": "55555"
     },
     "oauth": {
       "connectionTitle": "55555",

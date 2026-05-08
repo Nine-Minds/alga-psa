@@ -54,6 +54,7 @@
         "expand": "Zwiększać",
         "collapse": "Zawalić się"
       },
+      "ready": "Gotowe do fakturowania",
       "canCombine": "Możliwość połączenia w 1 fakturę",
       "separate": "Należy wystawić osobną fakturę",
       "blocked": "Zawiera zablokowane elementy",

@@ -184,6 +184,63 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
     });
 }
 
+async function linkAndMarkSourceBillingRecord(params: {
+  tx: Knex.Transaction;
+  tenant: string;
+  invoiceId: string;
+  charge: IBillingCharge;
+  linkedAt: string;
+}) {
+  const { tx, tenant, invoiceId, charge, linkedAt } = params;
+
+  if (charge.type === 'time') {
+    const entryId = (charge as { entryId?: string | null }).entryId;
+    if (!entryId) {
+      return;
+    }
+
+    const updatedCount = await tx('time_entries')
+      .where({ tenant, entry_id: entryId, invoiced: false })
+      .update({ invoiced: true });
+
+    if (updatedCount !== 1) {
+      throw new Error(`Internal error: Time entry ${entryId} could not be marked invoiced for invoice ${invoiceId}.`);
+    }
+
+    await tx('invoice_time_entries').insert({
+      invoice_time_entry_id: uuidv4(),
+      invoice_id: invoiceId,
+      entry_id: entryId,
+      tenant,
+      created_at: linkedAt,
+    });
+    return;
+  }
+
+  if (charge.type === 'usage') {
+    const usageId = (charge as { usageId?: string | null }).usageId;
+    if (!usageId) {
+      return;
+    }
+
+    const updatedCount = await tx('usage_tracking')
+      .where({ tenant, usage_id: usageId, invoiced: false })
+      .update({ invoiced: true });
+
+    if (updatedCount !== 1) {
+      throw new Error(`Internal error: Usage record ${usageId} could not be marked invoiced for invoice ${invoiceId}.`);
+    }
+
+    await tx('invoice_usage_records').insert({
+      invoice_usage_record_id: uuidv4(),
+      invoice_id: invoiceId,
+      usage_id: usageId,
+      tenant,
+      created_at: linkedAt,
+    });
+  }
+}
+
 function getRecurringChargeFamilyForInvoiceLinkage(
   charge: IBillingCharge,
 ): RecurringChargeFamily | null {
@@ -995,19 +1052,30 @@ export async function persistInvoiceCharges(
       recurringChargeFamily !== null
       && Boolean(charge.servicePeriodStart || charge.servicePeriodEnd || charge.billingTiming);
 
+    await linkAndMarkSourceBillingRecord({
+      tx,
+      tenant,
+      invoiceId,
+      charge,
+      linkedAt: now,
+    });
+
     if (shouldPersistDetail) {
       const detailId = uuidv4();
       if (!charge.config_id) {
         throw new Error(`Internal error: Recurring ${charge.type} charge must include a config_id.`);
       }
 
+      const detailQuantity = Number(charge.quantity ?? 1) || 1;
+      const detailRate = Number(charge.rate ?? 0) || 0;
+
       await tx('invoice_charge_details').insert({
         item_detail_id: detailId,
         item_id: invoiceItem.item_id,
         service_id: charge.serviceId,
         config_id: charge.config_id,
-        quantity: charge.quantity ?? 1,
-        rate: charge.rate ?? 0,
+        quantity: detailQuantity,
+        rate: detailRate,
         service_period_start: charge.servicePeriodStart ?? null,
         service_period_end: charge.servicePeriodEnd ?? null,
         billing_timing: charge.billingTiming ?? null,

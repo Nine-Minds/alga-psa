@@ -33,6 +33,7 @@ const activities = proxyActivities<{
     licenseCount?: number;
     billingSource?: 'stripe' | 'apple_iap' | 'manual';
     plan?: 'solo' | 'pro' | 'premium';
+    productCode?: 'psa' | 'algadesk';
     appleIap?: {
       originalTransactionId: string;
       productId: string;
@@ -247,6 +248,7 @@ export async function tenantCreationWorkflow(
       // Billing source + IAP data (IAP path skips Stripe entirely)
       billingSource: input.billingSource,
       plan: input.plan,
+      productCode: input.productCode,
       appleIap: input.appleIap,
       // Pass through Stripe integration data (from input or fetched from Stripe)
       stripeCustomerId: stripeDetails.stripeCustomerId,

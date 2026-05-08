@@ -16,7 +16,12 @@ import { createEmailProvider, updateEmailProvider } from '@alga-psa/integrations
 import { getInboundTicketDefaults } from '@alga-psa/integrations/actions/email-actions/inboundTicketDefaultsActions';
 
 const eeImapProviderSchema = z.object({
-  providerName: z.string().min(1, 'Provider name is required'),
+  providerName: z.string().min(1, 'Configuration name is required'),
+  senderDisplayName: z
+    .string()
+    .max(255)
+    .refine((value) => !/[\x00-\x1F\x7F"<>]/.test(value), 'Display name cannot contain quotes, angle brackets, or line breaks')
+    .optional(),
   mailbox: z
     .string()
     .trim()
@@ -74,6 +79,7 @@ export function ImapProviderForm({
     resolver: zodResolver(eeImapProviderSchema) as any,
     defaultValues: provider && provider.imapConfig ? {
       providerName: provider.providerName,
+      senderDisplayName: provider.senderDisplayName || '',
       mailbox: provider.mailbox,
       host: provider.imapConfig.host,
       port: provider.imapConfig.port,
@@ -91,6 +97,7 @@ export function ImapProviderForm({
       folderFilters: provider.imapConfig.folder_filters?.join(', ') || '',
       inboundTicketDefaultsId: (provider as any).inboundTicketDefaultsId || undefined
     } : {
+      senderDisplayName: '',
       port: 993,
       secure: true,
       allowStarttls: false,
@@ -130,6 +137,7 @@ export function ImapProviderForm({
         tenant,
         providerType: 'imap',
         providerName: data.providerName,
+        senderDisplayName: data.senderDisplayName?.trim() || null,
         mailbox: data.mailbox,
         isActive: data.isActive,
         inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
@@ -206,8 +214,27 @@ export function ImapProviderForm({
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <Label htmlFor="providerName">{t('imapForm.fields.providerName')}</Label>
-            <Input id="providerName" {...form.register('providerName')} error={form.formState.errors.providerName?.message} />
+            <Label htmlFor="providerName">{t('imapForm.fields.providerName', { defaultValue: 'Configuration Name' })}</Label>
+            <Input
+              id="providerName"
+              {...form.register('providerName')}
+              placeholder={t('imapForm.fields.providerNamePlaceholder', { defaultValue: 'e.g., Support IMAP (internal)' })}
+              error={form.formState.errors.providerName?.message}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              {t('imapForm.fields.providerNameHelp', { defaultValue: 'Internal name used to identify this configuration. Not shown in outbound emails.' })}
+            </p>
+          </div>
+          <div>
+            <Label htmlFor="senderDisplayName">{t('imapForm.fields.senderDisplayName', { defaultValue: 'Sender Display Name' })}</Label>
+            <Input
+              id="senderDisplayName"
+              {...form.register('senderDisplayName')}
+              placeholder={t('imapForm.fields.senderDisplayNamePlaceholder', { defaultValue: 'e.g., Acme Support' })}
+            />
+            <p className="text-xs text-muted-foreground mt-1">
+              {t('imapForm.fields.senderDisplayNameHelp', { defaultValue: 'Display name shown in the From header on outbound ticket emails (replies, closures). Applied only when this mailbox matches the tenant\'s outbound ticketing-from address. Leave blank to fall back to the ticket\'s board name.' })}
+            </p>
           </div>
           <div>
             <Label htmlFor="mailbox">{t('imapForm.fields.mailboxAddress')}</Label>

@@ -121,12 +121,13 @@ describe('Client Form Validation', () => {
     it('should accept valid contact names', () => {
       expect(validateContactName('John Doe')).toBeNull();
       expect(validateContactName("Mary O'Connor")).toBeNull();
+      expect(validateContactName('Smoke Contact 2026-05-06-001')).toBeNull();
       expect(validateContactName('')).toBeNull(); // Optional field
     });
 
     it('should reject invalid contact names', () => {
-      expect(validateContactName('😀')).toBe('Contact name cannot contain emojis');
-      expect(validateContactName('1')).toBe('Contact name must be at least 2 characters long');
+      expect(validateContactName('😀')).toBe('Contact name must contain meaningful characters');
+      expect(validateContactName('1')).toBe('Contact name must contain letters');
       expect(validateContactName('123')).toBe('Contact name must contain letters');
     });
   });

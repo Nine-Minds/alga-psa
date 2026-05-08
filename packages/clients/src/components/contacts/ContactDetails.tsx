@@ -146,6 +146,7 @@ interface ContactDetailsProps {
     canUpdateRoles: boolean;
     canRead: boolean;
   };
+  isAlgadeskMode?: boolean;
 }
 
 const ContactDetails: React.FC<ContactDetailsProps> = ({
@@ -159,6 +160,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   onDocumentCreated,
   onContactUpdated,
   onChangesSaved,
+  isAlgadeskMode = false,
   userPermissions = {
     canInvite: false,
     canUpdateRoles: false,
@@ -580,7 +582,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     return client ? client.client_name : t('contactDetails.empty.unknownClient', { defaultValue: 'Unknown Client' });
   };
 
-  const tabContent = [
+  const baseTabContent = [
     {
       id: 'details',
       label: t('contactDetails.tabs.details', { defaultValue: 'Details' }),
@@ -828,6 +830,10 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       )
     }
   ];
+
+  const tabContent = isAlgadeskMode
+    ? baseTabContent.filter((tab) => tab.id !== 'documents')
+    : baseTabContent;
 
   return (
     <ReflectionContainer id={id} label={t('contactDetails.title', { defaultValue: 'Contact Details' })}>

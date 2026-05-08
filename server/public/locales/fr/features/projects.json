@@ -200,6 +200,8 @@
     "tasksReorderedSuccess": "Tâches réordonnées avec succès",
     "commentCountsLoadError": "Échec du chargement du nombre de commentaires",
     "taskAssigneeUpdatedSuccess": "Assigné de la tâche mis à jour avec succès !",
+    "teamAssignedSuccess": "Équipe assignée avec succès",
+    "assignTeamFailed": "Échec de l’assignation de l’équipe",
     "taskDuplicatedSuccess": "Tâche \"{{taskName}}\" dupliquée avec succès !",
     "duplicateNoTargetPhase": "Impossible de trouver une phase cible pour la duplication.",
     "taskNotFound": "Tâche introuvable",
@@ -277,6 +279,18 @@
     "agentPendingSave": "L’agent sera ajouté lors de l’enregistrement de la tâche",
     "teamAssignedSuccess": "Équipe assignée avec succès",
     "assignTeamFailed": "Échec de l’assignation de l’équipe",
+    "teamRemovedSuccess": "Équipe supprimée avec succès",
+    "teamRemoveFailed": "Échec de la suppression de l'attribution de l'équipe",
+    "removeTeamAssignment": "Supprimer l'affectation de l'équipe",
+    "switchTeamAssignment": "Changer d'affectation d'équipe",
+    "removeTeamMode": {
+      "removeAll": "Supprimer tous les membres de l'équipe",
+      "keepAll": "Gardez tous les membres de l’équipe en tant qu’agents individuels",
+      "selective": "Sélectionnez des membres individuels à conserver/supprimer",
+      "selectiveHint": "Cochez les membres à conserver sur la tâche en tant qu’agents individuels. Les membres non cochés seront supprimés."
+    },
+    "noTeamMembersFound": "Aucun membre de l'équipe trouvé sur cette tâche.",
+    "unnamedUser": "Utilisateur anonyme",
     "linkingPartialFailure": "Tâche créée mais échec de la liaison de certains éléments",
     "tagCreationPartialFailure": "Impossible de créer {{count}} étiquette(s)",
     "saveFailed": "Échec de l'enregistrement de la tâche",
@@ -304,6 +318,10 @@
     "documentCleanupFailure": "{{count}} document{{plural}} n’ont pas pu être supprimés et resteront dans Documents",
     "ticketCleanupFailure": "{{count}} ticket{{plural}} n’ont pas pu être supprimés",
     "checklistItemPlaceholder": "Élément de checklist",
+    "reorderChecklistItem": "Glisser pour réorganiser",
+    "insertChecklistItem": "Insérer un élément ici",
+    "editChecklistItem": "Modifier l’élément",
+    "removeChecklistItem": "Supprimer l’élément",
     "tagsTitle": "Étiquettes",
     "checklistTitle": "Liste de contrôle",
     "createFromTicket": "Créer depuis un ticket",
@@ -587,7 +605,8 @@
       "row": "Ligne",
       "phase": "Phase",
       "task": "Tâche",
-      "issues": "Problèmes"
+      "issues": "Problèmes",
+      "valid": "Valide"
     },
     "fields": {
       "task_name": "Nom de la tâche *",
@@ -602,7 +621,24 @@
       "task_type": "Type de tâche",
       "status": "Statut",
       "tags": "Étiquettes"
-    }
+    },
+    "fallbackPhaseLabel": "Phase par défaut pour les tâches sans phase_name",
+    "fallbackPhaseHelp": "{{count}} ligne(s) sans phase. Choisissez une phase existante ou conservez la valeur par défaut pour en créer une.",
+    "fallbackPhaseCreateDefault": "Créer une nouvelle phase : « {{name}} »",
+    "fallbackStatusLabel": "Statut par défaut pour les tâches sans statut",
+    "fallbackStatusHelp": "{{count}} ligne(s) sans statut. Le statut sélectionné sera attribué à ces tâches.",
+    "rowResultsTitle": "Résultats par ligne",
+    "rowFilterLabel": "Afficher :",
+    "rowFilterAll": "Toutes les lignes ({{count}})",
+    "rowFilterImported": "Seront importées ({{count}})",
+    "rowFilterSkipped": "Seront ignorées ({{count}})",
+    "rowsToBeSkippedCount": "{{count}} ligne(s) seront ignorées",
+    "rowsToBeSkippedHelp": "car elles n'ont pas passé la validation. Utilisez le filtre ci-dessus pour les examiner.",
+    "statusUnmatchedSuffix": "Non apparié",
+    "statusUnmatchedTooltip": "Le statut ne correspond à aucun statut existant pour cette phase. À résoudre dans les étapes de mappage avant l'import.",
+    "statusFallbackSuffix": "Par défaut",
+    "statusFallbackTooltip": "Utilisation du statut de repli par défaut pour cette phase.",
+    "inPhaseBadge": "dans {{phase}}"
   },
   "dialogs": {
     "moveTask": {
@@ -1018,6 +1054,8 @@
       "addChecklistItem": "Ajouter un élément",
       "checklistItemPlaceholder": "Élément de checklist",
       "emptyChecklistItem": "Élément vide",
+      "reorderChecklistItem": "Glisser pour réorganiser",
+      "insertChecklistItem": "Insérer un élément ici",
       "dependencies": "Dépendances",
       "dependenciesHelp": "Définissez les dépendances des tâches pour contrôler l'ordre d'exécution lors de la création du projet",
       "removeDependency": "Supprimer la dépendance",

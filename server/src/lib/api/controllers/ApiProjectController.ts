@@ -613,6 +613,8 @@ export class ApiProjectController extends ApiBaseController {
           apiKeyId: keyRecord.api_key_id,
         };
 
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
+
         // Extract project ID from path
         const url = new URL(req.url);
         const pathParts = url.pathname.split('/');
@@ -684,6 +686,8 @@ export class ApiProjectController extends ApiBaseController {
           user,
           apiKeyId: keyRecord.api_key_id,
         };
+
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
 
         const url = new URL(req.url);
         const pathParts = url.pathname.split('/');
@@ -757,6 +761,8 @@ export class ApiProjectController extends ApiBaseController {
           user,
           apiKeyId: keyRecord.api_key_id,
         };
+
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
 
         // Extract project ID from path
         const url = new URL(req.url);
@@ -859,6 +865,8 @@ export class ApiProjectController extends ApiBaseController {
           apiKeyId: keyRecord.api_key_id,
         };
 
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
+
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
@@ -936,6 +944,8 @@ export class ApiProjectController extends ApiBaseController {
           user,
           apiKeyId: keyRecord.api_key_id,
         };
+
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
 
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
@@ -1015,6 +1025,8 @@ export class ApiProjectController extends ApiBaseController {
           apiKeyId: keyRecord.api_key_id,
         };
 
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
+
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
@@ -1093,6 +1105,8 @@ export class ApiProjectController extends ApiBaseController {
           apiKeyId: keyRecord.api_key_id,
         };
 
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
+
         // Extract project ID from URL
         const url = new URL(req.url);
         const pathParts = url.pathname.split('/');
@@ -1168,6 +1182,8 @@ export class ApiProjectController extends ApiBaseController {
           user,
           apiKeyId: keyRecord.api_key_id,
         };
+
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
 
         // Extract project ID from URL
         const url = new URL(req.url);
@@ -1248,6 +1264,8 @@ export class ApiProjectController extends ApiBaseController {
           user,
           apiKeyId: keyRecord.api_key_id,
         };
+
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
 
         // Extract IDs from URL
         const url = new URL(req.url);
@@ -1332,6 +1350,8 @@ export class ApiProjectController extends ApiBaseController {
           apiKeyId: keyRecord.api_key_id,
         };
 
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
+
         // Extract phase ID from URL
         const url = new URL(req.url);
         const pathParts = url.pathname.split('/');
@@ -1406,6 +1426,8 @@ export class ApiProjectController extends ApiBaseController {
           user,
           apiKeyId: keyRecord.api_key_id,
         };
+
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
 
         // Extract phase ID from URL
         const url = new URL(req.url);
@@ -1482,6 +1504,8 @@ export class ApiProjectController extends ApiBaseController {
           user,
           apiKeyId: keyRecord.api_key_id,
         };
+
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
 
         // Extract IDs from URL
         const url = new URL(req.url);
@@ -1575,6 +1599,8 @@ export class ApiProjectController extends ApiBaseController {
           apiKeyId: keyRecord.api_key_id,
         };
 
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
+
         // Extract task ID from URL
         const url = new URL(req.url);
         const pathParts = url.pathname.split('/');
@@ -1653,6 +1679,8 @@ export class ApiProjectController extends ApiBaseController {
           user,
           apiKeyId: keyRecord.api_key_id,
         };
+
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
 
         // Extract task ID from URL
         const url = new URL(req.url);
@@ -1746,6 +1774,8 @@ export class ApiProjectController extends ApiBaseController {
           apiKeyId: keyRecord.api_key_id,
         };
 
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
+
         // Extract task ID from URL
         const url = new URL(req.url);
         const pathParts = url.pathname.split('/');
@@ -1820,6 +1850,8 @@ export class ApiProjectController extends ApiBaseController {
           user,
           apiKeyId: keyRecord.api_key_id,
         };
+
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
 
         // Extract task ID from URL
         const url = new URL(req.url);
@@ -1951,6 +1983,8 @@ export class ApiProjectController extends ApiBaseController {
           user,
           apiKeyId: keyRecord.api_key_id,
         };
+
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
 
         // Extract task ID from URL
         const url = new URL(req.url);

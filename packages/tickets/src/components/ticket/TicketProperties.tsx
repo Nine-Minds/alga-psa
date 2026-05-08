@@ -98,6 +98,8 @@ interface TicketPropertiesProps {
   timeEntriesRefreshKey?: number;
   onEditTimeEntry?: (entry: { entry_id: string }) => void;
   onDeleteTimeEntry?: (entry: { entry_id: string; user_name: string | null }) => void;
+  hideTimeEntry?: boolean;
+  hideMaterials?: boolean;
 }
 
 // Helper function to format location display
@@ -183,6 +185,8 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   timeEntriesRefreshKey = 0,
   onEditTimeEntry,
   onDeleteTimeEntry,
+  hideTimeEntry = false,
+  hideMaterials = false,
 }) => {
   const { openDrawer } = useDrawer();
   const { renderQuickAddContact } = useQuickAddClient();
@@ -410,6 +414,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   return (
     <>
       <div className="flex-shrink-0 space-y-6">
+      {!hideTimeEntry && (
       <ContentCard
         id={`${id}-time-entry`}
         collapsible
@@ -506,6 +511,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
 
         </div>
       </ContentCard>
+      )}
 
       <ContentCard
         id={`${id}-contact-info`}
@@ -1138,7 +1144,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
       />
 
 
-      {ticket.ticket_id && ticket.client_id && (
+      {!hideMaterials && ticket.ticket_id && ticket.client_id && (
         <TicketMaterialsCard
           ticketId={ticket.ticket_id}
           clientId={ticket.client_id}

@@ -234,7 +234,7 @@
     },
     "microsoft": {
       "validation": {
-        "providerNameRequired": "Le nom du fournisseur est requis",
+        "providerNameRequired": "Le nom de configuration est obligatoire",
         "emailRequired": "Une adresse e-mail valide est requise",
         "redirectRequired": "Un URI de redirection valide est requis",
         "authorizeRequiresValid": "Veuillez remplir tous les champs obligatoires avant d'autoriser",
@@ -244,18 +244,22 @@
         "authorizationFailed": "L'autorisation a échoué"
       },
       "requiredFields": {
-        "providerName": "Nom du fournisseur",
+        "providerName": "Nom de configuration",
         "emailAddress": "Adresse email",
         "redirectUri": "URI de redirection"
       },
       "basic": {
         "title": "Configuration de base",
         "description": "Paramètres de base de votre fournisseur de messagerie Microsoft 365",
-        "providerNameLabel": "Nom du fournisseur *",
-        "providerNamePlaceholder": "par exemple, e-mail d'assistance",
+        "providerNameLabel": "Nom de configuration *",
+        "providerNamePlaceholder": "ex. : Boîte support (interne)",
         "emailLabel": "Adresse e-mail *",
         "emailPlaceholder": "support@client.com",
-        "enableProvider": "Activer ce fournisseur"
+        "enableProvider": "Activer ce fournisseur",
+        "providerNameHelp": "Nom interne utilisé pour identifier cette configuration. N'apparaît pas dans les e-mails sortants.",
+        "senderDisplayNameLabel": "Nom de l'expéditeur",
+        "senderDisplayNamePlaceholder": "ex. : Acme Support",
+        "senderDisplayNameHelp": "Nom affiché dans l'en-tête « De » des e-mails de tickets sortants (réponses, clôtures). Appliqué uniquement lorsque cette boîte correspond à l'adresse d'envoi sortante du locataire. Laissez vide pour utiliser le nom du tableau du ticket."
       },
       "oauth": {
         "sectionTitle": "Configuration Microsoft OAuth",
@@ -279,7 +283,7 @@
     },
     "gmail": {
       "validation": {
-        "providerNameRequired": "Le nom du fournisseur est requis",
+        "providerNameRequired": "Le nom de configuration est obligatoire",
         "gmailAddressRequired": "Une adresse Gmail valide est requise",
         "authorizeRequiresValid": "Veuillez remplir tous les champs obligatoires avant d'autoriser",
         "googleNotConfigured": "L'intégration de Google n'est pas configurée pour ce locataire. Configurez d'abord Google, puis réessayez.",
@@ -295,17 +299,21 @@
         "settingUp": "Configuration des notifications Gmail..."
       },
       "requiredFields": {
-        "providerName": "Nom du fournisseur",
+        "providerName": "Nom de configuration",
         "gmailAddress": "Adresse Gmail"
       },
       "basic": {
         "title": "Configuration de base",
         "description": "Paramètres de base de votre fournisseur de messagerie Gmail",
-        "providerNameLabel": "Nom du fournisseur *",
-        "providerNamePlaceholder": "par exemple, prendre en charge Gmail",
+        "providerNameLabel": "Nom de configuration *",
+        "providerNamePlaceholder": "ex. : Gmail support (interne)",
         "mailboxLabel": "Adresse Gmail *",
         "mailboxPlaceholder": "support@client.com",
-        "enableProvider": "Activer ce fournisseur"
+        "enableProvider": "Activer ce fournisseur",
+        "providerNameHelp": "Nom interne utilisé pour identifier cette configuration. N'apparaît pas dans les e-mails sortants.",
+        "senderDisplayNameLabel": "Nom de l'expéditeur",
+        "senderDisplayNamePlaceholder": "ex. : Acme Support",
+        "senderDisplayNameHelp": "Nom affiché dans l'en-tête « De » des e-mails de tickets sortants (réponses, clôtures). Appliqué uniquement lorsque cette boîte correspond à l'adresse d'envoi sortante du locataire. Laissez vide pour utiliser le nom du tableau du ticket."
       },
       "oauth": {
         "sectionTitle": "Google OAuth",
@@ -334,7 +342,7 @@
     },
     "imap": {
       "validation": {
-        "providerNameRequired": "Le nom du fournisseur est requis",
+        "providerNameRequired": "Le nom de configuration est obligatoire",
         "mailboxRequired": "La boîte aux lettres est requise",
         "mailboxInvalid": "Une boîte aux lettres valide est requise (par exemple user@domain.com, user@localhost, user@test-server ou user)",
         "hostRequired": "Un hôte IMAP est requis",
@@ -344,12 +352,17 @@
       "basic": {
         "title": "Paramètres de base",
         "description": "Définissez les détails de connexion à la boîte aux lettres IMAP.",
-        "providerName": "Nom du fournisseur",
+        "providerName": "Nom de configuration",
         "mailboxAddress": "Adresse de la boîte aux lettres",
         "host": "Hôte IMAP",
         "port": "Port",
         "useTls": "Utiliser TLS/SSL",
-        "allowStarttls": "Autoriser la mise à niveau STARTTLS"
+        "allowStarttls": "Autoriser la mise à niveau STARTTLS",
+        "providerNamePlaceholder": "ex. : IMAP support (interne)",
+        "providerNameHelp": "Nom interne utilisé pour identifier cette configuration. N'apparaît pas dans les e-mails sortants.",
+        "senderDisplayName": "Nom de l'expéditeur",
+        "senderDisplayNamePlaceholder": "ex. : Acme Support",
+        "senderDisplayNameHelp": "Nom affiché dans l'en-tête « De » des e-mails de tickets sortants (réponses, clôtures). Appliqué uniquement lorsque cette boîte correspond à l'adresse d'envoi sortante du locataire. Laissez vide pour utiliser le nom du tableau du ticket."
       },
       "auth": {
         "title": "Authentification",
@@ -476,7 +489,7 @@
       }
     },
     "fields": {
-      "providerName": "Nom du fournisseur",
+      "providerName": "Nom de configuration",
       "mailboxAddress": "Adresse de la boîte aux lettres",
       "imapHost": "Hôte IMAP",
       "port": "Port",
@@ -496,7 +509,12 @@
       "active": "Actif",
       "ticketDefaultsLabel": "Valeurs par défaut des tickets",
       "ticketDefaultsPlaceholder": "Sélectionnez les valeurs par défaut...",
-      "ticketDefaultsEmpty": "Aucune valeur par défaut disponible"
+      "ticketDefaultsEmpty": "Aucune valeur par défaut disponible",
+      "providerNamePlaceholder": "ex. : IMAP support (interne)",
+      "providerNameHelp": "Nom interne utilisé pour identifier cette configuration. N'apparaît pas dans les e-mails sortants.",
+      "senderDisplayName": "Nom de l'expéditeur",
+      "senderDisplayNamePlaceholder": "ex. : Acme Support",
+      "senderDisplayNameHelp": "Nom affiché dans l'en-tête « De » des e-mails de tickets sortants (réponses, clôtures). Appliqué uniquement lorsque cette boîte correspond à l'adresse d'envoi sortante du locataire. Laissez vide pour utiliser le nom du tableau du ticket."
     },
     "authOptions": {
       "password": "Mot de passe",
@@ -546,8 +564,8 @@
       }
     },
     "fields": {
-      "providerNameLabel": "Nom du fournisseur *",
-      "providerNamePlaceholder": "par exemple, Support Microsoft 365",
+      "providerNameLabel": "Nom de configuration *",
+      "providerNamePlaceholder": "ex. : Boîte support (interne)",
       "mailboxLabel": "Adresse Microsoft 365 *",
       "mailboxPlaceholder": "support@client.com",
       "enableProvider": "Activer ce fournisseur",
@@ -557,7 +575,11 @@
       "maxEmailsLabel": "Nombre maximum d'e-mails par synchronisation",
       "maxEmailsHelp": "Nombre maximum d'e-mails à traiter à chaque synchronisation (1-1000)",
       "inboundDefaultsLabel": "Valeurs par défaut des tickets entrants",
-      "inboundDefaultsPlaceholder": "Sélectionnez les valeurs par défaut (facultatif)"
+      "inboundDefaultsPlaceholder": "Sélectionnez les valeurs par défaut (facultatif)",
+      "providerNameHelp": "Nom interne utilisé pour identifier cette configuration. N'apparaît pas dans les e-mails sortants.",
+      "senderDisplayNameLabel": "Nom de l'expéditeur",
+      "senderDisplayNamePlaceholder": "ex. : Acme Support",
+      "senderDisplayNameHelp": "Nom affiché dans l'en-tête « De » des e-mails de tickets sortants (réponses, clôtures). Appliqué uniquement lorsque cette boîte correspond à l'adresse d'envoi sortante du locataire. Laissez vide pour utiliser le nom du tableau du ticket."
     },
     "oauth": {
       "connectionTitle": "Connexion Microsoft 365",
@@ -596,7 +618,7 @@
     },
     "validation": {
       "requiredFieldsTitle": "Veuillez remplir les champs obligatoires :",
-      "providerName": "Nom du fournisseur",
+      "providerName": "Nom de configuration",
       "mailbox": "Adresse Microsoft 365"
     }
   },

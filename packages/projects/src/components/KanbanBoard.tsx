@@ -43,6 +43,8 @@ interface KanbanBoardProps {
   onAddCard: (status: ProjectStatus) => void;
   onTaskSelected: (task: IProjectTask) => void;
   onAssigneeChange: (taskId: string, newAssigneeId: string) => void;
+  onTeamAssign?: (taskId: string, teamId: string) => void | Promise<void>;
+  teams?: import('@alga-psa/types').ITeam[];
   onDragStart: (e: React.DragEvent, taskId: string) => void;
   onDragEnd: (e: React.DragEvent) => void;
   onReorderTasks: (updates: { taskId: string, newWbsCode: string }[]) => void;
@@ -122,6 +124,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onAddCard,
   onTaskSelected,
   onAssigneeChange,
+  onTeamAssign,
+  teams = [],
   onDragStart,
   onDragEnd,
   onReorderTasks,
@@ -217,6 +221,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             onAddCard={onAddCard}
             onTaskSelected={onTaskSelected}
             onAssigneeChange={onAssigneeChange}
+            onTeamAssign={onTeamAssign}
+            teams={teams}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
             onReorderTasks={onReorderTasks}

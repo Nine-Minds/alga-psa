@@ -172,7 +172,7 @@ export function SettingsScreen() {
           setAppleError(
             t(
               "security.appleId.errors.alreadyLinkedElsewhere",
-              "This Apple ID is already linked to a different Alga PSA account.",
+              "This Apple ID is already linked to a different AlgaPSA account.",
             ),
           );
         } else {

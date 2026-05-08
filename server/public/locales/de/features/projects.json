@@ -200,6 +200,8 @@
     "tasksReorderedSuccess": "Aufgaben erfolgreich neu sortiert",
     "commentCountsLoadError": "Kommentarzähler konnten nicht geladen werden",
     "taskAssigneeUpdatedSuccess": "Zuweisung der Aufgabe erfolgreich aktualisiert!",
+    "teamAssignedSuccess": "Team erfolgreich zugewiesen",
+    "assignTeamFailed": "Team konnte nicht zugewiesen werden",
     "taskDuplicatedSuccess": "Aufgabe \"{{taskName}}\" erfolgreich dupliziert!",
     "duplicateNoTargetPhase": "Keine Zielphase zum Duplizieren gefunden.",
     "taskNotFound": "Aufgabe nicht gefunden",
@@ -277,6 +279,18 @@
     "agentPendingSave": "Der Agent wird beim Speichern der Aufgabe hinzugefügt",
     "teamAssignedSuccess": "Team erfolgreich zugewiesen",
     "assignTeamFailed": "Team konnte nicht zugewiesen werden",
+    "teamRemovedSuccess": "Team erfolgreich entfernt",
+    "teamRemoveFailed": "Teamzuweisung konnte nicht entfernt werden",
+    "removeTeamAssignment": "Teamzuweisung entfernen",
+    "switchTeamAssignment": "Teamzuweisung wechseln",
+    "removeTeamMode": {
+      "removeAll": "Alle Teammitglieder entfernen",
+      "keepAll": "Alle Teammitglieder als einzelne Agents behalten",
+      "selective": "Einzelne Mitglieder zum Behalten/Entfernen auswählen",
+      "selectiveHint": "Aktivieren Sie die Mitglieder, die als einzelne Agents an der Aufgabe verbleiben sollen. Nicht aktivierte Mitglieder werden entfernt."
+    },
+    "noTeamMembersFound": "Keine Teammitglieder bei dieser Aufgabe gefunden.",
+    "unnamedUser": "Unbenannter Benutzer",
     "linkingPartialFailure": "Aufgabe erstellt, aber einige Elemente konnten nicht verknüpft werden",
     "tagCreationPartialFailure": "{{count}} Tag(s) konnten nicht erstellt werden",
     "saveFailed": "Aufgabe konnte nicht gespeichert werden",
@@ -304,6 +318,10 @@
     "documentCleanupFailure": "{{count}} Dokument{{plural}} konnten nicht gelöscht werden und verbleiben in Dokumente",
     "ticketCleanupFailure": "{{count}} Ticket{{plural}} konnten nicht gelöscht werden",
     "checklistItemPlaceholder": "Checklistenpunkt",
+    "reorderChecklistItem": "Zum Neuanordnen ziehen",
+    "insertChecklistItem": "Element hier einfügen",
+    "editChecklistItem": "Checklistenpunkt bearbeiten",
+    "removeChecklistItem": "Checklistenpunkt entfernen",
     "tagsTitle": "Tags",
     "checklistTitle": "Checkliste",
     "createFromTicket": "Aus Ticket erstellen",
@@ -587,7 +605,8 @@
       "row": "Zeile",
       "phase": "Phase",
       "task": "Aufgabe",
-      "issues": "Probleme"
+      "issues": "Probleme",
+      "valid": "Gültig"
     },
     "fields": {
       "task_name": "Aufgabenname *",
@@ -602,7 +621,24 @@
       "task_type": "Aufgabentyp",
       "status": "Status",
       "tags": "Tags"
-    }
+    },
+    "fallbackPhaseLabel": "Standardphase für Aufgaben ohne phase_name",
+    "fallbackPhaseHelp": "{{count}} Zeile(n) ohne Phase. Wählen Sie eine vorhandene Phase oder behalten Sie die Vorgabe, um eine neue zu erstellen.",
+    "fallbackPhaseCreateDefault": "Neue Phase erstellen: „{{name}}\"",
+    "fallbackStatusLabel": "Standardstatus für Aufgaben ohne Status",
+    "fallbackStatusHelp": "{{count}} Zeile(n) ohne Status. Der ausgewählte Status wird diesen Aufgaben zugewiesen.",
+    "rowResultsTitle": "Zeilenergebnisse",
+    "rowFilterLabel": "Anzeigen:",
+    "rowFilterAll": "Alle Zeilen ({{count}})",
+    "rowFilterImported": "Werden importiert ({{count}})",
+    "rowFilterSkipped": "Werden übersprungen ({{count}})",
+    "rowsToBeSkippedCount": "{{count}} Zeile(n) werden übersprungen",
+    "rowsToBeSkippedHelp": "weil sie die Validierung nicht bestanden haben. Verwenden Sie den Filter oben, um sie zu überprüfen.",
+    "statusUnmatchedSuffix": "Nicht zugeordnet",
+    "statusUnmatchedTooltip": "Der Status entspricht keinem vorhandenen Status für diese Phase. Bitte vor dem Import in den Zuordnungsschritten lösen.",
+    "statusFallbackSuffix": "Standard",
+    "statusFallbackTooltip": "Verwendung des Standard-Ersatzstatus für diese Phase.",
+    "inPhaseBadge": "in {{phase}}"
   },
   "dialogs": {
     "moveTask": {
@@ -1018,6 +1054,8 @@
       "addChecklistItem": "Element hinzufügen",
       "checklistItemPlaceholder": "Checklistenpunkt",
       "emptyChecklistItem": "Leerer Eintrag",
+      "reorderChecklistItem": "Zum Neuanordnen ziehen",
+      "insertChecklistItem": "Element hier einfügen",
       "dependencies": "Abhängigkeiten",
       "dependenciesHelp": "Definieren Sie Aufgabenabhängigkeiten, um die Ausführungsreihenfolge bei der Projekterstellung zu steuern",
       "removeDependency": "Abhängigkeit entfernen",

@@ -34,6 +34,9 @@ interface SidebarProps {
   mode?: NavMode;
   onBackToMain?: () => void;
   onMenuItemClick?: (href?: string) => void;
+  appDisplayName?: string;
+  appLogoAlt?: string;
+  settingsSectionsOverride?: NavigationSection[];
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -45,7 +48,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   disableTransition = false,
   mode = 'main',
   onBackToMain,
-  onMenuItemClick
+  onMenuItemClick,
+  appDisplayName = 'AlgaPSA',
+  appLogoAlt = 'AlgaPSA Logo',
+  settingsSectionsOverride,
 }): React.JSX.Element => {
   const appVersion = getAppVersion();
   const { t } = useTranslation('msp/core');
@@ -223,7 +229,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   // Determine which sections to render based on mode
-  const settingsSections: NavigationSection[] = settingsNavigationSections;
+  const settingsSections: NavigationSection[] = settingsSectionsOverride ?? settingsNavigationSections;
 
   const billingSections: NavigationSection[] = billingNavigationSections;
 
@@ -265,13 +271,13 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
           <Image
             src="/images/avatar-purple-background.png"
-            alt={t('sidebar.logoAlt', { defaultValue: 'AlgaPSA Logo' })}
+            alt={t('sidebar.logoAlt', { defaultValue: appLogoAlt })}
             width={200}
             height={200}
             className="w-full h-full object-cover"
           />
         </div>
-        <span className={`text-xl font-semibold truncate ${sidebarOpen ? '' : 'hidden'}`}>AlgaPSA</span>
+        <span className={`text-xl font-semibold truncate ${sidebarOpen ? '' : 'hidden'}`}>{appDisplayName}</span>
       </a>
 
       {/* Back to Main button - shown in settings and billing modes */}

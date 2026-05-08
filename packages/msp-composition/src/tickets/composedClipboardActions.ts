@@ -1,6 +1,7 @@
 'use server';
 
 import { deleteDocument } from '@alga-psa/documents/actions/documentActions';
+import { uploadDocument } from '@alga-psa/documents/actions/documentActions';
 import { deleteDraftClipboardImages as deleteDraftClipboardImagesCore } from '@alga-psa/tickets/actions/comment-actions/clipboardImageDraftActions';
 
 /**
@@ -15,4 +16,14 @@ export async function deleteDraftClipboardImages(input: {
     ...input,
     deleteDocumentFn: deleteDocument,
   });
+}
+
+/**
+ * Composed ticket attachment upload for ticket/comment rich-text flows.
+ */
+export async function uploadTicketAttachmentDocument(
+  formData: FormData,
+  params: { userId: string; ticketId: string }
+) {
+  return uploadDocument(formData, params);
 }

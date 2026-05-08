@@ -1053,7 +1053,10 @@
       "unknownError": "Une erreur inconnue s'est produite",
       "templateNotFoundDetail": "Le modèle que vous recherchez n'existe pas ou a été supprimé.",
       "teamLeadAccessDetail": "Pour approuver les feuilles de temps des membres de votre équipe, vous devez être chef d'équipe.",
-      "teamsTabEnableHint": "Demandez à un administrateur PSA d'activer l'intégration Teams pour ce tenant avant de rouvrir l'onglet."
+      "teamsTabEnableHint": "Demandez à un administrateur PSA d'activer l'intégration Teams pour ce tenant avant de rouvrir l'onglet.",
+      "teamsSetupNotFinished": "Configuration Teams non terminée",
+      "teamsSetupNotFinishedHint": "Demandez à un administrateur PSA de finaliser la configuration Teams, puis rouvrez l'onglet personnel.",
+      "teamsTabAdminHint": "Demandez à un administrateur PSA de finaliser la configuration Teams, puis rouvrez l'onglet."
     },
     "actions": {
       "tryAgain": "Réessayer",
@@ -1073,6 +1076,48 @@
       "slaSettings": "Paramètres SLA",
       "documentEditor": "Éditeur de document",
       "accountManagement": "Gestion du compte"
+    },
+    "teamsTab": {
+      "signedInAs": "Connecté en tant que {{name}}",
+      "openInFullPsa": "Ouvrir dans PSA complet",
+      "iframeTitle": "{{destination}} dans Alga PSA",
+      "fullPsaHint": "Utilisez « Ouvrir dans PSA complet » pour plus de contexte qu'une carte Teams ne peut afficher.",
+      "fallback": {
+        "label": "Enregistrement demandé indisponible :",
+        "showingInstead": "Affichage de votre liste de travail Teams au lieu de {{destination}}."
+      },
+      "entrySource": {
+        "bot": "Ouvert depuis un résultat du bot Teams.",
+        "messageExtension": "Ouvert depuis un résultat de l'extension de messagerie Teams.",
+        "notification": "Ouvert depuis une notification d'activité Teams."
+      },
+      "destinations": {
+        "myWork": {
+          "title": "Mon travail",
+          "summary": "Votre onglet personnel Teams est prêt à charger votre file d'attente PSA."
+        },
+        "ticket": {
+          "title": "Ticket {{ticketId}}",
+          "summary": "Vous ouvrez le ticket {{ticketId}} depuis Teams."
+        },
+        "projectTask": {
+          "title": "Tâche de projet {{taskId}}",
+          "summary": "Vous ouvrez la tâche {{taskId}} dans le projet {{projectId}}."
+        },
+        "approval": {
+          "title": "Approbation {{approvalId}}",
+          "summary": "Vous ouvrez l'approbation {{approvalId}} depuis Teams."
+        },
+        "timeEntry": {
+          "title": "Saisie de temps {{entryId}}",
+          "summary": "Vous ouvrez la saisie de temps {{entryId}} depuis Teams."
+        },
+        "contact": {
+          "title": "Contact {{contactId}}",
+          "summary": "Vous ouvrez le contact {{contactId}} depuis Teams.",
+          "summaryWithClient": "Vous ouvrez le contact {{contactId}} pour le client {{clientId}} depuis Teams."
+        }
+      }
     }
   },
   "feedback": {

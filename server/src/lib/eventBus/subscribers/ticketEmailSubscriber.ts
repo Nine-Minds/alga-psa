@@ -48,14 +48,34 @@ function normalizeHost(host: string): string {
   return host.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
 }
 
-async function resolveTicketingFromAddress(knex: Knex, tenantId: string) {
+async function resolveTicketingFromAddress(
+  knex: Knex,
+  tenantId: string
+): Promise<{ email: string; name?: string } | undefined> {
   try {
     const settings = await TenantEmailService.getTenantEmailSettings(tenantId, knex);
     const candidate = settings?.ticketingFromEmail;
 
-    if (candidate) {
-      return { email: candidate };
+    if (!candidate) {
+      return undefined;
     }
+
+    // Look up the inbound provider row matching this mailbox to pick up the
+    // optional sender_display_name override. Falls back to undefined when no
+    // matching row or no display name is set; callers then use board-name
+    // fallback for backward compatibility.
+    const provider = await knex('email_providers')
+      .where({ tenant: tenantId, mailbox: candidate })
+      .first(['sender_display_name']);
+
+    const senderDisplayName = typeof provider?.sender_display_name === 'string'
+      ? provider.sender_display_name.trim()
+      : '';
+
+    return {
+      email: candidate,
+      name: senderDisplayName.length > 0 ? senderDisplayName : undefined
+    };
   } catch (error) {
     logger.warn('[TicketEmailSubscriber] Failed to resolve ticketing from address', {
       tenantId,
@@ -2411,8 +2431,11 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     const emailMetadata = ticket.email_metadata || {};
 
-    const senderName = ticket.board_name || 'Support';
     const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
+    // Prefer the per-provider Sender Display Name when configured; otherwise
+    // fall back to the ticket's board name (existing behavior) and finally
+    // 'Support' so the From-name is always populated.
+    const senderName = ticketingFromAddress?.name || ticket.board_name || 'Support';
     const fromAddress = ticketingFromAddress
       ? { email: ticketingFromAddress.email, name: senderName }
       : undefined;
@@ -2844,8 +2867,14 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     };
 
     const ticketingFromAddress = await resolveTicketingFromAddress(db, tenantId);
+    // Prefer the per-provider Sender Display Name when configured; otherwise
+    // fall back to the ticket's board name (existing behavior) and finally
+    // 'Support' so the From-name is always populated.
     const fromAddress = ticketingFromAddress
-      ? { email: ticketingFromAddress.email, name: ticket.board_name || 'Support' }
+      ? {
+          email: ticketingFromAddress.email,
+          name: ticketingFromAddress.name || ticket.board_name || 'Support'
+        }
       : undefined;
 
     // Send to contact email if available, otherwise client email

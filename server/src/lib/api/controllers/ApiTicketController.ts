@@ -340,6 +340,8 @@ export class ApiTicketController extends ApiBaseController {
           apiKeyId: keyRecord.api_key_id,
         };
 
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
+
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
@@ -429,6 +431,8 @@ export class ApiTicketController extends ApiBaseController {
           apiKeyId: keyRecord.api_key_id,
         };
 
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
+
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
@@ -494,6 +498,8 @@ export class ApiTicketController extends ApiBaseController {
           user,
           apiKeyId: keyRecord.api_key_id,
         };
+
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
 
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
@@ -833,6 +839,8 @@ export class ApiTicketController extends ApiBaseController {
           apiKeyId: keyRecord.api_key_id,
         };
 
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
+
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
@@ -905,6 +913,8 @@ export class ApiTicketController extends ApiBaseController {
           user,
           apiKeyId: keyRecord.api_key_id,
         };
+
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
 
         return await runWithTenant(tenantId!, async () => {
           const hasAccess = await hasPermission(user, 'ticket', 'update');
@@ -992,6 +1002,8 @@ export class ApiTicketController extends ApiBaseController {
           apiKeyId: keyRecord.api_key_id,
         };
 
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
+
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
@@ -1078,6 +1090,8 @@ export class ApiTicketController extends ApiBaseController {
           user,
           apiKeyId: keyRecord.api_key_id,
         };
+
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
 
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
@@ -1220,6 +1234,8 @@ export class ApiTicketController extends ApiBaseController {
           user,
           apiKeyId: keyRecord.api_key_id,
         };
+
+        await this.assertProductApiAccess(apiRequest as AuthenticatedApiRequest);
 
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {

@@ -79,6 +79,8 @@ export interface ITaskImportRow {
   task_type?: string;
   status?: string;
   tags?: string;
+  /** Source row number in the CSV (header is row 1, first data row is row 2). Not from CSV. */
+  csvRowNumber?: number;
 }
 
 /**
@@ -122,6 +124,8 @@ export interface IGroupedTaskData {
   /** Resolved status mapping ID (null if unmatched) */
   status_mapping_id: string | null;
   tags: string[];
+  /** Source CSV row number for error reporting */
+  csvRowNumber?: number;
 }
 
 /**
@@ -149,8 +153,8 @@ export interface IPhaseTaskValidationResponse {
   statusLookup: Record<string, string>;
   /** phase name -> (status name -> project_status_mapping_id) */
   statusLookupByPhase?: Record<string, Record<string, string>>;
-  /** List of status names that don't match */
-  unmatchedStatuses: string[];
+  /** Phase-scoped pairs of (phase, status) that don't match */
+  unmatchedStatuses: Array<{ phaseName: string; statusName: string }>;
   /** List of agent names that don't match */
   unmatchedAgents: string[];
 }
@@ -165,6 +169,7 @@ export interface IImportReferenceData {
   users: IImportUser[];
   priorities: Array<{ priority_id: string; priority_name: string }>;
   services: Array<{ service_id: string; service_name: string }>;
+  phases: Array<{ phase_id: string; phase_name: string }>;
   statusMappings: Array<{
     project_status_mapping_id: string;
     phase_id?: string;
@@ -182,10 +187,13 @@ export interface IImportReferenceData {
 }
 
 /**
- * Information about an unmatched status and affected tasks
+ * Information about an unmatched status and affected tasks.
+ * Scoped per (phase, status) so phase-specific status sets can be honored when resolving.
  */
 export interface IUnmatchedStatusInfo {
   statusName: string;
+  /** Phase the affected tasks belong to (or DEFAULT_PHASE_NAME for unphased tasks) */
+  phaseName: string;
   taskCount: number;
   /** First few task names for display */
   taskNames: string[];
@@ -198,6 +206,8 @@ export type StatusResolutionAction = 'create' | 'use_default' | 'map_to_existing
 
 export interface IStatusResolution {
   originalStatusName: string;
+  /** Phase whose tasks this resolution applies to */
+  phaseName: string;
   action: StatusResolutionAction;
   /** If action is 'map_to_existing', the target status ID */
   mappedStatusId?: string;

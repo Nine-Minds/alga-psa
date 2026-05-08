@@ -35,7 +35,8 @@
       "addClient": "Dodaj klienta",
       "clientContact": "Kontakt klienta",
       "billing": "Fakturowanie",
-      "ticketing": "Zgłoszenia"
+      "ticketing": "Zgłoszenia",
+      "algadeskWorkspace": "Obszar roboczy"
     },
     "errors": {
       "saveClientInfo": "Nie udało się zapisać informacji o kliencie",
@@ -62,7 +63,9 @@
     },
     "shell": {
       "title": "Skonfiguruj swój system",
-      "description": "Skonfigurujmy Twoje środowisko i przygotujmy je do użycia."
+      "description": "Skonfigurujmy Twoje środowisko i przygotujmy je do użycia.",
+      "algadeskTitle": "Skonfiguruj Algadesk",
+      "algadeskDescription": "Skonfiguruj obszar roboczy helpdesku, klientów i domyślne ustawienia zgłoszeń."
     }
   },
   "addClientStep": {

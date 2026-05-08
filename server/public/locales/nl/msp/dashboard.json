@@ -5,6 +5,33 @@
     "titleCommunity": "Welkom terug",
     "descriptionCommunity": "Ga vanaf je dashboard direct naar tickets, planning, projecten en rapportage."
   },
+  "algadesk": {
+    "welcome": {
+      "title": "Welkom bij AlgaDesk",
+      "description": "Houd de ticket-werklast, de e-mailkanaalstatus en elk gesprek in de gaten."
+    },
+    "metrics": {
+      "openTickets": "Openstaande tickets",
+      "awaitingCustomer": "Wacht op klant",
+      "awaitingInternal": "Wacht intern",
+      "activeEmailChannels": "Actieve e-mailkanalen"
+    },
+    "aging": {
+      "title": "Ouderdom tickets",
+      "under2Days": "Minder dan 2 dagen",
+      "days2To7": "2 tot 7 dagen",
+      "over7Days": "Meer dan 7 dagen"
+    },
+    "emailHealth": {
+      "title": "E-mailkanaalstatus",
+      "summary": "{{healthy}} van {{active}} actieve kanalen zijn verbonden.",
+      "totalConfigured": "Totaal geconfigureerde kanalen: {{total}}"
+    },
+    "recentTickets": {
+      "title": "Recent bijgewerkte tickets",
+      "empty": "Geen recente ticketactiviteit."
+    }
+  },
   "features": {
     "heading": "Platformfuncties",
     "comingSoon": "Binnenkort beschikbaar!",

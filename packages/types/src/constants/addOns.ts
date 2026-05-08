@@ -12,6 +12,9 @@
  *   1. Fetch active add-ons for tenant (from DB or session)
  *   2. Check access: tierHasFeature(tier, feature) || tenantHasAddOn(addons, addon)
  *   3. Gate UI and server actions accordingly
+ *
+ * Product entitlement (`tenants.product_code`) is independent of add-ons.
+ * A product decision should not mutate or replace add-on checks.
  */
 
 /**

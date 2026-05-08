@@ -5,6 +5,7 @@ import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { TicketDetailsContainer } from '@alga-psa/client-portal/components';
 import logger from '@alga-psa/core/logger';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { getCurrentTenantProduct } from '@/lib/productAccess';
 import type { Metadata } from 'next';
 
 const getCachedTicket = cache((id: string) => getClientTicketDetails(id));
@@ -35,6 +36,7 @@ export default async function TicketPage({ params }: TicketPageProps) {
   try {
     const ticketData = await getCachedTicket(ticketId);
     const statuses = await getTicketStatuses(ticketData.board_id);
+    const productCode = await getCurrentTenantProduct();
 
     return (
       <div className="w-full">
@@ -42,6 +44,7 @@ export default async function TicketPage({ params }: TicketPageProps) {
           ticketId={ticketId}
           ticketData={ticketData}
           statuses={statuses}
+          productCode={productCode}
         />
       </div>
     );

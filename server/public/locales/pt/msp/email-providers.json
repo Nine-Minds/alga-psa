@@ -234,7 +234,7 @@
     },
     "microsoft": {
       "validation": {
-        "providerNameRequired": "O nome do provedor é obrigatório",
+        "providerNameRequired": "O nome da configuração é obrigatório",
         "emailRequired": "É obrigatório um endereço de e-mail válido",
         "redirectRequired": "É obrigatório um redirect URI válido",
         "authorizeRequiresValid": "Preencha todos os campos obrigatórios antes de autorizar",
@@ -244,18 +244,22 @@
         "authorizationFailed": "Falha na autorização"
       },
       "requiredFields": {
-        "providerName": "Nome do provedor",
+        "providerName": "Nome da configuração",
         "emailAddress": "Endereço de e-mail",
         "redirectUri": "Redirect URI"
       },
       "basic": {
         "title": "Configuração básica",
         "description": "Configurações básicas para seu provedor de e-mail Microsoft 365",
-        "providerNameLabel": "Nome do provedor *",
-        "providerNamePlaceholder": "ex. E-mail de suporte",
+        "providerNameLabel": "Nome da configuração *",
+        "providerNamePlaceholder": "ex.: Caixa de suporte (interna)",
         "emailLabel": "Endereço de e-mail *",
         "emailPlaceholder": "suporte@cliente.com",
-        "enableProvider": "Habilitar este provedor"
+        "enableProvider": "Habilitar este provedor",
+        "providerNameHelp": "Nome interno usado para identificar esta configuração. Não é exibido em e-mails enviados.",
+        "senderDisplayNameLabel": "Nome de exibição do remetente",
+        "senderDisplayNamePlaceholder": "ex.: Acme Support",
+        "senderDisplayNameHelp": "Nome de exibição no cabeçalho De dos e-mails de tickets enviados (respostas, encerramentos). Aplicado apenas quando esta caixa de e-mail corresponde ao endereço de envio do locatário. Deixe em branco para usar o nome do quadro do ticket."
       },
       "oauth": {
         "sectionTitle": "Configuração Microsoft OAuth",
@@ -279,7 +283,7 @@
     },
     "gmail": {
       "validation": {
-        "providerNameRequired": "O nome do provedor é obrigatório",
+        "providerNameRequired": "O nome da configuração é obrigatório",
         "gmailAddressRequired": "É obrigatório um endereço Gmail válido",
         "authorizeRequiresValid": "Preencha todos os campos obrigatórios antes de autorizar",
         "googleNotConfigured": "A integração com o Google não está configurada para este tenant. Configure o Google primeiro e tente novamente.",
@@ -295,17 +299,21 @@
         "settingUp": "Configurando notificações do Gmail..."
       },
       "requiredFields": {
-        "providerName": "Nome do provedor",
+        "providerName": "Nome da configuração",
         "gmailAddress": "Endereço Gmail"
       },
       "basic": {
         "title": "Configuração básica",
         "description": "Configurações básicas para seu provedor de e-mail Gmail",
-        "providerNameLabel": "Nome do provedor *",
-        "providerNamePlaceholder": "ex. Suporte Gmail",
+        "providerNameLabel": "Nome da configuração *",
+        "providerNamePlaceholder": "ex.: Gmail de suporte (interno)",
         "mailboxLabel": "Endereço Gmail *",
         "mailboxPlaceholder": "suporte@cliente.com",
-        "enableProvider": "Habilitar este provedor"
+        "enableProvider": "Habilitar este provedor",
+        "providerNameHelp": "Nome interno usado para identificar esta configuração. Não é exibido em e-mails enviados.",
+        "senderDisplayNameLabel": "Nome de exibição do remetente",
+        "senderDisplayNamePlaceholder": "ex.: Acme Support",
+        "senderDisplayNameHelp": "Nome de exibição no cabeçalho De dos e-mails de tickets enviados (respostas, encerramentos). Aplicado apenas quando esta caixa de e-mail corresponde ao endereço de envio do locatário. Deixe em branco para usar o nome do quadro do ticket."
       },
       "oauth": {
         "sectionTitle": "Google OAuth",
@@ -334,7 +342,7 @@
     },
     "imap": {
       "validation": {
-        "providerNameRequired": "O nome do provedor é obrigatório",
+        "providerNameRequired": "O nome da configuração é obrigatório",
         "mailboxRequired": "A caixa de correio é obrigatória",
         "mailboxInvalid": "É obrigatória uma caixa de correio válida (ex. user@domain.com, user@localhost, user@test-server, ou user)",
         "hostRequired": "O host IMAP é obrigatório",
@@ -344,12 +352,17 @@
       "basic": {
         "title": "Configurações básicas",
         "description": "Defina os detalhes de conexão da caixa de correio IMAP.",
-        "providerName": "Nome do provedor",
+        "providerName": "Nome da configuração",
         "mailboxAddress": "Endereço da caixa de correio",
         "host": "Host IMAP",
         "port": "Porta",
         "useTls": "Usar TLS/SSL",
-        "allowStarttls": "Permitir upgrade STARTTLS"
+        "allowStarttls": "Permitir upgrade STARTTLS",
+        "providerNamePlaceholder": "ex.: IMAP de suporte (interno)",
+        "providerNameHelp": "Nome interno usado para identificar esta configuração. Não é exibido em e-mails enviados.",
+        "senderDisplayName": "Nome de exibição do remetente",
+        "senderDisplayNamePlaceholder": "ex.: Acme Support",
+        "senderDisplayNameHelp": "Nome de exibição no cabeçalho De dos e-mails de tickets enviados (respostas, encerramentos). Aplicado apenas quando esta caixa de e-mail corresponde ao endereço de envio do locatário. Deixe em branco para usar o nome do quadro do ticket."
       },
       "auth": {
         "title": "Autenticação",
@@ -476,7 +489,7 @@
       }
     },
     "fields": {
-      "providerName": "Nome do provedor",
+      "providerName": "Nome da configuração",
       "mailboxAddress": "Endereço da caixa de correio",
       "imapHost": "Host IMAP",
       "port": "Porta",
@@ -496,7 +509,12 @@
       "active": "Ativo",
       "ticketDefaultsLabel": "Padrões de ticket",
       "ticketDefaultsPlaceholder": "Selecionar padrões...",
-      "ticketDefaultsEmpty": "Nenhum padrão disponível"
+      "ticketDefaultsEmpty": "Nenhum padrão disponível",
+      "providerNamePlaceholder": "ex.: IMAP de suporte (interno)",
+      "providerNameHelp": "Nome interno usado para identificar esta configuração. Não é exibido em e-mails enviados.",
+      "senderDisplayName": "Nome de exibição do remetente",
+      "senderDisplayNamePlaceholder": "ex.: Acme Support",
+      "senderDisplayNameHelp": "Nome de exibição no cabeçalho De dos e-mails de tickets enviados (respostas, encerramentos). Aplicado apenas quando esta caixa de e-mail corresponde ao endereço de envio do locatário. Deixe em branco para usar o nome do quadro do ticket."
     },
     "authOptions": {
       "password": "Senha",
@@ -546,8 +564,8 @@
       }
     },
     "fields": {
-      "providerNameLabel": "Nome do provedor *",
-      "providerNamePlaceholder": "ex. Suporte Microsoft 365",
+      "providerNameLabel": "Nome da configuração *",
+      "providerNamePlaceholder": "ex.: Caixa de suporte (interna)",
       "mailboxLabel": "Endereço Microsoft 365 *",
       "mailboxPlaceholder": "suporte@cliente.com",
       "enableProvider": "Habilitar este provedor",
@@ -557,7 +575,11 @@
       "maxEmailsLabel": "Máximo de e-mails por sincronização",
       "maxEmailsHelp": "Número máximo de e-mails a processar em cada sincronização (1-1000)",
       "inboundDefaultsLabel": "Padrões de ticket de entrada",
-      "inboundDefaultsPlaceholder": "Selecionar padrões (opcional)"
+      "inboundDefaultsPlaceholder": "Selecionar padrões (opcional)",
+      "providerNameHelp": "Nome interno usado para identificar esta configuração. Não é exibido em e-mails enviados.",
+      "senderDisplayNameLabel": "Nome de exibição do remetente",
+      "senderDisplayNamePlaceholder": "ex.: Acme Support",
+      "senderDisplayNameHelp": "Nome de exibição no cabeçalho De dos e-mails de tickets enviados (respostas, encerramentos). Aplicado apenas quando esta caixa de e-mail corresponde ao endereço de envio do locatário. Deixe em branco para usar o nome do quadro do ticket."
     },
     "oauth": {
       "connectionTitle": "Conexão Microsoft 365",
@@ -596,7 +618,7 @@
     },
     "validation": {
       "requiredFieldsTitle": "Preencha os campos obrigatórios:",
-      "providerName": "Nome do provedor",
+      "providerName": "Nome da configuração",
       "mailbox": "Endereço Microsoft 365"
     }
   },

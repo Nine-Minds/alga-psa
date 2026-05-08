@@ -200,6 +200,8 @@
     "tasksReorderedSuccess": "Taken zijn opnieuw gerangschikt",
     "commentCountsLoadError": "Kon reactie-aantallen niet laden",
     "taskAssigneeUpdatedSuccess": "Taaktoegewezene succesvol bijgewerkt!",
+    "teamAssignedSuccess": "Team succesvol toegewezen",
+    "assignTeamFailed": "Kan team niet toewijzen",
     "taskDuplicatedSuccess": "Taak \"{{taskName}}\" is succesvol gedupliceerd!",
     "duplicateNoTargetPhase": "Kan geen doelfase vinden om naar te dupliceren.",
     "taskNotFound": "Taak niet gevonden",
@@ -277,6 +279,18 @@
     "agentPendingSave": "Agent wordt toegevoegd wanneer de taak wordt opgeslagen",
     "teamAssignedSuccess": "Team succesvol toegewezen",
     "assignTeamFailed": "Kan team niet toewijzen",
+    "teamRemovedSuccess": "Team succesvol verwijderd",
+    "teamRemoveFailed": "Teamtoewijzing kon niet worden verwijderd",
+    "removeTeamAssignment": "Teamtoewijzing verwijderen",
+    "switchTeamAssignment": "Teamtoewijzing wisselen",
+    "removeTeamMode": {
+      "removeAll": "Alle teamleden verwijderen",
+      "keepAll": "Alle teamleden als individuele medewerkers behouden",
+      "selective": "Selecteer individuele leden om te behouden/verwijderen",
+      "selectiveHint": "Vink leden aan die als individuele medewerkers op de taak behouden moeten blijven. Niet-aangevinkte leden worden verwijderd."
+    },
+    "noTeamMembersFound": "Geen teamleden gevonden op deze taak.",
+    "unnamedUser": "Naamloze gebruiker",
     "linkingPartialFailure": "Taak aangemaakt maar kon sommige items niet koppelen",
     "tagCreationPartialFailure": "{{count}} tag(s) konden niet worden gemaakt",
     "saveFailed": "Kon taak niet opslaan",
@@ -304,6 +318,10 @@
     "documentCleanupFailure": "{{count}} document{{plural}} kan niet worden verwijderd en blijft in Documenten staan",
     "ticketCleanupFailure": "{{count}} ticket{{plural}} kon niet worden verwijderd",
     "checklistItemPlaceholder": "Controlelijstitem",
+    "reorderChecklistItem": "Sleep om opnieuw te ordenen",
+    "insertChecklistItem": "Item hier invoegen",
+    "editChecklistItem": "Item bewerken",
+    "removeChecklistItem": "Item verwijderen",
     "tagsTitle": "Labels",
     "checklistTitle": "Checklist",
     "createFromTicket": "Maken vanaf ticket",
@@ -587,7 +605,8 @@
       "row": "Rij",
       "phase": "Fase",
       "task": "Taak",
-      "issues": "Problemen"
+      "issues": "Problemen",
+      "valid": "Geldig"
     },
     "fields": {
       "task_name": "Taaknaam *",
@@ -602,7 +621,24 @@
       "task_type": "Taaktype",
       "status": "Status",
       "tags": "Labels"
-    }
+    },
+    "fallbackPhaseLabel": "Standaardfase voor taken zonder phase_name",
+    "fallbackPhaseHelp": "{{count}} rij(en) zonder fase. Kies een bestaande fase of behoud de standaard om er een te maken.",
+    "fallbackPhaseCreateDefault": "Nieuwe fase maken: \"{{name}}\"",
+    "fallbackStatusLabel": "Standaardstatus voor taken zonder status",
+    "fallbackStatusHelp": "{{count}} rij(en) zonder status. De geselecteerde status wordt aan die taken toegewezen.",
+    "rowResultsTitle": "Rijresultaten",
+    "rowFilterLabel": "Tonen:",
+    "rowFilterAll": "Alle rijen ({{count}})",
+    "rowFilterImported": "Worden geïmporteerd ({{count}})",
+    "rowFilterSkipped": "Worden overgeslagen ({{count}})",
+    "rowsToBeSkippedCount": "{{count}} rij(en) worden overgeslagen",
+    "rowsToBeSkippedHelp": "omdat ze de validatie niet hebben doorstaan. Gebruik het filter hierboven om ze te bekijken.",
+    "statusUnmatchedSuffix": "Geen overeenkomst",
+    "statusUnmatchedTooltip": "Status komt niet overeen met een bestaande status voor deze fase. Los op in de mappingstappen voor de import.",
+    "statusFallbackSuffix": "Standaard",
+    "statusFallbackTooltip": "De standaard fallback-status voor deze fase wordt gebruikt.",
+    "inPhaseBadge": "in {{phase}}"
   },
   "dialogs": {
     "moveTask": {
@@ -1018,6 +1054,8 @@
       "addChecklistItem": "Item toevoegen",
       "checklistItemPlaceholder": "Controlelijstitem",
       "emptyChecklistItem": "Leeg artikel",
+      "reorderChecklistItem": "Sleep om opnieuw te ordenen",
+      "insertChecklistItem": "Item hier invoegen",
       "dependencies": "Afhankelijkheden",
       "dependenciesHelp": "Definieer taakafhankelijkheden om de uitvoeringsvolgorde bij het aanmaken van het project te regelen",
       "removeDependency": "Afhankelijkheid verwijderen",
