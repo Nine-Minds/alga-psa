@@ -23,8 +23,8 @@
       "import": "./dist/publishers/*.js"
     },
     "./ticket-live-updates": {
-      "types": "./src/ticketLiveUpdates.ts",
-      "import": "./dist/ticketLiveUpdates.js"
+      "types": "./src/ticket-live-updates.ts",
+      "import": "./dist/ticket-live-updates.js"
     }
   },
   "scripts": {
