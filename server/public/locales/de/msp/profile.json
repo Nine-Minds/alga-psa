@@ -328,7 +328,7 @@
         "sourceLabels": {
           "key": "Außerkraftsetzung",
           "tenant": "Mandanten-Standard",
-          "system": "System-Standard"
+          "default": "System-Standard"
         },
         "remaining": " • Verbleibend: {{remaining}}/{{maxTokens}}",
         "remainingUnavailable": " • Verbleibend: nicht verfügbar",

@@ -328,7 +328,7 @@
         "sourceLabels": {
           "key": "Anulación",
           "tenant": "Predeterminado del tenant",
-          "system": "Predeterminado del sistema"
+          "default": "Predeterminado del sistema"
         },
         "remaining": " • Restante: {{remaining}}/{{maxTokens}}",
         "remainingUnavailable": " • Restante: no disponible",
