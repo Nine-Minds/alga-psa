@@ -4,7 +4,7 @@ import { Knex } from 'knex';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import type { IProjectStatusMapping, IStatus } from '@alga-psa/types';
+import type { DeletionValidationResult, IProjectStatusMapping, IStatus } from '@alga-psa/types';
 import type { IUserWithRoles } from '@alga-psa/types';
 import ProjectModel from '@alga-psa/projects/models/project';
 import {
@@ -18,6 +18,89 @@ import {
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 
 import { getScopedProjectStatusMappings, ProjectStatusMappingDetails } from '../lib/projectStatusMappingUtils';
+
+type ProjectStatusUsage = {
+  count: number;
+  projectNames: string[];
+};
+
+function formatProjectUsageDescription(projectNames: string[], count: number): string {
+  const visibleNames = projectNames.slice(0, 5);
+  const remainingCount = count - visibleNames.length;
+  const suffix = remainingCount > 0 ? ` and ${remainingCount} more` : '';
+
+  return `Projects: ${visibleNames.join(', ')}${suffix}`;
+}
+
+async function getTenantProjectStatusUsage(
+  trx: Knex.Transaction,
+  tenant: string,
+  statusId: string
+): Promise<ProjectStatusUsage> {
+  const rows = await trx('project_status_mappings as psm')
+    .leftJoin('projects as p', function() {
+      this.on('psm.project_id', '=', 'p.project_id')
+        .andOn('psm.tenant', '=', 'p.tenant');
+    })
+    .where({
+      'psm.tenant': tenant,
+      'psm.status_id': statusId
+    })
+    .distinct<{ project_id: string; project_name: string | null }[]>(
+      'psm.project_id as project_id',
+      'p.project_name as project_name'
+    )
+    .orderBy('p.project_name');
+
+  return {
+    count: rows.length,
+    projectNames: rows.map((row) => row.project_name || `Unknown project (${row.project_id})`)
+  };
+}
+
+async function buildTenantProjectStatusDeletionValidation(
+  trx: Knex.Transaction,
+  tenant: string,
+  statusId: string
+): Promise<DeletionValidationResult> {
+  const status = await trx('statuses')
+    .where({ tenant, status_id: statusId, status_type: 'project_task' })
+    .first<{ status_id: string; name: string }>('status_id', 'name');
+
+  if (!status) {
+    return {
+      canDelete: false,
+      code: 'NOT_FOUND',
+      message: 'Project task status not found.',
+      dependencies: [],
+      alternatives: []
+    };
+  }
+
+  const usage = await getTenantProjectStatusUsage(trx, tenant, statusId);
+  if (usage.count > 0) {
+    const projectLabel = usage.count === 1 ? 'project' : 'projects';
+
+    return {
+      canDelete: false,
+      code: 'DEPENDENCIES_EXIST',
+      message: `Cannot delete status "${status.name}" because it is used by ${usage.count} ${projectLabel}.`,
+      dependencies: [{
+        type: 'project',
+        count: usage.count,
+        label: projectLabel,
+        description: formatProjectUsageDescription(usage.projectNames, usage.count)
+      }],
+      alternatives: []
+    };
+  }
+
+  return {
+    canDelete: true,
+    dependencies: [],
+    alternatives: []
+  };
+}
 
 function extractRoleIdsFromUser(user: IUserWithRoles): string[] {
   if (!Array.isArray(user.roles)) {
@@ -682,6 +765,28 @@ export const updateTenantProjectStatus = withAuth(async (
     .update(updates);
 });
 
+export const validateTenantProjectStatusDeletion = withAuth(async (
+  user,
+  { tenant },
+  statusId: string
+): Promise<DeletionValidationResult> => {
+  if (!await hasPermission(user, 'project', 'update')) {
+    return {
+      canDelete: false,
+      code: 'PERMISSION_DENIED',
+      message: 'Permission denied: Cannot update project',
+      dependencies: [],
+      alternatives: []
+    };
+  }
+
+  const { knex } = await createTenantKnex();
+
+  return withTransaction(knex, async (trx) => (
+    buildTenantProjectStatusDeletionValidation(trx, tenant, statusId)
+  ));
+});
+
 /**
  * Delete a status from tenant's library
  */
@@ -698,17 +803,13 @@ export const deleteTenantProjectStatus = withAuth(async (
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
-    // Check if any projects are using this status
-    const usageCount = await trx('project_status_mappings')
-      .where({ status_id: statusId, tenant })
-      .count('* as count')
-      .first();
-
-    if (parseInt(usageCount?.count as string) > 0) {
-      throw new Error(
-        `Cannot delete status that is used by ${usageCount?.count} projects. ` +
-        `Please remove it from those projects first.`
-      );
+    const validation = await buildTenantProjectStatusDeletionValidation(trx, tenant, statusId);
+    if (!validation.canDelete) {
+      const dependencyDetails = validation.dependencies
+        .map((dependency) => dependency.description)
+        .filter(Boolean)
+        .join(' ');
+      throw new Error([validation.message, dependencyDetails].filter(Boolean).join(' '));
     }
 
     // Delete the status

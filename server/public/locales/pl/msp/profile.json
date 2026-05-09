@@ -328,7 +328,7 @@
         "sourceLabels": {
           "key": "Nadpisanie",
           "tenant": "Domyślne dla tenanta",
-          "system": "Domyślne systemowe"
+          "default": "Domyślne systemowe"
         },
         "remaining": " • Pozostałe: {{remaining}}/{{maxTokens}}",
         "remainingUnavailable": " • Pozostałe: niedostępne",

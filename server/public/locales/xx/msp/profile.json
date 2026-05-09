@@ -328,7 +328,7 @@
         "sourceLabels": {
           "key": "11111",
           "tenant": "11111",
-          "system": "11111"
+          "default": "11111"
         },
         "remaining": "11111 {{remaining}} 11111 {{maxTokens}} 11111",
         "remainingUnavailable": "11111",

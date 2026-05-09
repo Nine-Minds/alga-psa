@@ -19,6 +19,54 @@ interface ReferenceDataConfig {
   conflictCheck?: (data: any, tenantId: string, trx?: Knex.Transaction) => Promise<boolean>;
 }
 
+function normalizeBoolean(value: unknown): boolean {
+  return value === true || value === 'true';
+}
+
+async function seedBoardTicketStatusesFromStandards(
+  trx: Knex.Transaction,
+  tenant: string,
+  boardId: string,
+  userId: string
+): Promise<number> {
+  const existingStatus = await trx('statuses')
+    .where({ tenant, board_id: boardId, status_type: 'ticket' })
+    .first('status_id');
+
+  if (existingStatus) {
+    return 0;
+  }
+
+  const standardStatuses = await trx('standard_statuses')
+    .where({ tenant, item_type: 'ticket' })
+    .orderBy('display_order', 'asc')
+    .orderBy('name', 'asc');
+
+  if (standardStatuses.length === 0) {
+    return 0;
+  }
+
+  const columns = await trx('statuses').columnInfo();
+  const hasColumn = (columnName: string) => Object.prototype.hasOwnProperty.call(columns, columnName);
+
+  await trx('statuses').insert(standardStatuses.map((status: any) => ({
+    tenant,
+    board_id: boardId,
+    name: status.name,
+    status_type: 'ticket',
+    order_number: status.display_order,
+    is_closed: normalizeBoolean(status.is_closed),
+    is_default: normalizeBoolean(status.is_default),
+    created_by: userId,
+    ...(hasColumn('item_type') ? { item_type: 'ticket' } : {}),
+    ...(hasColumn('standard_status_id') ? { standard_status_id: status.standard_status_id } : {}),
+    ...(hasColumn('created_at') ? { created_at: new Date().toISOString() } : {}),
+    ...(hasColumn('updated_at') ? { updated_at: new Date().toISOString() } : {})
+  })));
+
+  return standardStatuses.length;
+}
+
 const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
   priorities: {
     sourceTable: 'standard_priorities',
@@ -552,10 +600,15 @@ export const importReferenceData = withAuth(async (
         }
       }
       
-      const [savedItem] = await trx(config.targetTable)
-        .insert(mappedData)
-        .returning('*');
-      importedItems.push(savedItem);
+	      const [savedItem] = await trx(config.targetTable)
+	        .insert(mappedData)
+	        .returning('*');
+
+	      if (dataType === 'boards') {
+	        await seedBoardTicketStatusesFromStandards(trx, tenant, savedItem.board_id, user.user_id);
+	      }
+
+	      importedItems.push(savedItem);
     } catch (insertError: any) {
       console.error('Error inserting item:', insertError);
       

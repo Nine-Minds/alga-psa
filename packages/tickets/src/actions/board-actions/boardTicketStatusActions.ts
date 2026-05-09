@@ -94,6 +94,52 @@ function normalizeBoardTicketStatuses(
   }));
 }
 
+async function getTicketUsageByStatus(
+  trx: Knex.Transaction,
+  tenant: string,
+  statusIds: string[]
+): Promise<Array<{ status_id: string; count: number }>> {
+  if (statusIds.length === 0) {
+    return [];
+  }
+
+  const rows = await trx('tickets')
+    .where({ tenant })
+    .whereIn('status_id', statusIds)
+    .select('status_id')
+    .count('ticket_id as count')
+    .groupBy('status_id') as Array<{ status_id: string; count: string }>;
+
+  return rows.map((row) => ({
+    status_id: row.status_id,
+    count: Number(row.count || 0),
+  }));
+}
+
+function buildTicketStatusInUseMessage(
+  usages: Array<{ status_id: string; count: number }>,
+  existingStatuses: IStatus[]
+): string {
+  const statusNameById = new Map(existingStatuses.map((status) => [status.status_id, status.name]));
+  const details = usages
+    .map((usage) => {
+      const name = statusNameById.get(usage.status_id) || 'Unknown status';
+      const ticketLabel = usage.count === 1 ? 'ticket' : 'tickets';
+      return `"${name}" (${usage.count} ${ticketLabel})`;
+    })
+    .join(', ');
+
+  if (usages.length === 1) {
+    const usage = usages[0];
+    const name = statusNameById.get(usage.status_id) || 'Unknown status';
+    const ticketLabel = usage.count === 1 ? 'ticket' : 'tickets';
+    const ticketReference = usage.count === 1 ? 'that ticket' : 'those tickets';
+    return `Cannot delete ticket status "${name}" because it is used by ${usage.count} ${ticketLabel}. Move ${ticketReference} to another status before deleting it.`;
+  }
+
+  return `Cannot delete ticket statuses because they are still used: ${details}. Move those tickets to another status before deleting them.`;
+}
+
 async function getStatusColumns(trx: Knex.Transaction): Promise<Record<string, unknown>> {
   return trx('statuses').columnInfo();
 }
@@ -156,6 +202,13 @@ async function persistBoardTicketStatuses(
   const deletedStatusIds = existingStatuses
     .map((status) => status.status_id)
     .filter((statusId) => !keptStatusIds.includes(statusId));
+
+  const deletedStatusUsage = await getTicketUsageByStatus(trx, tenant, deletedStatusIds);
+  if (deletedStatusUsage.length > 0) {
+    throw formatBoardTicketStatusValidationError(
+      buildTicketStatusInUseMessage(deletedStatusUsage, existingStatuses)
+    );
+  }
 
   for (const [index, existingStatus] of existingStatuses.entries()) {
     if (!keptStatusIds.includes(existingStatus.status_id)) {
