@@ -10,16 +10,18 @@ import {
   createTenantProjectStatus,
   updateTenantProjectStatus,
   deleteTenantProjectStatus,
+  validateTenantProjectStatusDeletion,
   reorderTenantProjectStatuses
 } from '@alga-psa/projects/actions/projectTaskStatusActions';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
-import type { IStatus, IStandardStatus } from '@alga-psa/types';
+import type { DeletionValidationResult, IStatus, IStandardStatus } from '@alga-psa/types';
 import { ChevronUp, ChevronDown, Trash2, Edit2, Plus, Palette } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { StatusImportDialog } from '@alga-psa/ui/components/settings/dialogs/StatusImportDialog';
 import { ConflictResolutionDialog } from '@alga-psa/reference-data/components';
+import { DeleteEntityDialog } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from 'react-i18next';
@@ -40,6 +42,10 @@ export function TenantProjectTaskStatusSettings() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [statusToDelete, setStatusToDelete] = useState<IStatus | null>(null);
+  const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
+  const [isDeleteValidating, setIsDeleteValidating] = useState(false);
+  const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
 
   // Import functionality state
   const [showStatusImportDialog, setShowStatusImportDialog] = useState(false);
@@ -119,21 +125,59 @@ export function TenantProjectTaskStatusSettings() {
     }
   }
 
-  async function handleDelete(statusId: string, statusName: string) {
-    if (!window.confirm(t('settings.statuses.delete_confirm_message', 'Are you sure you want to delete the status "{{statusName}}"? This cannot be undone.', {
-      statusName,
-    }))) {
-      return;
-    }
+  function resetDeleteState() {
+    setStatusToDelete(null);
+    setDeleteValidation(null);
+    setIsDeleteValidating(false);
+    setIsDeleteProcessing(false);
+  }
+
+  async function handleDelete(status: IStatus) {
+    setStatusToDelete(status);
+    setDeleteValidation(null);
+    setIsDeleteValidating(true);
 
     try {
-      await deleteTenantProjectStatus(statusId);
-      setStatuses(statuses.filter(s => s.status_id !== statusId));
+      const validation = await validateTenantProjectStatusDeletion(status.status_id);
+      setDeleteValidation(validation);
+    } catch (error) {
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: error instanceof Error
+          ? error.message
+          : t('settings.statuses.delete_validation_failed', 'Failed to validate deletion. Please try again.'),
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteValidating(false);
+    }
+  }
+
+  async function confirmDeleteStatus() {
+    if (!statusToDelete) return;
+
+    try {
+      setIsDeleteProcessing(true);
+      await deleteTenantProjectStatus(statusToDelete.status_id);
+      setStatuses(statuses.filter(s => s.status_id !== statusToDelete.status_id));
       toast.success(t('settings.statuses.status_deleted_success', 'Status "{{statusName}}" deleted successfully', {
-        statusName,
+        statusName: statusToDelete.name,
       }));
-    } catch (error: any) {
-      handleError(error, t('settings.statuses.delete_in_use', 'Failed to delete status. It may be in use by projects.'));
+      resetDeleteState();
+    } catch (error) {
+      setDeleteValidation({
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: error instanceof Error
+          ? error.message
+          : t('settings.statuses.delete_failed', 'Failed to delete status.'),
+        dependencies: [],
+        alternatives: []
+      });
+    } finally {
+      setIsDeleteProcessing(false);
     }
   }
 
@@ -370,18 +414,18 @@ export function TenantProjectTaskStatusSettings() {
                     size="sm"
                     onClick={() => openEditDialog(status)}
                     id={`edit-status-${status.status_id}`}
-                    >
-                      <Edit2 className="w-4 h-4 mr-1" />
-                      {t('common:actions.edit', 'Edit')}
+                  >
+                    <Edit2 className="w-4 h-4 mr-1" />
+                    {t('common:actions.edit', 'Edit')}
                   </Button>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDelete(status.status_id, status.name)}
+                    onClick={() => handleDelete(status)}
                     id={`delete-status-${status.status_id}`}
-                    >
-                      <Trash2 className="w-4 h-4 mr-1" />
-                      {t('common:actions.delete', 'Delete')}
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" />
+                    {t('common:actions.delete', 'Delete')}
                   </Button>
                 </div>
               </div>
@@ -668,6 +712,17 @@ export function TenantProjectTaskStatusSettings() {
             setImportConflicts([]);
             setConflictResolutions({});
           }}
+        />
+
+        <DeleteEntityDialog
+          id="delete-project-task-status-dialog"
+          isOpen={Boolean(statusToDelete)}
+          onClose={resetDeleteState}
+          onConfirmDelete={confirmDeleteStatus}
+          entityName={statusToDelete?.name || t('settings.statuses.this_status', 'this status')}
+          validationResult={deleteValidation}
+          isValidating={isDeleteValidating}
+          isDeleting={isDeleteProcessing}
         />
       </CardContent>
     </Card>
