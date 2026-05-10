@@ -73,3 +73,18 @@ Working notes for adding deterministic regex parsing/extraction/replacement Tran
 
 - `ee/server/src/components/workflow-designer/__tests__/TransformActionInputEditor.test.tsx` currently depends on broader module resolution that can fail in isolated runs due unresolved `@alga-psa/reference-data/actions` in this environment; targeted suites above were run successfully.
 
+
+## Review Fixes (2026-05-10)
+
+- Fixed `InputMappingEditor` regex action detection by moving the regex action-id helper to module scope so both field editor render paths can use it safely.
+- Made regex `text` inputs required with a finite primitive text-source schema instead of bare `z.unknown()`, so missing text fails validation and JSON Schema marks it required.
+- Reset regex state before replacement after match counting so sticky (`y`) regex replacements do not report a replacement count without changing text.
+- Added regression coverage for required regex text inputs and sticky first-only replacement.
+- Stabilized the workflow transform component test environment by mocking server-side action dependencies and patching React.act compatibility for this workspace's React/testing-library combination.
+
+## Validation (2026-05-10 Review Fixes)
+
+- `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/registerTransformActions.test.ts workflow/runtime/nodes/__tests__/actionCallTransformRegexSaveAsRuntime.test.ts`
+  - Passed: 2 files, 11 tests.
+- `cd ee/server && npx vitest run --config vitest.config.ts src/__tests__/services/chatWorkflowRegexTransformGuidance.test.ts src/components/workflow-designer/__tests__/TransformActionInputEditor.test.tsx src/components/workflow-designer/__tests__/workflowDataContext.test.ts src/components/workflow-run-studio/__tests__/workflowRunDisplayError.test.ts`
+  - Passed: 4 files, 28 tests.

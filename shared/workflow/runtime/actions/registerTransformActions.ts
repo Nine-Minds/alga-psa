@@ -152,8 +152,15 @@ const stringifyJsonInputSchema = z.object({
   spacing: z.number().int().min(0).max(8).optional().describe('Optional pretty-print spacing between 0 and 8')
 });
 
+const regexTextInputSchema = z.union([
+  z.string(),
+  z.number().finite(),
+  z.boolean(),
+  z.null(),
+]);
+
 const regexMatchInputSchema = z.object({
-  text: z.unknown().describe('Source text to inspect'),
+  text: regexTextInputSchema.describe('Source text to inspect'),
   pattern: withWorkflowJsonSchemaMetadata(
     z.string().min(1),
     'JavaScript regular expression pattern body (without surrounding /.../)',
@@ -169,7 +176,7 @@ const regexMatchInputSchema = z.object({
 });
 
 const regexReplaceInputSchema = z.object({
-  text: z.unknown().describe('Source text to modify'),
+  text: regexTextInputSchema.describe('Source text to modify'),
   pattern: withWorkflowJsonSchemaMetadata(
     z.string().min(1),
     'JavaScript regular expression pattern body (without surrounding /.../)',
@@ -195,7 +202,7 @@ const regexReplaceInputSchema = z.object({
 });
 
 const regexExtractInputSchema = z.object({
-  text: z.unknown().describe('Source text to inspect'),
+  text: regexTextInputSchema.describe('Source text to inspect'),
   pattern: withWorkflowJsonSchemaMetadata(
     z.string().min(1),
     'JavaScript regular expression pattern body (without surrounding /.../)',
@@ -523,6 +530,7 @@ export function registerTransformActionsV2(): void {
         ? (regex.exec(text) ? 1 : 0)
         : countRegexMatches(regex, text, REGEX_MAX_MATCHES_LIMIT, actionId);
 
+      regex.lastIndex = 0;
       const outputText = text.replace(regex, input.replacement);
       return {
         text: outputText,

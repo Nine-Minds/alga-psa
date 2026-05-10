@@ -61,6 +61,11 @@ import {
  * @param fieldOptions - Available field options from data context
  * @returns ExpressionContext for the expression editor
  */
+const isRegexTransformActionId = (actionId?: string): boolean =>
+  actionId === 'transform.regex_match' ||
+  actionId === 'transform.regex_extract' ||
+  actionId === 'transform.regex_replace';
+
 function buildExpressionContextFromOptions(fieldOptions: SelectOption[]): ExpressionContext {
   // Group fields by their root (payload, vars, meta, error)
   const payloadFields: Record<string, JsonSchema> = {};
@@ -384,10 +389,7 @@ const MappingFieldEditor: React.FC<{
     aiAssistantAvailable &&
     actionId === 'transform.query_json' &&
     field.name === 'expression';
-  const isRegexTransformAction =
-    actionId === 'transform.regex_match' ||
-    actionId === 'transform.regex_extract' ||
-    actionId === 'transform.regex_replace';
+  const isRegexTransformAction = isRegexTransformActionId(actionId);
   const showRegexAskAi =
     aiAssistantAvailable &&
     isRegexTransformAction &&
@@ -1960,17 +1962,17 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                   )}
                   {aiAssistantAvailable && (
                     (actionId === 'transform.query_json' && field.name === 'expression')
-                    || (isRegexTransformAction && (field.name === 'pattern' || field.name === 'replacement'))
+                    || (isRegexTransformActionId(actionId) && (field.name === 'pattern' || field.name === 'replacement'))
                   ) ? (
                     <button
                       id={`mapping-${stepId}-${field.name}-ask-ai`}
                       type="button"
                       className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-purple-700 transition-colors hover:text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:text-purple-300 dark:hover:text-purple-200"
                       title={t('inputMappingEditor.askAi.shortcutHint', {
-                        defaultValue: isRegexTransformAction ? 'Open Quick Ask for regex guidance' : 'Open Quick Ask for JSONata guidance'
+                        defaultValue: isRegexTransformActionId(actionId) ? 'Open Quick Ask for regex guidance' : 'Open Quick Ask for JSONata guidance'
                       })}
                       aria-label={t('inputMappingEditor.askAi.ariaLabel', {
-                        defaultValue: isRegexTransformAction ? 'Ask AI for regex help' : 'Ask AI for JSONata help'
+                        defaultValue: isRegexTransformActionId(actionId) ? 'Ask AI for regex help' : 'Ask AI for JSONata help'
                       })}
                       onClick={openQuickAsk}
                       disabled={disabled}

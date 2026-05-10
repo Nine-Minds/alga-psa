@@ -77,7 +77,7 @@ describe('registerTransformActionsV2', () => {
       .rejects.toThrow('JSON parse failed: parsed value is not a finite JSON value');
   });
 
-  it('requires JSON transform source/value schema fields instead of accepting missing unknown values', () => {
+  it('requires transform source/value schema fields instead of accepting missing unknown values', () => {
     const registry = getActionRegistryV2();
 
     expect(registry.get('transform.parse_json', 1)?.inputSchema.safeParse({}).success).toBe(false);
@@ -85,6 +85,9 @@ describe('registerTransformActionsV2', () => {
     expect(registry.get('transform.stringify_json', 1)?.inputSchema.safeParse({}).success).toBe(false);
     expect(registry.get('transform.query_json', 1)?.outputSchema.safeParse({}).success).toBe(false);
     expect(registry.get('transform.query_json', 1)?.outputSchema.safeParse({ value: undefined }).success).toBe(false);
+    expect(registry.get('transform.regex_match', 1)?.inputSchema.safeParse({ pattern: 'INC-(\\d+)' }).success).toBe(false);
+    expect(registry.get('transform.regex_extract', 1)?.inputSchema.safeParse({ pattern: 'INC-(\\d+)' }).success).toBe(false);
+    expect(registry.get('transform.regex_replace', 1)?.inputSchema.safeParse({ pattern: 'INC-(\\d+)', replacement: 'REF-$1' }).success).toBe(false);
   });
 
   it('T268/T272/T273: exposes schema-driven outputs for coalesce and array transforms', () => {
@@ -414,9 +417,14 @@ describe('registerTransformActionsV2', () => {
       regexReplace.inputSchema.parse({ text: 'srv-001', pattern: 'srv-(?<id>\\d+)', replacement: 'host-$<id>' }),
       {} as never
     );
+    const stickyFirstOnlyReplace = await regexReplace?.handler(
+      regexReplace.inputSchema.parse({ text: 'alpha alpha', pattern: 'alpha', flags: 'y', replacement: 'beta', replaceAll: false }),
+      {} as never
+    );
     expect(firstOnlyReplace).toEqual({ text: 'node host host', replacementCount: 1 });
     expect(replaceAll).toEqual({ text: 'REF-123 REF-456', replacementCount: 2 });
     expect(replaceNamed).toEqual({ text: 'host-001', replacementCount: 1 });
+    expect(stickyFirstOnlyReplace).toEqual({ text: 'beta alpha', replacementCount: 1 });
 
     const zeroWidth = await regexExtract?.handler(
       regexExtract.inputSchema.parse({ text: 'abc', pattern: '^', flags: 'gm', maxMatches: 5 }),

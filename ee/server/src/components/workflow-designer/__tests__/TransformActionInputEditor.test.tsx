@@ -4,6 +4,28 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+// React 18 in this workspace does not expose React.act, while the installed
+// testing-library/react act compat path expects it when NODE_ENV selects the
+// react-dom/test-utils production wrapper.
+(React as unknown as { act?: (callback: () => unknown) => unknown }).act ??= async (callback: () => unknown) => {
+  const result = callback();
+  if (result && typeof (result as Promise<unknown>).then === 'function') {
+    await result;
+  }
+  await new Promise((resolve) => setTimeout(resolve, 0));
+};
+
+vi.mock('@alga-psa/core/secrets', () => ({
+  getSecretProviderInstance: vi.fn().mockResolvedValue({
+    getAppSecret: vi.fn().mockResolvedValue(null),
+    getTenantSecret: vi.fn().mockResolvedValue(null),
+    setTenantSecret: vi.fn().mockResolvedValue(undefined),
+  }),
+  getSecret: vi.fn().mockResolvedValue(null),
+  EnvSecretProvider: class {},
+  FileSystemSecretProvider: class {},
+}));
+
 vi.mock('@alga-psa/integrations/actions', () => ({
   getTicketFieldOptions: vi.fn().mockResolvedValue({
     options: {
@@ -25,6 +47,25 @@ vi.mock('@alga-psa/clients/actions', () => ({
 
 vi.mock('@alga-psa/teams/actions', () => ({
   getTeamsBasic: vi.fn().mockResolvedValue([]),
+  getTeamAvatarUrlsBatchAction: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock('@alga-psa/user-composition/actions', () => ({
+  getAllUsersBasic: vi.fn().mockResolvedValue([]),
+  getUserAvatarUrlsBatchAction: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock('@alga-psa/tickets/actions', () => ({
+  getTicketById: vi.fn().mockResolvedValue(null),
+  getTicketsForList: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@alga-psa/projects/actions/projectActions', () => ({
+  getProjectsWithPhases: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@alga-psa/projects/actions/projectTaskActions', () => ({
+  getProjectTaskData: vi.fn().mockResolvedValue({ tasks: [], statuses: [] }),
 }));
 
 vi.mock('@alga-psa/reference-data/actions', () => ({
@@ -202,7 +243,7 @@ describe('transform action input editor', () => {
       </QuickAskProvider>
     );
 
-    const askAi = screen.getByRole('button', { name: 'Ask AI for JSONata help' });
+    const askAi = await screen.findByRole('button', { name: 'Ask AI for JSONata help' });
     expect(askAi).toBeInTheDocument();
 
     fireEvent.click(askAi);
@@ -239,7 +280,7 @@ describe('transform action input editor', () => {
       </QuickAskProvider>
     );
 
-    const askAi = screen.getByRole('button', { name: 'Ask AI for regex help' });
+    const askAi = await screen.findByRole('button', { name: 'Ask AI for regex help' });
     expect(askAi).toBeInTheDocument();
 
     fireEvent.click(askAi);
