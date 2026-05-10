@@ -193,3 +193,10 @@ Working notes for implementing tenant-scoped client portal SSO and Entra entitle
 ## Commands Run
 
 - `npx vitest run src/test/unit/portalInvitationOAuthPrelink.contract.test.ts src/test/unit/contacts/ContactEmailDefaultConsumer.contract.test.ts` (workdir: `server/`) ✅
+- (2026-05-09) Marked `F060` complete after verification: lifecycle deactivation path explicitly targets only `users` rows with `client_portal_entra_metadata.managed=true` plus matching Entra identity, so invitation/manual users without that metadata remain outside Entra lifecycle ownership.
+- (2026-05-09) Implemented `F062`: regenerated API route inventory via `scripts/generate_route_inventory.py`; inventory now includes both client portal SSO endpoints (`/api/auth/client-portal/sso/discover`, `/api/auth/client-portal/sso/resolve`) in `docs/openapi/route-inventory.json` and `.csv`.
+
+## Commands Run
+
+- `python3 scripts/generate_route_inventory.py` ✅
+- `rg -n "client-portal/sso/discover|client-portal/sso/resolve" docs/openapi/route-inventory.json docs/openapi/route-inventory.csv` ✅

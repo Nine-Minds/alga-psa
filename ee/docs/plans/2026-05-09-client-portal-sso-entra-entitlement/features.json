@@ -515,7 +515,7 @@
   {
     "id": "F060",
     "description": "Keep invitation-created manual portal users outside Entra deactivation unless explicitly marked Entra-managed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Lifecycle"
     ]
@@ -532,7 +532,7 @@
   {
     "id": "F062",
     "description": "Update OpenAPI route inventory or auth API docs for new client portal SSO endpoints if the repo generation path requires it.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ]
