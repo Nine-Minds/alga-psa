@@ -74,11 +74,18 @@ Rolling notes for adding first-party workflow integration modules and the first 
 - (2026-05-10) Added/updated tests:
   - `shared/workflow/runtime/__tests__/workflowIntegrationModuleRegistry.test.ts` (duplicate-key + metadata roundtrip)
   - `shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts` (explicit module record behavior)
+  - `ee/packages/workflows/src/actions/workflow-runtime-v2-designer-catalog.integration-filtering.test.ts`:
+    - `T003` active NinjaOne tenant includes `app:ninjaone` in designer catalog
+    - `T004` inactive/missing NinjaOne excludes `app:ninjaone`
+    - `T005` extension app filtering still works with first-party filtering (`app:acme.sync` allowed when installed)
+
+- (2026-05-10) Added targeted unit/integration-style coverage around `listWorkflowDesignerActionCatalogAction` filter behavior by mocking auth/runtime and exercising `rmm_integrations` plus extension-install query paths. Rationale: prove regression-safe catalog filtering without requiring full end-to-end server harness for this plan slice.
 
 ## Validation Runbook
 
 - `npx vitest run --config shared/vitest.config.ts shared/workflow/runtime/__tests__/workflowIntegrationModuleRegistry.test.ts shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts`
 - `npx tsc -p ee/packages/workflows/tsconfig.json --noEmit`
+- `cd ee/packages/workflows && npx vitest run src/actions/workflow-runtime-v2-designer-catalog.integration-filtering.test.ts`
 
 ## Gotchas
 

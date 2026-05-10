@@ -21,7 +21,7 @@
   {
     "id": "T003",
     "description": "DB-backed integration test: tenant with active NinjaOne rmm_integrations row receives the NinjaOne designer catalog record.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F008"
@@ -30,7 +30,7 @@
   {
     "id": "T004",
     "description": "DB-backed integration test: tenants with no NinjaOne row, inactive NinjaOne row, or null connected_at do not receive the NinjaOne designer catalog record.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F008",
@@ -40,7 +40,7 @@
   {
     "id": "T005",
     "description": "Regression test that extension app catalog filtering still works after first-party integration filtering is added.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005"
     ]
