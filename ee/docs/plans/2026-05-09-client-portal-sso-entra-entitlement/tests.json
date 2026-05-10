@@ -278,5 +278,15 @@
     "featureIds": [
       "F024"
     ]
+  },
+  {
+    "id": "T028",
+    "description": "Settings behavior: SSO preferences default client portal Entra provisioning mode to disabled, default entitlement-removal deactivation to true, and expose UI controls for both values.",
+    "implemented": true,
+    "featureIds": [
+      "F025",
+      "F026",
+      "F027"
+    ]
   }
 ]

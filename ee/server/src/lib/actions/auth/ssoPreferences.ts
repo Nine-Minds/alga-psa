@@ -12,13 +12,28 @@ import { assertTierAccess } from "server/src/lib/tier-gating/assertTierAccess";
 export interface SsoPreferences {
   autoLinkInternal: boolean;
   autoLinkClient: boolean;
+  clientPortalEntraProvisioningMode: "disabled" | "built_in" | "workflow_managed";
+  deactivateEntraManagedPortalUsersOnEntitlementRemoval: boolean;
 }
 
 function normalizePreferences(raw?: any): SsoPreferences {
   const prefs = raw?.sso ?? {};
+  const provisioningModeRaw = typeof prefs.clientPortalEntraProvisioningMode === "string"
+    ? prefs.clientPortalEntraProvisioningMode
+    : "disabled";
+  const provisioningMode =
+    provisioningModeRaw === "built_in" || provisioningModeRaw === "workflow_managed"
+      ? provisioningModeRaw
+      : "disabled";
+
   return {
     autoLinkInternal: Boolean(prefs.autoLinkInternal),
     autoLinkClient: Boolean(prefs.autoLinkClient),
+    clientPortalEntraProvisioningMode: provisioningMode,
+    deactivateEntraManagedPortalUsersOnEntitlementRemoval:
+      prefs.deactivateEntraManagedPortalUsersOnEntitlementRemoval === undefined
+        ? true
+        : Boolean(prefs.deactivateEntraManagedPortalUsersOnEntitlementRemoval),
   };
 }
 
@@ -58,6 +73,12 @@ export const updateSsoPreferencesAction = withAuth(async (
     autoLinkInternal:
       updates.autoLinkInternal ?? Boolean(currentSettings?.sso?.autoLinkInternal),
     autoLinkClient: updates.autoLinkClient ?? Boolean(currentSettings?.sso?.autoLinkClient),
+    clientPortalEntraProvisioningMode:
+      updates.clientPortalEntraProvisioningMode ??
+      normalizePreferences(currentSettings).clientPortalEntraProvisioningMode,
+    deactivateEntraManagedPortalUsersOnEntitlementRemoval:
+      updates.deactivateEntraManagedPortalUsersOnEntitlementRemoval ??
+      normalizePreferences(currentSettings).deactivateEntraManagedPortalUsersOnEntitlementRemoval,
   };
 
   const updatedSettings = {
@@ -66,6 +87,9 @@ export const updateSsoPreferencesAction = withAuth(async (
       ...(currentSettings?.sso ?? {}),
       autoLinkInternal: nextPreferences.autoLinkInternal,
       autoLinkClient: nextPreferences.autoLinkClient,
+      clientPortalEntraProvisioningMode: nextPreferences.clientPortalEntraProvisioningMode,
+      deactivateEntraManagedPortalUsersOnEntitlementRemoval:
+        nextPreferences.deactivateEntraManagedPortalUsersOnEntitlementRemoval,
     },
   };
 

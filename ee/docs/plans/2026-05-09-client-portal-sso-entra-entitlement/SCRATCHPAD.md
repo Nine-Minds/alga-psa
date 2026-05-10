@@ -109,3 +109,10 @@ Working notes for implementing tenant-scoped client portal SSO and Entra entitle
 ## Commands Run
 
 - `npx vitest run src/components/settings/security/__tests__/SsoBulkAssignment.autoLinkClient.contract.test.ts` (workdir: `ee/server/`) ✅
+- (2026-05-09) Implemented `F025`/`F026` in `ee/server/src/lib/actions/auth/ssoPreferences.ts`: added tenant-level SSO preference fields `clientPortalEntraProvisioningMode` (`disabled` default) and `deactivateEntraManagedPortalUsersOnEntitlementRemoval` (`true` default).
+- (2026-05-09) Implemented `F027` in `ee/server/src/components/settings/security/SsoBulkAssignment.tsx`: added settings UI controls for client portal provisioning mode (`disabled`/`built_in`/`workflow_managed`) and entitlement-removal deactivation toggle.
+- (2026-05-09) Added focused checklist test `T028` and extended `ee/server/src/components/settings/security/__tests__/SsoBulkAssignment.autoLinkClient.contract.test.ts` to cover the new settings UI wiring plus backing preference-field contract checks.
+
+## Commands Run
+
+- `npx vitest run src/components/settings/security/__tests__/SsoBulkAssignment.autoLinkClient.contract.test.ts` (workdir: `ee/server/`) ✅

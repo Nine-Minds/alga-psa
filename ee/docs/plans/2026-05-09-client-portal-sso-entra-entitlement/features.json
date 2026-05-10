@@ -211,7 +211,7 @@
   {
     "id": "F025",
     "description": "Add client portal Entra provisioning mode configuration defaulting to disabled, with built-in and workflow-managed modes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Configuration",
       "Rollout / Migration"
@@ -220,7 +220,7 @@
   {
     "id": "F026",
     "description": "Add tenant setting deactivateEntraManagedPortalUsersOnEntitlementRemoval defaulting to true.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Configuration",
       "Lifecycle"
@@ -229,7 +229,7 @@
   {
     "id": "F027",
     "description": "Add settings UI controls for client portal Entra provisioning mode and entitlement-removal deactivation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Configuration",
       "UX / UI Notes"
