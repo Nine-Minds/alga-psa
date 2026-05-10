@@ -499,6 +499,38 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
 
     return users;
   }
+
+  public async listSecurityGroupsForTenant(
+    input: EntraListUsersForTenantInput
+  ): Promise<Array<{ id: string; displayName: string | null }>> {
+    const groups: Array<{ id: string; displayName: string | null }> = [];
+    const seen = new Set<string>();
+    const encodedTenant = encodeURIComponent(input.managedTenantId);
+    let nextUrl =
+      `${GRAPH_BASE_URL}/tenantRelationships/managedTenants/tenants/${encodedTenant}/groups` +
+      `?$select=id,displayName,securityEnabled&$top=200`;
+
+    while (nextUrl) {
+      const payload = await this.graphGet(input.tenant, nextUrl);
+      const rows = Array.isArray(payload.value) ? payload.value : [];
+      for (const row of rows) {
+        const raw = toObject(row);
+        const id = getNullableString(raw.id);
+        if (!id || seen.has(id)) continue;
+        const securityEnabled = getBoolean(raw.securityEnabled, true);
+        if (!securityEnabled) continue;
+        seen.add(id);
+        groups.push({
+          id,
+          displayName: getNullableString(raw.displayName),
+        });
+      }
+      const candidateNextLink = getNullableString(payload['@odata.nextLink']);
+      nextUrl = candidateNextLink || '';
+    }
+
+    return groups;
+  }
 }
 
 export function createDirectProviderAdapter(): EntraProviderAdapter {

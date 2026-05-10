@@ -4,7 +4,7 @@ import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getEntraMappingPreview, confirmEntraMappings } from '@alga-psa/integrations/actions';
+import { getEntraMappingPreview, confirmEntraMappings, listEntraMappingGroups } from '@alga-psa/integrations/actions';
 import { skipEntraTenantMapping, importEntraTenantAsClient } from '@alga-psa/integrations/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
@@ -28,6 +28,7 @@ interface MappingTenantRow {
   state: 'auto_matched' | 'needs_review' | 'unmatched' | 'imported';
   candidates: MappingCandidate[];
   selectedClientId: string | null;
+  selectedEntitlementGroupId: string | null;
   isSkipped: boolean;
 }
 
@@ -72,6 +73,7 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
         },
       ],
       selectedClientId: String(match.clientId || '') || null,
+      selectedEntitlementGroupId: null,
       isSkipped: false,
     });
   }
@@ -92,6 +94,7 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
         reason: (candidate?.reason || 'fuzzy_name') as MatchReason,
       })),
       selectedClientId: null,
+      selectedEntitlementGroupId: null,
       isSkipped: false,
     });
   }
@@ -106,6 +109,7 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
       state: 'unmatched',
       candidates: [],
       selectedClientId: null,
+      selectedEntitlementGroupId: null,
       isSkipped: false,
     });
   }
@@ -138,6 +142,8 @@ export function EntraTenantMappingTable({
   const [importingByRow, setImportingByRow] = React.useState<Record<string, boolean>>({});
   const [confirmingMappings, setConfirmingMappings] = React.useState(false);
   const [confirmFeedback, setConfirmFeedback] = React.useState<string | null>(null);
+  const [groupOptionsByTenant, setGroupOptionsByTenant] = React.useState<Record<string, Array<{ id: string; displayName: string | null }>>>({});
+  const [groupLoadingByTenant, setGroupLoadingByTenant] = React.useState<Record<string, boolean>>({});
 
   const loadPreview = React.useCallback(async () => {
     setLoading(true);
@@ -218,6 +224,8 @@ export function EntraTenantMappingTable({
           clientId: String(row.selectedClientId),
           mappingState: 'mapped' as const,
           confidenceScore: row.candidates[0]?.confidenceScore ?? null,
+          clientPortalEntitlementGroupId: row.selectedEntitlementGroupId,
+          clientPortalEntitlementMembershipMode: 'transitive' as const,
         })),
     [rows]
   );
@@ -231,6 +239,35 @@ export function EntraTenantMappingTable({
       )
     );
   }, []);
+
+  const updateEntitlementGroupSelection = React.useCallback((managedTenantId: string, selectedEntitlementGroupId: string) => {
+    setRows((currentRows) =>
+      currentRows.map((row) =>
+        row.managedTenantId === managedTenantId
+          ? { ...row, selectedEntitlementGroupId: selectedEntitlementGroupId || null }
+          : row
+      )
+    );
+  }, []);
+
+  const loadGroupsForManagedTenant = React.useCallback(async (managedTenantId: string) => {
+    if (!managedTenantId || groupOptionsByTenant[managedTenantId] || groupLoadingByTenant[managedTenantId]) {
+      return;
+    }
+
+    setGroupLoadingByTenant((current) => ({ ...current, [managedTenantId]: true }));
+    try {
+      const result = await listEntraMappingGroups({ managedTenantId });
+      if ('error' in result) {
+        setGroupOptionsByTenant((current) => ({ ...current, [managedTenantId]: [] }));
+        return;
+      }
+      const groups = Array.isArray(result.data?.groups) ? result.data.groups : [];
+      setGroupOptionsByTenant((current) => ({ ...current, [managedTenantId]: groups }));
+    } finally {
+      setGroupLoadingByTenant((current) => ({ ...current, [managedTenantId]: false }));
+    }
+  }, [groupOptionsByTenant, groupLoadingByTenant]);
 
   const handleSkip = React.useCallback(async (row: MappingTenantRow) => {
     if (!row.managedTenantId) {
@@ -290,7 +327,7 @@ export function EntraTenantMappingTable({
       setRows((currentRows) =>
         currentRows.map((r) =>
           r.managedTenantId === row.managedTenantId && 'clientId' in result.data
-            ? { ...r, state: 'imported', selectedClientId: result.data.clientId, isSkipped: false }
+            ? { ...r, state: 'imported', selectedClientId: result.data.clientId, selectedEntitlementGroupId: null, isSkipped: false }
             : r
         )
       );
@@ -398,6 +435,7 @@ export function EntraTenantMappingTable({
               <th className="px-3 py-2 font-medium">{t('integrations.entra.tenantMapping.columns.confidence')}</th>
               <th className="px-3 py-2 font-medium">{t('integrations.entra.tenantMapping.columns.selectClient')}</th>
               <th className="px-3 py-2 font-medium">{t('integrations.entra.tenantMapping.columns.actions')}</th>
+              <th className="px-3 py-2 font-medium">Portal access group</th>
             </tr>
           </thead>
           <tbody>
@@ -486,13 +524,32 @@ export function EntraTenantMappingTable({
                       <span className="text-muted-foreground">—</span>
                     )}
                   </td>
+                  <td className="px-3 py-2">
+                    <div className="flex flex-col gap-1">
+                      <select
+                        id={`entra-entitlement-group-${row.managedTenantId}`}
+                        className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                        disabled={!row.selectedClientId || row.isSkipped || Boolean(groupLoadingByTenant[row.managedTenantId])}
+                        value={row.selectedEntitlementGroupId || ''}
+                        onFocus={() => void loadGroupsForManagedTenant(row.managedTenantId)}
+                        onChange={(event) => updateEntitlementGroupSelection(row.managedTenantId, event.target.value)}
+                      >
+                        <option value="">{groupLoadingByTenant[row.managedTenantId] ? 'Loading groups…' : 'No group selected'}</option>
+                        {(groupOptionsByTenant[row.managedTenantId] || []).map((group) => (
+                          <option key={group.id} value={group.id}>
+                            {group.displayName || group.id}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </td>
                 </tr>
               );
             })}
 
             {!loading && rows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">
+                <td colSpan={8} className="px-3 py-6 text-center text-muted-foreground">
                   {t('integrations.entra.tenantMapping.empty')}
                 </td>
               </tr>

@@ -265,7 +265,7 @@
   {
     "id": "F031",
     "description": "Load selectable Entra groups for a managed tenant/client entitlement configuration UI.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Configuration",
       "UX / UI Notes"

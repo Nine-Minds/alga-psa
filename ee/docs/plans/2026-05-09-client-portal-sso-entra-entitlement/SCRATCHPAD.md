@@ -116,11 +116,14 @@ Working notes for implementing tenant-scoped client portal SSO and Entra entitle
 - (2026-05-09) Implemented `T010` completion for `F028`: extended `SsoBulkAssignment.autoLinkClient.contract.test.ts` with contract assertions that mapping confirm route/service include the per-mapping provisioning mode persistence path; added unit coverage `T065` in `confirmEntraMappingsService.clientLink.test.ts` validating default `disabled` persistence when mode is omitted.
 - (2026-05-09) Implemented `F029`: added per-managed-mapping entitlement group persistence field `client_portal_entitlement_group_id` on `entra_client_tenant_mappings` (migration `20260509173000_add_entitlement_group_to_entra_mappings.cjs`), extended mapping confirm route parsing (`clientPortalEntitlementGroupId` plus snake_case alias), and persisted normalized value in `confirmMappingsService` update/insert paths.
 - (2026-05-09) Implemented `F030`: added per-managed-mapping entitlement membership mode field `client_portal_entitlement_membership_mode` on `entra_client_tenant_mappings` (migration `20260509174500_add_entitlement_membership_mode_to_entra_mappings.cjs`), parsed confirm payload (`clientPortalEntitlementMembershipMode` plus snake_case alias), and persisted normalized mode with default `transitive` in `confirmMappingsService`.
+- (2026-05-09) Implemented `F031`: added Entra mapping group loader endpoint `GET /api/integrations/entra/mappings/groups?managedTenantId=...`, extended Entra provider adapters with `listSecurityGroupsForTenant`, added `listEntraMappingGroups` action in `@alga-psa/integrations/actions`, and wired `EntraTenantMappingTable` to lazy-load/select entitlement groups per managed tenant row.
 
 ## Commands Run
 
 - `npx vitest run src/components/settings/security/__tests__/SsoBulkAssignment.autoLinkClient.contract.test.ts` (workdir: `ee/server/`) ✅
 - `npx vitest run src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts` (workdir: `ee/server/`) ✅
 - `npx vitest run src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts` (workdir: `ee/server/`) ✅
+- `npx vitest run src/__tests__/unit/entraTenantMappingTable.selection.test.tsx` (workdir: `ee/server/`) ✅
+- `npx vitest run src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts src/__tests__/unit/entraTenantMappingTable.selection.test.tsx` (workdir: `ee/server/`) ✅
 - `npx vitest run src/components/settings/security/__tests__/SsoBulkAssignment.autoLinkClient.contract.test.ts` (workdir: `ee/server/`) ✅
 - `npx vitest run src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts` (workdir: `ee/server/`) ✅

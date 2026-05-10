@@ -7,12 +7,14 @@ import { EntraTenantMappingTable } from '@ee/components/settings/integrations/En
 const {
   getEntraMappingPreviewMock,
   confirmEntraMappingsMock,
+  listEntraMappingGroupsMock,
   skipEntraTenantMappingMock,
   importEntraTenantAsClientMock,
   getAllClientsMock,
 } = vi.hoisted(() => ({
   getEntraMappingPreviewMock: vi.fn(),
   confirmEntraMappingsMock: vi.fn(),
+  listEntraMappingGroupsMock: vi.fn(),
   skipEntraTenantMappingMock: vi.fn(),
   importEntraTenantAsClientMock: vi.fn(),
   getAllClientsMock: vi.fn(),
@@ -21,6 +23,7 @@ const {
 vi.mock('@alga-psa/integrations/actions', () => ({
   getEntraMappingPreview: getEntraMappingPreviewMock,
   confirmEntraMappings: confirmEntraMappingsMock,
+  listEntraMappingGroups: listEntraMappingGroupsMock,
   skipEntraTenantMapping: skipEntraTenantMappingMock,
   importEntraTenantAsClient: importEntraTenantAsClientMock,
 }));
@@ -78,6 +81,7 @@ describe('EntraTenantMappingTable client selection', () => {
       data: { confirmedMappings: 1 },
     });
     skipEntraTenantMappingMock.mockResolvedValue({ data: { skipped: true } });
+    listEntraMappingGroupsMock.mockResolvedValue({ success: true, data: { groups: [] } });
     importEntraTenantAsClientMock.mockResolvedValue({
       success: true,
       data: { clientId: 'client-import-default', managedTenantId: 'managed-import-default' },
@@ -132,8 +136,8 @@ describe('EntraTenantMappingTable client selection', () => {
     expect(fuzzyRow).toBeTruthy();
     expect(unmatchedRow).toBeTruthy();
 
-    const fuzzySelect = within(fuzzyRow as HTMLElement).getByRole('combobox') as HTMLSelectElement;
-    const unmatchedSelect = within(unmatchedRow as HTMLElement).getByRole('combobox') as HTMLSelectElement;
+    const fuzzySelect = within(fuzzyRow as HTMLElement).getByTestId('client-picker-entra-client-picker-managed-fuzzy') as HTMLSelectElement;
+    const unmatchedSelect = within(unmatchedRow as HTMLElement).getByTestId('client-picker-entra-client-picker-managed-unmatched') as HTMLSelectElement;
 
     fireEvent.change(fuzzySelect, { target: { value: 'client-alpha' } });
     fireEvent.change(unmatchedSelect, { target: { value: 'client-beta' } });
@@ -195,12 +199,12 @@ describe('EntraTenantMappingTable client selection', () => {
     await screen.findByText('Auto Tenant One');
     await screen.findByText('Auto Tenant Two');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Preselect Exact Matches' }));
+    fireEvent.click(screen.getByRole('button', { name: 'integrations.entra.tenantMapping.actions.preselectExact' }));
 
     const rowOne = screen.getByText('Auto Tenant One').closest('tr') as HTMLElement;
     const rowTwo = screen.getByText('Auto Tenant Two').closest('tr') as HTMLElement;
-    const selectOne = within(rowOne).getByRole('combobox') as HTMLSelectElement;
-    const selectTwo = within(rowTwo).getByRole('combobox') as HTMLSelectElement;
+    const selectOne = within(rowOne).getByTestId('client-picker-entra-client-picker-managed-auto-1') as HTMLSelectElement;
+    const selectTwo = within(rowTwo).getByTestId('client-picker-entra-client-picker-managed-auto-2') as HTMLSelectElement;
 
     expect(selectOne.value).toBe('client-one');
     expect(selectTwo.value).toBe('client-two');
@@ -237,9 +241,9 @@ describe('EntraTenantMappingTable client selection', () => {
 
     await screen.findByText('Unmapped Import Tenant');
     const initialRow = screen.getByText('Unmapped Import Tenant').closest('tr') as HTMLElement;
-    expect(within(initialRow).getByText('Unmatched')).toBeTruthy();
+    expect(within(initialRow).getByText('integrations.entra.tenantMapping.states.unmatched')).toBeTruthy();
 
-    fireEvent.click(within(initialRow).getByRole('button', { name: 'Import as new client' }));
+    fireEvent.click(within(initialRow).getByRole('button', { name: 'integrations.entra.tenantMapping.actions.import' }));
 
     await waitFor(() => {
       expect(importEntraTenantAsClientMock).toHaveBeenCalledWith({
@@ -248,10 +252,10 @@ describe('EntraTenantMappingTable client selection', () => {
     });
 
     await waitFor(() => {
-      const updatedRow = screen.getByText('Unmapped Import Tenant').closest('tr') as HTMLElement;
-      expect(within(updatedRow).getByText('Imported')).toBeTruthy();
-      expect(within(updatedRow).queryByText('Auto-matched')).toBeNull();
-      const updatedSelect = within(updatedRow).getByRole('combobox') as HTMLSelectElement;
+      const updatedRow = screen.getAllByText('Unmapped Import Tenant')[0].closest('tr') as HTMLElement;
+      expect(within(updatedRow).getByText('integrations.entra.tenantMapping.states.imported')).toBeTruthy();
+      expect(within(updatedRow).queryByText('integrations.entra.tenantMapping.states.autoMatched')).toBeNull();
+      const updatedSelect = within(updatedRow).getByTestId('client-picker-entra-client-picker-managed-unmapped-130') as HTMLSelectElement;
       expect(updatedSelect.value).toBe('client-imported-130');
     });
   });
@@ -284,10 +288,10 @@ describe('EntraTenantMappingTable client selection', () => {
 
     await screen.findByText('Unmatched Confirm Tenant');
     const row = screen.getByText('Unmatched Confirm Tenant').closest('tr') as HTMLElement;
-    const select = within(row).getByRole('combobox') as HTMLSelectElement;
+    const select = within(row).getByTestId('client-picker-entra-client-picker-managed-unmatched-131') as HTMLSelectElement;
     fireEvent.change(select, { target: { value: 'client-131' } });
 
-    const confirmButton = screen.getByRole('button', { name: 'Confirm Selected Mappings' });
+    const confirmButton = screen.getByRole('button', { name: 'integrations.entra.tenantMapping.actions.confirmSelected' });
     fireEvent.click(confirmButton);
 
     await waitFor(() => {
@@ -362,7 +366,7 @@ describe('EntraTenantMappingTable client selection', () => {
       );
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Skip' }));
+    fireEvent.click(screen.getByRole('button', { name: 'integrations.entra.tenantMapping.actions.skip' }));
 
     await waitFor(() => {
       expect(onSummaryChange).toHaveBeenCalledWith(

@@ -259,6 +259,39 @@ export class CippProviderAdapter implements EntraProviderAdapter {
 
     return users;
   }
+
+  public async listSecurityGroupsForTenant(
+    input: EntraListUsersForTenantInput
+  ): Promise<Array<{ id: string; displayName: string | null }>> {
+    const credentials = await getEntraCippCredentials(input.tenant);
+    if (!credentials) {
+      throw new Error('CIPP credentials are not configured.');
+    }
+
+    const tenantId = encodeURIComponent(input.managedTenantId);
+    const payload = await this.requestFromCandidates(credentials.baseUrl, credentials.apiToken, [
+      `/api/listgroups?tenantId=${tenantId}`,
+      `/api/groups?tenantId=${tenantId}`,
+      `/api/tenant/${tenantId}/groups`,
+      `/api/tenants/${tenantId}/groups`,
+    ]);
+    const rows = extractCollection(payload);
+    const groups: Array<{ id: string; displayName: string | null }> = [];
+    const seen = new Set<string>();
+
+    for (const row of rows) {
+      const raw = toObject(row);
+      const id = toStringOrNull(raw.id) || toStringOrNull(raw.groupId) || toStringOrNull(raw.objectId);
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      groups.push({
+        id,
+        displayName: toStringOrNull(raw.displayName) || toStringOrNull(raw.name),
+      });
+    }
+
+    return groups;
+  }
 }
 
 export function createCippProviderAdapter(): EntraProviderAdapter {
