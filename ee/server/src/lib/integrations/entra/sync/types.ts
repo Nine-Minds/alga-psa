@@ -10,6 +10,11 @@ export interface EntraSyncUser {
   jobTitle: string | null;
   mobilePhone: string | null;
   businessPhones: string[];
+  clientPortalEntitlement?: {
+    groupId: string | null;
+    membershipMode: 'transitive' | 'direct';
+    isMember: boolean | null;
+  };
   raw: Record<string, unknown>;
 }
 

@@ -282,7 +282,7 @@
   {
     "id": "F033",
     "description": "Extend Entra sync user data or sync context with portal access group membership information.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Entra Provisioning",
       "Entitlement Model"

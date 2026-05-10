@@ -20,6 +20,9 @@ export interface EntraManagedTenantRef {
   managedTenantId: string;
   entraTenantId: string;
   clientId?: string | null;
+  clientPortalEntraProvisioningMode?: 'disabled' | 'built_in' | 'workflow_managed';
+  clientPortalEntitlementGroupId?: string | null;
+  clientPortalEntitlementMembershipMode?: 'transitive' | 'direct';
 }
 
 export interface EntraSyncWorkflowInput {

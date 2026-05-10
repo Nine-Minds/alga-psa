@@ -12,6 +12,11 @@ export interface ExecuteEntraSyncInput {
   clientId: string;
   managedTenantId: string | null;
   users: EntraSyncUser[];
+  portalEntitlement?: {
+    provisioningMode: 'disabled' | 'built_in' | 'workflow_managed';
+    groupId: string | null;
+    membershipMode: 'transitive' | 'direct';
+  };
   fieldSyncConfig?: Record<string, unknown>;
   dryRun?: boolean;
 }
@@ -34,7 +39,17 @@ export async function executeEntraSync(
   const counters = new EntraSyncResultAggregator();
 
   for (const user of input.users) {
-    const candidates = await findContactMatchesByEmail(input.tenantId, input.clientId, user);
+    const userWithEntitlement: EntraSyncUser = input.portalEntitlement
+      ? {
+          ...user,
+          clientPortalEntitlement: {
+            groupId: input.portalEntitlement.groupId,
+            membershipMode: input.portalEntitlement.membershipMode,
+            isMember: null,
+          },
+        }
+      : user;
+    const candidates = await findContactMatchesByEmail(input.tenantId, input.clientId, userWithEntitlement);
 
     if (candidates.length > 1) {
       counters.increment('ambiguous');
@@ -43,7 +58,7 @@ export async function executeEntraSync(
           input.tenantId,
           input.clientId,
           input.managedTenantId,
-          user,
+          userWithEntitlement,
           candidates
         );
       }
@@ -57,7 +72,7 @@ export async function executeEntraSync(
           input.tenantId,
           input.clientId,
           candidates[0],
-          user,
+          userWithEntitlement,
           input.fieldSyncConfig
         );
       }
@@ -66,7 +81,7 @@ export async function executeEntraSync(
 
     counters.increment('created');
     if (!dryRun) {
-      await createContactForEntraUser(input.tenantId, input.clientId, user);
+      await createContactForEntraUser(input.tenantId, input.clientId, userWithEntitlement);
     }
   }
 

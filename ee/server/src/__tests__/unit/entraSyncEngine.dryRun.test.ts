@@ -92,4 +92,41 @@ describe('executeEntraSync dry-run behavior', () => {
     expect(linkExistingMatchedContactMock).not.toHaveBeenCalled();
     expect(createContactForEntraUserMock).not.toHaveBeenCalled();
   });
+
+  it('T112: threads portal entitlement context into each sync user when provided', async () => {
+    findContactMatchesByEmailMock.mockReset();
+    queueAmbiguousContactMatchMock.mockReset();
+    linkExistingMatchedContactMock.mockReset();
+    createContactForEntraUserMock.mockReset();
+
+    findContactMatchesByEmailMock.mockResolvedValueOnce([]);
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    await executeEntraSync({
+      tenantId: 'tenant-112',
+      clientId: 'client-112',
+      managedTenantId: 'managed-112',
+      dryRun: true,
+      users: [buildUser('entitled')],
+      portalEntitlement: {
+        provisioningMode: 'built_in',
+        groupId: 'group-112',
+        membershipMode: 'transitive',
+      },
+    });
+
+    expect(findContactMatchesByEmailMock).toHaveBeenCalledTimes(1);
+    expect(findContactMatchesByEmailMock).toHaveBeenCalledWith(
+      'tenant-112',
+      'client-112',
+      expect.objectContaining({
+        entraObjectId: 'entra-object-entitled',
+        clientPortalEntitlement: {
+          groupId: 'group-112',
+          membershipMode: 'transitive',
+          isMember: null,
+        },
+      })
+    );
+  });
 });

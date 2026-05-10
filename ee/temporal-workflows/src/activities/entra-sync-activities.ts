@@ -60,7 +60,14 @@ export async function loadMappedTenantsActivity(
         'm.is_active': true,
         'm.mapping_state': 'mapped',
       })
-      .select('m.managed_tenant_id', 'm.client_id', 't.entra_tenant_id')
+      .select(
+        'm.managed_tenant_id',
+        'm.client_id',
+        't.entra_tenant_id',
+        'm.client_portal_entra_provisioning_mode',
+        'm.client_portal_entitlement_group_id',
+        'm.client_portal_entitlement_membership_mode'
+      )
       .orderBy('m.updated_at', 'asc');
 
     if (input.managedTenantId) {
@@ -74,6 +81,9 @@ export async function loadMappedTenantsActivity(
     managed_tenant_id: string;
     entra_tenant_id: string;
     client_id: string | null;
+    client_portal_entra_provisioning_mode: 'disabled' | 'built_in' | 'workflow_managed' | null;
+    client_portal_entitlement_group_id: string | null;
+    client_portal_entitlement_membership_mode: 'transitive' | 'direct' | null;
   };
 
   return {
@@ -81,6 +91,16 @@ export async function loadMappedTenantsActivity(
       managedTenantId: String(row.managed_tenant_id),
       entraTenantId: String(row.entra_tenant_id),
       clientId: row.client_id ? String(row.client_id) : null,
+      clientPortalEntraProvisioningMode:
+        row.client_portal_entra_provisioning_mode === 'built_in' ||
+        row.client_portal_entra_provisioning_mode === 'workflow_managed'
+          ? row.client_portal_entra_provisioning_mode
+          : 'disabled',
+      clientPortalEntitlementGroupId: row.client_portal_entitlement_group_id
+        ? String(row.client_portal_entitlement_group_id)
+        : null,
+      clientPortalEntitlementMembershipMode:
+        row.client_portal_entitlement_membership_mode === 'direct' ? 'direct' : 'transitive',
     })),
   };
 }
@@ -129,6 +149,11 @@ export async function syncTenantUsersActivity(
     clientId: input.mapping.clientId,
     managedTenantId: input.mapping.managedTenantId,
     users: filteredUsers.included,
+    portalEntitlement: {
+      provisioningMode: input.mapping.clientPortalEntraProvisioningMode || 'disabled',
+      groupId: input.mapping.clientPortalEntitlementGroupId || null,
+      membershipMode: input.mapping.clientPortalEntitlementMembershipMode || 'transitive',
+    },
     fieldSyncConfig,
     dryRun: false,
   });
