@@ -178,7 +178,7 @@
   {
     "id": "F021",
     "description": "If the lightweight Ask AI trigger is included, render it only when AI Assistant entitlement and feature access are available.",
-    "implemented": true,
+    "implemented": false,
     "prdRefs": [
       "UX / UI Notes",
       "Functional Requirements 13",
@@ -188,7 +188,7 @@
   {
     "id": "F022",
     "description": "If the lightweight Ask AI trigger is included, make it open/seed existing Quick Ask rather than introducing a separate AI panel or required workflow path.",
-    "implemented": true,
+    "implemented": false,
     "prdRefs": [
       "UX / UI Notes",
       "Goals"

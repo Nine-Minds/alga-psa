@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { WORKFLOW_JSON_TRANSFORM_GUIDANCE } from '../chatWorkflowJsonTransformGuidance';
+import { WORKFLOW_JSON_TRANSFORM_GUIDANCE } from '../../services/chatWorkflowJsonTransformGuidance';
 
 describe('workflow JSON transform Quick Ask guidance', () => {
   it('includes action names, JSONata examples, saveAs guidance, and deterministic runtime note', () => {

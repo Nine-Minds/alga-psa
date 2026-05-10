@@ -106,3 +106,28 @@ Working notes for adding deterministic JSON Transform actions and AI-assisted au
 
 - Deferred for this PRD slice; no new trigger UI introduced.
 - Existing Quick Ask entitlement gating remains unchanged (AI add-on + feature access checks remain existing behavior).
+
+## Review Fixes (2026-05-09)
+
+- Replaced bare `z.unknown()` JSON action source/value schemas with a recursive JSON value schema so required fields are enforced by Zod and emitted in JSON Schema.
+- Added JSON transform schema regression assertions for missing `source`/`value` fields.
+- Moved the Quick Ask JSON guidance unit test from `ee/server/src/services/__tests__` to `ee/server/src/__tests__/services` so it is included by `ee/server/vitest.config.ts`.
+- Corrected plan checklist state: optional Ask AI trigger features/tests are deferred, not implemented.
+- Reverted unrelated `package-lock.json` changes.
+
+## Validation (2026-05-09 Review Fixes)
+
+- `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/registerTransformActions.test.ts workflow/runtime/__tests__/expressionEngine.test.ts workflow/runtime/nodes/__tests__/actionCallTransformJsonSaveAsRuntime.test.ts`
+  - Passed: 3 files, 15 tests.
+- `cd ee/server && npx vitest run --config vitest.config.ts src/__tests__/services/chatWorkflowJsonTransformGuidance.test.ts`
+  - Passed: 1 file, 2 tests.
+
+## Review Fix Follow-up (2026-05-09)
+
+- Fixed `transform.parse_json` numeric overflow handling: JSON strings such as `1e999` now fail with `JSON parse failed: parsed value is not a finite JSON value` instead of returning `Infinity` and failing later during output validation.
+- Added regression coverage for JSON numeric overflow.
+
+## Validation (2026-05-09 Numeric Overflow Fix)
+
+- `npx vitest run --config shared/vitest.config.ts workflow/runtime/actions/__tests__/registerTransformActions.test.ts workflow/runtime/__tests__/expressionEngine.test.ts workflow/runtime/nodes/__tests__/actionCallTransformJsonSaveAsRuntime.test.ts`
+  - Passed: 3 files, 15 tests.

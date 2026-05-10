@@ -38,15 +38,26 @@ const coalesceOutputSchema = z.object({
   matchedIndex: z.number().int().nullable().describe('Zero-based index of the selected candidate')
 });
 
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+
+const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() => z.union([
+  z.string(),
+  z.number().finite(),
+  z.boolean(),
+  z.null(),
+  z.array(jsonValueSchema),
+  z.record(jsonValueSchema),
+]));
+
 const jsonTypeSchema = z.enum(['object', 'array', 'string', 'number', 'boolean', 'null']);
 
 const parseJsonOutputSchema = z.object({
-  value: z.unknown().describe('Parsed JSON value'),
+  value: jsonValueSchema.describe('Parsed JSON value'),
   type: jsonTypeSchema.describe('Detected JSON type for the parsed value')
 });
 
 const queryJsonOutputSchema = z.object({
-  value: z.unknown().describe('Evaluated JSONata result')
+  value: jsonValueSchema.describe('Evaluated JSONata result')
 });
 
 const stringifyJsonOutputSchema = z.object({
@@ -54,20 +65,29 @@ const stringifyJsonOutputSchema = z.object({
 });
 
 const parseJsonInputSchema = z.object({
-  source: z.unknown().describe('JSON text or literal object/array to parse')
+  source: z.union([z.string(), z.array(jsonValueSchema), z.record(jsonValueSchema)])
+    .describe('JSON text or literal object/array to parse')
 });
 
 const queryJsonInputSchema = z.object({
-  source: z.unknown().describe('Input value exposed to expression as "source"'),
+  source: jsonValueSchema.describe('Input value exposed to expression as "source"'),
   expression: z.string().min(1).describe('JSONata expression to evaluate against source')
 });
 
 const stringifyJsonInputSchema = z.object({
-  source: z.unknown().describe('JSON-serializable value to serialize'),
+  source: jsonValueSchema.describe('JSON-serializable value to serialize'),
   spacing: z.number().int().min(0).max(8).optional().describe('Optional pretty-print spacing between 0 and 8')
 });
 
-const detectJsonType = (value: unknown): z.infer<typeof jsonTypeSchema> => {
+const assertJsonValue = (value: unknown, context: string): JsonValue => {
+  const parsed = jsonValueSchema.safeParse(value);
+  if (!parsed.success) {
+    throw new Error(`${context}: parsed value is not a finite JSON value`);
+  }
+  return parsed.data;
+};
+
+const detectJsonType = (value: JsonValue): z.infer<typeof jsonTypeSchema> => {
   if (value === null) return 'null';
   if (Array.isArray(value)) return 'array';
   if (typeof value === 'object') return 'object';
@@ -118,7 +138,7 @@ export function registerTransformActionsV2(): void {
     handler: async (input) => {
       if (typeof input.source === 'string') {
         try {
-          const value = JSON.parse(input.source);
+          const value = assertJsonValue(JSON.parse(input.source), 'JSON parse failed');
           return { value, type: detectJsonType(value) };
         } catch (error) {
           throw new Error(`JSON parse failed: ${error instanceof Error ? error.message : String(error)}`);

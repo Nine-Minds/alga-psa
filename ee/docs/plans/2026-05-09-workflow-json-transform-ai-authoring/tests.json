@@ -102,7 +102,7 @@
   {
     "id": "T012",
     "description": "Entitlement/UI unit, if Ask AI trigger is included: trigger is hidden without AI feature/add-on access and opens/seeds existing Quick Ask when access exists.",
-    "implemented": true,
+    "implemented": false,
     "featureIds": [
       "F020",
       "F021",

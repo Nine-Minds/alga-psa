@@ -59,6 +59,16 @@ describe('registerTransformActionsV2', () => {
     expect(registry.get('transform.trim_text', 1)?.outputSchema.safeParse({ text: 'abc' }).success).toBe(true);
   });
 
+  it('requires JSON transform source/value schema fields instead of accepting missing unknown values', () => {
+    const registry = getActionRegistryV2();
+
+    expect(registry.get('transform.parse_json', 1)?.inputSchema.safeParse({}).success).toBe(false);
+    expect(registry.get('transform.query_json', 1)?.inputSchema.safeParse({ expression: 'source' }).success).toBe(false);
+    expect(registry.get('transform.stringify_json', 1)?.inputSchema.safeParse({}).success).toBe(false);
+    expect(registry.get('transform.query_json', 1)?.outputSchema.safeParse({}).success).toBe(false);
+    expect(registry.get('transform.query_json', 1)?.outputSchema.safeParse({ value: undefined }).success).toBe(false);
+  });
+
   it('T268/T272/T273: exposes schema-driven outputs for coalesce and array transforms', () => {
     const registry = getActionRegistryV2();
 
@@ -296,6 +306,9 @@ describe('registerTransformActionsV2', () => {
     await expect(
       parseJson?.handler(parseJson.inputSchema.parse({ source: '{bad json]' }), {} as never)
     ).rejects.toThrow('JSON parse failed:');
+    await expect(
+      parseJson?.handler(parseJson.inputSchema.parse({ source: '1e999' }), {} as never)
+    ).rejects.toThrow('JSON parse failed: parsed value is not a finite JSON value');
 
     await expect(
       queryJson?.handler(queryJson.inputSchema.parse({ source: { ids: [1, 2] }, expression: '$sum(source.ids)' }), {} as never)
