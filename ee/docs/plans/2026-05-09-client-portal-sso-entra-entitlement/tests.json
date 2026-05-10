@@ -129,7 +129,7 @@
   {
     "id": "T013",
     "description": "DB-backed integration: built-in mode provisions a client portal user and Microsoft OAuth account link for an enabled entitled Entra user after non-ambiguous contact reconciliation.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035",
       "F041",

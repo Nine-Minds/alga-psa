@@ -294,4 +294,53 @@ describe('executeEntraSync dry-run behavior', () => {
     expect(linkExistingMatchedContactMock).toHaveBeenCalledTimes(1);
     expect(handleEligibleClientPortalProvisioningMock).not.toHaveBeenCalled();
   });
+
+  it('T128/T013: runs built-in provisioning hook after successful non-ambiguous reconciliation when eligible', async () => {
+    findContactMatchesByEmailMock.mockReset();
+    linkExistingMatchedContactMock.mockReset();
+    evaluateClientPortalProvisioningEligibilityMock.mockReset();
+    handleEligibleClientPortalProvisioningMock.mockReset();
+
+    findContactMatchesByEmailMock.mockResolvedValueOnce([
+      {
+        contactNameId: 'contact-128',
+        clientId: 'client-128',
+        email: 'linked128@example.com',
+        fullName: 'Linked 128',
+        isInactive: false,
+      },
+    ]);
+    linkExistingMatchedContactMock.mockResolvedValue({ contactNameId: 'contact-128' });
+    evaluateClientPortalProvisioningEligibilityMock.mockReturnValue({
+      eligible: true,
+      reason: 'eligible',
+    });
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    await executeEntraSync({
+      tenantId: 'tenant-128',
+      clientId: 'client-128',
+      managedTenantId: 'managed-128',
+      dryRun: false,
+      users: [buildUser('linked128')],
+      portalEntitlement: {
+        provisioningMode: 'built_in',
+        groupId: 'group-128',
+        membershipMode: 'transitive',
+      },
+    });
+
+    expect(handleEligibleClientPortalProvisioningMock).toHaveBeenCalledTimes(1);
+    expect(handleEligibleClientPortalProvisioningMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-128',
+        clientId: 'client-128',
+        managedTenantId: 'managed-128',
+        contactNameId: 'contact-128',
+      }),
+      expect.objectContaining({
+        entraObjectId: 'entra-object-linked128',
+      })
+    );
+  });
 });
