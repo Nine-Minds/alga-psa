@@ -83,6 +83,11 @@ Rolling notes for adding first-party workflow integration modules and the first 
     - `T007` verifies side-effect/idempotency metadata and `ninjaone.alerts.reset` UI label/description (`Acknowledge alert`)
   - `ee/packages/workflows/src/runtime/actions/__tests__/ninjaOneWorkflowActions.handlers.test.ts`:
     - `T008` verifies `ninjaone.devices.find` happy path (local lookup) returns normalized device output and does not leak secret-like source fields
+    - `T009` verifies `ninjaone.devices.sync` delegates to sync strategy and returns synced identifiers
+    - `T010` verifies `ninjaone.devices.reboot` inactive-integration guard and successful reboot delegation
+    - `T011` verifies `ninjaone.alerts.list_active` output includes alert/device/asset/severity/message fields for ticket mappings
+    - `T012` verifies `ninjaone.alerts.get` happy path and not-found behavior
+    - `T013` verifies `ninjaone.alerts.reset` calls NinjaOne reset operation and returns acknowledged output
 
 - (2026-05-10) Added targeted unit/integration-style coverage around `listWorkflowDesignerActionCatalogAction` filter behavior by mocking auth/runtime and exercising `rmm_integrations` plus extension-install query paths. Rationale: prove regression-safe catalog filtering without requiring full end-to-end server harness for this plan slice.
 - (2026-05-10) Added runtime registration coverage using real runtime bootstrap/worker initialization and shared action registry reads. Included virtual test shim for `@alga-psa/db/workDate` to satisfy shared runtime import graph in package-level Vitest execution.

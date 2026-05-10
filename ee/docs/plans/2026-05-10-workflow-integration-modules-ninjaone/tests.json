@@ -79,7 +79,7 @@
   {
     "id": "T009",
     "description": "Handler test for ninjaone.devices.sync verifies single-device sync delegates to existing sync behavior and returns asset/device identifiers.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013",
       "F014"
@@ -88,7 +88,7 @@
   {
     "id": "T010",
     "description": "Handler test for ninjaone.devices.reboot verifies inactive integration guard and successful reboot delegation with normalized output.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F016",
@@ -98,7 +98,7 @@
   {
     "id": "T011",
     "description": "Handler test for ninjaone.alerts.list_active verifies active alert list output includes fields needed by tickets.create mapping.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F018",
@@ -108,7 +108,7 @@
   {
     "id": "T012",
     "description": "Handler test for ninjaone.alerts.get verifies lookup by alert UID/external ID and not-found failure behavior.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F020"
@@ -117,7 +117,7 @@
   {
     "id": "T013",
     "description": "Handler test for ninjaone.alerts.reset verifies Acknowledge alert calls the NinjaOne reset operation and returns acknowledged output.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021",
       "F023"
