@@ -7,6 +7,7 @@ const linkExistingMatchedContactMock = vi.fn();
 const createContactForEntraUserMock = vi.fn();
 const evaluateClientPortalProvisioningEligibilityMock = vi.fn();
 const handleEligibleClientPortalProvisioningMock = vi.fn();
+const handleIneligibleClientPortalLifecycleMock = vi.fn();
 
 vi.mock('@ee/lib/integrations/entra/sync/contactMatcher', () => ({
   findContactMatchesByEmail: findContactMatchesByEmailMock,
@@ -21,6 +22,7 @@ vi.mock('@ee/lib/integrations/entra/sync/contactReconciler', () => ({
 vi.mock('@ee/lib/integrations/entra/sync/clientPortalProvisioning', () => ({
   evaluateClientPortalProvisioningEligibility: evaluateClientPortalProvisioningEligibilityMock,
   handleEligibleClientPortalProvisioning: handleEligibleClientPortalProvisioningMock,
+  handleIneligibleClientPortalLifecycle: handleIneligibleClientPortalLifecycleMock,
 }));
 
 function buildUser(seed: string): EntraSyncUser {
@@ -48,7 +50,10 @@ describe('executeEntraSync dry-run behavior', () => {
     createContactForEntraUserMock.mockReset();
     evaluateClientPortalProvisioningEligibilityMock.mockReset();
     handleEligibleClientPortalProvisioningMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockResolvedValue({ outcome: 'none' });
     handleEligibleClientPortalProvisioningMock.mockResolvedValue({ outcome: 'provisioned' });
+    handleIneligibleClientPortalLifecycleMock.mockResolvedValue({ outcome: 'none' });
 
     findContactMatchesByEmailMock
       .mockResolvedValueOnce([
@@ -150,6 +155,8 @@ describe('executeEntraSync dry-run behavior', () => {
     createContactForEntraUserMock.mockReset();
     evaluateClientPortalProvisioningEligibilityMock.mockReset();
     handleEligibleClientPortalProvisioningMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockResolvedValue({ outcome: 'none' });
     handleEligibleClientPortalProvisioningMock.mockResolvedValue({ outcome: 'provisioned' });
 
     findContactMatchesByEmailMock.mockResolvedValueOnce([
@@ -185,6 +192,8 @@ describe('executeEntraSync dry-run behavior', () => {
     createContactForEntraUserMock.mockReset();
     evaluateClientPortalProvisioningEligibilityMock.mockReset();
     handleEligibleClientPortalProvisioningMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockResolvedValue({ outcome: 'none' });
     handleEligibleClientPortalProvisioningMock.mockResolvedValue({ outcome: 'provisioned' });
 
     findContactMatchesByEmailMock.mockResolvedValueOnce([
@@ -226,6 +235,8 @@ describe('executeEntraSync dry-run behavior', () => {
     linkExistingMatchedContactMock.mockReset();
     evaluateClientPortalProvisioningEligibilityMock.mockReset();
     handleEligibleClientPortalProvisioningMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockResolvedValue({ outcome: 'none' });
     handleEligibleClientPortalProvisioningMock.mockResolvedValue({ outcome: 'provisioned' });
 
     findContactMatchesByEmailMock.mockResolvedValueOnce([
@@ -266,6 +277,8 @@ describe('executeEntraSync dry-run behavior', () => {
     linkExistingMatchedContactMock.mockReset();
     evaluateClientPortalProvisioningEligibilityMock.mockReset();
     handleEligibleClientPortalProvisioningMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockResolvedValue({ outcome: 'none' });
     handleEligibleClientPortalProvisioningMock.mockResolvedValue({ outcome: 'provisioned' });
 
     findContactMatchesByEmailMock.mockResolvedValueOnce([
@@ -306,6 +319,8 @@ describe('executeEntraSync dry-run behavior', () => {
     linkExistingMatchedContactMock.mockReset();
     evaluateClientPortalProvisioningEligibilityMock.mockReset();
     handleEligibleClientPortalProvisioningMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockResolvedValue({ outcome: 'none' });
     handleEligibleClientPortalProvisioningMock.mockResolvedValue({ outcome: 'provisioned' });
 
     findContactMatchesByEmailMock.mockResolvedValueOnce([
@@ -356,6 +371,8 @@ describe('executeEntraSync dry-run behavior', () => {
     linkExistingMatchedContactMock.mockReset();
     evaluateClientPortalProvisioningEligibilityMock.mockReset();
     handleEligibleClientPortalProvisioningMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockResolvedValue({ outcome: 'none' });
 
     findContactMatchesByEmailMock.mockResolvedValueOnce([
       {
@@ -396,5 +413,81 @@ describe('executeEntraSync dry-run behavior', () => {
       created: 0,
       ambiguous: 0,
     });
+  });
+
+  it('T132/T015: increments inactivated count when entitlement removal deactivates an Entra-managed portal user', async () => {
+    findContactMatchesByEmailMock.mockReset();
+    linkExistingMatchedContactMock.mockReset();
+    evaluateClientPortalProvisioningEligibilityMock.mockReset();
+    handleEligibleClientPortalProvisioningMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockResolvedValue({
+      outcome: 'deactivated',
+      reason: 'missing_entitlement',
+    });
+
+    findContactMatchesByEmailMock.mockResolvedValueOnce([
+      { contactNameId: 'contact-132', clientId: 'client-132', email: 'linked132@example.com' },
+    ]);
+    linkExistingMatchedContactMock.mockResolvedValue({ contactNameId: 'contact-132' });
+    evaluateClientPortalProvisioningEligibilityMock.mockReturnValue({
+      eligible: false,
+      reason: 'missing_entitlement',
+    });
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    const result = await executeEntraSync({
+      tenantId: 'tenant-132',
+      clientId: 'client-132',
+      managedTenantId: 'managed-132',
+      dryRun: false,
+      users: [buildUser('linked132')],
+      portalEntitlement: {
+        provisioningMode: 'built_in',
+        groupId: 'group-132',
+        membershipMode: 'transitive',
+        deactivateOnEntitlementRemoval: true,
+      },
+    });
+    expect(result.counters.inactivated).toBe(1);
+    expect(handleEligibleClientPortalProvisioningMock).not.toHaveBeenCalled();
+  });
+
+  it('T133/T016: increments inactivated count when disabled Entra account deactivates an Entra-managed portal user', async () => {
+    findContactMatchesByEmailMock.mockReset();
+    linkExistingMatchedContactMock.mockReset();
+    evaluateClientPortalProvisioningEligibilityMock.mockReset();
+    handleEligibleClientPortalProvisioningMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockResolvedValue({
+      outcome: 'deactivated',
+      reason: 'account_disabled',
+    });
+
+    findContactMatchesByEmailMock.mockResolvedValueOnce([
+      { contactNameId: 'contact-133', clientId: 'client-133', email: 'linked133@example.com' },
+    ]);
+    linkExistingMatchedContactMock.mockResolvedValue({ contactNameId: 'contact-133' });
+    evaluateClientPortalProvisioningEligibilityMock.mockReturnValue({
+      eligible: false,
+      reason: 'account_disabled',
+    });
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    const result = await executeEntraSync({
+      tenantId: 'tenant-133',
+      clientId: 'client-133',
+      managedTenantId: 'managed-133',
+      dryRun: false,
+      users: [buildUser('linked133')],
+      portalEntitlement: {
+        provisioningMode: 'built_in',
+        groupId: 'group-133',
+        membershipMode: 'transitive',
+        deactivateOnEntitlementRemoval: true,
+      },
+    });
+    expect(result.counters.inactivated).toBe(1);
+    expect(handleEligibleClientPortalProvisioningMock).not.toHaveBeenCalled();
   });
 });

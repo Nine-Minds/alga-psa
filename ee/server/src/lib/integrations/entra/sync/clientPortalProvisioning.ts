@@ -35,6 +35,37 @@ export interface ClientPortalProvisioningResult {
   reason?: 'contact_conflict' | 'email_conflict' | 'oauth_link_conflict';
 }
 
+export interface ClientPortalLifecycleResult {
+  outcome: 'none' | 'deactivated' | 'reactivated';
+  reason?: 'missing_entitlement' | 'account_disabled';
+}
+
+type EntraMetadata = {
+  managed?: boolean;
+  lifecycle?: {
+    state?: string;
+    owner?: string;
+    reason?: string;
+    updatedAt?: string;
+  };
+  [key: string]: unknown;
+};
+
+function parseEntraMetadata(value: unknown): EntraMetadata {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {};
+  }
+  return value as EntraMetadata;
+}
+
+function shouldReactivateUser(isInactive: boolean, metadataRaw: unknown): boolean {
+  if (!isInactive) {
+    return false;
+  }
+  const metadata = parseEntraMetadata(metadataRaw);
+  return metadata.lifecycle?.state === 'deactivated' && metadata.lifecycle?.owner === 'entra_sync';
+}
+
 export function evaluateClientPortalProvisioningEligibility(
   user: EntraSyncUser,
   config: ClientPortalProvisioningConfig | undefined
@@ -58,6 +89,71 @@ export function evaluateClientPortalProvisioningEligibility(
     return { eligible: false, reason: 'missing_entitlement' };
   }
   return { eligible: true, reason: 'eligible' };
+}
+
+export async function handleIneligibleClientPortalLifecycle(
+  context: ClientPortalProvisioningContext,
+  user: EntraSyncUser,
+  eligibility: ClientPortalProvisioningEligibility,
+  options?: { deactivateOnEntitlementRemoval?: boolean }
+): Promise<ClientPortalLifecycleResult> {
+  const shouldDeactivateForReason =
+    eligibility.reason === 'account_disabled' ||
+    (eligibility.reason === 'missing_entitlement' &&
+      (options?.deactivateOnEntitlementRemoval ?? true));
+  if (!shouldDeactivateForReason) {
+    return { outcome: 'none' };
+  }
+
+  const reason = eligibility.reason as 'missing_entitlement' | 'account_disabled';
+  return runWithTenant(context.tenantId, async () => {
+    const { knex } = await createTenantKnex();
+    return knex.transaction(async (trx) => {
+      const existing = await trx('users')
+        .where({
+          tenant: context.tenantId,
+          user_type: 'client',
+        })
+        .andWhereRaw("client_portal_entra_metadata->>'managed' = 'true'")
+        .andWhereRaw("client_portal_entra_metadata->>'entraTenantId' = ?", [user.entraTenantId])
+        .andWhereRaw("client_portal_entra_metadata->>'entraObjectId' = ?", [user.entraObjectId])
+        .orderBy('updated_at', 'desc')
+        .first(['user_id', 'is_inactive', 'client_portal_entra_metadata']);
+
+      if (!existing?.user_id) {
+        return { outcome: 'none' } as ClientPortalLifecycleResult;
+      }
+      if (existing.is_inactive) {
+        return { outcome: 'none' } as ClientPortalLifecycleResult;
+      }
+
+      const metadata = parseEntraMetadata(existing.client_portal_entra_metadata);
+      const nextMetadata = {
+        ...metadata,
+        lifecycle: {
+          state: 'deactivated',
+          owner: 'entra_sync',
+          reason,
+          updatedAt: new Date().toISOString(),
+        },
+      };
+      await trx('users')
+        .where({
+          tenant: context.tenantId,
+          user_id: String(existing.user_id),
+        })
+        .update({
+          is_inactive: true,
+          client_portal_entra_metadata: nextMetadata,
+          updated_at: trx.fn.now(),
+        });
+
+      return {
+        outcome: 'deactivated',
+        reason,
+      } as ClientPortalLifecycleResult;
+    });
+  });
 }
 
 export async function handleEligibleClientPortalProvisioning(
@@ -88,7 +184,7 @@ export async function handleEligibleClientPortalProvisioning(
             user_type: 'client',
             contact_id: context.contactNameId,
           })
-          .select(['user_id', 'email'])
+          .select(['user_id', 'email', 'is_inactive', 'client_portal_entra_metadata'])
           .orderBy('updated_at', 'desc');
         if (existingForContact.length > 1) {
           return {
@@ -102,6 +198,13 @@ export async function handleEligibleClientPortalProvisioning(
           : null;
 
         if (userId) {
+          const didReactivate = shouldReactivateUser(
+            Boolean(existingForContact[0].is_inactive),
+            existingForContact[0].client_portal_entra_metadata
+          );
+          const existingMetadata = parseEntraMetadata(
+            existingForContact[0].client_portal_entra_metadata
+          );
           await trx('users')
             .where({
               tenant: context.tenantId,
@@ -110,8 +213,18 @@ export async function handleEligibleClientPortalProvisioning(
             .update({
               email: normalizedEmail || trx.raw('email'),
               username: normalizedEmail || trx.raw('username'),
-              is_inactive: false,
-              client_portal_entra_metadata: entraManagedMetadata,
+              is_inactive: didReactivate ? false : trx.raw('is_inactive'),
+              client_portal_entra_metadata: {
+                ...entraManagedMetadata,
+                lifecycle: didReactivate
+                  ? {
+                      state: 'active',
+                      owner: 'entra_sync',
+                      reason: 'entitlement_restored',
+                      updatedAt: new Date().toISOString(),
+                    }
+                  : existingMetadata.lifecycle ?? null,
+              },
               updated_at: trx.fn.now(),
             });
         }
@@ -124,7 +237,7 @@ export async function handleEligibleClientPortalProvisioning(
                   user_type: 'client',
                 })
                 .andWhereRaw('lower(email) = ?', [normalizedEmail])
-                .select(['user_id', 'contact_id'])
+                .select(['user_id', 'contact_id', 'is_inactive', 'client_portal_entra_metadata'])
                 .orderBy('updated_at', 'desc')
             : [];
 
@@ -146,6 +259,13 @@ export async function handleEligibleClientPortalProvisioning(
 
           if (safeByEmailMatch) {
             userId = String(byEmailRows[0].user_id);
+            const didReactivate = shouldReactivateUser(
+              Boolean(byEmailRows[0].is_inactive),
+              byEmailRows[0].client_portal_entra_metadata
+            );
+            const existingMetadata = parseEntraMetadata(
+              byEmailRows[0].client_portal_entra_metadata
+            );
             await trx('users')
               .where({
                 tenant: context.tenantId,
@@ -155,8 +275,18 @@ export async function handleEligibleClientPortalProvisioning(
                 contact_id: context.contactNameId,
                 username: normalizedEmail || trx.raw('username'),
                 email: normalizedEmail || trx.raw('email'),
-                is_inactive: false,
-                client_portal_entra_metadata: entraManagedMetadata,
+                is_inactive: didReactivate ? false : trx.raw('is_inactive'),
+                client_portal_entra_metadata: {
+                  ...entraManagedMetadata,
+                  lifecycle: didReactivate
+                    ? {
+                        state: 'active',
+                        owner: 'entra_sync',
+                        reason: 'entitlement_restored',
+                        updatedAt: new Date().toISOString(),
+                      }
+                    : existingMetadata.lifecycle ?? null,
+                },
                 updated_at: trx.fn.now(),
               });
           }

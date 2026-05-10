@@ -156,7 +156,7 @@
   {
     "id": "T015",
     "description": "DB-backed integration: entitlement removal deactivates an Entra-managed portal user when configured.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026",
       "F051",
@@ -166,7 +166,7 @@
   {
     "id": "T016",
     "description": "DB-backed integration: disabled Entra account deactivates the corresponding Entra-managed portal user.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039",
       "F052",
@@ -176,7 +176,7 @@
   {
     "id": "T017",
     "description": "DB-backed integration: entitlement removal does not deactivate a manually managed portal user.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053",
       "F060"
@@ -185,7 +185,7 @@
   {
     "id": "T018",
     "description": "DB-backed integration: entitlement return reactivates only lifecycle-deactivated Entra-managed portal users, not manually disabled users.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054",
       "F055"

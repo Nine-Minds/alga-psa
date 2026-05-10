@@ -438,7 +438,7 @@
   {
     "id": "F051",
     "description": "Deactivate Entra-managed portal users when group entitlement is removed and the deactivation setting is enabled.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Lifecycle"
     ]
@@ -446,7 +446,7 @@
   {
     "id": "F052",
     "description": "Deactivate Entra-managed portal users when their Entra account is disabled.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Lifecycle"
     ]
@@ -454,7 +454,7 @@
   {
     "id": "F053",
     "description": "Do not deactivate manually managed portal users when Entra entitlement is missing.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Lifecycle",
       "Security / Permissions"
@@ -463,7 +463,7 @@
   {
     "id": "F054",
     "description": "Track whether a portal user was deactivated by Entra lifecycle versus manually disabled.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Lifecycle",
       "Portal User Metadata"
@@ -472,7 +472,7 @@
   {
     "id": "F055",
     "description": "Reactivate Entra-managed portal users only when entitlement returns and prior deactivation was lifecycle-owned.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Lifecycle"
     ]

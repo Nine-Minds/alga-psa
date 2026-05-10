@@ -34,8 +34,18 @@ function buildUser(overrides: Partial<EntraSyncUser> = {}): EntraSyncUser {
 }
 
 function setupKnexHarness(params: {
-  existingContactUsers?: Array<{ user_id: string; email: string }>;
-  emailMatches?: Array<{ user_id: string; contact_id: string | null }>;
+  existingContactUsers?: Array<{
+    user_id: string;
+    email: string;
+    is_inactive?: boolean;
+    client_portal_entra_metadata?: Record<string, unknown> | null;
+  }>;
+  emailMatches?: Array<{
+    user_id: string;
+    contact_id: string | null;
+    is_inactive?: boolean;
+    client_portal_entra_metadata?: Record<string, unknown> | null;
+  }>;
   existingMicrosoftLinkUserId?: string | null;
 }) {
   const updates: Array<Record<string, unknown>> = [];
@@ -145,7 +155,7 @@ describe('clientPortalProvisioning built-in mutations', () => {
       })
     );
     expect(harness.updates[0]).toMatchObject({
-      is_inactive: false,
+      is_inactive: 'is_inactive',
       client_portal_entra_metadata: expect.objectContaining({
         managed: true,
         entraTenantId: 'entra-tenant-201',
@@ -176,7 +186,7 @@ describe('clientPortalProvisioning built-in mutations', () => {
       contact_id: 'contact-202',
       email: 'user202@example.com',
       username: 'user202@example.com',
-      is_inactive: false,
+      is_inactive: 'is_inactive',
       client_portal_entra_metadata: expect.objectContaining({
         managed: true,
         managedTenantId: 'managed-202',
@@ -273,5 +283,72 @@ describe('clientPortalProvisioning built-in mutations', () => {
 
     expect(result).toEqual({ outcome: 'skipped_conflict', reason: 'oauth_link_conflict' });
     expect(upsertOAuthAccountLinkMock).not.toHaveBeenCalled();
+  });
+
+  it('T134/F055: reactivates lifecycle-deactivated Entra-managed portal users when entitlement returns', async () => {
+    const harness = setupKnexHarness({
+      existingContactUsers: [{
+        user_id: 'managed-inactive-206',
+        email: 'user206@example.com',
+        is_inactive: true,
+        client_portal_entra_metadata: {
+          managed: true,
+          lifecycle: { state: 'deactivated', owner: 'entra_sync', reason: 'missing_entitlement' },
+        },
+      }],
+      emailMatches: [],
+    });
+
+    const { handleEligibleClientPortalProvisioning } = await import('@ee/lib/integrations/entra/sync/clientPortalProvisioning');
+    await handleEligibleClientPortalProvisioning(
+      {
+        tenantId: 'tenant-206',
+        clientId: 'client-206',
+        managedTenantId: 'managed-206',
+        contactNameId: 'contact-206',
+      },
+      buildUser({ entraObjectId: 'entra-object-206', email: 'user206@example.com' })
+    );
+
+    expect(harness.updates[0]).toMatchObject({
+      is_inactive: false,
+      client_portal_entra_metadata: expect.objectContaining({
+        lifecycle: expect.objectContaining({
+          state: 'active',
+          owner: 'entra_sync',
+          reason: 'entitlement_restored',
+        }),
+      }),
+    });
+  });
+
+  it('T135/F053: does not reactivate manually deactivated portal users during entitlement return', async () => {
+    const harness = setupKnexHarness({
+      existingContactUsers: [{
+        user_id: 'manual-inactive-207',
+        email: 'user207@example.com',
+        is_inactive: true,
+        client_portal_entra_metadata: {
+          managed: true,
+          lifecycle: { state: 'deactivated', owner: 'manual', reason: 'staff_action' },
+        },
+      }],
+      emailMatches: [],
+    });
+
+    const { handleEligibleClientPortalProvisioning } = await import('@ee/lib/integrations/entra/sync/clientPortalProvisioning');
+    await handleEligibleClientPortalProvisioning(
+      {
+        tenantId: 'tenant-207',
+        clientId: 'client-207',
+        managedTenantId: 'managed-207',
+        contactNameId: 'contact-207',
+      },
+      buildUser({ entraObjectId: 'entra-object-207', email: 'user207@example.com' })
+    );
+
+    expect(harness.updates[0]).toMatchObject({
+      is_inactive: 'is_inactive',
+    });
   });
 });

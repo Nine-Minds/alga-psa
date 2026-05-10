@@ -9,6 +9,7 @@ import {
 import {
   evaluateClientPortalProvisioningEligibility,
   handleEligibleClientPortalProvisioning,
+  handleIneligibleClientPortalLifecycle,
 } from './clientPortalProvisioning';
 
 export interface ExecuteEntraSyncInput {
@@ -20,6 +21,7 @@ export interface ExecuteEntraSyncInput {
     provisioningMode: 'disabled' | 'built_in' | 'workflow_managed';
     groupId: string | null;
     membershipMode: 'transitive' | 'direct';
+    deactivateOnEntitlementRemoval?: boolean;
   };
   fieldSyncConfig?: Record<string, unknown>;
   dryRun?: boolean;
@@ -97,6 +99,24 @@ export async function executeEntraSync(
           if (provisioning.outcome === 'skipped_conflict') {
             counters.increment('skipped');
           }
+        } else {
+          const lifecycle = await handleIneligibleClientPortalLifecycle(
+            {
+              tenantId: input.tenantId,
+              clientId: input.clientId,
+              managedTenantId: input.managedTenantId,
+              contactNameId: linkedContact.contactNameId,
+            },
+            userWithEntitlement,
+            eligibility,
+            {
+              deactivateOnEntitlementRemoval:
+                input.portalEntitlement?.deactivateOnEntitlementRemoval,
+            }
+          );
+          if (lifecycle.outcome === 'deactivated') {
+            counters.increment('inactivated');
+          }
         }
       }
       continue;
@@ -121,6 +141,24 @@ export async function executeEntraSync(
         );
         if (provisioning.outcome === 'skipped_conflict') {
           counters.increment('skipped');
+        }
+      } else {
+        const lifecycle = await handleIneligibleClientPortalLifecycle(
+          {
+            tenantId: input.tenantId,
+            clientId: input.clientId,
+            managedTenantId: input.managedTenantId,
+            contactNameId: createdContact.contactNameId,
+          },
+          userWithEntitlement,
+          eligibility,
+          {
+            deactivateOnEntitlementRemoval:
+              input.portalEntitlement?.deactivateOnEntitlementRemoval,
+          }
+        );
+        if (lifecycle.outcome === 'deactivated') {
+          counters.increment('inactivated');
         }
       }
     }

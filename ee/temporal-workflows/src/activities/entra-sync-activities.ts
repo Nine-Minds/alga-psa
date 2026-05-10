@@ -165,13 +165,28 @@ export async function syncTenantUsersActivity(
 
   const fieldSyncConfig = await runWithTenant(input.tenantId, async () => {
     const { knex } = await createTenantKnex();
-    const row = await knex('entra_sync_settings')
-      .where({ tenant: input.tenantId })
-      .first(['field_sync_config']);
-    const raw = row?.field_sync_config;
-    return raw && typeof raw === 'object' && !Array.isArray(raw)
-      ? (raw as Record<string, unknown>)
-      : {};
+    const [syncRow, tenantSettingsRow] = await Promise.all([
+      knex('entra_sync_settings').where({ tenant: input.tenantId }).first(['field_sync_config']),
+      knex('tenant_settings').where({ tenant: input.tenantId }).first(['settings']),
+    ]);
+    const raw = syncRow?.field_sync_config;
+    const fieldSyncConfig =
+      raw && typeof raw === 'object' && !Array.isArray(raw)
+        ? (raw as Record<string, unknown>)
+        : {};
+    let ssoSettingsRaw: any = tenantSettingsRow?.settings;
+    if (typeof ssoSettingsRaw === 'string') {
+      try {
+        ssoSettingsRaw = JSON.parse(ssoSettingsRaw);
+      } catch {
+        ssoSettingsRaw = {};
+      }
+    }
+    const deactivateOnEntitlementRemoval =
+      ssoSettingsRaw?.sso?.deactivateEntraManagedPortalUsersOnEntitlementRemoval === undefined
+        ? true
+        : Boolean(ssoSettingsRaw?.sso?.deactivateEntraManagedPortalUsersOnEntitlementRemoval);
+    return { fieldSyncConfig, deactivateOnEntitlementRemoval };
   });
 
   const syncResult = await executeEntraSync({
@@ -179,13 +194,14 @@ export async function syncTenantUsersActivity(
     clientId: input.mapping.clientId,
     managedTenantId: input.mapping.managedTenantId,
     users: usersWithEntitlement,
+    fieldSyncConfig: fieldSyncConfig.fieldSyncConfig,
+    dryRun: false,
     portalEntitlement: {
       provisioningMode: input.mapping.clientPortalEntraProvisioningMode || 'disabled',
       groupId: input.mapping.clientPortalEntitlementGroupId || null,
       membershipMode: input.mapping.clientPortalEntitlementMembershipMode || 'transitive',
+      deactivateOnEntitlementRemoval: fieldSyncConfig.deactivateOnEntitlementRemoval,
     },
-    fieldSyncConfig,
-    dryRun: false,
   });
 
   const disabledIdentities = filteredUsers.excluded

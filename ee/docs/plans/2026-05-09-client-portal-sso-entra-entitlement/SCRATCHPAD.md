@@ -172,3 +172,11 @@ Working notes for implementing tenant-scoped client portal SSO and Entra entitle
 ## Gotchas
 
 - (2026-05-09) `clientPortalProvisioning` now returns a structured outcome (`provisioned` or `skipped_conflict`), so sync callers/mocks must assert return values instead of treating provisioning as `void`.
+- (2026-05-09) Implemented `F051`/`F052`/`F053`/`F054`/`F055`: added lifecycle handler for ineligible Entra users that deactivates only Entra-managed client portal users on entitlement loss (when configured) or disabled Entra accounts, stamps lifecycle ownership metadata (`owner=entra_sync`, reason/state/timestamp), and reactivates only users previously lifecycle-deactivated by Entra when eligibility returns.
+- (2026-05-09) `executeEntraSync` now calls lifecycle handling for ineligible-but-reconciled users and increments inactivated counters only when lifecycle deactivation actually occurs.
+- (2026-05-09) Temporal sync activity now reads tenant SSO preference `deactivateEntraManagedPortalUsersOnEntitlementRemoval` from `tenant_settings.settings.sso` and passes it into sync entitlement context.
+- (2026-05-09) Added lifecycle test coverage: `clientPortalProvisioning.lifecycle.test.ts` (`T136`-`T138`), `clientPortalProvisioning.builtIn.test.ts` (`T134`,`T135`), and `entraSyncEngine.dryRun.test.ts` (`T132`,`T133`).
+
+## Commands Run
+
+- `npx vitest run src/__tests__/unit/clientPortalProvisioning.builtIn.test.ts src/__tests__/unit/clientPortalProvisioning.lifecycle.test.ts src/__tests__/unit/entraSyncEngine.dryRun.test.ts` (workdir: `ee/server/`) ✅
