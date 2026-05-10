@@ -180,3 +180,9 @@ Working notes for implementing tenant-scoped client portal SSO and Entra entitle
 ## Commands Run
 
 - `npx vitest run src/__tests__/unit/clientPortalProvisioning.builtIn.test.ts src/__tests__/unit/clientPortalProvisioning.lifecycle.test.ts src/__tests__/unit/entraSyncEngine.dryRun.test.ts` (workdir: `ee/server/`) ✅
+- (2026-05-09) Implemented `F057`: Entra sync history drilldown now displays skipped provisioning counts in two natural places: per-tenant stats (`..., skipped N`) and run-summary skipped totals when present in run summary payload.
+- (2026-05-09) Updated `entraSyncHistoryPanel.test.tsx` to lock skipped-count rendering and added deterministic i18n mocks for stable assertions.
+
+## Commands Run
+
+- `npx vitest run src/__tests__/unit/entraSyncHistoryPanel.test.tsx` (workdir: `ee/server/`) ✅

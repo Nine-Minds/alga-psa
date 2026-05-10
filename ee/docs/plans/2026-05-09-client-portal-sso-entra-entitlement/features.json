@@ -489,7 +489,7 @@
   {
     "id": "F057",
     "description": "Show client portal provisioning counts in the existing Entra sync results UI where available.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Observability"
