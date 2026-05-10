@@ -300,7 +300,7 @@
   {
     "id": "F035",
     "description": "Run client portal provisioning only after contact reconciliation succeeds without ambiguity.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Entra Provisioning"
     ]
@@ -308,7 +308,7 @@
   {
     "id": "F036",
     "description": "Skip portal user provisioning when client portal Entra provisioning mode is disabled.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Entra Provisioning",
       "Configuration"
@@ -317,7 +317,7 @@
   {
     "id": "F037",
     "description": "Skip portal user provisioning when no entitlement group is configured for the mapped client.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Entra Provisioning",
       "Entitlement Model"
@@ -326,7 +326,7 @@
   {
     "id": "F038",
     "description": "Skip portal user provisioning when the Entra user lacks email and UPN.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Entra Provisioning"
     ]
@@ -343,7 +343,7 @@
   {
     "id": "F040",
     "description": "Skip portal user provisioning when the Entra user is not in the configured access group.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Entra Provisioning",
       "Entitlement Model"

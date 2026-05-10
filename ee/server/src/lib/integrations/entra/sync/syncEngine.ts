@@ -6,6 +6,10 @@ import {
   linkExistingMatchedContact,
   queueAmbiguousContactMatch,
 } from './contactReconciler';
+import {
+  evaluateClientPortalProvisioningEligibility,
+  handleEligibleClientPortalProvisioning,
+} from './clientPortalProvisioning';
 
 export interface ExecuteEntraSyncInput {
   tenantId: string;
@@ -75,6 +79,20 @@ export async function executeEntraSync(
           userWithEntitlement,
           input.fieldSyncConfig
         );
+        const eligibility = evaluateClientPortalProvisioningEligibility(
+          userWithEntitlement,
+          input.portalEntitlement
+        );
+        if (eligibility.eligible) {
+          await handleEligibleClientPortalProvisioning(
+            {
+              tenantId: input.tenantId,
+              clientId: input.clientId,
+              managedTenantId: input.managedTenantId,
+            },
+            userWithEntitlement
+          );
+        }
       }
       continue;
     }
@@ -82,6 +100,20 @@ export async function executeEntraSync(
     counters.increment('created');
     if (!dryRun) {
       await createContactForEntraUser(input.tenantId, input.clientId, userWithEntitlement);
+      const eligibility = evaluateClientPortalProvisioningEligibility(
+        userWithEntitlement,
+        input.portalEntitlement
+      );
+      if (eligibility.eligible) {
+        await handleEligibleClientPortalProvisioning(
+          {
+            tenantId: input.tenantId,
+            clientId: input.clientId,
+            managedTenantId: input.managedTenantId,
+          },
+          userWithEntitlement
+        );
+      }
     }
   }
 

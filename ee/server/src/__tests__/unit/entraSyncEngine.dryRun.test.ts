@@ -5,6 +5,8 @@ const findContactMatchesByEmailMock = vi.fn();
 const queueAmbiguousContactMatchMock = vi.fn();
 const linkExistingMatchedContactMock = vi.fn();
 const createContactForEntraUserMock = vi.fn();
+const evaluateClientPortalProvisioningEligibilityMock = vi.fn();
+const handleEligibleClientPortalProvisioningMock = vi.fn();
 
 vi.mock('@ee/lib/integrations/entra/sync/contactMatcher', () => ({
   findContactMatchesByEmail: findContactMatchesByEmailMock,
@@ -14,6 +16,11 @@ vi.mock('@ee/lib/integrations/entra/sync/contactReconciler', () => ({
   queueAmbiguousContactMatch: queueAmbiguousContactMatchMock,
   linkExistingMatchedContact: linkExistingMatchedContactMock,
   createContactForEntraUser: createContactForEntraUserMock,
+}));
+
+vi.mock('@ee/lib/integrations/entra/sync/clientPortalProvisioning', () => ({
+  evaluateClientPortalProvisioningEligibility: evaluateClientPortalProvisioningEligibilityMock,
+  handleEligibleClientPortalProvisioning: handleEligibleClientPortalProvisioningMock,
 }));
 
 function buildUser(seed: string): EntraSyncUser {
@@ -39,6 +46,8 @@ describe('executeEntraSync dry-run behavior', () => {
     queueAmbiguousContactMatchMock.mockReset();
     linkExistingMatchedContactMock.mockReset();
     createContactForEntraUserMock.mockReset();
+    evaluateClientPortalProvisioningEligibilityMock.mockReset();
+    handleEligibleClientPortalProvisioningMock.mockReset();
 
     findContactMatchesByEmailMock
       .mockResolvedValueOnce([
@@ -91,6 +100,8 @@ describe('executeEntraSync dry-run behavior', () => {
     expect(queueAmbiguousContactMatchMock).not.toHaveBeenCalled();
     expect(linkExistingMatchedContactMock).not.toHaveBeenCalled();
     expect(createContactForEntraUserMock).not.toHaveBeenCalled();
+    expect(evaluateClientPortalProvisioningEligibilityMock).not.toHaveBeenCalled();
+    expect(handleEligibleClientPortalProvisioningMock).not.toHaveBeenCalled();
   });
 
   it('T112: threads portal entitlement context into each sync user when provided', async () => {
@@ -128,5 +139,78 @@ describe('executeEntraSync dry-run behavior', () => {
         },
       })
     );
+  });
+
+  it('T115: does not attempt portal provisioning for ambiguous reconciliation outcomes', async () => {
+    findContactMatchesByEmailMock.mockReset();
+    queueAmbiguousContactMatchMock.mockReset();
+    linkExistingMatchedContactMock.mockReset();
+    createContactForEntraUserMock.mockReset();
+    evaluateClientPortalProvisioningEligibilityMock.mockReset();
+    handleEligibleClientPortalProvisioningMock.mockReset();
+
+    findContactMatchesByEmailMock.mockResolvedValueOnce([
+      { contactNameId: 'c1' },
+      { contactNameId: 'c2' },
+    ]);
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    await executeEntraSync({
+      tenantId: 'tenant-115',
+      clientId: 'client-115',
+      managedTenantId: 'managed-115',
+      dryRun: false,
+      users: [buildUser('ambiguous')],
+      portalEntitlement: {
+        provisioningMode: 'built_in',
+        groupId: 'group-115',
+        membershipMode: 'transitive',
+      },
+    });
+
+    expect(queueAmbiguousContactMatchMock).toHaveBeenCalledTimes(1);
+    expect(evaluateClientPortalProvisioningEligibilityMock).not.toHaveBeenCalled();
+    expect(handleEligibleClientPortalProvisioningMock).not.toHaveBeenCalled();
+  });
+
+  it('T116: skips provisioning when mode is disabled after successful reconciliation', async () => {
+    findContactMatchesByEmailMock.mockReset();
+    queueAmbiguousContactMatchMock.mockReset();
+    linkExistingMatchedContactMock.mockReset();
+    createContactForEntraUserMock.mockReset();
+    evaluateClientPortalProvisioningEligibilityMock.mockReset();
+    handleEligibleClientPortalProvisioningMock.mockReset();
+
+    findContactMatchesByEmailMock.mockResolvedValueOnce([
+      {
+        contactNameId: 'contact-116',
+        clientId: 'client-116',
+        email: 'linked116@example.com',
+        fullName: 'Linked 116',
+        isInactive: false,
+      },
+    ]);
+    evaluateClientPortalProvisioningEligibilityMock.mockReturnValue({
+      eligible: false,
+      reason: 'mode_disabled',
+    });
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    await executeEntraSync({
+      tenantId: 'tenant-116',
+      clientId: 'client-116',
+      managedTenantId: 'managed-116',
+      dryRun: false,
+      users: [buildUser('linked116')],
+      portalEntitlement: {
+        provisioningMode: 'disabled',
+        groupId: 'group-116',
+        membershipMode: 'transitive',
+      },
+    });
+
+    expect(linkExistingMatchedContactMock).toHaveBeenCalledTimes(1);
+    expect(evaluateClientPortalProvisioningEligibilityMock).toHaveBeenCalledTimes(1);
+    expect(handleEligibleClientPortalProvisioningMock).not.toHaveBeenCalled();
   });
 });

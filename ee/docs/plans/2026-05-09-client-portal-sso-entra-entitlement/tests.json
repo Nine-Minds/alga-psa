@@ -107,7 +107,7 @@
   {
     "id": "T011",
     "description": "DB-backed integration: Entra sync creates or links a contact but skips portal user provisioning when provisioning mode is disabled.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035",
       "F036"
