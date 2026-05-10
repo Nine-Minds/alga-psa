@@ -150,3 +150,6 @@ Working notes for implementing tenant-scoped client portal SSO and Entra entitle
 ## Commands Run
 
 - `npx vitest run src/__tests__/unit/clientPortalProvisioning.builtIn.test.ts src/__tests__/unit/entraSyncEngine.dryRun.test.ts src/__tests__/unit/clientPortalProvisioningEligibility.test.ts` (workdir: `ee/server/`) ✅
+- (2026-05-09) Implemented `F047`/`F048`: added durable portal-user metadata column `users.client_portal_entra_metadata` (migration `server/migrations/20260509193000_add_client_portal_entra_metadata_to_users.cjs`) and now stamp/update metadata during built-in provisioning/link paths with managed flag, managed tenant id, Entra tenant/object identity, and entitlement source details.
+- (2026-05-09) Extended `clientPortalProvisioning.builtIn.test.ts` assertions to lock metadata stamping behavior for existing-contact link, safe email attach, and create-new-user paths.
+- `npx vitest run src/__tests__/unit/clientPortalProvisioning.builtIn.test.ts src/__tests__/unit/entraSyncEngine.dryRun.test.ts src/__tests__/unit/clientPortalProvisioningEligibility.test.ts` (workdir: `ee/server/`) ✅

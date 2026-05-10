@@ -55,6 +55,18 @@ export async function handleEligibleClientPortalProvisioning(
   await runWithTenant(context.tenantId, async () => {
     const { knex } = await createTenantKnex();
     const normalizedEmail = (user.email || user.userPrincipalName || '').trim().toLowerCase();
+    const entraManagedMetadata = {
+      managed: true,
+      managedTenantId: context.managedTenantId,
+      entraTenantId: user.entraTenantId,
+      entraObjectId: user.entraObjectId,
+      entitlementSource: {
+        type: 'group',
+        groupId: user.clientPortalEntitlement?.groupId ?? null,
+        membershipMode: user.clientPortalEntitlement?.membershipMode ?? null,
+      },
+      updatedBy: 'entra_sync',
+    };
 
     await knex.transaction(async (trx) => {
       const existingForContact = await trx('users')
@@ -67,6 +79,21 @@ export async function handleEligibleClientPortalProvisioning(
         .first(['user_id', 'email']);
 
       let userId: string | null = existingForContact?.user_id ? String(existingForContact.user_id) : null;
+
+      if (userId) {
+        await trx('users')
+          .where({
+            tenant: context.tenantId,
+            user_id: userId,
+          })
+          .update({
+            email: normalizedEmail || trx.raw('email'),
+            username: normalizedEmail || trx.raw('username'),
+            is_inactive: false,
+            client_portal_entra_metadata: entraManagedMetadata,
+            updated_at: trx.fn.now(),
+          });
+      }
 
       if (!userId) {
         const byEmailRows = normalizedEmail
@@ -96,6 +123,7 @@ export async function handleEligibleClientPortalProvisioning(
               username: normalizedEmail || trx.raw('username'),
               email: normalizedEmail || trx.raw('email'),
               is_inactive: false,
+              client_portal_entra_metadata: entraManagedMetadata,
               updated_at: trx.fn.now(),
             });
         }
@@ -115,6 +143,7 @@ export async function handleEligibleClientPortalProvisioning(
             is_inactive: false,
             two_factor_enabled: false,
             is_google_user: false,
+            client_portal_entra_metadata: entraManagedMetadata,
             created_at: trx.fn.now(),
             updated_at: trx.fn.now(),
           })

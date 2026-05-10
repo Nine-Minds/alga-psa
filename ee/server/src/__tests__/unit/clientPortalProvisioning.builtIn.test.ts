@@ -96,7 +96,7 @@ describe('clientPortalProvisioning built-in mutations', () => {
   });
 
   it('T122/F041/F046: uses existing client portal user linked to reconciled contact and upserts Microsoft OAuth link', async () => {
-    setupKnexHarness({
+    const harness = setupKnexHarness({
       existingContactUser: { user_id: 'existing-user-201', email: 'user201@example.com' },
       emailMatches: [],
     });
@@ -120,6 +120,14 @@ describe('clientPortalProvisioning built-in mutations', () => {
         providerAccountId: 'entra-object-201',
       })
     );
+    expect(harness.updates[0]).toMatchObject({
+      is_inactive: false,
+      client_portal_entra_metadata: expect.objectContaining({
+        managed: true,
+        entraTenantId: 'entra-tenant-201',
+        entraObjectId: 'entra-object-201',
+      }),
+    });
   });
 
   it('T123/F042: safely links an existing tenant client user by email when it has no conflicting contact linkage', async () => {
@@ -145,6 +153,11 @@ describe('clientPortalProvisioning built-in mutations', () => {
       email: 'user202@example.com',
       username: 'user202@example.com',
       is_inactive: false,
+      client_portal_entra_metadata: expect.objectContaining({
+        managed: true,
+        managedTenantId: 'managed-202',
+        entraObjectId: 'entra-object-202',
+      }),
     });
     expect(upsertOAuthAccountLinkMock).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'email-user-202', providerAccountId: 'entra-object-202' })
@@ -180,6 +193,11 @@ describe('clientPortalProvisioning built-in mutations', () => {
       email: 'user203@example.com',
       username: 'user203@example.com',
       is_inactive: false,
+      client_portal_entra_metadata: expect.objectContaining({
+        managed: true,
+        managedTenantId: 'managed-203',
+        entraTenantId: 'entra-tenant-201',
+      }),
     });
     expect(upsertOAuthAccountLinkMock).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'created-user-201', providerAccountId: 'entra-object-203' })

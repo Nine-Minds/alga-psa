@@ -403,7 +403,7 @@
   {
     "id": "F047",
     "description": "Store durable metadata identifying portal users as Entra-managed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Portal User Metadata",
       "Lifecycle"
@@ -412,7 +412,7 @@
   {
     "id": "F048",
     "description": "Store source Entra tenant ID, managed tenant mapping, Entra object ID, and entitlement source metadata for Entra-managed portal users.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Portal User Metadata"
     ]
