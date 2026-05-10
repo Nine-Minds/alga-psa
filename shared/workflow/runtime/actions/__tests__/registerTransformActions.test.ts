@@ -12,6 +12,9 @@ describe('registerTransformActionsV2', () => {
   it('T226/T227/T228: registers text transform actions with explicit input and output schemas', () => {
     const registry = getActionRegistryV2();
     const actionIds = [
+      'transform.parse_json',
+      'transform.query_json',
+      'transform.stringify_json',
       'transform.compose_text',
       'transform.truncate_text',
       'transform.concat_text',
@@ -43,6 +46,9 @@ describe('registerTransformActionsV2', () => {
     const registry = getActionRegistryV2();
 
     expect(registry.get('transform.truncate_text', 1)?.outputSchema.safeParse({ text: 'abc' }).success).toBe(true);
+    expect(registry.get('transform.parse_json', 1)?.outputSchema.safeParse({ value: { a: 1 }, type: 'object' }).success).toBe(true);
+    expect(registry.get('transform.query_json', 1)?.outputSchema.safeParse({ value: { a: 1 } }).success).toBe(true);
+    expect(registry.get('transform.stringify_json', 1)?.outputSchema.safeParse({ text: '{"a":1}' }).success).toBe(true);
     expect(registry.get('transform.compose_text', 1)?.outputSchema.safeParse({ prompt: 'abc' }).success).toBe(true);
     expect(registry.get('transform.concat_text', 1)?.outputSchema.safeParse({ text: 'abc' }).success).toBe(true);
     expect(registry.get('transform.replace_text', 1)?.outputSchema.safeParse({ text: 'abc' }).success).toBe(true);
@@ -211,5 +217,113 @@ describe('registerTransformActionsV2', () => {
 
     expect(parsed).toEqual({ source: null, fields: ['ticketId'] });
     expect(pickedObject).toEqual({ object: {} });
+  });
+
+  it('T001/T002/T003/T004/T005/T006/T007/T008/T010/T011/T016: executes JSON transform actions with parse/query/stringify coverage', async () => {
+    const registry = getActionRegistryV2();
+    const parseJson = registry.get('transform.parse_json', 1);
+    const queryJson = registry.get('transform.query_json', 1);
+    const stringifyJson = registry.get('transform.stringify_json', 1);
+
+    const parsedObject = await parseJson?.handler(
+      parseJson.inputSchema.parse({ source: '{"customer":{"email":"owner@example.com"},"active":true}' }),
+      {} as never
+    );
+    const parsedArray = await parseJson?.handler(
+      parseJson.inputSchema.parse({ source: '[1,2,3]' }),
+      {} as never
+    );
+    const parsedNumber = await parseJson?.handler(
+      parseJson.inputSchema.parse({ source: '42' }),
+      {} as never
+    );
+    const parsedString = await parseJson?.handler(
+      parseJson.inputSchema.parse({ source: '"hello"' }),
+      {} as never
+    );
+    const parsedNull = await parseJson?.handler(
+      parseJson.inputSchema.parse({ source: 'null' }),
+      {} as never
+    );
+    const passthroughObject = await parseJson?.handler(
+      parseJson.inputSchema.parse({ source: { nested: { id: 'a1' } } }),
+      {} as never
+    );
+    const passthroughArray = await parseJson?.handler(
+      parseJson.inputSchema.parse({ source: [{ id: 1 }, { id: 2 }] }),
+      {} as never
+    );
+
+    const queried = await queryJson?.handler(
+      queryJson.inputSchema.parse({
+        source: { customer: { email: 'owner@example.com' }, assets: [{ tag: 'srv-1' }, { tag: 'srv-2' }] },
+        expression: '{"email": source.customer.email, "tags": source.assets.tag}'
+      }),
+      {
+        expressionContext: {
+          payload: { workflowName: 'Normalize inbound payload' },
+          vars: { fallbackEmail: 'fallback@example.com' },
+          meta: { runId: 'run-123' },
+          error: { message: 'none' }
+        }
+      } as never
+    );
+
+    const queriedWithWorkflowContext = await queryJson?.handler(
+      queryJson.inputSchema.parse({
+        source: { customer: {} },
+        expression: 'coalesce(source.customer.email, vars.fallbackEmail)'
+      }),
+      {
+        expressionContext: {
+          payload: { tenant: 'alpha' },
+          vars: { fallbackEmail: 'fallback@example.com' },
+          meta: { workflowVersion: 1 },
+          error: null
+        }
+      } as never
+    );
+
+    const compactJson = await stringifyJson?.handler(
+      stringifyJson.inputSchema.parse({ source: { customer: 'owner@example.com', tags: ['srv-1', 'srv-2'] } }),
+      {} as never
+    );
+    const prettyJson = await stringifyJson?.handler(
+      stringifyJson.inputSchema.parse({ source: { customer: 'owner@example.com', tags: ['srv-1', 'srv-2'] }, spacing: 2 }),
+      {} as never
+    );
+
+    await expect(
+      parseJson?.handler(parseJson.inputSchema.parse({ source: '{bad json]' }), {} as never)
+    ).rejects.toThrow('JSON parse failed:');
+
+    await expect(
+      queryJson?.handler(queryJson.inputSchema.parse({ source: { ids: [1, 2] }, expression: '$sum(source.ids)' }), {} as never)
+    ).rejects.toThrow('JSON query expression validation failed:');
+
+    await expect(
+      queryJson?.handler(queryJson.inputSchema.parse({ source: { missing: true }, expression: 'source.nope' }), {} as never)
+    ).rejects.toThrow('JSON query expression evaluation failed:');
+
+    const largeText = 'x'.repeat(256 * 1024 + 8);
+    await expect(
+      queryJson?.handler(queryJson.inputSchema.parse({ source: { largeText }, expression: 'source.largeText' }), {} as never)
+    ).rejects.toThrow('max output size');
+
+    expect(parsedObject).toEqual({
+      value: { customer: { email: 'owner@example.com' }, active: true },
+      type: 'object'
+    });
+    expect(parsedArray).toEqual({ value: [1, 2, 3], type: 'array' });
+    expect(parsedNumber).toEqual({ value: 42, type: 'number' });
+    expect(parsedString).toEqual({ value: 'hello', type: 'string' });
+    expect(parsedNull).toEqual({ value: null, type: 'null' });
+    expect(passthroughObject).toEqual({ value: { nested: { id: 'a1' } }, type: 'object' });
+    expect(passthroughArray).toEqual({ value: [{ id: 1 }, { id: 2 }], type: 'array' });
+    expect((queried as any)?.value?.email).toBe('owner@example.com');
+    expect(JSON.parse(JSON.stringify((queried as any)?.value?.tags))).toEqual(['srv-1', 'srv-2']);
+    expect(queriedWithWorkflowContext).toEqual({ value: 'fallback@example.com' });
+    expect(compactJson).toEqual({ text: '{"customer":"owner@example.com","tags":["srv-1","srv-2"]}' });
+    expect(prettyJson).toEqual({ text: '{\n  "customer": "owner@example.com",\n  "tags": [\n    "srv-1",\n    "srv-2"\n  ]\n}' });
   });
 });

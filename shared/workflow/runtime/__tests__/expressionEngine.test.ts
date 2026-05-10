@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { compileExpression, validateExpressionSource } from '../expressionEngine';
+import { compileExpression, evaluateExpressionSource, validateExpressionSource } from '../expressionEngine';
 
 describe('expressionEngine guardrails', () => {
   afterEach(() => {
@@ -48,5 +48,14 @@ describe('expressionEngine guardrails', () => {
         payload: { big: oversized },
       })
     ).rejects.toThrow('Expression result exceeded max output size');
+  });
+
+  it('evaluates ad-hoc expression source against custom context', async () => {
+    await expect(
+      evaluateExpressionSource('coalesce(source.customer.email, vars.fallbackEmail)', {
+        source: { customer: {} },
+        vars: { fallbackEmail: 'fallback@example.com' },
+      })
+    ).resolves.toBe('fallback@example.com');
   });
 });

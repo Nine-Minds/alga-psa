@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
+import { compileExpression } from '../expressionEngine';
 import {
   COMPOSE_TEXT_ACTION_ID,
   COMPOSE_TEXT_VERSION,
@@ -37,6 +38,45 @@ const coalesceOutputSchema = z.object({
   matchedIndex: z.number().int().nullable().describe('Zero-based index of the selected candidate')
 });
 
+const jsonTypeSchema = z.enum(['object', 'array', 'string', 'number', 'boolean', 'null']);
+
+const parseJsonOutputSchema = z.object({
+  value: z.unknown().describe('Parsed JSON value'),
+  type: jsonTypeSchema.describe('Detected JSON type for the parsed value')
+});
+
+const queryJsonOutputSchema = z.object({
+  value: z.unknown().describe('Evaluated JSONata result')
+});
+
+const stringifyJsonOutputSchema = z.object({
+  text: z.string().describe('Serialized JSON text')
+});
+
+const parseJsonInputSchema = z.object({
+  source: z.unknown().describe('JSON text or literal object/array to parse')
+});
+
+const queryJsonInputSchema = z.object({
+  source: z.unknown().describe('Input value exposed to expression as "source"'),
+  expression: z.string().min(1).describe('JSONata expression to evaluate against source')
+});
+
+const stringifyJsonInputSchema = z.object({
+  source: z.unknown().describe('JSON-serializable value to serialize'),
+  spacing: z.number().int().min(0).max(8).optional().describe('Optional pretty-print spacing between 0 and 8')
+});
+
+const detectJsonType = (value: unknown): z.infer<typeof jsonTypeSchema> => {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  if (typeof value === 'object') return 'object';
+  if (typeof value === 'string') return 'string';
+  if (typeof value === 'number') return 'number';
+  if (typeof value === 'boolean') return 'boolean';
+  throw new Error('Unsupported JSON value type');
+};
+
 function truncateText(
   text: string,
   maxLength: number,
@@ -62,6 +102,99 @@ function truncateText(
 
 export function registerTransformActionsV2(): void {
   const registry = getActionRegistryV2();
+
+  registry.register({
+    id: 'transform.parse_json',
+    version: 1,
+    inputSchema: parseJsonInputSchema,
+    outputSchema: parseJsonOutputSchema,
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Parse JSON',
+      category: 'Transform',
+      description: 'Parse JSON text or pass through literal object/array values for downstream mapping.'
+    },
+    handler: async (input) => {
+      if (typeof input.source === 'string') {
+        try {
+          const value = JSON.parse(input.source);
+          return { value, type: detectJsonType(value) };
+        } catch (error) {
+          throw new Error(`JSON parse failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+
+      if (input.source !== null && typeof input.source === 'object') {
+        if (!Array.isArray(input.source) && Object.getPrototypeOf(input.source) !== Object.prototype) {
+          throw new Error('JSON parse failed: source object must be a plain object or array');
+        }
+        return { value: input.source, type: detectJsonType(input.source) };
+      }
+
+      throw new Error('JSON parse failed: source must be a JSON string or a literal object/array');
+    }
+  });
+
+  registry.register({
+    id: 'transform.query_json',
+    version: 1,
+    inputSchema: queryJsonInputSchema,
+    outputSchema: queryJsonOutputSchema,
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Query JSON',
+      category: 'Transform',
+      description: 'Evaluate a JSONata expression against a source value and return structured output.'
+    },
+    handler: async (input, ctx) => {
+      const evaluationContext = {
+        ...(ctx.expressionContext ?? {}),
+        source: input.source
+      };
+
+      let compiled;
+      try {
+        compiled = compileExpression({ $expr: input.expression });
+      } catch (error) {
+        throw new Error(`JSON query expression validation failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+
+      try {
+        const value = await compiled.evaluate(evaluationContext);
+        return { value };
+      } catch (error) {
+        throw new Error(`JSON query expression evaluation failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+  });
+
+  registry.register({
+    id: 'transform.stringify_json',
+    version: 1,
+    inputSchema: stringifyJsonInputSchema,
+    outputSchema: stringifyJsonOutputSchema,
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Stringify JSON',
+      category: 'Transform',
+      description: 'Serialize JSON-compatible values to text for storage, transport, or templating.'
+    },
+    handler: async (input) => {
+      try {
+        const spacing = input.spacing && input.spacing > 0 ? input.spacing : undefined;
+        const text = JSON.stringify(input.source, null, spacing);
+        if (typeof text !== 'string') {
+          throw new Error('source must be JSON-serializable');
+        }
+        return { text };
+      } catch (error) {
+        throw new Error(`JSON stringify failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+  });
 
   registry.register({
     id: COMPOSE_TEXT_ACTION_ID,
