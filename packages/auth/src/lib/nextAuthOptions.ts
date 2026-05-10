@@ -30,6 +30,11 @@ import {
     getMspSsoSigningSecret,
     parseAndVerifyMspSsoResolutionCookie,
 } from "./sso/mspSsoResolution";
+import {
+    CLIENT_PORTAL_SSO_DISCOVERY_COOKIE,
+    CLIENT_PORTAL_SSO_RESOLUTION_COOKIE,
+    parseAndVerifyClientPortalSsoResolutionCookie,
+} from "./sso/clientPortalSsoResolution";
 import { resolveTeamsMicrosoftProviderConfig } from "./sso/teamsMicrosoftProviderResolution";
 import {
     buildClearedPendingRememberContextCookie,
@@ -689,6 +694,7 @@ interface OAuthAccountMetadata {
     vanityHostHint?: string;
     sessionState?: string;
     idTokenClaims?: Record<string, unknown>;
+    callbackUrl?: string;
 }
 
 function extractOAuthAccountMetadata(
@@ -748,6 +754,11 @@ function extractOAuthAccountMetadata(
     ]);
     if (tenantHint) {
         metadata.tenantHint = tenantHint;
+    }
+
+    const callbackUrl = parseStateValue(rawState, 'callback_url');
+    if (callbackUrl) {
+        metadata.callbackUrl = callbackUrl;
     }
 
     const vanityHostHint = pickFirstString([
@@ -866,6 +877,20 @@ async function finalizePendingRememberedEmailCookie(): Promise<void> {
         store.set(buildRememberedEmailCookie(pendingContext.email));
     } catch (error) {
         console.warn('[remember-email] failed to finalize pending remember context', { error });
+    }
+}
+
+async function clearClientPortalSsoStateCookies(): Promise<void> {
+    try {
+        const store = await cookies();
+        if (store.get(CLIENT_PORTAL_SSO_DISCOVERY_COOKIE)) {
+            store.delete(CLIENT_PORTAL_SSO_DISCOVERY_COOKIE);
+        }
+        if (store.get(CLIENT_PORTAL_SSO_RESOLUTION_COOKIE)) {
+            store.delete(CLIENT_PORTAL_SSO_RESOLUTION_COOKIE);
+        }
+    } catch (error) {
+        console.warn('[client-portal-sso] failed to clear state cookies', { error });
     }
 }
 
@@ -1558,6 +1583,44 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
 
             if (providerId && providerId !== 'credentials') {
                 await finalizePendingRememberedEmailCookie();
+                await clearClientPortalSsoStateCookies();
+            }
+
+            if (providerId && providerId !== 'credentials' && extendedUser?.user_type === 'client') {
+                const accountRecord = account as unknown as Record<string, unknown> | null;
+                const metadata = extractOAuthAccountMetadata(accountRecord);
+                const callbackUrl = metadata.callbackUrl;
+                const canonicalBaseUrl = process.env.NEXTAUTH_URL;
+
+                if (callbackUrl && canonicalBaseUrl) {
+                    try {
+                        const vanityRedirect = await computeVanityRedirect({
+                            url: callbackUrl,
+                            baseUrl: canonicalBaseUrl,
+                            token: {
+                                id: extendedUser.id,
+                                email: extendedUser.email,
+                                name: extendedUser.name,
+                                tenant: extendedUser.tenant,
+                                tenantSlug: extendedUser.tenantSlug,
+                                user_type: extendedUser.user_type,
+                                clientId: extendedUser.clientId,
+                                contactId: extendedUser.contactId,
+                            },
+                        });
+
+                        if (vanityRedirect) {
+                            return vanityRedirect;
+                        }
+                    } catch (error) {
+                        console.warn('[signIn] failed to compute OAuth client portal redirect', {
+                            email: extendedUser?.email,
+                            tenant: extendedUser?.tenant,
+                            callbackUrl,
+                            error,
+                        });
+                    }
+                }
             }
 
             if (providerId === 'credentials') {
@@ -2357,6 +2420,44 @@ export const options: NextAuthConfig = {
 
             if (providerId && providerId !== 'credentials') {
                 await finalizePendingRememberedEmailCookie();
+                await clearClientPortalSsoStateCookies();
+            }
+
+            if (providerId && providerId !== 'credentials' && extendedUser?.user_type === 'client') {
+                const accountRecord = account as unknown as Record<string, unknown> | null;
+                const metadata = extractOAuthAccountMetadata(accountRecord);
+                const callbackUrl = metadata.callbackUrl;
+                const canonicalBaseUrl = process.env.NEXTAUTH_URL;
+
+                if (callbackUrl && canonicalBaseUrl) {
+                    try {
+                        const vanityRedirect = await computeVanityRedirect({
+                            url: callbackUrl,
+                            baseUrl: canonicalBaseUrl,
+                            token: {
+                                id: extendedUser.id,
+                                email: extendedUser.email,
+                                name: extendedUser.name,
+                                tenant: extendedUser.tenant,
+                                tenantSlug: extendedUser.tenantSlug,
+                                user_type: extendedUser.user_type,
+                                clientId: extendedUser.clientId,
+                                contactId: extendedUser.contactId,
+                            },
+                        });
+
+                        if (vanityRedirect) {
+                            return vanityRedirect;
+                        }
+                    } catch (error) {
+                        console.warn('[signIn] failed to compute OAuth client portal redirect', {
+                            email: extendedUser?.email,
+                            tenant: extendedUser?.tenant,
+                            callbackUrl,
+                            error,
+                        });
+                    }
+                }
             }
 
             if (providerId === 'credentials') {

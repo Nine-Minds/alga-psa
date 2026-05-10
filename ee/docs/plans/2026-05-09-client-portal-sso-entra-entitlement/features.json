@@ -168,7 +168,7 @@
   {
     "id": "F020",
     "description": "Apply existing vanity-domain handoff redirect logic to successful OAuth client portal sign-ins.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Login Flow",
       "Functional Requirements"
@@ -177,7 +177,7 @@
   {
     "id": "F021",
     "description": "Finalize and clear client portal SSO state after OAuth sign-in succeeds or fails.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions"
     ]
@@ -185,7 +185,7 @@
   {
     "id": "F022",
     "description": "Preserve existing client portal credentials login behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration"
     ]
@@ -193,7 +193,7 @@
   {
     "id": "F023",
     "description": "Preserve existing MSP SSO discovery and resolution behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration",
       "Non-goals"

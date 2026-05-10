@@ -58,7 +58,7 @@
   {
     "id": "T006",
     "description": "Auth behavior: client portal OAuth sign-in redirects through vanity-domain handoff for a client user with active portal domain.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F021"
@@ -78,7 +78,7 @@
   {
     "id": "T008",
     "description": "Regression behavior: existing client portal credentials login still signs in and redirects as before.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ]
@@ -86,7 +86,7 @@
   {
     "id": "T009",
     "description": "Regression behavior: existing MSP SSO discovery and resolve behavior remains unchanged after shared component/helper changes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F023"

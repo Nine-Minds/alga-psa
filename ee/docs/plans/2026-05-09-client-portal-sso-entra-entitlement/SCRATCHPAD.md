@@ -85,3 +85,21 @@ Working notes for implementing tenant-scoped client portal SSO and Entra entitle
 - (2026-05-09) Implemented `F016`-`F019` in `ee/server/src/lib/auth/ssoProviders.ts`: client-portal OAuth mapping now requires `user_type=client`, requires tenant-scoped lookup for client mode, blocks global fallback paths for client mode, and rejects internal-user matches when `user_type=client` is requested.
 - (2026-05-09) Implemented `T005` via `ee/server/src/__tests__/unit/auth/ssoProviders.clientPortal.test.ts` to validate tenant-scoped active client mapping and internal-user rejection.
 - (2026-05-09) Command: `npx vitest run src/__tests__/unit/auth/ssoProviders.clientPortal.test.ts` (workdir: `ee/server/`) ✅
+- (2026-05-09) Implemented `F020`/`F021`: OAuth client-portal SSO now carries `callback_url` in signed state from `SsoProviderButtons`, and `nextAuthOptions` uses that callback context during OAuth sign-in to run existing vanity-domain handoff redirect logic for `user_type=client` (same `computeVanityRedirect` path as credentials flow).
+- (2026-05-09) Added explicit client-portal SSO state finalization in NextAuth sign-in callback: clears `client_portal_sso_discovery` and `client_portal_sso_resolution` cookies after OAuth completion handling to prevent stale cross-attempt context reuse.
+- (2026-05-09) Implemented `T006` via `packages/auth/src/lib/nextAuthOptions.clientPortalSso.contract.test.ts` to lock callback-state extraction, OAuth vanity redirect branch, and client-portal SSO state cookie clearing behavior.
+
+## Commands Run
+
+- `npx vitest run src/lib/nextAuthOptions.clientPortalSso.contract.test.ts` (workdir: `packages/auth/`) ✅
+- `npx vitest run src/__tests__/unit/auth/ssoProviders.clientPortal.test.ts` (workdir: `ee/server/`) ✅
+
+## Gotchas
+
+- (2026-05-09) `packages/auth` Vitest config currently includes only `src/**/*.test.ts`; `*.test.tsx` files are not discovered by default, so targeted regression execution should use `.test.ts` suites or update include config in a separate change.
+- (2026-05-09) Implemented `F022` and `T008` with a credentials-flow regression contract test in `packages/auth/src/components/clientPortalCredentialsRegression.contract.test.ts` to lock client credentials sign-in payload behavior (`userType: client`, callback pass-through) and default dashboard callback routing.
+- (2026-05-09) Implemented `F023` and `T009` with MSP SSO regression contract coverage in `packages/auth/src/components/mspSsoRegression.contract.test.ts` to verify MSP default discovery/resolve endpoints, last-provider storage key, and `user_type=internal` state remain unchanged.
+
+## Commands Run
+
+- `npx vitest run src/lib/nextAuthOptions.clientPortalSso.contract.test.ts src/components/clientPortalCredentialsRegression.contract.test.ts src/components/mspSsoRegression.contract.test.ts` (workdir: `packages/auth/`) ✅

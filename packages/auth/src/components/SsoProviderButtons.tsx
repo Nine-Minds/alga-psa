@@ -190,6 +190,7 @@ export default function SsoProviderButtons({
         mode: 'login',
         user_type: authSurface === 'client_portal' ? 'client' : 'internal',
         tenant: tenantHint ?? null,
+        callback_url: callbackUrl,
       };
 
       const authorizationParams: Record<string, string> = {
