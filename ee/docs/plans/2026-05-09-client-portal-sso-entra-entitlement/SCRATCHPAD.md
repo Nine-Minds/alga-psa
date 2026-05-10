@@ -142,3 +142,11 @@ Working notes for implementing tenant-scoped client portal SSO and Entra entitle
 - (2026-05-09) Implemented `F039` (skip path): eligibility gate now blocks provisioning when `accountEnabled` is false (`reason: account_disabled`). Deactivation of existing Entra-managed portal users remains in later lifecycle items (`F051`/`F052`).
 - (2026-05-09) Added `T121` in `clientPortalProvisioningEligibility.test.ts` for disabled-account skip gating.
 - (2026-05-09) Command: `npx vitest run src/__tests__/unit/clientPortalProvisioningEligibility.test.ts` (workdir: `ee/server/`) ✅
+- (2026-05-09) Implemented `F041`/`F042`/`F043`/`F044`/`F046` in `clientPortalProvisioning`: built-in provisioning now resolves existing client users by reconciled contact first, then performs a safe single-match tenant+email attach when non-conflicting, otherwise creates a new `users` record (`user_type='client'`, normalized email/username, contact link, active state) and upserts Microsoft OAuth account link with `provider_account_id = entraObjectId`.
+- (2026-05-09) Updated `executeEntraSync` to pass reconciled `contactNameId` into provisioning mutations for both linked and created contact paths.
+- (2026-05-09) Implemented `T012` via additional sync-engine skip coverage (`T125`) plus existing eligibility rules (`T120`): provisioning hook remains suppressed when entitlement group is missing or membership is false.
+- (2026-05-09) Added built-in provisioning mutation coverage in `clientPortalProvisioning.builtIn.test.ts` (`T122`-`T124`) for existing-contact reuse, safe email attach, user creation path, and OAuth link upsert contract.
+
+## Commands Run
+
+- `npx vitest run src/__tests__/unit/clientPortalProvisioning.builtIn.test.ts src/__tests__/unit/entraSyncEngine.dryRun.test.ts src/__tests__/unit/clientPortalProvisioningEligibility.test.ts` (workdir: `ee/server/`) ✅

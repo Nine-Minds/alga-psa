@@ -72,7 +72,7 @@ export async function executeEntraSync(
     if (candidates.length === 1) {
       counters.increment('linked');
       if (!dryRun) {
-        await linkExistingMatchedContact(
+        const linkedContact = await linkExistingMatchedContact(
           input.tenantId,
           input.clientId,
           candidates[0],
@@ -89,6 +89,7 @@ export async function executeEntraSync(
               tenantId: input.tenantId,
               clientId: input.clientId,
               managedTenantId: input.managedTenantId,
+              contactNameId: linkedContact.contactNameId,
             },
             userWithEntitlement
           );
@@ -99,7 +100,7 @@ export async function executeEntraSync(
 
     counters.increment('created');
     if (!dryRun) {
-      await createContactForEntraUser(input.tenantId, input.clientId, userWithEntitlement);
+      const createdContact = await createContactForEntraUser(input.tenantId, input.clientId, userWithEntitlement);
       const eligibility = evaluateClientPortalProvisioningEligibility(
         userWithEntitlement,
         input.portalEntitlement
@@ -110,6 +111,7 @@ export async function executeEntraSync(
             tenantId: input.tenantId,
             clientId: input.clientId,
             managedTenantId: input.managedTenantId,
+            contactNameId: createdContact.contactNameId,
           },
           userWithEntitlement
         );

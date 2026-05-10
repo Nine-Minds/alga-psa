@@ -352,7 +352,7 @@
   {
     "id": "F041",
     "description": "Find an existing client portal user for a reconciled contact before creating a new one.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Entra Provisioning"
     ]
@@ -360,7 +360,7 @@
   {
     "id": "F042",
     "description": "Find an existing client portal user by tenant and email only when it is safe and non-conflicting.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Entra Provisioning",
       "Security / Permissions"
@@ -369,7 +369,7 @@
   {
     "id": "F043",
     "description": "Create a client portal user for an entitled reconciled contact when no portal user exists.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Entra Provisioning"
     ]
@@ -377,7 +377,7 @@
   {
     "id": "F044",
     "description": "Set created portal users to user_type=client with tenant, contact_id, client ID, and normalized email.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Entra Provisioning",
       "Data / API / Integrations"
@@ -394,7 +394,7 @@
   {
     "id": "F046",
     "description": "Upsert Microsoft OAuth account links for Entra-provisioned portal users using stable Entra identity data.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Entra Provisioning",
       "OAuth Account Link"

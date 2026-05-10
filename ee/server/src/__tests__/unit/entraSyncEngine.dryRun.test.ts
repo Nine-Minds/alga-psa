@@ -153,6 +153,8 @@ describe('executeEntraSync dry-run behavior', () => {
       { contactNameId: 'c1' },
       { contactNameId: 'c2' },
     ]);
+    linkExistingMatchedContactMock.mockResolvedValue({ contactNameId: 'contact-115' });
+    createContactForEntraUserMock.mockResolvedValue({ contactNameId: 'contact-115' });
 
     const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
     await executeEntraSync({
@@ -194,6 +196,7 @@ describe('executeEntraSync dry-run behavior', () => {
       eligible: false,
       reason: 'mode_disabled',
     });
+    linkExistingMatchedContactMock.mockResolvedValue({ contactNameId: 'contact-116' });
 
     const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
     await executeEntraSync({
@@ -211,6 +214,45 @@ describe('executeEntraSync dry-run behavior', () => {
 
     expect(linkExistingMatchedContactMock).toHaveBeenCalledTimes(1);
     expect(evaluateClientPortalProvisioningEligibilityMock).toHaveBeenCalledTimes(1);
+    expect(handleEligibleClientPortalProvisioningMock).not.toHaveBeenCalled();
+  });
+
+  it('T125/T012: skips portal provisioning when entitlement group is not configured', async () => {
+    findContactMatchesByEmailMock.mockReset();
+    linkExistingMatchedContactMock.mockReset();
+    evaluateClientPortalProvisioningEligibilityMock.mockReset();
+    handleEligibleClientPortalProvisioningMock.mockReset();
+
+    findContactMatchesByEmailMock.mockResolvedValueOnce([
+      {
+        contactNameId: 'contact-125',
+        clientId: 'client-125',
+        email: 'linked125@example.com',
+        fullName: 'Linked 125',
+        isInactive: false,
+      },
+    ]);
+    linkExistingMatchedContactMock.mockResolvedValue({ contactNameId: 'contact-125' });
+    evaluateClientPortalProvisioningEligibilityMock.mockReturnValue({
+      eligible: false,
+      reason: 'missing_group',
+    });
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    await executeEntraSync({
+      tenantId: 'tenant-125',
+      clientId: 'client-125',
+      managedTenantId: 'managed-125',
+      dryRun: false,
+      users: [buildUser('linked125')],
+      portalEntitlement: {
+        provisioningMode: 'built_in',
+        groupId: null,
+        membershipMode: 'transitive',
+      },
+    });
+
+    expect(linkExistingMatchedContactMock).toHaveBeenCalledTimes(1);
     expect(handleEligibleClientPortalProvisioningMock).not.toHaveBeenCalled();
   });
 });

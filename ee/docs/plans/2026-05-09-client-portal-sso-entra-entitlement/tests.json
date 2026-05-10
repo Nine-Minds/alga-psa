@@ -116,7 +116,7 @@
   {
     "id": "T012",
     "description": "DB-backed integration: Entra sync skips portal user provisioning when no entitlement group is configured or the user lacks group membership.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028",
       "F029",

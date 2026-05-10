@@ -1,9 +1,12 @@
 import type { EntraSyncUser } from './types';
+import { createTenantKnex, runWithTenant } from '@/lib/db';
+import { upsertOAuthAccountLink } from '@ee/lib/auth/oauthAccountLinks';
 
 export interface ClientPortalProvisioningContext {
   tenantId: string;
   clientId: string;
   managedTenantId: string | null;
+  contactNameId: string;
 }
 
 export interface ClientPortalProvisioningConfig {
@@ -46,8 +49,94 @@ export function evaluateClientPortalProvisioningEligibility(
 }
 
 export async function handleEligibleClientPortalProvisioning(
-  _context: ClientPortalProvisioningContext,
-  _user: EntraSyncUser
+  context: ClientPortalProvisioningContext,
+  user: EntraSyncUser
 ): Promise<void> {
-  // Provisioning mutations are implemented in later plan items.
+  await runWithTenant(context.tenantId, async () => {
+    const { knex } = await createTenantKnex();
+    const normalizedEmail = (user.email || user.userPrincipalName || '').trim().toLowerCase();
+
+    await knex.transaction(async (trx) => {
+      const existingForContact = await trx('users')
+        .where({
+          tenant: context.tenantId,
+          user_type: 'client',
+          contact_id: context.contactNameId,
+        })
+        .orderBy('updated_at', 'desc')
+        .first(['user_id', 'email']);
+
+      let userId: string | null = existingForContact?.user_id ? String(existingForContact.user_id) : null;
+
+      if (!userId) {
+        const byEmailRows = normalizedEmail
+          ? await trx('users')
+              .where({
+                tenant: context.tenantId,
+                user_type: 'client',
+              })
+              .andWhereRaw('lower(email) = ?', [normalizedEmail])
+              .select(['user_id', 'contact_id'])
+              .orderBy('updated_at', 'desc')
+          : [];
+
+        const safeByEmailMatch =
+          byEmailRows.length === 1 &&
+          (!byEmailRows[0].contact_id || String(byEmailRows[0].contact_id) === context.contactNameId);
+
+        if (safeByEmailMatch) {
+          userId = String(byEmailRows[0].user_id);
+          await trx('users')
+            .where({
+              tenant: context.tenantId,
+              user_id: userId,
+            })
+            .update({
+              contact_id: context.contactNameId,
+              username: normalizedEmail || trx.raw('username'),
+              email: normalizedEmail || trx.raw('email'),
+              is_inactive: false,
+              updated_at: trx.fn.now(),
+            });
+        }
+      }
+
+      if (!userId) {
+        const inserted = await trx('users')
+          .insert({
+            tenant: context.tenantId,
+            user_id: trx.raw('gen_random_uuid()'),
+            username: normalizedEmail,
+            email: normalizedEmail,
+            first_name: user.givenName?.trim() || user.displayName?.trim() || null,
+            last_name: user.surname?.trim() || null,
+            user_type: 'client',
+            contact_id: context.contactNameId,
+            is_inactive: false,
+            two_factor_enabled: false,
+            is_google_user: false,
+            created_at: trx.fn.now(),
+            updated_at: trx.fn.now(),
+          })
+          .returning(['user_id']);
+        userId = String(inserted[0].user_id);
+      }
+
+      await upsertOAuthAccountLink({
+        tenant: context.tenantId,
+        userId,
+        provider: 'microsoft',
+        providerAccountId: user.entraObjectId,
+        providerEmail: normalizedEmail || null,
+        metadata: {
+          source: 'entra_sync',
+          entraTenantId: user.entraTenantId,
+          managedTenantId: context.managedTenantId,
+          entitlementGroupId: user.clientPortalEntitlement?.groupId ?? null,
+          entitlementMembershipMode: user.clientPortalEntitlement?.membershipMode ?? null,
+        },
+        lastUsedAt: new Date(),
+      });
+    });
+  });
 }
