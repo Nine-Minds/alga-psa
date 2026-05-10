@@ -16,6 +16,8 @@ import {
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
+import { getWorkflowSaveAsDisplayPath } from './workflowSaveAsPath';
+
 import {
   extractSchemaFields,
   type ActionRegistryItem,
@@ -329,6 +331,7 @@ export const ActionSchemaReference: React.FC<{
   const resolvedOutputSchema = outputSchemaOverride ?? action.outputSchema;
   const inputFields = extractSchemaFields(action.inputSchema, action.inputSchema);
   const outputFields = extractSchemaFields(resolvedOutputSchema, resolvedOutputSchema);
+  const saveAsDisplayPath = getWorkflowSaveAsDisplayPath(saveAs);
 
   return (
     <div className="space-y-3">
@@ -371,14 +374,14 @@ export const ActionSchemaReference: React.FC<{
             title={t('schemaReference.outputSchemaTitle', { defaultValue: 'Output Schema' })}
             icon={<FileJson className="w-3.5 h-3.5 text-gray-500" />}
             fields={outputFields}
-            pathPrefix={saveAs ? `vars.${saveAs}` : 'output'}
+            pathPrefix={saveAs ? saveAsDisplayPath : 'output'}
             defaultExpanded={false}
             emptyMessage={t('schemaReference.noOutputFields', { defaultValue: 'No output fields' })}
             onCopyPath={onCopyPath}
             headerExtra={
               saveAs ? (
                 <span className="text-[10px] text-gray-500 font-normal">
-                  → vars.{saveAs}
+                  → {saveAsDisplayPath}
                 </span>
               ) : undefined
             }
@@ -389,7 +392,7 @@ export const ActionSchemaReference: React.FC<{
               <Check className="w-3.5 h-3.5 text-success" />
               <span className="text-success">
                 {t('schemaReference.outputAvailablePrefix', { defaultValue: 'Output available at' })}{' '}
-                <code className="bg-success/15 px-1 rounded">${`{vars.${saveAs}}`}</code>
+                <code className="bg-success/15 px-1 rounded">${`{${saveAsDisplayPath}}`}</code>
               </span>
             </div>
           )}

@@ -1,0 +1,258 @@
+[
+  {
+    "id": "F001",
+    "description": "Register transform.regex_match as a pure Transform action with explicit input and output schemas.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 1",
+      "Functional Requirements 18",
+      "Functional Requirements 19"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Implement regex_match inputs for text, pattern, optional flags, and optional requireMatch.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 2"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Implement regex_match output shape with matched, match, index, groups, and namedGroups.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 3"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Register transform.regex_extract as a pure Transform action with explicit input and output schemas.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 4",
+      "Functional Requirements 18",
+      "Functional Requirements 19"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Implement regex_extract inputs for text, pattern, optional flags, optional maxMatches, and optional requireMatch.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 5"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Implement regex_extract output shape with matched, count, first, and matches.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 6"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Support numbered capture groups in regex_match and regex_extract outputs.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 7"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Support JavaScript named capture groups in regex_match and regex_extract outputs where available.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 8"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Register transform.regex_replace as a pure Transform action with explicit input and output schemas.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 9",
+      "Functional Requirements 18",
+      "Functional Requirements 19"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Implement regex_replace inputs for text, pattern, optional flags, replacement, and optional replaceAll.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 10"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Implement regex_replace output shape with text and replacementCount.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 11"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Support or explicitly document JavaScript replacement tokens such as $1, $2, $<name>, and $$.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 12"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Add shared regex compilation helper that validates pattern syntax and returns actionable invalid-pattern errors.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 13",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Validate supported regex flags and reject unsupported or duplicate flags with actionable errors.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 14"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Enforce guardrails for maximum source text length, maximum pattern length, and maximum match count.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 15",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Handle zero-width global matches safely so extract and replace loops cannot hang.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 16"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Implement deterministic no-match behavior and requireMatch failure behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 17"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Ensure regex actions are sideEffectful false and use engine-provided idempotency.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 18"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Expose regex action input and output fields through the workflow designer catalog.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 19",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Ensure regex transform outputs save through existing action.call saveAs behavior with no new assignment semantics.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 20"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Teach workflowDataContext/downstream reference building to expose stable regex output fields.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 21",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Optionally infer useful output fields from named capture groups when feasible without weakening runtime safety.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Render regex pattern, flags, replacement, maxMatches, and requireMatch inputs cleanly in the workflow designer.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Preserve and validate scoped saveAs paths such as payload.*, vars.*, and meta.* for regex outputs.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements 20"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Improve Run Studio error display so regex action-level errors appear before generic wrapper errors.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 22",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Add Quick Ask guidance for regex action names, JavaScript regex syntax, flags, captures, replacements, saveAs, guardrails, and deterministic runtime behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 23"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Preserve existing Quick Ask and AI Assistant entitlement gating while keeping regex actions available without AI entitlement.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements 24",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Document guidance that saved regex captures may persist sensitive or secret-derived content into workflow state.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Keep existing workflows and current transform actions backward-compatible.",
+    "implemented": true,
+    "prdRefs": [
+      "Rollout / Migration",
+      "Non-functional Requirements"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Add examples for common MSP parsing patterns such as incident IDs, hostnames, serial numbers, asset tags, and whitespace normalization.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Functional Requirements 23"
+    ]
+  }
+]

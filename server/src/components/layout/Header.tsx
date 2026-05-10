@@ -10,6 +10,7 @@ import {
   Home,
   PlusCircle,
   Settings,
+  Sparkles,
   User,
 } from 'lucide-react';
 import {
@@ -37,6 +38,7 @@ import { useProduct } from '@/context/ProductContext';
 import { ThemeToggle } from '@alga-psa/ui/components/ThemeToggle';
 import { TrialBanner } from './TrialBanner';
 import { PaymentFailedBanner } from './PaymentFailedBanner';
+import { useQuickAsk } from './QuickAskContext';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -365,6 +367,7 @@ export default function Header({
   const [userData, setUserData] = useState<IUserWithRoles | null>(null);
   const [canManageAccount, setCanManageAccount] = useState<boolean>(false);
   const router = useRouter();
+  const { aiAssistantAvailable, openQuickAsk } = useQuickAsk();
 
   // Use SWR hooks for avatar - only one will be active based on user type
   const { avatarUrl: userAvatarUrl } = useUserAvatar(
@@ -418,6 +421,11 @@ export default function Header({
   };
 
   const pathname = usePathname();
+  const showWorkflowQuickAsk = aiAssistantAvailable && Boolean(pathname?.startsWith('/msp/workflow-editor'));
+  const handleWorkflowQuickAskOpen = () => {
+    analytics.capture('ui.workflow_designer.quick_ask.opened', { source: 'header' });
+    openQuickAsk();
+  };
   const breadcrumbItems = useMemo(() => getBreadcrumbItems(pathname), [pathname, t]);
   const homeLabel = t('header.breadcrumb.home', { defaultValue: 'Home' });
   const tenantBadgeAriaLabel = userData?.tenant
@@ -470,6 +478,19 @@ export default function Header({
         <PaymentFailedBanner />
         <TrialBanner />
         <TenantBadge tenant={userData?.tenant} ariaLabel={tenantBadgeAriaLabel} />
+        {showWorkflowQuickAsk ? (
+          <button
+            id="workflow-designer-ask-ai"
+            type="button"
+            className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-50 hover:text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:text-purple-300 dark:hover:bg-purple-950/30 dark:hover:text-purple-200"
+            aria-label={t('header.quickAsk.ariaLabel', { defaultValue: 'Ask AI about this workflow' })}
+            title={t('header.quickAsk.shortcutHint', { defaultValue: 'Open Quick Ask for workflow guidance' })}
+            onClick={handleWorkflowQuickAskOpen}
+          >
+            <Sparkles className="h-5 w-5" />
+            <span className="hidden lg:inline">{t('header.quickAsk.title', { defaultValue: 'Ask AI' })}</span>
+          </button>
+        ) : null}
         <QuickCreateMenu t={t} />
         <ThemeToggle
           labels={{

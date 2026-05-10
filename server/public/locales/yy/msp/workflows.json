@@ -1383,6 +1383,11 @@
       "openEditor": "55555",
       "apply": "55555",
       "cancel": "55555"
+    },
+    "askAi": {
+      "ariaLabel": "11111",
+      "title": "11111",
+      "shortcutHint": "11111"
     }
   },
   "schemaReference": {

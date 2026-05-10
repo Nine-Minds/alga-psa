@@ -232,6 +232,74 @@ describe('action input editor state', () => {
     });
   });
 
+  it('preserves non-null anyOf action input unions as readable type labels', () => {
+    const jsonTransformRegistry: WorkflowDesignerActionRegistryItem[] = [
+      {
+        id: 'transform.json_test',
+        version: 1,
+        inputSchema: {
+          type: 'object',
+          properties: {
+            parseSource: {
+              anyOf: [
+                { type: 'string' },
+                { type: 'array', items: { type: 'string' } },
+                { type: 'object', additionalProperties: true },
+              ],
+              description: 'JSON text or literal object/array to parse',
+            },
+            jsonValue: {
+              anyOf: [
+                { type: 'string' },
+                { type: 'number' },
+                { type: 'boolean' },
+                { type: 'null' },
+                { type: 'array', items: { type: 'string' } },
+                { type: 'object', additionalProperties: true },
+              ],
+              description: 'JSON-serializable value',
+            },
+            optionalName: {
+              anyOf: [
+                { type: 'string' },
+                { type: 'null' },
+              ],
+            },
+          },
+          required: ['parseSource', 'jsonValue'],
+        },
+        outputSchema: {
+          type: 'object',
+          properties: {},
+        },
+      },
+    ];
+
+    const step: NodeStep = {
+      id: 'step-json-transform-types',
+      type: 'action.call',
+      name: 'JSON Transform Test',
+      config: {
+        actionId: 'transform.json_test',
+        version: 1,
+      },
+    };
+
+    const state = buildActionInputEditorState(step, jsonTransformRegistry);
+    expect(state.actionInputFields.find((field) => field.name === 'parseSource')).toMatchObject({
+      type: 'string | array | object',
+      required: true,
+    });
+    expect(state.actionInputFields.find((field) => field.name === 'jsonValue')).toMatchObject({
+      type: 'string | number | boolean | null | array | object',
+      required: true,
+    });
+    expect(state.actionInputFields.find((field) => field.name === 'optionalName')).toMatchObject({
+      type: 'string',
+      nullable: true,
+    });
+  });
+
   it('promotes user picker metadata from primitive array items to the array field editor', () => {
     const arrayItemPickerRegistry: WorkflowDesignerActionRegistryItem[] = [
       {
