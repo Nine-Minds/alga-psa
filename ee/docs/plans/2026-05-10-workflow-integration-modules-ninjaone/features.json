@@ -1,0 +1,279 @@
+[
+  {
+    "id": "F001",
+    "description": "Create a first-party workflow integration module registry for declarative module metadata.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements: Functional Requirements"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Support module metadata fields for group key, label, description, tile kind, icon token, default action ID, action IDs, and availability key.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements: Functional Requirements"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Allow designer catalog construction to include registered first-party integration modules as stable app records.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Preserve existing built-in action grouping behavior for core, transform, and AI modules.",
+    "implemented": true,
+    "prdRefs": [
+      "Non-goals",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Preserve existing extension app filtering behavior when adding first-party integration filtering.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements: Functional Requirements"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Add an availability resolver mechanism keyed by declarative availability keys.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Implement the NinjaOne availability resolver using active rmm_integrations rows for the current tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements: Functional Requirements"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Filter the workflow designer catalog so the NinjaOne module is returned only when NinjaOne is active for the tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Register a NinjaOne workflow module with group key app:ninjaone, NinjaOne label, NinjaOne icon token, and default action.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Map the NinjaOne icon token in the Workflow Designer palette so the tile is visibly NinjaOne-specific.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Register the ninjaone.devices.find workflow action with schema, metadata, and handler.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements: Functional Requirements"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Implement NinjaOne device find/list output with normalized device fields suitable for downstream mappings.",
+    "implemented": true,
+    "prdRefs": [
+      "Primary flow: device operation"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Register the ninjaone.devices.sync workflow action with schema, metadata, and handler.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements: Functional Requirements"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Implement single-device sync by reusing existing NinjaOne sync engine behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Register the ninjaone.devices.reboot workflow action with side-effectful metadata and engine-provided idempotency.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Implement NinjaOne device reboot by validating tenant/integration/device context and calling the existing NinjaOne client.",
+    "implemented": true,
+    "prdRefs": [
+      "Primary flow: device operation"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Register the ninjaone.alerts.list_active workflow action with schema, metadata, and handler.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements: Functional Requirements"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Implement active alert listing with normalized alert outputs for downstream Ticket module mappings.",
+    "implemented": true,
+    "prdRefs": [
+      "Primary flow: automate from NinjaOne alert to generic ticket creation"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Register the ninjaone.alerts.get workflow action with schema, metadata, and handler.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements: Functional Requirements"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Implement get-alert behavior by external alert ID or alert UID and return normalized alert fields.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements: Functional Requirements"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Register the ninjaone.alerts.reset workflow action with side-effectful metadata and engine-provided idempotency.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Display ninjaone.alerts.reset as Acknowledge alert in the designer while keeping the technical ID stable.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Implement acknowledge-alert behavior by calling the NinjaOne reset alert operation after tenant/integration validation.",
+    "implemented": true,
+    "prdRefs": [
+      "Requirements: Functional Requirements"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Ensure all NinjaOne workflow action handlers fail fast when tenant context is missing.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Ensure all NinjaOne workflow action handlers fail fast when NinjaOne is inactive for the tenant.",
+    "implemented": true,
+    "prdRefs": [
+      "Runtime behavior",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Ensure all NinjaOne workflow action handlers avoid returning credentials or sensitive secret-derived data.",
+    "implemented": true,
+    "prdRefs": [
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Register NinjaOne workflow actions in the server runtime used by catalog and publish validation.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Register NinjaOne workflow actions in the Temporal worker runtime used for action execution.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Expose NinjaOne action input and output schemas through the existing workflow registry/catalog endpoints.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Ensure the NinjaOne designer module action dropdown contains only the approved NinjaOne actions.",
+    "implemented": true,
+    "prdRefs": [
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "Ensure NinjaOne alert outputs include fields needed to map into generic ticket creation.",
+    "implemented": true,
+    "prdRefs": [
+      "Primary flow: automate from NinjaOne alert to generic ticket creation"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Keep ticket creation out of the NinjaOne module and rely on existing Ticket actions for that flow.",
+    "implemented": true,
+    "prdRefs": [
+      "Non-goals"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "Use clear user-facing action labels and descriptions for all NinjaOne actions.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Document the module registry pattern enough for future first-party integrations to adopt it.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals"
+    ]
+  }
+]

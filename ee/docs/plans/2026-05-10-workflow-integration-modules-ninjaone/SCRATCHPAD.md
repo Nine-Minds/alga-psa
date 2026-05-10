@@ -1,0 +1,86 @@
+# Scratchpad — Workflow Integration Modules: NinjaOne First Pass
+
+- Plan slug: `2026-05-10-workflow-integration-modules-ninjaone`
+- Created: `2026-05-10`
+
+## What This Is
+
+Rolling notes for adding first-party workflow integration modules and the first NinjaOne workflow module/actions.
+
+## Decisions
+
+- (2026-05-10) Use a first-party workflow integration module registry instead of only action-prefix grouping. Rationale: integrations need tenant availability, icon/logo metadata, default action, and future extensibility without hardcoding each integration into the generic designer.
+- (2026-05-10) Define NinjaOne “in use” as an active `rmm_integrations` row with `provider = 'ninjaone'`, `is_active = true`, and non-null `connected_at`.
+- (2026-05-10) First pass will implement a mixed NinjaOne action set: find/list device, sync single device, reboot device, list active alerts, get alert, acknowledge alert.
+- (2026-05-10) Do not add `ninjaone.alerts.create_ticket`. Users should chain NinjaOne alert outputs into the generic Ticket module (`tickets.create`, etc.). This keeps PSA ticket behavior generic and avoids duplicated ticket rules.
+- (2026-05-10) Label `ninjaone.alerts.reset` as **Acknowledge alert** in the UI. The technical action ID can reflect the NinjaOne API reset operation, but users should see MSP/operator terminology.
+- (2026-05-10) Any workflow editor can add/use NinjaOne workflow actions. No extra integration/action permission gate in this pass.
+
+## Discoveries / Constraints
+
+- (2026-05-10) Existing action catalog builder lives at `shared/workflow/runtime/designer/actionCatalog.ts` and already groups unknown action prefixes into `tileKind: 'app'` records.
+- (2026-05-10) Existing designer catalog endpoint is backed by `listWorkflowDesignerActionCatalogAction` in `ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts`.
+- (2026-05-10) Existing app filtering only checks enabled extension installs via `tenant_extension_install` and `extension_registry`; it does not handle first-party integration availability.
+- (2026-05-10) Current Workflow Designer icon mapping lives in `ee/server/src/components/workflow-designer/WorkflowDesigner.tsx` in `getPaletteIcon`.
+- (2026-05-10) NinjaOne integration code already exists under `ee/server/src/lib/integrations/ninjaone/`, including `ninjaOneClient.ts`, `sync/syncEngine.ts`, and alert/webhook handling.
+- (2026-05-10) `rmm_integrations` schema includes `provider`, `is_active`, `connected_at`, `instance_url`, sync status fields, and tenant-scoped uniqueness on `(tenant, provider)`.
+- (2026-05-10) Temporal activities import workflow runtime from `@alga-psa/workflows/runtime/core`, so worker/runtime bootstrap must be considered carefully when adding EE/server-only NinjaOne registrations.
+
+## Commands / Runbooks
+
+- (2026-05-10) Initial context commands used:
+  - `rg "WorkflowDesignerCatalog|actionCatalog|buildWorkflowDesignerActionCatalog|workflow module" -n server ee shared packages`
+  - `rg "loadAvailableWorkflowDesignerAppKeys|availableAppKeys|integration" ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts server/src ee/server shared -n`
+  - `rg "rmm_integrations|ninjaone|quickbooks|xero|email_providers|calendar_providers|microsoft_profiles" ee/server/migrations server/migrations packages -n`
+  - `rg "NinjaOne|ninjaone|remote|device|alert|webhook|rmm" ee/server/src/lib/integrations/ninjaone packages/integrations/src/actions/integrations packages/integrations/src/lib/rmm -n`
+
+## Links / References
+
+- `shared/workflow/runtime/registries/actionRegistry.ts`
+- `shared/workflow/runtime/designer/actionCatalog.ts`
+- `shared/workflow/runtime/init.ts`
+- `ee/packages/workflows/src/runtime/bootstrap.ts`
+- `ee/packages/workflows/src/runtime/worker.ts`
+- `ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts`
+- `server/src/app/api/workflow/registry/designer-catalog/route.ts`
+- `ee/server/src/components/workflow-designer/WorkflowDesigner.tsx`
+- `ee/server/src/components/workflow-designer/GroupedActionConfigSection.tsx`
+- `server/migrations/20251124000001_create_rmm_integration_tables.cjs`
+- `ee/server/src/lib/integrations/ninjaone/ninjaOneClient.ts`
+- `ee/server/src/lib/integrations/ninjaone/sync/syncEngine.ts`
+- `ee/server/src/lib/integrations/ninjaone/alerts/alertProcessor.ts`
+
+## Open Questions
+
+- Should the first pass render a true NinjaOne SVG/logo asset, or is a `ninjaone` icon token mapped in the existing palette sufficient?
+- Should `ninjaone.devices.find` be local-only, live API-backed, or support both? Recommendation in PRD: local-first with optional live mode only if low risk.
+
+## Progress Updates
+
+- (2026-05-10) Implemented first-party workflow integration module registry in `shared/workflow/runtime/registries/integrationModuleRegistry.ts` with duplicate-key protection and singleton accessor.
+- (2026-05-10) Extended `buildWorkflowDesignerActionCatalog` to accept explicit first-party app module definitions and produce stable app records from declarative `allowedActionIds`.
+- (2026-05-10) Added server-side first-party availability filtering keyed by `availabilityKey` in `listWorkflowDesignerActionCatalogAction`; preserved extension install filtering path.
+- (2026-05-10) Registered `app:ninjaone` first-party workflow module in EE runtime core with icon token `ninjaone`, default action `ninjaone.devices.find`, and explicit six-action allow-list.
+- (2026-05-10) Added six NinjaOne workflow actions in `ee/packages/workflows/src/runtime/actions/registerNinjaOneWorkflowActions.ts`:
+  - `ninjaone.devices.find`
+  - `ninjaone.devices.sync`
+  - `ninjaone.devices.reboot`
+  - `ninjaone.alerts.list_active`
+  - `ninjaone.alerts.get`
+  - `ninjaone.alerts.reset` (labelled `Acknowledge alert`)
+- (2026-05-10) Handlers now fail fast for missing tenant and inactive integration, use engine-provided idempotency for side-effectful operations, and return normalized non-secret outputs.
+- (2026-05-10) Mapped `ninjaone` icon token in Workflow Designer palette (`WorkflowDesigner.tsx`) for a distinct NinjaOne tile icon.
+- (2026-05-10) Added registry pattern documentation for future integrations at `ee/docs/plans/2026-05-10-workflow-integration-modules-ninjaone/INTEGRATION_MODULE_REGISTRY.md`.
+- (2026-05-10) Added/updated tests:
+  - `shared/workflow/runtime/__tests__/workflowIntegrationModuleRegistry.test.ts` (duplicate-key + metadata roundtrip)
+  - `shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts` (explicit module record behavior)
+
+## Validation Runbook
+
+- `npx vitest run --config shared/vitest.config.ts shared/workflow/runtime/__tests__/workflowIntegrationModuleRegistry.test.ts shared/workflow/runtime/__tests__/workflowDesignerActionCatalog.test.ts`
+- `npx tsc -p ee/packages/workflows/tsconfig.json --noEmit`
+
+## Gotchas
+
+- Root vitest config does not discover `ee/packages/workflows/src/runtime/__tests__` by default; shared runtime tests were executed via `shared/vitest.config.ts`.
+- `createNinjaOneClient` second argument is region, not instance URL; workflow action handlers must call it with workflow context rather than raw URL.
