@@ -53,6 +53,7 @@ export interface EntraClientTenantMappingRow {
   mapping_state: EntraMappingState;
   confidence_score: number | null;
   client_portal_entra_provisioning_mode: 'disabled' | 'built_in' | 'workflow_managed';
+  client_portal_entitlement_group_id: string | null;
   is_active: boolean;
   decided_by: string | null;
   decided_at: string | null;

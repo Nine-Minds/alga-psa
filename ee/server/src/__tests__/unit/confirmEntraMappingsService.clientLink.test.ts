@@ -77,6 +77,7 @@ describe('confirmEntraMappings client linkage updates', () => {
           clientId: 'client-63',
           mappingState: 'mapped',
           clientPortalEntraProvisioningMode: 'workflow_managed',
+          clientPortalEntitlementGroupId: 'group-63',
         },
       ],
     });
@@ -95,6 +96,7 @@ describe('confirmEntraMappings client linkage updates', () => {
         client_id: 'client-63',
         mapping_state: 'mapped',
         client_portal_entra_provisioning_mode: 'workflow_managed',
+        client_portal_entitlement_group_id: 'group-63',
       })
     );
   });

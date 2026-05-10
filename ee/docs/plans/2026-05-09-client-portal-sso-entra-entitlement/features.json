@@ -247,7 +247,7 @@
   {
     "id": "F029",
     "description": "Persist selected Entra group ID as the client portal access entitlement source for a mapped client.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Entitlement Model",
       "Data / API / Integrations"

@@ -6,6 +6,7 @@ export interface ConfirmEntraMappingInput {
   mappingState?: 'mapped' | 'skip_for_now' | 'needs_review';
   confidenceScore?: number | null;
   clientPortalEntraProvisioningMode?: 'disabled' | 'built_in' | 'workflow_managed';
+  clientPortalEntitlementGroupId?: string | null;
 }
 
 export interface ConfirmEntraMappingsResult {
@@ -60,6 +61,9 @@ export async function confirmEntraMappings(
         const clientId = mapping.clientId ? String(mapping.clientId).trim() : null;
         const mappingState = normalizeMappingState(mapping);
         const clientPortalEntraProvisioningMode = normalizeProvisioningMode(mapping);
+        const clientPortalEntitlementGroupId = mapping.clientPortalEntitlementGroupId
+          ? String(mapping.clientPortalEntitlementGroupId).trim()
+          : null;
         const confidenceScore =
           typeof mapping.confidenceScore === 'number' ? mapping.confidenceScore : null;
 
@@ -92,6 +96,7 @@ export async function confirmEntraMappings(
             .update({
               confidence_score: confidenceScore,
               client_portal_entra_provisioning_mode: clientPortalEntraProvisioningMode,
+              client_portal_entitlement_group_id: clientPortalEntitlementGroupId,
               decided_by: params.userId,
               decided_at: now,
               updated_at: now,
@@ -115,6 +120,7 @@ export async function confirmEntraMappings(
             mapping_state: mappingState,
             confidence_score: confidenceScore,
             client_portal_entra_provisioning_mode: clientPortalEntraProvisioningMode,
+            client_portal_entitlement_group_id: clientPortalEntitlementGroupId,
             is_active: true,
             decided_by: params.userId,
             decided_at: now,

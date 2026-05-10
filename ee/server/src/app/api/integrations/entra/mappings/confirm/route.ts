@@ -41,6 +41,14 @@ export async function POST(request: Request): Promise<Response> {
           : typeof raw.client_portal_entra_provisioning_mode === 'string'
             ? (raw.client_portal_entra_provisioning_mode as ConfirmEntraMappingInput['clientPortalEntraProvisioningMode'])
             : undefined,
+      clientPortalEntitlementGroupId:
+        raw.clientPortalEntitlementGroupId === null || raw.client_portal_entitlement_group_id === null
+          ? null
+          : typeof raw.clientPortalEntitlementGroupId === 'string'
+            ? raw.clientPortalEntitlementGroupId
+            : typeof raw.client_portal_entitlement_group_id === 'string'
+              ? raw.client_portal_entitlement_group_id
+              : undefined,
     };
   });
 

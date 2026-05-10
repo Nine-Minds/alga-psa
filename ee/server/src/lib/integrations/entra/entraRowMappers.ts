@@ -105,6 +105,7 @@ export function mapEntraClientTenantMappingRow(row: DbRow): EntraClientTenantMap
     mapping_state: toStringValue(row.mapping_state, 'mapping_state') as EntraClientTenantMappingRow['mapping_state'],
     confidence_score: toNullableNumberValue(row.confidence_score),
     client_portal_entra_provisioning_mode: clientPortalEntraProvisioningMode,
+    client_portal_entitlement_group_id: toNullableStringValue(row.client_portal_entitlement_group_id),
     is_active: toBooleanValue(row.is_active, 'is_active'),
     decided_by: toNullableStringValue(row.decided_by),
     decided_at: toNullableStringValue(row.decided_at),
