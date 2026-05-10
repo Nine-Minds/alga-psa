@@ -567,7 +567,7 @@
   {
     "id": "F066",
     "description": "Show warning copy when an MSP selects a broad Entra entitlement group, explaining that every enabled user in the group is eligible for portal access.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Security / Permissions"

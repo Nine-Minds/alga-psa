@@ -211,3 +211,9 @@ Working notes for implementing tenant-scoped client portal SSO and Entra entitle
 ## Gotchas
 
 - (2026-05-09) Role assignment uses role-name lookup (`roles.client=true`, case-insensitive) rather than role_id because role IDs are tenant-specific; mapping stores configurable role name and defaults to `User`.
+- (2026-05-09) Implemented `F066`: `EntraTenantMappingTable` now renders explicit warning copy when selected entitlement group label indicates a broad group (`All Users`), clarifying that all enabled users in that group become portal-eligible.
+- (2026-05-09) Implemented `T022` in `entraTenantMappingTable.selection.test.tsx` to verify warning visibility after selecting a broad entitlement group.
+
+## Commands Run
+
+- `npx vitest run src/__tests__/unit/entraTenantMappingTable.selection.test.tsx src/__tests__/unit/clientPortalProvisioning.builtIn.test.ts src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts` (workdir: `ee/server/`) ✅

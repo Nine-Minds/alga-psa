@@ -223,7 +223,7 @@
   {
     "id": "T022",
     "description": "UI behavior: selecting a broad Entra entitlement group presents warning copy that all enabled users in the group become eligible for portal access.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029",
       "F031",

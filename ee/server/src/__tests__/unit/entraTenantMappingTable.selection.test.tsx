@@ -378,4 +378,60 @@ describe('EntraTenantMappingTable client selection', () => {
       );
     });
   });
+
+  it('T022: selecting a broad entitlement group shows warning copy that all enabled users become eligible', async () => {
+    getEntraMappingPreviewMock.mockResolvedValue({
+      data: {
+        autoMatched: [],
+        fuzzyCandidates: [],
+        unmatched: [
+          {
+            managedTenantId: 'managed-warning-22',
+            entraTenantId: 'entra-warning-22',
+            displayName: 'Warning Tenant',
+            primaryDomain: null,
+            sourceUserCount: 9,
+          },
+        ],
+      },
+    });
+    getAllClientsMock.mockResolvedValue([{ client_id: 'client-22', client_name: 'Client 22' }]);
+    listEntraMappingGroupsMock.mockResolvedValue({
+      success: true,
+      data: {
+        groups: [
+          { id: 'group-all-users', displayName: 'All Users' },
+          { id: 'group-limited', displayName: 'Project Team' },
+        ],
+      },
+    });
+
+    render(<EntraTenantMappingTable />);
+    await screen.findByText('Warning Tenant');
+
+    const row = screen.getByText('Warning Tenant').closest('tr') as HTMLElement;
+    const clientSelect = within(row).getByTestId(
+      'client-picker-entra-client-picker-managed-warning-22'
+    ) as HTMLSelectElement;
+    fireEvent.change(clientSelect, { target: { value: 'client-22' } });
+
+    const groupSelect = row.querySelector(
+      '#entra-entitlement-group-managed-warning-22'
+    ) as HTMLSelectElement | null;
+    expect(groupSelect).toBeTruthy();
+    if (!groupSelect) {
+      throw new Error('entitlement group select not found');
+    }
+    fireEvent.focus(groupSelect);
+    await waitFor(() => {
+      expect(listEntraMappingGroupsMock).toHaveBeenCalledWith({ managedTenantId: 'managed-warning-22' });
+    });
+    fireEvent.change(groupSelect, { target: { value: 'group-all-users' } });
+
+    expect(
+      within(row).getByText(
+        'Warning: every enabled user in this Entra group will be eligible for client portal access.'
+      )
+    ).toBeTruthy();
+  });
 });

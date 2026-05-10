@@ -49,6 +49,11 @@ function formatConfidence(score: number): string {
   return `${Math.round(score * 100)}%`;
 }
 
+function isBroadEntitlementGroup(label: string | null | undefined): boolean {
+  const normalized = String(label || '').trim().toLowerCase();
+  return normalized === 'all users' || normalized.includes('all users');
+}
+
 function mapPreviewToRows(payload: any): MappingTenantRow[] {
   const autoMatched = Array.isArray(payload?.autoMatched) ? payload.autoMatched : [];
   const fuzzyCandidates = Array.isArray(payload?.fuzzyCandidates) ? payload.fuzzyCandidates : [];
@@ -557,6 +562,20 @@ export function EntraTenantMappingTable({
                           </option>
                         ))}
                       </select>
+                      {(() => {
+                        const selectedGroup = (groupOptionsByTenant[row.managedTenantId] || []).find(
+                          (group) => group.id === row.selectedEntitlementGroupId
+                        );
+                        const selectedLabel = selectedGroup?.displayName || selectedGroup?.id || null;
+                        if (!isBroadEntitlementGroup(selectedLabel)) {
+                          return null;
+                        }
+                        return (
+                          <p className="text-xs text-amber-700">
+                            Warning: every enabled user in this Entra group will be eligible for client portal access.
+                          </p>
+                        );
+                      })()}
                     </div>
                   </td>
                   <td className="px-3 py-2">
