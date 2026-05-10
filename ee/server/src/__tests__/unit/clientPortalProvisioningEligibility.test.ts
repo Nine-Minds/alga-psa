@@ -68,4 +68,23 @@ describe('client portal provisioning eligibility', () => {
     );
     expect(result).toEqual({ eligible: false, reason: 'missing_entitlement' });
   });
+
+  it('T121: returns account_disabled when the Entra account is disabled', () => {
+    const result = evaluateClientPortalProvisioningEligibility(
+      buildUser({
+        accountEnabled: false,
+        clientPortalEntitlement: {
+          groupId: 'group-1',
+          membershipMode: 'transitive',
+          isMember: true,
+        },
+      }),
+      {
+        provisioningMode: 'built_in',
+        groupId: 'group-1',
+        membershipMode: 'transitive',
+      }
+    );
+    expect(result).toEqual({ eligible: false, reason: 'account_disabled' });
+  });
 });

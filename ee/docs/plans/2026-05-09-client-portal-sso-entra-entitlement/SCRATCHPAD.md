@@ -139,3 +139,6 @@ Working notes for implementing tenant-scoped client portal SSO and Entra entitle
 - (2026-05-09) Implemented `F035`/`F036`/`F037`/`F038`/`F040`: added `clientPortalProvisioning` eligibility gate and hook in `syncEngine`. Provisioning hook executes only after successful non-ambiguous contact reconciliation and only when mode/group/identity/account/entitlement checks pass; ambiguous outcomes and ineligible users skip provisioning.
 - (2026-05-09) Implemented `T011` behavior coverage via unit contracts in `entraSyncEngine.dryRun.test.ts` (`T115`, `T116`) and eligibility rule tests in `clientPortalProvisioningEligibility.test.ts` (`T117`-`T120`).
 - (2026-05-09) Command: `npx vitest run src/__tests__/unit/clientPortalProvisioningEligibility.test.ts src/__tests__/unit/entraSyncEngine.dryRun.test.ts` (workdir: `ee/server/`) ✅
+- (2026-05-09) Implemented `F039` (skip path): eligibility gate now blocks provisioning when `accountEnabled` is false (`reason: account_disabled`). Deactivation of existing Entra-managed portal users remains in later lifecycle items (`F051`/`F052`).
+- (2026-05-09) Added `T121` in `clientPortalProvisioningEligibility.test.ts` for disabled-account skip gating.
+- (2026-05-09) Command: `npx vitest run src/__tests__/unit/clientPortalProvisioningEligibility.test.ts` (workdir: `ee/server/`) ✅

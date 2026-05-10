@@ -334,7 +334,7 @@
   {
     "id": "F039",
     "description": "Skip or deactivate portal access when the Entra account is disabled.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Lifecycle",
       "Entra Provisioning"
