@@ -27,4 +27,11 @@ export interface EntraProviderAdapter {
   listSecurityGroupsForTenant(
     input: EntraListUsersForTenantInput
   ): Promise<Array<{ id: string; displayName: string | null }>>;
+  isUserInSecurityGroup(input: {
+    tenant: string;
+    managedTenantId: string;
+    userEntraObjectId: string;
+    groupId: string;
+    membershipMode: 'transitive' | 'direct';
+  }): Promise<boolean>;
 }

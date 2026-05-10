@@ -292,6 +292,38 @@ export class CippProviderAdapter implements EntraProviderAdapter {
 
     return groups;
   }
+
+  public async isUserInSecurityGroup(input: {
+    tenant: string;
+    managedTenantId: string;
+    userEntraObjectId: string;
+    groupId: string;
+    membershipMode: 'transitive' | 'direct';
+  }): Promise<boolean> {
+    const credentials = await getEntraCippCredentials(input.tenant);
+    if (!credentials) {
+      throw new Error('CIPP credentials are not configured.');
+    }
+
+    const tenantId = encodeURIComponent(input.managedTenantId);
+    const userId = encodeURIComponent(input.userEntraObjectId);
+    const payload = await this.requestFromCandidates(credentials.baseUrl, credentials.apiToken, [
+      `/api/usergroups?tenantId=${tenantId}&userId=${userId}`,
+      `/api/users/${userId}/groups?tenantId=${tenantId}`,
+      `/api/tenant/${tenantId}/users/${userId}/groups`,
+      `/api/tenants/${tenantId}/users/${userId}/groups`,
+    ]);
+    const rows = extractCollection(payload);
+    const groupIds = new Set(
+      rows
+        .map((row) => {
+          const raw = toObject(row);
+          return toStringOrNull(raw.id) || toStringOrNull(raw.groupId) || toStringOrNull(raw.objectId);
+        })
+        .filter((value): value is string => Boolean(value))
+    );
+    return groupIds.has(input.groupId);
+  }
 }
 
 export function createCippProviderAdapter(): EntraProviderAdapter {

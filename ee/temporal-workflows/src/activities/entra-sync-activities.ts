@@ -132,6 +132,36 @@ export async function syncTenantUsersActivity(
     managedTenantId: input.mapping.entraTenantId,
   });
   const filteredUsers = await filterEntraUsersForTenant(input.tenantId, users);
+  const portalEntitlementGroupId = input.mapping.clientPortalEntitlementGroupId || null;
+  const portalEntitlementMode = input.mapping.clientPortalEntitlementMembershipMode || 'transitive';
+  const usersWithEntitlement = portalEntitlementGroupId
+    ? await Promise.all(
+        filteredUsers.included.map(async (user) => {
+          const isMember = await adapter.isUserInSecurityGroup({
+            tenant: input.tenantId,
+            managedTenantId: input.mapping.entraTenantId,
+            userEntraObjectId: user.entraObjectId,
+            groupId: portalEntitlementGroupId,
+            membershipMode: portalEntitlementMode,
+          });
+          return {
+            ...user,
+            clientPortalEntitlement: {
+              groupId: portalEntitlementGroupId,
+              membershipMode: portalEntitlementMode,
+              isMember,
+            },
+          };
+        })
+      )
+    : filteredUsers.included.map((user) => ({
+        ...user,
+        clientPortalEntitlement: {
+          groupId: null,
+          membershipMode: portalEntitlementMode,
+          isMember: null,
+        },
+      }));
 
   const fieldSyncConfig = await runWithTenant(input.tenantId, async () => {
     const { knex } = await createTenantKnex();
@@ -148,7 +178,7 @@ export async function syncTenantUsersActivity(
     tenantId: input.tenantId,
     clientId: input.mapping.clientId,
     managedTenantId: input.mapping.managedTenantId,
-    users: filteredUsers.included,
+    users: usersWithEntitlement,
     portalEntitlement: {
       provisioningMode: input.mapping.clientPortalEntraProvisioningMode || 'disabled',
       groupId: input.mapping.clientPortalEntitlementGroupId || null,

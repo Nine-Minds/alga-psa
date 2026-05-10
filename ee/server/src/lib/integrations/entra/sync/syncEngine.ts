@@ -45,7 +45,7 @@ export async function executeEntraSync(
           clientPortalEntitlement: {
             groupId: input.portalEntitlement.groupId,
             membershipMode: input.portalEntitlement.membershipMode,
-            isMember: null,
+            isMember: user.clientPortalEntitlement?.isMember ?? null,
           },
         }
       : user;

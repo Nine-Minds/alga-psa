@@ -531,6 +531,30 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
 
     return groups;
   }
+
+  public async isUserInSecurityGroup(input: {
+    tenant: string;
+    managedTenantId: string;
+    userEntraObjectId: string;
+    groupId: string;
+    membershipMode: 'transitive' | 'direct';
+  }): Promise<boolean> {
+    const encodedTenant = encodeURIComponent(input.managedTenantId);
+    const encodedUser = encodeURIComponent(input.userEntraObjectId);
+    const endpoint = `${GRAPH_BASE_URL}/tenantRelationships/managedTenants/tenants/${encodedTenant}/users/${encodedUser}/checkMemberGroups`;
+    const accessToken = await this.getAccessToken(input.tenant);
+    const response = await axios.post(
+      endpoint,
+      { groupIds: [input.groupId] },
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        timeout: 20_000,
+      }
+    );
+    const payload = toObject(response.data);
+    const values = Array.isArray(payload.value) ? payload.value : [];
+    return values.some((value) => getNullableString(value) === input.groupId);
+  }
 }
 
 export function createDirectProviderAdapter(): EntraProviderAdapter {

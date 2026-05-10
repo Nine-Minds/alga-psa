@@ -291,7 +291,7 @@
   {
     "id": "F034",
     "description": "Check transitive group membership for client portal entitlement during Entra sync.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Entitlement Model",
       "Entra Provisioning"
