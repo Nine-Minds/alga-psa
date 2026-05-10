@@ -50,6 +50,16 @@ const toObjectValue = (value: unknown): Record<string, unknown> => {
   return {};
 };
 
+const toNullableObjectValue = (value: unknown): Record<string, unknown> | null => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return null;
+};
+
 const toArrayValue = (value: unknown): unknown[] => {
   return Array.isArray(value) ? value : [];
 };
@@ -113,6 +123,8 @@ export function mapEntraClientTenantMappingRow(row: DbRow): EntraClientTenantMap
     client_portal_entitlement_group_id: toNullableStringValue(row.client_portal_entitlement_group_id),
     client_portal_entitlement_membership_mode: clientPortalEntitlementMembershipMode,
     client_portal_default_role_name: toNullableStringValue(row.client_portal_default_role_name),
+    client_portal_workflow_target: toNullableStringValue(row.client_portal_workflow_target),
+    client_portal_workflow_config: toNullableObjectValue(row.client_portal_workflow_config),
     is_active: toBooleanValue(row.is_active, 'is_active'),
     decided_by: toNullableStringValue(row.decided_by),
     decided_at: toNullableStringValue(row.decided_at),

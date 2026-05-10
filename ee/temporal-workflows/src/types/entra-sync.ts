@@ -24,6 +24,8 @@ export interface EntraManagedTenantRef {
   clientPortalEntitlementGroupId?: string | null;
   clientPortalEntitlementMembershipMode?: 'transitive' | 'direct';
   clientPortalDefaultRoleName?: string | null;
+  clientPortalWorkflowTarget?: string | null;
+  clientPortalWorkflowConfig?: Record<string, unknown> | null;
 }
 
 export interface EntraSyncWorkflowInput {

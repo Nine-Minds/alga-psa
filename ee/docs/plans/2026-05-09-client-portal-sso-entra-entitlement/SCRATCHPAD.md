@@ -217,3 +217,24 @@ Working notes for implementing tenant-scoped client portal SSO and Entra entitle
 ## Commands Run
 
 - `npx vitest run src/__tests__/unit/entraTenantMappingTable.selection.test.tsx src/__tests__/unit/clientPortalProvisioning.builtIn.test.ts src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts` (workdir: `ee/server/`) ✅
+- (2026-05-09) Implemented `F068`: added per-mapping workflow target/config persistence (`client_portal_workflow_target`, `client_portal_workflow_config`) via confirm route/service and migration `20260509202000_add_client_portal_workflow_fields_to_entra_mappings.cjs`, and threaded fields through mapped-tenant load output into sync execution context.
+- (2026-05-09) Implemented `F069`/`F070`/`F071`: added workflow-managed provisioning publisher (`workflowManagedProvisioning.ts`) and sync-engine branch for `workflow_managed` mode that publishes idempotent `ENTRA_PORTAL_ACCESS_ELIGIBLE` or `ENTRA_PORTAL_ACCESS_REMOVED` events after successful non-ambiguous contact reconciliation, without running built-in provisioning or lifecycle mutation paths.
+- (2026-05-09) Event payload now includes tenant/client/contact, managed mapping, Entra identity/account state, entitlement group/membership/isMember, recommended default role, workflow target/config, and sync run context; idempotency key includes tenant + mapping + Entra tenant/object + entitlement source + decision + sync run.
+- (2026-05-09) Implemented `T023`/`T024` in `entraSyncEngine.dryRun.test.ts` and `workflowManagedProvisioning.test.ts` to verify workflow-managed eligible/removed event publishing, payload/idempotency context, and suppression of built-in provisioning/lifecycle mutations.
+
+## Commands Run
+
+- `npx vitest run src/__tests__/unit/entraSyncEngine.dryRun.test.ts src/__tests__/unit/workflowManagedProvisioning.test.ts src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts` (workdir: `ee/server/`) ✅
+- (2026-05-09) Implemented `F075`: `SsoBulkAssignment` now shows workflow-managed mode info copy clarifying that Entra sync only emits events and workflow logic owns provisioning, role assignment, invitations, and lifecycle actions.
+- (2026-05-09) Strengthened `F068` coverage by extending confirm-mapping unit contracts to assert workflow target/config persistence fields in insert payloads.
+- (2026-05-09) Implemented `T026` via `SsoBulkAssignment.autoLinkClient.contract.test.ts` assertions on workflow-managed explanatory copy.
+
+## Commands Run
+
+- `npx vitest run src/components/settings/security/__tests__/SsoBulkAssignment.autoLinkClient.contract.test.ts src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts src/__tests__/unit/entraSyncEngine.dryRun.test.ts src/__tests__/unit/workflowManagedProvisioning.test.ts` (workdir: `ee/server/`) ✅
+- (2026-05-09) Implemented `F072`/`F073`/`F074`: added workflow action primitives in `workflowPortalAccessActions.ts` for safe idempotent client portal provisioning/linking (reuses built-in provisioning primitive), client-role assignment (`user_roles` insert only when missing), Microsoft OAuth link upsert, and managed-only deactivate/reactivate lifecycle toggles keyed by Entra metadata ownership.
+- (2026-05-09) Implemented `T025` in `workflowPortalAccessActions.test.ts` to verify action contracts: create/link reuse path, idempotent role assignment and OAuth link upsert, and managed lifecycle deactivate/reactivate without touching non-eligible paths.
+
+## Commands Run
+
+- `npx vitest run src/__tests__/unit/workflowPortalAccessActions.test.ts src/__tests__/unit/entraSyncEngine.dryRun.test.ts src/__tests__/unit/workflowManagedProvisioning.test.ts` (workdir: `ee/server/`) ✅

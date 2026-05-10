@@ -585,7 +585,7 @@
   {
     "id": "F068",
     "description": "Persist workflow target/configuration for workflow-managed client portal Entra provisioning mode.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Workflow Events and Actions"
@@ -594,7 +594,7 @@
   {
     "id": "F069",
     "description": "Publish an idempotent workflow event when an entitled Entra user becomes eligible for client portal access in workflow-managed mode.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Workflow Events and Actions",
       "Functional Requirements"
@@ -603,7 +603,7 @@
   {
     "id": "F070",
     "description": "Publish an idempotent workflow event when Entra group entitlement is removed or the Entra account is disabled in workflow-managed mode.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Workflow Events and Actions",
       "Lifecycle"
@@ -612,7 +612,7 @@
   {
     "id": "F071",
     "description": "Include tenant, client, contact, Entra identity, entitlement, account status, configured group, recommended default role, and sync run context in workflow-managed provisioning events.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Workflow Events and Actions",
       "Functional Requirements"
@@ -621,7 +621,7 @@
   {
     "id": "F072",
     "description": "Add or expose a workflow action that safely creates or links a client portal user using the same idempotent primitives as built-in provisioning.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Workflow Events and Actions",
       "Functional Requirements"
@@ -630,7 +630,7 @@
   {
     "id": "F073",
     "description": "Add or expose workflow actions for assigning a client portal role and upserting the Microsoft OAuth account link.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Workflow Events and Actions",
       "Functional Requirements"
@@ -639,7 +639,7 @@
   {
     "id": "F074",
     "description": "Add or expose workflow actions for deactivating and reactivating Entra-managed client portal access without changing manually managed users.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Workflow Events and Actions",
       "Lifecycle"
@@ -648,7 +648,7 @@
   {
     "id": "F075",
     "description": "Show workflow-managed mode copy explaining that the selected workflow is responsible for provisioning, role assignment, invitations, and lifecycle changes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]

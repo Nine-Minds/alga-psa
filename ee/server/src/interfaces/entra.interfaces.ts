@@ -56,6 +56,8 @@ export interface EntraClientTenantMappingRow {
   client_portal_entitlement_group_id: string | null;
   client_portal_entitlement_membership_mode: 'transitive' | 'direct';
   client_portal_default_role_name: string | null;
+  client_portal_workflow_target: string | null;
+  client_portal_workflow_config: Record<string, unknown> | null;
   is_active: boolean;
   decided_by: string | null;
   decided_at: string | null;

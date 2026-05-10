@@ -46,4 +46,10 @@ describe('SSO bulk assignment auto-link contract', () => {
     expect(confirmServiceSource).toContain('client_portal_entra_provisioning_mode');
     expect(confirmServiceSource).toContain('normalizeProvisioningMode');
   });
+
+  it('T026/F075: shows workflow-managed explanatory copy that workflow owns provisioning and lifecycle behavior', () => {
+    expect(source).toContain('workflowManagedInfo');
+    expect(source).toContain('Workflow-managed mode publishes Entra access events only.');
+    expect(source).toContain('client portal user provisioning, role assignment, invitations, and lifecycle changes');
+  });
 });

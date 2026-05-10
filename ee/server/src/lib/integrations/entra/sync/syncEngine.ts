@@ -11,6 +11,7 @@ import {
   handleEligibleClientPortalProvisioning,
   handleIneligibleClientPortalLifecycle,
 } from './clientPortalProvisioning';
+import { publishWorkflowManagedPortalProvisioningEvent } from './workflowManagedProvisioning';
 
 export interface ExecuteEntraSyncInput {
   tenantId: string;
@@ -22,8 +23,11 @@ export interface ExecuteEntraSyncInput {
     groupId: string | null;
     membershipMode: 'transitive' | 'direct';
     defaultRoleName?: string | null;
+    workflowTarget?: string | null;
+    workflowConfig?: Record<string, unknown> | null;
     deactivateOnEntitlementRemoval?: boolean;
   };
+  syncRunId?: string;
   fieldSyncConfig?: Record<string, unknown>;
   dryRun?: boolean;
 }
@@ -101,6 +105,20 @@ export async function executeEntraSync(
           if (provisioning.outcome === 'skipped_conflict') {
             counters.increment('skipped');
           }
+        } else if (eligibility.reason === 'workflow_managed') {
+          await publishWorkflowManagedPortalProvisioningEvent(
+            {
+              tenantId: input.tenantId,
+              clientId: input.clientId,
+              managedTenantId: input.managedTenantId,
+              contactNameId: linkedContact.contactNameId,
+              defaultRoleName: input.portalEntitlement?.defaultRoleName || 'User',
+              syncRunId: input.syncRunId,
+              workflowTarget: input.portalEntitlement?.workflowTarget,
+              workflowConfig: input.portalEntitlement?.workflowConfig || null,
+            },
+            userWithEntitlement
+          );
         } else {
           const lifecycle = await handleIneligibleClientPortalLifecycle(
             {
@@ -145,6 +163,20 @@ export async function executeEntraSync(
         if (provisioning.outcome === 'skipped_conflict') {
           counters.increment('skipped');
         }
+      } else if (eligibility.reason === 'workflow_managed') {
+        await publishWorkflowManagedPortalProvisioningEvent(
+          {
+            tenantId: input.tenantId,
+            clientId: input.clientId,
+            managedTenantId: input.managedTenantId,
+            contactNameId: createdContact.contactNameId,
+            defaultRoleName: input.portalEntitlement?.defaultRoleName || 'User',
+            syncRunId: input.syncRunId,
+            workflowTarget: input.portalEntitlement?.workflowTarget,
+            workflowConfig: input.portalEntitlement?.workflowConfig || null,
+          },
+          userWithEntitlement
+        );
       } else {
         const lifecycle = await handleIneligibleClientPortalLifecycle(
           {

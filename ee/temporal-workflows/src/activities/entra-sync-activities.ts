@@ -67,7 +67,9 @@ export async function loadMappedTenantsActivity(
         'm.client_portal_entra_provisioning_mode',
         'm.client_portal_entitlement_group_id',
         'm.client_portal_entitlement_membership_mode',
-        'm.client_portal_default_role_name'
+        'm.client_portal_default_role_name',
+        'm.client_portal_workflow_target',
+        'm.client_portal_workflow_config'
       )
       .orderBy('m.updated_at', 'asc');
 
@@ -86,6 +88,8 @@ export async function loadMappedTenantsActivity(
     client_portal_entitlement_group_id: string | null;
     client_portal_entitlement_membership_mode: 'transitive' | 'direct' | null;
     client_portal_default_role_name: string | null;
+    client_portal_workflow_target: string | null;
+    client_portal_workflow_config: Record<string, unknown> | null;
   };
 
   return {
@@ -106,6 +110,15 @@ export async function loadMappedTenantsActivity(
       clientPortalDefaultRoleName: row.client_portal_default_role_name
         ? String(row.client_portal_default_role_name)
         : 'User',
+      clientPortalWorkflowTarget: row.client_portal_workflow_target
+        ? String(row.client_portal_workflow_target)
+        : null,
+      clientPortalWorkflowConfig:
+        row.client_portal_workflow_config &&
+        typeof row.client_portal_workflow_config === 'object' &&
+        !Array.isArray(row.client_portal_workflow_config)
+          ? row.client_portal_workflow_config
+          : null,
     })),
   };
 }
@@ -206,8 +219,11 @@ export async function syncTenantUsersActivity(
       groupId: input.mapping.clientPortalEntitlementGroupId || null,
       membershipMode: input.mapping.clientPortalEntitlementMembershipMode || 'transitive',
       defaultRoleName: input.mapping.clientPortalDefaultRoleName || 'User',
+      workflowTarget: input.mapping.clientPortalWorkflowTarget || null,
+      workflowConfig: input.mapping.clientPortalWorkflowConfig || null,
       deactivateOnEntitlementRemoval: fieldSyncConfig.deactivateOnEntitlementRemoval,
     },
+    syncRunId: input.runId,
   });
 
   const disabledIdentities = filteredUsers.excluded

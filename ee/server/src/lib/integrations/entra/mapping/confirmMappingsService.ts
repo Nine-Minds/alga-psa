@@ -9,6 +9,8 @@ export interface ConfirmEntraMappingInput {
   clientPortalEntitlementGroupId?: string | null;
   clientPortalEntitlementMembershipMode?: 'transitive' | 'direct';
   clientPortalDefaultRoleName?: string | null;
+  clientPortalWorkflowTarget?: string | null;
+  clientPortalWorkflowConfig?: Record<string, unknown> | null;
 }
 
 export interface ConfirmEntraMappingsResult {
@@ -81,6 +83,16 @@ export async function confirmEntraMappings(
           mapping.clientPortalDefaultRoleName === null
             ? null
             : String(mapping.clientPortalDefaultRoleName || '').trim() || 'User';
+        const clientPortalWorkflowTarget =
+          mapping.clientPortalWorkflowTarget === null
+            ? null
+            : String(mapping.clientPortalWorkflowTarget || '').trim() || null;
+        const clientPortalWorkflowConfig =
+          mapping.clientPortalWorkflowConfig &&
+          typeof mapping.clientPortalWorkflowConfig === 'object' &&
+          !Array.isArray(mapping.clientPortalWorkflowConfig)
+            ? mapping.clientPortalWorkflowConfig
+            : null;
         const confidenceScore =
           typeof mapping.confidenceScore === 'number' ? mapping.confidenceScore : null;
 
@@ -117,6 +129,8 @@ export async function confirmEntraMappings(
               client_portal_entitlement_membership_mode:
                 clientPortalEntitlementMembershipMode,
               client_portal_default_role_name: clientPortalDefaultRoleName,
+              client_portal_workflow_target: clientPortalWorkflowTarget,
+              client_portal_workflow_config: clientPortalWorkflowConfig,
               decided_by: params.userId,
               decided_at: now,
               updated_at: now,
@@ -144,6 +158,8 @@ export async function confirmEntraMappings(
             client_portal_entitlement_membership_mode:
               clientPortalEntitlementMembershipMode,
             client_portal_default_role_name: clientPortalDefaultRoleName,
+            client_portal_workflow_target: clientPortalWorkflowTarget,
+            client_portal_workflow_config: clientPortalWorkflowConfig,
             is_active: true,
             decided_by: params.userId,
             decided_at: now,

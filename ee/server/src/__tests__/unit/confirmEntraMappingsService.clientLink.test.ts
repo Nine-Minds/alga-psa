@@ -79,6 +79,8 @@ describe('confirmEntraMappings client linkage updates', () => {
           clientPortalEntraProvisioningMode: 'workflow_managed',
           clientPortalEntitlementGroupId: 'group-63',
           clientPortalEntitlementMembershipMode: 'direct',
+          clientPortalWorkflowTarget: 'workflow-63',
+          clientPortalWorkflowConfig: { strategy: 'manual_review' },
         },
       ],
     });
@@ -100,6 +102,8 @@ describe('confirmEntraMappings client linkage updates', () => {
         client_portal_entitlement_group_id: 'group-63',
         client_portal_entitlement_membership_mode: 'direct',
         client_portal_default_role_name: 'User',
+        client_portal_workflow_target: 'workflow-63',
+        client_portal_workflow_config: { strategy: 'manual_review' },
       })
     );
   });

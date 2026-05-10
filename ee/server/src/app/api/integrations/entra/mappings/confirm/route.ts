@@ -66,6 +66,20 @@ export async function POST(request: Request): Promise<Response> {
             : typeof raw.client_portal_default_role_name === 'string'
               ? raw.client_portal_default_role_name
               : undefined,
+      clientPortalWorkflowTarget:
+        raw.clientPortalWorkflowTarget === null || raw.client_portal_workflow_target === null
+          ? null
+          : typeof raw.clientPortalWorkflowTarget === 'string'
+            ? raw.clientPortalWorkflowTarget
+            : typeof raw.client_portal_workflow_target === 'string'
+              ? raw.client_portal_workflow_target
+              : undefined,
+      clientPortalWorkflowConfig:
+        raw.clientPortalWorkflowConfig && typeof raw.clientPortalWorkflowConfig === 'object' && !Array.isArray(raw.clientPortalWorkflowConfig)
+          ? (raw.clientPortalWorkflowConfig as Record<string, unknown>)
+          : raw.client_portal_workflow_config && typeof raw.client_portal_workflow_config === 'object' && !Array.isArray(raw.client_portal_workflow_config)
+            ? (raw.client_portal_workflow_config as Record<string, unknown>)
+            : undefined,
     };
   });
 

@@ -233,7 +233,7 @@
   {
     "id": "T023",
     "description": "DB-backed integration: workflow-managed mode publishes an idempotent eligible-access workflow event for an entitled Entra user and does not create or link a portal user directly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067",
       "F068",
@@ -244,7 +244,7 @@
   {
     "id": "T024",
     "description": "DB-backed integration: workflow-managed mode publishes an idempotent access-removal workflow event when entitlement is removed or the Entra account is disabled and does not directly deactivate the portal user.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F067",
       "F070",
@@ -254,7 +254,7 @@
   {
     "id": "T025",
     "description": "Workflow behavior: portal user workflow actions create/link users, assign roles, upsert Microsoft OAuth links, and deactivate/reactivate access idempotently without affecting manually managed users.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F072",
       "F073",
@@ -264,7 +264,7 @@
   {
     "id": "T026",
     "description": "UI behavior: workflow-managed mode explains that the selected workflow owns provisioning, role assignment, invitations, and lifecycle changes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F068",

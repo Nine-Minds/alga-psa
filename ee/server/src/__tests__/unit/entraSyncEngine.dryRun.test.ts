@@ -8,6 +8,7 @@ const createContactForEntraUserMock = vi.fn();
 const evaluateClientPortalProvisioningEligibilityMock = vi.fn();
 const handleEligibleClientPortalProvisioningMock = vi.fn();
 const handleIneligibleClientPortalLifecycleMock = vi.fn();
+const publishWorkflowManagedPortalProvisioningEventMock = vi.fn();
 
 vi.mock('@ee/lib/integrations/entra/sync/contactMatcher', () => ({
   findContactMatchesByEmail: findContactMatchesByEmailMock,
@@ -23,6 +24,11 @@ vi.mock('@ee/lib/integrations/entra/sync/clientPortalProvisioning', () => ({
   evaluateClientPortalProvisioningEligibility: evaluateClientPortalProvisioningEligibilityMock,
   handleEligibleClientPortalProvisioning: handleEligibleClientPortalProvisioningMock,
   handleIneligibleClientPortalLifecycle: handleIneligibleClientPortalLifecycleMock,
+}));
+
+vi.mock('@ee/lib/integrations/entra/sync/workflowManagedProvisioning', () => ({
+  publishWorkflowManagedPortalProvisioningEvent:
+    publishWorkflowManagedPortalProvisioningEventMock,
 }));
 
 function buildUser(seed: string): EntraSyncUser {
@@ -489,5 +495,113 @@ describe('executeEntraSync dry-run behavior', () => {
     });
     expect(result.counters.inactivated).toBe(1);
     expect(handleEligibleClientPortalProvisioningMock).not.toHaveBeenCalled();
+  });
+
+  it('T023/F069/F071: workflow-managed mode publishes eligible access event and skips built-in provisioning', async () => {
+    findContactMatchesByEmailMock.mockReset();
+    linkExistingMatchedContactMock.mockReset();
+    evaluateClientPortalProvisioningEligibilityMock.mockReset();
+    handleEligibleClientPortalProvisioningMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockReset();
+    publishWorkflowManagedPortalProvisioningEventMock.mockReset();
+
+    findContactMatchesByEmailMock.mockResolvedValueOnce([
+      { contactNameId: 'contact-223', clientId: 'client-223', email: 'eligible223@example.com' },
+    ]);
+    linkExistingMatchedContactMock.mockResolvedValue({ contactNameId: 'contact-223' });
+    evaluateClientPortalProvisioningEligibilityMock.mockReturnValue({
+      eligible: false,
+      reason: 'workflow_managed',
+    });
+    publishWorkflowManagedPortalProvisioningEventMock.mockResolvedValue(
+      'ENTRA_PORTAL_ACCESS_ELIGIBLE'
+    );
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    await executeEntraSync({
+      tenantId: 'tenant-223',
+      clientId: 'client-223',
+      managedTenantId: 'managed-223',
+      syncRunId: 'run-223',
+      dryRun: false,
+      users: [
+        {
+          ...buildUser('linked223'),
+          accountEnabled: true,
+          clientPortalEntitlement: { groupId: 'group-223', membershipMode: 'transitive', isMember: true },
+        },
+      ],
+      portalEntitlement: {
+        provisioningMode: 'workflow_managed',
+        groupId: 'group-223',
+        membershipMode: 'transitive',
+        defaultRoleName: 'User',
+        workflowTarget: 'workflow-223',
+      },
+    });
+
+    expect(publishWorkflowManagedPortalProvisioningEventMock).toHaveBeenCalledTimes(1);
+    expect(publishWorkflowManagedPortalProvisioningEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-223',
+        clientId: 'client-223',
+        contactNameId: 'contact-223',
+        syncRunId: 'run-223',
+        workflowTarget: 'workflow-223',
+      }),
+      expect.objectContaining({
+        entraObjectId: 'entra-object-linked223',
+      })
+    );
+    expect(handleEligibleClientPortalProvisioningMock).not.toHaveBeenCalled();
+    expect(handleIneligibleClientPortalLifecycleMock).not.toHaveBeenCalled();
+  });
+
+  it('T024/F070/F071: workflow-managed mode publishes access-removed event on entitlement loss or disabled account', async () => {
+    findContactMatchesByEmailMock.mockReset();
+    linkExistingMatchedContactMock.mockReset();
+    evaluateClientPortalProvisioningEligibilityMock.mockReset();
+    handleEligibleClientPortalProvisioningMock.mockReset();
+    handleIneligibleClientPortalLifecycleMock.mockReset();
+    publishWorkflowManagedPortalProvisioningEventMock.mockReset();
+
+    findContactMatchesByEmailMock.mockResolvedValueOnce([
+      { contactNameId: 'contact-224', clientId: 'client-224', email: 'removed224@example.com' },
+    ]);
+    linkExistingMatchedContactMock.mockResolvedValue({ contactNameId: 'contact-224' });
+    evaluateClientPortalProvisioningEligibilityMock.mockReturnValue({
+      eligible: false,
+      reason: 'workflow_managed',
+    });
+    publishWorkflowManagedPortalProvisioningEventMock.mockResolvedValue(
+      'ENTRA_PORTAL_ACCESS_REMOVED'
+    );
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    await executeEntraSync({
+      tenantId: 'tenant-224',
+      clientId: 'client-224',
+      managedTenantId: 'managed-224',
+      syncRunId: 'run-224',
+      dryRun: false,
+      users: [
+        {
+          ...buildUser('linked224'),
+          accountEnabled: false,
+          clientPortalEntitlement: { groupId: 'group-224', membershipMode: 'transitive', isMember: false },
+        },
+      ],
+      portalEntitlement: {
+        provisioningMode: 'workflow_managed',
+        groupId: 'group-224',
+        membershipMode: 'transitive',
+        defaultRoleName: 'User',
+        workflowTarget: 'workflow-224',
+      },
+    });
+
+    expect(publishWorkflowManagedPortalProvisioningEventMock).toHaveBeenCalledTimes(1);
+    expect(handleEligibleClientPortalProvisioningMock).not.toHaveBeenCalled();
+    expect(handleIneligibleClientPortalLifecycleMock).not.toHaveBeenCalled();
   });
 });

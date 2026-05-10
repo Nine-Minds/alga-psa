@@ -197,6 +197,16 @@ export default function SsoBulkAssignment() {
                 {t("ssoBulk.clientPortalProvisioning.modeWorkflowManaged", { defaultValue: "Workflow-managed" })}
               </option>
             </select>
+            {clientPortalEntraProvisioningMode === "workflow_managed" ? (
+              <Alert variant="info">
+                <AlertDescription>
+                  {t("ssoBulk.clientPortalProvisioning.workflowManagedInfo", {
+                    defaultValue:
+                      "Workflow-managed mode publishes Entra access events only. The selected workflow is responsible for client portal user provisioning, role assignment, invitations, and lifecycle changes.",
+                  })}
+                </AlertDescription>
+              </Alert>
+            ) : null}
           </div>
           <div className="flex items-center justify-between rounded-lg border border-muted-foreground/20 p-4">
             <div className="max-w-xl space-y-1">
