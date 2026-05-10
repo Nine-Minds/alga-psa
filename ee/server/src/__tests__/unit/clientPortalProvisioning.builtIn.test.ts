@@ -12,6 +12,7 @@ vi.mock('@/lib/db', () => ({
 
 vi.mock('@ee/lib/auth/oauthAccountLinks', () => ({
   upsertOAuthAccountLink: upsertOAuthAccountLinkMock,
+  OAuthAccountLinkConflictError: class OAuthAccountLinkConflictError extends Error {},
 }));
 
 function buildUser(overrides: Partial<EntraSyncUser> = {}): EntraSyncUser {
@@ -33,19 +34,23 @@ function buildUser(overrides: Partial<EntraSyncUser> = {}): EntraSyncUser {
 }
 
 function setupKnexHarness(params: {
-  existingContactUser?: { user_id: string; email: string } | null;
+  existingContactUsers?: Array<{ user_id: string; email: string }>;
   emailMatches?: Array<{ user_id: string; contact_id: string | null }>;
+  existingMicrosoftLinkUserId?: string | null;
 }) {
   const updates: Array<Record<string, unknown>> = [];
   const inserts: Array<Record<string, unknown>> = [];
 
   const usersWhereMock = vi.fn(() => {
+    const selectOrderByMock = vi.fn(async () => params.existingContactUsers ?? []);
+    const emailSelectOrderByMock = vi.fn(async () => params.emailMatches ?? []);
     const chain: any = {
-      orderBy: vi.fn(() => chain),
-      first: vi.fn(async () => params.existingContactUser ?? null),
+      select: vi.fn(() => ({
+        orderBy: selectOrderByMock,
+      })),
       andWhereRaw: vi.fn(() => ({
         select: vi.fn(() => ({
-          orderBy: vi.fn(async () => params.emailMatches ?? []),
+          orderBy: emailSelectOrderByMock,
         })),
       })),
       update: vi.fn(async (payload: Record<string, unknown>) => {
@@ -72,6 +77,25 @@ function setupKnexHarness(params: {
       insert: usersInsertMock,
     };
   });
+  const userAuthAccountsWhereMock = vi.fn(() => ({
+    first: vi.fn(async () =>
+      params.existingMicrosoftLinkUserId ? { user_id: params.existingMicrosoftLinkUserId } : undefined
+    ),
+  }));
+  trxFn.mockImplementation((table: string) => {
+    if (table === 'users') {
+      return {
+        where: usersWhereMock,
+        insert: usersInsertMock,
+      };
+    }
+    if (table === 'user_auth_accounts') {
+      return {
+        where: userAuthAccountsWhereMock,
+      };
+    }
+    throw new Error(`Unexpected table ${table}`);
+  });
 
   trxFn.fn = { now: vi.fn(() => 'db-now') };
   trxFn.raw = vi.fn((value: string) => value);
@@ -97,7 +121,7 @@ describe('clientPortalProvisioning built-in mutations', () => {
 
   it('T122/F041/F046: uses existing client portal user linked to reconciled contact and upserts Microsoft OAuth link', async () => {
     const harness = setupKnexHarness({
-      existingContactUser: { user_id: 'existing-user-201', email: 'user201@example.com' },
+      existingContactUsers: [{ user_id: 'existing-user-201', email: 'user201@example.com' }],
       emailMatches: [],
     });
 
@@ -132,7 +156,7 @@ describe('clientPortalProvisioning built-in mutations', () => {
 
   it('T123/F042: safely links an existing tenant client user by email when it has no conflicting contact linkage', async () => {
     const harness = setupKnexHarness({
-      existingContactUser: null,
+      existingContactUsers: [],
       emailMatches: [{ user_id: 'email-user-202', contact_id: null }],
     });
 
@@ -166,7 +190,7 @@ describe('clientPortalProvisioning built-in mutations', () => {
 
   it('T124/F043/F044/F045: creates a client portal user for entitled reconciled contact when no existing user is found', async () => {
     const harness = setupKnexHarness({
-      existingContactUser: null,
+      existingContactUsers: [],
       emailMatches: [],
     });
 
@@ -203,5 +227,51 @@ describe('clientPortalProvisioning built-in mutations', () => {
     expect(upsertOAuthAccountLinkMock).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'created-user-201', providerAccountId: 'entra-object-203' })
     );
+  });
+
+  it('T129/F049: returns conflict skip when multiple client portal users already map to the reconciled contact', async () => {
+    setupKnexHarness({
+      existingContactUsers: [
+        { user_id: 'user-a', email: 'dup@example.com' },
+        { user_id: 'user-b', email: 'dup@example.com' },
+      ],
+      emailMatches: [],
+    });
+
+    const { handleEligibleClientPortalProvisioning } = await import('@ee/lib/integrations/entra/sync/clientPortalProvisioning');
+    const result = await handleEligibleClientPortalProvisioning(
+      {
+        tenantId: 'tenant-204',
+        clientId: 'client-204',
+        managedTenantId: 'managed-204',
+        contactNameId: 'contact-204',
+      },
+      buildUser({ entraObjectId: 'entra-object-204' })
+    );
+
+    expect(result).toEqual({ outcome: 'skipped_conflict', reason: 'contact_conflict' });
+    expect(upsertOAuthAccountLinkMock).not.toHaveBeenCalled();
+  });
+
+  it('T130/F049: returns conflict skip when Microsoft account link already belongs to another user', async () => {
+    setupKnexHarness({
+      existingContactUsers: [{ user_id: 'contact-user-205', email: 'user205@example.com' }],
+      emailMatches: [],
+      existingMicrosoftLinkUserId: 'different-user-205',
+    });
+
+    const { handleEligibleClientPortalProvisioning } = await import('@ee/lib/integrations/entra/sync/clientPortalProvisioning');
+    const result = await handleEligibleClientPortalProvisioning(
+      {
+        tenantId: 'tenant-205',
+        clientId: 'client-205',
+        managedTenantId: 'managed-205',
+        contactNameId: 'contact-205',
+      },
+      buildUser({ entraObjectId: 'entra-object-205', email: 'user205@example.com' })
+    );
+
+    expect(result).toEqual({ outcome: 'skipped_conflict', reason: 'oauth_link_conflict' });
+    expect(upsertOAuthAccountLinkMock).not.toHaveBeenCalled();
   });
 });

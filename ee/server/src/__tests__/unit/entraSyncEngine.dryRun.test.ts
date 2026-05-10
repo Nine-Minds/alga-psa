@@ -48,6 +48,7 @@ describe('executeEntraSync dry-run behavior', () => {
     createContactForEntraUserMock.mockReset();
     evaluateClientPortalProvisioningEligibilityMock.mockReset();
     handleEligibleClientPortalProvisioningMock.mockReset();
+    handleEligibleClientPortalProvisioningMock.mockResolvedValue({ outcome: 'provisioned' });
 
     findContactMatchesByEmailMock
       .mockResolvedValueOnce([
@@ -94,6 +95,7 @@ describe('executeEntraSync dry-run behavior', () => {
         updated: 0,
         ambiguous: 1,
         inactivated: 0,
+        skipped: 0,
       },
     });
     expect(findContactMatchesByEmailMock).toHaveBeenCalledTimes(3);
@@ -148,6 +150,7 @@ describe('executeEntraSync dry-run behavior', () => {
     createContactForEntraUserMock.mockReset();
     evaluateClientPortalProvisioningEligibilityMock.mockReset();
     handleEligibleClientPortalProvisioningMock.mockReset();
+    handleEligibleClientPortalProvisioningMock.mockResolvedValue({ outcome: 'provisioned' });
 
     findContactMatchesByEmailMock.mockResolvedValueOnce([
       { contactNameId: 'c1' },
@@ -182,6 +185,7 @@ describe('executeEntraSync dry-run behavior', () => {
     createContactForEntraUserMock.mockReset();
     evaluateClientPortalProvisioningEligibilityMock.mockReset();
     handleEligibleClientPortalProvisioningMock.mockReset();
+    handleEligibleClientPortalProvisioningMock.mockResolvedValue({ outcome: 'provisioned' });
 
     findContactMatchesByEmailMock.mockResolvedValueOnce([
       {
@@ -222,6 +226,7 @@ describe('executeEntraSync dry-run behavior', () => {
     linkExistingMatchedContactMock.mockReset();
     evaluateClientPortalProvisioningEligibilityMock.mockReset();
     handleEligibleClientPortalProvisioningMock.mockReset();
+    handleEligibleClientPortalProvisioningMock.mockResolvedValue({ outcome: 'provisioned' });
 
     findContactMatchesByEmailMock.mockResolvedValueOnce([
       {
@@ -261,6 +266,7 @@ describe('executeEntraSync dry-run behavior', () => {
     linkExistingMatchedContactMock.mockReset();
     evaluateClientPortalProvisioningEligibilityMock.mockReset();
     handleEligibleClientPortalProvisioningMock.mockReset();
+    handleEligibleClientPortalProvisioningMock.mockResolvedValue({ outcome: 'provisioned' });
 
     findContactMatchesByEmailMock.mockResolvedValueOnce([
       {
@@ -300,6 +306,7 @@ describe('executeEntraSync dry-run behavior', () => {
     linkExistingMatchedContactMock.mockReset();
     evaluateClientPortalProvisioningEligibilityMock.mockReset();
     handleEligibleClientPortalProvisioningMock.mockReset();
+    handleEligibleClientPortalProvisioningMock.mockResolvedValue({ outcome: 'provisioned' });
 
     findContactMatchesByEmailMock.mockResolvedValueOnce([
       {
@@ -342,5 +349,52 @@ describe('executeEntraSync dry-run behavior', () => {
         entraObjectId: 'entra-object-linked128',
       })
     );
+  });
+
+  it('T131/T014: records skipped conflict outcome when provisioning detects portal-user conflicts', async () => {
+    findContactMatchesByEmailMock.mockReset();
+    linkExistingMatchedContactMock.mockReset();
+    evaluateClientPortalProvisioningEligibilityMock.mockReset();
+    handleEligibleClientPortalProvisioningMock.mockReset();
+
+    findContactMatchesByEmailMock.mockResolvedValueOnce([
+      {
+        contactNameId: 'contact-131',
+        clientId: 'client-131',
+        email: 'linked131@example.com',
+        fullName: 'Linked 131',
+        isInactive: false,
+      },
+    ]);
+    linkExistingMatchedContactMock.mockResolvedValue({ contactNameId: 'contact-131' });
+    evaluateClientPortalProvisioningEligibilityMock.mockReturnValue({
+      eligible: true,
+      reason: 'eligible',
+    });
+    handleEligibleClientPortalProvisioningMock.mockResolvedValue({
+      outcome: 'skipped_conflict',
+      reason: 'email_conflict',
+    });
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    const result = await executeEntraSync({
+      tenantId: 'tenant-131',
+      clientId: 'client-131',
+      managedTenantId: 'managed-131',
+      dryRun: false,
+      users: [buildUser('linked131')],
+      portalEntitlement: {
+        provisioningMode: 'built_in',
+        groupId: 'group-131',
+        membershipMode: 'transitive',
+      },
+    });
+
+    expect(result.counters).toMatchObject({
+      linked: 1,
+      skipped: 1,
+      created: 0,
+      ambiguous: 0,
+    });
   });
 });

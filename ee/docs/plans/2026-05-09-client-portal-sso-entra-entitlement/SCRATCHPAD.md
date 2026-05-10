@@ -160,3 +160,15 @@ Working notes for implementing tenant-scoped client portal SSO and Entra entitle
 - (2026-05-09) Implemented `T013` coverage with `T128` in `entraSyncEngine.dryRun.test.ts`: built-in eligible users now explicitly assert provisioning hook execution only after non-ambiguous reconciliation and with resolved `contactNameId` context.
 - (2026-05-09) `T013` behavior is completed jointly by sync-hook invocation contract (`T128`) and provisioning mutation contracts (`T122`-`T124`) verifying existing-user reuse, create path, Entra metadata stamping, and Microsoft OAuth link upsert.
 - `npx vitest run src/__tests__/unit/clientPortalProvisioning.builtIn.test.ts src/__tests__/unit/entraSyncEngine.dryRun.test.ts src/__tests__/unit/clientPortalProvisioningEligibility.test.ts` (workdir: `ee/server/`) ✅
+- (2026-05-09) Implemented `F049`/`F050`: built-in portal provisioning now performs explicit conflict checks before mutation/linking (multiple client users on reconciled contact, conflicting tenant email matches, and Microsoft OAuth link collisions) and returns deterministic `skipped_conflict` outcomes instead of creating duplicates.
+- (2026-05-09) Implemented `F056` (return path): sync counters now include `skipped`, and `executeEntraSync` increments `skipped` when provisioning reports conflict outcomes; Temporal Entra workflow summaries now carry `skipped` totals for run-level observability.
+- (2026-05-09) Implemented `T014` with unit contracts: `clientPortalProvisioning.builtIn.test.ts` (`T129`,`T130`) covers contact/link conflict detection, and `entraSyncEngine.dryRun.test.ts` (`T131`) verifies skipped/conflict counters are recorded without duplicate provisioning.
+
+## Commands Run
+
+- `npx vitest run src/__tests__/unit/clientPortalProvisioning.builtIn.test.ts src/__tests__/unit/entraSyncEngine.dryRun.test.ts src/__tests__/unit/entraSyncResultAggregator.test.ts` (workdir: `ee/server/`) ✅
+- `npx vitest run src/workflows/__tests__/entra-all-tenants-sync-workflow.test.ts src/workflows/__tests__/entra-initial-sync-workflow.test.ts src/workflows/__tests__/entra-tenant-sync-workflow.test.ts` (workdir: `ee/temporal-workflows/`) ⚠️ no matching tests found in that package
+
+## Gotchas
+
+- (2026-05-09) `clientPortalProvisioning` now returns a structured outcome (`provisioned` or `skipped_conflict`), so sync callers/mocks must assert return values instead of treating provisioning as `void`.

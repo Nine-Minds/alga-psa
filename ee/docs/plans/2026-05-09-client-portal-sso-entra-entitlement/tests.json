@@ -145,7 +145,7 @@
   {
     "id": "T014",
     "description": "DB-backed integration: Entra sync detects conflicting portal users and records a skipped/conflict outcome without creating a duplicate user.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042",
       "F049",

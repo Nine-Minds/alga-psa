@@ -33,6 +33,7 @@ export interface ExecuteEntraSyncResult {
     updated: number;
     ambiguous: number;
     inactivated: number;
+    skipped: number;
   };
 }
 
@@ -84,7 +85,7 @@ export async function executeEntraSync(
           input.portalEntitlement
         );
         if (eligibility.eligible) {
-          await handleEligibleClientPortalProvisioning(
+          const provisioning = await handleEligibleClientPortalProvisioning(
             {
               tenantId: input.tenantId,
               clientId: input.clientId,
@@ -93,6 +94,9 @@ export async function executeEntraSync(
             },
             userWithEntitlement
           );
+          if (provisioning.outcome === 'skipped_conflict') {
+            counters.increment('skipped');
+          }
         }
       }
       continue;
@@ -106,7 +110,7 @@ export async function executeEntraSync(
         input.portalEntitlement
       );
       if (eligibility.eligible) {
-        await handleEligibleClientPortalProvisioning(
+        const provisioning = await handleEligibleClientPortalProvisioning(
           {
             tenantId: input.tenantId,
             clientId: input.clientId,
@@ -115,6 +119,9 @@ export async function executeEntraSync(
           },
           userWithEntitlement
         );
+        if (provisioning.outcome === 'skipped_conflict') {
+          counters.increment('skipped');
+        }
       }
     }
   }

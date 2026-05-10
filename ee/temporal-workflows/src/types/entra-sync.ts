@@ -54,6 +54,7 @@ export interface EntraSyncRunSummary {
   updated: number;
   ambiguous: number;
   inactivated: number;
+  skipped: number;
 }
 
 export interface EntraTenantSyncResult {
@@ -65,6 +66,7 @@ export interface EntraTenantSyncResult {
   updated: number;
   ambiguous: number;
   inactivated: number;
+  skipped: number;
   errorMessage?: string | null;
 }
 

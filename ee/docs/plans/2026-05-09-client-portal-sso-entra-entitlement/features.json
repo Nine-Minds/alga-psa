@@ -420,7 +420,7 @@
   {
     "id": "F049",
     "description": "Detect conflicting portal users by tenant, contact, email, and link state before provisioning.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Entra Provisioning",
       "Security / Permissions"
@@ -429,7 +429,7 @@
   {
     "id": "F050",
     "description": "Skip provisioning and record a skipped/conflict result when conflicting portal users are found.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Entra Provisioning",
       "Failure Behavior"
@@ -480,7 +480,7 @@
   {
     "id": "F056",
     "description": "Return or persist sync provisioning counts for created, linked, deactivated, skipped, and ambiguous outcomes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "Observability"

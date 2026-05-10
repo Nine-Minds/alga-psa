@@ -207,6 +207,7 @@ export async function syncTenantUsersActivity(
     updated: syncResult.counters.updated,
     ambiguous: syncResult.counters.ambiguous,
     inactivated: syncResult.counters.inactivated + inactivatedCount,
+    skipped: syncResult.counters.skipped,
     errorMessage: null,
   };
 }
