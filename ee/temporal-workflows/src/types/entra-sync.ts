@@ -20,9 +20,11 @@ export interface EntraManagedTenantRef {
   managedTenantId: string;
   entraTenantId: string;
   clientId?: string | null;
+  clientPortalEntraProvisioningModeOverride?: 'inherit' | 'disabled' | 'built_in' | 'workflow_managed';
   clientPortalEntraProvisioningMode?: 'disabled' | 'built_in' | 'workflow_managed';
   clientPortalEntitlementGroupId?: string | null;
   clientPortalEntitlementMembershipMode?: 'transitive' | 'direct';
+  clientPortalDefaultRoleNameOverride?: string | null;
   clientPortalDefaultRoleName?: string | null;
   clientPortalWorkflowTarget?: string | null;
   clientPortalWorkflowConfig?: Record<string, unknown> | null;

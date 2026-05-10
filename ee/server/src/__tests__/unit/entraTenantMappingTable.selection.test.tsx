@@ -260,7 +260,7 @@ describe('EntraTenantMappingTable client selection', () => {
     });
   });
 
-  it('T131: confirming selected mappings persists manual unmatched selections', async () => {
+  it('T030: confirming selected mappings persists client mapping override fields and updated terminology', async () => {
     getEntraMappingPreviewMock.mockResolvedValue({
       data: {
         autoMatched: [],
@@ -287,9 +287,16 @@ describe('EntraTenantMappingTable client selection', () => {
     render(<EntraTenantMappingTable />);
 
     await screen.findByText('Unmatched Confirm Tenant');
+    expect(screen.getByText('Managed Microsoft tenant to Client mappings')).toBeTruthy();
     const row = screen.getByText('Unmatched Confirm Tenant').closest('tr') as HTMLElement;
     const select = within(row).getByTestId('client-picker-entra-client-picker-managed-unmatched-131') as HTMLSelectElement;
     fireEvent.change(select, { target: { value: 'client-131' } });
+
+    const modeSelect = row.querySelector(
+      '#entra-provisioning-mode-managed-unmatched-131'
+    ) as HTMLSelectElement | null;
+    expect(modeSelect).toBeTruthy();
+    fireEvent.change(modeSelect as HTMLSelectElement, { target: { value: 'workflow_managed' } });
 
     const confirmButton = screen.getByRole('button', { name: 'integrations.entra.tenantMapping.actions.confirmSelected' });
     fireEvent.click(confirmButton);
@@ -301,6 +308,8 @@ describe('EntraTenantMappingTable client selection', () => {
             managedTenantId: 'managed-unmatched-131',
             clientId: 'client-131',
             mappingState: 'mapped',
+            clientPortalEntraProvisioningMode: 'workflow_managed',
+            clientPortalDefaultRoleName: null,
           }),
         ],
       });

@@ -13,6 +13,7 @@ export interface SsoPreferences {
   autoLinkInternal: boolean;
   autoLinkClient: boolean;
   clientPortalEntraProvisioningMode: "disabled" | "built_in" | "workflow_managed";
+  clientPortalDefaultRoleName: string;
   deactivateEntraManagedPortalUsersOnEntitlementRemoval: boolean;
 }
 
@@ -30,6 +31,11 @@ function normalizePreferences(raw?: any): SsoPreferences {
     autoLinkInternal: Boolean(prefs.autoLinkInternal),
     autoLinkClient: Boolean(prefs.autoLinkClient),
     clientPortalEntraProvisioningMode: provisioningMode,
+    clientPortalDefaultRoleName:
+      typeof prefs.clientPortalDefaultRoleName === "string" &&
+      prefs.clientPortalDefaultRoleName.trim().length > 0
+        ? prefs.clientPortalDefaultRoleName.trim()
+        : "User",
     deactivateEntraManagedPortalUsersOnEntitlementRemoval:
       prefs.deactivateEntraManagedPortalUsersOnEntitlementRemoval === undefined
         ? true
@@ -76,6 +82,10 @@ export const updateSsoPreferencesAction = withAuth(async (
     clientPortalEntraProvisioningMode:
       updates.clientPortalEntraProvisioningMode ??
       normalizePreferences(currentSettings).clientPortalEntraProvisioningMode,
+    clientPortalDefaultRoleName:
+      (typeof updates.clientPortalDefaultRoleName === "string"
+        ? updates.clientPortalDefaultRoleName.trim()
+        : normalizePreferences(currentSettings).clientPortalDefaultRoleName) || "User",
     deactivateEntraManagedPortalUsersOnEntitlementRemoval:
       updates.deactivateEntraManagedPortalUsersOnEntitlementRemoval ??
       normalizePreferences(currentSettings).deactivateEntraManagedPortalUsersOnEntitlementRemoval,
@@ -88,6 +98,7 @@ export const updateSsoPreferencesAction = withAuth(async (
       autoLinkInternal: nextPreferences.autoLinkInternal,
       autoLinkClient: nextPreferences.autoLinkClient,
       clientPortalEntraProvisioningMode: nextPreferences.clientPortalEntraProvisioningMode,
+      clientPortalDefaultRoleName: nextPreferences.clientPortalDefaultRoleName,
       deactivateEntraManagedPortalUsersOnEntitlementRemoval:
         nextPreferences.deactivateEntraManagedPortalUsersOnEntitlementRemoval,
     },

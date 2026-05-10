@@ -101,7 +101,7 @@ describe('confirmEntraMappings client linkage updates', () => {
         client_portal_entra_provisioning_mode: 'workflow_managed',
         client_portal_entitlement_group_id: 'group-63',
         client_portal_entitlement_membership_mode: 'direct',
-        client_portal_default_role_name: 'User',
+        client_portal_default_role_name: null,
         client_portal_workflow_target: 'workflow-63',
         client_portal_workflow_config: { strategy: 'manual_review' },
       })
@@ -192,7 +192,7 @@ describe('confirmEntraMappings client linkage updates', () => {
     );
   });
 
-  it('T065: defaults per-mapping provisioning mode to disabled when confirm payload omits mode', async () => {
+  it('T065/T030: defaults per-mapping provisioning mode to inherit when confirm payload omits mode', async () => {
     const managedTenantFirstMock = vi.fn(async () => ({
       entra_tenant_id: 'entra-tenant-65',
       primary_domain: 'client65.example.com',
@@ -253,9 +253,9 @@ describe('confirmEntraMappings client linkage updates', () => {
 
     expect(mappingInsertMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        client_portal_entra_provisioning_mode: 'disabled',
+        client_portal_entra_provisioning_mode: 'inherit',
         client_portal_entitlement_membership_mode: 'transitive',
-        client_portal_default_role_name: 'User',
+        client_portal_default_role_name: null,
       })
     );
   });

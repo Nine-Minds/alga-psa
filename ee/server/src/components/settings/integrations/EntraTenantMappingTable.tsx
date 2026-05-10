@@ -29,7 +29,8 @@ interface MappingTenantRow {
   candidates: MappingCandidate[];
   selectedClientId: string | null;
   selectedEntitlementGroupId: string | null;
-  selectedDefaultRoleName: string;
+  selectedProvisioningMode: 'inherit' | 'disabled' | 'built_in' | 'workflow_managed';
+  selectedDefaultRoleName: string | null;
   isSkipped: boolean;
 }
 
@@ -80,7 +81,8 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
       ],
       selectedClientId: String(match.clientId || '') || null,
       selectedEntitlementGroupId: null,
-      selectedDefaultRoleName: 'User',
+      selectedProvisioningMode: 'inherit',
+      selectedDefaultRoleName: null,
       isSkipped: false,
     });
   }
@@ -102,7 +104,8 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
       })),
       selectedClientId: null,
       selectedEntitlementGroupId: null,
-      selectedDefaultRoleName: 'User',
+      selectedProvisioningMode: 'inherit',
+      selectedDefaultRoleName: null,
       isSkipped: false,
     });
   }
@@ -118,7 +121,8 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
       candidates: [],
       selectedClientId: null,
       selectedEntitlementGroupId: null,
-      selectedDefaultRoleName: 'User',
+      selectedProvisioningMode: 'inherit',
+      selectedDefaultRoleName: null,
       isSkipped: false,
     });
   }
@@ -234,8 +238,9 @@ export function EntraTenantMappingTable({
           mappingState: 'mapped' as const,
           confidenceScore: row.candidates[0]?.confidenceScore ?? null,
           clientPortalEntitlementGroupId: row.selectedEntitlementGroupId,
+          clientPortalEntraProvisioningMode: row.selectedProvisioningMode,
           clientPortalEntitlementMembershipMode: 'transitive' as const,
-          clientPortalDefaultRoleName: row.selectedDefaultRoleName?.trim() || 'User',
+          clientPortalDefaultRoleName: row.selectedDefaultRoleName?.trim() || null,
         })),
     [rows]
   );
@@ -264,7 +269,20 @@ export function EntraTenantMappingTable({
     setRows((currentRows) =>
       currentRows.map((row) =>
         row.managedTenantId === managedTenantId
-          ? { ...row, selectedDefaultRoleName: selectedDefaultRoleName || 'User' }
+          ? { ...row, selectedDefaultRoleName: selectedDefaultRoleName || null }
+          : row
+      )
+    );
+  }, []);
+
+  const updateProvisioningMode = React.useCallback((
+    managedTenantId: string,
+    selectedProvisioningMode: MappingTenantRow["selectedProvisioningMode"]
+  ) => {
+    setRows((currentRows) =>
+      currentRows.map((row) =>
+        row.managedTenantId === managedTenantId
+          ? { ...row, selectedProvisioningMode }
           : row
       )
     );
@@ -347,7 +365,7 @@ export function EntraTenantMappingTable({
       setRows((currentRows) =>
         currentRows.map((r) =>
           r.managedTenantId === row.managedTenantId && 'clientId' in result.data
-            ? { ...r, state: 'imported', selectedClientId: result.data.clientId, selectedEntitlementGroupId: null, selectedDefaultRoleName: 'User', isSkipped: false }
+            ? { ...r, state: 'imported', selectedClientId: result.data.clientId, selectedEntitlementGroupId: null, selectedProvisioningMode: 'inherit', selectedDefaultRoleName: null, isSkipped: false }
             : r
         )
       );
@@ -411,7 +429,7 @@ export function EntraTenantMappingTable({
   return (
     <div className="space-y-3" id="entra-mapping-table">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold">{t('integrations.entra.tenantMapping.title')}</p>
+        <p className="text-sm font-semibold">Managed Microsoft tenant to Client mappings</p>
         <div className="flex gap-2">
           <Button
             id="entra-confirm-selected-mappings"
@@ -456,6 +474,7 @@ export function EntraTenantMappingTable({
               <th className="px-3 py-2 font-medium">{t('integrations.entra.tenantMapping.columns.selectClient')}</th>
               <th className="px-3 py-2 font-medium">{t('integrations.entra.tenantMapping.columns.actions')}</th>
               <th className="px-3 py-2 font-medium">Portal access group</th>
+              <th className="px-3 py-2 font-medium">Provisioning mode override</th>
               <th className="px-3 py-2 font-medium">Default role</th>
             </tr>
           </thead>
@@ -467,6 +486,7 @@ export function EntraTenantMappingTable({
                   <td className="px-3 py-2">
                     <p className="font-medium">{row.displayName || row.entraTenantId}</p>
                     <p className="text-xs text-muted-foreground">{row.entraTenantId}</p>
+                    <p className="text-xs text-muted-foreground">Managed Microsoft tenant</p>
                   </td>
                   <td className="px-3 py-2">{row.primaryDomain || '—'}</td>
                   <td className="px-3 py-2">
@@ -579,12 +599,32 @@ export function EntraTenantMappingTable({
                     </div>
                   </td>
                   <td className="px-3 py-2">
+                    <select
+                      id={`entra-provisioning-mode-${row.managedTenantId}`}
+                      className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                      disabled={!row.selectedClientId || row.isSkipped}
+                      value={row.selectedProvisioningMode}
+                      onChange={(event) =>
+                        updateProvisioningMode(
+                          row.managedTenantId,
+                          event.target.value as MappingTenantRow["selectedProvisioningMode"]
+                        )
+                      }
+                    >
+                      <option value="inherit">Inherit MSP workspace default</option>
+                      <option value="disabled">Disabled</option>
+                      <option value="built_in">Built-in</option>
+                      <option value="workflow_managed">Workflow-managed</option>
+                    </select>
+                  </td>
+                  <td className="px-3 py-2">
                     <input
                       id={`entra-default-role-${row.managedTenantId}`}
                       className="h-9 w-28 rounded-md border border-input bg-background px-2 text-sm"
                       disabled={!row.selectedClientId || row.isSkipped}
-                      value={row.selectedDefaultRoleName}
+                      value={row.selectedDefaultRoleName || ''}
                       onChange={(event) => updateDefaultRoleName(row.managedTenantId, event.target.value)}
+                      placeholder="Inherit workspace role"
                     />
                   </td>
                 </tr>
@@ -593,7 +633,7 @@ export function EntraTenantMappingTable({
 
             {!loading && rows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-3 py-6 text-center text-muted-foreground">
+                <td colSpan={10} className="px-3 py-6 text-center text-muted-foreground">
                   {t('integrations.entra.tenantMapping.empty')}
                 </td>
               </tr>

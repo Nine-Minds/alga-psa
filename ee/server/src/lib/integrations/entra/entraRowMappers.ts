@@ -103,9 +103,11 @@ export function mapEntraManagedTenantRow(row: DbRow): EntraManagedTenantRow {
 export function mapEntraClientTenantMappingRow(row: DbRow): EntraClientTenantMappingRow {
   const provisioningModeRaw = toNullableStringValue(row.client_portal_entra_provisioning_mode);
   const clientPortalEntraProvisioningMode =
-    provisioningModeRaw === 'built_in' || provisioningModeRaw === 'workflow_managed'
+    provisioningModeRaw === 'inherit' ||
+    provisioningModeRaw === 'built_in' ||
+    provisioningModeRaw === 'workflow_managed'
       ? provisioningModeRaw
-      : 'disabled';
+      : 'inherit';
   const entitlementMembershipModeRaw = toNullableStringValue(
     row.client_portal_entitlement_membership_mode
   );

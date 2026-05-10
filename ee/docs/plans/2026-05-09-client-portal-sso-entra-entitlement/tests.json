@@ -94,7 +94,7 @@
   },
   {
     "id": "T010",
-    "description": "Settings behavior: SSO settings can persist autoLinkClient, client portal Entra provisioning mode, and entitlement-removal deactivation independently.",
+    "description": "Settings behavior: SSO settings can persist autoLinkClient, MSP workspace default client portal Entra provisioning mode, and entitlement-removal deactivation independently.",
     "implemented": true,
     "featureIds": [
       "F024",
@@ -287,6 +287,40 @@
       "F025",
       "F026",
       "F027"
+    ]
+  },
+  {
+    "id": "T029",
+    "description": "DB-backed integration: Entra sync resolves effective portal provisioning mode from per-client override first and MSP workspace default second, and skips provisioning/events when the effective mode is disabled.",
+    "implemented": true,
+    "featureIds": [
+      "F025",
+      "F028",
+      "F036",
+      "F076",
+      "F079",
+      "F080"
+    ]
+  },
+  {
+    "id": "T030",
+    "description": "UI/API behavior: client mapping configuration supports inherit/disabled/built-in/workflow-managed override choices, keeps portal access group explicit per managed Microsoft tenant, and uses MSP workspace / managed Microsoft tenant terminology.",
+    "implemented": true,
+    "featureIds": [
+      "F028",
+      "F077",
+      "F078"
+    ]
+  },
+  {
+    "id": "T031",
+    "description": "DB-backed integration: built-in provisioning uses per-client default role override when present, otherwise workspace default role, otherwise User, while still preserving later manual role changes.",
+    "implemented": true,
+    "featureIds": [
+      "F063",
+      "F064",
+      "F065",
+      "F079"
     ]
   }
 ]

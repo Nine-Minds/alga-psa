@@ -238,3 +238,26 @@ Working notes for implementing tenant-scoped client portal SSO and Entra entitle
 ## Commands Run
 
 - `npx vitest run src/__tests__/unit/workflowPortalAccessActions.test.ts src/__tests__/unit/entraSyncEngine.dryRun.test.ts src/__tests__/unit/workflowManagedProvisioning.test.ts` (workdir: `ee/server/`) ✅
+
+## Decisions
+
+- (2026-05-10) Revised provisioning-mode design after review: the MSP workspace setting is the global default policy for client portal Entra provisioning, and each Alga client mapping may override that default with `inherit`, `disabled`, `built_in`, or `workflow_managed`.
+- (2026-05-10) Portal access group selection remains explicit per Alga client mapping because Entra group IDs are scoped to the managed Microsoft tenant and are not safe to inherit globally. A future "match group by name" helper could change this, but it is out of scope for the current plan.
+- (2026-05-10) Default portal role resolves similarly to mode: per-client override first, then MSP workspace default role, then `User`.
+- (2026-05-10) User-facing terminology should avoid overloaded "tenant": use `MSP workspace` for Alga tenant-level settings, `Client` for Alga client/company, `managed Microsoft tenant` for Entra/customer tenant, and `client mapping` for the mapping row.
+- (2026-05-10) Existing branch implementation has pieces of this behavior, but does not yet compute effective mode from workspace default plus per-client override. Added `F076`-`F080` and `T029`-`T031` as not implemented to track the remaining design correction.
+- (2026-05-10) Implemented design-correction bundle `F028`/`F036`/`F063`/`F076`/`F077`/`F078`/`F079`/`F080`:
+  - Added explicit per-client mapping provisioning-mode override semantics (`inherit`/`disabled`/`built_in`/`workflow_managed`) in mapping UI + confirm persistence, with `inherit` as the default persisted override.
+  - Added workspace default client-portal role setting in SSO preferences (`clientPortalDefaultRoleName`, default `User`) and surfaced it in security UI as MSP workspace default role.
+  - Added shared effective-resolution helpers in `clientPortalEntitlementResolution.ts` and used them in Temporal Entra mapped-tenant loading so effective provisioning mode resolves as override first, workspace default second; effective default role resolves as mapping override, then workspace default, then `User`.
+  - Kept portal access group explicit per client mapping in UI/API payloads; no global group inheritance path added.
+  - Updated client-mapping table terminology to emphasize managed Microsoft tenant and client mapping context.
+- (2026-05-10) Implemented `T029`/`T030`/`T031` coverage:
+  - `T029`/`T031`: new resolution unit contracts in `ee/server/src/__tests__/unit/clientPortalEntitlementResolution.test.ts`.
+  - `T030`: updated mapping-table selection contract `entraTenantMappingTable.selection.test.tsx` to assert override payload (`clientPortalEntraProvisioningMode`) and terminology copy.
+  - Updated confirm-mapping contracts for inherit/default-role-null persistence semantics in `confirmEntraMappingsService.clientLink.test.ts`.
+
+## Commands Run
+
+- `npx vitest run src/__tests__/unit/clientPortalEntitlementResolution.test.ts src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts src/__tests__/unit/entraTenantMappingTable.selection.test.tsx src/components/settings/security/__tests__/SsoBulkAssignment.autoLinkClient.contract.test.ts src/__tests__/unit/entraSyncEngine.dryRun.test.ts src/__tests__/unit/clientPortalProvisioning.builtIn.test.ts src/__tests__/unit/workflowManagedProvisioning.test.ts` (workdir: `ee/server/`) ✅
+- `npx vitest run src/lib/nextAuthOptions.clientPortalSso.contract.test.ts src/components/mspSsoRegression.contract.test.ts` (workdir: `packages/auth/`) ✅

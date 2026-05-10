@@ -5,7 +5,7 @@ export interface ConfirmEntraMappingInput {
   clientId?: string | null;
   mappingState?: 'mapped' | 'skip_for_now' | 'needs_review';
   confidenceScore?: number | null;
-  clientPortalEntraProvisioningMode?: 'disabled' | 'built_in' | 'workflow_managed';
+  clientPortalEntraProvisioningMode?: 'inherit' | 'disabled' | 'built_in' | 'workflow_managed';
   clientPortalEntitlementGroupId?: string | null;
   clientPortalEntitlementMembershipMode?: 'transitive' | 'direct';
   clientPortalDefaultRoleName?: string | null;
@@ -29,14 +29,17 @@ function normalizeMappingState(input: ConfirmEntraMappingInput): 'mapped' | 'ski
 
 function normalizeProvisioningMode(
   input: ConfirmEntraMappingInput
-): 'disabled' | 'built_in' | 'workflow_managed' {
+): 'inherit' | 'disabled' | 'built_in' | 'workflow_managed' {
+  if (input.clientPortalEntraProvisioningMode === 'inherit') {
+    return 'inherit';
+  }
   if (
     input.clientPortalEntraProvisioningMode === 'built_in' ||
     input.clientPortalEntraProvisioningMode === 'workflow_managed'
   ) {
     return input.clientPortalEntraProvisioningMode;
   }
-  return 'disabled';
+  return 'inherit';
 }
 
 function normalizeEntitlementMembershipMode(
@@ -82,7 +85,7 @@ export async function confirmEntraMappings(
         const clientPortalDefaultRoleName =
           mapping.clientPortalDefaultRoleName === null
             ? null
-            : String(mapping.clientPortalDefaultRoleName || '').trim() || 'User';
+            : String(mapping.clientPortalDefaultRoleName || '').trim() || null;
         const clientPortalWorkflowTarget =
           mapping.clientPortalWorkflowTarget === null
             ? null

@@ -210,7 +210,7 @@
   },
   {
     "id": "F025",
-    "description": "Add client portal Entra provisioning mode configuration defaulting to disabled, with built-in and workflow-managed modes.",
+    "description": "Add MSP workspace default client portal Entra provisioning mode configuration defaulting to disabled, with built-in and workflow-managed modes.",
     "implemented": true,
     "prdRefs": [
       "Configuration",
@@ -228,7 +228,7 @@
   },
   {
     "id": "F027",
-    "description": "Add settings UI controls for client portal Entra provisioning mode and entitlement-removal deactivation.",
+    "description": "Add settings UI controls for MSP workspace default client portal Entra provisioning mode and entitlement-removal deactivation.",
     "implemented": true,
     "prdRefs": [
       "Configuration",
@@ -237,7 +237,7 @@
   },
   {
     "id": "F028",
-    "description": "Persist per managed Entra tenant/client mapping configuration for client portal provisioning mode.",
+    "description": "Persist per-client mapping override for client portal provisioning mode with inherit-workspace-default, disabled, built-in, and workflow-managed choices.",
     "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
@@ -307,7 +307,7 @@
   },
   {
     "id": "F036",
-    "description": "Skip portal user provisioning when client portal Entra provisioning mode is disabled.",
+    "description": "Skip portal user provisioning and workflow events when the effective client portal Entra provisioning mode resolves to disabled.",
     "implemented": true,
     "prdRefs": [
       "Entra Provisioning",
@@ -539,7 +539,7 @@
   },
   {
     "id": "F063",
-    "description": "Persist a default Alga client portal role for built-in Entra-provisioned users on the managed Entra tenant/client mapping, defaulting to User.",
+    "description": "Persist workspace default role and optional per-client default role override for built-in Entra-provisioned users, defaulting to User.",
     "implemented": true,
     "prdRefs": [
       "Configuration",
@@ -651,6 +651,50 @@
     "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "Resolve effective client portal provisioning mode by using the per-client mapping override when set, otherwise the MSP workspace default.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Entra Entitlement Configuration"
+    ]
+  },
+  {
+    "id": "F077",
+    "description": "Keep portal access group selection explicit per client mapping; do not inherit a group globally across managed Microsoft tenants.",
+    "implemented": true,
+    "prdRefs": [
+      "Entra Entitlement Configuration",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F078",
+    "description": "Update configuration UI terminology to distinguish MSP workspace, Alga client, managed Microsoft tenant, and client mapping.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F079",
+    "description": "Thread workspace default provisioning mode and default role into Entra sync activity context so sync can compute effective per-client behavior.",
+    "implemented": true,
+    "prdRefs": [
+      "Entra Provisioning",
+      "Settings"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Treat workflow-managed mode as the effective mode only after default/override resolution, so built-in mutations and workflow events remain mutually exclusive.",
+    "implemented": true,
+    "prdRefs": [
+      "Workflow Events and Actions",
+      "Security / Permissions"
     ]
   }
 ]

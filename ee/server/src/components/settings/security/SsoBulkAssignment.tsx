@@ -66,6 +66,7 @@ export default function SsoBulkAssignment() {
   const autoLinkInternalEnabled = Boolean(preferences?.autoLinkInternal);
   const autoLinkClientEnabled = Boolean(preferences?.autoLinkClient);
   const clientPortalEntraProvisioningMode = preferences?.clientPortalEntraProvisioningMode ?? "disabled";
+  const clientPortalDefaultRoleName = preferences?.clientPortalDefaultRoleName ?? "User";
   const deactivateOnEntitlementRemoval =
     preferences?.deactivateEntraManagedPortalUsersOnEntitlementRemoval ?? true;
 
@@ -119,6 +120,20 @@ export default function SsoBulkAssignment() {
     }
   }
 
+  async function handleDefaultRoleNameBlur(roleName: string) {
+    setPrefPending(true);
+    try {
+      const updated = await updateSsoPreferencesAction({
+        clientPortalDefaultRoleName: roleName.trim() || "User",
+      });
+      setPreferences(updated);
+    } catch (err: any) {
+      setError(err?.message ?? t("ssoBulk.errors.updatePreferences"));
+    } finally {
+      setPrefPending(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <Card>
@@ -143,6 +158,28 @@ export default function SsoBulkAssignment() {
               onCheckedChange={handleInternalAutoLinkToggle}
               disabled={prefPending}
               aria-label={t("ssoBulk.autoLink.internalToggleLabel", { defaultValue: "Toggle internal auto-linking" })}
+            />
+          </div>
+          <div className="space-y-2 rounded-lg border border-muted-foreground/20 p-4">
+            <p className="text-sm font-medium">
+              {t("ssoBulk.clientPortalProvisioning.defaultRoleTitle", {
+                defaultValue: "MSP workspace default client portal role",
+              })}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {t("ssoBulk.clientPortalProvisioning.defaultRoleBody", {
+                defaultValue:
+                  "Used for newly provisioned client portal users in built-in mode when a client mapping does not override the role.",
+              })}
+            </p>
+            <input
+              className="h-9 w-48 rounded-md border border-input bg-background px-3 text-sm"
+              defaultValue={clientPortalDefaultRoleName}
+              disabled={prefPending}
+              aria-label={t("ssoBulk.clientPortalProvisioning.defaultRoleLabel", {
+                defaultValue: "MSP workspace default client portal role",
+              })}
+              onBlur={(event) => void handleDefaultRoleNameBlur(event.target.value)}
             />
           </div>
           <div className="flex items-center justify-between rounded-lg border border-muted-foreground/20 p-4">
