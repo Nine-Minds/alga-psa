@@ -270,5 +270,13 @@
       "F068",
       "F075"
     ]
+  },
+  {
+    "id": "T027",
+    "description": "UI behavior: security SSO settings expose separate auto-link toggles for internal users and client portal users, persisting autoLinkClient independently.",
+    "implemented": true,
+    "featureIds": [
+      "F024"
+    ]
   }
 ]

@@ -63,12 +63,25 @@ export default function SsoBulkAssignment() {
   }
 
   const shouldShowFallback = !providerOptions || providerOptions.length === 0;
-  const autoLinkEnabled = Boolean(preferences?.autoLinkInternal);
+  const autoLinkInternalEnabled = Boolean(preferences?.autoLinkInternal);
+  const autoLinkClientEnabled = Boolean(preferences?.autoLinkClient);
 
-  async function handleAutoLinkToggle(checked: boolean) {
+  async function handleInternalAutoLinkToggle(checked: boolean) {
     setPrefPending(true);
     try {
       const updated = await updateSsoPreferencesAction({ autoLinkInternal: checked });
+      setPreferences(updated);
+    } catch (err: any) {
+      setError(err?.message ?? t("ssoBulk.errors.updatePreferences"));
+    } finally {
+      setPrefPending(false);
+    }
+  }
+
+  async function handleClientAutoLinkToggle(checked: boolean) {
+    setPrefPending(true);
+    try {
+      const updated = await updateSsoPreferencesAction({ autoLinkClient: checked });
       setPreferences(updated);
     } catch (err: any) {
       setError(err?.message ?? t("ssoBulk.errors.updatePreferences"));
@@ -89,18 +102,37 @@ export default function SsoBulkAssignment() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between rounded-lg border border-muted-foreground/20 p-4">
             <div className="max-w-xl space-y-1">
+              <p className="text-sm font-medium">{t("ssoBulk.autoLink.internalTitle", { defaultValue: "Auto-link internal users" })}</p>
               <p className="text-sm text-muted-foreground">
-                {t("ssoBulk.autoLink.body")}
+                {t("ssoBulk.autoLink.internalBody", {
+                  defaultValue: "When enabled, matching MSP/internal users are automatically linked to their SSO identities on login.",
+                })}
               </p>
             </div>
             <Switch
-              checked={autoLinkEnabled}
-              onCheckedChange={handleAutoLinkToggle}
+              checked={autoLinkInternalEnabled}
+              onCheckedChange={handleInternalAutoLinkToggle}
               disabled={prefPending}
-              aria-label={t("ssoBulk.autoLink.toggleLabel")}
+              aria-label={t("ssoBulk.autoLink.internalToggleLabel", { defaultValue: "Toggle internal auto-linking" })}
             />
           </div>
-          {!autoLinkEnabled && (
+          <div className="flex items-center justify-between rounded-lg border border-muted-foreground/20 p-4">
+            <div className="max-w-xl space-y-1">
+              <p className="text-sm font-medium">{t("ssoBulk.autoLink.clientTitle", { defaultValue: "Auto-link client portal users" })}</p>
+              <p className="text-sm text-muted-foreground">
+                {t("ssoBulk.autoLink.clientBody", {
+                  defaultValue: "When enabled, matching client portal users are automatically linked to their SSO identities on login.",
+                })}
+              </p>
+            </div>
+            <Switch
+              checked={autoLinkClientEnabled}
+              onCheckedChange={handleClientAutoLinkToggle}
+              disabled={prefPending}
+              aria-label={t("ssoBulk.autoLink.clientToggleLabel", { defaultValue: "Toggle client auto-linking" })}
+            />
+          </div>
+          {!autoLinkInternalEnabled && !autoLinkClientEnabled && (
             <Alert variant="info">
               <AlertDescription>
                 {t("ssoBulk.autoLink.disabledInfo")}

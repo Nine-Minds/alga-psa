@@ -103,3 +103,9 @@ Working notes for implementing tenant-scoped client portal SSO and Entra entitle
 ## Commands Run
 
 - `npx vitest run src/lib/nextAuthOptions.clientPortalSso.contract.test.ts src/components/clientPortalCredentialsRegression.contract.test.ts src/components/mspSsoRegression.contract.test.ts` (workdir: `packages/auth/`) ✅
+- (2026-05-09) Implemented `F024`: `ee/server/src/components/settings/security/SsoBulkAssignment.tsx` now exposes separate auto-link controls for internal users and client portal users and persists `autoLinkClient` independently via `updateSsoPreferencesAction`.
+- (2026-05-09) Added focused checklist test `T027` and implemented it via static contract test `ee/server/src/components/settings/security/__tests__/SsoBulkAssignment.autoLinkClient.contract.test.ts` because existing `T010` bundles broader provisioning settings scope (`F025`-`F028`) not yet implemented.
+
+## Commands Run
+
+- `npx vitest run src/components/settings/security/__tests__/SsoBulkAssignment.autoLinkClient.contract.test.ts` (workdir: `ee/server/`) ✅

@@ -202,7 +202,7 @@
   {
     "id": "F024",
     "description": "Expose autoLinkClient in the SSO settings UI separately from internal auto-linking.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Configuration",
       "UX / UI Notes"
