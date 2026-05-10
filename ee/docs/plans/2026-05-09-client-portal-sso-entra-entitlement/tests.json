@@ -95,7 +95,7 @@
   {
     "id": "T010",
     "description": "Settings behavior: SSO settings can persist autoLinkClient, client portal Entra provisioning mode, and entitlement-removal deactivation independently.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F025",

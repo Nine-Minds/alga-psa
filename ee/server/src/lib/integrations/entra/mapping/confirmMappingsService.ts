@@ -5,6 +5,7 @@ export interface ConfirmEntraMappingInput {
   clientId?: string | null;
   mappingState?: 'mapped' | 'skip_for_now' | 'needs_review';
   confidenceScore?: number | null;
+  clientPortalEntraProvisioningMode?: 'disabled' | 'built_in' | 'workflow_managed';
 }
 
 export interface ConfirmEntraMappingsResult {
@@ -19,6 +20,18 @@ function normalizeMappingState(input: ConfirmEntraMappingInput): 'mapped' | 'ski
     return 'mapped';
   }
   return 'skip_for_now';
+}
+
+function normalizeProvisioningMode(
+  input: ConfirmEntraMappingInput
+): 'disabled' | 'built_in' | 'workflow_managed' {
+  if (
+    input.clientPortalEntraProvisioningMode === 'built_in' ||
+    input.clientPortalEntraProvisioningMode === 'workflow_managed'
+  ) {
+    return input.clientPortalEntraProvisioningMode;
+  }
+  return 'disabled';
 }
 
 export async function confirmEntraMappings(
@@ -46,6 +59,7 @@ export async function confirmEntraMappings(
 
         const clientId = mapping.clientId ? String(mapping.clientId).trim() : null;
         const mappingState = normalizeMappingState(mapping);
+        const clientPortalEntraProvisioningMode = normalizeProvisioningMode(mapping);
         const confidenceScore =
           typeof mapping.confidenceScore === 'number' ? mapping.confidenceScore : null;
 
@@ -77,6 +91,7 @@ export async function confirmEntraMappings(
             .where({ mapping_id: existingActive.mapping_id })
             .update({
               confidence_score: confidenceScore,
+              client_portal_entra_provisioning_mode: clientPortalEntraProvisioningMode,
               decided_by: params.userId,
               decided_at: now,
               updated_at: now,
@@ -99,6 +114,7 @@ export async function confirmEntraMappings(
             client_id: clientId,
             mapping_state: mappingState,
             confidence_score: confidenceScore,
+            client_portal_entra_provisioning_mode: clientPortalEntraProvisioningMode,
             is_active: true,
             decided_by: params.userId,
             decided_at: now,

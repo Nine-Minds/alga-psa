@@ -9,6 +9,14 @@ const preferencesSource = fs.readFileSync(
   path.join(here, '..', '..', '..', '..', 'lib', 'actions', 'auth', 'ssoPreferences.ts'),
   'utf8'
 );
+const confirmRouteSource = fs.readFileSync(
+  path.join(here, '..', '..', '..', '..', 'app', 'api', 'integrations', 'entra', 'mappings', 'confirm', 'route.ts'),
+  'utf8'
+);
+const confirmServiceSource = fs.readFileSync(
+  path.join(here, '..', '..', '..', '..', 'lib', 'integrations', 'entra', 'mapping', 'confirmMappingsService.ts'),
+  'utf8'
+);
 
 describe('SSO bulk assignment auto-link contract', () => {
   it('T010/F024: exposes separate internal and client auto-link toggles and persists autoLinkClient independently', () => {
@@ -30,5 +38,12 @@ describe('SSO bulk assignment auto-link contract', () => {
     expect(preferencesSource).toContain('deactivateEntraManagedPortalUsersOnEntitlementRemoval');
     expect(preferencesSource).toContain('const provisioningModeRaw');
     expect(preferencesSource).toContain('provisioningModeRaw === "built_in" || provisioningModeRaw === "workflow_managed"');
+  });
+
+  it('T010/F028: persists client portal provisioning mode on managed Entra tenant/client mapping confirm', () => {
+    expect(confirmRouteSource).toContain('clientPortalEntraProvisioningMode');
+    expect(confirmRouteSource).toContain('client_portal_entra_provisioning_mode');
+    expect(confirmServiceSource).toContain('client_portal_entra_provisioning_mode');
+    expect(confirmServiceSource).toContain('normalizeProvisioningMode');
   });
 });

@@ -91,6 +91,12 @@ export function mapEntraManagedTenantRow(row: DbRow): EntraManagedTenantRow {
 }
 
 export function mapEntraClientTenantMappingRow(row: DbRow): EntraClientTenantMappingRow {
+  const provisioningModeRaw = toNullableStringValue(row.client_portal_entra_provisioning_mode);
+  const clientPortalEntraProvisioningMode =
+    provisioningModeRaw === 'built_in' || provisioningModeRaw === 'workflow_managed'
+      ? provisioningModeRaw
+      : 'disabled';
+
   return {
     tenant: toStringValue(row.tenant, 'tenant'),
     mapping_id: toStringValue(row.mapping_id, 'mapping_id'),
@@ -98,6 +104,7 @@ export function mapEntraClientTenantMappingRow(row: DbRow): EntraClientTenantMap
     client_id: toNullableStringValue(row.client_id),
     mapping_state: toStringValue(row.mapping_state, 'mapping_state') as EntraClientTenantMappingRow['mapping_state'],
     confidence_score: toNullableNumberValue(row.confidence_score),
+    client_portal_entra_provisioning_mode: clientPortalEntraProvisioningMode,
     is_active: toBooleanValue(row.is_active, 'is_active'),
     decided_by: toNullableStringValue(row.decided_by),
     decided_at: toNullableStringValue(row.decided_at),

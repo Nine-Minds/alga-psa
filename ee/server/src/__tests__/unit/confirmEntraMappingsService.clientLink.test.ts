@@ -76,6 +76,7 @@ describe('confirmEntraMappings client linkage updates', () => {
           managedTenantId: 'managed-63',
           clientId: 'client-63',
           mappingState: 'mapped',
+          clientPortalEntraProvisioningMode: 'workflow_managed',
         },
       ],
     });
@@ -93,6 +94,7 @@ describe('confirmEntraMappings client linkage updates', () => {
         managed_tenant_id: 'managed-63',
         client_id: 'client-63',
         mapping_state: 'mapped',
+        client_portal_entra_provisioning_mode: 'workflow_managed',
       })
     );
   });
@@ -177,6 +179,72 @@ describe('confirmEntraMappings client linkage updates', () => {
         client_id: 'client-new-64',
         mapping_state: 'mapped',
         is_active: true,
+      })
+    );
+  });
+
+  it('T065: defaults per-mapping provisioning mode to disabled when confirm payload omits mode', async () => {
+    const managedTenantFirstMock = vi.fn(async () => ({
+      entra_tenant_id: 'entra-tenant-65',
+      primary_domain: 'client65.example.com',
+    }));
+    const activeMappingFirstMock = vi.fn(async () => null);
+    const deactivateUpdateMock = vi.fn(async () => 1);
+    const mappingInsertMock = vi.fn(async () => [1]);
+
+    const trxMock = vi.fn((table: string) => {
+      if (table === 'entra_managed_tenants') {
+        const chain = { first: managedTenantFirstMock };
+        return { where: vi.fn(() => chain) };
+      }
+
+      if (table === 'entra_client_tenant_mappings') {
+        const chain = {
+          first: activeMappingFirstMock,
+          update: deactivateUpdateMock,
+        };
+        return {
+          where: vi.fn(() => chain),
+          insert: mappingInsertMock,
+        };
+      }
+
+      if (table === 'clients') {
+        const chain = {
+          update: vi.fn(async () => 1),
+        };
+        return {
+          where: vi.fn(() => chain),
+        };
+      }
+
+      throw new Error(`Unexpected table ${table}`);
+    });
+
+    const knexMock = {
+      fn: { now: vi.fn(() => 'db-now') },
+      transaction: vi.fn(async (cb: (trx: typeof trxMock) => Promise<void>) => cb(trxMock)),
+    };
+    createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+
+    const { confirmEntraMappings } = await import(
+      '@ee/lib/integrations/entra/mapping/confirmMappingsService'
+    );
+    await confirmEntraMappings({
+      tenant: 'tenant-65',
+      userId: 'user-65',
+      mappings: [
+        {
+          managedTenantId: 'managed-65',
+          clientId: 'client-65',
+          mappingState: 'mapped',
+        },
+      ],
+    });
+
+    expect(mappingInsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        client_portal_entra_provisioning_mode: 'disabled',
       })
     );
   });

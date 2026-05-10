@@ -238,7 +238,7 @@
   {
     "id": "F028",
     "description": "Persist per managed Entra tenant/client mapping configuration for client portal provisioning mode.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Configuration"

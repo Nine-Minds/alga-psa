@@ -112,7 +112,11 @@ Working notes for implementing tenant-scoped client portal SSO and Entra entitle
 - (2026-05-09) Implemented `F025`/`F026` in `ee/server/src/lib/actions/auth/ssoPreferences.ts`: added tenant-level SSO preference fields `clientPortalEntraProvisioningMode` (`disabled` default) and `deactivateEntraManagedPortalUsersOnEntitlementRemoval` (`true` default).
 - (2026-05-09) Implemented `F027` in `ee/server/src/components/settings/security/SsoBulkAssignment.tsx`: added settings UI controls for client portal provisioning mode (`disabled`/`built_in`/`workflow_managed`) and entitlement-removal deactivation toggle.
 - (2026-05-09) Added focused checklist test `T028` and extended `ee/server/src/components/settings/security/__tests__/SsoBulkAssignment.autoLinkClient.contract.test.ts` to cover the new settings UI wiring plus backing preference-field contract checks.
+- (2026-05-09) Implemented `F028`: added per-managed-mapping persistence field `client_portal_entra_provisioning_mode` on `entra_client_tenant_mappings` (migration `20260509170000_add_client_portal_provisioning_mode_to_entra_mappings.cjs`), extended confirm mapping route parsing (`clientPortalEntraProvisioningMode` and snake_case alias), and persisted normalized mode (`disabled` default) in `confirmMappingsService`.
+- (2026-05-09) Implemented `T010` completion for `F028`: extended `SsoBulkAssignment.autoLinkClient.contract.test.ts` with contract assertions that mapping confirm route/service include the per-mapping provisioning mode persistence path; added unit coverage `T065` in `confirmEntraMappingsService.clientLink.test.ts` validating default `disabled` persistence when mode is omitted.
 
 ## Commands Run
 
+- `npx vitest run src/components/settings/security/__tests__/SsoBulkAssignment.autoLinkClient.contract.test.ts` (workdir: `ee/server/`) ✅
+- `npx vitest run src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts` (workdir: `ee/server/`) ✅
 - `npx vitest run src/components/settings/security/__tests__/SsoBulkAssignment.autoLinkClient.contract.test.ts` (workdir: `ee/server/`) ✅

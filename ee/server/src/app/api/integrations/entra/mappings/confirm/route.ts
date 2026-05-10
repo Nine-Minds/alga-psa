@@ -35,6 +35,12 @@ export async function POST(request: Request): Promise<Response> {
           : typeof raw.confidence_score === 'number'
             ? raw.confidence_score
             : null,
+      clientPortalEntraProvisioningMode:
+        typeof raw.clientPortalEntraProvisioningMode === 'string'
+          ? (raw.clientPortalEntraProvisioningMode as ConfirmEntraMappingInput['clientPortalEntraProvisioningMode'])
+          : typeof raw.client_portal_entra_provisioning_mode === 'string'
+            ? (raw.client_portal_entra_provisioning_mode as ConfirmEntraMappingInput['clientPortalEntraProvisioningMode'])
+            : undefined,
     };
   });
 
