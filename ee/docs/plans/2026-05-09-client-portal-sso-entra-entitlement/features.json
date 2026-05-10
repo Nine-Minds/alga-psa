@@ -274,7 +274,7 @@
   {
     "id": "F032",
     "description": "Validate that selected entitlement groups belong to the configured managed Entra tenant.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions"
     ]

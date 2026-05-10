@@ -203,7 +203,7 @@
   {
     "id": "T020",
     "description": "Configuration behavior: selected entitlement group must belong to the managed Entra tenant and group membership mode defaults to transitive.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030",
       "F031",
