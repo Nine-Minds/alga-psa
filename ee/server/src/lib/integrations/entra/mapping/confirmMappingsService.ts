@@ -7,6 +7,7 @@ export interface ConfirmEntraMappingInput {
   confidenceScore?: number | null;
   clientPortalEntraProvisioningMode?: 'disabled' | 'built_in' | 'workflow_managed';
   clientPortalEntitlementGroupId?: string | null;
+  clientPortalEntitlementMembershipMode?: 'transitive' | 'direct';
 }
 
 export interface ConfirmEntraMappingsResult {
@@ -33,6 +34,15 @@ function normalizeProvisioningMode(
     return input.clientPortalEntraProvisioningMode;
   }
   return 'disabled';
+}
+
+function normalizeEntitlementMembershipMode(
+  input: ConfirmEntraMappingInput
+): 'transitive' | 'direct' {
+  if (input.clientPortalEntitlementMembershipMode === 'direct') {
+    return 'direct';
+  }
+  return 'transitive';
 }
 
 export async function confirmEntraMappings(
@@ -64,6 +74,8 @@ export async function confirmEntraMappings(
         const clientPortalEntitlementGroupId = mapping.clientPortalEntitlementGroupId
           ? String(mapping.clientPortalEntitlementGroupId).trim()
           : null;
+        const clientPortalEntitlementMembershipMode =
+          normalizeEntitlementMembershipMode(mapping);
         const confidenceScore =
           typeof mapping.confidenceScore === 'number' ? mapping.confidenceScore : null;
 
@@ -97,6 +109,8 @@ export async function confirmEntraMappings(
               confidence_score: confidenceScore,
               client_portal_entra_provisioning_mode: clientPortalEntraProvisioningMode,
               client_portal_entitlement_group_id: clientPortalEntitlementGroupId,
+              client_portal_entitlement_membership_mode:
+                clientPortalEntitlementMembershipMode,
               decided_by: params.userId,
               decided_at: now,
               updated_at: now,
@@ -121,6 +135,8 @@ export async function confirmEntraMappings(
             confidence_score: confidenceScore,
             client_portal_entra_provisioning_mode: clientPortalEntraProvisioningMode,
             client_portal_entitlement_group_id: clientPortalEntitlementGroupId,
+            client_portal_entitlement_membership_mode:
+              clientPortalEntitlementMembershipMode,
             is_active: true,
             decided_by: params.userId,
             decided_at: now,

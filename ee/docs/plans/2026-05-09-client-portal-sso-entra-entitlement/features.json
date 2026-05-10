@@ -256,7 +256,7 @@
   {
     "id": "F030",
     "description": "Persist group membership mode for entitlement checks with transitive membership as the default.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Entitlement Model",
       "Configuration"

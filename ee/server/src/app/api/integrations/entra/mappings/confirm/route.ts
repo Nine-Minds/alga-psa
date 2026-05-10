@@ -49,6 +49,12 @@ export async function POST(request: Request): Promise<Response> {
             : typeof raw.client_portal_entitlement_group_id === 'string'
               ? raw.client_portal_entitlement_group_id
               : undefined,
+      clientPortalEntitlementMembershipMode:
+        typeof raw.clientPortalEntitlementMembershipMode === 'string'
+          ? (raw.clientPortalEntitlementMembershipMode as ConfirmEntraMappingInput['clientPortalEntitlementMembershipMode'])
+          : typeof raw.client_portal_entitlement_membership_mode === 'string'
+            ? (raw.client_portal_entitlement_membership_mode as ConfirmEntraMappingInput['clientPortalEntitlementMembershipMode'])
+            : undefined,
     };
   });
 

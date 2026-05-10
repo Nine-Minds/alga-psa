@@ -78,6 +78,7 @@ describe('confirmEntraMappings client linkage updates', () => {
           mappingState: 'mapped',
           clientPortalEntraProvisioningMode: 'workflow_managed',
           clientPortalEntitlementGroupId: 'group-63',
+          clientPortalEntitlementMembershipMode: 'direct',
         },
       ],
     });
@@ -97,6 +98,7 @@ describe('confirmEntraMappings client linkage updates', () => {
         mapping_state: 'mapped',
         client_portal_entra_provisioning_mode: 'workflow_managed',
         client_portal_entitlement_group_id: 'group-63',
+        client_portal_entitlement_membership_mode: 'direct',
       })
     );
   });
@@ -247,6 +249,7 @@ describe('confirmEntraMappings client linkage updates', () => {
     expect(mappingInsertMock).toHaveBeenCalledWith(
       expect.objectContaining({
         client_portal_entra_provisioning_mode: 'disabled',
+        client_portal_entitlement_membership_mode: 'transitive',
       })
     );
   });
