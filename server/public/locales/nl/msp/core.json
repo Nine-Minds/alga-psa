@@ -165,7 +165,12 @@
       "system": "Systeem",
       "selected": "Geselecteerd"
     },
-    "openUserMenu": "Gebruikersmenu openen"
+    "openUserMenu": "Gebruikersmenu openen",
+    "quickAsk": {
+      "ariaLabel": "Vraag AI over deze workflow",
+      "title": "Vraag AI",
+      "shortcutHint": "Open Quick Ask voor workflowhulp"
+    }
   },
   "dialogs": {
     "aiInterrupt": {

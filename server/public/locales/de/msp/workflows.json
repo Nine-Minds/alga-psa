@@ -1383,6 +1383,11 @@
       "openEditor": "Editor öffnen",
       "apply": "Anwenden",
       "cancel": "Abbrechen"
+    },
+    "askAi": {
+      "ariaLabel": "KI um Transformationshilfe bitten",
+      "title": "KI fragen",
+      "shortcutHint": "Quick Ask für Transformationshilfe öffnen"
     }
   },
   "schemaReference": {

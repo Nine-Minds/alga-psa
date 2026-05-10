@@ -1341,9 +1341,9 @@
     "fill": "Fill",
     "clearValues": "Clear values",
     "askAi": {
-      "ariaLabel": "Ask AI for JSONata help",
+      "ariaLabel": "Ask AI for transform help",
       "title": "Ask AI",
-      "shortcutHint": "Open Quick Ask for JSONata guidance"
+      "shortcutHint": "Open Quick Ask for transform guidance"
     },
     "applySuggestions": "Apply suggestions ({{count}})",
     "applySuggestionTitle": "Apply suggestion: {{sourcePath}}",

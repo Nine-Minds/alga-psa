@@ -1383,6 +1383,11 @@
       "openEditor": "Apri editor",
       "apply": "Applica",
       "cancel": "Annulla"
+    },
+    "askAi": {
+      "ariaLabel": "Chiedi aiuto all’IA per le trasformazioni",
+      "title": "Chiedi all’IA",
+      "shortcutHint": "Apri Quick Ask per la guida sulle trasformazioni"
     }
   },
   "schemaReference": {
