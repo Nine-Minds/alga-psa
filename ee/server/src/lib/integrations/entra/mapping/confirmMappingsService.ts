@@ -8,6 +8,7 @@ export interface ConfirmEntraMappingInput {
   clientPortalEntraProvisioningMode?: 'disabled' | 'built_in' | 'workflow_managed';
   clientPortalEntitlementGroupId?: string | null;
   clientPortalEntitlementMembershipMode?: 'transitive' | 'direct';
+  clientPortalDefaultRoleName?: string | null;
 }
 
 export interface ConfirmEntraMappingsResult {
@@ -76,6 +77,10 @@ export async function confirmEntraMappings(
           : null;
         const clientPortalEntitlementMembershipMode =
           normalizeEntitlementMembershipMode(mapping);
+        const clientPortalDefaultRoleName =
+          mapping.clientPortalDefaultRoleName === null
+            ? null
+            : String(mapping.clientPortalDefaultRoleName || '').trim() || 'User';
         const confidenceScore =
           typeof mapping.confidenceScore === 'number' ? mapping.confidenceScore : null;
 
@@ -111,6 +116,7 @@ export async function confirmEntraMappings(
               client_portal_entitlement_group_id: clientPortalEntitlementGroupId,
               client_portal_entitlement_membership_mode:
                 clientPortalEntitlementMembershipMode,
+              client_portal_default_role_name: clientPortalDefaultRoleName,
               decided_by: params.userId,
               decided_at: now,
               updated_at: now,
@@ -137,6 +143,7 @@ export async function confirmEntraMappings(
             client_portal_entitlement_group_id: clientPortalEntitlementGroupId,
             client_portal_entitlement_membership_mode:
               clientPortalEntitlementMembershipMode,
+            client_portal_default_role_name: clientPortalDefaultRoleName,
             is_active: true,
             decided_by: params.userId,
             decided_at: now,

@@ -540,7 +540,7 @@
   {
     "id": "F063",
     "description": "Persist a default Alga client portal role for built-in Entra-provisioned users on the managed Entra tenant/client mapping, defaulting to User.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Configuration",
       "Data / API / Integrations"
@@ -549,7 +549,7 @@
   {
     "id": "F064",
     "description": "Assign the configured default Alga client portal role only when creating a new portal user in built-in provisioning mode.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Entra Provisioning"
@@ -558,7 +558,7 @@
   {
     "id": "F065",
     "description": "Preserve manual Alga role changes on existing Entra-managed portal users during later Entra sync runs.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Security / Permissions"

@@ -66,7 +66,8 @@ export async function loadMappedTenantsActivity(
         't.entra_tenant_id',
         'm.client_portal_entra_provisioning_mode',
         'm.client_portal_entitlement_group_id',
-        'm.client_portal_entitlement_membership_mode'
+        'm.client_portal_entitlement_membership_mode',
+        'm.client_portal_default_role_name'
       )
       .orderBy('m.updated_at', 'asc');
 
@@ -84,6 +85,7 @@ export async function loadMappedTenantsActivity(
     client_portal_entra_provisioning_mode: 'disabled' | 'built_in' | 'workflow_managed' | null;
     client_portal_entitlement_group_id: string | null;
     client_portal_entitlement_membership_mode: 'transitive' | 'direct' | null;
+    client_portal_default_role_name: string | null;
   };
 
   return {
@@ -101,6 +103,9 @@ export async function loadMappedTenantsActivity(
         : null,
       clientPortalEntitlementMembershipMode:
         row.client_portal_entitlement_membership_mode === 'direct' ? 'direct' : 'transitive',
+      clientPortalDefaultRoleName: row.client_portal_default_role_name
+        ? String(row.client_portal_default_role_name)
+        : 'User',
     })),
   };
 }
@@ -200,6 +205,7 @@ export async function syncTenantUsersActivity(
       provisioningMode: input.mapping.clientPortalEntraProvisioningMode || 'disabled',
       groupId: input.mapping.clientPortalEntitlementGroupId || null,
       membershipMode: input.mapping.clientPortalEntitlementMembershipMode || 'transitive',
+      defaultRoleName: input.mapping.clientPortalDefaultRoleName || 'User',
       deactivateOnEntitlementRemoval: fieldSyncConfig.deactivateOnEntitlementRemoval,
     },
   });

@@ -10,6 +10,7 @@ export interface ClientPortalProvisioningContext {
   clientId: string;
   managedTenantId: string | null;
   contactNameId: string;
+  defaultRoleName: string;
 }
 
 export interface ClientPortalProvisioningConfig {
@@ -312,6 +313,22 @@ export async function handleEligibleClientPortalProvisioning(
             })
             .returning(['user_id']);
           userId = String(inserted[0].user_id);
+
+          const defaultRoleName = context.defaultRoleName.trim() || 'User';
+          const roleRow = await trx('roles')
+            .where({
+              tenant: context.tenantId,
+              client: true,
+            })
+            .andWhereRaw('lower(role_name) = lower(?)', [defaultRoleName])
+            .first(['role_id']);
+          if (roleRow?.role_id) {
+            await trx('user_roles').insert({
+              tenant: context.tenantId,
+              user_id: userId,
+              role_id: String(roleRow.role_id),
+            });
+          }
         }
 
         const existingMicrosoftLink = await trx('user_auth_accounts')

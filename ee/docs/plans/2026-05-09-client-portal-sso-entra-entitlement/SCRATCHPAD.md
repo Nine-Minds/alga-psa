@@ -200,3 +200,14 @@ Working notes for implementing tenant-scoped client portal SSO and Entra entitle
 
 - `python3 scripts/generate_route_inventory.py` ✅
 - `rg -n "client-portal/sso/discover|client-portal/sso/resolve" docs/openapi/route-inventory.json docs/openapi/route-inventory.csv` ✅
+- (2026-05-09) Implemented `F063`/`F064`/`F065`: added per-mapping default role persistence (`client_portal_default_role_name`, default `User`) through Entra mapping confirm route/service + migration (`20260509195500_add_client_portal_default_role_to_entra_mappings.cjs`), threaded the setting into Temporal sync mapping refs and `executeEntraSync` entitlement context, and applied role assignment only on built-in create-path in `clientPortalProvisioning` by resolving `roles.client=true` + case-insensitive role name and inserting `user_roles` for newly created portal users.
+- (2026-05-09) Existing-user provisioning/link/update paths intentionally do not write `user_roles`, preserving manual role changes on later sync runs (`F065`).
+- (2026-05-09) Implemented `T021` in `clientPortalProvisioning.builtIn.test.ts`: verifies configured default role assignment on create and verifies no role assignment mutation on existing-user sync path.
+
+## Commands Run
+
+- `npx vitest run src/__tests__/unit/clientPortalProvisioning.builtIn.test.ts src/__tests__/unit/confirmEntraMappingsService.clientLink.test.ts src/__tests__/unit/entraSyncEngine.dryRun.test.ts src/__tests__/unit/entraTenantMappingTable.selection.test.tsx` (workdir: `ee/server/`) ✅
+
+## Gotchas
+
+- (2026-05-09) Role assignment uses role-name lookup (`roles.client=true`, case-insensitive) rather than role_id because role IDs are tenant-specific; mapping stores configurable role name and defaults to `User`.

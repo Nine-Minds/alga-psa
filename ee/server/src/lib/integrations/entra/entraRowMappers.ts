@@ -112,6 +112,7 @@ export function mapEntraClientTenantMappingRow(row: DbRow): EntraClientTenantMap
     client_portal_entra_provisioning_mode: clientPortalEntraProvisioningMode,
     client_portal_entitlement_group_id: toNullableStringValue(row.client_portal_entitlement_group_id),
     client_portal_entitlement_membership_mode: clientPortalEntitlementMembershipMode,
+    client_portal_default_role_name: toNullableStringValue(row.client_portal_default_role_name),
     is_active: toBooleanValue(row.is_active, 'is_active'),
     decided_by: toNullableStringValue(row.decided_by),
     decided_at: toNullableStringValue(row.decided_at),

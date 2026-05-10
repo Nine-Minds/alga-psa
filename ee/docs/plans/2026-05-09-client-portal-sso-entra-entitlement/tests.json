@@ -213,7 +213,7 @@
   {
     "id": "T021",
     "description": "DB-backed integration: newly Entra-provisioned portal users in built-in mode receive the configured default role, and later manual role changes are preserved across sync runs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F063",
       "F064",

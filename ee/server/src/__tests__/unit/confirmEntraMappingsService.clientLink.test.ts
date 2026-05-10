@@ -99,6 +99,7 @@ describe('confirmEntraMappings client linkage updates', () => {
         client_portal_entra_provisioning_mode: 'workflow_managed',
         client_portal_entitlement_group_id: 'group-63',
         client_portal_entitlement_membership_mode: 'direct',
+        client_portal_default_role_name: 'User',
       })
     );
   });
@@ -250,6 +251,7 @@ describe('confirmEntraMappings client linkage updates', () => {
       expect.objectContaining({
         client_portal_entra_provisioning_mode: 'disabled',
         client_portal_entitlement_membership_mode: 'transitive',
+        client_portal_default_role_name: 'User',
       })
     );
   });

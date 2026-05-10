@@ -21,6 +21,7 @@ export interface ExecuteEntraSyncInput {
     provisioningMode: 'disabled' | 'built_in' | 'workflow_managed';
     groupId: string | null;
     membershipMode: 'transitive' | 'direct';
+    defaultRoleName?: string | null;
     deactivateOnEntitlementRemoval?: boolean;
   };
   fieldSyncConfig?: Record<string, unknown>;
@@ -93,6 +94,7 @@ export async function executeEntraSync(
               clientId: input.clientId,
               managedTenantId: input.managedTenantId,
               contactNameId: linkedContact.contactNameId,
+              defaultRoleName: input.portalEntitlement?.defaultRoleName || 'User',
             },
             userWithEntitlement
           );
@@ -136,6 +138,7 @@ export async function executeEntraSync(
             clientId: input.clientId,
             managedTenantId: input.managedTenantId,
             contactNameId: createdContact.contactNameId,
+            defaultRoleName: input.portalEntitlement?.defaultRoleName || 'User',
           },
           userWithEntitlement
         );

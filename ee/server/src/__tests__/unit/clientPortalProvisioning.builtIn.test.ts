@@ -47,9 +47,11 @@ function setupKnexHarness(params: {
     client_portal_entra_metadata?: Record<string, unknown> | null;
   }>;
   existingMicrosoftLinkUserId?: string | null;
+  roleIdForDefaultRole?: string | null;
 }) {
   const updates: Array<Record<string, unknown>> = [];
   const inserts: Array<Record<string, unknown>> = [];
+  const userRoleInserts: Array<Record<string, unknown>> = [];
 
   const usersWhereMock = vi.fn(() => {
     const selectOrderByMock = vi.fn(async () => params.existingContactUsers ?? []);
@@ -104,6 +106,25 @@ function setupKnexHarness(params: {
         where: userAuthAccountsWhereMock,
       };
     }
+    if (table === 'roles') {
+      return {
+        where: vi.fn(() => ({
+          andWhereRaw: vi.fn(() => ({
+            first: vi.fn(async () =>
+              params.roleIdForDefaultRole ? { role_id: params.roleIdForDefaultRole } : undefined
+            ),
+          })),
+        })),
+      };
+    }
+    if (table === 'user_roles') {
+      return {
+        insert: vi.fn(async (payload: Record<string, unknown>) => {
+          userRoleInserts.push(payload);
+          return [1];
+        }),
+      };
+    }
     throw new Error(`Unexpected table ${table}`);
   });
 
@@ -116,7 +137,7 @@ function setupKnexHarness(params: {
     },
   });
 
-  return { updates, inserts };
+  return { updates, inserts, userRoleInserts };
 }
 
 describe('clientPortalProvisioning built-in mutations', () => {
@@ -142,6 +163,7 @@ describe('clientPortalProvisioning built-in mutations', () => {
         clientId: 'client-201',
         managedTenantId: 'managed-201',
         contactNameId: 'contact-201',
+        defaultRoleName: 'User',
       },
       buildUser()
     );
@@ -177,6 +199,7 @@ describe('clientPortalProvisioning built-in mutations', () => {
         clientId: 'client-202',
         managedTenantId: 'managed-202',
         contactNameId: 'contact-202',
+        defaultRoleName: 'User',
       },
       buildUser({ entraObjectId: 'entra-object-202', email: 'user202@example.com', userPrincipalName: 'user202@example.com' })
     );
@@ -202,6 +225,7 @@ describe('clientPortalProvisioning built-in mutations', () => {
     const harness = setupKnexHarness({
       existingContactUsers: [],
       emailMatches: [],
+      roleIdForDefaultRole: 'role-user-203',
     });
 
     const { handleEligibleClientPortalProvisioning } = await import('@ee/lib/integrations/entra/sync/clientPortalProvisioning');
@@ -211,6 +235,7 @@ describe('clientPortalProvisioning built-in mutations', () => {
         clientId: 'client-203',
         managedTenantId: 'managed-203',
         contactNameId: 'contact-203',
+        defaultRoleName: 'User',
       },
       buildUser({
         entraObjectId: 'entra-object-203',
@@ -234,6 +259,13 @@ describe('clientPortalProvisioning built-in mutations', () => {
       }),
     });
     expect(harness.inserts[0]).not.toHaveProperty('hashed_password');
+    expect(harness.userRoleInserts).toEqual([
+      {
+        tenant: 'tenant-203',
+        user_id: 'created-user-201',
+        role_id: 'role-user-203',
+      },
+    ]);
     expect(upsertOAuthAccountLinkMock).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'created-user-201', providerAccountId: 'entra-object-203' })
     );
@@ -255,6 +287,7 @@ describe('clientPortalProvisioning built-in mutations', () => {
         clientId: 'client-204',
         managedTenantId: 'managed-204',
         contactNameId: 'contact-204',
+        defaultRoleName: 'User',
       },
       buildUser({ entraObjectId: 'entra-object-204' })
     );
@@ -277,6 +310,7 @@ describe('clientPortalProvisioning built-in mutations', () => {
         clientId: 'client-205',
         managedTenantId: 'managed-205',
         contactNameId: 'contact-205',
+        defaultRoleName: 'User',
       },
       buildUser({ entraObjectId: 'entra-object-205', email: 'user205@example.com' })
     );
@@ -306,6 +340,7 @@ describe('clientPortalProvisioning built-in mutations', () => {
         clientId: 'client-206',
         managedTenantId: 'managed-206',
         contactNameId: 'contact-206',
+        defaultRoleName: 'User',
       },
       buildUser({ entraObjectId: 'entra-object-206', email: 'user206@example.com' })
     );
@@ -320,6 +355,7 @@ describe('clientPortalProvisioning built-in mutations', () => {
         }),
       }),
     });
+    expect(harness.userRoleInserts).toHaveLength(0);
   });
 
   it('T135/F053: does not reactivate manually deactivated portal users during entitlement return', async () => {
@@ -343,6 +379,7 @@ describe('clientPortalProvisioning built-in mutations', () => {
         clientId: 'client-207',
         managedTenantId: 'managed-207',
         contactNameId: 'contact-207',
+        defaultRoleName: 'User',
       },
       buildUser({ entraObjectId: 'entra-object-207', email: 'user207@example.com' })
     );
@@ -350,5 +387,57 @@ describe('clientPortalProvisioning built-in mutations', () => {
     expect(harness.updates[0]).toMatchObject({
       is_inactive: 'is_inactive',
     });
+  });
+
+  it('T021/F063/F064/F065: assigns configured default role only for newly created users', async () => {
+    const createHarness = setupKnexHarness({
+      existingContactUsers: [],
+      emailMatches: [],
+      roleIdForDefaultRole: 'role-admin-entra',
+    });
+
+    const { handleEligibleClientPortalProvisioning } = await import('@ee/lib/integrations/entra/sync/clientPortalProvisioning');
+    await handleEligibleClientPortalProvisioning(
+      {
+        tenantId: 'tenant-221',
+        clientId: 'client-221',
+        managedTenantId: 'managed-221',
+        contactNameId: 'contact-221',
+        defaultRoleName: 'Admin',
+      },
+      buildUser({
+        entraObjectId: 'entra-object-221',
+        email: 'user221@example.com',
+        userPrincipalName: 'user221@example.com',
+      })
+    );
+    expect(createHarness.userRoleInserts).toEqual([
+      {
+        tenant: 'tenant-221',
+        user_id: 'created-user-201',
+        role_id: 'role-admin-entra',
+      },
+    ]);
+
+    const existingHarness = setupKnexHarness({
+      existingContactUsers: [{ user_id: 'existing-user-221', email: 'user221@example.com' }],
+      emailMatches: [],
+      roleIdForDefaultRole: 'role-user-entra',
+    });
+    await handleEligibleClientPortalProvisioning(
+      {
+        tenantId: 'tenant-221',
+        clientId: 'client-221',
+        managedTenantId: 'managed-221',
+        contactNameId: 'contact-221',
+        defaultRoleName: 'User',
+      },
+      buildUser({
+        entraObjectId: 'entra-object-221',
+        email: 'user221@example.com',
+        userPrincipalName: 'user221@example.com',
+      })
+    );
+    expect(existingHarness.userRoleInserts).toHaveLength(0);
   });
 });

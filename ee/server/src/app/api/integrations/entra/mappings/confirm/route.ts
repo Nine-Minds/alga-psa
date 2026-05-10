@@ -58,6 +58,14 @@ export async function POST(request: Request): Promise<Response> {
           : typeof raw.client_portal_entitlement_membership_mode === 'string'
             ? (raw.client_portal_entitlement_membership_mode as ConfirmEntraMappingInput['clientPortalEntitlementMembershipMode'])
             : undefined,
+      clientPortalDefaultRoleName:
+        raw.clientPortalDefaultRoleName === null || raw.client_portal_default_role_name === null
+          ? null
+          : typeof raw.clientPortalDefaultRoleName === 'string'
+            ? raw.clientPortalDefaultRoleName
+            : typeof raw.client_portal_default_role_name === 'string'
+              ? raw.client_portal_default_role_name
+              : undefined,
     };
   });
 

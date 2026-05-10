@@ -23,6 +23,7 @@ export interface EntraManagedTenantRef {
   clientPortalEntraProvisioningMode?: 'disabled' | 'built_in' | 'workflow_managed';
   clientPortalEntitlementGroupId?: string | null;
   clientPortalEntitlementMembershipMode?: 'transitive' | 'direct';
+  clientPortalDefaultRoleName?: string | null;
 }
 
 export interface EntraSyncWorkflowInput {

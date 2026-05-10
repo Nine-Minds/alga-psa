@@ -29,6 +29,7 @@ interface MappingTenantRow {
   candidates: MappingCandidate[];
   selectedClientId: string | null;
   selectedEntitlementGroupId: string | null;
+  selectedDefaultRoleName: string;
   isSkipped: boolean;
 }
 
@@ -74,6 +75,7 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
       ],
       selectedClientId: String(match.clientId || '') || null,
       selectedEntitlementGroupId: null,
+      selectedDefaultRoleName: 'User',
       isSkipped: false,
     });
   }
@@ -95,6 +97,7 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
       })),
       selectedClientId: null,
       selectedEntitlementGroupId: null,
+      selectedDefaultRoleName: 'User',
       isSkipped: false,
     });
   }
@@ -110,6 +113,7 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
       candidates: [],
       selectedClientId: null,
       selectedEntitlementGroupId: null,
+      selectedDefaultRoleName: 'User',
       isSkipped: false,
     });
   }
@@ -226,6 +230,7 @@ export function EntraTenantMappingTable({
           confidenceScore: row.candidates[0]?.confidenceScore ?? null,
           clientPortalEntitlementGroupId: row.selectedEntitlementGroupId,
           clientPortalEntitlementMembershipMode: 'transitive' as const,
+          clientPortalDefaultRoleName: row.selectedDefaultRoleName?.trim() || 'User',
         })),
     [rows]
   );
@@ -245,6 +250,16 @@ export function EntraTenantMappingTable({
       currentRows.map((row) =>
         row.managedTenantId === managedTenantId
           ? { ...row, selectedEntitlementGroupId: selectedEntitlementGroupId || null }
+          : row
+      )
+    );
+  }, []);
+
+  const updateDefaultRoleName = React.useCallback((managedTenantId: string, selectedDefaultRoleName: string) => {
+    setRows((currentRows) =>
+      currentRows.map((row) =>
+        row.managedTenantId === managedTenantId
+          ? { ...row, selectedDefaultRoleName: selectedDefaultRoleName || 'User' }
           : row
       )
     );
@@ -327,7 +342,7 @@ export function EntraTenantMappingTable({
       setRows((currentRows) =>
         currentRows.map((r) =>
           r.managedTenantId === row.managedTenantId && 'clientId' in result.data
-            ? { ...r, state: 'imported', selectedClientId: result.data.clientId, selectedEntitlementGroupId: null, isSkipped: false }
+            ? { ...r, state: 'imported', selectedClientId: result.data.clientId, selectedEntitlementGroupId: null, selectedDefaultRoleName: 'User', isSkipped: false }
             : r
         )
       );
@@ -436,6 +451,7 @@ export function EntraTenantMappingTable({
               <th className="px-3 py-2 font-medium">{t('integrations.entra.tenantMapping.columns.selectClient')}</th>
               <th className="px-3 py-2 font-medium">{t('integrations.entra.tenantMapping.columns.actions')}</th>
               <th className="px-3 py-2 font-medium">Portal access group</th>
+              <th className="px-3 py-2 font-medium">Default role</th>
             </tr>
           </thead>
           <tbody>
@@ -543,13 +559,22 @@ export function EntraTenantMappingTable({
                       </select>
                     </div>
                   </td>
+                  <td className="px-3 py-2">
+                    <input
+                      id={`entra-default-role-${row.managedTenantId}`}
+                      className="h-9 w-28 rounded-md border border-input bg-background px-2 text-sm"
+                      disabled={!row.selectedClientId || row.isSkipped}
+                      value={row.selectedDefaultRoleName}
+                      onChange={(event) => updateDefaultRoleName(row.managedTenantId, event.target.value)}
+                    />
+                  </td>
                 </tr>
               );
             })}
 
             {!loading && rows.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-muted-foreground">
+                <td colSpan={9} className="px-3 py-6 text-center text-muted-foreground">
                   {t('integrations.entra.tenantMapping.empty')}
                 </td>
               </tr>
