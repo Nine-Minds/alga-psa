@@ -22,6 +22,7 @@ import {
   type ResolvedChatProvider,
 } from './chatProviderResolver';
 import { WORKFLOW_JSON_TRANSFORM_GUIDANCE } from './chatWorkflowJsonTransformGuidance';
+import { WORKFLOW_REGEX_TRANSFORM_GUIDANCE } from './chatWorkflowRegexTransformGuidance';
 
 const isEnterpriseEdition = () =>
   process.env.NEXT_PUBLIC_EDITION === 'enterprise' ||
@@ -2095,6 +2096,7 @@ export class ChatCompletionsService {
         'When users ask questions that could be answered by internal documentation (e.g. how-to questions, troubleshooting, process questions), proactively search the knowledge base using GET /api/v1/kb-articles with a relevant search query. If matching articles are found, read their content with GET /api/v1/kb-articles/{id}/content and use that information in your response. When creating KB articles from resolved tickets, use POST /api/v1/kb-articles/from-ticket/{ticketId} and then review the generated content. ' +
         'After a function result is provided, summarize the outcome for the user and outline any follow-up you will handle automatically.' +
         `\n\n${WORKFLOW_JSON_TRANSFORM_GUIDANCE}` +
+        `\n\n${WORKFLOW_REGEX_TRANSFORM_GUIDANCE}` +
         (promptContext ? `\n\n${promptContext}` : ''),
     };
 

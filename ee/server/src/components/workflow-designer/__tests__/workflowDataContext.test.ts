@@ -81,6 +81,55 @@ const actionRegistry = [
     },
   },
   {
+    id: 'transform.regex_extract',
+    version: 1,
+    ui: {
+      label: 'Regex Extract',
+      description: 'Extract regex captures.',
+    },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string' },
+        pattern: { type: 'string' },
+      },
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        matched: { type: 'boolean' },
+        count: { type: 'number' },
+        first: {
+          type: ['object', 'null'],
+          properties: {
+            text: { type: 'string' },
+            index: { type: 'number' },
+            groups: { type: 'array', items: { type: ['string', 'null'] } },
+            namedGroups: {
+              type: 'object',
+              additionalProperties: { type: ['string', 'null'] },
+            },
+          },
+        },
+        matches: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              text: { type: 'string' },
+              index: { type: 'number' },
+              groups: { type: 'array', items: { type: ['string', 'null'] } },
+              namedGroups: {
+                type: 'object',
+                additionalProperties: { type: ['string', 'null'] },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  {
     id: 'transform.truncate_text',
     version: 1,
     ui: {
@@ -276,6 +325,43 @@ describe('workflow data context', () => {
         updated: { type: 'boolean' },
       },
     });
+  });
+
+  it('exposes stable regex output fields for downstream references', () => {
+    const definition: WorkflowDefinition = {
+      id: 'workflow-1',
+      version: 1,
+      name: 'Regex workflow',
+      payloadSchemaRef: 'system:default',
+      trigger: { type: 'event', eventName: 'ticket.created' },
+      steps: [
+        {
+          id: 'step-1',
+          type: 'action.call',
+          name: 'Extract',
+          config: {
+            actionId: 'transform.regex_extract',
+            version: 1,
+            saveAs: 'parsedRegex',
+          },
+        },
+        {
+          id: 'step-2',
+          type: 'action.call',
+          name: 'Next',
+          config: {},
+        },
+      ],
+    };
+
+    const context = buildDataContext(definition, 'step-2', actionRegistry, null);
+    const stepContext = context.steps.find((step) => step.saveAs === 'parsedRegex');
+    expect(stepContext).toBeDefined();
+    const fieldNames = (stepContext?.fields ?? []).map((field) => field.name);
+    expect(fieldNames).toContain('matched');
+    expect(fieldNames).toContain('count');
+    expect(fieldNames).toContain('first');
+    expect(fieldNames).toContain('matches');
   });
 
   it('tracks catch-block context so Reference mode can expose error sources only where they are valid', () => {

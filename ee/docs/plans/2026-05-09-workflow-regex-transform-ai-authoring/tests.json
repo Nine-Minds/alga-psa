@@ -1,0 +1,164 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit: regex_match returns matched=false with stable null/empty fields for a no-match default case.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F003",
+      "F017"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit: regex_match returns match text, index, numbered groups, and namedGroups for a representative pattern.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F007",
+      "F008"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Unit: regex_extract returns first/count/matches for multiple matches and respects maxMatches.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F005",
+      "F006",
+      "F015"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Unit: regex_extract supports numbered and named captures across all returned matches.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F008"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Unit: regex_replace replaces first vs all occurrences according to replaceAll and returns replacementCount.",
+    "implemented": true,
+    "featureIds": [
+      "F009",
+      "F010",
+      "F011"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Unit: regex_replace handles documented JavaScript replacement tokens for numbered and named groups.",
+    "implemented": true,
+    "featureIds": [
+      "F012"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Unit: invalid regex patterns fail with actionable invalid-pattern errors.",
+    "implemented": true,
+    "featureIds": [
+      "F013"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Unit: unsupported or duplicate regex flags fail with actionable flag errors.",
+    "implemented": true,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Unit: guardrails reject source text, pattern, and match count inputs that exceed configured limits.",
+    "implemented": true,
+    "featureIds": [
+      "F015"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Unit: zero-width global matches do not hang and still return bounded deterministic results.",
+    "implemented": true,
+    "featureIds": [
+      "F016"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Unit: requireMatch turns no-match regex_match and regex_extract runs into action failures with clear messages.",
+    "implemented": true,
+    "featureIds": [
+      "F017"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Catalog/runtime metadata: regex actions are sideEffectful false, engine-idempotent, grouped under Transform, and expose schemas.",
+    "implemented": true,
+    "featureIds": [
+      "F018",
+      "F019",
+      "F029"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Runtime integration: action.call can save regex_extract output with saveAs and a later step can reference the saved capture value.",
+    "implemented": true,
+    "featureIds": [
+      "F020",
+      "F021",
+      "F024"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Designer/component test: regex action inputs render with clear pattern/flags/replacement fields and output references show stable regex fields.",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F023"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Designer/component test: named capture output inference appears when implemented, or generic namedGroups references remain available when deferred.",
+    "implemented": true,
+    "featureIds": [
+      "F022"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Run Studio/display test: invalid pattern and require-match failures surface the regex action-level message before generic wrapper text.",
+    "implemented": true,
+    "featureIds": [
+      "F025"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Chat guidance unit: Quick Ask regex guidance includes action names, JavaScript regex syntax, flags, capture examples, replacement examples, saveAs guidance, guardrails, and deterministic-runtime messaging.",
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F030"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Entitlement/security check: regex actions are available without AI entitlement, while AI guidance remains gated by existing Quick Ask access; guidance warns about persisting sensitive captures.",
+    "implemented": true,
+    "featureIds": [
+      "F027",
+      "F028"
+    ]
+  }
+]

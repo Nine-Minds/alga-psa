@@ -57,4 +57,37 @@ describe('workflow run display errors', () => {
       stepPath: 'root.steps[0]',
     });
   });
+
+  it('surfaces regex action-level messages before generic wrapper text', () => {
+    const displayError = buildRunDisplayError(
+      {
+        node_path: 'root.steps[3]',
+        error_json: {
+          message: 'Activity task failed',
+          nodePath: 'root.steps[3]',
+        },
+      },
+      [
+        {
+          ...failedStep,
+          step_path: 'root.steps[3]',
+        },
+      ],
+      [
+        {
+          ...failedInvocation,
+          step_path: 'root.steps[3]',
+          action_id: 'transform.regex_match',
+          error_message: 'transform.regex_match: invalid regex pattern "(": Unterminated group',
+        },
+      ]
+    );
+
+    expect(displayError).toMatchObject({
+      message: 'transform.regex_match: invalid regex pattern "(": Unterminated group',
+      category: 'transform.regex_match',
+      technicalMessage: 'Activity task failed',
+      stepPath: 'root.steps[3]',
+    });
+  });
 });

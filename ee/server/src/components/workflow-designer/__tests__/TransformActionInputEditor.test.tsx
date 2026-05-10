@@ -209,6 +209,43 @@ describe('transform action input editor', () => {
     expect(openQuickAsk).toHaveBeenCalledTimes(1);
   });
 
+  it('shows contextual Ask AI guidance for regex pattern fields when Quick Ask is available', async () => {
+    const openQuickAsk = vi.fn();
+
+    render(
+      <QuickAskProvider value={{ aiAssistantAvailable: true, openQuickAsk }}>
+        <InputMappingEditor
+          value={{ pattern: 'INC-(\\d{6})' }}
+          onChange={vi.fn()}
+          targetFields={[
+            {
+              name: 'pattern',
+              type: 'string',
+              required: true,
+              description: 'Regex pattern body',
+              editor: {
+                kind: 'text',
+                inline: {
+                  mode: 'textarea',
+                },
+              },
+            },
+          ]}
+          fieldOptions={[]}
+          stepId="step-regex-match"
+          actionId="transform.regex_match"
+          positionsHandlers={positionsHandlers}
+        />
+      </QuickAskProvider>
+    );
+
+    const askAi = screen.getByRole('button', { name: 'Ask AI for regex help' });
+    expect(askAi).toBeInTheDocument();
+
+    fireEvent.click(askAi);
+    expect(openQuickAsk).toHaveBeenCalledTimes(1);
+  });
+
   it('T237: transform input fields show type-compatibility hints like business action fields', async () => {
     render(
       <InputMappingEditor
