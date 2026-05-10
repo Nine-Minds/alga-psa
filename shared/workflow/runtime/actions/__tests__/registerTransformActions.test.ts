@@ -59,6 +59,14 @@ describe('registerTransformActionsV2', () => {
     expect(registry.get('transform.trim_text', 1)?.outputSchema.safeParse({ text: 'abc' }).success).toBe(true);
   });
 
+  it('fails Parse JSON numeric overflow with a clear finite-value parse error', async () => {
+    const registry = getActionRegistryV2();
+    const parseJson = registry.get('transform.parse_json', 1);
+
+    await expect(parseJson?.handler(parseJson.inputSchema.parse({ source: '1e999' }), {} as never))
+      .rejects.toThrow('JSON parse failed: parsed value is not a finite JSON value');
+  });
+
   it('requires JSON transform source/value schema fields instead of accepting missing unknown values', () => {
     const registry = getActionRegistryV2();
 

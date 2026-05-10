@@ -114,6 +114,10 @@ import { buildActionInputEditorState } from './actionInputEditorState';
 import { PaletteItemWithTooltip } from './PaletteItemWithTooltip';
 import { WorkflowStepNameField } from './WorkflowStepNameField';
 import { WorkflowStepSaveOutputSection } from './WorkflowStepSaveOutputSection';
+import {
+  normalizeWorkflowSaveAsPath,
+  validateWorkflowSaveAsPathShape,
+} from './workflowSaveAsPath';
 import { WorkflowActionInputSection } from './WorkflowActionInputSection';
 import { WorkflowActionInputFixedPicker } from './WorkflowActionInputFixedPicker';
 import { resolveLocalJsonSchemaRef } from './jsonSchemaRefs';
@@ -6135,15 +6139,17 @@ export const StepConfigPanel: React.FC<{
   }, [groupedActionRecord, onChange, selectedAction, step]);
 
   // §16.2 - Enhanced field options with step outputs
+  const effectivePayloadSchema = dataContext.payloadSchema ?? payloadSchema;
+
   const enhancedFieldOptions = useMemo(() =>
-    buildWorkflowReferenceFieldOptions(payloadSchema, dataContext),
-    [payloadSchema, dataContext]
+    buildWorkflowReferenceFieldOptions(effectivePayloadSchema, dataContext),
+    [effectivePayloadSchema, dataContext]
   );
 
   // §20 - Expression context for Monaco editor autocomplete
   const expressionContext = useMemo(() =>
-    buildExpressionContext(payloadSchema, dataContext),
-    [payloadSchema, dataContext]
+    buildExpressionContext(effectivePayloadSchema, dataContext),
+    [effectivePayloadSchema, dataContext]
   );
 
   // §16.5 - Expression validation for this step
@@ -6173,33 +6179,18 @@ export const StepConfigPanel: React.FC<{
   const saveAsValidation = useMemo(() => {
     if (!saveAs) return null;
 
-    // Check for conflicts with previous steps' saveAs names
-    const existingSaveAsNames = dataContext.steps.map(s => s.saveAs);
-    if (existingSaveAsNames.includes(saveAs)) {
+    const normalizedSaveAs = normalizeWorkflowSaveAsPath(saveAs);
+
+    // Check for conflicts with previous steps' assignment paths.
+    const existingSaveAsPaths = dataContext.steps.map(s => normalizeWorkflowSaveAsPath(s.saveAs));
+    if (existingSaveAsPaths.includes(normalizedSaveAs)) {
       return {
         type: 'error' as const,
-        message: `"${saveAs}" conflicts with an existing step output variable`
+        message: `"${saveAs}" conflicts with an existing step output path`
       };
     }
 
-    // Check for reserved names
-    const reservedNames = ['payload', 'vars', 'meta', 'error', 'env', 'secrets', 'item', '$index'];
-    if (reservedNames.includes(saveAs)) {
-      return {
-        type: 'error' as const,
-        message: `"${saveAs}" is a reserved variable name`
-      };
-    }
-
-    // Check for invalid characters (should be valid JS identifier)
-    if (!/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(saveAs)) {
-      return {
-        type: 'warning' as const,
-        message: 'Variable name should start with a letter and contain only letters, numbers, and underscores'
-      };
-    }
-
-    return null;
+    return validateWorkflowSaveAsPathShape(saveAs);
   }, [saveAs, dataContext.steps]);
 
   const removeInvalidWaitConfigFields = useCallback((config: Record<string, unknown>): Record<string, unknown> => {
@@ -6985,6 +6976,7 @@ export const StepConfigPanel: React.FC<{
       {step.type === 'action.call' && selectedAction && actionInputFields.length > 0 && (
         <WorkflowActionInputSection
           stepId={step.id}
+          actionId={selectedAction.id}
           inputMapping={inputMapping}
           onInputMappingChange={handleInputMappingChange}
           targetFields={actionInputFields}

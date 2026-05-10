@@ -141,7 +141,8 @@ export function registerTransformActionsV2(): void {
           const value = assertJsonValue(JSON.parse(input.source), 'JSON parse failed');
           return { value, type: detectJsonType(value) };
         } catch (error) {
-          throw new Error(`JSON parse failed: ${error instanceof Error ? error.message : String(error)}`);
+          const message = error instanceof Error ? error.message : String(error);
+          throw new Error(message.startsWith('JSON parse failed:') ? message : `JSON parse failed: ${message}`);
         }
       }
 

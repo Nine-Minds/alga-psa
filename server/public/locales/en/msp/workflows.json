@@ -1340,6 +1340,11 @@
     "addItem": "Add item",
     "fill": "Fill",
     "clearValues": "Clear values",
+    "askAi": {
+      "ariaLabel": "Ask AI for JSONata help",
+      "title": "Ask AI",
+      "shortcutHint": "Open Quick Ask for JSONata guidance"
+    },
     "applySuggestions": "Apply suggestions ({{count}})",
     "applySuggestionTitle": "Apply suggestion: {{sourcePath}}",
     "fuzzySuffix": "(fuzzy)",

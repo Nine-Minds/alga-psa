@@ -10,6 +10,9 @@ describe('workflow JSON transform Quick Ask guidance', () => {
     expect(WORKFLOW_JSON_TRANSFORM_GUIDANCE).toContain('coalesce');
     expect(WORKFLOW_JSON_TRANSFORM_GUIDANCE).toContain('assets[type = "server"]');
     expect(WORKFLOW_JSON_TRANSFORM_GUIDANCE).toContain('Paste JSONata into transform.query_json.inputMapping.expression');
+    expect(WORKFLOW_JSON_TRANSFORM_GUIDANCE).toContain('serverTags');
+    expect(WORKFLOW_JSON_TRANSFORM_GUIDANCE).toContain('AI helps author deterministic workflow configuration');
+    expect(WORKFLOW_JSON_TRANSFORM_GUIDANCE).toContain('workflow runtime executes transform.parse_json and transform.query_json');
     expect(WORKFLOW_JSON_TRANSFORM_GUIDANCE).toContain('AI does not execute inside workflow runtime');
   });
 

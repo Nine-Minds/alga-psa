@@ -27,6 +27,11 @@ vi.mock('@alga-psa/teams/actions', () => ({
   getTeamsBasic: vi.fn().mockResolvedValue([]),
 }));
 
+vi.mock('@alga-psa/reference-data/actions', () => ({
+  getAllPriorities: vi.fn().mockResolvedValue([]),
+  getPrioritiesByBoardType: vi.fn().mockResolvedValue([]),
+}), { virtual: true });
+
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   __esModule: true,
   default: ({
@@ -59,6 +64,7 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 import { InputMappingEditor } from '../mapping/InputMappingEditor';
+import { QuickAskProvider } from 'server/src/components/layout/QuickAskContext';
 import type { MappingPositionsHandlers } from '../mapping/useMappingPositions';
 import type { InputMapping } from '@alga-psa/workflows/runtime/client';
 
@@ -170,6 +176,37 @@ describe('transform action input editor', () => {
       maxLength: 24,
       strategy: 'middle',
     });
+  });
+
+  it('shows contextual Ask AI guidance for JSONata query expressions when Quick Ask is available', async () => {
+    const openQuickAsk = vi.fn();
+
+    render(
+      <QuickAskProvider value={{ aiAssistantAvailable: true, openQuickAsk }}>
+        <InputMappingEditor
+          value={{ expression: '{"email": source.customer.email}' }}
+          onChange={vi.fn()}
+          targetFields={[
+            {
+              name: 'expression',
+              type: 'string',
+              required: true,
+              description: 'JSONata expression to evaluate against source',
+            },
+          ]}
+          fieldOptions={[]}
+          stepId="step-query-json"
+          actionId="transform.query_json"
+          positionsHandlers={positionsHandlers}
+        />
+      </QuickAskProvider>
+    );
+
+    const askAi = screen.getByRole('button', { name: 'Ask AI for JSONata help' });
+    expect(askAi).toBeInTheDocument();
+
+    fireEvent.click(askAi);
+    expect(openQuickAsk).toHaveBeenCalledTimes(1);
   });
 
   it('T237: transform input fields show type-compatibility hints like business action fields', async () => {

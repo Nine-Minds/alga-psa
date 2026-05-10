@@ -695,6 +695,96 @@ describe('workflow data context', () => {
     });
   });
 
+  it('exposes action outputs saved to payload.* as downstream payload references, not vars entries', () => {
+    const scopedActionRegistry = [
+      ...actionRegistry,
+      {
+        id: 'transform.query_json',
+        version: 1,
+        ui: {
+          label: 'Query JSON',
+          description: 'Query JSON.',
+        },
+        inputSchema: {
+          type: 'object',
+          properties: {
+            source: { type: 'object' },
+          },
+        },
+        outputSchema: {
+          type: 'object',
+          properties: {
+            value: {
+              type: 'object',
+              properties: {
+                customerEmail: { type: 'string' },
+                serverTags: { type: 'array', items: { type: 'string' } },
+              },
+            },
+          },
+        },
+      },
+    ];
+
+    const definition: WorkflowDefinition = {
+      id: 'workflow-scoped-save-as',
+      version: 1,
+      name: 'Scoped saveAs workflow',
+      payloadSchemaRef: 'system:default',
+      steps: [
+        {
+          id: 'query-step',
+          type: 'action.call',
+          name: 'Query JSON',
+          config: {
+            designerGroupKey: 'transform',
+            designerTileKind: 'transform',
+            actionId: 'transform.query_json',
+            version: 1,
+            saveAs: 'payload.normalizedInbound',
+          },
+        },
+        {
+          id: 'downstream-step',
+          type: 'action.call',
+          config: {
+            actionId: 'tickets.create',
+            version: 1,
+          },
+        },
+      ],
+    };
+
+    const context = buildDataContext(definition, 'downstream-step', scopedActionRegistry, {
+      type: 'object',
+      properties: {},
+    });
+
+    expect(context.steps).toHaveLength(0);
+    expect(context.payloadSchema).toMatchObject({
+      type: 'object',
+      properties: {
+        normalizedInbound: {
+          type: 'object',
+          properties: {
+            value: {
+              type: 'object',
+              properties: {
+                customerEmail: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const values = buildWorkflowReferenceFieldOptions(context.payloadSchema, context).map((option) => option.value);
+    expect(values).toContain('payload.normalizedInbound');
+    expect(values).toContain('payload.normalizedInbound.value');
+    expect(values).toContain('payload.normalizedInbound.value.customerEmail');
+    expect(values).not.toContain('vars.payload.normalizedInbound');
+  });
+
   it('T271: rename-fields exposes renamed output keys to downstream references', () => {
     const definition: WorkflowDefinition = {
       id: 'workflow-rename-fields',
