@@ -135,7 +135,7 @@
   {
     "id": "T015",
     "description": "Workflow Designer component test verifies active-catalog NinjaOne tile renders with NinjaOne-specific icon token and action dropdown options.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F030",
@@ -145,7 +145,7 @@
   {
     "id": "T016",
     "description": "Representative workflow authoring test verifies NinjaOne alert output can be selected/mapped into a generic Ticket action without a NinjaOne create-ticket action.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031",
       "F032"
