@@ -39,6 +39,15 @@ describe('client portal provisioning eligibility', () => {
     expect(result).toEqual({ eligible: false, reason: 'missing_group' });
   });
 
+  it('T126/F067: returns workflow_managed when provisioning mode delegates to workflows', () => {
+    const result = evaluateClientPortalProvisioningEligibility(buildUser(), {
+      provisioningMode: 'workflow_managed',
+      groupId: 'group-1',
+      membershipMode: 'transitive',
+    });
+    expect(result).toEqual({ eligible: false, reason: 'workflow_managed' });
+  });
+
   it('T119: returns missing_identity when user has neither email nor UPN', () => {
     const result = evaluateClientPortalProvisioningEligibility(
       buildUser({ email: null, userPrincipalName: null }),

@@ -386,7 +386,7 @@
   {
     "id": "F045",
     "description": "Mark provisioned portal users as email-verified or otherwise OAuth-ready without requiring password setup.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Entra Provisioning"
     ]
@@ -576,7 +576,7 @@
   {
     "id": "F067",
     "description": "Ensure built-in provisioning and workflow-managed provisioning are mutually exclusive for each mapped client sync decision.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Security / Permissions"

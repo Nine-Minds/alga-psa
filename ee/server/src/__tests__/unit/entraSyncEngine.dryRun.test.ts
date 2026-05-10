@@ -255,4 +255,43 @@ describe('executeEntraSync dry-run behavior', () => {
     expect(linkExistingMatchedContactMock).toHaveBeenCalledTimes(1);
     expect(handleEligibleClientPortalProvisioningMock).not.toHaveBeenCalled();
   });
+
+  it('T127/F067: does not run built-in provisioning mutations in workflow-managed mode', async () => {
+    findContactMatchesByEmailMock.mockReset();
+    linkExistingMatchedContactMock.mockReset();
+    evaluateClientPortalProvisioningEligibilityMock.mockReset();
+    handleEligibleClientPortalProvisioningMock.mockReset();
+
+    findContactMatchesByEmailMock.mockResolvedValueOnce([
+      {
+        contactNameId: 'contact-127',
+        clientId: 'client-127',
+        email: 'linked127@example.com',
+        fullName: 'Linked 127',
+        isInactive: false,
+      },
+    ]);
+    linkExistingMatchedContactMock.mockResolvedValue({ contactNameId: 'contact-127' });
+    evaluateClientPortalProvisioningEligibilityMock.mockReturnValue({
+      eligible: false,
+      reason: 'workflow_managed',
+    });
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    await executeEntraSync({
+      tenantId: 'tenant-127',
+      clientId: 'client-127',
+      managedTenantId: 'managed-127',
+      dryRun: false,
+      users: [buildUser('linked127')],
+      portalEntitlement: {
+        provisioningMode: 'workflow_managed',
+        groupId: 'group-127',
+        membershipMode: 'transitive',
+      },
+    });
+
+    expect(linkExistingMatchedContactMock).toHaveBeenCalledTimes(1);
+    expect(handleEligibleClientPortalProvisioningMock).not.toHaveBeenCalled();
+  });
 });

@@ -199,6 +199,7 @@ describe('clientPortalProvisioning built-in mutations', () => {
         entraTenantId: 'entra-tenant-201',
       }),
     });
+    expect(harness.inserts[0]).not.toHaveProperty('hashed_password');
     expect(upsertOAuthAccountLinkMock).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 'created-user-201', providerAccountId: 'entra-object-203' })
     );

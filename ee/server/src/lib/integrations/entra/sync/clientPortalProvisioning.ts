@@ -20,6 +20,7 @@ export interface ClientPortalProvisioningEligibility {
   reason:
     | 'eligible'
     | 'mode_disabled'
+    | 'workflow_managed'
     | 'missing_group'
     | 'missing_identity'
     | 'account_disabled'
@@ -32,6 +33,9 @@ export function evaluateClientPortalProvisioningEligibility(
 ): ClientPortalProvisioningEligibility {
   if (!config || config.provisioningMode === 'disabled') {
     return { eligible: false, reason: 'mode_disabled' };
+  }
+  if (config.provisioningMode === 'workflow_managed') {
+    return { eligible: false, reason: 'workflow_managed' };
   }
   if (!config.groupId) {
     return { eligible: false, reason: 'missing_group' };
