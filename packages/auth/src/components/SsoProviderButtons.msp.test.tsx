@@ -184,7 +184,10 @@ describe('MSP SSO provider buttons', () => {
         '/api/auth/msp/sso/discover',
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ email: 'remembered@example.com' }),
+          body: JSON.stringify({
+            email: 'remembered@example.com',
+            callbackUrl: '/msp',
+          }),
         })
       )
     );
