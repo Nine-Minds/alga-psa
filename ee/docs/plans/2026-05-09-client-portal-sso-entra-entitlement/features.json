@@ -133,7 +133,7 @@
   {
     "id": "F016",
     "description": "Require client portal OAuth profile mapping to use user_type=client.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Security / Permissions"
@@ -142,7 +142,7 @@
   {
     "id": "F017",
     "description": "Require client portal OAuth profile mapping to match the resolved tenant.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements",
       "Security / Permissions"
@@ -151,7 +151,7 @@
   {
     "id": "F018",
     "description": "Prevent client portal OAuth mapping from falling back to global client-user lookup.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions"
     ]
@@ -159,7 +159,7 @@
   {
     "id": "F019",
     "description": "Ensure internal users cannot authenticate through the client portal OAuth flow.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "Failure Behavior"

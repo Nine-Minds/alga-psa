@@ -82,3 +82,6 @@ Working notes for implementing tenant-scoped client portal SSO and Entra entitle
 ## Gotchas
 
 - (2026-05-09) Needed to add package export `@alga-psa/auth/lib/sso/clientPortalSsoResolution` in `packages/auth/package.json`; server Vitest otherwise failed module resolution.
+- (2026-05-09) Implemented `F016`-`F019` in `ee/server/src/lib/auth/ssoProviders.ts`: client-portal OAuth mapping now requires `user_type=client`, requires tenant-scoped lookup for client mode, blocks global fallback paths for client mode, and rejects internal-user matches when `user_type=client` is requested.
+- (2026-05-09) Implemented `T005` via `ee/server/src/__tests__/unit/auth/ssoProviders.clientPortal.test.ts` to validate tenant-scoped active client mapping and internal-user rejection.
+- (2026-05-09) Command: `npx vitest run src/__tests__/unit/auth/ssoProviders.clientPortal.test.ts` (workdir: `ee/server/`) ✅

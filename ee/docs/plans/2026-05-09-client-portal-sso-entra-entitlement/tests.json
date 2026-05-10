@@ -46,7 +46,7 @@
   {
     "id": "T005",
     "description": "Auth behavior: client portal OAuth mapping authenticates an active client user only when tenant and user type match.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F016",
