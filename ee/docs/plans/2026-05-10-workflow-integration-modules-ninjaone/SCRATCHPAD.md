@@ -81,9 +81,12 @@ Rolling notes for adding first-party workflow integration modules and the first 
   - `ee/packages/workflows/src/runtime/__tests__/ninjaOneWorkflowActions.registration.test.ts`:
     - `T006` verifies bootstrap and worker runtime entrypoints both register exactly the six NinjaOne action IDs
     - `T007` verifies side-effect/idempotency metadata and `ninjaone.alerts.reset` UI label/description (`Acknowledge alert`)
+  - `ee/packages/workflows/src/runtime/actions/__tests__/ninjaOneWorkflowActions.handlers.test.ts`:
+    - `T008` verifies `ninjaone.devices.find` happy path (local lookup) returns normalized device output and does not leak secret-like source fields
 
 - (2026-05-10) Added targeted unit/integration-style coverage around `listWorkflowDesignerActionCatalogAction` filter behavior by mocking auth/runtime and exercising `rmm_integrations` plus extension-install query paths. Rationale: prove regression-safe catalog filtering without requiring full end-to-end server harness for this plan slice.
 - (2026-05-10) Added runtime registration coverage using real runtime bootstrap/worker initialization and shared action registry reads. Included virtual test shim for `@alga-psa/db/workDate` to satisfy shared runtime import graph in package-level Vitest execution.
+- (2026-05-10) Added handler-level test harness for NinjaOne actions with mocked integration client/sync strategy imports and action-registry invocation to validate output contracts directly at handler boundary.
 
 ## Validation Runbook
 
@@ -91,6 +94,7 @@ Rolling notes for adding first-party workflow integration modules and the first 
 - `npx tsc -p ee/packages/workflows/tsconfig.json --noEmit`
 - `cd ee/packages/workflows && npx vitest run src/actions/workflow-runtime-v2-designer-catalog.integration-filtering.test.ts`
 - `cd ee/packages/workflows && npx vitest run src/runtime/__tests__/ninjaOneWorkflowActions.registration.test.ts`
+- `cd ee/packages/workflows && npx vitest run src/runtime/actions/__tests__/ninjaOneWorkflowActions.handlers.test.ts`
 
 ## Gotchas
 

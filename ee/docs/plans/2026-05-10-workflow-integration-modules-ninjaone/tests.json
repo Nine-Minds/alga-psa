@@ -69,7 +69,7 @@
   {
     "id": "T008",
     "description": "Handler test for ninjaone.devices.find covers a happy path returning normalized device fields without secrets.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F011",
       "F012",
