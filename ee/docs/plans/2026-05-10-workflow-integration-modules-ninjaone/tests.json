@@ -48,7 +48,7 @@
   {
     "id": "T006",
     "description": "Runtime registration test verifies server/publish runtime and worker runtime both include the six NinjaOne action IDs.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F028",
@@ -58,7 +58,7 @@
   {
     "id": "T007",
     "description": "Unit test NinjaOne action metadata: side-effectful flags, idempotency modes, labels, descriptions, and Acknowledge alert wording.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015",
       "F021",
