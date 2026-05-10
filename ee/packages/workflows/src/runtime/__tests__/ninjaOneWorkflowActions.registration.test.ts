@@ -51,4 +51,32 @@ describe('NinjaOne workflow action runtime registration', () => {
     expect(resetAction?.ui?.label).toBe('Acknowledge alert');
     expect(resetAction?.ui?.description).toContain('NinjaOne reset alert operation');
   });
+
+  it('T014: NinjaOne actions expose input/output schemas for action.call configuration', async () => {
+    const actions = await loadNinjaOneActions('bootstrap');
+    const getAlert = actions.find((action) => action.id === 'ninjaone.alerts.get');
+    const listActive = actions.find((action) => action.id === 'ninjaone.alerts.list_active');
+
+    expect(getAlert).toBeDefined();
+    expect(listActive).toBeDefined();
+    expect(getAlert!.inputSchema.safeParse({ alert_uid: 'uid-1' }).success).toBe(true);
+    expect(getAlert!.outputSchema.safeParse({
+      alert: {
+        alert_id: 'a1',
+        external_alert_id: 'ext-a1',
+        status: 'active',
+        severity: 'high',
+        priority: 'p1',
+        title: 'Alert',
+        message: 'CPU high',
+        device_id: 'd1',
+        asset_id: null,
+        source_type: 'monitor',
+        created_at: '2026-05-10T00:00:00.000Z',
+        updated_at: '2026-05-10T00:01:00.000Z',
+        acknowledged: false
+      }
+    }).success).toBe(true);
+    expect(listActive!.outputSchema.safeParse({ alerts: [], count: 0 }).success).toBe(true);
+  });
 });

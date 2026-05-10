@@ -126,7 +126,7 @@
   {
     "id": "T014",
     "description": "Publish-validation or registry API test verifies NinjaOne action schemas are available for action.call configuration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F029"

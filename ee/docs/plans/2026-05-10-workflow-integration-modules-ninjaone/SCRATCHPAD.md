@@ -81,6 +81,7 @@ Rolling notes for adding first-party workflow integration modules and the first 
   - `ee/packages/workflows/src/runtime/__tests__/ninjaOneWorkflowActions.registration.test.ts`:
     - `T006` verifies bootstrap and worker runtime entrypoints both register exactly the six NinjaOne action IDs
     - `T007` verifies side-effect/idempotency metadata and `ninjaone.alerts.reset` UI label/description (`Acknowledge alert`)
+    - `T014` verifies NinjaOne registry action input/output schemas are present and parse representative `action.call` configuration payloads
   - `ee/packages/workflows/src/runtime/actions/__tests__/ninjaOneWorkflowActions.handlers.test.ts`:
     - `T008` verifies `ninjaone.devices.find` happy path (local lookup) returns normalized device output and does not leak secret-like source fields
     - `T009` verifies `ninjaone.devices.sync` delegates to sync strategy and returns synced identifiers
