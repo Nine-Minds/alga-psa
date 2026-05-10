@@ -194,7 +194,7 @@
   {
     "id": "T019",
     "description": "Invitation behavior: invitation with Entra pre-link completes through OAuth without requiring password setup.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F058",
       "F059"

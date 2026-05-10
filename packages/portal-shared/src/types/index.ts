@@ -41,6 +41,17 @@ export interface SendInvitationResult {
   errorCode?: PortalInvitationErrorCode;
 }
 
+export interface PortalInvitationEntraPrelink {
+  provider: 'microsoft';
+  providerAccountId: string;
+  entraObjectId?: string;
+  entraTenantId?: string;
+}
+
+export interface SendPortalInvitationOptions {
+  entraPrelink?: PortalInvitationEntraPrelink;
+}
+
 export interface VerifyTokenResult {
   success: boolean;
   contact?: {
@@ -49,6 +60,7 @@ export interface VerifyTokenResult {
     email: string;
     client_name: string;
   };
+  prelinkedOAuth?: PortalInvitationEntraPrelink;
   error?: string;
   errorCode?: PortalInvitationErrorCode;
 }

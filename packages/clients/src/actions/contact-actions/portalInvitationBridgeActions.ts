@@ -10,11 +10,15 @@ import type { IUser } from '@alga-psa/types';
 import type {
   SendInvitationResult,
   InvitationHistoryItem,
-  PortalInvitationErrorCode
+  PortalInvitationErrorCode,
+  SendPortalInvitationOptions
 } from '@alga-psa/portal-shared/types';
 
-export async function sendPortalInvitation(contactId: string): Promise<SendInvitationResult> {
-  return sendPortalInvitationAction(contactId);
+export async function sendPortalInvitation(
+  contactId: string,
+  options?: SendPortalInvitationOptions
+): Promise<SendInvitationResult> {
+  return sendPortalInvitationAction(contactId, options);
 }
 
 export async function getPortalInvitations(contactId: string): Promise<InvitationHistoryItem[]> {

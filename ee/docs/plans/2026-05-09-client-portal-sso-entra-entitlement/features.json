@@ -498,7 +498,7 @@
   {
     "id": "F058",
     "description": "Extend portal invitation flow to optionally pre-link an Entra identity for an invited contact.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows"
     ]
@@ -506,7 +506,7 @@
   {
     "id": "F059",
     "description": "Support invitation completion through OAuth without forcing password setup when an Entra pre-link exists.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Users and Primary Flows",
       "Login Flow"

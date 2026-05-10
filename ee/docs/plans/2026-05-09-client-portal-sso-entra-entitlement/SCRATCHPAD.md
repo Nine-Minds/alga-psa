@@ -186,3 +186,10 @@ Working notes for implementing tenant-scoped client portal SSO and Entra entitle
 ## Commands Run
 
 - `npx vitest run src/__tests__/unit/entraSyncHistoryPanel.test.tsx` (workdir: `ee/server/`) ✅
+- (2026-05-09) Implemented `F058`/`F059`: extended portal invitation flow to accept optional Entra pre-link metadata (`entraPrelink`) and persist it on `portal_invitations.metadata`; token verification now returns `prelinkedOAuth` context when present.
+- (2026-05-09) `completePortalSetup` now supports passwordless completion when a valid Entra pre-link exists: it reactivates/creates the client user, upserts Microsoft OAuth link (`oauth_account_links` keyed by tenant+provider+provider_account_id), and marks the invitation used without forcing password setup.
+- (2026-05-09) Added `T019` coverage in `server/src/test/unit/portalInvitationOAuthPrelink.contract.test.ts` to lock pre-link persistence and passwordless OAuth-ready completion contracts.
+
+## Commands Run
+
+- `npx vitest run src/test/unit/portalInvitationOAuthPrelink.contract.test.ts src/test/unit/contacts/ContactEmailDefaultConsumer.contract.test.ts` (workdir: `server/`) ✅
