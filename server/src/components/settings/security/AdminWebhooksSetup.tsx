@@ -50,6 +50,7 @@ import type {
   InboundWebhookConfig,
   InboundWebhookDelivery,
 } from '@/lib/inboundWebhooks/types';
+import { InboundWebhookMappingField } from './inbound/InboundWebhookMappingField';
 
 // Entities live in a static registry; this turns the readonly field arrays
 // into mutable string[] for the UI render layer.
@@ -102,6 +103,8 @@ type InboundWebhookIdentityFormState = {
   handlerType: InboundWebhookConfig['handlerType'];
   directActionName: string;
   workflowId: string;
+  fieldMapping: Record<string, string>;
+  samplePayload: unknown | null;
 };
 
 type WebhookStatsSnapshot = {
@@ -340,6 +343,8 @@ function InboundWebhooksListView() {
     handlerType: 'direct_action',
     directActionName: '',
     workflowId: '',
+    fieldMapping: {},
+    samplePayload: null,
   });
   const [revealedInboundSecret, setRevealedInboundSecret] = useState<{
     webhookName: string;
@@ -480,6 +485,10 @@ function InboundWebhooksListView() {
                   workflowId: webhook.handlerConfig.type === 'workflow'
                     ? webhook.handlerConfig.workflowId
                     : '',
+                  fieldMapping: webhook.handlerConfig.type === 'direct_action'
+                    ? webhook.handlerConfig.fieldMapping
+                    : {},
+                  samplePayload: webhook.samplePayload,
                 });
                 setIdentityDialogOpen(true);
               }}
@@ -514,6 +523,8 @@ function InboundWebhooksListView() {
       handlerType: 'direct_action',
       directActionName: '',
       workflowId: '',
+      fieldMapping: {},
+      samplePayload: null,
     });
     setIdentityDialogOpen(true);
   }, []);
@@ -539,6 +550,11 @@ function InboundWebhooksListView() {
     value: action.name,
     label: `${action.entityType}: ${action.displayName}`,
   })), [inboundActions]);
+
+  const selectedInboundAction = useMemo(
+    () => inboundActions.find((action) => action.name === identityForm.directActionName) ?? null,
+    [identityForm.directActionName, inboundActions],
+  );
 
   return (
     <div className="space-y-6">
@@ -909,11 +925,60 @@ function InboundWebhooksListView() {
                       setIdentityForm((current) => ({
                         ...current,
                         directActionName: value,
+                        fieldMapping: current.directActionName === value ? current.fieldMapping : {},
                       }));
                     }}
                     options={inboundActionOptions}
                   />
                 </div>
+                {selectedInboundAction ? (
+                  <div className="mt-4 space-y-3">
+                    <div>
+                      <h5 className="text-sm font-medium text-gray-900">
+                        {t('security.webhooks.inbound.handler.targetFields')}
+                      </h5>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {selectedInboundAction.description}
+                      </p>
+                    </div>
+                    {selectedInboundAction.targetFields.map((field) => (
+                      <div key={field.name} className="rounded-md border border-gray-200 bg-white p-3">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <label
+                            htmlFor={`inbound-webhook-mapping-${field.name}`}
+                            className="text-sm font-medium text-gray-900"
+                          >
+                            {field.name}
+                          </label>
+                          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                            {field.type}
+                          </span>
+                          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                            {field.required
+                              ? t('security.webhooks.inbound.handler.required')
+                              : t('security.webhooks.inbound.handler.optional')}
+                          </span>
+                        </div>
+                        <p className="mb-2 text-xs text-gray-500">{field.description}</p>
+                        <InboundWebhookMappingField
+                          id={`inbound-webhook-mapping-${field.name}`}
+                          value={identityForm.fieldMapping[field.name] ?? ''}
+                          samplePayload={identityForm.samplePayload}
+                          placeholder={t('security.webhooks.inbound.handler.mappingPlaceholder')}
+                          onChange={(value) => {
+                            setIdentityForm((current) => ({
+                              ...current,
+                              fieldMapping: {
+                                ...current.fieldMapping,
+                                [field.name]: value,
+                              },
+                            }));
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             ) : (
               <div className="rounded-md border border-gray-200 bg-gray-50 p-4">

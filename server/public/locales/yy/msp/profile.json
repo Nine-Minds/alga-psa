@@ -295,6 +295,10 @@
           "directActionHelp": "55555",
           "action": "55555",
           "actionPlaceholder": "55555",
+          "targetFields": "55555",
+          "required": "55555",
+          "optional": "55555",
+          "mappingPlaceholder": "55555",
           "workflowTitle": "55555",
           "workflowHelp": "55555"
         }

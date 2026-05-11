@@ -295,6 +295,10 @@
           "directActionHelp": "Select an inbound action and map payload fields to its target fields.",
           "action": "Action",
           "actionPlaceholder": "Select an action",
+          "targetFields": "Target fields",
+          "required": "Required",
+          "optional": "Optional",
+          "mappingPlaceholder": "alert.message",
           "workflowTitle": "Workflow",
           "workflowHelp": "Select a workflow to start with the normalized webhook envelope."
         }
