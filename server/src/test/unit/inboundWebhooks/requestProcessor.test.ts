@@ -118,6 +118,18 @@ function activeIpAllowlistWebhook() {
   };
 }
 
+function activePathTokenWebhook() {
+  return {
+    ...activeHmacWebhook(),
+    auth_type: 'path_token',
+    auth_config: {
+      type: 'path_token',
+      query_param: 'token',
+      token_vault_path: 'inbound-webhooks/inbound_webhook_webhook-1_path_token',
+    },
+  };
+}
+
 describe('inbound webhook request processor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -416,5 +428,45 @@ describe('inbound webhook request processor', () => {
     );
     expect(createInboundDelivery.mock.calls[0][1]).not.toHaveProperty('requestBody');
     expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
+  });
+
+  it('T037: accepts a valid path-token request', async () => {
+    lookupInboundWebhookBySlug.mockResolvedValue(activePathTokenWebhook());
+    getTenantSecret.mockResolvedValue('path-secret');
+    const body = JSON.stringify({ source: 'automation' });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/custom-hook?token=path-secret', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'custom-hook',
+    });
+
+    await expect(response.json()).resolves.toEqual({ delivery_id: 'delivery-1' });
+    expect(response.status).toBe(200);
+    expect(getTenantSecret).toHaveBeenCalledWith('tenant-a', 'inbound_webhook_webhook-1_path_token');
+    expect(createInboundDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        inboundWebhookId: 'webhook-1',
+        requestPath: '/api/inbound/tenant-slug/custom-hook?token=path-secret',
+        requestBody: { source: 'automation' },
+        authStatus: 'verified',
+      }),
+    );
+    expect(dispatchInboundWebhookHandler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        deliveryId: 'delivery-1',
+        body: { source: 'automation' },
+      }),
+    );
   });
 });
