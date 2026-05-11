@@ -42,6 +42,10 @@ const webhookFixture = {
   updatedAt: '2026-05-11T10:00:00.000Z',
 };
 
+const routeContext = (params: Record<string, string>) => ({
+  params: Promise.resolve(params),
+});
+
 describe('inbound webhook REST API routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -96,5 +100,30 @@ describe('inbound webhook REST API routes', () => {
       secret: 'generated-secret',
     });
     expect(inboundActions.upsertInboundWebhook).toHaveBeenCalledWith(input);
+  });
+
+  it('returns one inbound webhook without raw secret material', async () => {
+    const redactedWebhook = {
+      ...webhookFixture,
+      authConfig: {
+        type: 'hmac_sha256',
+        signatureHeader: 'X-Alga-Signature',
+        secretVaultPath: 'tenant/tenant-a/inbound-webhooks/webhook-1/hmac',
+      },
+    };
+    inboundActions.getInboundWebhook.mockResolvedValue(redactedWebhook);
+
+    const route = await import('@/app/api/v1/inbound-webhooks/[id]/route');
+    const response = await route.GET(
+      new Request('http://localhost/api/v1/inbound-webhooks/webhook-1'),
+      routeContext({ id: 'webhook-1' }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ data: redactedWebhook });
+    expect(JSON.stringify(body)).not.toContain('raw-secret');
+    expect(JSON.stringify(body)).not.toContain('caller-provided-secret');
+    expect(inboundActions.getInboundWebhook).toHaveBeenCalledWith('webhook-1');
   });
 });
