@@ -54,7 +54,9 @@
     "empty": {
       "noData": "Aucune donnée pour ce rapport.",
       "noOpenTicketsInRange": "Aucun ticket ouvert dans cette période.",
-      "noDate": "Aucune date"
+      "noDate": "Aucune date",
+      "notAvailable": "n/d",
+      "noEmailChannels": "Aucun canal e-mail n’est configure."
     },
     "fallbackTitle": "Rapport",
     "dateRange": {
@@ -72,7 +74,15 @@
       "under2Days": "Moins de 2 jours",
       "days2To7": "2 à 7 jours",
       "days8To30": "8 à 30 jours",
-      "over30Days": "Plus de 30 jours"
+      "over30Days": "Plus de 30 jours",
+      "activeChannels": "Canaux actifs",
+      "healthyChannels": "Canaux sains",
+      "problemChannels": "Canaux en probleme",
+      "emailsProcessed": "E-mails traites",
+      "ticketsFromEmail": "Tickets par e-mail",
+      "failedEmails": "E-mails en echec",
+      "avgProcessingTime": "Temps moyen de traitement",
+      "avgTicketCreationTime": "Temps moyen e-mail-ticket"
     },
     "sections": {
       "openByStatus": "Ouverts par statut",
@@ -80,7 +90,9 @@
       "openByAssignee": "Ouverts par assigné",
       "ageDistribution": "Répartition par âge",
       "responseOwnership": "Responsable de la réponse",
-      "oldestOpenTickets": "Tickets ouverts les plus anciens"
+      "oldestOpenTickets": "Tickets ouverts les plus anciens",
+      "emailProcessingStatus": "Etat du traitement",
+      "emailChannels": "Canaux e-mail"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -93,7 +105,7 @@
       },
       "emailChannelHealth": {
         "title": "Santé des canaux e-mail",
-        "description": "Canaux configurés, boîtes actives et état de connexion. Disponible prochainement."
+        "description": "Volume des e-mails entrants, vitesse de creation des tickets et etat de connexion des boites mail."
       },
       "timeUtilization": {
         "title": "Utilisation du temps",
@@ -107,6 +119,24 @@
         "title": "Rapports de contrats",
         "description": "Revenus de contrat, renouvellements, utilisation des forfaits et rentabilité simple."
       }
+    },
+    "table": {
+      "channel": "Canal",
+      "status": "Etat",
+      "processed": "Traites",
+      "tickets": "Tickets",
+      "avgEmailToTicket": "Moy. e-mail vers ticket"
+    },
+    "statusValues": {
+      "connected": "Connecte",
+      "disconnected": "Deconnecte",
+      "error": "Erreur",
+      "configuring": "Configuration",
+      "unknown": "Inconnu",
+      "success": "Reussi",
+      "failed": "Echec",
+      "partial": "Partiel",
+      "processing": "En traitement"
     }
   },
   "contractReports": {

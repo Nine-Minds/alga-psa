@@ -54,7 +54,9 @@
     "empty": {
       "noData": "Brak danych dla tego raportu.",
       "noOpenTicketsInRange": "Brak otwartych zgłoszeń w tym zakresie.",
-      "noDate": "Brak daty"
+      "noDate": "Brak daty",
+      "notAvailable": "brak",
+      "noEmailChannels": "Nie skonfigurowano kanalow e-mail."
     },
     "fallbackTitle": "Raport",
     "dateRange": {
@@ -72,7 +74,15 @@
       "under2Days": "Poniżej 2 dni",
       "days2To7": "Od 2 do 7 dni",
       "days8To30": "Od 8 do 30 dni",
-      "over30Days": "Ponad 30 dni"
+      "over30Days": "Ponad 30 dni",
+      "activeChannels": "Aktywne kanaly",
+      "healthyChannels": "Zdrowe kanaly",
+      "problemChannels": "Kanaly z problemami",
+      "emailsProcessed": "Przetworzone e-maile",
+      "ticketsFromEmail": "Zgloszenia z e-maili",
+      "failedEmails": "Nieudane e-maile",
+      "avgProcessingTime": "Sredni czas przetwarzania",
+      "avgTicketCreationTime": "Sredni czas e-mail-zgloszenie"
     },
     "sections": {
       "openByStatus": "Otwarte według statusu",
@@ -80,7 +90,9 @@
       "openByAssignee": "Otwarte według przypisanej osoby",
       "ageDistribution": "Rozkład wieku",
       "responseOwnership": "Odpowiedzialny za odpowiedź",
-      "oldestOpenTickets": "Najstarsze otwarte zgłoszenia"
+      "oldestOpenTickets": "Najstarsze otwarte zgłoszenia",
+      "emailProcessingStatus": "Status przetwarzania",
+      "emailChannels": "Kanaly e-mail"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -93,7 +105,7 @@
       },
       "emailChannelHealth": {
         "title": "Stan kanałów e-mail",
-        "description": "Skonfigurowane kanały, aktywne skrzynki i stan połączenia. Wkrótce."
+        "description": "Wolumen przychodzacych e-maili, czas tworzenia zgloszen i stan polaczenia skrzynek."
       },
       "timeUtilization": {
         "title": "Wykorzystanie czasu",
@@ -107,6 +119,24 @@
         "title": "Raporty kontraktów",
         "description": "Przychody z kontraktów, odnowienia, użycie pakietów i prosta rentowność."
       }
+    },
+    "table": {
+      "channel": "Kanal",
+      "status": "Status",
+      "processed": "Przetworzone",
+      "tickets": "Zgloszenia",
+      "avgEmailToTicket": "Sr. e-mail do zgloszenia"
+    },
+    "statusValues": {
+      "connected": "Polaczony",
+      "disconnected": "Rozlaczony",
+      "error": "Blad",
+      "configuring": "Konfiguracja",
+      "unknown": "Nieznany",
+      "success": "Sukces",
+      "failed": "Niepowodzenie",
+      "partial": "Czesciowo",
+      "processing": "Przetwarzanie"
     }
   },
   "contractReports": {

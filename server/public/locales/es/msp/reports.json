@@ -54,7 +54,9 @@
     "empty": {
       "noData": "No hay datos para este informe.",
       "noOpenTicketsInRange": "No hay tickets abiertos en este intervalo.",
-      "noDate": "Sin fecha"
+      "noDate": "Sin fecha",
+      "notAvailable": "n/d",
+      "noEmailChannels": "No hay canales de correo configurados."
     },
     "fallbackTitle": "Informe",
     "dateRange": {
@@ -72,7 +74,15 @@
       "under2Days": "Menos de 2 días",
       "days2To7": "2 a 7 días",
       "days8To30": "8 a 30 días",
-      "over30Days": "Más de 30 días"
+      "over30Days": "Más de 30 días",
+      "activeChannels": "Canales activos",
+      "healthyChannels": "Canales correctos",
+      "problemChannels": "Canales con problemas",
+      "emailsProcessed": "Correos procesados",
+      "ticketsFromEmail": "Tickets por correo",
+      "failedEmails": "Correos fallidos",
+      "avgProcessingTime": "Tiempo medio de procesamiento",
+      "avgTicketCreationTime": "Tiempo medio correo-ticket"
     },
     "sections": {
       "openByStatus": "Abiertos por estado",
@@ -80,7 +90,9 @@
       "openByAssignee": "Abiertos por responsable",
       "ageDistribution": "Distribución por antigüedad",
       "responseOwnership": "Responsable de respuesta",
-      "oldestOpenTickets": "Tickets abiertos más antiguos"
+      "oldestOpenTickets": "Tickets abiertos más antiguos",
+      "emailProcessingStatus": "Estado de procesamiento",
+      "emailChannels": "Canales de correo"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -93,7 +105,7 @@
       },
       "emailChannelHealth": {
         "title": "Estado de canales de correo",
-        "description": "Canales configurados, buzones activos y estado de conexión. Próximamente."
+        "description": "Volumen de correo entrante, velocidad de creacion de tickets y estado de conexion de los buzones."
       },
       "timeUtilization": {
         "title": "Utilización de tiempo",
@@ -107,6 +119,24 @@
         "title": "Informes de contratos",
         "description": "Ingresos de contratos, renovaciones, uso de bolsas y rentabilidad simple."
       }
+    },
+    "table": {
+      "channel": "Canal",
+      "status": "Estado",
+      "processed": "Procesados",
+      "tickets": "Tickets",
+      "avgEmailToTicket": "Prom. correo a ticket"
+    },
+    "statusValues": {
+      "connected": "Conectado",
+      "disconnected": "Desconectado",
+      "error": "Error",
+      "configuring": "Configurando",
+      "unknown": "Desconocido",
+      "success": "Correcto",
+      "failed": "Fallido",
+      "partial": "Parcial",
+      "processing": "Procesando"
     }
   },
   "contractReports": {

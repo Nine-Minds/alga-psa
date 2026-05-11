@@ -54,7 +54,9 @@
     "empty": {
       "noData": "11111",
       "noOpenTicketsInRange": "11111",
-      "noDate": "11111"
+      "noDate": "11111",
+      "notAvailable": "11111",
+      "noEmailChannels": "11111"
     },
     "fallbackTitle": "11111",
     "dateRange": {
@@ -72,7 +74,15 @@
       "under2Days": "11111",
       "days2To7": "11111",
       "days8To30": "11111",
-      "over30Days": "11111"
+      "over30Days": "11111",
+      "activeChannels": "11111",
+      "healthyChannels": "11111",
+      "problemChannels": "11111",
+      "emailsProcessed": "11111",
+      "ticketsFromEmail": "11111",
+      "failedEmails": "11111",
+      "avgProcessingTime": "11111",
+      "avgTicketCreationTime": "11111"
     },
     "sections": {
       "openByStatus": "11111",
@@ -80,7 +90,9 @@
       "openByAssignee": "11111",
       "ageDistribution": "11111",
       "responseOwnership": "11111",
-      "oldestOpenTickets": "11111"
+      "oldestOpenTickets": "11111",
+      "emailProcessingStatus": "11111",
+      "emailChannels": "11111"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -107,6 +119,24 @@
         "title": "11111",
         "description": "11111"
       }
+    },
+    "table": {
+      "channel": "11111",
+      "status": "11111",
+      "processed": "11111",
+      "tickets": "11111",
+      "avgEmailToTicket": "11111"
+    },
+    "statusValues": {
+      "connected": "11111",
+      "disconnected": "11111",
+      "error": "11111",
+      "configuring": "11111",
+      "unknown": "11111",
+      "success": "11111",
+      "failed": "11111",
+      "partial": "11111",
+      "processing": "11111"
     }
   },
   "contractReports": {

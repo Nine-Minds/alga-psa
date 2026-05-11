@@ -54,7 +54,9 @@
     "empty": {
       "noData": "No data for this report.",
       "noOpenTicketsInRange": "No open tickets in this range.",
-      "noDate": "No date"
+      "noDate": "No date",
+      "notAvailable": "n/a",
+      "noEmailChannels": "No email channels are configured."
     },
     "fallbackTitle": "Report",
     "dateRange": {
@@ -72,7 +74,15 @@
       "under2Days": "Under 2 days",
       "days2To7": "2 to 7 days",
       "days8To30": "8 to 30 days",
-      "over30Days": "Over 30 days"
+      "over30Days": "Over 30 days",
+      "activeChannels": "Active channels",
+      "healthyChannels": "Healthy channels",
+      "problemChannels": "Problem channels",
+      "emailsProcessed": "Emails processed",
+      "ticketsFromEmail": "Tickets from email",
+      "failedEmails": "Failed emails",
+      "avgProcessingTime": "Avg. processing time",
+      "avgTicketCreationTime": "Avg. email-to-ticket time"
     },
     "sections": {
       "openByStatus": "Open by status",
@@ -80,7 +90,9 @@
       "openByAssignee": "Open by assignee",
       "ageDistribution": "Age distribution",
       "responseOwnership": "Response ownership",
-      "oldestOpenTickets": "Oldest open tickets"
+      "oldestOpenTickets": "Oldest open tickets",
+      "emailProcessingStatus": "Processing status",
+      "emailChannels": "Email channels"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -93,7 +105,7 @@
       },
       "emailChannelHealth": {
         "title": "Email Channel Health",
-        "description": "Configured channels, active mailboxes, and connection health. Coming next."
+        "description": "Email intake volume, ticket creation speed, and mailbox connection health."
       },
       "timeUtilization": {
         "title": "Time Utilization",
@@ -107,6 +119,24 @@
         "title": "Contract Reports",
         "description": "Contract revenue, renewals, bucket utilization, and simple profitability."
       }
+    },
+    "table": {
+      "channel": "Channel",
+      "status": "Status",
+      "processed": "Processed",
+      "tickets": "Tickets",
+      "avgEmailToTicket": "Avg. email to ticket"
+    },
+    "statusValues": {
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "error": "Error",
+      "configuring": "Configuring",
+      "unknown": "Unknown",
+      "success": "Success",
+      "failed": "Failed",
+      "partial": "Partial",
+      "processing": "Processing"
     }
   },
   "contractReports": {

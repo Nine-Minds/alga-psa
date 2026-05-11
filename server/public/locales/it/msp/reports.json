@@ -54,7 +54,9 @@
     "empty": {
       "noData": "Nessun dato per questo report.",
       "noOpenTicketsInRange": "Nessun ticket aperto in questo intervallo.",
-      "noDate": "Nessuna data"
+      "noDate": "Nessuna data",
+      "notAvailable": "n/d",
+      "noEmailChannels": "Nessun canale email configurato."
     },
     "fallbackTitle": "Report",
     "dateRange": {
@@ -72,7 +74,15 @@
       "under2Days": "Meno di 2 giorni",
       "days2To7": "Da 2 a 7 giorni",
       "days8To30": "Da 8 a 30 giorni",
-      "over30Days": "Oltre 30 giorni"
+      "over30Days": "Oltre 30 giorni",
+      "activeChannels": "Canali attivi",
+      "healthyChannels": "Canali integri",
+      "problemChannels": "Canali con problemi",
+      "emailsProcessed": "Email elaborate",
+      "ticketsFromEmail": "Ticket da email",
+      "failedEmails": "Email non riuscite",
+      "avgProcessingTime": "Tempo medio di elaborazione",
+      "avgTicketCreationTime": "Tempo medio email-ticket"
     },
     "sections": {
       "openByStatus": "Aperti per stato",
@@ -80,7 +90,9 @@
       "openByAssignee": "Aperti per assegnatario",
       "ageDistribution": "Distribuzione per età",
       "responseOwnership": "Responsabile della risposta",
-      "oldestOpenTickets": "Ticket aperti meno recenti"
+      "oldestOpenTickets": "Ticket aperti meno recenti",
+      "emailProcessingStatus": "Stato elaborazione",
+      "emailChannels": "Canali email"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -93,7 +105,7 @@
       },
       "emailChannelHealth": {
         "title": "Stato dei canali e-mail",
-        "description": "Canali configurati, caselle attive, stato della connessione. In arrivo."
+        "description": "Volume email in ingresso, velocita di creazione dei ticket e stato di connessione delle caselle."
       },
       "timeUtilization": {
         "title": "Utilizzo del tempo",
@@ -107,6 +119,24 @@
         "title": "Report contratti",
         "description": "Ricavi dei contratti, rinnovi, utilizzo dei pacchetti, redditività semplice."
       }
+    },
+    "table": {
+      "channel": "Canale",
+      "status": "Stato",
+      "processed": "Elaborate",
+      "tickets": "Ticket",
+      "avgEmailToTicket": "Media email-ticket"
+    },
+    "statusValues": {
+      "connected": "Connesso",
+      "disconnected": "Disconnesso",
+      "error": "Errore",
+      "configuring": "Configurazione",
+      "unknown": "Sconosciuto",
+      "success": "Riuscito",
+      "failed": "Non riuscito",
+      "partial": "Parziale",
+      "processing": "In elaborazione"
     }
   },
   "contractReports": {

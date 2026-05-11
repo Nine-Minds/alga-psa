@@ -54,7 +54,9 @@
     "empty": {
       "noData": "Sem dados para este relatório.",
       "noOpenTicketsInRange": "Nenhum ticket aberto neste período.",
-      "noDate": "Sem data"
+      "noDate": "Sem data",
+      "notAvailable": "n/d",
+      "noEmailChannels": "Nenhum canal de email configurado."
     },
     "fallbackTitle": "Relatório",
     "dateRange": {
@@ -72,7 +74,15 @@
       "under2Days": "Menos de 2 dias",
       "days2To7": "2 a 7 dias",
       "days8To30": "8 a 30 dias",
-      "over30Days": "Mais de 30 dias"
+      "over30Days": "Mais de 30 dias",
+      "activeChannels": "Canais ativos",
+      "healthyChannels": "Canais saudaveis",
+      "problemChannels": "Canais com problemas",
+      "emailsProcessed": "Emails processados",
+      "ticketsFromEmail": "Tickets por email",
+      "failedEmails": "Emails com falha",
+      "avgProcessingTime": "Tempo medio de processamento",
+      "avgTicketCreationTime": "Tempo medio email-ticket"
     },
     "sections": {
       "openByStatus": "Abertos por status",
@@ -80,7 +90,9 @@
       "openByAssignee": "Abertos por responsável",
       "ageDistribution": "Distribuição por idade",
       "responseOwnership": "Responsável pela resposta",
-      "oldestOpenTickets": "Tickets abertos mais antigos"
+      "oldestOpenTickets": "Tickets abertos mais antigos",
+      "emailProcessingStatus": "Status de processamento",
+      "emailChannels": "Canais de email"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -93,7 +105,7 @@
       },
       "emailChannelHealth": {
         "title": "Saúde dos canais de e-mail",
-        "description": "Canais configurados, caixas ativas e status de conexão. Em breve."
+        "description": "Volume de emails recebidos, velocidade de criacao de tickets e saude da conexao das caixas."
       },
       "timeUtilization": {
         "title": "Utilização de tempo",
@@ -107,6 +119,24 @@
         "title": "Relatórios de contratos",
         "description": "Receita de contratos, renovações, uso de pacotes e rentabilidade simples."
       }
+    },
+    "table": {
+      "channel": "Canal",
+      "status": "Status",
+      "processed": "Processados",
+      "tickets": "Tickets",
+      "avgEmailToTicket": "Media email para ticket"
+    },
+    "statusValues": {
+      "connected": "Conectado",
+      "disconnected": "Desconectado",
+      "error": "Erro",
+      "configuring": "Configurando",
+      "unknown": "Desconhecido",
+      "success": "Sucesso",
+      "failed": "Falha",
+      "partial": "Parcial",
+      "processing": "Processando"
     }
   },
   "contractReports": {

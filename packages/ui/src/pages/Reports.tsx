@@ -25,8 +25,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/component
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
+  getEmailChannelHealthReport,
   getTicketAgingReport,
   getTicketWorkloadReport,
+  type EmailChannelHealthReport,
   type ReportBucket,
   type ReportRangeDays,
   type TicketAgingReport,
@@ -35,7 +37,7 @@ import {
 
 type ReportCategory = 'helpdesk' | 'operations' | 'billing';
 type ReportKind = 'embedded' | 'link' | 'planned';
-type EmbeddedReportId = 'ticket-workload' | 'ticket-aging';
+type EmbeddedReportId = 'ticket-workload' | 'ticket-aging' | 'email-channel-health';
 
 interface ReportDefinition {
   id: EmbeddedReportId | 'email-channel-health' | 'time-utilization' | 'team-performance' | 'contract-reports';
@@ -86,11 +88,11 @@ const REPORTS: ReportDefinition[] = [
     titleKey: 'reportsPage.reportCatalog.emailChannelHealth.title',
     titleDefault: 'Email Channel Health',
     descriptionKey: 'reportsPage.reportCatalog.emailChannelHealth.description',
-    descriptionDefault: 'Configured channels, active mailboxes, and connection health. Coming next.',
+    descriptionDefault: 'Email intake volume, ticket creation speed, and mailbox connection health.',
     category: 'helpdesk',
     products: ['psa', 'algadesk'],
     minimumTier: 'solo',
-    kind: 'planned',
+    kind: 'embedded',
     icon: Mail,
   },
   {
@@ -142,13 +144,22 @@ function canAccessReport(report: ReportDefinition, productCode: ProductCode, tie
   return report.products.includes(productCode) && tierAtLeast(tier, report.minimumTier);
 }
 
-function MetricCard({ label, value }: { label: string; value: number }) {
+function MetricCard({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-3">
       <p className="text-xs font-medium text-[rgb(var(--color-text-500))]">{label}</p>
       <p className="mt-1 text-2xl font-semibold text-[rgb(var(--color-text-900))]">{value}</p>
     </div>
   );
+}
+
+function formatDurationMinutes(value: number | null, emptyText: string): string {
+  if (value === null) return emptyText;
+  if (value < 1) return '<1m';
+  if (value < 60) return `${Math.round(value)}m`;
+  const hours = Math.floor(value / 60);
+  const minutes = Math.round(value % 60);
+  return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
 }
 
 function BucketList({ title, buckets, emptyText }: { title: string; buckets: ReportBucket[]; emptyText: string }) {
@@ -232,6 +243,107 @@ function TicketWorkloadView({ rangeDays }: { rangeDays: ReportRangeDays }) {
         <BucketList title={t('reportsPage.sections.openByStatus', { defaultValue: 'Open by status' })} buckets={report.byStatus} emptyText={t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' })} />
         <BucketList title={t('reportsPage.sections.openByPriority', { defaultValue: 'Open by priority' })} buckets={report.byPriority} emptyText={t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' })} />
         <BucketList title={t('reportsPage.sections.openByAssignee', { defaultValue: 'Open by assignee' })} buckets={report.byAssignee} emptyText={t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' })} />
+      </div>
+    </div>
+  );
+}
+
+function EmailChannelHealthView({ rangeDays }: { rangeDays: ReportRangeDays }) {
+  const { t } = useTranslation('msp/reports');
+  const [report, setReport] = useState<EmailChannelHealthReport | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setReport(null);
+    setError(null);
+    getEmailChannelHealthReport(rangeDays)
+      .then((data) => {
+        if (!cancelled) setReport(data);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : t('reportsPage.errors.loadReport', { defaultValue: 'Failed to load report.' }));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [rangeDays, t]);
+
+  if (error) return <p className="text-sm text-[rgb(var(--color-destructive-600))]">{error}</p>;
+  if (!report) return <LoadingReport />;
+
+  const emptyDuration = t('reportsPage.empty.notAvailable', { defaultValue: 'n/a' });
+  const processingStatusBuckets = report.byStatus.map((bucket) => ({
+    ...bucket,
+    label: t(`reportsPage.statusValues.${bucket.label}`, { defaultValue: bucket.label }),
+  }));
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <MetricCard label={t('reportsPage.metrics.activeChannels', { defaultValue: 'Active channels' })} value={`${report.summary.activeChannels}/${report.summary.totalChannels}`} />
+        <MetricCard label={t('reportsPage.metrics.healthyChannels', { defaultValue: 'Healthy channels' })} value={report.summary.healthyChannels} />
+        <MetricCard label={t('reportsPage.metrics.problemChannels', { defaultValue: 'Problem channels' })} value={report.summary.problemChannels} />
+        <MetricCard label={t('reportsPage.metrics.emailsProcessed', { defaultValue: 'Emails processed' })} value={report.summary.processedEmails} />
+        <MetricCard label={t('reportsPage.metrics.ticketsFromEmail', { defaultValue: 'Tickets from email' })} value={report.summary.ticketsCreated} />
+        <MetricCard label={t('reportsPage.metrics.failedEmails', { defaultValue: 'Failed emails' })} value={report.summary.failedEmails} />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <MetricCard label={t('reportsPage.metrics.avgProcessingTime', { defaultValue: 'Avg. processing time' })} value={formatDurationMinutes(report.summary.avgProcessingMinutes, emptyDuration)} />
+            <MetricCard label={t('reportsPage.metrics.avgTicketCreationTime', { defaultValue: 'Avg. email-to-ticket time' })} value={formatDurationMinutes(report.summary.avgTicketCreationMinutes, emptyDuration)} />
+          </div>
+          <BucketList title={t('reportsPage.sections.emailProcessingStatus', { defaultValue: 'Processing status' })} buckets={processingStatusBuckets} emptyText={t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' })} />
+        </div>
+        <div className="rounded-md border border-[rgb(var(--color-border-200))]">
+          <div className="border-b border-[rgb(var(--color-border-200))] p-4">
+            <h3 className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
+              {t('reportsPage.sections.emailChannels', { defaultValue: 'Email channels' })}
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-[rgb(var(--color-border-200))] text-sm">
+              <thead className="bg-[rgb(var(--color-background-100))]">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.channel', { defaultValue: 'Channel' })}</th>
+                  <th className="px-4 py-3 text-left font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.status', { defaultValue: 'Status' })}</th>
+                  <th className="px-4 py-3 text-right font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.processed', { defaultValue: 'Processed' })}</th>
+                  <th className="px-4 py-3 text-right font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.tickets', { defaultValue: 'Tickets' })}</th>
+                  <th className="px-4 py-3 text-right font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.avgEmailToTicket', { defaultValue: 'Avg. email to ticket' })}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[rgb(var(--color-border-200))]">
+                {report.channels.length === 0 ? (
+                  <tr>
+                    <td className="px-4 py-5 text-[rgb(var(--color-text-500))]" colSpan={5}>
+                      {t('reportsPage.empty.noEmailChannels', { defaultValue: 'No email channels are configured.' })}
+                    </td>
+                  </tr>
+                ) : (
+                  report.channels.map((channel) => (
+                    <tr key={channel.providerId}>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-[rgb(var(--color-text-900))]">{channel.providerName}</div>
+                        <div className="text-xs text-[rgb(var(--color-text-500))]">{channel.mailbox || channel.providerType}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant={channel.isActive && channel.status === 'connected' ? 'success' : channel.isActive ? 'warning' : 'default-muted'}>
+                          {t(`reportsPage.statusValues.${channel.status}`, { defaultValue: channel.status })}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3 text-right text-[rgb(var(--color-text-700))]">{channel.processedEmails}</td>
+                      <td className="px-4 py-3 text-right text-[rgb(var(--color-text-700))]">{channel.ticketsCreated}</td>
+                      <td className="px-4 py-3 text-right text-[rgb(var(--color-text-700))]">
+                        {formatDurationMinutes(channel.avgTicketCreationMinutes, emptyDuration)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -450,6 +562,8 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
           <CardContent>
             {selectedReportId === 'ticket-aging' ? (
               <TicketAgingView rangeDays={rangeDays} />
+            ) : selectedReportId === 'email-channel-health' ? (
+              <EmailChannelHealthView rangeDays={rangeDays} />
             ) : (
               <TicketWorkloadView rangeDays={rangeDays} />
             )}

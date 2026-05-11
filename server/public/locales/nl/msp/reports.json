@@ -54,7 +54,9 @@
     "empty": {
       "noData": "Geen gegevens voor dit rapport.",
       "noOpenTicketsInRange": "Geen open tickets in deze periode.",
-      "noDate": "Geen datum"
+      "noDate": "Geen datum",
+      "notAvailable": "n.v.t.",
+      "noEmailChannels": "Er zijn geen e-mailkanalen geconfigureerd."
     },
     "fallbackTitle": "Rapport",
     "dateRange": {
@@ -72,7 +74,15 @@
       "under2Days": "Minder dan 2 dagen",
       "days2To7": "2 tot 7 dagen",
       "days8To30": "8 tot 30 dagen",
-      "over30Days": "Meer dan 30 dagen"
+      "over30Days": "Meer dan 30 dagen",
+      "activeChannels": "Actieve kanalen",
+      "healthyChannels": "Gezonde kanalen",
+      "problemChannels": "Kanalen met problemen",
+      "emailsProcessed": "Verwerkte e-mails",
+      "ticketsFromEmail": "Tickets uit e-mail",
+      "failedEmails": "Mislukte e-mails",
+      "avgProcessingTime": "Gem. verwerkingstijd",
+      "avgTicketCreationTime": "Gem. e-mail-naar-ticket tijd"
     },
     "sections": {
       "openByStatus": "Open per status",
@@ -80,7 +90,9 @@
       "openByAssignee": "Open per toegewezene",
       "ageDistribution": "Leeftijdsverdeling",
       "responseOwnership": "Reactie-eigenaar",
-      "oldestOpenTickets": "Oudste open tickets"
+      "oldestOpenTickets": "Oudste open tickets",
+      "emailProcessingStatus": "Verwerkingsstatus",
+      "emailChannels": "E-mailkanalen"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -93,7 +105,7 @@
       },
       "emailChannelHealth": {
         "title": "Status van e-mailkanalen",
-        "description": "Geconfigureerde kanalen, actieve mailboxen en verbindingsstatus. Binnenkort beschikbaar."
+        "description": "Volume van inkomende e-mail, snelheid van ticketaanmaak en verbindingsstatus van mailboxen."
       },
       "timeUtilization": {
         "title": "Tijdsbesteding",
@@ -107,6 +119,24 @@
         "title": "Contractrapporten",
         "description": "Contractomzet, verlengingen, bundelgebruik en eenvoudige winstgevendheid."
       }
+    },
+    "table": {
+      "channel": "Kanaal",
+      "status": "Status",
+      "processed": "Verwerkt",
+      "tickets": "Tickets",
+      "avgEmailToTicket": "Gem. e-mail naar ticket"
+    },
+    "statusValues": {
+      "connected": "Verbonden",
+      "disconnected": "Verbroken",
+      "error": "Fout",
+      "configuring": "Configureren",
+      "unknown": "Onbekend",
+      "success": "Geslaagd",
+      "failed": "Mislukt",
+      "partial": "Gedeeltelijk",
+      "processing": "Wordt verwerkt"
     }
   },
   "contractReports": {

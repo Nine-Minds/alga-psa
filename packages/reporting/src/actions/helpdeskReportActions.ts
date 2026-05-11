@@ -45,6 +45,35 @@ export interface TicketAgingReport {
   }>;
 }
 
+export interface EmailChannelHealthReport {
+  rangeDays: ReportRangeDays;
+  summary: {
+    totalChannels: number;
+    activeChannels: number;
+    healthyChannels: number;
+    problemChannels: number;
+    processedEmails: number;
+    ticketsCreated: number;
+    failedEmails: number;
+    avgProcessingMinutes: number | null;
+    avgTicketCreationMinutes: number | null;
+  };
+  byStatus: ReportBucket[];
+  channels: Array<{
+    providerId: string;
+    providerName: string;
+    mailbox: string;
+    providerType: string;
+    isActive: boolean;
+    status: string;
+    processedEmails: number;
+    ticketsCreated: number;
+    failedEmails: number;
+    avgTicketCreationMinutes: number | null;
+    lastSyncAt: string;
+  }>;
+}
+
 function normalizeRangeDays(value?: number): ReportRangeDays {
   return value === 7 || value === 90 ? value : 30;
 }
@@ -56,6 +85,11 @@ function toCount(value: unknown): number {
 function toIsoString(value: unknown): string {
   if (value instanceof Date) return value.toISOString();
   return typeof value === 'string' ? value : '';
+}
+
+function toNullableNumber(value: unknown): number | null {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 export const getTicketWorkloadReport = withAuth(
@@ -169,6 +203,118 @@ export const getTicketWorkloadReport = withAuth(
       byStatus: mapBuckets(statusRows),
       byPriority: mapBuckets(priorityRows),
       byAssignee: mapBuckets(assigneeRows),
+    };
+  },
+);
+
+export const getEmailChannelHealthReport = withAuth(
+  async (_user, { tenant }, rangeDaysInput?: number): Promise<EmailChannelHealthReport> => {
+    const rangeDays = normalizeRangeDays(rangeDaysInput);
+    const { knex } = await createTenantKnex();
+
+    const [providerRows, summaryRow, statusRows, channelRows] = await Promise.all([
+      knex('email_providers')
+        .where({ tenant })
+        .select('id', 'is_active', 'status'),
+      knex('email_processed_messages as epm')
+        .leftJoin('tickets as t', function joinTicket() {
+          this.on('epm.ticket_id', '=', 't.ticket_id').andOn('epm.tenant', '=', 't.tenant');
+        })
+        .where('epm.tenant', tenant)
+        .where('epm.processed_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
+        .select(
+          knex.raw('COUNT(*)::int as processed_emails'),
+          knex.raw('COUNT(epm.ticket_id)::int as tickets_created'),
+          knex.raw("SUM(CASE WHEN epm.processing_status = 'failed' THEN 1 ELSE 0 END)::int as failed_emails"),
+          knex.raw(
+            'AVG(CASE WHEN epm.received_at IS NOT NULL AND epm.processed_at IS NOT NULL THEN GREATEST(EXTRACT(EPOCH FROM (epm.processed_at - epm.received_at)) / 60, 0) END) as avg_processing_minutes',
+          ),
+          knex.raw(
+            'AVG(CASE WHEN epm.received_at IS NOT NULL AND t.entered_at IS NOT NULL THEN GREATEST(EXTRACT(EPOCH FROM (t.entered_at - epm.received_at)) / 60, 0) END) as avg_ticket_creation_minutes',
+          ),
+        )
+        .first(),
+      knex('email_processed_messages')
+        .where({ tenant })
+        .where('processed_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
+        .select('processing_status as label')
+        .count<{ label: string | null; count: string }[]>('* as count')
+        .groupBy('processing_status')
+        .orderBy('count', 'desc'),
+      knex('email_providers as ep')
+        .leftJoin('email_processed_messages as epm', function joinProcessedMessages() {
+          this.on('ep.id', '=', 'epm.provider_id')
+            .andOn('ep.tenant', '=', 'epm.tenant')
+            .andOn('epm.processed_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`));
+        })
+        .leftJoin('tickets as t', function joinTicket() {
+          this.on('epm.ticket_id', '=', 't.ticket_id').andOn('epm.tenant', '=', 't.tenant');
+        })
+        .where('ep.tenant', tenant)
+        .select(
+          'ep.id',
+          'ep.provider_name',
+          'ep.mailbox',
+          'ep.provider_type',
+          'ep.is_active',
+          'ep.status',
+          'ep.last_sync_at',
+          knex.raw('COUNT(epm.message_id)::int as processed_emails'),
+          knex.raw('COUNT(epm.ticket_id)::int as tickets_created'),
+          knex.raw("SUM(CASE WHEN epm.processing_status = 'failed' THEN 1 ELSE 0 END)::int as failed_emails"),
+          knex.raw(
+            'AVG(CASE WHEN epm.received_at IS NOT NULL AND t.entered_at IS NOT NULL THEN GREATEST(EXTRACT(EPOCH FROM (t.entered_at - epm.received_at)) / 60, 0) END) as avg_ticket_creation_minutes',
+          ),
+        )
+        .groupBy(
+          'ep.id',
+          'ep.tenant',
+          'ep.provider_name',
+          'ep.mailbox',
+          'ep.provider_type',
+          'ep.is_active',
+          'ep.status',
+          'ep.last_sync_at',
+        )
+        .orderBy('processed_emails', 'desc')
+        .orderBy('ep.provider_name', 'asc'),
+    ]);
+
+    const totalChannels = providerRows.length;
+    const activeChannels = providerRows.filter((row) => row.is_active).length;
+    const healthyChannels = providerRows.filter((row) => row.is_active && row.status === 'connected').length;
+    const problemChannels = providerRows.filter((row) => row.is_active && row.status !== 'connected').length;
+
+    return {
+      rangeDays,
+      summary: {
+        totalChannels,
+        activeChannels,
+        healthyChannels,
+        problemChannels,
+        processedEmails: toCount((summaryRow as any)?.processed_emails),
+        ticketsCreated: toCount((summaryRow as any)?.tickets_created),
+        failedEmails: toCount((summaryRow as any)?.failed_emails),
+        avgProcessingMinutes: toNullableNumber((summaryRow as any)?.avg_processing_minutes),
+        avgTicketCreationMinutes: toNullableNumber((summaryRow as any)?.avg_ticket_creation_minutes),
+      },
+      byStatus: statusRows.map((row) => ({
+        label: row.label || 'unknown',
+        count: toCount(row.count),
+      })),
+      channels: channelRows.map((row) => ({
+        providerId: row.id,
+        providerName: row.provider_name || row.mailbox || 'Unnamed channel',
+        mailbox: row.mailbox || '',
+        providerType: row.provider_type || 'unknown',
+        isActive: Boolean(row.is_active),
+        status: row.status || 'unknown',
+        processedEmails: toCount(row.processed_emails),
+        ticketsCreated: toCount(row.tickets_created),
+        failedEmails: toCount(row.failed_emails),
+        avgTicketCreationMinutes: toNullableNumber(row.avg_ticket_creation_minutes),
+        lastSyncAt: toIsoString(row.last_sync_at),
+      })),
     };
   },
 );
