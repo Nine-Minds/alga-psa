@@ -438,3 +438,67 @@ export const deleteInboundWebhook = withAuth(
     return { deleted: true, inboundWebhookId };
   },
 );
+
+export const rotateInboundWebhookSecret = withAuth(
+  async (
+    user,
+    { tenant },
+    inboundWebhookId: string,
+  ): Promise<{ webhook: InboundWebhookConfig; secret: string }> => {
+    const { knex } = await createTenantKnex(tenant);
+    await assertInboundWebhookPermission(user, 'update', knex);
+
+    const existing = await knex<InboundWebhookRow>('inbound_webhooks')
+      .where({ tenant, inbound_webhook_id: inboundWebhookId })
+      .first();
+
+    if (!existing) {
+      throw new Error('Inbound webhook not found');
+    }
+
+    if (existing.auth_type === 'ip_allowlist') {
+      throw new Error('IP allowlist inbound webhooks do not have a secret to rotate');
+    }
+
+    const authConfig = { ...(existing.auth_config ?? {}) };
+    const secret = generateWebhookSecret();
+    let vaultPath: string;
+
+    if (existing.auth_type === 'hmac_sha256') {
+      vaultPath =
+        String(authConfig.secret_vault_path ?? authConfig.secretVaultPath ?? '') ||
+        buildSecretVaultPath(buildSecretName(inboundWebhookId, 'hmac_secret'));
+      authConfig.type = 'hmac_sha256';
+      authConfig.secret_vault_path = vaultPath;
+    } else if (existing.auth_type === 'bearer') {
+      vaultPath =
+        String(authConfig.token_vault_path ?? authConfig.tokenVaultPath ?? '') ||
+        buildSecretVaultPath(buildSecretName(inboundWebhookId, 'bearer_token'));
+      authConfig.type = 'bearer';
+      authConfig.token_vault_path = vaultPath;
+    } else if (existing.auth_type === 'path_token') {
+      vaultPath =
+        String(authConfig.token_vault_path ?? authConfig.tokenVaultPath ?? '') ||
+        buildSecretVaultPath(buildSecretName(inboundWebhookId, 'path_token'));
+      authConfig.type = 'path_token';
+      authConfig.token_vault_path = vaultPath;
+    } else {
+      throw new Error(`Unsupported inbound webhook auth type: ${existing.auth_type}`);
+    }
+
+    await writeTenantSecret(tenant, vaultPath, secret);
+
+    const [row] = await knex<InboundWebhookRow>('inbound_webhooks')
+      .where({ tenant, inbound_webhook_id: inboundWebhookId })
+      .update({
+        auth_config: authConfig,
+        updated_at: knex.fn.now(),
+      })
+      .returning('*');
+
+    return {
+      webhook: mapInboundWebhook(row),
+      secret,
+    };
+  },
+);

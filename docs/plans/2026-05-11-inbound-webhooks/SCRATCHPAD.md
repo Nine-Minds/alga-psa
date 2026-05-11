@@ -35,6 +35,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F013 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `getInboundWebhook(id)` uses the same auth/permission/mapping path as list and scopes lookup by both `tenant` and `inbound_webhook_id`, so missing or cross-tenant IDs return `null`.
 - (2026-05-11) **F014 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `upsertInboundWebhook` validates input with F011 schemas, checks `inbound_webhook:create/update`, enforces `(tenant, slug)` uniqueness before DB write, writes HMAC/Bearer/path-token secrets to tenant secret storage, returns the generated/provided secret once, and stores only vault path metadata in `auth_config`.
 - (2026-05-11) **F015 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `deleteInboundWebhook` checks `inbound_webhook:delete`, fetches by `(tenant, inbound_webhook_id)`, deletes the config row, and deletes the associated HMAC/Bearer/path-token tenant secret. Delivery rows are retained with nullable `inbound_webhook_id` per the F002 migration rather than cascaded.
+- (2026-05-11) **F016 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `rotateInboundWebhookSecret` checks `inbound_webhook:update`, rejects IP allowlist configs, writes a new generated secret/token to the existing or generated tenant-secret vault path, updates `auth_config` metadata if needed, and returns the new value once.
 - (2026-05-11) **Bundled integrations already in the codebase** — the user-configurable system complements these, not replaces them:
   - **Tanium** (EE) — `ee/server/src/lib/integrations/tanium/` + `taniumGatewayClient.ts`. Outbound sync (devices → assets) + webhook. Uses `ingestNormalizedRmmDeviceSnapshot`.
   - **NinjaOne** (EE) — `ee/server/src/lib/integrations/ninjaone/` — has a full inbound webhook implementation (`webhooks/webhookHandler.ts`, `webhooks/webhookRegistration.ts`, `alerts/alertProcessor.ts`, `alerts/ticketCreator.ts`). The user-configurable inbound webhook system is the generic equivalent.
@@ -81,6 +82,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Type check after F014:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F015:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F016:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References
