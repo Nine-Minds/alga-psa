@@ -85,6 +85,7 @@ interface InboundDeliveryPage {
 
 const DEFAULT_DELIVERY_PAGE_SIZE = 25;
 const MAX_DELIVERY_PAGE_SIZE = 100;
+const SAMPLE_CAPTURE_WINDOW_MS = 5 * 60 * 1000;
 
 function toIso(value: Date | string | null): string | null {
   return value ? new Date(value).toISOString() : null;
@@ -672,5 +673,27 @@ export const getInboundDelivery = withAuth(
       .first();
 
     return row ? mapInboundDelivery(row) : null;
+  },
+);
+
+export const captureSamplePayload = withAuth(
+  async (user, { tenant }, inboundWebhookId: string): Promise<InboundWebhookConfig> => {
+    const { knex } = await createTenantKnex(tenant);
+    await assertInboundWebhookPermission(user, 'update', knex);
+
+    const captureExpiresAt = new Date(Date.now() + SAMPLE_CAPTURE_WINDOW_MS);
+    const [row] = await knex<InboundWebhookRow>('inbound_webhooks')
+      .where({ tenant, inbound_webhook_id: inboundWebhookId })
+      .update({
+        sample_capture_expires_at: captureExpiresAt,
+        updated_at: knex.fn.now(),
+      })
+      .returning('*');
+
+    if (!row) {
+      throw new Error('Inbound webhook not found');
+    }
+
+    return mapInboundWebhook(row);
   },
 );

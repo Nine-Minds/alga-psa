@@ -18,7 +18,7 @@
   { "id": "F018", "description": "Server action `listInboundDeliveries(filter, page)`", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F019", "description": "Server action `getInboundDelivery(id)`", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F020", "description": "Server action `replayInboundDelivery(id)` — re-dispatches against current config, links new row", "implemented": false, "prdRefs": ["Functional Requirements"] },
-  { "id": "F021", "description": "Server action `captureSamplePayload(id)` (toggles capture mode for 5 min)", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F021", "description": "Server action `captureSamplePayload(id)` (toggles capture mode for 5 min)", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F022", "description": "Server action `clearSamplePayload(id)`", "implemented": false, "prdRefs": ["Functional Requirements"] },
   { "id": "F023", "description": "Server action `sendInboundWebhookTest(id, body, headers)` (synthetic in-process dispatch)", "implemented": false, "prdRefs": ["Functional Requirements"] },
 
