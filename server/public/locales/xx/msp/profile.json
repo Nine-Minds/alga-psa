@@ -301,6 +301,16 @@
           "mappingPlaceholder": "11111",
           "workflowTitle": "11111",
           "workflowHelp": "11111"
+        },
+        "sample": {
+          "title": "11111",
+          "help": "11111",
+          "createFirst": "11111",
+          "captureButton": "11111",
+          "captureActive": "11111",
+          "sampleAvailable": "11111",
+          "noSample": "11111",
+          "captureFailed": "11111"
         }
       },
       "stats": {

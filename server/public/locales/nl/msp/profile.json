@@ -301,6 +301,16 @@
           "mappingPlaceholder": "alert.message",
           "workflowTitle": "Workflow",
           "workflowHelp": "Select a workflow to start with the normalized webhook envelope."
+        },
+        "sample": {
+          "title": "Sample payload",
+          "help": "Capture the next verified request for mapping autocomplete.",
+          "createFirst": "Save the webhook before capturing a sample request.",
+          "captureButton": "Capture sample request",
+          "captureActive": "Capture window active until {{expiresAt}}.",
+          "sampleAvailable": "Sample payload captured.",
+          "noSample": "No sample captured yet.",
+          "captureFailed": "Failed to enable sample capture."
         }
       },
       "stats": {

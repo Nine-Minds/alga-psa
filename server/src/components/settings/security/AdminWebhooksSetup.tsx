@@ -40,6 +40,7 @@ import {
   type WebhookSettingsView,
 } from '@/lib/actions/webhookActions';
 import {
+  captureSamplePayload,
   listInboundWebhookActions,
   listInboundDeliveries,
   listInboundWebhooks,
@@ -105,6 +106,7 @@ type InboundWebhookIdentityFormState = {
   workflowId: string;
   fieldMapping: Record<string, string>;
   samplePayload: unknown | null;
+  sampleCaptureExpiresAt: string | Date | null;
 };
 
 type WebhookStatsSnapshot = {
@@ -345,6 +347,7 @@ function InboundWebhooksListView() {
     workflowId: '',
     fieldMapping: {},
     samplePayload: null,
+    sampleCaptureExpiresAt: null,
   });
   const [revealedInboundSecret, setRevealedInboundSecret] = useState<{
     webhookName: string;
@@ -489,6 +492,7 @@ function InboundWebhooksListView() {
                     ? webhook.handlerConfig.fieldMapping
                     : {},
                   samplePayload: webhook.samplePayload,
+                  sampleCaptureExpiresAt: webhook.sampleCaptureExpiresAt,
                 });
                 setIdentityDialogOpen(true);
               }}
@@ -525,6 +529,7 @@ function InboundWebhooksListView() {
       workflowId: '',
       fieldMapping: {},
       samplePayload: null,
+      sampleCaptureExpiresAt: null,
     });
     setIdentityDialogOpen(true);
   }, []);
@@ -555,6 +560,32 @@ function InboundWebhooksListView() {
     () => inboundActions.find((action) => action.name === identityForm.directActionName) ?? null,
     [identityForm.directActionName, inboundActions],
   );
+
+  const sampleCaptureActive = identityForm.sampleCaptureExpiresAt
+    ? new Date(identityForm.sampleCaptureExpiresAt).getTime() > Date.now()
+    : false;
+
+  const handleCaptureSample = useCallback(async () => {
+    if (!identityForm.inboundWebhookId) {
+      return;
+    }
+
+    try {
+      const updated = await captureSamplePayload(identityForm.inboundWebhookId);
+      setIdentityForm((current) => ({
+        ...current,
+        sampleCaptureExpiresAt: updated.sampleCaptureExpiresAt,
+        samplePayload: updated.samplePayload,
+      }));
+      setWebhooks((current) => current.map((webhook) => (
+        webhook.inboundWebhookId === updated.inboundWebhookId ? updated : webhook
+      )));
+      setError(null);
+    } catch (captureError) {
+      console.error('Failed to enable inbound webhook sample capture:', captureError);
+      setError(captureError instanceof Error ? captureError.message : t('security.webhooks.inbound.sample.captureFailed'));
+    }
+  }, [identityForm.inboundWebhookId, t]);
 
   return (
     <div className="space-y-6">
@@ -907,6 +938,37 @@ function InboundWebhooksListView() {
               }}
               options={handlerTypeOptions}
             />
+            <div className="rounded-md border border-gray-200 bg-white p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900">
+                    {t('security.webhooks.inbound.sample.title')}
+                  </h4>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {identityForm.inboundWebhookId
+                      ? t('security.webhooks.inbound.sample.help')
+                      : t('security.webhooks.inbound.sample.createFirst')}
+                  </p>
+                  <div className="mt-2 text-xs text-gray-500">
+                    {sampleCaptureActive
+                      ? t('security.webhooks.inbound.sample.captureActive', {
+                        expiresAt: formatDateTime(identityForm.sampleCaptureExpiresAt as string, neverLabel),
+                      })
+                      : identityForm.samplePayload
+                        ? t('security.webhooks.inbound.sample.sampleAvailable')
+                        : t('security.webhooks.inbound.sample.noSample')}
+                  </div>
+                </div>
+                <Button
+                  id="inbound-webhook-capture-sample"
+                  variant="outline"
+                  disabled={!identityForm.inboundWebhookId}
+                  onClick={() => void handleCaptureSample()}
+                >
+                  {t('security.webhooks.inbound.sample.captureButton')}
+                </Button>
+              </div>
+            </div>
             {identityForm.handlerType === 'direct_action' ? (
               <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
                 <h4 className="text-sm font-medium text-gray-900">
