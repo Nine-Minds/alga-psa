@@ -49,6 +49,31 @@ interface InboundWebhookRowFixture {
   updated_at: Date | string;
 }
 
+interface InboundWebhookDeliveryRowFixture {
+  tenant: string;
+  delivery_id: string;
+  inbound_webhook_id: string | null;
+  idempotency_key: string | null;
+  received_at: Date | string;
+  request_method: string;
+  request_path: string;
+  request_headers: Record<string, string | string[]>;
+  request_body: unknown | null;
+  source_ip: string | null;
+  user_agent: string | null;
+  auth_status: string;
+  dispatch_status: string;
+  handler_outcome: Record<string, unknown> | null;
+  response_status: number | null;
+  response_body: unknown | null;
+  duration_ms: number | null;
+  retry_count: number;
+  is_replay: boolean;
+  replayed_from: string | null;
+  created_at: Date | string;
+  updated_at: Date | string;
+}
+
 function inboundWebhookRow(overrides: Partial<InboundWebhookRowFixture> = {}): InboundWebhookRowFixture {
   const id = overrides.inbound_webhook_id ?? 'webhook-1';
 
@@ -82,6 +107,34 @@ function inboundWebhookRow(overrides: Partial<InboundWebhookRowFixture> = {}): I
     created_by: 'user-1',
     created_at: '2026-05-11T00:00:00.000Z',
     updated_at: '2026-05-11T01:00:00.000Z',
+    ...overrides,
+  };
+}
+
+function inboundDeliveryRow(overrides: Partial<InboundWebhookDeliveryRowFixture> = {}): InboundWebhookDeliveryRowFixture {
+  return {
+    tenant: 'tenant-a',
+    delivery_id: 'delivery-1',
+    inbound_webhook_id: 'webhook-1',
+    idempotency_key: null,
+    received_at: '2026-05-11T00:00:00.000Z',
+    request_method: 'POST',
+    request_path: '/api/inbound/tenant-slug/rmm-alerts',
+    request_headers: {},
+    request_body: { alert: { message: 'Disk full' } },
+    source_ip: '203.0.113.10',
+    user_agent: 'vitest',
+    auth_status: 'verified',
+    dispatch_status: 'dispatched',
+    handler_outcome: { success: true },
+    response_status: 200,
+    response_body: { delivery_id: 'delivery-1' },
+    duration_ms: 12,
+    retry_count: 0,
+    is_replay: false,
+    replayed_from: null,
+    created_at: '2026-05-11T00:00:00.000Z',
+    updated_at: '2026-05-11T00:00:01.000Z',
     ...overrides,
   };
 }
@@ -238,6 +291,38 @@ function makeGetKnex(row: InboundWebhookRowFixture | null) {
 
   const knex = vi.fn((table: string) => {
     if (table !== 'inbound_webhooks') {
+      throw new Error(`Unexpected table ${table}`);
+    }
+
+    return builder;
+  });
+
+  return { knex, builder };
+}
+
+function makeGetDeliveryKnex(row: InboundWebhookDeliveryRowFixture | null) {
+  const whereCalls: Record<string, unknown>[] = [];
+  const builder: any = {
+    where: vi.fn((criteria: Record<string, unknown>) => {
+      whereCalls.push(criteria);
+      return builder;
+    }),
+    first: vi.fn(async () => {
+      if (!row) {
+        return null;
+      }
+
+      const criteria = Object.assign({}, ...whereCalls);
+      return Object.entries(criteria).every(
+        ([key, value]) => row[key as keyof InboundWebhookDeliveryRowFixture] === value,
+      )
+        ? row
+        : null;
+    }),
+  };
+
+  const knex = vi.fn((table: string) => {
+    if (table !== 'inbound_webhook_deliveries') {
       throw new Error(`Unexpected table ${table}`);
     }
 
@@ -564,6 +649,23 @@ describe('inbound webhook server actions', () => {
     expect(createTenantKnex).toHaveBeenLastCalledWith('tenant-a');
     expect(deleteHarness.getBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', inbound_webhook_id: 'webhook-1' });
     expect(deleteHarness.deleteBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', inbound_webhook_id: 'webhook-1' });
+  });
+
+  it('T192: getInboundDelivery blocks cross-tenant delivery lookup', async () => {
+    const { knex, builder } = makeGetDeliveryKnex(
+      inboundDeliveryRow({
+        tenant: 'tenant-b',
+        delivery_id: 'delivery-foreign',
+      }),
+    );
+    createTenantKnex.mockResolvedValue({ knex });
+
+    const { getInboundDelivery } = await import('@/lib/actions/inboundWebhookActions');
+    const result = await getInboundDelivery('delivery-foreign');
+
+    expect(hasPermission).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'inbound_webhook', 'read', knex);
+    expect(builder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', delivery_id: 'delivery-foreign' });
+    expect(result).toBeNull();
   });
 
   it('T082: clearSamplePayload removes the saved sample and capture window', async () => {
