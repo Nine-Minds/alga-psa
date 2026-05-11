@@ -362,6 +362,81 @@ describe('inbound webhook request processor', () => {
     );
   });
 
+  it('T200: signed HMAC createTicket webhook stores the created ticket outcome for the UI log', async () => {
+    dispatchInboundWebhookHandler.mockResolvedValue({
+      action: 'createTicket',
+      entity_type: 'ticket',
+      entity_id: 'ticket-acceptance-1',
+      metadata: {
+        ticket_number: 'T-ACCEPT-1',
+        title: 'Critical disk alert',
+      },
+    });
+    const body = JSON.stringify({
+      alert: {
+        id: 'rmm-alert-200',
+        message: 'Critical disk alert',
+        severity: 'critical',
+      },
+    });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-idempotency-key': 'rmm-alert-200',
+        'x-signature': `sha256=${hmacSignature('top-secret', body)}`,
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    await expect(response.json()).resolves.toEqual({ delivery_id: 'delivery-1' });
+    expect(response.status).toBe(200);
+    expect(lookupInboundWebhookBySlug).toHaveBeenCalledWith(expect.anything(), 'tenant-a', 'rmm-alerts');
+    expect(dispatchInboundWebhookHandler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        webhook: expect.objectContaining({
+          handler_type: 'direct_action',
+          handler_config: expect.objectContaining({
+            action: 'createTicket',
+          }),
+        }),
+        body: {
+          alert: {
+            id: 'rmm-alert-200',
+            message: 'Critical disk alert',
+            severity: 'critical',
+          },
+        },
+      }),
+    );
+    expect(updateInboundDeliveryOutcome).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        deliveryId: 'delivery-1',
+        dispatchStatus: 'dispatched',
+        handlerOutcome: {
+          action: 'createTicket',
+          entity_type: 'ticket',
+          entity_id: 'ticket-acceptance-1',
+          metadata: {
+            ticket_number: 'T-ACCEPT-1',
+            title: 'Critical disk alert',
+          },
+        },
+        responseStatus: 200,
+        responseBody: { delivery_id: 'delivery-1' },
+      }),
+    );
+  });
+
   it('T113: records workflow_run_id in the delivery handler outcome after workflow trigger', async () => {
     lookupInboundWebhookBySlug.mockResolvedValue({
       ...activeHmacWebhook(),

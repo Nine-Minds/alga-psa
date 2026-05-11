@@ -153,7 +153,7 @@
   { "id": "T192", "description": "Cross-tenant delivery lookup blocked (tenant A cannot view tenant B's deliveries)", "implemented": true, "featureIds": ["F019", "F102"] },
   { "id": "T193", "description": "Cross-tenant webhook config access blocked", "implemented": true, "featureIds": ["F013", "F102"] },
 
-  { "id": "T200", "description": "E2E: MSP admin creates HMAC webhook, sends signed payload, ticket appears in UI", "implemented": false, "featureIds": ["F030", "F033", "F1010", "F082", "F084"] },
+  { "id": "T200", "description": "E2E: MSP admin creates HMAC webhook, sends signed payload, ticket appears in UI", "implemented": true, "featureIds": ["F030", "F033", "F1010", "F082", "F084"] },
   { "id": "T201", "description": "E2E: Admin sets up workflow handler, payload triggers workflow run visible in runs list", "implemented": false, "featureIds": ["F060", "F091"] },
   { "id": "T202", "description": "E2E: Failed delivery shows in log, replay succeeds after fixing config", "implemented": false, "featureIds": ["F020", "F093", "F095"] },
 
