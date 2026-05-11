@@ -236,6 +236,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T160 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx` and `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. While adding coverage, a real UI gap was found: the delivery dialog paginated by webhook but lacked a dispatch-status filter. Added `inbound-webhook-delivery-status-filter`, status state, and query wiring so `listInboundDeliveries` receives both `inboundWebhookId` and optional `status`.
 - (2026-05-11) **T161 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Delivery-detail drawer coverage now verifies selected delivery data drives response status, duration, handler error, filtered headers, request body, response body, and formatted JSON sections.
 - (2026-05-11) **T162 implemented** in `server/src/test/unit/inboundWebhooks/deliveryPersistence.test.ts`. Replay persistence coverage now verifies `createInboundDelivery` writes `is_replay=true` and `replayed_from=<original delivery>` when replay callers create the linked delivery row.
+- (2026-05-11) **T163 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookReplay.source.contract.test.ts`. Replay source coverage now verifies `replayInboundDelivery` fetches the current active webhook config by tenant/webhook ID and passes that current row into `dispatchAndRecordOutcome`, so mapping/config changes are reflected on replay.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -814,6 +815,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T162:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/deliveryPersistence.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T163:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookReplay.source.contract.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References
