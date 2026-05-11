@@ -61,7 +61,7 @@
 
   { "id": "F1050", "description": "Invoice action: `markInvoicePaidByExternalId`", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F1051", "description": "Invoice action: `updateInvoiceStatusByExternalId`", "implemented": true, "prdRefs": ["Functional Requirements"] },
-  { "id": "F1052", "description": "Invoice action: idempotent mark-paid (no double-mark on already-paid invoice)", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F1052", "description": "Invoice action: idempotent mark-paid (no double-mark on already-paid invoice)", "implemented": true, "prdRefs": ["Functional Requirements"] },
 
   { "id": "F1060", "description": "Time entry action: `createTimeEntry`", "implemented": false, "prdRefs": ["Functional Requirements"] },
 
