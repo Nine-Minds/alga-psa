@@ -30,4 +30,15 @@ describe('inbound webhook permissions migration and seed', () => {
     expect(permissionMigration).toContain('role_id: adminRole.role_id');
     expect(permissionMigration).toContain('permission_id: permissionId');
   });
+
+  it('T007: does not grant inbound_webhook permissions to non-admin roles by default', () => {
+    expect(permissionMigration).toContain(".where({ tenant, role_name: 'Admin', msp: true })");
+    expect(permissionMigration).not.toContain("role_name: 'Manager'");
+    expect(permissionMigration).not.toContain("role_name: 'Technician'");
+    expect(permissionMigration).not.toContain("role_name: 'Client'");
+    expect(permissionMigration).not.toContain('msp: false');
+
+    const rolePermissionInsertCount = (permissionMigration.match(/role_permissions'\)\.insert/g) ?? []).length;
+    expect(rolePermissionInsertCount).toBe(1);
+  });
 });

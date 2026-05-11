@@ -7,7 +7,7 @@
   { "id": "T004b", "description": "Reserved integration_type collision: user webhook slug `ninjaone` rejected (or auto-namespaced) so it cannot pollute bundled integration mappings", "implemented": true, "featureIds": ["F003"] },
   { "id": "T005", "description": "Migration is idempotent (re-running is safe)", "implemented": true, "featureIds": ["F001", "F002"] },
   { "id": "T006", "description": "`inbound_webhook` permission seeded for admin role", "implemented": true, "featureIds": ["F006"] },
-  { "id": "T007", "description": "Non-admin role does NOT receive inbound_webhook permissions by default", "implemented": false, "featureIds": ["F006"] },
+  { "id": "T007", "description": "Non-admin role does NOT receive inbound_webhook permissions by default", "implemented": true, "featureIds": ["F006"] },
 
   { "id": "T010", "description": "Zod validation rejects upsert with bogus auth_type", "implemented": false, "featureIds": ["F011"] },
   { "id": "T011", "description": "Zod validation rejects HMAC config without signature header name", "implemented": false, "featureIds": ["F011"] },
