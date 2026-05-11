@@ -44,7 +44,7 @@
   { "id": "F053", "description": "Bootstrap import of all package-contributed inbound action registrations on server start", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F054", "description": "Field mapping evaluator: runs JSONata against request body per target field", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F055", "description": "Mapping validation errors recorded as failed delivery with clear error", "implemented": true, "prdRefs": ["Functional Requirements"] },
-  { "id": "F056", "description": "Lookup-miss in `*ByExternalId` actions returns failed delivery (not silent no-op)", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F056", "description": "Lookup-miss in `*ByExternalId` actions returns failed delivery (not silent no-op)", "implemented": true, "prdRefs": ["Functional Requirements"] },
 
   { "id": "F1010", "description": "Ticket action: `createTicket` (registered in `packages/tickets/src/actions/inboundActions.ts`)", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F1011", "description": "Ticket action: `updateTicketByExternalId` (status, priority, assignment, board)", "implemented": true, "prdRefs": ["Functional Requirements"] },
