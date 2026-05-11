@@ -393,6 +393,28 @@
       "decrease": "Abstand in der Ticketliste verringern",
       "increase": "Abstand in der Ticketliste vergrößern",
       "reset": "Abstand in der Ticketliste zurücksetzen"
+    },
+    "print": {
+      "action": "Drucken",
+      "selectedAction_one": "Auswahl drucken ({{count}})",
+      "selectedAction_other": "Auswahl drucken ({{count}})",
+      "title": "Tickets",
+      "selectedTitle_one": "Ausgewählte Tickets ({{count}})",
+      "selectedTitle_other": "Ausgewählte Tickets ({{count}})",
+      "subtitle_one": "{{count}} Ticket",
+      "subtitle_other": "{{count}} Tickets",
+      "noTickets": "Keine Tickets zum Drucken",
+      "columns": {
+        "ticket": "Ticket",
+        "title": "Titel",
+        "client": "Kunde",
+        "status": "Status",
+        "priority": "Priorität",
+        "assigned": "Zugewiesen",
+        "dueDate": "Fälligkeitsdatum"
+      },
+      "emptyValue": "—",
+      "noDueDate": "Kein Fälligkeitsdatum"
     }
   },
   "bulk": {

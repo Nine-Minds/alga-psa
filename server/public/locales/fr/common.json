@@ -40,7 +40,10 @@
     "duplicate": "Dupliquer",
     "openMenu": "Ouvrir le menu",
     "confirmDeletion": "Confirmer la suppression",
-    "saving": "Enregistrement..."
+    "saving": "Enregistrement...",
+    "print": "Imprimer",
+    "printSelected_one": "Imprimer la sélection ({{count}})",
+    "printSelected_other": "Imprimer la sélection ({{count}})"
   },
   "status": {
     "loading": "Chargement...",

@@ -40,7 +40,10 @@
     "duplicate": "55555",
     "openMenu": "55555",
     "confirmDeletion": "55555",
-    "saving": "55555"
+    "saving": "55555",
+    "print": "55555",
+    "printSelected_one": "55555 {{count}} 55555",
+    "printSelected_other": "55555 {{count}} 55555"
   },
   "form": {
     "selectPlaceholder": "55555",

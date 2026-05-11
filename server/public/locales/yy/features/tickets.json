@@ -393,6 +393,28 @@
       "decrease": "55555",
       "increase": "55555",
       "reset": "55555"
+    },
+    "print": {
+      "action": "55555",
+      "selectedAction_one": "55555 {{count}} 55555",
+      "selectedAction_other": "55555 {{count}} 55555",
+      "title": "55555",
+      "selectedTitle_one": "55555 {{count}} 55555",
+      "selectedTitle_other": "55555 {{count}} 55555",
+      "subtitle_one": "55555 {{count}} 55555",
+      "subtitle_other": "55555 {{count}} 55555",
+      "noTickets": "55555",
+      "columns": {
+        "ticket": "55555",
+        "title": "55555",
+        "client": "55555",
+        "status": "55555",
+        "priority": "55555",
+        "assigned": "55555",
+        "dueDate": "55555"
+      },
+      "emptyValue": "55555",
+      "noDueDate": "55555"
     }
   },
   "bulk": {

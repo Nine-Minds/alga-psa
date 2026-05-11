@@ -393,6 +393,28 @@
       "decrease": "Riduci spaziatura elenco ticket",
       "increase": "Aumenta spaziatura elenco ticket",
       "reset": "Reimposta spaziatura elenco ticket"
+    },
+    "print": {
+      "action": "Stampa",
+      "selectedAction_one": "Stampa selezionato ({{count}})",
+      "selectedAction_other": "Stampa selezionati ({{count}})",
+      "title": "Ticket",
+      "selectedTitle_one": "Ticket selezionati ({{count}})",
+      "selectedTitle_other": "Ticket selezionati ({{count}})",
+      "subtitle_one": "{{count}} ticket",
+      "subtitle_other": "{{count}} ticket",
+      "noTickets": "Nessun ticket da stampare",
+      "columns": {
+        "ticket": "Ticket",
+        "title": "Titolo",
+        "client": "Cliente",
+        "status": "Stato",
+        "priority": "Priorità",
+        "assigned": "Assegnato",
+        "dueDate": "Data di scadenza"
+      },
+      "emptyValue": "—",
+      "noDueDate": "Nessuna data di scadenza"
     }
   },
   "bulk": {

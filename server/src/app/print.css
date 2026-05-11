@@ -1,0 +1,112 @@
+.app-print-only {
+  display: none;
+}
+
+@media print {
+  html.app-print-mode,
+  html.app-print-mode body {
+    background: #fff !important;
+  }
+
+  html.app-print-mode body * {
+    visibility: hidden;
+  }
+
+  html.app-print-mode [data-print-hide],
+  html.app-print-mode .toast-region,
+  html.app-print-mode .tooltip {
+    display: none !important;
+  }
+
+  html.app-print-mode [data-print-region],
+  html.app-print-mode [data-print-region] *,
+  html.app-print-mode .app-print-root,
+  html.app-print-mode .app-print-root * {
+    visibility: visible;
+  }
+
+  html.app-print-mode [data-print-region],
+  html.app-print-mode .app-print-root {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100% !important;
+    padding: 16pt;
+    color: #000;
+    background: #fff;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 10pt;
+    line-height: 1.4;
+  }
+
+  html.app-print-mode table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  html.app-print-mode thead {
+    display: table-header-group;
+  }
+
+  html.app-print-mode tr,
+  html.app-print-mode td,
+  html.app-print-mode th {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  html.app-print-mode th,
+  html.app-print-mode td {
+    border-bottom: 1pt solid #d4d4d4;
+    padding: 5pt 6pt;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  html.app-print-mode th {
+    font-weight: 700;
+    color: #111;
+  }
+
+  html.app-print-mode .app-print-table-header {
+    margin-bottom: 10pt;
+    border-bottom: 1pt solid #000;
+    padding-bottom: 6pt;
+  }
+
+  html.app-print-mode .app-print-table-header h2 {
+    margin: 0;
+    font-size: 14pt;
+    font-weight: 700;
+  }
+
+  html.app-print-mode .app-print-table-header p {
+    margin: 3pt 0 0;
+    color: #444;
+    font-size: 9pt;
+  }
+
+  html.app-print-mode .app-print-table-empty {
+    color: #555;
+    font-style: italic;
+  }
+
+  html.app-print-mode .print-muted {
+    color: #444 !important;
+  }
+
+  html.app-print-mode .tickets-print-number-column {
+    width: 10%;
+    white-space: nowrap;
+  }
+
+  html.app-print-mode .tickets-print-title-column {
+    width: 30%;
+  }
+
+  html.app-print-mode .tickets-print-date-column {
+    width: 12%;
+    white-space: nowrap;
+  }
+}

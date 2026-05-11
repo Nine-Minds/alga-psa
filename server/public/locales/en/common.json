@@ -40,7 +40,10 @@
     "duplicate": "Duplicate",
     "openMenu": "Open menu",
     "confirmDeletion": "Confirm Deletion",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "print": "Print",
+    "printSelected_one": "Print selected ({{count}})",
+    "printSelected_other": "Print selected ({{count}})"
   },
   "form": {
     "selectPlaceholder": "Select...",

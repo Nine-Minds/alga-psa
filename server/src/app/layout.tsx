@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "./print.css";
 // Global vendor CSS for react-big-calendar is added via a <link> tag below
 import { ThemedToaster } from '@alga-psa/ui/components/ThemedToaster';
 import { getCurrentTenant, getTenantBrandingByDomain } from '@alga-psa/tenancy/actions';

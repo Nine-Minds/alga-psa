@@ -393,6 +393,28 @@
       "decrease": "Decrease ticket list spacing",
       "increase": "Increase ticket list spacing",
       "reset": "Reset ticket list spacing"
+    },
+    "print": {
+      "action": "Imprimir",
+      "selectedAction_one": "Imprimir selecionado ({{count}})",
+      "selectedAction_other": "Imprimir selecionados ({{count}})",
+      "title": "Tickets",
+      "selectedTitle_one": "Tickets selecionados ({{count}})",
+      "selectedTitle_other": "Tickets selecionados ({{count}})",
+      "subtitle_one": "{{count}} ticket",
+      "subtitle_other": "{{count}} tickets",
+      "noTickets": "Nenhum ticket para imprimir",
+      "columns": {
+        "ticket": "Ticket",
+        "title": "Título",
+        "client": "Cliente",
+        "status": "Status",
+        "priority": "Prioridade",
+        "assigned": "Atribuído",
+        "dueDate": "Data de vencimento"
+      },
+      "emptyValue": "—",
+      "noDueDate": "Sem data de vencimento"
     }
   },
   "bulk": {

@@ -393,6 +393,28 @@
       "decrease": "Afstand ticketlijst verkleinen",
       "increase": "Afstand ticketlijst vergroten",
       "reset": "Afstand ticketlijst herstellen"
+    },
+    "print": {
+      "action": "Afdrukken",
+      "selectedAction_one": "Geselecteerde afdrukken ({{count}})",
+      "selectedAction_other": "Geselecteerde afdrukken ({{count}})",
+      "title": "Tickets",
+      "selectedTitle_one": "Geselecteerde tickets ({{count}})",
+      "selectedTitle_other": "Geselecteerde tickets ({{count}})",
+      "subtitle_one": "{{count}} ticket",
+      "subtitle_other": "{{count}} tickets",
+      "noTickets": "Geen tickets om af te drukken",
+      "columns": {
+        "ticket": "Ticket",
+        "title": "Titel",
+        "client": "Klant",
+        "status": "Status",
+        "priority": "Prioriteit",
+        "assigned": "Toegewezen",
+        "dueDate": "Vervaldatum"
+      },
+      "emptyValue": "—",
+      "noDueDate": "Geen vervaldatum"
     }
   },
   "bulk": {

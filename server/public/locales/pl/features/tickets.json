@@ -393,6 +393,28 @@
       "decrease": "Zmniejsz odstępy na liście zgłoszeń",
       "increase": "Zwiększ odstępy na liście zgłoszeń",
       "reset": "Resetuj odstępy na liście zgłoszeń"
+    },
+    "print": {
+      "action": "Drukuj",
+      "selectedAction_one": "Drukuj zaznaczone ({{count}})",
+      "selectedAction_other": "Drukuj zaznaczone ({{count}})",
+      "title": "Zgłoszenia",
+      "selectedTitle_one": "Zaznaczone zgłoszenia ({{count}})",
+      "selectedTitle_other": "Zaznaczone zgłoszenia ({{count}})",
+      "subtitle_one": "{{count}} zgłoszenie",
+      "subtitle_other": "{{count}} zgłoszeń",
+      "noTickets": "Brak zgłoszeń do wydruku",
+      "columns": {
+        "ticket": "Zgłoszenie",
+        "title": "Tytuł",
+        "client": "Klient",
+        "status": "Status",
+        "priority": "Priorytet",
+        "assigned": "Przypisane do",
+        "dueDate": "Termin"
+      },
+      "emptyValue": "—",
+      "noDueDate": "Brak terminu"
     }
   },
   "bulk": {

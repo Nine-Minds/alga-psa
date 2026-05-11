@@ -5,16 +5,19 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Activity,
   ActivityFilters,
+  ActivitySortBy,
   ActivityType,
-  ActivityResponse,
   IPriority,
   IStatus,
   ITag,
+  ItemType,
   ProjectWithPhases,
+  TaggedEntityType,
 } from '@alga-psa/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { RefreshCw, List, LayoutList, Printer } from 'lucide-react';
+import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { RefreshCw, List, LayoutList } from 'lucide-react';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import './userActivitiesPrint.css';
 import { fetchActivities, getUserActivityGroups, type ActivityGroup } from '@alga-psa/workflows/actions';
@@ -48,6 +51,32 @@ const DEFAULT_FILTERS: ActivityFilters = {
 };
 
 type ListViewMode = 'flat' | 'grouped';
+
+const PRINT_FALLBACK_PAGE_SIZE = 500;
+
+function dedupeRecurringActivities(activities: Activity[]): Activity[] {
+  const uniqueUpcomingActivities: Activity[] = [];
+  const addedRecurringSeriesOnPage = new Set<string>();
+
+  for (const activity of activities) {
+    if (activity.type === ActivityType.SCHEDULE) {
+      const scheduleActivity = activity as ScheduleActivity;
+      if (scheduleActivity.isRecurring) {
+        const seriesIdentifier = `${scheduleActivity.title}-${scheduleActivity.workItemId || 'no-item'}-${scheduleActivity.workItemType || 'no-type'}`;
+        if (!addedRecurringSeriesOnPage.has(seriesIdentifier)) {
+          uniqueUpcomingActivities.push(scheduleActivity);
+          addedRecurringSeriesOnPage.add(seriesIdentifier);
+        }
+      } else {
+        uniqueUpcomingActivities.push(activity);
+      }
+    } else {
+      uniqueUpcomingActivities.push(activity);
+    }
+  }
+
+  return uniqueUpcomingActivities;
+}
 
 export function ActivitiesDataTableSection({
   title,
@@ -110,7 +139,6 @@ export function ActivitiesDataTableSection({
   const {
     getActivities,
     invalidateCache,
-    getCacheStats,
     isLoading,
     isInitialLoad
   } = useActivitiesCache();
@@ -137,13 +165,16 @@ export function ActivitiesDataTableSection({
 
   // User-defined activity groups (shared between GroupedActivitiesView + PrintableActivitiesView)
   const [activityGroups, setActivityGroups] = useState<ActivityGroup[]>([]);
+  const [printActivities, setPrintActivities] = useState<Activity[] | null>(null);
 
-  const loadActivityGroups = useCallback(async () => {
+  const loadActivityGroups = useCallback(async (): Promise<ActivityGroup[]> => {
     try {
       const groups = await getUserActivityGroups();
       setActivityGroups(groups);
+      return groups;
     } catch (err) {
       console.error('Error loading activity groups:', err);
+      return [];
     }
   }, []);
 
@@ -160,11 +191,11 @@ export function ActivitiesDataTableSection({
   const [totalItems, setTotalItems] = useState(0);
 
   // Sort state (server-side)
-  const [sortBy, setSortBy] = useState<string | undefined>(undefined);
+  const [sortBy, setSortBy] = useState<ActivitySortBy | undefined>(undefined);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const handleSortChange = useCallback((nextSortBy: string, nextDirection: 'asc' | 'desc') => {
-    setSortBy(nextSortBy);
+    setSortBy(nextSortBy as ActivitySortBy);
     setSortDirection(nextDirection);
     setCurrentPage(1); // reset to first page on sort change
   }, []);
@@ -188,19 +219,19 @@ export function ActivitiesDataTableSection({
   // Load projects with phases + statuses for the filter tree on mount
   useEffect(() => {
     ctx.getProjectsWithPhases()
-      .then((data: any) => {
+      .then((data: unknown) => {
         if (!isActionPermissionError(data)) {
-          setProjects(data);
+          setProjects(data as ProjectWithPhases[]);
         }
       })
-      .catch((err: any) => console.error('Error loading projects with phases:', err));
+      .catch((err: unknown) => console.error('Error loading projects with phases:', err));
   }, [ctx]);
 
   // Load boards and ticket statuses on mount
   useEffect(() => {
     Promise.all([
       getAllBoards(true),
-      getStatuses('ticket' as any),
+      getStatuses('ticket' as ItemType),
     ])
       .then(([boardsData, statusesData]) => {
         setBoards(boardsData || []);
@@ -212,8 +243,8 @@ export function ActivitiesDataTableSection({
   // Load tags on mount (for both ticket and project task filters)
   useEffect(() => {
     Promise.all([
-      findAllTagsByType('ticket' as any),
-      findAllTagsByType('project_task' as any),
+      findAllTagsByType('ticket' as TaggedEntityType),
+      findAllTagsByType('project_task' as TaggedEntityType),
     ])
       .then(([tt, pt]) => {
         setTicketTags(tt || []);
@@ -225,16 +256,18 @@ export function ActivitiesDataTableSection({
   // Use useCallback to memoize loadActivities with cache.
   // In grouped mode, we load ALL activities (no pagination) so DnD works across
   // the full set. Uses a large page size as a practical upper bound.
+  const getEffectiveFilters = useCallback((): ActivityFilters => ({
+    ...filters,
+    types: filters.types && filters.types.length > 0
+      ? filters.types
+      : Object.values(ActivityType),
+    sortBy,
+    sortDirection,
+  }), [filters, sortBy, sortDirection]);
+
   const loadActivities = useCallback(async () => {
     try {
-      const effectiveFilters: ActivityFilters = {
-        ...filters,
-        types: filters.types && filters.types.length > 0
-          ? filters.types
-          : Object.values(ActivityType),
-        sortBy: sortBy as any,
-        sortDirection,
-      };
+      const effectiveFilters = getEffectiveFilters();
 
       const effectivePage = listViewMode === 'grouped' ? 1 : currentPage;
       const effectivePageSize = listViewMode === 'grouped' ? 500 : pageSize;
@@ -252,7 +285,7 @@ export function ActivitiesDataTableSection({
       console.error(`Error loading activities:`, err);
       setError(t('table.errors.loadFailed', { defaultValue: 'Failed to load activities. Please try again later.' }));
     }
-  }, [filters, currentPage, pageSize, getActivities, sortBy, sortDirection, listViewMode, t]);
+  }, [currentPage, pageSize, getActivities, getEffectiveFilters, listViewMode, t]);
 
   // useEffect to trigger loadActivities when filters or pagination changes
   useEffect(() => {
@@ -276,16 +309,25 @@ export function ActivitiesDataTableSection({
     setCurrentPage(1);
   }, [setSavedFilters]);
 
-  const handlePrint = useCallback(() => {
-    const html = document.documentElement;
-    html.classList.add('ua-print-mode');
-    const cleanup = () => {
-      html.classList.remove('ua-print-mode');
-      window.removeEventListener('afterprint', cleanup);
-    };
-    window.addEventListener('afterprint', cleanup);
-    // Give the browser a tick to apply the class before opening the dialog
-    setTimeout(() => window.print(), 50);
+  const preparePrintActivities = useCallback(async () => {
+    if (listViewMode === 'grouped') {
+      await loadActivityGroups();
+    }
+
+    const effectiveFilters = getEffectiveFilters();
+    const printPageSize = Math.max(
+      totalItems,
+      activities.length,
+      pageSize,
+      PRINT_FALLBACK_PAGE_SIZE
+    );
+
+    const result = await fetchActivities(effectiveFilters, 1, printPageSize);
+    setPrintActivities(dedupeRecurringActivities(result.activities));
+  }, [activities.length, getEffectiveFilters, listViewMode, loadActivityGroups, pageSize, totalItems]);
+
+  const cleanupPrintActivities = useCallback(() => {
+    setPrintActivities(null);
   }, []);
 
   const handlePageChange = useCallback((newPage: number) => {
@@ -297,28 +339,9 @@ export function ActivitiesDataTableSection({
     setCurrentPage(1); // Reset to first page when changing page size
   }, []);
 
-  const filteredActivitiesForTable = useMemo(() => {
-    const uniqueUpcomingActivities: Activity[] = [];
-    const addedRecurringSeriesOnPage = new Set<string>();
-
-    for (const activity of activities) {
-      if (activity.type === ActivityType.SCHEDULE) {
-        const scheduleActivity = activity as ScheduleActivity;
-        if (scheduleActivity.isRecurring) {
-          const seriesIdentifier = `${scheduleActivity.title}-${scheduleActivity.workItemId || 'no-item'}-${scheduleActivity.workItemType || 'no-type'}`;
-          if (!addedRecurringSeriesOnPage.has(seriesIdentifier)) {
-            uniqueUpcomingActivities.push(scheduleActivity);
-            addedRecurringSeriesOnPage.add(seriesIdentifier);
-          }
-        } else {
-          uniqueUpcomingActivities.push(scheduleActivity);
-        }
-      } else {
-        uniqueUpcomingActivities.push(activity);
-      }
-    }
-    return uniqueUpcomingActivities;
-  }, [activities]);
+  const filteredActivitiesForTable = useMemo(() => (
+    dedupeRecurringActivities(activities)
+  ), [activities]);
  
   return (
     <>
@@ -342,16 +365,15 @@ export function ActivitiesDataTableSection({
             {t('table.actions.refresh', { defaultValue: 'Refresh' })}
           </Button>
           <div className="w-px h-6 bg-border" />
-          <Button
+          <PrintButton
             id={`${id}-print-button`}
             variant="outline"
             size="sm"
-            onClick={handlePrint}
             disabled={isLoading || activities.length === 0}
-          >
-            <Printer className="h-4 w-4 mr-2" />
-            {t('table.actions.print', { defaultValue: 'Print' })}
-          </Button>
+            label={t('table.actions.print', { defaultValue: 'Print' })}
+            onBeforePrint={preparePrintActivities}
+            onAfterPrint={cleanupPrintActivities}
+          />
         </div>
       </CardHeader>
       <CardContent>
@@ -383,7 +405,9 @@ export function ActivitiesDataTableSection({
           <GroupedActivitiesView
             activities={filteredActivitiesForTable}
             serverGroups={activityGroups}
-            onGroupsChange={loadActivityGroups}
+            onGroupsChange={async () => {
+              await loadActivityGroups();
+            }}
             onActionComplete={handleRefresh}
           />
         ) : (
@@ -405,7 +429,7 @@ export function ActivitiesDataTableSection({
       </CardContent>
     </Card>
     <PrintableActivitiesView
-      activities={filteredActivitiesForTable}
+      activities={printActivities ?? filteredActivitiesForTable}
       grouped={listViewMode === 'grouped'}
       serverGroups={activityGroups}
       ungroupedCollapsed={ungroupedCollapsed}

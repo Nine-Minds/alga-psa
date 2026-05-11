@@ -393,6 +393,28 @@
       "decrease": "Decrease ticket list spacing",
       "increase": "Increase ticket list spacing",
       "reset": "Reset ticket list spacing"
+    },
+    "print": {
+      "action": "Print",
+      "selectedAction_one": "Print selected ({{count}})",
+      "selectedAction_other": "Print selected ({{count}})",
+      "title": "Tickets",
+      "selectedTitle_one": "Selected Tickets ({{count}})",
+      "selectedTitle_other": "Selected Tickets ({{count}})",
+      "subtitle_one": "{{count}} ticket",
+      "subtitle_other": "{{count}} tickets",
+      "noTickets": "No tickets to print",
+      "columns": {
+        "ticket": "Ticket",
+        "title": "Title",
+        "client": "Client",
+        "status": "Status",
+        "priority": "Priority",
+        "assigned": "Assigned",
+        "dueDate": "Due Date"
+      },
+      "emptyValue": "—",
+      "noDueDate": "No due date"
     }
   },
   "bulk": {

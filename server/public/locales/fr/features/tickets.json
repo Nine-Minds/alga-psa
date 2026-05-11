@@ -393,6 +393,28 @@
       "decrease": "Réduire l’espacement des listes de tickets",
       "increase": "Augmenter l'espacement des listes de tickets",
       "reset": "Réinitialiser l'espacement de la liste de tickets"
+    },
+    "print": {
+      "action": "Imprimer",
+      "selectedAction_one": "Imprimer la sélection ({{count}})",
+      "selectedAction_other": "Imprimer la sélection ({{count}})",
+      "title": "Tickets",
+      "selectedTitle_one": "Tickets sélectionnés ({{count}})",
+      "selectedTitle_other": "Tickets sélectionnés ({{count}})",
+      "subtitle_one": "{{count}} ticket",
+      "subtitle_other": "{{count}} tickets",
+      "noTickets": "Aucun ticket à imprimer",
+      "columns": {
+        "ticket": "Ticket",
+        "title": "Titre",
+        "client": "Client",
+        "status": "Statut",
+        "priority": "Priorité",
+        "assigned": "Assigné",
+        "dueDate": "Date d'échéance"
+      },
+      "emptyValue": "—",
+      "noDueDate": "Aucune date d'échéance"
     }
   },
   "bulk": {

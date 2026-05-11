@@ -40,7 +40,10 @@
     "duplicate": "Dupliceren",
     "openMenu": "Menu openen",
     "confirmDeletion": "Verwijderen bevestigen",
-    "saving": "Opslaan..."
+    "saving": "Opslaan...",
+    "print": "Afdrukken",
+    "printSelected_one": "Geselecteerde afdrukken ({{count}})",
+    "printSelected_other": "Geselecteerde afdrukken ({{count}})"
   },
   "status": {
     "loading": "Bezig met laden...",
