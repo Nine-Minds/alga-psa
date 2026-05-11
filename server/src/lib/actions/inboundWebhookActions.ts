@@ -697,3 +697,25 @@ export const captureSamplePayload = withAuth(
     return mapInboundWebhook(row);
   },
 );
+
+export const clearSamplePayload = withAuth(
+  async (user, { tenant }, inboundWebhookId: string): Promise<InboundWebhookConfig> => {
+    const { knex } = await createTenantKnex(tenant);
+    await assertInboundWebhookPermission(user, 'update', knex);
+
+    const [row] = await knex<InboundWebhookRow>('inbound_webhooks')
+      .where({ tenant, inbound_webhook_id: inboundWebhookId })
+      .update({
+        sample_payload: null,
+        sample_capture_expires_at: null,
+        updated_at: knex.fn.now(),
+      })
+      .returning('*');
+
+    if (!row) {
+      throw new Error('Inbound webhook not found');
+    }
+
+    return mapInboundWebhook(row);
+  },
+);
