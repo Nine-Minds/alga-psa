@@ -3,8 +3,9 @@ import KeycloakProvider from "next-auth/providers/keycloak";
 import GoogleProvider from "next-auth/providers/google";
 import AzureADProvider from "next-auth/providers/azure-ad";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import type { NextAuthConfig } from "next-auth";
 import "@alga-psa/auth/types/next-auth";
+
+type NextAuthConfig = any;
 // AnalyticsEvents imported dynamically when needed to avoid circular dependency
 // import { getAdminConnection } from "@alga-psa/db";
 import {
@@ -1670,7 +1671,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
     },
     cookies: NEXTAUTH_COOKIES,
     callbacks: {
-        async signIn({ user, account, credentials, profile, ...context }) {
+        async signIn({ user, account, credentials, profile, ...context }: any) {
             const providerId = account?.provider;
             const extendedUser = user as ExtendedUser | undefined;
             const request = (context as any).request; // NextAuth v5 runtime provides request
@@ -1849,7 +1850,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
 
             return true; // Allow sign in
         },
-	        async jwt({ token, user, trigger }) {
+	        async jwt({ token, user, trigger }: any) {
 	            console.log('JWT callback - initial token:', {
 	                id: token.id,
 	                email: token.email,
@@ -2033,7 +2034,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
 
             return result;
         },
-        async session({ session, token }) {
+        async session({ session, token }: any) {
             if (token.error === "TokenValidationError") {
                 // If there was an error during token validation, return a special session
                 return { expires: "0" };
@@ -2097,7 +2098,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
 
             return session;
         },
-        async redirect({ url, baseUrl }) {
+        async redirect({ url, baseUrl }: any) {
             return resolveSafeAuthRedirect({ url, baseUrl });
         },
     },
@@ -2498,7 +2499,7 @@ export const options: NextAuthConfig = {
     },
     cookies: NEXTAUTH_COOKIES,
     callbacks: {
-        async signIn({ user, account, credentials }) {
+        async signIn({ user, account, credentials }: any) {
             // Track successful login
             // const extendedUser = user as ExtendedUser;
             // analytics.capture(AnalyticsEvents.USER_LOGGED_IN, {
@@ -2628,7 +2629,7 @@ export const options: NextAuthConfig = {
 
             return true; // Allow sign in
         },
-        async jwt({ token, user, trigger }) {
+        async jwt({ token, user, trigger }: any) {
             console.log('JWT callback - initial token:', {
                 id: token.id,
                 email: token.email,
@@ -2811,7 +2812,7 @@ export const options: NextAuthConfig = {
 
             return result;
         },
-        async session({ session, token }) {
+        async session({ session, token }: any) {
             if (token.error === "TokenValidationError") {
                 // If there was an error during token validation, return a special session
                 return { expires: "0" };
@@ -2875,7 +2876,7 @@ export const options: NextAuthConfig = {
 
             return session;
         },
-        async redirect({ url, baseUrl }) {
+        async redirect({ url, baseUrl }: any) {
             return resolveSafeAuthRedirect({ url, baseUrl });
         },
     },
