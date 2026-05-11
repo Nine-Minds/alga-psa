@@ -26,6 +26,7 @@ export const PRODUCT_CAPABILITIES = {
     'clients',
     'contacts',
     'knowledge_base',
+    'reports',
     'settings',
     'client_portal',
     'email_to_ticket',
@@ -51,7 +52,7 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
   },
   {
     group: 'msp_core_helpdesk',
-    staticPrefixes: ['/msp/tickets', '/msp/clients', '/msp/contacts', '/msp/knowledge-base', '/msp/settings', '/msp/profile', '/msp/security-settings'],
+    staticPrefixes: ['/msp/tickets', '/msp/clients', '/msp/contacts', '/msp/knowledge-base', '/msp/reports', '/msp/settings', '/msp/profile', '/msp/security-settings'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
   },
   {
@@ -71,7 +72,6 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
       '/msp/workflow-control',
       '/msp/surveys',
       '/msp/extensions',
-      '/msp/reports',
       '/msp/service-requests',
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'upgrade_boundary' },
@@ -129,6 +129,7 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/statuses',
       '/api/v1/priorities',
       '/api/v1/tags',
+      '/api/v1/knowledge-base',
       '/api/v1/kb-articles',
       '/api/v1/email',
       '/api/email/oauth',

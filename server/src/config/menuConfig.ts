@@ -92,6 +92,12 @@ export const navigationSections: NavigationSection[] = [
         href: '/msp/tickets'
       },
       {
+        name: 'Reports',
+        translationKey: 'nav.billing.reports',
+        icon: FileBarChart,
+        href: '/msp/reports'
+      },
+      {
         name: 'Service Requests',
         translationKey: 'nav.serviceRequests',
         icon: LayoutTemplate,
