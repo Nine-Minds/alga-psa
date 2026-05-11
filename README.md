@@ -1,150 +1,220 @@
-# Open Source MSP Professional Services Automation (PSA)
+# Alga PSA: Open-Source MSP Professional Services Automation
 
-A comprehensive Professional Services Automation platform designed for Managed Service Providers (MSPs). This open-source solution helps MSPs streamline operations, manage client relationships, track time and billing, and improve service delivery.
+Alga PSA is a professional services automation platform built for Managed Service Providers. It brings client records, service tickets, time tracking, contracts, billing, invoicing, documents, assets, reporting, and automation into one MSP-focused system.
 
-## Features
+It is designed for teams that want more control over their PSA stack: self-hostable Community Edition code, a modern TypeScript/PostgreSQL architecture, and an Enterprise Edition path for commercially licensed modules and larger deployments.
 
-### Core Functionality
-- **Asset Management**: Track and manage client assets, maintenance schedules, and relationships
-- **Automation Hub**: Create and manage TypeScript-based workflows with event-based triggers
-- **Event Bus System**: Redis-based pub/sub messaging for asynchronous processing and system events
-- **Email Notifications**: Templated email notifications for tickets, invoices, and project updates, powered by the event bus
-- **Billing & Invoicing**: Flexible billing cycles, international tax support, and automated invoicing
-  - Supports contract purchase orders (PO number on invoices; advisory PO limits)
-- **Client Management**: Comprehensive client profiles and relationship tracking
-- **Document Management**: Centralized document repository with version control
-- **Project Management**: Project tracking, task management, and resource allocation
-- **Support Ticketing**: Incident tracking and resolution management
-- **Time Management**: Time tracking with automatic interval tracking, timesheet approval, and utilization reporting
-- **Reporting & Analytics**: Customizable reports and business intelligence
-- **Security**: Role-based access control (RBAC) and attribute-based access control (ABAC)
+## Why MSPs look at Alga PSA
 
-### Advanced Features
-- **International Tax Support**: Handle complex tax scenarios across jurisdictions
-  - Composite taxes
-  - Threshold-based tax rates
-  - Tax holidays
-  - Reverse charge mechanisms
-- **Flexible Billing Cycles**: Customizable per company
-  - Weekly, bi-weekly, monthly, quarterly options
-  - Proration support
-  - Approval-based time entry billing
-  - Unapproved time entry rollover
-- **Automatic Interval Tracking**: Intelligent time tracking for ticket work
-  - Automatic capture of ticket viewing sessions
-  - Local browser storage with IndexedDB
-  - Interval management with merging and adjustment capabilities
-  - Seamless conversion to billable time entries
-  - Auto-close mechanism for abandoned intervals
-- **Automation Hub**: Powerful workflow automation system
-  - TypeScript-based workflow definitions
-  - Event-driven workflow triggers
-  - Visual workflow editor with code completion
-  - Workflow versioning and history
-  - Template library for common automation patterns
+MSP operations break down when tickets, contracts, time, and invoices live in separate tools. Teams lose billable time, service managers chase updates, and owners have a harder time seeing whether client work is profitable.
 
-## Technical Architecture
+Alga PSA is built around the way MSPs operate with clients:
 
-- **Frontend**: Next.js application
-- **Backend**: Node.js server
-- **Database**: PostgreSQL with row-level security
-- **Event Processing**: Redis-based event bus with Zod schema validation
-- **Workflow Engine**: Event-sourced workflow system with TypeScript support
-- **Real-time Collaboration**: Hocuspocus integration
-- **Authentication**: NextAuth.js with multi-portal support (MSP and Client Portal)
-- **UI Components**: Radix-based component library
+- **Tickets tied to clients, contacts, assets, and service history** so the team has context before work starts.
+- **Time and approvals connected to billing** so billable work can move toward invoices with less duplicate entry.
+- **Contracts, recurring services, tax, and invoice workflows** for the financial side of service delivery.
+- **Client portal and document workflows** so clients have a clearer place to submit requests, view information, and follow progress.
+- **Workflow automation and an event bus** for teams that need repeatable handoffs, notifications, and business processes.
+- **Open-source core with self-hosting support** for MSPs and technical teams that want deployment and data control.
 
-## Getting Started
+## Features at a glance
 
-For detailed setup instructions, please refer to our [Complete Setup Guide](docs/getting-started/setup_guide.md) or [Setup Guide for Windows](docs/getting-started/setup_guide_windows.md). The guide covers:
-- Prerequisites and system requirements
-- Installation steps for both Community and Enterprise editions
-- Environment configuration
-- Security setup
-- Verification steps
+### Service desk and client operations
 
-Note: For production-like persistence, both CE and EE prebuilt compose files define named volumes for the database (`postgres_data`) and uploaded documents (`files_data`). These volumes are created automatically and ensure data survives container restarts and upgrades. See the Production section in the setup guide for backup/restore examples.
+- Support ticketing for client requests, incidents, and follow-up work
+- Client, contact, and company management
+- Client portal support for separate MSP and client-facing access
+- Email notifications for tickets, invoices, and project updates
+- Document management with version control
+- Asset management for client equipment, maintenance schedules, and relationships
+- Project and task management for longer-running client work
+
+### Time, contracts, billing, and invoicing
+
+- Time tracking with approval workflows and utilization reporting
+- Automatic interval tracking for ticket work, stored in the browser with IndexedDB
+- Conversion of tracked intervals into time entries
+- Flexible billing cycles by company, including weekly, bi-weekly, monthly, and quarterly billing
+- Proration support, approval-based time billing, and unapproved time rollover
+- Contract purchase order support, including PO numbers on invoices and advisory PO limits
+- International tax support, including composite taxes, threshold-based rates, tax holidays, and reverse charge scenarios
+
+### Automation, reporting, and controls
+
+- Automation Hub for TypeScript-based workflows with event-driven triggers
+- Workflow editor with code completion, versioning, history, and templates
+- Redis-backed event processing for asynchronous work and system events
+- Reporting and analytics for operational visibility
+- Role-based access control (RBAC) and attribute-based access control (ABAC)
+- Multi-portal authentication for MSP users and client portal users
+
+Some capabilities may depend on edition, deployment configuration, or enabled feature flags. See the setup and architecture docs for implementation details.
+
+## Product screenshots
+
+These images link directly to screenshots from the [Alga PSA feature tour](https://www.nineminds.com/AlgaPSA-features).
+
+| Dashboard and service desk | Billing and time |
+| --- | --- |
+| <img src="https://www.nineminds.com/imported-media/Overview%20Dashboard.png" alt="Alga PSA overview dashboard" width="420"> | <img src="https://www.nineminds.com/imported-media/Billing%20dashboard.png" alt="Alga PSA billing dashboard" width="420"> |
+| Home dashboard with setup cards, metrics, and quick links. | Contracts, billing, and invoice-related workflows in one billing area. |
+| <img src="https://www.nineminds.com/imported-media/Ticketing-1.gif" alt="Alga PSA ticketing screen" width="420"> | <img src="https://www.nineminds.com/imported-media/time%20entry%20select%20time%20period.png" alt="Alga PSA time entry screen" width="420"> |
+| Ticketing views for client requests, assignment, attachments, and follow-up. | Time entry views for recording and reviewing work before billing. |
+| <img src="https://www.nineminds.com/imported-media/Workflows.png" alt="Alga PSA workflows screen" width="420"> | <img src="https://www.nineminds.com/imported-media/Schedule%20view.png" alt="Alga PSA schedule view" width="420"> |
+| Workflow tools for repeatable processes and handoffs. | Schedule views for dispatch and calendar-based work planning. |
+
+## Quick start
+
+For a full installation, use the [Complete Setup Guide](docs/getting-started/setup_guide.md). It covers release selection, secrets, environment configuration, Docker Compose, initial login credentials, persistence, backups, and production notes.
+
+The current CE prebuilt Docker Compose path is below. Before running these commands, follow the setup guide to create the required `secrets/` directory and `server/.env` file.
+
+```bash
+git clone https://github.com/nine-minds/alga-psa.git
+cd alga-psa
+
+./scripts/set-image-tag.sh
+
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+  --env-file server/.env --env-file .env.image up -d
+```
+
+The prebuilt stack creates named volumes for PostgreSQL data and uploaded files so data survives container restarts and upgrades. See the setup guide for backup and restore procedures.
+
+After the first successful boot, the server logs print a seeded workspace admin account. Tail the logs and update the password before using the system in production.
+
+```bash
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+  --env-file server/.env --env-file .env.image logs -f
+```
+
+### Requirements
+
+- Docker Engine 24.0.0 or later
+- Docker Compose v2.20.0 or later
+- Git
+- Node.js `>=20 <25` for source development
+
+For Windows-specific setup, see the [Windows Setup Guide](docs/getting-started/setup_guide_windows.md).
+
+## Technical architecture
+
+Alga PSA is a TypeScript monorepo with a Next.js application, shared domain packages, worker services, and Docker-based deployment paths.
+
+| Area | Implementation |
+| --- | --- |
+| Frontend | Next.js application with React, Tailwind, Radix-based components, and shared UI packages |
+| Backend | Next.js API routes running on Node.js, shared domain packages, and a dedicated workflow worker service |
+| Database | PostgreSQL with row-level security for tenant isolation |
+| Event processing | Redis-backed event bus with Zod schema validation for asynchronous system events |
+| Workflow execution | Dedicated workflow worker service for processing workflow jobs outside the request path |
+| Real-time collaboration | Hocuspocus/Yjs for collaborative document editing |
+| Authentication | NextAuth.js with separate MSP and client portal access surfaces |
+| Packages | npm workspaces and Nx-managed `@alga-psa/*` packages for billing, clients, tickets, documents, scheduling, reporting, integrations, and shared infrastructure |
+| Deployment | Docker Compose for CE/EE stacks, named volumes for PostgreSQL and files, Docker secrets, PgBouncer, and Helm assets for Kubernetes-oriented deployments |
+| Extensions and API | Extension SDK, client SDK docs, API docs, and OpenAPI registry material for integrations and custom workflows |
+
+Useful technical docs:
+
+- [Architecture Overview](docs/architecture/overview.md)
+- [Package Build System](docs/architecture/package-build-system.md)
+- [Docker Compose Structure](docs/getting-started/docker_compose.md)
+- [Secrets Management](docs/security/secrets_management.md)
+- [API Overview](docs/api/api_overview.md)
+- [OpenAPI Registry Integration](docs/openapi/registry-integration.md)
+- [Client SDK](docs/client-sdk/README.md)
+- [Inbound Email](docs/inbound-email/README.md)
+- [Testing Standards](docs/reference/testing-standards.md)
 
 ## Documentation
 
-### Setup & Configuration
-- [Complete Setup Guide](docs/getting-started/setup_guide.md) - Step-by-step setup instructions
-- [Configuration Guide](docs/getting-started/configuration_guide.md) - Detailed configuration options
-- [Development Guide](docs/getting-started/development_guide.md) - Development workflow and best practices
+### Setup and configuration
 
-### Architecture & Components
-- [Package Build System](docs/architecture/package-build-system.md) - How packages are built and resolved
-- [Docker Compose Structure](docs/getting-started/docker_compose.md) - Container orchestration
-- [Secrets Management](docs/security/secrets_management.md) - Secure credentials handling
-- [Configuration Standards](docs/getting-started/configuration_standards.md) - Coding and config standards
-- [Entrypoint Scripts](docs/getting-started/entrypoint_scripts.md) - Service initialization
+- [Complete Setup Guide](docs/getting-started/setup_guide.md)
+- [Windows Setup Guide](docs/getting-started/setup_guide_windows.md)
+- [Configuration Guide](docs/getting-started/configuration_guide.md)
+- [Development Guide](docs/getting-started/development_guide.md)
+- [Entrypoint Scripts](docs/getting-started/entrypoint_scripts.md)
 
-### Features & Modules
-- [Architecture Overview](docs/architecture/overview.md)
+### MSP feature areas
+
 - [Billing System](docs/billing/billing.md)
 - [International Tax Support](docs/billing/tax/international_tax_support.md)
 - [Asset Management](docs/features/asset_management.md)
+- [SLA Management](docs/features/sla.md)
 - [Time Entry Guide](docs/features/time_entry.md)
 - [Workflow System](docs/workflow/workflow-system.md)
 - [TypeScript Workflow Creation](docs/workflow/typescript-workflow-creation.md)
 - [Automation Hub Guide](docs/workflow/automation-hub-workflow-guide.md)
 
-## Project Structure
+### Development and contribution
 
-```
+- [Contributing Guide](docs/contributing.md)
+- [Configuration Standards](docs/getting-started/configuration_standards.md)
+- [Package Build System](docs/architecture/package-build-system.md)
+- [Testing Standards](docs/reference/testing-standards.md)
+
+## Project structure
+
+```text
 alga-psa/
 ├── server/                  # Next.js application server
-│   ├── src/
-│   │   ├── app/             # Next.js App Router pages
-│   │   ├── components/      # React components
-│   │   └── lib/             # Core business logic
-│   └── migrations/          # Database migrations (CE)
+│   ├── src/app/             # App routes and API routes
+│   ├── src/components/      # React components
+│   └── src/lib/             # Core application logic
 ├── packages/                # Shared @alga-psa/* packages
 │   ├── billing/             # Billing, invoicing, tax
 │   ├── clients/             # Client management
-│   ├── core/                # Logging, encryption, utilities
-│   ├── db/                  # Database connection & tenant context
-│   ├── types/               # Shared TypeScript interfaces
+│   ├── tickets/             # Ticketing domain code
+│   ├── db/                  # Database connection and tenant context
+│   ├── event-schemas/       # Event contracts and validation
 │   ├── ui/                  # Shared UI component library
-│   ├── build-tools/         # Shared tsup build preset
-│   └── ...                  # ~50 domain & utility packages
-├── ee/                      # Enterprise Edition
-│   ├── server/              # EE server overrides & migrations
-│   └── packages/            # EE-only packages
-├── shared/                  # Legacy shared libraries
+│   └── ...                  # Domain and infrastructure packages
+├── ee/                      # Enterprise Edition code and licensed modules
+├── services/                # Background services, including workflow-worker
 ├── hocuspocus/              # Real-time collaboration server
-├── services/
-│   └── workflow-worker/     # Workflow processing service
-├── sdk/                     # Extension SDK & samples
-└── docs/                    # Documentation
+├── sdk/                     # Extension SDK and samples
+├── extensions/              # Extension examples and supporting code
+├── helm/                    # Kubernetes deployment assets
+├── redis/                   # Redis configuration
+├── pgbouncer/               # PostgreSQL connection pooling configuration
+├── setup/                   # Bootstrap and installation scripts
+├── scripts/                 # Build, release, and utility scripts
+├── tools/                   # Developer and automation tooling
+└── docs/                    # Product, setup, architecture, and developer docs
 ```
 
-See [Package Build System](docs/architecture/package-build-system.md) for details on how packages are built and resolved.
+## Development and testing
 
-## Testing
-
-We use Vitest for testing. Run the test suite:
+Install dependencies and run tests from the repository root. Source development requires Node.js `>=20 <25`.
 
 ```bash
-npm run test
+npm install
+npm run test:local
 
 # Run specific tests
-npm run test -- path/to/test/file.test.ts
+npm run test:local -- path/to/test/file.test.ts
 ```
 
-## License
+For development workflow details, package build behavior, and test conventions, see:
 
-This project uses multiple licenses:
+- [Development Guide](docs/getting-started/development_guide.md)
+- [Package Build System](docs/architecture/package-build-system.md)
+- [Testing Standards](docs/reference/testing-standards.md)
+
+## Editions and licensing
+
+Alga PSA uses multiple licenses:
 
 - Documentation (`docs/`): Creative Commons Attribution 4.0 International License (CC BY 4.0)
 - Enterprise Edition (`ee/`): See `ee/LICENSE`
 - All other content: GNU Affero General Public License Version 3 (AGPL-3.0)
 
-See [LICENSE.md](LICENSE.md) for details.
+See [LICENSE.md](LICENSE.md) for details. If your deployment model requires commercial terms or a license outside the AGPL core, visit [algapsa.com](https://algapsa.com) for Enterprise Edition and hosted deployment information.
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](docs/contributing.md) for details on how to get started.
+Contributions are welcome. Start with the [Contributing Guide](docs/contributing.md) for development setup, coding expectations, pull request guidance, and module conventions.
 
 ---
 Copyright (c) 2026 Nine Minds LLC
