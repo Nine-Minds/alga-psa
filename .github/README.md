@@ -4,6 +4,12 @@ Alga PSA is a professional services automation platform built for Managed Servic
 
 It is designed for teams that want more control over their PSA stack: self-hostable Community Edition code, a modern TypeScript/PostgreSQL architecture, and an Enterprise Edition path for commercially licensed modules and larger deployments.
 
+<a href="https://www.nineminds.com/AlgaPSA-features">
+  <img src="https://www.nineminds.com/imported-media/Overview%20Dashboard.png" alt="Alga PSA overview dashboard" width="900">
+</a>
+
+[See the Alga PSA feature tour](https://www.nineminds.com/AlgaPSA-features)
+
 ## Why MSPs look at Alga PSA
 
 MSP operations break down when tickets, contracts, time, and invoices live in separate tools. Teams lose billable time, service managers chase updates, and owners have a harder time seeing whether client work is profitable.
@@ -54,14 +60,14 @@ Some capabilities may depend on edition, deployment configuration, or enabled fe
 
 These images link directly to screenshots from the [Alga PSA feature tour](https://www.nineminds.com/AlgaPSA-features).
 
-| Dashboard and service desk | Billing and time |
+| Service desk | Billing and time |
 | --- | --- |
-| <img src="https://www.nineminds.com/imported-media/Overview%20Dashboard.png" alt="Alga PSA overview dashboard" width="420"> | <img src="https://www.nineminds.com/imported-media/Billing%20dashboard.png" alt="Alga PSA billing dashboard" width="420"> |
-| Home dashboard with setup cards, metrics, and quick links. | Contracts, billing, and invoice-related workflows in one billing area. |
-| <img src="https://www.nineminds.com/imported-media/Ticketing-1.gif" alt="Alga PSA ticketing screen" width="420"> | <img src="https://www.nineminds.com/imported-media/time%20entry%20select%20time%20period.png" alt="Alga PSA time entry screen" width="420"> |
-| Ticketing views for client requests, assignment, attachments, and follow-up. | Time entry views for recording and reviewing work before billing. |
-| <img src="https://www.nineminds.com/imported-media/Workflows.png" alt="Alga PSA workflows screen" width="420"> | <img src="https://www.nineminds.com/imported-media/Schedule%20view.png" alt="Alga PSA schedule view" width="420"> |
-| Workflow tools for repeatable processes and handoffs. | Schedule views for dispatch and calendar-based work planning. |
+| <img src="https://www.nineminds.com/imported-media/Ticketing-1.gif" alt="Alga PSA ticketing screen" width="420"> | <img src="https://www.nineminds.com/imported-media/Billing%20dashboard.png" alt="Alga PSA billing dashboard" width="420"> |
+| Ticketing views for client requests, assignment, attachments, and follow-up. | Contracts, billing, and invoice-related workflows in one billing area. |
+| <img src="https://www.nineminds.com/imported-media/time%20entry%20select%20time%20period.png" alt="Alga PSA time entry screen" width="420"> | <img src="https://www.nineminds.com/imported-media/Schedule%20view.png" alt="Alga PSA schedule view" width="420"> |
+| Time entry views for recording and reviewing work before billing. | Schedule views for dispatch and calendar-based work planning. |
+| <img src="https://www.nineminds.com/imported-media/Workflows.png" alt="Alga PSA workflows screen" width="420"> | <img src="https://www.nineminds.com/imported-media/Assets%20Asset%20workspace%20overview.png" alt="Alga PSA asset workspace overview" width="420"> |
+| Workflow tools for repeatable processes and handoffs. | Asset views for client equipment and service context. |
 
 ## Quick start
 
