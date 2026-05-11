@@ -107,4 +107,65 @@ describe('asset inbound webhook actions', () => {
     expect(mocks.withTransaction).not.toHaveBeenCalled();
     expect(mocks.writeEntityMapping).not.toHaveBeenCalled();
   });
+
+  it('T1041: RMM-path asset upsert preserves the normalized ingestion snapshot shape', async () => {
+    const normalizedSnapshot = {
+      provider: 'tactical_rmm',
+      integrationId: 'tactical-instance',
+      externalDeviceId: 'tactical-device',
+      externalScopeId: 'tactical-site',
+      lifecycleState: 'active',
+      assetType: 'server',
+      displayName: 'server-01',
+      serialNumber: 'SN-123',
+      status: 'online',
+      location: 'Main office',
+      assetTag: 'TAG-123',
+      agentStatus: 'online',
+      lastSeenAt: '2026-05-11T12:00:00.000Z',
+      extension: {
+        osType: 'linux',
+        osVersion: 'Ubuntu 24.04',
+        agentVersion: '2.8.0',
+        lanIp: '10.0.0.10',
+        wanIp: '203.0.113.10',
+        cpuCores: 8,
+        ramGb: 32,
+      },
+      metadata: {
+        source: 'regression-sample',
+      },
+    };
+    const { getAction } = await loadAssetInboundActions();
+    const action = getAction('upsertAssetByExternalId');
+
+    await action?.handle(
+      {
+        tenant: 'tenant-a',
+        webhookSlug: 'rmm-alerts',
+        deliveryId: 'delivery-1',
+        headers: {},
+        rawBody: { device: normalizedSnapshot },
+        idempotencyKey: 'device-42',
+      },
+      {
+        external_id: 'device-42',
+        client_id: 'client-1',
+        rmm_snapshot: normalizedSnapshot,
+      },
+    );
+
+    expect(mocks.ingestNormalizedRmmDeviceSnapshot).toHaveBeenCalledWith({
+      tenant: 'tenant-a',
+      resolvedClientId: 'client-1',
+      knex: tenantKnex,
+      snapshot: {
+        ...normalizedSnapshot,
+        provider: 'rmm-alerts',
+        integrationId: 'rmm-alerts',
+        externalDeviceId: 'device-42',
+        externalScopeId: 'tactical-site',
+      },
+    });
+  });
 });
