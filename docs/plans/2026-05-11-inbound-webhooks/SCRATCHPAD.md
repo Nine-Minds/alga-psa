@@ -222,6 +222,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T136 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Auth-section UI coverage now verifies the IP allowlist option renders the CIDR textarea with stable ID, translated labels/placeholders, and `identityForm.ipCidrs` state wiring.
 - (2026-05-11) **T137 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx` and `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. While adding coverage, a real UI gap was found: inbound create/update save was still disabled. The dialog now builds the snake_case upsert payload, calls `upsertInboundWebhook`, updates local list state, and displays the returned one-time secret only in `revealedInboundSecret`, which is cleared on modal close.
 - (2026-05-11) **T138 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx` and `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Saved non-IP inbound webhook configs now show a rotate-secret button that calls `rotateInboundWebhookSecret` and reuses the one-time secret modal for the replacement secret.
+- (2026-05-11) **T139 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Idempotency-section UI coverage now verifies the header/jsonata source dropdown, value input label/placeholder switch, and duplicate-window seconds input are present and state-backed.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -757,6 +758,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T138:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T139:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 

@@ -117,4 +117,16 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain('secret: result.secret');
     expect(adminWebhooksSource).toContain('isOpen={revealedInboundSecret !== null}');
   });
+
+  it('T139: idempotency section renders source dropdown, value input, and duplicate window', () => {
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-idempotency-type"');
+    expect(adminWebhooksSource).toContain("label={t('security.webhooks.inbound.idempotency.source')}");
+    expect(adminWebhooksSource).toContain("value: 'header'");
+    expect(adminWebhooksSource).toContain("value: 'jsonata'");
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-idempotency-value"');
+    expect(adminWebhooksSource).toContain("security.webhooks.inbound.idempotency.headerName");
+    expect(adminWebhooksSource).toContain("security.webhooks.inbound.idempotency.jsonataExpression");
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-idempotency-window"');
+    expect(adminWebhooksSource).toContain('idempotencyWindowSeconds: Number(event.target.value)');
+  });
 });
