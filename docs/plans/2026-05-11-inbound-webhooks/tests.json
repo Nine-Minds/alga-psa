@@ -108,7 +108,7 @@
   { "id": "T114", "description": "Workflow engine error on trigger → failed delivery with error message", "implemented": true, "featureIds": ["F063"] },
   { "id": "T115", "description": "Workflow run failure AFTER trigger does NOT mark delivery failed", "implemented": true, "featureIds": ["F063"] },
 
-  { "id": "T120", "description": "Webhook payload context adapter builds path tree from sample payload", "implemented": false, "featureIds": ["F070", "F071"] },
+  { "id": "T120", "description": "Webhook payload context adapter builds path tree from sample payload", "implemented": true, "featureIds": ["F070", "F071"] },
   { "id": "T121", "description": "Adapter handles nested objects, arrays, mixed types", "implemented": false, "featureIds": ["F071"] },
   { "id": "T122", "description": "Adapter handles empty/null sample (returns minimal tree, no crash)", "implemented": false, "featureIds": ["F071"] },
   { "id": "T123", "description": "ExpressionTextArea autocompletes paths from adapter", "implemented": false, "featureIds": ["F072", "F088"] },

@@ -209,6 +209,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T113 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. The receiver path now verifies a successful workflow dispatch outcome, including `workflow_run_id`, is persisted into `handlerOutcome` when the delivery is marked `dispatched`.
 - (2026-05-11) **T114 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Workflow trigger errors now have receiver-path coverage showing the delivery is updated to `dispatchStatus='failed'` with the engine error message in `handlerOutcome`.
 - (2026-05-11) **T115 implemented** in `server/src/test/unit/inboundWebhooks/workflowDispatcher.test.ts`. Workflow dispatch now has launch-boundary coverage showing once `launchPublishedWorkflowRun` returns a run id/version, dispatch resolves with the workflow outcome and does not wait for or observe later workflow completion/failure.
+- (2026-05-11) **T120 implemented** in `shared/workflow/expression-authoring/__tests__/coreContracts.test.ts`. The webhook payload context adapter now has contract coverage for turning a captured sample body into deterministic top-level expression roots and nested path options such as `alert.id` / `device.hostname`.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -706,6 +707,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T115:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/workflowDispatcher.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T120:
+  - `npx vitest run --config shared/vitest.config.ts shared/workflow/expression-authoring/__tests__/coreContracts.test.ts`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References

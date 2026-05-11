@@ -3,6 +3,8 @@ import { EXPRESSION_MODES, isExpressionMode } from '../modes';
 import {
   buildInvoiceExpressionContextRoots,
   buildInvoiceExpressionPathOptions,
+  buildWebhookPayloadExpressionContextRoots,
+  buildWebhookPayloadExpressionPathOptions,
   buildWorkflowExpressionContextRoots,
   buildWorkflowExpressionPathOptions,
 } from '../adapters';
@@ -228,6 +230,52 @@ describe('expression authoring contracts', () => {
     expect(optionByPath.get('vars.duplicatedContact.duplicate_contact.contact_name_id')).toMatchObject({
       valueType: 'string',
       isLeaf: true,
+    });
+  });
+
+  it('T120: builds webhook payload roots and path options from a captured sample', () => {
+    const samplePayload = {
+      alert: {
+        id: 'rmm-123',
+        message: 'Disk full',
+      },
+      device: {
+        hostname: 'server-01',
+      },
+    };
+
+    const roots = buildWebhookPayloadExpressionContextRoots(samplePayload);
+    const options = buildWebhookPayloadExpressionPathOptions(samplePayload, { includeRootPaths: false });
+    const optionByPath = new Map(options.map((option) => [option.path, option]));
+
+    expect(roots.map((root) => root.key)).toEqual(['alert', 'device']);
+    expect(roots).toEqual([
+      expect.objectContaining({
+        key: 'alert',
+        label: 'alert',
+        schema: expect.objectContaining({
+          type: 'object',
+        }),
+      }),
+      expect.objectContaining({
+        key: 'device',
+        label: 'device',
+        schema: expect.objectContaining({
+          type: 'object',
+        }),
+      }),
+    ]);
+
+    expect([...optionByPath.keys()]).toEqual([
+      'alert.id',
+      'alert.message',
+      'device.hostname',
+    ]);
+    expect(optionByPath.get('alert.id')).toMatchObject({
+      root: 'alert',
+      valueType: 'string',
+      isLeaf: true,
+      segments: ['alert', 'id'],
     });
   });
 
