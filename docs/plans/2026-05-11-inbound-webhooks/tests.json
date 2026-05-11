@@ -60,7 +60,7 @@
   { "id": "T081", "description": "Capture window expires after 5 min; later requests don't overwrite", "implemented": true, "featureIds": ["F021", "F044"] },
   { "id": "T082", "description": "`clearSamplePayload` removes the saved sample", "implemented": true, "featureIds": ["F022"] },
 
-  { "id": "T090", "description": "Action registry: `registerAction` adds a definition; `listActions` returns all registered, grouped by entityType", "implemented": false, "featureIds": ["F050"] },
+  { "id": "T090", "description": "Action registry: `registerAction` adds a definition; `listActions` returns all registered, grouped by entityType", "implemented": true, "featureIds": ["F050"] },
   { "id": "T091", "description": "Action registry: duplicate action name throws on register (or last-wins; pick and test)", "implemented": false, "featureIds": ["F050"] },
   { "id": "T092", "description": "Bootstrap loads all v1 package action contributions before first inbound request", "implemented": false, "featureIds": ["F053"] },
   { "id": "T093", "description": "Field mapping evaluator: JSONata expression evaluated correctly against request body", "implemented": false, "featureIds": ["F054"] },
