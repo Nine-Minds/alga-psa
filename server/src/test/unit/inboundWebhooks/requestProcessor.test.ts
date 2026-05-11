@@ -689,4 +689,52 @@ describe('inbound webhook request processor', () => {
     );
     expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
   });
+
+  it('T054: accepts a request when the configured idempotency key is missing', async () => {
+    lookupInboundWebhookBySlug.mockResolvedValue(hmacWebhookWithHeaderIdempotency());
+    extractInboundWebhookIdempotencyKey.mockResolvedValue(null);
+    const body = JSON.stringify({ alert: { message: 'Disk full' } });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-signature': `sha256=${hmacSignature('top-secret', body)}`,
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    await expect(response.json()).resolves.toEqual({ delivery_id: 'delivery-1' });
+    expect(response.status).toBe(200);
+    expect(findDuplicateInboundDelivery).toHaveBeenCalledWith({
+      knex: expect.anything(),
+      tenant: 'tenant-a',
+      inboundWebhookId: 'webhook-1',
+      idempotencyKey: null,
+      windowSeconds: 86_400,
+    });
+    expect(createInboundDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        inboundWebhookId: 'webhook-1',
+        idempotencyKey: null,
+        requestBody: { alert: { message: 'Disk full' } },
+        authStatus: 'verified',
+      }),
+    );
+    expect(dispatchInboundWebhookHandler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        deliveryId: 'delivery-1',
+        idempotencyKey: null,
+        body: { alert: { message: 'Disk full' } },
+      }),
+    );
+  });
 });

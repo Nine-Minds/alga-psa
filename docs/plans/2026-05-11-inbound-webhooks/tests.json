@@ -45,7 +45,7 @@
   { "id": "T051", "description": "JSONata-source idempotency key extracted from configured path", "implemented": true, "featureIds": ["F039"] },
   { "id": "T052", "description": "Duplicate idempotency key within window returns 200 no-op", "implemented": true, "featureIds": ["F040"] },
   { "id": "T053", "description": "Same idempotency key after window expires triggers fresh dispatch", "implemented": true, "featureIds": ["F040"] },
-  { "id": "T054", "description": "Missing idempotency key (when source is configured) — define behavior and test (accept vs reject)", "implemented": false, "featureIds": ["F038", "F039"] },
+  { "id": "T054", "description": "Missing idempotency key (when source is configured) — define behavior and test (accept vs reject)", "implemented": true, "featureIds": ["F038", "F039"] },
   { "id": "T055", "description": "Different webhooks with same idempotency key dedup independently", "implemented": false, "featureIds": ["F040"] },
 
   { "id": "T060", "description": "Delivery row persisted with auth_status=verified before dispatch", "implemented": false, "featureIds": ["F041"] },
