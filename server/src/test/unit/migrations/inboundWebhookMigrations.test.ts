@@ -35,4 +35,12 @@ describe('inbound webhook migrations', () => {
     expect(deliveriesMigration).toContain("ON inbound_webhook_deliveries (tenant, inbound_webhook_id, idempotency_key");
     expect(deliveriesMigration).toContain("create_distributed_table('inbound_webhook_deliveries', 'tenant'");
   });
+
+  it('T003: enforces inbound webhook slug uniqueness per tenant, not globally', () => {
+    expect(inboundWebhooksMigration).toContain(
+      "table.unique(['tenant', 'slug'], { indexName: 'inbound_webhooks_tenant_slug_unique' })",
+    );
+    expect(inboundWebhooksMigration).not.toContain("table.unique(['slug']");
+    expect(inboundWebhooksMigration).not.toContain('UNIQUE (slug)');
+  });
 });
