@@ -130,4 +130,45 @@ describe('inbound webhook workflow dispatcher', () => {
       }),
     );
   });
+
+  it('T115: workflow dispatch succeeds once the run is launched without waiting for completion', async () => {
+    mocks.launchPublishedWorkflowRun.mockResolvedValueOnce({
+      runId: 'workflow-run-that-may-fail-later',
+      workflowVersion: 2,
+    });
+    const { dispatchInboundWebhookHandler } = await import('@/lib/inboundWebhooks/dispatcher');
+
+    await expect(
+      dispatchInboundWebhookHandler({
+        webhook: {
+          tenant: 'tenant-a',
+          slug: 'triage-alerts',
+          handler_type: 'workflow',
+          handler_config: {
+            type: 'workflow',
+            workflow_id: 'workflow-3',
+          },
+        },
+        deliveryId: 'delivery-3',
+        idempotencyKey: 'alert-99',
+        body: { alert: { id: 'alert-99' } },
+        headers: {},
+      }),
+    ).resolves.toEqual({
+      workflow_id: 'workflow-3',
+      workflow_run_id: 'workflow-run-that-may-fail-later',
+      workflow_version: 2,
+      envelope: expect.objectContaining({
+        delivery_id: 'delivery-3',
+      }),
+    });
+
+    expect(mocks.launchPublishedWorkflowRun).toHaveBeenCalledWith(
+      knex,
+      expect.objectContaining({
+        execute: true,
+        executionKey: 'inbound-webhook:delivery-3',
+      }),
+    );
+  });
 });
