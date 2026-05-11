@@ -85,4 +85,30 @@ describe('inbound webhook idempotency', () => {
     expect(calls.whereIn).toHaveBeenCalledWith('dispatch_status', ['pending', 'dispatched', 'duplicate']);
     expect(calls.orderBy).toHaveBeenCalledWith('received_at', 'desc');
   });
+
+  it('T055: scopes duplicate idempotency checks to the current webhook', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(new Date('2026-05-11T12:00:00.000Z').getTime());
+    const { knex, calls } = createDuplicateLookupKnex(null);
+
+    const duplicate = await findDuplicateInboundDelivery({
+      knex: knex as any,
+      tenant: 'tenant-a',
+      inboundWebhookId: 'webhook-b',
+      idempotencyKey: 'shared-alert-key',
+      windowSeconds: 86_400,
+    });
+
+    expect(duplicate).toBeNull();
+    expect(calls.where).toHaveBeenCalledWith({
+      tenant: 'tenant-a',
+      inbound_webhook_id: 'webhook-b',
+      idempotency_key: 'shared-alert-key',
+    });
+    expect(calls.where).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        inbound_webhook_id: 'webhook-a',
+        idempotency_key: 'shared-alert-key',
+      }),
+    );
+  });
 });

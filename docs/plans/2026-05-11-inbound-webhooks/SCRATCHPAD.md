@@ -161,6 +161,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T052 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Duplicate idempotency receiver test verifies a duplicate key within the configured 24h window returns `200` with the original `delivery_id`, creates a new delivery row marked `dispatch_status='duplicate'`, records `handler_outcome.duplicate_of`, and does not dispatch.
 - (2026-05-11) **T053 implemented** in `server/src/test/unit/inboundWebhooks/idempotency.test.ts`. Duplicate lookup test freezes time, verifies the query applies `received_at >= now - windowSeconds` plus tenant/webhook/key/status filters, and returns `null` when no in-window row exists so the receiver can fresh-dispatch the same key after expiry.
 - (2026-05-11) **T054 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Decision locked: if an idempotency source is configured but yields no key, the receiver accepts and dispatches once with `idempotency_key=null` rather than rejecting the request; dedupe lookup receives `null` and returns no duplicate.
+- (2026-05-11) **T055 implemented** in `server/src/test/unit/inboundWebhooks/idempotency.test.ts`. Duplicate lookup is explicitly scoped by `inbound_webhook_id` along with tenant and idempotency key, so two webhook configs can receive the same external idempotency key without deduping each other.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -514,6 +515,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T054:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T055:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/idempotency.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References
