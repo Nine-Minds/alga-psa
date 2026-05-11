@@ -74,6 +74,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F071 implemented** in `shared/workflow/expression-authoring/adapters/webhookPayloadContextAdapter.ts`. The adapter infers schema nodes recursively from captured samples, supports nested objects/arrays/primitives/nulls, and builds path options via existing `buildPathOptionsFromContextRoots`.
 - (2026-05-11) **F072 implemented** in `server/src/components/settings/security/inbound/InboundWebhookMappingField.tsx`. The new client component wraps the existing EE workflow-designer `ExpressionTextArea`, feeds it autocomplete options from the webhook payload context adapter, and exposes a compact prop API for the upcoming inbound direct-action field rows.
 - (2026-05-11) **F080 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. The Settings webhook panel is now a tabbed shell with `Inbound` and `Outbound` tabs; the existing outbound implementation was moved intact into `OutboundWebhooksSetup`, and the inbound tab has a translated placeholder until the list view lands in F081. Also widened the shared `TabsTrigger` prop type so interactive tab IDs compile.
+- (2026-05-11) **F081 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. `InboundWebhooksListView` loads tenant-scoped inbound configs via `listInboundWebhooks`, fetches the latest delivery per webhook for the last-delivery column, derives receiver URLs from the existing tenant portal slug helper, and renders a DataTable with name/URL, handler, last delivery, active state, and row action menu.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -211,6 +212,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Type check after F072:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F080:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F081:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References

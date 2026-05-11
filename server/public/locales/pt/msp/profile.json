@@ -197,7 +197,33 @@
       },
       "inbound": {
         "title": "Inbound Webhooks",
-        "placeholder": "Configure incoming webhook endpoints that verify requests, deduplicate deliveries, and dispatch to actions or workflows."
+        "description": "Accept authenticated requests from external systems and dispatch them to direct actions or workflows.",
+        "placeholder": "Configure incoming webhook endpoints that verify requests, deduplicate deliveries, and dispatch to actions or workflows.",
+        "newWebhook": "New Webhook",
+        "list": {
+          "title": "Configured Inbound Webhooks",
+          "loading": "Loading…",
+          "configuredCount": "{{count}} configured",
+          "empty": "No inbound webhooks configured yet.",
+          "columns": {
+            "name": "Name",
+            "handler": "Handler",
+            "lastDelivery": "Last Delivery",
+            "active": "Active",
+            "actions": "Actions"
+          }
+        },
+        "handlers": {
+          "directAction": "Direct action",
+          "workflow": "Workflow"
+        },
+        "status": {
+          "active": "Active",
+          "inactive": "Inactive"
+        },
+        "messages": {
+          "loadFailed": "Failed to load inbound webhooks."
+        }
       },
       "stats": {
         "total": "Total webhooks",

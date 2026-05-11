@@ -197,7 +197,33 @@
       },
       "inbound": {
         "title": "55555",
-        "placeholder": "55555"
+        "description": "55555",
+        "placeholder": "55555",
+        "newWebhook": "55555",
+        "list": {
+          "title": "55555",
+          "loading": "55555",
+          "configuredCount": "55555",
+          "empty": "55555",
+          "columns": {
+            "name": "55555",
+            "handler": "55555",
+            "lastDelivery": "55555",
+            "active": "55555",
+            "actions": "55555"
+          }
+        },
+        "handlers": {
+          "directAction": "55555",
+          "workflow": "55555"
+        },
+        "status": {
+          "active": "55555",
+          "inactive": "55555"
+        },
+        "messages": {
+          "loadFailed": "55555"
+        }
       },
       "stats": {
         "total": "55555",

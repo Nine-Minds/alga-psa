@@ -197,7 +197,33 @@
       },
       "inbound": {
         "title": "Webhooks entrantes",
-        "placeholder": "Configura endpoints de webhooks entrantes que verifican solicitudes, deduplican entregas y envían a acciones o flujos de trabajo."
+        "description": "Acepta solicitudes autenticadas de sistemas externos y envíalas a acciones directas o flujos de trabajo.",
+        "placeholder": "Configura endpoints de webhooks entrantes que verifican solicitudes, deduplican entregas y envían a acciones o flujos de trabajo.",
+        "newWebhook": "Nuevo webhook",
+        "list": {
+          "title": "Webhooks entrantes configurados",
+          "loading": "Cargando…",
+          "configuredCount": "{{count}} configurados",
+          "empty": "No hay webhooks entrantes configurados.",
+          "columns": {
+            "name": "Nombre",
+            "handler": "Manejador",
+            "lastDelivery": "Última entrega",
+            "active": "Activo",
+            "actions": "Acciones"
+          }
+        },
+        "handlers": {
+          "directAction": "Acción directa",
+          "workflow": "Flujo de trabajo"
+        },
+        "status": {
+          "active": "Activo",
+          "inactive": "Inactivo"
+        },
+        "messages": {
+          "loadFailed": "No se pudieron cargar los webhooks entrantes."
+        }
       },
       "stats": {
         "total": "Webhooks totales",

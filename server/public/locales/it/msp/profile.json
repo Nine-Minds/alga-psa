@@ -197,7 +197,33 @@
       },
       "inbound": {
         "title": "Webhook in entrata",
-        "placeholder": "Configura endpoint webhook in entrata che verificano le richieste, deduplicano le consegne e inoltrano ad azioni o workflow."
+        "description": "Accetta richieste autenticate da sistemi esterni e inoltrale ad azioni dirette o workflow.",
+        "placeholder": "Configura endpoint webhook in entrata che verificano le richieste, deduplicano le consegne e inoltrano ad azioni o workflow.",
+        "newWebhook": "Nuovo webhook",
+        "list": {
+          "title": "Webhook in entrata configurati",
+          "loading": "Caricamento…",
+          "configuredCount": "{{count}} configurati",
+          "empty": "Nessun webhook in entrata configurato.",
+          "columns": {
+            "name": "Nome",
+            "handler": "Handler",
+            "lastDelivery": "Ultima consegna",
+            "active": "Attivo",
+            "actions": "Azioni"
+          }
+        },
+        "handlers": {
+          "directAction": "Azione diretta",
+          "workflow": "Workflow"
+        },
+        "status": {
+          "active": "Attivo",
+          "inactive": "Inattivo"
+        },
+        "messages": {
+          "loadFailed": "Impossibile caricare i webhook in entrata."
+        }
       },
       "stats": {
         "total": "Webhook totali",

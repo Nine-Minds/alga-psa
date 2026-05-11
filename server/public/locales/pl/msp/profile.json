@@ -197,7 +197,33 @@
       },
       "inbound": {
         "title": "Webhooki przychodzące",
-        "placeholder": "Skonfiguruj przychodzące endpointy webhooków, które weryfikują żądania, deduplikują dostarczenia i przekazują je do akcji lub workflow."
+        "description": "Przyjmuj uwierzytelnione żądania z systemów zewnętrznych i przekazuj je do akcji bezpośrednich lub workflow.",
+        "placeholder": "Skonfiguruj przychodzące endpointy webhooków, które weryfikują żądania, deduplikują dostarczenia i przekazują je do akcji lub workflow.",
+        "newWebhook": "Nowy webhook",
+        "list": {
+          "title": "Skonfigurowane webhooki przychodzące",
+          "loading": "Ładowanie…",
+          "configuredCount": "{{count}} skonfigurowano",
+          "empty": "Nie skonfigurowano jeszcze webhooków przychodzących.",
+          "columns": {
+            "name": "Nazwa",
+            "handler": "Handler",
+            "lastDelivery": "Ostatnie dostarczenie",
+            "active": "Aktywny",
+            "actions": "Akcje"
+          }
+        },
+        "handlers": {
+          "directAction": "Akcja bezpośrednia",
+          "workflow": "Workflow"
+        },
+        "status": {
+          "active": "Aktywny",
+          "inactive": "Nieaktywny"
+        },
+        "messages": {
+          "loadFailed": "Nie udało się załadować webhooków przychodzących."
+        }
       },
       "stats": {
         "total": "Webhooki łącznie",

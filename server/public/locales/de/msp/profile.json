@@ -197,7 +197,33 @@
       },
       "inbound": {
         "title": "Eingehende Webhooks",
-        "placeholder": "Konfigurieren Sie eingehende Webhook-Endpunkte, die Anfragen prüfen, Zustellungen deduplizieren und an Aktionen oder Workflows weiterleiten."
+        "description": "Akzeptieren Sie authentifizierte Anfragen von externen Systemen und leiten Sie sie an Aktionen oder Workflows weiter.",
+        "placeholder": "Konfigurieren Sie eingehende Webhook-Endpunkte, die Anfragen prüfen, Zustellungen deduplizieren und an Aktionen oder Workflows weiterleiten.",
+        "newWebhook": "Neuer Webhook",
+        "list": {
+          "title": "Konfigurierte eingehende Webhooks",
+          "loading": "Laden…",
+          "configuredCount": "{{count}} konfiguriert",
+          "empty": "Noch keine eingehenden Webhooks konfiguriert.",
+          "columns": {
+            "name": "Name",
+            "handler": "Handler",
+            "lastDelivery": "Letzte Zustellung",
+            "active": "Aktiv",
+            "actions": "Aktionen"
+          }
+        },
+        "handlers": {
+          "directAction": "Direkte Aktion",
+          "workflow": "Workflow"
+        },
+        "status": {
+          "active": "Aktiv",
+          "inactive": "Inaktiv"
+        },
+        "messages": {
+          "loadFailed": "Eingehende Webhooks konnten nicht geladen werden."
+        }
       },
       "stats": {
         "total": "Webhooks gesamt",

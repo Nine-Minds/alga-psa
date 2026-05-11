@@ -197,7 +197,33 @@
       },
       "inbound": {
         "title": "Inkomende webhooks",
-        "placeholder": "Configureer inkomende webhook-eindpunten die verzoeken verifiëren, leveringen dedupliceren en doorsturen naar acties of workflows."
+        "description": "Accepteer geauthenticeerde verzoeken van externe systemen en stuur ze door naar directe acties of workflows.",
+        "placeholder": "Configureer inkomende webhook-eindpunten die verzoeken verifiëren, leveringen dedupliceren en doorsturen naar acties of workflows.",
+        "newWebhook": "Nieuwe webhook",
+        "list": {
+          "title": "Geconfigureerde inkomende webhooks",
+          "loading": "Laden…",
+          "configuredCount": "{{count}} geconfigureerd",
+          "empty": "Nog geen inkomende webhooks geconfigureerd.",
+          "columns": {
+            "name": "Naam",
+            "handler": "Handler",
+            "lastDelivery": "Laatste levering",
+            "active": "Actief",
+            "actions": "Acties"
+          }
+        },
+        "handlers": {
+          "directAction": "Directe actie",
+          "workflow": "Workflow"
+        },
+        "status": {
+          "active": "Actief",
+          "inactive": "Inactief"
+        },
+        "messages": {
+          "loadFailed": "Inkomende webhooks konden niet worden geladen."
+        }
       },
       "stats": {
         "total": "Totale webhooks",

@@ -20,6 +20,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { ArrowLeft, MoreVertical } from 'lucide-react';
 import type { ColumnDefinition } from '@alga-psa/types';
+import { buildTenantPortalSlug } from '@alga-psa/validation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   deleteWebhook,
@@ -36,7 +37,15 @@ import {
   type WebhookDeliveryView,
   type WebhookSettingsView,
 } from '@/lib/actions/webhookActions';
+import {
+  listInboundDeliveries,
+  listInboundWebhooks,
+} from '@/lib/actions/inboundWebhookActions';
 import { WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY } from '@/lib/actions/webhookPayloadFields';
+import type {
+  InboundWebhookConfig,
+  InboundWebhookDelivery,
+} from '@/lib/inboundWebhooks/types';
 
 // Entities live in a static registry; this turns the readonly field arrays
 // into mutable string[] for the UI render layer.
@@ -248,7 +257,7 @@ export default function AdminWebhooksSetup() {
         </TabsTrigger>
       </TabsList>
       <TabsContent value="inbound">
-        <InboundWebhooksPlaceholder />
+        <InboundWebhooksListView />
       </TabsContent>
       <TabsContent value="outbound">
         <OutboundWebhooksSetup />
@@ -257,20 +266,198 @@ export default function AdminWebhooksSetup() {
   );
 }
 
-function InboundWebhooksPlaceholder() {
+function buildInboundWebhookUrl(webhook: InboundWebhookConfig): string {
+  const tenantSlug = buildTenantPortalSlug(webhook.tenant);
+  return `/api/inbound/${tenantSlug}/${webhook.slug}`;
+}
+
+function formatInboundHandlerLabel(
+  webhook: InboundWebhookConfig,
+  t: ReturnType<typeof useTranslation>['t'],
+): string {
+  if (webhook.handlerType === 'direct_action') {
+    return t('security.webhooks.inbound.handlers.directAction');
+  }
+
+  return t('security.webhooks.inbound.handlers.workflow');
+}
+
+function InboundWebhooksListView() {
   const { t } = useTranslation('msp/profile');
+  const [webhooks, setWebhooks] = useState<InboundWebhookConfig[]>([]);
+  const [lastDeliveries, setLastDeliveries] = useState<Record<string, InboundWebhookDelivery | null>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [tableCurrentPage, setTableCurrentPage] = useState(1);
+  const [tablePageSize, setTablePageSize] = useState(10);
+  const neverLabel = t('security.webhooks.common.never');
+
+  const loadInboundWebhooks = useCallback(async () => {
+    try {
+      setLoading(true);
+      const configs = await listInboundWebhooks();
+      setWebhooks(configs);
+      setError(null);
+
+      const deliveryEntries = await Promise.all(
+        configs.map(async (webhook) => {
+          const page = await listInboundDeliveries(
+            { inboundWebhookId: webhook.inboundWebhookId },
+            1,
+            1,
+          );
+          return [webhook.inboundWebhookId, page.data[0] ?? null] as const;
+        }),
+      );
+      setLastDeliveries(Object.fromEntries(deliveryEntries));
+    } catch (loadError) {
+      console.error('Failed to load inbound webhooks:', loadError);
+      setError(loadError instanceof Error ? loadError.message : t('security.webhooks.inbound.messages.loadFailed'));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    void loadInboundWebhooks();
+  }, [loadInboundWebhooks]);
+
+  const columns = useMemo<ColumnDefinition<InboundWebhookConfig>[]>(() => [
+    {
+      title: t('security.webhooks.inbound.list.columns.name'),
+      dataIndex: 'name',
+      render: (_value, webhook) => (
+        <div>
+          <div className="font-medium text-gray-900">{webhook.name}</div>
+          <div className="mt-1 break-all text-xs text-gray-500">{buildInboundWebhookUrl(webhook)}</div>
+          {webhook.description ? (
+            <div className="mt-1 text-xs text-gray-500">{webhook.description}</div>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      title: t('security.webhooks.inbound.list.columns.handler'),
+      dataIndex: 'handlerType',
+      render: (_value, webhook) => (
+        <div>
+          <div className="text-sm text-gray-900">{formatInboundHandlerLabel(webhook, t)}</div>
+          {webhook.handlerConfig.type === 'direct_action' ? (
+            <div className="mt-1 text-xs text-gray-500">{webhook.handlerConfig.action}</div>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      title: t('security.webhooks.inbound.list.columns.lastDelivery'),
+      dataIndex: 'updatedAt',
+      render: (_value, webhook) => formatDateTime(
+        (lastDeliveries[webhook.inboundWebhookId]?.receivedAt as string | undefined) ?? null,
+        neverLabel,
+      ),
+    },
+    {
+      title: t('security.webhooks.inbound.list.columns.active'),
+      dataIndex: 'isActive',
+      render: (_value, webhook) => (
+        <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+          webhook.isActive
+            ? 'bg-green-50 text-green-700 ring-1 ring-green-600/20'
+            : 'bg-gray-100 text-gray-700 ring-1 ring-gray-500/20'
+        }`}>
+          {webhook.isActive
+            ? t('security.webhooks.inbound.status.active')
+            : t('security.webhooks.inbound.status.inactive')}
+        </span>
+      ),
+    },
+    {
+      title: t('security.webhooks.inbound.list.columns.actions'),
+      dataIndex: 'inboundWebhookId',
+      sortable: false,
+      width: '64px',
+      render: (_value, webhook) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              id={`inbound-webhook-actions-${webhook.inboundWebhookId}`}
+              variant="ghost"
+              className="h-8 w-8 p-0"
+            >
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem id={`inbound-webhook-view-${webhook.inboundWebhookId}`} disabled>
+              {t('security.webhooks.list.actions.view')}
+            </DropdownMenuItem>
+            <DropdownMenuItem id={`inbound-webhook-edit-${webhook.inboundWebhookId}`} disabled>
+              {t('security.webhooks.list.actions.edit')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+    },
+  ], [lastDeliveries, neverLabel, t]);
+
+  const handleTablePageSizeChange = useCallback((newPageSize: number) => {
+    setTablePageSize(newPageSize);
+    setTableCurrentPage(1);
+  }, []);
 
   return (
-    <Card className="p-6">
-      <div className="space-y-2">
-        <h3 className="text-lg font-medium text-gray-900">
-          {t('security.webhooks.inbound.title')}
-        </h3>
-        <p className="text-sm text-gray-500">
-          {t('security.webhooks.inbound.placeholder')}
-        </p>
-      </div>
-    </Card>
+    <div className="space-y-6">
+      <Card className="p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h2 className="text-2xl font-semibold">{t('security.webhooks.inbound.title')}</h2>
+            <p className="mt-1 max-w-2xl text-sm text-gray-600">
+              {t('security.webhooks.inbound.description')}
+            </p>
+          </div>
+          <Button
+            id="inbound-webhooks-new"
+            disabled
+          >
+            {t('security.webhooks.inbound.newWebhook')}
+          </Button>
+        </div>
+
+        {error ? (
+          <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+            {error}
+          </div>
+        ) : null}
+      </Card>
+
+      <Card className="p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold">{t('security.webhooks.inbound.list.title')}</h3>
+          <div className="text-sm text-gray-500">
+            {loading
+              ? t('security.webhooks.inbound.list.loading')
+              : t('security.webhooks.inbound.list.configuredCount', { count: webhooks.length })}
+          </div>
+        </div>
+
+        {webhooks.length === 0 && !loading ? (
+          <div className="rounded-lg border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500">
+            {t('security.webhooks.inbound.list.empty')}
+          </div>
+        ) : (
+          <DataTable<InboundWebhookConfig>
+            id="inbound-webhooks-table"
+            data={webhooks}
+            columns={columns}
+            pagination
+            currentPage={tableCurrentPage}
+            onPageChange={setTableCurrentPage}
+            pageSize={tablePageSize}
+            onItemsPerPageChange={handleTablePageSizeChange}
+          />
+        )}
+      </Card>
+    </div>
   );
 }
 
