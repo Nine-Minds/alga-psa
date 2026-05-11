@@ -66,7 +66,7 @@
   { "id": "T093", "description": "Field mapping evaluator: JSONata expression evaluated correctly against request body", "implemented": true, "featureIds": ["F054"] },
   { "id": "T094", "description": "Field mapping: malformed JSONata → failed delivery, not 500", "implemented": true, "featureIds": ["F054", "F055"] },
   { "id": "T095", "description": "Field mapping: missing required target field → failed delivery with clear error", "implemented": true, "featureIds": ["F055"] },
-  { "id": "T096", "description": "Lookup-miss in any `*ByExternalId` action → failed delivery with `lookup_miss` reason", "implemented": false, "featureIds": ["F056"] },
+  { "id": "T096", "description": "Lookup-miss in any `*ByExternalId` action → failed delivery with `lookup_miss` reason", "implemented": true, "featureIds": ["F056"] },
 
   { "id": "T1010", "description": "`createTicket` action creates ticket with mapped fields; tenant scoped", "implemented": false, "featureIds": ["F1010", "F054"] },
   { "id": "T1011", "description": "`createTicket` writes mapping row when an `external_id` is mapped", "implemented": false, "featureIds": ["F1010", "F005"] },

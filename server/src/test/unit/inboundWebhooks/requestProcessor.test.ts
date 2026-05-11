@@ -395,6 +395,46 @@ describe('inbound webhook request processor', () => {
     );
   });
 
+  it('T096: records lookup misses from external-id actions as failed deliveries', async () => {
+    dispatchInboundWebhookHandler.mockRejectedValue(new Error('lookup_miss: ticket external_id alert-42 was not found'));
+    const body = JSON.stringify({ alert: { id: 'alert-42' } });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-signature': `sha256=${hmacSignature('top-secret', body)}`,
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    await expect(response.json()).resolves.toEqual({
+      delivery_id: 'delivery-1',
+      error: 'dispatch_failed',
+    });
+    expect(response.status).toBe(500);
+    expect(updateInboundDeliveryOutcome).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        deliveryId: 'delivery-1',
+        dispatchStatus: 'failed',
+        handlerOutcome: { error: 'lookup_miss: ticket external_id alert-42 was not found' },
+        responseStatus: 500,
+        responseBody: {
+          delivery_id: 'delivery-1',
+          error: 'dispatch_failed',
+        },
+      }),
+    );
+  });
+
   it('T070: returns 429 when the webhook rate limit is exceeded', async () => {
     checkInboundWebhookRateLimit.mockResolvedValue({ allowed: false, retryAfterMs: 1500 });
     const body = JSON.stringify({ alert: { message: 'Disk full' } });

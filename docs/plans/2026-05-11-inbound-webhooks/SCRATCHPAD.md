@@ -177,6 +177,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T093 implemented** in `server/src/test/unit/inboundWebhooks/mappingEvaluator.test.ts`. JSONata field mapping now has direct coverage against the raw request body, preserving PRD-style expressions like `alert.message` instead of requiring a wrapper object.
 - (2026-05-11) **T094 implemented** in `server/src/lib/inboundWebhooks/dispatcher.ts`, `requestProcessor.ts`, and `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Mapping/evaluation failures are now classified as `InboundWebhookMappingError` and recorded as failed deliveries with `response_status=400` / `error='mapping_failed'` instead of surfacing as internal 500 dispatch failures.
 - (2026-05-11) **T095 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Missing required mapped fields now have explicit delivery coverage: the request processor records a failed delivery with the dispatcher-provided field/action error and returns `400` with `error='mapping_failed'`.
+- (2026-05-11) **T096 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. External-ID lookup misses now have receiver-level delivery coverage: action lookup-miss errors are persisted to `handler_outcome.error` with `dispatch_status='failed'`, preserving the `lookup_miss` reason for debugging.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -577,6 +578,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T095:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T096:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
