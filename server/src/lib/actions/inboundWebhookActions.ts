@@ -502,3 +502,34 @@ export const rotateInboundWebhookSecret = withAuth(
     };
   },
 );
+
+export const setInboundWebhookActiveState = withAuth(
+  async (
+    user,
+    { tenant },
+    inboundWebhookId: string,
+    active: boolean,
+  ): Promise<InboundWebhookConfig> => {
+    const { knex } = await createTenantKnex(tenant);
+    await assertInboundWebhookPermission(user, 'update', knex);
+    const updatePayload: Record<string, unknown> = {
+      is_active: active,
+      updated_at: knex.fn.now(),
+    };
+
+    if (active) {
+      updatePayload.auto_disabled_at = null;
+    }
+
+    const [row] = await knex<InboundWebhookRow>('inbound_webhooks')
+      .where({ tenant, inbound_webhook_id: inboundWebhookId })
+      .update(updatePayload)
+      .returning('*');
+
+    if (!row) {
+      throw new Error('Inbound webhook not found');
+    }
+
+    return mapInboundWebhook(row);
+  },
+);
