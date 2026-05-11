@@ -18,6 +18,15 @@ export interface InboundWebhookMappingFieldProps {
   onFocus?: () => void;
 }
 
+export function buildInboundWebhookMappingFieldOptions(samplePayload: unknown): SelectOption[] {
+  return buildWebhookPayloadExpressionPathOptions(samplePayload, { includeRootPaths: true })
+    .map((option) => ({
+      value: option.path,
+      label: option.path,
+      dropdownHint: option.description || option.valueType,
+    }));
+}
+
 export function InboundWebhookMappingField({
   id,
   value,
@@ -31,12 +40,7 @@ export function InboundWebhookMappingField({
 }: InboundWebhookMappingFieldProps) {
   const { t } = useTranslation('msp/settings');
   const fieldOptions = useMemo<SelectOption[]>(
-    () => buildWebhookPayloadExpressionPathOptions(samplePayload, { includeRootPaths: true })
-      .map((option) => ({
-        value: option.path,
-        label: option.path,
-        dropdownHint: option.description || option.valueType,
-      })),
+    () => buildInboundWebhookMappingFieldOptions(samplePayload),
     [samplePayload],
   );
 
