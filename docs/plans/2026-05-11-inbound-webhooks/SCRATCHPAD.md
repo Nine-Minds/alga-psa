@@ -114,6 +114,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F216 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts`. Registered named `InboundWebhookDelivery` with persisted request/response fields, auth/dispatch statuses, handler outcome, replay linkage, duration, and timestamps.
 - (2026-05-11) **F217 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts`. Registered named `InboundActionTargetField` and `InboundActionDefinition` components and wired the action discovery response to `InboundActionDefinition[]`.
 - (2026-05-11) **F218 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts`. Registered named `WorkflowWebhookEnvelope` documenting the workflow `context.input` payload: source slug, parsed body, filtered headers, verified flag, delivery id, idempotency key, and received timestamp.
+- (2026-05-11) **F220 implemented** by running the OpenAPI generator from the `sdk` workspace for both CE and EE editions. This regenerated `alga-openapi.{ce,ee}.{json,yaml}` plus the CE alias `alga-openapi.{json,yaml}`; the CE YAML now contains the `/api/v1/inbound-webhooks/*` management paths, `/api/inbound/{tenantSlug}/{webhookSlug}`, and inbound webhook components.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -326,6 +327,10 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F218:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) OpenAPI generation after F220:
+  - `node sdk/scripts/generate-openapi.ts` (failed: TypeScript ESM directory import without the repo loader)
+  - `npm run openapi:generate --workspace=sdk -- --edition ce && npm run openapi:generate --workspace=sdk -- --edition ee` (failed: npm matched nested SDK workspaces without that script)
+  - `(cd sdk && npm run openapi:generate -- --edition ce && npm run openapi:generate -- --edition ee)`
 
 ## Links / References
 

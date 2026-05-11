@@ -124,7 +124,7 @@
   { "id": "F217", "description": "OpenAPI component schemas: `InboundActionDefinition`, `InboundActionTargetField`", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F218", "description": "OpenAPI component schema: `WorkflowWebhookEnvelope` (envelope shape workflow handlers receive)", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
 
-  { "id": "F220", "description": "Regenerate `sdk/docs/openapi/alga-openapi.{ce,ee}.{yaml,json}` and commit", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },
+  { "id": "F220", "description": "Regenerate `sdk/docs/openapi/alga-openapi.{ce,ee}.{yaml,json}` and commit", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F221", "description": "Contract test for each management route (pattern: `projectTasksOpenApi.contract.test.ts`)", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F222", "description": "Contract test for action discovery endpoint", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F223", "description": "REST API routes share the same `withAuth` + permission checks as server actions; no parallel auth path", "implemented": false, "prdRefs": ["Security / Permissions"] }
