@@ -230,6 +230,23 @@ function makeCreateKnex(existingRows: InboundWebhookRowFixture[]) {
   return { knex, collisionBuilder, insertBuilder, getInsertedPayload: () => insertedPayload };
 }
 
+function makeGetKnex(row: InboundWebhookRowFixture | null) {
+  const builder: any = {
+    where: vi.fn(() => builder),
+    first: vi.fn(async () => row),
+  };
+
+  const knex = vi.fn((table: string) => {
+    if (table !== 'inbound_webhooks') {
+      throw new Error(`Unexpected table ${table}`);
+    }
+
+    return builder;
+  });
+
+  return { knex, builder };
+}
+
 describe('inbound webhook server actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -320,5 +337,30 @@ describe('inbound webhook server actions', () => {
       secretVaultPath: expect.stringContaining('inbound-webhooks/inbound_webhook_'),
     });
     expect(result.secret).toBe('0123456789abcdef');
+  });
+
+  it('T024: getInboundWebhook does not return raw secrets', async () => {
+    const { knex, builder } = makeGetKnex(
+      inboundWebhookRow({
+        auth_config: {
+          type: 'hmac_sha256',
+          signature_header: 'X-Signature',
+          secret: 'raw-db-secret-should-not-leak',
+          secret_vault_path: 'inbound-webhooks/inbound_webhook_webhook-1_hmac_secret',
+        },
+      }),
+    );
+    createTenantKnex.mockResolvedValue({ knex });
+
+    const { getInboundWebhook } = await import('@/lib/actions/inboundWebhookActions');
+    const result = await getInboundWebhook('webhook-1');
+
+    expect(builder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', inbound_webhook_id: 'webhook-1' });
+    expect(result?.authConfig).toEqual({
+      type: 'hmac_sha256',
+      signatureHeader: 'X-Signature',
+      secretVaultPath: 'inbound-webhooks/inbound_webhook_webhook-1_hmac_secret',
+    });
+    expect(JSON.stringify(result)).not.toContain('raw-db-secret-should-not-leak');
   });
 });

@@ -19,7 +19,7 @@
   { "id": "T021", "description": "`upsertInboundWebhook` rejects duplicate slug in same tenant", "implemented": true, "featureIds": ["F014"] },
   { "id": "T022", "description": "`upsertInboundWebhook` allows same slug across different tenants", "implemented": true, "featureIds": ["F014"] },
   { "id": "T023", "description": "`upsertInboundWebhook` writes secret to vault, not DB column", "implemented": true, "featureIds": ["F014", "F016"] },
-  { "id": "T024", "description": "`getInboundWebhook` does NOT return secret in response", "implemented": false, "featureIds": ["F013"] },
+  { "id": "T024", "description": "`getInboundWebhook` does NOT return secret in response", "implemented": true, "featureIds": ["F013"] },
   { "id": "T025", "description": "`rotateInboundWebhookSecret` invalidates old secret immediately", "implemented": false, "featureIds": ["F016"] },
   { "id": "T026", "description": "`deleteInboundWebhook` cascades to deliveries OR retains deliveries (decide and test)", "implemented": false, "featureIds": ["F015"] },
   { "id": "T027", "description": "Server actions reject when user lacks `inbound_webhook` permission", "implemented": false, "featureIds": ["F102"] },
