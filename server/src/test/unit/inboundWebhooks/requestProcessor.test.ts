@@ -96,6 +96,17 @@ function activeHmacWebhook() {
   };
 }
 
+function activeBearerWebhook() {
+  return {
+    ...activeHmacWebhook(),
+    auth_type: 'bearer',
+    auth_config: {
+      type: 'bearer',
+      token_vault_path: 'inbound-webhooks/inbound_webhook_webhook-1_bearer_token',
+    },
+  };
+}
+
 describe('inbound webhook request processor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -240,5 +251,46 @@ describe('inbound webhook request processor', () => {
       }),
     );
     expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
+  });
+
+  it('T033: accepts a valid Bearer token request', async () => {
+    lookupInboundWebhookBySlug.mockResolvedValue(activeBearerWebhook());
+    getTenantSecret.mockResolvedValue('bearer-secret');
+    const body = JSON.stringify({ event: 'payment_received' });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/billing-events', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer bearer-secret',
+        'content-type': 'application/json',
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'billing-events',
+    });
+
+    await expect(response.json()).resolves.toEqual({ delivery_id: 'delivery-1' });
+    expect(response.status).toBe(200);
+    expect(getTenantSecret).toHaveBeenCalledWith('tenant-a', 'inbound_webhook_webhook-1_bearer_token');
+    expect(createInboundDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        inboundWebhookId: 'webhook-1',
+        requestPath: '/api/inbound/tenant-slug/billing-events',
+        requestBody: { event: 'payment_received' },
+        authStatus: 'verified',
+      }),
+    );
+    expect(dispatchInboundWebhookHandler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        deliveryId: 'delivery-1',
+        body: { event: 'payment_received' },
+      }),
+    );
   });
 });
