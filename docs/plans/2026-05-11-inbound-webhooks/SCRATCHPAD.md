@@ -216,6 +216,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T130 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. The Settings webhooks shell now has source-level UI contract coverage for the tab container, inbound/outbound tab trigger IDs, tab values, and the inbound/outbound tab panel components.
 - (2026-05-11) **T131 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Outbound regression coverage now verifies the outbound tab still mounts `OutboundWebhooksSetup` and that the existing outbound list/save/delete/test/rotate/retry/delivery/stat action paths remain wired in the refactored component.
 - (2026-05-11) **T132 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. The inbound list view now has contract coverage for the required table shape: name/receiver URL, handler, last delivery, active state, and DataTable binding to inbound webhook rows.
+- (2026-05-11) **T133 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. The inbound create/edit dialog now has contract coverage for the Identity section title/help and stable inputs for name, URL-safe slug normalization, and description.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -733,6 +734,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T132:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T133:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 

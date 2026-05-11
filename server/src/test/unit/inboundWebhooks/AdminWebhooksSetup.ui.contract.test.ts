@@ -52,4 +52,16 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain('data={webhooks}');
     expect(adminWebhooksSource).toContain('columns={columns}');
   });
+
+  it('T133: inbound create/edit dialog includes identity fields for name, slug, and description', () => {
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-identity"');
+    expect(adminWebhooksSource).toContain("t('security.webhooks.inbound.identity.title')");
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-name"');
+    expect(adminWebhooksSource).toContain("label={t('security.webhooks.inbound.identity.name')}");
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-slug"');
+    expect(adminWebhooksSource).toContain("label={t('security.webhooks.inbound.identity.slug')}");
+    expect(adminWebhooksSource).toContain('slugifyInboundWebhookName(event.target.value)');
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-description"');
+    expect(adminWebhooksSource).toContain("label={t('security.webhooks.inbound.identity.description')}");
+  });
 });
