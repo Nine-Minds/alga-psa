@@ -302,6 +302,56 @@ describe('inbound webhook request processor', () => {
     );
   });
 
+  it('T070: returns 429 when the webhook rate limit is exceeded', async () => {
+    checkInboundWebhookRateLimit.mockResolvedValue({ allowed: false, retryAfterMs: 1500 });
+    const body = JSON.stringify({ alert: { message: 'Disk full' } });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-signature': `sha256=${hmacSignature('top-secret', body)}`,
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    await expect(response.json()).resolves.toEqual({
+      delivery_id: 'delivery-1',
+      error: 'rate_limited',
+    });
+    expect(response.status).toBe(429);
+    expect(response.headers.get('retry-after')).toBe('2');
+    expect(checkInboundWebhookRateLimit).toHaveBeenCalledWith('tenant-a', 'webhook-1');
+    expect(createInboundDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        inboundWebhookId: 'webhook-1',
+        authStatus: 'verified',
+        dispatchStatus: 'failed',
+        responseStatus: 429,
+        responseBody: { error: 'rate_limited' },
+      }),
+    );
+    expect(updateInboundDeliveryOutcome).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        deliveryId: 'delivery-1',
+        dispatchStatus: 'failed',
+        handlerOutcome: { error: 'rate_limited' },
+        responseStatus: 429,
+      }),
+    );
+    expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
+  });
+
   it('T031: rejects an invalid HMAC with 401 and logs only rejected-auth metadata', async () => {
     const body = JSON.stringify({ alert: { message: 'Disk full' } });
     const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
