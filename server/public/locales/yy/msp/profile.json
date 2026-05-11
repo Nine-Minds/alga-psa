@@ -300,7 +300,10 @@
           "optional": "55555",
           "mappingPlaceholder": "55555",
           "workflowTitle": "55555",
-          "workflowHelp": "55555"
+          "workflowHelp": "55555",
+          "workflow": "55555",
+          "workflowPlaceholder": "55555",
+          "envelopeTitle": "55555"
         },
         "sample": {
           "title": "55555",

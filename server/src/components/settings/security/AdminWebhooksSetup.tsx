@@ -44,8 +44,10 @@ import {
   captureSamplePayload,
   listInboundWebhookActions,
   listInboundDeliveries,
+  listInboundWorkflowOptions,
   listInboundWebhooks,
   type InboundActionDefinitionView,
+  type InboundWorkflowOptionView,
 } from '@/lib/actions/inboundWebhookActions';
 import { WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY } from '@/lib/actions/webhookPayloadFields';
 import type {
@@ -324,6 +326,7 @@ function InboundWebhooksListView() {
   const { t } = useTranslation('msp/profile');
   const [webhooks, setWebhooks] = useState<InboundWebhookConfig[]>([]);
   const [inboundActions, setInboundActions] = useState<InboundActionDefinitionView[]>([]);
+  const [workflowOptions, setWorkflowOptions] = useState<InboundWorkflowOptionView[]>([]);
   const [lastDeliveries, setLastDeliveries] = useState<Record<string, InboundWebhookDelivery | null>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -360,12 +363,14 @@ function InboundWebhooksListView() {
   const loadInboundWebhooks = useCallback(async () => {
     try {
       setLoading(true);
-      const [configs, actionDefinitions] = await Promise.all([
+      const [configs, actionDefinitions, workflows] = await Promise.all([
         listInboundWebhooks(),
         listInboundWebhookActions(),
+        listInboundWorkflowOptions(),
       ]);
       setWebhooks(configs);
       setInboundActions(actionDefinitions);
+      setWorkflowOptions(workflows);
       setError(null);
 
       const deliveryEntries = await Promise.all(
@@ -557,6 +562,12 @@ function InboundWebhooksListView() {
     value: action.name,
     label: `${action.entityType}: ${action.displayName}`,
   })), [inboundActions]);
+
+  const workflowSelectOptions = useMemo(() => workflowOptions.map((workflow) => ({
+    value: workflow.workflowId,
+    label: workflow.name,
+    dropdownHint: workflow.description ?? workflow.status ?? undefined,
+  })), [workflowOptions]);
 
   const selectedInboundAction = useMemo(
     () => inboundActions.find((action) => action.name === identityForm.directActionName) ?? null,
@@ -1105,6 +1116,37 @@ function InboundWebhooksListView() {
                 <p className="mt-1 text-sm text-gray-500">
                   {t('security.webhooks.inbound.handler.workflowHelp')}
                 </p>
+                <div className="mt-4">
+                  <CustomSelect
+                    id="inbound-webhook-workflow"
+                    label={t('security.webhooks.inbound.handler.workflow')}
+                    value={identityForm.workflowId}
+                    placeholder={t('security.webhooks.inbound.handler.workflowPlaceholder')}
+                    onValueChange={(value) => {
+                      setIdentityForm((current) => ({
+                        ...current,
+                        workflowId: value,
+                      }));
+                    }}
+                    options={workflowSelectOptions}
+                  />
+                </div>
+                <div className="mt-4 rounded-md border border-blue-200 bg-blue-50 p-3">
+                  <h5 className="text-sm font-medium text-blue-950">
+                    {t('security.webhooks.inbound.handler.envelopeTitle')}
+                  </h5>
+                  <pre className="mt-2 overflow-x-auto rounded bg-white p-3 text-xs text-blue-950">
+{`{
+  "source": "<webhook_slug>",
+  "body": { },
+  "headers": { },
+  "verified": true,
+  "delivery_id": "<delivery_id>",
+  "idempotency_key": "<key>",
+  "received_at": "<iso_timestamp>"
+}`}
+                  </pre>
+                </div>
               </div>
             )}
           </div>

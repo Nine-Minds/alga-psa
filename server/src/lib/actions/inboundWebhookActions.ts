@@ -100,6 +100,14 @@ export interface InboundActionDefinitionView {
   targetFields: InboundActionTargetField[];
 }
 
+export interface InboundWorkflowOptionView {
+  workflowId: string;
+  name: string;
+  description: string | null;
+  status: string | null;
+  publishedVersion: number | null;
+}
+
 const DEFAULT_DELIVERY_PAGE_SIZE = 25;
 const MAX_DELIVERY_PAGE_SIZE = 100;
 const SAMPLE_CAPTURE_WINDOW_MS = 5 * 60 * 1000;
@@ -430,6 +438,46 @@ export const listInboundWebhookActions = withAuth(async (user, { tenant }): Prom
     displayName: action.displayName,
     description: action.description,
     targetFields: action.targetFields,
+  }));
+});
+
+export const listInboundWorkflowOptions = withAuth(async (user, { tenant }): Promise<InboundWorkflowOptionView[]> => {
+  const { knex } = await createTenantKnex(tenant);
+  await assertInboundWebhookPermission(user, 'read', knex);
+
+  const publishedVersions = knex('workflow_definition_versions')
+    .select('workflow_id')
+    .max('version as published_version')
+    .groupBy('workflow_id')
+    .as('published_versions');
+
+  const rows = await knex('workflow_definitions as workflow_definitions')
+    .leftJoin(publishedVersions, 'published_versions.workflow_id', 'workflow_definitions.workflow_id')
+    .select(
+      'workflow_definitions.workflow_id',
+      'workflow_definitions.name',
+      'workflow_definitions.description',
+      'workflow_definitions.status',
+      knex.raw('published_versions.published_version as published_version'),
+    )
+    .where('workflow_definitions.tenant_id', tenant)
+    .where((query) => {
+      query.whereNull('workflow_definitions.is_visible').orWhere('workflow_definitions.is_visible', true);
+    })
+    .orderBy('workflow_definitions.name', 'asc') as Array<{
+      workflow_id: string;
+      name: string;
+      description: string | null;
+      status: string | null;
+      published_version: number | string | null;
+    }>;
+
+  return rows.map((row) => ({
+    workflowId: row.workflow_id,
+    name: row.name,
+    description: row.description,
+    status: row.status,
+    publishedVersion: row.published_version == null ? null : Number(row.published_version),
   }));
 });
 

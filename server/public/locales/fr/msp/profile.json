@@ -300,7 +300,10 @@
           "optional": "Optional",
           "mappingPlaceholder": "alert.message",
           "workflowTitle": "Workflow",
-          "workflowHelp": "Select a workflow to start with the normalized webhook envelope."
+          "workflowHelp": "Select a workflow to start with the normalized webhook envelope.",
+          "workflow": "Workflow",
+          "workflowPlaceholder": "Select a workflow",
+          "envelopeTitle": "Workflow input envelope"
         },
         "sample": {
           "title": "Sample payload",
