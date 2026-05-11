@@ -493,4 +493,18 @@ describe('inbound webhook server actions', () => {
     );
     expect(result).toEqual({ deleted: true, inboundWebhookId: 'webhook-1' });
   });
+
+  it('T027: server actions reject when the user lacks inbound_webhook permission', async () => {
+    const knex = vi.fn(() => {
+      throw new Error('webhook data should not be queried after permission denial');
+    });
+    createTenantKnex.mockResolvedValue({ knex });
+    hasPermission.mockResolvedValue(false);
+
+    const { listInboundWebhooks } = await import('@/lib/actions/inboundWebhookActions');
+
+    await expect(listInboundWebhooks()).rejects.toThrow('Forbidden: inbound_webhook:read permission required');
+    expect(hasPermission).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'inbound_webhook', 'read', knex);
+    expect(knex).not.toHaveBeenCalled();
+  });
 });

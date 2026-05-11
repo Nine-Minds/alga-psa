@@ -139,6 +139,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T024 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Mocked `getInboundWebhook` lookup verifies raw secret fields present in DB `auth_config` are redacted from the returned config view.
 - (2026-05-11) **T025 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Mocked rotation verifies `rotateInboundWebhookSecret` checks `inbound_webhook:update`, overwrites the existing tenant-secret vault path with the newly returned one-time secret, updates only vault metadata in `auth_config`, and does not leak the new secret through the webhook config response.
 - (2026-05-11) **T026 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Decision confirmed: delivery rows are retained after webhook deletion. The migration FK uses `ON DELETE SET NULL`, and the server-action test verifies `deleteInboundWebhook` deletes only the tenant-scoped config row, deletes the stored auth secret, and never deletes `inbound_webhook_deliveries`.
+- (2026-05-11) **T027 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Permission-denial test sets `hasPermission=false` and verifies `listInboundWebhooks` throws `Forbidden: inbound_webhook:read permission required` before querying webhook tables.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -425,6 +426,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T026:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T027:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
