@@ -283,6 +283,13 @@
           "jsonataExpressionPlaceholder": "55555",
           "windowSeconds": "55555"
         },
+        "active": {
+          "title": "55555",
+          "help": "55555",
+          "toggle": "55555",
+          "autoDisabled": "55555",
+          "updateFailed": "55555"
+        },
         "handler": {
           "title": "55555",
           "help": "55555",

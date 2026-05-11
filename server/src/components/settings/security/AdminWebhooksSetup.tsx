@@ -8,6 +8,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import {
   Dialog,
   DialogContent,
@@ -46,6 +47,7 @@ import {
   listInboundDeliveries,
   listInboundWorkflowOptions,
   listInboundWebhooks,
+  setInboundWebhookActiveState,
   type InboundActionDefinitionView,
   type InboundWorkflowOptionView,
 } from '@/lib/actions/inboundWebhookActions';
@@ -110,6 +112,8 @@ type InboundWebhookIdentityFormState = {
   fieldMapping: Record<string, string>;
   samplePayload: unknown | null;
   sampleCaptureExpiresAt: string | Date | null;
+  isActive: boolean;
+  autoDisabledAt: string | Date | null;
 };
 
 type WebhookStatsSnapshot = {
@@ -352,6 +356,8 @@ function InboundWebhooksListView() {
     fieldMapping: {},
     samplePayload: null,
     sampleCaptureExpiresAt: null,
+    isActive: true,
+    autoDisabledAt: null,
   });
   const [revealedInboundSecret, setRevealedInboundSecret] = useState<{
     webhookName: string;
@@ -500,6 +506,8 @@ function InboundWebhooksListView() {
                     : {},
                   samplePayload: webhook.samplePayload,
                   sampleCaptureExpiresAt: webhook.sampleCaptureExpiresAt,
+                  isActive: webhook.isActive,
+                  autoDisabledAt: webhook.autoDisabledAt,
                 });
                 setIdentityDialogOpen(true);
               }}
@@ -537,6 +545,8 @@ function InboundWebhooksListView() {
       fieldMapping: {},
       samplePayload: null,
       sampleCaptureExpiresAt: null,
+      isActive: true,
+      autoDisabledAt: null,
     });
     setIdentityDialogOpen(true);
   }, []);
@@ -618,6 +628,32 @@ function InboundWebhooksListView() {
       },
     }));
   }, [focusedMappingField]);
+
+  const handleInboundActiveChange = useCallback(async (checked: boolean) => {
+    if (!identityForm.inboundWebhookId) {
+      setIdentityForm((current) => ({
+        ...current,
+        isActive: checked,
+      }));
+      return;
+    }
+
+    try {
+      const updated = await setInboundWebhookActiveState(identityForm.inboundWebhookId, checked);
+      setIdentityForm((current) => ({
+        ...current,
+        isActive: updated.isActive,
+        autoDisabledAt: updated.autoDisabledAt,
+      }));
+      setWebhooks((current) => current.map((webhook) => (
+        webhook.inboundWebhookId === updated.inboundWebhookId ? updated : webhook
+      )));
+      setError(null);
+    } catch (toggleError) {
+      console.error('Failed to update inbound webhook active state:', toggleError);
+      setError(toggleError instanceof Error ? toggleError.message : t('security.webhooks.inbound.active.updateFailed'));
+    }
+  }, [identityForm.inboundWebhookId, t]);
 
   return (
     <div className="space-y-6">
@@ -950,6 +986,31 @@ function InboundWebhooksListView() {
                 }));
               }}
             />
+            <div className="border-t border-gray-200 pt-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    {t('security.webhooks.inbound.active.title')}
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {t('security.webhooks.inbound.active.help')}
+                  </p>
+                </div>
+                <Switch
+                  id="inbound-webhook-active"
+                  label={t('security.webhooks.inbound.active.toggle')}
+                  checked={identityForm.isActive}
+                  onCheckedChange={(checked) => void handleInboundActiveChange(checked)}
+                />
+              </div>
+              {identityForm.autoDisabledAt ? (
+                <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                  {t('security.webhooks.inbound.active.autoDisabled', {
+                    date: formatDateTime(identityForm.autoDisabledAt as string, neverLabel),
+                  })}
+                </div>
+              ) : null}
+            </div>
             <div className="border-t border-gray-200 pt-4">
               <h3 className="text-sm font-semibold text-gray-900">
                 {t('security.webhooks.inbound.handler.title')}

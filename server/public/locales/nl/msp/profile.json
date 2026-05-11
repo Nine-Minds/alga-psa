@@ -283,6 +283,13 @@
           "jsonataExpressionPlaceholder": "alert.id",
           "windowSeconds": "Duplicate Window (seconds)"
         },
+        "active": {
+          "title": "Active State",
+          "help": "Pause the endpoint without deleting its URL, mappings, or delivery history.",
+          "toggle": "Webhook is active",
+          "autoDisabled": "Auto-disabled at {{date}} after repeated failures.",
+          "updateFailed": "Failed to update inbound webhook state."
+        },
         "handler": {
           "title": "Handler",
           "help": "Choose what Alga should do after the request is verified and deduplicated.",
