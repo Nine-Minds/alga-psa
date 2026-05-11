@@ -251,4 +251,16 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain('pagination');
     expect(adminWebhooksSource).toContain('onPageChange={setInboundDeliveryPageNumber}');
   });
+
+  it('T161: delivery detail drawer shows request, response, latency, and errors', () => {
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-delivery-detail"');
+    expect(adminWebhooksSource).toContain('isOpen={selectedInboundDelivery !== null}');
+    expect(adminWebhooksSource).toContain('selectedInboundDelivery.responseStatus');
+    expect(adminWebhooksSource).toContain('selectedInboundDelivery.durationMs');
+    expect(adminWebhooksSource).toContain('selectedInboundDelivery.handlerOutcome?.error');
+    expect(adminWebhooksSource).toContain("['headers', selectedInboundDelivery.requestHeaders]");
+    expect(adminWebhooksSource).toContain("['requestBody', selectedInboundDelivery.requestBody]");
+    expect(adminWebhooksSource).toContain("['responseBody', selectedInboundDelivery.responseBody]");
+    expect(adminWebhooksSource).toContain('formatJsonForDisplay(value)');
+  });
 });
