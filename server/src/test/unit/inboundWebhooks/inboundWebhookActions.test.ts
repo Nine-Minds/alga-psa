@@ -312,6 +312,40 @@ function makeDeleteKnex(row: InboundWebhookRowFixture) {
   return { knex, getBuilder, deleteBuilder };
 }
 
+function makeUpdateWebhookKnex(row: InboundWebhookRowFixture) {
+  const now = new Date('2026-05-11T03:00:00.000Z');
+  let updatedPayload: Record<string, unknown> | null = null;
+
+  const builder: any = {
+    where: vi.fn(() => builder),
+    update: vi.fn((payload: Record<string, unknown>) => {
+      updatedPayload = payload;
+      return builder;
+    }),
+    returning: vi.fn(async () => [
+      inboundWebhookRow({
+        ...row,
+        ...(updatedPayload as Partial<InboundWebhookRowFixture>),
+        updated_at: now,
+      }),
+    ]),
+  };
+
+  const knex = vi.fn((table: string) => {
+    if (table !== 'inbound_webhooks') {
+      throw new Error(`Unexpected table ${table}`);
+    }
+
+    return builder;
+  });
+
+  knex.fn = {
+    now: vi.fn(() => now),
+  };
+
+  return { knex, builder, getUpdatedPayload: () => updatedPayload };
+}
+
 describe('inbound webhook server actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -530,5 +564,27 @@ describe('inbound webhook server actions', () => {
     expect(createTenantKnex).toHaveBeenLastCalledWith('tenant-a');
     expect(deleteHarness.getBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', inbound_webhook_id: 'webhook-1' });
     expect(deleteHarness.deleteBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', inbound_webhook_id: 'webhook-1' });
+  });
+
+  it('T082: clearSamplePayload removes the saved sample and capture window', async () => {
+    const { knex, builder, getUpdatedPayload } = makeUpdateWebhookKnex(
+      inboundWebhookRow({
+        sample_payload: { alert: { id: 'alert-123' } },
+        sample_capture_expires_at: '2026-05-11T03:05:00.000Z',
+      }),
+    );
+    createTenantKnex.mockResolvedValue({ knex });
+
+    const { clearSamplePayload } = await import('@/lib/actions/inboundWebhookActions');
+    const result = await clearSamplePayload('webhook-1');
+
+    expect(hasPermission).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'inbound_webhook', 'update', knex);
+    expect(builder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', inbound_webhook_id: 'webhook-1' });
+    expect(getUpdatedPayload()).toMatchObject({
+      sample_payload: null,
+      sample_capture_expires_at: null,
+    });
+    expect(result.samplePayload).toBeNull();
+    expect(result.sampleCaptureExpiresAt).toBeNull();
   });
 });

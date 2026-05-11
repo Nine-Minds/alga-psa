@@ -170,6 +170,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T072 implemented** in `server/src/test/unit/inboundWebhooks/rateLimitConfig.test.ts`. Rate-limit isolation by tenant is covered by asserting the same webhook ID under two tenants calls the shared token bucket with different tenant dimensions.
 - (2026-05-11) **T080 implemented** in `server/src/test/unit/inboundWebhooks/sampleCapture.test.ts`. Sample capture now has direct coverage for the atomic conditional update that stores the verified body only when capture is active and `sample_payload` is still null, then clears `sample_capture_expires_at`.
 - (2026-05-11) **T081 implemented** in `server/src/test/unit/inboundWebhooks/sampleCapture.test.ts`. Expired/otherwise non-matching capture windows now return `false` when the conditional update affects zero rows, which prevents late requests from overwriting an existing captured sample.
+- (2026-05-11) **T082 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. `clearSamplePayload` now has server-action coverage for `inbound_webhook:update` permission, tenant-scoped update by webhook id, and clearing both `sample_payload` and `sample_capture_expires_at`.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -550,6 +551,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T081:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/sampleCapture.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T082:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References
