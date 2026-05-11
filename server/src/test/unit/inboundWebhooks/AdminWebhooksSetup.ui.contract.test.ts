@@ -18,4 +18,25 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain('<InboundWebhooksListView />');
     expect(adminWebhooksSource).toContain('<OutboundWebhooksSetup />');
   });
+
+  it('T131: keeps the outbound webhook setup wired to the existing outbound actions', () => {
+    expect(adminWebhooksSource).toContain('<TabsContent value="outbound">');
+    expect(adminWebhooksSource).toContain('<OutboundWebhooksSetup />');
+    expect(adminWebhooksSource).toContain('function OutboundWebhooksSetup()');
+
+    for (const actionName of [
+      'listWebhooks',
+      'upsertWebhook',
+      'deleteWebhook',
+      'sendWebhookTest',
+      'rotateWebhookSecret',
+      'setWebhookActiveState',
+      'retryWebhookDelivery',
+      'listWebhookDeliveries',
+      'listWebhookEvents',
+      'getWebhookStatsSnapshot',
+    ]) {
+      expect(adminWebhooksSource).toContain(actionName);
+    }
+  });
 });
