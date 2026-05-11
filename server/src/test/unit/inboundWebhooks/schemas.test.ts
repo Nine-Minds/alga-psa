@@ -101,4 +101,24 @@ describe('inbound webhook schemas', () => {
       ]),
     );
   });
+
+  it('T013: rejects workflow handler config without a workflow_id', () => {
+    const result = inboundWebhookUpsertInputSchema.safeParse(
+      validInboundWebhookInput({
+        handler_type: 'workflow',
+        handler_config: {
+          type: 'workflow',
+        },
+      }),
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: ['handler_config', 'workflow_id'],
+        }),
+      ]),
+    );
+  });
 });
