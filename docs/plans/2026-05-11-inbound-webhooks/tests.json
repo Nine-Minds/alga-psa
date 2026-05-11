@@ -94,7 +94,7 @@
 
   { "id": "T1060", "description": "`createTimeEntry` creates a time entry with mapped user, work item, duration, billable flag", "implemented": true, "featureIds": ["F1060"] },
 
-  { "id": "T1070", "description": "`createProjectTask` creates a task under a project resolved by external_id or direct project_id", "implemented": false, "featureIds": ["F1070"] },
+  { "id": "T1070", "description": "`createProjectTask` creates a task under a project resolved by external_id or direct project_id", "implemented": true, "featureIds": ["F1070"] },
   { "id": "T1071", "description": "`updateProjectTaskStatusByExternalId` updates status via mappings lookup", "implemented": false, "featureIds": ["F1071"] },
 
   { "id": "T1080", "description": "`addTagToEntityByExternalId` attaches tag to ticket when entity_type=ticket", "implemented": false, "featureIds": ["F1080"] },
