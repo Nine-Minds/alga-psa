@@ -147,6 +147,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T033 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Bearer-auth receiver test swaps in a bearer webhook config, reads the mocked tenant-secret token through the real verifier, and verifies a valid `Authorization: Bearer ...` request creates a verified delivery, dispatches, and returns `200 {delivery_id}`.
 - (2026-05-11) **T034 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Bad Bearer token test verifies a bodyless `401`, rejected-auth delivery metadata with `auth_status='rejected_bearer'`, no persisted request body, and no dispatch.
 - (2026-05-11) **T035 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. IP allowlist success test uses the real CIDR matcher with `X-Forwarded-For`, verifies the first forwarded IP is accepted, no tenant secret is read, and a verified delivery dispatches.
+- (2026-05-11) **T036 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. IP allowlist rejection test verifies a request from outside the configured CIDR returns a bodyless `401`, logs `auth_status='rejected_ip'` with no request body, and skips dispatch.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -457,6 +458,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T035:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T036:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 

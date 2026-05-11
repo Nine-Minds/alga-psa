@@ -381,4 +381,40 @@ describe('inbound webhook request processor', () => {
       }),
     );
   });
+
+  it('T036: rejects a request from an IP outside the allowlist', async () => {
+    lookupInboundWebhookBySlug.mockResolvedValue(activeIpAllowlistWebhook());
+    const body = JSON.stringify({ alert: { id: 'alert-1' } });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-forwarded-for': '198.51.100.42',
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    await expect(response.text()).resolves.toBe('');
+    expect(response.status).toBe(401);
+    expect(createInboundDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        inboundWebhookId: 'webhook-1',
+        sourceIp: '198.51.100.42',
+        authStatus: 'rejected_ip',
+        dispatchStatus: 'failed',
+        responseStatus: 401,
+      }),
+    );
+    expect(createInboundDelivery.mock.calls[0][1]).not.toHaveProperty('requestBody');
+    expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
+  });
 });
