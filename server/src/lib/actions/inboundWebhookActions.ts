@@ -1,6 +1,7 @@
 'use server';
 
 import crypto from 'node:crypto';
+import type { Knex } from 'knex';
 
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -11,6 +12,8 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import type {
   InboundWebhookAuthConfig,
   InboundWebhookConfig,
+  InboundWebhookDelivery,
+  InboundWebhookDispatchStatus,
   InboundWebhookHandlerConfig,
   InboundWebhookIdempotencySource,
 } from '@/lib/inboundWebhooks/types';
@@ -40,6 +43,48 @@ interface InboundWebhookRow {
   created_at: Date | string;
   updated_at: Date | string;
 }
+
+interface InboundWebhookDeliveryRow {
+  tenant: string;
+  delivery_id: string;
+  inbound_webhook_id: string | null;
+  idempotency_key: string | null;
+  received_at: Date | string;
+  request_method: string;
+  request_path: string;
+  request_headers: Record<string, string | string[]>;
+  request_body: unknown | null;
+  source_ip: string | null;
+  user_agent: string | null;
+  auth_status: InboundWebhookDelivery['authStatus'];
+  dispatch_status: InboundWebhookDispatchStatus;
+  handler_outcome: Record<string, unknown> | null;
+  response_status: number | null;
+  response_body: unknown | null;
+  duration_ms: number | null;
+  retry_count: number;
+  is_replay: boolean;
+  replayed_from: string | null;
+  created_at: Date | string;
+  updated_at: Date | string;
+}
+
+interface ListInboundDeliveriesFilter {
+  inboundWebhookId?: string;
+  status?: InboundWebhookDispatchStatus;
+  dateFrom?: string | Date;
+  dateTo?: string | Date;
+}
+
+interface InboundDeliveryPage {
+  data: InboundWebhookDelivery[];
+  page: number;
+  limit: number;
+  total: number;
+}
+
+const DEFAULT_DELIVERY_PAGE_SIZE = 25;
+const MAX_DELIVERY_PAGE_SIZE = 100;
 
 function toIso(value: Date | string | null): string | null {
   return value ? new Date(value).toISOString() : null;
@@ -140,6 +185,33 @@ function mapInboundWebhook(row: InboundWebhookRow): InboundWebhookConfig {
     rateLimitPerMinute: row.rate_limit_per_minute,
     autoDisabledAt: toIso(row.auto_disabled_at),
     createdBy: row.created_by,
+    createdAt: new Date(row.created_at).toISOString(),
+    updatedAt: new Date(row.updated_at).toISOString(),
+  };
+}
+
+function mapInboundDelivery(row: InboundWebhookDeliveryRow): InboundWebhookDelivery {
+  return {
+    tenant: row.tenant,
+    deliveryId: row.delivery_id,
+    inboundWebhookId: row.inbound_webhook_id,
+    idempotencyKey: row.idempotency_key,
+    receivedAt: new Date(row.received_at).toISOString(),
+    requestMethod: row.request_method,
+    requestPath: row.request_path,
+    requestHeaders: row.request_headers ?? {},
+    requestBody: row.request_body,
+    sourceIp: row.source_ip,
+    userAgent: row.user_agent,
+    authStatus: row.auth_status,
+    dispatchStatus: row.dispatch_status,
+    handlerOutcome: row.handler_outcome,
+    responseStatus: row.response_status,
+    responseBody: row.response_body,
+    durationMs: row.duration_ms,
+    retryCount: row.retry_count,
+    isReplay: row.is_replay,
+    replayedFrom: row.replayed_from,
     createdAt: new Date(row.created_at).toISOString(),
     updatedAt: new Date(row.updated_at).toISOString(),
   };
@@ -531,5 +603,61 @@ export const setInboundWebhookActiveState = withAuth(
     }
 
     return mapInboundWebhook(row);
+  },
+);
+
+export const listInboundDeliveries = withAuth(
+  async (
+    user,
+    { tenant },
+    filter: ListInboundDeliveriesFilter = {},
+    page: number = 1,
+    limit: number = DEFAULT_DELIVERY_PAGE_SIZE,
+  ): Promise<InboundDeliveryPage> => {
+    const { knex } = await createTenantKnex(tenant);
+    await assertInboundWebhookPermission(user, 'read', knex);
+
+    const safePage = Math.max(1, Math.floor(page || 1));
+    const safeLimit = Math.min(MAX_DELIVERY_PAGE_SIZE, Math.max(1, Math.floor(limit || DEFAULT_DELIVERY_PAGE_SIZE)));
+
+    const applyFilters = <TRecord extends {} = any, TResult = any>(
+      query: Knex.QueryBuilder<TRecord, TResult>,
+    ): Knex.QueryBuilder<TRecord, TResult> => {
+      query.where('tenant', tenant);
+
+      if (filter.inboundWebhookId) {
+        query.andWhere('inbound_webhook_id', filter.inboundWebhookId);
+      }
+
+      if (filter.status) {
+        query.andWhere('dispatch_status', filter.status);
+      }
+
+      if (filter.dateFrom) {
+        query.andWhere('received_at', '>=', new Date(filter.dateFrom));
+      }
+
+      if (filter.dateTo) {
+        query.andWhere('received_at', '<=', new Date(filter.dateTo));
+      }
+
+      return query;
+    };
+
+    const totalRow = await applyFilters(knex('inbound_webhook_deliveries'))
+      .count<{ count: string | number }[]>({ count: '*' })
+      .first();
+
+    const rows = await applyFilters(knex<InboundWebhookDeliveryRow>('inbound_webhook_deliveries'))
+      .orderBy('received_at', 'desc')
+      .limit(safeLimit)
+      .offset((safePage - 1) * safeLimit);
+
+    return {
+      data: rows.map(mapInboundDelivery),
+      page: safePage,
+      limit: safeLimit,
+      total: Number(totalRow?.count ?? 0),
+    };
   },
 );
