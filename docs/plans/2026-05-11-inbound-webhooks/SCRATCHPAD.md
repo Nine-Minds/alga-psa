@@ -211,6 +211,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T115 implemented** in `server/src/test/unit/inboundWebhooks/workflowDispatcher.test.ts`. Workflow dispatch now has launch-boundary coverage showing once `launchPublishedWorkflowRun` returns a run id/version, dispatch resolves with the workflow outcome and does not wait for or observe later workflow completion/failure.
 - (2026-05-11) **T120 implemented** in `shared/workflow/expression-authoring/__tests__/coreContracts.test.ts`. The webhook payload context adapter now has contract coverage for turning a captured sample body into deterministic top-level expression roots and nested path options such as `alert.id` / `device.hostname`.
 - (2026-05-11) **T121 implemented** in `shared/workflow/expression-authoring/__tests__/coreContracts.test.ts`. Captured webhook sample inference now covers nested objects, arrays, array-item path segments, and primitive type classification for integer/number/boolean/string fields.
+- (2026-05-11) **T122 implemented** in `shared/workflow/expression-authoring/__tests__/coreContracts.test.ts`. Adapter edge-case coverage now verifies null bodies produce a minimal `value` root, array bodies expose `value[]` paths, and empty object samples return empty roots/options without throwing.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -713,6 +714,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `npx vitest run --config shared/vitest.config.ts shared/workflow/expression-authoring/__tests__/coreContracts.test.ts`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T121:
+  - `npx vitest run --config shared/vitest.config.ts shared/workflow/expression-authoring/__tests__/coreContracts.test.ts`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T122:
   - `npx vitest run --config shared/vitest.config.ts shared/workflow/expression-authoring/__tests__/coreContracts.test.ts`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 

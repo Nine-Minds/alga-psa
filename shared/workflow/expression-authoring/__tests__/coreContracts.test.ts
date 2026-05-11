@@ -326,6 +326,37 @@ describe('expression authoring contracts', () => {
     });
   });
 
+  it('T122: handles null, array, and empty webhook samples without crashing', () => {
+    const nullRoots = buildWebhookPayloadExpressionContextRoots(null);
+    const nullOptions = buildWebhookPayloadExpressionPathOptions(null);
+
+    expect(nullRoots).toEqual([
+      expect.objectContaining({
+        key: 'value',
+        label: 'Payload',
+        schema: { type: 'null' },
+      }),
+    ]);
+    expect(nullOptions).toEqual([
+      expect.objectContaining({
+        path: 'value',
+        valueType: 'null',
+        isLeaf: true,
+      }),
+    ]);
+
+    const arrayOptions = buildWebhookPayloadExpressionPathOptions([{ id: 'device-1' }], {
+      includeRootPaths: false,
+    });
+    expect(arrayOptions.map((option) => option.path)).toEqual([
+      'value[]',
+      'value[].id',
+    ]);
+
+    expect(buildWebhookPayloadExpressionContextRoots({})).toEqual([]);
+    expect(buildWebhookPayloadExpressionPathOptions({})).toEqual([]);
+  });
+
   it('returns informational diagnostics for unresolved schema-aware paths', () => {
     const options = buildWorkflowExpressionPathOptions({
       payloadSchema: {
