@@ -247,6 +247,45 @@ function makeGetKnex(row: InboundWebhookRowFixture | null) {
   return { knex, builder };
 }
 
+function makeRotateKnex(row: InboundWebhookRowFixture) {
+  const now = new Date('2026-05-11T02:00:00.000Z');
+  let updatedPayload: Record<string, unknown> | null = null;
+
+  const getBuilder: any = {
+    where: vi.fn(() => getBuilder),
+    first: vi.fn(async () => row),
+  };
+
+  const updateBuilder: any = {
+    where: vi.fn(() => updateBuilder),
+    update: vi.fn((payload: Record<string, unknown>) => {
+      updatedPayload = payload;
+      return updateBuilder;
+    }),
+    returning: vi.fn(async () => [
+      inboundWebhookRow({
+        ...row,
+        ...(updatedPayload as Partial<InboundWebhookRowFixture>),
+        updated_at: now,
+      }),
+    ]),
+  };
+
+  const knex = vi.fn((table: string) => {
+    if (table !== 'inbound_webhooks') {
+      throw new Error(`Unexpected table ${table}`);
+    }
+
+    return knex.mock.calls.length === 1 ? getBuilder : updateBuilder;
+  });
+
+  knex.fn = {
+    now: vi.fn(() => now),
+  };
+
+  return { knex, getBuilder, updateBuilder, getUpdatedPayload: () => updatedPayload };
+}
+
 describe('inbound webhook server actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -362,5 +401,44 @@ describe('inbound webhook server actions', () => {
       secretVaultPath: 'inbound-webhooks/inbound_webhook_webhook-1_hmac_secret',
     });
     expect(JSON.stringify(result)).not.toContain('raw-db-secret-should-not-leak');
+  });
+
+  it('T025: rotateInboundWebhookSecret overwrites the existing vault secret immediately', async () => {
+    const existingVaultPath = 'inbound-webhooks/inbound_webhook_webhook-1_hmac_secret';
+    const { knex, getBuilder, updateBuilder, getUpdatedPayload } = makeRotateKnex(
+      inboundWebhookRow({
+        auth_config: {
+          type: 'hmac_sha256',
+          signature_header: 'X-Signature',
+          secret_vault_path: existingVaultPath,
+        },
+      }),
+    );
+    createTenantKnex.mockResolvedValue({ knex });
+
+    const { rotateInboundWebhookSecret } = await import('@/lib/actions/inboundWebhookActions');
+    const result = await rotateInboundWebhookSecret('webhook-1');
+
+    expect(hasPermission).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'inbound_webhook', 'update', knex);
+    expect(getBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', inbound_webhook_id: 'webhook-1' });
+    expect(setTenantSecret).toHaveBeenCalledWith(
+      'tenant-a',
+      'inbound_webhook_webhook-1_hmac_secret',
+      result.secret,
+    );
+    expect(result.secret).toEqual(expect.any(String));
+    expect(result.secret.length).toBeGreaterThan(20);
+    expect(getUpdatedPayload()?.auth_config).toMatchObject({
+      type: 'hmac_sha256',
+      signature_header: 'X-Signature',
+      secret_vault_path: existingVaultPath,
+    });
+    expect(updateBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', inbound_webhook_id: 'webhook-1' });
+    expect(result.webhook.authConfig).toEqual({
+      type: 'hmac_sha256',
+      signatureHeader: 'X-Signature',
+      secretVaultPath: existingVaultPath,
+    });
+    expect(JSON.stringify(result.webhook)).not.toContain(result.secret);
   });
 });
