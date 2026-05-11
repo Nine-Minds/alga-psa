@@ -61,6 +61,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F034 implemented** in `server/src/lib/inboundWebhooks/authVerifier.ts`. Bearer auth reads `Authorization: Bearer <token>`, loads the tenant secret by vault path metadata, and uses the same timing-safe comparison helper.
 - (2026-05-11) **F035 implemented** in `server/src/lib/inboundWebhooks/authVerifier.ts`. IP allowlist auth supports exact IP strings and IPv4 CIDR ranges without adding a new dependency. IPv6 is currently exact-match only; add a CIDR library if IPv6 CIDR support becomes required.
 - (2026-05-11) **F036 implemented** in `server/src/lib/inboundWebhooks/authVerifier.ts`. Path-token auth reads the configured query parameter (default `token`), loads the tenant token secret, and compares with the timing-safe helper.
+- (2026-05-11) **F037 implemented** in `server/src/lib/inboundWebhooks/responses.ts`. `unauthorizedInboundWebhookResponse()` returns a bodyless `401` `NextResponse` to reuse for unknown tenant, unknown webhook, disabled webhook, and bad auth cases.
 - (2026-05-11) **Bundled integrations already in the codebase** — the user-configurable system complements these, not replaces them:
   - **Tanium** (EE) — `ee/server/src/lib/integrations/tanium/` + `taniumGatewayClient.ts`. Outbound sync (devices → assets) + webhook. Uses `ingestNormalizedRmmDeviceSnapshot`.
   - **NinjaOne** (EE) — `ee/server/src/lib/integrations/ninjaone/` — has a full inbound webhook implementation (`webhooks/webhookHandler.ts`, `webhooks/webhookRegistration.ts`, `alerts/alertProcessor.ts`, `alerts/ticketCreator.ts`). The user-configurable inbound webhook system is the generic equivalent.
@@ -137,6 +138,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Type check after F041:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F033:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F037:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References
