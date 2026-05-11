@@ -97,7 +97,7 @@
   { "id": "T1070", "description": "`createProjectTask` creates a task under a project resolved by external_id or direct project_id", "implemented": true, "featureIds": ["F1070"] },
   { "id": "T1071", "description": "`updateProjectTaskStatusByExternalId` updates status via mappings lookup", "implemented": true, "featureIds": ["F1071"] },
 
-  { "id": "T1080", "description": "`addTagToEntityByExternalId` attaches tag to ticket when entity_type=ticket", "implemented": false, "featureIds": ["F1080"] },
+  { "id": "T1080", "description": "`addTagToEntityByExternalId` attaches tag to ticket when entity_type=ticket", "implemented": true, "featureIds": ["F1080"] },
   { "id": "T1081", "description": "`addTagToEntityByExternalId` attaches tag to client when entity_type=client", "implemented": false, "featureIds": ["F1080"] },
   { "id": "T1082", "description": "`addTagToEntityByExternalId` rejects unsupported entity_type with clear error", "implemented": false, "featureIds": ["F1080"] },
 
