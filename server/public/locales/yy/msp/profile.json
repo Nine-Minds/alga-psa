@@ -327,6 +327,26 @@
           "help": "55555",
           "focusHelp": "55555",
           "empty": "55555"
+        },
+        "deliveryLog": {
+          "title": "55555",
+          "help": "55555",
+          "empty": "55555",
+          "loadFailed": "55555",
+          "pageSummary": "55555",
+          "durationMs": "55555",
+          "columns": {
+            "received": "55555",
+            "status": "55555",
+            "response": "55555",
+            "duration": "55555"
+          },
+          "status": {
+            "pending": "55555",
+            "dispatched": "55555",
+            "duplicate": "55555",
+            "failed": "55555"
+          }
         }
       },
       "stats": {

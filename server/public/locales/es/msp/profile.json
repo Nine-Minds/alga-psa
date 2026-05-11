@@ -327,6 +327,26 @@
           "help": "Click a path to insert it into {{field}}.",
           "focusHelp": "Focus a mapping field, then click a path to insert it.",
           "empty": "Capture a sample payload to browse fields."
+        },
+        "deliveryLog": {
+          "title": "Delivery log",
+          "help": "Recent verified deliveries for this inbound webhook.",
+          "empty": "No deliveries recorded yet.",
+          "loadFailed": "Failed to load inbound webhook deliveries.",
+          "pageSummary": "Page {{page}} of {{total}}",
+          "durationMs": "{{duration}} ms",
+          "columns": {
+            "received": "Received",
+            "status": "Status",
+            "response": "Response",
+            "duration": "Duration"
+          },
+          "status": {
+            "pending": "pending",
+            "dispatched": "dispatched",
+            "duplicate": "duplicate",
+            "failed": "failed"
+          }
         }
       },
       "stats": {

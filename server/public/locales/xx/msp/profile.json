@@ -327,6 +327,26 @@
           "help": "11111",
           "focusHelp": "11111",
           "empty": "11111"
+        },
+        "deliveryLog": {
+          "title": "11111",
+          "help": "11111",
+          "empty": "11111",
+          "loadFailed": "11111",
+          "pageSummary": "11111",
+          "durationMs": "11111",
+          "columns": {
+            "received": "11111",
+            "status": "11111",
+            "response": "11111",
+            "duration": "11111"
+          },
+          "status": {
+            "pending": "11111",
+            "dispatched": "11111",
+            "duplicate": "11111",
+            "failed": "11111"
+          }
         }
       },
       "stats": {

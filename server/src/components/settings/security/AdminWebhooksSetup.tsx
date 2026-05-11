@@ -331,6 +331,13 @@ function InboundWebhooksListView() {
   const [webhooks, setWebhooks] = useState<InboundWebhookConfig[]>([]);
   const [inboundActions, setInboundActions] = useState<InboundActionDefinitionView[]>([]);
   const [workflowOptions, setWorkflowOptions] = useState<InboundWorkflowOptionView[]>([]);
+  const [inboundDeliveryPage, setInboundDeliveryPage] = useState<{
+    data: InboundWebhookDelivery[];
+    page: number;
+    limit: number;
+    total: number;
+  } | null>(null);
+  const [inboundDeliveryPageNumber, setInboundDeliveryPageNumber] = useState(1);
   const [lastDeliveries, setLastDeliveries] = useState<Record<string, InboundWebhookDelivery | null>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -401,6 +408,27 @@ function InboundWebhooksListView() {
   useEffect(() => {
     void loadInboundWebhooks();
   }, [loadInboundWebhooks]);
+
+  const loadInboundDialogDeliveries = useCallback(async (webhookId: string, page: number) => {
+    try {
+      const deliveriesPage = await listInboundDeliveries({ inboundWebhookId: webhookId }, page, 10);
+      setInboundDeliveryPage(deliveriesPage);
+      setError(null);
+    } catch (deliveryError) {
+      console.error('Failed to load inbound webhook deliveries:', deliveryError);
+      setError(deliveryError instanceof Error ? deliveryError.message : t('security.webhooks.inbound.deliveryLog.loadFailed'));
+    }
+  }, [t]);
+
+  useEffect(() => {
+    if (!identityDialogOpen || !identityForm.inboundWebhookId) {
+      setInboundDeliveryPage(null);
+      setInboundDeliveryPageNumber(1);
+      return;
+    }
+
+    void loadInboundDialogDeliveries(identityForm.inboundWebhookId, inboundDeliveryPageNumber);
+  }, [identityDialogOpen, identityForm.inboundWebhookId, inboundDeliveryPageNumber, loadInboundDialogDeliveries]);
 
   const columns = useMemo<ColumnDefinition<InboundWebhookConfig>[]>(() => [
     {
@@ -583,6 +611,35 @@ function InboundWebhooksListView() {
     () => inboundActions.find((action) => action.name === identityForm.directActionName) ?? null,
     [identityForm.directActionName, inboundActions],
   );
+
+  const inboundDeliveryColumns = useMemo<ColumnDefinition<InboundWebhookDelivery>[]>(() => [
+    {
+      title: t('security.webhooks.inbound.deliveryLog.columns.received'),
+      dataIndex: 'receivedAt',
+      render: (value) => formatDateTime(value as string | null, neverLabel),
+    },
+    {
+      title: t('security.webhooks.inbound.deliveryLog.columns.status'),
+      dataIndex: 'dispatchStatus',
+      render: (value) => (
+        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+          {t(`security.webhooks.inbound.deliveryLog.status.${value as string}`, { defaultValue: value as string })}
+        </span>
+      ),
+    },
+    {
+      title: t('security.webhooks.inbound.deliveryLog.columns.response'),
+      dataIndex: 'responseStatus',
+      render: (value) => value ?? t('security.webhooks.deliveries.noResponseCode'),
+    },
+    {
+      title: t('security.webhooks.inbound.deliveryLog.columns.duration'),
+      dataIndex: 'durationMs',
+      render: (value) => value == null
+        ? t('security.webhooks.deliveries.noResponseCode')
+        : t('security.webhooks.inbound.deliveryLog.durationMs', { duration: value as number }),
+    },
+  ], [neverLabel, t]);
 
   const samplePathOptions = useMemo(
     () => buildWebhookPayloadExpressionPathOptions(identityForm.samplePayload, { includeRootPaths: true }),
@@ -1210,6 +1267,43 @@ function InboundWebhooksListView() {
                 </div>
               </div>
             )}
+            {identityForm.inboundWebhookId ? (
+              <div className="border-t border-gray-200 pt-4">
+                <div className="mb-3 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900">
+                      {t('security.webhooks.inbound.deliveryLog.title')}
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      {t('security.webhooks.inbound.deliveryLog.help')}
+                    </p>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {inboundDeliveryPage
+                      ? t('security.webhooks.inbound.deliveryLog.pageSummary', {
+                        page: inboundDeliveryPage.page,
+                        total: Math.max(1, Math.ceil(inboundDeliveryPage.total / inboundDeliveryPage.limit)),
+                      })
+                      : null}
+                  </div>
+                </div>
+                {inboundDeliveryPage && inboundDeliveryPage.data.length > 0 ? (
+                  <DataTable<InboundWebhookDelivery>
+                    id="inbound-webhook-deliveries-table"
+                    data={inboundDeliveryPage.data}
+                    columns={inboundDeliveryColumns}
+                    pagination
+                    currentPage={inboundDeliveryPageNumber}
+                    onPageChange={setInboundDeliveryPageNumber}
+                    pageSize={inboundDeliveryPage.limit}
+                  />
+                ) : (
+                  <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
+                    {t('security.webhooks.inbound.deliveryLog.empty')}
+                  </div>
+                )}
+              </div>
+            ) : null}
           </div>
         </DialogContent>
         <DialogFooter>
