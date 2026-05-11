@@ -1,6 +1,10 @@
 import { evaluateFieldMapping } from './actions/mappingEvaluator';
 import { getAction, type InboundActionDefinition, type InboundActionTargetField } from './actions/registry';
 import type { InboundWebhookConfigLookupRow } from './configLookup';
+import { filterInboundWebhookHeaders } from './headerFilter';
+import { buildWorkflowWebhookEnvelope } from './workflowEnvelope';
+import { launchPublishedWorkflowRun } from '@alga-psa/workflows/lib/workflowRunLauncher';
+import { createTenantKnex } from '@alga-psa/db';
 
 export interface DispatchInboundWebhookHandlerInput {
   webhook: Pick<InboundWebhookConfigLookupRow, 'tenant' | 'slug' | 'handler_type' | 'handler_config'>;
@@ -18,7 +22,7 @@ export async function dispatchInboundWebhookHandler(
   }
 
   if (input.webhook.handler_type === 'workflow') {
-    throw new Error('Workflow inbound webhook handler is not implemented yet');
+    return dispatchWorkflow(input);
   }
 
   throw new Error(`Unsupported inbound webhook handler type: ${input.webhook.handler_type}`);
@@ -58,6 +62,48 @@ async function dispatchDirectAction(input: DispatchInboundWebhookHandlerInput): 
     external_id: result.externalId,
     message: result.message,
     metadata: result.metadata,
+  };
+}
+
+async function dispatchWorkflow(input: DispatchInboundWebhookHandlerInput): Promise<Record<string, unknown>> {
+  const config = input.webhook.handler_config ?? {};
+  const workflowId = typeof config.workflow_id === 'string' ? config.workflow_id.trim() : '';
+
+  if (!workflowId) {
+    throw new Error('Inbound workflow handler requires workflow_id');
+  }
+
+  const envelope = buildWorkflowWebhookEnvelope({
+    webhookSlug: input.webhook.slug,
+    body: input.body,
+    headers: filterInboundWebhookHeaders(input.headers),
+    deliveryId: input.deliveryId,
+    idempotencyKey: input.idempotencyKey,
+  });
+
+  const { knex } = await createTenantKnex(input.webhook.tenant);
+  const launched = await launchPublishedWorkflowRun(knex, {
+    workflowId,
+    tenantId: input.webhook.tenant,
+    payload: envelope as unknown as Record<string, unknown>,
+    triggerType: 'event',
+    triggerMetadata: {
+      source: 'inbound_webhook',
+      webhook_slug: input.webhook.slug,
+      delivery_id: input.deliveryId,
+      idempotency_key: input.idempotencyKey,
+    },
+    triggerFireKey: `inbound-webhook:${input.deliveryId}`,
+    eventType: 'INBOUND_WEBHOOK_RECEIVED',
+    execute: true,
+    executionKey: `inbound-webhook:${input.deliveryId}`,
+  });
+
+  return {
+    workflow_id: workflowId,
+    workflow_run_id: launched.runId,
+    workflow_version: launched.workflowVersion,
+    envelope,
   };
 }
 

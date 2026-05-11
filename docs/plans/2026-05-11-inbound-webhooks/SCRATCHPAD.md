@@ -50,6 +50,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F054 implemented** in `server/src/lib/inboundWebhooks/actions/mappingEvaluator.ts`. `evaluateFieldMapping` evaluates each mapped target field using the existing workflow JSONata runtime (`@alga-psa/workflows/runtime/expressionEngine`) with both `body` and `payload` bound to the inbound request body.
 - (2026-05-11) **F055 implemented** in `server/src/lib/inboundWebhooks/dispatcher.ts` and the receiver/replay/test outcome paths. The dispatcher validates required fields and primitive target field types after JSONata evaluation; errors are caught by callers and persisted to `handler_outcome.error` with `dispatch_status='failed'`.
 - (2026-05-11) **F056 verified/implemented** through the existing direct-action dispatcher plus action return contracts. Ticket/client/invoice `*ByExternalId` lookup misses return `success:false` with `lookup_miss` messages, and `dispatchInboundWebhookHandler` converts any unsuccessful action result into an exception so the receiver/replay/test callers persist `dispatch_status='failed'` rather than silently no-oping.
+- (2026-05-11) **F060 implemented** in `server/src/lib/inboundWebhooks/dispatcher.ts`. Workflow handlers now call the existing `launchPublishedWorkflowRun` entrypoint with the normalized webhook envelope as the workflow payload, `triggerType='event'`, event type `INBOUND_WEBHOOK_RECEIVED`, and a delivery-scoped trigger/execution key. Envelope headers are filtered through the inbound header filter before being passed to workflow context.
 - (2026-05-11) **F1010 implemented** in `packages/tickets/src/actions/inboundActions.ts`. `createTicket` registers itself with the inbound action registry, uses shared `TicketModel.createTicketWithRetry`, supports optional asset association, and writes `tenant_external_entity_mappings` when `external_id` is mapped.
 - (2026-05-11) **F1011 implemented** in `packages/tickets/src/actions/inboundActions.ts`. `updateTicketByExternalId` resolves tickets through `tenant_external_entity_mappings` using `integration_type=<webhookSlug>`, updates status/priority/assignment/board and related ticket fields through shared `TicketModel.updateTicket`, and returns `success:false` with `lookup_miss` wording when no mapping exists.
 - (2026-05-11) **F1012 implemented** in `packages/tickets/src/actions/inboundActions.ts`. `addTicketCommentByExternalId` resolves mapped tickets through `tenant_external_entity_mappings`, appends comments through shared `TicketModel.createComment`, supports internal/resolution/contact-author fields, and records inbound webhook metadata on the comment.
@@ -200,6 +201,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Type check after F1071:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F1080:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F060:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References
