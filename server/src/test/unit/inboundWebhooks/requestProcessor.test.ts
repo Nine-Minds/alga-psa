@@ -277,6 +277,62 @@ describe('inbound webhook request processor', () => {
     );
   });
 
+  it('T113: records workflow_run_id in the delivery handler outcome after workflow trigger', async () => {
+    lookupInboundWebhookBySlug.mockResolvedValue({
+      ...activeHmacWebhook(),
+      handler_type: 'workflow',
+      handler_config: {
+        type: 'workflow',
+        workflow_id: 'workflow-1',
+      },
+    });
+    dispatchInboundWebhookHandler.mockResolvedValue({
+      workflow_id: 'workflow-1',
+      workflow_run_id: 'workflow-run-1',
+      workflow_version: 3,
+      envelope: {
+        source: 'rmm-alerts',
+        body: { alert: { message: 'Disk full' } },
+        headers: { 'content-type': 'application/json' },
+        verified: true,
+        delivery_id: 'delivery-1',
+        idempotency_key: null,
+        received_at: '2026-05-11T17:00:00.000Z',
+      },
+    });
+    const body = JSON.stringify({ alert: { message: 'Disk full' } });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-signature': `sha256=${hmacSignature('top-secret', body)}`,
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    expect(response.status).toBe(200);
+    expect(updateInboundDeliveryOutcome).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        deliveryId: 'delivery-1',
+        dispatchStatus: 'dispatched',
+        handlerOutcome: expect.objectContaining({
+          workflow_id: 'workflow-1',
+          workflow_run_id: 'workflow-run-1',
+          workflow_version: 3,
+        }),
+      }),
+    );
+  });
+
   it('T060: persists a verified delivery row before dispatch', async () => {
     const body = JSON.stringify({ alert: { message: 'Disk full' } });
     const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
