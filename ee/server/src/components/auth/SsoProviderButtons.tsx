@@ -61,6 +61,25 @@ export default function SsoProviderButtons({
   const hasValidEmail = EMAIL_PATTERN.test(normalizedEmail);
   const genericStartFailureMessage =
     "We couldn't start SSO sign-in. Please verify provider setup and try again.";
+  const effectiveDiscoveryEndpoint =
+    discoveryEndpoint ??
+    (authSurface === 'client_portal'
+      ? '/api/auth/client-portal/sso/discover'
+      : '/api/auth/msp/sso/discover');
+  const effectiveResolveEndpoint =
+    resolveEndpoint ??
+    (authSurface === 'client_portal'
+      ? '/api/auth/client-portal/sso/resolve'
+      : '/api/auth/msp/sso/resolve');
+  const effectiveStorageKey =
+    storageKey ??
+    (authSurface === 'client_portal'
+      ? 'client_portal_sso_last_provider'
+      : LAST_PROVIDER_STORAGE_KEY);
+  const inferredPortalDomain =
+    typeof window !== 'undefined' ? window.location.hostname : undefined;
+  const portalDomainContext =
+    portalDomainHint || (authSurface === 'client_portal' ? inferredPortalDomain : undefined);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -190,6 +209,7 @@ export default function SsoProviderButtons({
         mode: 'login',
         user_type: authSurface === 'client_portal' ? 'client' : 'internal',
         tenant: tenantHint ?? null,
+        callback_url: callbackUrl,
       };
 
       const authorizationParams: Record<string, string> = {
@@ -250,8 +270,3 @@ export default function SsoProviderButtons({
     </div>
   );
 }
-  const effectiveDiscoveryEndpoint = discoveryEndpoint ?? (authSurface === 'client_portal' ? '/api/auth/client-portal/sso/discover' : '/api/auth/msp/sso/discover');
-  const effectiveResolveEndpoint = resolveEndpoint ?? (authSurface === 'client_portal' ? '/api/auth/client-portal/sso/resolve' : '/api/auth/msp/sso/resolve');
-  const effectiveStorageKey = storageKey ?? (authSurface === 'client_portal' ? 'client_portal_sso_last_provider' : LAST_PROVIDER_STORAGE_KEY);
-  const inferredPortalDomain = typeof window !== 'undefined' ? window.location.hostname : undefined;
-  const portalDomainContext = portalDomainHint || (authSurface === 'client_portal' ? inferredPortalDomain : undefined);

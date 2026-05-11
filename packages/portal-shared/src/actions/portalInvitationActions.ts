@@ -1,11 +1,10 @@
 'use server'
 
+import { randomBytes } from 'node:crypto';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db';
 import { PortalInvitationService } from '../services/PortalInvitationService';
 import { getTenantSlugForTenant } from '@alga-psa/db';
 import { getSystemEmailService, TenantEmailService, sendPortalInvitationEmail } from '@alga-psa/email';
-import { UserService } from '@alga-psa/users';
-import { runAsSystem, createSystemContext } from '@alga-psa/db';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
 import type { IUserWithRoles, IUser } from '@alga-psa/types';
@@ -567,21 +566,131 @@ export async function completePortalSetup(
         } as CompleteSetupResult;
       }
 
-      const upsertMicrosoftOAuthLink = async (userId: string) => {
+      const assertMicrosoftOAuthLinkAvailable = async (userId?: string, db = knex) => {
         if (!prelinkedOAuth?.providerAccountId || prelinkedOAuth.provider !== 'microsoft') {
           return;
         }
-        await knex('oauth_account_links')
-          .insert({
+
+        const existingProviderAccountQuery = db('user_auth_accounts')
+          .where({
             tenant,
-            user_id: userId,
             provider: 'microsoft',
             provider_account_id: prelinkedOAuth.providerAccountId,
-            created_at: knex.raw('now()'),
-            updated_at: knex.raw('now()')
+          });
+        if (userId) {
+          existingProviderAccountQuery.whereNot('user_id', userId);
+        }
+
+        const existingProviderAccount = await existingProviderAccountQuery.first(['user_id']);
+        if (existingProviderAccount?.user_id) {
+          throw new PortalInvitationError(
+            'This Microsoft account is already linked to another portal user',
+            'SETUP_FAILED'
+          );
+        }
+      };
+
+      const acquireMicrosoftOAuthLinkLock = async (db = knex) => {
+        if (!prelinkedOAuth?.providerAccountId || prelinkedOAuth.provider !== 'microsoft') {
+          return;
+        }
+
+        await db.raw(
+          'select pg_advisory_xact_lock(hashtext(?), hashtext(?))',
+          [
+            'oauth_account_link',
+            `${tenant}:microsoft:${prelinkedOAuth.providerAccountId}`,
+          ]
+        );
+      };
+
+      const upsertMicrosoftOAuthLink = async (userId: string, trx = knex) => {
+        if (!prelinkedOAuth?.providerAccountId || prelinkedOAuth.provider !== 'microsoft') {
+          return;
+        }
+
+        try {
+          await trx('user_auth_accounts')
+            .insert({
+              tenant,
+              user_id: userId,
+              provider: 'microsoft',
+              provider_account_id: prelinkedOAuth.providerAccountId,
+              metadata: {},
+              created_at: trx.raw('now()'),
+              updated_at: trx.raw('now()')
+            })
+            .onConflict(['tenant', 'user_id', 'provider'])
+            .merge({
+              provider_account_id: prelinkedOAuth.providerAccountId,
+              updated_at: trx.raw('now()')
+            });
+        } catch (error) {
+          if ((error as { code?: string })?.code === '23505') {
+            throw new PortalInvitationError(
+              'This Microsoft account is already linked to another portal user',
+              'SETUP_FAILED'
+            );
+          }
+          throw error;
+        }
+      };
+
+      const createDefaultUserPreferences = async (userId: string, db = knex) => {
+        const defaultPreferences = {
+          theme: 'light',
+          language: 'en',
+          timezone: 'UTC',
+          notifications_email: true,
+          notifications_browser: true,
+          dashboard_layout: 'default'
+        };
+
+        for (const [settingName, settingValue] of Object.entries(defaultPreferences)) {
+          await db('user_preferences').insert({
+            user_id: userId,
+            setting_name: settingName,
+            setting_value: JSON.stringify(settingValue),
+            tenant,
+            updated_at: new Date()
+          });
+        }
+      };
+
+      const createPortalUserInTransaction = async (db = knex) => {
+        const { hashPassword } = await import('@alga-psa/core/encryption');
+        const passwordForStorage = normalizedPassword || randomBytes(32).toString('hex');
+        const hashedPassword = await hashPassword(passwordForStorage);
+        const fullName = String(contact.full_name || '').trim() || String(contact.email || '').trim();
+        const nameParts = fullName.split(' ');
+        const firstName = nameParts[0] || fullName;
+        const lastName = nameParts.slice(1).join(' ') || null;
+
+        const [user] = await db('users')
+          .insert({
+            user_id: db.raw('gen_random_uuid()'),
+            username: contact.email.toLowerCase(),
+            email: contact.email.toLowerCase(),
+            first_name: firstName,
+            last_name: lastName,
+            hashed_password: hashedPassword,
+            user_type: 'client',
+            contact_id: contact.contact_name_id,
+            is_inactive: false,
+            two_factor_enabled: false,
+            is_google_user: false,
+            tenant,
+            created_at: db.raw('now()'),
+            updated_at: db.raw('now()')
           })
-          .onConflict(['tenant', 'provider', 'provider_account_id'])
-          .merge({ user_id: userId, updated_at: knex.raw('now()') });
+          .returning('*');
+
+        if (!user || !user.user_id) {
+          throw new Error('Failed to create user account');
+        }
+
+        await createDefaultUserPreferences(user.user_id, db);
+        return user;
       };
 
       // Check if user already exists
@@ -593,18 +702,24 @@ export async function completePortalSetup(
         // Treat as a password reset for existing client user when a password is supplied.
         // For Entra pre-link invitations, password setup is optional.
         try {
-          if (normalizedPassword) {
-            const { hashPassword } = await import('@alga-psa/core/encryption');
-            const hashedPassword = await hashPassword(normalizedPassword);
-            await knex('users')
-              .where({ user_id: existingUser.user_id, tenant })
-              .update({ hashed_password: hashedPassword, is_inactive: false, updated_at: knex.raw('now()') });
-          } else {
-            await knex('users')
-              .where({ user_id: existingUser.user_id, tenant })
-              .update({ is_inactive: false, updated_at: knex.raw('now()') });
-          }
-          await upsertMicrosoftOAuthLink(existingUser.user_id);
+          await knex.transaction(async (trx) => {
+            await acquireMicrosoftOAuthLinkLock(trx);
+            await assertMicrosoftOAuthLinkAvailable(existingUser.user_id, trx);
+
+            if (normalizedPassword) {
+              const { hashPassword } = await import('@alga-psa/core/encryption');
+              const hashedPassword = await hashPassword(normalizedPassword);
+              await trx('users')
+                .where({ user_id: existingUser.user_id, tenant })
+                .update({ hashed_password: hashedPassword, is_inactive: false, updated_at: trx.raw('now()') });
+            } else {
+              await trx('users')
+                .where({ user_id: existingUser.user_id, tenant })
+                .update({ is_inactive: false, updated_at: trx.raw('now()') });
+            }
+
+            await upsertMicrosoftOAuthLink(existingUser.user_id, trx);
+          });
 
           // Mark invitation as used
           const tokenMarked = await PortalInvitationService.markTokenAsUsed(token);
@@ -634,6 +749,13 @@ export async function completePortalSetup(
               : 'Portal account is ready. Continue with Microsoft sign in.'
           } as CompleteSetupResult;
         } catch (e) {
+          if (e instanceof PortalInvitationError) {
+            return {
+              success: false,
+              error: e.message,
+              errorCode: e.errorCode
+            } as CompleteSetupResult;
+          }
           console.error('Error resetting password for existing user:', e);
           return {
             success: false,
@@ -643,47 +765,42 @@ export async function completePortalSetup(
         }
       }
 
-      // Create user account using UserService within a system operation
+      const normalizedContactEmail = String(contact.email || '').trim().toLowerCase();
+      const existingEmailOwner = normalizedContactEmail
+        ? await knex('users')
+            .where({ tenant })
+            .andWhereRaw('lower(email) = ?', [normalizedContactEmail])
+            .first(['user_id'])
+        : null;
+      if (existingEmailOwner?.user_id) {
+        return {
+          success: false,
+          error: 'A portal user already exists for this contact or email address',
+          errorCode: 'PORTAL_USER_ALREADY_EXISTS'
+        } as CompleteSetupResult;
+      }
+
       let newUser;
       try {
-        newUser = await runAsSystem('portal-invitation-user-creation', async () => {
-          const userService = new UserService();
-          const systemContext = createSystemContext(tenant);
-
-          // Extract first and last names from full_name
-          const nameParts = contact.full_name.split(' ');
-          const firstName = nameParts[0] || contact.full_name;
-          const lastName = nameParts.slice(1).join(' ') || undefined;
-
-          const user = await userService.create({
-            username: contact.email.toLowerCase(),
-            email: contact.email.toLowerCase(),
-            password: normalizedPassword || `${Math.random().toString(36)}!A9${Date.now()}`,
-            first_name: firstName,
-            last_name: lastName,
-            contact_id: contact.contact_name_id,
-            user_type: 'client',
-            is_inactive: false,
-            two_factor_enabled: false,
-            is_google_user: false
-          }, systemContext);
-
-          if (!user || !user.user_id) {
-            throw new Error('Failed to create user account');
-          }
-
+        newUser = await knex.transaction(async (trx) => {
+          await acquireMicrosoftOAuthLinkLock(trx);
+          await assertMicrosoftOAuthLinkAvailable(undefined, trx);
+          const user = await createPortalUserInTransaction(trx);
+          await upsertMicrosoftOAuthLink(user.user_id, trx);
           return user;
         });
       } catch (error) {
         console.error('Error creating user account:', error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to create user account',
-          errorCode: 'CREATE_USER_FAILED'
+          error: error instanceof PortalInvitationError
+            ? error.message
+            : error instanceof Error
+              ? error.message
+              : 'Failed to create user account',
+          errorCode: error instanceof PortalInvitationError ? error.errorCode : 'CREATE_USER_FAILED'
         } as CompleteSetupResult;
       }
-
-      await upsertMicrosoftOAuthLink(newUser.user_id);
 
       // Assign appropriate role based on contact's is_client_admin flag
       try {
@@ -750,6 +867,9 @@ export async function completePortalSetup(
     return result;
 
   } catch (error) {
+    if (error instanceof PortalInvitationError) {
+      return { success: false, error: error.message, errorCode: error.errorCode };
+    }
     console.error('Error completing portal setup:', error);
     return { success: false, error: 'Failed to complete portal setup', errorCode: 'SETUP_FAILED' };
   }

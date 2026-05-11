@@ -7,8 +7,9 @@ import {
   MSP_SSO_GENERIC_FAILURE_MESSAGE,
   MSP_SSO_RESOLUTION_TTL_SECONDS,
   getMspSsoSigningSecret,
+  hasAppFallbackProviderCredentials,
   hasTenantProviderCredentials,
-  isValidResolverCallbackUrl,
+  isValidClientPortalResolverCallbackUrl,
   normalizeResolverEmail,
   parseResolverProvider,
 } from './mspSsoResolution';
@@ -80,7 +81,7 @@ async function resolveTenantIdFromPortalDomain(domain: string): Promise<string |
 }
 
 async function resolveTenantIdFromCallbackUrl(callbackUrl: string): Promise<string | undefined> {
-  if (!isValidResolverCallbackUrl(callbackUrl)) return undefined;
+  if (!isValidClientPortalResolverCallbackUrl(callbackUrl)) return undefined;
   const trimmed = callbackUrl.trim();
   if (!trimmed || trimmed.startsWith('/')) return undefined;
 
@@ -91,7 +92,10 @@ async function resolveTenantIdFromCallbackUrl(callbackUrl: string): Promise<stri
     return undefined;
   }
 
-  if (!parsed.pathname.startsWith('/client-portal')) {
+  if (
+    !parsed.pathname.startsWith('/client-portal') &&
+    !parsed.pathname.startsWith('/auth/client-portal/handoff')
+  ) {
     return undefined;
   }
 
@@ -107,33 +111,49 @@ export async function resolveClientPortalSsoTenantContext(
   input: ClientPortalTenantContextInput
 ): Promise<{ tenantId?: string }> {
   const slug = typeof input.tenantSlug === 'string' ? input.tenantSlug.trim().toLowerCase() : '';
+  let tenantFromSlug: string | undefined;
   if (slug && isValidTenantSlug(slug)) {
-    const tenantId = await getTenantIdBySlug(slug);
-    if (tenantId) return { tenantId };
+    tenantFromSlug = (await getTenantIdBySlug(slug)) ?? undefined;
   }
 
   const portalDomain = typeof input.portalDomain === 'string' ? input.portalDomain : '';
+  let tenantFromPortalDomain: string | undefined;
   if (portalDomain) {
-    const tenantId = await resolveTenantIdFromPortalDomain(portalDomain);
-    if (tenantId) return { tenantId };
+    tenantFromPortalDomain = await resolveTenantIdFromPortalDomain(portalDomain);
   }
 
   const callbackUrl = typeof input.callbackUrl === 'string' ? input.callbackUrl : '';
+  let tenantFromCallbackUrl: string | undefined;
   if (callbackUrl) {
-    const tenantId = await resolveTenantIdFromCallbackUrl(callbackUrl);
-    if (tenantId) return { tenantId };
+    tenantFromCallbackUrl = await resolveTenantIdFromCallbackUrl(callbackUrl);
   }
 
-  return {};
+  const resolvedTenants = [
+    tenantFromSlug,
+    tenantFromPortalDomain,
+    tenantFromCallbackUrl,
+  ].filter((tenantId): tenantId is string => Boolean(tenantId));
+
+  if (resolvedTenants.length === 0) return {};
+  if (new Set(resolvedTenants).size > 1) return {};
+
+  return {
+    tenantId: tenantFromPortalDomain ?? tenantFromSlug ?? tenantFromCallbackUrl,
+  };
 }
 
 export async function discoverClientPortalSsoProviders(tenantId: string): Promise<MspSsoProviderId[]> {
-  const [googleReady, microsoftReady] = await Promise.all([
+  const [tenantGoogleReady, tenantMicrosoftReady, appGoogleReady, appMicrosoftReady] = await Promise.all([
     hasTenantProviderCredentials(tenantId, 'google'),
     hasTenantProviderCredentials(tenantId, 'azure-ad'),
+    hasAppFallbackProviderCredentials('google'),
+    hasAppFallbackProviderCredentials('azure-ad'),
   ]);
 
-  return normalizeProviders([...(googleReady ? ['google'] : []), ...(microsoftReady ? ['azure-ad'] : [])]);
+  return normalizeProviders([
+    ...(tenantGoogleReady || appGoogleReady ? ['google'] : []),
+    ...(tenantMicrosoftReady || appMicrosoftReady ? ['azure-ad'] : []),
+  ]);
 }
 
 export function createSignedClientPortalSsoDiscoveryCookie(params: {
@@ -189,7 +209,7 @@ export function parseAndVerifyClientPortalSsoDiscoveryCookie(params: {
   if (typeof payload.nonce !== 'string' || payload.nonce.length < 8) return null;
   const providers = normalizeProviders(payload.providers);
   if (providers.length !== payload.providers.length) return null;
-  if (payload.callbackUrl !== undefined && !isValidResolverCallbackUrl(payload.callbackUrl)) return null;
+  if (payload.callbackUrl !== undefined && !isValidClientPortalResolverCallbackUrl(payload.callbackUrl)) return null;
   const now = params.now ?? Date.now();
   if (payload.expiresAt <= now) return null;
 
@@ -251,7 +271,7 @@ export function parseAndVerifyClientPortalSsoResolutionCookie(params: {
 
 export {
   getMspSsoSigningSecret,
-  isValidResolverCallbackUrl,
+  isValidClientPortalResolverCallbackUrl,
   normalizeResolverEmail,
   parseResolverProvider,
 };

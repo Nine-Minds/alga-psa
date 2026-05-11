@@ -1,4 +1,6 @@
 import type { EntraSyncUser } from './types';
+import { randomBytes } from 'node:crypto';
+import { hashPassword } from '@alga-psa/core/encryption';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import {
   OAuthAccountLinkConflictError,
@@ -10,13 +12,13 @@ export interface ClientPortalProvisioningContext {
   clientId: string;
   managedTenantId: string | null;
   contactNameId: string;
-  defaultRoleName: string;
+  defaultRoleName?: string;
 }
 
 export interface ClientPortalProvisioningConfig {
   provisioningMode: 'disabled' | 'built_in' | 'workflow_managed';
   groupId: string | null;
-  membershipMode: 'transitive' | 'direct';
+  membershipMode: 'transitive';
 }
 
 export interface ClientPortalProvisioningEligibility {
@@ -33,7 +35,7 @@ export interface ClientPortalProvisioningEligibility {
 
 export interface ClientPortalProvisioningResult {
   outcome: 'provisioned' | 'skipped_conflict';
-  reason?: 'contact_conflict' | 'email_conflict' | 'oauth_link_conflict';
+  reason?: 'contact_conflict' | 'email_conflict' | 'oauth_link_conflict' | 'role_conflict';
 }
 
 export interface ClientPortalLifecycleResult {
@@ -65,6 +67,14 @@ function shouldReactivateUser(isInactive: boolean, metadataRaw: unknown): boolea
   }
   const metadata = parseEntraMetadata(metadataRaw);
   return metadata.lifecycle?.state === 'deactivated' && metadata.lifecycle?.owner === 'entra_sync';
+}
+
+function normalizeStoredEmail(value: unknown): string {
+  return typeof value === 'string' ? value.trim().toLowerCase() : '';
+}
+
+async function createUnusablePasswordHash(): Promise<string> {
+  return hashPassword(`entra-sso:${randomBytes(32).toString('hex')}`);
 }
 
 export function evaluateClientPortalProvisioningEligibility(
@@ -197,38 +207,8 @@ export async function handleEligibleClientPortalProvisioning(
         let userId: string | null = existingForContact[0]?.user_id
           ? String(existingForContact[0].user_id)
           : null;
-
-        if (userId) {
-          const didReactivate = shouldReactivateUser(
-            Boolean(existingForContact[0].is_inactive),
-            existingForContact[0].client_portal_entra_metadata
-          );
-          const existingMetadata = parseEntraMetadata(
-            existingForContact[0].client_portal_entra_metadata
-          );
-          await trx('users')
-            .where({
-              tenant: context.tenantId,
-              user_id: userId,
-            })
-            .update({
-              email: normalizedEmail || trx.raw('email'),
-              username: normalizedEmail || trx.raw('username'),
-              is_inactive: didReactivate ? false : trx.raw('is_inactive'),
-              client_portal_entra_metadata: {
-                ...entraManagedMetadata,
-                lifecycle: didReactivate
-                  ? {
-                      state: 'active',
-                      owner: 'entra_sync',
-                      reason: 'entitlement_restored',
-                      updatedAt: new Date().toISOString(),
-                    }
-                  : existingMetadata.lifecycle ?? null,
-              },
-              updated_at: trx.fn.now(),
-            });
-        }
+        let matchedUserRow = existingForContact[0] ?? null;
+        let attachMatchedUserToContact = false;
 
         if (!userId) {
           const byEmailRows = normalizedEmail
@@ -260,46 +240,121 @@ export async function handleEligibleClientPortalProvisioning(
 
           if (safeByEmailMatch) {
             userId = String(byEmailRows[0].user_id);
-            const didReactivate = shouldReactivateUser(
-              Boolean(byEmailRows[0].is_inactive),
-              byEmailRows[0].client_portal_entra_metadata
-            );
-            const existingMetadata = parseEntraMetadata(
-              byEmailRows[0].client_portal_entra_metadata
-            );
-            await trx('users')
-              .where({
-                tenant: context.tenantId,
-                user_id: userId,
-              })
-              .update({
-                contact_id: context.contactNameId,
-                username: normalizedEmail || trx.raw('username'),
-                email: normalizedEmail || trx.raw('email'),
-                is_inactive: didReactivate ? false : trx.raw('is_inactive'),
-                client_portal_entra_metadata: {
-                  ...entraManagedMetadata,
-                  lifecycle: didReactivate
-                    ? {
-                        state: 'active',
-                        owner: 'entra_sync',
-                        reason: 'entitlement_restored',
-                        updatedAt: new Date().toISOString(),
-                      }
-                    : existingMetadata.lifecycle ?? null,
-                },
-                updated_at: trx.fn.now(),
-              });
+            matchedUserRow = byEmailRows[0];
+            attachMatchedUserToContact = true;
           }
         }
 
+        const existingMicrosoftLinkQuery = trx('user_auth_accounts')
+          .where({
+            tenant: context.tenantId,
+            provider: 'microsoft',
+            provider_account_id: user.entraObjectId,
+          });
+        if (userId) {
+          existingMicrosoftLinkQuery.whereNot('user_id', userId);
+        }
+
+        const existingMicrosoftLink = await existingMicrosoftLinkQuery.first(['user_id']);
+        if (existingMicrosoftLink?.user_id) {
+          return {
+            outcome: 'skipped_conflict',
+            reason: 'oauth_link_conflict',
+          } as ClientPortalProvisioningResult;
+        }
+
+        if (
+          userId &&
+          normalizedEmail &&
+          normalizeStoredEmail(matchedUserRow?.email) !== normalizedEmail
+        ) {
+          const existingEmailOwner = await trx('users')
+            .where({
+              tenant: context.tenantId,
+            })
+            .andWhereRaw('lower(email) = ?', [normalizedEmail])
+            .whereNot('user_id', userId)
+            .first(['user_id']);
+          if (existingEmailOwner?.user_id) {
+            return {
+              outcome: 'skipped_conflict',
+              reason: 'email_conflict',
+            } as ClientPortalProvisioningResult;
+          }
+        }
+
+        if (userId && matchedUserRow) {
+          const didReactivate = shouldReactivateUser(
+            Boolean(matchedUserRow.is_inactive),
+            matchedUserRow.client_portal_entra_metadata
+          );
+          const existingMetadata = parseEntraMetadata(
+            matchedUserRow.client_portal_entra_metadata
+          );
+          await trx('users')
+            .where({
+              tenant: context.tenantId,
+              user_id: userId,
+            })
+            .update({
+              ...(attachMatchedUserToContact ? { contact_id: context.contactNameId } : {}),
+              email: normalizedEmail || trx.raw('email'),
+              username: normalizedEmail || trx.raw('username'),
+              is_inactive: didReactivate ? false : trx.raw('is_inactive'),
+              client_portal_entra_metadata: {
+                ...entraManagedMetadata,
+                lifecycle: didReactivate
+                  ? {
+                      state: 'active',
+                      owner: 'entra_sync',
+                      reason: 'entitlement_restored',
+                      updatedAt: new Date().toISOString(),
+                    }
+                  : existingMetadata.lifecycle ?? null,
+              },
+              updated_at: trx.fn.now(),
+            });
+        }
+
         if (!userId) {
+          const existingEmailOwner = normalizedEmail
+            ? await trx('users')
+                .where({
+                  tenant: context.tenantId,
+                })
+                .andWhereRaw('lower(email) = ?', [normalizedEmail])
+                .first(['user_id'])
+            : null;
+          if (existingEmailOwner?.user_id) {
+            return {
+              outcome: 'skipped_conflict',
+              reason: 'email_conflict',
+            } as ClientPortalProvisioningResult;
+          }
+
+          const defaultRoleName = (context.defaultRoleName || 'User').trim() || 'User';
+          const roleRow = await trx('roles')
+            .where({
+              tenant: context.tenantId,
+              client: true,
+            })
+            .andWhereRaw('lower(role_name) = lower(?)', [defaultRoleName])
+            .first(['role_id']);
+          if (!roleRow?.role_id) {
+            return {
+              outcome: 'skipped_conflict',
+              reason: 'role_conflict',
+            } as ClientPortalProvisioningResult;
+          }
+          const hashedPassword = await createUnusablePasswordHash();
+
           const inserted = await trx('users')
             .insert({
               tenant: context.tenantId,
               user_id: trx.raw('gen_random_uuid()'),
               username: normalizedEmail,
               email: normalizedEmail,
+              hashed_password: hashedPassword,
               first_name: user.givenName?.trim() || user.displayName?.trim() || null,
               last_name: user.surname?.trim() || null,
               user_type: 'client',
@@ -314,38 +369,11 @@ export async function handleEligibleClientPortalProvisioning(
             .returning(['user_id']);
           userId = String(inserted[0].user_id);
 
-          const defaultRoleName = context.defaultRoleName.trim() || 'User';
-          const roleRow = await trx('roles')
-            .where({
-              tenant: context.tenantId,
-              client: true,
-            })
-            .andWhereRaw('lower(role_name) = lower(?)', [defaultRoleName])
-            .first(['role_id']);
-          if (roleRow?.role_id) {
-            await trx('user_roles').insert({
-              tenant: context.tenantId,
-              user_id: userId,
-              role_id: String(roleRow.role_id),
-            });
-          }
-        }
-
-        const existingMicrosoftLink = await trx('user_auth_accounts')
-          .where({
+          await trx('user_roles').insert({
             tenant: context.tenantId,
-            provider: 'microsoft',
-            provider_account_id: user.entraObjectId,
-          })
-          .first(['user_id']);
-        if (
-          existingMicrosoftLink?.user_id &&
-          (!userId || String(existingMicrosoftLink.user_id) !== userId)
-        ) {
-          return {
-            outcome: 'skipped_conflict',
-            reason: 'oauth_link_conflict',
-          } as ClientPortalProvisioningResult;
+            user_id: userId,
+            role_id: String(roleRow.role_id),
+          });
         }
 
         await upsertOAuthAccountLink({
@@ -362,7 +390,7 @@ export async function handleEligibleClientPortalProvisioning(
             entitlementMembershipMode: user.clientPortalEntitlement?.membershipMode ?? null,
           },
           lastUsedAt: new Date(),
-        });
+        }, trx);
 
         return {
           outcome: 'provisioned',

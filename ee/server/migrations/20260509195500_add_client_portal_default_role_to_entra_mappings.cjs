@@ -6,7 +6,7 @@ exports.up = async function up(knex) {
 
   if (!hasColumn) {
     await knex.schema.alterTable('entra_client_tenant_mappings', (table) => {
-      table.text('client_portal_default_role_name').nullable().defaultTo('User');
+      table.text('client_portal_default_role_name').nullable();
     });
   }
 };

@@ -4,6 +4,7 @@ import type { EntraSyncUser } from '@ee/lib/integrations/entra/sync/types';
 const createTenantKnexMock = vi.fn();
 const runWithTenantMock = vi.fn();
 const upsertOAuthAccountLinkMock = vi.fn();
+const hashPasswordMock = vi.fn();
 
 vi.mock('@/lib/db', () => ({
   createTenantKnex: createTenantKnexMock,
@@ -13,6 +14,10 @@ vi.mock('@/lib/db', () => ({
 vi.mock('@ee/lib/auth/oauthAccountLinks', () => ({
   upsertOAuthAccountLink: upsertOAuthAccountLinkMock,
   OAuthAccountLinkConflictError: class OAuthAccountLinkConflictError extends Error {},
+}));
+
+vi.mock('@alga-psa/core/encryption', () => ({
+  hashPassword: hashPasswordMock,
 }));
 
 function buildUser(overrides: Partial<EntraSyncUser> = {}): EntraSyncUser {
@@ -42,10 +47,12 @@ function setupKnexHarness(params: {
   }>;
   emailMatches?: Array<{
     user_id: string;
+    email?: string;
     contact_id: string | null;
     is_inactive?: boolean;
     client_portal_entra_metadata?: Record<string, unknown> | null;
   }>;
+  emailConflictUserId?: string | null;
   existingMicrosoftLinkUserId?: string | null;
   roleIdForDefaultRole?: string | null;
 }) {
@@ -56,6 +63,9 @@ function setupKnexHarness(params: {
   const usersWhereMock = vi.fn(() => {
     const selectOrderByMock = vi.fn(async () => params.existingContactUsers ?? []);
     const emailSelectOrderByMock = vi.fn(async () => params.emailMatches ?? []);
+    const emailConflictFirstMock = vi.fn(async () =>
+      params.emailConflictUserId ? { user_id: params.emailConflictUserId } : undefined
+    );
     const chain: any = {
       select: vi.fn(() => ({
         orderBy: selectOrderByMock,
@@ -63,6 +73,16 @@ function setupKnexHarness(params: {
       andWhereRaw: vi.fn(() => ({
         select: vi.fn(() => ({
           orderBy: emailSelectOrderByMock,
+        })),
+        first: vi.fn(async () =>
+          params.emailConflictUserId ? { user_id: params.emailConflictUserId } : undefined
+        ),
+        whereNot: vi.fn((_field: string, value: string) => ({
+          first: vi.fn(async () =>
+            params.emailConflictUserId && params.emailConflictUserId !== value
+              ? emailConflictFirstMock()
+              : undefined
+          ),
         })),
       })),
       update: vi.fn(async (payload: Record<string, unknown>) => {
@@ -89,11 +109,22 @@ function setupKnexHarness(params: {
       insert: usersInsertMock,
     };
   });
-  const userAuthAccountsWhereMock = vi.fn(() => ({
-    first: vi.fn(async () =>
-      params.existingMicrosoftLinkUserId ? { user_id: params.existingMicrosoftLinkUserId } : undefined
-    ),
-  }));
+  const userAuthAccountsWhereMock = vi.fn(() => {
+    let excludedUserId: string | null = null;
+    const chain: any = {
+      whereNot: vi.fn((_field: string, value: string) => {
+        excludedUserId = value;
+        return chain;
+      }),
+      first: vi.fn(async () =>
+        params.existingMicrosoftLinkUserId &&
+        params.existingMicrosoftLinkUserId !== excludedUserId
+          ? { user_id: params.existingMicrosoftLinkUserId }
+          : undefined
+      ),
+    };
+    return chain;
+  });
   trxFn.mockImplementation((table: string) => {
     if (table === 'users') {
       return {
@@ -146,8 +177,10 @@ describe('clientPortalProvisioning built-in mutations', () => {
     createTenantKnexMock.mockReset();
     runWithTenantMock.mockReset();
     upsertOAuthAccountLinkMock.mockReset();
+    hashPasswordMock.mockReset();
     runWithTenantMock.mockImplementation(async (_tenant: string, fn: () => Promise<unknown>) => fn());
     upsertOAuthAccountLinkMock.mockResolvedValue(undefined);
+    hashPasswordMock.mockResolvedValue('hashed-unusable-sso-password');
   });
 
   it('T122/F041/F046: uses existing client portal user linked to reconciled contact and upserts Microsoft OAuth link', async () => {
@@ -174,7 +207,8 @@ describe('clientPortalProvisioning built-in mutations', () => {
         userId: 'existing-user-201',
         provider: 'microsoft',
         providerAccountId: 'entra-object-201',
-      })
+      }),
+      expect.any(Function)
     );
     expect(harness.updates[0]).toMatchObject({
       is_inactive: 'is_inactive',
@@ -217,7 +251,8 @@ describe('clientPortalProvisioning built-in mutations', () => {
       }),
     });
     expect(upsertOAuthAccountLinkMock).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 'email-user-202', providerAccountId: 'entra-object-202' })
+      expect.objectContaining({ userId: 'email-user-202', providerAccountId: 'entra-object-202' }),
+      expect.any(Function)
     );
   });
 
@@ -251,6 +286,7 @@ describe('clientPortalProvisioning built-in mutations', () => {
       contact_id: 'contact-203',
       email: 'user203@example.com',
       username: 'user203@example.com',
+      hashed_password: 'hashed-unusable-sso-password',
       is_inactive: false,
       client_portal_entra_metadata: expect.objectContaining({
         managed: true,
@@ -258,7 +294,7 @@ describe('clientPortalProvisioning built-in mutations', () => {
         entraTenantId: 'entra-tenant-201',
       }),
     });
-    expect(harness.inserts[0]).not.toHaveProperty('hashed_password');
+    expect(hashPasswordMock).toHaveBeenCalledTimes(1);
     expect(harness.userRoleInserts).toEqual([
       {
         tenant: 'tenant-203',
@@ -267,7 +303,8 @@ describe('clientPortalProvisioning built-in mutations', () => {
       },
     ]);
     expect(upsertOAuthAccountLinkMock).toHaveBeenCalledWith(
-      expect.objectContaining({ userId: 'created-user-201', providerAccountId: 'entra-object-203' })
+      expect.objectContaining({ userId: 'created-user-201', providerAccountId: 'entra-object-203' }),
+      expect.any(Function)
     );
   });
 
@@ -297,7 +334,7 @@ describe('clientPortalProvisioning built-in mutations', () => {
   });
 
   it('T130/F049: returns conflict skip when Microsoft account link already belongs to another user', async () => {
-    setupKnexHarness({
+    const harness = setupKnexHarness({
       existingContactUsers: [{ user_id: 'contact-user-205', email: 'user205@example.com' }],
       emailMatches: [],
       existingMicrosoftLinkUserId: 'different-user-205',
@@ -316,6 +353,71 @@ describe('clientPortalProvisioning built-in mutations', () => {
     );
 
     expect(result).toEqual({ outcome: 'skipped_conflict', reason: 'oauth_link_conflict' });
+    expect(harness.updates).toEqual([]);
+    expect(harness.inserts).toEqual([]);
+    expect(harness.userRoleInserts).toEqual([]);
+    expect(upsertOAuthAccountLinkMock).not.toHaveBeenCalled();
+  });
+
+  it('skips existing contact-linked portal user update when the target email belongs to another tenant user', async () => {
+    const harness = setupKnexHarness({
+      existingContactUsers: [{ user_id: 'contact-user-208', email: 'old208@example.com' }],
+      emailMatches: [],
+      emailConflictUserId: 'other-user-208',
+    });
+
+    const { handleEligibleClientPortalProvisioning } = await import('@ee/lib/integrations/entra/sync/clientPortalProvisioning');
+    const result = await handleEligibleClientPortalProvisioning(
+      {
+        tenantId: 'tenant-208',
+        clientId: 'client-208',
+        managedTenantId: 'managed-208',
+        contactNameId: 'contact-208',
+        defaultRoleName: 'User',
+      },
+      buildUser({
+        entraObjectId: 'entra-object-208',
+        email: 'new208@example.com',
+        userPrincipalName: 'new208@example.com',
+      })
+    );
+
+    expect(result).toEqual({ outcome: 'skipped_conflict', reason: 'email_conflict' });
+    expect(harness.updates).toEqual([]);
+    expect(harness.inserts).toEqual([]);
+    expect(harness.userRoleInserts).toEqual([]);
+    expect(upsertOAuthAccountLinkMock).not.toHaveBeenCalled();
+  });
+
+  it('skips new portal user provisioning when the target email belongs to another tenant user', async () => {
+    const harness = setupKnexHarness({
+      existingContactUsers: [],
+      emailMatches: [],
+      emailConflictUserId: 'internal-user-209',
+      roleIdForDefaultRole: 'role-user-209',
+    });
+
+    const { handleEligibleClientPortalProvisioning } = await import('@ee/lib/integrations/entra/sync/clientPortalProvisioning');
+    const result = await handleEligibleClientPortalProvisioning(
+      {
+        tenantId: 'tenant-209',
+        clientId: 'client-209',
+        managedTenantId: 'managed-209',
+        contactNameId: 'contact-209',
+        defaultRoleName: 'User',
+      },
+      buildUser({
+        entraObjectId: 'entra-object-209',
+        email: 'internal209@example.com',
+        userPrincipalName: 'internal209@example.com',
+      })
+    );
+
+    expect(result).toEqual({ outcome: 'skipped_conflict', reason: 'email_conflict' });
+    expect(harness.updates).toEqual([]);
+    expect(harness.inserts).toEqual([]);
+    expect(harness.userRoleInserts).toEqual([]);
+    expect(hashPasswordMock).not.toHaveBeenCalled();
     expect(upsertOAuthAccountLinkMock).not.toHaveBeenCalled();
   });
 
@@ -439,5 +541,34 @@ describe('clientPortalProvisioning built-in mutations', () => {
       })
     );
     expect(existingHarness.userRoleInserts).toHaveLength(0);
+  });
+
+  it('skips new portal user provisioning when configured default role does not exist', async () => {
+    const harness = setupKnexHarness({
+      existingContactUsers: [],
+      emailMatches: [],
+      roleIdForDefaultRole: null,
+    });
+
+    const { handleEligibleClientPortalProvisioning } = await import('@ee/lib/integrations/entra/sync/clientPortalProvisioning');
+    const result = await handleEligibleClientPortalProvisioning(
+      {
+        tenantId: 'tenant-role-missing',
+        clientId: 'client-role-missing',
+        managedTenantId: 'managed-role-missing',
+        contactNameId: 'contact-role-missing',
+        defaultRoleName: 'Missing Role',
+      },
+      buildUser({
+        entraObjectId: 'entra-object-role-missing',
+        email: 'role-missing@example.com',
+        userPrincipalName: 'role-missing@example.com',
+      })
+    );
+
+    expect(result).toEqual({ outcome: 'skipped_conflict', reason: 'role_conflict' });
+    expect(harness.inserts).toEqual([]);
+    expect(harness.userRoleInserts).toEqual([]);
+    expect(upsertOAuthAccountLinkMock).not.toHaveBeenCalled();
   });
 });

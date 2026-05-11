@@ -53,10 +53,10 @@ export async function POST(request: Request): Promise<Response> {
               ? raw.client_portal_entitlement_group_id
               : undefined,
       clientPortalEntitlementMembershipMode:
-        typeof raw.clientPortalEntitlementMembershipMode === 'string'
-          ? (raw.clientPortalEntitlementMembershipMode as ConfirmEntraMappingInput['clientPortalEntitlementMembershipMode'])
-          : typeof raw.client_portal_entitlement_membership_mode === 'string'
-            ? (raw.client_portal_entitlement_membership_mode as ConfirmEntraMappingInput['clientPortalEntitlementMembershipMode'])
+        raw.clientPortalEntitlementMembershipMode === 'transitive'
+          ? 'transitive'
+          : raw.client_portal_entitlement_membership_mode === 'transitive'
+            ? 'transitive'
             : undefined,
       clientPortalDefaultRoleName:
         raw.clientPortalDefaultRoleName === null || raw.client_portal_default_role_name === null
@@ -75,7 +75,9 @@ export async function POST(request: Request): Promise<Response> {
               ? raw.client_portal_workflow_target
               : undefined,
       clientPortalWorkflowConfig:
-        raw.clientPortalWorkflowConfig && typeof raw.clientPortalWorkflowConfig === 'object' && !Array.isArray(raw.clientPortalWorkflowConfig)
+        raw.clientPortalWorkflowConfig === null || raw.client_portal_workflow_config === null
+          ? null
+          : raw.clientPortalWorkflowConfig && typeof raw.clientPortalWorkflowConfig === 'object' && !Array.isArray(raw.clientPortalWorkflowConfig)
           ? (raw.clientPortalWorkflowConfig as Record<string, unknown>)
           : raw.client_portal_workflow_config && typeof raw.client_portal_workflow_config === 'object' && !Array.isArray(raw.client_portal_workflow_config)
             ? (raw.client_portal_workflow_config as Record<string, unknown>)
@@ -86,6 +88,34 @@ export async function POST(request: Request): Promise<Response> {
   const conflicts = findManagedTenantAssignmentConflicts(normalizedMappings);
   if (conflicts.length > 0) {
     return badRequest(conflicts[0].message);
+  }
+
+  const defaultRoleNames = Array.from(
+    new Set(
+      normalizedMappings
+        .map((mapping) => mapping.clientPortalDefaultRoleName?.trim())
+        .filter((roleName): roleName is string => Boolean(roleName))
+    )
+  );
+  if (defaultRoleNames.length > 0) {
+    const roleRows = await runWithTenant(flagGate.tenantId, async () => {
+      const { knex } = await createTenantKnex();
+      return knex('roles')
+        .where({
+          tenant: flagGate.tenantId,
+          client: true,
+        })
+        .select(['role_name']);
+    });
+    const knownRoleNames = new Set(
+      roleRows.map((row: { role_name?: string }) => String(row.role_name || '').toLowerCase())
+    );
+    const missingRoleName = defaultRoleNames.find(
+      (roleName) => !knownRoleNames.has(roleName.toLowerCase())
+    );
+    if (missingRoleName) {
+      return badRequest(`Client portal default role "${missingRoleName}" must be an existing client portal role.`);
+    }
   }
 
   const mappingsWithEntitlementGroup = normalizedMappings.filter(

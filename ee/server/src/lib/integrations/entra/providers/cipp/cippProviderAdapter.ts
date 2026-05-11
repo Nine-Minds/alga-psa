@@ -298,7 +298,7 @@ export class CippProviderAdapter implements EntraProviderAdapter {
     managedTenantId: string;
     userEntraObjectId: string;
     groupId: string;
-    membershipMode: 'transitive' | 'direct';
+    membershipMode: 'transitive';
   }): Promise<boolean> {
     const credentials = await getEntraCippCredentials(input.tenant);
     if (!credentials) {

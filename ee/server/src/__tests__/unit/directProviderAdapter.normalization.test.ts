@@ -4,6 +4,7 @@ const axiosGetMock = vi.fn();
 const axiosPostMock = vi.fn();
 const getSecretProviderInstanceMock = vi.fn();
 const refreshEntraDirectTokenMock = vi.fn();
+const refreshEntraDirectAccessTokenForTenantMock = vi.fn();
 
 vi.mock('axios', () => ({
   default: {
@@ -21,6 +22,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
 }));
 
 vi.mock('@ee/lib/integrations/entra/auth/refreshDirectToken', () => ({
+  refreshEntraDirectAccessTokenForTenant: refreshEntraDirectAccessTokenForTenantMock,
   refreshEntraDirectToken: refreshEntraDirectTokenMock,
 }));
 
@@ -30,7 +32,14 @@ describe('DirectProviderAdapter normalization', () => {
     axiosGetMock.mockReset();
     axiosPostMock.mockReset();
     getSecretProviderInstanceMock.mockReset();
+    refreshEntraDirectAccessTokenForTenantMock.mockReset();
     refreshEntraDirectTokenMock.mockReset();
+    refreshEntraDirectAccessTokenForTenantMock.mockResolvedValue({
+      accessToken: 'access-token-customer',
+      refreshToken: 'refresh-token-customer',
+      expiresAt: new Date(Date.now() + 3600_000).toISOString(),
+      scope: null,
+    });
 
     const expiresFuture = new Date(Date.now() + 3600_000).toISOString();
     getSecretProviderInstanceMock.mockResolvedValue({
@@ -144,10 +153,50 @@ describe('DirectProviderAdapter normalization', () => {
 
     expect(isMember).toBe(true);
     expect(axiosPostMock).toHaveBeenCalledWith(
-      'https://graph.microsoft.com/v1.0/tenantRelationships/managedTenants/tenants/managed-tenant-113/users/user-113/checkMemberGroups',
+      'https://graph.microsoft.com/v1.0/users/user-113/checkMemberGroups',
       { groupIds: ['group-113'] },
       expect.objectContaining({
-        headers: { Authorization: 'Bearer access-token-direct' },
+        headers: { Authorization: 'Bearer access-token-customer' },
+      })
+    );
+    expect(refreshEntraDirectAccessTokenForTenantMock).toHaveBeenCalledWith(
+      'tenant-113',
+      'managed-tenant-113'
+    );
+  });
+
+  it('reuses a managed-tenant access token across repeated group membership checks', async () => {
+    axiosPostMock.mockResolvedValue({
+      data: { value: ['group-cache'] },
+    });
+
+    const { createDirectProviderAdapter } = await import(
+      '@ee/lib/integrations/entra/providers/direct/directProviderAdapter'
+    );
+    const adapter = createDirectProviderAdapter();
+
+    await Promise.all([
+      adapter.isUserInSecurityGroup({
+        tenant: 'tenant-cache',
+        managedTenantId: 'managed-tenant-cache',
+        userEntraObjectId: 'user-one',
+        groupId: 'group-cache',
+        membershipMode: 'transitive',
+      }),
+      adapter.isUserInSecurityGroup({
+        tenant: 'tenant-cache',
+        managedTenantId: 'managed-tenant-cache',
+        userEntraObjectId: 'user-two',
+        groupId: 'group-cache',
+        membershipMode: 'transitive',
+      }),
+    ]);
+
+    expect(refreshEntraDirectAccessTokenForTenantMock).toHaveBeenCalledTimes(1);
+    expect(axiosPostMock).toHaveBeenCalledTimes(2);
+    expect(axiosPostMock.mock.calls[1]?.[2]).toEqual(
+      expect.objectContaining({
+        headers: { Authorization: 'Bearer access-token-customer' },
       })
     );
   });

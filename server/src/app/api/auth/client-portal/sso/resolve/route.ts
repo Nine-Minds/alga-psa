@@ -8,12 +8,16 @@ import {
   CLIENT_PORTAL_SSO_RESOLUTION_TTL_SECONDS,
   createSignedClientPortalSsoResolutionCookie,
   getMspSsoSigningSecret,
-  isValidResolverCallbackUrl,
+  isValidClientPortalResolverCallbackUrl,
   normalizeResolverEmail,
   parseAndVerifyClientPortalSsoDiscoveryCookie,
   parseResolverProvider,
   resolveClientPortalSsoTenantContext,
 } from '@alga-psa/auth/lib/sso/clientPortalSsoResolution';
+import {
+  MSP_SSO_DISCOVERY_COOKIE,
+  MSP_SSO_RESOLUTION_COOKIE,
+} from '@alga-psa/auth/lib/sso/mspSsoResolution';
 
 export const dynamic = 'force-dynamic';
 
@@ -51,6 +55,20 @@ function buildGenericFailureResponse(): NextResponse {
   return response;
 }
 
+function clearMspSsoCookies(response: NextResponse): void {
+  for (const cookieName of [MSP_SSO_DISCOVERY_COOKIE, MSP_SSO_RESOLUTION_COOKIE]) {
+    response.cookies.set({
+      name: cookieName,
+      value: '',
+      path: '/',
+      maxAge: 0,
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
+  }
+}
+
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = (await request.json().catch(() => null)) as
@@ -66,7 +84,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const provider = parseResolverProvider(body?.provider);
     const email = typeof body?.email === 'string' ? normalizeResolverEmail(body.email) : '';
     const callbackUrl = typeof body?.callbackUrl === 'string' ? body.callbackUrl.trim() : undefined;
-    if (!provider || !email || !EMAIL_PATTERN.test(email) || !isValidResolverCallbackUrl(callbackUrl)) {
+    if (!provider || !email || !EMAIL_PATTERN.test(email) || !isValidClientPortalResolverCallbackUrl(callbackUrl)) {
       return buildGenericFailureResponse();
     }
 
@@ -110,6 +128,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       ttlSeconds: CLIENT_PORTAL_SSO_RESOLUTION_TTL_SECONDS,
     });
     const response = NextResponse.json({ ok: true }, { status: 200 });
+    clearMspSsoCookies(response);
     response.cookies.set({
       name: CLIENT_PORTAL_SSO_RESOLUTION_COOKIE,
       value: cookie.value,

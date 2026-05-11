@@ -12,7 +12,7 @@ export interface EntraSyncUser {
   businessPhones: string[];
   clientPortalEntitlement?: {
     groupId: string | null;
-    membershipMode: 'transitive' | 'direct';
+    membershipMode: 'transitive';
     isMember: boolean | null;
   };
   raw: Record<string, unknown>;

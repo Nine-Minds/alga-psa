@@ -39,7 +39,6 @@ export async function publishWorkflowManagedPortalProvisioningEvent(
     user.entraObjectId,
     user.clientPortalEntitlement?.groupId || 'none',
     entitled ? 'eligible' : user.accountEnabled ? 'removed_entitlement' : 'removed_disabled',
-    context.syncRunId || 'no_run_id',
   ].join(':');
 
   await publishWorkflowEvent({

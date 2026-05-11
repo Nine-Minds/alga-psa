@@ -32,6 +32,6 @@ export interface EntraProviderAdapter {
     managedTenantId: string;
     userEntraObjectId: string;
     groupId: string;
-    membershipMode: 'transitive' | 'direct';
+    membershipMode: 'transitive';
   }): Promise<boolean>;
 }

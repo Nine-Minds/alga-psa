@@ -115,6 +115,8 @@ import {
   createSignedMspSsoResolutionCookie,
   discoverMspSsoProviderOptions,
   extractDomainFromEmail,
+  isValidClientPortalResolverCallbackUrl,
+  isValidResolverCallbackUrl,
   normalizeResolverEmail,
   parseAndVerifyMspSsoDiscoveryCookie,
   parseAndVerifyMspSsoResolutionCookie,
@@ -141,6 +143,27 @@ describe('mspSsoResolution helpers', () => {
     expect(normalizeResolverEmail('  User@Example.COM  ')).toBe('user@example.com');
     expect(extractDomainFromEmail('  User@Example.COM  ')).toBe('example.com');
     expect(extractDomainFromEmail('not-an-email')).toBeNull();
+  });
+
+  it('allows MSP resolver callback URLs while rejecting protocol-relative callbacks', () => {
+    expect(isValidResolverCallbackUrl('/msp')).toBe(true);
+    expect(isValidResolverCallbackUrl('/client-portal/dashboard')).toBe(true);
+    expect(isValidResolverCallbackUrl('https://app.example.com/msp/dashboard')).toBe(true);
+    expect(isValidResolverCallbackUrl('https://portal.example.com/client-portal/dashboard')).toBe(true);
+    expect(isValidResolverCallbackUrl('https://portal.example.com/auth/client-portal/handoff')).toBe(true);
+    expect(isValidResolverCallbackUrl('https://evil.example.com/phishing')).toBe(true);
+    expect(isValidResolverCallbackUrl('//evil.example.com/client-portal/dashboard')).toBe(false);
+  });
+
+  it('rejects arbitrary absolute client portal callback URLs while allowing portal paths', () => {
+    expect(isValidClientPortalResolverCallbackUrl('/client-portal/dashboard')).toBe(true);
+    expect(isValidClientPortalResolverCallbackUrl('/auth/client-portal/handoff')).toBe(true);
+    expect(isValidClientPortalResolverCallbackUrl('/msp/dashboard')).toBe(false);
+    expect(isValidClientPortalResolverCallbackUrl('https://portal.example.com/client-portal/dashboard')).toBe(true);
+    expect(isValidClientPortalResolverCallbackUrl('https://portal.example.com/auth/client-portal/handoff')).toBe(true);
+    expect(isValidClientPortalResolverCallbackUrl('https://app.example.com/msp/dashboard')).toBe(false);
+    expect(isValidClientPortalResolverCallbackUrl('https://evil.example.com/phishing')).toBe(false);
+    expect(isValidClientPortalResolverCallbackUrl('//evil.example.com/client-portal/dashboard')).toBe(false);
   });
 
   it('T014: resolves mapped domain to single tenant and marks ambiguous duplicates as unresolved', async () => {

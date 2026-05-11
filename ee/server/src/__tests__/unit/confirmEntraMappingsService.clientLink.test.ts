@@ -78,7 +78,6 @@ describe('confirmEntraMappings client linkage updates', () => {
           mappingState: 'mapped',
           clientPortalEntraProvisioningMode: 'workflow_managed',
           clientPortalEntitlementGroupId: 'group-63',
-          clientPortalEntitlementMembershipMode: 'direct',
           clientPortalWorkflowTarget: 'workflow-63',
           clientPortalWorkflowConfig: { strategy: 'manual_review' },
         },
@@ -100,7 +99,7 @@ describe('confirmEntraMappings client linkage updates', () => {
         mapping_state: 'mapped',
         client_portal_entra_provisioning_mode: 'workflow_managed',
         client_portal_entitlement_group_id: 'group-63',
-        client_portal_entitlement_membership_mode: 'direct',
+        client_portal_entitlement_membership_mode: 'transitive',
         client_portal_default_role_name: null,
         client_portal_workflow_target: 'workflow-63',
         client_portal_workflow_config: { strategy: 'manual_review' },
@@ -117,6 +116,12 @@ describe('confirmEntraMappings client linkage updates', () => {
       mapping_id: 'mapping-old-64',
       client_id: 'client-old-64',
       mapping_state: 'mapped',
+      client_portal_entra_provisioning_mode: 'workflow_managed',
+      client_portal_entitlement_group_id: 'group-64',
+      client_portal_entitlement_membership_mode: 'transitive',
+      client_portal_default_role_name: 'Finance',
+      client_portal_workflow_target: 'workflow-64',
+      client_portal_workflow_config: { strategy: 'approval' },
     }));
     const deactivateUpdateMock = vi.fn(async () => 1);
     const mappingInsertMock = vi.fn(async () => [1]);
@@ -187,6 +192,11 @@ describe('confirmEntraMappings client linkage updates', () => {
         managed_tenant_id: 'managed-64',
         client_id: 'client-new-64',
         mapping_state: 'mapped',
+        client_portal_entra_provisioning_mode: 'workflow_managed',
+        client_portal_entitlement_group_id: 'group-64',
+        client_portal_default_role_name: 'Finance',
+        client_portal_workflow_target: 'workflow-64',
+        client_portal_workflow_config: { strategy: 'approval' },
         is_active: true,
       })
     );
@@ -256,6 +266,66 @@ describe('confirmEntraMappings client linkage updates', () => {
         client_portal_entra_provisioning_mode: 'inherit',
         client_portal_entitlement_membership_mode: 'transitive',
         client_portal_default_role_name: null,
+      })
+    );
+  });
+
+  it('preserves an explicit per-client disabled provisioning override', async () => {
+    const managedTenantFirstMock = vi.fn(async () => ({
+      entra_tenant_id: 'entra-tenant-disabled',
+      primary_domain: 'disabled.example.com',
+    }));
+    const activeMappingFirstMock = vi.fn(async () => null);
+    const mappingInsertMock = vi.fn(async () => [1]);
+
+    const trxMock = vi.fn((table: string) => {
+      if (table === 'entra_managed_tenants') {
+        return { where: vi.fn(() => ({ first: managedTenantFirstMock })) };
+      }
+
+      if (table === 'entra_client_tenant_mappings') {
+        return {
+          where: vi.fn(() => ({
+            first: activeMappingFirstMock,
+            update: vi.fn(async () => 1),
+          })),
+          insert: mappingInsertMock,
+        };
+      }
+
+      if (table === 'clients') {
+        return { where: vi.fn(() => ({ update: vi.fn(async () => 1) })) };
+      }
+
+      throw new Error(`Unexpected table ${table}`);
+    });
+
+    createTenantKnexMock.mockResolvedValue({
+      knex: {
+        fn: { now: vi.fn(() => 'db-now') },
+        transaction: vi.fn(async (cb: (trx: typeof trxMock) => Promise<void>) => cb(trxMock)),
+      },
+    });
+
+    const { confirmEntraMappings } = await import(
+      '@ee/lib/integrations/entra/mapping/confirmMappingsService'
+    );
+    await confirmEntraMappings({
+      tenant: 'tenant-disabled',
+      userId: 'user-disabled',
+      mappings: [
+        {
+          managedTenantId: 'managed-disabled',
+          clientId: 'client-disabled',
+          mappingState: 'mapped',
+          clientPortalEntraProvisioningMode: 'disabled',
+        },
+      ],
+    });
+
+    expect(mappingInsertMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        client_portal_entra_provisioning_mode: 'disabled',
       })
     );
   });

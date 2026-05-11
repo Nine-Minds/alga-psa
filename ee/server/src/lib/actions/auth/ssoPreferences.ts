@@ -58,6 +58,24 @@ function safeParse(raw: string): Record<string, unknown> | undefined {
   }
 }
 
+async function assertClientPortalRoleExists(
+  knex: Awaited<ReturnType<typeof createTenantKnex>>["knex"],
+  tenant: string,
+  roleName: string
+): Promise<void> {
+  const role = await knex("roles")
+    .where({
+      tenant,
+      client: true,
+    })
+    .andWhereRaw("lower(role_name) = lower(?)", [roleName])
+    .first(["role_id"]);
+
+  if (!role?.role_id) {
+    throw new Error("Selected default role must be an existing client portal role.");
+  }
+}
+
 export const updateSsoPreferencesAction = withAuth(async (
   user,
   { tenant },
@@ -90,6 +108,10 @@ export const updateSsoPreferencesAction = withAuth(async (
       updates.deactivateEntraManagedPortalUsersOnEntitlementRemoval ??
       normalizePreferences(currentSettings).deactivateEntraManagedPortalUsersOnEntitlementRemoval,
   };
+
+  if (updates.clientPortalDefaultRoleName !== undefined) {
+    await assertClientPortalRoleExists(knex, tenant, nextPreferences.clientPortalDefaultRoleName);
+  }
 
   const updatedSettings = {
     ...currentSettings,

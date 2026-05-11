@@ -70,6 +70,30 @@ function parseWorkspaceSsoSettings(rawSettings: unknown): {
   };
 }
 
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  const worker = async () => {
+    while (true) {
+      const currentIndex = nextIndex;
+      nextIndex += 1;
+      if (currentIndex >= items.length) {
+        return;
+      }
+      results[currentIndex] = await mapper(items[currentIndex], currentIndex);
+    }
+  };
+
+  const workerCount = Math.min(Math.max(1, concurrency), items.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return results;
+}
+
 export async function loadMappedTenantsActivity(
   input: LoadMappedTenantsActivityInput
 ): Promise<LoadMappedTenantsActivityOutput> {
@@ -132,7 +156,7 @@ export async function loadMappedTenantsActivity(
       | 'workflow_managed'
       | null;
     client_portal_entitlement_group_id: string | null;
-    client_portal_entitlement_membership_mode: 'transitive' | 'direct' | null;
+    client_portal_entitlement_membership_mode: 'transitive' | null;
     client_portal_default_role_name: string | null;
     client_portal_workflow_target: string | null;
     client_portal_workflow_config: Record<string, unknown> | null;
@@ -157,13 +181,11 @@ export async function loadMappedTenantsActivity(
       clientPortalEntitlementGroupId: row.client_portal_entitlement_group_id
         ? String(row.client_portal_entitlement_group_id)
         : null,
-      clientPortalEntitlementMembershipMode:
-        row.client_portal_entitlement_membership_mode === 'direct' ? 'direct' : 'transitive',
-      clientPortalDefaultRoleName: row.client_portal_default_role_name
-        resolveEffectiveDefaultRoleName(
-          row.client_portal_default_role_name,
-          workspaceSsoDefaults.defaultRoleName
-        ),
+      clientPortalEntitlementMembershipMode: 'transitive',
+      clientPortalDefaultRoleName: resolveEffectiveDefaultRoleName(
+        row.client_portal_default_role_name,
+        workspaceSsoDefaults.defaultRoleName
+      ),
       clientPortalDefaultRoleNameOverride: row.client_portal_default_role_name
         ? String(row.client_portal_default_role_name)
         : null,
@@ -209,9 +231,12 @@ export async function syncTenantUsersActivity(
   const filteredUsers = await filterEntraUsersForTenant(input.tenantId, users);
   const portalEntitlementGroupId = input.mapping.clientPortalEntitlementGroupId || null;
   const portalEntitlementMode = input.mapping.clientPortalEntitlementMembershipMode || 'transitive';
+  const membershipCheckConcurrency = 8;
   const usersWithEntitlement = portalEntitlementGroupId
-    ? await Promise.all(
-        filteredUsers.included.map(async (user) => {
+    ? await mapWithConcurrency(
+        filteredUsers.included,
+        membershipCheckConcurrency,
+        async (user) => {
           const isMember = await adapter.isUserInSecurityGroup({
             tenant: input.tenantId,
             managedTenantId: input.mapping.entraTenantId,
@@ -227,7 +252,7 @@ export async function syncTenantUsersActivity(
               isMember,
             },
           };
-        })
+        }
       )
     : filteredUsers.included.map((user) => ({
         ...user,

@@ -34,6 +34,14 @@ interface MappingTenantRow {
   isSkipped: boolean;
 }
 
+interface ExistingMappingSettings {
+  clientId?: string | null;
+  mappingState?: string | null;
+  clientPortalEntraProvisioningMode?: 'inherit' | 'disabled' | 'built_in' | 'workflow_managed' | null;
+  clientPortalEntitlementGroupId?: string | null;
+  clientPortalDefaultRoleName?: string | null;
+}
+
 export interface EntraMappingSummary {
   mapped: number;
   skipped: number;
@@ -55,6 +63,20 @@ function isBroadEntitlementGroup(label: string | null | undefined): boolean {
   return normalized === 'all users' || normalized.includes('all users');
 }
 
+function normalizeExistingMapping(raw: unknown): ExistingMappingSettings {
+  return raw && typeof raw === 'object' && !Array.isArray(raw)
+    ? (raw as ExistingMappingSettings)
+    : {};
+}
+
+function normalizeProvisioningMode(
+  value: unknown
+): MappingTenantRow["selectedProvisioningMode"] {
+  return value === 'disabled' || value === 'built_in' || value === 'workflow_managed'
+    ? value
+    : 'inherit';
+}
+
 function mapPreviewToRows(payload: any): MappingTenantRow[] {
   const autoMatched = Array.isArray(payload?.autoMatched) ? payload.autoMatched : [];
   const fuzzyCandidates = Array.isArray(payload?.fuzzyCandidates) ? payload.fuzzyCandidates : [];
@@ -64,6 +86,7 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
 
   for (const item of autoMatched) {
     const match = item?.match || {};
+    const existingMapping = normalizeExistingMapping(item?.existingMapping);
     rows.push({
       managedTenantId: String(item?.managedTenantId || ''),
       entraTenantId: String(item?.entraTenantId || ''),
@@ -79,16 +102,21 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
           reason: (match.reason || 'exact_domain') as MatchReason,
         },
       ],
-      selectedClientId: String(match.clientId || '') || null,
-      selectedEntitlementGroupId: null,
-      selectedProvisioningMode: 'inherit',
-      selectedDefaultRoleName: null,
-      isSkipped: false,
+      selectedClientId: String(existingMapping.clientId || match.clientId || '') || null,
+      selectedEntitlementGroupId: existingMapping.clientPortalEntitlementGroupId || null,
+      selectedProvisioningMode: normalizeProvisioningMode(
+        existingMapping.clientPortalEntraProvisioningMode
+      ),
+      selectedDefaultRoleName: existingMapping.clientPortalDefaultRoleName || null,
+      isSkipped:
+        existingMapping.mappingState === 'skip_for_now' ||
+        existingMapping.mappingState === 'skipped',
     });
   }
 
   for (const item of fuzzyCandidates) {
     const candidates = Array.isArray(item?.candidates) ? item.candidates : [];
+    const existingMapping = normalizeExistingMapping(item?.existingMapping);
     rows.push({
       managedTenantId: String(item?.managedTenantId || ''),
       entraTenantId: String(item?.entraTenantId || ''),
@@ -102,15 +130,20 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
         confidenceScore: Number(candidate?.confidenceScore || 0),
         reason: (candidate?.reason || 'fuzzy_name') as MatchReason,
       })),
-      selectedClientId: null,
-      selectedEntitlementGroupId: null,
-      selectedProvisioningMode: 'inherit',
-      selectedDefaultRoleName: null,
-      isSkipped: false,
+      selectedClientId: existingMapping.clientId || null,
+      selectedEntitlementGroupId: existingMapping.clientPortalEntitlementGroupId || null,
+      selectedProvisioningMode: normalizeProvisioningMode(
+        existingMapping.clientPortalEntraProvisioningMode
+      ),
+      selectedDefaultRoleName: existingMapping.clientPortalDefaultRoleName || null,
+      isSkipped:
+        existingMapping.mappingState === 'skip_for_now' ||
+        existingMapping.mappingState === 'skipped',
     });
   }
 
   for (const item of unmatched) {
+    const existingMapping = normalizeExistingMapping(item?.existingMapping);
     rows.push({
       managedTenantId: String(item?.managedTenantId || ''),
       entraTenantId: String(item?.entraTenantId || ''),
@@ -119,11 +152,15 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
       sourceUserCount: Number(item?.sourceUserCount || 0),
       state: 'unmatched',
       candidates: [],
-      selectedClientId: null,
-      selectedEntitlementGroupId: null,
-      selectedProvisioningMode: 'inherit',
-      selectedDefaultRoleName: null,
-      isSkipped: false,
+      selectedClientId: existingMapping.clientId || null,
+      selectedEntitlementGroupId: existingMapping.clientPortalEntitlementGroupId || null,
+      selectedProvisioningMode: normalizeProvisioningMode(
+        existingMapping.clientPortalEntraProvisioningMode
+      ),
+      selectedDefaultRoleName: existingMapping.clientPortalDefaultRoleName || null,
+      isSkipped:
+        existingMapping.mappingState === 'skip_for_now' ||
+        existingMapping.mappingState === 'skipped',
     });
   }
 
@@ -231,7 +268,7 @@ export function EntraTenantMappingTable({
   const mappingsToConfirm = React.useMemo(
     () =>
       rows
-        .filter((row) => !row.isSkipped && row.state !== 'imported' && Boolean(row.selectedClientId))
+        .filter((row) => !row.isSkipped && Boolean(row.selectedClientId))
         .map((row) => ({
           managedTenantId: row.managedTenantId,
           clientId: String(row.selectedClientId),
@@ -576,6 +613,14 @@ export function EntraTenantMappingTable({
                         onChange={(event) => updateEntitlementGroupSelection(row.managedTenantId, event.target.value)}
                       >
                         <option value="">{groupLoadingByTenant[row.managedTenantId] ? 'Loading groups…' : 'No group selected'}</option>
+                        {row.selectedEntitlementGroupId &&
+                        !(groupOptionsByTenant[row.managedTenantId] || []).some(
+                          (group) => group.id === row.selectedEntitlementGroupId
+                        ) ? (
+                          <option value={row.selectedEntitlementGroupId}>
+                            {row.selectedEntitlementGroupId}
+                          </option>
+                        ) : null}
                         {(groupOptionsByTenant[row.managedTenantId] || []).map((group) => (
                           <option key={group.id} value={group.id}>
                             {group.displayName || group.id}

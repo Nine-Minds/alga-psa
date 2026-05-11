@@ -7,6 +7,7 @@ import {
   createSignedClientPortalSsoDiscoveryCookie,
   discoverClientPortalSsoProviders,
   getMspSsoSigningSecret,
+  isValidClientPortalResolverCallbackUrl,
   normalizeResolverEmail,
   resolveClientPortalSsoTenantContext,
 } from '@alga-psa/auth/lib/sso/clientPortalSsoResolution';
@@ -57,6 +58,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (!email || !EMAIL_PATTERN.test(email)) {
       return buildNeutralDiscoveryResponse();
     }
+    const callbackUrl = typeof body?.callbackUrl === 'string' ? body.callbackUrl.trim() : undefined;
+    if (!isValidClientPortalResolverCallbackUrl(callbackUrl)) {
+      return buildNeutralDiscoveryResponse();
+    }
 
     const ip = getRequestIp(request);
     const emailHashBucket = createHash('sha256').update(email).digest('hex').slice(0, 16);
@@ -69,7 +74,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const tenantContext = await resolveClientPortalSsoTenantContext({
       tenantSlug: typeof body?.tenantSlug === 'string' ? body.tenantSlug : undefined,
       portalDomain: typeof body?.portalDomain === 'string' ? body.portalDomain : undefined,
-      callbackUrl: typeof body?.callbackUrl === 'string' ? body.callbackUrl : undefined,
+      callbackUrl,
     });
 
     if (!tenantContext.tenantId) {
@@ -85,7 +90,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const cookie = createSignedClientPortalSsoDiscoveryCookie({
       tenantId: tenantContext.tenantId,
       providers,
-      callbackUrl: typeof body?.callbackUrl === 'string' ? body.callbackUrl : undefined,
+      callbackUrl,
       secret: signingSecret,
       ttlSeconds: CLIENT_PORTAL_SSO_DISCOVERY_TTL_SECONDS,
     });

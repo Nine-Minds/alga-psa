@@ -66,6 +66,45 @@ function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, proto
     url.port = portCandidate;
 }
 
+async function isKnownClientPortalHandoffRedirect(url: string, baseUrl: string): Promise<boolean> {
+    let target: URL;
+    let base: URL;
+    try {
+        target = new URL(url, baseUrl);
+        base = new URL(baseUrl);
+    } catch {
+        return false;
+    }
+
+    if (!target.pathname.startsWith('/auth/client-portal/handoff')) {
+        return false;
+    }
+
+    if (target.origin === base.origin) {
+        return true;
+    }
+
+    try {
+        const { getAdminConnection } = await import('@alga-psa/db/admin');
+        const knex = await getAdminConnection();
+        const candidates = [target.hostname];
+        if (target.port && target.port.length > 0 && target.port !== '80' && target.port !== '443') {
+            candidates.unshift(`${target.hostname}:${target.port}`);
+        }
+
+        for (const candidate of candidates) {
+            const portalDomain = await getPortalDomainByHostname(knex, candidate);
+            if (portalDomain?.status === 'active') {
+                return true;
+            }
+        }
+    } catch (error) {
+        console.warn('[auth-redirect] failed to validate client portal handoff host', { error });
+    }
+
+    return false;
+}
+
 const SESSION_MAX_AGE = getSessionMaxAge();
 const SESSION_COOKIE = getSessionCookieConfig();
 
@@ -182,6 +221,35 @@ const NEXTAUTH_SECURE_COOKIES = isSecureCookieEnvironment();
 const NEXTAUTH_COOKIE_PREFIX = NEXTAUTH_SECURE_COOKIES ? '__Secure-' : '';
 const PLAYWRIGHT_FAKE_GOOGLE_OAUTH_ENABLED = process.env.PLAYWRIGHT_FAKE_GOOGLE_OAUTH === 'true';
 
+async function getClientPortalSsoProfileHints(
+    provider: 'google' | 'azure-ad',
+): Promise<{ tenantHint?: string; userTypeHint?: 'client' } | null> {
+    try {
+        const signingSecret = await getMspSsoSigningSecret();
+        if (!signingSecret) {
+            return null;
+        }
+
+        const cookieStore = await cookies();
+        const resolution = parseAndVerifyClientPortalSsoResolutionCookie({
+            value: cookieStore.get(CLIENT_PORTAL_SSO_RESOLUTION_COOKIE)?.value,
+            secret: signingSecret,
+        });
+
+        if (!resolution || resolution.provider !== provider) {
+            return null;
+        }
+
+        return {
+            tenantHint: resolution.tenantId,
+            userTypeHint: 'client',
+        };
+    } catch (error) {
+        console.warn('[client-portal-sso] failed to read OAuth profile hints', error);
+        return null;
+    }
+}
+
 const NEXTAUTH_COOKIES = {
     sessionToken: SESSION_COOKIE,
     callbackUrl: {
@@ -233,14 +301,17 @@ const NEXTAUTH_COOKIES = {
     },
 } as const;
 
-function mapGoogleProfile(profile: Record<string, any>): Promise<ExtendedUser> {
+async function mapGoogleProfile(profile: Record<string, any>): Promise<ExtendedUser> {
     const googleProfile = profile as Record<string, unknown>;
+    const clientPortalHints = await getClientPortalSsoProfileHints('google');
     const tenantHint =
-        typeof googleProfile.hd === 'string' ? googleProfile.hd : undefined;
+        clientPortalHints?.tenantHint ??
+        (typeof googleProfile.hd === 'string' ? googleProfile.hd : undefined);
     const userTypeHint =
-        typeof googleProfile.user_type === 'string'
+        clientPortalHints?.userTypeHint ??
+        (typeof googleProfile.user_type === 'string'
             ? googleProfile.user_type
-            : undefined;
+            : undefined);
     const vanityHostHint =
         typeof googleProfile.vanity_host === 'string'
             ? googleProfile.vanity_host
@@ -466,6 +537,36 @@ async function computeVanityRedirect({
     } catch (error) {
         console.warn('Failed to prepare vanity redirect for client portal', error);
         return null;
+    }
+}
+
+async function resolveSafeAuthRedirect({
+    url,
+    baseUrl,
+}: {
+    url: string;
+    baseUrl: string;
+}): Promise<string> {
+    try {
+        if (await isKnownClientPortalHandoffRedirect(url, baseUrl)) {
+            return new URL(url, baseUrl).toString();
+        }
+
+        const vanityUrl = await computeVanityRedirect({ url, baseUrl, token: null });
+        if (vanityUrl) {
+            return vanityUrl;
+        }
+
+        const base = new URL(baseUrl);
+        const target = new URL(url, baseUrl);
+        if (target.origin === base.origin) {
+            return target.toString();
+        }
+
+        return base.toString();
+    } catch (error) {
+        console.warn('[auth-redirect] rejected unsafe callback URL', { url, baseUrl, error });
+        return baseUrl;
     }
 }
 
@@ -933,18 +1034,18 @@ async function ensureOAuthAccountLink(
     user: ExtendedUser | undefined,
     account: Record<string, unknown> | null | undefined,
     providerId?: string | null,
-): Promise<void> {
+): Promise<boolean> {
     if (!isEnterprise) {
-        return;
+        return true;
     }
 
     if (!user || !providerId) {
-        return;
+        return true;
     }
 
     const normalizedProvider = normalizeOAuthProvider(providerId);
     if (!normalizedProvider || !user.tenant) {
-        return;
+        return true;
     }
 
     const metadata = extractOAuthAccountMetadata(account);
@@ -956,7 +1057,7 @@ async function ensureOAuthAccountLink(
             accountKeys: account ? Object.keys(account) : null,
             accountSnapshot: account,
         });
-        return;
+        return true;
     }
 
     // Some providers echo only an access token back; fall back to the cookie if the signed link fields are missing.
@@ -983,17 +1084,34 @@ async function ensureOAuthAccountLink(
         toOptionalString(metadata.linkNonceSignature),
     );
 
-    const existingLink = await getSSORegistry().findOAuthAccountLink(normalizedProvider, providerAccountId);
+    const existingLink = await getSSORegistry().findOAuthAccountLink(
+        normalizedProvider,
+        providerAccountId,
+        user.tenant,
+    );
+    const existingLinkMatchesUser = existingLink?.user_id === user.id;
+    const existingLinkConflictsWithUser =
+        Boolean(existingLink?.user_id) &&
+        existingLink?.tenant === user.tenant &&
+        !existingLinkMatchesUser;
+    if (existingLinkConflictsWithUser) {
+        console.warn('[oauth] account already linked to another user', {
+            providerId,
+            providerAccountId,
+            userId: user.id,
+        });
+        return false;
+    }
     let autoLinkAuthorized = false;
-    if (!linkingAuthorized && (!existingLink || existingLink.user_id !== user.id)) {
+    if (!linkingAuthorized && !existingLinkMatchesUser) {
         autoLinkAuthorized = await getSSORegistry().isAutoLinkEnabledForTenant(
             typeof user.tenant === "string" ? user.tenant : undefined,
             (user.user_type as "internal" | "client") || "internal",
         );
     }
-    if (!linkingAuthorized && !autoLinkAuthorized) {
+    if (!linkingAuthorized && !existingLinkMatchesUser && !autoLinkAuthorized) {
         // Skip linking when not authorized and auto-linking is disabled.
-        return;
+        return true;
     }
 
     const { linkNonceIssuedAt, linkNonceSignature, ...metadataForStorage } = metadata;
@@ -1018,13 +1136,13 @@ async function ensureOAuthAccountLink(
             metadata: finalMetadata,
         });
     } catch (error) {
-        if (error instanceof OAuthAccountLinkConflictError) {
+        if (error instanceof OAuthAccountLinkConflictError || (error as { name?: string })?.name === 'OAuthAccountLinkConflictError') {
             console.warn('[oauth] account already linked to another user', {
                 providerId,
                 providerAccountId,
                 userId: user.id,
             });
-            return;
+            return false;
         }
 
         console.warn('[oauth] failed to persist account link', {
@@ -1034,6 +1152,8 @@ async function ensureOAuthAccountLink(
             error,
         });
     }
+
+    return true;
 }
 
 // Helper function to get OAuth secrets from secret provider with env fallback
@@ -1110,13 +1230,24 @@ async function getOAuthSecrets(context?: BuildAuthOptionsContext) {
         }
 
         const cookieStore = await cookies();
-        const cookieValue = cookieStore.get(MSP_SSO_RESOLUTION_COOKIE)?.value;
-        const resolution = parseAndVerifyMspSsoResolutionCookie({
-            value: cookieValue,
+        const clientPortalResolution = parseAndVerifyClientPortalSsoResolutionCookie({
+            value: cookieStore.get(CLIENT_PORTAL_SSO_RESOLUTION_COOKIE)?.value,
             secret: signingSecret,
         });
+        const mspResolution = parseAndVerifyMspSsoResolutionCookie({
+            value: cookieStore.get(MSP_SSO_RESOLUTION_COOKIE)?.value,
+            secret: signingSecret,
+        });
+        const resolution =
+            clientPortalResolution ??
+            (mspResolution?.source === 'tenant' && mspResolution.tenantId
+                ? {
+                    provider: mspResolution.provider,
+                    tenantId: mspResolution.tenantId,
+                }
+                : null);
 
-        if (!resolution || resolution.source !== 'tenant' || !resolution.tenantId) {
+        if (!resolution?.tenantId) {
             return resolved;
         }
 
@@ -1173,13 +1304,15 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     issuer: `https://login.microsoftonline.com/${secrets.microsoftTenantId || 'common'}/v2.0`,
                     checks: ['pkce', 'state'],
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
+                        const clientPortalHints = await getClientPortalSsoProfileHints('azure-ad');
                         const emailCandidate =
                             profile.email ??
                             profile.mail ??
                             profile.preferred_username ??
                             profile.userPrincipalName;
                         const tenantHint =
-                            typeof profile.tenant === 'string'
+                            clientPortalHints?.tenantHint ??
+                            (typeof profile.tenant === 'string'
                                 ? profile.tenant
                                 : typeof profile.tenantId === 'string'
                                 ? profile.tenantId
@@ -1187,11 +1320,12 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                                 ? profile.tid
                                 : typeof profile.domain === 'string'
                                 ? profile.domain
-                                : undefined;
+                                : undefined);
                         const vanityHostHint =
                             typeof profile.vanity_host === 'string' ? profile.vanity_host : undefined;
                         const userTypeHint =
-                            typeof profile.user_type === 'string' ? profile.user_type : undefined;
+                            clientPortalHints?.userTypeHint ??
+                            (typeof profile.user_type === 'string' ? profile.user_type : undefined);
                         return mapOAuthProfileToExtendedUser({
                             provider: 'microsoft',
                             email: typeof emailCandidate === 'string' ? emailCandidate : undefined,
@@ -1563,7 +1697,10 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     });
                 }
 
-                await ensureOAuthAccountLink(extendedUser, accountRecord, providerId);
+                const accountLinkAllowed = await ensureOAuthAccountLink(extendedUser, accountRecord, providerId);
+                if (!accountLinkAllowed) {
+                    return false;
+                }
             }
 
             // Track last login
@@ -1961,16 +2098,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
             return session;
         },
         async redirect({ url, baseUrl }) {
-            if (url.includes('/auth/client-portal/handoff')) {
-                return url;
-            }
-
-            const vanityUrl = await computeVanityRedirect({ url, baseUrl, token: null });
-            // if the url doesn't include the host, add it
-            if (url.startsWith('/')) {
-                return process.env.NEXTAUTH_URL + url;
-            }
-            return vanityUrl ?? url;
+            return resolveSafeAuthRedirect({ url, baseUrl });
         },
     },
     };
@@ -2401,7 +2529,10 @@ export const options: NextAuthConfig = {
                     });
                 }
 
-                await ensureOAuthAccountLink(extendedUser, accountRecord, providerId);
+                const accountLinkAllowed = await ensureOAuthAccountLink(extendedUser, accountRecord, providerId);
+                if (!accountLinkAllowed) {
+                    return false;
+                }
             }
 
             // Track last login
@@ -2745,12 +2876,7 @@ export const options: NextAuthConfig = {
             return session;
         },
         async redirect({ url, baseUrl }) {
-            if (url.includes('/auth/client-portal/handoff')) {
-                return url;
-            }
-
-            const vanityUrl = await computeVanityRedirect({ url, baseUrl, token: null });
-            return vanityUrl ?? url;
+            return resolveSafeAuthRedirect({ url, baseUrl });
         },
     },
 };

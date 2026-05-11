@@ -57,11 +57,12 @@ describe('workflow-managed Entra portal provisioning events', () => {
     expect(publishWorkflowEventMock).toHaveBeenCalledWith(
       expect.objectContaining({
         eventType: 'ENTRA_PORTAL_ACCESS_ELIGIBLE',
-        idempotencyKey: expect.stringContaining('run-301'),
+        idempotencyKey: 'entra_portal_access:tenant-301:managed-301:entra-tenant-301:entra-object-301:group-301:eligible',
         payload: expect.objectContaining({
           tenantId: 'tenant-301',
           clientId: 'client-301',
           contactNameId: 'contact-301',
+          syncRunId: 'run-301',
           recommendedDefaultRole: 'User',
           workflowTarget: 'workflow-301',
           entitlement: expect.objectContaining({

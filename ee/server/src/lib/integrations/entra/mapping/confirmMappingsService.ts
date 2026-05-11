@@ -7,7 +7,7 @@ export interface ConfirmEntraMappingInput {
   confidenceScore?: number | null;
   clientPortalEntraProvisioningMode?: 'inherit' | 'disabled' | 'built_in' | 'workflow_managed';
   clientPortalEntitlementGroupId?: string | null;
-  clientPortalEntitlementMembershipMode?: 'transitive' | 'direct';
+  clientPortalEntitlementMembershipMode?: 'transitive';
   clientPortalDefaultRoleName?: string | null;
   clientPortalWorkflowTarget?: string | null;
   clientPortalWorkflowConfig?: Record<string, unknown> | null;
@@ -28,26 +28,21 @@ function normalizeMappingState(input: ConfirmEntraMappingInput): 'mapped' | 'ski
 }
 
 function normalizeProvisioningMode(
-  input: ConfirmEntraMappingInput
+  value: unknown,
+  fallback: 'inherit' | 'disabled' | 'built_in' | 'workflow_managed' = 'inherit'
 ): 'inherit' | 'disabled' | 'built_in' | 'workflow_managed' {
-  if (input.clientPortalEntraProvisioningMode === 'inherit') {
-    return 'inherit';
-  }
   if (
-    input.clientPortalEntraProvisioningMode === 'built_in' ||
-    input.clientPortalEntraProvisioningMode === 'workflow_managed'
+    value === 'inherit' ||
+    value === 'disabled' ||
+    value === 'built_in' ||
+    value === 'workflow_managed'
   ) {
-    return input.clientPortalEntraProvisioningMode;
+    return value;
   }
-  return 'inherit';
+  return fallback;
 }
 
-function normalizeEntitlementMembershipMode(
-  input: ConfirmEntraMappingInput
-): 'transitive' | 'direct' {
-  if (input.clientPortalEntitlementMembershipMode === 'direct') {
-    return 'direct';
-  }
+function normalizeEntitlementMembershipMode(): 'transitive' {
   return 'transitive';
 }
 
@@ -76,26 +71,6 @@ export async function confirmEntraMappings(
 
         const clientId = mapping.clientId ? String(mapping.clientId).trim() : null;
         const mappingState = normalizeMappingState(mapping);
-        const clientPortalEntraProvisioningMode = normalizeProvisioningMode(mapping);
-        const clientPortalEntitlementGroupId = mapping.clientPortalEntitlementGroupId
-          ? String(mapping.clientPortalEntitlementGroupId).trim()
-          : null;
-        const clientPortalEntitlementMembershipMode =
-          normalizeEntitlementMembershipMode(mapping);
-        const clientPortalDefaultRoleName =
-          mapping.clientPortalDefaultRoleName === null
-            ? null
-            : String(mapping.clientPortalDefaultRoleName || '').trim() || null;
-        const clientPortalWorkflowTarget =
-          mapping.clientPortalWorkflowTarget === null
-            ? null
-            : String(mapping.clientPortalWorkflowTarget || '').trim() || null;
-        const clientPortalWorkflowConfig =
-          mapping.clientPortalWorkflowConfig &&
-          typeof mapping.clientPortalWorkflowConfig === 'object' &&
-          !Array.isArray(mapping.clientPortalWorkflowConfig)
-            ? mapping.clientPortalWorkflowConfig
-            : null;
         const confidenceScore =
           typeof mapping.confidenceScore === 'number' ? mapping.confidenceScore : null;
 
@@ -116,7 +91,65 @@ export async function confirmEntraMappings(
             managed_tenant_id: managedTenantId,
             is_active: true,
           })
-          .first(['mapping_id', 'client_id', 'mapping_state']);
+          .first([
+            'mapping_id',
+            'client_id',
+            'mapping_state',
+            'client_portal_entra_provisioning_mode',
+            'client_portal_entitlement_group_id',
+            'client_portal_entitlement_membership_mode',
+            'client_portal_default_role_name',
+            'client_portal_workflow_target',
+            'client_portal_workflow_config',
+          ]);
+
+        const existingProvisioningMode = normalizeProvisioningMode(
+          existingActive?.client_portal_entra_provisioning_mode
+        );
+        const clientPortalEntraProvisioningMode =
+          mapping.clientPortalEntraProvisioningMode === undefined
+            ? existingProvisioningMode
+            : normalizeProvisioningMode(mapping.clientPortalEntraProvisioningMode);
+        const clientPortalEntitlementGroupId =
+          mapping.clientPortalEntitlementGroupId === undefined
+            ? existingActive?.client_portal_entitlement_group_id
+              ? String(existingActive.client_portal_entitlement_group_id)
+              : null
+            : mapping.clientPortalEntitlementGroupId
+              ? String(mapping.clientPortalEntitlementGroupId).trim() || null
+              : null;
+        const clientPortalEntitlementMembershipMode =
+          normalizeEntitlementMembershipMode();
+        const clientPortalDefaultRoleName =
+          mapping.clientPortalDefaultRoleName === undefined
+            ? existingActive?.client_portal_default_role_name
+              ? String(existingActive.client_portal_default_role_name)
+              : null
+            : mapping.clientPortalDefaultRoleName === null
+              ? null
+              : String(mapping.clientPortalDefaultRoleName || '').trim() || null;
+        const clientPortalWorkflowTarget =
+          mapping.clientPortalWorkflowTarget === undefined
+            ? existingActive?.client_portal_workflow_target
+              ? String(existingActive.client_portal_workflow_target)
+              : null
+            : mapping.clientPortalWorkflowTarget === null
+              ? null
+              : String(mapping.clientPortalWorkflowTarget || '').trim() || null;
+        const existingWorkflowConfig =
+          existingActive?.client_portal_workflow_config &&
+          typeof existingActive.client_portal_workflow_config === 'object' &&
+          !Array.isArray(existingActive.client_portal_workflow_config)
+            ? existingActive.client_portal_workflow_config
+            : null;
+        const clientPortalWorkflowConfig =
+          mapping.clientPortalWorkflowConfig === undefined
+            ? existingWorkflowConfig
+            : mapping.clientPortalWorkflowConfig &&
+                typeof mapping.clientPortalWorkflowConfig === 'object' &&
+                !Array.isArray(mapping.clientPortalWorkflowConfig)
+              ? mapping.clientPortalWorkflowConfig
+              : null;
 
         if (
           existingActive &&

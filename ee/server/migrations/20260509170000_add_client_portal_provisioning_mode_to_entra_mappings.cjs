@@ -18,7 +18,7 @@ exports.up = async function up(knex) {
       table
         .text('client_portal_entra_provisioning_mode')
         .notNullable()
-        .defaultTo('disabled');
+        .defaultTo('inherit');
     }
   );
 };
@@ -34,4 +34,3 @@ exports.down = async function down(knex) {
     });
   }
 };
-

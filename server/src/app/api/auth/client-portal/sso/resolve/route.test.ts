@@ -34,12 +34,17 @@ vi.mock('@alga-psa/auth/lib/sso/clientPortalSsoResolution', () => ({
   CLIENT_PORTAL_SSO_RESOLUTION_TTL_SECONDS: 300,
   createSignedClientPortalSsoResolutionCookie: (...args: unknown[]) => createCookieMock(...args),
   getMspSsoSigningSecret: () => getSigningSecretMock(),
-  isValidResolverCallbackUrl: (value: string | undefined) =>
-    !value || value.startsWith('/') || value.startsWith('http://') || value.startsWith('https://'),
+  isValidClientPortalResolverCallbackUrl: (value: string | undefined) =>
+    !value || value.startsWith('/client-portal') || value.includes('/auth/client-portal/handoff'),
   normalizeResolverEmail: (value: string) => value.trim().toLowerCase(),
   parseAndVerifyClientPortalSsoDiscoveryCookie: (...args: unknown[]) => parseDiscoveryCookieMock(...args),
   parseResolverProvider: (value: unknown) => (value === 'google' || value === 'azure-ad' ? value : null),
   resolveClientPortalSsoTenantContext: (...args: unknown[]) => resolveTenantContextMock(...args),
+}));
+
+vi.mock('@alga-psa/auth/lib/sso/mspSsoResolution', () => ({
+  MSP_SSO_DISCOVERY_COOKIE: 'msp_sso_discovery',
+  MSP_SSO_RESOLUTION_COOKIE: 'msp_sso_resolution',
 }));
 
 const { POST } = await import('./route');
@@ -105,6 +110,13 @@ describe('POST /api/auth/client-portal/sso/resolve', () => {
         name: 'client_portal_sso_resolution',
         value: 'signed-client-portal-resolution-cookie',
         maxAge: 300,
+      })
+    );
+    expect(setCookieMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'msp_sso_resolution',
+        value: '',
+        maxAge: 0,
       })
     );
   });

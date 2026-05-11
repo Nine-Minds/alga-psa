@@ -104,16 +104,11 @@ export function mapEntraClientTenantMappingRow(row: DbRow): EntraClientTenantMap
   const provisioningModeRaw = toNullableStringValue(row.client_portal_entra_provisioning_mode);
   const clientPortalEntraProvisioningMode =
     provisioningModeRaw === 'inherit' ||
+    provisioningModeRaw === 'disabled' ||
     provisioningModeRaw === 'built_in' ||
     provisioningModeRaw === 'workflow_managed'
       ? provisioningModeRaw
       : 'inherit';
-  const entitlementMembershipModeRaw = toNullableStringValue(
-    row.client_portal_entitlement_membership_mode
-  );
-  const clientPortalEntitlementMembershipMode =
-    entitlementMembershipModeRaw === 'direct' ? 'direct' : 'transitive';
-
   return {
     tenant: toStringValue(row.tenant, 'tenant'),
     mapping_id: toStringValue(row.mapping_id, 'mapping_id'),
@@ -123,7 +118,7 @@ export function mapEntraClientTenantMappingRow(row: DbRow): EntraClientTenantMap
     confidence_score: toNullableNumberValue(row.confidence_score),
     client_portal_entra_provisioning_mode: clientPortalEntraProvisioningMode,
     client_portal_entitlement_group_id: toNullableStringValue(row.client_portal_entitlement_group_id),
-    client_portal_entitlement_membership_mode: clientPortalEntitlementMembershipMode,
+    client_portal_entitlement_membership_mode: 'transitive',
     client_portal_default_role_name: toNullableStringValue(row.client_portal_default_role_name),
     client_portal_workflow_target: toNullableStringValue(row.client_portal_workflow_target),
     client_portal_workflow_config: toNullableObjectValue(row.client_portal_workflow_config),

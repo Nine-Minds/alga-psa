@@ -32,6 +32,10 @@ vi.mock('@alga-psa/auth/lib/sso/clientPortalSsoResolution', () => ({
   createSignedClientPortalSsoDiscoveryCookie: (...args: unknown[]) => createCookieMock(...args),
   discoverClientPortalSsoProviders: (...args: unknown[]) => discoverProvidersMock(...args),
   getMspSsoSigningSecret: () => getSigningSecretMock(),
+  isValidClientPortalResolverCallbackUrl: (value: string | undefined) =>
+    !value ||
+    value.startsWith('/client-portal') ||
+    value.startsWith('/auth/client-portal/handoff'),
   normalizeResolverEmail: (value: string) => value.trim().toLowerCase(),
   resolveClientPortalSsoTenantContext: (...args: unknown[]) => resolveTenantContextMock(...args),
 }));
@@ -58,6 +62,20 @@ describe('POST /api/auth/client-portal/sso/discover', () => {
   it('T001: returns neutral discovery response when tenant context cannot be resolved', async () => {
     const response = await POST(buildRequest({ email: 'user@example.com' }) as any);
     await expect(response.json()).resolves.toEqual({ ok: true, providers: [] });
+  });
+
+  it('rejects non-client-portal relative callback URLs before resolving tenant context', async () => {
+    const response = await POST(
+      buildRequest({
+        email: 'user@example.com',
+        tenantSlug: 'abc123def456',
+        callbackUrl: '/msp/dashboard',
+      }) as any
+    );
+
+    await expect(response.json()).resolves.toEqual({ ok: true, providers: [] });
+    expect(resolveTenantContextMock).not.toHaveBeenCalled();
+    expect(createCookieMock).not.toHaveBeenCalled();
   });
 
   it('T002: returns providers and sets signed discovery cookie when tenant context resolves from slug', async () => {
