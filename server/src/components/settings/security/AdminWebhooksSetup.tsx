@@ -17,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { ArrowLeft, MoreVertical } from 'lucide-react';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -233,6 +234,47 @@ function getDeliveryBadgeClasses(status: string): string {
 }
 
 export default function AdminWebhooksSetup() {
+  const { t } = useTranslation('msp/profile');
+  const [activeTab, setActiveTab] = useState<'inbound' | 'outbound'>('inbound');
+
+  return (
+    <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'inbound' | 'outbound')}>
+      <TabsList className="mb-6">
+        <TabsTrigger id="webhooks-inbound-tab" value="inbound">
+          {t('security.webhooks.tabs.inbound')}
+        </TabsTrigger>
+        <TabsTrigger id="webhooks-outbound-tab" value="outbound">
+          {t('security.webhooks.tabs.outbound')}
+        </TabsTrigger>
+      </TabsList>
+      <TabsContent value="inbound">
+        <InboundWebhooksPlaceholder />
+      </TabsContent>
+      <TabsContent value="outbound">
+        <OutboundWebhooksSetup />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
+function InboundWebhooksPlaceholder() {
+  const { t } = useTranslation('msp/profile');
+
+  return (
+    <Card className="p-6">
+      <div className="space-y-2">
+        <h3 className="text-lg font-medium text-gray-900">
+          {t('security.webhooks.inbound.title')}
+        </h3>
+        <p className="text-sm text-gray-500">
+          {t('security.webhooks.inbound.placeholder')}
+        </p>
+      </div>
+    </Card>
+  );
+}
+
+function OutboundWebhooksSetup() {
   const { t } = useTranslation('msp/profile');
   const [webhooks, setWebhooks] = useState<WebhookSettingsView[]>([]);
   const [eventOptions, setEventOptions] = useState<string[]>([]);

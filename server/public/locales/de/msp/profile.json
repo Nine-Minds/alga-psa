@@ -191,7 +191,13 @@
       "newWebhook": "Neuer Webhook",
       "tabs": {
         "configuration": "Konfiguration",
-        "deliveries": "Zustellungen"
+        "deliveries": "Zustellungen",
+        "inbound": "Eingehend",
+        "outbound": "Ausgehend"
+      },
+      "inbound": {
+        "title": "Eingehende Webhooks",
+        "placeholder": "Konfigurieren Sie eingehende Webhook-Endpunkte, die Anfragen prüfen, Zustellungen deduplizieren und an Aktionen oder Workflows weiterleiten."
       },
       "stats": {
         "total": "Webhooks gesamt",

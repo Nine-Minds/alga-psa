@@ -191,7 +191,13 @@
       "newWebhook": "Nuevo webhook",
       "tabs": {
         "configuration": "Configuración",
-        "deliveries": "Entregas"
+        "deliveries": "Entregas",
+        "inbound": "Entrantes",
+        "outbound": "Salientes"
+      },
+      "inbound": {
+        "title": "Webhooks entrantes",
+        "placeholder": "Configura endpoints de webhooks entrantes que verifican solicitudes, deduplican entregas y envían a acciones o flujos de trabajo."
       },
       "stats": {
         "total": "Webhooks totales",

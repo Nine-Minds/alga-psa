@@ -191,7 +191,13 @@
       "newWebhook": "Nieuwe webhook",
       "tabs": {
         "configuration": "Configuratie",
-        "deliveries": "Leveringen"
+        "deliveries": "Leveringen",
+        "inbound": "Inkomend",
+        "outbound": "Uitgaand"
+      },
+      "inbound": {
+        "title": "Inkomende webhooks",
+        "placeholder": "Configureer inkomende webhook-eindpunten die verzoeken verifiëren, leveringen dedupliceren en doorsturen naar acties of workflows."
       },
       "stats": {
         "total": "Totale webhooks",

@@ -191,7 +191,13 @@
       "newWebhook": "55555",
       "tabs": {
         "configuration": "55555",
-        "deliveries": "55555"
+        "deliveries": "55555",
+        "inbound": "55555",
+        "outbound": "55555"
+      },
+      "inbound": {
+        "title": "55555",
+        "placeholder": "55555"
       },
       "stats": {
         "total": "55555",

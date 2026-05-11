@@ -191,7 +191,13 @@
       "newWebhook": "New Webhook",
       "tabs": {
         "configuration": "Configuration",
-        "deliveries": "Deliveries"
+        "deliveries": "Deliveries",
+        "inbound": "Inbound",
+        "outbound": "Outbound"
+      },
+      "inbound": {
+        "title": "Inbound Webhooks",
+        "placeholder": "Configure incoming webhook endpoints that verify requests, deduplicate deliveries, and dispatch to actions or workflows."
       },
       "stats": {
         "total": "Total webhooks",

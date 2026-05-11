@@ -191,7 +191,13 @@
       "newWebhook": "11111",
       "tabs": {
         "configuration": "11111",
-        "deliveries": "11111"
+        "deliveries": "11111",
+        "inbound": "11111",
+        "outbound": "11111"
+      },
+      "inbound": {
+        "title": "11111",
+        "placeholder": "11111"
       },
       "stats": {
         "total": "11111",
