@@ -85,7 +85,7 @@
 
   { "id": "T1040", "description": "`upsertAssetByExternalId` for RMM-shaped payload delegates to `ingestNormalizedRmmDeviceSnapshot`", "implemented": true, "featureIds": ["F1040"] },
   { "id": "T1041", "description": "RMM-path asset upsert produces identical record shape to NinjaOne/Tactical RMM ingestion (regression vs sample)", "implemented": true, "featureIds": ["F1040"] },
-  { "id": "T1042", "description": "`upsertAssetByExternalId` for non-RMM payload takes plain asset upsert path", "implemented": false, "featureIds": ["F1041"] },
+  { "id": "T1042", "description": "`upsertAssetByExternalId` for non-RMM payload takes plain asset upsert path", "implemented": true, "featureIds": ["F1041"] },
 
   { "id": "T1050", "description": "`markInvoicePaidByExternalId` marks matching invoice paid", "implemented": false, "featureIds": ["F1050"] },
   { "id": "T1051", "description": "`markInvoicePaidByExternalId` lookup-miss → failed delivery", "implemented": false, "featureIds": ["F1050", "F056"] },
