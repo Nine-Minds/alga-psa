@@ -68,7 +68,7 @@
   { "id": "F1070", "description": "Project task action: `createProjectTask`", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F1071", "description": "Project task action: `updateProjectTaskStatusByExternalId`", "implemented": true, "prdRefs": ["Functional Requirements"] },
 
-  { "id": "F1080", "description": "Cross-cutting action: `addTagToEntityByExternalId` (accepts target entity_type + external_id + tag value)", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F1080", "description": "Cross-cutting action: `addTagToEntityByExternalId` (accepts target entity_type + external_id + tag value)", "implemented": true, "prdRefs": ["Functional Requirements"] },
 
   { "id": "F060", "description": "Workflow handler dispatcher: starts a workflow run with the normalized envelope", "implemented": false, "prdRefs": ["Functional Requirements", "Open Questions"] },
   { "id": "F061", "description": "Envelope builder: `{source, body, headers, verified, delivery_id, idempotency_key, received_at}`", "implemented": true, "prdRefs": ["Functional Requirements"] },
