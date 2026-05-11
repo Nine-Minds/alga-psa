@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createTenantKnex = vi.fn();
 const hasPermission = vi.fn();
+const setTenantSecret = vi.fn();
+const deleteTenantSecret = vi.fn();
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: unknown[]) => createTenantKnex(...args),
@@ -16,6 +18,13 @@ vi.mock('@alga-psa/auth/withAuth', () => ({
 
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: (...args: unknown[]) => hasPermission(...args),
+}));
+
+vi.mock('@alga-psa/core/secrets', () => ({
+  getSecretProviderInstance: vi.fn(async () => ({
+    setTenantSecret: (...args: unknown[]) => setTenantSecret(...args),
+    deleteTenantSecret: (...args: unknown[]) => deleteTenantSecret(...args),
+  })),
 }));
 
 interface InboundWebhookRowFixture {
@@ -110,6 +119,57 @@ function makeListKnex(rows: InboundWebhookRowFixture[]) {
   return { knex, builder };
 }
 
+function validUpsertInput(overrides: Record<string, unknown> = {}) {
+  return {
+    name: 'RMM Alerts',
+    slug: 'rmm-alerts',
+    auth_type: 'hmac_sha256',
+    auth_config: {
+      type: 'hmac_sha256',
+      signature_header: 'X-Signature',
+      secret: '0123456789abcdef',
+    },
+    handler_type: 'direct_action',
+    handler_config: {
+      type: 'direct_action',
+      action: 'createTicket',
+      field_mapping: {
+        title: 'alert.message',
+      },
+    },
+    ...overrides,
+  };
+}
+
+function makeDuplicateSlugKnex(collisionRow: Record<string, unknown>) {
+  const builder: any = {
+    where: vi.fn(() => builder),
+    modify: vi.fn((callback: (query: any) => void) => {
+      callback(builder);
+      return builder;
+    }),
+    andWhereNot: vi.fn(() => builder),
+    first: vi.fn(async () => collisionRow),
+    insert: vi.fn(() => {
+      throw new Error('insert should not be called when slug collides');
+    }),
+  };
+
+  const knex = vi.fn((table: string) => {
+    if (table !== 'inbound_webhooks') {
+      throw new Error(`Unexpected table ${table}`);
+    }
+
+    return builder;
+  });
+
+  knex.fn = {
+    now: vi.fn(() => new Date('2026-05-11T00:00:00.000Z')),
+  };
+
+  return { knex, builder };
+}
+
 describe('inbound webhook server actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -135,5 +195,20 @@ describe('inbound webhook server actions', () => {
       inboundWebhookId: 'webhook-a',
       slug: 'tenant-a-hook',
     });
+  });
+
+  it('T021: upsertInboundWebhook rejects duplicate slug in the same tenant', async () => {
+    const { knex, builder } = makeDuplicateSlugKnex({ inbound_webhook_id: 'existing-webhook-id' });
+    createTenantKnex.mockResolvedValue({ knex });
+
+    const { upsertInboundWebhook } = await import('@/lib/actions/inboundWebhookActions');
+    await expect(upsertInboundWebhook(validUpsertInput())).rejects.toThrow(
+      'Inbound webhook slug "rmm-alerts" already exists',
+    );
+
+    expect(hasPermission).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'inbound_webhook', 'create', knex);
+    expect(builder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', slug: 'rmm-alerts' });
+    expect(setTenantSecret).not.toHaveBeenCalled();
+    expect(builder.insert).not.toHaveBeenCalled();
   });
 });
