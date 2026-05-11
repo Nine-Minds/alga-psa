@@ -107,6 +107,17 @@ function activeBearerWebhook() {
   };
 }
 
+function activeIpAllowlistWebhook() {
+  return {
+    ...activeHmacWebhook(),
+    auth_type: 'ip_allowlist',
+    auth_config: {
+      type: 'ip_allowlist',
+      ip_cidrs: ['203.0.113.0/24'],
+    },
+  };
+}
+
 describe('inbound webhook request processor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -329,5 +340,45 @@ describe('inbound webhook request processor', () => {
     );
     expect(createInboundDelivery.mock.calls[0][1]).not.toHaveProperty('requestBody');
     expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
+  });
+
+  it('T035: accepts a request from an IP in the allowlist', async () => {
+    lookupInboundWebhookBySlug.mockResolvedValue(activeIpAllowlistWebhook());
+    const body = JSON.stringify({ alert: { id: 'alert-1' } });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-forwarded-for': '203.0.113.42, 198.51.100.10',
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    await expect(response.json()).resolves.toEqual({ delivery_id: 'delivery-1' });
+    expect(response.status).toBe(200);
+    expect(getTenantSecret).not.toHaveBeenCalled();
+    expect(createInboundDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        inboundWebhookId: 'webhook-1',
+        sourceIp: '203.0.113.42',
+        requestBody: { alert: { id: 'alert-1' } },
+        authStatus: 'verified',
+      }),
+    );
+    expect(dispatchInboundWebhookHandler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        deliveryId: 'delivery-1',
+        body: { alert: { id: 'alert-1' } },
+      }),
+    );
   });
 });

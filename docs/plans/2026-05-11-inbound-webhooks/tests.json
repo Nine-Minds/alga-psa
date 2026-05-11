@@ -30,7 +30,7 @@
   { "id": "T032", "description": "POST with mismatched signature header name returns 401", "implemented": true, "featureIds": ["F033"] },
   { "id": "T033", "description": "POST with valid Bearer token succeeds", "implemented": true, "featureIds": ["F034"] },
   { "id": "T034", "description": "POST with bad Bearer token returns 401", "implemented": true, "featureIds": ["F034"] },
-  { "id": "T035", "description": "POST from IP in allowlist succeeds", "implemented": false, "featureIds": ["F035"] },
+  { "id": "T035", "description": "POST from IP in allowlist succeeds", "implemented": true, "featureIds": ["F035"] },
   { "id": "T036", "description": "POST from IP outside allowlist returns 401", "implemented": false, "featureIds": ["F035"] },
   { "id": "T037", "description": "POST with valid path-token succeeds", "implemented": false, "featureIds": ["F036"] },
   { "id": "T038", "description": "POST with invalid path-token returns 401", "implemented": false, "featureIds": ["F036"] },
