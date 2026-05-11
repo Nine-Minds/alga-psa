@@ -469,4 +469,41 @@ describe('inbound webhook request processor', () => {
       }),
     );
   });
+
+  it('T038: rejects an invalid path-token request with 401', async () => {
+    lookupInboundWebhookBySlug.mockResolvedValue(activePathTokenWebhook());
+    getTenantSecret.mockResolvedValue('path-secret');
+    const body = JSON.stringify({ source: 'automation' });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/custom-hook?token=wrong-secret', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'custom-hook',
+    });
+
+    await expect(response.text()).resolves.toBe('');
+    expect(response.status).toBe(401);
+    expect(getTenantSecret).toHaveBeenCalledWith('tenant-a', 'inbound_webhook_webhook-1_path_token');
+    expect(createInboundDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        inboundWebhookId: 'webhook-1',
+        requestPath: '/api/inbound/tenant-slug/custom-hook?token=wrong-secret',
+        authStatus: 'rejected_no_auth',
+        dispatchStatus: 'failed',
+        responseStatus: 401,
+      }),
+    );
+    expect(createInboundDelivery.mock.calls[0][1]).not.toHaveProperty('requestBody');
+    expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
+  });
 });
