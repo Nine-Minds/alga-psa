@@ -62,4 +62,37 @@ describe('inbound webhook delivery persistence', () => {
       }),
     );
   });
+
+  it('T162: persists replay deliveries with replay linkage metadata', async () => {
+    const { knex, builder } = createInsertKnex();
+
+    await expect(
+      createInboundDelivery(knex, {
+        tenant: 'tenant-a',
+        inboundWebhookId: 'webhook-1',
+        idempotencyKey: 'alert-123',
+        requestMethod: 'POST',
+        requestPath: '/api/inbound/tenant-slug/rmm-alerts',
+        requestHeaders: {
+          'content-type': 'application/json',
+        },
+        requestBody: { alert: { message: 'CPU high' } },
+        sourceIp: '203.0.113.10',
+        userAgent: 'vitest',
+        authStatus: 'verified',
+        isReplay: true,
+        replayedFrom: 'delivery-original',
+      }),
+    ).resolves.toEqual({ deliveryId: 'delivery-1' });
+
+    expect(builder.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        inbound_webhook_id: 'webhook-1',
+        auth_status: 'verified',
+        is_replay: true,
+        replayed_from: 'delivery-original',
+      }),
+    );
+  });
 });
