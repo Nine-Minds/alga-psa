@@ -8,7 +8,7 @@
   { "id": "F007", "description": "Add PostHog feature flag `inbound_webhooks_enabled`", "implemented": true, "prdRefs": ["Rollout / Migration"] },
 
   { "id": "F010", "description": "TypeScript types: `InboundWebhookConfig`, `InboundWebhookDelivery`, `AuthConfig` union, `HandlerConfig` union", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
-  { "id": "F011", "description": "Zod schemas for inbound webhook upsert input (per auth_type and handler_type)", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F011", "description": "Zod schemas for inbound webhook upsert input (per auth_type and handler_type)", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F012", "description": "Server action `listInboundWebhooks` (withAuth, tenant-scoped)", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F013", "description": "Server action `getInboundWebhook(id)`", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F014", "description": "Server action `upsertInboundWebhook(input)` — slug uniqueness check per tenant", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
