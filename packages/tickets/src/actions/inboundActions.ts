@@ -54,6 +54,12 @@ interface AddTicketCommentByExternalIdMappedValues extends Record<string, unknow
   contact_id?: string;
 }
 
+interface ChangeTicketStatusByExternalIdMappedValues extends Record<string, unknown> {
+  external_id: string;
+  status_id: string;
+  board_id?: string;
+}
+
 const createTicketAction: InboundActionDefinition<CreateTicketMappedValues> = {
   name: 'createTicket',
   entityType: 'ticket',
@@ -286,14 +292,70 @@ const addTicketCommentByExternalIdAction: InboundActionDefinition<AddTicketComme
   },
 };
 
+const changeTicketStatusByExternalIdAction: InboundActionDefinition<ChangeTicketStatusByExternalIdMappedValues> = {
+  name: 'changeTicketStatusByExternalId',
+  entityType: 'ticket',
+  displayName: 'Change Ticket Status by External ID',
+  description: 'Change the status of a mapped ticket using the webhook-scoped external ID.',
+  targetFields: [
+    { name: 'external_id', type: 'string', required: true, description: 'External ticket identifier to resolve' },
+    { name: 'status_id', type: 'ref', required: true, refEntityType: 'ticket_status', description: 'Target ticket status ID' },
+    { name: 'board_id', type: 'ref', required: false, refEntityType: 'board', description: 'Destination board ID when moving boards' },
+  ],
+  async handle(ctx, mappedValues) {
+    const { knex } = await createTenantKnex(ctx.tenant);
+    const updatedTicket = await withTransaction(knex, async (trx) => {
+      const lookup = await lookupAlgaEntityByExternalId(
+        ctx.tenant,
+        ctx.webhookSlug,
+        'ticket',
+        mappedValues.external_id,
+        { knex: trx },
+      );
+
+      if (!lookup) {
+        return null;
+      }
+
+      const updateInput: UpdateTicketInput = {
+        status_id: mappedValues.status_id,
+      };
+      assignIfPresent(updateInput, 'board_id', mappedValues.board_id);
+
+      return TicketModel.updateTicket(lookup.algaEntityId, updateInput, ctx.tenant, trx);
+    });
+
+    if (!updatedTicket) {
+      return {
+        success: false,
+        entityType: 'ticket',
+        externalId: mappedValues.external_id,
+        message: `lookup_miss: ticket external_id "${mappedValues.external_id}" is not mapped for webhook "${ctx.webhookSlug}"`,
+      };
+    }
+
+    return {
+      success: true,
+      entityType: 'ticket',
+      entityId: updatedTicket.ticket_id,
+      externalId: mappedValues.external_id,
+      metadata: {
+        status_id: updatedTicket.status_id,
+      },
+    };
+  },
+};
+
 registerAction(createTicketAction);
 registerAction(updateTicketByExternalIdAction);
 registerAction(addTicketCommentByExternalIdAction);
+registerAction(changeTicketStatusByExternalIdAction);
 
 export const ticketInboundActions = [
   createTicketAction,
   updateTicketByExternalIdAction,
   addTicketCommentByExternalIdAction,
+  changeTicketStatusByExternalIdAction,
 ];
 
 function assignIfPresent<T extends object>(target: T, key: string, value: unknown): void {
