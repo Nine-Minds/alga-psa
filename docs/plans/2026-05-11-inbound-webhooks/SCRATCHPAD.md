@@ -174,6 +174,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T090 implemented** in `server/src/test/unit/inboundWebhooks/actionRegistry.test.ts`. Registry ordering is now locked: `registerAction` stores definitions and `listActions()` returns a deterministic flat list grouped by `entityType` ordering and then action name.
 - (2026-05-11) **T091 implemented** in `server/src/test/unit/inboundWebhooks/actionRegistry.test.ts`. Duplicate action registration now has explicit coverage and must throw `Inbound action "<name>" is already registered`, matching the registry's fail-fast behavior.
 - (2026-05-11) **T092 implemented** in `server/src/test/unit/inboundWebhooks/actionRegistry.test.ts`. Added a source-level bootstrap contract that requires all seven v1 package contribution imports (tickets, clients/contacts, assets, billing, scheduling, projects, tags), plus bootstrap calls from app initialization and action discovery before `listActions()`.
+- (2026-05-11) **T093 implemented** in `server/src/test/unit/inboundWebhooks/mappingEvaluator.test.ts`. JSONata field mapping now has direct coverage against the raw request body, preserving PRD-style expressions like `alert.message` instead of requiring a wrapper object.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -566,6 +567,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T092:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/actionRegistry.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T093:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/mappingEvaluator.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References
