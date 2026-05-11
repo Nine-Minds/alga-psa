@@ -247,6 +247,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T190 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookTenantScoping.source.contract.test.ts`. Added a source contract that enumerates every `inbound_webhooks` table access in server actions plus receiver config lookup, requires tenant-scoped `where` clauses on read/update/delete paths, and verifies create paths insert the tenant key.
 - (2026-05-11) **T191 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookTenantScoping.source.contract.test.ts`. Extended the source contract to enumerate delivery table access in server actions, delivery persistence, and idempotency helpers; inserts must include `tenant`, direct lookups/updates must filter by tenant, and paginated list queries must flow through the shared `applyFilters` tenant guard.
 - (2026-05-11) **T192 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Added a mocked `getInboundDelivery` cross-tenant test: a tenant-B delivery row is not returned to the tenant-A auth context because the action queries by `{ tenant: 'tenant-a', delivery_id }`.
+- (2026-05-11) **T193 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Tightened the mocked config lookup harness to honor `where` criteria and added a cross-tenant `getInboundWebhook` test proving tenant-A cannot read a tenant-B webhook config with the same requested id.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -857,6 +858,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookTenantScoping.source.contract.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T192:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T193:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 

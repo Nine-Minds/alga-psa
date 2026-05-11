@@ -151,7 +151,7 @@
   { "id": "T190", "description": "All inbound webhook queries include `tenant` in WHERE", "implemented": true, "featureIds": ["F001", "F012", "F013", "F032"] },
   { "id": "T191", "description": "All inbound delivery queries include `tenant` in WHERE", "implemented": true, "featureIds": ["F002", "F018", "F019"] },
   { "id": "T192", "description": "Cross-tenant delivery lookup blocked (tenant A cannot view tenant B's deliveries)", "implemented": true, "featureIds": ["F019", "F102"] },
-  { "id": "T193", "description": "Cross-tenant webhook config access blocked", "implemented": false, "featureIds": ["F013", "F102"] },
+  { "id": "T193", "description": "Cross-tenant webhook config access blocked", "implemented": true, "featureIds": ["F013", "F102"] },
 
   { "id": "T200", "description": "E2E: MSP admin creates HMAC webhook, sends signed payload, ticket appears in UI", "implemented": false, "featureIds": ["F030", "F033", "F1010", "F082", "F084"] },
   { "id": "T201", "description": "E2E: Admin sets up workflow handler, payload triggers workflow run visible in runs list", "implemented": false, "featureIds": ["F060", "F091"] },

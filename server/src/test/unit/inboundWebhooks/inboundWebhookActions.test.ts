@@ -284,9 +284,22 @@ function makeCreateKnex(existingRows: InboundWebhookRowFixture[]) {
 }
 
 function makeGetKnex(row: InboundWebhookRowFixture | null) {
+  const whereCalls: Record<string, unknown>[] = [];
   const builder: any = {
-    where: vi.fn(() => builder),
-    first: vi.fn(async () => row),
+    where: vi.fn((criteria: Record<string, unknown>) => {
+      whereCalls.push(criteria);
+      return builder;
+    }),
+    first: vi.fn(async () => {
+      if (!row) {
+        return null;
+      }
+
+      const criteria = Object.assign({}, ...whereCalls);
+      return Object.entries(criteria).every(([key, value]) => row[key as keyof InboundWebhookRowFixture] === value)
+        ? row
+        : null;
+    }),
   };
 
   const knex = vi.fn((table: string) => {
@@ -665,6 +678,23 @@ describe('inbound webhook server actions', () => {
 
     expect(hasPermission).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'inbound_webhook', 'read', knex);
     expect(builder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', delivery_id: 'delivery-foreign' });
+    expect(result).toBeNull();
+  });
+
+  it('T193: getInboundWebhook blocks cross-tenant config lookup', async () => {
+    const { knex, builder } = makeGetKnex(
+      inboundWebhookRow({
+        tenant: 'tenant-b',
+        inbound_webhook_id: 'webhook-foreign',
+      }),
+    );
+    createTenantKnex.mockResolvedValue({ knex });
+
+    const { getInboundWebhook } = await import('@/lib/actions/inboundWebhookActions');
+    const result = await getInboundWebhook('webhook-foreign');
+
+    expect(hasPermission).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'inbound_webhook', 'read', knex);
+    expect(builder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', inbound_webhook_id: 'webhook-foreign' });
     expect(result).toBeNull();
   });
 
