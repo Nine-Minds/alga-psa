@@ -74,4 +74,15 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain("label={t('security.webhooks.inbound.auth.signatureHeader')}");
     expect(adminWebhooksSource).toContain('hmacSignatureHeader: event.target.value');
   });
+
+  it('T135: auth section conditionally renders Bearer token fields', () => {
+    expect(adminWebhooksSource).toContain("value: 'bearer'");
+    expect(adminWebhooksSource).toContain("label: t('security.webhooks.inbound.auth.types.bearer')");
+    expect(adminWebhooksSource).toContain("identityForm.authType === 'bearer'");
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-auth-bearer-token"');
+    expect(adminWebhooksSource).toContain("label={t('security.webhooks.inbound.auth.bearerToken')}");
+    expect(adminWebhooksSource).toContain('type="password"');
+    expect(adminWebhooksSource).toContain("t('security.webhooks.inbound.auth.secretUnchangedPlaceholder')");
+    expect(adminWebhooksSource).toContain('bearerToken: event.target.value');
+  });
 });
