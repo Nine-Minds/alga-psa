@@ -4,6 +4,9 @@ const createTenantKnex = vi.fn();
 const hasPermission = vi.fn();
 const setTenantSecret = vi.fn();
 const deleteTenantSecret = vi.fn();
+const createInboundDelivery = vi.fn();
+const updateInboundDeliveryOutcome = vi.fn();
+const dispatchInboundWebhookHandler = vi.fn();
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: unknown[]) => createTenantKnex(...args),
@@ -25,6 +28,15 @@ vi.mock('@alga-psa/core/secrets', () => ({
     setTenantSecret: (...args: unknown[]) => setTenantSecret(...args),
     deleteTenantSecret: (...args: unknown[]) => deleteTenantSecret(...args),
   })),
+}));
+
+vi.mock('@/lib/inboundWebhooks/deliveryPersistence', () => ({
+  createInboundDelivery: (...args: unknown[]) => createInboundDelivery(...args),
+  updateInboundDeliveryOutcome: (...args: unknown[]) => updateInboundDeliveryOutcome(...args),
+}));
+
+vi.mock('@/lib/inboundWebhooks/dispatcher', () => ({
+  dispatchInboundWebhookHandler: (...args: unknown[]) => dispatchInboundWebhookHandler(...args),
 }));
 
 interface InboundWebhookRowFixture {
@@ -343,6 +355,67 @@ function makeGetDeliveryKnex(row: InboundWebhookDeliveryRowFixture | null) {
   });
 
   return { knex, builder };
+}
+
+function makeReplayKnex(args: {
+  original: InboundWebhookDeliveryRowFixture;
+  webhook: InboundWebhookRowFixture;
+  replayed: InboundWebhookDeliveryRowFixture;
+}) {
+  let deliveryLookupCount = 0;
+
+  function deliveryBuilderFor(row: InboundWebhookDeliveryRowFixture | null) {
+    const whereCalls: Record<string, unknown>[] = [];
+    const builder: any = {
+      where: vi.fn((criteria: Record<string, unknown>) => {
+        whereCalls.push(criteria);
+        return builder;
+      }),
+      first: vi.fn(async () => {
+        if (!row) {
+          return null;
+        }
+
+        const criteria = Object.assign({}, ...whereCalls);
+        return Object.entries(criteria).every(([key, value]) => row[key as keyof InboundWebhookDeliveryRowFixture] === value)
+          ? row
+          : null;
+      }),
+    };
+
+    return builder;
+  }
+
+  const webhookWhereCalls: Record<string, unknown>[] = [];
+  const webhookBuilder: any = {
+    where: vi.fn((criteria: Record<string, unknown>) => {
+      webhookWhereCalls.push(criteria);
+      return webhookBuilder;
+    }),
+    first: vi.fn(async () => {
+      const criteria = Object.assign({}, ...webhookWhereCalls);
+      return Object.entries(criteria).every(([key, value]) => args.webhook[key as keyof InboundWebhookRowFixture] === value)
+        ? args.webhook
+        : null;
+    }),
+  };
+
+  const originalBuilder = deliveryBuilderFor(args.original);
+  const replayedBuilder = deliveryBuilderFor(args.replayed);
+  const knex = vi.fn((table: string) => {
+    if (table === 'inbound_webhook_deliveries') {
+      deliveryLookupCount += 1;
+      return deliveryLookupCount === 1 ? originalBuilder : replayedBuilder;
+    }
+
+    if (table === 'inbound_webhooks') {
+      return webhookBuilder;
+    }
+
+    throw new Error(`Unexpected table ${table}`);
+  });
+
+  return { knex, originalBuilder, webhookBuilder, replayedBuilder };
 }
 
 function makeRotateKnex(row: InboundWebhookRowFixture) {
@@ -696,6 +769,107 @@ describe('inbound webhook server actions', () => {
     expect(hasPermission).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'inbound_webhook', 'read', knex);
     expect(builder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', inbound_webhook_id: 'webhook-foreign' });
     expect(result).toBeNull();
+  });
+
+  it('T202: replay of a failed delivery creates a linked successful delivery using current config', async () => {
+    const original = inboundDeliveryRow({
+      delivery_id: 'delivery-failed-1',
+      dispatch_status: 'failed',
+      handler_outcome: { error: 'Missing required mapped field "title"' },
+      response_status: 500,
+      response_body: { delivery_id: 'delivery-failed-1', error: 'dispatch_failed' },
+      request_body: { alert: { message: 'Fixed mapping alert' } },
+    });
+    const webhook = inboundWebhookRow({
+      inbound_webhook_id: 'webhook-1',
+      slug: 'rmm-alerts',
+      handler_config: {
+        type: 'direct_action',
+        action: 'createTicket',
+        field_mapping: {
+          title: 'alert.message',
+        },
+      },
+    });
+    const replayed = inboundDeliveryRow({
+      delivery_id: 'delivery-replay-1',
+      dispatch_status: 'dispatched',
+      handler_outcome: {
+        action: 'createTicket',
+        entity_type: 'ticket',
+        entity_id: 'ticket-replay-1',
+      },
+      response_status: 200,
+      response_body: { delivery_id: 'delivery-replay-1' },
+      is_replay: true,
+      replayed_from: 'delivery-failed-1',
+    });
+    const { knex, originalBuilder, webhookBuilder, replayedBuilder } = makeReplayKnex({
+      original,
+      webhook,
+      replayed,
+    });
+    createTenantKnex.mockResolvedValue({ knex });
+    createInboundDelivery.mockResolvedValue({ deliveryId: 'delivery-replay-1' });
+    dispatchInboundWebhookHandler.mockResolvedValue({
+      action: 'createTicket',
+      entity_type: 'ticket',
+      entity_id: 'ticket-replay-1',
+    });
+
+    const { replayInboundDelivery } = await import('@/lib/actions/inboundWebhookActions');
+    const result = await replayInboundDelivery('delivery-failed-1');
+
+    expect(hasPermission).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'inbound_webhook', 'replay', knex);
+    expect(originalBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', delivery_id: 'delivery-failed-1' });
+    expect(webhookBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', inbound_webhook_id: 'webhook-1' });
+    expect(createInboundDelivery).toHaveBeenCalledWith(
+      knex,
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        inboundWebhookId: 'webhook-1',
+        requestBody: { alert: { message: 'Fixed mapping alert' } },
+        authStatus: 'verified',
+        isReplay: true,
+        replayedFrom: 'delivery-failed-1',
+      }),
+    );
+    expect(dispatchInboundWebhookHandler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        webhook: expect.objectContaining({
+          slug: 'rmm-alerts',
+          handler_config: expect.objectContaining({
+            field_mapping: {
+              title: 'alert.message',
+            },
+          }),
+        }),
+        deliveryId: 'delivery-replay-1',
+        body: { alert: { message: 'Fixed mapping alert' } },
+      }),
+    );
+    expect(updateInboundDeliveryOutcome).toHaveBeenCalledWith(
+      knex,
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        deliveryId: 'delivery-replay-1',
+        dispatchStatus: 'dispatched',
+        responseStatus: 200,
+        responseBody: { delivery_id: 'delivery-replay-1' },
+      }),
+    );
+    expect(replayedBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', delivery_id: 'delivery-replay-1' });
+    expect(result).toMatchObject({
+      deliveryId: 'delivery-replay-1',
+      dispatchStatus: 'dispatched',
+      isReplay: true,
+      replayedFrom: 'delivery-failed-1',
+      handlerOutcome: {
+        action: 'createTicket',
+        entity_type: 'ticket',
+        entity_id: 'ticket-replay-1',
+      },
+    });
   });
 
   it('T082: clearSamplePayload removes the saved sample and capture window', async () => {
