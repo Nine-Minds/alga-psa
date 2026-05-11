@@ -56,7 +56,7 @@
   { "id": "T071", "description": "Rate limit isolates per webhook (one webhook hitting limit doesn't affect another)", "implemented": true, "featureIds": ["F042"] },
   { "id": "T072", "description": "Rate limit isolates per tenant", "implemented": true, "featureIds": ["F042"] },
 
-  { "id": "T080", "description": "Sample payload capture stores first verified body within capture window", "implemented": false, "featureIds": ["F044", "F021"] },
+  { "id": "T080", "description": "Sample payload capture stores first verified body within capture window", "implemented": true, "featureIds": ["F044", "F021"] },
   { "id": "T081", "description": "Capture window expires after 5 min; later requests don't overwrite", "implemented": false, "featureIds": ["F021", "F044"] },
   { "id": "T082", "description": "`clearSamplePayload` removes the saved sample", "implemented": false, "featureIds": ["F022"] },
 
