@@ -109,7 +109,27 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
       updatedAt: zOpenApi.string().datetime(),
     }),
   );
-  const InboundActionDefinition = zOpenApi.record(zOpenApi.unknown()).describe('Inbound action definition.');
+  const InboundActionTargetField = registry.registerSchema(
+    'InboundActionTargetField',
+    zOpenApi.object({
+      name: zOpenApi.string(),
+      type: zOpenApi.enum(['string', 'int', 'number', 'boolean', 'enum', 'object', 'array', 'ref']),
+      required: zOpenApi.boolean(),
+      description: zOpenApi.string(),
+      enumValues: zOpenApi.array(zOpenApi.string()).optional(),
+      refEntityType: zOpenApi.string().optional(),
+    }),
+  );
+  const InboundActionDefinition = registry.registerSchema(
+    'InboundActionDefinition',
+    zOpenApi.object({
+      name: zOpenApi.string(),
+      entityType: zOpenApi.string(),
+      displayName: zOpenApi.string(),
+      description: zOpenApi.string(),
+      targetFields: zOpenApi.array(InboundActionTargetField),
+    }),
+  );
   const InboundWebhookCreateInput = registry.registerSchema(
     'InboundWebhookCreateInput',
     zOpenApi.object({
