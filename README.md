@@ -18,7 +18,7 @@ Alga PSA is built around the way MSPs operate with clients:
 
 - **Tickets tied to clients, contacts, assets, and service history** so the team has context before work starts.
 - **Time and approvals connected to billing** so billable work can move toward invoices with less duplicate entry.
-- **Contracts, recurring services, tax, and invoice workflows** for the financial side of service delivery.
+- **Contracts, sales quotes, recurring services, tax, and invoice workflows** for the financial side of service delivery.
 - **Client portal and document workflows** so clients have a clearer place to submit requests, view information, and follow progress.
 - **Workflow automation** for turning repeatable ticket, billing, notification, and approval steps into managed processes with Event Catalog triggers and scheduled runs.
 - **Open-source core with self-hosting support** for MSPs and technical teams that want deployment and data control.
@@ -43,6 +43,8 @@ Alga PSA is built around the way MSPs operate with clients:
 - Flexible billing cycles by company, including weekly, bi-weekly, monthly, and quarterly billing
 - Proration support, approval-based time billing, and unapproved time rollover
 - Contract purchase order support, including PO numbers on invoices and advisory PO limits
+- Sales quotes for pricing proposals, optional line items, approvals, client portal acceptance, and conversion to contracts or invoices
+- Graphical invoice and quote designer for branded PDF layouts, data-bound fields, line-item tables, preview, and per-document template overrides
 - International tax support, including composite taxes, threshold-based rates, tax holidays, and reverse charge scenarios
 
 ### Automation, reporting, and controls
@@ -58,7 +60,7 @@ Some capabilities may depend on edition, deployment configuration, or enabled fe
 
 ## Product screenshots
 
-These images link directly to screenshots from the [Alga PSA feature tour](https://www.nineminds.com/AlgaPSA-features) and the [Workflow Automation docs](https://www.nineminds.com/documentation/152-choosing-workflow-triggers).
+These images link directly to screenshots from the [Alga PSA feature tour](https://www.nineminds.com/AlgaPSA-features), [Workflow Automation docs](https://www.nineminds.com/documentation/152-choosing-workflow-triggers), and [Invoice Designer docs](https://www.nineminds.com/documentation/1410-bind-invoice-data-to-your-layout).
 
 | Service desk | Billing and time |
 | --- | --- |
@@ -66,6 +68,8 @@ These images link directly to screenshots from the [Alga PSA feature tour](https
 | Ticketing views for client requests, assignment, attachments, and follow-up. | Contracts, billing, and invoice-related workflows in one billing area. |
 | <img src="https://www.nineminds.com/imported-media/time%20entry%20select%20time%20period.png" alt="Alga PSA time entry screen" width="420"> | <img src="https://www.nineminds.com/imported-media/Schedule%20view.png" alt="Alga PSA schedule view" width="420"> |
 | Time entry views for recording and reviewing work before billing. | Schedule views for dispatch and calendar-based work planning. |
+| <img src="https://www.nineminds.com/docs-images/invoice-designer-workspace.png" alt="Alga PSA invoice and quote designer workspace" width="420"> | <img src="https://www.nineminds.com/docs-images/invoice-designer-fields.png" alt="Alga PSA invoice designer fields tab" width="420"> |
+| Drag-and-drop invoice and quote layout designer with palette, canvas, and inspector. | Data bindings for customer, invoice, quote, line-item, and tenant fields. |
 | <img src="https://www.nineminds.com/docs-images/workflow-event-catalog.png" alt="Alga PSA workflow event catalog" width="420"> | <img src="https://www.nineminds.com/docs-images/workflow-designer-ticket-triage.png" alt="Alga PSA visual workflow designer" width="420"> |
 | Event Catalog triggers for choosing the business moment that should start a workflow. | Visual workflow designer for ticket triage, notifications, approvals, and other repeatable processes. |
 
@@ -145,6 +149,8 @@ Useful technical docs:
 ### MSP feature areas
 
 - [Billing System](docs/billing/billing.md)
+- [Invoice Templates](docs/billing/invoice_templates.md)
+- [Quoting System](docs/billing/quoting-system.md)
 - [International Tax Support](docs/billing/tax/international_tax_support.md)
 - [Asset Management](docs/features/asset_management.md)
 - [SLA Management](docs/features/sla.md)
