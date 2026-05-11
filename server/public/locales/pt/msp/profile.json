@@ -339,13 +339,29 @@
             "received": "Received",
             "status": "Status",
             "response": "Response",
-            "duration": "Duration"
+            "duration": "Duration",
+            "actions": "Actions"
           },
+          "view": "View",
           "status": {
             "pending": "pending",
             "dispatched": "dispatched",
             "duplicate": "duplicate",
             "failed": "failed"
+          }
+        },
+        "deliveryDetail": {
+          "title": "Delivery detail",
+          "close": "Close",
+          "received": "Received",
+          "status": "Status",
+          "responseStatus": "Response status",
+          "duration": "Duration",
+          "sections": {
+            "headers": "Request headers",
+            "requestBody": "Request body",
+            "responseBody": "Response body",
+            "handlerOutcome": "Handler outcome"
           }
         }
       },

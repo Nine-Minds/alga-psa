@@ -9,6 +9,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import Drawer from '@alga-psa/ui/components/Drawer';
 import {
   Dialog,
   DialogContent,
@@ -150,6 +151,18 @@ function formatDateTime(value: string | null, neverLabel: string): string {
 
 function formatPercent(value: number): string {
   return `${Math.round(value * 100)}%`;
+}
+
+function formatJsonForDisplay(value: unknown): string {
+  if (value == null) {
+    return '';
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  return JSON.stringify(value, null, 2);
 }
 
 function buildFormState(webhook: WebhookSettingsView): WebhookFormState {
@@ -338,6 +351,7 @@ function InboundWebhooksListView() {
     total: number;
   } | null>(null);
   const [inboundDeliveryPageNumber, setInboundDeliveryPageNumber] = useState(1);
+  const [selectedInboundDelivery, setSelectedInboundDelivery] = useState<InboundWebhookDelivery | null>(null);
   const [lastDeliveries, setLastDeliveries] = useState<Record<string, InboundWebhookDelivery | null>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -638,6 +652,22 @@ function InboundWebhooksListView() {
       render: (value) => value == null
         ? t('security.webhooks.deliveries.noResponseCode')
         : t('security.webhooks.inbound.deliveryLog.durationMs', { duration: value as number }),
+    },
+    {
+      title: t('security.webhooks.inbound.deliveryLog.columns.actions'),
+      dataIndex: 'deliveryId',
+      sortable: false,
+      width: '80px',
+      render: (_value, delivery) => (
+        <Button
+          id={`inbound-webhook-delivery-view-${delivery.deliveryId}`}
+          variant="ghost"
+          size="sm"
+          onClick={() => setSelectedInboundDelivery(delivery)}
+        >
+          {t('security.webhooks.inbound.deliveryLog.view')}
+        </Button>
+      ),
     },
   ], [neverLabel, t]);
 
@@ -1322,6 +1352,78 @@ function InboundWebhooksListView() {
           </Button>
         </DialogFooter>
       </Dialog>
+
+      <Drawer
+        id="inbound-webhook-delivery-detail"
+        isOpen={selectedInboundDelivery !== null}
+        onClose={() => setSelectedInboundDelivery(null)}
+        hideCloseButton
+        width="min(720px, 100vw)"
+      >
+        {selectedInboundDelivery ? (
+          <div className="space-y-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {t('security.webhooks.inbound.deliveryDetail.title')}
+                </h3>
+                <p className="mt-1 break-all text-sm text-gray-500">
+                  {selectedInboundDelivery.deliveryId}
+                </p>
+              </div>
+              <Button
+                id="inbound-webhook-delivery-detail-close"
+                variant="ghost"
+                onClick={() => setSelectedInboundDelivery(null)}
+              >
+                {t('security.webhooks.inbound.deliveryDetail.close')}
+              </Button>
+            </div>
+            <dl className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <dt className="text-xs font-medium text-gray-500">{t('security.webhooks.inbound.deliveryDetail.received')}</dt>
+                <dd className="text-sm text-gray-900">{formatDateTime(selectedInboundDelivery.receivedAt as string, neverLabel)}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-gray-500">{t('security.webhooks.inbound.deliveryDetail.status')}</dt>
+                <dd className="text-sm text-gray-900">{selectedInboundDelivery.dispatchStatus}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-gray-500">{t('security.webhooks.inbound.deliveryDetail.responseStatus')}</dt>
+                <dd className="text-sm text-gray-900">{selectedInboundDelivery.responseStatus ?? t('security.webhooks.deliveries.noResponseCode')}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-gray-500">{t('security.webhooks.inbound.deliveryDetail.duration')}</dt>
+                <dd className="text-sm text-gray-900">
+                  {selectedInboundDelivery.durationMs == null
+                    ? t('security.webhooks.deliveries.noResponseCode')
+                    : t('security.webhooks.inbound.deliveryLog.durationMs', { duration: selectedInboundDelivery.durationMs })}
+                </dd>
+              </div>
+            </dl>
+            {selectedInboundDelivery.handlerOutcome?.error ? (
+              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+                {String(selectedInboundDelivery.handlerOutcome.error)}
+              </div>
+            ) : null}
+            {[
+              ['headers', selectedInboundDelivery.requestHeaders],
+              ['requestBody', selectedInboundDelivery.requestBody],
+              ['responseBody', selectedInboundDelivery.responseBody],
+              ['handlerOutcome', selectedInboundDelivery.handlerOutcome],
+            ].map(([key, value]) => (
+              <div key={key as string}>
+                <h4 className="mb-2 text-sm font-medium text-gray-900">
+                  {t(`security.webhooks.inbound.deliveryDetail.sections.${key as string}`)}
+                </h4>
+                <pre className="max-h-80 overflow-auto rounded-md bg-gray-950 p-3 text-xs text-gray-100">
+                  {formatJsonForDisplay(value)}
+                </pre>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </Drawer>
     </div>
   );
 }

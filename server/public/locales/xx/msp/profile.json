@@ -339,13 +339,29 @@
             "received": "11111",
             "status": "11111",
             "response": "11111",
-            "duration": "11111"
+            "duration": "11111",
+            "actions": "11111"
           },
+          "view": "11111",
           "status": {
             "pending": "11111",
             "dispatched": "11111",
             "duplicate": "11111",
             "failed": "11111"
+          }
+        },
+        "deliveryDetail": {
+          "title": "11111",
+          "close": "11111",
+          "received": "11111",
+          "status": "11111",
+          "responseStatus": "11111",
+          "duration": "11111",
+          "sections": {
+            "headers": "11111",
+            "requestBody": "11111",
+            "responseBody": "11111",
+            "handlerOutcome": "11111"
           }
         }
       },
