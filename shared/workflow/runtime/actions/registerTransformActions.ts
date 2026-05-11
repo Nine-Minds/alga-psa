@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
+import { compileExpression } from '../expressionEngine';
+import { withWorkflowJsonSchemaMetadata } from '../jsonSchemaMetadata';
 import {
   COMPOSE_TEXT_ACTION_ID,
   COMPOSE_TEXT_VERSION,
@@ -10,6 +12,78 @@ import {
 const coerceText = (value: unknown): string => {
   if (value === null || value === undefined) return '';
   return String(value);
+};
+
+const REGEX_MAX_TEXT_LENGTH = 100_000;
+const REGEX_MAX_PATTERN_LENGTH = 2_000;
+const REGEX_DEFAULT_MAX_MATCHES = 100;
+const REGEX_MAX_MATCHES_LIMIT = 1_000;
+const SUPPORTED_REGEX_FLAGS = new Set(['d', 'g', 'i', 'm', 's', 'u', 'v', 'y']);
+
+const validateRegexFlags = (flags: string, actionId: string): void => {
+  const seen = new Set<string>();
+  for (const flag of flags) {
+    if (!SUPPORTED_REGEX_FLAGS.has(flag)) {
+      throw new Error(`${actionId}: invalid regex flags "${flags}": unsupported flag "${flag}"`);
+    }
+    if (seen.has(flag)) {
+      throw new Error(`${actionId}: invalid regex flags "${flags}": duplicate flag "${flag}"`);
+    }
+    seen.add(flag);
+  }
+};
+
+const compileRegex = (pattern: string, flags: string, actionId: string): RegExp => {
+  if (pattern.length > REGEX_MAX_PATTERN_LENGTH) {
+    throw new Error(
+      `${actionId}: pattern length ${pattern.length} exceeds maximum ${REGEX_MAX_PATTERN_LENGTH}`
+    );
+  }
+
+  validateRegexFlags(flags, actionId);
+  try {
+    return new RegExp(pattern, flags);
+  } catch (error) {
+    throw new Error(
+      `${actionId}: invalid regex pattern "${pattern}": ${error instanceof Error ? error.message : String(error)}`
+    );
+  }
+};
+
+const assertRegexTextLength = (text: string, actionId: string): void => {
+  if (text.length > REGEX_MAX_TEXT_LENGTH) {
+    throw new Error(
+      `${actionId}: text length ${text.length} exceeds maximum ${REGEX_MAX_TEXT_LENGTH}`
+    );
+  }
+};
+
+const normalizeRegexGroups = (groups: string[] | undefined): Array<string | null> =>
+  (groups ?? []).map((group) => group ?? null);
+
+const normalizeNamedGroups = (groups: Record<string, string> | undefined): Record<string, string | null> => {
+  if (!groups) return {};
+  return Object.fromEntries(
+    Object.entries(groups).map(([name, value]) => [name, value ?? null])
+  );
+};
+
+const countRegexMatches = (regex: RegExp, text: string, maxMatches: number, actionId: string): number => {
+  let count = 0;
+  regex.lastIndex = 0;
+
+  while (true) {
+    const match = regex.exec(text);
+    if (!match) break;
+    count += 1;
+    if (count > maxMatches) {
+      throw new Error(`${actionId}: match count exceeded maximum ${maxMatches}`);
+    }
+    if (match[0].length === 0) {
+      regex.lastIndex += 1;
+    }
+  }
+  return count;
 };
 
 const baseTextInputSchema = z.object({
@@ -36,6 +110,160 @@ const coalesceOutputSchema = z.object({
   value: z.unknown().optional().describe('First usable candidate value'),
   matchedIndex: z.number().int().nullable().describe('Zero-based index of the selected candidate')
 });
+
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+
+const jsonValueSchema: z.ZodType<JsonValue> = z.lazy(() => z.union([
+  z.string(),
+  z.number().finite(),
+  z.boolean(),
+  z.null(),
+  z.array(jsonValueSchema),
+  z.record(jsonValueSchema),
+]));
+
+const jsonTypeSchema = z.enum(['object', 'array', 'string', 'number', 'boolean', 'null']);
+
+const parseJsonOutputSchema = z.object({
+  value: jsonValueSchema.describe('Parsed JSON value'),
+  type: jsonTypeSchema.describe('Detected JSON type for the parsed value')
+});
+
+const queryJsonOutputSchema = z.object({
+  value: jsonValueSchema.describe('Evaluated JSONata result')
+});
+
+const stringifyJsonOutputSchema = z.object({
+  text: z.string().describe('Serialized JSON text')
+});
+
+const parseJsonInputSchema = z.object({
+  source: z.union([z.string(), z.array(jsonValueSchema), z.record(jsonValueSchema)])
+    .describe('JSON text or literal object/array to parse')
+});
+
+const queryJsonInputSchema = z.object({
+  source: jsonValueSchema.describe('Input value exposed to expression as "source"'),
+  expression: z.string().min(1).describe('JSONata expression to evaluate against source')
+});
+
+const stringifyJsonInputSchema = z.object({
+  source: jsonValueSchema.describe('JSON-serializable value to serialize'),
+  spacing: z.number().int().min(0).max(8).optional().describe('Optional pretty-print spacing between 0 and 8')
+});
+
+const regexTextInputSchema = z.union([
+  z.string(),
+  z.number().finite(),
+  z.boolean(),
+  z.null(),
+]);
+
+const regexMatchInputSchema = z.object({
+  text: regexTextInputSchema.describe('Source text to inspect'),
+  pattern: withWorkflowJsonSchemaMetadata(
+    z.string().min(1),
+    'JavaScript regular expression pattern body (without surrounding /.../)',
+    {
+      'x-workflow-editor': {
+        kind: 'text',
+        inline: { mode: 'textarea' },
+      }
+    }
+  ),
+  flags: z.string().optional().default('').describe('Optional JavaScript regex flags (for example: i, m, s, g, u)'),
+  requireMatch: z.boolean().optional().default(false).describe('When true, no-match is treated as an action failure')
+});
+
+const regexReplaceInputSchema = z.object({
+  text: regexTextInputSchema.describe('Source text to modify'),
+  pattern: withWorkflowJsonSchemaMetadata(
+    z.string().min(1),
+    'JavaScript regular expression pattern body (without surrounding /.../)',
+    {
+      'x-workflow-editor': {
+        kind: 'text',
+        inline: { mode: 'textarea' },
+      }
+    }
+  ),
+  flags: z.string().optional().default('').describe('Optional JavaScript regex flags (for example: i, m, s, u)'),
+  replacement: withWorkflowJsonSchemaMetadata(
+    z.string(),
+    'Replacement string. JavaScript replacement tokens are supported, including $1, $2, $<name>, and $$.',
+    {
+      'x-workflow-editor': {
+        kind: 'text',
+        inline: { mode: 'textarea' },
+      }
+    }
+  ),
+  replaceAll: z.boolean().optional().default(true).describe('Replace all matches when true; otherwise replace only the first match')
+});
+
+const regexExtractInputSchema = z.object({
+  text: regexTextInputSchema.describe('Source text to inspect'),
+  pattern: withWorkflowJsonSchemaMetadata(
+    z.string().min(1),
+    'JavaScript regular expression pattern body (without surrounding /.../)',
+    {
+      'x-workflow-editor': {
+        kind: 'text',
+        inline: { mode: 'textarea' },
+      }
+    }
+  ),
+  flags: z.string().optional().default('').describe('Optional JavaScript regex flags (for example: i, m, s, g, u)'),
+  maxMatches: z.number().int().positive().optional().default(REGEX_DEFAULT_MAX_MATCHES).describe(
+    `Maximum matches to collect (1-${REGEX_MAX_MATCHES_LIMIT})`
+  ),
+  requireMatch: z.boolean().optional().default(false).describe('When true, no-match is treated as an action failure')
+});
+
+const regexMatchOutputSchema = z.object({
+  matched: z.boolean(),
+  match: z.string().nullable(),
+  index: z.number().int().nullable(),
+  groups: z.array(z.string().nullable()),
+  namedGroups: z.record(z.string().nullable())
+});
+
+const regexExtractMatchSchema = z.object({
+  text: z.string(),
+  index: z.number().int(),
+  groups: z.array(z.string().nullable()),
+  namedGroups: z.record(z.string().nullable())
+});
+
+const regexExtractOutputSchema = z.object({
+  matched: z.boolean(),
+  count: z.number().int(),
+  first: regexExtractMatchSchema.nullable(),
+  matches: z.array(regexExtractMatchSchema),
+});
+
+const regexReplaceOutputSchema = z.object({
+  text: z.string(),
+  replacementCount: z.number().int(),
+});
+
+const assertJsonValue = (value: unknown, context: string): JsonValue => {
+  const parsed = jsonValueSchema.safeParse(value);
+  if (!parsed.success) {
+    throw new Error(`${context}: parsed value is not a finite JSON value`);
+  }
+  return parsed.data;
+};
+
+const detectJsonType = (value: JsonValue): z.infer<typeof jsonTypeSchema> => {
+  if (value === null) return 'null';
+  if (Array.isArray(value)) return 'array';
+  if (typeof value === 'object') return 'object';
+  if (typeof value === 'string') return 'string';
+  if (typeof value === 'number') return 'number';
+  if (typeof value === 'boolean') return 'boolean';
+  throw new Error('Unsupported JSON value type');
+};
 
 function truncateText(
   text: string,
@@ -64,6 +292,100 @@ export function registerTransformActionsV2(): void {
   const registry = getActionRegistryV2();
 
   registry.register({
+    id: 'transform.parse_json',
+    version: 1,
+    inputSchema: parseJsonInputSchema,
+    outputSchema: parseJsonOutputSchema,
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Parse JSON',
+      category: 'Transform',
+      description: 'Parse JSON text or pass through literal object/array values for downstream mapping.'
+    },
+    handler: async (input) => {
+      if (typeof input.source === 'string') {
+        try {
+          const value = assertJsonValue(JSON.parse(input.source), 'JSON parse failed');
+          return { value, type: detectJsonType(value) };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          throw new Error(message.startsWith('JSON parse failed:') ? message : `JSON parse failed: ${message}`);
+        }
+      }
+
+      if (input.source !== null && typeof input.source === 'object') {
+        if (!Array.isArray(input.source) && Object.getPrototypeOf(input.source) !== Object.prototype) {
+          throw new Error('JSON parse failed: source object must be a plain object or array');
+        }
+        return { value: input.source, type: detectJsonType(input.source) };
+      }
+
+      throw new Error('JSON parse failed: source must be a JSON string or a literal object/array');
+    }
+  });
+
+  registry.register({
+    id: 'transform.query_json',
+    version: 1,
+    inputSchema: queryJsonInputSchema,
+    outputSchema: queryJsonOutputSchema,
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Query JSON',
+      category: 'Transform',
+      description: 'Evaluate a JSONata expression against a source value and return structured output.'
+    },
+    handler: async (input, ctx) => {
+      const evaluationContext = {
+        ...(ctx.expressionContext ?? {}),
+        source: input.source
+      };
+
+      let compiled;
+      try {
+        compiled = compileExpression({ $expr: input.expression });
+      } catch (error) {
+        throw new Error(`JSON query expression validation failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+
+      try {
+        const value = await compiled.evaluate(evaluationContext);
+        return { value };
+      } catch (error) {
+        throw new Error(`JSON query expression evaluation failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+  });
+
+  registry.register({
+    id: 'transform.stringify_json',
+    version: 1,
+    inputSchema: stringifyJsonInputSchema,
+    outputSchema: stringifyJsonOutputSchema,
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Stringify JSON',
+      category: 'Transform',
+      description: 'Serialize JSON-compatible values to text for storage, transport, or templating.'
+    },
+    handler: async (input) => {
+      try {
+        const spacing = input.spacing && input.spacing > 0 ? input.spacing : undefined;
+        const text = JSON.stringify(input.source, null, spacing);
+        if (typeof text !== 'string') {
+          throw new Error('source must be JSON-serializable');
+        }
+        return { text };
+      } catch (error) {
+        throw new Error(`JSON stringify failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+  });
+
+  registry.register({
     id: COMPOSE_TEXT_ACTION_ID,
     version: COMPOSE_TEXT_VERSION,
     inputSchema: z.object({}).strict(),
@@ -77,6 +399,144 @@ export function registerTransformActionsV2(): void {
     },
     handler: async (_input, ctx) =>
       renderComposeTextOutputs(ctx.stepConfig, ctx.expressionContext)
+  });
+
+  registry.register({
+    id: 'transform.regex_match',
+    version: 1,
+    inputSchema: regexMatchInputSchema,
+    outputSchema: regexMatchOutputSchema,
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Regex Match',
+      category: 'Transform',
+      description: 'Evaluate a JavaScript regular expression and return the first match with capture groups.'
+    },
+    handler: async (input) => {
+      const actionId = 'transform.regex_match';
+      const text = coerceText(input.text);
+      assertRegexTextLength(text, actionId);
+
+      const regex = compileRegex(input.pattern, input.flags ?? '', actionId);
+      const match = regex.exec(text);
+
+      if (!match) {
+        if (input.requireMatch) {
+          throw new Error(`${actionId}: no match found but requireMatch is true`);
+        }
+        return {
+          matched: false,
+          match: null,
+          index: null,
+          groups: [],
+          namedGroups: {},
+        };
+      }
+
+      return {
+        matched: true,
+        match: match[0] ?? null,
+        index: typeof match.index === 'number' ? match.index : null,
+        groups: normalizeRegexGroups(match.slice(1)),
+        namedGroups: normalizeNamedGroups(match.groups),
+      };
+    }
+  });
+
+  registry.register({
+    id: 'transform.regex_extract',
+    version: 1,
+    inputSchema: regexExtractInputSchema,
+    outputSchema: regexExtractOutputSchema,
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Regex Extract',
+      category: 'Transform',
+      description: 'Extract one or more regex matches with numbered and named capture groups.'
+    },
+    handler: async (input) => {
+      const actionId = 'transform.regex_extract';
+      const text = coerceText(input.text);
+      assertRegexTextLength(text, actionId);
+
+      const maxMatches = input.maxMatches ?? REGEX_DEFAULT_MAX_MATCHES;
+      if (maxMatches > REGEX_MAX_MATCHES_LIMIT) {
+        throw new Error(`${actionId}: maxMatches ${maxMatches} exceeds maximum ${REGEX_MAX_MATCHES_LIMIT}`);
+      }
+
+      const rawFlags = input.flags ?? '';
+      const globalFlags = rawFlags.includes('g') ? rawFlags : `${rawFlags}g`;
+      const regex = compileRegex(input.pattern, globalFlags, actionId);
+
+      const matches: Array<z.infer<typeof regexExtractMatchSchema>> = [];
+      regex.lastIndex = 0;
+
+      while (matches.length < maxMatches) {
+        const match = regex.exec(text);
+        if (!match) break;
+        matches.push({
+          text: match[0] ?? '',
+          index: match.index,
+          groups: normalizeRegexGroups(match.slice(1)),
+          namedGroups: normalizeNamedGroups(match.groups),
+        });
+        if (match[0].length === 0) {
+          regex.lastIndex += 1;
+        }
+      }
+
+      const matched = matches.length > 0;
+      if (!matched && input.requireMatch) {
+        throw new Error(`${actionId}: no match found but requireMatch is true`);
+      }
+
+      return {
+        matched,
+        count: matches.length,
+        first: matches[0] ?? null,
+        matches,
+      };
+    }
+  });
+
+  registry.register({
+    id: 'transform.regex_replace',
+    version: 1,
+    inputSchema: regexReplaceInputSchema,
+    outputSchema: regexReplaceOutputSchema,
+    sideEffectful: false,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Regex Replace',
+      category: 'Transform',
+      description: 'Replace regex matches using JavaScript RegExp replacement semantics.'
+    },
+    handler: async (input) => {
+      const actionId = 'transform.regex_replace';
+      const text = coerceText(input.text);
+      assertRegexTextLength(text, actionId);
+
+      const rawFlags = input.flags ?? '';
+      const flags = input.replaceAll === false
+        ? rawFlags.replace(/g/g, '')
+        : rawFlags.includes('g')
+          ? rawFlags
+          : `${rawFlags}g`;
+      const regex = compileRegex(input.pattern, flags, actionId);
+
+      const replacementCount = input.replaceAll === false
+        ? (regex.exec(text) ? 1 : 0)
+        : countRegexMatches(regex, text, REGEX_MAX_MATCHES_LIMIT, actionId);
+
+      regex.lastIndex = 0;
+      const outputText = text.replace(regex, input.replacement);
+      return {
+        text: outputText,
+        replacementCount,
+      };
+    }
   });
 
   registry.register({

@@ -165,7 +165,12 @@
       "system": "System",
       "selected": "Ausgewahlt"
     },
-    "openUserMenu": "Benutzermenü öffnen"
+    "openUserMenu": "Benutzermenü öffnen",
+    "quickAsk": {
+      "ariaLabel": "KI zu diesem Workflow fragen",
+      "title": "KI fragen",
+      "shortcutHint": "Quick Ask für Workflow-Hilfe öffnen"
+    }
   },
   "dialogs": {
     "aiInterrupt": {

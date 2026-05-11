@@ -110,6 +110,11 @@
     "profile": "Profile",
     "account": "Account",
     "signOut": "Sign out",
+    "quickAsk": {
+      "ariaLabel": "Ask AI about this workflow",
+      "title": "Ask AI",
+      "shortcutHint": "Open Quick Ask for workflow guidance"
+    },
     "quickCreate": {
       "ariaLabel": "Open quick create",
       "title": "Quick Create",

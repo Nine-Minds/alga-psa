@@ -1,11 +1,12 @@
 /* @vitest-environment jsdom */
 
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
-import { render } from '@testing-library/react';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+import { cleanup, render, screen } from '@testing-library/react';
 import TicketDetailsContainer from '../TicketDetailsContainer';
 
 let lastTicketDetailsProps: any = null;
+let liveTicketUpdatesEnabled = false;
 
 vi.mock('next/server', () => ({
   NextRequest: class NextRequest {},
@@ -23,10 +24,6 @@ vi.mock('next-auth', () => ({
     signIn: vi.fn(),
     signOut: vi.fn(),
   })),
-}));
-
-vi.mock('next-auth/lib/env', () => ({
-  setEnvDefaults: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -47,6 +44,16 @@ vi.mock('@alga-psa/ui/context', () => ({
   UnsavedChangesProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: liveTicketUpdatesEnabled, loading: false, error: null }),
+}));
+
+vi.mock('../TicketLiveProvider', () => ({
+  TicketLiveProvider: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="ticket-live-provider">{children}</div>
+  ),
+}));
+
 vi.mock('../TicketDetails', () => ({
   __esModule: true,
   default: (props: any) => {
@@ -56,6 +63,15 @@ vi.mock('../TicketDetails', () => ({
 }));
 
 describe('TicketDetailsContainer renderCreateProjectTask passthrough', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  beforeEach(() => {
+    liveTicketUpdatesEnabled = false;
+    lastTicketDetailsProps = null;
+  });
+
   it('passes renderCreateProjectTask to TicketDetails', () => {
     const renderCreateProjectTask = vi.fn();
 
@@ -84,5 +100,33 @@ describe('TicketDetailsContainer renderCreateProjectTask passthrough', () => {
     );
 
     expect(lastTicketDetailsProps.renderCreateProjectTask).toBe(renderCreateProjectTask);
+  });
+
+  it('T045: does not mount the live provider when the feature flag is off', () => {
+    render(
+      <TicketDetailsContainer
+        ticketData={{
+          ticket: { ticket_id: 'ticket-1', tenant: 'tenant-1' },
+          comments: [],
+          documents: [],
+          client: null,
+          contacts: [],
+          contactInfo: null,
+          createdByUser: null,
+          board: null,
+          additionalAgents: [],
+          availableAgents: [],
+          userMap: {},
+          options: { status: [], agent: [], board: [], priority: [] },
+          categories: [],
+          clients: [],
+          locations: [],
+          agentSchedules: []
+        }}
+      />
+    );
+
+    expect(screen.queryByTestId('ticket-live-provider')).toBeNull();
+    expect(screen.getByTestId('ticket-details')).toBeTruthy();
   });
 });

@@ -1383,6 +1383,11 @@
       "openEditor": "Editor openen",
       "apply": "Toepassen",
       "cancel": "Annuleren"
+    },
+    "askAi": {
+      "ariaLabel": "Vraag AI om hulp bij transformaties",
+      "title": "Vraag AI",
+      "shortcutHint": "Open Quick Ask voor transformatiehulp"
     }
   },
   "schemaReference": {

@@ -165,7 +165,12 @@
       "system": "11111",
       "selected": "11111"
     },
-    "openUserMenu": "11111"
+    "openUserMenu": "11111",
+    "quickAsk": {
+      "ariaLabel": "11111",
+      "title": "11111",
+      "shortcutHint": "11111"
+    }
   },
   "dialogs": {
     "aiInterrupt": {

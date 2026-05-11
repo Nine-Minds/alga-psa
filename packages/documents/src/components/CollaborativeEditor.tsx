@@ -20,8 +20,8 @@ import {
   AiResponseBlock,
 } from '@alga-psa/ui/editor';
 import type { EmojiSuggestionState, MentionSuggestionState, MentionSuggestionUser } from '@alga-psa/ui/editor';
-import AvatarIcon from '@alga-psa/ui/components/AvatarIcon';
 import { Card } from '@alga-psa/ui/components/Card';
+import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { EditorToolbar } from './EditorToolbar';
 import { handleMarkdownPaste } from './markdownPaste';
@@ -88,17 +88,6 @@ const hashString = (value: string) => {
 const getUserColor = (userId: string) => {
   const index = hashString(userId) % USER_COLORS.length;
   return USER_COLORS[index];
-};
-
-const parseName = (name: string) => {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) {
-    return { firstName: 'User', lastName: '' };
-  }
-  return {
-    firstName: parts[0] || 'User',
-    lastName: parts.slice(1).join(' '),
-  };
 };
 
 const buildPresenceUsers = (
@@ -401,21 +390,11 @@ export function CollaborativeEditor({
   return (
     <Card className="p-4">
       <div className={styles.header}>
-        <div className={styles.presenceBar}>
-          {connectedUsers.length === 0 ? (
-            <span className={styles.presenceEmpty}>No one else is editing</span>
-          ) : (
-            connectedUsers.map((user) => {
-              const { firstName, lastName } = parseName(user.name);
-              return (
-                <div key={user.id} className={styles.userChip}>
-                  <AvatarIcon userId={user.id} firstName={firstName} lastName={lastName} size="xs" />
-                  <span>{user.name}</span>
-                </div>
-              );
-            })
-          )}
-        </div>
+        <PresenceBar
+          users={connectedUsers}
+          showNames
+          className={styles.presenceBar}
+        />
         <div className={styles.statusBar}>
           <div className={styles.connectionStatus} data-status={connectionStatus}>
             <span className={styles.statusDot} />

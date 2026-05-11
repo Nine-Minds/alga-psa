@@ -173,6 +173,59 @@ const extractDirectReferencePath = (value: unknown): string | null => {
   return directReferencePattern.test(trimmed) ? trimmed : null;
 };
 
+const normalizeAssignmentPath = (path: string): string => {
+  const trimmed = path.trim();
+  if (!trimmed) return trimmed;
+  const scoped = trimmed.startsWith('payload.')
+    || trimmed.startsWith('vars.')
+    || trimmed.startsWith('meta.')
+    || trimmed.startsWith('error.')
+    || trimmed.startsWith('/');
+  return scoped ? trimmed : `vars.${trimmed}`;
+};
+
+const assignmentPathParts = (path: string): { scope: 'payload' | 'vars' | 'meta' | 'error'; parts: string[] } | null => {
+  const normalized = normalizeAssignmentPath(path);
+  if (normalized.startsWith('/')) {
+    return {
+      scope: 'payload',
+      parts: normalized
+        .replace(/^\//, '')
+        .split('/')
+        .map((part) => part.replace(/~1/g, '/').replace(/~0/g, '~'))
+        .filter(Boolean),
+    };
+  }
+
+  const [scope, ...parts] = normalized.split('.').filter(Boolean);
+  if (scope === 'payload' || scope === 'vars' || scope === 'meta' || scope === 'error') {
+    return { scope, parts };
+  }
+  return null;
+};
+
+const setSchemaAtPath = (root: JsonSchema, parts: string[], schema: JsonSchema) => {
+  if (parts.length === 0) return;
+  root.type = 'object';
+  root.properties ??= {};
+  let cursor = root;
+  parts.forEach((part, index) => {
+    cursor.properties ??= {};
+    const isLeaf = index === parts.length - 1;
+    if (isLeaf) {
+      cursor.properties[part] = cloneSchema(schema);
+      return;
+    }
+
+    const existing = cursor.properties[part];
+    if (!existing || normalizeSchemaType(existing) !== 'object') {
+      cursor.properties[part] = { type: 'object', properties: {} };
+    }
+    cursor = cursor.properties[part] as JsonSchema;
+    cursor.properties ??= {};
+  });
+};
+
 const descendSchema = (schema: JsonSchema | null | undefined, parts: string[]): JsonSchema | null => {
   if (!schema) return null;
 
@@ -316,9 +369,11 @@ export const buildDataContext = (
   actionRegistry: ActionRegistryItem[],
   payloadSchema: JsonSchema | null
 ): DataContext => {
+  const workingPayloadSchema = payloadSchema ? cloneSchema(payloadSchema) : null;
+
   const context: DataContext = {
-    payload: payloadSchema ? extractSchemaFields(payloadSchema, payloadSchema) : [],
-    payloadSchema,
+    payload: workingPayloadSchema ? extractSchemaFields(workingPayloadSchema, workingPayloadSchema) : [],
+    payloadSchema: workingPayloadSchema,
     steps: [],
     globals: {
       env: [{ name: 'env', type: 'object', required: false, nullable: false, description: 'Environment variables' }],
@@ -338,6 +393,17 @@ export const buildDataContext = (
   };
 
   const assignedVars = new Map<string, { lastStepId: string; lastStepName: string; nestedPaths: string[][] }>();
+
+  const recordScopedAssignmentSchema = (assignmentPath: string, outputSchema: JsonSchema) => {
+    const parsed = assignmentPathParts(assignmentPath);
+    if (!parsed || parsed.parts.length === 0) return;
+
+    if (parsed.scope === 'payload') {
+      context.payloadSchema ??= { type: 'object', properties: {} };
+      setSchemaAtPath(context.payloadSchema, parsed.parts, outputSchema);
+      context.payload = extractSchemaFields(context.payloadSchema, context.payloadSchema);
+    }
+  };
 
   const recordAssignedVarPath = (assignmentPath: string, step: Step) => {
     if (!assignmentPath.startsWith('vars.')) return;
@@ -417,7 +483,7 @@ export const buildDataContext = (
     if (parts.length === 0) return null;
 
     if (parts[0] === 'payload') {
-      return descendSchema(payloadSchema, parts.slice(1));
+      return descendSchema(context.payloadSchema, parts.slice(1));
     }
 
     if (parts[0] === 'vars' && parts.length >= 2) {
@@ -548,6 +614,11 @@ export const buildDataContext = (
         const config = nodeStep.config as { actionId?: string; version?: number; saveAs?: string } | undefined;
 
         if (config?.saveAs) {
+          const saveAsPath = assignmentPathParts(config.saveAs);
+          const varsSaveAs = saveAsPath?.scope === 'vars' && saveAsPath.parts.length === 1
+            ? saveAsPath.parts[0]
+            : null;
+
           if (step.type === 'action.call' && config?.actionId) {
             const action = actionRegistry.find(a =>
               a.id === config.actionId &&
@@ -560,31 +631,28 @@ export const buildDataContext = (
                   : isWorkflowAiInferAction(config.actionId)
                     ? ((resolveWorkflowAiSchemaFromConfig(config).schema ?? {}) as JsonSchema)
                     : action.outputSchema;
-              context.steps.push({
-                stepId: step.id,
-                stepName: nodeStep.name || action.ui?.label || config.actionId,
-                saveAs: config.saveAs,
-                outputSchema,
-                fields: extractSchemaFields(outputSchema, outputSchema)
-              });
+              recordScopedAssignmentSchema(config.saveAs, outputSchema);
+              if (varsSaveAs) {
+                context.steps.push({
+                  stepId: step.id,
+                  stepName: nodeStep.name || action.ui?.label || config.actionId,
+                  saveAs: varsSaveAs,
+                  outputSchema,
+                  fields: extractSchemaFields(outputSchema, outputSchema)
+                });
+              }
             }
           } else {
             const action = actionRegistry.find(a => a.id === step.type);
-            if (action?.outputSchema) {
+            const outputSchema = action?.outputSchema ?? {};
+            recordScopedAssignmentSchema(config.saveAs, outputSchema);
+            if (varsSaveAs) {
               context.steps.push({
                 stepId: step.id,
-                stepName: nodeStep.name || action.ui?.label || step.type,
-                saveAs: config.saveAs,
-                outputSchema: action.outputSchema,
-                fields: extractSchemaFields(action.outputSchema, action.outputSchema)
-              });
-            } else {
-              context.steps.push({
-                stepId: step.id,
-                stepName: nodeStep.name || step.type,
-                saveAs: config.saveAs,
-                outputSchema: {},
-                fields: []
+                stepName: nodeStep.name || action?.ui?.label || step.type,
+                saveAs: varsSaveAs,
+                outputSchema,
+                fields: extractSchemaFields(outputSchema, outputSchema)
               });
             }
           }

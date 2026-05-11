@@ -1122,5 +1122,14 @@
   },
   "feedback": {
     "providePlaceholder": "Bitte geben Sie Feedback"
+  },
+  "presence": {
+    "noOneElseEditing": "Niemand sonst bearbeitet gerade",
+    "conflict": {
+      "changedField": "{{author}} hat dieses Feld gerade {{time}} geändert.",
+      "remoteValue": "Remote-Wert:",
+      "keepYours": "Eigene behalten",
+      "takeTheirs": "Remote übernehmen"
+    }
   }
 }

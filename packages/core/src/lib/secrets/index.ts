@@ -6,13 +6,50 @@
  */
 
 // Types
+import type { ISecretProvider } from './ISecretProvider';
+
 export type { ISecretProvider } from './ISecretProvider';
 
 // Providers
 export { EnvSecretProvider } from './EnvSecretProvider';
 export { CompositeSecretProvider } from './CompositeSecretProvider';
-export { FileSystemSecretProvider } from './FileSystemSecretProvider';
-export { VaultSecretProvider } from './VaultSecretProvider';
+export { FileSystemSecretProvider } from './LazyFileSystemSecretProvider';
+
+/**
+ * Lazy compatibility wrapper for the Vault provider.
+ *
+ * `node-vault` is Node-only and should not be resolved just because a module
+ * imports `@alga-psa/core/secrets` for `getSecret`.
+ */
+export class VaultSecretProvider implements ISecretProvider {
+  private providerPromise: Promise<ISecretProvider> | null = null;
+
+  private async getProvider(): Promise<ISecretProvider> {
+    if (!this.providerPromise) {
+      this.providerPromise = import('./VaultSecretProvider').then(
+        ({ VaultSecretProvider: RealVaultSecretProvider }) => new RealVaultSecretProvider()
+      );
+    }
+
+    return this.providerPromise;
+  }
+
+  async getAppSecret(name: string): Promise<string | undefined> {
+    return (await this.getProvider()).getAppSecret(name);
+  }
+
+  async getTenantSecret(tenantId: string, name: string): Promise<string | undefined> {
+    return (await this.getProvider()).getTenantSecret(tenantId, name);
+  }
+
+  async setTenantSecret(tenantId: string, name: string, value: string | null): Promise<void> {
+    return (await this.getProvider()).setTenantSecret(tenantId, name, value);
+  }
+
+  async deleteTenantSecret(tenantId: string, name: string): Promise<void> {
+    return (await this.getProvider()).deleteTenantSecret(tenantId, name);
+  }
+}
 
 // Factory
 export { getSecretProviderInstance } from './secretProvider';

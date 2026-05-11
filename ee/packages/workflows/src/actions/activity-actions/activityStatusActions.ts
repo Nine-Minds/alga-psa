@@ -9,6 +9,11 @@ import { withAuth } from "@alga-psa/auth";
 import { revalidatePath } from "next/cache";
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { publishTicketUpdate } from '@alga-psa/event-bus/ticket-live-updates';
+
+function formatLiveUpdateDisplayName(user: any): string {
+  return `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || 'Workflow';
+}
 
 /**
  * Server action to update the status of an activity
@@ -19,7 +24,7 @@ import { Knex } from 'knex';
  * @returns Promise resolving to a boolean indicating success
  */
 export const updateActivityStatus = withAuth(async (
-  _user,
+  user,
   { tenant },
   activityId: string,
   activityType: ActivityType,
@@ -109,6 +114,19 @@ export const updateActivityStatus = withAuth(async (
       }
     });
 
+    if (activityType === ActivityType.TICKET) {
+      await publishTicketUpdate({
+        tenantId: tenant,
+        ticketId: activityId,
+        updatedFields: ['status_id'],
+        updatedBy: {
+          userId: user?.user_id ?? 'workflow',
+          displayName: formatLiveUpdateDisplayName(user),
+        },
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
     // Revalidate the activities path to refresh the data
     revalidatePath('/activities');
     
@@ -132,7 +150,7 @@ export const updateActivityStatus = withAuth(async (
  * @param statusId The status/mapping ID to set
  */
 export const updateActivityStatusById = withAuth(async (
-  _user,
+  user,
   { tenant },
   activityId: string,
   activityType: ActivityType,
@@ -177,6 +195,19 @@ export const updateActivityStatusById = withAuth(async (
           throw new Error(`Status update by ID not supported for activity type: ${activityType}`);
       }
     });
+
+    if (activityType === ActivityType.TICKET) {
+      await publishTicketUpdate({
+        tenantId: tenant,
+        ticketId: activityId,
+        updatedFields: ['status_id'],
+        updatedBy: {
+          userId: user?.user_id ?? 'workflow',
+          displayName: formatLiveUpdateDisplayName(user),
+        },
+        updatedAt: new Date().toISOString(),
+      });
+    }
 
     revalidatePath('/activities');
     return true;
@@ -335,7 +366,7 @@ export const getActivityStatusOptions = withAuth(async (
  * @returns Promise resolving to a boolean indicating success
  */
 export const updateActivityPriority = withAuth(async (
-  _user,
+  user,
   { tenant },
   activityId: string,
   activityType: ActivityType,
@@ -406,6 +437,19 @@ export const updateActivityPriority = withAuth(async (
       }
     });
 
+    if (activityType === ActivityType.TICKET) {
+      await publishTicketUpdate({
+        tenantId: tenant,
+        ticketId: activityId,
+        updatedFields: ['priority_id'],
+        updatedBy: {
+          userId: user?.user_id ?? 'workflow',
+          displayName: formatLiveUpdateDisplayName(user),
+        },
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
     // Revalidate the activities path to refresh the data
     revalidatePath('/activities');
 
@@ -426,7 +470,7 @@ export const updateActivityPriority = withAuth(async (
  * @returns Promise resolving to a boolean indicating success
  */
 export const updateActivityPriorityById = withAuth(async (
-  _user,
+  user,
   { tenant },
   activityId: string,
   activityType: ActivityType,
@@ -462,6 +506,19 @@ export const updateActivityPriorityById = withAuth(async (
       }
     });
 
+    if (activityType === ActivityType.TICKET) {
+      await publishTicketUpdate({
+        tenantId: tenant,
+        ticketId: activityId,
+        updatedFields: ['priority_id'],
+        updatedBy: {
+          userId: user?.user_id ?? 'workflow',
+          displayName: formatLiveUpdateDisplayName(user),
+        },
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
     revalidatePath('/activities');
     return true;
   } catch (error) {
@@ -479,7 +536,7 @@ export const updateActivityPriorityById = withAuth(async (
  * @returns Promise resolving to a boolean indicating success
  */
 export const reassignActivity = withAuth(async (
-  _user,
+  user,
   { tenant },
   activityId: string,
   activityType: ActivityType,
@@ -557,6 +614,19 @@ export const reassignActivity = withAuth(async (
           throw new Error(`Reassignment not supported for activity type: ${activityType}`);
       }
     });
+
+    if (activityType === ActivityType.TICKET) {
+      await publishTicketUpdate({
+        tenantId: tenant,
+        ticketId: activityId,
+        updatedFields: ['assigned_to'],
+        updatedBy: {
+          userId: user?.user_id ?? 'workflow',
+          displayName: formatLiveUpdateDisplayName(user),
+        },
+        updatedAt: new Date().toISOString(),
+      });
+    }
 
     // Revalidate the activities path to refresh the data
     revalidatePath('/activities');

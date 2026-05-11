@@ -81,6 +81,55 @@ const actionRegistry = [
     },
   },
   {
+    id: 'transform.regex_extract',
+    version: 1,
+    ui: {
+      label: 'Regex Extract',
+      description: 'Extract regex captures.',
+    },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string' },
+        pattern: { type: 'string' },
+      },
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        matched: { type: 'boolean' },
+        count: { type: 'number' },
+        first: {
+          type: ['object', 'null'],
+          properties: {
+            text: { type: 'string' },
+            index: { type: 'number' },
+            groups: { type: 'array', items: { type: ['string', 'null'] } },
+            namedGroups: {
+              type: 'object',
+              additionalProperties: { type: ['string', 'null'] },
+            },
+          },
+        },
+        matches: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              text: { type: 'string' },
+              index: { type: 'number' },
+              groups: { type: 'array', items: { type: ['string', 'null'] } },
+              namedGroups: {
+                type: 'object',
+                additionalProperties: { type: ['string', 'null'] },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  {
     id: 'transform.truncate_text',
     version: 1,
     ui: {
@@ -276,6 +325,43 @@ describe('workflow data context', () => {
         updated: { type: 'boolean' },
       },
     });
+  });
+
+  it('exposes stable regex output fields for downstream references', () => {
+    const definition: WorkflowDefinition = {
+      id: 'workflow-1',
+      version: 1,
+      name: 'Regex workflow',
+      payloadSchemaRef: 'system:default',
+      trigger: { type: 'event', eventName: 'ticket.created' },
+      steps: [
+        {
+          id: 'step-1',
+          type: 'action.call',
+          name: 'Extract',
+          config: {
+            actionId: 'transform.regex_extract',
+            version: 1,
+            saveAs: 'parsedRegex',
+          },
+        },
+        {
+          id: 'step-2',
+          type: 'action.call',
+          name: 'Next',
+          config: {},
+        },
+      ],
+    };
+
+    const context = buildDataContext(definition, 'step-2', actionRegistry, null);
+    const stepContext = context.steps.find((step) => step.saveAs === 'parsedRegex');
+    expect(stepContext).toBeDefined();
+    const fieldNames = (stepContext?.fields ?? []).map((field) => field.name);
+    expect(fieldNames).toContain('matched');
+    expect(fieldNames).toContain('count');
+    expect(fieldNames).toContain('first');
+    expect(fieldNames).toContain('matches');
   });
 
   it('tracks catch-block context so Reference mode can expose error sources only where they are valid', () => {
@@ -693,6 +779,96 @@ describe('workflow data context', () => {
       name: 'object',
       children: [{ name: 'updated' }, { name: 'ticket_id' }],
     });
+  });
+
+  it('exposes action outputs saved to payload.* as downstream payload references, not vars entries', () => {
+    const scopedActionRegistry = [
+      ...actionRegistry,
+      {
+        id: 'transform.query_json',
+        version: 1,
+        ui: {
+          label: 'Query JSON',
+          description: 'Query JSON.',
+        },
+        inputSchema: {
+          type: 'object',
+          properties: {
+            source: { type: 'object' },
+          },
+        },
+        outputSchema: {
+          type: 'object',
+          properties: {
+            value: {
+              type: 'object',
+              properties: {
+                customerEmail: { type: 'string' },
+                serverTags: { type: 'array', items: { type: 'string' } },
+              },
+            },
+          },
+        },
+      },
+    ];
+
+    const definition: WorkflowDefinition = {
+      id: 'workflow-scoped-save-as',
+      version: 1,
+      name: 'Scoped saveAs workflow',
+      payloadSchemaRef: 'system:default',
+      steps: [
+        {
+          id: 'query-step',
+          type: 'action.call',
+          name: 'Query JSON',
+          config: {
+            designerGroupKey: 'transform',
+            designerTileKind: 'transform',
+            actionId: 'transform.query_json',
+            version: 1,
+            saveAs: 'payload.normalizedInbound',
+          },
+        },
+        {
+          id: 'downstream-step',
+          type: 'action.call',
+          config: {
+            actionId: 'tickets.create',
+            version: 1,
+          },
+        },
+      ],
+    };
+
+    const context = buildDataContext(definition, 'downstream-step', scopedActionRegistry, {
+      type: 'object',
+      properties: {},
+    });
+
+    expect(context.steps).toHaveLength(0);
+    expect(context.payloadSchema).toMatchObject({
+      type: 'object',
+      properties: {
+        normalizedInbound: {
+          type: 'object',
+          properties: {
+            value: {
+              type: 'object',
+              properties: {
+                customerEmail: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const values = buildWorkflowReferenceFieldOptions(context.payloadSchema, context).map((option) => option.value);
+    expect(values).toContain('payload.normalizedInbound');
+    expect(values).toContain('payload.normalizedInbound.value');
+    expect(values).toContain('payload.normalizedInbound.value.customerEmail');
+    expect(values).not.toContain('vars.payload.normalizedInbound');
   });
 
   it('T271: rename-fields exposes renamed output keys to downstream references', () => {

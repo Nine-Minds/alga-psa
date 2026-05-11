@@ -21,6 +21,10 @@
     "./publishers/*": {
       "types": "./src/publishers/*.ts",
       "import": "./dist/publishers/*.js"
+    },
+    "./ticket-live-updates": {
+      "types": "./src/ticket-live-updates.ts",
+      "import": "./dist/ticket-live-updates.js"
     }
   },
   "scripts": {
