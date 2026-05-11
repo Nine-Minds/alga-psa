@@ -38,6 +38,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F016 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `rotateInboundWebhookSecret` checks `inbound_webhook:update`, rejects IP allowlist configs, writes a new generated secret/token to the existing or generated tenant-secret vault path, updates `auth_config` metadata if needed, and returns the new value once.
 - (2026-05-11) **F017 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `setInboundWebhookActiveState` checks `inbound_webhook:update`, updates `is_active` by `(tenant, inbound_webhook_id)`, clears `auto_disabled_at` when re-enabling, and returns the redacted config view.
 - (2026-05-11) **F018 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `listInboundDeliveries(filter, page, limit)` checks `inbound_webhook:read`, filters by tenant plus optional webhook/status/date range, paginates with a 100-row cap, and maps rows to camelCase delivery views.
+- (2026-05-11) **F019 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `getInboundDelivery(id)` checks `inbound_webhook:read`, scopes by `(tenant, delivery_id)`, and returns `null` for missing/cross-tenant deliveries.
 - (2026-05-11) **Bundled integrations already in the codebase** — the user-configurable system complements these, not replaces them:
   - **Tanium** (EE) — `ee/server/src/lib/integrations/tanium/` + `taniumGatewayClient.ts`. Outbound sync (devices → assets) + webhook. Uses `ingestNormalizedRmmDeviceSnapshot`.
   - **NinjaOne** (EE) — `ee/server/src/lib/integrations/ninjaone/` — has a full inbound webhook implementation (`webhooks/webhookHandler.ts`, `webhooks/webhookRegistration.ts`, `alerts/alertProcessor.ts`, `alerts/ticketCreator.ts`). The user-configurable inbound webhook system is the generic equivalent.
@@ -90,6 +91,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Type check after F017:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F018:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F019:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References

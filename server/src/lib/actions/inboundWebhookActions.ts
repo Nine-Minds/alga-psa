@@ -661,3 +661,16 @@ export const listInboundDeliveries = withAuth(
     };
   },
 );
+
+export const getInboundDelivery = withAuth(
+  async (user, { tenant }, deliveryId: string): Promise<InboundWebhookDelivery | null> => {
+    const { knex } = await createTenantKnex(tenant);
+    await assertInboundWebhookPermission(user, 'read', knex);
+
+    const row = await knex<InboundWebhookDeliveryRow>('inbound_webhook_deliveries')
+      .where({ tenant, delivery_id: deliveryId })
+      .first();
+
+    return row ? mapInboundDelivery(row) : null;
+  },
+);

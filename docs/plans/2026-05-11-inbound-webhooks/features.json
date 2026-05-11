@@ -16,7 +16,7 @@
   { "id": "F016", "description": "Server action `rotateInboundWebhookSecret(id)` (writes new secret to vault, returns once)", "implemented": true, "prdRefs": ["Security / Permissions"] },
   { "id": "F017", "description": "Server action `setInboundWebhookActiveState(id, active)`", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F018", "description": "Server action `listInboundDeliveries(filter, page)`", "implemented": true, "prdRefs": ["Functional Requirements"] },
-  { "id": "F019", "description": "Server action `getInboundDelivery(id)`", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F019", "description": "Server action `getInboundDelivery(id)`", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F020", "description": "Server action `replayInboundDelivery(id)` — re-dispatches against current config, links new row", "implemented": false, "prdRefs": ["Functional Requirements"] },
   { "id": "F021", "description": "Server action `captureSamplePayload(id)` (toggles capture mode for 5 min)", "implemented": false, "prdRefs": ["Functional Requirements"] },
   { "id": "F022", "description": "Server action `clearSamplePayload(id)`", "implemented": false, "prdRefs": ["Functional Requirements"] },
