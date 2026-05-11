@@ -2042,6 +2042,7 @@
       "heading": "Beispielhafte zukünftig materialisierte Zeiträume",
       "summary": {
         "contract": "Wenn du diese wiederkehrende Zeile speicherst, würden zukünftige Zeiträume in einer jubiläumsbasierten Vorschau am 8. vor der Rechnungserstellung materialisiert.",
+        "contractUnsupportedFrequency": "Der Vertragsjubiläumsrhythmus unterstützt derzeit nur monatliche, vierteljährliche, halbjährliche und jährliche Abrechnung.",
         "client": "Wenn du diese wiederkehrende Zeile speicherst, würden zukünftige Zeiträume in der Vorschau des Kundenabrechnungsplans vor der Rechnungserstellung materialisiert."
       }
     }

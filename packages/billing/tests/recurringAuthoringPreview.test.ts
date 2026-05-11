@@ -71,6 +71,49 @@ describe('recurring authoring preview copy', () => {
     });
   });
 
+  it('contract cadence + weekly does not render monthly rows and surfaces the unsupported message', () => {
+    const preview = getRecurringAuthoringPreview({
+      cadenceOwner: 'contract',
+      billingTiming: 'arrears',
+      billingFrequency: 'weekly',
+      enableProration: false,
+    }, mockT);
+
+    expect(preview.materializedPeriods).toEqual([]);
+    expect(preview.materializedPeriodsSummary).toBe(
+      'Contract anniversary cadence currently supports only monthly, quarterly, semi-annually, and annually.',
+    );
+    expect(preview.materializedPeriodsSummary).not.toMatch(/anniversary-style preview/);
+  });
+
+  it('contract cadence + bi-weekly surfaces the unsupported message with no preview rows', () => {
+    const preview = getRecurringAuthoringPreview({
+      cadenceOwner: 'contract',
+      billingTiming: 'advance',
+      billingFrequency: 'bi-weekly',
+      enableProration: true,
+    }, mockT);
+
+    expect(preview.materializedPeriods).toEqual([]);
+    expect(preview.materializedPeriodsSummary).toBe(
+      'Contract anniversary cadence currently supports only monthly, quarterly, semi-annually, and annually.',
+    );
+  });
+
+  it('client cadence + weekly still renders preview rows (unsupported gate is contract-only)', () => {
+    const preview = getRecurringAuthoringPreview({
+      cadenceOwner: 'client',
+      billingTiming: 'arrears',
+      billingFrequency: 'weekly',
+      enableProration: false,
+    }, mockT);
+
+    expect(preview.materializedPeriods.length).toBeGreaterThan(0);
+    expect(preview.materializedPeriodsSummary).not.toMatch(
+      /Contract anniversary cadence currently supports/,
+    );
+  });
+
   it('T308: schedule previews and explainers show illustrative future materialized service periods before a contract line is saved', () => {
     expect(
       getRecurringAuthoringPreview({

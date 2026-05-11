@@ -2042,6 +2042,7 @@
       "heading": "55555",
       "summary": {
         "contract": "55555",
+        "contractUnsupportedFrequency": "55555",
         "client": "55555"
       }
     }

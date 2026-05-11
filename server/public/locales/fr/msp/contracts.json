@@ -2042,6 +2042,7 @@
       "heading": "Périodes futures matérialisées illustratives",
       "summary": {
         "contract": "Si vous enregistrez cette ligne récurrente, les périodes futures se matérialiseraient selon un aperçu de type anniversaire ancré au 8 avant la génération des factures.",
+        "contractUnsupportedFrequency": "La cadence d'anniversaire du contrat ne prend actuellement en charge que la facturation mensuelle, trimestrielle, semestrielle et annuelle.",
         "client": "Si vous enregistrez cette ligne récurrente, les périodes futures se matérialiseraient selon l'aperçu du calendrier de facturation client avant la génération des factures."
       }
     }

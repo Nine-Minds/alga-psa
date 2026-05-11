@@ -2042,6 +2042,7 @@
       "heading": "Periodi futuri materializzati illustrativi",
       "summary": {
         "contract": "Se salvi questa riga ricorrente, i periodi futuri si materializzerebbero in un'anteprima di tipo anniversario ancorata all'8 prima della generazione delle fatture.",
+        "contractUnsupportedFrequency": "La cadenza dell'anniversario del contratto supporta attualmente solo la fatturazione mensile, trimestrale, semestrale e annuale.",
         "client": "Se salvi questa riga ricorrente, i periodi futuri si materializzerebbero nell'anteprima della pianificazione di fatturazione del cliente prima della generazione delle fatture."
       }
     }

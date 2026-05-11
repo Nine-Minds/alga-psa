@@ -2042,6 +2042,7 @@
       "heading": "Illustratieve toekomstige gematerialiseerde perioden",
       "summary": {
         "contract": "Als je deze terugkerende regel opslaat, zouden toekomstige perioden worden gematerialiseerd in een verjaardagsgebaseerde voorvertoning verankerd op de 8e vóór de factuurgeneratie.",
+        "contractUnsupportedFrequency": "De contractverjaardagscadans ondersteunt momenteel alleen maandelijkse, driemaandelijkse, halfjaarlijkse en jaarlijkse facturatie.",
         "client": "Als je deze terugkerende regel opslaat, zouden toekomstige perioden worden gematerialiseerd in de voorvertoning van het facturatieschema van de klant vóór de factuurgeneratie."
       }
     }

@@ -3,6 +3,7 @@ import type { BillingCycleType, IPersistedRecurringObligationRef } from '@alga-p
 
 import { materializeClientCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeClientCadenceServicePeriods';
 import { materializeContractCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeContractCadenceServicePeriods';
+import { getUnsupportedRecurringAuthoringCombination } from '@alga-psa/shared/billingClients/recurringAuthoringValidation';
 
 const CLIENT_PREVIEW_AS_OF = '2025-04-01T00:00:00Z';
 const CONTRACT_PREVIEW_AS_OF = '2025-04-08T00:00:00Z';
@@ -56,7 +57,9 @@ function resolveClientPreviewBillingFrequency(value: string | undefined): Client
   }
 }
 
-function resolveContractPreviewBillingFrequency(value: string | undefined): ContractPreviewBillingFrequency {
+function resolveContractPreviewBillingFrequency(
+  value: string | undefined,
+): ContractPreviewBillingFrequency | null {
   switch (value) {
     case 'quarterly':
       return 'quarterly';
@@ -64,12 +67,22 @@ function resolveContractPreviewBillingFrequency(value: string | undefined): Cont
       return 'semi-annually';
     case 'annually':
       return 'annually';
-    case 'weekly':
-    case 'bi-weekly':
+    case undefined:
     case 'monthly':
-    default:
       return 'monthly';
+    default:
+      return null;
   }
+}
+
+function isContractCadenceFrequencySupported(value: string | undefined): boolean {
+  return (
+    getUnsupportedRecurringAuthoringCombination({
+      lineType: 'Fixed',
+      cadenceOwner: 'contract',
+      billingFrequency: value ?? null,
+    }) === null
+  );
 }
 
 function formatPreviewRange(start: string, end: string, t: TFunction) {
@@ -98,30 +111,37 @@ function buildMaterializedPreviewPeriods(input: {
   const duePosition = input.billingTiming === 'advance' ? 'advance' : 'arrears';
   const sourceObligation = buildPreviewSourceObligation(input.cadenceOwner);
 
-  const records = input.cadenceOwner === 'contract'
-    ? materializeContractCadenceServicePeriods({
-        asOf: CONTRACT_PREVIEW_AS_OF,
-        materializedAt: CONTRACT_PREVIEW_AS_OF,
-        billingCycle: resolveContractPreviewBillingFrequency(input.billingFrequency),
-        anchorDate: CONTRACT_PREVIEW_AS_OF,
-        sourceObligation,
-        duePosition,
-        sourceRuleVersion: 'preview:v1',
-        sourceRunKey: 'authoring-preview',
-        targetHorizonDays: 400,
-        replenishmentThresholdDays: 30,
-      }).records
-    : materializeClientCadenceServicePeriods({
-        asOf: CLIENT_PREVIEW_AS_OF,
-        materializedAt: CLIENT_PREVIEW_AS_OF,
-        billingCycle: resolveClientPreviewBillingFrequency(input.billingFrequency),
-        sourceObligation,
-        duePosition,
-        sourceRuleVersion: 'preview:v1',
-        sourceRunKey: 'authoring-preview',
-        targetHorizonDays: 400,
-        replenishmentThresholdDays: 30,
-      }).records;
+  let records;
+  if (input.cadenceOwner === 'contract') {
+    const contractFrequency = resolveContractPreviewBillingFrequency(input.billingFrequency);
+    if (contractFrequency === null) {
+      return [];
+    }
+    records = materializeContractCadenceServicePeriods({
+      asOf: CONTRACT_PREVIEW_AS_OF,
+      materializedAt: CONTRACT_PREVIEW_AS_OF,
+      billingCycle: contractFrequency,
+      anchorDate: CONTRACT_PREVIEW_AS_OF,
+      sourceObligation,
+      duePosition,
+      sourceRuleVersion: 'preview:v1',
+      sourceRunKey: 'authoring-preview',
+      targetHorizonDays: 400,
+      replenishmentThresholdDays: 30,
+    }).records;
+  } else {
+    records = materializeClientCadenceServicePeriods({
+      asOf: CLIENT_PREVIEW_AS_OF,
+      materializedAt: CLIENT_PREVIEW_AS_OF,
+      billingCycle: resolveClientPreviewBillingFrequency(input.billingFrequency),
+      sourceObligation,
+      duePosition,
+      sourceRuleVersion: 'preview:v1',
+      sourceRunKey: 'authoring-preview',
+      targetHorizonDays: 400,
+      replenishmentThresholdDays: 30,
+    }).records;
+  }
 
   return records.slice(0, PREVIEW_PERIOD_COUNT).map((record) => ({
     servicePeriodLabel: formatPreviewRange(
@@ -145,6 +165,8 @@ export function getRecurringAuthoringPreview(
   const billingTiming = input.billingTiming === 'advance' ? 'advance' : 'arrears';
   const enableProration = Boolean(input.enableProration);
   const billingFrequency = input.billingFrequency;
+  const isUnsupportedContractCadence =
+    cadenceOwner === 'contract' && !isContractCadenceFrequencySupported(billingFrequency);
 
   return {
     cadenceOwnerLabel:
@@ -197,19 +219,25 @@ export function getRecurringAuthoringPreview(
     materializedPeriodsHeading: t('recurringPreview.materializedPeriods.heading', {
       defaultValue: 'Illustrative future materialized periods',
     }),
-    materializedPeriodsSummary:
-      cadenceOwner === 'contract'
+    materializedPeriodsSummary: isUnsupportedContractCadence
+      ? t('recurringPreview.materializedPeriods.summary.contractUnsupportedFrequency', {
+          defaultValue:
+            'Contract anniversary cadence currently supports only monthly, quarterly, semi-annually, and annually.',
+        })
+      : cadenceOwner === 'contract'
         ? t('recurringPreview.materializedPeriods.summary.contract', {
             defaultValue: 'If you save this recurring line, future periods would materialize on an anniversary-style preview anchored to the 8th before invoice generation.',
           })
         : t('recurringPreview.materializedPeriods.summary.client', {
             defaultValue: 'If you save this recurring line, future periods would materialize on the client billing schedule preview before invoice generation.',
           }),
-    materializedPeriods: buildMaterializedPreviewPeriods({
-      cadenceOwner,
-      billingTiming,
-      billingFrequency,
-      t,
-    }),
+    materializedPeriods: isUnsupportedContractCadence
+      ? []
+      : buildMaterializedPreviewPeriods({
+          cadenceOwner,
+          billingTiming,
+          billingFrequency,
+          t,
+        }),
   };
 }

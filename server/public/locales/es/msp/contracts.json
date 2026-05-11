@@ -2042,6 +2042,7 @@
       "heading": "Períodos futuros materializados ilustrativos",
       "summary": {
         "contract": "Si guardas esta línea recurrente, los períodos futuros se materializarían mediante una vista previa tipo aniversario anclada al día 8 antes de la generación de facturas.",
+        "contractUnsupportedFrequency": "La cadencia por aniversario del contrato actualmente solo admite facturación mensual, trimestral, semestral y anual.",
         "client": "Si guardas esta línea recurrente, los períodos futuros se materializarían en la vista previa del calendario de facturación del cliente antes de la generación de facturas."
       }
     }

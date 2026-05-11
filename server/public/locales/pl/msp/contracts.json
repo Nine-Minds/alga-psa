@@ -2042,6 +2042,7 @@
       "heading": "Przykładowe przyszłe zmaterializowane okresy",
       "summary": {
         "contract": "Jeśli zapiszesz tę cykliczną linię, przyszłe okresy zostałyby zmaterializowane w podglądzie typu rocznicowego zakotwiczonym na 8. dniu przed wygenerowaniem faktur.",
+        "contractUnsupportedFrequency": "Kadencja rocznicy umowy obsługuje obecnie tylko rozliczenia miesięczne, kwartalne, półroczne i roczne.",
         "client": "Jeśli zapiszesz tę cykliczną linię, przyszłe okresy zostałyby zmaterializowane w podglądzie harmonogramu rozliczeń klienta przed wygenerowaniem faktur."
       }
     }
