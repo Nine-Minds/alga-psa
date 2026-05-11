@@ -300,4 +300,55 @@ describe('ticket inbound webhook actions', () => {
       'trx',
     );
   });
+
+  it('T1016: changeTicketStatusByExternalId delegates valid status changes and propagates invalid status errors', async () => {
+    mocks.updateTicket.mockResolvedValueOnce({
+      ticket_id: 'ticket-1',
+      status_id: 'status-closed',
+    });
+    const { getAction } = await loadTicketInboundActions();
+    const action = getAction('changeTicketStatusByExternalId');
+    const ctx = {
+      tenant: 'tenant-a',
+      webhookSlug: 'rmm-alerts',
+      deliveryId: 'delivery-1',
+      headers: {},
+      rawBody: { alert: { id: 'alert-42', status: 'closed' } },
+      idempotencyKey: 'alert-42',
+    };
+
+    await expect(
+      action?.handle(ctx, {
+        external_id: 'alert-42',
+        status_id: 'status-closed',
+        board_id: 'board-2',
+      }),
+    ).resolves.toEqual({
+      success: true,
+      entityType: 'ticket',
+      entityId: 'ticket-1',
+      externalId: 'alert-42',
+      metadata: {
+        status_id: 'status-closed',
+      },
+    });
+    expect(mocks.updateTicket).toHaveBeenCalledWith(
+      'ticket-1',
+      {
+        status_id: 'status-closed',
+        board_id: 'board-2',
+      },
+      'tenant-a',
+      'trx',
+    );
+
+    mocks.updateTicket.mockRejectedValueOnce(new Error('Invalid status for board'));
+
+    await expect(
+      action?.handle(ctx, {
+        external_id: 'alert-42',
+        status_id: 'status-invalid',
+      }),
+    ).rejects.toThrow('Invalid status for board');
+  });
 });
