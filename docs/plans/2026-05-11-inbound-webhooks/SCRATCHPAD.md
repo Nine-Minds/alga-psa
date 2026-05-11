@@ -182,6 +182,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T1011 implemented** in `server/src/test/unit/inboundWebhooks/ticketInboundActions.test.ts`. The `createTicket` action now has coverage for optional mapped `external_id`, asserting it writes a `ticket` mapping through `writeEntityMapping` with `integration_type=<webhookSlug>` and delivery metadata inside the transaction.
 - (2026-05-11) **T1012 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Successful direct-action delivery updates now assert the `createTicket` dispatch outcome is persisted to `handler_outcome` with `entity_type='ticket'`, `entity_id=<ticket_id>`, and ticket number metadata.
 - (2026-05-11) **T1013 implemented** in `server/src/test/unit/inboundWebhooks/ticketInboundActions.test.ts`. `updateTicketByExternalId` now has coverage for resolving the ticket through `tenant_external_entity_mappings` via `lookupAlgaEntityByExternalId` and applying mapped status, priority, and assignee fields through `TicketModel.updateTicket` with the current tenant.
+- (2026-05-11) **T1014 implemented** in `server/src/test/unit/inboundWebhooks/ticketInboundActions.test.ts`. `updateTicketByExternalId` now returns a structured `success:false` `lookup_miss` result and skips `TicketModel.updateTicket` when the webhook-scoped external ID mapping is absent; T096 covers conversion of this failure class into a failed delivery row.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -597,6 +598,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T1013:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/ticketInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1014:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/ticketInboundActions.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 

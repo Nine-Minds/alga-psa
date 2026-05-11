@@ -208,4 +208,34 @@ describe('ticket inbound webhook actions', () => {
       'trx',
     );
   });
+
+  it('T1014: updateTicketByExternalId returns lookup_miss when no mapping exists', async () => {
+    mocks.lookupAlgaEntityByExternalId.mockResolvedValue(null);
+    const { getAction } = await loadTicketInboundActions();
+    const action = getAction('updateTicketByExternalId');
+
+    await expect(
+      action?.handle(
+        {
+          tenant: 'tenant-a',
+          webhookSlug: 'rmm-alerts',
+          deliveryId: 'delivery-1',
+          headers: {},
+          rawBody: { alert: { id: 'missing-alert' } },
+          idempotencyKey: 'missing-alert',
+        },
+        {
+          external_id: 'missing-alert',
+          status_id: 'status-triage',
+        },
+      ),
+    ).resolves.toEqual({
+      success: false,
+      entityType: 'ticket',
+      externalId: 'missing-alert',
+      message: 'lookup_miss: ticket external_id "missing-alert" is not mapped for webhook "rmm-alerts"',
+    });
+
+    expect(mocks.updateTicket).not.toHaveBeenCalled();
+  });
 });
