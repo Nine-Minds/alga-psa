@@ -59,7 +59,7 @@
   { "id": "F1040", "description": "Asset action: `upsertAssetByExternalId` — delegates to `ingestNormalizedRmmDeviceSnapshot` when payload is RMM-shaped", "implemented": true, "prdRefs": ["Functional Requirements", "Goals"] },
   { "id": "F1041", "description": "Asset action: plain (non-RMM) asset upsert path for generic asset payloads", "implemented": true, "prdRefs": ["Functional Requirements"] },
 
-  { "id": "F1050", "description": "Invoice action: `markInvoicePaidByExternalId`", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F1050", "description": "Invoice action: `markInvoicePaidByExternalId`", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F1051", "description": "Invoice action: `updateInvoiceStatusByExternalId`", "implemented": false, "prdRefs": ["Functional Requirements"] },
   { "id": "F1052", "description": "Invoice action: idempotent mark-paid (no double-mark on already-paid invoice)", "implemented": false, "prdRefs": ["Functional Requirements"] },
 
