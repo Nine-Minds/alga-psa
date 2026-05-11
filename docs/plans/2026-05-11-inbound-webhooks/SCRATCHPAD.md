@@ -201,6 +201,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T1070 implemented** in `server/src/test/unit/inboundWebhooks/projectTaskInboundActions.test.ts`. `createProjectTask` now has coverage for resolving a parent project through `tenant_external_entity_mappings`, validating project/phase/status mapping scope, creating through `ProjectTaskModel.addTask`, and writing a `project_task` external mapping.
 - (2026-05-11) **T1071 implemented** in `server/src/test/unit/inboundWebhooks/projectTaskInboundActions.test.ts`. `updateProjectTaskStatusByExternalId` now covers webhook-scoped task lookup through `tenant_external_entity_mappings`, tenant-aware task/project resolution, target status validation, and the shared `ProjectTaskModel.updateTaskStatus` call.
 - (2026-05-11) **T1080 implemented** in `server/src/test/unit/inboundWebhooks/tagInboundActions.test.ts`. `addTagToEntityByExternalId` now covers resolving a mapped ticket, verifying the ticket still exists, getting/creating the tag definition, and inserting a tenant-scoped `tag_mappings` row.
+- (2026-05-11) **T1081 implemented** in `server/src/test/unit/inboundWebhooks/tagInboundActions.test.ts`. The tag action now also covers `entity_type='client'`, verifying the client table/id-column mapping and default tag color handling before inserting `tag_mappings`.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -673,6 +674,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/projectTaskInboundActions.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T1080:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/tagInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1081:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/tagInboundActions.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
