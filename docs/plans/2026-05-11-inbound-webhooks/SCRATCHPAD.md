@@ -33,6 +33,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F011 implemented** in `server/src/lib/inboundWebhooks/schemas.ts`. Input schemas are snake_case to match server/API payloads, use discriminated unions for `auth_config` and `handler_config`, enforce matching top-level `auth_type`/`handler_type`, validate URL-safe lowercase slugs, and reject reserved integration slugs through F003 helper.
 - (2026-05-11) **F012 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `listInboundWebhooks` is wrapped in `withAuth`, checks `inbound_webhook:read`, queries `inbound_webhooks` with `where({ tenant })`, orders by update time/name, maps snake_case DB rows to camelCase runtime types, and redacts any raw auth secret/token fields by returning only vault paths/config metadata.
 - (2026-05-11) **F013 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `getInboundWebhook(id)` uses the same auth/permission/mapping path as list and scopes lookup by both `tenant` and `inbound_webhook_id`, so missing or cross-tenant IDs return `null`.
+- (2026-05-11) **F014 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `upsertInboundWebhook` validates input with F011 schemas, checks `inbound_webhook:create/update`, enforces `(tenant, slug)` uniqueness before DB write, writes HMAC/Bearer/path-token secrets to tenant secret storage, returns the generated/provided secret once, and stores only vault path metadata in `auth_config`.
 - (2026-05-11) **Bundled integrations already in the codebase** — the user-configurable system complements these, not replaces them:
   - **Tanium** (EE) — `ee/server/src/lib/integrations/tanium/` + `taniumGatewayClient.ts`. Outbound sync (devices → assets) + webhook. Uses `ingestNormalizedRmmDeviceSnapshot`.
   - **NinjaOne** (EE) — `ee/server/src/lib/integrations/ninjaone/` — has a full inbound webhook implementation (`webhooks/webhookHandler.ts`, `webhooks/webhookRegistration.ts`, `alerts/alertProcessor.ts`, `alerts/ticketCreator.ts`). The user-configurable inbound webhook system is the generic equivalent.
@@ -76,6 +77,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Run migrations after changes:
   - `npm run migrate`
 - (2026-05-11) Reset feature flag in PostHog UI or via API for testing.
+- (2026-05-11) Type check after F014:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References
 

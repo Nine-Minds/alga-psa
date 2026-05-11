@@ -1,7 +1,10 @@
 'use server';
 
+import crypto from 'node:crypto';
+
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 
@@ -11,6 +14,10 @@ import type {
   InboundWebhookHandlerConfig,
   InboundWebhookIdempotencySource,
 } from '@/lib/inboundWebhooks/types';
+import {
+  inboundWebhookUpsertInputSchema,
+  type InboundWebhookUpsertInput,
+} from '@/lib/inboundWebhooks/schemas';
 
 interface InboundWebhookRow {
   tenant: string;
@@ -138,6 +145,135 @@ function mapInboundWebhook(row: InboundWebhookRow): InboundWebhookConfig {
   };
 }
 
+function buildSecretName(inboundWebhookId: string, kind: string): string {
+  return `inbound_webhook_${inboundWebhookId}_${kind}`;
+}
+
+function buildSecretVaultPath(secretName: string): string {
+  return `inbound-webhooks/${secretName}`;
+}
+
+function getSecretNameFromVaultPath(vaultPath: string): string {
+  return vaultPath.split('/').filter(Boolean).at(-1) ?? vaultPath;
+}
+
+function generateWebhookSecret(): string {
+  return crypto.randomBytes(32).toString('base64url');
+}
+
+async function writeTenantSecret(tenant: string, vaultPath: string, value: string): Promise<void> {
+  const secretProvider = await getSecretProviderInstance();
+  await secretProvider.setTenantSecret(tenant, getSecretNameFromVaultPath(vaultPath), value);
+}
+
+async function buildStoredAuthConfig(args: {
+  tenant: string;
+  inboundWebhookId: string;
+  input: InboundWebhookUpsertInput;
+  existing?: InboundWebhookRow | null;
+}): Promise<{ authConfig: Record<string, unknown>; oneTimeSecret: string | null }> {
+  const { tenant, inboundWebhookId, input, existing } = args;
+  const existingAuthConfig = existing?.auth_config ?? {};
+  const existingAuthType = existing?.auth_type;
+
+  switch (input.auth_config.type) {
+    case 'hmac_sha256': {
+      const existingVaultPath =
+        existingAuthType === 'hmac_sha256'
+          ? String(existingAuthConfig.secret_vault_path ?? existingAuthConfig.secretVaultPath ?? '')
+          : '';
+      const secretVaultPath =
+        input.auth_config.secret_vault_path ||
+        existingVaultPath ||
+        buildSecretVaultPath(buildSecretName(inboundWebhookId, 'hmac_secret'));
+      const secret = input.auth_config.secret ?? (!existingVaultPath ? generateWebhookSecret() : null);
+
+      if (secret) {
+        await writeTenantSecret(tenant, secretVaultPath, secret);
+      }
+
+      return {
+        authConfig: {
+          type: 'hmac_sha256',
+          signature_header: input.auth_config.signature_header,
+          secret_vault_path: secretVaultPath,
+        },
+        oneTimeSecret: secret,
+      };
+    }
+    case 'bearer': {
+      const existingVaultPath =
+        existingAuthType === 'bearer'
+          ? String(existingAuthConfig.token_vault_path ?? existingAuthConfig.tokenVaultPath ?? '')
+          : '';
+      const tokenVaultPath =
+        input.auth_config.token_vault_path ||
+        existingVaultPath ||
+        buildSecretVaultPath(buildSecretName(inboundWebhookId, 'bearer_token'));
+      const token = input.auth_config.token ?? (!existingVaultPath ? generateWebhookSecret() : null);
+
+      if (token) {
+        await writeTenantSecret(tenant, tokenVaultPath, token);
+      }
+
+      return {
+        authConfig: {
+          type: 'bearer',
+          token_vault_path: tokenVaultPath,
+        },
+        oneTimeSecret: token,
+      };
+    }
+    case 'ip_allowlist':
+      return {
+        authConfig: {
+          type: 'ip_allowlist',
+          ip_cidrs: input.auth_config.ip_cidrs,
+        },
+        oneTimeSecret: null,
+      };
+    case 'path_token': {
+      const existingVaultPath =
+        existingAuthType === 'path_token'
+          ? String(existingAuthConfig.token_vault_path ?? existingAuthConfig.tokenVaultPath ?? '')
+          : '';
+      const tokenVaultPath =
+        input.auth_config.token_vault_path ||
+        existingVaultPath ||
+        buildSecretVaultPath(buildSecretName(inboundWebhookId, 'path_token'));
+      const token = input.auth_config.token ?? (!existingVaultPath ? generateWebhookSecret() : null);
+
+      if (token) {
+        await writeTenantSecret(tenant, tokenVaultPath, token);
+      }
+
+      return {
+        authConfig: {
+          type: 'path_token',
+          query_param: input.auth_config.query_param,
+          token_vault_path: tokenVaultPath,
+        },
+        oneTimeSecret: token,
+      };
+    }
+  }
+}
+
+function buildStoredHandlerConfig(input: InboundWebhookUpsertInput): Record<string, unknown> {
+  if (input.handler_config.type === 'direct_action') {
+    return {
+      type: 'direct_action',
+      action: input.handler_config.action,
+      field_mapping: input.handler_config.field_mapping,
+    };
+  }
+
+  return {
+    type: 'workflow',
+    workflow_id: input.handler_config.workflow_id,
+  };
+}
+
 async function assertInboundWebhookPermission(
   user: IUserWithRoles,
   action: 'create' | 'read' | 'update' | 'delete' | 'replay',
@@ -173,5 +309,85 @@ export const getInboundWebhook = withAuth(
       .first();
 
     return row ? mapInboundWebhook(row) : null;
+  },
+);
+
+export const upsertInboundWebhook = withAuth(
+  async (
+    user,
+    { tenant },
+    input: unknown,
+  ): Promise<{ webhook: InboundWebhookConfig; secret: string | null }> => {
+    const parsed = inboundWebhookUpsertInputSchema.parse(input);
+    const { knex } = await createTenantKnex(tenant);
+    const action = parsed.inbound_webhook_id ? 'update' : 'create';
+    await assertInboundWebhookPermission(user, action, knex);
+
+    const existing = parsed.inbound_webhook_id
+      ? await knex<InboundWebhookRow>('inbound_webhooks')
+          .where({ tenant, inbound_webhook_id: parsed.inbound_webhook_id })
+          .first()
+      : null;
+
+    if (parsed.inbound_webhook_id && !existing) {
+      throw new Error('Inbound webhook not found');
+    }
+
+    const slugCollision = await knex<InboundWebhookRow>('inbound_webhooks')
+      .where({ tenant, slug: parsed.slug })
+      .modify((query) => {
+        if (parsed.inbound_webhook_id) {
+          query.andWhereNot('inbound_webhook_id', parsed.inbound_webhook_id);
+        }
+      })
+      .first('inbound_webhook_id');
+
+    if (slugCollision) {
+      throw new Error(`Inbound webhook slug "${parsed.slug}" already exists`);
+    }
+
+    const inboundWebhookId = parsed.inbound_webhook_id ?? crypto.randomUUID();
+    const { authConfig, oneTimeSecret } = await buildStoredAuthConfig({
+      tenant,
+      inboundWebhookId,
+      input: parsed,
+      existing,
+    });
+    const handlerConfig = buildStoredHandlerConfig(parsed);
+
+    const rowPayload = {
+      name: parsed.name,
+      slug: parsed.slug,
+      description: parsed.description ?? null,
+      auth_type: parsed.auth_type,
+      auth_config: authConfig,
+      idempotency_source: parsed.idempotency_source ?? null,
+      idempotency_window_seconds: parsed.idempotency_window_seconds,
+      handler_type: parsed.handler_type,
+      handler_config: handlerConfig,
+      is_active: parsed.is_active,
+      rate_limit_per_minute: parsed.rate_limit_per_minute,
+      updated_at: knex.fn.now(),
+    };
+
+    const [row] = parsed.inbound_webhook_id
+      ? await knex<InboundWebhookRow>('inbound_webhooks')
+          .where({ tenant, inbound_webhook_id: inboundWebhookId })
+          .update(rowPayload)
+          .returning('*')
+      : await knex<InboundWebhookRow>('inbound_webhooks')
+          .insert({
+            tenant,
+            inbound_webhook_id: inboundWebhookId,
+            ...rowPayload,
+            created_by: user.user_id,
+            created_at: knex.fn.now(),
+          })
+          .returning('*');
+
+    return {
+      webhook: mapInboundWebhook(row),
+      secret: oneTimeSecret,
+    };
   },
 );
