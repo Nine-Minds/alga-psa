@@ -150,4 +150,15 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain('id="inbound-webhook-direct-action"');
     expect(adminWebhooksSource).toContain('options={inboundActionOptions}');
   });
+
+  it('T142: selected action renders target fields with expression mapping rows', () => {
+    expect(adminWebhooksSource).toContain('const selectedInboundAction = useMemo');
+    expect(adminWebhooksSource).toContain('inboundActions.find((action) => action.name === identityForm.directActionName)');
+    expect(adminWebhooksSource).toContain('selectedInboundAction.targetFields.map((field) => (');
+    expect(adminWebhooksSource).toContain('htmlFor={`inbound-webhook-mapping-${field.name}`}');
+    expect(adminWebhooksSource).toContain('id={`inbound-webhook-mapping-${field.name}`}');
+    expect(adminWebhooksSource).toContain('<InboundWebhookMappingField');
+    expect(adminWebhooksSource).toContain('samplePayload={identityForm.samplePayload}');
+    expect(adminWebhooksSource).toContain('[field.name]: value');
+  });
 });

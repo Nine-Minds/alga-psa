@@ -125,7 +125,7 @@
   { "id": "T139", "description": "Idempotency section renders source dropdown + value input", "implemented": true, "featureIds": ["F085"] },
   { "id": "T140", "description": "Handler section switches between direct_action and workflow views", "implemented": true, "featureIds": ["F086"] },
   { "id": "T141", "description": "Action dropdown lists all registered actions", "implemented": true, "featureIds": ["F087"] },
-  { "id": "T142", "description": "Selecting action renders its target fields with ExpressionTextArea rows", "implemented": false, "featureIds": ["F088"] },
+  { "id": "T142", "description": "Selecting action renders its target fields with ExpressionTextArea rows", "implemented": true, "featureIds": ["F088"] },
   { "id": "T143", "description": "Workflow dropdown lists tenant's workflows", "implemented": false, "featureIds": ["F091"] },
   { "id": "T144", "description": "Workflow envelope info card displays correct shape", "implemented": false, "featureIds": ["F091"] },
   { "id": "T145", "description": "Sample capture button toggles capture mode and shows countdown", "implemented": false, "featureIds": ["F089"] },

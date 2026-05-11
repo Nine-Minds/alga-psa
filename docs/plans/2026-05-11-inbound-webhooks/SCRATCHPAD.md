@@ -225,6 +225,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T139 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Idempotency-section UI coverage now verifies the header/jsonata source dropdown, value input label/placeholder switch, and duplicate-window seconds input are present and state-backed.
 - (2026-05-11) **T140 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Handler-section UI coverage now verifies the handler type selector exposes direct-action/workflow options, updates `identityForm.handlerType`, and conditionally renders the direct-action or workflow panel.
 - (2026-05-11) **T141 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Direct-action dropdown coverage now verifies actions are loaded from `listInboundWebhookActions`, mapped into selector options by registry name/display metadata, and rendered through the `inbound-webhook-direct-action` select.
+- (2026-05-11) **T142 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Direct-action mapping coverage now verifies selected action definitions drive target-field rows, each row uses a stable `inbound-webhook-mapping-*` ID, and mappings are edited through the reused `InboundWebhookMappingField` with captured sample context.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -769,6 +770,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T141:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T142:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
