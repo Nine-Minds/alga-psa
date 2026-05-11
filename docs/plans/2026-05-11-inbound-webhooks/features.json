@@ -111,7 +111,7 @@
   { "id": "F205", "description": "REST API route: `POST/DELETE /api/v1/inbound-webhooks/{id}/capture-sample`", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F206", "description": "REST API route: `GET /api/v1/inbound-webhooks/{id}/deliveries` (paginated, filterable)", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F207", "description": "REST API route: `GET /api/v1/inbound-webhooks/{id}/deliveries/{deliveryId}`", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
-  { "id": "F208", "description": "REST API route: `POST /api/v1/inbound-webhooks/{id}/deliveries/{deliveryId}/replay`", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },
+  { "id": "F208", "description": "REST API route: `POST /api/v1/inbound-webhooks/{id}/deliveries/{deliveryId}/replay`", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F209", "description": "REST API route: `GET /api/v1/inbound-webhooks/actions` (action discovery — returns registry contents with target field schemas)", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },
 
   { "id": "F210", "description": "OpenAPI registry file: `server/src/lib/api/openapi/routes/inboundWebhooks.ts` with all management endpoints", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },
