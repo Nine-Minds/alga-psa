@@ -161,4 +161,15 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain('samplePayload={identityForm.samplePayload}');
     expect(adminWebhooksSource).toContain('[field.name]: value');
   });
+
+  it("T143: workflow dropdown lists the tenant's workflows", () => {
+    expect(adminWebhooksSource).toContain('listInboundWorkflowOptions');
+    expect(adminWebhooksSource).toContain('const [workflowOptions, setWorkflowOptions]');
+    expect(adminWebhooksSource).toContain('setWorkflowOptions(workflows)');
+    expect(adminWebhooksSource).toContain('const workflowSelectOptions = useMemo(() => workflowOptions.map((workflow) => ({');
+    expect(adminWebhooksSource).toContain('value: workflow.workflowId');
+    expect(adminWebhooksSource).toContain('label: workflow.name');
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-workflow"');
+    expect(adminWebhooksSource).toContain('options={workflowSelectOptions}');
+  });
 });
