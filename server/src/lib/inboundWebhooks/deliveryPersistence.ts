@@ -48,3 +48,32 @@ export async function createInboundDelivery(
 
   return { deliveryId: row.delivery_id };
 }
+
+export interface UpdateInboundDeliveryOutcomeInput {
+  tenant: string;
+  deliveryId: string;
+  dispatchStatus: InboundWebhookDispatchStatus;
+  handlerOutcome?: Record<string, unknown> | null;
+  responseStatus: number;
+  responseBody?: unknown | null;
+  durationMs: number;
+}
+
+export async function updateInboundDeliveryOutcome(
+  knex: Knex,
+  input: UpdateInboundDeliveryOutcomeInput,
+): Promise<void> {
+  await knex('inbound_webhook_deliveries')
+    .where({
+      tenant: input.tenant,
+      delivery_id: input.deliveryId,
+    })
+    .update({
+      dispatch_status: input.dispatchStatus,
+      handler_outcome: input.handlerOutcome ?? null,
+      response_status: input.responseStatus,
+      response_body: input.responseBody ?? null,
+      duration_ms: input.durationMs,
+      updated_at: knex.fn.now(),
+    });
+}

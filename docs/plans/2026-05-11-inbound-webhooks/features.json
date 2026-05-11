@@ -22,7 +22,7 @@
   { "id": "F022", "description": "Server action `clearSamplePayload(id)`", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F023", "description": "Server action `sendInboundWebhookTest(id, body, headers)` (synthetic in-process dispatch)", "implemented": false, "prdRefs": ["Functional Requirements"] },
 
-  { "id": "F030", "description": "Inbound HTTP route handler at `/api/inbound/[tenantSlug]/[webhookSlug]` (POST/PUT/PATCH)", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
+  { "id": "F030", "description": "Inbound HTTP route handler at `/api/inbound/[tenantSlug]/[webhookSlug]` (POST/PUT/PATCH)", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F031", "description": "Tenant slug → tenant resolver with caching", "implemented": true, "prdRefs": ["Open Questions"] },
   { "id": "F032", "description": "Webhook slug → config lookup (per-tenant, indexed)", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F033", "description": "Auth verifier: HMAC-SHA256 (configurable header), timing-safe compare", "implemented": true, "prdRefs": ["Security / Permissions"] },
