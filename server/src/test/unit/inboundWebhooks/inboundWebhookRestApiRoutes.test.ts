@@ -126,4 +126,43 @@ describe('inbound webhook REST API routes', () => {
     expect(JSON.stringify(body)).not.toContain('caller-provided-secret');
     expect(inboundActions.getInboundWebhook).toHaveBeenCalledWith('webhook-1');
   });
+
+  it('updates an inbound webhook using the path id as the persisted id', async () => {
+    const input = {
+      inbound_webhook_id: 'body-id-ignored',
+      name: 'Updated RMM Alerts',
+      slug: 'rmm-alerts',
+      description: 'Updated description',
+    };
+    const updatedWebhook = {
+      ...webhookFixture,
+      name: 'Updated RMM Alerts',
+      description: 'Updated description',
+      updatedAt: '2026-05-11T11:00:00.000Z',
+    };
+    inboundActions.upsertInboundWebhook.mockResolvedValue({
+      webhook: updatedWebhook,
+      secret: null,
+    });
+
+    const route = await import('@/app/api/v1/inbound-webhooks/[id]/route');
+    const response = await route.PUT(
+      new Request('http://localhost/api/v1/inbound-webhooks/webhook-1', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(input),
+      }),
+      routeContext({ id: 'webhook-1' }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      data: updatedWebhook,
+      secret: null,
+    });
+    expect(inboundActions.upsertInboundWebhook).toHaveBeenCalledWith({
+      ...input,
+      inbound_webhook_id: 'webhook-1',
+    });
+  });
 });
