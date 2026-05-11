@@ -1,8 +1,8 @@
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import { TicketModel, type CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
+import { TicketModel, type CreateTicketInput, type UpdateTicketInput } from '@alga-psa/shared/models/ticketModel';
 
 import { registerAction, type InboundActionDefinition } from '@/lib/inboundWebhooks/actions/registry';
-import { writeEntityMapping } from '@/lib/inboundWebhooks/externalEntityMappings';
+import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@/lib/inboundWebhooks/externalEntityMappings';
 
 interface CreateTicketMappedValues extends Record<string, unknown> {
   title: string;
@@ -20,6 +20,23 @@ interface CreateTicketMappedValues extends Record<string, unknown> {
   due_date?: string;
   asset_id?: string;
   external_id?: string;
+  attributes?: Record<string, unknown>;
+}
+
+interface UpdateTicketByExternalIdMappedValues extends Record<string, unknown> {
+  external_id: string;
+  title?: string;
+  client_id?: string;
+  board_id?: string;
+  status_id?: string;
+  priority_id?: string;
+  assigned_to?: string;
+  assigned_team_id?: string;
+  category_id?: string;
+  subcategory_id?: string;
+  contact_id?: string;
+  location_id?: string;
+  due_date?: string;
   attributes?: Record<string, unknown>;
 }
 
@@ -107,6 +124,94 @@ const createTicketAction: InboundActionDefinition<CreateTicketMappedValues> = {
   },
 };
 
-registerAction(createTicketAction);
+const updateTicketByExternalIdAction: InboundActionDefinition<UpdateTicketByExternalIdMappedValues> = {
+  name: 'updateTicketByExternalId',
+  entityType: 'ticket',
+  displayName: 'Update Ticket by External ID',
+  description: 'Update a mapped ticket using the webhook-scoped external ID.',
+  targetFields: [
+    { name: 'external_id', type: 'string', required: true, description: 'External ticket identifier to resolve' },
+    { name: 'title', type: 'string', required: false, description: 'Ticket title' },
+    { name: 'client_id', type: 'ref', required: false, refEntityType: 'client', description: 'Client ID' },
+    { name: 'board_id', type: 'ref', required: false, refEntityType: 'board', description: 'Ticket board ID' },
+    { name: 'status_id', type: 'ref', required: false, refEntityType: 'ticket_status', description: 'Ticket status ID' },
+    { name: 'priority_id', type: 'ref', required: false, refEntityType: 'ticket_priority', description: 'Ticket priority ID' },
+    { name: 'assigned_to', type: 'ref', required: false, refEntityType: 'user', description: 'Assigned user ID' },
+    { name: 'assigned_team_id', type: 'ref', required: false, refEntityType: 'team', description: 'Assigned team ID' },
+    { name: 'category_id', type: 'ref', required: false, refEntityType: 'ticket_category', description: 'Category ID' },
+    { name: 'subcategory_id', type: 'ref', required: false, refEntityType: 'ticket_subcategory', description: 'Subcategory ID' },
+    { name: 'contact_id', type: 'ref', required: false, refEntityType: 'contact', description: 'Contact ID' },
+    { name: 'location_id', type: 'ref', required: false, refEntityType: 'client_location', description: 'Location ID' },
+    { name: 'due_date', type: 'string', required: false, description: 'Due date' },
+    { name: 'attributes', type: 'json', required: false, description: 'Additional ticket attributes to merge' },
+  ],
+  async handle(ctx, mappedValues) {
+    const { knex } = await createTenantKnex(ctx.tenant);
+    const updatedTicket = await withTransaction(knex, async (trx) => {
+      const lookup = await lookupAlgaEntityByExternalId(
+        ctx.tenant,
+        ctx.webhookSlug,
+        'ticket',
+        mappedValues.external_id,
+        { knex: trx },
+      );
 
-export const ticketInboundActions = [createTicketAction];
+      if (!lookup) {
+        return null;
+      }
+
+      const updateInput: UpdateTicketInput = {};
+      assignIfPresent(updateInput, 'title', mappedValues.title);
+      assignIfPresent(updateInput, 'client_id', mappedValues.client_id);
+      assignIfPresent(updateInput, 'board_id', mappedValues.board_id);
+      assignIfPresent(updateInput, 'status_id', mappedValues.status_id);
+      assignIfPresent(updateInput, 'priority_id', mappedValues.priority_id);
+      assignIfPresent(updateInput, 'assigned_to', mappedValues.assigned_to);
+      assignIfPresent(updateInput, 'assigned_team_id', mappedValues.assigned_team_id);
+      assignIfPresent(updateInput, 'category_id', mappedValues.category_id);
+      assignIfPresent(updateInput, 'subcategory_id', mappedValues.subcategory_id);
+      assignIfPresent(updateInput, 'contact_name_id', mappedValues.contact_id);
+      assignIfPresent(updateInput, 'location_id', mappedValues.location_id);
+      assignIfPresent(updateInput, 'due_date', mappedValues.due_date);
+      if (mappedValues.attributes) {
+        updateInput.attributes = {
+          ...mappedValues.attributes,
+          inbound_webhook_delivery_id: ctx.deliveryId,
+          inbound_webhook_slug: ctx.webhookSlug,
+        };
+      }
+
+      return TicketModel.updateTicket(lookup.algaEntityId, updateInput, ctx.tenant, trx);
+    });
+
+    if (!updatedTicket) {
+      return {
+        success: false,
+        entityType: 'ticket',
+        externalId: mappedValues.external_id,
+        message: `lookup_miss: ticket external_id "${mappedValues.external_id}" is not mapped for webhook "${ctx.webhookSlug}"`,
+      };
+    }
+
+    return {
+      success: true,
+      entityType: 'ticket',
+      entityId: updatedTicket.ticket_id,
+      externalId: mappedValues.external_id,
+      metadata: {
+        updated_fields: Object.keys(mappedValues).filter((field) => field !== 'external_id'),
+      },
+    };
+  },
+};
+
+registerAction(createTicketAction);
+registerAction(updateTicketByExternalIdAction);
+
+export const ticketInboundActions = [createTicketAction, updateTicketByExternalIdAction];
+
+function assignIfPresent<T extends object>(target: T, key: string, value: unknown): void {
+  if (value !== undefined) {
+    (target as Record<string, unknown>)[key] = value;
+  }
+}
