@@ -55,4 +55,30 @@ describe('inbound webhook auth verifier', () => {
     expect(timingSafeEqual.mock.calls[0][0]).toHaveLength(validSignature.length);
     expect(timingSafeEqual.mock.calls[0][1]).toHaveLength(validSignature.length);
   });
+
+  it('T043: Bearer verification uses timing-safe comparison for token mismatches', async () => {
+    getTenantSecret.mockResolvedValue('bearer-secret');
+    const invalidSameLengthToken = 'cearer-secret';
+    const timingSafeEqual = vi.spyOn(crypto, 'timingSafeEqual');
+
+    const { verifyInboundWebhookAuth } = await import('@/lib/inboundWebhooks/authVerifier');
+    const result = await verifyInboundWebhookAuth({
+      tenant: 'tenant-a',
+      authType: 'bearer',
+      authConfig: {
+        token_vault_path: 'inbound-webhooks/inbound_webhook_webhook-1_bearer_token',
+      },
+      headers: new Headers({
+        authorization: `Bearer ${invalidSameLengthToken}`,
+      }),
+      rawBody: '',
+      sourceIp: null,
+      url: new URL('http://localhost/api/inbound/tenant-slug/billing-events'),
+    });
+
+    expect(result).toEqual({ verified: false, authStatus: 'rejected_bearer' });
+    expect(timingSafeEqual).toHaveBeenCalledTimes(1);
+    expect(timingSafeEqual.mock.calls[0][0]).toHaveLength('bearer-secret'.length);
+    expect(timingSafeEqual.mock.calls[0][1]).toHaveLength('bearer-secret'.length);
+  });
 });
