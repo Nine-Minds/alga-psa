@@ -26,7 +26,7 @@
   { "id": "T028", "description": "Server actions require tenant context (withAuth)", "implemented": true, "featureIds": ["F012", "F013", "F014", "F015"] },
 
   { "id": "T030", "description": "POST to `/api/inbound/<tenant>/<slug>` with valid HMAC returns 200 + delivery_id", "implemented": true, "featureIds": ["F030", "F033"] },
-  { "id": "T031", "description": "POST with invalid HMAC returns 401, no delivery row beyond rejected-auth log", "implemented": false, "featureIds": ["F033", "F037"] },
+  { "id": "T031", "description": "POST with invalid HMAC returns 401, no delivery row beyond rejected-auth log", "implemented": true, "featureIds": ["F033", "F037"] },
   { "id": "T032", "description": "POST with mismatched signature header name returns 401", "implemented": false, "featureIds": ["F033"] },
   { "id": "T033", "description": "POST with valid Bearer token succeeds", "implemented": false, "featureIds": ["F034"] },
   { "id": "T034", "description": "POST with bad Bearer token returns 401", "implemented": false, "featureIds": ["F034"] },
