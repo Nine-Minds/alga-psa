@@ -32,7 +32,7 @@
   { "id": "F037", "description": "Unified 401 response for unknown slug + bad auth (no enumeration)", "implemented": false, "prdRefs": ["Security / Permissions"] },
   { "id": "F038", "description": "Idempotency key extractor: header source", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F039", "description": "Idempotency key extractor: JSONata expression on body", "implemented": true, "prdRefs": ["Functional Requirements"] },
-  { "id": "F040", "description": "Dedup lookup within configurable window; return 200 no-op for duplicates", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F040", "description": "Dedup lookup within configurable window; return 200 no-op for duplicates", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F041", "description": "Delivery row persisted before dispatch (so failures are visible)", "implemented": false, "prdRefs": ["Functional Requirements"] },
   { "id": "F042", "description": "Per-webhook rate limiter (Redis token bucket, default 600/min)", "implemented": false, "prdRefs": ["Non-functional Requirements"] },
   { "id": "F043", "description": "Header filtering on persistence (strip Cookie/Authorization)", "implemented": true, "prdRefs": ["Security / Permissions"] },
