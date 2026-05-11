@@ -9,11 +9,6 @@ const getEnvVar = (name: string): string | undefined => {
   return typeof process !== 'undefined' && process.env ? process.env[name] : undefined;
 };
 
-const runtimeImport = <TModule,>(specifier: string): Promise<TModule> => {
-  const importer = new Function('specifier', 'return import(specifier)') as <T>(specifier: string) => Promise<T>;
-  return importer<TModule>(specifier);
-};
-
 let secretProviderInstance: ISecretProvider | null = null;
 
 // Cached concrete provider instances for composite provider
@@ -52,8 +47,7 @@ async function getProviderInstance(providerType: ProviderType): Promise<ISecretP
       if (!vaultProviderInstance) {
         // Use direct vault provider
         try {
-          const { loadVaultSecretProvider } =
-            await runtimeImport<typeof import('./vaultLoader')>('./vaultLoader');
+          const { loadVaultSecretProvider } = await import('./vaultLoader');
           vaultProviderInstance = await loadVaultSecretProvider();
           logger.info('Using VaultSecretProvider for Node runtime');
         } catch (error) {

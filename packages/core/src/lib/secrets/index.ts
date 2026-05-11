@@ -10,11 +10,6 @@ import type { ISecretProvider } from './ISecretProvider';
 
 export type { ISecretProvider } from './ISecretProvider';
 
-const runtimeImport = <TModule,>(specifier: string): Promise<TModule> => {
-  const importer = new Function('specifier', 'return import(specifier)') as <T>(specifier: string) => Promise<T>;
-  return importer<TModule>(specifier);
-};
-
 // Providers
 export { EnvSecretProvider } from './EnvSecretProvider';
 export { CompositeSecretProvider } from './CompositeSecretProvider';
@@ -31,7 +26,7 @@ export class VaultSecretProvider implements ISecretProvider {
 
   private async getProvider(): Promise<ISecretProvider> {
     if (!this.providerPromise) {
-      this.providerPromise = runtimeImport<typeof import('./VaultSecretProvider')>('./VaultSecretProvider').then(
+      this.providerPromise = import('./VaultSecretProvider').then(
         ({ VaultSecretProvider: RealVaultSecretProvider }) => new RealVaultSecretProvider()
       );
     }
