@@ -76,7 +76,7 @@
   { "id": "F063", "description": "Workflow trigger failure (engine error) recorded on delivery; subsequent workflow run failures do NOT mark delivery failed", "implemented": false, "prdRefs": ["Functional Requirements"] },
 
   { "id": "F070", "description": "Webhook payload context adapter for expression editor (`webhookPayloadContextAdapter.ts`)", "implemented": true, "prdRefs": ["Functional Requirements"] },
-  { "id": "F071", "description": "Adapter introspects captured sample payload to build path tree", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F071", "description": "Adapter introspects captured sample payload to build path tree", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F072", "description": "Reuse `ExpressionTextArea` from workflow designer for field mapping inputs", "implemented": false, "prdRefs": ["Functional Requirements"] },
 
   { "id": "F080", "description": "Settings page refactor: tabbed `AdminWebhooksSetup` (Inbound | Outbound)", "implemented": false, "prdRefs": ["UX / UI Notes"] },
