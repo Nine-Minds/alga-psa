@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { ADD_ONS } from '@alga-psa/types';
 import { type NavMode } from "@/config/menuConfig";
@@ -14,6 +14,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ActivityDrawerProvider } from "@alga-psa/workflows/components";
 import { savePreference } from '@alga-psa/ui/lib';
 import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
+import { QuickAskProvider } from './QuickAskContext';
 import { PlatformNotificationBanner } from './PlatformNotificationBanner';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 import { SchedulingProviderWithCallbacks } from '@alga-psa/scheduling/providers/SchedulingProviderWithCallbacks';
@@ -379,9 +380,21 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
     };
   }, [isChatInterruptible, router, runInterruptGuard]);
 
+  const handleQuickAskOpen = useCallback(() => {
+    setQuickAskOpen(true);
+  }, []);
+
   const handleQuickAskClose = () => {
     setQuickAskOpen(false);
   };
+
+  const quickAskContextValue = useMemo(
+    () => ({
+      aiAssistantAvailable,
+      openQuickAsk: handleQuickAskOpen,
+    }),
+    [aiAssistantAvailable, handleQuickAskOpen]
+  );
 
   const handleOpenQuickAskInSidebar = (chatId: string) => {
     if (!aiAssistantAvailable) {
@@ -431,20 +444,45 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
             onMenuItemClick={handleMenuItemClick}
           />
           <div className="flex-1 flex flex-col overflow-hidden">
-            <Header
-              sidebarOpen={sidebarOpen}
-              setSidebarOpen={setSidebarOpen}
-              rightSidebarOpen={rightSidebarOpen}
-              setRightSidebarOpen={setRightSidebarOpen}
-            />
-            <PlatformNotificationBanner />
-            <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
-              <Body>{children}</Body>
+            <QuickAskProvider value={quickAskContextValue}>
+              <Header
+                sidebarOpen={sidebarOpen}
+                setSidebarOpen={setSidebarOpen}
+                rightSidebarOpen={rightSidebarOpen}
+                setRightSidebarOpen={setRightSidebarOpen}
+              />
+              <PlatformNotificationBanner />
+              <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
+                <Body>{children}</Body>
+                {aiAssistantAvailable ? (
+                  <RightSidebar
+                    isOpen={rightSidebarOpen}
+                    setIsOpen={setRightSidebarOpen}
+                    onRequestClose={requestSidebarClose}
+                    clientUrl={clientUrl}
+                    accountId={accountId}
+                    messages={messages}
+                    userRole={userRole}
+                    userId={userId}
+                    selectedAccount={selectedAccount}
+                    handleSelectAccount={handleSelectAccount}
+                    auth_token={auth_token}
+                    setChatTitle={setChatTitle}
+                    isTitleLocked={isTitleLocked}
+                    handoffChatId={sidebarHandoff.chatId}
+                    handoffNonce={sidebarHandoff.nonce}
+                    onInterruptibleStateChange={setIsChatInterruptible}
+                    onRegisterCancelHandler={(cancelHandler) => {
+                      cancelActiveChatWorkRef.current = cancelHandler;
+                    }}
+                  />
+                ) : null}
+              </main>
               {aiAssistantAvailable ? (
-                <RightSidebar
-                  isOpen={rightSidebarOpen}
-                  setIsOpen={setRightSidebarOpen}
-                  onRequestClose={requestSidebarClose}
+                <QuickAskOverlay
+                  isOpen={quickAskOpen}
+                  onClose={handleQuickAskClose}
+                  onOpenInSidebar={handleOpenQuickAskInSidebar}
                   clientUrl={clientUrl}
                   accountId={accountId}
                   messages={messages}
@@ -455,33 +493,10 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
                   auth_token={auth_token}
                   setChatTitle={setChatTitle}
                   isTitleLocked={isTitleLocked}
-                  handoffChatId={sidebarHandoff.chatId}
-                  handoffNonce={sidebarHandoff.nonce}
-                  onInterruptibleStateChange={setIsChatInterruptible}
-                  onRegisterCancelHandler={(cancelHandler) => {
-                    cancelActiveChatWorkRef.current = cancelHandler;
-                  }}
+                  hf={null}
                 />
               ) : null}
-            </main>
-            {aiAssistantAvailable ? (
-              <QuickAskOverlay
-                isOpen={quickAskOpen}
-                onClose={handleQuickAskClose}
-                onOpenInSidebar={handleOpenQuickAskInSidebar}
-                clientUrl={clientUrl}
-                accountId={accountId}
-                messages={messages}
-                userRole={userRole}
-                userId={userId}
-                selectedAccount={selectedAccount}
-                handleSelectAccount={handleSelectAccount}
-                auth_token={auth_token}
-                setChatTitle={setChatTitle}
-                isTitleLocked={isTitleLocked}
-                hf={null}
-              />
-            ) : null}
+            </QuickAskProvider>
           </div>
         </div>
         {pendingInterruptKind !== null && (

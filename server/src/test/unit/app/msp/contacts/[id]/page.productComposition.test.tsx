@@ -85,12 +85,12 @@ describe('MSP contact detail page product composition', () => {
     getDocumentsByEntityMock.mockResolvedValue([{ document_id: 'doc-1' }]);
   });
 
-  it('routes Algadesk tenants through Algadesk-safe contact detail mode', async () => {
+  it('routes AlgaDesk tenants through AlgaDesk-safe contact detail mode', async () => {
     getCurrentTenantProductMock.mockResolvedValue('algadesk');
 
     const props = await getRenderedContactDetailProps('documents');
 
-    expect(props.isAlgadeskMode).toBe(true);
+    expect(props.isAlgaDeskMode).toBe(true);
     expect(props.documents).toEqual([]);
     expect(getDocumentsByEntityMock).not.toHaveBeenCalled();
   });
@@ -100,7 +100,7 @@ describe('MSP contact detail page product composition', () => {
 
     const props = await getRenderedContactDetailProps('documents');
 
-    expect(props.isAlgadeskMode).toBe(false);
+    expect(props.isAlgaDeskMode).toBe(false);
     expect(props.documents).toEqual([{ document_id: 'doc-1' }]);
     expect(getDocumentsByEntityMock).toHaveBeenCalledWith('contact-1', 'contact');
   });

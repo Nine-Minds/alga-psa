@@ -110,6 +110,7 @@ interface TicketPropertiesProps {
   onTakeLiveConflict?: (field: string) => void;
   liveEditingUsers?: Partial<Record<string, string[]>>;
   onLiveEditingFieldChange?: (field: string | null) => void;
+  disableAgentSchedule?: boolean;
 }
 
 // Helper function to format location display
@@ -205,6 +206,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onTakeLiveConflict,
   liveEditingUsers = {},
   onLiveEditingFieldChange,
+  disableAgentSchedule = false,
 }) => {
   const { openDrawer } = useDrawer();
   const { renderQuickAddContact } = useQuickAddClient();
@@ -1225,8 +1227,8 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             <h5 className="font-bold mb-2">{t('properties.primaryAgent', 'Primary Agent')}</h5>
             {ticket.assigned_to ? (
               <div
-                className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
-                onClick={() => onAgentClick(ticket.assigned_to!)}
+                className={`flex items-center space-x-2 p-2 rounded ${disableAgentSchedule ? '' : 'cursor-pointer hover:bg-gray-50'}`}
+                onClick={disableAgentSchedule ? undefined : () => onAgentClick(ticket.assigned_to!)}
               >
                 <UserAvatar
                   {...withDataAutomationId({ id: `${id}-primary-agent-avatar` })}
@@ -1336,7 +1338,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               users={availableAgents.filter(agent => agent.user_id !== ticket.assigned_to)}
               size="sm"
               placeholder={t('properties.selectAdditionalAgents', 'Select additional agents...')}
-              onUserClick={onAgentClick}
+              onUserClick={disableAgentSchedule ? undefined : onAgentClick}
             />
           </div>
         </div>

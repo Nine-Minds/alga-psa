@@ -42,7 +42,7 @@
     "dev:sdk": "npm -w sdk/alga-client-sdk run dev",
     "start:workflow-worker": "cd services/workflow-worker && npm run start",
     "dev:workflow-worker": "cd services/workflow-worker && npm run dev",
-    "create-tenant": "cd server && npm run create-tenant",
+    "create-tenant": "cd server && npm run create-tenant --",
     "rollback-tenant": "cd server && npm run rollback-tenant",
     "lint": "eslint \"{server,ee/server,ee/packages,shared,services,packages}/**/*.{js,mjs,cjs,ts,jsx,tsx}\"",
     "guard:temporal-packaging-contract": "node scripts/check-temporal-worker-packaging-contract.mjs",

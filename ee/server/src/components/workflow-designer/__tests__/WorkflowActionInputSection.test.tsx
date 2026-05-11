@@ -7,15 +7,18 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../mapping', () => ({
   MappingPanel: ({
     stepId,
+    actionId,
     value,
     disabled,
   }: {
     stepId: string;
+    actionId?: string;
     value: Record<string, unknown>;
     disabled?: boolean;
   }) => (
     <div
       data-testid={`mapping-panel-${stepId}`}
+      data-action-id={actionId ?? ''}
       data-disabled={disabled ? 'true' : 'false'}
     >
       {JSON.stringify(value)}
@@ -93,6 +96,38 @@ describe('WorkflowActionInputSection', () => {
 
     expect(screen.queryByText('1 / 2 fields configured')).not.toBeInTheDocument();
     expect(screen.queryByText('All 1 required fields are mapped')).not.toBeInTheDocument();
+  });
+
+  it('passes action id through to the mapping panel for contextual JSONata guidance', () => {
+    render(
+      <WorkflowActionInputSection
+        stepId="query-step"
+        actionId="transform.query_json"
+        inputMapping={{ expression: '{"email": source.customer.email}' }}
+        onInputMappingChange={vi.fn()}
+        targetFields={[{ name: 'expression', type: 'string', required: true }]}
+        dataContext={{
+          payload: [],
+          payloadSchema: undefined,
+          steps: [],
+          globals: {
+            env: [],
+            secrets: [],
+            meta: [],
+            error: [],
+          },
+        }}
+        fieldOptions={[]}
+        mappedInputFieldCount={1}
+        requiredActionInputFields={[{ name: 'expression', type: 'string', required: true }]}
+        unmappedRequiredInputFieldCount={0}
+      />
+    );
+
+    expect(screen.getByTestId('mapping-panel-query-step')).toHaveAttribute(
+      'data-action-id',
+      'transform.query_json'
+    );
   });
 
   it('T223/T238: transform grouped steps reuse the inline action-input section and validation summary', () => {

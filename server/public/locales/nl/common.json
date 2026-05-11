@@ -1053,7 +1053,10 @@
       "unknownError": "Er is een onbekende fout opgetreden",
       "templateNotFoundDetail": "Het sjabloon dat u zoekt, bestaat niet of is verwijderd.",
       "teamLeadAccessDetail": "Om urenstaten voor uw teamleden goed te keuren, moet u teamleider zijn.",
-      "teamsTabEnableHint": "Vraag een PSA-beheerder om de Teams-integratie voor deze tenant in te schakelen voordat u het tabblad opnieuw opent."
+      "teamsTabEnableHint": "Vraag een PSA-beheerder om de Teams-integratie voor deze tenant in te schakelen voordat u het tabblad opnieuw opent.",
+      "teamsSetupNotFinished": "Teams-configuratie niet voltooid",
+      "teamsSetupNotFinishedHint": "Vraag een PSA-beheerder om de Teams-configuratie te voltooien en open daarna het persoonlijke tabblad opnieuw.",
+      "teamsTabAdminHint": "Vraag een PSA-beheerder om de Teams-configuratie te voltooien en open daarna het tabblad opnieuw."
     },
     "actions": {
       "tryAgain": "Opnieuw proberen",
@@ -1073,6 +1076,48 @@
       "slaSettings": "SLA-instellingen",
       "documentEditor": "Documenteditor",
       "accountManagement": "Accountbeheer"
+    },
+    "teamsTab": {
+      "signedInAs": "Aangemeld als {{name}}",
+      "openInFullPsa": "Openen in volledige PSA",
+      "iframeTitle": "{{destination}} in Alga PSA",
+      "fullPsaHint": "Gebruik 'Openen in volledige PSA' voor meer context dan een Teams-kaart kan tonen.",
+      "fallback": {
+        "label": "Gevraagd record niet beschikbaar:",
+        "showingInstead": "Uw Teams-werklijst wordt weergegeven in plaats van {{destination}}."
+      },
+      "entrySource": {
+        "bot": "Geopend vanuit een Teams-botresultaat.",
+        "messageExtension": "Geopend vanuit een Teams-berichtenuitbreidingsresultaat.",
+        "notification": "Geopend vanuit een Teams-activiteitenmelding."
+      },
+      "destinations": {
+        "myWork": {
+          "title": "Mijn werk",
+          "summary": "Uw persoonlijke Teams-tabblad is klaar om uw PSA-werkwachtrij te laden."
+        },
+        "ticket": {
+          "title": "Ticket {{ticketId}}",
+          "summary": "U opent ticket {{ticketId}} vanuit Teams."
+        },
+        "projectTask": {
+          "title": "Projecttaak {{taskId}}",
+          "summary": "U opent taak {{taskId}} in project {{projectId}}."
+        },
+        "approval": {
+          "title": "Goedkeuring {{approvalId}}",
+          "summary": "U opent goedkeuring {{approvalId}} vanuit Teams."
+        },
+        "timeEntry": {
+          "title": "Tijdregistratie {{entryId}}",
+          "summary": "U opent tijdregistratie {{entryId}} vanuit Teams."
+        },
+        "contact": {
+          "title": "Contact {{contactId}}",
+          "summary": "U opent contact {{contactId}} vanuit Teams.",
+          "summaryWithClient": "U opent contact {{contactId}} voor klant {{clientId}} vanuit Teams."
+        }
+      }
     }
   },
   "feedback": {

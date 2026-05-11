@@ -328,7 +328,7 @@
         "sourceLabels": {
           "key": "Remplacement",
           "tenant": "Valeur par défaut du tenant",
-          "system": "Valeur par défaut du système"
+          "default": "Valeur par défaut du système"
         },
         "remaining": " • Restant : {{remaining}}/{{maxTokens}}",
         "remainingUnavailable": " • Restant : indisponible",

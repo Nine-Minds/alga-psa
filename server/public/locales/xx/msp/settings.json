@@ -1358,107 +1358,6 @@
       "sso": "11111",
       "sessions": "11111"
     },
-    "ssoBulk": {
-      "loading": {
-        "title": "11111",
-        "description": "11111"
-      },
-      "autoLink": {
-        "title": "11111",
-        "description": "11111",
-        "body": "11111",
-        "toggleLabel": "11111",
-        "disabledInfo": "11111"
-      },
-      "bulk": {
-        "title": "11111",
-        "description": "11111",
-        "noProviders": "11111"
-      },
-      "errors": {
-        "loadProviders": "11111",
-        "updatePreferences": "11111"
-      },
-      "form": {
-        "title": "11111",
-        "description": "11111",
-        "providerLabel": "11111",
-        "notConfigured": "11111",
-        "providerNotConfiguredAlert": "11111",
-        "actionLabel": "11111",
-        "linkSelected": "11111",
-        "unlinkSelected": "11111",
-        "actionPlaceholder": "11111",
-        "actionDescription": "11111",
-        "searchLabel": "11111",
-        "searchPlaceholder": "11111",
-        "noneSelected": "11111",
-        "selected_one": "11111 {{count}} 11111",
-        "selected_other": "11111 {{count}} 11111",
-        "clearSelection": "11111",
-        "loadingUsers": "11111",
-        "noMatch": "11111",
-        "noUsers": "11111",
-        "clientPortalComing": "11111",
-        "loadUsersFailed": "11111",
-        "actions": {
-          "previewLink": "11111",
-          "previewUnlink": "11111",
-          "link": "11111",
-          "unlink": "11111",
-          "preparingPreview": "11111",
-          "linking": "11111",
-          "unlinking": "11111",
-          "bulkLabel": "11111 {{location}} 11111"
-        },
-        "table": {
-          "email": "11111",
-          "id": "11111",
-          "name": "11111",
-          "status": "11111",
-          "active": "11111",
-          "inactive": "11111",
-          "linkedProviders": "11111",
-          "unlinked": "11111",
-          "lastLogin": "11111"
-        },
-        "toast": {
-          "providerRequiredTitle": "11111",
-          "providerRequiredDescription": "11111",
-          "noUsersTitle": "11111",
-          "noUsersDescription": "11111",
-          "failedTitle": "11111",
-          "failedDescription": "11111",
-          "linkCompleteTitle": "11111",
-          "unlinkCompleteTitle": "11111",
-          "previewReadyTitle": "11111",
-          "linkedCount": "11111 {{count}} 11111 {{provider}} 11111",
-          "unlinkedCount": "11111 {{count}} 11111 {{provider}} 11111",
-          "previewUnlink_one": "11111 {{count}} 11111",
-          "previewUnlink_other": "11111 {{count}} 11111",
-          "previewLink": "11111"
-        },
-        "results": {
-          "completeTitle": "11111",
-          "previewTitle": "11111",
-          "noneMatched": "11111",
-          "processed_one": "11111 {{count}} 11111",
-          "processed_other": "11111 {{count}} 11111",
-          "candidatesSelected": "11111 {{count}} 11111",
-          "unlinked": "11111",
-          "wouldUnlink": "11111",
-          "linked": "11111",
-          "wouldLink": "11111",
-          "alreadyUnlinked": "11111",
-          "alreadyLinked": "11111",
-          "skippedInactive": "11111"
-        },
-        "providerNames": {
-          "google": "11111",
-          "microsoft": "11111"
-        }
-      }
-    },
     "userRoles": {
       "title": "11111",
       "description": {
@@ -1537,6 +1436,107 @@
         "loading": "11111",
         "noMatch": "11111",
         "noSessions": "11111"
+      }
+    }
+  },
+  "ssoBulk": {
+    "loading": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "autoLink": {
+      "title": "11111",
+      "description": "11111",
+      "body": "11111",
+      "toggleLabel": "11111",
+      "disabledInfo": "11111"
+    },
+    "bulk": {
+      "title": "11111",
+      "description": "11111",
+      "noProviders": "11111"
+    },
+    "errors": {
+      "loadProviders": "11111",
+      "updatePreferences": "11111"
+    },
+    "form": {
+      "title": "11111",
+      "description": "11111",
+      "providerLabel": "11111",
+      "notConfigured": "11111",
+      "providerNotConfiguredAlert": "11111",
+      "actionLabel": "11111",
+      "linkSelected": "11111",
+      "unlinkSelected": "11111",
+      "actionPlaceholder": "11111",
+      "actionDescription": "11111",
+      "searchLabel": "11111",
+      "searchPlaceholder": "11111",
+      "noneSelected": "11111",
+      "selected_one": "11111 {{count}} 11111",
+      "selected_other": "11111 {{count}} 11111",
+      "clearSelection": "11111",
+      "loadingUsers": "11111",
+      "noMatch": "11111",
+      "noUsers": "11111",
+      "clientPortalComing": "11111",
+      "loadUsersFailed": "11111",
+      "actions": {
+        "previewLink": "11111",
+        "previewUnlink": "11111",
+        "link": "11111",
+        "unlink": "11111",
+        "preparingPreview": "11111",
+        "linking": "11111",
+        "unlinking": "11111",
+        "bulkLabel": "11111 {{location}} 11111"
+      },
+      "table": {
+        "email": "11111",
+        "id": "11111",
+        "name": "11111",
+        "status": "11111",
+        "active": "11111",
+        "inactive": "11111",
+        "linkedProviders": "11111",
+        "unlinked": "11111",
+        "lastLogin": "11111"
+      },
+      "toast": {
+        "providerRequiredTitle": "11111",
+        "providerRequiredDescription": "11111",
+        "noUsersTitle": "11111",
+        "noUsersDescription": "11111",
+        "failedTitle": "11111",
+        "failedDescription": "11111",
+        "linkCompleteTitle": "11111",
+        "unlinkCompleteTitle": "11111",
+        "previewReadyTitle": "11111",
+        "linkedCount": "11111 {{count}} 11111 {{provider}} 11111",
+        "unlinkedCount": "11111 {{count}} 11111 {{provider}} 11111",
+        "previewUnlink_one": "11111 {{count}} 11111",
+        "previewUnlink_other": "11111 {{count}} 11111",
+        "previewLink": "11111"
+      },
+      "results": {
+        "completeTitle": "11111",
+        "previewTitle": "11111",
+        "noneMatched": "11111",
+        "processed_one": "11111 {{count}} 11111",
+        "processed_other": "11111 {{count}} 11111",
+        "candidatesSelected": "11111 {{count}} 11111",
+        "unlinked": "11111",
+        "wouldUnlink": "11111",
+        "linked": "11111",
+        "wouldLink": "11111",
+        "alreadyUnlinked": "11111",
+        "alreadyLinked": "11111",
+        "skippedInactive": "11111"
+      },
+      "providerNames": {
+        "google": "11111",
+        "microsoft": "11111"
       }
     }
   },

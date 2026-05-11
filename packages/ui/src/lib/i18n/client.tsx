@@ -8,7 +8,6 @@ import { createContext, useContext, useState, useEffect, useMemo, ReactNode } fr
 import i18next from 'i18next';
 import { initReactI18next, useTranslation as useI18nextTranslation } from 'react-i18next';
 import HttpBackend from 'i18next-http-backend';
-import LanguageDetector from 'i18next-browser-languagedetector';
 import { getCookie, setCookie } from 'cookies-next';
 import {
   LOCALE_CONFIG,
@@ -19,31 +18,33 @@ import {
 } from './config';
 
 /**
- * Initialize i18next on the client side
+ * Initialize i18next on the client side.
+ *
+ * The locale is supplied explicitly by `I18nProvider` (which receives it from
+ * `I18nWrapper` → `getHierarchicalLocaleAction`, the same DB-pref-aware
+ * resolver the server uses). We deliberately do NOT use `LanguageDetector`:
+ * cookie/localStorage/navigator detection used to silently override the user's
+ * stored DB preference, producing the server-vs-client locale drift where
+ * server text rendered in one language and client text in another.
  */
 let i18nInitialized = false;
 
 async function initI18n(locale?: SupportedLocale) {
-  if (i18nInitialized) return;
+  if (i18nInitialized) {
+    if (locale && i18next.language !== locale) {
+      await i18next.changeLanguage(locale);
+    }
+    return;
+  }
 
   await i18next
     .use(HttpBackend)
-    .use(LanguageDetector)
     .use(initReactI18next)
     .init({
       ...I18N_CONFIG,
       lng: locale || LOCALE_CONFIG.defaultLocale,
       backend: {
         loadPath: '/locales/{{lng}}/{{ns}}.json',
-      },
-      detection: {
-        order: ['cookie', 'localStorage', 'navigator'],
-        caches: ['cookie', 'localStorage'],
-        lookupCookie: LOCALE_CONFIG.cookie.name,
-        lookupLocalStorage: 'locale',
-        cookieOptions: {
-          sameSite: LOCALE_CONFIG.cookie.sameSite,
-        },
       },
     });
 

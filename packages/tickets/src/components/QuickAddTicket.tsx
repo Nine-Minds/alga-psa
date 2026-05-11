@@ -156,7 +156,7 @@ interface QuickAddTicketProps {
   /** Optional asset display name; rendered in a banner so the operator sees which asset will be linked. */
   assetName?: string;
   renderBeforeFooter?: () => React.ReactNode;
-  isAlgadeskMode?: boolean;
+  isAlgaDeskMode?: boolean;
 }
 
 export function QuickAddTicket({
@@ -175,7 +175,7 @@ export function QuickAddTicket({
   assetId,
   assetName,
   renderBeforeFooter,
-  isAlgadeskMode = false,
+  isAlgaDeskMode = false,
 }: QuickAddTicketProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -251,7 +251,7 @@ export function QuickAddTicket({
   const [itilImpact, setItilImpact] = useState<number | undefined>(undefined);
   const [itilUrgency, setItilUrgency] = useState<number | undefined>(undefined);
   const [showPriorityMatrix, setShowPriorityMatrix] = useState(false);
-  const effectiveAssetId = isAlgadeskMode ? undefined : assetId;
+  const effectiveAssetId = isAlgaDeskMode ? undefined : assetId;
 
   // Calculate ITIL priority when impact and urgency are set
   const calculatedItilPriority = useMemo(() => {

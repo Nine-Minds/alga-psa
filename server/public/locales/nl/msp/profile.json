@@ -328,7 +328,7 @@
         "sourceLabels": {
           "key": "Overschrijving",
           "tenant": "Standaard van tenant",
-          "system": "Systeemstandaard"
+          "default": "Systeemstandaard"
         },
         "remaining": " • Resterend: {{remaining}}/{{maxTokens}}",
         "remainingUnavailable": " • Resterend: niet beschikbaar",

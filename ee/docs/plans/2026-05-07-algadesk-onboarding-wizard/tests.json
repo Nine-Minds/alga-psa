@@ -1,0 +1,46 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit test product-specific step derivation: PSA includes all existing steps and AlgaDesk excludes Billing while keeping required workspace/ticketing positions correct.",
+    "implemented": true,
+    "featureIds": [
+      "F002",
+      "F003",
+      "F004",
+      "F005"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Contract/unit test the onboarding page passes productCode into OnboardingWizard from ProductProvider.",
+    "implemented": true,
+    "featureIds": [
+      "F001"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Source/contract test that AlgaDesk-specific wizard copy exists while PSA defaults remain available.",
+    "implemented": true,
+    "featureIds": [
+      "F006"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Regression check existing onboarding data separation tests still pass for tenantName vs user-specific fields.",
+    "implemented": true,
+    "featureIds": [
+      "F008"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Contract test every onboarding locale defines the AlgaDesk wizard shell and workspace step translation keys.",
+    "implemented": true,
+    "featureIds": [
+      "F006",
+      "F009"
+    ]
+  }
+]

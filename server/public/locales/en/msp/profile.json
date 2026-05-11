@@ -328,7 +328,7 @@
         "sourceLabels": {
           "key": "Override",
           "tenant": "Tenant default",
-          "system": "System default"
+          "default": "System default"
         },
         "remaining": " • Remaining: {{remaining}}/{{maxTokens}}",
         "remainingUnavailable": " • Remaining: unavailable",

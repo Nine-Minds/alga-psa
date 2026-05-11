@@ -328,7 +328,7 @@
         "sourceLabels": {
           "key": "Sovrascrittura",
           "tenant": "Predefinito del tenant",
-          "system": "Predefinito di sistema"
+          "default": "Predefinito di sistema"
         },
         "remaining": " • Rimanenti: {{remaining}}/{{maxTokens}}",
         "remainingUnavailable": " • Rimanenti: non disponibile",

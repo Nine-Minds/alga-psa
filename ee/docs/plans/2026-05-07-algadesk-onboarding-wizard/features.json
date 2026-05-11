@@ -1,0 +1,85 @@
+[
+  {
+    "id": "F001",
+    "description": "Pass the current tenant product code into the onboarding wizard from the MSP onboarding page.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals 1",
+      "Data / API / Integration Notes"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Derive wizard step lists by product while preserving the full existing PSA step list.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals 1",
+      "Goals 2",
+      "Acceptance Criteria 1"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Hide the Billing step for AlgaDesk tenants so setupBilling cannot be reached through wizard navigation.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals 3",
+      "Goals 6",
+      "Acceptance Criteria 2"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Map displayed step positions to original step action indexes so product filtering does not call the wrong save/validation/render logic.",
+    "implemented": true,
+    "prdRefs": [
+      "Risks and Constraints"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Keep AlgaDesk help-desk setup steps available and skippable where optional: team members, first client, client contact, and ticketing configuration.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals 4",
+      "Acceptance Criteria 4"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Use AlgaDesk/help-desk-oriented title and description copy in the onboarding shell for AlgaDesk tenants.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Acceptance Criteria 5"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Retain current onboarding completion and ticketing-default validation behavior for both PSA and AlgaDesk.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals 5",
+      "Data / API / Integration Notes",
+      "Acceptance Criteria 3"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Keep existing onboarding_data merge behavior and user-specific field separation unchanged.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integration Notes",
+      "Acceptance Criteria 6"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Add AlgaDesk onboarding wizard shell and step translation keys to all onboarding locale files.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Acceptance Criteria 5"
+    ]
+  }
+]

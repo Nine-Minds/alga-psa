@@ -5,6 +5,33 @@
     "titleCommunity": "Witamy ponownie",
     "descriptionCommunity": "Przechodź z pulpitu bezpośrednio do zgłoszeń, harmonogramu, projektów i raportów."
   },
+  "algadesk": {
+    "welcome": {
+      "title": "Witamy w AlgaDesk",
+      "description": "Monitoruj obciążenie zgłoszeniami, kondycję kanałów e-mail i bądź na bieżąco z każdą rozmową."
+    },
+    "metrics": {
+      "openTickets": "Otwarte zgłoszenia",
+      "awaitingCustomer": "Oczekuje na klienta",
+      "awaitingInternal": "Oczekuje wewnętrznie",
+      "activeEmailChannels": "Aktywne kanały e-mail"
+    },
+    "aging": {
+      "title": "Wiek zgłoszeń",
+      "under2Days": "Poniżej 2 dni",
+      "days2To7": "Od 2 do 7 dni",
+      "over7Days": "Powyżej 7 dni"
+    },
+    "emailHealth": {
+      "title": "Kondycja kanałów e-mail",
+      "summary": "Połączonych jest {{healthy}} z {{active}} aktywnych kanałów.",
+      "totalConfigured": "Łącznie skonfigurowanych kanałów: {{total}}"
+    },
+    "recentTickets": {
+      "title": "Ostatnio zaktualizowane zgłoszenia",
+      "empty": "Brak ostatniej aktywności w zgłoszeniach."
+    }
+  },
   "features": {
     "heading": "Funkcje platformy",
     "comingSoon": "Wkrótce!",

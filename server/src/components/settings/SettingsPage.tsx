@@ -104,7 +104,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   const canUseTeams = useTierFeature(TIER_FEATURES.TEAMS_INTEGRATION);
   const { hasFeature } = useTier();
   const { productCode } = useProduct();
-  const isAlgadesk = productCode === 'algadesk';
+  const isAlgaDesk = productCode === 'algadesk';
   const allowedTabIds = useMemo(() => getAllowedSettingsTabIds(productCode), [productCode]);
 
   const baseTabContent: SettingsTabContent[] = [
@@ -302,7 +302,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
             <CardDescription>{t('email.description')}</CardDescription>
           </CardHeader>
           <CardContent>
-            {isAlgadesk ? <EmailProviderConfiguration /> : <EmailSettings />}
+            {isAlgaDesk ? <EmailProviderConfiguration /> : <EmailSettings />}
           </CardContent>
         </Card>
       ),
@@ -336,12 +336,12 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   // Create a map of tab content by label for easy lookup
   const allTabs = useMemo(() => {
     const tabs = [...baseTabContent, extensionsTab];
-    if (!isAlgadesk) {
+    if (!isAlgaDesk) {
       return tabs;
     }
 
     return tabs.filter((tab) => allowedTabIds.has(tab.id));
-  }, [allowedTabIds, baseTabContent, extensionsTab, isAlgadesk]);
+  }, [allowedTabIds, baseTabContent, extensionsTab, isAlgaDesk]);
 
   const initialTabId = useMemo(() => {
     const requestedTab = tabParam?.toLowerCase();

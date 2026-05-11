@@ -12,9 +12,8 @@ import { ClientContactStep } from './steps/ClientContactStep';
 import { BillingSetupStep } from './steps/BillingSetupStep';
 import { TicketingConfigStep } from './steps/TicketingConfigStep';
 import {
+  type ProductCode,
   type WizardData,
-  ONBOARDING_WIZARD_STEPS,
-  ONBOARDING_WIZARD_REQUIRED_STEP_INDEXES,
 } from '@alga-psa/types';
 import {
   saveClientInfo,
@@ -29,9 +28,10 @@ import {
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { updateTenantDefaultLocaleAction } from '@alga-psa/tenancy/actions';
 import { isSupportedLocale, type SupportedLocale } from '@alga-psa/core/i18n/config';
-
-const STEPS = ONBOARDING_WIZARD_STEPS;
-const REQUIRED_STEPS = ONBOARDING_WIZARD_REQUIRED_STEP_INDEXES;
+import {
+  getOnboardingWizardRequiredStepPositions,
+  getOnboardingWizardStepIndexes,
+} from '../lib/onboardingWizardSteps';
 
 interface OnboardingWizardProps {
   open?: boolean;
@@ -42,6 +42,7 @@ interface OnboardingWizardProps {
   onComplete?: (data: WizardData) => void;
   fullPage?: boolean;
   isRevisit?: boolean;
+  productCode?: ProductCode;
 }
 
 export function OnboardingWizard({
@@ -53,6 +54,7 @@ export function OnboardingWizard({
   onComplete,
   fullPage = false,
   isRevisit = false,
+  productCode = 'psa',
 }: OnboardingWizardProps) {
   const { t } = useTranslation('msp/onboarding');
   const [currentStep, setCurrentStep] = useState(0);
@@ -60,6 +62,11 @@ export function OnboardingWizard({
   const [errors, setErrors] = useState<Record<number, string>>({});
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [attemptedSteps, setAttemptedSteps] = useState<Set<number>>(new Set());
+  const activeStepIndexes = getOnboardingWizardStepIndexes(productCode);
+  const requiredStepPositions = getOnboardingWizardRequiredStepPositions(productCode);
+  const currentOriginalStepIndex = activeStepIndexes[currentStep] ?? activeStepIndexes[0] ?? 0;
+  const isAlgaDesk = productCode === 'algadesk';
+
   const [wizardData, setWizardData] = useState<WizardData>({
     // MSP Company Info
     firstName: '',
@@ -111,9 +118,9 @@ export function OnboardingWizard({
     setWizardData((prev) => ({ ...prev, ...data }));
   };
 
-  const translatedSteps = [
-    t('onboardingWizard.steps.clientInfo', {
-      defaultValue: 'Client Info'
+  const translatedStepLabelsByOriginalIndex = [
+    t(isAlgaDesk ? 'onboardingWizard.steps.algadeskWorkspace' : 'onboardingWizard.steps.clientInfo', {
+      defaultValue: isAlgaDesk ? 'Workspace' : 'Client Info'
     }),
     t('onboardingWizard.steps.teamMembers', {
       defaultValue: 'Team Members'
@@ -131,6 +138,9 @@ export function OnboardingWizard({
       defaultValue: 'Ticketing'
     })
   ];
+  const translatedSteps = activeStepIndexes.map(
+    (stepIndex) => translatedStepLabelsByOriginalIndex[stepIndex] ?? translatedStepLabelsByOriginalIndex[0]
+  );
 
   const saveStepData = async (stepIndex: number): Promise<boolean> => {
     if (testMode) return true;
@@ -287,8 +297,8 @@ export function OnboardingWizard({
     // Mark the current step as attempted
     setAttemptedSteps(prev => new Set([...prev, currentStep]));
     
-    if (currentStep < STEPS.length - 1) {
-      const saved = await saveStepData(currentStep);
+    if (currentStep < activeStepIndexes.length - 1) {
+      const saved = await saveStepData(currentOriginalStepIndex);
       if (saved) {
         setCompletedSteps(prev => new Set([...prev, currentStep]));
         setCurrentStep(currentStep + 1);
@@ -303,7 +313,7 @@ export function OnboardingWizard({
   };
 
   const handleSkip = () => {
-    if (currentStep < STEPS.length - 1 && !REQUIRED_STEPS.includes(currentStep)) {
+    if (currentStep < activeStepIndexes.length - 1 && !requiredStepPositions.includes(currentStep)) {
       // Don't mark as completed when skipping
       setCurrentStep(currentStep + 1);
     }
@@ -422,7 +432,7 @@ export function OnboardingWizard({
   };
 
   const hasAtLeastOneFieldFilled = () => {
-    switch (currentStep) {
+    switch (currentOriginalStepIndex) {
       case 1: // Team members
         return wizardData.teamMembers.some((member) => 
           member.firstName || member.lastName || member.email || member.role
@@ -451,11 +461,11 @@ export function OnboardingWizard({
   };
 
   const isStepValid = () => {
-    if (currentStep === 0) return isFirstStepValid();
-    if (currentStep === 5) return isTicketingStepValid();
+    if (currentOriginalStepIndex === 0) return isFirstStepValid();
+    if (currentOriginalStepIndex === 5) return isTicketingStepValid();
     
     // For optional steps with dependencies, check if the dependency was skipped
-    if (currentStep === 3) { // Contact step
+    if (currentOriginalStepIndex === 3) { // Contact step
       // If client step was skipped (no client data), this step is valid to proceed
       const hasClientInfo = !!(wizardData.clientName || wizardData.clientEmail || 
                              wizardData.clientPhone || wizardData.clientUrl || wizardData.clientId);
@@ -466,7 +476,7 @@ export function OnboardingWizard({
   };
 
   const renderStep = () => {
-    switch (currentStep) {
+    switch (currentOriginalStepIndex) {
       case 0:
         return <ClientInfoStep data={wizardData} updateData={updateData} isRevisit={isRevisit} />;
       case 1:
@@ -487,13 +497,13 @@ export function OnboardingWizard({
   const wizardNavigation = (
     <WizardNavigation
       currentStep={currentStep}
-      totalSteps={STEPS.length}
+      totalSteps={activeStepIndexes.length}
       onBack={handleBack}
       onNext={handleNext}
       onSkip={handleSkip}
       onFinish={handleFinish}
       isNextDisabled={!isStepValid() || isLoading}
-      isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
+      isSkipDisabled={requiredStepPositions.includes(currentStep)}
       isLoading={isLoading}
       backLabel={t('common.actions.back', {
         defaultValue: 'Back'
@@ -560,7 +570,7 @@ export function OnboardingWizard({
           <p>
             {t('onboardingWizard.debug.isRequired', {
               defaultValue: 'Is Required: {{value}}',
-              value: REQUIRED_STEPS.includes(currentStep)
+              value: requiredStepPositions.includes(currentStep)
                 ? t('common.yes', { defaultValue: 'Yes' })
                 : t('common.no', { defaultValue: 'No' })
             })}
@@ -578,9 +588,9 @@ export function OnboardingWizard({
         </div>
       )}
 
-      {errors[currentStep] && (
+      {errors[currentOriginalStepIndex] && (
         <Alert variant="destructive" className="mb-4">
-          <AlertDescription>{errors[currentStep]}</AlertDescription>
+          <AlertDescription>{errors[currentOriginalStepIndex]}</AlertDescription>
         </Alert>
       )}
     </>
@@ -592,13 +602,15 @@ export function OnboardingWizard({
         <div className="mx-auto max-w-5xl px-4 py-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">
-              {t('onboardingWizard.shell.title', {
-                defaultValue: 'Setup Your System'
+              {t(isAlgaDesk ? 'onboardingWizard.shell.algadeskTitle' : 'onboardingWizard.shell.title', {
+                defaultValue: isAlgaDesk ? 'Set Up AlgaDesk' : 'Setup Your System'
               })}
             </h1>
             <p className="mt-2 text-lg text-gray-600">
-              {t('onboardingWizard.shell.description', {
-                defaultValue: 'Let\'s get your workspace configured and ready to use.'
+              {t(isAlgaDesk ? 'onboardingWizard.shell.algadeskDescription' : 'onboardingWizard.shell.description', {
+                defaultValue: isAlgaDesk
+                  ? 'Configure your help desk workspace, clients, and ticketing defaults.'
+                  : 'Let\'s get your workspace configured and ready to use.'
               })}
             </p>
           </div>
@@ -615,8 +627,8 @@ export function OnboardingWizard({
     <Dialog
       isOpen={open}
       onClose={() => onOpenChange?.(false)}
-      title={t('onboardingWizard.shell.title', {
-        defaultValue: 'Setup Your System'
+      title={t(isAlgaDesk ? 'onboardingWizard.shell.algadeskTitle' : 'onboardingWizard.shell.title', {
+        defaultValue: isAlgaDesk ? 'Set Up AlgaDesk' : 'Setup Your System'
       })}
       className="max-w-4xl"
       footer={wizardNavigation}

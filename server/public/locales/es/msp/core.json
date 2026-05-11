@@ -165,7 +165,12 @@
       "system": "Sistema",
       "selected": "Seleccionado"
     },
-    "openUserMenu": "Abrir menú de usuario"
+    "openUserMenu": "Abrir menú de usuario",
+    "quickAsk": {
+      "ariaLabel": "Preguntar a la IA sobre este flujo de trabajo",
+      "title": "Preguntar a la IA",
+      "shortcutHint": "Abrir Quick Ask para obtener ayuda sobre el flujo de trabajo"
+    }
   },
   "dialogs": {
     "aiInterrupt": {

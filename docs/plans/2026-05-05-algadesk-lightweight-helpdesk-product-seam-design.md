@@ -1,13 +1,13 @@
-# Algadesk Lightweight Help Desk Product Seam Design
+# AlgaDesk Lightweight Help Desk Product Seam Design
 
 - Date: `2026-05-05`
 - Status: Approved for planning
 
 ## Summary
 
-Create Algadesk as a focused help-desk wedge product within the existing Alga PSA application. Algadesk runs from the same codebase, Next.js app, database schema, and background-worker model as PSA, but presents a distinct product surface based on product entitlement. The seam is a product/licensing boundary, not a physical process boundary.
+Create AlgaDesk as a focused help-desk wedge product within the existing Alga PSA application. AlgaDesk runs from the same codebase, Next.js app, database schema, and background-worker model as PSA, but presents a distinct product surface based on product entitlement. The seam is a product/licensing boundary, not a physical process boundary.
 
-Algadesk includes ticketing, clients/contacts, client portal ticketing, ticket attachments, knowledge base, users/teams settings, and email-to-ticket. It excludes billing, contracts, quotes, projects, time entry, scheduling/dispatch, assets/RMM, workflows, service request forms, surveys, extensions, AI chat, reporting, and full document management.
+AlgaDesk includes ticketing, clients/contacts, client portal ticketing, ticket attachments, knowledge base, users/teams settings, and email-to-ticket. It excludes billing, contracts, quotes, projects, time entry, scheduling/dispatch, assets/RMM, workflows, service request forms, surveys, extensions, AI chat, reporting, and full document management.
 
 ## Product Entitlement Model
 
@@ -17,7 +17,7 @@ Preferred first cut:
 
 - Add `tenants.product_code` with values such as `algadesk` and `psa`.
 - Default all existing tenants to `psa`.
-- Provision new Algadesk tenants with `product_code = 'algadesk'`.
+- Provision new AlgaDesk tenants with `product_code = 'algadesk'`.
 - Add resolver/assertion APIs so app code does not read the raw column directly:
   - `getTenantProduct(tenantId)`
   - `assertProductAccess(...)`
@@ -35,13 +35,13 @@ Add a new composition package:
 
 Likely responsibilities:
 
-- Algadesk MSP layout/sidebar/dashboard/settings shell
-- Algadesk ticket list and ticket detail composition
-- Algadesk client/contact detail composition
-- Algadesk email-channel and KB-safe settings composition
-- Algadesk portal composition, either in this package or a paired portal package
+- AlgaDesk MSP layout/sidebar/dashboard/settings shell
+- AlgaDesk ticket list and ticket detail composition
+- AlgaDesk client/contact detail composition
+- AlgaDesk email-channel and KB-safe settings composition
+- AlgaDesk portal composition, either in this package or a paired portal package
 
-Algadesk composition should depend on shared/core domains only:
+AlgaDesk composition should depend on shared/core domains only:
 
 - tickets
 - clients/contacts
@@ -55,9 +55,9 @@ It should not import billing, projects, assets, scheduling, SLA, workflows, surv
 
 ## MSP Product Surface
 
-Algadesk includes these MSP pages:
+AlgaDesk includes these MSP pages:
 
-- `/msp/dashboard` — Algadesk dashboard only: open tickets, aging, awaiting customer/internal, recent activity, and email channel health.
+- `/msp/dashboard` — AlgaDesk dashboard only: open tickets, aging, awaiting customer/internal, recent activity, and email channel health.
 - `/msp/tickets`
 - `/msp/tickets/[id]`
 - `/msp/clients`
@@ -65,7 +65,7 @@ Algadesk includes these MSP pages:
 - `/msp/contacts`
 - `/msp/contacts/[id]`
 - `/msp/knowledge-base` — KB articles only, not full document library.
-- `/msp/settings` with Algadesk tabs only:
+- `/msp/settings` with AlgaDesk tabs only:
   - General
   - Users
   - Teams
@@ -79,7 +79,7 @@ Ticket detail should keep comments, assignment, boards, statuses, priorities, ca
 
 ## Client Portal Product Surface
 
-Algadesk client portal includes:
+AlgaDesk client portal includes:
 
 - `/client-portal/dashboard`
 - `/client-portal/tickets`
@@ -93,11 +93,11 @@ It excludes billing, projects, devices/assets, documents library, appointments, 
 
 ## Route and Boundary Behavior
 
-Keep current public routes as canonical for now, with product-aware composition. Later `/desk/*` aliases can point to the same Algadesk compositions.
+Keep current public routes as canonical for now, with product-aware composition. Later `/desk/*` aliases can point to the same AlgaDesk compositions.
 
-For Algadesk tenants:
+For AlgaDesk tenants:
 
-- Allowed routes render Algadesk compositions.
+- Allowed routes render AlgaDesk compositions.
 - Major excluded human-facing routes render a branded upgrade boundary, e.g. billing, projects, assets, workflow editor, scheduling, surveys.
 - Internal/deep/test/API-like routes return not-found or product-denied.
 - Navigation and portal sidebars never link to excluded surfaces.
@@ -108,7 +108,7 @@ For PSA tenants, existing PSA behavior should remain unchanged.
 
 Create one authoritative product surface registry that can project allowed route groups, navigation items, API groups, and metadata/OpenAPI visibility.
 
-Algadesk API allowlist:
+AlgaDesk API allowlist:
 
 - tickets, comments, assignment, attachments
 - boards, statuses, priorities, ticket categories
@@ -119,7 +119,7 @@ Algadesk API allowlist:
 - email-to-ticket endpoints/webhooks/config
 - product/feature metadata required by clients
 
-Algadesk API denylist:
+AlgaDesk API denylist:
 
 - billing, invoices, quotes, contracts, accounting exports
 - projects/tasks
@@ -132,9 +132,9 @@ Algadesk API denylist:
 - full document management
 - integrations outside required email-channel paths
 
-Most `/api/v1/*` routes use `ApiBaseController`; add product access after tenant resolution and before controller execution. Standalone API routes and high-risk server actions need explicit product assertions. API metadata, OpenAPI, and docs must filter out blocked endpoints for Algadesk tenants.
+Most `/api/v1/*` routes use `ApiBaseController`; add product access after tenant resolution and before controller execution. Standalone API routes and high-risk server actions need explicit product assertions. API metadata, OpenAPI, and docs must filter out blocked endpoints for AlgaDesk tenants.
 
-Server actions require both composition discipline and assertions. Algadesk components should not import excluded action modules. Billing, projects, workflows, scheduling, assets/RMM, extensions, AI, and surveys should add explicit product-denied checks at their server-action boundaries.
+Server actions require both composition discipline and assertions. AlgaDesk components should not import excluded action modules. Billing, projects, workflows, scheduling, assets/RMM, extensions, AI, and surveys should add explicit product-denied checks at their server-action boundaries.
 
 ## Package and Component Seams
 
@@ -151,11 +151,11 @@ Use existing injection seams in `TicketDetails`:
 - include attachment upload/view/delete providers
 - keep client/contact rendering
 
-Where ticket components dynamically import document actions directly, introduce an attachment provider so Algadesk uses only ticket-attachment/KB-safe document functions.
+Where ticket components dynamically import document actions directly, introduce an attachment provider so AlgaDesk uses only ticket-attachment/KB-safe document functions.
 
 ### Clients
 
-Algadesk should use narrowed client exports for:
+AlgaDesk should use narrowed client exports for:
 
 - client CRUD
 - contact CRUD
@@ -166,11 +166,11 @@ It should not import contracts, contract lines, billing config, tax rates, or se
 
 ### Client Portal
 
-Split broad portal barrels so Algadesk can import only dashboard, tickets, ticket creation, KB, profile, and client settings. Billing, projects, documents library, devices, appointments, notifications beyond ticket needs, and service requests should live behind separate entrypoints or full-PSA composition.
+Split broad portal barrels so AlgaDesk can import only dashboard, tickets, ticket creation, KB, profile, and client settings. Billing, projects, documents library, devices, appointments, notifications beyond ticket needs, and service requests should live behind separate entrypoints or full-PSA composition.
 
 ## Email-to-Ticket
 
-Email-to-ticket is core Algadesk functionality.
+Email-to-ticket is core AlgaDesk functionality.
 
 Included:
 
@@ -199,15 +199,15 @@ Existing background services/workers may remain separate runtime processes. The 
    - Add `product_code`.
    - Default existing tenants to `psa`.
    - Add resolver/assertion helpers and tests.
-2. Algadesk shell
+2. AlgaDesk shell
    - Add layout/sidebar/dashboard/settings shell.
    - Switch composition based on product entitlement.
-   - Avoid PSA cross-feature providers in Algadesk layout.
+   - Avoid PSA cross-feature providers in AlgaDesk layout.
 3. Core pages
    - Tickets, ticket detail, clients, contacts, KB.
    - Remove/inject away PSA-only controls.
 4. Portal
-   - Add Algadesk portal layout/sidebar and allowed pages.
+   - Add AlgaDesk portal layout/sidebar and allowed pages.
    - Hide excluded portal surfaces.
 5. Email
    - Add focused email channel settings.
@@ -229,16 +229,16 @@ Unit tests:
 
 Component tests:
 
-- Algadesk sidebar exposes only allowed links
+- AlgaDesk sidebar exposes only allowed links
 - ticket detail omits PSA-only controls
 - portal sidebar exposes only dashboard, tickets, KB, profile/settings
 
 Integration/API tests:
 
-- Algadesk tenant can use ticket/client/contact/KB/email endpoints
-- Algadesk tenant gets product-denied for billing/projects/assets/workflows/etc.
+- AlgaDesk tenant can use ticket/client/contact/KB/email endpoints
+- AlgaDesk tenant gets product-denied for billing/projects/assets/workflows/etc.
 - PSA tenant behavior remains unchanged
-- Algadesk API metadata/OpenAPI does not advertise blocked endpoints
+- AlgaDesk API metadata/OpenAPI does not advertise blocked endpoints
 
 Playwright smoke tests:
 
@@ -250,5 +250,5 @@ Playwright smoke tests:
 
 - Decide whether `product_code` lives directly on `tenants` or is backed by a future entitlement table; first cut should expose only resolver APIs either way.
 - Define the branded upgrade boundary copy and whether it differs by route group.
-- Identify exact email settings needed for first Algadesk launch.
-- Confirm whether support notes/interactions are retained in client/contact detail for Algadesk v1.
+- Identify exact email settings needed for first AlgaDesk launch.
+- Confirm whether support notes/interactions are retained in client/contact detail for AlgaDesk v1.

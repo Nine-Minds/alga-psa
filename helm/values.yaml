@@ -321,6 +321,13 @@ token:
 auth:
   nextauth_session_expires: 86400
 
+# API rate limiting
+# Stage 3 of the rollout flips enforce to "true" so over-budget API
+# requests return HTTP 429. With "false" (observation mode), denials
+# only emit a structured WARN log + headers. See docs/api/api-rate-limiting-and-ticket-webhooks.md.
+rateLimit:
+  enforce: "false"
+
 # Gmail Integration (Enterprise Edition)
 gmail_integration:
   enabled: false

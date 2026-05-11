@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { describe, expect, it } from 'vitest';
 
-describe('Algadesk email channel mapping and health contract', () => {
+describe('AlgaDesk email channel mapping and health contract', () => {
   it('T023: supports outbound identity, inbound defaults mapping, enable/disable, and channel health/error status', () => {
     const defaultsFormPath = path.resolve(__dirname, '../../../../../packages/integrations/src/components/email/forms/InboundTicketDefaultsForm.tsx');
     const providerCardPath = path.resolve(__dirname, '../../../../../packages/integrations/src/components/email/EmailProviderCard.tsx');

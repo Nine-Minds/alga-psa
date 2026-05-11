@@ -23,17 +23,24 @@ export interface DeleteEntityDialogProps extends AutomationProps {
 
 function renderDependencyRow(dependency: DeletionDependency) {
   return (
-    <li key={dependency.type} className="flex items-center justify-between text-sm text-[rgb(var(--color-text-700))]">
-      <span>
-        {dependency.count} {dependency.label}
-      </span>
-      {dependency.viewUrl ? (
-        <a
-          href={dependency.viewUrl}
-          className="text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))] underline"
-        >
-          View
-        </a>
+    <li key={dependency.type} className="text-sm text-[rgb(var(--color-text-700))]">
+      <div className="flex items-center justify-between gap-3">
+        <span>
+          {dependency.count} {dependency.label}
+        </span>
+        {dependency.viewUrl ? (
+          <a
+            href={dependency.viewUrl}
+            className="text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))] underline"
+          >
+            View
+          </a>
+        ) : null}
+      </div>
+      {dependency.description ? (
+        <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
+          {dependency.description}
+        </p>
       ) : null}
     </li>
   );

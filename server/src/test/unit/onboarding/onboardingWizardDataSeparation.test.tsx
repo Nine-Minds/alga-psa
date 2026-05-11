@@ -15,6 +15,10 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
     t: (key: string, options?: Record<string, unknown>) =>
       String(options?.defaultValue ?? key),
   }),
+  useI18n: () => ({
+    locale: 'en',
+    setLocale: vi.fn(),
+  }),
 }));
 
 vi.mock('@alga-psa/validation', () => ({
@@ -86,6 +90,7 @@ describe('Onboarding wizard data separation: tenantName vs clientName', () => {
       const data = makeWizardData();
 
       render(<ClientInfoStep data={data} updateData={updateData} isRevisit />);
+      updateData.mockClear();
 
       const input = screen.getByPlaceholderText('Acme IT Solutions');
       await import('@testing-library/user-event').then(async ({ default: userEvent }) => {
@@ -93,6 +98,7 @@ describe('Onboarding wizard data separation: tenantName vs clientName', () => {
       });
 
       const calls = updateData.mock.calls.flat();
+      expect(calls.length).toBeGreaterThan(0);
       expect(calls.every((call: Record<string, unknown>) => 'tenantName' in call)).toBe(true);
       expect(calls.some((call: Record<string, unknown>) => 'clientName' in call)).toBe(false);
     });

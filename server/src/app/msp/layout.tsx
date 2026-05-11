@@ -59,7 +59,7 @@ export default async function MspLayout({
   const productCode = await getCurrentTenantProduct();
 
   if (productCode === 'psa') {
-    // Keep PSA-only integrations out of Algadesk composition.
+    // Keep PSA-only integrations out of AlgaDesk composition.
     registerSlaIntegration();
     registerScheduleEntryIntegration();
   }

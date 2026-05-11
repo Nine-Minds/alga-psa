@@ -45,6 +45,7 @@ import {
   transitionWorkflowActionInputMode,
   type WorkflowActionInputSourceModeValue,
 } from '../WorkflowActionInputSourceMode';
+import { useQuickAsk } from 'server/src/components/layout/QuickAskContext';
 import {
   ReferenceScopeSelector,
   buildReferenceSourceModel,
@@ -60,6 +61,11 @@ import {
  * @param fieldOptions - Available field options from data context
  * @returns ExpressionContext for the expression editor
  */
+const isRegexTransformActionId = (actionId?: string): boolean =>
+  actionId === 'transform.regex_match' ||
+  actionId === 'transform.regex_extract' ||
+  actionId === 'transform.regex_replace';
+
 function buildExpressionContextFromOptions(fieldOptions: SelectOption[]): ExpressionContext {
   // Group fields by their root (payload, vars, meta, error)
   const payloadFields: Record<string, JsonSchema> = {};
@@ -243,6 +249,11 @@ export interface InputMappingEditorProps {
   stepId: string;
 
   /**
+   * Registry action id for contextual guidance affordances.
+   */
+  actionId?: string;
+
+  /**
    * §19.3 - Shared position handlers from MappingPanel
    */
   positionsHandlers?: MappingPositionsHandlers;
@@ -338,6 +349,7 @@ const MappingFieldEditor: React.FC<{
   rootInputMapping: InputMapping;
   fieldOptions: SelectOption[];
   stepId: string;
+  actionId?: string;
   disabled?: boolean;
   sourceTypeMap?: Map<string, string>;
   expressionContext?: ExpressionContext;
@@ -350,12 +362,14 @@ const MappingFieldEditor: React.FC<{
   rootInputMapping,
   fieldOptions,
   stepId,
+  actionId,
   disabled,
   sourceTypeMap,
   expressionContext,
   referenceBrowseContext,
 }) => {
   const { t } = useTranslation('msp/workflows');
+  const { aiAssistantAvailable, openQuickAsk } = useQuickAsk();
   const [expanded, setExpanded] = useState(true);
   const [preservedFixedValue, setPreservedFixedValue] = useState<MappingValue | undefined>(() =>
     deriveWorkflowActionInputSourceMode(value).mode === 'fixed' ? value : undefined
@@ -371,6 +385,15 @@ const MappingFieldEditor: React.FC<{
     () => Boolean(field.required) && !isMappingValueSet(value, field.type),
     [field.required, field.type, value]
   );
+  const showJsonataAskAi =
+    aiAssistantAvailable &&
+    actionId === 'transform.query_json' &&
+    field.name === 'expression';
+  const isRegexTransformAction = isRegexTransformActionId(actionId);
+  const showRegexAskAi =
+    aiAssistantAvailable &&
+    isRegexTransformAction &&
+    (field.name === 'pattern' || field.name === 'replacement');
 
   useEffect(() => {
     const sourceMode = deriveWorkflowActionInputSourceMode(value).mode;
@@ -523,6 +546,20 @@ const MappingFieldEditor: React.FC<{
             />
           </div>
         </button>
+        {showJsonataAskAi || showRegexAskAi ? (
+          <button
+            id={`${idPrefix}-ask-ai`}
+            type="button"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-purple-700 transition-colors hover:text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:text-purple-300 dark:hover:text-purple-200"
+            title={t('inputMappingEditor.askAi.shortcutHint', { defaultValue: showRegexAskAi ? 'Open Quick Ask for regex guidance' : 'Open Quick Ask for JSONata guidance' })}
+            aria-label={t('inputMappingEditor.askAi.ariaLabel', { defaultValue: showRegexAskAi ? 'Ask AI for regex help' : 'Ask AI for JSONata help' })}
+            onClick={openQuickAsk}
+            disabled={disabled}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>{t('inputMappingEditor.askAi.title', { defaultValue: 'Ask AI' })}</span>
+          </button>
+        ) : null}
       </div>
 
       {expanded && (
@@ -1636,12 +1673,14 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
   targetFields,
   fieldOptions,
   stepId,
+  actionId,
   sourceTypeMap,
   disabled,
   expressionContext: providedExpressionContext,
   referenceBrowseContext,
 }) => {
   const { t } = useTranslation('msp/workflows');
+  const { aiAssistantAvailable, openQuickAsk } = useQuickAsk();
   const missingRequiredCount = useMemo(() => {
     return targetFields.filter((field) => {
       if (!field.required) return false;
@@ -1851,6 +1890,7 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                   rootInputMapping={value}
                   fieldOptions={fieldOptions}
                   stepId={stepId}
+                  actionId={actionId}
                   disabled={disabled}
                   sourceTypeMap={sourceTypeMap}
                   expressionContext={expressionContext}
@@ -1920,6 +1960,27 @@ export const InputMappingEditor: React.FC<InputMappingEditorProps> = ({
                       <Wand2 className="w-3.5 h-3.5" />
                     </Button>
                   )}
+                  {aiAssistantAvailable && (
+                    (actionId === 'transform.query_json' && field.name === 'expression')
+                    || (isRegexTransformActionId(actionId) && (field.name === 'pattern' || field.name === 'replacement'))
+                  ) ? (
+                    <button
+                      id={`mapping-${stepId}-${field.name}-ask-ai`}
+                      type="button"
+                      className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-purple-700 transition-colors hover:text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:text-purple-300 dark:hover:text-purple-200"
+                      title={t('inputMappingEditor.askAi.shortcutHint', {
+                        defaultValue: isRegexTransformActionId(actionId) ? 'Open Quick Ask for regex guidance' : 'Open Quick Ask for JSONata guidance'
+                      })}
+                      aria-label={t('inputMappingEditor.askAi.ariaLabel', {
+                        defaultValue: isRegexTransformActionId(actionId) ? 'Ask AI for regex help' : 'Ask AI for JSONata help'
+                      })}
+                      onClick={openQuickAsk}
+                      disabled={disabled}
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span>{t('inputMappingEditor.askAi.title', { defaultValue: 'Ask AI' })}</span>
+                    </button>
+                  ) : null}
                   <Button
                     id={`add-mapping-${stepId}-${field.name}`}
                     variant="ghost"

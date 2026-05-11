@@ -73,7 +73,12 @@ export async function startTenantCreationWorkflow(
 
     const workflowId = `tenant-creation-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-    const handle = await client.workflow.start('tenantCreationWorkflow', {
+    const workflowName =
+      input.productCode === 'algadesk'
+        ? 'algadeskTenantCreationWorkflow'
+        : 'tenantCreationWorkflow';
+
+    const handle = await client.workflow.start(workflowName, {
       args: [input],
       taskQueue,
       workflowId,

@@ -35,7 +35,8 @@
       "addClient": "Añadir cliente",
       "clientContact": "Contacto del cliente",
       "billing": "Facturación",
-      "ticketing": "Tickets"
+      "ticketing": "Tickets",
+      "algadeskWorkspace": "Espacio de trabajo"
     },
     "errors": {
       "saveClientInfo": "No se pudo guardar la información del cliente",
@@ -62,7 +63,9 @@
     },
     "shell": {
       "title": "Configura tu sistema",
-      "description": "Vamos a configurar tu espacio de trabajo y dejarlo listo para usar."
+      "description": "Vamos a configurar tu espacio de trabajo y dejarlo listo para usar.",
+      "algadeskTitle": "Configurar AlgaDesk",
+      "algadeskDescription": "Configura tu espacio de trabajo de mesa de ayuda, clientes y valores predeterminados de tickets."
     }
   },
   "addClientStep": {

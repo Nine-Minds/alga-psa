@@ -2,16 +2,25 @@ import { Context } from '@temporalio/activity';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
 import * as path from 'path';
-import * as fs from 'fs/promises';
 import { fileURLToPath, pathToFileURL } from 'url';
+import {
+  listProductSeedFiles,
+  normalizeProductCode,
+  resolveProductSeedDirectory,
+  type ProductCode,
+} from './product-bootstrap-resolver.js';
 
 const logger = () => Context.current().log;
 
 /**
  * Runs the onboarding seed files for a specific tenant
  */
-export async function runOnboardingSeeds(tenantId: string): Promise<{ success: boolean; seedsApplied: string[] }> {
+export async function runOnboardingSeeds(
+  tenantId: string,
+  productCode?: ProductCode | string | null,
+): Promise<{ success: boolean; seedsApplied: string[] }> {
   const log = logger();
+  const resolvedProductCode = normalizeProductCode(productCode);
   const seedsApplied: string[] = [];
   
   try {
@@ -29,24 +38,33 @@ export async function runOnboardingSeeds(tenantId: string): Promise<{ success: b
       const currentFileUrl = import.meta.url;
       const isRunningFromDist = currentFileUrl.includes('/dist/');
       
-      let seedsDir: string;
+      let onboardingSeedsRoot: string;
       if (isRunningFromDist) {
         // Running from dist - seeds are copied to dist/seeds/onboarding by Docker
         // This assumes we're running in the container where working directory is /app/ee/temporal-workflows
-        seedsDir = path.resolve(process.cwd(), 'dist/seeds/onboarding');
+        onboardingSeedsRoot = path.resolve(process.cwd(), 'dist/seeds/onboarding');
       } else {
         // Running from source (development)
         const currentDir = path.dirname(fileURLToPath(currentFileUrl));
-        seedsDir = path.resolve(currentDir, '../../../server/seeds/onboarding');
+        onboardingSeedsRoot = path.resolve(currentDir, '../../../server/seeds/onboarding');
       }
-      
-      // Read all files from the directory
-      const files = await fs.readdir(seedsDir);
-      
+
+      const seedsDir = resolveProductSeedDirectory({
+        onboardingSeedsRoot,
+        productCode: resolvedProductCode,
+      });
+
       // Filter and sort seed files (case-insensitive for cross-platform compatibility)
-      const seedFiles = files
-        .filter(file => file.toLowerCase().endsWith('.cjs'))
-        .sort(); // This will sort them alphabetically, which works for numbered files
+      const seedFiles = await listProductSeedFiles({
+        onboardingSeedsRoot,
+        productCode: resolvedProductCode,
+      });
+      log.info('Resolved product onboarding seeds', {
+        tenantId,
+        productCode: resolvedProductCode,
+        seedsDir,
+        seedFiles,
+      });
 
       // Run each seed file
       for (const seedFile of seedFiles) {

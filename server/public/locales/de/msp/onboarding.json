@@ -35,7 +35,8 @@
       "addClient": "Kunden anlegen",
       "clientContact": "Kundenkontakt",
       "billing": "Abrechnung",
-      "ticketing": "Ticketing"
+      "ticketing": "Ticketing",
+      "algadeskWorkspace": "Arbeitsbereich"
     },
     "errors": {
       "saveClientInfo": "Kundeninfo konnte nicht gespeichert werden",
@@ -62,7 +63,9 @@
     },
     "shell": {
       "title": "System einrichten",
-      "description": "Lassen Sie uns Ihren Arbeitsbereich konfigurieren und einsatzbereit machen."
+      "description": "Lassen Sie uns Ihren Arbeitsbereich konfigurieren und einsatzbereit machen.",
+      "algadeskTitle": "AlgaDesk einrichten",
+      "algadeskDescription": "Konfigurieren Sie Ihren Helpdesk-Arbeitsbereich, Kunden und Ticketing-Standardeinstellungen."
     }
   },
   "addClientStep": {

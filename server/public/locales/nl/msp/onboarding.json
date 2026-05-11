@@ -35,7 +35,8 @@
       "addClient": "Klant toevoegen",
       "clientContact": "Klantcontact",
       "billing": "Facturatie",
-      "ticketing": "Tickets"
+      "ticketing": "Tickets",
+      "algadeskWorkspace": "Werkruimte"
     },
     "errors": {
       "saveClientInfo": "Klantinfo opslaan mislukt",
@@ -62,7 +63,9 @@
     },
     "shell": {
       "title": "Stel je systeem in",
-      "description": "Laten we je werkruimte configureren en klaarzetten voor gebruik."
+      "description": "Laten we je werkruimte configureren en klaarzetten voor gebruik.",
+      "algadeskTitle": "AlgaDesk instellen",
+      "algadeskDescription": "Configureer je helpdeskomgeving, klanten en standaardinstellingen voor tickets."
     }
   },
   "addClientStep": {

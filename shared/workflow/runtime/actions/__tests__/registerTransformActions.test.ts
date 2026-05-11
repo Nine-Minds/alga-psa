@@ -12,6 +12,12 @@ describe('registerTransformActionsV2', () => {
   it('T226/T227/T228: registers text transform actions with explicit input and output schemas', () => {
     const registry = getActionRegistryV2();
     const actionIds = [
+      'transform.parse_json',
+      'transform.query_json',
+      'transform.stringify_json',
+      'transform.regex_match',
+      'transform.regex_extract',
+      'transform.regex_replace',
       'transform.compose_text',
       'transform.truncate_text',
       'transform.concat_text',
@@ -43,6 +49,16 @@ describe('registerTransformActionsV2', () => {
     const registry = getActionRegistryV2();
 
     expect(registry.get('transform.truncate_text', 1)?.outputSchema.safeParse({ text: 'abc' }).success).toBe(true);
+    expect(registry.get('transform.parse_json', 1)?.outputSchema.safeParse({ value: { a: 1 }, type: 'object' }).success).toBe(true);
+    expect(registry.get('transform.query_json', 1)?.outputSchema.safeParse({ value: { a: 1 } }).success).toBe(true);
+    expect(registry.get('transform.stringify_json', 1)?.outputSchema.safeParse({ text: '{"a":1}' }).success).toBe(true);
+    expect(registry.get('transform.regex_match', 1)?.outputSchema.safeParse({
+      matched: true, match: 'INC-123456', index: 0, groups: ['123456'], namedGroups: {}
+    }).success).toBe(true);
+    expect(registry.get('transform.regex_extract', 1)?.outputSchema.safeParse({
+      matched: true, count: 1, first: { text: 'INC-123456', index: 0, groups: ['123456'], namedGroups: {} }, matches: []
+    }).success).toBe(true);
+    expect(registry.get('transform.regex_replace', 1)?.outputSchema.safeParse({ text: 'value', replacementCount: 1 }).success).toBe(true);
     expect(registry.get('transform.compose_text', 1)?.outputSchema.safeParse({ prompt: 'abc' }).success).toBe(true);
     expect(registry.get('transform.concat_text', 1)?.outputSchema.safeParse({ text: 'abc' }).success).toBe(true);
     expect(registry.get('transform.replace_text', 1)?.outputSchema.safeParse({ text: 'abc' }).success).toBe(true);
@@ -51,6 +67,27 @@ describe('registerTransformActionsV2', () => {
     expect(registry.get('transform.lowercase_text', 1)?.outputSchema.safeParse({ text: 'abc' }).success).toBe(true);
     expect(registry.get('transform.uppercase_text', 1)?.outputSchema.safeParse({ text: 'ABC' }).success).toBe(true);
     expect(registry.get('transform.trim_text', 1)?.outputSchema.safeParse({ text: 'abc' }).success).toBe(true);
+  });
+
+  it('fails Parse JSON numeric overflow with a clear finite-value parse error', async () => {
+    const registry = getActionRegistryV2();
+    const parseJson = registry.get('transform.parse_json', 1);
+
+    await expect(parseJson?.handler(parseJson.inputSchema.parse({ source: '1e999' }), {} as never))
+      .rejects.toThrow('JSON parse failed: parsed value is not a finite JSON value');
+  });
+
+  it('requires transform source/value schema fields instead of accepting missing unknown values', () => {
+    const registry = getActionRegistryV2();
+
+    expect(registry.get('transform.parse_json', 1)?.inputSchema.safeParse({}).success).toBe(false);
+    expect(registry.get('transform.query_json', 1)?.inputSchema.safeParse({ expression: 'source' }).success).toBe(false);
+    expect(registry.get('transform.stringify_json', 1)?.inputSchema.safeParse({}).success).toBe(false);
+    expect(registry.get('transform.query_json', 1)?.outputSchema.safeParse({}).success).toBe(false);
+    expect(registry.get('transform.query_json', 1)?.outputSchema.safeParse({ value: undefined }).success).toBe(false);
+    expect(registry.get('transform.regex_match', 1)?.inputSchema.safeParse({ pattern: 'INC-(\\d+)' }).success).toBe(false);
+    expect(registry.get('transform.regex_extract', 1)?.inputSchema.safeParse({ pattern: 'INC-(\\d+)' }).success).toBe(false);
+    expect(registry.get('transform.regex_replace', 1)?.inputSchema.safeParse({ pattern: 'INC-(\\d+)', replacement: 'REF-$1' }).success).toBe(false);
   });
 
   it('T268/T272/T273: exposes schema-driven outputs for coalesce and array transforms', () => {
@@ -211,5 +248,215 @@ describe('registerTransformActionsV2', () => {
 
     expect(parsed).toEqual({ source: null, fields: ['ticketId'] });
     expect(pickedObject).toEqual({ object: {} });
+  });
+
+  it('T001/T002/T003/T004/T005/T006/T007/T008/T010/T011/T016: executes JSON transform actions with parse/query/stringify coverage', async () => {
+    const registry = getActionRegistryV2();
+    const parseJson = registry.get('transform.parse_json', 1);
+    const queryJson = registry.get('transform.query_json', 1);
+    const stringifyJson = registry.get('transform.stringify_json', 1);
+
+    const parsedObject = await parseJson?.handler(
+      parseJson.inputSchema.parse({ source: '{"customer":{"email":"owner@example.com"},"active":true}' }),
+      {} as never
+    );
+    const parsedArray = await parseJson?.handler(
+      parseJson.inputSchema.parse({ source: '[1,2,3]' }),
+      {} as never
+    );
+    const parsedNumber = await parseJson?.handler(
+      parseJson.inputSchema.parse({ source: '42' }),
+      {} as never
+    );
+    const parsedString = await parseJson?.handler(
+      parseJson.inputSchema.parse({ source: '"hello"' }),
+      {} as never
+    );
+    const parsedNull = await parseJson?.handler(
+      parseJson.inputSchema.parse({ source: 'null' }),
+      {} as never
+    );
+    const passthroughObject = await parseJson?.handler(
+      parseJson.inputSchema.parse({ source: { nested: { id: 'a1' } } }),
+      {} as never
+    );
+    const passthroughArray = await parseJson?.handler(
+      parseJson.inputSchema.parse({ source: [{ id: 1 }, { id: 2 }] }),
+      {} as never
+    );
+
+    const queried = await queryJson?.handler(
+      queryJson.inputSchema.parse({
+        source: { customer: { email: 'owner@example.com' }, assets: [{ tag: 'srv-1' }, { tag: 'srv-2' }] },
+        expression: '{"email": source.customer.email, "tags": source.assets.tag}'
+      }),
+      {
+        expressionContext: {
+          payload: { workflowName: 'Normalize inbound payload' },
+          vars: { fallbackEmail: 'fallback@example.com' },
+          meta: { runId: 'run-123' },
+          error: { message: 'none' }
+        }
+      } as never
+    );
+
+    const queriedWithWorkflowContext = await queryJson?.handler(
+      queryJson.inputSchema.parse({
+        source: { customer: {} },
+        expression: 'coalesce(source.customer.email, vars.fallbackEmail)'
+      }),
+      {
+        expressionContext: {
+          payload: { tenant: 'alpha' },
+          vars: { fallbackEmail: 'fallback@example.com' },
+          meta: { workflowVersion: 1 },
+          error: null
+        }
+      } as never
+    );
+
+    const compactJson = await stringifyJson?.handler(
+      stringifyJson.inputSchema.parse({ source: { customer: 'owner@example.com', tags: ['srv-1', 'srv-2'] } }),
+      {} as never
+    );
+    const prettyJson = await stringifyJson?.handler(
+      stringifyJson.inputSchema.parse({ source: { customer: 'owner@example.com', tags: ['srv-1', 'srv-2'] }, spacing: 2 }),
+      {} as never
+    );
+
+    await expect(
+      parseJson?.handler(parseJson.inputSchema.parse({ source: '{bad json]' }), {} as never)
+    ).rejects.toThrow('JSON parse failed:');
+    await expect(
+      parseJson?.handler(parseJson.inputSchema.parse({ source: '1e999' }), {} as never)
+    ).rejects.toThrow('JSON parse failed: parsed value is not a finite JSON value');
+
+    await expect(
+      queryJson?.handler(queryJson.inputSchema.parse({ source: { ids: [1, 2] }, expression: '$sum(source.ids)' }), {} as never)
+    ).rejects.toThrow('JSON query expression validation failed:');
+
+    await expect(
+      queryJson?.handler(queryJson.inputSchema.parse({ source: { missing: true }, expression: 'source.nope' }), {} as never)
+    ).rejects.toThrow('JSON query expression evaluation failed:');
+
+    const largeText = 'x'.repeat(256 * 1024 + 8);
+    await expect(
+      queryJson?.handler(queryJson.inputSchema.parse({ source: { largeText }, expression: 'source.largeText' }), {} as never)
+    ).rejects.toThrow('max output size');
+
+    expect(parsedObject).toEqual({
+      value: { customer: { email: 'owner@example.com' }, active: true },
+      type: 'object'
+    });
+    expect(parsedArray).toEqual({ value: [1, 2, 3], type: 'array' });
+    expect(parsedNumber).toEqual({ value: 42, type: 'number' });
+    expect(parsedString).toEqual({ value: 'hello', type: 'string' });
+    expect(parsedNull).toEqual({ value: null, type: 'null' });
+    expect(passthroughObject).toEqual({ value: { nested: { id: 'a1' } }, type: 'object' });
+    expect(passthroughArray).toEqual({ value: [{ id: 1 }, { id: 2 }], type: 'array' });
+    expect((queried as any)?.value?.email).toBe('owner@example.com');
+    expect(JSON.parse(JSON.stringify((queried as any)?.value?.tags))).toEqual(['srv-1', 'srv-2']);
+    expect(queriedWithWorkflowContext).toEqual({ value: 'fallback@example.com' });
+    expect(compactJson).toEqual({ text: '{"customer":"owner@example.com","tags":["srv-1","srv-2"]}' });
+    expect(prettyJson).toEqual({ text: '{\n  "customer": "owner@example.com",\n  "tags": [\n    "srv-1",\n    "srv-2"\n  ]\n}' });
+  });
+
+  it('T001/T002/T003/T004/T005/T006/T007/T008/T009/T010/T011/T012: executes regex transforms with deterministic outputs and validation errors', async () => {
+    const registry = getActionRegistryV2();
+    const regexMatch = registry.get('transform.regex_match', 1);
+    const regexExtract = registry.get('transform.regex_extract', 1);
+    const regexReplace = registry.get('transform.regex_replace', 1);
+
+    const noMatch = await regexMatch?.handler(
+      regexMatch.inputSchema.parse({ text: 'No incident here', pattern: 'INC-(\\d{6})' }),
+      {} as never
+    );
+    expect(noMatch).toEqual({
+      matched: false,
+      match: null,
+      index: null,
+      groups: [],
+      namedGroups: {},
+    });
+
+    const matched = await regexMatch?.handler(
+      regexMatch.inputSchema.parse({ text: 'Incident INC-123456 on srv-01', pattern: 'INC-(?<id>\\d{6})' }),
+      {} as never
+    );
+    expect(matched).toEqual({
+      matched: true,
+      match: 'INC-123456',
+      index: 9,
+      groups: ['123456'],
+      namedGroups: { id: '123456' },
+    });
+
+    const extracted = await regexExtract?.handler(
+      regexExtract.inputSchema.parse({ text: 'A-1 B-2 C-3', pattern: '([A-Z])-(?<n>\\d)', maxMatches: 2 }),
+      {} as never
+    );
+    expect(extracted).toEqual({
+      matched: true,
+      count: 2,
+      first: { text: 'A-1', index: 0, groups: ['A', '1'], namedGroups: { n: '1' } },
+      matches: [
+        { text: 'A-1', index: 0, groups: ['A', '1'], namedGroups: { n: '1' } },
+        { text: 'B-2', index: 4, groups: ['B', '2'], namedGroups: { n: '2' } },
+      ],
+    });
+
+    const firstOnlyReplace = await regexReplace?.handler(
+      regexReplace.inputSchema.parse({ text: 'host host host', pattern: 'host', replacement: 'node', replaceAll: false }),
+      {} as never
+    );
+    const replaceAll = await regexReplace?.handler(
+      regexReplace.inputSchema.parse({ text: 'INC-123 INC-456', pattern: 'INC-(\\d+)', replacement: 'REF-$1', replaceAll: true }),
+      {} as never
+    );
+    const replaceNamed = await regexReplace?.handler(
+      regexReplace.inputSchema.parse({ text: 'srv-001', pattern: 'srv-(?<id>\\d+)', replacement: 'host-$<id>' }),
+      {} as never
+    );
+    const stickyFirstOnlyReplace = await regexReplace?.handler(
+      regexReplace.inputSchema.parse({ text: 'alpha alpha', pattern: 'alpha', flags: 'y', replacement: 'beta', replaceAll: false }),
+      {} as never
+    );
+    expect(firstOnlyReplace).toEqual({ text: 'node host host', replacementCount: 1 });
+    expect(replaceAll).toEqual({ text: 'REF-123 REF-456', replacementCount: 2 });
+    expect(replaceNamed).toEqual({ text: 'host-001', replacementCount: 1 });
+    expect(stickyFirstOnlyReplace).toEqual({ text: 'beta alpha', replacementCount: 1 });
+
+    const zeroWidth = await regexExtract?.handler(
+      regexExtract.inputSchema.parse({ text: 'abc', pattern: '^', flags: 'gm', maxMatches: 5 }),
+      {} as never
+    );
+    expect(zeroWidth).toMatchObject({ matched: true, count: 1 });
+
+    await expect(
+      regexMatch?.handler(regexMatch.inputSchema.parse({ text: 'abc', pattern: '(' }), {} as never)
+    ).rejects.toThrow('invalid regex pattern');
+    await expect(
+      regexMatch?.handler(regexMatch.inputSchema.parse({ text: 'abc', pattern: 'a', flags: 'gg' }), {} as never)
+    ).rejects.toThrow('duplicate flag');
+    await expect(
+      regexMatch?.handler(regexMatch.inputSchema.parse({ text: 'abc', pattern: 'a', flags: 'z' }), {} as never)
+    ).rejects.toThrow('unsupported flag');
+    await expect(
+      regexExtract?.handler(regexExtract.inputSchema.parse({ text: 'x '.repeat(100_001), pattern: 'x' }), {} as never)
+    ).rejects.toThrow('text length');
+    const cappedMatches = await regexExtract?.handler(
+      regexExtract.inputSchema.parse({ text: 'a a a', pattern: 'a', maxMatches: 1 }),
+      {} as never
+    );
+    expect(cappedMatches).toMatchObject({ count: 1, matched: true });
+    await expect(
+      regexExtract?.handler(regexExtract.inputSchema.parse({ text: 'a', pattern: 'a', maxMatches: 1001 }), {} as never)
+    ).rejects.toThrow('maxMatches 1001 exceeds maximum 1000');
+    await expect(
+      regexExtract?.handler(regexExtract.inputSchema.parse({ text: 'nope', pattern: 'INC-(\\d+)', requireMatch: true }), {} as never)
+    ).rejects.toThrow('requireMatch is true');
+    await expect(
+      regexMatch?.handler(regexMatch.inputSchema.parse({ text: 'nope', pattern: 'INC-(\\d+)', requireMatch: true }), {} as never)
+    ).rejects.toThrow('requireMatch is true');
   });
 });

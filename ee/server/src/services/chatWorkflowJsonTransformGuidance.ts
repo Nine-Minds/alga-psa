@@ -1,0 +1,16 @@
+export const WORKFLOW_JSON_TRANSFORM_GUIDANCE = [
+  'Workflow JSON transform authoring guidance:',
+  '- Use action.call with transform.parse_json to parse JSON text (or pass through literal objects/arrays).',
+  '- Use action.call with transform.query_json to run JSONata against source and return { value }.',
+  '- Use action.call with transform.stringify_json to serialize JSON-compatible values back to text.',
+  '- Paste JSONata into transform.query_json.inputMapping.expression in the workflow designer action configuration.',
+  '- Save outputs with action.call.saveAs (for example saveAs: vars.parsedRequest or saveAs: payload.normalizedRequest).',
+  '- When users ask how to parse JSON for later workflow steps, explicitly mention transform.parse_json, transform.query_json, JSONata syntax, saveAs, and include this point in the final answer: AI helps author deterministic workflow configuration; the workflow runtime executes transform.parse_json and transform.query_json, not the AI model.',
+  '- Example extract: expression `source.customer.email` with source `vars.parsedRequest.value`.',
+  '- Example object shape: expression `{"customerEmail": source.customer.email, "serverTags": source.assets[type = "server"].tag}`.',
+  '- Example coalesce/default: expression `coalesce(source.customer.email, vars.fallbackEmail)`.',
+  '- Example array filter/map: expression `source.assets[type = "server"].{"tag": tag, "name": name}`.',
+  '- JSONata helpers are allow-listed; avoid undocumented functions and keep outputs JSON-serializable.',
+  '- If source JSON originates from a secret value, saveAs can persist that content into payload/vars/meta; only save what is safe to expose downstream.',
+  '- AI only helps author deterministic workflow configs; AI does not execute inside workflow runtime.',
+].join('\n');

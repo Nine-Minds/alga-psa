@@ -35,7 +35,8 @@
       "addClient": "11111",
       "clientContact": "11111",
       "billing": "11111",
-      "ticketing": "11111"
+      "ticketing": "11111",
+      "algadeskWorkspace": "11111"
     },
     "errors": {
       "saveClientInfo": "11111",
@@ -62,7 +63,9 @@
     },
     "shell": {
       "title": "11111",
-      "description": "11111"
+      "description": "11111",
+      "algadeskTitle": "11111",
+      "algadeskDescription": "11111"
     }
   },
   "addClientStep": {

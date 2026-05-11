@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { getAllowedSettingsTabIds } from '@/lib/settingsProductTabs';
 
 describe('settings product tab allowlist', () => {
-  it('T006: Algadesk exposes only approved settings tabs', () => {
+  it('T006: AlgaDesk exposes only approved settings tabs', () => {
     const tabs = getAllowedSettingsTabIds('algadesk');
     expect(tabs.has('general')).toBe(true);
     expect(tabs.has('users')).toBe(true);

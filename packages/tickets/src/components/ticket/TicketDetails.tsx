@@ -193,6 +193,7 @@ interface TicketDetailsProps {
     disableAttachmentFolderSelection?: boolean;
     disableAttachmentSharing?: boolean;
     disableAttachmentLinking?: boolean;
+    disableAgentSchedule?: boolean;
 }
 
 const TicketDetails: React.FC<TicketDetailsProps> = ({
@@ -245,6 +246,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     disableAttachmentFolderSelection = false,
     disableAttachmentSharing = false,
     disableAttachmentLinking = false,
+    disableAgentSchedule = false,
 }) => {
     const { t } = useTranslation('features/tickets');
     const ticketLive = useTicketLiveContext();
@@ -1254,6 +1256,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     };
 
   const handleAgentClick = (userId: string) => {
+    if (disableAgentSchedule) {
+      return;
+    }
+
     openDrawer(
       <AgentScheduleDrawer
         agentId={userId}
@@ -2771,6 +2777,7 @@ const handleClose = () => {
                                 additionalAgents={additionalAgents}
                                 availableAgents={availableAgents}
                                 onAgentClick={handleAgentClick}
+                                disableAgentSchedule={disableAgentSchedule}
                                 onAddAgent={handleAddAgent}
                                 onRemoveAgent={handleRemoveAgent}
                                 currentTimeSheet={currentTimeSheet}
