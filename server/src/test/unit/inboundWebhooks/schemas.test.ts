@@ -59,4 +59,24 @@ describe('inbound webhook schemas', () => {
       ]),
     );
   });
+
+  it('T011: rejects HMAC auth config without a signature header name', () => {
+    const result = inboundWebhookUpsertInputSchema.safeParse(
+      validInboundWebhookInput({
+        auth_config: {
+          type: 'hmac_sha256',
+          secret: '0123456789abcdef',
+        },
+      }),
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: ['auth_config', 'signature_header'],
+        }),
+      ]),
+    );
+  });
 });
