@@ -117,7 +117,7 @@
   { "id": "T131", "description": "Outbound tab functions identically to pre-refactor (no regressions)", "implemented": true, "featureIds": ["F080"] },
   { "id": "T132", "description": "Inbound list view shows table with name/URL/handler/last delivery/active", "implemented": true, "featureIds": ["F081"] },
   { "id": "T133", "description": "Create dialog: Identity section accepts name, slug, description", "implemented": true, "featureIds": ["F082"] },
-  { "id": "T134", "description": "Auth section conditionally renders HMAC fields", "implemented": false, "featureIds": ["F083"] },
+  { "id": "T134", "description": "Auth section conditionally renders HMAC fields", "implemented": true, "featureIds": ["F083"] },
   { "id": "T135", "description": "Auth section conditionally renders Bearer fields", "implemented": false, "featureIds": ["F083"] },
   { "id": "T136", "description": "Auth section conditionally renders IP allowlist fields", "implemented": false, "featureIds": ["F083"] },
   { "id": "T137", "description": "Secret displayed once on creation, never again", "implemented": false, "featureIds": ["F084"] },

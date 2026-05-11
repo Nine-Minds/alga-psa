@@ -64,4 +64,14 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain('id="inbound-webhook-description"');
     expect(adminWebhooksSource).toContain("label={t('security.webhooks.inbound.identity.description')}");
   });
+
+  it('T134: auth section conditionally renders HMAC signature-header fields', () => {
+    expect(adminWebhooksSource).toContain("value: 'hmac_sha256'");
+    expect(adminWebhooksSource).toContain("label: t('security.webhooks.inbound.auth.types.hmacSha256')");
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-auth-type"');
+    expect(adminWebhooksSource).toContain("identityForm.authType === 'hmac_sha256'");
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-auth-hmac-header"');
+    expect(adminWebhooksSource).toContain("label={t('security.webhooks.inbound.auth.signatureHeader')}");
+    expect(adminWebhooksSource).toContain('hmacSignatureHeader: event.target.value');
+  });
 });
