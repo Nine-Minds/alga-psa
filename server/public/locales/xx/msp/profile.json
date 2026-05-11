@@ -261,6 +261,13 @@
           "queryParamPlaceholder": "11111",
           "pathToken": "11111",
           "pathTokenPlaceholder": "11111"
+        },
+        "secret": {
+          "label": "11111",
+          "warning": "11111",
+          "copy": "11111",
+          "download": "11111",
+          "close": "11111"
         }
       },
       "stats": {

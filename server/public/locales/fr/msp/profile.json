@@ -261,6 +261,13 @@
           "queryParamPlaceholder": "token",
           "pathToken": "Jeton de chemin",
           "pathTokenPlaceholder": "Collez un jeton ou laissez vide pour en générer un"
+        },
+        "secret": {
+          "label": "Secret du webhook",
+          "warning": "Cette valeur n'est affichée que maintenant. Enregistrez-la dans le système source avant de fermer cette fenêtre.",
+          "copy": "Copier",
+          "download": "Télécharger en .txt",
+          "close": "Fermer"
         }
       },
       "stats": {

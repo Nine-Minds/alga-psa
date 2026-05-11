@@ -326,6 +326,10 @@ function InboundWebhooksListView() {
     pathTokenQueryParam: 'token',
     pathToken: '',
   });
+  const [revealedInboundSecret, setRevealedInboundSecret] = useState<{
+    webhookName: string;
+    secret: string;
+  } | null>(null);
   const neverLabel = t('security.webhooks.common.never');
 
   const loadInboundWebhooks = useCallback(async () => {
@@ -538,6 +542,73 @@ function InboundWebhooksListView() {
           />
         )}
       </Card>
+
+      <Dialog
+        id="inbound-webhook-secret"
+        isOpen={revealedInboundSecret !== null}
+        onClose={() => setRevealedInboundSecret(null)}
+        title={t('security.webhooks.inbound.secret.label')}
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500">
+              {t('security.webhooks.inbound.secret.warning')}
+            </p>
+            <div className="rounded-md bg-gray-50 p-4">
+              <code className="break-all text-sm">{revealedInboundSecret?.secret ?? ''}</code>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Button
+                id="inbound-webhook-secret-copy"
+                className="w-full"
+                onClick={async () => {
+                  if (!revealedInboundSecret?.secret) return;
+                  try {
+                    await navigator.clipboard.writeText(revealedInboundSecret.secret);
+                  } catch (copyError) {
+                    console.error('Failed to copy inbound webhook secret:', copyError);
+                  }
+                }}
+              >
+                {t('security.webhooks.inbound.secret.copy')}
+              </Button>
+              <Button
+                id="inbound-webhook-secret-download"
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  if (!revealedInboundSecret?.secret) return;
+                  const safeName = (revealedInboundSecret.webhookName || 'inbound-webhook')
+                    .toLowerCase()
+                    .replace(/[^a-z0-9-_]+/g, '-')
+                    .replace(/^-+|-+$/g, '')
+                    || 'inbound-webhook';
+                  const blob = new Blob([revealedInboundSecret.secret], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement('a');
+                  link.href = url;
+                  link.download = `${safeName}-secret.txt`;
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                {t('security.webhooks.inbound.secret.download')}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+        <DialogFooter>
+          <Button
+            id="inbound-webhook-secret-close"
+            variant="ghost"
+            onClick={() => setRevealedInboundSecret(null)}
+          >
+            {t('security.webhooks.inbound.secret.close')}
+          </Button>
+        </DialogFooter>
+      </Dialog>
 
       <Dialog
         id="inbound-webhook-identity"

@@ -261,6 +261,13 @@
           "queryParamPlaceholder": "token",
           "pathToken": "Pfad-Token",
           "pathTokenPlaceholder": "Token einfügen oder leer lassen, um eines zu generieren"
+        },
+        "secret": {
+          "label": "Webhook-Secret",
+          "warning": "Dieser Wert wird nur jetzt angezeigt. Speichern Sie ihn im Quellsystem, bevor Sie diesen Dialog schließen.",
+          "copy": "Kopieren",
+          "download": "Als .txt herunterladen",
+          "close": "Schließen"
         }
       },
       "stats": {

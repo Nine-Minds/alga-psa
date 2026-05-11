@@ -261,6 +261,13 @@
           "queryParamPlaceholder": "token",
           "pathToken": "Token ścieżki",
           "pathTokenPlaceholder": "Wklej token lub zostaw puste, aby wygenerować"
+        },
+        "secret": {
+          "label": "Sekret webhooka",
+          "warning": "Ta wartość jest pokazana tylko teraz. Zapisz ją w systemie źródłowym przed zamknięciem tego okna.",
+          "copy": "Kopiuj",
+          "download": "Pobierz jako .txt",
+          "close": "Zamknij"
         }
       },
       "stats": {

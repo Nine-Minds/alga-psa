@@ -261,6 +261,13 @@
           "queryParamPlaceholder": "token",
           "pathToken": "Path Token",
           "pathTokenPlaceholder": "Paste token or leave blank to generate one"
+        },
+        "secret": {
+          "label": "Webhook secret",
+          "warning": "This value is shown only now. Store it in the source system before you close this dialog.",
+          "copy": "Copy",
+          "download": "Download as .txt",
+          "close": "Close"
         }
       },
       "stats": {

@@ -83,7 +83,7 @@
   { "id": "F081", "description": "Inbound webhooks list view (table mirrors outbound shape)", "implemented": true, "prdRefs": ["UX / UI Notes"] },
   { "id": "F082", "description": "Inbound webhook create/edit dialog with Identity section", "implemented": true, "prdRefs": ["UX / UI Notes"] },
   { "id": "F083", "description": "Auth section: dropdown (HMAC/Bearer/IP/Path) + conditional sub-form", "implemented": true, "prdRefs": ["UX / UI Notes"] },
-  { "id": "F084", "description": "Auth secret one-time-display modal after creation", "implemented": false, "prdRefs": ["Security / Permissions"] },
+  { "id": "F084", "description": "Auth secret one-time-display modal after creation", "implemented": true, "prdRefs": ["Security / Permissions"] },
   { "id": "F085", "description": "Idempotency section (key source dropdown + value input)", "implemented": false, "prdRefs": ["UX / UI Notes"] },
   { "id": "F086", "description": "Handler section conditional rendering: direct_action vs workflow", "implemented": false, "prdRefs": ["UX / UI Notes"] },
   { "id": "F087", "description": "Direct-action UI: action dropdown populated from registry", "implemented": false, "prdRefs": ["UX / UI Notes"] },

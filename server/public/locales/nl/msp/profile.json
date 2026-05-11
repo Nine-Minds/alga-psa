@@ -261,6 +261,13 @@
           "queryParamPlaceholder": "token",
           "pathToken": "Pad-token",
           "pathTokenPlaceholder": "Plak token of laat leeg om er een te genereren"
+        },
+        "secret": {
+          "label": "Webhook-geheim",
+          "warning": "Deze waarde wordt alleen nu getoond. Sla deze op in het bronsysteem voordat je dit venster sluit.",
+          "copy": "Kopiëren",
+          "download": "Downloaden als .txt",
+          "close": "Sluiten"
         }
       },
       "stats": {
