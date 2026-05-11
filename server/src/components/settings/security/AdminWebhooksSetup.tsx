@@ -48,6 +48,7 @@ import {
   listInboundDeliveries,
   listInboundWorkflowOptions,
   listInboundWebhooks,
+  replayInboundDelivery,
   setInboundWebhookActiveState,
   type InboundActionDefinitionView,
   type InboundWorkflowOptionView,
@@ -742,6 +743,20 @@ function InboundWebhooksListView() {
     }
   }, [identityForm.inboundWebhookId, t]);
 
+  const handleReplayInboundDelivery = useCallback(async (deliveryId: string) => {
+    try {
+      const replayed = await replayInboundDelivery(deliveryId);
+      setSelectedInboundDelivery(replayed);
+      if (identityForm.inboundWebhookId) {
+        await loadInboundDialogDeliveries(identityForm.inboundWebhookId, inboundDeliveryPageNumber);
+      }
+      setError(null);
+    } catch (replayError) {
+      console.error('Failed to replay inbound webhook delivery:', replayError);
+      setError(replayError instanceof Error ? replayError.message : t('security.webhooks.inbound.deliveryDetail.replayFailed'));
+    }
+  }, [identityForm.inboundWebhookId, inboundDeliveryPageNumber, loadInboundDialogDeliveries, t]);
+
   return (
     <div className="space-y-6">
       <Card className="p-6">
@@ -1371,13 +1386,22 @@ function InboundWebhooksListView() {
                   {selectedInboundDelivery.deliveryId}
                 </p>
               </div>
-              <Button
-                id="inbound-webhook-delivery-detail-close"
-                variant="ghost"
-                onClick={() => setSelectedInboundDelivery(null)}
-              >
-                {t('security.webhooks.inbound.deliveryDetail.close')}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  id="inbound-webhook-delivery-detail-replay"
+                  variant="outline"
+                  onClick={() => void handleReplayInboundDelivery(selectedInboundDelivery.deliveryId)}
+                >
+                  {t('security.webhooks.inbound.deliveryDetail.replay')}
+                </Button>
+                <Button
+                  id="inbound-webhook-delivery-detail-close"
+                  variant="ghost"
+                  onClick={() => setSelectedInboundDelivery(null)}
+                >
+                  {t('security.webhooks.inbound.deliveryDetail.close')}
+                </Button>
+              </div>
             </div>
             <dl className="grid gap-3 sm:grid-cols-2">
               <div>

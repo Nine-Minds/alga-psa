@@ -94,7 +94,7 @@
   { "id": "F092", "description": "Active state toggle + auto-disable indicator", "implemented": true, "prdRefs": ["UX / UI Notes"] },
   { "id": "F093", "description": "Delivery log list (mirrors outbound's table layout)", "implemented": true, "prdRefs": ["UX / UI Notes"] },
   { "id": "F094", "description": "Delivery detail drawer (request/response/headers/latency/error)", "implemented": true, "prdRefs": ["UX / UI Notes"] },
-  { "id": "F095", "description": "Replay button on delivery rows", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F095", "description": "Replay button on delivery rows", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F096", "description": "Synthetic test request UI (send custom body/headers from dialog)", "implemented": false, "prdRefs": ["Functional Requirements"] },
   { "id": "F097", "description": "All new UI strings via `t('...')` i18n", "implemented": false, "prdRefs": ["UX / UI Notes"] },
   { "id": "F098", "description": "All interactive elements have kebab-case `id` attributes", "implemented": false, "prdRefs": ["UX / UI Notes"] },

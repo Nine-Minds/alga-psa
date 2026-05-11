@@ -353,6 +353,8 @@
         "deliveryDetail": {
           "title": "55555",
           "close": "55555",
+          "replay": "55555",
+          "replayFailed": "55555",
           "received": "55555",
           "status": "55555",
           "responseStatus": "55555",
