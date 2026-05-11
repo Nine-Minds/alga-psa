@@ -187,4 +187,16 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
       expect(adminWebhooksSource).toContain(field);
     }
   });
+
+  it('T145: sample capture button toggles capture mode and shows active window status', () => {
+    expect(adminWebhooksSource).toContain('captureSamplePayload');
+    expect(adminWebhooksSource).toContain('const sampleCaptureActive = identityForm.sampleCaptureExpiresAt');
+    expect(adminWebhooksSource).toContain('new Date(identityForm.sampleCaptureExpiresAt).getTime() > Date.now()');
+    expect(adminWebhooksSource).toContain('const handleCaptureSample = useCallback');
+    expect(adminWebhooksSource).toContain('captureSamplePayload(identityForm.inboundWebhookId)');
+    expect(adminWebhooksSource).toContain('sampleCaptureExpiresAt: updated.sampleCaptureExpiresAt');
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-capture-sample"');
+    expect(adminWebhooksSource).toContain('disabled={!identityForm.inboundWebhookId}');
+    expect(adminWebhooksSource).toContain("t('security.webhooks.inbound.sample.captureActive'");
+  });
 });
