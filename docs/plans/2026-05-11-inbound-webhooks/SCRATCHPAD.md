@@ -166,6 +166,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T061 implemented** in `server/src/test/unit/inboundWebhooks/deliveryPersistence.test.ts`. Rejected-auth persistence now asserts a row is still inserted with tenant/webhook metadata and response status, while `request_body` is forced to `null` and sensitive headers are filtered.
 - (2026-05-11) **T062 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Dispatch exceptions now have regression coverage: the receiver returns `500 {delivery_id, error:'dispatch_failed'}` and updates the existing verified delivery to `dispatch_status='failed'` with the exception message in `handler_outcome.error`.
 - (2026-05-11) **T070 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Over-limit requests now assert `checkInboundWebhookRateLimit(tenant, webhookId)` is enforced after auth/JSON parse, return `429` with `retry-after`, persist a failed verified delivery, and skip dispatch.
+- (2026-05-11) **T071 implemented** in `server/src/test/unit/inboundWebhooks/rateLimitConfig.test.ts`. Rate-limit isolation by webhook is covered by asserting the shared token bucket is called with namespace `webhook-in`, the tenant ID, and each webhook ID as a distinct bucket dimension.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -534,6 +535,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T070:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T071:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/rateLimitConfig.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References

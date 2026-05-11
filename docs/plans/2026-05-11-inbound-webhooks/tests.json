@@ -53,7 +53,7 @@
   { "id": "T062", "description": "Dispatch failure leaves delivery row with dispatch_status=failed and error message", "implemented": true, "featureIds": ["F041"] },
 
   { "id": "T070", "description": "Rate limit: requests above per-webhook threshold get 429", "implemented": true, "featureIds": ["F042"] },
-  { "id": "T071", "description": "Rate limit isolates per webhook (one webhook hitting limit doesn't affect another)", "implemented": false, "featureIds": ["F042"] },
+  { "id": "T071", "description": "Rate limit isolates per webhook (one webhook hitting limit doesn't affect another)", "implemented": true, "featureIds": ["F042"] },
   { "id": "T072", "description": "Rate limit isolates per tenant", "implemented": false, "featureIds": ["F042"] },
 
   { "id": "T080", "description": "Sample payload capture stores first verified body within capture window", "implemented": false, "featureIds": ["F044", "F021"] },
