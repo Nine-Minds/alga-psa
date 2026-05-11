@@ -100,7 +100,7 @@
   { "id": "F098", "description": "All interactive elements have kebab-case `id` attributes", "implemented": true, "prdRefs": ["UX / UI Notes"] },
 
   { "id": "F100", "description": "Feature flag gate on Settings tab visibility", "implemented": true, "prdRefs": ["Rollout / Migration"] },
-  { "id": "F101", "description": "Feature flag gate on `/api/inbound/*` route (returns 404 when disabled)", "implemented": false, "prdRefs": ["Rollout / Migration"] },
+  { "id": "F101", "description": "Feature flag gate on `/api/inbound/*` route (returns 404 when disabled)", "implemented": true, "prdRefs": ["Rollout / Migration"] },
   { "id": "F102", "description": "Permission check on every server action (`withAuth` + `hasPermission`)", "implemented": false, "prdRefs": ["Security / Permissions"] },
 
   { "id": "F200", "description": "REST API route: `GET /api/v1/inbound-webhooks` (list)", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },

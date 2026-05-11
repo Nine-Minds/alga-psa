@@ -93,6 +93,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F097 implemented/verified** by scanning the inbound UI additions in `AdminWebhooksSetup.tsx` and `server/src/components/settings/security/inbound/`. User-facing labels, button text, helper copy, status text, and placeholders are routed through `t('security.webhooks.inbound...')` locale keys. Server-provided action/workflow names and JSON contract property names remain data/technical identifiers rather than hardcoded UI copy.
 - (2026-05-11) **F098 implemented/verified** by scanning the inbound tab/dialog/drawer UI controls. New interactive controls (tabs, buttons, selects, inputs, switches, text areas, tables, row menu items, path buttons, dialogs, and drawer) all have stable kebab-case `id` attributes.
 - (2026-05-11) **F100 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. The Settings Webhooks shell now uses `useFeatureFlag('inbound_webhooks_enabled', { defaultValue:false })`, defaults to the existing Outbound tab, and only renders the Inbound tab/content when the flag is enabled.
+- (2026-05-11) **F101 implemented** in `server/src/lib/inboundWebhooks/requestProcessor.ts`. The receiver route resolves the tenant slug first, evaluates `inbound_webhooks_enabled` with the actual tenant ID, and returns a bare `404` before config lookup/dispatch when disabled.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -264,6 +265,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Type check after F096:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F100:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F101:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References

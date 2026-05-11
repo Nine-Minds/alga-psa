@@ -25,16 +25,15 @@ const JSON_RESPONSE_HEADERS = { 'content-type': 'application/json' };
 export async function processInboundWebhookRequest(input: ProcessInboundWebhookRequestInput): Promise<NextResponse> {
   const { request, tenantSlug, webhookSlug } = input;
   const startedAt = Date.now();
-  const featureEnabled = await isInboundWebhooksEnabled({ tenantId: tenantSlug });
-
-  if (!featureEnabled) {
-    return new NextResponse(null, { status: 404 });
-  }
-
   const { resolveInboundWebhookTenantSlug } = await import('./tenantResolver');
   const tenant = await resolveInboundWebhookTenantSlug(tenantSlug);
   if (!tenant) {
     return unauthorizedInboundWebhookResponse();
+  }
+
+  const featureEnabled = await isInboundWebhooksEnabled({ tenantId: tenant });
+  if (!featureEnabled) {
+    return new NextResponse(null, { status: 404 });
   }
 
   return runWithTenant(tenant, async () => {
