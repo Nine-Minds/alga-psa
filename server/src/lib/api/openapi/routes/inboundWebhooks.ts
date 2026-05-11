@@ -76,7 +76,39 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
       updatedAt: zOpenApi.string().datetime(),
     }),
   );
-  const InboundWebhookDelivery = zOpenApi.record(zOpenApi.unknown()).describe('Inbound webhook delivery.');
+  const InboundWebhookDelivery = registry.registerSchema(
+    'InboundWebhookDelivery',
+    zOpenApi.object({
+      tenant: zOpenApi.string().uuid(),
+      deliveryId: zOpenApi.string().uuid(),
+      inboundWebhookId: zOpenApi.string().uuid().nullable(),
+      idempotencyKey: zOpenApi.string().nullable(),
+      receivedAt: zOpenApi.string().datetime(),
+      requestMethod: zOpenApi.string(),
+      requestPath: zOpenApi.string(),
+      requestHeaders: zOpenApi.record(zOpenApi.union([zOpenApi.string(), zOpenApi.array(zOpenApi.string())])),
+      requestBody: zOpenApi.unknown().nullable(),
+      sourceIp: zOpenApi.string().nullable(),
+      userAgent: zOpenApi.string().nullable(),
+      authStatus: zOpenApi.enum([
+        'verified',
+        'rejected_signature',
+        'rejected_bearer',
+        'rejected_ip',
+        'rejected_no_auth',
+      ]),
+      dispatchStatus: zOpenApi.enum(['pending', 'dispatched', 'duplicate', 'failed']),
+      handlerOutcome: zOpenApi.record(zOpenApi.unknown()).nullable(),
+      responseStatus: zOpenApi.number().int().nullable(),
+      responseBody: zOpenApi.unknown().nullable(),
+      durationMs: zOpenApi.number().int().nullable(),
+      retryCount: zOpenApi.number().int(),
+      isReplay: zOpenApi.boolean(),
+      replayedFrom: zOpenApi.string().uuid().nullable(),
+      createdAt: zOpenApi.string().datetime(),
+      updatedAt: zOpenApi.string().datetime(),
+    }),
+  );
   const InboundActionDefinition = zOpenApi.record(zOpenApi.unknown()).describe('Inbound action definition.');
   const InboundWebhookCreateInput = registry.registerSchema(
     'InboundWebhookCreateInput',

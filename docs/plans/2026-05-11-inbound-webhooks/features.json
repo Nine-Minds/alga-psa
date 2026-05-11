@@ -120,7 +120,7 @@
   { "id": "F213", "description": "OpenAPI component schemas: `InboundWebhookCreateInput`, `InboundWebhookUpdateInput`", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F214", "description": "OpenAPI component schema: `InboundWebhookAuthConfig` (discriminated union by auth_type)", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F215", "description": "OpenAPI component schema: `InboundWebhookHandlerConfig` (discriminated union by handler_type)", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
-  { "id": "F216", "description": "OpenAPI component schema: `InboundWebhookDelivery`", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },
+  { "id": "F216", "description": "OpenAPI component schema: `InboundWebhookDelivery`", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F217", "description": "OpenAPI component schemas: `InboundActionDefinition`, `InboundActionTargetField`", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F218", "description": "OpenAPI component schema: `WorkflowWebhookEnvelope` (envelope shape workflow handlers receive)", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },
 
