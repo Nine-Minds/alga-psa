@@ -14,10 +14,7 @@ export async function evaluateFieldMapping(
   for (const [fieldName, expression] of Object.entries(fieldMapping)) {
     mappedValues[fieldName] = await evaluateExpressionSource(
       expression,
-      {
-        body,
-        payload: body,
-      },
+      body && typeof body === 'object' ? (body as Record<string, unknown>) : { value: body },
       options.timeoutMs,
     );
   }
