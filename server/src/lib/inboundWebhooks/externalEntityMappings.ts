@@ -26,6 +26,12 @@ export interface ExternalEntityMappingLookupOptions {
   knex?: Knex;
 }
 
+export interface WriteEntityMappingOptions {
+  externalRealmId?: string | null;
+  metadata?: Record<string, unknown> | null;
+  knex?: Knex;
+}
+
 export async function lookupAlgaEntityByExternalId(
   tenant: string,
   webhookSlug: string,
@@ -60,4 +66,62 @@ export async function lookupAlgaEntityByExternalId(
         mapping,
       }
     : null;
+}
+
+export async function writeEntityMapping(
+  tenant: string,
+  webhookSlug: string,
+  entityType: string,
+  algaId: string,
+  externalId: string,
+  options: WriteEntityMappingOptions = {},
+): Promise<TenantExternalEntityMapping> {
+  const db = options.knex ?? (await createTenantKnex(tenant)).knex;
+  const externalRealmId = options.externalRealmId || null;
+
+  const existingExternalMapping = await db<TenantExternalEntityMapping>('tenant_external_entity_mappings')
+    .where({
+      tenant_id: tenant,
+      integration_type: webhookSlug,
+      external_entity_id: externalId,
+    })
+    .modify((query) => {
+      if (externalRealmId === null) {
+        query.whereNull('external_realm_id');
+      } else {
+        query.andWhere('external_realm_id', externalRealmId);
+      }
+    })
+    .first();
+
+  if (existingExternalMapping && existingExternalMapping.alga_entity_id !== algaId) {
+    throw new Error(
+      `External ${entityType} id "${externalId}" is already mapped to ${existingExternalMapping.alga_entity_id}`,
+    );
+  }
+
+  const [mapping] = await db<TenantExternalEntityMapping>('tenant_external_entity_mappings')
+    .insert({
+      tenant_id: tenant,
+      integration_type: webhookSlug,
+      alga_entity_type: entityType,
+      alga_entity_id: algaId,
+      external_entity_id: externalId,
+      external_realm_id: externalRealmId,
+      sync_status: 'synced',
+      last_synced_at: db.fn.now(),
+      metadata: options.metadata ?? null,
+    })
+    .onConflict(['tenant_id', 'integration_type', 'alga_entity_type', 'alga_entity_id'])
+    .merge({
+      external_entity_id: externalId,
+      external_realm_id: externalRealmId,
+      sync_status: 'synced',
+      last_synced_at: db.fn.now(),
+      metadata: options.metadata ?? null,
+      updated_at: db.fn.now(),
+    })
+    .returning('*');
+
+  return mapping;
 }
