@@ -223,6 +223,22 @@
         },
         "messages": {
           "loadFailed": "Failed to load inbound webhooks."
+        },
+        "dialog": {
+          "createTitle": "Create Inbound Webhook",
+          "editTitle": "Edit Inbound Webhook",
+          "cancel": "Cancel",
+          "saveUnavailable": "Continue"
+        },
+        "identity": {
+          "title": "Identity",
+          "help": "Name the webhook and choose the URL-safe slug used in its receiver endpoint.",
+          "name": "Name",
+          "namePlaceholder": "RMM critical alerts",
+          "slug": "Slug",
+          "slugPlaceholder": "rmm-critical-alerts",
+          "description": "Description",
+          "descriptionPlaceholder": "Optional notes about the source system and payload."
         }
       },
       "stats": {

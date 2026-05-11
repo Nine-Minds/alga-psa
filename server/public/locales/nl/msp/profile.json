@@ -223,6 +223,22 @@
         },
         "messages": {
           "loadFailed": "Inkomende webhooks konden niet worden geladen."
+        },
+        "dialog": {
+          "createTitle": "Inkomende webhook maken",
+          "editTitle": "Inkomende webhook bewerken",
+          "cancel": "Annuleren",
+          "saveUnavailable": "Doorgaan"
+        },
+        "identity": {
+          "title": "Identiteit",
+          "help": "Geef de webhook een naam en kies de URL-veilige slug voor het ontvangende eindpunt.",
+          "name": "Naam",
+          "namePlaceholder": "Kritieke RMM-meldingen",
+          "slug": "Slug",
+          "slugPlaceholder": "kritieke-rmm-meldingen",
+          "description": "Beschrijving",
+          "descriptionPlaceholder": "Optionele notities over het bronsysteem en de payload."
         }
       },
       "stats": {

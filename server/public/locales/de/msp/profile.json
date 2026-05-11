@@ -223,6 +223,22 @@
         },
         "messages": {
           "loadFailed": "Eingehende Webhooks konnten nicht geladen werden."
+        },
+        "dialog": {
+          "createTitle": "Eingehenden Webhook erstellen",
+          "editTitle": "Eingehenden Webhook bearbeiten",
+          "cancel": "Abbrechen",
+          "saveUnavailable": "Weiter"
+        },
+        "identity": {
+          "title": "Identität",
+          "help": "Benennen Sie den Webhook und wählen Sie den URL-sicheren Slug für den Empfangsendpunkt.",
+          "name": "Name",
+          "namePlaceholder": "Kritische RMM-Alarme",
+          "slug": "Slug",
+          "slugPlaceholder": "rmm-kritische-alarme",
+          "description": "Beschreibung",
+          "descriptionPlaceholder": "Optionale Notizen zum Quellsystem und Payload."
         }
       },
       "stats": {

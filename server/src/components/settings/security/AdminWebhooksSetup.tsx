@@ -5,6 +5,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import {
   Dialog,
@@ -79,6 +80,13 @@ type WebhookFormState = {
    */
   payloadFieldSelection: Record<string, string[]>;
   isActive: boolean;
+};
+
+type InboundWebhookIdentityFormState = {
+  inboundWebhookId?: string;
+  name: string;
+  slug: string;
+  description: string;
 };
 
 type WebhookStatsSnapshot = {
@@ -271,6 +279,15 @@ function buildInboundWebhookUrl(webhook: InboundWebhookConfig): string {
   return `/api/inbound/${tenantSlug}/${webhook.slug}`;
 }
 
+function slugifyInboundWebhookName(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+}
+
 function formatInboundHandlerLabel(
   webhook: InboundWebhookConfig,
   t: ReturnType<typeof useTranslation>['t'],
@@ -290,6 +307,12 @@ function InboundWebhooksListView() {
   const [error, setError] = useState<string | null>(null);
   const [tableCurrentPage, setTableCurrentPage] = useState(1);
   const [tablePageSize, setTablePageSize] = useState(10);
+  const [identityDialogOpen, setIdentityDialogOpen] = useState(false);
+  const [identityForm, setIdentityForm] = useState<InboundWebhookIdentityFormState>({
+    name: '',
+    slug: '',
+    description: '',
+  });
   const neverLabel = t('security.webhooks.common.never');
 
   const loadInboundWebhooks = useCallback(async () => {
@@ -391,7 +414,18 @@ function InboundWebhooksListView() {
             <DropdownMenuItem id={`inbound-webhook-view-${webhook.inboundWebhookId}`} disabled>
               {t('security.webhooks.list.actions.view')}
             </DropdownMenuItem>
-            <DropdownMenuItem id={`inbound-webhook-edit-${webhook.inboundWebhookId}`} disabled>
+            <DropdownMenuItem
+              id={`inbound-webhook-edit-${webhook.inboundWebhookId}`}
+              onClick={() => {
+                setIdentityForm({
+                  inboundWebhookId: webhook.inboundWebhookId,
+                  name: webhook.name,
+                  slug: webhook.slug,
+                  description: webhook.description ?? '',
+                });
+                setIdentityDialogOpen(true);
+              }}
+            >
               {t('security.webhooks.list.actions.edit')}
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -403,6 +437,15 @@ function InboundWebhooksListView() {
   const handleTablePageSizeChange = useCallback((newPageSize: number) => {
     setTablePageSize(newPageSize);
     setTableCurrentPage(1);
+  }, []);
+
+  const handleNewInboundWebhook = useCallback(() => {
+    setIdentityForm({
+      name: '',
+      slug: '',
+      description: '',
+    });
+    setIdentityDialogOpen(true);
   }, []);
 
   return (
@@ -417,7 +460,7 @@ function InboundWebhooksListView() {
           </div>
           <Button
             id="inbound-webhooks-new"
-            disabled
+            onClick={handleNewInboundWebhook}
           >
             {t('security.webhooks.inbound.newWebhook')}
           </Button>
@@ -457,6 +500,85 @@ function InboundWebhooksListView() {
           />
         )}
       </Card>
+
+      <Dialog
+        id="inbound-webhook-identity"
+        isOpen={identityDialogOpen}
+        onClose={() => setIdentityDialogOpen(false)}
+        title={
+          identityForm.inboundWebhookId
+            ? t('security.webhooks.inbound.dialog.editTitle')
+            : t('security.webhooks.inbound.dialog.createTitle')
+        }
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900">
+                {t('security.webhooks.inbound.identity.title')}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {t('security.webhooks.inbound.identity.help')}
+              </p>
+            </div>
+            <Input
+              id="inbound-webhook-name"
+              label={t('security.webhooks.inbound.identity.name')}
+              value={identityForm.name}
+              required
+              placeholder={t('security.webhooks.inbound.identity.namePlaceholder')}
+              onChange={(event) => {
+                const nextName = event.target.value;
+                setIdentityForm((current) => ({
+                  ...current,
+                  name: nextName,
+                  slug: current.slug ? current.slug : slugifyInboundWebhookName(nextName),
+                }));
+              }}
+            />
+            <Input
+              id="inbound-webhook-slug"
+              label={t('security.webhooks.inbound.identity.slug')}
+              value={identityForm.slug}
+              required
+              placeholder={t('security.webhooks.inbound.identity.slugPlaceholder')}
+              onChange={(event) => {
+                setIdentityForm((current) => ({
+                  ...current,
+                  slug: slugifyInboundWebhookName(event.target.value),
+                }));
+              }}
+            />
+            <TextArea
+              id="inbound-webhook-description"
+              label={t('security.webhooks.inbound.identity.description')}
+              value={identityForm.description}
+              placeholder={t('security.webhooks.inbound.identity.descriptionPlaceholder')}
+              onChange={(event) => {
+                setIdentityForm((current) => ({
+                  ...current,
+                  description: event.target.value,
+                }));
+              }}
+            />
+          </div>
+        </DialogContent>
+        <DialogFooter>
+          <Button
+            id="inbound-webhook-identity-cancel"
+            variant="ghost"
+            onClick={() => setIdentityDialogOpen(false)}
+          >
+            {t('security.webhooks.inbound.dialog.cancel')}
+          </Button>
+          <Button
+            id="inbound-webhook-identity-save"
+            disabled
+          >
+            {t('security.webhooks.inbound.dialog.saveUnavailable')}
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   );
 }

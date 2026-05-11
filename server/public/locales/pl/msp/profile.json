@@ -223,6 +223,22 @@
         },
         "messages": {
           "loadFailed": "Nie udało się załadować webhooków przychodzących."
+        },
+        "dialog": {
+          "createTitle": "Utwórz webhook przychodzący",
+          "editTitle": "Edytuj webhook przychodzący",
+          "cancel": "Anuluj",
+          "saveUnavailable": "Kontynuuj"
+        },
+        "identity": {
+          "title": "Tożsamość",
+          "help": "Nazwij webhook i wybierz bezpieczny dla URL slug używany w jego endpoincie odbiorczym.",
+          "name": "Nazwa",
+          "namePlaceholder": "Krytyczne alerty RMM",
+          "slug": "Slug",
+          "slugPlaceholder": "krytyczne-alerty-rmm",
+          "description": "Opis",
+          "descriptionPlaceholder": "Opcjonalne notatki o systemie źródłowym i payloadzie."
         }
       },
       "stats": {

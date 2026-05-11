@@ -81,7 +81,7 @@
 
   { "id": "F080", "description": "Settings page refactor: tabbed `AdminWebhooksSetup` (Inbound | Outbound)", "implemented": true, "prdRefs": ["UX / UI Notes"] },
   { "id": "F081", "description": "Inbound webhooks list view (table mirrors outbound shape)", "implemented": true, "prdRefs": ["UX / UI Notes"] },
-  { "id": "F082", "description": "Inbound webhook create/edit dialog with Identity section", "implemented": false, "prdRefs": ["UX / UI Notes"] },
+  { "id": "F082", "description": "Inbound webhook create/edit dialog with Identity section", "implemented": true, "prdRefs": ["UX / UI Notes"] },
   { "id": "F083", "description": "Auth section: dropdown (HMAC/Bearer/IP/Path) + conditional sub-form", "implemented": false, "prdRefs": ["UX / UI Notes"] },
   { "id": "F084", "description": "Auth secret one-time-display modal after creation", "implemented": false, "prdRefs": ["Security / Permissions"] },
   { "id": "F085", "description": "Idempotency section (key source dropdown + value input)", "implemented": false, "prdRefs": ["UX / UI Notes"] },

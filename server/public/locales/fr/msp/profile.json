@@ -223,6 +223,22 @@
         },
         "messages": {
           "loadFailed": "Impossible de charger les webhooks entrants."
+        },
+        "dialog": {
+          "createTitle": "Créer un webhook entrant",
+          "editTitle": "Modifier le webhook entrant",
+          "cancel": "Annuler",
+          "saveUnavailable": "Continuer"
+        },
+        "identity": {
+          "title": "Identité",
+          "help": "Nommez le webhook et choisissez le slug compatible URL utilisé dans son endpoint de réception.",
+          "name": "Nom",
+          "namePlaceholder": "Alertes RMM critiques",
+          "slug": "Slug",
+          "slugPlaceholder": "alertes-rmm-critiques",
+          "description": "Description",
+          "descriptionPlaceholder": "Notes facultatives sur le système source et le payload."
         }
       },
       "stats": {

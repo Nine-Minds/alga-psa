@@ -223,6 +223,22 @@
         },
         "messages": {
           "loadFailed": "11111"
+        },
+        "dialog": {
+          "createTitle": "11111",
+          "editTitle": "11111",
+          "cancel": "11111",
+          "saveUnavailable": "11111"
+        },
+        "identity": {
+          "title": "11111",
+          "help": "11111",
+          "name": "11111",
+          "namePlaceholder": "11111",
+          "slug": "11111",
+          "slugPlaceholder": "11111",
+          "description": "11111",
+          "descriptionPlaceholder": "11111"
         }
       },
       "stats": {
