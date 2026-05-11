@@ -30,7 +30,7 @@
   { "id": "F035", "description": "Auth verifier: IP allowlist (CIDR matching)", "implemented": false, "prdRefs": ["Security / Permissions"] },
   { "id": "F036", "description": "Auth verifier: Shared-secret-in-path token", "implemented": false, "prdRefs": ["Security / Permissions"] },
   { "id": "F037", "description": "Unified 401 response for unknown slug + bad auth (no enumeration)", "implemented": false, "prdRefs": ["Security / Permissions"] },
-  { "id": "F038", "description": "Idempotency key extractor: header source", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F038", "description": "Idempotency key extractor: header source", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F039", "description": "Idempotency key extractor: JSONata expression on body", "implemented": false, "prdRefs": ["Functional Requirements"] },
   { "id": "F040", "description": "Dedup lookup within configurable window; return 200 no-op for duplicates", "implemented": false, "prdRefs": ["Functional Requirements"] },
   { "id": "F041", "description": "Delivery row persisted before dispatch (so failures are visible)", "implemented": false, "prdRefs": ["Functional Requirements"] },
