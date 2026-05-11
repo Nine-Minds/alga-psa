@@ -43,4 +43,22 @@ describe('inbound webhook migrations', () => {
     expect(inboundWebhooksMigration).not.toContain("table.unique(['slug']");
     expect(inboundWebhooksMigration).not.toContain('UNIQUE (slug)');
   });
+
+  it('T005: inbound webhook migrations are idempotent when re-run', () => {
+    expect(inboundWebhooksMigration).toContain("await knex.schema.hasTable('inbound_webhooks')");
+    expect(inboundWebhooksMigration).toContain('if (!tableExists) {');
+    expect(inboundWebhooksMigration).toContain('FROM pg_dist_partition');
+    expect(inboundWebhooksMigration).toContain('if (!alreadyDistributed.rows?.[0]?.is_distributed)');
+    expect(inboundWebhooksMigration).toContain("dropTableIfExists('inbound_webhooks')");
+
+    expect(deliveriesMigration).toContain("await knex.schema.hasTable('inbound_webhook_deliveries')");
+    expect(deliveriesMigration).toContain('if (!tableExists) {');
+    expect(deliveriesMigration).toContain('CREATE INDEX IF NOT EXISTS inbound_webhook_deliveries_webhook_received_idx');
+    expect(deliveriesMigration).toContain('CREATE INDEX IF NOT EXISTS inbound_webhook_deliveries_status_received_idx');
+    expect(deliveriesMigration).toContain('CREATE INDEX IF NOT EXISTS inbound_webhook_deliveries_idempotency_idx');
+    expect(deliveriesMigration).toContain('CREATE INDEX IF NOT EXISTS inbound_webhook_deliveries_replay_idx');
+    expect(deliveriesMigration).toContain('FROM pg_dist_partition');
+    expect(deliveriesMigration).toContain('if (!alreadyDistributed.rows?.[0]?.is_distributed)');
+    expect(deliveriesMigration).toContain("dropTableIfExists('inbound_webhook_deliveries')");
+  });
 });
