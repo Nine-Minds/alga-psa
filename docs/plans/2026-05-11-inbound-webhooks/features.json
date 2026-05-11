@@ -65,7 +65,7 @@
 
   { "id": "F1060", "description": "Time entry action: `createTimeEntry`", "implemented": true, "prdRefs": ["Functional Requirements"] },
 
-  { "id": "F1070", "description": "Project task action: `createProjectTask`", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F1070", "description": "Project task action: `createProjectTask`", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F1071", "description": "Project task action: `updateProjectTaskStatusByExternalId`", "implemented": false, "prdRefs": ["Functional Requirements"] },
 
   { "id": "F1080", "description": "Cross-cutting action: `addTagToEntityByExternalId` (accepts target entity_type + external_id + tag value)", "implemented": false, "prdRefs": ["Functional Requirements"] },

@@ -10,6 +10,7 @@ export async function bootstrapInboundWebhookActions(): Promise<void> {
   await import('@alga-psa/assets/actions/inboundActions');
   await import('@alga-psa/billing/actions/inboundActions');
   await import('@alga-psa/scheduling/actions/inboundActions');
+  await import('@alga-psa/projects/actions/inboundActions');
   bootstrapped = true;
 }
 
