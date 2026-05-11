@@ -232,6 +232,51 @@ describe('inbound webhook request processor', () => {
     );
   });
 
+  it('T1012: records created ticket id in the delivery handler outcome', async () => {
+    dispatchInboundWebhookHandler.mockResolvedValue({
+      action: 'createTicket',
+      entity_type: 'ticket',
+      entity_id: 'ticket-1',
+      metadata: {
+        ticket_number: 'T-100',
+      },
+    });
+    const body = JSON.stringify({ alert: { message: 'Disk full' } });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-signature': `sha256=${hmacSignature('top-secret', body)}`,
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    expect(response.status).toBe(200);
+    expect(updateInboundDeliveryOutcome).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        deliveryId: 'delivery-1',
+        dispatchStatus: 'dispatched',
+        handlerOutcome: {
+          action: 'createTicket',
+          entity_type: 'ticket',
+          entity_id: 'ticket-1',
+          metadata: {
+            ticket_number: 'T-100',
+          },
+        },
+      }),
+    );
+  });
+
   it('T060: persists a verified delivery row before dispatch', async () => {
     const body = JSON.stringify({ alert: { message: 'Disk full' } });
     const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
