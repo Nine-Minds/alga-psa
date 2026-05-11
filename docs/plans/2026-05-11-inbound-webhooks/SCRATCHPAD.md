@@ -238,6 +238,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T162 implemented** in `server/src/test/unit/inboundWebhooks/deliveryPersistence.test.ts`. Replay persistence coverage now verifies `createInboundDelivery` writes `is_replay=true` and `replayed_from=<original delivery>` when replay callers create the linked delivery row.
 - (2026-05-11) **T163 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookReplay.source.contract.test.ts`. Replay source coverage now verifies `replayInboundDelivery` fetches the current active webhook config by tenant/webhook ID and passes that current row into `dispatchAndRecordOutcome`, so mapping/config changes are reflected on replay.
 - (2026-05-11) **T164 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookReplay.source.contract.test.ts`. Replay linkage source coverage now verifies `replayInboundDelivery` creates the replay row with `isReplay: true`, `replayedFrom: original.delivery_id`, and returns the newly fetched replay delivery.
+- (2026-05-11) **T165 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Synthetic-test UI coverage now verifies the dialog exposes custom JSON body and header editors, parses both, calls `sendInboundWebhookTest` for in-process dispatch, and opens the resulting delivery detail.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -822,6 +823,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T164:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookReplay.source.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T165:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References

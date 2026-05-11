@@ -263,4 +263,17 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain("['responseBody', selectedInboundDelivery.responseBody]");
     expect(adminWebhooksSource).toContain('formatJsonForDisplay(value)');
   });
+
+  it('T165: synthetic test dialog accepts custom body and headers for in-process dispatch', () => {
+    expect(adminWebhooksSource).toContain('sendInboundWebhookTest');
+    expect(adminWebhooksSource).toContain('const [testBodyText, setTestBodyText]');
+    expect(adminWebhooksSource).toContain('const [testHeadersText, setTestHeadersText]');
+    expect(adminWebhooksSource).toContain('const handleSendInboundTest = useCallback(async () => {');
+    expect(adminWebhooksSource).toContain('const body = testBodyText.trim() ? JSON.parse(testBodyText) : {};');
+    expect(adminWebhooksSource).toContain('parseCustomHeaders(');
+    expect(adminWebhooksSource).toContain('sendInboundWebhookTest(identityForm.inboundWebhookId, { body, headers })');
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-test-body"');
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-test-headers"');
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-test-send"');
+  });
 });
