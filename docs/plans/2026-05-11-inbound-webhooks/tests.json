@@ -138,7 +138,7 @@
   { "id": "T161", "description": "Delivery detail drawer shows request body, headers, response, latency", "implemented": true, "featureIds": ["F094"] },
   { "id": "T162", "description": "Replay button creates new delivery row with is_replay=true", "implemented": true, "featureIds": ["F020", "F095"] },
   { "id": "T163", "description": "Replay uses current config (mapping changes reflected)", "implemented": true, "featureIds": ["F020"] },
-  { "id": "T164", "description": "Replayed delivery links back to original via replayed_from", "implemented": false, "featureIds": ["F020"] },
+  { "id": "T164", "description": "Replayed delivery links back to original via replayed_from", "implemented": true, "featureIds": ["F020"] },
   { "id": "T165", "description": "Synthetic test dialog accepts custom body + headers and dispatches in-process", "implemented": false, "featureIds": ["F023", "F096"] },
 
   { "id": "T170", "description": "No hardcoded English strings in new UI components (i18n scan passes)", "implemented": false, "featureIds": ["F097"] },

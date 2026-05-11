@@ -17,4 +17,11 @@ describe('inbound webhook replay source contract', () => {
     expect(inboundWebhookActionsSource).toContain('webhook,');
     expect(inboundWebhookActionsSource).toContain('deliveryId: replayDeliveryId');
   });
+
+  it('T164: replayed deliveries link back to the original delivery', () => {
+    expect(inboundWebhookActionsSource).toContain('const { deliveryId: replayDeliveryId } = await createInboundDelivery(knex, {');
+    expect(inboundWebhookActionsSource).toContain('isReplay: true');
+    expect(inboundWebhookActionsSource).toContain('replayedFrom: original.delivery_id');
+    expect(inboundWebhookActionsSource).toContain('return fetchInboundDeliveryById(knex, tenant, replayDeliveryId)');
+  });
 });
