@@ -139,4 +139,15 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain("t('security.webhooks.inbound.handler.directActionTitle')");
     expect(adminWebhooksSource).toContain("t('security.webhooks.inbound.handler.workflowTitle')");
   });
+
+  it('T141: action dropdown lists registered inbound actions', () => {
+    expect(adminWebhooksSource).toContain('listInboundWebhookActions');
+    expect(adminWebhooksSource).toContain('const [inboundActions, setInboundActions]');
+    expect(adminWebhooksSource).toContain('setInboundActions(actionDefinitions)');
+    expect(adminWebhooksSource).toContain('const inboundActionOptions = useMemo(() => inboundActions.map((action) => ({');
+    expect(adminWebhooksSource).toContain('value: action.name');
+    expect(adminWebhooksSource).toContain('label: `${action.entityType}: ${action.displayName}`');
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-direct-action"');
+    expect(adminWebhooksSource).toContain('options={inboundActionOptions}');
+  });
 });
