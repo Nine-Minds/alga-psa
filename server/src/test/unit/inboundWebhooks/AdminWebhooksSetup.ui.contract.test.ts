@@ -291,4 +291,18 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
 
     expect(jsxTextLiterals).toEqual([]);
   });
+
+  it('T171: inbound interactive elements use kebab-case id attributes', () => {
+    const staticInboundIds = Array.from(inboundWebhooksSource.matchAll(/id="(inbound-[^"]+)"/g))
+      .map((match) => match[1]);
+
+    expect(staticInboundIds.length).toBeGreaterThan(20);
+    for (const id of staticInboundIds) {
+      expect(id).toMatch(/^inbound-[a-z0-9]+(?:-[a-z0-9]+)*$/);
+    }
+
+    expect(inboundWebhooksSource).toContain('id={`inbound-webhook-mapping-${field.name}`}');
+    expect(inboundWebhooksSource).toContain('id={`inbound-webhook-sample-path-${option.path.replace(/[^a-zA-Z0-9_-]+/g, \'-\')}`}');
+    expect(inboundWebhooksSource).toContain('id={`inbound-webhook-delivery-view-${delivery.deliveryId}`}');
+  });
 });
