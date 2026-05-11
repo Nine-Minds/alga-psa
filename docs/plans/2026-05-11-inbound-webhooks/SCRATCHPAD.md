@@ -243,6 +243,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T171 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. UI reflection coverage now scans inbound static IDs for kebab-case form and verifies dynamic mapping, sample-path, and delivery-view IDs are generated from kebab-case prefixes.
 - (2026-05-11) **T180 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Settings feature-flag coverage now verifies `inbound_webhooks_enabled` defaults off, the active tab falls back to outbound if disabled, and inbound tab/content are only rendered behind the flag.
 - (2026-05-11) **T181 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Receiver feature-flag coverage now verifies a disabled `inbound_webhooks_enabled` flag returns a bodyless 404 after tenant resolution and before tenant context, webhook lookup, delivery persistence, or dispatch.
+- (2026-05-11) **T182 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. The receiver now has tenant-specific flag coverage: tenant A can proceed through `runWithTenant` and dispatch while tenant B, in the same mocked scenario, receives a bodyless 404 and never reaches lookup, delivery creation, or dispatch.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -841,6 +842,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T181:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T182:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 

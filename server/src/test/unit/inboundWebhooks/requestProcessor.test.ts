@@ -260,6 +260,63 @@ describe('inbound webhook request processor', () => {
     expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
   });
 
+  it('T182: evaluates the inbound webhooks feature flag per resolved tenant', async () => {
+    resolveInboundWebhookTenantSlug.mockImplementation(async (tenantSlug: string) =>
+      tenantSlug === 'tenant-b-slug' ? 'tenant-b' : 'tenant-a',
+    );
+    isInboundWebhooksEnabled.mockImplementation(async ({ tenantId }: { tenantId: string }) => tenantId === 'tenant-a');
+
+    const enabledBody = JSON.stringify({ alert: { message: 'Tenant A alert' } });
+    const enabledRequest = new NextRequest('http://localhost/api/inbound/tenant-a-slug/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-signature': `sha256=${hmacSignature('top-secret', enabledBody)}`,
+      },
+      body: enabledBody,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const enabledResponse = await processInboundWebhookRequest({
+      request: enabledRequest,
+      tenantSlug: 'tenant-a-slug',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    await expect(enabledResponse.json()).resolves.toEqual({ delivery_id: 'delivery-1' });
+    expect(enabledResponse.status).toBe(200);
+    expect(isInboundWebhooksEnabled).toHaveBeenCalledWith({ tenantId: 'tenant-a' });
+    expect(runWithTenant).toHaveBeenCalledWith('tenant-a', expect.any(Function));
+
+    runWithTenant.mockClear();
+    lookupInboundWebhookBySlug.mockClear();
+    createInboundDelivery.mockClear();
+    dispatchInboundWebhookHandler.mockClear();
+
+    const disabledRequest = new NextRequest('http://localhost/api/inbound/tenant-b-slug/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-signature': 'sha256=anything',
+      },
+      body: JSON.stringify({ alert: { message: 'Tenant B alert' } }),
+    });
+
+    const disabledResponse = await processInboundWebhookRequest({
+      request: disabledRequest,
+      tenantSlug: 'tenant-b-slug',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    await expect(disabledResponse.text()).resolves.toBe('');
+    expect(disabledResponse.status).toBe(404);
+    expect(isInboundWebhooksEnabled).toHaveBeenCalledWith({ tenantId: 'tenant-b' });
+    expect(runWithTenant).not.toHaveBeenCalled();
+    expect(lookupInboundWebhookBySlug).not.toHaveBeenCalled();
+    expect(createInboundDelivery).not.toHaveBeenCalled();
+    expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
+  });
+
   it('T1012: records created ticket id in the delivery handler outcome', async () => {
     dispatchInboundWebhookHandler.mockResolvedValue({
       action: 'createTicket',
