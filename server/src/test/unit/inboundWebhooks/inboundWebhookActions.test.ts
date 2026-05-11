@@ -170,6 +170,66 @@ function makeDuplicateSlugKnex(collisionRow: Record<string, unknown>) {
   return { knex, builder };
 }
 
+function makeCreateKnex(existingRows: InboundWebhookRowFixture[]) {
+  const now = new Date('2026-05-11T00:00:00.000Z');
+  const collisionWhereCalls: Record<string, unknown>[] = [];
+  let insertedPayload: Record<string, unknown> | null = null;
+
+  const collisionBuilder: any = {
+    where: vi.fn((criteria: Record<string, unknown>) => {
+      collisionWhereCalls.push(criteria);
+      return collisionBuilder;
+    }),
+    modify: vi.fn((callback: (query: any) => void) => {
+      callback(collisionBuilder);
+      return collisionBuilder;
+    }),
+    andWhereNot: vi.fn(() => collisionBuilder),
+    first: vi.fn(async () => {
+      const criteria = Object.assign({}, ...collisionWhereCalls);
+      return (
+        existingRows.find((row) =>
+          Object.entries(criteria).every(([key, value]) => row[key as keyof InboundWebhookRowFixture] === value),
+        ) ?? null
+      );
+    }),
+  };
+
+  const insertBuilder: any = {
+    insert: vi.fn((payload: Record<string, unknown>) => {
+      insertedPayload = payload;
+      return insertBuilder;
+    }),
+    returning: vi.fn(async () => {
+      if (!insertedPayload) {
+        throw new Error('insert payload missing');
+      }
+
+      return [
+        inboundWebhookRow({
+          ...(insertedPayload as Partial<InboundWebhookRowFixture>),
+          created_at: now,
+          updated_at: now,
+        }),
+      ];
+    }),
+  };
+
+  const knex = vi.fn((table: string) => {
+    if (table !== 'inbound_webhooks') {
+      throw new Error(`Unexpected table ${table}`);
+    }
+
+    return knex.mock.calls.length === 1 ? collisionBuilder : insertBuilder;
+  });
+
+  knex.fn = {
+    now: vi.fn(() => now),
+  };
+
+  return { knex, collisionBuilder, insertBuilder, getInsertedPayload: () => insertedPayload };
+}
+
 describe('inbound webhook server actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -210,5 +270,28 @@ describe('inbound webhook server actions', () => {
     expect(builder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', slug: 'rmm-alerts' });
     expect(setTenantSecret).not.toHaveBeenCalled();
     expect(builder.insert).not.toHaveBeenCalled();
+  });
+
+  it('T022: upsertInboundWebhook allows the same slug across different tenants', async () => {
+    const { knex, collisionBuilder, insertBuilder, getInsertedPayload } = makeCreateKnex([
+      inboundWebhookRow({ tenant: 'tenant-b', inbound_webhook_id: 'tenant-b-webhook', slug: 'rmm-alerts' }),
+    ]);
+    createTenantKnex.mockResolvedValue({ knex });
+
+    const { upsertInboundWebhook } = await import('@/lib/actions/inboundWebhookActions');
+    const result = await upsertInboundWebhook(validUpsertInput());
+
+    expect(collisionBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', slug: 'rmm-alerts' });
+    expect(insertBuilder.insert).toHaveBeenCalledTimes(1);
+    expect(getInsertedPayload()).toMatchObject({
+      tenant: 'tenant-a',
+      slug: 'rmm-alerts',
+      auth_type: 'hmac_sha256',
+      handler_type: 'direct_action',
+    });
+    expect(result.webhook).toMatchObject({
+      tenant: 'tenant-a',
+      slug: 'rmm-alerts',
+    });
   });
 });

@@ -134,6 +134,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T014 implemented** in `server/src/test/unit/inboundWebhooks/schemas.test.ts`. Zod schema test verifies webhook slugs reject uppercase, spaces, punctuation, and other URL-unsafe characters via the URL-safe lowercase slug rule.
 - (2026-05-11) **T020 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Mocked `withAuth`, RBAC, and Knex verify `listInboundWebhooks` creates a tenant-scoped Knex instance, checks `inbound_webhook:read`, applies `where({ tenant })`, and maps only rows for the current tenant.
 - (2026-05-11) **T021 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Mocked upsert path verifies `upsertInboundWebhook` checks `(tenant, slug)` for collisions, rejects duplicate slugs in the same tenant, and stops before writing secrets or inserting rows.
+- (2026-05-11) **T022 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Mocked create path verifies `upsertInboundWebhook` scopes slug collision checks by current tenant, allowing a webhook slug already used by another tenant to be inserted for `tenant-a`.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -405,6 +406,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T021:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T022:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
