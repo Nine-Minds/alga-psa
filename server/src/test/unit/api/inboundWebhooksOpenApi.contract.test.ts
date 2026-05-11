@@ -75,4 +75,59 @@ describe('inbound webhook OpenAPI contracts', () => {
       }
     }
   });
+
+  it('documents action discovery response as inbound action definitions with target fields', () => {
+    const document = generateBaseDocument({
+      title: 'Alga PSA API',
+      version: '0.1.0-test',
+      description: 'Test document',
+      edition: 'ce',
+    });
+
+    const operation = document.paths?.['/api/v1/inbound-webhooks/actions']?.get as
+      | Record<string, any>
+      | undefined;
+    const actionSchema = document.components?.schemas?.InboundActionDefinition as Record<string, any> | undefined;
+    const targetFieldSchema = document.components?.schemas?.InboundActionTargetField as Record<string, any> | undefined;
+
+    expect(operation).toBeTruthy();
+    expect(operation?.extensions?.['x-rbac-resource']).toBe('inbound_webhook');
+    expect(operation?.extensions?.['x-rbac-action']).toBe('read');
+    expect(operation?.responses?.['200']?.content?.['application/json']?.schema).toMatchObject({
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/InboundActionDefinition' },
+        },
+      },
+    });
+
+    expect(actionSchema).toMatchObject({
+      type: 'object',
+      required: expect.arrayContaining(['name', 'entityType', 'displayName', 'description', 'targetFields']),
+      properties: {
+        name: { type: 'string' },
+        entityType: { type: 'string' },
+        targetFields: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/InboundActionTargetField' },
+        },
+      },
+    });
+    expect(targetFieldSchema).toMatchObject({
+      type: 'object',
+      required: expect.arrayContaining(['name', 'type', 'required', 'description']),
+      properties: {
+        type: {
+          type: 'string',
+          enum: expect.arrayContaining(['string', 'int', 'enum', 'ref']),
+        },
+        enumValues: {
+          type: 'array',
+          items: { type: 'string' },
+        },
+      },
+    });
+  });
 });
