@@ -254,6 +254,54 @@ describe('inbound webhook request processor', () => {
     );
   });
 
+  it('T062: records dispatch failures on the existing delivery row', async () => {
+    dispatchInboundWebhookHandler.mockRejectedValue(new Error('Required field title is missing'));
+    const body = JSON.stringify({ alert: { message: 'Disk full' } });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-signature': `sha256=${hmacSignature('top-secret', body)}`,
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    await expect(response.json()).resolves.toEqual({
+      delivery_id: 'delivery-1',
+      error: 'dispatch_failed',
+    });
+    expect(response.status).toBe(500);
+    expect(createInboundDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        inboundWebhookId: 'webhook-1',
+        authStatus: 'verified',
+      }),
+    );
+    expect(updateInboundDeliveryOutcome).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        deliveryId: 'delivery-1',
+        dispatchStatus: 'failed',
+        handlerOutcome: { error: 'Required field title is missing' },
+        responseStatus: 500,
+        responseBody: {
+          delivery_id: 'delivery-1',
+          error: 'dispatch_failed',
+        },
+      }),
+    );
+  });
+
   it('T031: rejects an invalid HMAC with 401 and logs only rejected-auth metadata', async () => {
     const body = JSON.stringify({ alert: { message: 'Disk full' } });
     const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
