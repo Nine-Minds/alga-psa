@@ -1,5 +1,5 @@
 [
-  { "id": "T001", "description": "Migration creates `inbound_webhooks` with tenant in composite PK", "implemented": false, "featureIds": ["F001"] },
+  { "id": "T001", "description": "Migration creates `inbound_webhooks` with tenant in composite PK", "implemented": true, "featureIds": ["F001"] },
   { "id": "T002", "description": "Migration creates `inbound_webhook_deliveries` with tenant in composite PK", "implemented": false, "featureIds": ["F002"] },
   { "id": "T003", "description": "Slug uniqueness enforced per-tenant, not globally", "implemented": false, "featureIds": ["F001", "F014"] },
   { "id": "T004", "description": "`lookupAlgaEntityByExternalId` resolves via `tenant_external_entity_mappings` and respects `integration_type=webhookSlug` scoping", "implemented": false, "featureIds": ["F004"] },
