@@ -365,6 +365,15 @@
             "responseBody": "11111",
             "handlerOutcome": "11111"
           }
+        },
+        "test": {
+          "openButton": "11111",
+          "title": "11111",
+          "body": "11111",
+          "headers": "11111",
+          "cancel": "11111",
+          "send": "11111",
+          "sendFailed": "11111"
         }
       },
       "stats": {

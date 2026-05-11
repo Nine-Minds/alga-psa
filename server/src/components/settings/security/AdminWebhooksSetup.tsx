@@ -49,6 +49,7 @@ import {
   listInboundWorkflowOptions,
   listInboundWebhooks,
   replayInboundDelivery,
+  sendInboundWebhookTest,
   setInboundWebhookActiveState,
   type InboundActionDefinitionView,
   type InboundWorkflowOptionView,
@@ -353,6 +354,9 @@ function InboundWebhooksListView() {
   } | null>(null);
   const [inboundDeliveryPageNumber, setInboundDeliveryPageNumber] = useState(1);
   const [selectedInboundDelivery, setSelectedInboundDelivery] = useState<InboundWebhookDelivery | null>(null);
+  const [testDialogOpen, setTestDialogOpen] = useState(false);
+  const [testBodyText, setTestBodyText] = useState('{\n  "id": "sample-1"\n}');
+  const [testHeadersText, setTestHeadersText] = useState('Content-Type: application/json');
   const [lastDeliveries, setLastDeliveries] = useState<Record<string, InboundWebhookDelivery | null>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -756,6 +760,28 @@ function InboundWebhooksListView() {
       setError(replayError instanceof Error ? replayError.message : t('security.webhooks.inbound.deliveryDetail.replayFailed'));
     }
   }, [identityForm.inboundWebhookId, inboundDeliveryPageNumber, loadInboundDialogDeliveries, t]);
+
+  const handleSendInboundTest = useCallback(async () => {
+    if (!identityForm.inboundWebhookId) {
+      return;
+    }
+
+    try {
+      const body = testBodyText.trim() ? JSON.parse(testBodyText) : {};
+      const headers = parseCustomHeaders(
+        testHeadersText,
+        (line) => t('security.webhooks.messages.invalidHeaderLine', { line }),
+      );
+      const delivery = await sendInboundWebhookTest(identityForm.inboundWebhookId, { body, headers });
+      setSelectedInboundDelivery(delivery);
+      setTestDialogOpen(false);
+      await loadInboundDialogDeliveries(identityForm.inboundWebhookId, inboundDeliveryPageNumber);
+      setError(null);
+    } catch (testError) {
+      console.error('Failed to send inbound webhook test:', testError);
+      setError(testError instanceof Error ? testError.message : t('security.webhooks.inbound.test.sendFailed'));
+    }
+  }, [identityForm.inboundWebhookId, inboundDeliveryPageNumber, loadInboundDialogDeliveries, t, testBodyText, testHeadersText]);
 
   return (
     <div className="space-y-6">
@@ -1162,6 +1188,14 @@ function InboundWebhooksListView() {
                 >
                   {t('security.webhooks.inbound.sample.captureButton')}
                 </Button>
+                <Button
+                  id="inbound-webhook-open-test"
+                  variant="outline"
+                  disabled={!identityForm.inboundWebhookId}
+                  onClick={() => setTestDialogOpen(true)}
+                >
+                  {t('security.webhooks.inbound.test.openButton')}
+                </Button>
               </div>
             </div>
             {identityForm.handlerType === 'direct_action' ? (
@@ -1448,6 +1482,47 @@ function InboundWebhooksListView() {
           </div>
         ) : null}
       </Drawer>
+
+      <Dialog
+        id="inbound-webhook-test"
+        isOpen={testDialogOpen}
+        onClose={() => setTestDialogOpen(false)}
+        title={t('security.webhooks.inbound.test.title')}
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            <TextArea
+              id="inbound-webhook-test-body"
+              label={t('security.webhooks.inbound.test.body')}
+              value={testBodyText}
+              onChange={(event) => setTestBodyText(event.target.value)}
+              className="font-mono text-sm"
+            />
+            <TextArea
+              id="inbound-webhook-test-headers"
+              label={t('security.webhooks.inbound.test.headers')}
+              value={testHeadersText}
+              onChange={(event) => setTestHeadersText(event.target.value)}
+              className="font-mono text-sm"
+            />
+          </div>
+        </DialogContent>
+        <DialogFooter>
+          <Button
+            id="inbound-webhook-test-cancel"
+            variant="ghost"
+            onClick={() => setTestDialogOpen(false)}
+          >
+            {t('security.webhooks.inbound.test.cancel')}
+          </Button>
+          <Button
+            id="inbound-webhook-test-send"
+            onClick={() => void handleSendInboundTest()}
+          >
+            {t('security.webhooks.inbound.test.send')}
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   );
 }

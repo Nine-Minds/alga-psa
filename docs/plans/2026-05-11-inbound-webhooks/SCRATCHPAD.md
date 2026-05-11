@@ -89,6 +89,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F093 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. Saved inbound webhook dialogs now load `listInboundDeliveries({ inboundWebhookId })` and render a paginated delivery table with received time, dispatch status, response status, and duration.
 - (2026-05-11) **F094 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. Delivery rows now expose a View action that opens a right-side drawer with request headers/body, response body/status, duration, dispatch status, and handler outcome/error details.
 - (2026-05-11) **F095 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. The delivery detail drawer now includes a Replay action that calls `replayInboundDelivery`, updates the drawer to the replayed delivery, and refreshes the paginated delivery log for the current webhook.
+- (2026-05-11) **F096 implemented** in `server/src/components/settings/security/AdminWebhooksSetup.tsx`. Saved webhook dialogs now include a Send Test flow with JSON body and header-line editors; it parses the inputs, calls `sendInboundWebhookTest`, refreshes deliveries, and opens the resulting delivery detail.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -256,6 +257,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Type check after F094:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F095:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F096:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References

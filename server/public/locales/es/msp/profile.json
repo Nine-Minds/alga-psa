@@ -365,6 +365,15 @@
             "responseBody": "Response body",
             "handlerOutcome": "Handler outcome"
           }
+        },
+        "test": {
+          "openButton": "Send test",
+          "title": "Send Test Request",
+          "body": "Request Body JSON",
+          "headers": "Headers",
+          "cancel": "Cancel",
+          "send": "Send Test",
+          "sendFailed": "Failed to send inbound webhook test."
         }
       },
       "stats": {
