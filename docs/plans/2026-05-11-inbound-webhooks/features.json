@@ -51,7 +51,7 @@
   { "id": "F1012", "description": "Ticket action: `addTicketCommentByExternalId`", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F1013", "description": "Ticket action: `changeTicketStatusByExternalId`", "implemented": true, "prdRefs": ["Functional Requirements"] },
 
-  { "id": "F1020", "description": "Client action: `upsertClientByExternalId`", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F1020", "description": "Client action: `upsertClientByExternalId`", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F1021", "description": "Client action: `setClientActiveByExternalId`", "implemented": false, "prdRefs": ["Functional Requirements"] },
 
   { "id": "F1030", "description": "Contact action: `upsertContactByExternalId` (uses `client_users` table)", "implemented": false, "prdRefs": ["Functional Requirements"] },
