@@ -67,6 +67,16 @@ describe('client inbound webhook actions', () => {
       callback(trx),
     );
     mocks.lookupAlgaEntityByExternalId.mockResolvedValue(null);
+    mocks.createContact.mockResolvedValue({
+      contact_name_id: 'contact-1',
+      email: 'jane@example.com',
+      client_id: 'client-1',
+    });
+    mocks.updateContact.mockResolvedValue({
+      contact_name_id: 'contact-1',
+      email: 'jane.updated@example.com',
+      client_id: 'client-1',
+    });
   });
 
   it('T1020: upsertClientByExternalId creates a client when mapping is absent and writes a mapping row', async () => {
@@ -250,5 +260,125 @@ describe('client inbound webhook actions', () => {
         is_inactive: true,
       }),
     );
+  });
+
+  it('T1030: upsertContactByExternalId creates and updates contact records', async () => {
+    const { getAction } = await loadClientInboundActions();
+    const action = getAction('upsertContactByExternalId');
+
+    await expect(
+      action?.handle(
+        {
+          tenant: 'tenant-a',
+          webhookSlug: 'rmm-alerts',
+          deliveryId: 'delivery-1',
+          headers: {},
+          rawBody: { contact: { id: 'contact-42', name: 'Jane Admin' } },
+          idempotencyKey: 'contact-42',
+        },
+        {
+          external_id: 'contact-42',
+          full_name: 'Jane Admin',
+          email: 'jane@example.com',
+          client_id: 'client-1',
+          role: 'IT Manager',
+          notes: 'Primary alert contact',
+          is_inactive: false,
+          phone: '+15555550100',
+        },
+      ),
+    ).resolves.toEqual({
+      success: true,
+      entityType: 'contact',
+      entityId: 'contact-1',
+      externalId: 'contact-42',
+      metadata: {
+        email: 'jane@example.com',
+        client_id: 'client-1',
+      },
+    });
+
+    expect(mocks.createContact).toHaveBeenCalledWith(
+      {
+        full_name: 'Jane Admin',
+        email: 'jane@example.com',
+        client_id: 'client-1',
+        role: 'IT Manager',
+        notes: 'Primary alert contact',
+        is_inactive: false,
+        phone_numbers: [
+          {
+            phone_number: '+15555550100',
+            canonical_type: 'work',
+            is_default: true,
+            display_order: 0,
+          },
+        ],
+      },
+      'tenant-a',
+      trx,
+    );
+    expect(mocks.writeEntityMapping).toHaveBeenCalledWith(
+      'tenant-a',
+      'rmm-alerts',
+      'contact',
+      'contact-1',
+      'contact-42',
+      {
+        knex: trx,
+        metadata: {
+          source: 'inbound_webhook',
+          delivery_id: 'delivery-1',
+        },
+      },
+    );
+
+    mocks.lookupAlgaEntityByExternalId.mockResolvedValue({
+      algaEntityId: 'contact-1',
+      externalEntityId: 'contact-42',
+      metadata: {},
+    });
+
+    await expect(
+      action?.handle(
+        {
+          tenant: 'tenant-a',
+          webhookSlug: 'rmm-alerts',
+          deliveryId: 'delivery-2',
+          headers: {},
+          rawBody: { contact: { id: 'contact-42', name: 'Jane Updated' } },
+          idempotencyKey: 'contact-42',
+        },
+        {
+          external_id: 'contact-42',
+          full_name: 'Jane Updated',
+          email: 'jane.updated@example.com',
+          client_id: 'client-1',
+          role: 'Operations',
+        },
+      ),
+    ).resolves.toEqual({
+      success: true,
+      entityType: 'contact',
+      entityId: 'contact-1',
+      externalId: 'contact-42',
+      metadata: {
+        email: 'jane.updated@example.com',
+        client_id: 'client-1',
+      },
+    });
+
+    expect(mocks.updateContact).toHaveBeenCalledWith(
+      'contact-1',
+      expect.objectContaining({
+        full_name: 'Jane Updated',
+        email: 'jane.updated@example.com',
+        client_id: 'client-1',
+        role: 'Operations',
+      }),
+      'tenant-a',
+      trx,
+    );
+    expect(mocks.writeEntityMapping).toHaveBeenCalledTimes(1);
   });
 });
