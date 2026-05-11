@@ -15,6 +15,7 @@ export interface InboundWebhookMappingFieldProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  onFocus?: () => void;
 }
 
 export function InboundWebhookMappingField({
@@ -26,6 +27,7 @@ export function InboundWebhookMappingField({
   placeholder,
   className,
   disabled = false,
+  onFocus,
 }: InboundWebhookMappingFieldProps) {
   const { t } = useTranslation('msp/settings');
   const fieldOptions = useMemo<SelectOption[]>(
@@ -48,6 +50,7 @@ export function InboundWebhookMappingField({
       placeholder={placeholder ?? t('webhooks.inbound.mappingPlaceholder')}
       className={className}
       disabled={disabled}
+      onFocus={onFocus}
     />
   );
 }

@@ -311,6 +311,12 @@
           "sampleAvailable": "Sample payload captured.",
           "noSample": "No sample captured yet.",
           "captureFailed": "Failed to enable sample capture."
+        },
+        "sampleTree": {
+          "title": "Sample paths",
+          "help": "Click a path to insert it into {{field}}.",
+          "focusHelp": "Focus a mapping field, then click a path to insert it.",
+          "empty": "Capture a sample payload to browse fields."
         }
       },
       "stats": {

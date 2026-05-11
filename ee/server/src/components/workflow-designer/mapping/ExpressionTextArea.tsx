@@ -50,6 +50,8 @@ export interface ExpressionTextAreaProps {
   className?: string;
   /** Whether the input is disabled */
   disabled?: boolean;
+  /** Callback when the textarea receives focus */
+  onFocus?: () => void;
 }
 
 /**
@@ -106,7 +108,8 @@ export const ExpressionTextArea: React.FC<ExpressionTextAreaProps> = ({
   rows = 2,
   placeholder,
   className = '',
-  disabled = false
+  disabled = false,
+  onFocus
 }) => {
   const { t } = useTranslation('msp/workflows');
   const resolvedPlaceholder = placeholder ?? t('expressionEditor.textAreaPlaceholder', { defaultValue: 'Enter JSONata expression...' });
@@ -134,6 +137,11 @@ export const ExpressionTextArea: React.FC<ExpressionTextAreaProps> = ({
     autocompleteHandlers.handleKeyDown(e);
   }, [autocompleteHandlers]);
 
+  const handleFocus = useCallback(() => {
+    autocompleteHandlers.handleFocus();
+    onFocus?.();
+  }, [autocompleteHandlers, onFocus]);
+
   return (
     <div className="relative">
       <TextArea
@@ -142,7 +150,7 @@ export const ExpressionTextArea: React.FC<ExpressionTextAreaProps> = ({
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
-        onFocus={autocompleteHandlers.handleFocus}
+        onFocus={handleFocus}
         onBlur={autocompleteHandlers.handleBlur}
         rows={rows}
         placeholder={resolvedPlaceholder}

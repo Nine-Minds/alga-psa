@@ -311,6 +311,12 @@
           "sampleAvailable": "11111",
           "noSample": "11111",
           "captureFailed": "11111"
+        },
+        "sampleTree": {
+          "title": "11111",
+          "help": "11111",
+          "focusHelp": "11111",
+          "empty": "11111"
         }
       },
       "stats": {

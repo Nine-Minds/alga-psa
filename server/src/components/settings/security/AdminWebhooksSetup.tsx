@@ -24,6 +24,7 @@ import { ArrowLeft, MoreVertical } from 'lucide-react';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { buildTenantPortalSlug } from '@alga-psa/validation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { buildWebhookPayloadExpressionPathOptions } from '@shared/workflow/expression-authoring/adapters/webhookPayloadContextAdapter';
 import {
   deleteWebhook,
   getWebhookStatsSnapshot,
@@ -353,6 +354,7 @@ function InboundWebhooksListView() {
     webhookName: string;
     secret: string;
   } | null>(null);
+  const [focusedMappingField, setFocusedMappingField] = useState<string | null>(null);
   const neverLabel = t('security.webhooks.common.never');
 
   const loadInboundWebhooks = useCallback(async () => {
@@ -561,6 +563,11 @@ function InboundWebhooksListView() {
     [identityForm.directActionName, inboundActions],
   );
 
+  const samplePathOptions = useMemo(
+    () => buildWebhookPayloadExpressionPathOptions(identityForm.samplePayload, { includeRootPaths: true }),
+    [identityForm.samplePayload],
+  );
+
   const sampleCaptureActive = identityForm.sampleCaptureExpiresAt
     ? new Date(identityForm.sampleCaptureExpiresAt).getTime() > Date.now()
     : false;
@@ -586,6 +593,20 @@ function InboundWebhooksListView() {
       setError(captureError instanceof Error ? captureError.message : t('security.webhooks.inbound.sample.captureFailed'));
     }
   }, [identityForm.inboundWebhookId, t]);
+
+  const handleInsertSamplePath = useCallback((path: string) => {
+    if (!focusedMappingField) {
+      return;
+    }
+
+    setIdentityForm((current) => ({
+      ...current,
+      fieldMapping: {
+        ...current.fieldMapping,
+        [focusedMappingField]: path,
+      },
+    }));
+  }, [focusedMappingField]);
 
   return (
     <div className="space-y-6">
@@ -994,51 +1015,85 @@ function InboundWebhooksListView() {
                   />
                 </div>
                 {selectedInboundAction ? (
-                  <div className="mt-4 space-y-3">
-                    <div>
+                  <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(16rem,1fr)]">
+                    <div className="space-y-3">
+                      <div>
+                        <h5 className="text-sm font-medium text-gray-900">
+                          {t('security.webhooks.inbound.handler.targetFields')}
+                        </h5>
+                        <p className="mt-1 text-xs text-gray-500">
+                          {selectedInboundAction.description}
+                        </p>
+                      </div>
+                      {selectedInboundAction.targetFields.map((field) => (
+                        <div key={field.name} className="rounded-md border border-gray-200 bg-white p-3">
+                          <div className="mb-2 flex flex-wrap items-center gap-2">
+                            <label
+                              htmlFor={`inbound-webhook-mapping-${field.name}`}
+                              className="text-sm font-medium text-gray-900"
+                            >
+                              {field.name}
+                            </label>
+                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                              {field.type}
+                            </span>
+                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                              {field.required
+                                ? t('security.webhooks.inbound.handler.required')
+                                : t('security.webhooks.inbound.handler.optional')}
+                            </span>
+                          </div>
+                          <p className="mb-2 text-xs text-gray-500">{field.description}</p>
+                          <InboundWebhookMappingField
+                            id={`inbound-webhook-mapping-${field.name}`}
+                            value={identityForm.fieldMapping[field.name] ?? ''}
+                            samplePayload={identityForm.samplePayload}
+                            placeholder={t('security.webhooks.inbound.handler.mappingPlaceholder')}
+                            onFocus={() => setFocusedMappingField(field.name)}
+                            onChange={(value) => {
+                              setIdentityForm((current) => ({
+                                ...current,
+                                fieldMapping: {
+                                  ...current.fieldMapping,
+                                  [field.name]: value,
+                                },
+                              }));
+                            }}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="rounded-md border border-gray-200 bg-white p-3">
                       <h5 className="text-sm font-medium text-gray-900">
-                        {t('security.webhooks.inbound.handler.targetFields')}
+                        {t('security.webhooks.inbound.sampleTree.title')}
                       </h5>
                       <p className="mt-1 text-xs text-gray-500">
-                        {selectedInboundAction.description}
+                        {focusedMappingField
+                          ? t('security.webhooks.inbound.sampleTree.help', { field: focusedMappingField })
+                          : t('security.webhooks.inbound.sampleTree.focusHelp')}
                       </p>
-                    </div>
-                    {selectedInboundAction.targetFields.map((field) => (
-                      <div key={field.name} className="rounded-md border border-gray-200 bg-white p-3">
-                        <div className="mb-2 flex flex-wrap items-center gap-2">
-                          <label
-                            htmlFor={`inbound-webhook-mapping-${field.name}`}
-                            className="text-sm font-medium text-gray-900"
-                          >
-                            {field.name}
-                          </label>
-                          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-                            {field.type}
-                          </span>
-                          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-                            {field.required
-                              ? t('security.webhooks.inbound.handler.required')
-                              : t('security.webhooks.inbound.handler.optional')}
-                          </span>
+                      {samplePathOptions.length === 0 ? (
+                        <div className="mt-3 rounded-md border border-dashed border-gray-300 p-3 text-xs text-gray-500">
+                          {t('security.webhooks.inbound.sampleTree.empty')}
                         </div>
-                        <p className="mb-2 text-xs text-gray-500">{field.description}</p>
-                        <InboundWebhookMappingField
-                          id={`inbound-webhook-mapping-${field.name}`}
-                          value={identityForm.fieldMapping[field.name] ?? ''}
-                          samplePayload={identityForm.samplePayload}
-                          placeholder={t('security.webhooks.inbound.handler.mappingPlaceholder')}
-                          onChange={(value) => {
-                            setIdentityForm((current) => ({
-                              ...current,
-                              fieldMapping: {
-                                ...current.fieldMapping,
-                                [field.name]: value,
-                              },
-                            }));
-                          }}
-                        />
-                      </div>
-                    ))}
+                      ) : (
+                        <div className="mt-3 max-h-80 space-y-1 overflow-y-auto pr-1">
+                          {samplePathOptions.map((option) => (
+                            <button
+                              key={option.path}
+                              id={`inbound-webhook-sample-path-${option.path.replace(/[^a-zA-Z0-9_-]+/g, '-')}`}
+                              type="button"
+                              className="block w-full rounded px-2 py-1 text-left font-mono text-xs text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:text-gray-400"
+                              style={{ paddingLeft: `${Math.max(0, option.path.split('.').length - 1) * 12 + 8}px` }}
+                              disabled={!focusedMappingField}
+                              onClick={() => handleInsertSamplePath(option.path)}
+                            >
+                              {option.path}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ) : null}
               </div>
