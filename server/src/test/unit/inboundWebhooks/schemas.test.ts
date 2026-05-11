@@ -79,4 +79,26 @@ describe('inbound webhook schemas', () => {
       ]),
     );
   });
+
+  it('T012: rejects direct_action handler config without an action name', () => {
+    const result = inboundWebhookUpsertInputSchema.safeParse(
+      validInboundWebhookInput({
+        handler_config: {
+          type: 'direct_action',
+          field_mapping: {
+            title: 'alert.message',
+          },
+        },
+      }),
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: ['handler_config', 'action'],
+        }),
+      ]),
+    );
+  });
 });
