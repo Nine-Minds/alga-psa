@@ -130,6 +130,13 @@ function activePathTokenWebhook() {
   };
 }
 
+function inactiveHmacWebhook() {
+  return {
+    ...activeHmacWebhook(),
+    is_active: false,
+  };
+}
+
 describe('inbound webhook request processor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -563,6 +570,45 @@ describe('inbound webhook request processor', () => {
         inboundWebhookId: null,
         requestMethod: 'POST',
         requestPath: '/api/inbound/tenant-slug/missing-hook',
+        authStatus: 'rejected_no_auth',
+        dispatchStatus: 'failed',
+        responseStatus: 401,
+        responseBody: null,
+      }),
+    );
+    expect(createInboundDelivery.mock.calls[0][1]).not.toHaveProperty('requestBody');
+    expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
+  });
+
+  it('T041: returns a bodyless 401 for a disabled webhook', async () => {
+    lookupInboundWebhookBySlug.mockResolvedValue(inactiveHmacWebhook());
+    const body = JSON.stringify({ alert: { message: 'Disk full' } });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-signature': `sha256=${hmacSignature('top-secret', body)}`,
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    await expect(response.text()).resolves.toBe('');
+    expect(response.status).toBe(401);
+    expect(getTenantSecret).not.toHaveBeenCalled();
+    expect(createInboundDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        inboundWebhookId: 'webhook-1',
+        requestMethod: 'POST',
+        requestPath: '/api/inbound/tenant-slug/rmm-alerts',
         authStatus: 'rejected_no_auth',
         dispatchStatus: 'failed',
         responseStatus: 401,
