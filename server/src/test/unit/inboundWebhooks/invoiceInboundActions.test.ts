@@ -203,4 +203,56 @@ describe('invoice inbound webhook actions', () => {
     expect(invoicesQuery.update).not.toHaveBeenCalled();
     expect(invoicesQuery.returning).not.toHaveBeenCalled();
   });
+
+  it('T1053: updateInvoiceStatusByExternalId updates invoice status from mapped value', async () => {
+    invoicesQuery.returning.mockResolvedValue([
+      {
+        invoice_id: 'invoice-1',
+        status: 'overdue',
+      },
+    ]);
+    const { getAction } = await loadInvoiceInboundActions();
+    const action = getAction('updateInvoiceStatusByExternalId');
+
+    await expect(
+      action?.handle(
+        {
+          tenant: 'tenant-a',
+          webhookSlug: 'accounting-feed',
+          deliveryId: 'delivery-3',
+          headers: {},
+          rawBody: { invoice: { id: 'inv-42', status: 'overdue' } },
+          idempotencyKey: 'inv-42:overdue',
+        },
+        {
+          external_id: 'inv-42',
+          status: 'overdue',
+        },
+      ),
+    ).resolves.toEqual({
+      success: true,
+      entityType: 'invoice',
+      entityId: 'invoice-1',
+      externalId: 'inv-42',
+      metadata: {
+        status: 'overdue',
+      },
+    });
+
+    expect(mocks.lookupAlgaEntityByExternalId).toHaveBeenCalledWith(
+      'tenant-a',
+      'accounting-feed',
+      'invoice',
+      'inv-42',
+      { knex: trx },
+    );
+    expect(invoicesQuery.update).toHaveBeenCalledWith({
+      status: 'overdue',
+      custom_fields: {
+        existing: true,
+        inbound_webhook_status_delivery_id: 'delivery-3',
+      },
+      updated_at: 'db-now',
+    });
+  });
 });

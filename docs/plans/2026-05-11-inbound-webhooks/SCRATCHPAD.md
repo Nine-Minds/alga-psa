@@ -196,6 +196,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T1050 implemented** in `server/src/test/unit/inboundWebhooks/invoiceInboundActions.test.ts`. `markInvoicePaidByExternalId` now has coverage for resolving the invoice via webhook-scoped external mapping, updating status to `paid`, merging payment metadata into `custom_fields`, and returning paid status metadata.
 - (2026-05-11) **T1051 implemented** in `server/src/test/unit/inboundWebhooks/invoiceInboundActions.test.ts`. `markInvoicePaidByExternalId` now has lookup-miss coverage: absent webhook-scoped invoice mapping returns `success:false` with a `lookup_miss` message and skips invoice reads/updates.
 - (2026-05-11) **T1052 implemented** in `server/src/test/unit/inboundWebhooks/invoiceInboundActions.test.ts`. `markInvoicePaidByExternalId` now has idempotency coverage for invoices already in `paid` status: the action returns success from the current row and skips duplicate status/custom-field updates.
+- (2026-05-11) **T1053 implemented** in `server/src/test/unit/inboundWebhooks/invoiceInboundActions.test.ts`. `updateInvoiceStatusByExternalId` now has coverage for resolving a mapped invoice, applying a mapped non-paid status, and recording inbound delivery metadata in `custom_fields`.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -653,6 +654,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/invoiceInboundActions.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T1052:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/invoiceInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1053:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/invoiceInboundActions.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
