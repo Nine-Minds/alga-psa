@@ -240,4 +240,174 @@ describe('inbound webhook REST API routes', () => {
     await expect(response.json()).resolves.toEqual({ data: deliveryFixture });
     expect(inboundActions.sendInboundWebhookTest).toHaveBeenCalledWith('webhook-1', input);
   });
+
+  it('enables sample capture for an inbound webhook', async () => {
+    inboundActions.captureSamplePayload.mockResolvedValue({
+      ...webhookFixture,
+      sampleCaptureExpiresAt: '2026-05-11T10:05:00.000Z',
+    });
+
+    const route = await import('@/app/api/v1/inbound-webhooks/[id]/capture-sample/route');
+    const response = await route.POST(
+      new Request('http://localhost/api/v1/inbound-webhooks/webhook-1/capture-sample', { method: 'POST' }),
+      routeContext({ id: 'webhook-1' }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      data: {
+        ...webhookFixture,
+        sampleCaptureExpiresAt: '2026-05-11T10:05:00.000Z',
+      },
+    });
+    expect(inboundActions.captureSamplePayload).toHaveBeenCalledWith('webhook-1');
+  });
+
+  it('clears a captured sample payload for an inbound webhook', async () => {
+    inboundActions.clearSamplePayload.mockResolvedValue({
+      ...webhookFixture,
+      samplePayload: null,
+      sampleCaptureExpiresAt: null,
+    });
+
+    const route = await import('@/app/api/v1/inbound-webhooks/[id]/capture-sample/route');
+    const response = await route.DELETE(
+      new Request('http://localhost/api/v1/inbound-webhooks/webhook-1/capture-sample', { method: 'DELETE' }),
+      routeContext({ id: 'webhook-1' }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      data: {
+        ...webhookFixture,
+        samplePayload: null,
+        sampleCaptureExpiresAt: null,
+      },
+    });
+    expect(inboundActions.clearSamplePayload).toHaveBeenCalledWith('webhook-1');
+  });
+
+  it('lists inbound deliveries with pagination and filters forced to the path webhook', async () => {
+    inboundActions.listInboundDeliveries.mockResolvedValue({
+      data: [deliveryFixture],
+      page: 2,
+      limit: 10,
+      total: 42,
+    });
+
+    const route = await import('@/app/api/v1/inbound-webhooks/[id]/deliveries/route');
+    const response = await route.GET(
+      new Request(
+        'http://localhost/api/v1/inbound-webhooks/webhook-1/deliveries?page=2&limit=10&status=failed&date_from=2026-05-01&date_to=2026-05-11',
+      ),
+      routeContext({ id: 'webhook-1' }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      data: [deliveryFixture],
+      meta: { page: 2, limit: 10, total: 42 },
+    });
+    expect(inboundActions.listInboundDeliveries).toHaveBeenCalledWith(
+      {
+        inboundWebhookId: 'webhook-1',
+        status: 'failed',
+        dateFrom: '2026-05-01',
+        dateTo: '2026-05-11',
+      },
+      2,
+      10,
+    );
+  });
+
+  it('returns one inbound delivery when it belongs to the path webhook', async () => {
+    inboundActions.getInboundDelivery.mockResolvedValue(deliveryFixture);
+
+    const route = await import('@/app/api/v1/inbound-webhooks/[id]/deliveries/[deliveryId]/route');
+    const response = await route.GET(
+      new Request('http://localhost/api/v1/inbound-webhooks/webhook-1/deliveries/delivery-1'),
+      routeContext({ id: 'webhook-1', deliveryId: 'delivery-1' }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ data: deliveryFixture });
+    expect(inboundActions.getInboundDelivery).toHaveBeenCalledWith('delivery-1');
+  });
+
+  it('replays one inbound delivery and returns the linked replay row', async () => {
+    const replayedDelivery = {
+      ...deliveryFixture,
+      deliveryId: 'delivery-2',
+      isReplay: true,
+      replayedFrom: 'delivery-1',
+    };
+    inboundActions.getInboundDelivery.mockResolvedValue(deliveryFixture);
+    inboundActions.replayInboundDelivery.mockResolvedValue(replayedDelivery);
+
+    const route = await import('@/app/api/v1/inbound-webhooks/[id]/deliveries/[deliveryId]/replay/route');
+    const response = await route.POST(
+      new Request('http://localhost/api/v1/inbound-webhooks/webhook-1/deliveries/delivery-1/replay', {
+        method: 'POST',
+      }),
+      routeContext({ id: 'webhook-1', deliveryId: 'delivery-1' }),
+    );
+
+    expect(response.status).toBe(202);
+    await expect(response.json()).resolves.toEqual({ data: replayedDelivery });
+    expect(inboundActions.getInboundDelivery).toHaveBeenCalledWith('delivery-1');
+    expect(inboundActions.replayInboundDelivery).toHaveBeenCalledWith('delivery-1');
+  });
+
+  it('returns registered inbound action definitions with target field schemas', async () => {
+    const actionDefinitions = [
+      {
+        name: 'createTicket',
+        entityType: 'ticket',
+        displayName: 'Create Ticket',
+        description: 'Create a ticket from mapped webhook fields',
+        targetFields: [
+          {
+            name: 'title',
+            type: 'string',
+            required: true,
+            description: 'Ticket title',
+          },
+        ],
+      },
+    ];
+    inboundActions.listInboundWebhookActions.mockResolvedValue(actionDefinitions);
+
+    const route = await import('@/app/api/v1/inbound-webhooks/actions/route');
+    const response = await route.GET();
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ data: actionDefinitions });
+    expect(inboundActions.listInboundWebhookActions).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not transform action discovery output away from the registry-backed server action', async () => {
+    const actionDefinitions = [
+      {
+        name: 'upsertClientByExternalId',
+        entityType: 'client',
+        displayName: 'Upsert Client',
+        description: 'Create or update a client by external id',
+        targetFields: [
+          {
+            name: 'external_id',
+            type: 'string',
+            required: true,
+            description: 'External client id',
+          },
+        ],
+      },
+    ];
+    inboundActions.listInboundWebhookActions.mockResolvedValue(actionDefinitions);
+
+    const route = await import('@/app/api/v1/inbound-webhooks/actions/route');
+    const response = await route.GET();
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ data: actionDefinitions });
+  });
 });
