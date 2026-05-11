@@ -148,7 +148,7 @@
   { "id": "T181", "description": "Feature flag off: `/api/inbound/*` returns 404", "implemented": true, "featureIds": ["F101"] },
   { "id": "T182", "description": "Feature flag on for specific tenant only: other tenants unaffected", "implemented": true, "featureIds": ["F100", "F101"] },
 
-  { "id": "T190", "description": "All inbound webhook queries include `tenant` in WHERE", "implemented": false, "featureIds": ["F001", "F012", "F013", "F032"] },
+  { "id": "T190", "description": "All inbound webhook queries include `tenant` in WHERE", "implemented": true, "featureIds": ["F001", "F012", "F013", "F032"] },
   { "id": "T191", "description": "All inbound delivery queries include `tenant` in WHERE", "implemented": false, "featureIds": ["F002", "F018", "F019"] },
   { "id": "T192", "description": "Cross-tenant delivery lookup blocked (tenant A cannot view tenant B's deliveries)", "implemented": false, "featureIds": ["F019", "F102"] },
   { "id": "T193", "description": "Cross-tenant webhook config access blocked", "implemented": false, "featureIds": ["F013", "F102"] },
