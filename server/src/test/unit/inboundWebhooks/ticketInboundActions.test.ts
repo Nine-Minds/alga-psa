@@ -45,6 +45,15 @@ describe('ticket inbound webhook actions', () => {
       ticket_id: 'ticket-1',
       ticket_number: 'T-100',
     });
+    mocks.lookupAlgaEntityByExternalId.mockResolvedValue({
+      algaEntityId: 'ticket-1',
+      externalEntityId: 'alert-42',
+      metadata: {},
+    });
+    mocks.updateTicket.mockResolvedValue({
+      ticket_id: 'ticket-1',
+      ticket_number: 'T-100',
+    });
   });
 
   it('T1010: createTicket creates a tenant-scoped ticket from mapped fields', async () => {
@@ -147,6 +156,56 @@ describe('ticket inbound webhook actions', () => {
           delivery_id: 'delivery-1',
         },
       },
+    );
+  });
+
+  it('T1013: updateTicketByExternalId resolves the ticket mapping and updates mapped fields', async () => {
+    const { getAction } = await loadTicketInboundActions();
+    const action = getAction('updateTicketByExternalId');
+
+    await expect(
+      action?.handle(
+        {
+          tenant: 'tenant-a',
+          webhookSlug: 'rmm-alerts',
+          deliveryId: 'delivery-1',
+          headers: {},
+          rawBody: { alert: { id: 'alert-42', severity: 'critical' } },
+          idempotencyKey: 'alert-42',
+        },
+        {
+          external_id: 'alert-42',
+          status_id: 'status-triage',
+          priority_id: 'priority-critical',
+          assigned_to: 'user-1',
+        },
+      ),
+    ).resolves.toEqual({
+      success: true,
+      entityType: 'ticket',
+      entityId: 'ticket-1',
+      externalId: 'alert-42',
+      metadata: {
+        updated_fields: ['status_id', 'priority_id', 'assigned_to'],
+      },
+    });
+
+    expect(mocks.lookupAlgaEntityByExternalId).toHaveBeenCalledWith(
+      'tenant-a',
+      'rmm-alerts',
+      'ticket',
+      'alert-42',
+      { knex: 'trx' },
+    );
+    expect(mocks.updateTicket).toHaveBeenCalledWith(
+      'ticket-1',
+      {
+        status_id: 'status-triage',
+        priority_id: 'priority-critical',
+        assigned_to: 'user-1',
+      },
+      'tenant-a',
+      'trx',
     );
   });
 });
