@@ -58,4 +58,43 @@ describe('inbound webhook REST API routes', () => {
     expect(inboundActions.listInboundWebhooks).toHaveBeenCalledTimes(1);
     expect(inboundActions.listInboundWebhooks).toHaveBeenCalledWith();
   });
+
+  it('creates an inbound webhook and returns its one-time secret', async () => {
+    const input = {
+      name: 'RMM Alerts',
+      slug: 'rmm-alerts',
+      auth_type: 'hmac_sha256',
+      auth_config: {
+        type: 'hmac_sha256',
+        signature_header: 'X-Alga-Signature',
+        secret: 'caller-provided-secret',
+      },
+      handler_type: 'direct_action',
+      handler_config: {
+        type: 'direct_action',
+        action: 'createTicket',
+        field_mapping: { title: 'alert.message' },
+      },
+    };
+    inboundActions.upsertInboundWebhook.mockResolvedValue({
+      webhook: webhookFixture,
+      secret: 'generated-secret',
+    });
+
+    const route = await import('@/app/api/v1/inbound-webhooks/route');
+    const response = await route.POST(
+      new Request('http://localhost/api/v1/inbound-webhooks', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(input),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toEqual({
+      data: webhookFixture,
+      secret: 'generated-secret',
+    });
+    expect(inboundActions.upsertInboundWebhook).toHaveBeenCalledWith(input);
+  });
 });

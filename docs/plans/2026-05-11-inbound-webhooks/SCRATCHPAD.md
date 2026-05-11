@@ -252,6 +252,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T201 implemented** in `server/src/test/unit/inboundWebhooks/workflowDispatcher.test.ts`. Added a workflow-handler acceptance contract verifying the dispatcher launches the published workflow with `execute=true`, delivery-scoped trigger/execution keys, and returns `workflow_run_id`/version so delivery logs can link users to the visible workflow run.
 - (2026-05-11) **T202 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Added a replay acceptance-path test: a failed original delivery is loaded from the log, replay creates a linked delivery with current webhook mapping, dispatch succeeds, and the returned delivery is marked `isReplay=true` with `replayedFrom` pointing to the failed original.
 - (2026-05-11) **T300 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts`. The `GET /api/v1/inbound-webhooks` route test verifies a 200 response with `{ data }` and confirms the route delegates to `listInboundWebhooks()`, preserving the tenant-scoped server-action path covered by T020/T190.
+- (2026-05-11) **T301 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts`. The `POST /api/v1/inbound-webhooks` route test verifies create requests delegate the parsed JSON body to `upsertInboundWebhook`, return `201`, and expose the returned secret only as the one-time `secret` response field.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -877,6 +878,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T300:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T301:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
