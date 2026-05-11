@@ -134,7 +134,7 @@
   { "id": "T148", "description": "Active toggle persists state", "implemented": true, "featureIds": ["F092"] },
   { "id": "T149", "description": "Auto-disable banner shows when auto_disabled_at is set", "implemented": true, "featureIds": ["F092"] },
 
-  { "id": "T160", "description": "Delivery log list paginates and filters by webhook + status", "implemented": false, "featureIds": ["F093"] },
+  { "id": "T160", "description": "Delivery log list paginates and filters by webhook + status", "implemented": true, "featureIds": ["F093"] },
   { "id": "T161", "description": "Delivery detail drawer shows request body, headers, response, latency", "implemented": false, "featureIds": ["F094"] },
   { "id": "T162", "description": "Replay button creates new delivery row with is_replay=true", "implemented": false, "featureIds": ["F020", "F095"] },
   { "id": "T163", "description": "Replay uses current config (mapping changes reflected)", "implemented": false, "featureIds": ["F020"] },

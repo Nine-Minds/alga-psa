@@ -239,4 +239,16 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain('date: formatDateTime(identityForm.autoDisabledAt as string, neverLabel)');
     expect(adminWebhooksSource).toContain('border-amber-200 bg-amber-50');
   });
+
+  it('T160: delivery log paginates and filters by webhook plus dispatch status', () => {
+    expect(adminWebhooksSource).toContain('const [inboundDeliveryStatusFilter, setInboundDeliveryStatusFilter]');
+    expect(adminWebhooksSource).toContain('const loadInboundDialogDeliveries = useCallback(async (');
+    expect(adminWebhooksSource).toContain('inboundWebhookId: webhookId');
+    expect(adminWebhooksSource).toContain("status: status === 'all' ? undefined : status");
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-delivery-status-filter"');
+    expect(adminWebhooksSource).toContain('options={inboundDeliveryStatusOptions}');
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-deliveries-table"');
+    expect(adminWebhooksSource).toContain('pagination');
+    expect(adminWebhooksSource).toContain('onPageChange={setInboundDeliveryPageNumber}');
+  });
 });

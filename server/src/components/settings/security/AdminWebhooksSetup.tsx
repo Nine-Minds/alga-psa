@@ -61,6 +61,7 @@ import { WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY } from '@/lib/actions/webhookPayloadFi
 import type {
   InboundWebhookConfig,
   InboundWebhookDelivery,
+  InboundWebhookDispatchStatus,
 } from '@/lib/inboundWebhooks/types';
 import { InboundWebhookMappingField } from './inbound/InboundWebhookMappingField';
 
@@ -434,6 +435,7 @@ function InboundWebhooksListView() {
     total: number;
   } | null>(null);
   const [inboundDeliveryPageNumber, setInboundDeliveryPageNumber] = useState(1);
+  const [inboundDeliveryStatusFilter, setInboundDeliveryStatusFilter] = useState<InboundWebhookDispatchStatus | 'all'>('all');
   const [selectedInboundDelivery, setSelectedInboundDelivery] = useState<InboundWebhookDelivery | null>(null);
   const [testDialogOpen, setTestDialogOpen] = useState(false);
   const [testBodyText, setTestBodyText] = useState('{\n  "id": "sample-1"\n}');
@@ -509,9 +511,16 @@ function InboundWebhooksListView() {
     void loadInboundWebhooks();
   }, [loadInboundWebhooks]);
 
-  const loadInboundDialogDeliveries = useCallback(async (webhookId: string, page: number) => {
+  const loadInboundDialogDeliveries = useCallback(async (
+    webhookId: string,
+    page: number,
+    status: InboundWebhookDispatchStatus | 'all',
+  ) => {
     try {
-      const deliveriesPage = await listInboundDeliveries({ inboundWebhookId: webhookId }, page, 10);
+      const deliveriesPage = await listInboundDeliveries({
+        inboundWebhookId: webhookId,
+        status: status === 'all' ? undefined : status,
+      }, page, 10);
       setInboundDeliveryPage(deliveriesPage);
       setError(null);
     } catch (deliveryError) {
@@ -524,11 +533,12 @@ function InboundWebhooksListView() {
     if (!identityDialogOpen || !identityForm.inboundWebhookId) {
       setInboundDeliveryPage(null);
       setInboundDeliveryPageNumber(1);
+      setInboundDeliveryStatusFilter('all');
       return;
     }
 
-    void loadInboundDialogDeliveries(identityForm.inboundWebhookId, inboundDeliveryPageNumber);
-  }, [identityDialogOpen, identityForm.inboundWebhookId, inboundDeliveryPageNumber, loadInboundDialogDeliveries]);
+    void loadInboundDialogDeliveries(identityForm.inboundWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter);
+  }, [identityDialogOpen, identityForm.inboundWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter, loadInboundDialogDeliveries]);
 
   const columns = useMemo<ColumnDefinition<InboundWebhookConfig>[]>(() => [
     {
@@ -757,6 +767,14 @@ function InboundWebhooksListView() {
     },
   ], [neverLabel, t]);
 
+  const inboundDeliveryStatusOptions = useMemo(() => [
+    { value: 'all', label: t('security.webhooks.apiKeys.list.filters.allStatuses') },
+    { value: 'pending', label: t('security.webhooks.inbound.deliveryLog.status.pending') },
+    { value: 'dispatched', label: t('security.webhooks.inbound.deliveryLog.status.dispatched') },
+    { value: 'duplicate', label: t('security.webhooks.inbound.deliveryLog.status.duplicate') },
+    { value: 'failed', label: t('security.webhooks.inbound.deliveryLog.status.failed') },
+  ], [t]);
+
   const samplePathOptions = useMemo(
     () => buildWebhookPayloadExpressionPathOptions(identityForm.samplePayload, { includeRootPaths: true }),
     [identityForm.samplePayload],
@@ -833,14 +851,14 @@ function InboundWebhooksListView() {
       const replayed = await replayInboundDelivery(deliveryId);
       setSelectedInboundDelivery(replayed);
       if (identityForm.inboundWebhookId) {
-        await loadInboundDialogDeliveries(identityForm.inboundWebhookId, inboundDeliveryPageNumber);
+        await loadInboundDialogDeliveries(identityForm.inboundWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter);
       }
       setError(null);
     } catch (replayError) {
       console.error('Failed to replay inbound webhook delivery:', replayError);
       setError(replayError instanceof Error ? replayError.message : t('security.webhooks.inbound.deliveryDetail.replayFailed'));
     }
-  }, [identityForm.inboundWebhookId, inboundDeliveryPageNumber, loadInboundDialogDeliveries, t]);
+  }, [identityForm.inboundWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter, loadInboundDialogDeliveries, t]);
 
   const handleSendInboundTest = useCallback(async () => {
     if (!identityForm.inboundWebhookId) {
@@ -856,13 +874,13 @@ function InboundWebhooksListView() {
       const delivery = await sendInboundWebhookTest(identityForm.inboundWebhookId, { body, headers });
       setSelectedInboundDelivery(delivery);
       setTestDialogOpen(false);
-      await loadInboundDialogDeliveries(identityForm.inboundWebhookId, inboundDeliveryPageNumber);
+      await loadInboundDialogDeliveries(identityForm.inboundWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter);
       setError(null);
     } catch (testError) {
       console.error('Failed to send inbound webhook test:', testError);
       setError(testError instanceof Error ? testError.message : t('security.webhooks.inbound.test.sendFailed'));
     }
-  }, [identityForm.inboundWebhookId, inboundDeliveryPageNumber, loadInboundDialogDeliveries, t, testBodyText, testHeadersText]);
+  }, [identityForm.inboundWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter, loadInboundDialogDeliveries, t, testBodyText, testHeadersText]);
 
   const handleSaveInboundWebhook = useCallback(async () => {
     try {
@@ -1509,6 +1527,18 @@ function InboundWebhooksListView() {
                       })
                       : null}
                   </div>
+                </div>
+                <div className="mb-3 max-w-xs">
+                  <CustomSelect
+                    id="inbound-webhook-delivery-status-filter"
+                    label={t('security.webhooks.inbound.deliveryLog.columns.status')}
+                    value={inboundDeliveryStatusFilter}
+                    onValueChange={(value) => {
+                      setInboundDeliveryStatusFilter(value as InboundWebhookDispatchStatus | 'all');
+                      setInboundDeliveryPageNumber(1);
+                    }}
+                    options={inboundDeliveryStatusOptions}
+                  />
                 </div>
                 {inboundDeliveryPage && inboundDeliveryPage.data.length > 0 ? (
                   <DataTable<InboundWebhookDelivery>
