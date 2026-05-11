@@ -218,4 +218,30 @@ describe('tag inbound webhook actions', () => {
       created_at: 'db-now',
     });
   });
+
+  it('T1082: addTagToEntityByExternalId rejects unsupported entity types with a clear error', async () => {
+    const { getAction } = await loadTagInboundActions();
+    const action = getAction('addTagToEntityByExternalId');
+
+    await expect(
+      action?.handle(
+        {
+          tenant: 'tenant-a',
+          webhookSlug: 'asset-feed',
+          deliveryId: 'delivery-3',
+          headers: {},
+          rawBody: { asset: { id: 'asset-42' } },
+          idempotencyKey: 'asset-42',
+        },
+        {
+          entity_type: 'asset',
+          external_id: 'asset-42',
+          tag_text: 'monitored',
+        },
+      ),
+    ).rejects.toThrow('VALIDATION_ERROR: unsupported tag entity_type "asset"');
+
+    expect(mocks.createTenantKnex).not.toHaveBeenCalled();
+    expect(mocks.lookupAlgaEntityByExternalId).not.toHaveBeenCalled();
+  });
 });
