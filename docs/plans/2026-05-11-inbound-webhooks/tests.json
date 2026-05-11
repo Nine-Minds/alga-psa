@@ -129,7 +129,7 @@
   { "id": "T143", "description": "Workflow dropdown lists tenant's workflows", "implemented": true, "featureIds": ["F091"] },
   { "id": "T144", "description": "Workflow envelope info card displays correct shape", "implemented": true, "featureIds": ["F091"] },
   { "id": "T145", "description": "Sample capture button toggles capture mode and shows countdown", "implemented": true, "featureIds": ["F089"] },
-  { "id": "T146", "description": "Sample tree side panel renders captured payload paths", "implemented": false, "featureIds": ["F090"] },
+  { "id": "T146", "description": "Sample tree side panel renders captured payload paths", "implemented": true, "featureIds": ["F090"] },
   { "id": "T147", "description": "Clicking a path in tree inserts it into focused ExpressionTextArea", "implemented": false, "featureIds": ["F090"] },
   { "id": "T148", "description": "Active toggle persists state", "implemented": false, "featureIds": ["F092"] },
   { "id": "T149", "description": "Auto-disable banner shows when auto_disabled_at is set", "implemented": false, "featureIds": ["F092"] },

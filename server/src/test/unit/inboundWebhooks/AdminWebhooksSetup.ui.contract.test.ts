@@ -199,4 +199,15 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain('disabled={!identityForm.inboundWebhookId}');
     expect(adminWebhooksSource).toContain("t('security.webhooks.inbound.sample.captureActive'");
   });
+
+  it('T146: sample tree side panel renders captured payload paths', () => {
+    expect(adminWebhooksSource).toContain('buildWebhookPayloadExpressionPathOptions');
+    expect(adminWebhooksSource).toContain('const samplePathOptions = useMemo');
+    expect(adminWebhooksSource).toContain('buildWebhookPayloadExpressionPathOptions(identityForm.samplePayload');
+    expect(adminWebhooksSource).toContain("t('security.webhooks.inbound.sampleTree.title')");
+    expect(adminWebhooksSource).toContain('samplePathOptions.length === 0');
+    expect(adminWebhooksSource).toContain('samplePathOptions.map((option) => (');
+    expect(adminWebhooksSource).toContain('id={`inbound-webhook-sample-path-${option.path.replace(/[^a-zA-Z0-9_-]+/g, \'-\')}`}');
+    expect(adminWebhooksSource).toContain('{option.path}');
+  });
 });
