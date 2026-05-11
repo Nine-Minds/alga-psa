@@ -221,6 +221,39 @@ describe('inbound webhook request processor', () => {
     );
   });
 
+  it('T060: persists a verified delivery row before dispatch', async () => {
+    const body = JSON.stringify({ alert: { message: 'Disk full' } });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-signature': `sha256=${hmacSignature('top-secret', body)}`,
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    expect(response.status).toBe(200);
+    expect(createInboundDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        inboundWebhookId: 'webhook-1',
+        authStatus: 'verified',
+        requestBody: { alert: { message: 'Disk full' } },
+      }),
+    );
+    expect(createInboundDelivery.mock.invocationCallOrder[0]).toBeLessThan(
+      dispatchInboundWebhookHandler.mock.invocationCallOrder[0],
+    );
+  });
+
   it('T031: rejects an invalid HMAC with 401 and logs only rejected-auth metadata', async () => {
     const body = JSON.stringify({ alert: { message: 'Disk full' } });
     const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
