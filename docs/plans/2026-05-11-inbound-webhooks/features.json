@@ -86,7 +86,7 @@
   { "id": "F084", "description": "Auth secret one-time-display modal after creation", "implemented": true, "prdRefs": ["Security / Permissions"] },
   { "id": "F085", "description": "Idempotency section (key source dropdown + value input)", "implemented": true, "prdRefs": ["UX / UI Notes"] },
   { "id": "F086", "description": "Handler section conditional rendering: direct_action vs workflow", "implemented": true, "prdRefs": ["UX / UI Notes"] },
-  { "id": "F087", "description": "Direct-action UI: action dropdown populated from registry", "implemented": false, "prdRefs": ["UX / UI Notes"] },
+  { "id": "F087", "description": "Direct-action UI: action dropdown populated from registry", "implemented": true, "prdRefs": ["UX / UI Notes"] },
   { "id": "F088", "description": "Direct-action UI: target field rows with `ExpressionTextArea` per field", "implemented": false, "prdRefs": ["UX / UI Notes"] },
   { "id": "F089", "description": "Sample payload capture button + status indicator", "implemented": false, "prdRefs": ["UX / UI Notes"] },
   { "id": "F090", "description": "Sample payload tree side panel (click-to-insert path)", "implemented": false, "prdRefs": ["UX / UI Notes"] },

@@ -293,6 +293,8 @@
           },
           "directActionTitle": "11111",
           "directActionHelp": "11111",
+          "action": "11111",
+          "actionPlaceholder": "11111",
           "workflowTitle": "11111",
           "workflowHelp": "11111"
         }

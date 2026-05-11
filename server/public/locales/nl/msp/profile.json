@@ -293,6 +293,8 @@
           },
           "directActionTitle": "Direct action",
           "directActionHelp": "Select an inbound action and map payload fields to its target fields.",
+          "action": "Action",
+          "actionPlaceholder": "Select an action",
           "workflowTitle": "Workflow",
           "workflowHelp": "Select a workflow to start with the normalized webhook envelope."
         }

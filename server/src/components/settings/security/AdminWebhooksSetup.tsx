@@ -40,8 +40,10 @@ import {
   type WebhookSettingsView,
 } from '@/lib/actions/webhookActions';
 import {
+  listInboundWebhookActions,
   listInboundDeliveries,
   listInboundWebhooks,
+  type InboundActionDefinitionView,
 } from '@/lib/actions/inboundWebhookActions';
 import { WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY } from '@/lib/actions/webhookPayloadFields';
 import type {
@@ -315,6 +317,7 @@ function formatInboundHandlerLabel(
 function InboundWebhooksListView() {
   const { t } = useTranslation('msp/profile');
   const [webhooks, setWebhooks] = useState<InboundWebhookConfig[]>([]);
+  const [inboundActions, setInboundActions] = useState<InboundActionDefinitionView[]>([]);
   const [lastDeliveries, setLastDeliveries] = useState<Record<string, InboundWebhookDelivery | null>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -347,8 +350,12 @@ function InboundWebhooksListView() {
   const loadInboundWebhooks = useCallback(async () => {
     try {
       setLoading(true);
-      const configs = await listInboundWebhooks();
+      const [configs, actionDefinitions] = await Promise.all([
+        listInboundWebhooks(),
+        listInboundWebhookActions(),
+      ]);
       setWebhooks(configs);
+      setInboundActions(actionDefinitions);
       setError(null);
 
       const deliveryEntries = await Promise.all(
@@ -527,6 +534,11 @@ function InboundWebhooksListView() {
     { value: 'direct_action', label: t('security.webhooks.inbound.handler.types.directAction') },
     { value: 'workflow', label: t('security.webhooks.inbound.handler.types.workflow') },
   ], [t]);
+
+  const inboundActionOptions = useMemo(() => inboundActions.map((action) => ({
+    value: action.name,
+    label: `${action.entityType}: ${action.displayName}`,
+  })), [inboundActions]);
 
   return (
     <div className="space-y-6">
@@ -887,6 +899,21 @@ function InboundWebhooksListView() {
                 <p className="mt-1 text-sm text-gray-500">
                   {t('security.webhooks.inbound.handler.directActionHelp')}
                 </p>
+                <div className="mt-4">
+                  <CustomSelect
+                    id="inbound-webhook-direct-action"
+                    label={t('security.webhooks.inbound.handler.action')}
+                    value={identityForm.directActionName}
+                    placeholder={t('security.webhooks.inbound.handler.actionPlaceholder')}
+                    onValueChange={(value) => {
+                      setIdentityForm((current) => ({
+                        ...current,
+                        directActionName: value,
+                      }));
+                    }}
+                    options={inboundActionOptions}
+                  />
+                </div>
               </div>
             ) : (
               <div className="rounded-md border border-gray-200 bg-gray-50 p-4">

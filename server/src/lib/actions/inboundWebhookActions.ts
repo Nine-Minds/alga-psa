@@ -21,6 +21,8 @@ import {
   inboundWebhookUpsertInputSchema,
   type InboundWebhookUpsertInput,
 } from '@/lib/inboundWebhooks/schemas';
+import { bootstrapInboundWebhookActions } from '@/lib/inboundWebhooks/actions/bootstrap';
+import { listActions, type InboundActionTargetField } from '@/lib/inboundWebhooks/actions/registry';
 import { createInboundDelivery, updateInboundDeliveryOutcome } from '@/lib/inboundWebhooks/deliveryPersistence';
 import { dispatchInboundWebhookHandler } from '@/lib/inboundWebhooks/dispatcher';
 
@@ -88,6 +90,14 @@ interface InboundDeliveryPage {
 interface SendInboundWebhookTestInput {
   body?: unknown;
   headers?: Record<string, string | string[] | undefined>;
+}
+
+export interface InboundActionDefinitionView {
+  name: string;
+  entityType: string;
+  displayName: string;
+  description: string;
+  targetFields: InboundActionTargetField[];
 }
 
 const DEFAULT_DELIVERY_PAGE_SIZE = 25;
@@ -407,6 +417,20 @@ export const listInboundWebhooks = withAuth(async (user, { tenant }): Promise<In
     .orderBy('name', 'asc');
 
   return rows.map(mapInboundWebhook);
+});
+
+export const listInboundWebhookActions = withAuth(async (user, { tenant }): Promise<InboundActionDefinitionView[]> => {
+  const { knex } = await createTenantKnex(tenant);
+  await assertInboundWebhookPermission(user, 'read', knex);
+  await bootstrapInboundWebhookActions();
+
+  return listActions().map((action) => ({
+    name: action.name,
+    entityType: action.entityType,
+    displayName: action.displayName,
+    description: action.description,
+    targetFields: action.targetFields,
+  }));
 });
 
 export const getInboundWebhook = withAuth(
