@@ -15,7 +15,7 @@
   { "id": "T013", "description": "Zod validation rejects workflow handler without workflow_id", "implemented": true, "featureIds": ["F011"] },
   { "id": "T014", "description": "Zod validation rejects URL-unsafe slug characters", "implemented": true, "featureIds": ["F011", "F014"] },
 
-  { "id": "T020", "description": "`listInboundWebhooks` returns only current tenant's webhooks", "implemented": false, "featureIds": ["F012"] },
+  { "id": "T020", "description": "`listInboundWebhooks` returns only current tenant's webhooks", "implemented": true, "featureIds": ["F012"] },
   { "id": "T021", "description": "`upsertInboundWebhook` rejects duplicate slug in same tenant", "implemented": false, "featureIds": ["F014"] },
   { "id": "T022", "description": "`upsertInboundWebhook` allows same slug across different tenants", "implemented": false, "featureIds": ["F014"] },
   { "id": "T023", "description": "`upsertInboundWebhook` writes secret to vault, not DB column", "implemented": false, "featureIds": ["F014", "F016"] },
