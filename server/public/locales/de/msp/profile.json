@@ -239,6 +239,28 @@
           "slugPlaceholder": "rmm-kritische-alarme",
           "description": "Beschreibung",
           "descriptionPlaceholder": "Optionale Notizen zum Quellsystem und Payload."
+        },
+        "auth": {
+          "title": "Auth",
+          "help": "Wählen Sie, wie eingehende Anfragen ihre Berechtigung für diesen Endpunkt nachweisen.",
+          "method": "Auth-Methode",
+          "types": {
+            "hmacSha256": "HMAC-SHA256",
+            "bearer": "Bearer-Token",
+            "ipAllowlist": "IP-Allowlist",
+            "pathToken": "Shared Secret im Pfad"
+          },
+          "signatureHeader": "Signatur-Header",
+          "signatureHeaderPlaceholder": "X-Alga-Signature",
+          "bearerToken": "Bearer-Token",
+          "bearerTokenPlaceholder": "Token einfügen oder leer lassen, um eines zu generieren",
+          "secretUnchangedPlaceholder": "Leer lassen, um das aktuelle Secret beizubehalten",
+          "ipCidrs": "Erlaubte IPs / CIDRs",
+          "ipCidrsPlaceholder": "203.0.113.10\n198.51.100.0/24",
+          "queryParam": "Query-Parameter",
+          "queryParamPlaceholder": "token",
+          "pathToken": "Pfad-Token",
+          "pathTokenPlaceholder": "Token einfügen oder leer lassen, um eines zu generieren"
         }
       },
       "stats": {

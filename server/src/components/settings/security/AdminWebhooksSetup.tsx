@@ -7,6 +7,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import {
   Dialog,
   DialogContent,
@@ -87,6 +88,12 @@ type InboundWebhookIdentityFormState = {
   name: string;
   slug: string;
   description: string;
+  authType: InboundWebhookConfig['authType'];
+  hmacSignatureHeader: string;
+  bearerToken: string;
+  ipCidrs: string;
+  pathTokenQueryParam: string;
+  pathToken: string;
 };
 
 type WebhookStatsSnapshot = {
@@ -312,6 +319,12 @@ function InboundWebhooksListView() {
     name: '',
     slug: '',
     description: '',
+    authType: 'hmac_sha256',
+    hmacSignatureHeader: 'X-Alga-Signature',
+    bearerToken: '',
+    ipCidrs: '',
+    pathTokenQueryParam: 'token',
+    pathToken: '',
   });
   const neverLabel = t('security.webhooks.common.never');
 
@@ -422,6 +435,18 @@ function InboundWebhooksListView() {
                   name: webhook.name,
                   slug: webhook.slug,
                   description: webhook.description ?? '',
+                  authType: webhook.authType,
+                  hmacSignatureHeader: webhook.authConfig.type === 'hmac_sha256'
+                    ? webhook.authConfig.signatureHeader
+                    : 'X-Alga-Signature',
+                  bearerToken: '',
+                  ipCidrs: webhook.authConfig.type === 'ip_allowlist'
+                    ? webhook.authConfig.ipCidrs.join('\n')
+                    : '',
+                  pathTokenQueryParam: webhook.authConfig.type === 'path_token'
+                    ? webhook.authConfig.queryParam
+                    : 'token',
+                  pathToken: '',
                 });
                 setIdentityDialogOpen(true);
               }}
@@ -444,9 +469,22 @@ function InboundWebhooksListView() {
       name: '',
       slug: '',
       description: '',
+      authType: 'hmac_sha256',
+      hmacSignatureHeader: 'X-Alga-Signature',
+      bearerToken: '',
+      ipCidrs: '',
+      pathTokenQueryParam: 'token',
+      pathToken: '',
     });
     setIdentityDialogOpen(true);
   }, []);
+
+  const authTypeOptions = useMemo(() => [
+    { value: 'hmac_sha256', label: t('security.webhooks.inbound.auth.types.hmacSha256') },
+    { value: 'bearer', label: t('security.webhooks.inbound.auth.types.bearer') },
+    { value: 'ip_allowlist', label: t('security.webhooks.inbound.auth.types.ipAllowlist') },
+    { value: 'path_token', label: t('security.webhooks.inbound.auth.types.pathToken') },
+  ], [t]);
 
   return (
     <div className="space-y-6">
@@ -561,6 +599,105 @@ function InboundWebhooksListView() {
                 }));
               }}
             />
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-semibold text-gray-900">
+                {t('security.webhooks.inbound.auth.title')}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {t('security.webhooks.inbound.auth.help')}
+              </p>
+            </div>
+            <CustomSelect
+              id="inbound-webhook-auth-type"
+              label={t('security.webhooks.inbound.auth.method')}
+              value={identityForm.authType}
+              onValueChange={(value) => {
+                setIdentityForm((current) => ({
+                  ...current,
+                  authType: value as InboundWebhookConfig['authType'],
+                }));
+              }}
+              options={authTypeOptions}
+            />
+            {identityForm.authType === 'hmac_sha256' ? (
+              <Input
+                id="inbound-webhook-auth-hmac-header"
+                label={t('security.webhooks.inbound.auth.signatureHeader')}
+                value={identityForm.hmacSignatureHeader}
+                required
+                placeholder={t('security.webhooks.inbound.auth.signatureHeaderPlaceholder')}
+                onChange={(event) => {
+                  setIdentityForm((current) => ({
+                    ...current,
+                    hmacSignatureHeader: event.target.value,
+                  }));
+                }}
+              />
+            ) : null}
+            {identityForm.authType === 'bearer' ? (
+              <Input
+                id="inbound-webhook-auth-bearer-token"
+                label={t('security.webhooks.inbound.auth.bearerToken')}
+                value={identityForm.bearerToken}
+                type="password"
+                placeholder={identityForm.inboundWebhookId
+                  ? t('security.webhooks.inbound.auth.secretUnchangedPlaceholder')
+                  : t('security.webhooks.inbound.auth.bearerTokenPlaceholder')}
+                onChange={(event) => {
+                  setIdentityForm((current) => ({
+                    ...current,
+                    bearerToken: event.target.value,
+                  }));
+                }}
+              />
+            ) : null}
+            {identityForm.authType === 'ip_allowlist' ? (
+              <TextArea
+                id="inbound-webhook-auth-ip-cidrs"
+                label={t('security.webhooks.inbound.auth.ipCidrs')}
+                value={identityForm.ipCidrs}
+                required
+                placeholder={t('security.webhooks.inbound.auth.ipCidrsPlaceholder')}
+                onChange={(event) => {
+                  setIdentityForm((current) => ({
+                    ...current,
+                    ipCidrs: event.target.value,
+                  }));
+                }}
+              />
+            ) : null}
+            {identityForm.authType === 'path_token' ? (
+              <div className="grid gap-4 md:grid-cols-2">
+                <Input
+                  id="inbound-webhook-auth-path-token-param"
+                  label={t('security.webhooks.inbound.auth.queryParam')}
+                  value={identityForm.pathTokenQueryParam}
+                  required
+                  placeholder={t('security.webhooks.inbound.auth.queryParamPlaceholder')}
+                  onChange={(event) => {
+                    setIdentityForm((current) => ({
+                      ...current,
+                      pathTokenQueryParam: event.target.value,
+                    }));
+                  }}
+                />
+                <Input
+                  id="inbound-webhook-auth-path-token"
+                  label={t('security.webhooks.inbound.auth.pathToken')}
+                  value={identityForm.pathToken}
+                  type="password"
+                  placeholder={identityForm.inboundWebhookId
+                    ? t('security.webhooks.inbound.auth.secretUnchangedPlaceholder')
+                    : t('security.webhooks.inbound.auth.pathTokenPlaceholder')}
+                  onChange={(event) => {
+                    setIdentityForm((current) => ({
+                      ...current,
+                      pathToken: event.target.value,
+                    }));
+                  }}
+                />
+              </div>
+            ) : null}
           </div>
         </DialogContent>
         <DialogFooter>

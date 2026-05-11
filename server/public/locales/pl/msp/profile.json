@@ -239,6 +239,28 @@
           "slugPlaceholder": "krytyczne-alerty-rmm",
           "description": "Opis",
           "descriptionPlaceholder": "Opcjonalne notatki o systemie źródłowym i payloadzie."
+        },
+        "auth": {
+          "title": "Uwierzytelnianie",
+          "help": "Wybierz, jak żądania przychodzące potwierdzają uprawnienie do użycia tego endpointu.",
+          "method": "Metoda uwierzytelniania",
+          "types": {
+            "hmacSha256": "HMAC-SHA256",
+            "bearer": "Token bearer",
+            "ipAllowlist": "Allowlista IP",
+            "pathToken": "Wspólny sekret w ścieżce"
+          },
+          "signatureHeader": "Nagłówek podpisu",
+          "signatureHeaderPlaceholder": "X-Alga-Signature",
+          "bearerToken": "Token bearer",
+          "bearerTokenPlaceholder": "Wklej token lub zostaw puste, aby wygenerować",
+          "secretUnchangedPlaceholder": "Zostaw puste, aby zachować aktualny sekret",
+          "ipCidrs": "Dozwolone IP / CIDR",
+          "ipCidrsPlaceholder": "203.0.113.10\n198.51.100.0/24",
+          "queryParam": "Parametr zapytania",
+          "queryParamPlaceholder": "token",
+          "pathToken": "Token ścieżki",
+          "pathTokenPlaceholder": "Wklej token lub zostaw puste, aby wygenerować"
         }
       },
       "stats": {

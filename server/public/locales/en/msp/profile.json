@@ -239,6 +239,28 @@
           "slugPlaceholder": "rmm-critical-alerts",
           "description": "Description",
           "descriptionPlaceholder": "Optional notes about the source system and payload."
+        },
+        "auth": {
+          "title": "Auth",
+          "help": "Choose how incoming requests prove they are allowed to use this endpoint.",
+          "method": "Auth Method",
+          "types": {
+            "hmacSha256": "HMAC-SHA256",
+            "bearer": "Bearer token",
+            "ipAllowlist": "IP allowlist",
+            "pathToken": "Shared secret in path"
+          },
+          "signatureHeader": "Signature Header",
+          "signatureHeaderPlaceholder": "X-Alga-Signature",
+          "bearerToken": "Bearer Token",
+          "bearerTokenPlaceholder": "Paste token or leave blank to generate one",
+          "secretUnchangedPlaceholder": "Leave blank to keep the current secret",
+          "ipCidrs": "Allowed IPs / CIDRs",
+          "ipCidrsPlaceholder": "203.0.113.10\n198.51.100.0/24",
+          "queryParam": "Query Parameter",
+          "queryParamPlaceholder": "token",
+          "pathToken": "Path Token",
+          "pathTokenPlaceholder": "Paste token or leave blank to generate one"
         }
       },
       "stats": {

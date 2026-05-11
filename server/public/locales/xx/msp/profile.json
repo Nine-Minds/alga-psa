@@ -239,6 +239,28 @@
           "slugPlaceholder": "11111",
           "description": "11111",
           "descriptionPlaceholder": "11111"
+        },
+        "auth": {
+          "title": "11111",
+          "help": "11111",
+          "method": "11111",
+          "types": {
+            "hmacSha256": "11111",
+            "bearer": "11111",
+            "ipAllowlist": "11111",
+            "pathToken": "11111"
+          },
+          "signatureHeader": "11111",
+          "signatureHeaderPlaceholder": "11111",
+          "bearerToken": "11111",
+          "bearerTokenPlaceholder": "11111",
+          "secretUnchangedPlaceholder": "11111",
+          "ipCidrs": "11111",
+          "ipCidrsPlaceholder": "11111",
+          "queryParam": "11111",
+          "queryParamPlaceholder": "11111",
+          "pathToken": "11111",
+          "pathTokenPlaceholder": "11111"
         }
       },
       "stats": {

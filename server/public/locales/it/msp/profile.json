@@ -239,6 +239,28 @@
           "slugPlaceholder": "avvisi-rmm-critici",
           "description": "Descrizione",
           "descriptionPlaceholder": "Note facoltative sul sistema sorgente e sul payload."
+        },
+        "auth": {
+          "title": "Autenticazione",
+          "help": "Scegli come le richieste in entrata dimostrano di poter usare questo endpoint.",
+          "method": "Metodo di autenticazione",
+          "types": {
+            "hmacSha256": "HMAC-SHA256",
+            "bearer": "Token bearer",
+            "ipAllowlist": "Allowlist IP",
+            "pathToken": "Segreto condiviso nel percorso"
+          },
+          "signatureHeader": "Header firma",
+          "signatureHeaderPlaceholder": "X-Alga-Signature",
+          "bearerToken": "Token bearer",
+          "bearerTokenPlaceholder": "Incolla un token o lascia vuoto per generarne uno",
+          "secretUnchangedPlaceholder": "Lascia vuoto per mantenere il segreto attuale",
+          "ipCidrs": "IP / CIDR consentiti",
+          "ipCidrsPlaceholder": "203.0.113.10\n198.51.100.0/24",
+          "queryParam": "Parametro query",
+          "queryParamPlaceholder": "token",
+          "pathToken": "Token percorso",
+          "pathTokenPlaceholder": "Incolla un token o lascia vuoto per generarne uno"
         }
       },
       "stats": {

@@ -239,6 +239,28 @@
           "slugPlaceholder": "kritieke-rmm-meldingen",
           "description": "Beschrijving",
           "descriptionPlaceholder": "Optionele notities over het bronsysteem en de payload."
+        },
+        "auth": {
+          "title": "Authenticatie",
+          "help": "Kies hoe inkomende verzoeken bewijzen dat ze dit eindpunt mogen gebruiken.",
+          "method": "Authenticatiemethode",
+          "types": {
+            "hmacSha256": "HMAC-SHA256",
+            "bearer": "Bearer-token",
+            "ipAllowlist": "IP-allowlist",
+            "pathToken": "Gedeeld geheim in pad"
+          },
+          "signatureHeader": "Handtekening-header",
+          "signatureHeaderPlaceholder": "X-Alga-Signature",
+          "bearerToken": "Bearer-token",
+          "bearerTokenPlaceholder": "Plak token of laat leeg om er een te genereren",
+          "secretUnchangedPlaceholder": "Laat leeg om het huidige geheim te behouden",
+          "ipCidrs": "Toegestane IP's / CIDR's",
+          "ipCidrsPlaceholder": "203.0.113.10\n198.51.100.0/24",
+          "queryParam": "Queryparameter",
+          "queryParamPlaceholder": "token",
+          "pathToken": "Pad-token",
+          "pathTokenPlaceholder": "Plak token of laat leeg om er een te genereren"
         }
       },
       "stats": {
