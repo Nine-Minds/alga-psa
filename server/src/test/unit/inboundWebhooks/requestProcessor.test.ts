@@ -208,4 +208,37 @@ describe('inbound webhook request processor', () => {
     expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
     expect(updateInboundDeliveryOutcome).not.toHaveBeenCalled();
   });
+
+  it('T032: rejects HMAC requests that use a mismatched signature header name', async () => {
+    const body = JSON.stringify({ alert: { message: 'Disk full' } });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-wrong-signature': `sha256=${hmacSignature('top-secret', body)}`,
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    await expect(response.text()).resolves.toBe('');
+    expect(response.status).toBe(401);
+    expect(createInboundDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        inboundWebhookId: 'webhook-1',
+        authStatus: 'rejected_signature',
+        dispatchStatus: 'failed',
+        responseStatus: 401,
+      }),
+    );
+    expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
+  });
 });
