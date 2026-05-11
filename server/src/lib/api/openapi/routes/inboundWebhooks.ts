@@ -100,6 +100,40 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
       rate_limit_per_minute: zOpenApi.number().int().positive().optional(),
     }),
   );
+  registry.registerSchema(
+    'InboundWebhookAuthConfig',
+    zOpenApi.discriminatedUnion('auth_type', [
+      zOpenApi.object({
+        auth_type: zOpenApi.literal('hmac_sha256'),
+        auth_config: zOpenApi.object({
+          signature_header: zOpenApi.string().describe('Header containing sha256=<hex> or raw hex HMAC.'),
+          secret: zOpenApi.string().optional().describe('Create/update-time secret; never returned after storage.'),
+          secret_vault_path: zOpenApi.string().optional().describe('Stored vault path metadata returned by reads.'),
+        }),
+      }),
+      zOpenApi.object({
+        auth_type: zOpenApi.literal('bearer'),
+        auth_config: zOpenApi.object({
+          token: zOpenApi.string().optional().describe('Create/update-time bearer token; never returned after storage.'),
+          token_vault_path: zOpenApi.string().optional().describe('Stored vault path metadata returned by reads.'),
+        }),
+      }),
+      zOpenApi.object({
+        auth_type: zOpenApi.literal('ip_allowlist'),
+        auth_config: zOpenApi.object({
+          ip_cidrs: zOpenApi.array(zOpenApi.string()).describe('Exact IP strings or CIDR ranges accepted.'),
+        }),
+      }),
+      zOpenApi.object({
+        auth_type: zOpenApi.literal('path_token'),
+        auth_config: zOpenApi.object({
+          query_param: zOpenApi.string().optional().describe('Query parameter name, default token.'),
+          token: zOpenApi.string().optional().describe('Create/update-time path token; never returned after storage.'),
+          token_vault_path: zOpenApi.string().optional().describe('Stored vault path metadata returned by reads.'),
+        }),
+      }),
+    ]),
+  );
   const InboundWebhookUpdateInput = registry.registerSchema(
     'InboundWebhookUpdateInput',
     InboundWebhookCreateInput.extend({

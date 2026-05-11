@@ -109,6 +109,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F211 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts`. The templated receiver endpoint `/api/inbound/{tenantSlug}/{webhookSlug}` is documented with tenant/webhook params, configurable signature/idempotency headers, generic JSON body, feature-flag metadata, and 200/401/404/429/5xx response surface.
 - (2026-05-11) **F212 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts`. Registered named component `InboundWebhookConfig` using the camelCase runtime/server-action response shape with redacted auth metadata, handler/idempotency fields, sample capture state, rate limit, active state, and timestamps.
 - (2026-05-11) **F213 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts`. Registered named `InboundWebhookCreateInput` and `InboundWebhookUpdateInput` components using the snake_case API/server-action payload shape; POST uses create and PUT uses update.
+- (2026-05-11) **F214 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts`. Registered named `InboundWebhookAuthConfig` as an `auth_type` discriminated union covering HMAC, Bearer, IP allowlist, and path-token configs, including one-time create fields and stored vault-path metadata.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -310,6 +311,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Type check after F212:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F213:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F214:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References
