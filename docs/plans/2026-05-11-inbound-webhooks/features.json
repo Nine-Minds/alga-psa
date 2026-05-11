@@ -20,7 +20,7 @@
   { "id": "F020", "description": "Server action `replayInboundDelivery(id)` — re-dispatches against current config, links new row", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F021", "description": "Server action `captureSamplePayload(id)` (toggles capture mode for 5 min)", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F022", "description": "Server action `clearSamplePayload(id)`", "implemented": true, "prdRefs": ["Functional Requirements"] },
-  { "id": "F023", "description": "Server action `sendInboundWebhookTest(id, body, headers)` (synthetic in-process dispatch)", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F023", "description": "Server action `sendInboundWebhookTest(id, body, headers)` (synthetic in-process dispatch)", "implemented": true, "prdRefs": ["Functional Requirements"] },
 
   { "id": "F030", "description": "Inbound HTTP route handler at `/api/inbound/[tenantSlug]/[webhookSlug]` (POST/PUT/PATCH)", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F031", "description": "Tenant slug → tenant resolver with caching", "implemented": true, "prdRefs": ["Open Questions"] },
