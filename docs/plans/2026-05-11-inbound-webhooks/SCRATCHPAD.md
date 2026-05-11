@@ -101,6 +101,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F203 implemented** in `server/src/app/api/v1/inbound-webhooks/[id]/rotate-secret/route.ts`. The endpoint calls `rotateInboundWebhookSecret` and returns the redacted config plus one-time replacement secret, preserving the server action's IP-allowlist rejection and vault update behavior.
 - (2026-05-11) **F204 implemented** in `server/src/app/api/v1/inbound-webhooks/[id]/test/route.ts`. `POST /test` accepts the synthetic body/headers payload, delegates to `sendInboundWebhookTest`, and returns the created delivery with `202` after in-process dispatch records its outcome.
 - (2026-05-11) **F205 implemented** in `server/src/app/api/v1/inbound-webhooks/[id]/capture-sample/route.ts`. `POST` enables a five-minute capture window via `captureSamplePayload`; `DELETE` clears both saved sample and capture state via `clearSamplePayload`.
+- (2026-05-11) **F206 implemented** in `server/src/app/api/v1/inbound-webhooks/[id]/deliveries/route.ts`. The route lists deliveries through `listInboundDeliveries`, forces the path webhook id into the filter, supports `page`, `limit`, `status`, `date_from/dateFrom`, and `date_to/dateTo`, and returns pagination metadata.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -286,6 +287,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Type check after F204:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F205:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F206:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References
