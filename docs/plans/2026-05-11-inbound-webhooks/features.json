@@ -5,7 +5,7 @@
   { "id": "F004", "description": "Helper `lookupAlgaEntityByExternalId(tenant, webhookSlug, entityType, externalId)` queries `tenant_external_entity_mappings` (no new entity columns)", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F005", "description": "Helper `writeEntityMapping(tenant, webhookSlug, entityType, algaId, externalId, realm?)` for create-actions to register mappings", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F006", "description": "Add `inbound_webhook` permission resource and seed for admin role", "implemented": true, "prdRefs": ["Security / Permissions"] },
-  { "id": "F007", "description": "Add PostHog feature flag `inbound_webhooks_enabled`", "implemented": false, "prdRefs": ["Rollout / Migration"] },
+  { "id": "F007", "description": "Add PostHog feature flag `inbound_webhooks_enabled`", "implemented": true, "prdRefs": ["Rollout / Migration"] },
 
   { "id": "F010", "description": "TypeScript types: `InboundWebhookConfig`, `InboundWebhookDelivery`, `AuthConfig` union, `HandlerConfig` union", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F011", "description": "Zod schemas for inbound webhook upsert input (per auth_type and handler_type)", "implemented": false, "prdRefs": ["Functional Requirements"] },

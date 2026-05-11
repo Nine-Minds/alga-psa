@@ -29,6 +29,7 @@ const DEFAULT_BOOLEAN_FLAGS: Record<string, boolean> = {
   'enable_salesforce_sync': false,
   'enable_client_client_dual_write': true,
   'quoting-enabled': false,
+  'inbound_webhooks_enabled': false,
 };
 
 const DEFAULT_VARIANT_FLAGS: Record<string, string> = {
