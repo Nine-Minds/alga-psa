@@ -46,7 +46,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F050 implemented** in `server/src/lib/inboundWebhooks/actions/registry.ts`. Added `registerAction`, `getAction`, `listActions`, duplicate-name rejection, deterministic list ordering by entity/name, and a test-only clear helper.
 - (2026-05-11) **F051 implemented** in `server/src/lib/inboundWebhooks/actions/registry.ts`. `InboundActionDefinition` includes `{ name, entityType, displayName, description, targetFields, handle(ctx, mappedValues) }` and returns a structured `InboundActionResult`.
 - (2026-05-11) **F052 implemented** in `server/src/lib/inboundWebhooks/actions/registry.ts`. `InboundActionTargetField` includes `{ name, type, required, description, enumValues?, refEntityType? }`; `refEntityType` is an additive helper for PRD `ref-to-entity` fields.
-- (2026-05-11) **F053 deferred** until the first package-contributed action modules exist. Bootstrap should import actual registration files, not empty placeholders.
+- (2026-05-11) **F053 implemented** in `server/src/lib/inboundWebhooks/actions/bootstrap.ts` and `initializeApp`. Bootstrap currently imports `@alga-psa/tickets/actions/inboundActions`; add future package action modules here as they land. `registerAction` was made generic so package actions can keep typed mapped-value payloads.
 - (2026-05-11) **F054 implemented** in `server/src/lib/inboundWebhooks/actions/mappingEvaluator.ts`. `evaluateFieldMapping` evaluates each mapped target field using the existing workflow JSONata runtime (`@alga-psa/workflows/runtime/expressionEngine`) with both `body` and `payload` bound to the inbound request body.
 - (2026-05-11) **F055 implemented** in `server/src/lib/inboundWebhooks/dispatcher.ts` and the receiver/replay/test outcome paths. The dispatcher validates required fields and primitive target field types after JSONata evaluation; errors are caught by callers and persisted to `handler_outcome.error` with `dispatch_status='failed'`.
 - (2026-05-11) **F1010 implemented** in `packages/tickets/src/actions/inboundActions.ts`. `createTicket` registers itself with the inbound action registry, uses shared `TicketModel.createTicketWithRetry`, supports optional asset association, and writes `tenant_external_entity_mappings` when `external_id` is mapped.
@@ -160,6 +160,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Type check after F020/F023 dispatcher work:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F1010:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F053:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References

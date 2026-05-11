@@ -4,7 +4,7 @@ import { TicketModel, type CreateTicketInput } from '@alga-psa/shared/models/tic
 import { registerAction, type InboundActionDefinition } from '@/lib/inboundWebhooks/actions/registry';
 import { writeEntityMapping } from '@/lib/inboundWebhooks/externalEntityMappings';
 
-interface CreateTicketMappedValues {
+interface CreateTicketMappedValues extends Record<string, unknown> {
   title: string;
   description?: string;
   client_id: string;

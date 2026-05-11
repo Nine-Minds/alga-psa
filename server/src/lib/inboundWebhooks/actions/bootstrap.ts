@@ -1,0 +1,18 @@
+let bootstrapped = false;
+
+export async function bootstrapInboundWebhookActions(): Promise<void> {
+  if (bootstrapped) {
+    return;
+  }
+
+  await import('@alga-psa/tickets/actions/inboundActions');
+  bootstrapped = true;
+}
+
+export function resetInboundWebhookActionBootstrapForTest(): void {
+  if (process.env.NODE_ENV !== 'test') {
+    throw new Error('resetInboundWebhookActionBootstrapForTest may only be used in tests');
+  }
+
+  bootstrapped = false;
+}

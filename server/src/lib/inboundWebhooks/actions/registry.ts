@@ -38,12 +38,14 @@ export interface InboundActionDefinition<TMappedValues extends Record<string, un
 
 const actions = new Map<string, InboundActionDefinition>();
 
-export function registerAction(definition: InboundActionDefinition): void {
+export function registerAction<TMappedValues extends Record<string, unknown>>(
+  definition: InboundActionDefinition<TMappedValues>,
+): void {
   if (actions.has(definition.name)) {
     throw new Error(`Inbound action "${definition.name}" is already registered`);
   }
 
-  actions.set(definition.name, definition);
+  actions.set(definition.name, definition as InboundActionDefinition);
 }
 
 export function getAction(name: string): InboundActionDefinition | undefined {
