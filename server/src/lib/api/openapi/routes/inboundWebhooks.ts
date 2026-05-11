@@ -1,5 +1,6 @@
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import type { ApiResponseSpec } from '../types';
+import type { ZodTypeAny } from 'zod';
 
 export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
   const tag = 'Inbound Webhooks';
@@ -77,7 +78,34 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
   );
   const InboundWebhookDelivery = zOpenApi.record(zOpenApi.unknown()).describe('Inbound webhook delivery.');
   const InboundActionDefinition = zOpenApi.record(zOpenApi.unknown()).describe('Inbound action definition.');
-  const InboundWebhookInput = zOpenApi.record(zOpenApi.unknown()).describe('Inbound webhook create/update input.');
+  const InboundWebhookCreateInput = registry.registerSchema(
+    'InboundWebhookCreateInput',
+    zOpenApi.object({
+      name: zOpenApi.string().min(1),
+      slug: zOpenApi.string().regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/),
+      description: zOpenApi.string().nullable().optional(),
+      auth_type: zOpenApi.enum(['hmac_sha256', 'bearer', 'ip_allowlist', 'path_token']),
+      auth_config: zOpenApi.record(zOpenApi.unknown()),
+      idempotency_source: zOpenApi
+        .object({
+          type: zOpenApi.enum(['header', 'jsonata']),
+          value: zOpenApi.string(),
+        })
+        .nullable()
+        .optional(),
+      idempotency_window_seconds: zOpenApi.number().int().positive().optional(),
+      handler_type: zOpenApi.enum(['direct_action', 'workflow']),
+      handler_config: zOpenApi.record(zOpenApi.unknown()),
+      is_active: zOpenApi.boolean().optional(),
+      rate_limit_per_minute: zOpenApi.number().int().positive().optional(),
+    }),
+  );
+  const InboundWebhookUpdateInput = registry.registerSchema(
+    'InboundWebhookUpdateInput',
+    InboundWebhookCreateInput.extend({
+      inbound_webhook_id: zOpenApi.string().uuid().optional(),
+    }).partial(),
+  );
   const SyntheticTestInput = zOpenApi.object({
     body: zOpenApi.unknown().optional(),
     headers: zOpenApi.record(zOpenApi.union([zOpenApi.string(), zOpenApi.array(zOpenApi.string())])).optional(),
@@ -134,7 +162,7 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
     success: ApiResponseSpec;
     params?: typeof InboundWebhookIdParam | typeof InboundDeliveryParams;
     query?: typeof DeliveryListQuery;
-    body?: typeof InboundWebhookInput | typeof SyntheticTestInput;
+    body?: ZodTypeAny;
     extraResponses?: Record<number, ApiResponseSpec>;
   };
 
@@ -153,7 +181,7 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
       action: 'create',
       summary: 'Create inbound webhook',
       description: 'Creates an inbound webhook configuration and returns any one-time generated secret.',
-      body: InboundWebhookInput,
+      body: InboundWebhookCreateInput,
       success: { description: 'Inbound webhook created.', schema: ConfigEnvelope },
       extraResponses: { 409: { description: 'Inbound webhook slug already exists.', schema: ApiError } },
     },
@@ -182,7 +210,7 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
       summary: 'Update inbound webhook',
       description: 'Updates an inbound webhook configuration by id.',
       params: InboundWebhookIdParam,
-      body: InboundWebhookInput,
+      body: InboundWebhookUpdateInput,
       success: { description: 'Inbound webhook updated.', schema: ConfigEnvelope },
       extraResponses: { 404: { description: 'Inbound webhook not found.', schema: ApiError } },
     },
