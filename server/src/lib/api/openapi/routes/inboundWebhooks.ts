@@ -134,6 +134,26 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
       }),
     ]),
   );
+  registry.registerSchema(
+    'InboundWebhookHandlerConfig',
+    zOpenApi.discriminatedUnion('handler_type', [
+      zOpenApi.object({
+        handler_type: zOpenApi.literal('direct_action'),
+        handler_config: zOpenApi.object({
+          action: zOpenApi.string().describe('Registered inbound action name.'),
+          field_mapping: zOpenApi
+            .record(zOpenApi.string())
+            .describe('Map of target field name to JSONata expression evaluated against the request body.'),
+        }),
+      }),
+      zOpenApi.object({
+        handler_type: zOpenApi.literal('workflow'),
+        handler_config: zOpenApi.object({
+          workflow_id: zOpenApi.string().uuid().describe('Workflow definition to start for verified deliveries.'),
+        }),
+      }),
+    ]),
+  );
   const InboundWebhookUpdateInput = registry.registerSchema(
     'InboundWebhookUpdateInput',
     InboundWebhookCreateInput.extend({
