@@ -39,7 +39,7 @@
   { "id": "T041", "description": "Disabled (is_active=false) webhook returns 401", "implemented": true, "featureIds": ["F030", "F037"] },
   { "id": "T042", "description": "HMAC comparison is timing-safe (no early-return on byte mismatch)", "implemented": true, "featureIds": ["F033"] },
   { "id": "T043", "description": "Bearer comparison is timing-safe", "implemented": true, "featureIds": ["F034"] },
-  { "id": "T044", "description": "Headers `Cookie` and `Authorization` are stripped before persistence", "implemented": false, "featureIds": ["F043"] },
+  { "id": "T044", "description": "Headers `Cookie` and `Authorization` are stripped before persistence", "implemented": true, "featureIds": ["F043"] },
 
   { "id": "T050", "description": "Header-source idempotency key extracted from configured header", "implemented": false, "featureIds": ["F038"] },
   { "id": "T051", "description": "JSONata-source idempotency key extracted from configured path", "implemented": false, "featureIds": ["F039"] },

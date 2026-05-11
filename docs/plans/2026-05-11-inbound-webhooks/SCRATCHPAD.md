@@ -155,6 +155,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T041 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Disabled webhook test verifies `is_active=false` short-circuits before secret lookup/auth verification, returns the same bodyless `401`, logs limited rejected-auth metadata against the webhook id, and skips dispatch.
 - (2026-05-11) **T042 implemented** in `server/src/test/unit/inboundWebhooks/authVerifier.test.ts`. HMAC verifier test mutates one byte of an otherwise valid same-length signature and spies on `crypto.timingSafeEqual`, proving the HMAC path still performs timing-safe comparison with equal-length buffers instead of early-returning on byte mismatch.
 - (2026-05-11) **T043 implemented** in `server/src/test/unit/inboundWebhooks/authVerifier.test.ts`. Bearer verifier test supplies a same-length wrong token, spies on `crypto.timingSafeEqual`, and verifies the bearer path rejects with `rejected_bearer` only after timing-safe comparison with equal-length buffers.
+- (2026-05-11) **T044 implemented** in `server/src/test/unit/inboundWebhooks/headerFilter.test.ts`. Header-filter test verifies persisted inbound headers strip `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key` while preserving safe lowercase headers like `content-type` and `x-request-id`.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -490,6 +491,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T043:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/authVerifier.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T044:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/headerFilter.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References
