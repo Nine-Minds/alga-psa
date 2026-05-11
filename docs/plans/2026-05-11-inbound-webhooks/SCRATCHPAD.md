@@ -207,6 +207,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T111 implemented** in `server/src/test/unit/inboundWebhooks/workflowEnvelope.test.ts`. The workflow envelope builder now has deterministic coverage for the exact documented fields: source, body, headers, verified, delivery_id, idempotency_key, and ISO received_at.
 - (2026-05-11) **T112 implemented** in `server/src/test/unit/inboundWebhooks/workflowDispatcher.test.ts`. Workflow dispatch now verifies sensitive inbound headers (`Authorization`, `Cookie`, `Set-Cookie`, `X-Api-Key`) are filtered before the envelope is passed to `launchPublishedWorkflowRun`.
 - (2026-05-11) **T113 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. The receiver path now verifies a successful workflow dispatch outcome, including `workflow_run_id`, is persisted into `handlerOutcome` when the delivery is marked `dispatched`.
+- (2026-05-11) **T114 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Workflow trigger errors now have receiver-path coverage showing the delivery is updated to `dispatchStatus='failed'` with the engine error message in `handlerOutcome`.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -697,6 +698,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/workflowDispatcher.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T113:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T114:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 

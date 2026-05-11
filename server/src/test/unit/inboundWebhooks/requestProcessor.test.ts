@@ -333,6 +333,50 @@ describe('inbound webhook request processor', () => {
     );
   });
 
+  it('T114: workflow trigger errors are recorded as failed deliveries', async () => {
+    lookupInboundWebhookBySlug.mockResolvedValue({
+      ...activeHmacWebhook(),
+      handler_type: 'workflow',
+      handler_config: {
+        type: 'workflow',
+        workflow_id: 'workflow-1',
+      },
+    });
+    dispatchInboundWebhookHandler.mockRejectedValue(new Error('Workflow engine unavailable'));
+    const body = JSON.stringify({ alert: { message: 'Disk full' } });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-signature': `sha256=${hmacSignature('top-secret', body)}`,
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    await expect(response.json()).resolves.toEqual({
+      delivery_id: 'delivery-1',
+      error: 'dispatch_failed',
+    });
+    expect(response.status).toBe(500);
+    expect(updateInboundDeliveryOutcome).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        deliveryId: 'delivery-1',
+        dispatchStatus: 'failed',
+        handlerOutcome: { error: 'Workflow engine unavailable' },
+        responseStatus: 500,
+      }),
+    );
+  });
+
   it('T060: persists a verified delivery row before dispatch', async () => {
     const body = JSON.stringify({ alert: { message: 'Disk full' } });
     const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {

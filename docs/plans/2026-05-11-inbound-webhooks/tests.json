@@ -105,7 +105,7 @@
   { "id": "T111", "description": "Envelope includes `source`, `body`, `headers`, `verified`, `delivery_id`, `idempotency_key`, `received_at`", "implemented": true, "featureIds": ["F061"] },
   { "id": "T112", "description": "Envelope `headers` is filtered (no Cookie/Authorization)", "implemented": true, "featureIds": ["F061", "F043"] },
   { "id": "T113", "description": "Delivery row stores workflow_run_id after successful trigger", "implemented": true, "featureIds": ["F062"] },
-  { "id": "T114", "description": "Workflow engine error on trigger → failed delivery with error message", "implemented": false, "featureIds": ["F063"] },
+  { "id": "T114", "description": "Workflow engine error on trigger → failed delivery with error message", "implemented": true, "featureIds": ["F063"] },
   { "id": "T115", "description": "Workflow run failure AFTER trigger does NOT mark delivery failed", "implemented": false, "featureIds": ["F063"] },
 
   { "id": "T120", "description": "Webhook payload context adapter builds path tree from sample payload", "implemented": false, "featureIds": ["F070", "F071"] },
