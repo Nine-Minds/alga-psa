@@ -46,7 +46,35 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
     date_to: zOpenApi.string().datetime().optional(),
   });
 
-  const InboundWebhookConfig = zOpenApi.record(zOpenApi.unknown()).describe('Inbound webhook configuration.');
+  const InboundWebhookConfig = registry.registerSchema(
+    'InboundWebhookConfig',
+    zOpenApi.object({
+      inboundWebhookId: zOpenApi.string().uuid(),
+      tenant: zOpenApi.string().uuid(),
+      name: zOpenApi.string(),
+      slug: zOpenApi.string(),
+      description: zOpenApi.string().nullable(),
+      authType: zOpenApi.enum(['hmac_sha256', 'bearer', 'ip_allowlist', 'path_token']),
+      authConfig: zOpenApi.record(zOpenApi.unknown()).describe('Redacted auth configuration metadata.'),
+      idempotencySource: zOpenApi
+        .object({
+          type: zOpenApi.enum(['header', 'jsonata']),
+          value: zOpenApi.string(),
+        })
+        .nullable(),
+      idempotencyWindowSeconds: zOpenApi.number().int(),
+      handlerType: zOpenApi.enum(['direct_action', 'workflow']),
+      handlerConfig: zOpenApi.record(zOpenApi.unknown()),
+      samplePayload: zOpenApi.unknown().nullable(),
+      sampleCaptureExpiresAt: zOpenApi.string().datetime().nullable(),
+      isActive: zOpenApi.boolean(),
+      rateLimitPerMinute: zOpenApi.number().int(),
+      autoDisabledAt: zOpenApi.string().datetime().nullable(),
+      createdBy: zOpenApi.string().uuid().nullable(),
+      createdAt: zOpenApi.string().datetime(),
+      updatedAt: zOpenApi.string().datetime(),
+    }),
+  );
   const InboundWebhookDelivery = zOpenApi.record(zOpenApi.unknown()).describe('Inbound webhook delivery.');
   const InboundActionDefinition = zOpenApi.record(zOpenApi.unknown()).describe('Inbound action definition.');
   const InboundWebhookInput = zOpenApi.record(zOpenApi.unknown()).describe('Inbound webhook create/update input.');

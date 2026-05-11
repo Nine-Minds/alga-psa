@@ -116,7 +116,7 @@
 
   { "id": "F210", "description": "OpenAPI registry file: `server/src/lib/api/openapi/routes/inboundWebhooks.ts` with all management endpoints", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F211", "description": "OpenAPI registration for templated receiver endpoint `/api/inbound/{tenantSlug}/{webhookSlug}` (headers, response codes, generic JSON body)", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
-  { "id": "F212", "description": "OpenAPI component schema: `InboundWebhookConfig`", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },
+  { "id": "F212", "description": "OpenAPI component schema: `InboundWebhookConfig`", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F213", "description": "OpenAPI component schemas: `InboundWebhookCreateInput`, `InboundWebhookUpdateInput`", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F214", "description": "OpenAPI component schema: `InboundWebhookAuthConfig` (discriminated union by auth_type)", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F215", "description": "OpenAPI component schema: `InboundWebhookHandlerConfig` (discriminated union by handler_type)", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },
