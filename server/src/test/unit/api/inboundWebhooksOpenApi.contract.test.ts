@@ -1,8 +1,12 @@
+import { readFileSync } from 'fs';
 import { describe, expect, it } from 'vitest';
 
 import { generateBaseDocument } from '@/lib/api/openapi';
 
 describe('inbound webhook OpenAPI contracts', () => {
+  const generatedCeYaml = () => readFileSync('../sdk/docs/openapi/alga-openapi.ce.yaml', 'utf8');
+  const generatedEeYaml = () => readFileSync('../sdk/docs/openapi/alga-openapi.ee.yaml', 'utf8');
+
   it('documents every inbound webhook management route with tenant-scoped RBAC metadata', () => {
     const document = generateBaseDocument({
       title: 'Alga PSA API',
@@ -126,6 +130,180 @@ describe('inbound webhook OpenAPI contracts', () => {
         enumValues: {
           type: 'array',
           items: { type: 'string' },
+        },
+      },
+    });
+  });
+
+  it('includes every inbound webhook API path in the generated CE OpenAPI YAML', () => {
+    const yaml = generatedCeYaml();
+    const expectedPaths = [
+      '/api/v1/inbound-webhooks:',
+      '/api/v1/inbound-webhooks/{id}:',
+      '/api/v1/inbound-webhooks/{id}/rotate-secret:',
+      '/api/v1/inbound-webhooks/{id}/test:',
+      '/api/v1/inbound-webhooks/{id}/capture-sample:',
+      '/api/v1/inbound-webhooks/{id}/deliveries:',
+      '/api/v1/inbound-webhooks/{id}/deliveries/{deliveryId}:',
+      '/api/v1/inbound-webhooks/{id}/deliveries/{deliveryId}/replay:',
+      '/api/v1/inbound-webhooks/actions:',
+    ];
+
+    for (const path of expectedPaths) {
+      expect(yaml).toContain(path);
+    }
+  });
+
+  it('keeps generated EE inbound webhook paths in parity with CE', () => {
+    const ceYaml = generatedCeYaml();
+    const eeYaml = generatedEeYaml();
+    const inboundPathPattern = /^  \/(api\/v1\/inbound-webhooks[^\n:]*|api\/inbound\/\{tenantSlug\}\/\{webhookSlug\}):/gm;
+
+    const cePaths = Array.from(ceYaml.matchAll(inboundPathPattern), (match) => match[0]);
+    const eePaths = Array.from(eeYaml.matchAll(inboundPathPattern), (match) => match[0]);
+
+    expect(eePaths).toEqual(cePaths);
+  });
+
+  it('documents the templated receiver endpoint with headers and response codes', () => {
+    const document = generateBaseDocument({
+      title: 'Alga PSA API',
+      version: '0.1.0-test',
+      description: 'Test document',
+      edition: 'ce',
+    });
+
+    const operation = document.paths?.['/api/inbound/{tenantSlug}/{webhookSlug}']?.post as
+      | Record<string, any>
+      | undefined;
+
+    expect(operation).toBeTruthy();
+    expect(operation?.parameters).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ name: 'tenantSlug', in: 'path', required: true }),
+        expect.objectContaining({ name: 'webhookSlug', in: 'path', required: true }),
+        expect.objectContaining({ name: 'x-signature', in: 'header' }),
+        expect.objectContaining({ name: 'x-idempotency-key', in: 'header' }),
+      ]),
+    );
+    expect(operation?.requestBody?.content?.['application/json']?.schema).toEqual({});
+    expect(operation?.responses).toEqual(
+      expect.objectContaining({
+        '200': expect.any(Object),
+        '401': expect.any(Object),
+        '404': expect.any(Object),
+        '429': expect.any(Object),
+        '500': expect.any(Object),
+      }),
+    );
+  });
+
+  it('references InboundWebhookConfig from list, get, and create responses', () => {
+    const document = generateBaseDocument({
+      title: 'Alga PSA API',
+      version: '0.1.0-test',
+      description: 'Test document',
+      edition: 'ce',
+    });
+
+    const listResponse = JSON.stringify(document.paths?.['/api/v1/inbound-webhooks']?.get?.responses);
+    const createResponse = JSON.stringify(document.paths?.['/api/v1/inbound-webhooks']?.post?.responses);
+    const getResponse = JSON.stringify(document.paths?.['/api/v1/inbound-webhooks/{id}']?.get?.responses);
+
+    expect(listResponse).toContain('#/components/schemas/InboundWebhookConfig');
+    expect(createResponse).toContain('#/components/schemas/InboundWebhookConfig');
+    expect(getResponse).toContain('#/components/schemas/InboundWebhookConfig');
+  });
+
+  it('documents auth config variants for each supported auth_type', () => {
+    const document = generateBaseDocument({
+      title: 'Alga PSA API',
+      version: '0.1.0-test',
+      description: 'Test document',
+      edition: 'ce',
+    });
+    const schemaText = JSON.stringify(document.components?.schemas?.InboundWebhookAuthConfig);
+
+    for (const authType of ['hmac_sha256', 'bearer', 'ip_allowlist', 'path_token']) {
+      expect(schemaText).toContain(authType);
+    }
+    expect(schemaText).toContain('signature_header');
+    expect(schemaText).toContain('secret_vault_path');
+    expect(schemaText).toContain('token_vault_path');
+    expect(schemaText).toContain('ip_cidrs');
+  });
+
+  it('documents direct-action and workflow handler config variants', () => {
+    const document = generateBaseDocument({
+      title: 'Alga PSA API',
+      version: '0.1.0-test',
+      description: 'Test document',
+      edition: 'ce',
+    });
+    const schemaText = JSON.stringify(document.components?.schemas?.InboundWebhookHandlerConfig);
+
+    expect(schemaText).toContain('direct_action');
+    expect(schemaText).toContain('field_mapping');
+    expect(schemaText).toContain('workflow');
+    expect(schemaText).toContain('workflow_id');
+  });
+
+  it('documents the WorkflowWebhookEnvelope component with runtime envelope fields', () => {
+    const document = generateBaseDocument({
+      title: 'Alga PSA API',
+      version: '0.1.0-test',
+      description: 'Test document',
+      edition: 'ce',
+    });
+    const envelope = document.components?.schemas?.WorkflowWebhookEnvelope as Record<string, any> | undefined;
+
+    expect(envelope).toMatchObject({
+      type: 'object',
+      required: expect.arrayContaining([
+        'source',
+        'headers',
+        'verified',
+        'delivery_id',
+        'idempotency_key',
+        'received_at',
+      ]),
+    });
+    expect(envelope?.properties).toHaveProperty('body');
+    expect(envelope?.properties?.verified).toEqual({ type: 'boolean', enum: [true] });
+  });
+
+  it('keeps management route response schemas aligned with registered handlers', () => {
+    const document = generateBaseDocument({
+      title: 'Alga PSA API',
+      version: '0.1.0-test',
+      description: 'Test document',
+      edition: 'ce',
+    });
+
+    expect(document.paths?.['/api/v1/inbound-webhooks']?.post?.requestBody?.content?.['application/json']?.schema).toEqual({
+      $ref: '#/components/schemas/InboundWebhookCreateInput',
+    });
+    expect(document.paths?.['/api/v1/inbound-webhooks/{id}']?.put?.requestBody?.content?.['application/json']?.schema).toEqual({
+      $ref: '#/components/schemas/InboundWebhookUpdateInput',
+    });
+    expect(JSON.stringify(document.paths?.['/api/v1/inbound-webhooks/{id}/test']?.post?.responses)).toContain(
+      '#/components/schemas/InboundWebhookDelivery',
+    );
+  });
+
+  it('documents action discovery output with the InboundActionDefinition array schema', () => {
+    const document = generateBaseDocument({
+      title: 'Alga PSA API',
+      version: '0.1.0-test',
+      description: 'Test document',
+      edition: 'ce',
+    });
+
+    expect(document.paths?.['/api/v1/inbound-webhooks/actions']?.get?.responses?.['200']?.content?.['application/json']?.schema).toMatchObject({
+      properties: {
+        data: {
+          type: 'array',
+          items: { $ref: '#/components/schemas/InboundActionDefinition' },
         },
       },
     });

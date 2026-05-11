@@ -172,15 +172,15 @@
   { "id": "T312", "description": "`GET /api/v1/inbound-webhooks/actions` returns all registered actions with target field schemas", "implemented": true, "featureIds": ["F209"] },
   { "id": "T313", "description": "Action discovery endpoint output matches registry contents (no drift)", "implemented": true, "featureIds": ["F209", "F050"] },
 
-  { "id": "T320", "description": "Generated `alga-openapi.ce.yaml` contains every `/api/v1/inbound-webhooks/*` path", "implemented": false, "featureIds": ["F210", "F220"] },
-  { "id": "T321", "description": "Generated `alga-openapi.ee.yaml` matches CE plus any EE-only entries", "implemented": false, "featureIds": ["F220"] },
-  { "id": "T322", "description": "Templated receiver endpoint `/api/inbound/{tenantSlug}/{webhookSlug}` present in OpenAPI with documented headers + response codes", "implemented": false, "featureIds": ["F211"] },
-  { "id": "T323", "description": "`InboundWebhookConfig` schema referenced from list/get/create responses", "implemented": false, "featureIds": ["F212"] },
-  { "id": "T324", "description": "`InboundWebhookAuthConfig` discriminated union resolves correctly for each `auth_type`", "implemented": false, "featureIds": ["F214"] },
-  { "id": "T325", "description": "`InboundWebhookHandlerConfig` discriminated union resolves for `direct_action` and `workflow`", "implemented": false, "featureIds": ["F215"] },
-  { "id": "T326", "description": "`WorkflowWebhookEnvelope` schema present and matches runtime envelope shape", "implemented": false, "featureIds": ["F218", "F061"] },
-  { "id": "T327", "description": "Contract test: each management route handler accepts/returns shapes matching its OpenAPI definition", "implemented": false, "featureIds": ["F221"] },
-  { "id": "T328", "description": "Contract test: action discovery endpoint output validates against `InboundActionDefinition[]` schema", "implemented": false, "featureIds": ["F222", "F217"] },
-  { "id": "T329", "description": "REST API routes reject unauthorized callers (parity with server actions)", "implemented": false, "featureIds": ["F223", "F102"] },
-  { "id": "T330", "description": "REST API routes scope every query by tenant (parity with server actions)", "implemented": false, "featureIds": ["F223", "F032"] }
+  { "id": "T320", "description": "Generated `alga-openapi.ce.yaml` contains every `/api/v1/inbound-webhooks/*` path", "implemented": true, "featureIds": ["F210", "F220"] },
+  { "id": "T321", "description": "Generated `alga-openapi.ee.yaml` matches CE plus any EE-only entries", "implemented": true, "featureIds": ["F220"] },
+  { "id": "T322", "description": "Templated receiver endpoint `/api/inbound/{tenantSlug}/{webhookSlug}` present in OpenAPI with documented headers + response codes", "implemented": true, "featureIds": ["F211"] },
+  { "id": "T323", "description": "`InboundWebhookConfig` schema referenced from list/get/create responses", "implemented": true, "featureIds": ["F212"] },
+  { "id": "T324", "description": "`InboundWebhookAuthConfig` discriminated union resolves correctly for each `auth_type`", "implemented": true, "featureIds": ["F214"] },
+  { "id": "T325", "description": "`InboundWebhookHandlerConfig` discriminated union resolves for `direct_action` and `workflow`", "implemented": true, "featureIds": ["F215"] },
+  { "id": "T326", "description": "`WorkflowWebhookEnvelope` schema present and matches runtime envelope shape", "implemented": true, "featureIds": ["F218", "F061"] },
+  { "id": "T327", "description": "Contract test: each management route handler accepts/returns shapes matching its OpenAPI definition", "implemented": true, "featureIds": ["F221"] },
+  { "id": "T328", "description": "Contract test: action discovery endpoint output validates against `InboundActionDefinition[]` schema", "implemented": true, "featureIds": ["F222", "F217"] },
+  { "id": "T329", "description": "REST API routes reject unauthorized callers (parity with server actions)", "implemented": true, "featureIds": ["F223", "F102"] },
+  { "id": "T330", "description": "REST API routes scope every query by tenant (parity with server actions)", "implemented": true, "featureIds": ["F223", "F032"] }
 ]

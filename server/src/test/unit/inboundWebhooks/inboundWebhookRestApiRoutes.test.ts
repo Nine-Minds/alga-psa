@@ -410,4 +410,30 @@ describe('inbound webhook REST API routes', () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ data: actionDefinitions });
   });
+
+  it('returns server-action authorization failures without adding a parallel auth path', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    inboundActions.listInboundWebhooks.mockRejectedValue(
+      Object.assign(new Error('Forbidden'), {
+        name: 'ForbiddenError',
+        statusCode: 403,
+        code: 'FORBIDDEN',
+      }),
+    );
+
+    try {
+      const route = await import('@/app/api/v1/inbound-webhooks/route');
+      const response = await route.GET();
+
+      expect(response.status).toBe(403);
+      await expect(response.json()).resolves.toEqual({
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Forbidden',
+        },
+      });
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
 });
