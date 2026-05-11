@@ -286,6 +286,32 @@ function makeRotateKnex(row: InboundWebhookRowFixture) {
   return { knex, getBuilder, updateBuilder, getUpdatedPayload: () => updatedPayload };
 }
 
+function makeDeleteKnex(row: InboundWebhookRowFixture) {
+  const getBuilder: any = {
+    where: vi.fn(() => getBuilder),
+    first: vi.fn(async () => row),
+  };
+
+  const deleteBuilder: any = {
+    where: vi.fn(() => deleteBuilder),
+    delete: vi.fn(async () => 1),
+  };
+
+  const knex = vi.fn((table: string) => {
+    if (table === 'inbound_webhook_deliveries') {
+      throw new Error('deleteInboundWebhook should retain delivery rows');
+    }
+
+    if (table !== 'inbound_webhooks') {
+      throw new Error(`Unexpected table ${table}`);
+    }
+
+    return knex.mock.calls.length === 1 ? getBuilder : deleteBuilder;
+  });
+
+  return { knex, getBuilder, deleteBuilder };
+}
+
 describe('inbound webhook server actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -440,5 +466,31 @@ describe('inbound webhook server actions', () => {
       secretVaultPath: existingVaultPath,
     });
     expect(JSON.stringify(result.webhook)).not.toContain(result.secret);
+  });
+
+  it('T026: deleteInboundWebhook retains deliveries and removes only the config plus auth secret', async () => {
+    const { knex, getBuilder, deleteBuilder } = makeDeleteKnex(
+      inboundWebhookRow({
+        auth_config: {
+          type: 'bearer',
+          token_vault_path: 'inbound-webhooks/inbound_webhook_webhook-1_bearer_token',
+        },
+      }),
+    );
+    createTenantKnex.mockResolvedValue({ knex });
+
+    const { deleteInboundWebhook } = await import('@/lib/actions/inboundWebhookActions');
+    const result = await deleteInboundWebhook('webhook-1');
+
+    expect(hasPermission).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'inbound_webhook', 'delete', knex);
+    expect(getBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', inbound_webhook_id: 'webhook-1' });
+    expect(deleteBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', inbound_webhook_id: 'webhook-1' });
+    expect(deleteBuilder.delete).toHaveBeenCalledTimes(1);
+    expect(knex).not.toHaveBeenCalledWith('inbound_webhook_deliveries');
+    expect(deleteTenantSecret).toHaveBeenCalledWith(
+      'tenant-a',
+      'inbound_webhook_webhook-1_bearer_token',
+    );
+    expect(result).toEqual({ deleted: true, inboundWebhookId: 'webhook-1' });
   });
 });
