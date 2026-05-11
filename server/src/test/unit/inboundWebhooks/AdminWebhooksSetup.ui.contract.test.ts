@@ -172,4 +172,19 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain('id="inbound-webhook-workflow"');
     expect(adminWebhooksSource).toContain('options={workflowSelectOptions}');
   });
+
+  it('T144: workflow envelope info card displays the documented shape', () => {
+    expect(adminWebhooksSource).toContain("t('security.webhooks.inbound.handler.envelopeTitle')");
+    for (const field of [
+      '"source": "<webhook_slug>"',
+      '"body": { }',
+      '"headers": { }',
+      '"verified": true',
+      '"delivery_id": "<delivery_id>"',
+      '"idempotency_key": "<key>"',
+      '"received_at": "<iso_timestamp>"',
+    ]) {
+      expect(adminWebhooksSource).toContain(field);
+    }
+  });
 });

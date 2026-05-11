@@ -127,7 +127,7 @@
   { "id": "T141", "description": "Action dropdown lists all registered actions", "implemented": true, "featureIds": ["F087"] },
   { "id": "T142", "description": "Selecting action renders its target fields with ExpressionTextArea rows", "implemented": true, "featureIds": ["F088"] },
   { "id": "T143", "description": "Workflow dropdown lists tenant's workflows", "implemented": true, "featureIds": ["F091"] },
-  { "id": "T144", "description": "Workflow envelope info card displays correct shape", "implemented": false, "featureIds": ["F091"] },
+  { "id": "T144", "description": "Workflow envelope info card displays correct shape", "implemented": true, "featureIds": ["F091"] },
   { "id": "T145", "description": "Sample capture button toggles capture mode and shows countdown", "implemented": false, "featureIds": ["F089"] },
   { "id": "T146", "description": "Sample tree side panel renders captured payload paths", "implemented": false, "featureIds": ["F090"] },
   { "id": "T147", "description": "Clicking a path in tree inserts it into focused ExpressionTextArea", "implemented": false, "featureIds": ["F090"] },
