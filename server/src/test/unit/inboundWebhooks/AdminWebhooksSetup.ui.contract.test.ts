@@ -95,4 +95,16 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain("placeholder={t('security.webhooks.inbound.auth.ipCidrsPlaceholder')}");
     expect(adminWebhooksSource).toContain('ipCidrs: event.target.value');
   });
+
+  it('T137: displays a created inbound webhook secret once and clears it when closed', () => {
+    expect(adminWebhooksSource).toContain('upsertInboundWebhook');
+    expect(adminWebhooksSource).toContain('setRevealedInboundSecret({');
+    expect(adminWebhooksSource).toContain('webhookName: result.webhook.name');
+    expect(adminWebhooksSource).toContain('secret: result.secret');
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-secret"');
+    expect(adminWebhooksSource).toContain('isOpen={revealedInboundSecret !== null}');
+    expect(adminWebhooksSource).toContain("onClose={() => setRevealedInboundSecret(null)}");
+    expect(adminWebhooksSource).toContain("{revealedInboundSecret?.secret ?? ''}");
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-secret-close"');
+  });
 });

@@ -52,6 +52,7 @@ import {
   replayInboundDelivery,
   sendInboundWebhookTest,
   setInboundWebhookActiveState,
+  upsertInboundWebhook,
   type InboundActionDefinitionView,
   type InboundWorkflowOptionView,
 } from '@/lib/actions/inboundWebhookActions';
@@ -340,6 +341,73 @@ function slugifyInboundWebhookName(value: string): string {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 80);
+}
+
+function splitLines(input: string): string[] {
+  return input
+    .split(/[\n,]+/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function buildInboundWebhookUpsertPayload(form: InboundWebhookIdentityFormState): Record<string, unknown> {
+  const authConfig = (() => {
+    switch (form.authType) {
+      case 'hmac_sha256':
+        return {
+          type: 'hmac_sha256',
+          signature_header: form.hmacSignatureHeader,
+        };
+      case 'bearer':
+        return {
+          type: 'bearer',
+          ...(form.bearerToken.trim() ? { token: form.bearerToken.trim() } : {}),
+        };
+      case 'ip_allowlist':
+        return {
+          type: 'ip_allowlist',
+          ip_cidrs: splitLines(form.ipCidrs),
+        };
+      case 'path_token':
+        return {
+          type: 'path_token',
+          query_param: form.pathTokenQueryParam.trim() || 'token',
+          ...(form.pathToken.trim() ? { token: form.pathToken.trim() } : {}),
+        };
+      default:
+        return { type: form.authType };
+    }
+  })();
+
+  const handlerConfig = form.handlerType === 'workflow'
+    ? {
+        type: 'workflow',
+        workflow_id: form.workflowId,
+      }
+    : {
+        type: 'direct_action',
+        action: form.directActionName,
+        field_mapping: form.fieldMapping,
+      };
+
+  return {
+    ...(form.inboundWebhookId ? { inbound_webhook_id: form.inboundWebhookId } : {}),
+    name: form.name,
+    slug: form.slug,
+    description: form.description || null,
+    auth_type: form.authType,
+    auth_config: authConfig,
+    idempotency_source: form.idempotencyValue.trim()
+      ? {
+          type: form.idempotencyType,
+          value: form.idempotencyValue.trim(),
+        }
+      : null,
+    idempotency_window_seconds: form.idempotencyWindowSeconds,
+    handler_type: form.handlerType,
+    handler_config: handlerConfig,
+    is_active: form.isActive,
+  };
 }
 
 function formatInboundHandlerLabel(
@@ -794,6 +862,39 @@ function InboundWebhooksListView() {
       setError(testError instanceof Error ? testError.message : t('security.webhooks.inbound.test.sendFailed'));
     }
   }, [identityForm.inboundWebhookId, inboundDeliveryPageNumber, loadInboundDialogDeliveries, t, testBodyText, testHeadersText]);
+
+  const handleSaveInboundWebhook = useCallback(async () => {
+    try {
+      const result = await upsertInboundWebhook(buildInboundWebhookUpsertPayload(identityForm));
+      setIdentityForm((current) => ({
+        ...current,
+        inboundWebhookId: result.webhook.inboundWebhookId,
+        samplePayload: result.webhook.samplePayload,
+        sampleCaptureExpiresAt: result.webhook.sampleCaptureExpiresAt,
+        autoDisabledAt: result.webhook.autoDisabledAt,
+      }));
+      setWebhooks((current) => {
+        const existingIndex = current.findIndex((webhook) => webhook.inboundWebhookId === result.webhook.inboundWebhookId);
+        if (existingIndex === -1) {
+          return [...current, result.webhook];
+        }
+        return current.map((webhook) => (
+          webhook.inboundWebhookId === result.webhook.inboundWebhookId ? result.webhook : webhook
+        ));
+      });
+      setIdentityDialogOpen(false);
+      if (result.secret) {
+        setRevealedInboundSecret({
+          webhookName: result.webhook.name,
+          secret: result.secret,
+        });
+      }
+      setError(null);
+    } catch (saveError) {
+      console.error('Failed to save inbound webhook:', saveError);
+      setError(saveError instanceof Error ? saveError.message : t('security.webhooks.messages.saveFailed'));
+    }
+  }, [identityForm, t]);
 
   return (
     <div className="space-y-6">
@@ -1407,7 +1508,7 @@ function InboundWebhooksListView() {
           </Button>
           <Button
             id="inbound-webhook-identity-save"
-            disabled
+            onClick={() => void handleSaveInboundWebhook()}
           >
             {t('security.webhooks.inbound.dialog.saveUnavailable')}
           </Button>
