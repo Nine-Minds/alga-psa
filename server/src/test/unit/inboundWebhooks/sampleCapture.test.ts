@@ -55,4 +55,33 @@ describe('inbound webhook sample capture', () => {
       updated_at: new Date('2026-05-11T12:00:00.000Z'),
     });
   });
+
+  it('T081: returns false when the capture window has expired and does not overwrite a sample', async () => {
+    const now = new Date('2026-05-11T12:06:00.000Z');
+    const body = { alert: { id: 'alert-456', message: 'Late payload' } };
+    const { knex, query, nestedBuilder } = createSampleCaptureKnex(0);
+
+    await expect(
+      captureInboundWebhookSampleIfRequested({
+        knex,
+        tenant: 'tenant-a',
+        inboundWebhookId: 'webhook-1',
+        body,
+        now,
+      }),
+    ).resolves.toBe(false);
+
+    expect(query.where).toHaveBeenCalledWith({
+      tenant: 'tenant-a',
+      inbound_webhook_id: 'webhook-1',
+    });
+    expect(query.andWhere).toHaveBeenCalledWith('sample_capture_expires_at', '>', now);
+    expect(nestedBuilder.whereNull).toHaveBeenCalledWith('sample_payload');
+    expect(query.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sample_payload: body,
+        sample_capture_expires_at: null,
+      }),
+    );
+  });
 });
