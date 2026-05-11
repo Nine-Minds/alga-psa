@@ -141,7 +141,7 @@
   { "id": "T164", "description": "Replayed delivery links back to original via replayed_from", "implemented": true, "featureIds": ["F020"] },
   { "id": "T165", "description": "Synthetic test dialog accepts custom body + headers and dispatches in-process", "implemented": true, "featureIds": ["F023", "F096"] },
 
-  { "id": "T170", "description": "No hardcoded English strings in new UI components (i18n scan passes)", "implemented": false, "featureIds": ["F097"] },
+  { "id": "T170", "description": "No hardcoded English strings in new UI components (i18n scan passes)", "implemented": true, "featureIds": ["F097"] },
   { "id": "T171", "description": "All interactive elements have kebab-case `id` attributes (UI reflection scan passes)", "implemented": false, "featureIds": ["F098"] },
 
   { "id": "T180", "description": "Feature flag off: Settings tab hidden", "implemented": false, "featureIds": ["F100"] },

@@ -7,6 +7,11 @@ const adminWebhooksSource = readFileSync(
   'utf8',
 );
 
+const inboundWebhooksSource = adminWebhooksSource.slice(
+  adminWebhooksSource.indexOf('function InboundWebhooksListView()'),
+  adminWebhooksSource.indexOf('function OutboundWebhooksSetup()'),
+);
+
 describe('AdminWebhooksSetup inbound UI contract', () => {
   it('T130: renders a tabbed webhooks settings shell with inbound and outbound tabs', () => {
     expect(adminWebhooksSource).toContain('<Tabs value={activeTab}');
@@ -275,5 +280,15 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain('id="inbound-webhook-test-body"');
     expect(adminWebhooksSource).toContain('id="inbound-webhook-test-headers"');
     expect(adminWebhooksSource).toContain('id="inbound-webhook-test-send"');
+  });
+
+  it('T170: inbound UI avoids hardcoded English copy outside translation calls', () => {
+    expect(inboundWebhooksSource).toContain("useTranslation('msp/profile')");
+    expect(inboundWebhooksSource).toContain("t('security.webhooks.inbound.");
+
+    const jsxTextLiterals = Array.from(inboundWebhooksSource.matchAll(/>\s*([A-Z][A-Za-z][A-Za-z ]{2,})\s*</g))
+      .map((match) => match[1]);
+
+    expect(jsxTextLiterals).toEqual([]);
   });
 });
