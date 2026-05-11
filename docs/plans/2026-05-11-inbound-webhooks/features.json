@@ -106,7 +106,7 @@
   { "id": "F200", "description": "REST API route: `GET /api/v1/inbound-webhooks` (list)", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F201", "description": "REST API route: `POST /api/v1/inbound-webhooks` (create)", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F202", "description": "REST API route: `GET/PUT/DELETE /api/v1/inbound-webhooks/{id}`", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
-  { "id": "F203", "description": "REST API route: `POST /api/v1/inbound-webhooks/{id}/rotate-secret`", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },
+  { "id": "F203", "description": "REST API route: `POST /api/v1/inbound-webhooks/{id}/rotate-secret`", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F204", "description": "REST API route: `POST /api/v1/inbound-webhooks/{id}/test` (synthetic dispatch)", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F205", "description": "REST API route: `POST/DELETE /api/v1/inbound-webhooks/{id}/capture-sample`", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F206", "description": "REST API route: `GET /api/v1/inbound-webhooks/{id}/deliveries` (paginated, filterable)", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },
