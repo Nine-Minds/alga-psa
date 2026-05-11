@@ -1,5 +1,10 @@
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import { TicketModel, type CreateTicketInput, type UpdateTicketInput } from '@alga-psa/shared/models/ticketModel';
+import {
+  TicketModel,
+  type CreateCommentInput,
+  type CreateTicketInput,
+  type UpdateTicketInput,
+} from '@alga-psa/shared/models/ticketModel';
 
 import { registerAction, type InboundActionDefinition } from '@/lib/inboundWebhooks/actions/registry';
 import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@/lib/inboundWebhooks/externalEntityMappings';
@@ -38,6 +43,15 @@ interface UpdateTicketByExternalIdMappedValues extends Record<string, unknown> {
   location_id?: string;
   due_date?: string;
   attributes?: Record<string, unknown>;
+}
+
+interface AddTicketCommentByExternalIdMappedValues extends Record<string, unknown> {
+  external_id: string;
+  content: string;
+  is_internal?: boolean;
+  is_resolution?: boolean;
+  author_id?: string;
+  contact_id?: string;
 }
 
 const createTicketAction: InboundActionDefinition<CreateTicketMappedValues> = {
@@ -205,10 +219,82 @@ const updateTicketByExternalIdAction: InboundActionDefinition<UpdateTicketByExte
   },
 };
 
+const addTicketCommentByExternalIdAction: InboundActionDefinition<AddTicketCommentByExternalIdMappedValues> = {
+  name: 'addTicketCommentByExternalId',
+  entityType: 'ticket',
+  displayName: 'Add Ticket Comment by External ID',
+  description: 'Append a comment to a mapped ticket using the webhook-scoped external ID.',
+  targetFields: [
+    { name: 'external_id', type: 'string', required: true, description: 'External ticket identifier to resolve' },
+    { name: 'content', type: 'string', required: true, description: 'Comment content' },
+    { name: 'is_internal', type: 'boolean', required: false, description: 'Whether the comment is internal only' },
+    { name: 'is_resolution', type: 'boolean', required: false, description: 'Whether the comment is a resolution note' },
+    { name: 'author_id', type: 'ref', required: false, refEntityType: 'user', description: 'Internal author user ID' },
+    { name: 'contact_id', type: 'ref', required: false, refEntityType: 'contact', description: 'Contact author ID' },
+  ],
+  async handle(ctx, mappedValues) {
+    const { knex } = await createTenantKnex(ctx.tenant);
+    const comment = await withTransaction(knex, async (trx) => {
+      const lookup = await lookupAlgaEntityByExternalId(
+        ctx.tenant,
+        ctx.webhookSlug,
+        'ticket',
+        mappedValues.external_id,
+        { knex: trx },
+      );
+
+      if (!lookup) {
+        return null;
+      }
+
+      const input: CreateCommentInput = {
+        ticket_id: lookup.algaEntityId,
+        content: mappedValues.content,
+        is_internal: mappedValues.is_internal ?? true,
+        is_resolution: mappedValues.is_resolution ?? false,
+        author_type: mappedValues.contact_id ? 'contact' : mappedValues.author_id ? 'internal' : 'system',
+        author_id: mappedValues.author_id,
+        contact_id: mappedValues.contact_id,
+        metadata: {
+          inbound_webhook_delivery_id: ctx.deliveryId,
+          inbound_webhook_slug: ctx.webhookSlug,
+          external_id: mappedValues.external_id,
+        },
+      };
+
+      return TicketModel.createComment(input, ctx.tenant, trx);
+    });
+
+    if (!comment) {
+      return {
+        success: false,
+        entityType: 'ticket',
+        externalId: mappedValues.external_id,
+        message: `lookup_miss: ticket external_id "${mappedValues.external_id}" is not mapped for webhook "${ctx.webhookSlug}"`,
+      };
+    }
+
+    return {
+      success: true,
+      entityType: 'ticket',
+      entityId: comment.ticket_id,
+      externalId: mappedValues.external_id,
+      metadata: {
+        comment_id: comment.comment_id,
+      },
+    };
+  },
+};
+
 registerAction(createTicketAction);
 registerAction(updateTicketByExternalIdAction);
+registerAction(addTicketCommentByExternalIdAction);
 
-export const ticketInboundActions = [createTicketAction, updateTicketByExternalIdAction];
+export const ticketInboundActions = [
+  createTicketAction,
+  updateTicketByExternalIdAction,
+  addTicketCommentByExternalIdAction,
+];
 
 function assignIfPresent<T extends object>(target: T, key: string, value: unknown): void {
   if (value !== undefined) {

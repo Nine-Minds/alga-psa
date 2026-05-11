@@ -51,6 +51,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F055 implemented** in `server/src/lib/inboundWebhooks/dispatcher.ts` and the receiver/replay/test outcome paths. The dispatcher validates required fields and primitive target field types after JSONata evaluation; errors are caught by callers and persisted to `handler_outcome.error` with `dispatch_status='failed'`.
 - (2026-05-11) **F1010 implemented** in `packages/tickets/src/actions/inboundActions.ts`. `createTicket` registers itself with the inbound action registry, uses shared `TicketModel.createTicketWithRetry`, supports optional asset association, and writes `tenant_external_entity_mappings` when `external_id` is mapped.
 - (2026-05-11) **F1011 implemented** in `packages/tickets/src/actions/inboundActions.ts`. `updateTicketByExternalId` resolves tickets through `tenant_external_entity_mappings` using `integration_type=<webhookSlug>`, updates status/priority/assignment/board and related ticket fields through shared `TicketModel.updateTicket`, and returns `success:false` with `lookup_miss` wording when no mapping exists.
+- (2026-05-11) **F1012 implemented** in `packages/tickets/src/actions/inboundActions.ts`. `addTicketCommentByExternalId` resolves mapped tickets through `tenant_external_entity_mappings`, appends comments through shared `TicketModel.createComment`, supports internal/resolution/contact-author fields, and records inbound webhook metadata on the comment.
 - (2026-05-11) **F061 implemented** in `server/src/lib/inboundWebhooks/workflowEnvelope.ts`. `buildWorkflowWebhookEnvelope` returns the documented shape `{source, body, headers, verified, delivery_id, idempotency_key, received_at}` and normalizes `received_at` to ISO string.
 - (2026-05-11) **F070 implemented** in `shared/workflow/expression-authoring/adapters/webhookPayloadContextAdapter.ts` and exported from `adapters/index.ts`. The adapter exposes context roots/path options for captured webhook payloads. Also corrected `evaluateFieldMapping` to evaluate JSONata directly against the request body, matching PRD examples like `alert.message`.
 - (2026-05-11) **F071 implemented** in `shared/workflow/expression-authoring/adapters/webhookPayloadContextAdapter.ts`. The adapter infers schema nodes recursively from captured samples, supports nested objects/arrays/primitives/nulls, and builds path options via existing `buildPathOptionsFromContextRoots`.
@@ -165,6 +166,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Type check after F053:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F1011:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F1012:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References

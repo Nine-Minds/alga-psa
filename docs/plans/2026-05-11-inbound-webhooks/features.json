@@ -48,7 +48,7 @@
 
   { "id": "F1010", "description": "Ticket action: `createTicket` (registered in `packages/tickets/src/actions/inboundActions.ts`)", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F1011", "description": "Ticket action: `updateTicketByExternalId` (status, priority, assignment, board)", "implemented": true, "prdRefs": ["Functional Requirements"] },
-  { "id": "F1012", "description": "Ticket action: `addTicketCommentByExternalId`", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F1012", "description": "Ticket action: `addTicketCommentByExternalId`", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F1013", "description": "Ticket action: `changeTicketStatusByExternalId`", "implemented": false, "prdRefs": ["Functional Requirements"] },
 
   { "id": "F1020", "description": "Client action: `upsertClientByExternalId`", "implemented": false, "prdRefs": ["Functional Requirements"] },
