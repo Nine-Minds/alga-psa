@@ -293,4 +293,41 @@ describe('inbound webhook request processor', () => {
       }),
     );
   });
+
+  it('T034: rejects a bad Bearer token with 401', async () => {
+    lookupInboundWebhookBySlug.mockResolvedValue(activeBearerWebhook());
+    getTenantSecret.mockResolvedValue('bearer-secret');
+    const body = JSON.stringify({ event: 'payment_received' });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/billing-events', {
+      method: 'POST',
+      headers: {
+        authorization: 'Bearer wrong-token',
+        'content-type': 'application/json',
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'billing-events',
+    });
+
+    await expect(response.text()).resolves.toBe('');
+    expect(response.status).toBe(401);
+    expect(createInboundDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        inboundWebhookId: 'webhook-1',
+        requestPath: '/api/inbound/tenant-slug/billing-events',
+        authStatus: 'rejected_bearer',
+        dispatchStatus: 'failed',
+        responseStatus: 401,
+      }),
+    );
+    expect(createInboundDelivery.mock.calls[0][1]).not.toHaveProperty('requestBody');
+    expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
+  });
 });
