@@ -101,7 +101,7 @@
   { "id": "T1081", "description": "`addTagToEntityByExternalId` attaches tag to client when entity_type=client", "implemented": true, "featureIds": ["F1080"] },
   { "id": "T1082", "description": "`addTagToEntityByExternalId` rejects unsupported entity_type with clear error", "implemented": true, "featureIds": ["F1080"] },
 
-  { "id": "T110", "description": "Workflow handler starts a workflow run with the documented envelope shape", "implemented": false, "featureIds": ["F060", "F061"] },
+  { "id": "T110", "description": "Workflow handler starts a workflow run with the documented envelope shape", "implemented": true, "featureIds": ["F060", "F061"] },
   { "id": "T111", "description": "Envelope includes `source`, `body`, `headers`, `verified`, `delivery_id`, `idempotency_key`, `received_at`", "implemented": false, "featureIds": ["F061"] },
   { "id": "T112", "description": "Envelope `headers` is filtered (no Cookie/Authorization)", "implemented": false, "featureIds": ["F061", "F043"] },
   { "id": "T113", "description": "Delivery row stores workflow_run_id after successful trigger", "implemented": false, "featureIds": ["F062"] },
