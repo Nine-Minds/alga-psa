@@ -1,5 +1,6 @@
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { IClient } from '@alga-psa/types';
+import { ContactModel, type CreateContactInput, type UpdateContactInput } from '@alga-psa/shared/models/contactModel';
 
 import { registerAction, type InboundActionDefinition } from '@/lib/inboundWebhooks/actions/registry';
 import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@/lib/inboundWebhooks/externalEntityMappings';
@@ -26,6 +27,18 @@ interface UpsertClientByExternalIdMappedValues extends Record<string, unknown> {
 interface SetClientActiveByExternalIdMappedValues extends Record<string, unknown> {
   external_id: string;
   active: boolean;
+}
+
+interface UpsertContactByExternalIdMappedValues extends Record<string, unknown> {
+  external_id: string;
+  full_name: string;
+  email: string;
+  client_id?: string;
+  client_external_id?: string;
+  role?: string;
+  notes?: string;
+  is_inactive?: boolean;
+  phone?: string;
 }
 
 const clientFields = [
@@ -181,10 +194,107 @@ const setClientActiveByExternalIdAction: InboundActionDefinition<SetClientActive
   },
 };
 
+const upsertContactByExternalIdAction: InboundActionDefinition<UpsertContactByExternalIdMappedValues> = {
+  name: 'upsertContactByExternalId',
+  entityType: 'contact',
+  displayName: 'Upsert Contact by External ID',
+  description: 'Create or update a contact using the webhook-scoped external ID.',
+  targetFields: [
+    { name: 'external_id', type: 'string', required: true, description: 'External contact identifier' },
+    { name: 'full_name', type: 'string', required: true, description: 'Contact full name' },
+    { name: 'email', type: 'string', required: true, description: 'Contact email address' },
+    { name: 'client_id', type: 'ref', required: false, refEntityType: 'client', description: 'Client ID' },
+    { name: 'client_external_id', type: 'string', required: false, description: 'External client ID to resolve' },
+    { name: 'role', type: 'string', required: false, description: 'Contact role or job title' },
+    { name: 'notes', type: 'string', required: false, description: 'Contact notes' },
+    { name: 'is_inactive', type: 'boolean', required: false, description: 'Inactive flag' },
+    { name: 'phone', type: 'string', required: false, description: 'Primary phone number' },
+  ],
+  async handle(ctx, mappedValues) {
+    const { knex } = await createTenantKnex(ctx.tenant);
+    const contact = await withTransaction(knex, async (trx) => {
+      const existingMapping = await lookupAlgaEntityByExternalId(
+        ctx.tenant,
+        ctx.webhookSlug,
+        'contact',
+        mappedValues.external_id,
+        { knex: trx },
+      );
+      const clientId = mappedValues.client_id || (
+        mappedValues.client_external_id
+          ? (await lookupAlgaEntityByExternalId(
+            ctx.tenant,
+            ctx.webhookSlug,
+            'client',
+            mappedValues.client_external_id,
+            { knex: trx },
+          ))?.algaEntityId
+          : undefined
+      );
+
+      if (!clientId && !existingMapping) {
+        throw new Error('VALIDATION_ERROR: upsertContactByExternalId requires client_id or resolvable client_external_id when creating a contact');
+      }
+
+      if (existingMapping) {
+        const input: UpdateContactInput = {
+          full_name: mappedValues.full_name,
+          email: mappedValues.email,
+          client_id: clientId,
+          role: mappedValues.role,
+          notes: mappedValues.notes,
+          is_inactive: mappedValues.is_inactive,
+          phone_numbers: mappedValues.phone
+            ? [{ phone_number: mappedValues.phone, canonical_type: 'work', is_default: true, display_order: 0 }]
+            : undefined,
+        };
+
+        return ContactModel.updateContact(existingMapping.algaEntityId, input, ctx.tenant, trx);
+      }
+
+      const input: CreateContactInput = {
+        full_name: mappedValues.full_name,
+        email: mappedValues.email,
+        client_id: clientId,
+        role: mappedValues.role,
+        notes: mappedValues.notes,
+        is_inactive: mappedValues.is_inactive,
+        phone_numbers: mappedValues.phone
+          ? [{ phone_number: mappedValues.phone, canonical_type: 'work', is_default: true, display_order: 0 }]
+          : undefined,
+      };
+      const created = await ContactModel.createContact(input, ctx.tenant, trx);
+
+      await writeEntityMapping(ctx.tenant, ctx.webhookSlug, 'contact', created.contact_name_id, mappedValues.external_id, {
+        knex: trx,
+        metadata: { source: 'inbound_webhook', delivery_id: ctx.deliveryId },
+      });
+
+      return created;
+    });
+
+    return {
+      success: true,
+      entityType: 'contact',
+      entityId: contact.contact_name_id,
+      externalId: mappedValues.external_id,
+      metadata: {
+        email: contact.email,
+        client_id: contact.client_id,
+      },
+    };
+  },
+};
+
 registerAction(upsertClientByExternalIdAction);
 registerAction(setClientActiveByExternalIdAction);
+registerAction(upsertContactByExternalIdAction);
 
-export const clientInboundActions = [upsertClientByExternalIdAction, setClientActiveByExternalIdAction];
+export const clientInboundActions = [
+  upsertClientByExternalIdAction,
+  setClientActiveByExternalIdAction,
+  upsertContactByExternalIdAction,
+];
 
 function buildClientPayload(mappedValues: UpsertClientByExternalIdMappedValues): Partial<IClient> {
   const payload: Partial<IClient> = {

@@ -55,6 +55,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F1013 implemented** in `packages/tickets/src/actions/inboundActions.ts`. `changeTicketStatusByExternalId` resolves mapped tickets by external ID and calls shared `TicketModel.updateTicket`, so status/board compatibility validation is reused.
 - (2026-05-11) **F1020 implemented** in `packages/clients/src/actions/inboundActions.ts` and bootstrapped from inbound action startup. `upsertClientByExternalId` resolves existing clients via `tenant_external_entity_mappings`, updates tenant-scoped client rows when mapped, creates clients when absent, and writes a mapping row for newly created clients.
 - (2026-05-11) **F1021 implemented** in `packages/clients/src/actions/inboundActions.ts`. `setClientActiveByExternalId` resolves a mapped client and updates `is_inactive` from the mapped `active` boolean; lookup misses return `success:false` with `lookup_miss` wording for delivery failure recording.
+- (2026-05-11) **F1030 implemented** in `packages/clients/src/actions/inboundActions.ts`. `upsertContactByExternalId` uses shared `ContactModel.createContact/updateContact`, writes contact mappings on create, and requires either direct `client_id` or resolvable `client_external_id` when creating a new contact.
 - (2026-05-11) **F061 implemented** in `server/src/lib/inboundWebhooks/workflowEnvelope.ts`. `buildWorkflowWebhookEnvelope` returns the documented shape `{source, body, headers, verified, delivery_id, idempotency_key, received_at}` and normalizes `received_at` to ISO string.
 - (2026-05-11) **F070 implemented** in `shared/workflow/expression-authoring/adapters/webhookPayloadContextAdapter.ts` and exported from `adapters/index.ts`. The adapter exposes context roots/path options for captured webhook payloads. Also corrected `evaluateFieldMapping` to evaluate JSONata directly against the request body, matching PRD examples like `alert.message`.
 - (2026-05-11) **F071 implemented** in `shared/workflow/expression-authoring/adapters/webhookPayloadContextAdapter.ts`. The adapter infers schema nodes recursively from captured samples, supports nested objects/arrays/primitives/nulls, and builds path options via existing `buildPathOptionsFromContextRoots`.
@@ -175,6 +176,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Type check after F1013:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F1020/F1021 client actions:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F1030:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References

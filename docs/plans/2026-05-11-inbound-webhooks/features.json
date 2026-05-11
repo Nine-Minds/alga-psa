@@ -54,7 +54,7 @@
   { "id": "F1020", "description": "Client action: `upsertClientByExternalId`", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F1021", "description": "Client action: `setClientActiveByExternalId`", "implemented": true, "prdRefs": ["Functional Requirements"] },
 
-  { "id": "F1030", "description": "Contact action: `upsertContactByExternalId` (uses `client_users` table)", "implemented": false, "prdRefs": ["Functional Requirements"] },
+  { "id": "F1030", "description": "Contact action: `upsertContactByExternalId` (uses `client_users` table)", "implemented": true, "prdRefs": ["Functional Requirements"] },
 
   { "id": "F1040", "description": "Asset action: `upsertAssetByExternalId` — delegates to `ingestNormalizedRmmDeviceSnapshot` when payload is RMM-shaped", "implemented": false, "prdRefs": ["Functional Requirements", "Goals"] },
   { "id": "F1041", "description": "Asset action: plain (non-RMM) asset upsert path for generic asset payloads", "implemented": false, "prdRefs": ["Functional Requirements"] },
