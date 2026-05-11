@@ -203,4 +203,52 @@ describe('client inbound webhook actions', () => {
     expect(clientsQuery.insert).not.toHaveBeenCalled();
     expect(mocks.writeEntityMapping).not.toHaveBeenCalled();
   });
+
+  it('T1022: setClientActiveByExternalId toggles active state through is_inactive', async () => {
+    mocks.lookupAlgaEntityByExternalId.mockResolvedValue({
+      algaEntityId: 'client-1',
+      externalEntityId: 'company-42',
+      metadata: {},
+    });
+    clientsQuery.returning.mockResolvedValue([
+      {
+        client_id: 'client-1',
+        is_inactive: true,
+      },
+    ]);
+    const { getAction } = await loadClientInboundActions();
+    const action = getAction('setClientActiveByExternalId');
+
+    await expect(
+      action?.handle(
+        {
+          tenant: 'tenant-a',
+          webhookSlug: 'rmm-alerts',
+          deliveryId: 'delivery-1',
+          headers: {},
+          rawBody: { company: { id: 'company-42', active: false } },
+          idempotencyKey: 'company-42',
+        },
+        {
+          external_id: 'company-42',
+          active: false,
+        },
+      ),
+    ).resolves.toEqual({
+      success: true,
+      entityType: 'client',
+      entityId: 'client-1',
+      externalId: 'company-42',
+      metadata: {
+        active: false,
+      },
+    });
+
+    expect(clientsQuery.where).toHaveBeenCalledWith({ tenant: 'tenant-a', client_id: 'client-1' });
+    expect(clientsQuery.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        is_inactive: true,
+      }),
+    );
+  });
 });

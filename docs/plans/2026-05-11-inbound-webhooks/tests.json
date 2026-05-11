@@ -78,7 +78,7 @@
 
   { "id": "T1020", "description": "`upsertClientByExternalId` creates client when mapping absent and writes mapping row", "implemented": true, "featureIds": ["F1020", "F005"] },
   { "id": "T1021", "description": "`upsertClientByExternalId` updates client when mapping resolves", "implemented": true, "featureIds": ["F1020", "F004"] },
-  { "id": "T1022", "description": "`setClientActiveByExternalId` toggles active state correctly", "implemented": false, "featureIds": ["F1021"] },
+  { "id": "T1022", "description": "`setClientActiveByExternalId` toggles active state correctly", "implemented": true, "featureIds": ["F1021"] },
 
   { "id": "T1030", "description": "`upsertContactByExternalId` creates or updates a client_user record", "implemented": false, "featureIds": ["F1030"] },
   { "id": "T1031", "description": "`upsertContactByExternalId` requires a client linkage (either mapped client_external_id or direct client_id)", "implemented": false, "featureIds": ["F1030"] },
