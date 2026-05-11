@@ -94,6 +94,9 @@ type InboundWebhookIdentityFormState = {
   ipCidrs: string;
   pathTokenQueryParam: string;
   pathToken: string;
+  idempotencyType: 'header' | 'jsonata';
+  idempotencyValue: string;
+  idempotencyWindowSeconds: number;
 };
 
 type WebhookStatsSnapshot = {
@@ -325,6 +328,9 @@ function InboundWebhooksListView() {
     ipCidrs: '',
     pathTokenQueryParam: 'token',
     pathToken: '',
+    idempotencyType: 'header',
+    idempotencyValue: 'X-Idempotency-Key',
+    idempotencyWindowSeconds: 86400,
   });
   const [revealedInboundSecret, setRevealedInboundSecret] = useState<{
     webhookName: string;
@@ -451,6 +457,9 @@ function InboundWebhooksListView() {
                     ? webhook.authConfig.queryParam
                     : 'token',
                   pathToken: '',
+                  idempotencyType: webhook.idempotencySource?.type ?? 'header',
+                  idempotencyValue: webhook.idempotencySource?.value ?? 'X-Idempotency-Key',
+                  idempotencyWindowSeconds: webhook.idempotencyWindowSeconds,
                 });
                 setIdentityDialogOpen(true);
               }}
@@ -479,6 +488,9 @@ function InboundWebhooksListView() {
       ipCidrs: '',
       pathTokenQueryParam: 'token',
       pathToken: '',
+      idempotencyType: 'header',
+      idempotencyValue: 'X-Idempotency-Key',
+      idempotencyWindowSeconds: 86400,
     });
     setIdentityDialogOpen(true);
   }, []);
@@ -488,6 +500,11 @@ function InboundWebhooksListView() {
     { value: 'bearer', label: t('security.webhooks.inbound.auth.types.bearer') },
     { value: 'ip_allowlist', label: t('security.webhooks.inbound.auth.types.ipAllowlist') },
     { value: 'path_token', label: t('security.webhooks.inbound.auth.types.pathToken') },
+  ], [t]);
+
+  const idempotencySourceOptions = useMemo(() => [
+    { value: 'header', label: t('security.webhooks.inbound.idempotency.types.header') },
+    { value: 'jsonata', label: t('security.webhooks.inbound.idempotency.types.jsonata') },
   ], [t]);
 
   return (
@@ -769,6 +786,58 @@ function InboundWebhooksListView() {
                 />
               </div>
             ) : null}
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-semibold text-gray-900">
+                {t('security.webhooks.inbound.idempotency.title')}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {t('security.webhooks.inbound.idempotency.help')}
+              </p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+              <CustomSelect
+                id="inbound-webhook-idempotency-type"
+                label={t('security.webhooks.inbound.idempotency.source')}
+                value={identityForm.idempotencyType}
+                onValueChange={(value) => {
+                  setIdentityForm((current) => ({
+                    ...current,
+                    idempotencyType: value as 'header' | 'jsonata',
+                    idempotencyValue: value === 'header' ? 'X-Idempotency-Key' : 'id',
+                  }));
+                }}
+                options={idempotencySourceOptions}
+              />
+              <Input
+                id="inbound-webhook-idempotency-value"
+                label={identityForm.idempotencyType === 'header'
+                  ? t('security.webhooks.inbound.idempotency.headerName')
+                  : t('security.webhooks.inbound.idempotency.jsonataExpression')}
+                value={identityForm.idempotencyValue}
+                placeholder={identityForm.idempotencyType === 'header'
+                  ? t('security.webhooks.inbound.idempotency.headerNamePlaceholder')
+                  : t('security.webhooks.inbound.idempotency.jsonataExpressionPlaceholder')}
+                onChange={(event) => {
+                  setIdentityForm((current) => ({
+                    ...current,
+                    idempotencyValue: event.target.value,
+                  }));
+                }}
+              />
+            </div>
+            <Input
+              id="inbound-webhook-idempotency-window"
+              label={t('security.webhooks.inbound.idempotency.windowSeconds')}
+              type="number"
+              min={60}
+              value={identityForm.idempotencyWindowSeconds}
+              onChange={(event) => {
+                setIdentityForm((current) => ({
+                  ...current,
+                  idempotencyWindowSeconds: Number(event.target.value) || 86400,
+                }));
+              }}
+            />
           </div>
         </DialogContent>
         <DialogFooter>

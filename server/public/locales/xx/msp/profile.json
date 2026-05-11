@@ -268,6 +268,20 @@
           "copy": "11111",
           "download": "11111",
           "close": "11111"
+        },
+        "idempotency": {
+          "title": "11111",
+          "help": "11111",
+          "source": "11111",
+          "types": {
+            "header": "11111",
+            "jsonata": "11111"
+          },
+          "headerName": "11111",
+          "headerNamePlaceholder": "11111",
+          "jsonataExpression": "11111",
+          "jsonataExpressionPlaceholder": "11111",
+          "windowSeconds": "11111"
         }
       },
       "stats": {
