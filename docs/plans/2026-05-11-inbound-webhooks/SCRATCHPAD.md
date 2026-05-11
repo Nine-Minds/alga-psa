@@ -22,6 +22,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 
 ## Discoveries / Constraints
 
+- (2026-05-11) **F001 implemented** in `server/migrations/20260511100000_create_inbound_webhooks_table.cjs`. The table uses composite PK `(tenant, inbound_webhook_id)`, unique `(tenant, slug)`, Citus distribution by `tenant`, and keeps auth secrets indirect through `auth_config` (vault path/config metadata). Added `sample_capture_expires_at` and `rate_limit_per_minute` now because later capture/rate-limit features need persistent state.
 - (2026-05-11) **Bundled integrations already in the codebase** — the user-configurable system complements these, not replaces them:
   - **Tanium** (EE) — `ee/server/src/lib/integrations/tanium/` + `taniumGatewayClient.ts`. Outbound sync (devices → assets) + webhook. Uses `ingestNormalizedRmmDeviceSnapshot`.
   - **NinjaOne** (EE) — `ee/server/src/lib/integrations/ninjaone/` — has a full inbound webhook implementation (`webhooks/webhookHandler.ts`, `webhooks/webhookRegistration.ts`, `alerts/alertProcessor.ts`, `alerts/ticketCreator.ts`). The user-configurable inbound webhook system is the generic equivalent.

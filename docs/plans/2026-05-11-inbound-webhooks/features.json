@@ -1,5 +1,5 @@
 [
-  { "id": "F001", "description": "Create migration adding `inbound_webhooks` table (Citus-distributed by tenant, composite PK including tenant)", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
+  { "id": "F001", "description": "Create migration adding `inbound_webhooks` table (Citus-distributed by tenant, composite PK including tenant)", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F002", "description": "Create migration adding `inbound_webhook_deliveries` table (Citus-distributed by tenant)", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F003", "description": "Reserved-integration-type registry/check so user webhook slugs cannot collide with bundled integrations' `tenant_external_entity_mappings.integration_type` values (ninjaone, tactical_rmm, tanium, xero, qbo, entra, etc.)", "implemented": false, "prdRefs": ["Open Questions", "Acceptance Criteria (Definition of Done)"] },
   { "id": "F004", "description": "Helper `lookupAlgaEntityByExternalId(tenant, webhookSlug, entityType, externalId)` queries `tenant_external_entity_mappings` (no new entity columns)", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
