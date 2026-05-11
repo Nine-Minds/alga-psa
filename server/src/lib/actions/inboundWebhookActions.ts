@@ -159,3 +159,19 @@ export const listInboundWebhooks = withAuth(async (user, { tenant }): Promise<In
 
   return rows.map(mapInboundWebhook);
 });
+
+export const getInboundWebhook = withAuth(
+  async (user, { tenant }, inboundWebhookId: string): Promise<InboundWebhookConfig | null> => {
+    const { knex } = await createTenantKnex(tenant);
+    await assertInboundWebhookPermission(user, 'read', knex);
+
+    const row = await knex<InboundWebhookRow>('inbound_webhooks')
+      .where({
+        tenant,
+        inbound_webhook_id: inboundWebhookId,
+      })
+      .first();
+
+    return row ? mapInboundWebhook(row) : null;
+  },
+);

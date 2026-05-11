@@ -10,7 +10,7 @@
   { "id": "F010", "description": "TypeScript types: `InboundWebhookConfig`, `InboundWebhookDelivery`, `AuthConfig` union, `HandlerConfig` union", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F011", "description": "Zod schemas for inbound webhook upsert input (per auth_type and handler_type)", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F012", "description": "Server action `listInboundWebhooks` (withAuth, tenant-scoped)", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
-  { "id": "F013", "description": "Server action `getInboundWebhook(id)`", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
+  { "id": "F013", "description": "Server action `getInboundWebhook(id)`", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F014", "description": "Server action `upsertInboundWebhook(input)` — slug uniqueness check per tenant", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F015", "description": "Server action `deleteInboundWebhook(id)`", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F016", "description": "Server action `rotateInboundWebhookSecret(id)` (writes new secret to vault, returns once)", "implemented": false, "prdRefs": ["Security / Permissions"] },
