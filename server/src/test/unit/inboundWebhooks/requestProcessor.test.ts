@@ -137,6 +137,16 @@ function inactiveHmacWebhook() {
   };
 }
 
+function hmacWebhookWithHeaderIdempotency() {
+  return {
+    ...activeHmacWebhook(),
+    idempotency_source: {
+      type: 'header',
+      value: 'X-Idempotency-Key',
+    },
+  };
+}
+
 describe('inbound webhook request processor', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -616,6 +626,67 @@ describe('inbound webhook request processor', () => {
       }),
     );
     expect(createInboundDelivery.mock.calls[0][1]).not.toHaveProperty('requestBody');
+    expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
+  });
+
+  it('T052: returns 200 no-op for duplicate idempotency keys within the window', async () => {
+    lookupInboundWebhookBySlug.mockResolvedValue(hmacWebhookWithHeaderIdempotency());
+    extractInboundWebhookIdempotencyKey.mockResolvedValue('alert-duplicate');
+    findDuplicateInboundDelivery.mockResolvedValue({
+      deliveryId: 'original-delivery',
+      receivedAt: '2026-05-11T00:00:00.000Z',
+    });
+    const body = JSON.stringify({ alert: { message: 'Disk full' } });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-idempotency-key': 'alert-duplicate',
+        'x-signature': `sha256=${hmacSignature('top-secret', body)}`,
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    await expect(response.json()).resolves.toEqual({ delivery_id: 'original-delivery', duplicate: true });
+    expect(response.status).toBe(200);
+    expect(findDuplicateInboundDelivery).toHaveBeenCalledWith({
+      knex: expect.anything(),
+      tenant: 'tenant-a',
+      inboundWebhookId: 'webhook-1',
+      idempotencyKey: 'alert-duplicate',
+      windowSeconds: 86_400,
+    });
+    expect(createInboundDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        inboundWebhookId: 'webhook-1',
+        idempotencyKey: 'alert-duplicate',
+        requestBody: { alert: { message: 'Disk full' } },
+        authStatus: 'verified',
+        dispatchStatus: 'duplicate',
+        responseStatus: 200,
+        responseBody: { delivery_id: 'original-delivery', duplicate: true },
+      }),
+    );
+    expect(updateInboundDeliveryOutcome).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        deliveryId: 'delivery-1',
+        dispatchStatus: 'duplicate',
+        handlerOutcome: { duplicate_of: 'original-delivery' },
+        responseStatus: 200,
+        responseBody: { delivery_id: 'original-delivery', duplicate: true },
+      }),
+    );
     expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
   });
 });

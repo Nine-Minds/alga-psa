@@ -158,6 +158,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T044 implemented** in `server/src/test/unit/inboundWebhooks/headerFilter.test.ts`. Header-filter test verifies persisted inbound headers strip `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key` while preserving safe lowercase headers like `content-type` and `x-request-id`.
 - (2026-05-11) **T050 implemented** in `server/src/test/unit/inboundWebhooks/idempotency.test.ts`. Header-source idempotency test verifies configured header names are extracted case-insensitively from both `Headers` and plain record inputs, trim whitespace, and use the first value when a header array is supplied.
 - (2026-05-11) **T051 implemented** in `server/src/test/unit/inboundWebhooks/idempotency.test.ts`. JSONata-source idempotency test evaluates `alert.id` against the parsed request body using the real workflow expression runtime and trims the resulting key.
+- (2026-05-11) **T052 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Duplicate idempotency receiver test verifies a duplicate key within the configured 24h window returns `200` with the original `delivery_id`, creates a new delivery row marked `dispatch_status='duplicate'`, records `handler_outcome.duplicate_of`, and does not dispatch.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -502,6 +503,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T051:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/idempotency.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T052:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References
