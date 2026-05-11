@@ -34,7 +34,7 @@
   { "id": "T036", "description": "POST from IP outside allowlist returns 401", "implemented": true, "featureIds": ["F035"] },
   { "id": "T037", "description": "POST with valid path-token succeeds", "implemented": true, "featureIds": ["F036"] },
   { "id": "T038", "description": "POST with invalid path-token returns 401", "implemented": true, "featureIds": ["F036"] },
-  { "id": "T039", "description": "Unknown tenant slug returns 401 (identical to bad auth — no enumeration)", "implemented": false, "featureIds": ["F037"] },
+  { "id": "T039", "description": "Unknown tenant slug returns 401 (identical to bad auth — no enumeration)", "implemented": true, "featureIds": ["F037"] },
   { "id": "T040", "description": "Unknown webhook slug under valid tenant returns 401 (identical body)", "implemented": false, "featureIds": ["F037"] },
   { "id": "T041", "description": "Disabled (is_active=false) webhook returns 401", "implemented": false, "featureIds": ["F030", "F037"] },
   { "id": "T042", "description": "HMAC comparison is timing-safe (no early-return on byte mismatch)", "implemented": false, "featureIds": ["F033"] },

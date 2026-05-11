@@ -506,4 +506,31 @@ describe('inbound webhook request processor', () => {
     expect(createInboundDelivery.mock.calls[0][1]).not.toHaveProperty('requestBody');
     expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
   });
+
+  it('T039: returns a bodyless 401 for an unknown tenant slug', async () => {
+    resolveInboundWebhookTenantSlug.mockResolvedValue(null);
+    const request = new NextRequest('http://localhost/api/inbound/unknown-tenant/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-signature': 'sha256=anything',
+      },
+      body: JSON.stringify({ alert: { message: 'Disk full' } }),
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'unknown-tenant',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    await expect(response.text()).resolves.toBe('');
+    expect(response.status).toBe(401);
+    expect(isInboundWebhooksEnabled).not.toHaveBeenCalled();
+    expect(runWithTenant).not.toHaveBeenCalled();
+    expect(lookupInboundWebhookBySlug).not.toHaveBeenCalled();
+    expect(createInboundDelivery).not.toHaveBeenCalled();
+    expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
+  });
 });
