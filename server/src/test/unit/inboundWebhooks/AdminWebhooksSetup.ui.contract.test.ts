@@ -220,4 +220,15 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain('disabled={!focusedMappingField}');
     expect(adminWebhooksSource).toContain('onClick={() => handleInsertSamplePath(option.path)}');
   });
+
+  it('T148: active toggle persists state for saved inbound webhooks', () => {
+    expect(adminWebhooksSource).toContain('setInboundWebhookActiveState');
+    expect(adminWebhooksSource).toContain('const handleInboundActiveChange = useCallback(async (checked: boolean) => {');
+    expect(adminWebhooksSource).toContain('setInboundWebhookActiveState(identityForm.inboundWebhookId, checked)');
+    expect(adminWebhooksSource).toContain('isActive: updated.isActive');
+    expect(adminWebhooksSource).toContain('autoDisabledAt: updated.autoDisabledAt');
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-active"');
+    expect(adminWebhooksSource).toContain('checked={identityForm.isActive}');
+    expect(adminWebhooksSource).toContain('onCheckedChange={(checked) => void handleInboundActiveChange(checked)}');
+  });
 });
