@@ -157,7 +157,7 @@
   { "id": "T201", "description": "E2E: Admin sets up workflow handler, payload triggers workflow run visible in runs list", "implemented": true, "featureIds": ["F060", "F091"] },
   { "id": "T202", "description": "E2E: Failed delivery shows in log, replay succeeds after fixing config", "implemented": true, "featureIds": ["F020", "F093", "F095"] },
 
-  { "id": "T300", "description": "`GET /api/v1/inbound-webhooks` returns 200 + list scoped to tenant", "implemented": false, "featureIds": ["F200"] },
+  { "id": "T300", "description": "`GET /api/v1/inbound-webhooks` returns 200 + list scoped to tenant", "implemented": true, "featureIds": ["F200"] },
   { "id": "T301", "description": "`POST /api/v1/inbound-webhooks` creates config and returns 201 + secret (once)", "implemented": false, "featureIds": ["F201"] },
   { "id": "T302", "description": "`GET /api/v1/inbound-webhooks/{id}` returns config without secret", "implemented": false, "featureIds": ["F202"] },
   { "id": "T303", "description": "`PUT /api/v1/inbound-webhooks/{id}` updates fields and persists", "implemented": false, "featureIds": ["F202"] },
