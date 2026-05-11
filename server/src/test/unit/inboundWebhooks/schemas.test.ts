@@ -42,4 +42,21 @@ describe('inbound webhook schemas', () => {
       ]),
     );
   });
+
+  it('T010: rejects upsert input with a bogus auth_type', () => {
+    const result = inboundWebhookUpsertInputSchema.safeParse(
+      validInboundWebhookInput({
+        auth_type: 'api_key',
+      }),
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: ['auth_type'],
+        }),
+      ]),
+    );
+  });
 });
