@@ -21,7 +21,9 @@ Alga PSA is built around the way MSPs operate with clients:
 - **Contracts, sales quotes, recurring services, tax, and invoice workflows** for the financial side of service delivery.
 - **Client portal and document workflows** so clients have a clearer place to submit requests, view information, and follow progress.
 - **Workflow automation** for turning repeatable ticket, billing, notification, and approval steps into managed processes with Event Catalog triggers and scheduled runs.
-- **Open-source core with self-hosting support** for MSPs and technical teams that want deployment and data control.
+- **Open-source core with self-hosting support** so MSPs and technical teams can keep control over deployment, data, and code review.
+
+Community Edition is the self-hostable AGPL core. Enterprise Edition covers commercially licensed modules and larger deployment needs. See [Editions and licensing](#editions-and-licensing) for details.
 
 ## Features at a glance
 
@@ -34,6 +36,7 @@ Alga PSA is built around the way MSPs operate with clients:
 - Document management with version control
 - Asset management for client equipment, maintenance schedules, and relationships
 - Project and task management for longer-running client work
+- Scheduling and dispatch views for planned work and technician coordination
 
 ### Time, contracts, billing, and invoicing
 
@@ -41,11 +44,11 @@ Alga PSA is built around the way MSPs operate with clients:
 - Automatic interval tracking for ticket work, stored in the browser with IndexedDB
 - Conversion of tracked intervals into time entries
 - Flexible billing cycles by company, including weekly, bi-weekly, monthly, and quarterly billing
-- Proration support, approval-based time billing, and unapproved time rollover
-- Contract purchase order support, including PO numbers on invoices and advisory PO limits
+- Billing-period support for proration and unapproved time rollover
+- Contract purchase order support with PO numbers and advisory PO limits
 - Sales quotes for pricing proposals, optional line items, approvals, client portal acceptance, and conversion to contracts or invoices
 - Graphical invoice and quote designer for branded PDF layouts, data-bound fields, line-item tables, preview, and per-document template overrides
-- International tax support, including composite taxes, threshold-based rates, tax holidays, and reverse charge scenarios
+- International tax support with composite rates, thresholds, tax holidays, and reverse charge scenarios
 
 ### Automation, reporting, and controls
 
@@ -55,29 +58,30 @@ Alga PSA is built around the way MSPs operate with clients:
 - Reporting and analytics for operational visibility
 - Role-based access control (RBAC) and attribute-based access control (ABAC)
 - Multi-portal authentication for MSP users and client portal users
+- API, OpenAPI registry material, and extension SDK support for integrations and custom workflows
 
-Some capabilities may depend on edition, deployment configuration, or enabled feature flags. See the setup and architecture docs for implementation details.
+Feature availability varies by edition, deployment configuration, and enabled feature flags. See the setup and architecture docs for implementation details.
 
 ## Product screenshots
 
 These images link directly to screenshots from the [Alga PSA feature tour](https://www.nineminds.com/AlgaPSA-features), [Workflow Automation docs](https://www.nineminds.com/documentation/152-choosing-workflow-triggers), and [Invoice Designer docs](https://www.nineminds.com/documentation/1410-bind-invoice-data-to-your-layout).
 
-| Service desk | Billing and time |
+| Core workflow | Business operations |
 | --- | --- |
 | <img src="https://www.nineminds.com/imported-media/Ticketing-1.gif" alt="Alga PSA ticketing screen" width="420"> | <img src="https://www.nineminds.com/imported-media/Billing%20dashboard.png" alt="Alga PSA billing dashboard" width="420"> |
 | Ticketing views for client requests, assignment, attachments, and follow-up. | Contracts, billing, and invoice-related workflows in one billing area. |
 | <img src="https://www.nineminds.com/imported-media/time%20entry%20select%20time%20period.png" alt="Alga PSA time entry screen" width="420"> | <img src="https://www.nineminds.com/imported-media/Schedule%20view.png" alt="Alga PSA schedule view" width="420"> |
 | Time entry views for recording and reviewing work before billing. | Schedule views for dispatch and calendar-based work planning. |
-| <img src="https://www.nineminds.com/docs-images/invoice-designer-workspace.png" alt="Alga PSA invoice and quote designer workspace" width="420"> | <img src="https://www.nineminds.com/docs-images/invoice-designer-fields.png" alt="Alga PSA invoice designer fields tab" width="420"> |
-| Drag-and-drop invoice and quote layout designer with palette, canvas, and inspector. | Data bindings for customer, invoice, quote, line-item, and tenant fields. |
-| <img src="https://www.nineminds.com/docs-images/workflow-event-catalog.png" alt="Alga PSA workflow event catalog" width="420"> | <img src="https://www.nineminds.com/docs-images/workflow-designer-ticket-triage.png" alt="Alga PSA visual workflow designer" width="420"> |
-| Event Catalog triggers for choosing the business moment that should start a workflow. | Visual workflow designer for ticket triage, notifications, approvals, and other repeatable processes. |
+| <img src="https://www.nineminds.com/docs-images/invoice-designer-workspace.png" alt="Alga PSA invoice and quote designer workspace" width="420"> | <img src="https://www.nineminds.com/docs-images/workflow-designer-ticket-triage.png" alt="Alga PSA visual workflow designer" width="420"> |
+| Drag-and-drop invoice and quote layout designer for branded PDFs. | Visual workflow designer for ticket triage, notifications, approvals, and other repeatable processes. |
 
 ## Quick start
 
 For a full installation, use the [Complete Setup Guide](docs/getting-started/setup_guide.md). It covers release selection, secrets, environment configuration, Docker Compose, initial login credentials, persistence, backups, and production notes.
 
 The current CE prebuilt Docker Compose path is below. Before running these commands, follow the setup guide to create the required `secrets/` directory and `server/.env` file.
+
+The stack boots PostgreSQL, the Next.js application server, and the workflow worker. On first start, the server creates a seeded workspace admin account; tail the logs below to retrieve the credentials.
 
 ```bash
 git clone https://github.com/nine-minds/alga-psa.git
@@ -108,6 +112,8 @@ docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.c
 For Windows-specific setup, see the [Windows Setup Guide](docs/getting-started/setup_guide_windows.md).
 
 ## Technical architecture
+
+The following details are for teams evaluating the technical stack. For deployment requirements, see [Quick start](#quick-start).
 
 Alga PSA is a TypeScript monorepo with a Next.js application, shared domain packages, worker services, and Docker-based deployment paths.
 
