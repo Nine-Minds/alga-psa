@@ -49,7 +49,7 @@
   { "id": "T055", "description": "Different webhooks with same idempotency key dedup independently", "implemented": true, "featureIds": ["F040"] },
 
   { "id": "T060", "description": "Delivery row persisted with auth_status=verified before dispatch", "implemented": true, "featureIds": ["F041"] },
-  { "id": "T061", "description": "Auth-rejected requests log to separate row with limited detail (no body)", "implemented": false, "featureIds": ["F041", "F043"] },
+  { "id": "T061", "description": "Auth-rejected requests log to separate row with limited detail (no body)", "implemented": true, "featureIds": ["F041", "F043"] },
   { "id": "T062", "description": "Dispatch failure leaves delivery row with dispatch_status=failed and error message", "implemented": false, "featureIds": ["F041"] },
 
   { "id": "T070", "description": "Rate limit: requests above per-webhook threshold get 429", "implemented": false, "featureIds": ["F042"] },
