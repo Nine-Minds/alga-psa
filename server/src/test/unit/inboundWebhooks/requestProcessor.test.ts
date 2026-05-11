@@ -232,6 +232,34 @@ describe('inbound webhook request processor', () => {
     );
   });
 
+  it('T181: returns 404 before lookup or dispatch when inbound webhooks flag is disabled', async () => {
+    isInboundWebhooksEnabled.mockResolvedValue(false);
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-signature': 'sha256=anything',
+      },
+      body: JSON.stringify({ alert: { message: 'Disk full' } }),
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    await expect(response.text()).resolves.toBe('');
+    expect(response.status).toBe(404);
+    expect(resolveInboundWebhookTenantSlug).toHaveBeenCalledWith('tenant-slug');
+    expect(isInboundWebhooksEnabled).toHaveBeenCalledWith({ tenantId: 'tenant-a' });
+    expect(runWithTenant).not.toHaveBeenCalled();
+    expect(lookupInboundWebhookBySlug).not.toHaveBeenCalled();
+    expect(createInboundDelivery).not.toHaveBeenCalled();
+    expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
+  });
+
   it('T1012: records created ticket id in the delivery handler outcome', async () => {
     dispatchInboundWebhookHandler.mockResolvedValue({
       action: 'createTicket',
