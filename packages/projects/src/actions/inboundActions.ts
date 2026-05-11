@@ -23,6 +23,11 @@ interface CreateProjectTaskMappedValues extends Record<string, unknown> {
   external_id?: string;
 }
 
+interface UpdateProjectTaskStatusByExternalIdMappedValues extends Record<string, unknown> {
+  external_id: string;
+  project_status_mapping_id: string;
+}
+
 const createProjectTaskAction: InboundActionDefinition<CreateProjectTaskMappedValues> = {
   name: 'createProjectTask',
   entityType: 'project_task',
@@ -103,9 +108,91 @@ const createProjectTaskAction: InboundActionDefinition<CreateProjectTaskMappedVa
   },
 };
 
-registerAction(createProjectTaskAction);
+const updateProjectTaskStatusByExternalIdAction: InboundActionDefinition<UpdateProjectTaskStatusByExternalIdMappedValues> = {
+  name: 'updateProjectTaskStatusByExternalId',
+  entityType: 'project_task',
+  displayName: 'Update Project Task Status by External ID',
+  description: 'Update the status mapping for a webhook-mapped project task.',
+  targetFields: [
+    { name: 'external_id', type: 'string', required: true, description: 'External task identifier to resolve' },
+    {
+      name: 'project_status_mapping_id',
+      type: 'ref',
+      required: true,
+      refEntityType: 'project_status_mapping',
+      description: 'Target project task status mapping ID',
+    },
+  ],
+  async handle(ctx, mappedValues) {
+    const { knex } = await createTenantKnex(ctx.tenant);
+    const updatedTask = await withTransaction(knex, async (trx) => {
+      const lookup = await lookupAlgaEntityByExternalId(
+        ctx.tenant,
+        ctx.webhookSlug,
+        'project_task',
+        mappedValues.external_id,
+        { knex: trx },
+      );
 
-export const projectInboundActions = [createProjectTaskAction];
+      if (!lookup) {
+        return null;
+      }
+
+      const task = await trx('project_tasks as pt')
+        .join('project_phases as pp', function joinPhase(this: any) {
+          this.on('pt.phase_id', '=', 'pp.phase_id').andOn('pt.tenant', '=', 'pp.tenant');
+        })
+        .where({ 'pt.tenant': ctx.tenant, 'pt.task_id': lookup.algaEntityId })
+        .first<{
+          task_id: string;
+          phase_id: string;
+          project_id: string;
+        }>('pt.task_id', 'pt.phase_id', 'pp.project_id');
+
+      if (!task) {
+        return null;
+      }
+
+      await assertStatusMappingValidForTaskProject(
+        trx,
+        ctx.tenant,
+        task.project_id,
+        mappedValues.project_status_mapping_id,
+      );
+
+      return ProjectTaskModel.updateTaskStatus(
+        trx,
+        ctx.tenant,
+        task.task_id,
+        mappedValues.project_status_mapping_id,
+      );
+    });
+
+    if (!updatedTask) {
+      return {
+        success: false,
+        entityType: 'project_task',
+        externalId: mappedValues.external_id,
+        message: `lookup_miss: project_task external_id "${mappedValues.external_id}" is not mapped for webhook "${ctx.webhookSlug}"`,
+      };
+    }
+
+    return {
+      success: true,
+      entityType: 'project_task',
+      entityId: updatedTask.task_id,
+      externalId: mappedValues.external_id,
+      metadata: {
+        project_status_mapping_id: updatedTask.project_status_mapping_id,
+      },
+    };
+  },
+};
+
+registerAction(createProjectTaskAction);
+registerAction(updateProjectTaskStatusByExternalIdAction);
+
+export const projectInboundActions = [createProjectTaskAction, updateProjectTaskStatusByExternalIdAction];
 
 async function resolveProjectId(
   trx: any,
@@ -184,4 +271,22 @@ async function resolveStatusMappingId(
     throw new Error(`VALIDATION_ERROR: project "${projectId}" has no task status mappings`);
   }
   return firstMapping.project_status_mapping_id;
+}
+
+async function assertStatusMappingValidForTaskProject(
+  trx: any,
+  tenant: string,
+  projectId: string,
+  statusMappingId: string,
+): Promise<void> {
+  const mapping = await trx('project_status_mappings')
+    .where({ tenant, project_status_mapping_id: statusMappingId })
+    .where((builder: any) => {
+      builder.where({ project_id: projectId }).orWhereNull('project_id');
+    })
+    .first('project_status_mapping_id');
+
+  if (!mapping) {
+    throw new Error(`VALIDATION_ERROR: project_status_mapping_id "${statusMappingId}" is not valid for project "${projectId}"`);
+  }
 }
