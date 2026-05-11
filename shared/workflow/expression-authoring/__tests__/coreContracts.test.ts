@@ -279,6 +279,53 @@ describe('expression authoring contracts', () => {
     });
   });
 
+  it('T121: infers nested webhook payload objects, arrays, and primitive value types', () => {
+    const samplePayload = {
+      alert: {
+        severity: 3,
+        confidence: 0.85,
+        acknowledged: false,
+        tags: ['disk', 'critical'],
+        events: [
+          {
+            code: 'disk.low',
+            metrics: {
+              free_gb: 12.5,
+            },
+          },
+        ],
+      },
+    };
+
+    const options = buildWebhookPayloadExpressionPathOptions(samplePayload, { includeRootPaths: false });
+    const optionByPath = new Map(options.map((option) => [option.path, option]));
+
+    expect(optionByPath.get('alert.severity')).toMatchObject({
+      valueType: 'integer',
+      isLeaf: true,
+    });
+    expect(optionByPath.get('alert.confidence')).toMatchObject({
+      valueType: 'number',
+      isLeaf: true,
+    });
+    expect(optionByPath.get('alert.acknowledged')).toMatchObject({
+      valueType: 'boolean',
+      isLeaf: true,
+    });
+    expect(optionByPath.get('alert.tags')).toMatchObject({
+      valueType: 'array',
+      isLeaf: false,
+    });
+    expect(optionByPath.get('alert.tags[]')).toMatchObject({
+      valueType: 'string',
+      segments: ['alert', 'tags', '[]'],
+    });
+    expect(optionByPath.get('alert.events[].metrics.free_gb')).toMatchObject({
+      valueType: 'number',
+      segments: ['alert', 'events', '[]', 'metrics', 'free_gb'],
+    });
+  });
+
   it('returns informational diagnostics for unresolved schema-aware paths', () => {
     const options = buildWorkflowExpressionPathOptions({
       payloadSchema: {
