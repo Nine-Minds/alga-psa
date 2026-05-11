@@ -35,7 +35,7 @@
   { "id": "F040", "description": "Dedup lookup within configurable window; return 200 no-op for duplicates", "implemented": false, "prdRefs": ["Functional Requirements"] },
   { "id": "F041", "description": "Delivery row persisted before dispatch (so failures are visible)", "implemented": false, "prdRefs": ["Functional Requirements"] },
   { "id": "F042", "description": "Per-webhook rate limiter (Redis token bucket, default 600/min)", "implemented": false, "prdRefs": ["Non-functional Requirements"] },
-  { "id": "F043", "description": "Header filtering on persistence (strip Cookie/Authorization)", "implemented": false, "prdRefs": ["Security / Permissions"] },
+  { "id": "F043", "description": "Header filtering on persistence (strip Cookie/Authorization)", "implemented": true, "prdRefs": ["Security / Permissions"] },
   { "id": "F044", "description": "Sample payload capture: first verified body within active capture window saved to config", "implemented": false, "prdRefs": ["Functional Requirements"] },
 
   { "id": "F050", "description": "Action registry core: `registerAction(def)`, `listActions()`, `getAction(name)` at `server/src/lib/inboundWebhooks/actions/registry.ts`", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
