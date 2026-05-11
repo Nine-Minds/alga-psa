@@ -54,6 +54,10 @@ describe('ticket inbound webhook actions', () => {
       ticket_id: 'ticket-1',
       ticket_number: 'T-100',
     });
+    mocks.createComment.mockResolvedValue({
+      ticket_id: 'ticket-1',
+      comment_id: 'comment-1',
+    });
   });
 
   it('T1010: createTicket creates a tenant-scoped ticket from mapped fields', async () => {
@@ -237,5 +241,63 @@ describe('ticket inbound webhook actions', () => {
     });
 
     expect(mocks.updateTicket).not.toHaveBeenCalled();
+  });
+
+  it('T1015: addTicketCommentByExternalId appends a comment to the mapped ticket', async () => {
+    const { getAction } = await loadTicketInboundActions();
+    const action = getAction('addTicketCommentByExternalId');
+
+    await expect(
+      action?.handle(
+        {
+          tenant: 'tenant-a',
+          webhookSlug: 'rmm-alerts',
+          deliveryId: 'delivery-1',
+          headers: {},
+          rawBody: { alert: { id: 'alert-42', details: 'Investigating' } },
+          idempotencyKey: 'alert-42',
+        },
+        {
+          external_id: 'alert-42',
+          content: 'Investigating disk pressure.',
+          is_internal: false,
+          author_id: 'user-1',
+        },
+      ),
+    ).resolves.toEqual({
+      success: true,
+      entityType: 'ticket',
+      entityId: 'ticket-1',
+      externalId: 'alert-42',
+      metadata: {
+        comment_id: 'comment-1',
+      },
+    });
+
+    expect(mocks.lookupAlgaEntityByExternalId).toHaveBeenCalledWith(
+      'tenant-a',
+      'rmm-alerts',
+      'ticket',
+      'alert-42',
+      { knex: 'trx' },
+    );
+    expect(mocks.createComment).toHaveBeenCalledWith(
+      {
+        ticket_id: 'ticket-1',
+        content: 'Investigating disk pressure.',
+        is_internal: false,
+        is_resolution: false,
+        author_type: 'internal',
+        author_id: 'user-1',
+        contact_id: undefined,
+        metadata: {
+          inbound_webhook_delivery_id: 'delivery-1',
+          inbound_webhook_slug: 'rmm-alerts',
+          external_id: 'alert-42',
+        },
+      },
+      'tenant-a',
+      'trx',
+    );
   });
 });
