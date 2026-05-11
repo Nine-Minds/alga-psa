@@ -94,4 +94,40 @@ describe('inbound webhook workflow dispatcher', () => {
       }),
     });
   });
+
+  it('T112: workflow envelope headers are filtered before launch', async () => {
+    const { dispatchInboundWebhookHandler } = await import('@/lib/inboundWebhooks/dispatcher');
+    await dispatchInboundWebhookHandler({
+      webhook: {
+        tenant: 'tenant-a',
+        slug: 'payment-alerts',
+        handler_type: 'workflow',
+        handler_config: {
+          type: 'workflow',
+          workflow_id: 'workflow-2',
+        },
+      },
+      deliveryId: 'delivery-2',
+      idempotencyKey: null,
+      body: { event: 'payment_failed' },
+      headers: {
+        authorization: 'Bearer secret',
+        cookie: 'session=secret',
+        'set-cookie': 'session=secret',
+        'x-api-key': 'secret',
+        'x-source': 'stripe',
+      },
+    });
+
+    expect(mocks.launchPublishedWorkflowRun).toHaveBeenCalledWith(
+      knex,
+      expect.objectContaining({
+        payload: expect.objectContaining({
+          headers: {
+            'x-source': 'stripe',
+          },
+        }),
+      }),
+    );
+  });
 });
