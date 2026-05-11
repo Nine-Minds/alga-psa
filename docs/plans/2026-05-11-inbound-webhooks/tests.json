@@ -42,7 +42,7 @@
   { "id": "T044", "description": "Headers `Cookie` and `Authorization` are stripped before persistence", "implemented": true, "featureIds": ["F043"] },
 
   { "id": "T050", "description": "Header-source idempotency key extracted from configured header", "implemented": true, "featureIds": ["F038"] },
-  { "id": "T051", "description": "JSONata-source idempotency key extracted from configured path", "implemented": false, "featureIds": ["F039"] },
+  { "id": "T051", "description": "JSONata-source idempotency key extracted from configured path", "implemented": true, "featureIds": ["F039"] },
   { "id": "T052", "description": "Duplicate idempotency key within window returns 200 no-op", "implemented": false, "featureIds": ["F040"] },
   { "id": "T053", "description": "Same idempotency key after window expires triggers fresh dispatch", "implemented": false, "featureIds": ["F040"] },
   { "id": "T054", "description": "Missing idempotency key (when source is configured) — define behavior and test (accept vs reject)", "implemented": false, "featureIds": ["F038", "F039"] },

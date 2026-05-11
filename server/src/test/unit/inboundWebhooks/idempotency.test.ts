@@ -24,4 +24,18 @@ describe('inbound webhook idempotency', () => {
       }),
     ).resolves.toBe('alert-456');
   });
+
+  it('T051: extracts a JSONata-source idempotency key from the request body', async () => {
+    await expect(
+      extractInboundWebhookIdempotencyKey({
+        source: { type: 'jsonata', value: 'alert.id' },
+        headers: new Headers(),
+        body: {
+          alert: {
+            id: ' alert-789 ',
+          },
+        },
+      }),
+    ).resolves.toBe('alert-789');
+  });
 });
