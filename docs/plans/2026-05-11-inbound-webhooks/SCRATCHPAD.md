@@ -141,6 +141,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T026 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Decision confirmed: delivery rows are retained after webhook deletion. The migration FK uses `ON DELETE SET NULL`, and the server-action test verifies `deleteInboundWebhook` deletes only the tenant-scoped config row, deletes the stored auth secret, and never deletes `inbound_webhook_deliveries`.
 - (2026-05-11) **T027 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Permission-denial test sets `hasPermission=false` and verifies `listInboundWebhooks` throws `Forbidden: inbound_webhook:read permission required` before querying webhook tables.
 - (2026-05-11) **T028 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Runtime test verifies `getInboundWebhook`, `upsertInboundWebhook`, and `deleteInboundWebhook` all consume the tenant supplied by `withAuth`, call `createTenantKnex('tenant-a')`, and scope their lookup/insert/delete payloads by that tenant.
+- (2026-05-11) **T030 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Receiver test keeps the real HMAC verifier, mocks tenant/db/rate-limit/delivery/dispatch seams, sends a correctly signed `POST /api/inbound/<tenant>/<slug>` request, and verifies `200` with `{delivery_id}`, verified delivery creation, dispatch, and delivery outcome persistence.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -434,6 +435,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T028:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T030:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References
