@@ -104,6 +104,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F206 implemented** in `server/src/app/api/v1/inbound-webhooks/[id]/deliveries/route.ts`. The route lists deliveries through `listInboundDeliveries`, forces the path webhook id into the filter, supports `page`, `limit`, `status`, `date_from/dateFrom`, and `date_to/dateTo`, and returns pagination metadata.
 - (2026-05-11) **F207 implemented** in `server/src/app/api/v1/inbound-webhooks/[id]/deliveries/[deliveryId]/route.ts`. The detail endpoint delegates to `getInboundDelivery` and returns 404 unless the tenant-scoped delivery belongs to the webhook id in the URL.
 - (2026-05-11) **F208 implemented** in `server/src/app/api/v1/inbound-webhooks/[id]/deliveries/[deliveryId]/replay/route.ts`. Replay first verifies the tenant-scoped delivery belongs to the URL webhook, then calls `replayInboundDelivery` and returns the new linked delivery with `202`.
+- (2026-05-11) **F209 implemented** in `server/src/app/api/v1/inbound-webhooks/actions/route.ts`. `GET /actions` returns `listInboundWebhookActions()` so SDK clients get the same registered action definitions and target field schemas as the Settings UI.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -295,6 +296,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Type check after F207:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F208:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F209:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References
