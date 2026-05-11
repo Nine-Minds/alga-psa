@@ -119,6 +119,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F222 implemented** in `server/src/test/unit/api/inboundWebhooksOpenApi.contract.test.ts`. Added action discovery assertions for `/api/v1/inbound-webhooks/actions`, including response data as `InboundActionDefinition[]` and component shape coverage for `InboundActionDefinition` plus `InboundActionTargetField`.
 - (2026-05-11) **F223 implemented/verified** across `server/src/app/api/v1/inbound-webhooks/**/route.ts`. Every REST handler imports and delegates to `server/src/lib/actions/inboundWebhookActions.ts`; none imports `withAuth`, `hasPermission`, or tenant DB helpers directly, so the API surface shares the existing server-action auth/permission path.
 - (2026-05-11) **T001 implemented** in `server/src/test/unit/migrations/inboundWebhookMigrations.test.ts`. Static migration contract verifies `inbound_webhooks` has `tenant`, `inbound_webhook_id`, composite PK `(tenant, inbound_webhook_id)`, tenant-scoped uniqueness/indexes, and Citus distribution on `tenant`.
+- (2026-05-11) **T002 implemented** in `server/src/test/unit/migrations/inboundWebhookMigrations.test.ts`. Static migration contract verifies `inbound_webhook_deliveries` has composite PK `(tenant, delivery_id)`, tenant-scoped webhook and replay foreign keys, idempotency index, and Citus distribution on `tenant`.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -345,6 +346,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `rg -n "from '@/lib/actions/inboundWebhookActions'|withAuth|hasPermission|createTenantKnex" server/src/app/api/v1/inbound-webhooks -g'route.ts'`
   - `find server/src/app/api/v1/inbound-webhooks -name route.ts -print | sort`
 - (2026-05-11) Test/typecheck after T001:
+  - `(cd server && npm run test -- src/test/unit/migrations/inboundWebhookMigrations.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T002:
   - `(cd server && npm run test -- src/test/unit/migrations/inboundWebhookMigrations.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
