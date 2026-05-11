@@ -37,7 +37,7 @@
   { "id": "T039", "description": "Unknown tenant slug returns 401 (identical to bad auth — no enumeration)", "implemented": true, "featureIds": ["F037"] },
   { "id": "T040", "description": "Unknown webhook slug under valid tenant returns 401 (identical body)", "implemented": true, "featureIds": ["F037"] },
   { "id": "T041", "description": "Disabled (is_active=false) webhook returns 401", "implemented": true, "featureIds": ["F030", "F037"] },
-  { "id": "T042", "description": "HMAC comparison is timing-safe (no early-return on byte mismatch)", "implemented": false, "featureIds": ["F033"] },
+  { "id": "T042", "description": "HMAC comparison is timing-safe (no early-return on byte mismatch)", "implemented": true, "featureIds": ["F033"] },
   { "id": "T043", "description": "Bearer comparison is timing-safe", "implemented": false, "featureIds": ["F034"] },
   { "id": "T044", "description": "Headers `Cookie` and `Authorization` are stripped before persistence", "implemented": false, "featureIds": ["F043"] },
 
