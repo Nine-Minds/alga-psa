@@ -161,4 +161,46 @@ describe('invoice inbound webhook actions', () => {
     expect(invoicesQuery.first).not.toHaveBeenCalled();
     expect(invoicesQuery.update).not.toHaveBeenCalled();
   });
+
+  it('T1052: markInvoicePaidByExternalId is idempotent when invoice is already paid', async () => {
+    invoicesQuery.first.mockResolvedValue({
+      invoice_id: 'invoice-1',
+      status: 'paid',
+      custom_fields: {
+        inbound_webhook_payment_reference: 'pay-99',
+      },
+    });
+    const { getAction } = await loadInvoiceInboundActions();
+    const action = getAction('markInvoicePaidByExternalId');
+
+    await expect(
+      action?.handle(
+        {
+          tenant: 'tenant-a',
+          webhookSlug: 'payments',
+          deliveryId: 'delivery-2',
+          headers: {},
+          rawBody: { invoice: { id: 'inv-42', paymentId: 'pay-99' } },
+          idempotencyKey: 'pay-99',
+        },
+        {
+          external_id: 'inv-42',
+          payment_reference: 'pay-99',
+        },
+      ),
+    ).resolves.toEqual({
+      success: true,
+      entityType: 'invoice',
+      entityId: 'invoice-1',
+      externalId: 'inv-42',
+      metadata: {
+        status: 'paid',
+      },
+    });
+
+    expect(invoicesQuery.where).toHaveBeenCalledWith({ tenant: 'tenant-a', invoice_id: 'invoice-1' });
+    expect(invoicesQuery.first).toHaveBeenCalled();
+    expect(invoicesQuery.update).not.toHaveBeenCalled();
+    expect(invoicesQuery.returning).not.toHaveBeenCalled();
+  });
 });
