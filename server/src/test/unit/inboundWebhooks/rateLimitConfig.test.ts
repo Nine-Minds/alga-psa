@@ -41,4 +41,21 @@ describe('inbound webhook rate limiting', () => {
     );
   });
 
+  it('T072: isolates token buckets per tenant', async () => {
+    await checkInboundWebhookRateLimit('tenant-a', 'shared-webhook-id');
+    await checkInboundWebhookRateLimit('tenant-b', 'shared-webhook-id');
+
+    expect(rateLimitMocks.tryConsume).toHaveBeenNthCalledWith(
+      1,
+      INBOUND_WEBHOOK_RATE_LIMIT_NAMESPACE,
+      'tenant-a',
+      'shared-webhook-id',
+    );
+    expect(rateLimitMocks.tryConsume).toHaveBeenNthCalledWith(
+      2,
+      INBOUND_WEBHOOK_RATE_LIMIT_NAMESPACE,
+      'tenant-b',
+      'shared-webhook-id',
+    );
+  });
 });
