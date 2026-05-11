@@ -19,6 +19,7 @@ import { useContactAvatar, invalidateContactAvatar } from '@alga-psa/user-compos
 import {
   getCategoriesAction,
   getCategoryWithSubtypesAction,
+  getUserPreferencesAction,
   updateUserPreferenceAction
 } from '@alga-psa/notifications/actions';
 import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from '@alga-psa/notifications';
@@ -89,18 +90,38 @@ export function ClientProfile() {
         setCurrentEffectiveLocale(inherited.locale);
         setInheritedSource(inherited.source);
 
-        // Get notification categories and subtypes
+        // Get notification categories, subtypes, and saved user email preferences
         const notificationCategories = await getCategoriesAction();
-        setCategories(notificationCategories);
+        const emailPreferences = await getUserPreferencesAction(currentUser.tenant, currentUser.user_id);
+        const emailPreferenceBySubtype = new Map(
+          emailPreferences.map((preference: UserNotificationPreference) => [
+            preference.subtype_id,
+            preference.is_enabled
+          ])
+        );
 
         // Get subtypes for each category
         const subtypes: Record<number, NotificationSubtype[]> = {};
         await Promise.all(
           notificationCategories.map(async (category: NotificationCategory): Promise<void> => {
             const { subtypes: categorySubtypes } = await getCategoryWithSubtypesAction(category.id);
-            subtypes[category.id] = categorySubtypes;
+            subtypes[category.id] = categorySubtypes.map((subtype: NotificationSubtype) => ({
+              ...subtype,
+              is_enabled: subtype.is_enabled && (emailPreferenceBySubtype.get(subtype.id) ?? true)
+            }));
           })
         );
+        setCategories(notificationCategories.map((category: NotificationCategory) => {
+          const categorySubtypes = subtypes[category.id] ?? [];
+          if (categorySubtypes.length === 0) {
+            return category;
+          }
+
+          return {
+            ...category,
+            is_enabled: categorySubtypes.every((subtype: NotificationSubtype) => subtype.is_enabled)
+          };
+        }));
         setSubtypesByCategory(subtypes);
 
       } catch (err) {
@@ -149,21 +170,78 @@ export function ClientProfile() {
     }
   };
 
-  const handleCategoryToggle = (categoryId: number, enabled: boolean) => {
-    setCategories(prev => 
-      prev.map((cat):NotificationCategory => 
-        cat.id === categoryId ? { ...cat, is_enabled: enabled } : cat
-      )
-    );
+  const handleCategoryToggle = async (categoryId: number, enabled: boolean) => {
+    if (!user) return;
+
+    const categorySubtypes = subtypesByCategory[categoryId] ?? [];
+
+    try {
+      await Promise.all(
+        categorySubtypes.map((subtype: NotificationSubtype) =>
+          updateUserPreferenceAction(user.tenant, user.user_id, {
+            subtype_id: subtype.id,
+            is_enabled: enabled
+          })
+        )
+      );
+
+      setSubtypesByCategory(prev => ({
+        ...prev,
+        [categoryId]: (prev[categoryId] ?? []).map((subtype): NotificationSubtype => ({
+          ...subtype,
+          is_enabled: enabled
+        }))
+      }));
+
+      setCategories(prev =>
+        prev.map((cat): NotificationCategory =>
+          cat.id === categoryId ? { ...cat, is_enabled: enabled } : cat
+        )
+      );
+    } catch (err) {
+      toast.error(tProfile('notifications.preferences.saveError', 'Failed to save preference'));
+      handleError(err, tProfile('notifications.preferences.saveError', 'Failed to save preference'));
+    }
   };
 
-  const handleSubtypeToggle = (categoryId: number, subtypeId: number, enabled: boolean) => {
-    setSubtypesByCategory(prev => ({
-      ...prev,
-      [categoryId]: prev[categoryId].map((subtype):NotificationSubtype =>
-        subtype.id === subtypeId ? { ...subtype, is_enabled: enabled } : subtype
-      )
-    }));
+  const handleSubtypeToggle = async (categoryId: number, subtypeId: number, enabled: boolean) => {
+    if (!user) return;
+
+    try {
+      await updateUserPreferenceAction(user.tenant, user.user_id, {
+        subtype_id: subtypeId,
+        is_enabled: enabled
+      });
+
+      setSubtypesByCategory(prev => ({
+        ...prev,
+        [categoryId]: (prev[categoryId] ?? []).map((subtype): NotificationSubtype =>
+          subtype.id === subtypeId ? { ...subtype, is_enabled: enabled } : subtype
+        )
+      }));
+
+      setCategories(prev =>
+        prev.map((category): NotificationCategory => {
+          if (category.id !== categoryId) {
+            return category;
+          }
+
+          const updatedSubtypes = (subtypesByCategory[categoryId] ?? []).map((subtype): NotificationSubtype =>
+            subtype.id === subtypeId ? { ...subtype, is_enabled: enabled } : subtype
+          );
+
+          return {
+            ...category,
+            is_enabled: updatedSubtypes.length > 0
+              ? updatedSubtypes.every((subtype: NotificationSubtype) => subtype.is_enabled)
+              : enabled
+          };
+        })
+      );
+    } catch (err) {
+      toast.error(tProfile('notifications.preferences.saveError', 'Failed to save preference'));
+      handleError(err, tProfile('notifications.preferences.saveError', 'Failed to save preference'));
+    }
   };
 
   // Define tab labels (must be before early returns to maintain hook order)
