@@ -294,4 +294,31 @@ describe('inbound webhook server actions', () => {
       slug: 'rmm-alerts',
     });
   });
+
+  it('T023: upsertInboundWebhook writes secrets to the vault and stores only vault metadata', async () => {
+    const { knex, getInsertedPayload } = makeCreateKnex([]);
+    createTenantKnex.mockResolvedValue({ knex });
+
+    const { upsertInboundWebhook } = await import('@/lib/actions/inboundWebhookActions');
+    const result = await upsertInboundWebhook(validUpsertInput());
+
+    const insertedPayload = getInsertedPayload();
+    expect(setTenantSecret).toHaveBeenCalledWith(
+      'tenant-a',
+      expect.stringContaining('inbound_webhook_'),
+      '0123456789abcdef',
+    );
+    expect(insertedPayload?.auth_config).toMatchObject({
+      type: 'hmac_sha256',
+      signature_header: 'X-Signature',
+      secret_vault_path: expect.stringContaining('inbound-webhooks/inbound_webhook_'),
+    });
+    expect(insertedPayload?.auth_config).not.toHaveProperty('secret');
+    expect(result.webhook.authConfig).toMatchObject({
+      type: 'hmac_sha256',
+      signatureHeader: 'X-Signature',
+      secretVaultPath: expect.stringContaining('inbound-webhooks/inbound_webhook_'),
+    });
+    expect(result.secret).toBe('0123456789abcdef');
+  });
 });
