@@ -282,6 +282,19 @@
           "jsonataExpression": "11111",
           "jsonataExpressionPlaceholder": "11111",
           "windowSeconds": "11111"
+        },
+        "handler": {
+          "title": "11111",
+          "help": "11111",
+          "type": "11111",
+          "types": {
+            "directAction": "11111",
+            "workflow": "11111"
+          },
+          "directActionTitle": "11111",
+          "directActionHelp": "11111",
+          "workflowTitle": "11111",
+          "workflowHelp": "11111"
         }
       },
       "stats": {

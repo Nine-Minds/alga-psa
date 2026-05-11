@@ -282,6 +282,19 @@
           "jsonataExpression": "JSONata Expression",
           "jsonataExpressionPlaceholder": "alert.id",
           "windowSeconds": "Duplicate Window (seconds)"
+        },
+        "handler": {
+          "title": "Handler",
+          "help": "Choose what Alga should do after the request is verified and deduplicated.",
+          "type": "Handler Type",
+          "types": {
+            "directAction": "Direct action",
+            "workflow": "Workflow"
+          },
+          "directActionTitle": "Direct action",
+          "directActionHelp": "Select an inbound action and map payload fields to its target fields.",
+          "workflowTitle": "Workflow",
+          "workflowHelp": "Select a workflow to start with the normalized webhook envelope."
         }
       },
       "stats": {

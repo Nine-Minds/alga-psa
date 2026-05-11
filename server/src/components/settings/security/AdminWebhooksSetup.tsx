@@ -97,6 +97,9 @@ type InboundWebhookIdentityFormState = {
   idempotencyType: 'header' | 'jsonata';
   idempotencyValue: string;
   idempotencyWindowSeconds: number;
+  handlerType: InboundWebhookConfig['handlerType'];
+  directActionName: string;
+  workflowId: string;
 };
 
 type WebhookStatsSnapshot = {
@@ -331,6 +334,9 @@ function InboundWebhooksListView() {
     idempotencyType: 'header',
     idempotencyValue: 'X-Idempotency-Key',
     idempotencyWindowSeconds: 86400,
+    handlerType: 'direct_action',
+    directActionName: '',
+    workflowId: '',
   });
   const [revealedInboundSecret, setRevealedInboundSecret] = useState<{
     webhookName: string;
@@ -460,6 +466,13 @@ function InboundWebhooksListView() {
                   idempotencyType: webhook.idempotencySource?.type ?? 'header',
                   idempotencyValue: webhook.idempotencySource?.value ?? 'X-Idempotency-Key',
                   idempotencyWindowSeconds: webhook.idempotencyWindowSeconds,
+                  handlerType: webhook.handlerType,
+                  directActionName: webhook.handlerConfig.type === 'direct_action'
+                    ? webhook.handlerConfig.action
+                    : '',
+                  workflowId: webhook.handlerConfig.type === 'workflow'
+                    ? webhook.handlerConfig.workflowId
+                    : '',
                 });
                 setIdentityDialogOpen(true);
               }}
@@ -491,6 +504,9 @@ function InboundWebhooksListView() {
       idempotencyType: 'header',
       idempotencyValue: 'X-Idempotency-Key',
       idempotencyWindowSeconds: 86400,
+      handlerType: 'direct_action',
+      directActionName: '',
+      workflowId: '',
     });
     setIdentityDialogOpen(true);
   }, []);
@@ -505,6 +521,11 @@ function InboundWebhooksListView() {
   const idempotencySourceOptions = useMemo(() => [
     { value: 'header', label: t('security.webhooks.inbound.idempotency.types.header') },
     { value: 'jsonata', label: t('security.webhooks.inbound.idempotency.types.jsonata') },
+  ], [t]);
+
+  const handlerTypeOptions = useMemo(() => [
+    { value: 'direct_action', label: t('security.webhooks.inbound.handler.types.directAction') },
+    { value: 'workflow', label: t('security.webhooks.inbound.handler.types.workflow') },
   ], [t]);
 
   return (
@@ -838,6 +859,45 @@ function InboundWebhooksListView() {
                 }));
               }}
             />
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-semibold text-gray-900">
+                {t('security.webhooks.inbound.handler.title')}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                {t('security.webhooks.inbound.handler.help')}
+              </p>
+            </div>
+            <CustomSelect
+              id="inbound-webhook-handler-type"
+              label={t('security.webhooks.inbound.handler.type')}
+              value={identityForm.handlerType}
+              onValueChange={(value) => {
+                setIdentityForm((current) => ({
+                  ...current,
+                  handlerType: value as InboundWebhookConfig['handlerType'],
+                }));
+              }}
+              options={handlerTypeOptions}
+            />
+            {identityForm.handlerType === 'direct_action' ? (
+              <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+                <h4 className="text-sm font-medium text-gray-900">
+                  {t('security.webhooks.inbound.handler.directActionTitle')}
+                </h4>
+                <p className="mt-1 text-sm text-gray-500">
+                  {t('security.webhooks.inbound.handler.directActionHelp')}
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
+                <h4 className="text-sm font-medium text-gray-900">
+                  {t('security.webhooks.inbound.handler.workflowTitle')}
+                </h4>
+                <p className="mt-1 text-sm text-gray-500">
+                  {t('security.webhooks.inbound.handler.workflowHelp')}
+                </p>
+              </div>
+            )}
           </div>
         </DialogContent>
         <DialogFooter>
