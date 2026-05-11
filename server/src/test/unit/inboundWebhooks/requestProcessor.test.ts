@@ -353,6 +353,48 @@ describe('inbound webhook request processor', () => {
     );
   });
 
+  it('T095: records missing required mapped fields as clear mapping failures', async () => {
+    dispatchInboundWebhookHandler.mockRejectedValue(
+      new TestInboundWebhookMappingError('Missing required mapped field "title" for action "createTicket"'),
+    );
+    const body = JSON.stringify({ alert: { severity: 'critical' } });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-signature': `sha256=${hmacSignature('top-secret', body)}`,
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    await expect(response.json()).resolves.toEqual({
+      delivery_id: 'delivery-1',
+      error: 'mapping_failed',
+    });
+    expect(response.status).toBe(400);
+    expect(updateInboundDeliveryOutcome).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        deliveryId: 'delivery-1',
+        dispatchStatus: 'failed',
+        handlerOutcome: { error: 'Missing required mapped field "title" for action "createTicket"' },
+        responseStatus: 400,
+        responseBody: {
+          delivery_id: 'delivery-1',
+          error: 'mapping_failed',
+        },
+      }),
+    );
+  });
+
   it('T070: returns 429 when the webhook rate limit is exceeded', async () => {
     checkInboundWebhookRateLimit.mockResolvedValue({ allowed: false, retryAfterMs: 1500 });
     const body = JSON.stringify({ alert: { message: 'Disk full' } });
