@@ -40,7 +40,7 @@
 
   { "id": "F050", "description": "Action registry core: `registerAction(def)`, `listActions()`, `getAction(name)` at `server/src/lib/inboundWebhooks/actions/registry.ts`", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F051", "description": "Action definition type: `{ name, entityType, displayName, description, targetFields[], handle() }`", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
-  { "id": "F052", "description": "Target field schema type: `{ name, type, required, description, enumValues? }`", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
+  { "id": "F052", "description": "Target field schema type: `{ name, type, required, description, enumValues? }`", "implemented": true, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F053", "description": "Bootstrap import of all package-contributed inbound action registrations on server start", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F054", "description": "Field mapping evaluator: runs JSONata against request body per target field", "implemented": false, "prdRefs": ["Functional Requirements"] },
   { "id": "F055", "description": "Mapping validation errors recorded as failed delivery with clear error", "implemented": false, "prdRefs": ["Functional Requirements"] },
