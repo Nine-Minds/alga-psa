@@ -42,6 +42,25 @@ const webhookFixture = {
   updatedAt: '2026-05-11T10:00:00.000Z',
 };
 
+const deliveryFixture = {
+  deliveryId: 'delivery-1',
+  tenant: 'tenant-a',
+  inboundWebhookId: 'webhook-1',
+  idempotencyKey: 'alert-1',
+  receivedAt: '2026-05-11T10:01:00.000Z',
+  requestMethod: 'POST',
+  requestPath: '/api/inbound/tenant-slug/rmm-alerts',
+  requestHeaders: { 'content-type': 'application/json' },
+  requestBody: { alert: { id: 'alert-1' } },
+  authStatus: 'verified',
+  dispatchStatus: 'dispatched',
+  responseStatus: 200,
+  responseBody: { delivery_id: 'delivery-1' },
+  durationMs: 42,
+  isReplay: false,
+  replayedFrom: null,
+};
+
 const routeContext = (params: Record<string, string>) => ({
   params: Promise.resolve(params),
 });
@@ -198,5 +217,27 @@ describe('inbound webhook REST API routes', () => {
       secret: 'replacement-secret',
     });
     expect(inboundActions.rotateInboundWebhookSecret).toHaveBeenCalledWith('webhook-1');
+  });
+
+  it('dispatches a synthetic inbound webhook request in process', async () => {
+    const input = {
+      body: { alert: { id: 'alert-1', message: 'CPU high' } },
+      headers: { 'x-idempotency-key': 'alert-1' },
+    };
+    inboundActions.sendInboundWebhookTest.mockResolvedValue(deliveryFixture);
+
+    const route = await import('@/app/api/v1/inbound-webhooks/[id]/test/route');
+    const response = await route.POST(
+      new Request('http://localhost/api/v1/inbound-webhooks/webhook-1/test', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(input),
+      }),
+      routeContext({ id: 'webhook-1' }),
+    );
+
+    expect(response.status).toBe(202);
+    await expect(response.json()).resolves.toEqual({ data: deliveryFixture });
+    expect(inboundActions.sendInboundWebhookTest).toHaveBeenCalledWith('webhook-1', input);
   });
 });
