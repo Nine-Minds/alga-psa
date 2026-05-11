@@ -21,6 +21,23 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
     deliveryId: zOpenApi.string().uuid().describe('Inbound delivery UUID.'),
   });
 
+  const ReceiverParams = zOpenApi.object({
+    tenantSlug: zOpenApi.string().describe('URL-safe tenant slug used for inbound webhook routing.'),
+    webhookSlug: zOpenApi.string().describe('URL-safe inbound webhook slug unique within the tenant.'),
+  });
+
+  const ReceiverHeaders = zOpenApi.object({
+    'content-type': zOpenApi.string().optional().describe('Expected to be application/json for JSON payloads.'),
+    'x-signature': zOpenApi
+      .string()
+      .optional()
+      .describe('Example HMAC-SHA256 signature header. Actual header name is webhook-configurable.'),
+    'x-idempotency-key': zOpenApi
+      .string()
+      .optional()
+      .describe('Optional idempotency key header when the webhook uses a header idempotency source.'),
+  });
+
   const DeliveryListQuery = zOpenApi.object({
     page: zOpenApi.string().optional(),
     limit: zOpenApi.string().optional(),
@@ -58,6 +75,9 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
   });
   const ActionListEnvelope = zOpenApi.object({
     data: zOpenApi.array(InboundActionDefinition),
+  });
+  const ReceiverAcceptedEnvelope = zOpenApi.object({
+    delivery_id: zOpenApi.string().uuid(),
   });
 
   const commonExtensions = {
@@ -244,4 +264,37 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
       edition: 'both',
     });
   }
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/inbound/{tenantSlug}/{webhookSlug}',
+    summary: 'Receive inbound webhook payload',
+    description:
+      'Receives a JSON payload for a tenant inbound webhook. Authentication, idempotency, rate limit, and handler behavior are controlled by the webhook configuration.',
+    tags: [tag],
+    request: {
+      params: ReceiverParams,
+      headers: ReceiverHeaders,
+      body: {
+        schema: zOpenApi.unknown(),
+        description: 'Source-specific JSON payload. Shape varies per inbound webhook configuration.',
+      },
+    },
+    responses: {
+      200: { description: 'Request accepted or treated as duplicate no-op.', schema: ReceiverAcceptedEnvelope },
+      400: { description: 'Invalid request payload or handler validation failure.', schema: ApiError },
+      401: { description: 'Authentication failed. Response body is intentionally empty at runtime.' },
+      404: { description: 'Inbound webhook receiver disabled by feature flag.' },
+      429: { description: 'Per-webhook rate limit exceeded.', schema: ApiError },
+      500: { description: 'Unexpected dispatch failure.', schema: ApiError },
+    },
+    extensions: {
+      'x-tenant-scoped': true,
+      'x-auth-mechanism': 'per-webhook auth configuration',
+      'x-feature-flag': 'inbound_webhooks_enabled',
+      'x-rbac-resource': 'inbound_webhook',
+      'x-handler': 'server/src/app/api/inbound/[tenantSlug]/[webhookSlug]/route.ts',
+    },
+    edition: 'both',
+  });
 }
