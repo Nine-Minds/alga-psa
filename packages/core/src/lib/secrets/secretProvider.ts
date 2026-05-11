@@ -1,11 +1,17 @@
 import { EnvSecretProvider } from './EnvSecretProvider';
 import { CompositeSecretProvider } from './CompositeSecretProvider';
+import { FileSystemSecretProvider } from './LazyFileSystemSecretProvider';
 import logger from '../logger';
 import type { ISecretProvider } from './ISecretProvider';
 
 // Safe process.env access
 const getEnvVar = (name: string): string | undefined => {
   return typeof process !== 'undefined' && process.env ? process.env[name] : undefined;
+};
+
+const runtimeImport = <TModule,>(specifier: string): Promise<TModule> => {
+  const importer = new Function('specifier', 'return import(specifier)') as <T>(specifier: string) => Promise<T>;
+  return importer<TModule>(specifier);
 };
 
 let secretProviderInstance: ISecretProvider | null = null;
@@ -38,7 +44,6 @@ async function getProviderInstance(providerType: ProviderType): Promise<ISecretP
 
     case 'filesystem':
       if (!filesystemProviderInstance) {
-        const { FileSystemSecretProvider } = await import('./FileSystemSecretProvider');
         filesystemProviderInstance = new FileSystemSecretProvider();
       }
       return filesystemProviderInstance;
@@ -47,7 +52,8 @@ async function getProviderInstance(providerType: ProviderType): Promise<ISecretP
       if (!vaultProviderInstance) {
         // Use direct vault provider
         try {
-          const { loadVaultSecretProvider } = await import('./vaultLoader');
+          const { loadVaultSecretProvider } =
+            await runtimeImport<typeof import('./vaultLoader')>('./vaultLoader');
           vaultProviderInstance = await loadVaultSecretProvider();
           logger.info('Using VaultSecretProvider for Node runtime');
         } catch (error) {

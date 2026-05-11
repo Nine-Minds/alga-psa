@@ -1264,12 +1264,19 @@ const requireWorkflowPermission = async (
   throwHttpError(403, 'Forbidden');
 };
 
+const hasWorkflowScheduleTable = async (
+  knex: Awaited<ReturnType<typeof createTenantKnex>>['knex']
+): Promise<boolean> => knex.schema.hasTable('tenant_workflow_schedule');
+
 const loadWorkflowScheduleStateMap = async (
   knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
   workflowIds: string[],
   tenant?: string | null
 ): Promise<Map<string, WorkflowScheduleStateRecord>> => {
   if (!workflowIds.length) return new Map();
+  if (!(await hasWorkflowScheduleTable(knex))) {
+    return new Map();
+  }
 
   const query = knex<WorkflowScheduleStateRecord>('tenant_workflow_schedule')
     .select('*')
@@ -2012,7 +2019,7 @@ export const publishWorkflowDefinitionAction = withAuth(async (user, { tenant },
     updated_by: user.user_id
   });
 
-  if (tenant) {
+  if (tenant && await hasWorkflowScheduleTable(knex)) {
     const nextTriggerIsTimeTrigger = isWorkflowTimeTrigger((definition as any)?.trigger);
     const previousTriggerIsTimeTrigger = isWorkflowTimeTrigger((workflow as any)?.trigger);
 

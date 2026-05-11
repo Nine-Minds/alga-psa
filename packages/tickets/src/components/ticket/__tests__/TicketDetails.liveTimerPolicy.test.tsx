@@ -3,10 +3,11 @@
 
 import React from 'react';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import TicketDetails from '../TicketDetails';
 
 const findBoardByIdMock = vi.fn();
+const getTicketByIdMock = vi.fn();
 const onTicketUpdateMock = vi.fn();
 const startTrackingMock = vi.fn();
 const stopTrackingMock = vi.fn();
@@ -17,6 +18,14 @@ const replaceDrawerMock = vi.fn();
 const launchTimeEntryMock = vi.fn();
 const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+let liveTicketContext = {
+  enabled: false,
+  presence: [] as Array<{ userId: string; displayName: string; avatarUrl?: string | null; color: string }>,
+  connectionStatus: 'unavailable' as 'connecting' | 'connected' | 'reconnecting' | 'unavailable',
+  setEditingField: vi.fn(),
+  lastRemoteUpdate: null,
+  reconnectVersion: 0,
+};
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
@@ -94,6 +103,12 @@ vi.mock('@alga-psa/ui/components', () => ({
   ResponseStateBadge: () => <div data-testid="response-state" />,
 }));
 
+vi.mock('@alga-psa/ui/presence/PresenceBar', () => ({
+  PresenceBar: ({ users }: { users: Array<{ name: string }> }) => (
+    <div data-testid="presence-bar">{users.map((user) => user.name).join(', ')}</div>
+  ),
+}));
+
 vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
   ConfirmationDialog: () => null,
 }));
@@ -152,6 +167,7 @@ vi.mock('@alga-psa/tickets/actions', () => ({
 vi.mock('@alga-psa/user-composition/actions', () => ({
   findUserById: vi.fn().mockResolvedValue(null),
   getCurrentUser: vi.fn().mockResolvedValue(null),
+  getCurrentUserPermissions: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('@alga-psa/reference-data/actions', () => ({
@@ -172,6 +188,7 @@ vi.mock('../../../actions/ticketDisplaySettings', () => ({
 
 vi.mock('../../../actions/clientLookupActions', () => ({
   getAllActiveContacts: vi.fn().mockResolvedValue([]),
+  getClientLocations: vi.fn().mockResolvedValue([]),
   getContactByContactNameId: vi.fn().mockResolvedValue(null),
   getContactsByClient: vi.fn().mockResolvedValue([]),
   getClientById: vi.fn().mockResolvedValue(null),
@@ -183,6 +200,7 @@ vi.mock('../../../actions/optimizedTicketActions', () => ({
 }));
 
 vi.mock('../../../actions/ticketActions', () => ({
+  getTicketById: (...args: unknown[]) => getTicketByIdMock(...args),
   updateTicket: vi.fn().mockResolvedValue('success'),
 }));
 
@@ -239,6 +257,10 @@ vi.mock('../AgentScheduleDrawer', () => ({
 vi.mock('../TicketNavigation', () => ({
   __esModule: true,
   default: () => <div data-testid="ticket-navigation" />,
+}));
+
+vi.mock('../TicketLiveProvider', () => ({
+  useTicketLiveContext: () => liveTicketContext,
 }));
 
 vi.mock('../../TicketOriginBadge', () => ({
@@ -300,6 +322,14 @@ function deferredPromise<T>() {
 describe('TicketDetails live timer board policy', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    liveTicketContext = {
+      enabled: false,
+      presence: [],
+      connectionStatus: 'unavailable',
+      setEditingField: vi.fn(),
+      lastRemoteUpdate: null,
+      reconnectVersion: 0,
+    };
     findBoardByIdMock.mockImplementation(async (boardId: string | null) => {
       if (boardId === 'board-disabled') {
         return disabledBoard;
@@ -311,6 +341,7 @@ describe('TicketDetails live timer board policy', () => {
 
       return null;
     });
+    getTicketByIdMock.mockResolvedValue(baseTicket);
     onTicketUpdateMock.mockReset();
     startTrackingMock.mockResolvedValue(false);
     stopTrackingMock.mockResolvedValue(undefined);
@@ -318,6 +349,7 @@ describe('TicketDetails live timer board policy', () => {
   });
 
   afterEach(() => {
+    cleanup();
     consoleErrorSpy.mockClear();
     consoleLogSpy.mockClear();
   });
@@ -403,5 +435,87 @@ describe('TicketDetails live timer board policy', () => {
 
     expect(findBoardByIdMock).not.toHaveBeenCalledWith('board-disabled');
     expect(stopTrackingMock).not.toHaveBeenCalled();
+  });
+
+  it('T033: renders the live connection indicator only for reconnecting and unavailable states', async () => {
+    liveTicketContext = {
+      ...liveTicketContext,
+      enabled: true,
+      connectionStatus: 'connected',
+      presence: [{ userId: 'user-2', displayName: 'Bob Example', color: '#0ea5e9' }],
+    };
+
+    const { rerender } = render(
+      <TicketDetails
+        initialTicket={baseTicket}
+        initialBoard={enabledBoard}
+      />
+    );
+
+    expect(screen.queryByTestId('ticket-live-connection-status')).toBeNull();
+    expect(screen.getByTestId('presence-bar')).toHaveTextContent('Bob Example');
+
+    liveTicketContext = {
+      ...liveTicketContext,
+      presence: [],
+      connectionStatus: 'reconnecting',
+    };
+
+    rerender(
+      <TicketDetails
+        initialTicket={baseTicket}
+        initialBoard={enabledBoard}
+      />
+    );
+
+    expect(screen.getByTestId('ticket-live-connection-status')).toHaveTextContent('Live updates offline — reconnecting…');
+
+    liveTicketContext = {
+      ...liveTicketContext,
+      connectionStatus: 'unavailable',
+    };
+
+    rerender(
+      <TicketDetails
+        initialTicket={baseTicket}
+        initialBoard={enabledBoard}
+      />
+    );
+
+    expect(screen.getByTestId('ticket-live-connection-status')).toHaveTextContent('Live updates unavailable');
+  });
+
+  it('refreshes the ticket snapshot once after a reconnect signal', async () => {
+    liveTicketContext = {
+      ...liveTicketContext,
+      enabled: true,
+      connectionStatus: 'connected',
+      reconnectVersion: 0,
+    };
+
+    const { rerender } = render(
+      <TicketDetails
+        initialTicket={baseTicket}
+        initialBoard={enabledBoard}
+      />
+    );
+
+    expect(getTicketByIdMock).not.toHaveBeenCalled();
+
+    liveTicketContext = {
+      ...liveTicketContext,
+      reconnectVersion: 1,
+    };
+
+    rerender(
+      <TicketDetails
+        initialTicket={baseTicket}
+        initialBoard={enabledBoard}
+      />
+    );
+
+    await waitFor(() => {
+      expect(getTicketByIdMock).toHaveBeenCalledWith('ticket-1');
+    });
   });
 });

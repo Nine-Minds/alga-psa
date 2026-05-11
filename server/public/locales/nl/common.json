@@ -1122,5 +1122,14 @@
   },
   "feedback": {
     "providePlaceholder": "Geef feedback"
+  },
+  "presence": {
+    "noOneElseEditing": "Niemand anders is aan het bewerken",
+    "conflict": {
+      "changedField": "{{author}} heeft dit veld zojuist gewijzigd {{time}}.",
+      "remoteValue": "Externe waarde:",
+      "keepYours": "Eigen behouden",
+      "takeTheirs": "Externe gebruiken"
+    }
   }
 }

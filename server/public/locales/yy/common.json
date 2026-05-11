@@ -1122,5 +1122,14 @@
   },
   "feedback": {
     "providePlaceholder": "55555"
+  },
+  "presence": {
+    "noOneElseEditing": "55555",
+    "conflict": {
+      "changedField": "55555 {{author}} 55555 {{time}} 55555",
+      "remoteValue": "55555:",
+      "keepYours": "55555",
+      "takeTheirs": "55555"
+    }
   }
 }

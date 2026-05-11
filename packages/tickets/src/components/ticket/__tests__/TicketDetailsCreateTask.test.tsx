@@ -211,6 +211,7 @@ vi.mock('@alga-psa/documents/actions/documentActions', () => ({
 }));
 
 vi.mock('../../actions/clientLookupActions', () => ({
+  getClientLocations: vi.fn().mockResolvedValue([]),
   getContactByContactNameId: vi.fn().mockResolvedValue(null),
   getContactsByClient: vi.fn().mockResolvedValue([]),
   getClientById: vi.fn().mockResolvedValue(null),

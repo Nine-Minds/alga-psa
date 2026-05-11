@@ -22,6 +22,7 @@ import {
   getTicketOrigin,
   parseTicketStatusFilterValue,
 } from '@alga-psa/tickets/lib';
+import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
 import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions';
 
 const clientTicketSchema = z.object({
@@ -562,6 +563,17 @@ export const addClientTicketComment = withAuth(async (
           }
         }
       });
+
+      await publishTicketUpdate({
+        tenantId: tenant,
+        ticketId,
+        updatedFields: isInternal ? ['comments'] : ['comments', 'response_state'],
+        updatedBy: {
+          userId: user.user_id,
+          displayName: `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim() || user.email || 'Client User',
+        },
+        updatedAt: newComment.created_at instanceof Date ? newComment.created_at.toISOString() : new Date().toISOString(),
+      });
     });
 
     return true; // Return true to indicate success
@@ -652,6 +664,17 @@ export const updateClientTicketComment = withAuth(async (
           updated_at: new Date().toISOString()
           // Removed updated_by as it doesn't exist in the comments table
         });
+
+      await publishTicketUpdate({
+        tenantId: tenant,
+        ticketId: comment.ticket_id,
+        updatedFields: ['comments'],
+        updatedBy: {
+          userId: user.user_id,
+          displayName: `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim() || user.email || 'Client User',
+        },
+        updatedAt: new Date().toISOString(),
+      });
     });
   } catch (error) {
     console.error('Failed to update comment:', error);
@@ -829,6 +852,17 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
           tenant: tenant
         })
         .del();
+
+      await publishTicketUpdate({
+        tenantId: tenant,
+        ticketId: comment.ticket_id,
+        updatedFields: ['comments'],
+        updatedBy: {
+          userId: user.user_id,
+          displayName: `${userRecord.first_name || ''} ${userRecord.last_name || ''}`.trim() || user.email || 'Client User',
+        },
+        updatedAt: new Date().toISOString(),
+      });
     });
   } catch (error) {
     console.error('Failed to delete comment:', error);

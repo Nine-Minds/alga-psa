@@ -1122,5 +1122,14 @@
   },
   "feedback": {
     "providePlaceholder": "Veuillez fournir un commentaire"
+  },
+  "presence": {
+    "noOneElseEditing": "Personne d’autre ne modifie",
+    "conflict": {
+      "changedField": "{{author}} vient de modifier ce champ {{time}}.",
+      "remoteValue": "Valeur distante :",
+      "keepYours": "Conserver la vôtre",
+      "takeTheirs": "Utiliser la distante"
+    }
   }
 }

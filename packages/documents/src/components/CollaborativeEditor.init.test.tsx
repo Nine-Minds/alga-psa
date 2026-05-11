@@ -98,6 +98,7 @@ vi.mock('./EditorToolbar', () => ({
 
 vi.mock('@alga-psa/ui/editor', () => ({
   Emoticon: {},
+  AiResponseBlock: {},
   createYjsProvider: (...args: any[]) => createYjsProvider(...args),
   EmojiSuggestionExtension: { configure: vi.fn(() => ({})) },
   EmojiSuggestionPopup: () => null,
@@ -210,7 +211,7 @@ describe('CollaborativeEditor initialization', () => {
     });
   });
 
-  it('shows connected users in the presence bar', async () => {
+  it('T024: shows connected users in the lifted presence bar', async () => {
     mockProvider.awareness.getStates.mockReturnValue(new Map([
       [1, { user: { id: 'user-1', name: 'User One', color: '#111111' } }],
       [2, { user: { id: 'user-2', name: 'User Two', color: '#222222' } }],

@@ -109,6 +109,7 @@ const apiKeySkipPaths = [
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
   return apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
+    (pathname.startsWith('/api/tickets/') && pathname.endsWith('/live-token')) ||
     (pathname.startsWith('/api/documents/') && (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview')));
 }
 
