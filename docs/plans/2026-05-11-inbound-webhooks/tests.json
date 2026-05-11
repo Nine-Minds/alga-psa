@@ -162,7 +162,7 @@
   { "id": "T302", "description": "`GET /api/v1/inbound-webhooks/{id}` returns config without secret", "implemented": true, "featureIds": ["F202"] },
   { "id": "T303", "description": "`PUT /api/v1/inbound-webhooks/{id}` updates fields and persists", "implemented": true, "featureIds": ["F202"] },
   { "id": "T304", "description": "`DELETE /api/v1/inbound-webhooks/{id}` returns 204", "implemented": true, "featureIds": ["F202"] },
-  { "id": "T305", "description": "`POST /api/v1/inbound-webhooks/{id}/rotate-secret` returns new secret once", "implemented": false, "featureIds": ["F203"] },
+  { "id": "T305", "description": "`POST /api/v1/inbound-webhooks/{id}/rotate-secret` returns new secret once", "implemented": true, "featureIds": ["F203"] },
   { "id": "T306", "description": "`POST /api/v1/inbound-webhooks/{id}/test` dispatches synthetic request in-process", "implemented": false, "featureIds": ["F204"] },
   { "id": "T307", "description": "`POST /api/v1/inbound-webhooks/{id}/capture-sample` enables capture window", "implemented": false, "featureIds": ["F205"] },
   { "id": "T308", "description": "`DELETE /api/v1/inbound-webhooks/{id}/capture-sample` clears captured sample", "implemented": false, "featureIds": ["F205"] },

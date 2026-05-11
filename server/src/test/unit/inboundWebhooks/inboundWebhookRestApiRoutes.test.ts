@@ -179,4 +179,24 @@ describe('inbound webhook REST API routes', () => {
     await expect(response.text()).resolves.toBe('');
     expect(inboundActions.deleteInboundWebhook).toHaveBeenCalledWith('webhook-1');
   });
+
+  it('rotates an inbound webhook secret and returns the replacement once', async () => {
+    inboundActions.rotateInboundWebhookSecret.mockResolvedValue({
+      webhook: webhookFixture,
+      secret: 'replacement-secret',
+    });
+
+    const route = await import('@/app/api/v1/inbound-webhooks/[id]/rotate-secret/route');
+    const response = await route.POST(
+      new Request('http://localhost/api/v1/inbound-webhooks/webhook-1/rotate-secret', { method: 'POST' }),
+      routeContext({ id: 'webhook-1' }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      data: webhookFixture,
+      secret: 'replacement-secret',
+    });
+    expect(inboundActions.rotateInboundWebhookSecret).toHaveBeenCalledWith('webhook-1');
+  });
 });
