@@ -57,6 +57,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
 - (2026-05-11) **F040 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `findDuplicateInboundDelivery` checks `(tenant, inbound_webhook_id, idempotency_key)` within the configured window and only treats `pending`, `dispatched`, or prior `duplicate` rows as dedup hits.
 - (2026-05-11) **F041 implemented** in `server/src/lib/inboundWebhooks/deliveryPersistence.ts`. `createInboundDelivery` inserts tenant-scoped rows before dispatch, filters persisted headers through F043, stores request bodies only for `auth_status='verified'`, and supports replay linkage fields.
+- (2026-05-11) **F033 implemented** in `server/src/lib/inboundWebhooks/authVerifier.ts`. HMAC-SHA256 verification uses configurable signature header names, supports `sha256=<hex>` or raw hex signatures, reads secrets from tenant secret storage, and compares with padded `crypto.timingSafeEqual`.
 - (2026-05-11) **Bundled integrations already in the codebase** — the user-configurable system complements these, not replaces them:
   - **Tanium** (EE) — `ee/server/src/lib/integrations/tanium/` + `taniumGatewayClient.ts`. Outbound sync (devices → assets) + webhook. Uses `ingestNormalizedRmmDeviceSnapshot`.
   - **NinjaOne** (EE) — `ee/server/src/lib/integrations/ninjaone/` — has a full inbound webhook implementation (`webhooks/webhookHandler.ts`, `webhooks/webhookRegistration.ts`, `alerts/alertProcessor.ts`, `alerts/ticketCreator.ts`). The user-configurable inbound webhook system is the generic equivalent.
@@ -131,6 +132,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Type check after F040:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F041:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F033:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References
