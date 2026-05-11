@@ -46,6 +46,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F050 implemented** in `server/src/lib/inboundWebhooks/actions/registry.ts`. Added `registerAction`, `getAction`, `listActions`, duplicate-name rejection, deterministic list ordering by entity/name, and a test-only clear helper.
 - (2026-05-11) **F051 implemented** in `server/src/lib/inboundWebhooks/actions/registry.ts`. `InboundActionDefinition` includes `{ name, entityType, displayName, description, targetFields, handle(ctx, mappedValues) }` and returns a structured `InboundActionResult`.
 - (2026-05-11) **F052 implemented** in `server/src/lib/inboundWebhooks/actions/registry.ts`. `InboundActionTargetField` includes `{ name, type, required, description, enumValues?, refEntityType? }`; `refEntityType` is an additive helper for PRD `ref-to-entity` fields.
+- (2026-05-11) **F053 deferred** until the first package-contributed action modules exist. Bootstrap should import actual registration files, not empty placeholders.
+- (2026-05-11) **F054 implemented** in `server/src/lib/inboundWebhooks/actions/mappingEvaluator.ts`. `evaluateFieldMapping` evaluates each mapped target field using the existing workflow JSONata runtime (`@alga-psa/workflows/runtime/expressionEngine`) with both `body` and `payload` bound to the inbound request body.
 - (2026-05-11) **Bundled integrations already in the codebase** — the user-configurable system complements these, not replaces them:
   - **Tanium** (EE) — `ee/server/src/lib/integrations/tanium/` + `taniumGatewayClient.ts`. Outbound sync (devices → assets) + webhook. Uses `ingestNormalizedRmmDeviceSnapshot`.
   - **NinjaOne** (EE) — `ee/server/src/lib/integrations/ninjaone/` — has a full inbound webhook implementation (`webhooks/webhookHandler.ts`, `webhooks/webhookRegistration.ts`, `alerts/alertProcessor.ts`, `alerts/ticketCreator.ts`). The user-configurable inbound webhook system is the generic equivalent.
@@ -106,6 +108,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Type check after F022:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F050:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F054:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References
