@@ -62,6 +62,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F1050 implemented** in `packages/billing/src/actions/inboundActions.ts` and bootstrapped from inbound action startup. `markInvoicePaidByExternalId` resolves invoices through `tenant_external_entity_mappings`, sets `status='paid'`, and records payment metadata in `custom_fields`.
 - (2026-05-11) **F1051 implemented** in `packages/billing/src/actions/inboundActions.ts`. `updateInvoiceStatusByExternalId` validates status through the action enum field and updates mapped invoices through the same tenant-scoped invoice helper.
 - (2026-05-11) **F1052 implemented** in `packages/billing/src/actions/inboundActions.ts`. The shared invoice update helper returns the existing invoice without writing when the current status already equals the target status, making mark-paid idempotent.
+- (2026-05-11) **F1060 implemented** in `packages/scheduling/src/actions/inboundActions.ts` and bootstrapped from inbound action startup. `createTimeEntry` accepts mapped user/work item/service/start/duration/billable fields, validates tenant-scoped references, computes `work_date` from the mapped user's timezone, creates or reuses the matching draft time sheet, inserts a `time_entries` row, publishes the standard `TIME_ENTRY_CREATED` event, and writes a `tenant_external_entity_mappings` row when `external_id` is mapped.
 - (2026-05-11) **F061 implemented** in `server/src/lib/inboundWebhooks/workflowEnvelope.ts`. `buildWorkflowWebhookEnvelope` returns the documented shape `{source, body, headers, verified, delivery_id, idempotency_key, received_at}` and normalizes `received_at` to ISO string.
 - (2026-05-11) **F070 implemented** in `shared/workflow/expression-authoring/adapters/webhookPayloadContextAdapter.ts` and exported from `adapters/index.ts`. The adapter exposes context roots/path options for captured webhook payloads. Also corrected `evaluateFieldMapping` to evaluate JSONata directly against the request body, matching PRD examples like `alert.message`.
 - (2026-05-11) **F071 implemented** in `shared/workflow/expression-authoring/adapters/webhookPayloadContextAdapter.ts`. The adapter infers schema nodes recursively from captured samples, supports nested objects/arrays/primitives/nulls, and builds path options via existing `buildPathOptionsFromContextRoots`.
@@ -188,6 +189,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Type check after F1040/F1041 asset actions:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F1050/F1051/F1052 invoice actions:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F1060:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References
