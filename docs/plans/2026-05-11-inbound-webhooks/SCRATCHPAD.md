@@ -64,6 +64,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F037 implemented** in `server/src/lib/inboundWebhooks/responses.ts`. `unauthorizedInboundWebhookResponse()` returns a bodyless `401` `NextResponse` to reuse for unknown tenant, unknown webhook, disabled webhook, and bad auth cases.
 - (2026-05-11) **F031 implemented** in `server/src/lib/inboundWebhooks/tenantResolver.ts`. Uses existing `@alga-psa/db.getTenantIdBySlug` and caches positive/negative lookups for 60 seconds; tenant slugs are the existing 12-hex portal slug format derived from tenant UUIDs.
 - (2026-05-11) **F032 implemented** in `server/src/lib/inboundWebhooks/configLookup.ts`. `lookupInboundWebhookBySlug(knex, tenant, webhookSlug)` queries `inbound_webhooks` with both `tenant` and `slug`, returning only receiver-needed fields; backed by F001 unique `(tenant, slug)` index.
+- (2026-05-11) **F044 implemented** in `server/src/lib/inboundWebhooks/sampleCapture.ts`. `captureInboundWebhookSampleIfRequested` stores the first verified body only while `sample_capture_expires_at > now`, clears the capture window after storing, and leaves existing samples untouched until the admin explicitly re-captures/clears.
 - (2026-05-11) **Bundled integrations already in the codebase** — the user-configurable system complements these, not replaces them:
   - **Tanium** (EE) — `ee/server/src/lib/integrations/tanium/` + `taniumGatewayClient.ts`. Outbound sync (devices → assets) + webhook. Uses `ingestNormalizedRmmDeviceSnapshot`.
   - **NinjaOne** (EE) — `ee/server/src/lib/integrations/ninjaone/` — has a full inbound webhook implementation (`webhooks/webhookHandler.ts`, `webhooks/webhookRegistration.ts`, `alerts/alertProcessor.ts`, `alerts/ticketCreator.ts`). The user-configurable inbound webhook system is the generic equivalent.
@@ -146,6 +147,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Type check after F031:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F032:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F044:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References
