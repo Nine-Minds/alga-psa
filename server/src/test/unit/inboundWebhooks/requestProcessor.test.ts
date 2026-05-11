@@ -533,4 +533,43 @@ describe('inbound webhook request processor', () => {
     expect(createInboundDelivery).not.toHaveBeenCalled();
     expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
   });
+
+  it('T040: returns a bodyless 401 for an unknown webhook slug under a valid tenant', async () => {
+    lookupInboundWebhookBySlug.mockResolvedValue(null);
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/missing-hook', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-signature': 'sha256=anything',
+      },
+      body: JSON.stringify({ alert: { message: 'Disk full' } }),
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'missing-hook',
+    });
+
+    await expect(response.text()).resolves.toBe('');
+    expect(response.status).toBe(401);
+    expect(isInboundWebhooksEnabled).toHaveBeenCalledWith({ tenantId: 'tenant-a' });
+    expect(lookupInboundWebhookBySlug).toHaveBeenCalledWith(expect.anything(), 'tenant-a', 'missing-hook');
+    expect(createInboundDelivery).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        inboundWebhookId: null,
+        requestMethod: 'POST',
+        requestPath: '/api/inbound/tenant-slug/missing-hook',
+        authStatus: 'rejected_no_auth',
+        dispatchStatus: 'failed',
+        responseStatus: 401,
+        responseBody: null,
+      }),
+    );
+    expect(createInboundDelivery.mock.calls[0][1]).not.toHaveProperty('requestBody');
+    expect(dispatchInboundWebhookHandler).not.toHaveBeenCalled();
+  });
 });
