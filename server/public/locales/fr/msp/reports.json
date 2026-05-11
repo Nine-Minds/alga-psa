@@ -46,8 +46,7 @@
       "viewReport": "Voir le rapport",
       "openInBilling": "Ouvrir dans la facturation",
       "requiresTier": "Requiert {{tier}}",
-      "comingSoon": "Bientôt disponible",
-      "openBillingReports": "Ouvrir les rapports de facturation"
+      "comingSoon": "Bientôt disponible"
     },
     "errors": {
       "loadReport": "Impossible de charger le rapport."
@@ -82,10 +81,6 @@
       "ageDistribution": "Répartition par âge",
       "responseOwnership": "Responsable de la réponse",
       "oldestOpenTickets": "Tickets ouverts les plus anciens"
-    },
-    "billingCallout": {
-      "title": "Les rapports de facturation sont dans l’espace de facturation",
-      "description": "Les revenus de contrat, expirations, utilisation des forfaits et rentabilité simple sont disponibles dans Facturation."
     },
     "reportCatalog": {
       "ticketWorkload": {

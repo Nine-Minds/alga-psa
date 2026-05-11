@@ -46,8 +46,7 @@
       "viewReport": "Ver relatório",
       "openInBilling": "Abrir em faturamento",
       "requiresTier": "Requer {{tier}}",
-      "comingSoon": "Em breve",
-      "openBillingReports": "Abrir relatórios de faturamento"
+      "comingSoon": "Em breve"
     },
     "errors": {
       "loadReport": "Falha ao carregar o relatório."
@@ -82,10 +81,6 @@
       "ageDistribution": "Distribuição por idade",
       "responseOwnership": "Responsável pela resposta",
       "oldestOpenTickets": "Tickets abertos mais antigos"
-    },
-    "billingCallout": {
-      "title": "Relatórios de faturamento ficam na área de faturamento",
-      "description": "Receita de contratos, vencimentos, uso de pacotes e rentabilidade simples estão disponíveis em Faturamento."
     },
     "reportCatalog": {
       "ticketWorkload": {

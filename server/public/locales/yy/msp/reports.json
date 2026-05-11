@@ -46,8 +46,7 @@
       "viewReport": "55555",
       "openInBilling": "55555",
       "requiresTier": "55555",
-      "comingSoon": "55555",
-      "openBillingReports": "55555"
+      "comingSoon": "55555"
     },
     "errors": {
       "loadReport": "55555"
@@ -82,10 +81,6 @@
       "ageDistribution": "55555",
       "responseOwnership": "55555",
       "oldestOpenTickets": "55555"
-    },
-    "billingCallout": {
-      "title": "55555",
-      "description": "55555"
     },
     "reportCatalog": {
       "ticketWorkload": {

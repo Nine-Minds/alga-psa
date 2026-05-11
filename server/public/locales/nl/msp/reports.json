@@ -46,8 +46,7 @@
       "viewReport": "Rapport bekijken",
       "openInBilling": "Openen in facturatie",
       "requiresTier": "Vereist {{tier}}",
-      "comingSoon": "Binnenkort",
-      "openBillingReports": "Facturatierapporten openen"
+      "comingSoon": "Binnenkort"
     },
     "errors": {
       "loadReport": "Rapport kon niet worden geladen."
@@ -82,10 +81,6 @@
       "ageDistribution": "Leeftijdsverdeling",
       "responseOwnership": "Reactie-eigenaar",
       "oldestOpenTickets": "Oudste open tickets"
-    },
-    "billingCallout": {
-      "title": "Facturatierapporten staan in de facturatiewerkruimte",
-      "description": "Contractomzet, vervaldatums, bundelgebruik en eenvoudige winstgevendheid zijn beschikbaar in Facturatie."
     },
     "reportCatalog": {
       "ticketWorkload": {

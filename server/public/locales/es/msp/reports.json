@@ -46,8 +46,7 @@
       "viewReport": "Ver informe",
       "openInBilling": "Abrir en facturación",
       "requiresTier": "Requiere {{tier}}",
-      "comingSoon": "Próximamente",
-      "openBillingReports": "Abrir informes de facturación"
+      "comingSoon": "Próximamente"
     },
     "errors": {
       "loadReport": "No se pudo cargar el informe."
@@ -82,10 +81,6 @@
       "ageDistribution": "Distribución por antigüedad",
       "responseOwnership": "Responsable de respuesta",
       "oldestOpenTickets": "Tickets abiertos más antiguos"
-    },
-    "billingCallout": {
-      "title": "Los informes de facturación están en el espacio de facturación",
-      "description": "Ingresos de contratos, vencimientos, uso de bolsas y rentabilidad simple están disponibles en Facturación."
     },
     "reportCatalog": {
       "ticketWorkload": {

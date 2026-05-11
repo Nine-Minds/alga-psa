@@ -46,8 +46,7 @@
       "viewReport": "Visualizza report",
       "openInBilling": "Apri in fatturazione",
       "requiresTier": "Richiede {{tier}}",
-      "comingSoon": "In arrivo",
-      "openBillingReports": "Apri report di fatturazione"
+      "comingSoon": "In arrivo"
     },
     "errors": {
       "loadReport": "Impossibile caricare il report."
@@ -82,10 +81,6 @@
       "ageDistribution": "Distribuzione per età",
       "responseOwnership": "Responsabile della risposta",
       "oldestOpenTickets": "Ticket aperti meno recenti"
-    },
-    "billingCallout": {
-      "title": "I report di fatturazione sono nello spazio di fatturazione",
-      "description": "Ricavi dei contratti, scadenze, utilizzo dei pacchetti, redditività semplice: tutto è disponibile in Fatturazione."
     },
     "reportCatalog": {
       "ticketWorkload": {

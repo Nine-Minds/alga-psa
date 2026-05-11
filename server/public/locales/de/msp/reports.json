@@ -46,8 +46,7 @@
       "viewReport": "Bericht anzeigen",
       "openInBilling": "In Abrechnung öffnen",
       "requiresTier": "Erfordert {{tier}}",
-      "comingSoon": "Demnächst",
-      "openBillingReports": "Abrechnungsberichte öffnen"
+      "comingSoon": "Demnächst"
     },
     "errors": {
       "loadReport": "Bericht konnte nicht geladen werden."
@@ -82,10 +81,6 @@
       "ageDistribution": "Altersverteilung",
       "responseOwnership": "Antwortzustand",
       "oldestOpenTickets": "Älteste offene Tickets"
-    },
-    "billingCallout": {
-      "title": "Abrechnungsberichte liegen im Abrechnungsbereich",
-      "description": "Vertragserlöse, Ablaufdaten, Kontingentnutzung und einfache Rentabilität sind in der Abrechnung verfügbar."
     },
     "reportCatalog": {
       "ticketWorkload": {

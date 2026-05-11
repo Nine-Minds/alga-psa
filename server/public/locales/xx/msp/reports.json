@@ -46,8 +46,7 @@
       "viewReport": "11111",
       "openInBilling": "11111",
       "requiresTier": "11111",
-      "comingSoon": "11111",
-      "openBillingReports": "11111"
+      "comingSoon": "11111"
     },
     "errors": {
       "loadReport": "11111"
@@ -82,10 +81,6 @@
       "ageDistribution": "11111",
       "responseOwnership": "11111",
       "oldestOpenTickets": "11111"
-    },
-    "billingCallout": {
-      "title": "11111",
-      "description": "11111"
     },
     "reportCatalog": {
       "ticketWorkload": {

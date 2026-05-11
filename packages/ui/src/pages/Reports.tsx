@@ -7,7 +7,6 @@ import {
   BarChart3,
   Clock3,
   FileBarChart,
-  LineChart,
   Lock,
   type LucideIcon,
   Mail,
@@ -457,30 +456,6 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
           </CardContent>
         </Card>
 
-        {productCode === 'psa' ? (
-          <Card>
-            <CardContent className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
-              <div className="flex items-center gap-3">
-                <LineChart className="h-5 w-5 text-[rgb(var(--color-primary-600))]" />
-                <div>
-                  <p className="font-medium text-[rgb(var(--color-text-900))]">
-                    {t('reportsPage.billingCallout.title', { defaultValue: 'Billing reports live in the billing workspace' })}
-                  </p>
-                  <p className="text-sm text-[rgb(var(--color-text-500))]">
-                    {t('reportsPage.billingCallout.description', {
-                      defaultValue: 'Contract revenue, expiration, bucket usage, and profitability are available from Billing.',
-                    })}
-                  </p>
-                </div>
-              </div>
-              <Button id="reports-open-billing-reports" asChild size="sm" variant="outline">
-                <Link href="/msp/billing?tab=reports">
-                  {t('reportsPage.actions.openBillingReports', { defaultValue: 'Open billing reports' })}
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        ) : null}
       </div>
     </div>
   );

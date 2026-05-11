@@ -46,8 +46,7 @@
       "viewReport": "View report",
       "openInBilling": "Open in billing",
       "requiresTier": "Requires {{tier}}",
-      "comingSoon": "Coming soon",
-      "openBillingReports": "Open billing reports"
+      "comingSoon": "Coming soon"
     },
     "errors": {
       "loadReport": "Failed to load report."
@@ -82,10 +81,6 @@
       "ageDistribution": "Age distribution",
       "responseOwnership": "Response ownership",
       "oldestOpenTickets": "Oldest open tickets"
-    },
-    "billingCallout": {
-      "title": "Billing reports live in the billing workspace",
-      "description": "Contract revenue, expiration, bucket usage, and profitability are available from Billing."
     },
     "reportCatalog": {
       "ticketWorkload": {

@@ -46,8 +46,7 @@
       "viewReport": "Zobacz raport",
       "openInBilling": "Otwórz w rozliczeniach",
       "requiresTier": "Wymaga {{tier}}",
-      "comingSoon": "Wkrótce",
-      "openBillingReports": "Otwórz raporty rozliczeniowe"
+      "comingSoon": "Wkrótce"
     },
     "errors": {
       "loadReport": "Nie udało się załadować raportu."
@@ -82,10 +81,6 @@
       "ageDistribution": "Rozkład wieku",
       "responseOwnership": "Odpowiedzialny za odpowiedź",
       "oldestOpenTickets": "Najstarsze otwarte zgłoszenia"
-    },
-    "billingCallout": {
-      "title": "Raporty rozliczeniowe są w obszarze rozliczeń",
-      "description": "Przychody z kontraktów, wygasanie, użycie pakietów i prosta rentowność są dostępne w Rozliczeniach."
     },
     "reportCatalog": {
       "ticketWorkload": {
