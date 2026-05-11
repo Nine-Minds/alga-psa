@@ -28,7 +28,7 @@
   { "id": "F033", "description": "Auth verifier: HMAC-SHA256 (configurable header), timing-safe compare", "implemented": true, "prdRefs": ["Security / Permissions"] },
   { "id": "F034", "description": "Auth verifier: Bearer token, timing-safe compare", "implemented": true, "prdRefs": ["Security / Permissions"] },
   { "id": "F035", "description": "Auth verifier: IP allowlist (CIDR matching)", "implemented": true, "prdRefs": ["Security / Permissions"] },
-  { "id": "F036", "description": "Auth verifier: Shared-secret-in-path token", "implemented": false, "prdRefs": ["Security / Permissions"] },
+  { "id": "F036", "description": "Auth verifier: Shared-secret-in-path token", "implemented": true, "prdRefs": ["Security / Permissions"] },
   { "id": "F037", "description": "Unified 401 response for unknown slug + bad auth (no enumeration)", "implemented": false, "prdRefs": ["Security / Permissions"] },
   { "id": "F038", "description": "Idempotency key extractor: header source", "implemented": true, "prdRefs": ["Functional Requirements"] },
   { "id": "F039", "description": "Idempotency key extractor: JSONata expression on body", "implemented": true, "prdRefs": ["Functional Requirements"] },
