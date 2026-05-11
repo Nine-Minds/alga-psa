@@ -16,6 +16,16 @@ const updateInboundDeliveryOutcome = vi.fn();
 const captureInboundWebhookSampleIfRequested = vi.fn();
 const dispatchInboundWebhookHandler = vi.fn();
 
+class TestInboundWebhookMappingError extends Error {
+  public readonly statusCode = 400;
+  public readonly code = 'mapping_failed';
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'InboundWebhookMappingError';
+  }
+}
+
 vi.mock('@/lib/db/db', () => ({
   getConnection: (...args: unknown[]) => getConnection(...args),
 }));
@@ -62,6 +72,7 @@ vi.mock('@/lib/inboundWebhooks/sampleCapture', () => ({
 
 vi.mock('@/lib/inboundWebhooks/dispatcher', () => ({
   dispatchInboundWebhookHandler: (...args: unknown[]) => dispatchInboundWebhookHandler(...args),
+  InboundWebhookMappingError: TestInboundWebhookMappingError,
 }));
 
 function hmacSignature(secret: string, body: string): string {
@@ -297,6 +308,46 @@ describe('inbound webhook request processor', () => {
         responseBody: {
           delivery_id: 'delivery-1',
           error: 'dispatch_failed',
+        },
+      }),
+    );
+  });
+
+  it('T094: records malformed mapping failures without returning 500', async () => {
+    dispatchInboundWebhookHandler.mockRejectedValue(new TestInboundWebhookMappingError('Invalid JSONata expression'));
+    const body = JSON.stringify({ alert: { message: 'Disk full' } });
+    const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-signature': `sha256=${hmacSignature('top-secret', body)}`,
+      },
+      body,
+    });
+
+    const { processInboundWebhookRequest } = await import('@/lib/inboundWebhooks/requestProcessor');
+    const response = await processInboundWebhookRequest({
+      request,
+      tenantSlug: 'tenant-slug',
+      webhookSlug: 'rmm-alerts',
+    });
+
+    await expect(response.json()).resolves.toEqual({
+      delivery_id: 'delivery-1',
+      error: 'mapping_failed',
+    });
+    expect(response.status).toBe(400);
+    expect(updateInboundDeliveryOutcome).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        tenant: 'tenant-a',
+        deliveryId: 'delivery-1',
+        dispatchStatus: 'failed',
+        handlerOutcome: { error: 'Invalid JSONata expression' },
+        responseStatus: 400,
+        responseBody: {
+          delivery_id: 'delivery-1',
+          error: 'mapping_failed',
         },
       }),
     );

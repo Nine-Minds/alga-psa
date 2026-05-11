@@ -6,7 +6,7 @@ import { runWithTenant } from '@/lib/db';
 import { verifyInboundWebhookAuth } from './authVerifier';
 import { lookupInboundWebhookBySlug } from './configLookup';
 import { createInboundDelivery, updateInboundDeliveryOutcome } from './deliveryPersistence';
-import { dispatchInboundWebhookHandler } from './dispatcher';
+import { dispatchInboundWebhookHandler, InboundWebhookMappingError } from './dispatcher';
 import { extractInboundWebhookIdempotencyKey, findDuplicateInboundDelivery } from './idempotency';
 import { checkInboundWebhookRateLimit } from './rateLimitConfig';
 import { unauthorizedInboundWebhookResponse } from './responses';
@@ -235,18 +235,23 @@ export async function processInboundWebhookRequest(input: ProcessInboundWebhookR
       return NextResponse.json(responseBody);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Inbound webhook dispatch failed';
-      const responseBody = { delivery_id: deliveryId, error: 'dispatch_failed' };
+      const isMappingError = error instanceof InboundWebhookMappingError;
+      const responseStatus = isMappingError ? 400 : 500;
+      const responseBody = {
+        delivery_id: deliveryId,
+        error: isMappingError ? 'mapping_failed' : 'dispatch_failed',
+      };
       await updateInboundDeliveryOutcome(knex, {
         tenant,
         deliveryId,
         dispatchStatus: 'failed',
         handlerOutcome: { error: message },
-        responseStatus: 500,
+        responseStatus,
         responseBody,
         durationMs: Date.now() - startedAt,
       });
       return new NextResponse(JSON.stringify(responseBody), {
-        status: 500,
+        status: responseStatus,
         headers: JSON_RESPONSE_HEADERS,
       });
     }

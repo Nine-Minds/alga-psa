@@ -6,6 +6,16 @@ import { buildWorkflowWebhookEnvelope } from './workflowEnvelope';
 import { launchPublishedWorkflowRun } from '@alga-psa/workflows/lib/workflowRunLauncher';
 import { createTenantKnex } from '@alga-psa/db';
 
+export class InboundWebhookMappingError extends Error {
+  public readonly statusCode = 400;
+  public readonly code = 'mapping_failed';
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'InboundWebhookMappingError';
+  }
+}
+
 export interface DispatchInboundWebhookHandlerInput {
   webhook: Pick<InboundWebhookConfigLookupRow, 'tenant' | 'slug' | 'handler_type' | 'handler_config'>;
   deliveryId: string;
@@ -38,7 +48,14 @@ async function dispatchDirectAction(input: DispatchInboundWebhookHandlerInput): 
   }
 
   const fieldMapping = isPlainObject(config.field_mapping) ? stringifyRecord(config.field_mapping) : {};
-  const mappedValues = validateMappedValues(action, await evaluateFieldMapping(input.body, fieldMapping));
+  let mappedValues: Record<string, unknown>;
+  try {
+    mappedValues = validateMappedValues(action, await evaluateFieldMapping(input.body, fieldMapping));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Inbound webhook field mapping failed';
+    throw new InboundWebhookMappingError(message);
+  }
+
   const result = await action.handle(
     {
       tenant: input.webhook.tenant,
