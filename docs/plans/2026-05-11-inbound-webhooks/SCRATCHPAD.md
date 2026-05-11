@@ -172,6 +172,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T081 implemented** in `server/src/test/unit/inboundWebhooks/sampleCapture.test.ts`. Expired/otherwise non-matching capture windows now return `false` when the conditional update affects zero rows, which prevents late requests from overwriting an existing captured sample.
 - (2026-05-11) **T082 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. `clearSamplePayload` now has server-action coverage for `inbound_webhook:update` permission, tenant-scoped update by webhook id, and clearing both `sample_payload` and `sample_capture_expires_at`.
 - (2026-05-11) **T090 implemented** in `server/src/test/unit/inboundWebhooks/actionRegistry.test.ts`. Registry ordering is now locked: `registerAction` stores definitions and `listActions()` returns a deterministic flat list grouped by `entityType` ordering and then action name.
+- (2026-05-11) **T091 implemented** in `server/src/test/unit/inboundWebhooks/actionRegistry.test.ts`. Duplicate action registration now has explicit coverage and must throw `Inbound action "<name>" is already registered`, matching the registry's fail-fast behavior.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -557,6 +558,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T090:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/actionRegistry.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T091:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/actionRegistry.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 

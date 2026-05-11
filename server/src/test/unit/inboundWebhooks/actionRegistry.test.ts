@@ -41,4 +41,12 @@ describe('inbound action registry', () => {
       'ticket:updateTicketByExternalId',
     ]);
   });
+
+  it('T091: rejects duplicate action names on register', () => {
+    registerAction(action('createTicket', 'ticket'));
+
+    expect(() => registerAction(action('createTicket', 'ticket'))).toThrow(
+      'Inbound action "createTicket" is already registered',
+    );
+  });
 });
