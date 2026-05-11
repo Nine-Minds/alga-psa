@@ -230,6 +230,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T144 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Workflow handler UI coverage now verifies the envelope info card includes the documented `source`, `body`, `headers`, `verified`, `delivery_id`, `idempotency_key`, and `received_at` fields.
 - (2026-05-11) **T145 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Sample-capture UI coverage now verifies the capture button is saved-webhook gated, calls `captureSamplePayload`, writes returned capture/sample state into the dialog form, and shows the active capture window status.
 - (2026-05-11) **T146 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Sample-tree UI coverage now verifies captured payloads are converted through `buildWebhookPayloadExpressionPathOptions`, empty state is handled, and path buttons render stable IDs plus the path text.
+- (2026-05-11) **T147 implemented** in `server/src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts`. Sample-tree insertion coverage now verifies mapping fields set the focused target, path buttons are disabled until a field is focused, and clicking a path writes it into `identityForm.fieldMapping[focusedMappingField]`.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -789,6 +790,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T146:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T147:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/AdminWebhooksSetup.ui.contract.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 

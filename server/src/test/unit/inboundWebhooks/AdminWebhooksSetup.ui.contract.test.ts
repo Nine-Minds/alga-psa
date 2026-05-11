@@ -210,4 +210,14 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain('id={`inbound-webhook-sample-path-${option.path.replace(/[^a-zA-Z0-9_-]+/g, \'-\')}`}');
     expect(adminWebhooksSource).toContain('{option.path}');
   });
+
+  it('T147: clicking a sample path inserts it into the focused expression field', () => {
+    expect(adminWebhooksSource).toContain('const [focusedMappingField, setFocusedMappingField]');
+    expect(adminWebhooksSource).toContain('const handleInsertSamplePath = useCallback((path: string) => {');
+    expect(adminWebhooksSource).toContain('if (!focusedMappingField) {');
+    expect(adminWebhooksSource).toContain('[focusedMappingField]: path');
+    expect(adminWebhooksSource).toContain('onFocus={() => setFocusedMappingField(field.name)}');
+    expect(adminWebhooksSource).toContain('disabled={!focusedMappingField}');
+    expect(adminWebhooksSource).toContain('onClick={() => handleInsertSamplePath(option.path)}');
+  });
 });
