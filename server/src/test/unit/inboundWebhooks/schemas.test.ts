@@ -121,4 +121,22 @@ describe('inbound webhook schemas', () => {
       ]),
     );
   });
+
+  it('T014: rejects URL-unsafe slug characters', () => {
+    const result = inboundWebhookUpsertInputSchema.safeParse(
+      validInboundWebhookInput({
+        slug: 'RMM Alerts!',
+      }),
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: ['slug'],
+          message: 'Slug must use lowercase letters, numbers, and hyphens',
+        }),
+      ]),
+    );
+  });
 });

@@ -131,6 +131,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T011 implemented** in `server/src/test/unit/inboundWebhooks/schemas.test.ts`. Zod schema test verifies HMAC auth configs must include a non-empty `signature_header`, preventing un-verifiable HMAC webhook configs.
 - (2026-05-11) **T012 implemented** in `server/src/test/unit/inboundWebhooks/schemas.test.ts`. Zod schema test verifies direct-action handler configs must include a non-empty `action` name before field mappings are accepted.
 - (2026-05-11) **T013 implemented** in `server/src/test/unit/inboundWebhooks/schemas.test.ts`. Zod schema test verifies workflow handler configs must include a `workflow_id` when `handler_type='workflow'`.
+- (2026-05-11) **T014 implemented** in `server/src/test/unit/inboundWebhooks/schemas.test.ts`. Zod schema test verifies webhook slugs reject uppercase, spaces, punctuation, and other URL-unsafe characters via the URL-safe lowercase slug rule.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -393,6 +394,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/schemas.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T013:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/schemas.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T014:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/schemas.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 

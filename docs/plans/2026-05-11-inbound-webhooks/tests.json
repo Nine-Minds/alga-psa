@@ -13,7 +13,7 @@
   { "id": "T011", "description": "Zod validation rejects HMAC config without signature header name", "implemented": true, "featureIds": ["F011"] },
   { "id": "T012", "description": "Zod validation rejects direct_action handler without action name", "implemented": true, "featureIds": ["F011"] },
   { "id": "T013", "description": "Zod validation rejects workflow handler without workflow_id", "implemented": true, "featureIds": ["F011"] },
-  { "id": "T014", "description": "Zod validation rejects URL-unsafe slug characters", "implemented": false, "featureIds": ["F011", "F014"] },
+  { "id": "T014", "description": "Zod validation rejects URL-unsafe slug characters", "implemented": true, "featureIds": ["F011", "F014"] },
 
   { "id": "T020", "description": "`listInboundWebhooks` returns only current tenant's webhooks", "implemented": false, "featureIds": ["F012"] },
   { "id": "T021", "description": "`upsertInboundWebhook` rejects duplicate slug in same tenant", "implemented": false, "featureIds": ["F014"] },
