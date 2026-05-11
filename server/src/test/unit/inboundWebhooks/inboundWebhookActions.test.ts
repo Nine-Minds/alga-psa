@@ -507,4 +507,28 @@ describe('inbound webhook server actions', () => {
     expect(hasPermission).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'inbound_webhook', 'read', knex);
     expect(knex).not.toHaveBeenCalled();
   });
+
+  it('T028: core server actions require the tenant context supplied by withAuth', async () => {
+    const actions = await import('@/lib/actions/inboundWebhookActions');
+
+    const getHarness = makeGetKnex(inboundWebhookRow());
+    createTenantKnex.mockResolvedValueOnce({ knex: getHarness.knex });
+    await actions.getInboundWebhook('webhook-1');
+    expect(createTenantKnex).toHaveBeenLastCalledWith('tenant-a');
+    expect(getHarness.builder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', inbound_webhook_id: 'webhook-1' });
+
+    const createHarness = makeCreateKnex([]);
+    createTenantKnex.mockResolvedValueOnce({ knex: createHarness.knex });
+    await actions.upsertInboundWebhook(validUpsertInput({ slug: 'tenant-context-hook' }));
+    expect(createTenantKnex).toHaveBeenLastCalledWith('tenant-a');
+    expect(createHarness.collisionBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', slug: 'tenant-context-hook' });
+    expect(createHarness.getInsertedPayload()).toMatchObject({ tenant: 'tenant-a' });
+
+    const deleteHarness = makeDeleteKnex(inboundWebhookRow());
+    createTenantKnex.mockResolvedValueOnce({ knex: deleteHarness.knex });
+    await actions.deleteInboundWebhook('webhook-1');
+    expect(createTenantKnex).toHaveBeenLastCalledWith('tenant-a');
+    expect(deleteHarness.getBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', inbound_webhook_id: 'webhook-1' });
+    expect(deleteHarness.deleteBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', inbound_webhook_id: 'webhook-1' });
+  });
 });
