@@ -189,6 +189,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T1021 implemented** in `server/src/test/unit/inboundWebhooks/clientInboundActions.test.ts`. `upsertClientByExternalId` now has coverage for the mapped update path: lookup by webhook-scoped external ID, tenant-scoped `clients` update, property merging, and no duplicate mapping write.
 - (2026-05-11) **T1022 implemented** in `server/src/test/unit/inboundWebhooks/clientInboundActions.test.ts`. `setClientActiveByExternalId` now has coverage for resolving the mapped client, updating `clients.is_inactive` from the mapped `active` flag, and returning active-state metadata.
 - (2026-05-11) **T1030 implemented** in `server/src/test/unit/inboundWebhooks/clientInboundActions.test.ts`. `upsertContactByExternalId` now has coverage for creating a contact with direct client linkage, writing the webhook-scoped contact mapping, and updating an existing mapped contact through `ContactModel.updateContact`.
+- (2026-05-11) **T1031 implemented** in `server/src/test/unit/inboundWebhooks/clientInboundActions.test.ts`. `upsertContactByExternalId` now rejects contact creation when neither `client_id` nor a resolvable webhook-scoped `client_external_id` is available, and the test verifies no contact or mapping write occurs.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -625,6 +626,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/clientInboundActions.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T1030:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/clientInboundActions.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T1031:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/clientInboundActions.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 

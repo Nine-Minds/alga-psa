@@ -381,4 +381,48 @@ describe('client inbound webhook actions', () => {
     );
     expect(mocks.writeEntityMapping).toHaveBeenCalledTimes(1);
   });
+
+  it('T1031: upsertContactByExternalId requires a direct or resolvable client linkage when creating', async () => {
+    mocks.lookupAlgaEntityByExternalId.mockResolvedValue(null);
+    const { getAction } = await loadClientInboundActions();
+    const action = getAction('upsertContactByExternalId');
+
+    await expect(
+      action?.handle(
+        {
+          tenant: 'tenant-a',
+          webhookSlug: 'rmm-alerts',
+          deliveryId: 'delivery-1',
+          headers: {},
+          rawBody: { contact: { id: 'contact-42', companyId: 'missing-company' } },
+          idempotencyKey: 'contact-42',
+        },
+        {
+          external_id: 'contact-42',
+          full_name: 'Jane Admin',
+          email: 'jane@example.com',
+          client_external_id: 'missing-company',
+        },
+      ),
+    ).rejects.toThrow(
+      'VALIDATION_ERROR: upsertContactByExternalId requires client_id or resolvable client_external_id when creating a contact',
+    );
+
+    expect(mocks.lookupAlgaEntityByExternalId).toHaveBeenCalledWith(
+      'tenant-a',
+      'rmm-alerts',
+      'contact',
+      'contact-42',
+      { knex: trx },
+    );
+    expect(mocks.lookupAlgaEntityByExternalId).toHaveBeenCalledWith(
+      'tenant-a',
+      'rmm-alerts',
+      'client',
+      'missing-company',
+      { knex: trx },
+    );
+    expect(mocks.createContact).not.toHaveBeenCalled();
+    expect(mocks.writeEntityMapping).not.toHaveBeenCalled();
+  });
 });
