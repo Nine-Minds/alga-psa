@@ -165,4 +165,18 @@ describe('inbound webhook REST API routes', () => {
       inbound_webhook_id: 'webhook-1',
     });
   });
+
+  it('deletes an inbound webhook and returns an empty 204 response', async () => {
+    inboundActions.deleteInboundWebhook.mockResolvedValue(undefined);
+
+    const route = await import('@/app/api/v1/inbound-webhooks/[id]/route');
+    const response = await route.DELETE(
+      new Request('http://localhost/api/v1/inbound-webhooks/webhook-1', { method: 'DELETE' }),
+      routeContext({ id: 'webhook-1' }),
+    );
+
+    expect(response.status).toBe(204);
+    await expect(response.text()).resolves.toBe('');
+    expect(inboundActions.deleteInboundWebhook).toHaveBeenCalledWith('webhook-1');
+  });
 });

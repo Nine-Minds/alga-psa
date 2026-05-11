@@ -255,6 +255,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T301 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts`. The `POST /api/v1/inbound-webhooks` route test verifies create requests delegate the parsed JSON body to `upsertInboundWebhook`, return `201`, and expose the returned secret only as the one-time `secret` response field.
 - (2026-05-11) **T302 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts`. The `GET /api/v1/inbound-webhooks/{id}` route test verifies lookup by path id, 200 `{ data }` response shape, and that raw secret material is absent from the returned config.
 - (2026-05-11) **T303 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts`. The `PUT /api/v1/inbound-webhooks/{id}` route test verifies the parsed body is persisted through `upsertInboundWebhook` with the URL path id overriding any body id and that updates return `{ data, secret:null }`.
+- (2026-05-11) **T304 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts`. The `DELETE /api/v1/inbound-webhooks/{id}` route test verifies deletion delegates to `deleteInboundWebhook(id)` and returns an empty `204` response.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -889,6 +890,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T303:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T304:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/inboundWebhookRestApiRoutes.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
