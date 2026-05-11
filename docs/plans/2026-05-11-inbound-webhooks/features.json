@@ -122,7 +122,7 @@
   { "id": "F215", "description": "OpenAPI component schema: `InboundWebhookHandlerConfig` (discriminated union by handler_type)", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F216", "description": "OpenAPI component schema: `InboundWebhookDelivery`", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F217", "description": "OpenAPI component schemas: `InboundActionDefinition`, `InboundActionTargetField`", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
-  { "id": "F218", "description": "OpenAPI component schema: `WorkflowWebhookEnvelope` (envelope shape workflow handlers receive)", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },
+  { "id": "F218", "description": "OpenAPI component schema: `WorkflowWebhookEnvelope` (envelope shape workflow handlers receive)", "implemented": true, "prdRefs": ["Public REST API and OpenAPI registration"] },
 
   { "id": "F220", "description": "Regenerate `sdk/docs/openapi/alga-openapi.{ce,ee}.{yaml,json}` and commit", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },
   { "id": "F221", "description": "Contract test for each management route (pattern: `projectTasksOpenApi.contract.test.ts`)", "implemented": false, "prdRefs": ["Public REST API and OpenAPI registration"] },

@@ -113,6 +113,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F215 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts`. Registered named `InboundWebhookHandlerConfig` as a `handler_type` discriminated union for direct actions (`action` plus JSONata `field_mapping`) and workflow triggers (`workflow_id`).
 - (2026-05-11) **F216 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts`. Registered named `InboundWebhookDelivery` with persisted request/response fields, auth/dispatch statuses, handler outcome, replay linkage, duration, and timestamps.
 - (2026-05-11) **F217 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts`. Registered named `InboundActionTargetField` and `InboundActionDefinition` components and wired the action discovery response to `InboundActionDefinition[]`.
+- (2026-05-11) **F218 implemented** in `server/src/lib/api/openapi/routes/inboundWebhooks.ts`. Registered named `WorkflowWebhookEnvelope` documenting the workflow `context.input` payload: source slug, parsed body, filtered headers, verified flag, delivery id, idempotency key, and received timestamp.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -322,6 +323,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Type check after F216:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F217:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F218:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References

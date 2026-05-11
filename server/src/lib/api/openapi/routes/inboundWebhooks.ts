@@ -241,6 +241,20 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
   const ReceiverAcceptedEnvelope = zOpenApi.object({
     delivery_id: zOpenApi.string().uuid(),
   });
+  registry.registerSchema(
+    'WorkflowWebhookEnvelope',
+    zOpenApi.object({
+      source: zOpenApi.string().describe('Inbound webhook slug.'),
+      body: zOpenApi.unknown().describe('Parsed JSON request body as received.'),
+      headers: zOpenApi
+        .record(zOpenApi.union([zOpenApi.string(), zOpenApi.array(zOpenApi.string())]))
+        .describe('Filtered safe request headers.'),
+      verified: zOpenApi.literal(true),
+      delivery_id: zOpenApi.string().uuid(),
+      idempotency_key: zOpenApi.string().nullable(),
+      received_at: zOpenApi.string().datetime(),
+    }),
+  );
 
   const commonExtensions = {
     'x-tenant-scoped': true,
