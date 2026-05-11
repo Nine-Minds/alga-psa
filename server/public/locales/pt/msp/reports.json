@@ -82,7 +82,20 @@
       "ticketsFromEmail": "Tickets por email",
       "failedEmails": "Emails com falha",
       "avgProcessingTime": "Tempo medio de processamento",
-      "avgTicketCreationTime": "Tempo medio email-ticket"
+      "avgTicketCreationTime": "Tempo medio email-ticket",
+      "totalHours": "Horas totais",
+      "billableHours": "Horas faturaveis",
+      "nonBillableHours": "Horas nao faturaveis",
+      "billablePercent": "% faturavel",
+      "timeEntries": "Entradas de tempo",
+      "activeContracts": "Contratos ativos",
+      "monthlyRecurring": "Recorrente mensal",
+      "renewalsDue": "Renovacoes pendentes",
+      "bucketUsedHours": "Horas de pacote usadas",
+      "bucketOverageHours": "Excesso do pacote",
+      "openAssigned": "Abertos atribuidos",
+      "activeAssignees": "Atribuidos ativos",
+      "avgResolutionTime": "Tempo medio de resolucao"
     },
     "sections": {
       "openByStatus": "Abertos por status",
@@ -92,7 +105,15 @@
       "responseOwnership": "Responsável pela resposta",
       "oldestOpenTickets": "Tickets abertos mais antigos",
       "emailProcessingStatus": "Status de processamento",
-      "emailChannels": "Canais de email"
+      "emailChannels": "Canais de email",
+      "timeByUser": "Tempo por usuario",
+      "billableHoursByService": "Horas faturaveis por servico",
+      "entriesByWorkType": "Entradas por tipo de trabalho",
+      "contractRevenue": "Receita de contratos",
+      "upcomingRenewals": "Renovacoes futuras",
+      "bucketUsage": "Uso do pacote",
+      "performanceByAssignee": "Desempenho por atribuido",
+      "closedByAssignee": "Fechados por atribuido"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -125,7 +146,12 @@
       "status": "Status",
       "processed": "Processados",
       "tickets": "Tickets",
-      "avgEmailToTicket": "Media email para ticket"
+      "avgEmailToTicket": "Media email para ticket",
+      "assignee": "Atribuido",
+      "created": "Criados",
+      "closed": "Fechados",
+      "open": "Abertos",
+      "avgResolution": "Resolucao media"
     },
     "statusValues": {
       "connected": "Conectado",

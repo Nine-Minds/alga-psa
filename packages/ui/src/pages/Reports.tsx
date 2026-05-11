@@ -26,21 +26,25 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getEmailChannelHealthReport,
+  getTeamPerformanceReport,
   getTicketAgingReport,
   getTicketWorkloadReport,
+  getTimeUtilizationReport,
   type EmailChannelHealthReport,
   type ReportBucket,
   type ReportRangeDays,
+  type TeamPerformanceReport,
   type TicketAgingReport,
   type TicketWorkloadReport,
+  type TimeUtilizationReport,
 } from '@alga-psa/reporting/actions';
 
 type ReportCategory = 'helpdesk' | 'operations' | 'billing';
 type ReportKind = 'embedded' | 'link' | 'planned';
-type EmbeddedReportId = 'ticket-workload' | 'ticket-aging' | 'email-channel-health';
+type EmbeddedReportId = 'ticket-workload' | 'ticket-aging' | 'email-channel-health' | 'time-utilization' | 'team-performance';
 
 interface ReportDefinition {
-  id: EmbeddedReportId | 'email-channel-health' | 'time-utilization' | 'team-performance' | 'contract-reports';
+  id: EmbeddedReportId | 'contract-reports';
   titleKey: string;
   titleDefault: string;
   descriptionKey: string;
@@ -104,7 +108,7 @@ const REPORTS: ReportDefinition[] = [
     category: 'operations',
     products: ['psa'],
     minimumTier: 'solo',
-    kind: 'planned',
+    kind: 'embedded',
     icon: Clock3,
   },
   {
@@ -116,7 +120,7 @@ const REPORTS: ReportDefinition[] = [
     category: 'operations',
     products: ['psa'],
     minimumTier: 'pro',
-    kind: 'planned',
+    kind: 'embedded',
     icon: Users,
   },
   {
@@ -160,6 +164,10 @@ function formatDurationMinutes(value: number | null, emptyText: string): string 
   const hours = Math.floor(value / 60);
   const minutes = Math.round(value % 60);
   return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+}
+
+function formatHours(value: number): string {
+  return `${value.toLocaleString(undefined, { maximumFractionDigits: 1 })}h`;
 }
 
 function BucketList({ title, buckets, emptyText }: { title: string; buckets: ReportBucket[]; emptyText: string }) {
@@ -243,6 +251,164 @@ function TicketWorkloadView({ rangeDays }: { rangeDays: ReportRangeDays }) {
         <BucketList title={t('reportsPage.sections.openByStatus', { defaultValue: 'Open by status' })} buckets={report.byStatus} emptyText={t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' })} />
         <BucketList title={t('reportsPage.sections.openByPriority', { defaultValue: 'Open by priority' })} buckets={report.byPriority} emptyText={t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' })} />
         <BucketList title={t('reportsPage.sections.openByAssignee', { defaultValue: 'Open by assignee' })} buckets={report.byAssignee} emptyText={t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' })} />
+      </div>
+    </div>
+  );
+}
+
+function TimeUtilizationView({ rangeDays }: { rangeDays: ReportRangeDays }) {
+  const { t } = useTranslation('msp/reports');
+  const [report, setReport] = useState<TimeUtilizationReport | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setReport(null);
+    setError(null);
+    getTimeUtilizationReport(rangeDays)
+      .then((data) => {
+        if (!cancelled) setReport(data);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : t('reportsPage.errors.loadReport', { defaultValue: 'Failed to load report.' }));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [rangeDays, t]);
+
+  if (error) return <p className="text-sm text-[rgb(var(--color-destructive-600))]">{error}</p>;
+  if (!report) return <LoadingReport />;
+
+  const serviceBuckets = report.byService.map((bucket) => ({
+    ...bucket,
+    label: `${bucket.label} (${formatHours(bucket.count)})`,
+  }));
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 md:grid-cols-5">
+        <MetricCard label={t('reportsPage.metrics.totalHours', { defaultValue: 'Total hours' })} value={formatHours(report.summary.totalHours)} />
+        <MetricCard label={t('reportsPage.metrics.billableHours', { defaultValue: 'Billable hours' })} value={formatHours(report.summary.billableHours)} />
+        <MetricCard label={t('reportsPage.metrics.nonBillableHours', { defaultValue: 'Non-billable hours' })} value={formatHours(report.summary.nonBillableHours)} />
+        <MetricCard label={t('reportsPage.metrics.billablePercent', { defaultValue: 'Billable %' })} value={`${report.summary.billablePercent}%`} />
+        <MetricCard label={t('reportsPage.metrics.timeEntries', { defaultValue: 'Time entries' })} value={report.summary.entries} />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+        <div className="rounded-md border border-[rgb(var(--color-border-200))]">
+          <div className="border-b border-[rgb(var(--color-border-200))] p-4">
+            <h3 className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
+              {t('reportsPage.sections.timeByUser', { defaultValue: 'Time by user' })}
+            </h3>
+          </div>
+          <div className="divide-y divide-[rgb(var(--color-border-200))]">
+            {report.byUser.length === 0 ? (
+              <p className="p-4 text-sm text-[rgb(var(--color-text-500))]">{t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' })}</p>
+            ) : (
+              report.byUser.map((user) => (
+                <div key={user.userId} className="grid gap-2 p-4 text-sm md:grid-cols-[1fr_110px_110px_80px]">
+                  <span className="font-medium text-[rgb(var(--color-text-900))]">{user.name}</span>
+                  <span className="text-[rgb(var(--color-text-700))]">{formatHours(user.totalHours)}</span>
+                  <span className="text-[rgb(var(--color-text-700))]">{formatHours(user.billableHours)}</span>
+                  <span className="text-[rgb(var(--color-text-500))]">{user.entries}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+        <div className="space-y-4">
+          <BucketList title={t('reportsPage.sections.billableHoursByService', { defaultValue: 'Billable hours by service' })} buckets={serviceBuckets} emptyText={t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' })} />
+          <BucketList title={t('reportsPage.sections.entriesByWorkType', { defaultValue: 'Entries by work type' })} buckets={report.byWorkType} emptyText={t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' })} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function formatHoursDuration(value: number | null, emptyText: string): string {
+  if (value === null) return emptyText;
+  return formatHours(Math.round(value * 10) / 10);
+}
+
+function TeamPerformanceView({ rangeDays }: { rangeDays: ReportRangeDays }) {
+  const { t } = useTranslation('msp/reports');
+  const [report, setReport] = useState<TeamPerformanceReport | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setReport(null);
+    setError(null);
+    getTeamPerformanceReport(rangeDays)
+      .then((data) => {
+        if (!cancelled) setReport(data);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : t('reportsPage.errors.loadReport', { defaultValue: 'Failed to load report.' }));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [rangeDays, t]);
+
+  if (error) return <p className="text-sm text-[rgb(var(--color-destructive-600))]">{error}</p>;
+  if (!report) return <LoadingReport />;
+
+  const emptyDuration = t('reportsPage.empty.notAvailable', { defaultValue: 'n/a' });
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 md:grid-cols-5">
+        <MetricCard label={t('reportsPage.metrics.created', { defaultValue: 'Created' })} value={report.summary.createdTickets} />
+        <MetricCard label={t('reportsPage.metrics.closed', { defaultValue: 'Closed' })} value={report.summary.closedTickets} />
+        <MetricCard label={t('reportsPage.metrics.openAssigned', { defaultValue: 'Open assigned' })} value={report.summary.openAssignedTickets} />
+        <MetricCard label={t('reportsPage.metrics.activeAssignees', { defaultValue: 'Active assignees' })} value={report.summary.activeAssignees} />
+        <MetricCard label={t('reportsPage.metrics.avgResolutionTime', { defaultValue: 'Avg. resolution time' })} value={formatHoursDuration(report.summary.avgResolutionHours, emptyDuration)} />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+        <div className="rounded-md border border-[rgb(var(--color-border-200))]">
+          <div className="border-b border-[rgb(var(--color-border-200))] p-4">
+            <h3 className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
+              {t('reportsPage.sections.performanceByAssignee', { defaultValue: 'Performance by assignee' })}
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-[rgb(var(--color-border-200))] text-sm">
+              <thead className="bg-[rgb(var(--color-background-100))]">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.assignee', { defaultValue: 'Assignee' })}</th>
+                  <th className="px-4 py-3 text-right font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.created', { defaultValue: 'Created' })}</th>
+                  <th className="px-4 py-3 text-right font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.closed', { defaultValue: 'Closed' })}</th>
+                  <th className="px-4 py-3 text-right font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.open', { defaultValue: 'Open' })}</th>
+                  <th className="px-4 py-3 text-right font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.avgResolution', { defaultValue: 'Avg. resolution' })}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[rgb(var(--color-border-200))]">
+                {report.byAssignee.length === 0 ? (
+                  <tr>
+                    <td className="px-4 py-5 text-[rgb(var(--color-text-500))]" colSpan={5}>
+                      {t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' })}
+                    </td>
+                  </tr>
+                ) : (
+                  report.byAssignee.map((assignee) => (
+                    <tr key={assignee.userId}>
+                      <td className="px-4 py-3 font-medium text-[rgb(var(--color-text-900))]">{assignee.name}</td>
+                      <td className="px-4 py-3 text-right text-[rgb(var(--color-text-700))]">{assignee.createdTickets}</td>
+                      <td className="px-4 py-3 text-right text-[rgb(var(--color-text-700))]">{assignee.closedTickets}</td>
+                      <td className="px-4 py-3 text-right text-[rgb(var(--color-text-700))]">{assignee.openTickets}</td>
+                      <td className="px-4 py-3 text-right text-[rgb(var(--color-text-700))]">{formatHoursDuration(assignee.avgResolutionHours, emptyDuration)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div className="space-y-4">
+          <BucketList title={t('reportsPage.sections.openByAssignee', { defaultValue: 'Open by assignee' })} buckets={report.openByAssignee} emptyText={t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' })} />
+          <BucketList title={t('reportsPage.sections.closedByAssignee', { defaultValue: 'Closed by assignee' })} buckets={report.closedByAssignee} emptyText={t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' })} />
+        </div>
       </div>
     </div>
   );
@@ -564,6 +730,10 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
               <TicketAgingView rangeDays={rangeDays} />
             ) : selectedReportId === 'email-channel-health' ? (
               <EmailChannelHealthView rangeDays={rangeDays} />
+            ) : selectedReportId === 'time-utilization' ? (
+              <TimeUtilizationView rangeDays={rangeDays} />
+            ) : selectedReportId === 'team-performance' ? (
+              <TeamPerformanceView rangeDays={rangeDays} />
             ) : (
               <TicketWorkloadView rangeDays={rangeDays} />
             )}

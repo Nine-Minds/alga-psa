@@ -82,7 +82,20 @@
       "ticketsFromEmail": "Tickets aus E-Mail",
       "failedEmails": "Fehlgeschlagene E-Mails",
       "avgProcessingTime": "Durchschn. Verarbeitungszeit",
-      "avgTicketCreationTime": "Durchschn. E-Mail-zu-Ticket-Zeit"
+      "avgTicketCreationTime": "Durchschn. E-Mail-zu-Ticket-Zeit",
+      "totalHours": "Gesamtstunden",
+      "billableHours": "Abrechenbare Stunden",
+      "nonBillableHours": "Nicht abrechenbare Stunden",
+      "billablePercent": "Abrechenbar %",
+      "timeEntries": "Zeiteintraege",
+      "activeContracts": "Aktive Vertraege",
+      "monthlyRecurring": "Monatlich wiederkehrend",
+      "renewalsDue": "Faellige Verlaengerungen",
+      "bucketUsedHours": "Genutzte Kontingentstunden",
+      "bucketOverageHours": "Kontingentueberziehung",
+      "openAssigned": "Offen zugewiesen",
+      "activeAssignees": "Aktive Bearbeiter",
+      "avgResolutionTime": "Durchschn. Loesungszeit"
     },
     "sections": {
       "openByStatus": "Offen nach Status",
@@ -92,7 +105,15 @@
       "responseOwnership": "Antwortzustand",
       "oldestOpenTickets": "Älteste offene Tickets",
       "emailProcessingStatus": "Verarbeitungsstatus",
-      "emailChannels": "E-Mail-Kanaele"
+      "emailChannels": "E-Mail-Kanaele",
+      "timeByUser": "Zeit nach Benutzer",
+      "billableHoursByService": "Abrechenbare Stunden nach Service",
+      "entriesByWorkType": "Eintraege nach Arbeitstyp",
+      "contractRevenue": "Vertragserloese",
+      "upcomingRenewals": "Anstehende Verlaengerungen",
+      "bucketUsage": "Kontingentnutzung",
+      "performanceByAssignee": "Leistung nach Bearbeiter",
+      "closedByAssignee": "Geschlossen nach Bearbeiter"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -125,7 +146,12 @@
       "status": "Status",
       "processed": "Verarbeitet",
       "tickets": "Tickets",
-      "avgEmailToTicket": "Durchschn. E-Mail zu Ticket"
+      "avgEmailToTicket": "Durchschn. E-Mail zu Ticket",
+      "assignee": "Bearbeiter",
+      "created": "Erstellt",
+      "closed": "Geschlossen",
+      "open": "Offen",
+      "avgResolution": "Durchschn. Loesung"
     },
     "statusValues": {
       "connected": "Verbunden",

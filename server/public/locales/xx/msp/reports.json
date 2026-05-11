@@ -82,7 +82,20 @@
       "ticketsFromEmail": "11111",
       "failedEmails": "11111",
       "avgProcessingTime": "11111",
-      "avgTicketCreationTime": "11111"
+      "avgTicketCreationTime": "11111",
+      "totalHours": "11111",
+      "billableHours": "11111",
+      "nonBillableHours": "11111",
+      "billablePercent": "11111",
+      "timeEntries": "11111",
+      "activeContracts": "11111",
+      "monthlyRecurring": "11111",
+      "renewalsDue": "11111",
+      "bucketUsedHours": "11111",
+      "bucketOverageHours": "11111",
+      "openAssigned": "11111",
+      "activeAssignees": "11111",
+      "avgResolutionTime": "11111"
     },
     "sections": {
       "openByStatus": "11111",
@@ -92,7 +105,15 @@
       "responseOwnership": "11111",
       "oldestOpenTickets": "11111",
       "emailProcessingStatus": "11111",
-      "emailChannels": "11111"
+      "emailChannels": "11111",
+      "timeByUser": "11111",
+      "billableHoursByService": "11111",
+      "entriesByWorkType": "11111",
+      "contractRevenue": "11111",
+      "upcomingRenewals": "11111",
+      "bucketUsage": "11111",
+      "performanceByAssignee": "11111",
+      "closedByAssignee": "11111"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -125,7 +146,12 @@
       "status": "11111",
       "processed": "11111",
       "tickets": "11111",
-      "avgEmailToTicket": "11111"
+      "avgEmailToTicket": "11111",
+      "assignee": "11111",
+      "created": "11111",
+      "closed": "11111",
+      "open": "11111",
+      "avgResolution": "11111"
     },
     "statusValues": {
       "connected": "11111",

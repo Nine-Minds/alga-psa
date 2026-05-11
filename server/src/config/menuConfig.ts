@@ -92,12 +92,6 @@ export const navigationSections: NavigationSection[] = [
         href: '/msp/tickets'
       },
       {
-        name: 'Reports',
-        translationKey: 'nav.billing.reports',
-        icon: FileBarChart,
-        href: '/msp/reports'
-      },
-      {
         name: 'Service Requests',
         translationKey: 'nav.serviceRequests',
         icon: LayoutTemplate,
@@ -144,6 +138,12 @@ export const navigationSections: NavigationSection[] = [
         translationKey: 'nav.assets',
         icon: Monitor,
         href: '/msp/assets'
+      },
+      {
+        name: 'Reports',
+        translationKey: 'nav.billing.reports',
+        icon: FileBarChart,
+        href: '/msp/reports'
       },
       {
         name: 'Time Management',

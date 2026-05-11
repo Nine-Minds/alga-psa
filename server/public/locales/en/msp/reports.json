@@ -82,7 +82,20 @@
       "ticketsFromEmail": "Tickets from email",
       "failedEmails": "Failed emails",
       "avgProcessingTime": "Avg. processing time",
-      "avgTicketCreationTime": "Avg. email-to-ticket time"
+      "avgTicketCreationTime": "Avg. email-to-ticket time",
+      "totalHours": "Total hours",
+      "billableHours": "Billable hours",
+      "nonBillableHours": "Non-billable hours",
+      "billablePercent": "Billable %",
+      "timeEntries": "Time entries",
+      "activeContracts": "Active contracts",
+      "monthlyRecurring": "Monthly recurring",
+      "renewalsDue": "Renewals due",
+      "bucketUsedHours": "Bucket hours used",
+      "bucketOverageHours": "Bucket overage",
+      "openAssigned": "Open assigned",
+      "activeAssignees": "Active assignees",
+      "avgResolutionTime": "Avg. resolution time"
     },
     "sections": {
       "openByStatus": "Open by status",
@@ -92,7 +105,15 @@
       "responseOwnership": "Response ownership",
       "oldestOpenTickets": "Oldest open tickets",
       "emailProcessingStatus": "Processing status",
-      "emailChannels": "Email channels"
+      "emailChannels": "Email channels",
+      "timeByUser": "Time by user",
+      "billableHoursByService": "Billable hours by service",
+      "entriesByWorkType": "Entries by work type",
+      "contractRevenue": "Contract revenue",
+      "upcomingRenewals": "Upcoming renewals",
+      "bucketUsage": "Bucket usage",
+      "performanceByAssignee": "Performance by assignee",
+      "closedByAssignee": "Closed by assignee"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -125,7 +146,12 @@
       "status": "Status",
       "processed": "Processed",
       "tickets": "Tickets",
-      "avgEmailToTicket": "Avg. email to ticket"
+      "avgEmailToTicket": "Avg. email to ticket",
+      "assignee": "Assignee",
+      "created": "Created",
+      "closed": "Closed",
+      "open": "Open",
+      "avgResolution": "Avg. resolution"
     },
     "statusValues": {
       "connected": "Connected",

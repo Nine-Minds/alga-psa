@@ -82,7 +82,20 @@
       "ticketsFromEmail": "Ticket da email",
       "failedEmails": "Email non riuscite",
       "avgProcessingTime": "Tempo medio di elaborazione",
-      "avgTicketCreationTime": "Tempo medio email-ticket"
+      "avgTicketCreationTime": "Tempo medio email-ticket",
+      "totalHours": "Ore totali",
+      "billableHours": "Ore fatturabili",
+      "nonBillableHours": "Ore non fatturabili",
+      "billablePercent": "% fatturabile",
+      "timeEntries": "Voci tempo",
+      "activeContracts": "Contratti attivi",
+      "monthlyRecurring": "Ricorrente mensile",
+      "renewalsDue": "Rinnovi in scadenza",
+      "bucketUsedHours": "Ore pacchetto usate",
+      "bucketOverageHours": "Extra pacchetto",
+      "openAssigned": "Aperti assegnati",
+      "activeAssignees": "Assegnatari attivi",
+      "avgResolutionTime": "Tempo medio risoluzione"
     },
     "sections": {
       "openByStatus": "Aperti per stato",
@@ -92,7 +105,15 @@
       "responseOwnership": "Responsabile della risposta",
       "oldestOpenTickets": "Ticket aperti meno recenti",
       "emailProcessingStatus": "Stato elaborazione",
-      "emailChannels": "Canali email"
+      "emailChannels": "Canali email",
+      "timeByUser": "Tempo per utente",
+      "billableHoursByService": "Ore fatturabili per servizio",
+      "entriesByWorkType": "Voci per tipo lavoro",
+      "contractRevenue": "Ricavi contratti",
+      "upcomingRenewals": "Rinnovi imminenti",
+      "bucketUsage": "Uso pacchetto",
+      "performanceByAssignee": "Prestazioni per assegnatario",
+      "closedByAssignee": "Chiusi per assegnatario"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -125,7 +146,12 @@
       "status": "Stato",
       "processed": "Elaborate",
       "tickets": "Ticket",
-      "avgEmailToTicket": "Media email-ticket"
+      "avgEmailToTicket": "Media email-ticket",
+      "assignee": "Assegnatario",
+      "created": "Creati",
+      "closed": "Chiusi",
+      "open": "Aperti",
+      "avgResolution": "Risoluzione media"
     },
     "statusValues": {
       "connected": "Connesso",

@@ -82,7 +82,20 @@
       "ticketsFromEmail": "Tickets uit e-mail",
       "failedEmails": "Mislukte e-mails",
       "avgProcessingTime": "Gem. verwerkingstijd",
-      "avgTicketCreationTime": "Gem. e-mail-naar-ticket tijd"
+      "avgTicketCreationTime": "Gem. e-mail-naar-ticket tijd",
+      "totalHours": "Totale uren",
+      "billableHours": "Factureerbare uren",
+      "nonBillableHours": "Niet-factureerbare uren",
+      "billablePercent": "% factureerbaar",
+      "timeEntries": "Tijdregistraties",
+      "activeContracts": "Actieve contracten",
+      "monthlyRecurring": "Maandelijks terugkerend",
+      "renewalsDue": "Vernieuwingen verwacht",
+      "bucketUsedHours": "Gebruikte bundeluren",
+      "bucketOverageHours": "Bundeloverschrijding",
+      "openAssigned": "Open toegewezen",
+      "activeAssignees": "Actieve toegewezenen",
+      "avgResolutionTime": "Gem. oplostijd"
     },
     "sections": {
       "openByStatus": "Open per status",
@@ -92,7 +105,15 @@
       "responseOwnership": "Reactie-eigenaar",
       "oldestOpenTickets": "Oudste open tickets",
       "emailProcessingStatus": "Verwerkingsstatus",
-      "emailChannels": "E-mailkanalen"
+      "emailChannels": "E-mailkanalen",
+      "timeByUser": "Tijd per gebruiker",
+      "billableHoursByService": "Factureerbare uren per service",
+      "entriesByWorkType": "Registraties per werktype",
+      "contractRevenue": "Contractomzet",
+      "upcomingRenewals": "Aankomende vernieuwingen",
+      "bucketUsage": "Bundelgebruik",
+      "performanceByAssignee": "Prestaties per toegewezene",
+      "closedByAssignee": "Gesloten per toegewezene"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -125,7 +146,12 @@
       "status": "Status",
       "processed": "Verwerkt",
       "tickets": "Tickets",
-      "avgEmailToTicket": "Gem. e-mail naar ticket"
+      "avgEmailToTicket": "Gem. e-mail naar ticket",
+      "assignee": "Toegewezene",
+      "created": "Aangemaakt",
+      "closed": "Gesloten",
+      "open": "Open",
+      "avgResolution": "Gem. oplossing"
     },
     "statusValues": {
       "connected": "Verbonden",

@@ -82,7 +82,20 @@
       "ticketsFromEmail": "Zgloszenia z e-maili",
       "failedEmails": "Nieudane e-maile",
       "avgProcessingTime": "Sredni czas przetwarzania",
-      "avgTicketCreationTime": "Sredni czas e-mail-zgloszenie"
+      "avgTicketCreationTime": "Sredni czas e-mail-zgloszenie",
+      "totalHours": "Godziny lacznie",
+      "billableHours": "Godziny rozliczalne",
+      "nonBillableHours": "Godziny nierozliczalne",
+      "billablePercent": "% rozliczalny",
+      "timeEntries": "Wpisy czasu",
+      "activeContracts": "Aktywne kontrakty",
+      "monthlyRecurring": "Miesiecznie cykliczne",
+      "renewalsDue": "Odnowienia do obslugi",
+      "bucketUsedHours": "Uzyte godziny pakietu",
+      "bucketOverageHours": "Przekroczenie pakietu",
+      "openAssigned": "Otwarte przypisane",
+      "activeAssignees": "Aktywni przypisani",
+      "avgResolutionTime": "Sredni czas rozwiazania"
     },
     "sections": {
       "openByStatus": "Otwarte według statusu",
@@ -92,7 +105,15 @@
       "responseOwnership": "Odpowiedzialny za odpowiedź",
       "oldestOpenTickets": "Najstarsze otwarte zgłoszenia",
       "emailProcessingStatus": "Status przetwarzania",
-      "emailChannels": "Kanaly e-mail"
+      "emailChannels": "Kanaly e-mail",
+      "timeByUser": "Czas wedlug uzytkownika",
+      "billableHoursByService": "Godziny rozliczalne wedlug uslugi",
+      "entriesByWorkType": "Wpisy wedlug typu pracy",
+      "contractRevenue": "Przychod z kontraktow",
+      "upcomingRenewals": "Nadchodzace odnowienia",
+      "bucketUsage": "Uzycie pakietu",
+      "performanceByAssignee": "Wyniki wedlug przypisanego",
+      "closedByAssignee": "Zamkniete wedlug przypisanego"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -125,7 +146,12 @@
       "status": "Status",
       "processed": "Przetworzone",
       "tickets": "Zgloszenia",
-      "avgEmailToTicket": "Sr. e-mail do zgloszenia"
+      "avgEmailToTicket": "Sr. e-mail do zgloszenia",
+      "assignee": "Przypisany",
+      "created": "Utworzone",
+      "closed": "Zamkniete",
+      "open": "Otwarte",
+      "avgResolution": "Sr. rozwiazanie"
     },
     "statusValues": {
       "connected": "Polaczony",
