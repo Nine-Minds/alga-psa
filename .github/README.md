@@ -20,7 +20,7 @@ Alga PSA is built around the way MSPs operate with clients:
 - **Time and approvals connected to billing** so billable work can move toward invoices with less duplicate entry.
 - **Contracts, recurring services, tax, and invoice workflows** for the financial side of service delivery.
 - **Client portal and document workflows** so clients have a clearer place to submit requests, view information, and follow progress.
-- **Workflow automation and an event bus** for teams that need repeatable handoffs, notifications, and business processes.
+- **Workflow automation** for turning repeatable ticket, billing, notification, and approval steps into managed processes with Event Catalog triggers and scheduled runs.
 - **Open-source core with self-hosting support** for MSPs and technical teams that want deployment and data control.
 
 ## Features at a glance
@@ -47,8 +47,8 @@ Alga PSA is built around the way MSPs operate with clients:
 
 ### Automation, reporting, and controls
 
-- Automation Hub for TypeScript-based workflows with event-driven triggers
-- Workflow editor with code completion, versioning, history, and templates
+- Workflow Automation with an Event Catalog for ticket, billing, scheduling, email, project, CRM, asset, document, and integration triggers
+- Visual workflow designer for event-driven, one-time scheduled, recurring scheduled, and manual runs, with versioning and run history
 - Redis-backed event processing for asynchronous work and system events
 - Reporting and analytics for operational visibility
 - Role-based access control (RBAC) and attribute-based access control (ABAC)
@@ -58,7 +58,7 @@ Some capabilities may depend on edition, deployment configuration, or enabled fe
 
 ## Product screenshots
 
-These images link directly to screenshots from the [Alga PSA feature tour](https://www.nineminds.com/AlgaPSA-features).
+These images link directly to screenshots from the [Alga PSA feature tour](https://www.nineminds.com/AlgaPSA-features) and the [Workflow Automation docs](https://www.nineminds.com/documentation/152-choosing-workflow-triggers).
 
 | Service desk | Billing and time |
 | --- | --- |
@@ -66,8 +66,8 @@ These images link directly to screenshots from the [Alga PSA feature tour](https
 | Ticketing views for client requests, assignment, attachments, and follow-up. | Contracts, billing, and invoice-related workflows in one billing area. |
 | <img src="https://www.nineminds.com/imported-media/time%20entry%20select%20time%20period.png" alt="Alga PSA time entry screen" width="420"> | <img src="https://www.nineminds.com/imported-media/Schedule%20view.png" alt="Alga PSA schedule view" width="420"> |
 | Time entry views for recording and reviewing work before billing. | Schedule views for dispatch and calendar-based work planning. |
-| <img src="https://www.nineminds.com/imported-media/Workflows.png" alt="Alga PSA workflows screen" width="420"> | <img src="https://www.nineminds.com/imported-media/Assets%20Asset%20workspace%20overview.png" alt="Alga PSA asset workspace overview" width="420"> |
-| Workflow tools for repeatable processes and handoffs. | Asset views for client equipment and service context. |
+| <img src="https://www.nineminds.com/docs-images/workflow-event-catalog.png" alt="Alga PSA workflow event catalog" width="420"> | <img src="https://www.nineminds.com/docs-images/workflow-designer-ticket-triage.png" alt="Alga PSA visual workflow designer" width="420"> |
+| Event Catalog triggers for choosing the business moment that should start a workflow. | Visual workflow designer for ticket triage, notifications, approvals, and other repeatable processes. |
 
 ## Quick start
 
@@ -113,7 +113,7 @@ Alga PSA is a TypeScript monorepo with a Next.js application, shared domain pack
 | Backend | Next.js API routes running on Node.js, shared domain packages, and a dedicated workflow worker service |
 | Database | PostgreSQL with row-level security for tenant isolation |
 | Event processing | Redis-backed event bus with Zod schema validation for asynchronous system events |
-| Workflow execution | Dedicated workflow worker service for processing workflow jobs outside the request path |
+| Workflow execution | Temporal-backed workflow runtime and worker services for event-triggered, scheduled, and manual workflow runs |
 | Real-time collaboration | Hocuspocus/Yjs for collaborative document editing |
 | Authentication | NextAuth.js with separate MSP and client portal access surfaces |
 | Packages | npm workspaces and Nx-managed `@alga-psa/*` packages for billing, clients, tickets, documents, scheduling, reporting, integrations, and shared infrastructure |
@@ -149,9 +149,10 @@ Useful technical docs:
 - [Asset Management](../docs/features/asset_management.md)
 - [SLA Management](../docs/features/sla.md)
 - [Time Entry Guide](../docs/features/time_entry.md)
-- [Workflow System](../docs/workflow/workflow-system.md)
-- [TypeScript Workflow Creation](../docs/workflow/typescript-workflow-creation.md)
-- [Automation Hub Guide](../docs/workflow/automation-hub-workflow-guide.md)
+- [Workflow Automation for MSPs](https://www.nineminds.com/documentation/151-workflow-automation-for-msps)
+- [Choosing Workflow Triggers](https://www.nineminds.com/documentation/152-choosing-workflow-triggers)
+- [Building Your First MSP Workflow](https://www.nineminds.com/documentation/153-building-your-first-msp-workflow)
+- [Publishing and Monitoring Workflows](https://www.nineminds.com/documentation/156-publishing-monitoring-workflows)
 
 ### Development and contribution
 
