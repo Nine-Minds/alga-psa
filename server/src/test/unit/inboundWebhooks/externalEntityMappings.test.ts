@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { lookupAlgaEntityByExternalId } from '@/lib/inboundWebhooks/externalEntityMappings';
+import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@/lib/inboundWebhooks/externalEntityMappings';
 
 function createLookupKnex(mapping: Record<string, unknown> | null) {
   const calls = {
@@ -30,6 +30,35 @@ function createLookupKnex(mapping: Record<string, unknown> | null) {
   );
 
   return { knex, query, calls };
+}
+
+function createWriteKnex(existingMapping: Record<string, unknown> | null, writtenMapping: Record<string, unknown>) {
+  const lookupQuery = {
+    where: vi.fn().mockReturnThis(),
+    modify: vi.fn((callback: (query: any) => void) => {
+      callback(lookupQuery);
+      return lookupQuery;
+    }),
+    whereNull: vi.fn().mockReturnThis(),
+    andWhere: vi.fn().mockReturnThis(),
+    first: vi.fn().mockResolvedValue(existingMapping),
+  };
+  const insertQuery = {
+    insert: vi.fn().mockReturnThis(),
+    onConflict: vi.fn().mockReturnThis(),
+    merge: vi.fn().mockReturnThis(),
+    returning: vi.fn().mockResolvedValue([writtenMapping]),
+  };
+  const table = vi.fn()
+    .mockReturnValueOnce(lookupQuery)
+    .mockReturnValueOnce(insertQuery);
+  const knex = Object.assign(table, {
+    fn: {
+      now: vi.fn(() => 'now()'),
+    },
+  });
+
+  return { knex, lookupQuery, insertQuery };
 }
 
 describe('external entity mapping helpers', () => {
@@ -71,5 +100,69 @@ describe('external entity mapping helpers', () => {
       algaEntityId: 'ticket-1',
       mapping,
     });
+  });
+
+  it('T004a: writeEntityMapping upserts on tenant integration entity and Alga id, with duplicate same mapping idempotent', async () => {
+    const existingMapping = {
+      tenant_id: 'tenant-1',
+      integration_type: 'connectwise-alerts',
+      alga_entity_type: 'ticket',
+      alga_entity_id: 'ticket-1',
+      external_entity_id: 'alert-123',
+      external_realm_id: null,
+    };
+    const writtenMapping = {
+      ...existingMapping,
+      id: 'mapping-1',
+      sync_status: 'synced',
+      metadata: { source: 'unit-test' },
+      last_synced_at: 'now()',
+      created_at: '2026-05-11T00:00:00.000Z',
+      updated_at: '2026-05-11T00:00:00.000Z',
+    };
+    const { knex, lookupQuery, insertQuery } = createWriteKnex(existingMapping, writtenMapping);
+
+    const result = await writeEntityMapping(
+      'tenant-1',
+      'connectwise-alerts',
+      'ticket',
+      'ticket-1',
+      'alert-123',
+      { knex: knex as any, metadata: { source: 'unit-test' } },
+    );
+
+    expect(lookupQuery.where).toHaveBeenCalledWith({
+      tenant_id: 'tenant-1',
+      integration_type: 'connectwise-alerts',
+      external_entity_id: 'alert-123',
+    });
+    expect(lookupQuery.whereNull).toHaveBeenCalledWith('external_realm_id');
+    expect(insertQuery.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenant_id: 'tenant-1',
+        integration_type: 'connectwise-alerts',
+        alga_entity_type: 'ticket',
+        alga_entity_id: 'ticket-1',
+        external_entity_id: 'alert-123',
+        external_realm_id: null,
+        sync_status: 'synced',
+        metadata: { source: 'unit-test' },
+      }),
+    );
+    expect(insertQuery.onConflict).toHaveBeenCalledWith([
+      'tenant_id',
+      'integration_type',
+      'alga_entity_type',
+      'alga_entity_id',
+    ]);
+    expect(insertQuery.merge).toHaveBeenCalledWith(
+      expect.objectContaining({
+        external_entity_id: 'alert-123',
+        external_realm_id: null,
+        sync_status: 'synced',
+        metadata: { source: 'unit-test' },
+      }),
+    );
+    expect(result).toBe(writtenMapping);
   });
 });

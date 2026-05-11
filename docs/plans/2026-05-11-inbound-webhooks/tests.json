@@ -3,7 +3,7 @@
   { "id": "T002", "description": "Migration creates `inbound_webhook_deliveries` with tenant in composite PK", "implemented": true, "featureIds": ["F002"] },
   { "id": "T003", "description": "Slug uniqueness enforced per-tenant, not globally", "implemented": true, "featureIds": ["F001", "F014"] },
   { "id": "T004", "description": "`lookupAlgaEntityByExternalId` resolves via `tenant_external_entity_mappings` and respects `integration_type=webhookSlug` scoping", "implemented": true, "featureIds": ["F004"] },
-  { "id": "T004a", "description": "`writeEntityMapping` inserts a row with correct unique constraint behavior; duplicate write is idempotent", "implemented": false, "featureIds": ["F005"] },
+  { "id": "T004a", "description": "`writeEntityMapping` inserts a row with correct unique constraint behavior; duplicate write is idempotent", "implemented": true, "featureIds": ["F005"] },
   { "id": "T004b", "description": "Reserved integration_type collision: user webhook slug `ninjaone` rejected (or auto-namespaced) so it cannot pollute bundled integration mappings", "implemented": false, "featureIds": ["F003"] },
   { "id": "T005", "description": "Migration is idempotent (re-running is safe)", "implemented": false, "featureIds": ["F001", "F002"] },
   { "id": "T006", "description": "`inbound_webhook` permission seeded for admin role", "implemented": false, "featureIds": ["F006"] },
