@@ -50,6 +50,7 @@ import {
   listInboundWorkflowOptions,
   listInboundWebhooks,
   replayInboundDelivery,
+  rotateInboundWebhookSecret,
   sendInboundWebhookTest,
   setInboundWebhookActiveState,
   upsertInboundWebhook,
@@ -896,6 +897,27 @@ function InboundWebhooksListView() {
     }
   }, [identityForm, t]);
 
+  const handleRotateInboundSecret = useCallback(async () => {
+    if (!identityForm.inboundWebhookId || identityForm.authType === 'ip_allowlist') {
+      return;
+    }
+
+    try {
+      const result = await rotateInboundWebhookSecret(identityForm.inboundWebhookId);
+      setWebhooks((current) => current.map((webhook) => (
+        webhook.inboundWebhookId === result.webhook.inboundWebhookId ? result.webhook : webhook
+      )));
+      setRevealedInboundSecret({
+        webhookName: result.webhook.name,
+        secret: result.secret,
+      });
+      setError(null);
+    } catch (rotateError) {
+      console.error('Failed to rotate inbound webhook secret:', rotateError);
+      setError(rotateError instanceof Error ? rotateError.message : t('security.webhooks.messages.rotateFailed'));
+    }
+  }, [identityForm.authType, identityForm.inboundWebhookId, t]);
+
   return (
     <div className="space-y-6">
       <Card className="p-6">
@@ -1174,6 +1196,15 @@ function InboundWebhooksListView() {
                   }}
                 />
               </div>
+            ) : null}
+            {identityForm.inboundWebhookId && identityForm.authType !== 'ip_allowlist' ? (
+              <Button
+                id="inbound-webhook-auth-rotate-secret"
+                variant="outline"
+                onClick={() => void handleRotateInboundSecret()}
+              >
+                {t('security.webhooks.detail.rotateSecret')}
+              </Button>
             ) : null}
             <div className="border-t border-gray-200 pt-4">
               <h3 className="text-sm font-semibold text-gray-900">

@@ -121,7 +121,7 @@
   { "id": "T135", "description": "Auth section conditionally renders Bearer fields", "implemented": true, "featureIds": ["F083"] },
   { "id": "T136", "description": "Auth section conditionally renders IP allowlist fields", "implemented": true, "featureIds": ["F083"] },
   { "id": "T137", "description": "Secret displayed once on creation, never again", "implemented": true, "featureIds": ["F084"] },
-  { "id": "T138", "description": "Rotate secret flow displays new secret once", "implemented": false, "featureIds": ["F016", "F084"] },
+  { "id": "T138", "description": "Rotate secret flow displays new secret once", "implemented": true, "featureIds": ["F016", "F084"] },
   { "id": "T139", "description": "Idempotency section renders source dropdown + value input", "implemented": false, "featureIds": ["F085"] },
   { "id": "T140", "description": "Handler section switches between direct_action and workflow views", "implemented": false, "featureIds": ["F086"] },
   { "id": "T141", "description": "Action dropdown lists all registered actions", "implemented": false, "featureIds": ["F087"] },

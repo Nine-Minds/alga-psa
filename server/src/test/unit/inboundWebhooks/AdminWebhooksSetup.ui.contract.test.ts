@@ -107,4 +107,14 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain("{revealedInboundSecret?.secret ?? ''}");
     expect(adminWebhooksSource).toContain('id="inbound-webhook-secret-close"');
   });
+
+  it('T138: rotate secret flow displays the new inbound secret once', () => {
+    expect(adminWebhooksSource).toContain('rotateInboundWebhookSecret');
+    expect(adminWebhooksSource).toContain('const handleRotateInboundSecret = useCallback');
+    expect(adminWebhooksSource).toContain("identityForm.authType === 'ip_allowlist'");
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-auth-rotate-secret"');
+    expect(adminWebhooksSource).toContain('onClick={() => void handleRotateInboundSecret()}');
+    expect(adminWebhooksSource).toContain('secret: result.secret');
+    expect(adminWebhooksSource).toContain('isOpen={revealedInboundSecret !== null}');
+  });
 });
