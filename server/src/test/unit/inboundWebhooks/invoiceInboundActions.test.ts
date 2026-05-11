@@ -123,4 +123,42 @@ describe('invoice inbound webhook actions', () => {
     });
     expect(invoicesQuery.returning).toHaveBeenCalledWith(['invoice_id', 'status']);
   });
+
+  it('T1051: markInvoicePaidByExternalId returns lookup_miss when invoice mapping is absent', async () => {
+    mocks.lookupAlgaEntityByExternalId.mockResolvedValue(null);
+    const { getAction } = await loadInvoiceInboundActions();
+    const action = getAction('markInvoicePaidByExternalId');
+
+    await expect(
+      action?.handle(
+        {
+          tenant: 'tenant-a',
+          webhookSlug: 'payments',
+          deliveryId: 'delivery-1',
+          headers: {},
+          rawBody: { invoice: { id: 'missing-inv' } },
+          idempotencyKey: 'missing-inv',
+        },
+        {
+          external_id: 'missing-inv',
+          payment_reference: 'pay-404',
+        },
+      ),
+    ).resolves.toEqual({
+      success: false,
+      entityType: 'invoice',
+      externalId: 'missing-inv',
+      message: 'lookup_miss: invoice external_id "missing-inv" is not mapped for webhook "payments"',
+    });
+
+    expect(mocks.lookupAlgaEntityByExternalId).toHaveBeenCalledWith(
+      'tenant-a',
+      'payments',
+      'invoice',
+      'missing-inv',
+      { knex: trx },
+    );
+    expect(invoicesQuery.first).not.toHaveBeenCalled();
+    expect(invoicesQuery.update).not.toHaveBeenCalled();
+  });
 });

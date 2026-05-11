@@ -88,7 +88,7 @@
   { "id": "T1042", "description": "`upsertAssetByExternalId` for non-RMM payload takes plain asset upsert path", "implemented": true, "featureIds": ["F1041"] },
 
   { "id": "T1050", "description": "`markInvoicePaidByExternalId` marks matching invoice paid", "implemented": true, "featureIds": ["F1050"] },
-  { "id": "T1051", "description": "`markInvoicePaidByExternalId` lookup-miss → failed delivery", "implemented": false, "featureIds": ["F1050", "F056"] },
+  { "id": "T1051", "description": "`markInvoicePaidByExternalId` lookup-miss → failed delivery", "implemented": true, "featureIds": ["F1050", "F056"] },
   { "id": "T1052", "description": "`markInvoicePaidByExternalId` is idempotent: re-applying to already-paid invoice does not double-mark or error", "implemented": false, "featureIds": ["F1052"] },
   { "id": "T1053", "description": "`updateInvoiceStatusByExternalId` updates invoice status via mapped value", "implemented": false, "featureIds": ["F1051"] },
 
