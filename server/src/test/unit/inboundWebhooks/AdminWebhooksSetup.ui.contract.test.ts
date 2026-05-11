@@ -85,4 +85,14 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain("t('security.webhooks.inbound.auth.secretUnchangedPlaceholder')");
     expect(adminWebhooksSource).toContain('bearerToken: event.target.value');
   });
+
+  it('T136: auth section conditionally renders IP allowlist fields', () => {
+    expect(adminWebhooksSource).toContain("value: 'ip_allowlist'");
+    expect(adminWebhooksSource).toContain("label: t('security.webhooks.inbound.auth.types.ipAllowlist')");
+    expect(adminWebhooksSource).toContain("identityForm.authType === 'ip_allowlist'");
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-auth-ip-cidrs"');
+    expect(adminWebhooksSource).toContain("label={t('security.webhooks.inbound.auth.ipCidrs')}");
+    expect(adminWebhooksSource).toContain("placeholder={t('security.webhooks.inbound.auth.ipCidrsPlaceholder')}");
+    expect(adminWebhooksSource).toContain('ipCidrs: event.target.value');
+  });
 });
