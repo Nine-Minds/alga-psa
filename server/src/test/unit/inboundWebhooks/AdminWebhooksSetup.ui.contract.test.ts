@@ -305,4 +305,14 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(inboundWebhooksSource).toContain('id={`inbound-webhook-sample-path-${option.path.replace(/[^a-zA-Z0-9_-]+/g, \'-\')}`}');
     expect(inboundWebhooksSource).toContain('id={`inbound-webhook-delivery-view-${delivery.deliveryId}`}');
   });
+
+  it('T180: feature flag off hides the Settings inbound tab', () => {
+    expect(adminWebhooksSource).toContain("useFeatureFlag('inbound_webhooks_enabled', { defaultValue: false })");
+    expect(adminWebhooksSource).toContain("useState<'inbound' | 'outbound'>('outbound')");
+    expect(adminWebhooksSource).toContain("if (!inboundWebhooksEnabled && activeTab === 'inbound')");
+    expect(adminWebhooksSource).toContain("setActiveTab('outbound')");
+    expect(adminWebhooksSource).toContain('{inboundWebhooksEnabled ? (');
+    expect(adminWebhooksSource).toContain('<TabsTrigger id="webhooks-inbound-tab" value="inbound">');
+    expect(adminWebhooksSource).toContain('<TabsContent value="inbound">');
+  });
 });
