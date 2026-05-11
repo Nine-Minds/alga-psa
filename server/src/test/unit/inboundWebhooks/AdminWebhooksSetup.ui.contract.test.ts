@@ -129,4 +129,14 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain('id="inbound-webhook-idempotency-window"');
     expect(adminWebhooksSource).toContain('idempotencyWindowSeconds: Number(event.target.value)');
   });
+
+  it('T140: handler section switches between direct-action and workflow views', () => {
+    expect(adminWebhooksSource).toContain('id="inbound-webhook-handler-type"');
+    expect(adminWebhooksSource).toContain("value: 'direct_action'");
+    expect(adminWebhooksSource).toContain("value: 'workflow'");
+    expect(adminWebhooksSource).toContain("handlerType: value as InboundWebhookConfig['handlerType']");
+    expect(adminWebhooksSource).toContain("identityForm.handlerType === 'direct_action'");
+    expect(adminWebhooksSource).toContain("t('security.webhooks.inbound.handler.directActionTitle')");
+    expect(adminWebhooksSource).toContain("t('security.webhooks.inbound.handler.workflowTitle')");
+  });
 });
