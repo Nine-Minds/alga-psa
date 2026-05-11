@@ -99,7 +99,7 @@
   { "id": "F097", "description": "All new UI strings via `t('...')` i18n", "implemented": true, "prdRefs": ["UX / UI Notes"] },
   { "id": "F098", "description": "All interactive elements have kebab-case `id` attributes", "implemented": true, "prdRefs": ["UX / UI Notes"] },
 
-  { "id": "F100", "description": "Feature flag gate on Settings tab visibility", "implemented": false, "prdRefs": ["Rollout / Migration"] },
+  { "id": "F100", "description": "Feature flag gate on Settings tab visibility", "implemented": true, "prdRefs": ["Rollout / Migration"] },
   { "id": "F101", "description": "Feature flag gate on `/api/inbound/*` route (returns 404 when disabled)", "implemented": false, "prdRefs": ["Rollout / Migration"] },
   { "id": "F102", "description": "Permission check on every server action (`withAuth` + `hasPermission`)", "implemented": false, "prdRefs": ["Security / Permissions"] },
 

@@ -26,6 +26,7 @@ import { ArrowLeft, MoreVertical } from 'lucide-react';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { buildTenantPortalSlug } from '@alga-psa/validation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { buildWebhookPayloadExpressionPathOptions } from '@shared/workflow/expression-authoring/adapters/webhookPayloadContextAdapter';
 import {
   deleteWebhook,
@@ -294,21 +295,32 @@ function getDeliveryBadgeClasses(status: string): string {
 
 export default function AdminWebhooksSetup() {
   const { t } = useTranslation('msp/profile');
-  const [activeTab, setActiveTab] = useState<'inbound' | 'outbound'>('inbound');
+  const { enabled: inboundWebhooksEnabled } = useFeatureFlag('inbound_webhooks_enabled', { defaultValue: false });
+  const [activeTab, setActiveTab] = useState<'inbound' | 'outbound'>('outbound');
+
+  useEffect(() => {
+    if (!inboundWebhooksEnabled && activeTab === 'inbound') {
+      setActiveTab('outbound');
+    }
+  }, [activeTab, inboundWebhooksEnabled]);
 
   return (
     <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'inbound' | 'outbound')}>
       <TabsList className="mb-6">
-        <TabsTrigger id="webhooks-inbound-tab" value="inbound">
-          {t('security.webhooks.tabs.inbound')}
-        </TabsTrigger>
+        {inboundWebhooksEnabled ? (
+          <TabsTrigger id="webhooks-inbound-tab" value="inbound">
+            {t('security.webhooks.tabs.inbound')}
+          </TabsTrigger>
+        ) : null}
         <TabsTrigger id="webhooks-outbound-tab" value="outbound">
           {t('security.webhooks.tabs.outbound')}
         </TabsTrigger>
       </TabsList>
-      <TabsContent value="inbound">
-        <InboundWebhooksListView />
-      </TabsContent>
+      {inboundWebhooksEnabled ? (
+        <TabsContent value="inbound">
+          <InboundWebhooksListView />
+        </TabsContent>
+      ) : null}
       <TabsContent value="outbound">
         <OutboundWebhooksSetup />
       </TabsContent>
