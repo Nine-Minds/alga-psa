@@ -32,6 +32,86 @@
         "title": "11111",
         "placeholder": "11111"
       }
+    },
+    "description": "11111",
+    "categories": {
+      "helpdesk": "11111",
+      "operations": "11111",
+      "billing": "11111"
+    },
+    "badges": {
+      "planned": "11111"
+    },
+    "actions": {
+      "viewReport": "11111",
+      "openInBilling": "11111",
+      "requiresTier": "11111",
+      "comingSoon": "11111",
+      "openBillingReports": "11111"
+    },
+    "errors": {
+      "loadReport": "11111"
+    },
+    "empty": {
+      "noData": "11111",
+      "noOpenTicketsInRange": "11111",
+      "noDate": "11111"
+    },
+    "fallbackTitle": "11111",
+    "dateRange": {
+      "lastDays": "11111"
+    },
+    "units": {
+      "daysWithCount": "11111"
+    },
+    "metrics": {
+      "created": "11111",
+      "closed": "11111",
+      "openNow": "11111",
+      "awaitingCustomer": "11111",
+      "awaitingInternal": "11111",
+      "under2Days": "11111",
+      "days2To7": "11111",
+      "days8To30": "11111",
+      "over30Days": "11111"
+    },
+    "sections": {
+      "openByStatus": "11111",
+      "openByPriority": "11111",
+      "openByAssignee": "11111",
+      "ageDistribution": "11111",
+      "responseOwnership": "11111",
+      "oldestOpenTickets": "11111"
+    },
+    "billingCallout": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "reportCatalog": {
+      "ticketWorkload": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "ticketAging": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "emailChannelHealth": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "timeUtilization": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "teamPerformance": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "contractReports": {
+        "title": "11111",
+        "description": "11111"
+      }
     }
   },
   "contractReports": {

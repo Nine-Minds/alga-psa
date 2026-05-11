@@ -32,6 +32,86 @@
         "title": "Teamleistung",
         "placeholder": "[Platzhalter für Teamleistungsdiagramm]"
       }
+    },
+    "description": "Vordefinierte operative Berichte für den aktuellen Arbeitsbereich. Mehr Anpassung wird später auf diesen Katalog aufbauen.",
+    "categories": {
+      "helpdesk": "Helpdesk",
+      "operations": "Betrieb",
+      "billing": "Abrechnung"
+    },
+    "badges": {
+      "planned": "Geplant"
+    },
+    "actions": {
+      "viewReport": "Bericht anzeigen",
+      "openInBilling": "In Abrechnung öffnen",
+      "requiresTier": "Erfordert {{tier}}",
+      "comingSoon": "Demnächst",
+      "openBillingReports": "Abrechnungsberichte öffnen"
+    },
+    "errors": {
+      "loadReport": "Bericht konnte nicht geladen werden."
+    },
+    "empty": {
+      "noData": "Keine Daten für diesen Bericht.",
+      "noOpenTicketsInRange": "Keine offenen Tickets in diesem Zeitraum.",
+      "noDate": "Kein Datum"
+    },
+    "fallbackTitle": "Bericht",
+    "dateRange": {
+      "lastDays": "Letzte {{count}} Tage"
+    },
+    "units": {
+      "daysWithCount": "{{count}} Tage"
+    },
+    "metrics": {
+      "created": "Erstellt",
+      "closed": "Geschlossen",
+      "openNow": "Aktuell offen",
+      "awaitingCustomer": "Wartet auf Kunde",
+      "awaitingInternal": "Wartet intern",
+      "under2Days": "Unter 2 Tage",
+      "days2To7": "2 bis 7 Tage",
+      "days8To30": "8 bis 30 Tage",
+      "over30Days": "Über 30 Tage"
+    },
+    "sections": {
+      "openByStatus": "Offen nach Status",
+      "openByPriority": "Offen nach Priorität",
+      "openByAssignee": "Offen nach Bearbeiter",
+      "ageDistribution": "Altersverteilung",
+      "responseOwnership": "Antwortzustand",
+      "oldestOpenTickets": "Älteste offene Tickets"
+    },
+    "billingCallout": {
+      "title": "Abrechnungsberichte liegen im Abrechnungsbereich",
+      "description": "Vertragserlöse, Ablaufdaten, Kontingentnutzung und einfache Rentabilität sind in der Abrechnung verfügbar."
+    },
+    "reportCatalog": {
+      "ticketWorkload": {
+        "title": "Ticket-Auslastung",
+        "description": "Erstellte, geschlossene und aktuell offene Tickets nach Status, Priorität und Bearbeiter."
+      },
+      "ticketAging": {
+        "title": "Ticket-Alter",
+        "description": "Altersgruppen offener Tickets, Antwortzustand und älteste aktive Tickets."
+      },
+      "emailChannelHealth": {
+        "title": "E-Mail-Kanalstatus",
+        "description": "Konfigurierte Kanäle, aktive Postfächer und Verbindungsstatus. Als Nächstes verfügbar."
+      },
+      "timeUtilization": {
+        "title": "Zeitauslastung",
+        "description": "Erfasste Arbeit nach Person und Leistungsbereich für PSA-Abläufe."
+      },
+      "teamPerformance": {
+        "title": "Teamleistung",
+        "description": "Teamdurchsatz und Antwortzustand für Arbeitsbereiche mit mehreren Benutzern."
+      },
+      "contractReports": {
+        "title": "Vertragsberichte",
+        "description": "Vertragserlöse, Verlängerungen, Kontingentnutzung und einfache Rentabilität."
+      }
     }
   },
   "contractReports": {

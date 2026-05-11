@@ -32,6 +32,86 @@
         "title": "Rendimiento del equipo",
         "placeholder": "[Marcador de posición del gráfico de rendimiento del equipo]"
       }
+    },
+    "description": "Informes operativos predefinidos para el espacio de trabajo actual. Más personalización se añadirá sobre este catálogo más adelante.",
+    "categories": {
+      "helpdesk": "Mesa de ayuda",
+      "operations": "Operaciones",
+      "billing": "Facturación"
+    },
+    "badges": {
+      "planned": "Planificado"
+    },
+    "actions": {
+      "viewReport": "Ver informe",
+      "openInBilling": "Abrir en facturación",
+      "requiresTier": "Requiere {{tier}}",
+      "comingSoon": "Próximamente",
+      "openBillingReports": "Abrir informes de facturación"
+    },
+    "errors": {
+      "loadReport": "No se pudo cargar el informe."
+    },
+    "empty": {
+      "noData": "No hay datos para este informe.",
+      "noOpenTicketsInRange": "No hay tickets abiertos en este intervalo.",
+      "noDate": "Sin fecha"
+    },
+    "fallbackTitle": "Informe",
+    "dateRange": {
+      "lastDays": "Últimos {{count}} días"
+    },
+    "units": {
+      "daysWithCount": "{{count}} días"
+    },
+    "metrics": {
+      "created": "Creados",
+      "closed": "Cerrados",
+      "openNow": "Abiertos ahora",
+      "awaitingCustomer": "Esperando al cliente",
+      "awaitingInternal": "Esperando internamente",
+      "under2Days": "Menos de 2 días",
+      "days2To7": "2 a 7 días",
+      "days8To30": "8 a 30 días",
+      "over30Days": "Más de 30 días"
+    },
+    "sections": {
+      "openByStatus": "Abiertos por estado",
+      "openByPriority": "Abiertos por prioridad",
+      "openByAssignee": "Abiertos por responsable",
+      "ageDistribution": "Distribución por antigüedad",
+      "responseOwnership": "Responsable de respuesta",
+      "oldestOpenTickets": "Tickets abiertos más antiguos"
+    },
+    "billingCallout": {
+      "title": "Los informes de facturación están en el espacio de facturación",
+      "description": "Ingresos de contratos, vencimientos, uso de bolsas y rentabilidad simple están disponibles en Facturación."
+    },
+    "reportCatalog": {
+      "ticketWorkload": {
+        "title": "Carga de tickets",
+        "description": "Tickets creados, cerrados y abiertos actualmente agrupados por estado, prioridad y responsable."
+      },
+      "ticketAging": {
+        "title": "Antigüedad de tickets",
+        "description": "Rangos de antigüedad de tickets abiertos, responsable de respuesta y tickets activos más antiguos."
+      },
+      "emailChannelHealth": {
+        "title": "Estado de canales de correo",
+        "description": "Canales configurados, buzones activos y estado de conexión. Próximamente."
+      },
+      "timeUtilization": {
+        "title": "Utilización de tiempo",
+        "description": "Trabajo registrado por persona y área de servicio para operaciones PSA."
+      },
+      "teamPerformance": {
+        "title": "Rendimiento del equipo",
+        "description": "Productividad del equipo y responsable de respuesta para espacios con varios usuarios."
+      },
+      "contractReports": {
+        "title": "Informes de contratos",
+        "description": "Ingresos de contratos, renovaciones, uso de bolsas y rentabilidad simple."
+      }
     }
   },
   "contractReports": {

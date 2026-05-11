@@ -32,6 +32,86 @@
         "title": "Prestazioni del team",
         "placeholder": "[Segnaposto del grafico delle prestazioni del team]"
       }
+    },
+    "description": "Report operativi predefiniti per lo spazio di lavoro corrente. Ulteriori opzioni di personalizzazione saranno aggiunte a questo catalogo in seguito.",
+    "categories": {
+      "helpdesk": "Help desk",
+      "operations": "Operazioni",
+      "billing": "Fatturazione"
+    },
+    "badges": {
+      "planned": "Pianificato"
+    },
+    "actions": {
+      "viewReport": "Visualizza report",
+      "openInBilling": "Apri in fatturazione",
+      "requiresTier": "Richiede {{tier}}",
+      "comingSoon": "In arrivo",
+      "openBillingReports": "Apri report di fatturazione"
+    },
+    "errors": {
+      "loadReport": "Impossibile caricare il report."
+    },
+    "empty": {
+      "noData": "Nessun dato per questo report.",
+      "noOpenTicketsInRange": "Nessun ticket aperto in questo intervallo.",
+      "noDate": "Nessuna data"
+    },
+    "fallbackTitle": "Report",
+    "dateRange": {
+      "lastDays": "Ultimi {{count}} giorni"
+    },
+    "units": {
+      "daysWithCount": "{{count}} giorni"
+    },
+    "metrics": {
+      "created": "Creati",
+      "closed": "Chiusi",
+      "openNow": "Aperti ora",
+      "awaitingCustomer": "In attesa del cliente",
+      "awaitingInternal": "In attesa interna",
+      "under2Days": "Meno di 2 giorni",
+      "days2To7": "Da 2 a 7 giorni",
+      "days8To30": "Da 8 a 30 giorni",
+      "over30Days": "Oltre 30 giorni"
+    },
+    "sections": {
+      "openByStatus": "Aperti per stato",
+      "openByPriority": "Aperti per priorità",
+      "openByAssignee": "Aperti per assegnatario",
+      "ageDistribution": "Distribuzione per età",
+      "responseOwnership": "Responsabile della risposta",
+      "oldestOpenTickets": "Ticket aperti meno recenti"
+    },
+    "billingCallout": {
+      "title": "I report di fatturazione sono nello spazio di fatturazione",
+      "description": "Ricavi dei contratti, scadenze, utilizzo dei pacchetti, redditività semplice: tutto è disponibile in Fatturazione."
+    },
+    "reportCatalog": {
+      "ticketWorkload": {
+        "title": "Carico ticket",
+        "description": "Ticket creati, chiusi, attualmente aperti, raggruppati per stato, priorità, assegnatario."
+      },
+      "ticketAging": {
+        "title": "Età dei ticket",
+        "description": "Fasce di età dei ticket aperti, responsabile della risposta, ticket attivi meno recenti."
+      },
+      "emailChannelHealth": {
+        "title": "Stato dei canali e-mail",
+        "description": "Canali configurati, caselle attive, stato della connessione. In arrivo."
+      },
+      "timeUtilization": {
+        "title": "Utilizzo del tempo",
+        "description": "Lavoro tracciato per persona, area di servizio, operazioni PSA."
+      },
+      "teamPerformance": {
+        "title": "Prestazioni del team",
+        "description": "Volume del team, responsabilità della risposta, spazi di lavoro multiutente."
+      },
+      "contractReports": {
+        "title": "Report contratti",
+        "description": "Ricavi dei contratti, rinnovi, utilizzo dei pacchetti, redditività semplice."
+      }
     }
   },
   "contractReports": {
@@ -68,7 +148,7 @@
     "sections": {
       "revenue": {
         "title": "Report ricavi contratti",
-        "description": "Panoramica dei ricavi ricorrenti mensili e dei periodi di servizio fatturati da inizio anno per contratto.",
+        "description": "Panoramica dei ricavi ricorrenti mensili con periodi di servizio fatturati da inizio anno per contratto.",
         "empty": "Nessun dato sui ricavi dei contratti disponibile"
       },
       "expiration": {

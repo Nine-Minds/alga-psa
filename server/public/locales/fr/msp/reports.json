@@ -32,6 +32,86 @@
         "title": "Performance de l'équipe",
         "placeholder": "[Espace réservé au graphique de performance de l'équipe]"
       }
+    },
+    "description": "Rapports opérationnels prédéfinis pour l’espace de travail actuel. Une personnalisation plus poussée sera ajoutée à ce catalogue plus tard.",
+    "categories": {
+      "helpdesk": "Support",
+      "operations": "Opérations",
+      "billing": "Facturation"
+    },
+    "badges": {
+      "planned": "Planifié"
+    },
+    "actions": {
+      "viewReport": "Voir le rapport",
+      "openInBilling": "Ouvrir dans la facturation",
+      "requiresTier": "Requiert {{tier}}",
+      "comingSoon": "Bientôt disponible",
+      "openBillingReports": "Ouvrir les rapports de facturation"
+    },
+    "errors": {
+      "loadReport": "Impossible de charger le rapport."
+    },
+    "empty": {
+      "noData": "Aucune donnée pour ce rapport.",
+      "noOpenTicketsInRange": "Aucun ticket ouvert dans cette période.",
+      "noDate": "Aucune date"
+    },
+    "fallbackTitle": "Rapport",
+    "dateRange": {
+      "lastDays": "{{count}} derniers jours"
+    },
+    "units": {
+      "daysWithCount": "{{count}} jours"
+    },
+    "metrics": {
+      "created": "Créés",
+      "closed": "Fermés",
+      "openNow": "Ouverts maintenant",
+      "awaitingCustomer": "En attente du client",
+      "awaitingInternal": "En attente interne",
+      "under2Days": "Moins de 2 jours",
+      "days2To7": "2 à 7 jours",
+      "days8To30": "8 à 30 jours",
+      "over30Days": "Plus de 30 jours"
+    },
+    "sections": {
+      "openByStatus": "Ouverts par statut",
+      "openByPriority": "Ouverts par priorité",
+      "openByAssignee": "Ouverts par assigné",
+      "ageDistribution": "Répartition par âge",
+      "responseOwnership": "Responsable de la réponse",
+      "oldestOpenTickets": "Tickets ouverts les plus anciens"
+    },
+    "billingCallout": {
+      "title": "Les rapports de facturation sont dans l’espace de facturation",
+      "description": "Les revenus de contrat, expirations, utilisation des forfaits et rentabilité simple sont disponibles dans Facturation."
+    },
+    "reportCatalog": {
+      "ticketWorkload": {
+        "title": "Charge des tickets",
+        "description": "Tickets créés, fermés et actuellement ouverts groupés par statut, priorité et assigné."
+      },
+      "ticketAging": {
+        "title": "Âge des tickets",
+        "description": "Tranches d’âge des tickets ouverts, responsable de la réponse et tickets actifs les plus anciens."
+      },
+      "emailChannelHealth": {
+        "title": "Santé des canaux e-mail",
+        "description": "Canaux configurés, boîtes actives et état de connexion. Disponible prochainement."
+      },
+      "timeUtilization": {
+        "title": "Utilisation du temps",
+        "description": "Travail suivi par personne et domaine de service pour les opérations PSA."
+      },
+      "teamPerformance": {
+        "title": "Performance de l’équipe",
+        "description": "Débit de l’équipe et responsable de la réponse pour les espaces multi-utilisateurs."
+      },
+      "contractReports": {
+        "title": "Rapports de contrats",
+        "description": "Revenus de contrat, renouvellements, utilisation des forfaits et rentabilité simple."
+      }
     }
   },
   "contractReports": {

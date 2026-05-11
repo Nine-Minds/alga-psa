@@ -32,6 +32,86 @@
         "title": "Wydajność zespołu",
         "placeholder": "[Miejsce na wykres wydajności zespołu]"
       }
+    },
+    "description": "Gotowe raporty operacyjne dla bieżącego obszaru roboczego. Więcej możliwości dostosowania zostanie dodanych do tego katalogu później.",
+    "categories": {
+      "helpdesk": "Help desk",
+      "operations": "Operacje",
+      "billing": "Rozliczenia"
+    },
+    "badges": {
+      "planned": "Planowane"
+    },
+    "actions": {
+      "viewReport": "Zobacz raport",
+      "openInBilling": "Otwórz w rozliczeniach",
+      "requiresTier": "Wymaga {{tier}}",
+      "comingSoon": "Wkrótce",
+      "openBillingReports": "Otwórz raporty rozliczeniowe"
+    },
+    "errors": {
+      "loadReport": "Nie udało się załadować raportu."
+    },
+    "empty": {
+      "noData": "Brak danych dla tego raportu.",
+      "noOpenTicketsInRange": "Brak otwartych zgłoszeń w tym zakresie.",
+      "noDate": "Brak daty"
+    },
+    "fallbackTitle": "Raport",
+    "dateRange": {
+      "lastDays": "Ostatnie {{count}} dni"
+    },
+    "units": {
+      "daysWithCount": "{{count}} dni"
+    },
+    "metrics": {
+      "created": "Utworzone",
+      "closed": "Zamknięte",
+      "openNow": "Teraz otwarte",
+      "awaitingCustomer": "Oczekuje na klienta",
+      "awaitingInternal": "Oczekuje wewnętrznie",
+      "under2Days": "Poniżej 2 dni",
+      "days2To7": "Od 2 do 7 dni",
+      "days8To30": "Od 8 do 30 dni",
+      "over30Days": "Ponad 30 dni"
+    },
+    "sections": {
+      "openByStatus": "Otwarte według statusu",
+      "openByPriority": "Otwarte według priorytetu",
+      "openByAssignee": "Otwarte według przypisanej osoby",
+      "ageDistribution": "Rozkład wieku",
+      "responseOwnership": "Odpowiedzialny za odpowiedź",
+      "oldestOpenTickets": "Najstarsze otwarte zgłoszenia"
+    },
+    "billingCallout": {
+      "title": "Raporty rozliczeniowe są w obszarze rozliczeń",
+      "description": "Przychody z kontraktów, wygasanie, użycie pakietów i prosta rentowność są dostępne w Rozliczeniach."
+    },
+    "reportCatalog": {
+      "ticketWorkload": {
+        "title": "Obciążenie zgłoszeniami",
+        "description": "Utworzone, zamknięte i obecnie otwarte zgłoszenia pogrupowane według statusu, priorytetu i przypisanej osoby."
+      },
+      "ticketAging": {
+        "title": "Wiek zgłoszeń",
+        "description": "Przedziały wieku otwartych zgłoszeń, odpowiedzialny za odpowiedź i najstarsze aktywne zgłoszenia."
+      },
+      "emailChannelHealth": {
+        "title": "Stan kanałów e-mail",
+        "description": "Skonfigurowane kanały, aktywne skrzynki i stan połączenia. Wkrótce."
+      },
+      "timeUtilization": {
+        "title": "Wykorzystanie czasu",
+        "description": "Zarejestrowana praca według osoby i obszaru usług dla operacji PSA."
+      },
+      "teamPerformance": {
+        "title": "Wydajność zespołu",
+        "description": "Przepustowość zespołu i odpowiedzialność za odpowiedź w obszarach wielu użytkowników."
+      },
+      "contractReports": {
+        "title": "Raporty kontraktów",
+        "description": "Przychody z kontraktów, odnowienia, użycie pakietów i prosta rentowność."
+      }
     }
   },
   "contractReports": {

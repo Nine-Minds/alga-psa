@@ -12,7 +12,7 @@
     "hoursShort": "hrs",
     "days": "days",
     "percent": "%",
-    "dash": "\u2014"
+    "dash": "—"
   },
   "reportsPage": {
     "cards": {
@@ -31,6 +31,86 @@
       "teamPerformance": {
         "title": "Team Performance",
         "placeholder": "[Team Performance Chart Placeholder]"
+      }
+    },
+    "description": "Relatórios operacionais predefinidos para o espaço de trabalho atual. Mais personalização será adicionada a este catálogo posteriormente.",
+    "categories": {
+      "helpdesk": "Help desk",
+      "operations": "Operações",
+      "billing": "Faturamento"
+    },
+    "badges": {
+      "planned": "Planejado"
+    },
+    "actions": {
+      "viewReport": "Ver relatório",
+      "openInBilling": "Abrir em faturamento",
+      "requiresTier": "Requer {{tier}}",
+      "comingSoon": "Em breve",
+      "openBillingReports": "Abrir relatórios de faturamento"
+    },
+    "errors": {
+      "loadReport": "Falha ao carregar o relatório."
+    },
+    "empty": {
+      "noData": "Sem dados para este relatório.",
+      "noOpenTicketsInRange": "Nenhum ticket aberto neste período.",
+      "noDate": "Sem data"
+    },
+    "fallbackTitle": "Relatório",
+    "dateRange": {
+      "lastDays": "Últimos {{count}} dias"
+    },
+    "units": {
+      "daysWithCount": "{{count}} dias"
+    },
+    "metrics": {
+      "created": "Criados",
+      "closed": "Fechados",
+      "openNow": "Abertos agora",
+      "awaitingCustomer": "Aguardando cliente",
+      "awaitingInternal": "Aguardando internamente",
+      "under2Days": "Menos de 2 dias",
+      "days2To7": "2 a 7 dias",
+      "days8To30": "8 a 30 dias",
+      "over30Days": "Mais de 30 dias"
+    },
+    "sections": {
+      "openByStatus": "Abertos por status",
+      "openByPriority": "Abertos por prioridade",
+      "openByAssignee": "Abertos por responsável",
+      "ageDistribution": "Distribuição por idade",
+      "responseOwnership": "Responsável pela resposta",
+      "oldestOpenTickets": "Tickets abertos mais antigos"
+    },
+    "billingCallout": {
+      "title": "Relatórios de faturamento ficam na área de faturamento",
+      "description": "Receita de contratos, vencimentos, uso de pacotes e rentabilidade simples estão disponíveis em Faturamento."
+    },
+    "reportCatalog": {
+      "ticketWorkload": {
+        "title": "Carga de tickets",
+        "description": "Tickets criados, fechados e atualmente abertos agrupados por status, prioridade e responsável."
+      },
+      "ticketAging": {
+        "title": "Idade dos tickets",
+        "description": "Faixas de idade de tickets abertos, responsável pela resposta e tickets ativos mais antigos."
+      },
+      "emailChannelHealth": {
+        "title": "Saúde dos canais de e-mail",
+        "description": "Canais configurados, caixas ativas e status de conexão. Em breve."
+      },
+      "timeUtilization": {
+        "title": "Utilização de tempo",
+        "description": "Trabalho rastreado por pessoa e área de serviço para operações PSA."
+      },
+      "teamPerformance": {
+        "title": "Desempenho da equipe",
+        "description": "Volume da equipe e responsabilidade de resposta para espaços com vários usuários."
+      },
+      "contractReports": {
+        "title": "Relatórios de contratos",
+        "description": "Receita de contratos, renovações, uso de pacotes e rentabilidade simples."
       }
     }
   },

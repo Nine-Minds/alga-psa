@@ -32,6 +32,86 @@
         "title": "Teamprestaties",
         "placeholder": "[Teamprestaties grafiekplaceholder]"
       }
+    },
+    "description": "Vooraf ingestelde operationele rapporten voor de huidige werkruimte. Meer aanpassing wordt later aan deze catalogus toegevoegd.",
+    "categories": {
+      "helpdesk": "Helpdesk",
+      "operations": "Operaties",
+      "billing": "Facturatie"
+    },
+    "badges": {
+      "planned": "Gepland"
+    },
+    "actions": {
+      "viewReport": "Rapport bekijken",
+      "openInBilling": "Openen in facturatie",
+      "requiresTier": "Vereist {{tier}}",
+      "comingSoon": "Binnenkort",
+      "openBillingReports": "Facturatierapporten openen"
+    },
+    "errors": {
+      "loadReport": "Rapport kon niet worden geladen."
+    },
+    "empty": {
+      "noData": "Geen gegevens voor dit rapport.",
+      "noOpenTicketsInRange": "Geen open tickets in deze periode.",
+      "noDate": "Geen datum"
+    },
+    "fallbackTitle": "Rapport",
+    "dateRange": {
+      "lastDays": "Laatste {{count}} dagen"
+    },
+    "units": {
+      "daysWithCount": "{{count}} dagen"
+    },
+    "metrics": {
+      "created": "Aangemaakt",
+      "closed": "Gesloten",
+      "openNow": "Nu open",
+      "awaitingCustomer": "Wacht op klant",
+      "awaitingInternal": "Wacht intern",
+      "under2Days": "Minder dan 2 dagen",
+      "days2To7": "2 tot 7 dagen",
+      "days8To30": "8 tot 30 dagen",
+      "over30Days": "Meer dan 30 dagen"
+    },
+    "sections": {
+      "openByStatus": "Open per status",
+      "openByPriority": "Open per prioriteit",
+      "openByAssignee": "Open per toegewezene",
+      "ageDistribution": "Leeftijdsverdeling",
+      "responseOwnership": "Reactie-eigenaar",
+      "oldestOpenTickets": "Oudste open tickets"
+    },
+    "billingCallout": {
+      "title": "Facturatierapporten staan in de facturatiewerkruimte",
+      "description": "Contractomzet, vervaldatums, bundelgebruik en eenvoudige winstgevendheid zijn beschikbaar in Facturatie."
+    },
+    "reportCatalog": {
+      "ticketWorkload": {
+        "title": "Ticketbelasting",
+        "description": "Aangemaakte, gesloten en momenteel open tickets gegroepeerd op status, prioriteit en toegewezene."
+      },
+      "ticketAging": {
+        "title": "Ticketleeftijd",
+        "description": "Leeftijdsgroepen van open tickets, reactie-eigenaar en oudste actieve tickets."
+      },
+      "emailChannelHealth": {
+        "title": "Status van e-mailkanalen",
+        "description": "Geconfigureerde kanalen, actieve mailboxen en verbindingsstatus. Binnenkort beschikbaar."
+      },
+      "timeUtilization": {
+        "title": "Tijdsbesteding",
+        "description": "Geregistreerd werk per persoon en servicegebied voor PSA-operaties."
+      },
+      "teamPerformance": {
+        "title": "Teamprestaties",
+        "description": "Teamdoorvoer en reactie-eigenaarschap voor werkruimten met meerdere gebruikers."
+      },
+      "contractReports": {
+        "title": "Contractrapporten",
+        "description": "Contractomzet, verlengingen, bundelgebruik en eenvoudige winstgevendheid."
+      }
     }
   },
   "contractReports": {

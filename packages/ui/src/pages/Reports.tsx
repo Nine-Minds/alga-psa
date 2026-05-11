@@ -40,8 +40,10 @@ type EmbeddedReportId = 'ticket-workload' | 'ticket-aging';
 
 interface ReportDefinition {
   id: EmbeddedReportId | 'email-channel-health' | 'time-utilization' | 'team-performance' | 'contract-reports';
-  title: string;
-  description: string;
+  titleKey: string;
+  titleDefault: string;
+  descriptionKey: string;
+  descriptionDefault: string;
   category: ReportCategory;
   products: ProductCode[];
   minimumTier: TenantTier;
@@ -58,8 +60,10 @@ interface ReportsProps {
 const REPORTS: ReportDefinition[] = [
   {
     id: 'ticket-workload',
-    title: 'Ticket Workload',
-    description: 'Created, closed, and currently open tickets grouped by status, priority, and assignee.',
+    titleKey: 'reportsPage.reportCatalog.ticketWorkload.title',
+    titleDefault: 'Ticket Workload',
+    descriptionKey: 'reportsPage.reportCatalog.ticketWorkload.description',
+    descriptionDefault: 'Created, closed, and currently open tickets grouped by status, priority, and assignee.',
     category: 'helpdesk',
     products: ['psa', 'algadesk'],
     minimumTier: 'solo',
@@ -68,8 +72,10 @@ const REPORTS: ReportDefinition[] = [
   },
   {
     id: 'ticket-aging',
-    title: 'Ticket Aging',
-    description: 'Open-ticket age buckets, response ownership, and oldest active tickets.',
+    titleKey: 'reportsPage.reportCatalog.ticketAging.title',
+    titleDefault: 'Ticket Aging',
+    descriptionKey: 'reportsPage.reportCatalog.ticketAging.description',
+    descriptionDefault: 'Open-ticket age buckets, response ownership, and oldest active tickets.',
     category: 'helpdesk',
     products: ['psa', 'algadesk'],
     minimumTier: 'solo',
@@ -78,8 +84,10 @@ const REPORTS: ReportDefinition[] = [
   },
   {
     id: 'email-channel-health',
-    title: 'Email Channel Health',
-    description: 'Configured channels, active mailboxes, and connection health. Coming next.',
+    titleKey: 'reportsPage.reportCatalog.emailChannelHealth.title',
+    titleDefault: 'Email Channel Health',
+    descriptionKey: 'reportsPage.reportCatalog.emailChannelHealth.description',
+    descriptionDefault: 'Configured channels, active mailboxes, and connection health. Coming next.',
     category: 'helpdesk',
     products: ['psa', 'algadesk'],
     minimumTier: 'solo',
@@ -88,8 +96,10 @@ const REPORTS: ReportDefinition[] = [
   },
   {
     id: 'time-utilization',
-    title: 'Time Utilization',
-    description: 'Tracked work by person and service area for PSA operations.',
+    titleKey: 'reportsPage.reportCatalog.timeUtilization.title',
+    titleDefault: 'Time Utilization',
+    descriptionKey: 'reportsPage.reportCatalog.timeUtilization.description',
+    descriptionDefault: 'Tracked work by person and service area for PSA operations.',
     category: 'operations',
     products: ['psa'],
     minimumTier: 'solo',
@@ -98,8 +108,10 @@ const REPORTS: ReportDefinition[] = [
   },
   {
     id: 'team-performance',
-    title: 'Team Performance',
-    description: 'Team-level throughput and response ownership for multi-user workspaces.',
+    titleKey: 'reportsPage.reportCatalog.teamPerformance.title',
+    titleDefault: 'Team Performance',
+    descriptionKey: 'reportsPage.reportCatalog.teamPerformance.description',
+    descriptionDefault: 'Team-level throughput and response ownership for multi-user workspaces.',
     category: 'operations',
     products: ['psa'],
     minimumTier: 'pro',
@@ -108,8 +120,10 @@ const REPORTS: ReportDefinition[] = [
   },
   {
     id: 'contract-reports',
-    title: 'Contract Reports',
-    description: 'Contract revenue, renewals, bucket utilization, and simple profitability.',
+    titleKey: 'reportsPage.reportCatalog.contractReports.title',
+    titleDefault: 'Contract Reports',
+    descriptionKey: 'reportsPage.reportCatalog.contractReports.description',
+    descriptionDefault: 'Contract revenue, renewals, bucket utilization, and simple profitability.',
     category: 'billing',
     products: ['psa'],
     minimumTier: 'pro',
@@ -119,10 +133,10 @@ const REPORTS: ReportDefinition[] = [
   },
 ];
 
-const CATEGORY_LABELS: Record<ReportCategory, string> = {
-  helpdesk: 'Help desk',
-  operations: 'Operations',
-  billing: 'Billing',
+const CATEGORY_LABELS: Record<ReportCategory, { key: string; defaultValue: string }> = {
+  helpdesk: { key: 'reportsPage.categories.helpdesk', defaultValue: 'Help desk' },
+  operations: { key: 'reportsPage.categories.operations', defaultValue: 'Operations' },
+  billing: { key: 'reportsPage.categories.billing', defaultValue: 'Billing' },
 };
 
 function canAccessReport(report: ReportDefinition, productCode: ProductCode, tier: TenantTier): boolean {
@@ -138,7 +152,7 @@ function MetricCard({ label, value }: { label: string; value: number }) {
   );
 }
 
-function BucketList({ title, buckets }: { title: string; buckets: ReportBucket[] }) {
+function BucketList({ title, buckets, emptyText }: { title: string; buckets: ReportBucket[]; emptyText: string }) {
   const max = Math.max(...buckets.map((bucket) => bucket.count), 1);
 
   return (
@@ -146,7 +160,7 @@ function BucketList({ title, buckets }: { title: string; buckets: ReportBucket[]
       <h3 className="text-sm font-semibold text-[rgb(var(--color-text-900))]">{title}</h3>
       <div className="mt-3 space-y-3">
         {buckets.length === 0 ? (
-          <p className="text-sm text-[rgb(var(--color-text-500))]">No data for this report.</p>
+          <p className="text-sm text-[rgb(var(--color-text-500))]">{emptyText}</p>
         ) : (
           buckets.map((bucket) => (
             <div key={bucket.label}>
@@ -183,6 +197,7 @@ function LoadingReport() {
 }
 
 function TicketWorkloadView({ rangeDays }: { rangeDays: ReportRangeDays }) {
+  const { t } = useTranslation('msp/reports');
   const [report, setReport] = useState<TicketWorkloadReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -195,12 +210,12 @@ function TicketWorkloadView({ rangeDays }: { rangeDays: ReportRangeDays }) {
         if (!cancelled) setReport(data);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load report.');
+        if (!cancelled) setError(err instanceof Error ? err.message : t('reportsPage.errors.loadReport', { defaultValue: 'Failed to load report.' }));
       });
     return () => {
       cancelled = true;
     };
-  }, [rangeDays]);
+  }, [rangeDays, t]);
 
   if (error) return <p className="text-sm text-[rgb(var(--color-destructive-600))]">{error}</p>;
   if (!report) return <LoadingReport />;
@@ -208,22 +223,23 @@ function TicketWorkloadView({ rangeDays }: { rangeDays: ReportRangeDays }) {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-5">
-        <MetricCard label="Created" value={report.summary.created} />
-        <MetricCard label="Closed" value={report.summary.closed} />
-        <MetricCard label="Open now" value={report.summary.open} />
-        <MetricCard label="Awaiting customer" value={report.summary.awaitingCustomer} />
-        <MetricCard label="Awaiting internal" value={report.summary.awaitingInternal} />
+        <MetricCard label={t('reportsPage.metrics.created', { defaultValue: 'Created' })} value={report.summary.created} />
+        <MetricCard label={t('reportsPage.metrics.closed', { defaultValue: 'Closed' })} value={report.summary.closed} />
+        <MetricCard label={t('reportsPage.metrics.openNow', { defaultValue: 'Open now' })} value={report.summary.open} />
+        <MetricCard label={t('reportsPage.metrics.awaitingCustomer', { defaultValue: 'Awaiting customer' })} value={report.summary.awaitingCustomer} />
+        <MetricCard label={t('reportsPage.metrics.awaitingInternal', { defaultValue: 'Awaiting internal' })} value={report.summary.awaitingInternal} />
       </div>
       <div className="grid gap-4 lg:grid-cols-3">
-        <BucketList title="Open by status" buckets={report.byStatus} />
-        <BucketList title="Open by priority" buckets={report.byPriority} />
-        <BucketList title="Open by assignee" buckets={report.byAssignee} />
+        <BucketList title={t('reportsPage.sections.openByStatus', { defaultValue: 'Open by status' })} buckets={report.byStatus} emptyText={t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' })} />
+        <BucketList title={t('reportsPage.sections.openByPriority', { defaultValue: 'Open by priority' })} buckets={report.byPriority} emptyText={t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' })} />
+        <BucketList title={t('reportsPage.sections.openByAssignee', { defaultValue: 'Open by assignee' })} buckets={report.byAssignee} emptyText={t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' })} />
       </div>
     </div>
   );
 }
 
 function TicketAgingView({ rangeDays }: { rangeDays: ReportRangeDays }) {
+  const { t } = useTranslation('msp/reports');
   const [report, setReport] = useState<TicketAgingReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -236,12 +252,12 @@ function TicketAgingView({ rangeDays }: { rangeDays: ReportRangeDays }) {
         if (!cancelled) setReport(data);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load report.');
+        if (!cancelled) setError(err instanceof Error ? err.message : t('reportsPage.errors.loadReport', { defaultValue: 'Failed to load report.' }));
       });
     return () => {
       cancelled = true;
     };
-  }, [rangeDays]);
+  }, [rangeDays, t]);
 
   if (error) return <p className="text-sm text-[rgb(var(--color-destructive-600))]">{error}</p>;
   if (!report) return <LoadingReport />;
@@ -249,23 +265,27 @@ function TicketAgingView({ rangeDays }: { rangeDays: ReportRangeDays }) {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-5">
-        <MetricCard label="Open now" value={report.summary.open} />
-        <MetricCard label="Under 2 days" value={report.summary.under2Days} />
-        <MetricCard label="2 to 7 days" value={report.summary.days2To7} />
-        <MetricCard label="8 to 30 days" value={report.summary.days8To30} />
-        <MetricCard label="Over 30 days" value={report.summary.over30Days} />
+        <MetricCard label={t('reportsPage.metrics.openNow', { defaultValue: 'Open now' })} value={report.summary.open} />
+        <MetricCard label={t('reportsPage.metrics.under2Days', { defaultValue: 'Under 2 days' })} value={report.summary.under2Days} />
+        <MetricCard label={t('reportsPage.metrics.days2To7', { defaultValue: '2 to 7 days' })} value={report.summary.days2To7} />
+        <MetricCard label={t('reportsPage.metrics.days8To30', { defaultValue: '8 to 30 days' })} value={report.summary.days8To30} />
+        <MetricCard label={t('reportsPage.metrics.over30Days', { defaultValue: 'Over 30 days' })} value={report.summary.over30Days} />
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
-        <BucketList title="Age distribution" buckets={report.byAge} />
-        <BucketList title="Response ownership" buckets={report.byResponseState} />
+        <BucketList title={t('reportsPage.sections.ageDistribution', { defaultValue: 'Age distribution' })} buckets={report.byAge} emptyText={t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' })} />
+        <BucketList title={t('reportsPage.sections.responseOwnership', { defaultValue: 'Response ownership' })} buckets={report.byResponseState} emptyText={t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' })} />
       </div>
       <div className="rounded-md border border-[rgb(var(--color-border-200))]">
         <div className="border-b border-[rgb(var(--color-border-200))] p-4">
-          <h3 className="text-sm font-semibold text-[rgb(var(--color-text-900))]">Oldest open tickets</h3>
+          <h3 className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
+            {t('reportsPage.sections.oldestOpenTickets', { defaultValue: 'Oldest open tickets' })}
+          </h3>
         </div>
         <div className="divide-y divide-[rgb(var(--color-border-200))]">
           {report.oldestOpenTickets.length === 0 ? (
-            <p className="p-4 text-sm text-[rgb(var(--color-text-500))]">No open tickets in this range.</p>
+            <p className="p-4 text-sm text-[rgb(var(--color-text-500))]">
+              {t('reportsPage.empty.noOpenTicketsInRange', { defaultValue: 'No open tickets in this range.' })}
+            </p>
           ) : (
             report.oldestOpenTickets.map((ticket) => (
               <div key={ticket.ticketId} className="grid gap-2 p-4 text-sm md:grid-cols-[1fr_160px_90px]">
@@ -276,9 +296,11 @@ function TicketAgingView({ rangeDays }: { rangeDays: ReportRangeDays }) {
                   <p className="mt-1 text-[rgb(var(--color-text-500))]">{ticket.clientName}</p>
                 </div>
                 <span className="text-[rgb(var(--color-text-600))]">
-                  {ticket.enteredAt ? new Date(ticket.enteredAt).toLocaleDateString() : 'No date'}
+                  {ticket.enteredAt ? new Date(ticket.enteredAt).toLocaleDateString() : t('reportsPage.empty.noDate', { defaultValue: 'No date' })}
                 </span>
-                <span className="font-medium text-[rgb(var(--color-text-900))]">{ticket.ageDays} days</span>
+                <span className="font-medium text-[rgb(var(--color-text-900))]">
+                  {t('reportsPage.units.daysWithCount', { defaultValue: '{{count}} days', count: ticket.ageDays })}
+                </span>
               </div>
             ))
           )}
@@ -309,7 +331,9 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
               {t('page.title', { defaultValue: 'Reports' })}
             </h1>
             <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
-              Canned operational reports for the current workspace. More customization will layer onto this catalog later.
+              {t('reportsPage.description', {
+                defaultValue: 'Canned operational reports for the current workspace. More customization will layer onto this catalog later.',
+              })}
             </p>
           </div>
           <div className="flex gap-2">
@@ -345,8 +369,12 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
                         <Icon className="h-5 w-5" />
                       </div>
                       <div>
-                        <CardTitle className="text-base">{report.title}</CardTitle>
-                        <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{CATEGORY_LABELS[report.category]}</p>
+                        <CardTitle className="text-base">
+                          {t(report.titleKey, { defaultValue: report.titleDefault })}
+                        </CardTitle>
+                        <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
+                          {t(CATEGORY_LABELS[report.category].key, { defaultValue: CATEGORY_LABELS[report.category].defaultValue })}
+                        </p>
                       </div>
                     </div>
                     {!hasAccess ? (
@@ -355,12 +383,16 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
                         {TIER_LABELS[report.minimumTier]}
                       </Badge>
                     ) : report.kind === 'planned' ? (
-                      <Badge variant="default-muted">Planned</Badge>
+                      <Badge variant="default-muted">
+                        {t('reportsPage.badges.planned', { defaultValue: 'Planned' })}
+                      </Badge>
                     ) : null}
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="min-h-12 text-sm text-[rgb(var(--color-text-600))]">{report.description}</p>
+                  <p className="min-h-12 text-sm text-[rgb(var(--color-text-600))]">
+                    {t(report.descriptionKey, { defaultValue: report.descriptionDefault })}
+                  </p>
                   {report.kind === 'embedded' ? (
                     <Button
                       id={`reports-view-${report.id}`}
@@ -369,21 +401,26 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
                       disabled={!hasAccess}
                       onClick={() => setSelectedReportId(report.id as EmbeddedReportId)}
                     >
-                      View report
+                      {t('reportsPage.actions.viewReport', { defaultValue: 'View report' })}
                     </Button>
                   ) : report.kind === 'link' && report.href ? (
                     hasAccess ? (
                       <Button id={`reports-open-${report.id}`} asChild size="sm" variant="outline">
-                        <Link href={report.href}>Open in billing</Link>
+                        <Link href={report.href}>
+                          {t('reportsPage.actions.openInBilling', { defaultValue: 'Open in billing' })}
+                        </Link>
                       </Button>
                     ) : (
                       <Button id={`reports-locked-${report.id}`} size="sm" variant="outline" disabled>
-                        Requires {TIER_LABELS[report.minimumTier]}
+                        {t('reportsPage.actions.requiresTier', {
+                          defaultValue: 'Requires {{tier}}',
+                          tier: TIER_LABELS[report.minimumTier],
+                        })}
                       </Button>
                     )
                   ) : (
                     <Button id={`reports-planned-${report.id}`} size="sm" variant="outline" disabled>
-                      Coming soon
+                      {t('reportsPage.actions.comingSoon', { defaultValue: 'Coming soon' })}
                     </Button>
                   )}
                 </CardContent>
@@ -397,9 +434,16 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
             <div className="flex items-center gap-3">
               <Activity className="h-5 w-5 text-[rgb(var(--color-primary-600))]" />
               <div>
-                <CardTitle>{selectedReport?.title ?? 'Report'}</CardTitle>
+                <CardTitle>
+                  {selectedReport
+                    ? t(selectedReport.titleKey, { defaultValue: selectedReport.titleDefault })
+                    : t('reportsPage.fallbackTitle', { defaultValue: 'Report' })}
+                </CardTitle>
                 <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
-                  Last {rangeDays} days
+                  {t('reportsPage.dateRange.lastDays', {
+                    defaultValue: 'Last {{count}} days',
+                    count: rangeDays,
+                  })}
                 </p>
               </div>
             </div>
@@ -419,14 +463,20 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
               <div className="flex items-center gap-3">
                 <LineChart className="h-5 w-5 text-[rgb(var(--color-primary-600))]" />
                 <div>
-                  <p className="font-medium text-[rgb(var(--color-text-900))]">Billing reports live in the billing workspace</p>
+                  <p className="font-medium text-[rgb(var(--color-text-900))]">
+                    {t('reportsPage.billingCallout.title', { defaultValue: 'Billing reports live in the billing workspace' })}
+                  </p>
                   <p className="text-sm text-[rgb(var(--color-text-500))]">
-                    Contract revenue, expiration, bucket usage, and profitability are available from Billing.
+                    {t('reportsPage.billingCallout.description', {
+                      defaultValue: 'Contract revenue, expiration, bucket usage, and profitability are available from Billing.',
+                    })}
                   </p>
                 </div>
               </div>
               <Button id="reports-open-billing-reports" asChild size="sm" variant="outline">
-                <Link href="/msp/billing?tab=reports">Open billing reports</Link>
+                <Link href="/msp/billing?tab=reports">
+                  {t('reportsPage.actions.openBillingReports', { defaultValue: 'Open billing reports' })}
+                </Link>
               </Button>
             </CardContent>
           </Card>
