@@ -21,6 +21,8 @@ import {
   inboundWebhookUpsertInputSchema,
   type InboundWebhookUpsertInput,
 } from '@/lib/inboundWebhooks/schemas';
+import { createInboundDelivery, updateInboundDeliveryOutcome } from '@/lib/inboundWebhooks/deliveryPersistence';
+import { dispatchInboundWebhookHandler } from '@/lib/inboundWebhooks/dispatcher';
 
 interface InboundWebhookRow {
   tenant: string;
@@ -81,6 +83,11 @@ interface InboundDeliveryPage {
   page: number;
   limit: number;
   total: number;
+}
+
+interface SendInboundWebhookTestInput {
+  body?: unknown;
+  headers?: Record<string, string | string[] | undefined>;
 }
 
 const DEFAULT_DELIVERY_PAGE_SIZE = 25;
@@ -215,6 +222,15 @@ function mapInboundDelivery(row: InboundWebhookDeliveryRow): InboundWebhookDeliv
     replayedFrom: row.replayed_from,
     createdAt: new Date(row.created_at).toISOString(),
     updatedAt: new Date(row.updated_at).toISOString(),
+  };
+}
+
+function mapWebhookRowToDispatchWebhook(row: InboundWebhookRow) {
+  return {
+    tenant: row.tenant,
+    slug: row.slug,
+    handler_type: row.handler_type,
+    handler_config: row.handler_config ?? {},
   };
 }
 
@@ -717,5 +733,162 @@ export const clearSamplePayload = withAuth(
     }
 
     return mapInboundWebhook(row);
+  },
+);
+
+async function fetchInboundDeliveryById(
+  knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
+  tenant: string,
+  deliveryId: string,
+): Promise<InboundWebhookDelivery> {
+  const row = await knex<InboundWebhookDeliveryRow>('inbound_webhook_deliveries')
+    .where({ tenant, delivery_id: deliveryId })
+    .first();
+
+  if (!row) {
+    throw new Error('Inbound delivery not found');
+  }
+
+  return mapInboundDelivery(row);
+}
+
+async function dispatchAndRecordOutcome(args: {
+  knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'];
+  webhook: InboundWebhookRow;
+  deliveryId: string;
+  idempotencyKey: string | null;
+  body: unknown;
+  headers: Record<string, string | string[]>;
+  startedAt: number;
+}): Promise<void> {
+  try {
+    const outcome = await dispatchInboundWebhookHandler({
+      webhook: mapWebhookRowToDispatchWebhook(args.webhook),
+      deliveryId: args.deliveryId,
+      idempotencyKey: args.idempotencyKey,
+      body: args.body,
+      headers: args.headers,
+    });
+
+    await updateInboundDeliveryOutcome(args.knex, {
+      tenant: args.webhook.tenant,
+      deliveryId: args.deliveryId,
+      dispatchStatus: 'dispatched',
+      handlerOutcome: outcome,
+      responseStatus: 200,
+      responseBody: { delivery_id: args.deliveryId },
+      durationMs: Date.now() - args.startedAt,
+    });
+  } catch (error) {
+    await updateInboundDeliveryOutcome(args.knex, {
+      tenant: args.webhook.tenant,
+      deliveryId: args.deliveryId,
+      dispatchStatus: 'failed',
+      handlerOutcome: { error: error instanceof Error ? error.message : 'Inbound webhook dispatch failed' },
+      responseStatus: 500,
+      responseBody: { delivery_id: args.deliveryId, error: 'dispatch_failed' },
+      durationMs: Date.now() - args.startedAt,
+    });
+  }
+}
+
+export const replayInboundDelivery = withAuth(
+  async (user, { tenant }, deliveryId: string): Promise<InboundWebhookDelivery> => {
+    const startedAt = Date.now();
+    const { knex } = await createTenantKnex(tenant);
+    await assertInboundWebhookPermission(user, 'replay', knex);
+
+    const original = await knex<InboundWebhookDeliveryRow>('inbound_webhook_deliveries')
+      .where({ tenant, delivery_id: deliveryId })
+      .first();
+
+    if (!original) {
+      throw new Error('Inbound delivery not found');
+    }
+
+    if (!original.inbound_webhook_id) {
+      throw new Error('Cannot replay an inbound delivery without a webhook config');
+    }
+
+    const webhook = await knex<InboundWebhookRow>('inbound_webhooks')
+      .where({ tenant, inbound_webhook_id: original.inbound_webhook_id })
+      .first();
+
+    if (!webhook || !webhook.is_active) {
+      throw new Error('Inbound webhook not found or inactive');
+    }
+
+    const { deliveryId: replayDeliveryId } = await createInboundDelivery(knex, {
+      tenant,
+      inboundWebhookId: webhook.inbound_webhook_id,
+      idempotencyKey: original.idempotency_key,
+      requestMethod: original.request_method,
+      requestPath: original.request_path,
+      requestHeaders: original.request_headers,
+      requestBody: original.request_body,
+      sourceIp: original.source_ip,
+      userAgent: original.user_agent,
+      authStatus: 'verified',
+      isReplay: true,
+      replayedFrom: original.delivery_id,
+    });
+
+    await dispatchAndRecordOutcome({
+      knex,
+      webhook,
+      deliveryId: replayDeliveryId,
+      idempotencyKey: original.idempotency_key,
+      body: original.request_body,
+      headers: original.request_headers,
+      startedAt,
+    });
+
+    return fetchInboundDeliveryById(knex, tenant, replayDeliveryId);
+  },
+);
+
+export const sendInboundWebhookTest = withAuth(
+  async (
+    user,
+    { tenant },
+    inboundWebhookId: string,
+    input: SendInboundWebhookTestInput = {},
+  ): Promise<InboundWebhookDelivery> => {
+    const startedAt = Date.now();
+    const { knex } = await createTenantKnex(tenant);
+    await assertInboundWebhookPermission(user, 'update', knex);
+
+    const webhook = await knex<InboundWebhookRow>('inbound_webhooks')
+      .where({ tenant, inbound_webhook_id: inboundWebhookId })
+      .first();
+
+    if (!webhook || !webhook.is_active) {
+      throw new Error('Inbound webhook not found or inactive');
+    }
+
+    const headers = Object.fromEntries(
+      Object.entries(input.headers ?? {}).filter((entry): entry is [string, string | string[]] => entry[1] !== undefined),
+    );
+    const { deliveryId } = await createInboundDelivery(knex, {
+      tenant,
+      inboundWebhookId: webhook.inbound_webhook_id,
+      requestMethod: 'POST',
+      requestPath: `/api/inbound/test/${webhook.slug}`,
+      requestHeaders: headers,
+      requestBody: input.body ?? null,
+      authStatus: 'verified',
+    });
+
+    await dispatchAndRecordOutcome({
+      knex,
+      webhook,
+      deliveryId,
+      idempotencyKey: null,
+      body: input.body ?? null,
+      headers,
+      startedAt,
+    });
+
+    return fetchInboundDeliveryById(knex, tenant, deliveryId);
   },
 );

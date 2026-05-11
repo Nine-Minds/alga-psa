@@ -39,7 +39,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **F017 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `setInboundWebhookActiveState` checks `inbound_webhook:update`, updates `is_active` by `(tenant, inbound_webhook_id)`, clears `auto_disabled_at` when re-enabling, and returns the redacted config view.
 - (2026-05-11) **F018 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `listInboundDeliveries(filter, page, limit)` checks `inbound_webhook:read`, filters by tenant plus optional webhook/status/date range, paginates with a 100-row cap, and maps rows to camelCase delivery views.
 - (2026-05-11) **F019 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `getInboundDelivery(id)` checks `inbound_webhook:read`, scopes by `(tenant, delivery_id)`, and returns `null` for missing/cross-tenant deliveries.
-- (2026-05-11) **F020 deferred** until the inbound dispatch pipeline exists. A correct replay needs to re-run auth-verified request dispatch against current config; cloning a delivery row without dispatching would not satisfy the PRD.
+- (2026-05-11) **F020 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `replayInboundDelivery` requires `inbound_webhook:replay`, loads the original delivery and current webhook config by tenant, creates a new linked delivery row (`is_replay=true`, `replayed_from=<original_id>`), and dispatches through the shared current-config dispatcher in `server/src/lib/inboundWebhooks/dispatcher.ts`.
 - (2026-05-11) **F021 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `captureSamplePayload(id)` checks `inbound_webhook:update`, scopes by `(tenant, inbound_webhook_id)`, and sets `sample_capture_expires_at` to now + 5 minutes.
 - (2026-05-11) **F022 implemented** in `server/src/lib/actions/inboundWebhookActions.ts`. `clearSamplePayload(id)` checks `inbound_webhook:update`, scopes by `(tenant, inbound_webhook_id)`, clears both `sample_payload` and `sample_capture_expires_at`, and returns the redacted config.
 - (2026-05-11) **F023 deferred** until the inbound dispatch pipeline exists. The synthetic test action should exercise the same in-process dispatch path as the receiver/replay code.
@@ -155,6 +155,8 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) Type check after F042:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Type check after F030:
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Type check after F020/F023 dispatcher work:
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References

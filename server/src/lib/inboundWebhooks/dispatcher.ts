@@ -1,0 +1,139 @@
+import { evaluateFieldMapping } from './actions/mappingEvaluator';
+import { getAction, type InboundActionDefinition, type InboundActionTargetField } from './actions/registry';
+import type { InboundWebhookConfigLookupRow } from './configLookup';
+
+export interface DispatchInboundWebhookHandlerInput {
+  webhook: Pick<InboundWebhookConfigLookupRow, 'tenant' | 'slug' | 'handler_type' | 'handler_config'>;
+  deliveryId: string;
+  idempotencyKey: string | null;
+  body: unknown;
+  headers: Record<string, string | string[]>;
+}
+
+export async function dispatchInboundWebhookHandler(
+  input: DispatchInboundWebhookHandlerInput,
+): Promise<Record<string, unknown>> {
+  if (input.webhook.handler_type === 'direct_action') {
+    return dispatchDirectAction(input);
+  }
+
+  if (input.webhook.handler_type === 'workflow') {
+    throw new Error('Workflow inbound webhook handler is not implemented yet');
+  }
+
+  throw new Error(`Unsupported inbound webhook handler type: ${input.webhook.handler_type}`);
+}
+
+async function dispatchDirectAction(input: DispatchInboundWebhookHandlerInput): Promise<Record<string, unknown>> {
+  const config = input.webhook.handler_config ?? {};
+  const actionName = String(config.action ?? '');
+  const action = getAction(actionName);
+
+  if (!action) {
+    throw new Error(`Inbound action "${actionName}" is not registered`);
+  }
+
+  const fieldMapping = isPlainObject(config.field_mapping) ? stringifyRecord(config.field_mapping) : {};
+  const mappedValues = validateMappedValues(action, await evaluateFieldMapping(input.body, fieldMapping));
+  const result = await action.handle(
+    {
+      tenant: input.webhook.tenant,
+      webhookSlug: input.webhook.slug,
+      deliveryId: input.deliveryId,
+      headers: input.headers,
+      rawBody: input.body,
+      idempotencyKey: input.idempotencyKey,
+    },
+    mappedValues,
+  );
+
+  if (!result.success) {
+    throw new Error(result.message || `Inbound action "${action.name}" failed`);
+  }
+
+  return {
+    action: action.name,
+    entity_type: result.entityType,
+    entity_id: result.entityId,
+    external_id: result.externalId,
+    message: result.message,
+    metadata: result.metadata,
+  };
+}
+
+function validateMappedValues(
+  action: InboundActionDefinition,
+  mappedValues: Record<string, unknown>,
+): Record<string, unknown> {
+  const normalized: Record<string, unknown> = {};
+
+  for (const field of action.targetFields) {
+    const value = mappedValues[field.name];
+    if (isMissing(value)) {
+      if (field.required) {
+        throw new Error(`Missing required mapped field "${field.name}" for action "${action.name}"`);
+      }
+      continue;
+    }
+
+    normalized[field.name] = normalizeMappedFieldValue(field, value);
+  }
+
+  return normalized;
+}
+
+function normalizeMappedFieldValue(field: InboundActionTargetField, value: unknown): unknown {
+  switch (field.type) {
+    case 'string':
+    case 'ref':
+      return String(value);
+    case 'int': {
+      const numberValue = typeof value === 'number' ? value : Number(value);
+      if (!Number.isInteger(numberValue)) {
+        throw new Error(`Mapped field "${field.name}" must be an integer`);
+      }
+      return numberValue;
+    }
+    case 'number': {
+      const numberValue = typeof value === 'number' ? value : Number(value);
+      if (!Number.isFinite(numberValue)) {
+        throw new Error(`Mapped field "${field.name}" must be a number`);
+      }
+      return numberValue;
+    }
+    case 'boolean':
+      if (typeof value === 'boolean') {
+        return value;
+      }
+      if (value === 'true') {
+        return true;
+      }
+      if (value === 'false') {
+        return false;
+      }
+      throw new Error(`Mapped field "${field.name}" must be a boolean`);
+    case 'enum': {
+      const stringValue = String(value);
+      if (field.enumValues && !field.enumValues.includes(stringValue)) {
+        throw new Error(`Mapped field "${field.name}" must be one of: ${field.enumValues.join(', ')}`);
+      }
+      return stringValue;
+    }
+    case 'json':
+      return value;
+    default:
+      return value;
+  }
+}
+
+function isMissing(value: unknown): boolean {
+  return value === undefined || value === null || value === '';
+}
+
+function stringifyRecord(input: Record<string, unknown>): Record<string, string> {
+  return Object.fromEntries(Object.entries(input).map(([key, value]) => [key, String(value)]));
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}

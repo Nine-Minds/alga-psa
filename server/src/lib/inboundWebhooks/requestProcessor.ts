@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type { Knex } from 'knex';
 
 import { getConnection } from '@/lib/db/db';
 import { runWithTenant } from '@/lib/db';
 
-import { evaluateFieldMapping } from './actions/mappingEvaluator';
-import { getAction, type InboundActionDefinition, type InboundActionTargetField } from './actions/registry';
 import { verifyInboundWebhookAuth } from './authVerifier';
-import { lookupInboundWebhookBySlug, type InboundWebhookConfigLookupRow } from './configLookup';
+import { lookupInboundWebhookBySlug } from './configLookup';
 import { createInboundDelivery, updateInboundDeliveryOutcome } from './deliveryPersistence';
+import { dispatchInboundWebhookHandler } from './dispatcher';
 import { extractInboundWebhookIdempotencyKey, findDuplicateInboundDelivery } from './idempotency';
 import { checkInboundWebhookRateLimit } from './rateLimitConfig';
 import { unauthorizedInboundWebhookResponse } from './responses';
@@ -20,15 +18,6 @@ interface ProcessInboundWebhookRequestInput {
   request: NextRequest;
   tenantSlug: string;
   webhookSlug: string;
-}
-
-interface DispatchInput {
-  knex: Knex;
-  webhook: InboundWebhookConfigLookupRow;
-  deliveryId: string;
-  idempotencyKey: string | null;
-  body: unknown;
-  headers: Record<string, string | string[]>;
 }
 
 const JSON_RESPONSE_HEADERS = { 'content-type': 'application/json' };
@@ -227,8 +216,7 @@ export async function processInboundWebhookRequest(input: ProcessInboundWebhookR
     });
 
     try {
-      const outcome = await dispatchInboundWebhook({
-        knex,
+      const outcome = await dispatchInboundWebhookHandler({
         webhook,
         deliveryId,
         idempotencyKey,
@@ -266,134 +254,8 @@ export async function processInboundWebhookRequest(input: ProcessInboundWebhookR
   });
 }
 
-async function dispatchInboundWebhook(input: DispatchInput): Promise<Record<string, unknown>> {
-  if (input.webhook.handler_type === 'direct_action') {
-    return dispatchDirectAction(input);
-  }
-
-  if (input.webhook.handler_type === 'workflow') {
-    throw new Error('Workflow inbound webhook handler is not implemented yet');
-  }
-
-  throw new Error(`Unsupported inbound webhook handler type: ${input.webhook.handler_type}`);
-}
-
-async function dispatchDirectAction(input: DispatchInput): Promise<Record<string, unknown>> {
-  const config = input.webhook.handler_config ?? {};
-  const actionName = String(config.action ?? '');
-  const action = getAction(actionName);
-
-  if (!action) {
-    throw new Error(`Inbound action "${actionName}" is not registered`);
-  }
-
-  const fieldMapping = isPlainObject(config.field_mapping) ? stringifyRecord(config.field_mapping) : {};
-  const mappedValues = validateMappedValues(action, await evaluateFieldMapping(input.body, fieldMapping));
-  const result = await action.handle(
-    {
-      tenant: input.webhook.tenant,
-      webhookSlug: input.webhook.slug,
-      deliveryId: input.deliveryId,
-      headers: input.headers,
-      rawBody: input.body,
-      idempotencyKey: input.idempotencyKey,
-    },
-    mappedValues,
-  );
-
-  if (!result.success) {
-    throw new Error(result.message || `Inbound action "${action.name}" failed`);
-  }
-
-  return {
-    action: action.name,
-    entity_type: result.entityType,
-    entity_id: result.entityId,
-    external_id: result.externalId,
-    message: result.message,
-    metadata: result.metadata,
-  };
-}
-
-function validateMappedValues(
-  action: InboundActionDefinition,
-  mappedValues: Record<string, unknown>,
-): Record<string, unknown> {
-  const normalized: Record<string, unknown> = {};
-
-  for (const field of action.targetFields) {
-    const value = mappedValues[field.name];
-    if (isMissing(value)) {
-      if (field.required) {
-        throw new Error(`Missing required mapped field "${field.name}" for action "${action.name}"`);
-      }
-      continue;
-    }
-
-    normalized[field.name] = normalizeMappedFieldValue(field, value);
-  }
-
-  return normalized;
-}
-
-function normalizeMappedFieldValue(field: InboundActionTargetField, value: unknown): unknown {
-  switch (field.type) {
-    case 'string':
-    case 'ref':
-      return String(value);
-    case 'int': {
-      const numberValue = typeof value === 'number' ? value : Number(value);
-      if (!Number.isInteger(numberValue)) {
-        throw new Error(`Mapped field "${field.name}" must be an integer`);
-      }
-      return numberValue;
-    }
-    case 'number': {
-      const numberValue = typeof value === 'number' ? value : Number(value);
-      if (!Number.isFinite(numberValue)) {
-        throw new Error(`Mapped field "${field.name}" must be a number`);
-      }
-      return numberValue;
-    }
-    case 'boolean':
-      if (typeof value === 'boolean') {
-        return value;
-      }
-      if (value === 'true') {
-        return true;
-      }
-      if (value === 'false') {
-        return false;
-      }
-      throw new Error(`Mapped field "${field.name}" must be a boolean`);
-    case 'enum': {
-      const stringValue = String(value);
-      if (field.enumValues && !field.enumValues.includes(stringValue)) {
-        throw new Error(`Mapped field "${field.name}" must be one of: ${field.enumValues.join(', ')}`);
-      }
-      return stringValue;
-    }
-    case 'json':
-      return value;
-    default:
-      return value;
-  }
-}
-
-function isMissing(value: unknown): boolean {
-  return value === undefined || value === null || value === '';
-}
-
 function headersToRecord(headers: Headers): Record<string, string | string[]> {
   return Object.fromEntries(headers.entries());
-}
-
-function stringifyRecord(input: Record<string, unknown>): Record<string, string> {
-  return Object.fromEntries(Object.entries(input).map(([key, value]) => [key, String(value)]));
-}
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function mapIdempotencySource(source: Record<string, unknown> | null): InboundWebhookIdempotencySource | null {
