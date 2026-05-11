@@ -39,4 +39,17 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
       expect(adminWebhooksSource).toContain(actionName);
     }
   });
+
+  it('T132: renders the inbound list table with name, URL, handler, last delivery, and active columns', () => {
+    expect(adminWebhooksSource).toContain('function InboundWebhooksListView()');
+    expect(adminWebhooksSource).toContain('const columns = useMemo<ColumnDefinition<InboundWebhookConfig>[]>');
+    expect(adminWebhooksSource).toContain("title: t('security.webhooks.inbound.list.columns.name')");
+    expect(adminWebhooksSource).toContain('buildInboundWebhookUrl(webhook)');
+    expect(adminWebhooksSource).toContain("title: t('security.webhooks.inbound.list.columns.handler')");
+    expect(adminWebhooksSource).toContain("title: t('security.webhooks.inbound.list.columns.lastDelivery')");
+    expect(adminWebhooksSource).toContain("title: t('security.webhooks.inbound.list.columns.active')");
+    expect(adminWebhooksSource).toContain('<DataTable');
+    expect(adminWebhooksSource).toContain('data={webhooks}');
+    expect(adminWebhooksSource).toContain('columns={columns}');
+  });
 });
