@@ -154,7 +154,7 @@
   { "id": "T193", "description": "Cross-tenant webhook config access blocked", "implemented": true, "featureIds": ["F013", "F102"] },
 
   { "id": "T200", "description": "E2E: MSP admin creates HMAC webhook, sends signed payload, ticket appears in UI", "implemented": true, "featureIds": ["F030", "F033", "F1010", "F082", "F084"] },
-  { "id": "T201", "description": "E2E: Admin sets up workflow handler, payload triggers workflow run visible in runs list", "implemented": false, "featureIds": ["F060", "F091"] },
+  { "id": "T201", "description": "E2E: Admin sets up workflow handler, payload triggers workflow run visible in runs list", "implemented": true, "featureIds": ["F060", "F091"] },
   { "id": "T202", "description": "E2E: Failed delivery shows in log, replay succeeds after fixing config", "implemented": false, "featureIds": ["F020", "F093", "F095"] },
 
   { "id": "T300", "description": "`GET /api/v1/inbound-webhooks` returns 200 + list scoped to tenant", "implemented": false, "featureIds": ["F200"] },

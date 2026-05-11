@@ -95,6 +95,60 @@ describe('inbound webhook workflow dispatcher', () => {
     });
   });
 
+  it('T201: workflow handler returns the launched run id for delivery logs and workflow runs navigation', async () => {
+    mocks.launchPublishedWorkflowRun.mockResolvedValueOnce({
+      runId: 'workflow-run-visible-1',
+      workflowVersion: 9,
+    });
+
+    const { dispatchInboundWebhookHandler } = await import('@/lib/inboundWebhooks/dispatcher');
+    const outcome = await dispatchInboundWebhookHandler({
+      webhook: {
+        tenant: 'tenant-a',
+        slug: 'workflow-alerts',
+        handler_type: 'workflow',
+        handler_config: {
+          type: 'workflow',
+          workflow_id: 'workflow-visible',
+        },
+      },
+      deliveryId: 'delivery-visible-1',
+      idempotencyKey: 'alert-visible-1',
+      body: {
+        alert: {
+          id: 'alert-visible-1',
+          message: 'Run workflow triage',
+        },
+      },
+      headers: {
+        'x-source': 'rmm',
+      },
+    });
+
+    expect(mocks.launchPublishedWorkflowRun).toHaveBeenCalledWith(
+      knex,
+      expect.objectContaining({
+        workflowId: 'workflow-visible',
+        tenantId: 'tenant-a',
+        execute: true,
+        triggerType: 'event',
+        eventType: 'INBOUND_WEBHOOK_RECEIVED',
+        triggerFireKey: 'inbound-webhook:delivery-visible-1',
+        executionKey: 'inbound-webhook:delivery-visible-1',
+      }),
+    );
+    expect(outcome).toEqual({
+      workflow_id: 'workflow-visible',
+      workflow_run_id: 'workflow-run-visible-1',
+      workflow_version: 9,
+      envelope: expect.objectContaining({
+        source: 'workflow-alerts',
+        delivery_id: 'delivery-visible-1',
+        idempotency_key: 'alert-visible-1',
+      }),
+    });
+  });
+
   it('T112: workflow envelope headers are filtered before launch', async () => {
     const { dispatchInboundWebhookHandler } = await import('@/lib/inboundWebhooks/dispatcher');
     await dispatchInboundWebhookHandler({

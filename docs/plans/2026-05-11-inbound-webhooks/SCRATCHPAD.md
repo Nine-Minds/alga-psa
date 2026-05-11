@@ -249,6 +249,7 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
 - (2026-05-11) **T192 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Added a mocked `getInboundDelivery` cross-tenant test: a tenant-B delivery row is not returned to the tenant-A auth context because the action queries by `{ tenant: 'tenant-a', delivery_id }`.
 - (2026-05-11) **T193 implemented** in `server/src/test/unit/inboundWebhooks/inboundWebhookActions.test.ts`. Tightened the mocked config lookup harness to honor `where` criteria and added a cross-tenant `getInboundWebhook` test proving tenant-A cannot read a tenant-B webhook config with the same requested id.
 - (2026-05-11) **T200 implemented** in `server/src/test/unit/inboundWebhooks/requestProcessor.test.ts`. Added an executable acceptance-path contract for HMAC create-ticket webhooks: a signed JSON request reaches the direct-action dispatcher, returns `{delivery_id}`, and persists a `createTicket` handler outcome with the created ticket id/number for the Settings delivery UI to display.
+- (2026-05-11) **T201 implemented** in `server/src/test/unit/inboundWebhooks/workflowDispatcher.test.ts`. Added a workflow-handler acceptance contract verifying the dispatcher launches the published workflow with `execute=true`, delivery-scoped trigger/execution keys, and returns `workflow_run_id`/version so delivery logs can link users to the visible workflow run.
 - (2026-05-11) **F043 implemented** in `server/src/lib/inboundWebhooks/headerFilter.ts`. `filterInboundWebhookHeaders` accepts `Headers` or plain records, lowercases persisted names, and strips `Authorization`, `Cookie`, `Set-Cookie`, `Proxy-Authorization`, and `X-Api-Key`.
 - (2026-05-11) **F038 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. `extractInboundWebhookIdempotencyKey` supports case-insensitive header lookup from `Headers` or plain header records and returns `null` for missing/blank keys.
 - (2026-05-11) **F039 implemented** in `server/src/lib/inboundWebhooks/idempotency.ts`. JSONata idempotency sources evaluate directly against the request body via the workflow expression runtime and normalize non-null results to trimmed strings.
@@ -866,6 +867,9 @@ Working memory for inbound webhook implementation. Capture discoveries, decision
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 - (2026-05-11) Test/typecheck after T200:
   - `(cd server && npm run test -- src/test/unit/inboundWebhooks/requestProcessor.test.ts)`
+  - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
+- (2026-05-11) Test/typecheck after T201:
+  - `(cd server && npm run test -- src/test/unit/inboundWebhooks/workflowDispatcher.test.ts)`
   - `npx tsc -p server/tsconfig.json --noEmit --pretty false`
 
 ## Links / References
