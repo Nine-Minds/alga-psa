@@ -69,7 +69,7 @@
   { "id": "T096", "description": "Lookup-miss in any `*ByExternalId` action → failed delivery with `lookup_miss` reason", "implemented": true, "featureIds": ["F056"] },
 
   { "id": "T1010", "description": "`createTicket` action creates ticket with mapped fields; tenant scoped", "implemented": true, "featureIds": ["F1010", "F054"] },
-  { "id": "T1011", "description": "`createTicket` writes mapping row when an `external_id` is mapped", "implemented": false, "featureIds": ["F1010", "F005"] },
+  { "id": "T1011", "description": "`createTicket` writes mapping row when an `external_id` is mapped", "implemented": true, "featureIds": ["F1010", "F005"] },
   { "id": "T1012", "description": "`createTicket` records ticket_id on delivery row", "implemented": false, "featureIds": ["F1010"] },
   { "id": "T1013", "description": "`updateTicketByExternalId` resolves ticket via mappings table and updates status/priority/assignee", "implemented": false, "featureIds": ["F1011", "F004"] },
   { "id": "T1014", "description": "`updateTicketByExternalId` no mapping found → failed delivery", "implemented": false, "featureIds": ["F1011", "F056"] },

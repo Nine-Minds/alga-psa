@@ -111,4 +111,42 @@ describe('ticket inbound webhook actions', () => {
     );
     expect(mocks.writeEntityMapping).not.toHaveBeenCalled();
   });
+
+  it('T1011: createTicket writes an external mapping when external_id is mapped', async () => {
+    const { getAction } = await loadTicketInboundActions();
+    const action = getAction('createTicket');
+
+    await action?.handle(
+      {
+        tenant: 'tenant-a',
+        webhookSlug: 'rmm-alerts',
+        deliveryId: 'delivery-1',
+        headers: {},
+        rawBody: { alert: { id: 'alert-42', message: 'Disk full' } },
+        idempotencyKey: 'alert-42',
+      },
+      {
+        title: 'Disk full',
+        client_id: 'client-1',
+        board_id: 'board-1',
+        priority_id: 'priority-critical',
+        external_id: 'alert-42',
+      },
+    );
+
+    expect(mocks.writeEntityMapping).toHaveBeenCalledWith(
+      'tenant-a',
+      'rmm-alerts',
+      'ticket',
+      'ticket-1',
+      'alert-42',
+      {
+        knex: 'trx',
+        metadata: {
+          source: 'inbound_webhook',
+          delivery_id: 'delivery-1',
+        },
+      },
+    );
+  });
 });
