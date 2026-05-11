@@ -52,6 +52,9 @@ export class TicketUpdatesExtension {
     })
 
     this.subscriber.on('ready', async () => {
+      // Redis drops server-side subscriptions on every reconnect; treat each
+      // 'ready' as a fresh session and re-issue pSubscribe.
+      this.hasPatternSubscription = false
       await this.ensurePatternSubscription()
     })
 
