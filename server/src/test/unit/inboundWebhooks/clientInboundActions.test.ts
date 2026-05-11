@@ -35,6 +35,9 @@ async function loadClientInboundActions() {
 describe('client inbound webhook actions', () => {
   let trx: ReturnType<typeof vi.fn>;
   let clientsQuery: {
+    where: ReturnType<typeof vi.fn>;
+    first: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
     insert: ReturnType<typeof vi.fn>;
     returning: ReturnType<typeof vi.fn>;
   };
@@ -42,6 +45,9 @@ describe('client inbound webhook actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     clientsQuery = {
+      where: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue(null),
+      update: vi.fn().mockReturnThis(),
       insert: vi.fn().mockReturnThis(),
       returning: vi.fn().mockResolvedValue([
         {
@@ -131,5 +137,70 @@ describe('client inbound webhook actions', () => {
         },
       },
     );
+  });
+
+  it('T1021: upsertClientByExternalId updates an existing mapped client', async () => {
+    mocks.lookupAlgaEntityByExternalId.mockResolvedValue({
+      algaEntityId: 'client-1',
+      externalEntityId: 'company-42',
+      metadata: {},
+    });
+    clientsQuery.first.mockResolvedValue({
+      client_id: 'client-1',
+      client_name: 'Acme Old',
+      properties: {
+        existing: true,
+      },
+    });
+    clientsQuery.returning.mockResolvedValue([
+      {
+        client_id: 'client-1',
+        client_name: 'Acme Corp',
+      },
+    ]);
+    const { getAction } = await loadClientInboundActions();
+    const action = getAction('upsertClientByExternalId');
+
+    await expect(
+      action?.handle(
+        {
+          tenant: 'tenant-a',
+          webhookSlug: 'rmm-alerts',
+          deliveryId: 'delivery-1',
+          headers: {},
+          rawBody: { company: { id: 'company-42', name: 'Acme Corp' } },
+          idempotencyKey: 'company-42',
+        },
+        {
+          external_id: 'company-42',
+          client_name: 'Acme Corp',
+          email: 'new-ops@example.com',
+          properties: { source_system: 'rmm' },
+        },
+      ),
+    ).resolves.toEqual({
+      success: true,
+      entityType: 'client',
+      entityId: 'client-1',
+      externalId: 'company-42',
+      metadata: {
+        client_name: 'Acme Corp',
+      },
+    });
+
+    expect(clientsQuery.where).toHaveBeenCalledWith({ tenant: 'tenant-a', client_id: 'client-1' });
+    expect(clientsQuery.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        client_name: 'Acme Corp',
+        email: 'new-ops@example.com',
+        properties: {
+          existing: true,
+          source_system: 'rmm',
+          inbound_webhook_external_id: 'company-42',
+        },
+      }),
+    );
+    expect(clientsQuery.insert).not.toHaveBeenCalled();
+    expect(mocks.writeEntityMapping).not.toHaveBeenCalled();
   });
 });

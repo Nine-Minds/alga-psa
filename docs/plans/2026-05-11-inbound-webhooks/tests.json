@@ -77,7 +77,7 @@
   { "id": "T1016", "description": "`changeTicketStatusByExternalId` transitions ticket through valid status only (invalid status → failed delivery)", "implemented": true, "featureIds": ["F1013"] },
 
   { "id": "T1020", "description": "`upsertClientByExternalId` creates client when mapping absent and writes mapping row", "implemented": true, "featureIds": ["F1020", "F005"] },
-  { "id": "T1021", "description": "`upsertClientByExternalId` updates client when mapping resolves", "implemented": false, "featureIds": ["F1020", "F004"] },
+  { "id": "T1021", "description": "`upsertClientByExternalId` updates client when mapping resolves", "implemented": true, "featureIds": ["F1020", "F004"] },
   { "id": "T1022", "description": "`setClientActiveByExternalId` toggles active state correctly", "implemented": false, "featureIds": ["F1021"] },
 
   { "id": "T1030", "description": "`upsertContactByExternalId` creates or updates a client_user record", "implemented": false, "featureIds": ["F1030"] },
