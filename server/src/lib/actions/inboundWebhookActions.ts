@@ -166,6 +166,30 @@ async function writeTenantSecret(tenant: string, vaultPath: string, value: strin
   await secretProvider.setTenantSecret(tenant, getSecretNameFromVaultPath(vaultPath), value);
 }
 
+async function deleteTenantSecret(tenant: string, vaultPath: string): Promise<void> {
+  if (!vaultPath) {
+    return;
+  }
+
+  const secretProvider = await getSecretProviderInstance();
+  await secretProvider.deleteTenantSecret(tenant, getSecretNameFromVaultPath(vaultPath));
+}
+
+async function deleteAuthSecretsForRow(row: InboundWebhookRow): Promise<void> {
+  const config = row.auth_config ?? {};
+  const vaultPath = String(
+    config.secret_vault_path ??
+      config.secretVaultPath ??
+      config.token_vault_path ??
+      config.tokenVaultPath ??
+      '',
+  );
+
+  if (vaultPath) {
+    await deleteTenantSecret(row.tenant, vaultPath);
+  }
+}
+
 async function buildStoredAuthConfig(args: {
   tenant: string;
   inboundWebhookId: string;
@@ -389,5 +413,28 @@ export const upsertInboundWebhook = withAuth(
       webhook: mapInboundWebhook(row),
       secret: oneTimeSecret,
     };
+  },
+);
+
+export const deleteInboundWebhook = withAuth(
+  async (user, { tenant }, inboundWebhookId: string): Promise<{ deleted: true; inboundWebhookId: string }> => {
+    const { knex } = await createTenantKnex(tenant);
+    await assertInboundWebhookPermission(user, 'delete', knex);
+
+    const existing = await knex<InboundWebhookRow>('inbound_webhooks')
+      .where({ tenant, inbound_webhook_id: inboundWebhookId })
+      .first();
+
+    if (!existing) {
+      throw new Error('Inbound webhook not found');
+    }
+
+    await knex<InboundWebhookRow>('inbound_webhooks')
+      .where({ tenant, inbound_webhook_id: inboundWebhookId })
+      .delete();
+
+    await deleteAuthSecretsForRow(existing);
+
+    return { deleted: true, inboundWebhookId };
   },
 );
