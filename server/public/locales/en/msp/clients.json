@@ -149,8 +149,13 @@
         "phone": "Phone",
         "address": "Address",
         "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Print options",
+        "description": "Choose which columns to include when printing clients."
       }
-    }
+    },
+    "shareTooltip": "Print, import and export"
   },
   "clientDetails": {
     "title": "Client Details",
@@ -234,6 +239,11 @@
     "status": {
       "label": "Status",
       "helper": "Set client status as active or inactive"
+    },
+    "fields": {
+      "accountManager": "Account Manager",
+      "url": "URL",
+      "status": "Status"
     }
   },
   "quickAddClient": {

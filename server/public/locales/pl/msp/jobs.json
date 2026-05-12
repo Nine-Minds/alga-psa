@@ -46,6 +46,10 @@
         "duration": "Czas trwania",
         "started": "Rozpoczęto",
         "completed": "Zakończono"
+      },
+      "optionsDialog": {
+        "title": "Opcje drukowania",
+        "description": "Wybierz, które kolumny dołączyć podczas drukowania ostatnich zadań."
       }
     }
   },

@@ -80,8 +80,13 @@
         "phone": "Telefoon",
         "client": "Klant",
         "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Afdrukopties",
+        "description": "Kies welke kolommen worden opgenomen bij het afdrukken van contactpersonen."
       }
-    }
+    },
+    "shareTooltip": "Afdrukken, importeren en exporteren"
   },
   "contactDetails": {
     "title": "Contactdetails",
@@ -109,7 +114,8 @@
       "useClientDestination": "Gebruik klantbestemming",
       "inboundTicketDestinationHelp": "Indien ingesteld, overschrijft dit de klantbestemming voor precies deze afzender. Voorrang: contactoverschrijving -> klantbestemming -> standaard van provider.",
       "tags": "Labels",
-      "notes": "Notities"
+      "notes": "Notities",
+      "status": "Status"
     },
     "status": {
       "label": "Status",

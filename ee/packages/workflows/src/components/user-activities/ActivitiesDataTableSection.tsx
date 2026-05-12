@@ -16,13 +16,14 @@ import {
 } from '@alga-psa/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
-  PrintOptionsButton,
+  PrintOptionsDialog,
   type PrintColumnOption,
   usePrintColumnSelection,
-} from '@alga-psa/ui/components/PrintOptionsButton';
-import { RefreshCw, List, LayoutList } from 'lucide-react';
+} from '@alga-psa/ui/components/PrintOptionsDialog';
+import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
+import { RefreshCw, List, LayoutList, Printer, Settings2 } from 'lucide-react';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import './userActivitiesPrint.css';
 import { fetchActivities, getUserActivityGroups, type ActivityGroup } from '@alga-psa/workflows/actions';
@@ -398,7 +399,14 @@ function formatActivityPrintDate(dateString?: string): string {
     setSelectedColumnKeys: setSelectedActivityPrintColumnKeys,
     resetSelectedColumnKeys: resetSelectedActivityPrintColumnKeys,
   } = usePrintColumnSelection('print-columns:user-activities', activityPrintColumns);
- 
+
+  const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
+
+  const { triggerPrint: triggerPrintActivities, isPreparing: isPreparingActivityPrint } = usePrintAction({
+    onBeforePrint: preparePrintActivities,
+    onAfterPrint: cleanupPrintActivities,
+  });
+
   return (
     <>
     <Card id={id} className="ua-print-hide">
@@ -421,21 +429,26 @@ function formatActivityPrintDate(dateString?: string): string {
             {t('table.actions.refresh', { defaultValue: 'Refresh' })}
           </Button>
           <div className="w-px h-6 bg-border" />
-          <PrintButton
-            id={`${id}-print-button`}
-            variant="outline"
-            size="sm"
+          <ShareActionsMenu
+            id={`${id}-share-actions`}
+            triggerSize="sm"
+            tooltip={t('actions.print', { defaultValue: 'Print' })}
             disabled={isLoading || activities.length === 0}
-            label={t('table.actions.print', { defaultValue: 'Print' })}
-            onBeforePrint={preparePrintActivities}
-            onAfterPrint={cleanupPrintActivities}
-          />
-          <PrintOptionsButton
-            id={`${id}-print-options-button`}
-            columns={activityPrintColumns}
-            selectedColumnKeys={selectedActivityPrintColumnKeys}
-            onSelectedColumnKeysChange={setSelectedActivityPrintColumnKeys}
-            onReset={resetSelectedActivityPrintColumnKeys}
+            actions={[
+              {
+                id: `${id}-share-print`,
+                icon: Printer,
+                label: t('table.actions.print', { defaultValue: 'Print' }),
+                onSelect: () => { void triggerPrintActivities(); },
+                disabled: isPreparingActivityPrint,
+              },
+              {
+                id: `${id}-share-print-options`,
+                icon: Settings2,
+                label: t('actions.printOptions', { defaultValue: 'Print options' }),
+                onSelect: () => setIsPrintOptionsOpen(true),
+              },
+            ] satisfies ShareAction[]}
           />
         </div>
       </CardHeader>
@@ -498,6 +511,21 @@ function formatActivityPrintDate(dateString?: string): string {
       ungroupedCollapsed={ungroupedCollapsed}
       title={effectiveTitle}
       columns={selectedActivityPrintColumns}
+    />
+    <PrintOptionsDialog
+      id={`${id}-print-options-dialog`}
+      open={isPrintOptionsOpen}
+      onOpenChange={setIsPrintOptionsOpen}
+      title={t('table.print.optionsDialog.title', { defaultValue: 'Print options' })}
+      description={t('table.print.optionsDialog.description', {
+        defaultValue: 'Choose which columns to include when printing activities.',
+      })}
+      columns={activityPrintColumns}
+      selectedColumnKeys={selectedActivityPrintColumnKeys}
+      onSelectedColumnKeysChange={setSelectedActivityPrintColumnKeys}
+      onReset={resetSelectedActivityPrintColumnKeys}
+      onPrint={() => triggerPrintActivities()}
+      isPrinting={isPreparingActivityPrint}
     />
     </>
   );

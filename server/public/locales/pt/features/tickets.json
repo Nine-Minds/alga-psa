@@ -334,6 +334,7 @@
   "dashboard": {
     "title": "Ticketing Dashboard",
     "addTicket": "Add Ticket",
+    "shareTooltip": "Imprimir, importar e exportar",
     "exportCsv": "Export CSV",
     "bundledToggle": "Bundled",
     "exportSelectedTooltip_one": "Export {{count}} selected ticket to CSV",
@@ -417,8 +418,16 @@
       "noDueDate": "Sem data de vencimento",
       "values": {
         "hasSla": "SLA"
+      },
+      "optionsDialog": {
+        "title": "Opções de impressão",
+        "selectedTitle": "Opções de impressão ({{count}} selecionados)",
+        "description": "Escolha quais colunas incluir ao imprimir os tickets."
       }
-    }
+    },
+    "exportSelectedAction": "Exportar selecionados ({{count}})",
+    "exportAction": "Exportar CSV",
+    "importAction": "Importar CSV"
   },
   "bulk": {
     "moveToBoard": "Move to Board",

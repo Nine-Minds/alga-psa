@@ -27,6 +27,7 @@
     "close": "11111"
   },
   "runList": {
+    "shareTooltip": "11111",
     "quickRanges": {
       "last24h": "11111",
       "last7d": "11111"
@@ -125,6 +126,10 @@
         "started": "11111",
         "updated": "11111",
         "duration": "11111"
+      },
+      "optionsDialog": {
+        "title": "11111",
+        "description": "11111"
       }
     }
   },

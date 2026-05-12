@@ -334,6 +334,7 @@
   "dashboard": {
     "title": "Ticketdashboard",
     "addTicket": "Ticket toevoegen",
+    "shareTooltip": "Afdrukken, importeren en exporteren",
     "exportCsv": "Exporteren naar CSV",
     "bundledToggle": "Gebundeld",
     "exportSelectedTooltip_one": "Exporteer {{count}} geselecteerd ticket naar CSV",
@@ -417,8 +418,16 @@
       "noDueDate": "Geen vervaldatum",
       "values": {
         "hasSla": "SLA"
+      },
+      "optionsDialog": {
+        "title": "Afdrukopties",
+        "selectedTitle": "Afdrukopties ({{count}} geselecteerd)",
+        "description": "Kies welke kolommen worden opgenomen bij het afdrukken van tickets."
       }
-    }
+    },
+    "exportSelectedAction": "Geselecteerde exporteren ({{count}})",
+    "exportAction": "CSV exporteren",
+    "importAction": "CSV importeren"
   },
   "bulk": {
     "moveToBoard": "Verplaatsen naar bord",

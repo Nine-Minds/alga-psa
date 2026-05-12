@@ -8,12 +8,13 @@ import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, Ban, GitBranch,
 import { extractTaskDescriptionText } from '../lib/taskRichText';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Button } from '@alga-psa/ui/components/Button';
-import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
-  PrintOptionsButton,
+  PrintOptionsDialog,
   type PrintColumnOption,
   usePrintColumnSelection,
-} from '@alga-psa/ui/components/PrintOptionsButton';
+} from '@alga-psa/ui/components/PrintOptionsDialog';
+import { useRegisterTaskShareActions } from './TaskShareActionsContext';
 import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { format } from 'date-fns';
@@ -813,22 +814,19 @@ export default function TaskListView({
     resetSelectedColumnKeys: resetSelectedTaskPrintColumnKeys,
   } = usePrintColumnSelection('print-columns:project-tasks-list', printColumns);
 
+  const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
+
+  const { triggerPrint: triggerPrintTasks, isPreparing: isPreparingTaskPrint } = usePrintAction();
+
+  const shareRegistration = useMemo(() => ({
+    triggerPrint: triggerPrintTasks,
+    openPrintOptions: () => setIsPrintOptionsOpen(true),
+    isPrinting: isPreparingTaskPrint,
+  }), [triggerPrintTasks, isPreparingTaskPrint]);
+  useRegisterTaskShareActions(shareRegistration);
+
   return (
     <div ref={containerRef} className="flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden h-[calc(100vh-220px)] min-h-[400px]">
-      <div className="flex items-center justify-end border-b border-gray-200 bg-white px-3 py-2">
-        <PrintButton
-          id="project-tasks-print-button"
-          variant="outline"
-          size="sm"
-        />
-        <PrintOptionsButton
-          id="project-tasks-print-options-button"
-          columns={printColumns}
-          selectedColumnKeys={selectedTaskPrintColumnKeys}
-          onSelectedColumnKeysChange={setSelectedTaskPrintColumnKeys}
-          onReset={resetSelectedTaskPrintColumnKeys}
-        />
-      </div>
       <div className="app-print-root app-print-only">
         <PrintableTable
           title={t('projectPrint.tasks.title', 'Project Tasks')}
@@ -841,6 +839,19 @@ export default function TaskListView({
           emptyMessage={t('projectPrint.tasks.noTasks', 'No project tasks to print')}
         />
       </div>
+      <PrintOptionsDialog
+        id="project-tasks-print-options-dialog"
+        open={isPrintOptionsOpen}
+        onOpenChange={setIsPrintOptionsOpen}
+        title={t('projectPrint.tasks.optionsDialog.title', 'Print options')}
+        description={t('projectPrint.tasks.optionsDialog.description', 'Choose which columns to include when printing project tasks.')}
+        columns={printColumns}
+        selectedColumnKeys={selectedTaskPrintColumnKeys}
+        onSelectedColumnKeysChange={setSelectedTaskPrintColumnKeys}
+        onReset={resetSelectedTaskPrintColumnKeys}
+        onPrint={() => triggerPrintTasks()}
+        isPrinting={isPreparingTaskPrint}
+      />
       {/* Hidden columns alert */}
       {hiddenColumnCount > 0 && (
         <Alert variant="info" className="rounded-none border-x-0 border-t-0">

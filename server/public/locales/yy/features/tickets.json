@@ -334,6 +334,7 @@
   "dashboard": {
     "title": "55555",
     "addTicket": "55555",
+    "shareTooltip": "55555",
     "exportCsv": "55555",
     "bundledToggle": "55555",
     "exportSelectedTooltip_one": "55555 {{count}} 55555",
@@ -417,8 +418,16 @@
       "noDueDate": "55555",
       "values": {
         "hasSla": "55555"
+      },
+      "optionsDialog": {
+        "title": "55555",
+        "selectedTitle": "55555 {{count}} 55555",
+        "description": "55555"
       }
-    }
+    },
+    "exportSelectedAction": "55555 {{count}} 55555",
+    "exportAction": "55555",
+    "importAction": "55555"
   },
   "bulk": {
     "moveToBoard": "55555",

@@ -105,6 +105,10 @@
         "end": "Fin",
         "assigned": "Asignado",
         "status": "Estado"
+      },
+      "optionsDialog": {
+        "title": "Opciones de impresión",
+        "description": "Elige qué columnas incluir al imprimir el calendario."
       }
     }
   },

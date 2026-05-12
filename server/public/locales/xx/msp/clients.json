@@ -149,8 +149,13 @@
         "phone": "11111",
         "address": "11111",
         "status": "11111"
+      },
+      "optionsDialog": {
+        "title": "11111",
+        "description": "11111"
       }
-    }
+    },
+    "shareTooltip": "11111"
   },
   "clientDetails": {
     "title": "11111",
@@ -234,6 +239,11 @@
     "status": {
       "label": "11111",
       "helper": "11111"
+    },
+    "fields": {
+      "accountManager": "11111",
+      "url": "11111",
+      "status": "11111"
     }
   },
   "quickAddClient": {

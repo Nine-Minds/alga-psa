@@ -211,6 +211,10 @@
         "status": "Status",
         "client": "Klient",
         "location": "Lokalizacja"
+      },
+      "optionsDialog": {
+        "title": "Opcje drukowania",
+        "description": "Wybierz, które kolumny dołączyć podczas drukowania zasobów."
       }
     }
   },
@@ -379,6 +383,14 @@
     "errors": {
       "title": "Błąd",
       "notFound": "Nie znaleziono zasobu lub nie masz uprawnień, aby go wyświetlić."
+    },
+    "fields": {
+      "assetTag": "Etykieta zasobu",
+      "serialNumber": "Numer seryjny",
+      "assetType": "Typ",
+      "client": "Klient",
+      "status": "Status",
+      "location": "Lokalizacja"
     }
   },
   "assetDetails": {

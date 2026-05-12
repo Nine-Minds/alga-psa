@@ -2,14 +2,15 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, ExternalLink, RefreshCw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, ExternalLink, Printer, RefreshCw, Settings2 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
-  PrintOptionsButton,
+  PrintOptionsDialog,
   type PrintColumnOption,
   usePrintColumnSelection,
-} from '@alga-psa/ui/components/PrintOptionsButton';
+} from '@alga-psa/ui/components/PrintOptionsDialog';
+import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
 import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -197,6 +198,7 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
   const [filters, setFilters] = useState<WorkflowRunFilters>(DEFAULT_FILTERS);
   const [runs, setRuns] = useState<WorkflowRunListItem[]>([]);
   const [printRuns, setPrintRuns] = useState<WorkflowRunListItem[]>([]);
+  const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
   const [nextCursor, setNextCursor] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -379,6 +381,11 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
     setSelectedColumnKeys: setSelectedWorkflowRunPrintColumnKeys,
     resetSelectedColumnKeys: resetSelectedWorkflowRunPrintColumnKeys,
   } = usePrintColumnSelection('print-columns:workflow-runs', printColumns);
+
+  const { triggerPrint: triggerPrintRuns, isPreparing: isPreparingRunPrint } = usePrintAction({
+    onBeforePrint: preparePrintRuns,
+    onAfterPrint: () => setPrintRuns([]),
+  });
 
   const fetchRuns = useCallback(
     async (cursor: number, append = false, overrideFilters?: WorkflowRunFilters) => {
@@ -855,22 +862,36 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
             >
               {t('runList.actions.runNow', { defaultValue: 'Run now' })}
             </Button>
-            <Button id="workflow-runs-export" variant="outline" onClick={handleExport}>
-              {t('runList.actions.exportCsv', { defaultValue: 'Export CSV' })}
-            </Button>
-            <PrintButton
-              id="workflow-runs-print"
-              variant="outline"
-              selectedCount={selectedRunIds.size}
-              onBeforePrint={preparePrintRuns}
-              onAfterPrint={() => setPrintRuns([])}
-            />
-            <PrintOptionsButton
-              id="workflow-runs-print-options"
-              columns={printColumns}
-              selectedColumnKeys={selectedWorkflowRunPrintColumnKeys}
-              onSelectedColumnKeysChange={setSelectedWorkflowRunPrintColumnKeys}
-              onReset={resetSelectedWorkflowRunPrintColumnKeys}
+            <ShareActionsMenu
+              id="workflow-runs-share-actions"
+              tooltip={t('runList.shareTooltip', { defaultValue: 'Print and export' })}
+              actions={[
+                {
+                  id: 'workflow-runs-share-print',
+                  icon: Printer,
+                  label: selectedRunIds.size > 0
+                    ? t('actions.printSelected', {
+                        count: selectedRunIds.size,
+                        defaultValue: 'Print selected ({{count}})',
+                      })
+                    : t('actions.print', { defaultValue: 'Print' }),
+                  onSelect: () => { void triggerPrintRuns(); },
+                  disabled: isPreparingRunPrint,
+                },
+                {
+                  id: 'workflow-runs-share-print-options',
+                  icon: Settings2,
+                  label: t('actions.printOptions', { defaultValue: 'Print options' }),
+                  onSelect: () => setIsPrintOptionsOpen(true),
+                },
+                {
+                  id: 'workflow-runs-share-export',
+                  icon: Download,
+                  label: t('runList.actions.exportCsv', { defaultValue: 'Export CSV' }),
+                  onSelect: () => { void handleExport(); },
+                  separator: true,
+                },
+              ] satisfies ShareAction[]}
             />
             <Button
               id="workflow-runs-refresh"
@@ -1094,6 +1115,29 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
         </div>
 
       </div>
+
+      <PrintOptionsDialog
+        id="workflow-runs-print-options-dialog"
+        open={isPrintOptionsOpen}
+        onOpenChange={setIsPrintOptionsOpen}
+        title={t('runList.print.optionsDialog.title', { defaultValue: 'Print options' })}
+        description={t('runList.print.optionsDialog.description', {
+          defaultValue: 'Choose which columns to include when printing workflow runs.',
+        })}
+        columns={printColumns}
+        selectedColumnKeys={selectedWorkflowRunPrintColumnKeys}
+        onSelectedColumnKeysChange={setSelectedWorkflowRunPrintColumnKeys}
+        onReset={resetSelectedWorkflowRunPrintColumnKeys}
+        onPrint={() => triggerPrintRuns()}
+        isPrinting={isPreparingRunPrint}
+        printLabel={selectedRunIds.size > 0
+          ? t('actions.printSelected', {
+              count: selectedRunIds.size,
+              defaultValue: 'Print selected ({{count}})',
+            })
+          : t('actions.print', { defaultValue: 'Print' })
+        }
+      />
 
       <Drawer
         id="workflow-run-preview-drawer"

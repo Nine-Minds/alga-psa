@@ -334,6 +334,7 @@
   "dashboard": {
     "title": "Tableau de bord des tickets",
     "addTicket": "Ajouter un ticket",
+    "shareTooltip": "Imprimer, importer et exporter",
     "exportCsv": "Exportation CSV",
     "bundledToggle": "Groupés",
     "exportSelectedTooltip_one": "Exportation de {{count}} tickets sélectionnés vers CSV",
@@ -417,8 +418,16 @@
       "noDueDate": "Aucune date d'échéance",
       "values": {
         "hasSla": "SLA"
+      },
+      "optionsDialog": {
+        "title": "Options d'impression",
+        "selectedTitle": "Options d'impression ({{count}} sélectionnés)",
+        "description": "Choisissez les colonnes à inclure lors de l'impression des tickets."
       }
-    }
+    },
+    "exportSelectedAction": "Exporter la sélection ({{count}})",
+    "exportAction": "Exporter CSV",
+    "importAction": "Importer CSV"
   },
   "bulk": {
     "moveToBoard": "Déplacer à bord",

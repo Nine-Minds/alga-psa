@@ -1268,7 +1268,8 @@
     "templateCreatedSuccess": "Szablon utworzono pomyślnie",
     "notAvailable": "Brak",
     "saveAsTemplate": "Zapisz jako szablon",
-    "materials": "Materiały"
+    "materials": "Materiały",
+    "shareTooltip": "Drukuj, importuj i eksportuj"
   },
   "projectPhases": {
     "addTask": "Dodaj zadanie",
@@ -1397,6 +1398,19 @@
         "assignee": "Przypisano do",
         "dueDate": "Termin",
         "hours": "Godziny"
+      },
+      "optionsDialog": {
+        "title": "Opcje drukowania",
+        "description": "Wybierz, które kolumny dołączyć podczas drukowania zadań projektu."
+      },
+      "fields": {
+        "phase": "Faza",
+        "status": "Status",
+        "assignee": "Przypisany do",
+        "dueDate": "Termin",
+        "estimatedHours": "Szacowane godziny",
+        "wbsCode": "Kod WBS",
+        "description": "Opis"
       }
     }
   }

@@ -80,8 +80,13 @@
         "phone": "Telefon",
         "client": "Kunde",
         "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Druckoptionen",
+        "description": "Wählen Sie die beim Drucken von Kontakten enthaltenen Spalten."
       }
-    }
+    },
+    "shareTooltip": "Drucken, importieren und exportieren"
   },
   "contactDetails": {
     "title": "Kontaktdetails",
@@ -109,7 +114,8 @@
       "useClientDestination": "Kundenziel verwenden",
       "inboundTicketDestinationHelp": "Falls gesetzt, überschreibt dies das Kundenziel für genau diesen Absenderkontakt. Vorrang: Kontaktüberschreibung -> Kundenziel -> Standard des Anbieters.",
       "tags": "Tags",
-      "notes": "Notizen"
+      "notes": "Notizen",
+      "status": "Status"
     },
     "status": {
       "label": "Status",

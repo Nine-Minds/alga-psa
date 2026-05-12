@@ -45,7 +45,9 @@
     "printSelected_one": "Print selected ({{count}})",
     "printSelected_other": "Print selected ({{count}})",
     "printOptions": "Print options",
-    "resetPrintOptions": "Reset print options"
+    "resetPrintOptions": "Reset print options",
+    "share": "Share",
+    "done": "Done"
   },
   "form": {
     "selectPlaceholder": "Select...",

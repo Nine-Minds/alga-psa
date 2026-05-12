@@ -9,15 +9,21 @@ import { getAllContacts, getContactsByClient, getAllClients } from '@alga-psa/cl
 import { exportContactsToCSV, deleteContact, updateContact, getContactLastUsagePhoneTypes, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
 import { Button } from '@alga-psa/ui/components/Button';
-import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import {
-  PrintOptionsButton,
+  DropdownMenuContent as StyledDropdownMenuContent,
+  DropdownMenuItem as StyledDropdownMenuItem,
+  DropdownMenuSeparator as StyledDropdownMenuSeparator,
+} from '@alga-psa/ui/components/DropdownMenu';
+import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
+import {
+  PrintOptionsDialog,
   type PrintColumnOption,
   usePrintColumnSelection,
-} from '@alga-psa/ui/components/PrintOptionsButton';
+} from '@alga-psa/ui/components/PrintOptionsDialog';
 import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
-import { Pen, Eye, CloudDownload, MoreVertical, Upload, Trash2, XCircle, ExternalLink, Power, RotateCcw } from 'lucide-react';
+import { Pen, Eye, CloudDownload, MoreVertical, Upload, Trash2, XCircle, ExternalLink, Power, RotateCcw, Printer, Settings2, Share2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
@@ -874,6 +880,10 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     resetSelectedColumnKeys: resetSelectedContactPrintColumnKeys,
   } = usePrintColumnSelection('print-columns:contacts-list', printColumns);
 
+  const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
+
+  const { triggerPrint: triggerPrintContacts, isPreparing: isPreparingContactPrint } = usePrintAction();
+
   if (isLoading) {
     return <ContactsSkeleton />;
   }
@@ -891,41 +901,52 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
             >
               {t('contactsPage.addContact', { defaultValue: '+ Add Contact' })}
             </Button>
-            <PrintButton
-              id="contacts-print-button"
-              variant="outline"
-              onBeforePrint={() => undefined}
-            />
-            <PrintOptionsButton
-              id="contacts-print-options-button"
-              columns={printColumns}
-              selectedColumnKeys={selectedContactPrintColumnKeys}
-              onSelectedColumnKeysChange={setSelectedContactPrintColumnKeys}
-              onReset={resetSelectedContactPrintColumnKeys}
-            />
             <DropdownMenu.Root>
-              <DropdownMenu.Trigger asChild>
-                  <button id="contacts-actions-button" className="border border-gray-300 rounded-md p-2 flex items-center gap-2">
-                    <MoreVertical size={16} />
-                    {t('contactsPage.actions', { defaultValue: 'Actions' })}
-                  </button>
-              </DropdownMenu.Trigger>
-                <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1">
-                  <DropdownMenu.Item 
-                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
-                    onSelect={() => setIsImportDialogOpen(true)}
+              <Tooltip content={t('contactsPage.shareTooltip', { defaultValue: 'Print, import and export' })}>
+                <DropdownMenu.Trigger asChild>
+                  <Button
+                    id="contacts-actions-button"
+                    variant="outline"
+                    size="default"
+                    className="w-10 px-0"
+                    aria-label={t('contactsPage.shareTooltip', { defaultValue: 'Print, import and export' })}
                   >
-                    <Upload size={14} className="mr-2" />
-                    {t('common.actions.uploadCsv', { defaultValue: 'Upload CSV' })}
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Item 
-                    className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
-                    onSelect={() => void handleExportToCSV()}
-                  >
-                    <CloudDownload size={14} className="mr-2" />
-                    {t('common.actions.downloadCsv', { defaultValue: 'Download CSV' })}
-                  </DropdownMenu.Item>
-              </DropdownMenu.Content>
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </DropdownMenu.Trigger>
+              </Tooltip>
+              <StyledDropdownMenuContent align="end" className="w-56">
+                <StyledDropdownMenuItem
+                  onSelect={(event) => { event.preventDefault(); void triggerPrintContacts(); }}
+                  disabled={isPreparingContactPrint}
+                  className="gap-2"
+                >
+                  <Printer className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">{t('actions.print', { defaultValue: 'Print' })}</span>
+                </StyledDropdownMenuItem>
+                <StyledDropdownMenuItem
+                  onSelect={(event) => { event.preventDefault(); setIsPrintOptionsOpen(true); }}
+                  className="gap-2"
+                >
+                  <Settings2 className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">{t('actions.printOptions', { defaultValue: 'Print options' })}</span>
+                </StyledDropdownMenuItem>
+                <StyledDropdownMenuSeparator />
+                <StyledDropdownMenuItem
+                  onSelect={() => setIsImportDialogOpen(true)}
+                  className="gap-2"
+                >
+                  <Upload className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">{t('common.actions.uploadCsv', { defaultValue: 'Upload CSV' })}</span>
+                </StyledDropdownMenuItem>
+                <StyledDropdownMenuItem
+                  onSelect={() => void handleExportToCSV()}
+                  className="gap-2"
+                >
+                  <CloudDownload className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">{t('common.actions.downloadCsv', { defaultValue: 'Download CSV' })}</span>
+                </StyledDropdownMenuItem>
+              </StyledDropdownMenuContent>
             </DropdownMenu.Root>
           </div>
         </div>
@@ -1021,6 +1042,21 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
               emptyMessage={t('contactsPage.print.noContacts', { defaultValue: 'No contacts to print' })}
             />
           </div>
+          <PrintOptionsDialog
+            id="contacts-print-options-dialog"
+            open={isPrintOptionsOpen}
+            onOpenChange={setIsPrintOptionsOpen}
+            title={t('contactsPage.print.optionsDialog.title', { defaultValue: 'Print options' })}
+            description={t('contactsPage.print.optionsDialog.description', {
+              defaultValue: 'Choose which columns to include when printing contacts.',
+            })}
+            columns={printColumns}
+            selectedColumnKeys={selectedContactPrintColumnKeys}
+            onSelectedColumnKeysChange={setSelectedContactPrintColumnKeys}
+            onReset={resetSelectedContactPrintColumnKeys}
+            onPrint={() => triggerPrintContacts()}
+            isPrinting={isPreparingContactPrint}
+          />
         </div>
         <QuickAddContact
           isOpen={isQuickAddOpen}

@@ -80,8 +80,13 @@
         "phone": "Telefon",
         "client": "Klient",
         "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Opcje drukowania",
+        "description": "Wybierz, które kolumny dołączyć podczas drukowania kontaktów."
       }
-    }
+    },
+    "shareTooltip": "Drukuj, importuj i eksportuj"
   },
   "contactDetails": {
     "title": "Szczegóły kontaktu",
@@ -109,7 +114,8 @@
       "useClientDestination": "Użyj docelowego miejsca klienta",
       "inboundTicketDestinationHelp": "Jeśli ustawione, nadpisuje docelowe miejsce klienta dla dokładnie tego kontaktu nadawcy. Kolejność: nadpisanie kontaktu -> docelowe miejsce klienta -> domyślne ustawienie dostawcy.",
       "tags": "Tagi",
-      "notes": "Notatki"
+      "notes": "Notatki",
+      "status": "Status"
     },
     "status": {
       "label": "Status",

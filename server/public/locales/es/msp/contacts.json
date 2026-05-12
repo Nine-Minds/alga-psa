@@ -80,8 +80,13 @@
         "phone": "Teléfono",
         "client": "Cliente",
         "status": "Estado"
+      },
+      "optionsDialog": {
+        "title": "Opciones de impresión",
+        "description": "Elige qué columnas incluir al imprimir los contactos."
       }
-    }
+    },
+    "shareTooltip": "Imprimir, importar y exportar"
   },
   "contactDetails": {
     "title": "Detalles del contacto",
@@ -109,7 +114,8 @@
       "useClientDestination": "Usar destino del cliente",
       "inboundTicketDestinationHelp": "Si se establece, esto sobrescribe el destino del cliente para este contacto remitente exacto. Prioridad: sobrescritura del contacto -> destino del cliente -> valor predeterminado del proveedor.",
       "tags": "Etiquetas",
-      "notes": "Notas"
+      "notes": "Notas",
+      "status": "Estado"
     },
     "status": {
       "label": "Estado",

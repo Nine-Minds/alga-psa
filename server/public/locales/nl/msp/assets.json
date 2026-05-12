@@ -211,6 +211,10 @@
         "status": "Status",
         "client": "Klant",
         "location": "Locatie"
+      },
+      "optionsDialog": {
+        "title": "Afdrukopties",
+        "description": "Kies welke kolommen worden opgenomen bij het afdrukken van assets."
       }
     }
   },
@@ -379,6 +383,14 @@
     "errors": {
       "title": "Fout",
       "notFound": "Item niet gevonden of u heeft geen toestemming om het te bekijken."
+    },
+    "fields": {
+      "assetTag": "Asset-tag",
+      "serialNumber": "Serienummer",
+      "assetType": "Type",
+      "client": "Klant",
+      "status": "Status",
+      "location": "Locatie"
     }
   },
   "assetDetails": {

@@ -105,6 +105,10 @@
         "end": "55555",
         "assigned": "55555",
         "status": "55555"
+      },
+      "optionsDialog": {
+        "title": "55555",
+        "description": "55555"
       }
     }
   },

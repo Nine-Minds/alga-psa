@@ -46,6 +46,10 @@
         "duration": "Dauer",
         "started": "Gestartet",
         "completed": "Abgeschlossen"
+      },
+      "optionsDialog": {
+        "title": "Druckoptionen",
+        "description": "Wählen Sie die beim Drucken von Jobs enthaltenen Spalten."
       }
     }
   },

@@ -149,8 +149,13 @@
         "phone": "55555",
         "address": "55555",
         "status": "55555"
+      },
+      "optionsDialog": {
+        "title": "55555",
+        "description": "55555"
       }
-    }
+    },
+    "shareTooltip": "55555"
   },
   "clientDetails": {
     "title": "55555",
@@ -234,6 +239,11 @@
     "status": {
       "label": "55555",
       "helper": "55555"
+    },
+    "fields": {
+      "accountManager": "55555",
+      "url": "55555",
+      "status": "55555"
     }
   },
   "quickAddClient": {

@@ -105,6 +105,10 @@
         "end": "Ende",
         "assigned": "Zugewiesen",
         "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Druckoptionen",
+        "description": "Wählen Sie die beim Drucken des Zeitplans enthaltenen Spalten."
       }
     }
   },

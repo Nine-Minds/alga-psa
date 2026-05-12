@@ -45,7 +45,9 @@
     "printSelected_one": "55555 {{count}} 55555",
     "printSelected_other": "55555 {{count}} 55555",
     "printOptions": "55555",
-    "resetPrintOptions": "55555"
+    "resetPrintOptions": "55555",
+    "share": "55555",
+    "done": "55555"
   },
   "form": {
     "selectPlaceholder": "55555",

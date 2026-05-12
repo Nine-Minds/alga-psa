@@ -1,16 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import { Settings2 } from 'lucide-react';
+import { Printer } from 'lucide-react';
 import { Button } from './Button';
 import { Checkbox } from './Checkbox';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from './DropdownMenu';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+} from './Dialog';
 import type { PrintableTableColumn } from './PrintableTable';
 import { useTranslation } from '../lib/i18n/client';
 import type { ColumnDefinition } from '@alga-psa/types';
@@ -28,12 +27,20 @@ type CreatePrintColumnsFromColumnDefinitionsOptions<T> = {
   emptyValue?: React.ReactNode;
 };
 
-type PrintOptionsButtonProps<T> = {
+type PrintOptionsDialogProps<T> = {
   id: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   columns: PrintColumnOption<T>[];
   selectedColumnKeys: string[];
   onSelectedColumnKeysChange: (keys: string[]) => void;
   onReset?: () => void;
+  /** When provided, footer shows a primary Print button that calls this and closes the dialog. */
+  onPrint?: () => void | Promise<void>;
+  printLabel?: string;
+  isPrinting?: boolean;
+  title?: string;
+  description?: React.ReactNode;
 };
 
 export function getDefaultPrintColumnKeys<T>(columns: PrintColumnOption<T>[]): string[] {
@@ -99,34 +106,52 @@ export function usePrintColumnSelection<T>(
   storageKey: string,
   columns: PrintColumnOption<T>[]
 ) {
-  const defaultKeys = React.useMemo(() => getDefaultPrintColumnKeys(columns), [columns]);
-  const availableKeys = React.useMemo(() => new Set(columns.map((column) => column.key)), [columns]);
+  const columnKeysSignature = columns.map((column) => column.key).join('|');
+
+  const defaultKeys = React.useMemo(
+    () => getDefaultPrintColumnKeys(columns),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [columnKeysSignature]
+  );
+  const availableKeys = React.useMemo(
+    () => new Set(columns.map((column) => column.key)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [columnKeysSignature]
+  );
 
   const [selectedColumnKeys, setSelectedColumnKeys] = React.useState<string[]>(defaultKeys);
 
   React.useEffect(() => {
-    if (typeof window === 'undefined') {
-      setSelectedColumnKeys(defaultKeys);
-      return;
-    }
+    const computeNextKeys = (): string[] => {
+      if (typeof window === 'undefined') return defaultKeys;
+      try {
+        const storedValue = window.localStorage.getItem(storageKey);
+        const parsedValue = storedValue ? JSON.parse(storedValue) : null;
+        const storedKeys = Array.isArray(parsedValue)
+          ? parsedValue.filter((key): key is string => typeof key === 'string' && availableKeys.has(key))
+          : [];
+        return storedKeys.length > 0 ? storedKeys : defaultKeys;
+      } catch {
+        return defaultKeys;
+      }
+    };
 
-    try {
-      const storedValue = window.localStorage.getItem(storageKey);
-      const parsedValue = storedValue ? JSON.parse(storedValue) : null;
-      const storedKeys = Array.isArray(parsedValue)
-        ? parsedValue.filter((key): key is string => typeof key === 'string' && availableKeys.has(key))
-        : [];
-
-      setSelectedColumnKeys(storedKeys.length > 0 ? storedKeys : defaultKeys);
-    } catch {
-      setSelectedColumnKeys(defaultKeys);
-    }
+    const nextKeys = computeNextKeys();
+    setSelectedColumnKeys((prev) =>
+      prev.length === nextKeys.length && prev.every((key, i) => key === nextKeys[i])
+        ? prev
+        : nextKeys
+    );
   }, [availableKeys, defaultKeys, storageKey]);
 
   const updateSelectedColumnKeys = React.useCallback((keys: string[]) => {
     const nextKeys = keys.filter((key) => availableKeys.has(key));
     const normalizedKeys = nextKeys.length > 0 ? nextKeys : defaultKeys;
-    setSelectedColumnKeys(normalizedKeys);
+    setSelectedColumnKeys((prev) =>
+      prev.length === normalizedKeys.length && prev.every((key, i) => key === normalizedKeys[i])
+        ? prev
+        : normalizedKeys
+    );
 
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(storageKey, JSON.stringify(normalizedKeys));
@@ -134,7 +159,11 @@ export function usePrintColumnSelection<T>(
   }, [availableKeys, defaultKeys, storageKey]);
 
   const resetSelectedColumnKeys = React.useCallback(() => {
-    setSelectedColumnKeys(defaultKeys);
+    setSelectedColumnKeys((prev) =>
+      prev.length === defaultKeys.length && prev.every((key, i) => key === defaultKeys[i])
+        ? prev
+        : defaultKeys
+    );
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(storageKey);
     }
@@ -154,15 +183,23 @@ export function usePrintColumnSelection<T>(
   };
 }
 
-export function PrintOptionsButton<T>({
+export function PrintOptionsDialog<T>({
   id,
+  open,
+  onOpenChange,
   columns,
   selectedColumnKeys,
   onSelectedColumnKeysChange,
   onReset,
-}: PrintOptionsButtonProps<T>) {
+  onPrint,
+  printLabel,
+  isPrinting,
+  title,
+  description,
+}: PrintOptionsDialogProps<T>) {
   const { t } = useTranslation('common');
   const selectedKeySet = React.useMemo(() => new Set(selectedColumnKeys), [selectedColumnKeys]);
+  const dialogTitle = title ?? t('actions.printOptions', { defaultValue: 'Print options' });
 
   const toggleColumn = (columnKey: string) => {
     const nextKeys = selectedKeySet.has(columnKey)
@@ -172,26 +209,31 @@ export function PrintOptionsButton<T>({
     onSelectedColumnKeysChange(nextKeys);
   };
 
+  const handlePrint = async () => {
+    if (!onPrint) return;
+    onOpenChange(false);
+    await onPrint();
+  };
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          id={id}
-          variant="outline"
-          size="sm"
-          className="gap-2"
-        >
-          <Settings2 className="h-4 w-4" />
-          {t('actions.printOptions', { defaultValue: 'Print options' })}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64">
-        <DropdownMenuLabel>
-          {t('labels.printColumns', { defaultValue: 'Print columns' })}
-        </DropdownMenuLabel>
-        <div className="max-h-72 overflow-y-auto px-1 py-1">
+    <Dialog
+      id={id}
+      isOpen={open}
+      onClose={() => onOpenChange(false)}
+      title={dialogTitle}
+      className="max-w-md"
+    >
+      <DialogContent>
+        {description ? (
+          <DialogDescription>{description}</DialogDescription>
+        ) : (
+          <DialogDescription className="sr-only">
+            {t('labels.printColumns', { defaultValue: 'Print columns' })}
+          </DialogDescription>
+        )}
+        <div className="max-h-[60vh] overflow-y-auto -mx-2 px-2">
           {columns.map((column) => (
-            <div key={column.key} className="px-2 py-1">
+            <div key={column.key} className="py-1">
               <Checkbox
                 id={`${id}-${column.key}`}
                 label={column.label}
@@ -203,19 +245,40 @@ export function PrintOptionsButton<T>({
             </div>
           ))}
         </div>
-        <DropdownMenuSeparator />
-        <div className="p-1">
+        <DialogFooter className="justify-between">
           <Button
             id={`${id}-reset`}
             variant="ghost"
             size="sm"
-            className="w-full justify-start"
             onClick={onReset}
+            disabled={!onReset}
           >
             {t('actions.resetPrintOptions', { defaultValue: 'Reset print options' })}
           </Button>
-        </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          {onPrint ? (
+            <Button
+              id={`${id}-print`}
+              variant="default"
+              size="sm"
+              onClick={() => { void handlePrint(); }}
+              disabled={isPrinting}
+              className="gap-2"
+            >
+              <Printer className="h-4 w-4" />
+              {printLabel ?? t('actions.print', { defaultValue: 'Print' })}
+            </Button>
+          ) : (
+            <Button
+              id={`${id}-done`}
+              variant="default"
+              size="sm"
+              onClick={() => onOpenChange(false)}
+            >
+              {t('actions.done', { defaultValue: 'Done' })}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

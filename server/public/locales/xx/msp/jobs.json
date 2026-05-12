@@ -46,6 +46,10 @@
         "duration": "11111",
         "started": "11111",
         "completed": "11111"
+      },
+      "optionsDialog": {
+        "title": "11111",
+        "description": "11111"
       }
     }
   },

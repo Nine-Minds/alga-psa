@@ -149,8 +149,13 @@
         "phone": "Telefon",
         "address": "Adresse",
         "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Druckoptionen",
+        "description": "Wählen Sie die beim Drucken von Kunden enthaltenen Spalten."
       }
-    }
+    },
+    "shareTooltip": "Drucken, importieren und exportieren"
   },
   "clientDetails": {
     "title": "Kundendaten",
@@ -234,7 +239,12 @@
     "inboundDomainAdded": "Eingehende E-Mail-Domäne hinzugefügt",
     "inboundDomainAddFailed": "Domäne konnte nicht hinzugefügt werden",
     "inboundDomainRemoved": "Eingehende E-Mail-Domäne entfernt",
-    "inboundDomainRemoveFailed": "Domäne konnte nicht entfernt werden"
+    "inboundDomainRemoveFailed": "Domäne konnte nicht entfernt werden",
+    "fields": {
+      "accountManager": "Kundenbetreuer",
+      "url": "URL",
+      "status": "Status"
+    }
   },
   "quickAddClient": {
     "title": "Neuen Kunden hinzufügen",

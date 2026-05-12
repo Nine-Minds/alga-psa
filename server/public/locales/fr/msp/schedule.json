@@ -105,6 +105,10 @@
         "end": "Fin",
         "assigned": "Assigné",
         "status": "Statut"
+      },
+      "optionsDialog": {
+        "title": "Options d'impression",
+        "description": "Choisissez les colonnes à inclure lors de l'impression du planning."
       }
     }
   },

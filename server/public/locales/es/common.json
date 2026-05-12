@@ -45,7 +45,9 @@
     "printSelected_one": "Imprimir seleccionado ({{count}})",
     "printSelected_other": "Imprimir seleccionados ({{count}})",
     "printOptions": "Opciones de impresión",
-    "resetPrintOptions": "Restablecer opciones de impresión"
+    "resetPrintOptions": "Restablecer opciones de impresión",
+    "share": "Compartir",
+    "done": "Listo"
   },
   "status": {
     "loading": "Cargando...",

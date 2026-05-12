@@ -211,6 +211,10 @@
         "status": "Status",
         "client": "Cliente",
         "location": "Localização"
+      },
+      "optionsDialog": {
+        "title": "Opções de impressão",
+        "description": "Escolha quais colunas incluir ao imprimir os ativos."
       }
     }
   },
@@ -379,6 +383,14 @@
     "errors": {
       "title": "Error",
       "notFound": "Asset not found or you do not have permission to view it."
+    },
+    "fields": {
+      "assetTag": "Etiqueta do ativo",
+      "serialNumber": "Número de série",
+      "assetType": "Tipo",
+      "client": "Cliente",
+      "status": "Status",
+      "location": "Localização"
     }
   },
   "assetDetails": {

@@ -105,6 +105,10 @@
         "end": "End",
         "assigned": "Assigned",
         "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Print options",
+        "description": "Choose which columns to include when printing the schedule."
       }
     }
   },

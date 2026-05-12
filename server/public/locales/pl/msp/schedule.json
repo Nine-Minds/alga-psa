@@ -105,6 +105,10 @@
         "end": "Koniec",
         "assigned": "Przypisano",
         "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Opcje drukowania",
+        "description": "Wybierz, które kolumny dołączyć podczas drukowania harmonogramu."
       }
     }
   },

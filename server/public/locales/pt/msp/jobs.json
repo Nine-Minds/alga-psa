@@ -46,6 +46,10 @@
         "duration": "Duração",
         "started": "Iniciado",
         "completed": "Concluído"
+      },
+      "optionsDialog": {
+        "title": "Opções de impressão",
+        "description": "Escolha quais colunas incluir ao imprimir os jobs recentes."
       }
     }
   },

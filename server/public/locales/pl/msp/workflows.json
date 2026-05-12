@@ -27,6 +27,7 @@
     "close": "Zamknij"
   },
   "runList": {
+    "shareTooltip": "Drukuj i eksportuj",
     "quickRanges": {
       "last24h": "Ostatnie 24 godz.",
       "last7d": "Ostatnie 7 dni"
@@ -125,6 +126,10 @@
         "started": "Rozpoczęto",
         "updated": "Zaktualizowano",
         "duration": "Czas trwania"
+      },
+      "optionsDialog": {
+        "title": "Opcje drukowania",
+        "description": "Wybierz, które kolumny dołączyć podczas drukowania uruchomień workflow."
       }
     }
   },

@@ -105,6 +105,10 @@
         "end": "Fine",
         "assigned": "Assegnato",
         "status": "Stato"
+      },
+      "optionsDialog": {
+        "title": "Opzioni di stampa",
+        "description": "Scegli quali colonne includere durante la stampa del calendario."
       }
     }
   },

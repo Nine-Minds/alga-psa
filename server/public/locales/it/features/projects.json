@@ -1268,7 +1268,8 @@
     "templateCreatedSuccess": "Modello creato con successo",
     "notAvailable": "N/D",
     "saveAsTemplate": "Salva come modello",
-    "materials": "Materiali"
+    "materials": "Materiali",
+    "shareTooltip": "Stampa, importa ed esporta"
   },
   "projectPhases": {
     "addTask": "Aggiungi attività",
@@ -1397,6 +1398,19 @@
         "assignee": "Assegnatario",
         "dueDate": "Scadenza",
         "hours": "Ore"
+      },
+      "optionsDialog": {
+        "title": "Opzioni di stampa",
+        "description": "Scegli quali colonne includere durante la stampa delle attività."
+      },
+      "fields": {
+        "phase": "Fase",
+        "status": "Stato",
+        "assignee": "Assegnatario",
+        "dueDate": "Data di scadenza",
+        "estimatedHours": "Ore stimate",
+        "wbsCode": "Codice WBS",
+        "description": "Descrizione"
       }
     }
   }

@@ -211,6 +211,10 @@
         "status": "Statut",
         "client": "Client",
         "location": "Emplacement"
+      },
+      "optionsDialog": {
+        "title": "Options d'impression",
+        "description": "Choisissez les colonnes à inclure lors de l'impression des actifs."
       }
     }
   },
@@ -379,6 +383,14 @@
     "errors": {
       "title": "Erreur",
       "notFound": "Actif introuvable ou vous n'êtes pas autorisé à l'afficher."
+    },
+    "fields": {
+      "assetTag": "Étiquette d'actif",
+      "serialNumber": "Numéro de série",
+      "assetType": "Type",
+      "client": "Client",
+      "status": "Statut",
+      "location": "Emplacement"
     }
   },
   "assetDetails": {

@@ -8,12 +8,13 @@ import { useClientDrawer } from '@alga-psa/ui';
 import { Card } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
-import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
   createPrintColumnsFromColumnDefinitions,
-  PrintOptionsButton,
+  PrintOptionsDialog,
   usePrintColumnSelection,
-} from '@alga-psa/ui/components/PrintOptionsButton';
+} from '@alga-psa/ui/components/PrintOptionsDialog';
+import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
 import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -60,7 +61,8 @@ import {
   MoreVertical,
   ChevronDown,
   RefreshCw,
-  X
+  X,
+  Settings2,
 } from 'lucide-react';
 
 interface AssetDashboardClientProps {
@@ -845,6 +847,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     resetSelectedColumnKeys: resetSelectedAssetPrintColumnKeys,
   } = usePrintColumnSelection('print-columns:assets-list', printColumns);
 
+  const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
+
+  const { triggerPrint: triggerPrintAssets, isPreparing: isPreparingAssetPrint } = usePrintAction({
+    onBeforePrint: preparePrintAssets,
+    onAfterPrint: () => setPrintAssets([]),
+  });
+
   return (
     <div className="relative p-6">
       <div className="space-y-6">
@@ -860,20 +869,30 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <PrintButton
-                id="assets-print-button"
-                variant="outline"
-                size="sm"
-                selectedCount={selectedAssetIds.length}
-                onBeforePrint={preparePrintAssets}
-                onAfterPrint={() => setPrintAssets([])}
-              />
-              <PrintOptionsButton
-                id="assets-print-options-button"
-                columns={printColumns}
-                selectedColumnKeys={selectedAssetPrintColumnKeys}
-                onSelectedColumnKeysChange={setSelectedAssetPrintColumnKeys}
-                onReset={resetSelectedAssetPrintColumnKeys}
+              <ShareActionsMenu
+                id="assets-share-actions"
+                triggerSize="sm"
+                tooltip={t('actions.print', { defaultValue: 'Print' })}
+                actions={[
+                  {
+                    id: 'assets-share-print',
+                    icon: Printer,
+                    label: selectedAssetIds.length > 0
+                      ? t('actions.printSelected', {
+                          count: selectedAssetIds.length,
+                          defaultValue: 'Print selected ({{count}})',
+                        })
+                      : t('actions.print', { defaultValue: 'Print' }),
+                    onSelect: () => { void triggerPrintAssets(); },
+                    disabled: isPreparingAssetPrint,
+                  },
+                  {
+                    id: 'assets-share-print-options',
+                    icon: Settings2,
+                    label: t('actions.printOptions', { defaultValue: 'Print options' }),
+                    onSelect: () => setIsPrintOptionsOpen(true),
+                  },
+                ] satisfies ShareAction[]}
               />
               <Button
                 id="refresh-assets-button"
@@ -1326,6 +1345,28 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
             </div>
           </Card>
       </div>
+      <PrintOptionsDialog
+        id="assets-print-options-dialog"
+        open={isPrintOptionsOpen}
+        onOpenChange={setIsPrintOptionsOpen}
+        title={t('assetDashboardClient.print.optionsDialog.title', { defaultValue: 'Print options' })}
+        description={t('assetDashboardClient.print.optionsDialog.description', {
+          defaultValue: 'Choose which columns to include when printing assets.',
+        })}
+        columns={printColumns}
+        selectedColumnKeys={selectedAssetPrintColumnKeys}
+        onSelectedColumnKeysChange={setSelectedAssetPrintColumnKeys}
+        onReset={resetSelectedAssetPrintColumnKeys}
+        onPrint={() => triggerPrintAssets()}
+        isPrinting={isPreparingAssetPrint}
+        printLabel={selectedAssetIds.length > 0
+          ? t('actions.printSelected', {
+              count: selectedAssetIds.length,
+              defaultValue: 'Print selected ({{count}})',
+            })
+          : t('actions.print', { defaultValue: 'Print' })
+        }
+      />
       <AssetCommandPalette
         isOpen={isCommandPaletteOpen}
         assets={assets}

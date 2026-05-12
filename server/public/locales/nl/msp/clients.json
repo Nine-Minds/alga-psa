@@ -149,8 +149,13 @@
         "phone": "Telefoon",
         "address": "Adres",
         "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Afdrukopties",
+        "description": "Kies welke kolommen worden opgenomen bij het afdrukken van klanten."
       }
-    }
+    },
+    "shareTooltip": "Afdrukken, importeren en exporteren"
   },
   "clientDetails": {
     "title": "Klantgegevens",
@@ -234,7 +239,12 @@
     "inboundDomainAdded": "Inkomend e-maildomein toegevoegd",
     "inboundDomainAddFailed": "Kan domein niet toevoegen",
     "inboundDomainRemoved": "Inkomend e-maildomein verwijderd",
-    "inboundDomainRemoveFailed": "Kan domein niet verwijderen"
+    "inboundDomainRemoveFailed": "Kan domein niet verwijderen",
+    "fields": {
+      "accountManager": "Accountmanager",
+      "url": "URL",
+      "status": "Status"
+    }
   },
   "quickAddClient": {
     "title": "Nieuwe klant toevoegen",

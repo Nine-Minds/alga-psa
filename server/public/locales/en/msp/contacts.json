@@ -80,8 +80,13 @@
         "phone": "Phone",
         "client": "Client",
         "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Print options",
+        "description": "Choose which columns to include when printing contacts."
       }
-    }
+    },
+    "shareTooltip": "Print, import and export"
   },
   "contactDetails": {
     "title": "Contact Details",
@@ -109,7 +114,8 @@
       "useClientDestination": "Use client destination",
       "inboundTicketDestinationHelp": "If set, this overrides the client destination for this exact sender contact. Precedence: Contact override -> Client destination -> Provider default.",
       "tags": "Tags",
-      "notes": "Notes"
+      "notes": "Notes",
+      "status": "Status"
     },
     "status": {
       "label": "Status",

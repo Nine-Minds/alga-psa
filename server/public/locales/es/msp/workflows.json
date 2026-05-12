@@ -27,6 +27,7 @@
     "close": "Cerrar"
   },
   "runList": {
+    "shareTooltip": "Imprimir y exportar",
     "quickRanges": {
       "last24h": "Últimas 24 h",
       "last7d": "Últimos 7 días"
@@ -125,6 +126,10 @@
         "started": "Iniciado",
         "updated": "Actualizado",
         "duration": "Duración"
+      },
+      "optionsDialog": {
+        "title": "Opciones de impresión",
+        "description": "Elige qué columnas incluir al imprimir las ejecuciones de flujo de trabajo."
       }
     }
   },

@@ -1268,7 +1268,8 @@
     "saveAsTemplate": "Save as Template",
     "materials": "Materials",
     "hoursUsageDescription": "Shows budget hours usage for the entire project",
-    "templateCreatedSuccess": "Template created successfully"
+    "templateCreatedSuccess": "Template created successfully",
+    "shareTooltip": "Imprimir, importar e exportar"
   },
   "comments": {
     "title": "Comments",
@@ -1397,6 +1398,19 @@
         "assignee": "Responsável",
         "dueDate": "Data de vencimento",
         "hours": "Horas"
+      },
+      "optionsDialog": {
+        "title": "Opções de impressão",
+        "description": "Escolha quais colunas incluir ao imprimir as tarefas do projeto."
+      },
+      "fields": {
+        "phase": "Fase",
+        "status": "Status",
+        "assignee": "Atribuído a",
+        "dueDate": "Data de vencimento",
+        "estimatedHours": "Horas estimadas",
+        "wbsCode": "Código EAP",
+        "description": "Descrição"
       }
     }
   }

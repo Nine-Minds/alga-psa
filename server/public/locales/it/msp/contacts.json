@@ -80,8 +80,13 @@
         "phone": "Telefono",
         "client": "Cliente",
         "status": "Stato"
+      },
+      "optionsDialog": {
+        "title": "Opzioni di stampa",
+        "description": "Scegli quali colonne includere durante la stampa dei contatti."
       }
-    }
+    },
+    "shareTooltip": "Stampa, importa ed esporta"
   },
   "contactDetails": {
     "title": "Dettagli contatto",
@@ -109,7 +114,8 @@
       "useClientDestination": "Usa destinazione cliente",
       "inboundTicketDestinationHelp": "Se impostato, sovrascrive la destinazione del cliente per questo specifico contatto mittente. Priorità: sovrascrittura contatto -> destinazione cliente -> valore predefinito del provider.",
       "tags": "Tag",
-      "notes": "Note"
+      "notes": "Note",
+      "status": "Stato"
     },
     "status": {
       "label": "Stato",

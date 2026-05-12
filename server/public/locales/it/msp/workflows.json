@@ -27,6 +27,7 @@
     "close": "Chiudi"
   },
   "runList": {
+    "shareTooltip": "Stampa ed esporta",
     "quickRanges": {
       "last24h": "Ultime 24h",
       "last7d": "Ultimi 7 giorni"
@@ -125,6 +126,10 @@
         "started": "Avviato",
         "updated": "Aggiornato",
         "duration": "Durata"
+      },
+      "optionsDialog": {
+        "title": "Opzioni di stampa",
+        "description": "Scegli quali colonne includere durante la stampa delle esecuzioni del workflow."
       }
     }
   },

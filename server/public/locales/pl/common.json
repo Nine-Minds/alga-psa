@@ -45,7 +45,9 @@
     "printSelected_one": "Drukuj zaznaczone ({{count}})",
     "printSelected_other": "Drukuj zaznaczone ({{count}})",
     "printOptions": "Opcje drukowania",
-    "resetPrintOptions": "Resetuj opcje drukowania"
+    "resetPrintOptions": "Resetuj opcje drukowania",
+    "share": "Udostępnij",
+    "done": "Gotowe"
   },
   "status": {
     "loading": "Ładowanie...",

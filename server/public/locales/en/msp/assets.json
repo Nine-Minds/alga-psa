@@ -211,6 +211,10 @@
         "status": "Status",
         "client": "Client",
         "location": "Location"
+      },
+      "optionsDialog": {
+        "title": "Print options",
+        "description": "Choose which columns to include when printing assets."
       }
     }
   },
@@ -379,6 +383,14 @@
     "errors": {
       "title": "Error",
       "notFound": "Asset not found or you do not have permission to view it."
+    },
+    "fields": {
+      "assetTag": "Asset Tag",
+      "serialNumber": "Serial Number",
+      "assetType": "Type",
+      "client": "Client",
+      "status": "Status",
+      "location": "Location"
     }
   },
   "assetDetails": {

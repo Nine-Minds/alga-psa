@@ -149,8 +149,13 @@
         "phone": "Telefono",
         "address": "Indirizzo",
         "status": "Stato"
+      },
+      "optionsDialog": {
+        "title": "Opzioni di stampa",
+        "description": "Scegli quali colonne includere durante la stampa dei clienti."
       }
-    }
+    },
+    "shareTooltip": "Stampa, importa ed esporta"
   },
   "clientDetails": {
     "title": "Dettagli del cliente",
@@ -234,7 +239,12 @@
     "inboundDomainAdded": "Dominio email in entrata aggiunto",
     "inboundDomainAddFailed": "Impossibile aggiungere il dominio",
     "inboundDomainRemoved": "Dominio email in entrata rimosso",
-    "inboundDomainRemoveFailed": "Impossibile rimuovere il dominio"
+    "inboundDomainRemoveFailed": "Impossibile rimuovere il dominio",
+    "fields": {
+      "accountManager": "Account manager",
+      "url": "URL",
+      "status": "Stato"
+    }
   },
   "quickAddClient": {
     "title": "Aggiungi nuovo cliente",

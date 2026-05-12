@@ -4,13 +4,19 @@ import type { IClient } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
-  PrintOptionsButton,
+  PrintOptionsDialog,
   type PrintColumnOption,
   usePrintColumnSelection,
-} from '@alga-psa/ui/components/PrintOptionsButton';
+} from '@alga-psa/ui/components/PrintOptionsDialog';
 import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import {
+  DropdownMenuContent as StyledDropdownMenuContent,
+  DropdownMenuItem as StyledDropdownMenuItem,
+  DropdownMenuSeparator as StyledDropdownMenuSeparator,
+} from '@alga-psa/ui/components/DropdownMenu';
 import QuickAddClient from './QuickAddClient';
 import { getAllClients } from '@alga-psa/clients/actions';
 import {
@@ -28,7 +34,7 @@ import { useSearchParams } from 'next/navigation';
 import ClientsGrid from './ClientsGrid';
 import ClientsList from './ClientsList';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
-import { TrashIcon, MoreVertical, CloudDownload, Upload, LayoutGrid, List, Search, XCircle, Power, RotateCcw } from 'lucide-react';
+import { TrashIcon, MoreVertical, CloudDownload, Upload, LayoutGrid, List, Search, XCircle, Power, RotateCcw, Printer, Settings2, Share2 } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
@@ -387,6 +393,7 @@ const Clients: React.FC = () => {
   const [isSelectAllMode, setIsSelectAllMode] = useState(false);
   const [loadedClients, setLoadedClients] = useState<IClient[]>([]);
   const [printClients, setPrintClients] = useState<IClient[]>([]);
+  const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isMultiDeleteDialogOpen, setIsMultiDeleteDialogOpen] = useState(false);
@@ -1367,6 +1374,11 @@ const Clients: React.FC = () => {
     resetSelectedColumnKeys: resetSelectedClientPrintColumnKeys,
   } = usePrintColumnSelection('print-columns:clients-list', clientPrintColumns);
 
+  const { triggerPrint: triggerPrintClients, isPreparing: isPreparingClientPrint } = usePrintAction({
+    onBeforePrint: preparePrintClients,
+    onAfterPrint: () => setPrintClients([]),
+  });
+
   const handleImportComplete = async (clients: IClient[], updateExisting: boolean) => {
     try {
       await importClientsFromCSV(clients, updateExisting);
@@ -1410,64 +1422,76 @@ const Clients: React.FC = () => {
             </Button>
 
             <DropdownMenu.Root>
-              <DropdownMenu.Trigger asChild>
-                <Button
-                  id="clients-actions-button"
-                  variant="outline"
-                  className="flex items-center gap-2"
+              <Tooltip content={t('clientsPage.shareTooltip', { defaultValue: 'Print, import and export' })}>
+                <DropdownMenu.Trigger asChild>
+                  <Button
+                    id="clients-actions-button"
+                    variant="outline"
+                    size="default"
+                    className="w-10 px-0"
+                    aria-label={t('clientsPage.shareTooltip', { defaultValue: 'Print, import and export' })}
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
+                </DropdownMenu.Trigger>
+              </Tooltip>
+              <StyledDropdownMenuContent align="end" className="w-56">
+                <StyledDropdownMenuItem
+                  onSelect={(event) => { event.preventDefault(); void triggerPrintClients(); }}
+                  disabled={isPreparingClientPrint}
+                  className="gap-2"
                 >
-                  <MoreVertical size={16} />
-                  {t('clientsPage.actions', { defaultValue: 'Actions' })}
-                </Button>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Content className="bg-white rounded-md shadow-lg p-1">
-                <DropdownMenu.Item
-                  className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
+                  <Printer className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">
+                    {selectedClients.length > 0
+                      ? t('actions.printSelected', {
+                          count: selectedClients.length,
+                          defaultValue: 'Print selected ({{count}})',
+                        })
+                      : t('actions.print', { defaultValue: 'Print' })}
+                  </span>
+                </StyledDropdownMenuItem>
+                <StyledDropdownMenuItem
+                  onSelect={(event) => { event.preventDefault(); setIsPrintOptionsOpen(true); }}
+                  className="gap-2"
+                >
+                  <Settings2 className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">{t('actions.printOptions', { defaultValue: 'Print options' })}</span>
+                </StyledDropdownMenuItem>
+                <StyledDropdownMenuSeparator />
+                <StyledDropdownMenuItem
                   onSelect={() => setIsImportDialogOpen(true)}
+                  className="gap-2"
                 >
-                  <Upload size={14} className="mr-2" />
-                  {t('common.actions.uploadCsv', { defaultValue: 'Upload CSV' })}
-                </DropdownMenu.Item>
-                <DropdownMenu.Item
-                  className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center"
+                  <Upload className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">{t('common.actions.uploadCsv', { defaultValue: 'Upload CSV' })}</span>
+                </StyledDropdownMenuItem>
+                <StyledDropdownMenuItem
                   onSelect={() => void handleExportToCSV()}
+                  className="gap-2"
                 >
-                  <CloudDownload size={14} className="mr-2" />
-                  {t('common.actions.downloadCsv', { defaultValue: 'Download CSV' })}
-                </DropdownMenu.Item>
-                <DropdownMenu.Separator className="h-px bg-gray-200 my-1" />
-                <DropdownMenu.Item
-                  className={`px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center ${selectedClients.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  <CloudDownload className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">{t('common.actions.downloadCsv', { defaultValue: 'Download CSV' })}</span>
+                </StyledDropdownMenuItem>
+                <StyledDropdownMenuSeparator />
+                <StyledDropdownMenuItem
                   onSelect={() => selectedClients.length > 0 && void handleBulkMarkInactive()}
                   disabled={selectedClients.length === 0}
+                  className="gap-2"
                 >
-                  <Power size={14} className="mr-2" />
-                  {t('clientsPage.markAsInactive', { defaultValue: 'Mark as Inactive' })}
-                </DropdownMenu.Item>
-                <DropdownMenu.Item
-                  className={`px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center ${selectedClients.length === 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  <Power className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">{t('clientsPage.markAsInactive', { defaultValue: 'Mark as Inactive' })}</span>
+                </StyledDropdownMenuItem>
+                <StyledDropdownMenuItem
                   onSelect={() => selectedClients.length > 0 && void handleBulkReactivate()}
                   disabled={selectedClients.length === 0}
+                  className="gap-2"
                 >
-                  <RotateCcw size={14} className="mr-2" />
-                  {t('common.actions.reactivate', { defaultValue: 'Reactivate' })}
-                </DropdownMenu.Item>
-              </DropdownMenu.Content>
+                  <RotateCcw className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
+                  <span className="flex-1">{t('common.actions.reactivate', { defaultValue: 'Reactivate' })}</span>
+                </StyledDropdownMenuItem>
+              </StyledDropdownMenuContent>
             </DropdownMenu.Root>
-            <PrintButton
-              id="clients-print-button"
-              variant="outline"
-              selectedCount={selectedClients.length}
-              onBeforePrint={preparePrintClients}
-              onAfterPrint={() => setPrintClients([])}
-            />
-            <PrintOptionsButton
-              id="clients-print-options-button"
-              columns={clientPrintColumns}
-              selectedColumnKeys={selectedClientPrintColumnKeys}
-              onSelectedColumnKeysChange={setSelectedClientPrintColumnKeys}
-              onReset={resetSelectedClientPrintColumnKeys}
-            />
           </div>
 
           <ViewSwitcher
@@ -1599,6 +1623,29 @@ const Clients: React.FC = () => {
           emptyMessage={t('clientsPage.print.noClients', { defaultValue: 'No clients to print' })}
         />
       </div>
+
+      <PrintOptionsDialog
+        id="clients-print-options-dialog"
+        open={isPrintOptionsOpen}
+        onOpenChange={setIsPrintOptionsOpen}
+        title={t('clientsPage.print.optionsDialog.title', { defaultValue: 'Print options' })}
+        description={t('clientsPage.print.optionsDialog.description', {
+          defaultValue: 'Choose which columns to include when printing clients.',
+        })}
+        columns={clientPrintColumns}
+        selectedColumnKeys={selectedClientPrintColumnKeys}
+        onSelectedColumnKeysChange={setSelectedClientPrintColumnKeys}
+        onReset={resetSelectedClientPrintColumnKeys}
+        onPrint={() => triggerPrintClients()}
+        isPrinting={isPreparingClientPrint}
+        printLabel={selectedClients.length > 0
+          ? t('actions.printSelected', {
+              count: selectedClients.length,
+              defaultValue: 'Print selected ({{count}})',
+            })
+          : t('actions.print', { defaultValue: 'Print' })
+        }
+      />
 
       {/* Clients */}
       <ClientResults

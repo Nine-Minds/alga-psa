@@ -105,6 +105,10 @@
         "end": "Fim",
         "assigned": "Atribuído",
         "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Opções de impressão",
+        "description": "Escolha quais colunas incluir ao imprimir a agenda."
       }
     }
   },

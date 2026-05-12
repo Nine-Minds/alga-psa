@@ -27,6 +27,7 @@
     "close": "Schließen"
   },
   "runList": {
+    "shareTooltip": "Drucken und exportieren",
     "quickRanges": {
       "last24h": "Letzte 24 Std.",
       "last7d": "Letzte 7 Tage"
@@ -125,6 +126,10 @@
         "started": "Gestartet",
         "updated": "Aktualisiert",
         "duration": "Dauer"
+      },
+      "optionsDialog": {
+        "title": "Druckoptionen",
+        "description": "Wählen Sie die beim Drucken von Workflow-Läufen enthaltenen Spalten."
       }
     }
   },

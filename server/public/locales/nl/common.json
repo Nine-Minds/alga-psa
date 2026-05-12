@@ -45,7 +45,9 @@
     "printSelected_one": "Geselecteerde afdrukken ({{count}})",
     "printSelected_other": "Geselecteerde afdrukken ({{count}})",
     "printOptions": "Afdrukopties",
-    "resetPrintOptions": "Afdrukopties resetten"
+    "resetPrintOptions": "Afdrukopties resetten",
+    "share": "Delen",
+    "done": "Klaar"
   },
   "status": {
     "loading": "Bezig met laden...",

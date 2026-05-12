@@ -1268,7 +1268,8 @@
     "saveAsTemplate": "11111",
     "materials": "11111",
     "hoursUsageDescription": "11111",
-    "templateCreatedSuccess": "11111"
+    "templateCreatedSuccess": "11111",
+    "shareTooltip": "11111"
   },
   "comments": {
     "title": "11111",
@@ -1397,6 +1398,19 @@
         "assignee": "11111",
         "dueDate": "11111",
         "hours": "11111"
+      },
+      "optionsDialog": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "fields": {
+        "phase": "11111",
+        "status": "11111",
+        "assignee": "11111",
+        "dueDate": "11111",
+        "estimatedHours": "11111",
+        "wbsCode": "11111",
+        "description": "11111"
       }
     }
   }

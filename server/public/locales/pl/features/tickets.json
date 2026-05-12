@@ -334,6 +334,7 @@
   "dashboard": {
     "title": "Panel zgłoszeń",
     "addTicket": "Dodaj zgłoszenie",
+    "shareTooltip": "Drukuj, importuj i eksportuj",
     "exportCsv": "Eksportuj CSV",
     "bundledToggle": "Zgrupowane",
     "exportSelectedTooltip_one": "Eksportuj {{count}} wybrane zgłoszenie do CSV",
@@ -417,8 +418,16 @@
       "noDueDate": "Brak terminu",
       "values": {
         "hasSla": "SLA"
+      },
+      "optionsDialog": {
+        "title": "Opcje drukowania",
+        "selectedTitle": "Opcje drukowania ({{count}} zaznaczonych)",
+        "description": "Wybierz, które kolumny dołączyć podczas drukowania zgłoszeń."
       }
-    }
+    },
+    "exportSelectedAction": "Eksportuj zaznaczone ({{count}})",
+    "exportAction": "Eksportuj CSV",
+    "importAction": "Importuj CSV"
   },
   "bulk": {
     "moveToBoard": "Przenieś do tablicy",

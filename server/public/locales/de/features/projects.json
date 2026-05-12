@@ -1268,7 +1268,8 @@
     "templateCreatedSuccess": "Vorlage erfolgreich erstellt",
     "notAvailable": "K. A.",
     "saveAsTemplate": "Als Vorlage speichern",
-    "materials": "Materialien"
+    "materials": "Materialien",
+    "shareTooltip": "Drucken, importieren und exportieren"
   },
   "projectPhases": {
     "addTask": "Aufgabe hinzufügen",
@@ -1397,6 +1398,19 @@
         "assignee": "Zugewiesen an",
         "dueDate": "Fälligkeitsdatum",
         "hours": "Stunden"
+      },
+      "optionsDialog": {
+        "title": "Druckoptionen",
+        "description": "Wählen Sie die beim Drucken von Projektaufgaben enthaltenen Spalten."
+      },
+      "fields": {
+        "phase": "Phase",
+        "status": "Status",
+        "assignee": "Zugewiesen an",
+        "dueDate": "Fälligkeitsdatum",
+        "estimatedHours": "Geschätzte Stunden",
+        "wbsCode": "PSP-Code",
+        "description": "Beschreibung"
       }
     }
   }

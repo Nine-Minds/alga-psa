@@ -18,13 +18,14 @@ import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { TagFilter } from '@alga-psa/ui/components';
-import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
-  PrintOptionsButton,
+  PrintOptionsDialog,
   type PrintColumnOption,
   usePrintColumnSelection,
-} from '@alga-psa/ui/components/PrintOptionsButton';
+} from '@alga-psa/ui/components/PrintOptionsDialog';
 import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
+import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { IBoard, IClient, IUser, ITeam } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -38,8 +39,7 @@ import { bundleTicketsAction, getBundleMasterStatusAction } from '../actions/tic
 import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds } from '../actions/optimizedTicketActions';
 import TicketExportDialog from './TicketExportDialog';
 import TicketImportDialog from './TicketImportDialog';
-import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { XCircle, Clock, Download, Upload, ChevronDown } from 'lucide-react';
+import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -234,6 +234,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [printTickets, setPrintTickets] = useState<ITicketListItem[] | null>(null);
+  const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
 
   const [boards] = useState<IBoard[]>(initialBoards);
   const [clients] = useState<IClient[]>(initialClients);
@@ -1519,6 +1520,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setPrintTickets(null);
   }, []);
 
+  const { triggerPrint: triggerPrintTickets, isPreparing: isPreparingPrint } = usePrintAction({
+    onBeforePrint: preparePrintTickets,
+    onAfterPrint: cleanupPrintTickets,
+  });
+
   const handleTicketAdded = useCallback((newTicket: ITicket) => {
     // Store tags for the new ticket if provided
     if (newTicket.ticket_id && newTicket.tags && newTicket.tags.length > 0) {
@@ -1707,61 +1713,50 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               {t('bulk.bundleTickets', 'Bundle Tickets')}
             </Button>
           )}
-          <Button
-            id={`${id}-import-csv-button`}
-            variant="outline"
-            onClick={() => setIsImportDialogOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <Upload className="h-4 w-4" />
-            Import CSV
-          </Button>
-          <PrintButton
-            id={`${id}-print-button`}
-            variant="outline"
-            size="default"
-            disabled={isLoadingMore || (!hasSelection && totalCount === 0)}
-            selectedCount={selectedTicketIds.size}
-            label={hasSelection
-              ? t('dashboard.print.selectedAction', {
-                  count: selectedTicketIds.size,
-                  defaultValue: 'Print selected ({{count}})',
-                })
-              : t('dashboard.print.action', 'Print')
-            }
-            onBeforePrint={preparePrintTickets}
-            onAfterPrint={cleanupPrintTickets}
-            className="flex items-center gap-2"
+          <ShareActionsMenu
+            id={`${id}-share-actions`}
+            disabled={isLoadingMore && !hasSelection}
+            tooltip={t('dashboard.shareTooltip', { defaultValue: 'Print, import and export' })}
+            actions={[
+              {
+                id: `${id}-share-print`,
+                icon: Printer,
+                label: hasSelection
+                  ? t('dashboard.print.selectedAction', {
+                      count: selectedTicketIds.size,
+                      defaultValue: 'Print selected ({{count}})',
+                    })
+                  : t('dashboard.print.action', 'Print'),
+                onSelect: () => { void triggerPrintTickets(); },
+                disabled: isPreparingPrint || (!hasSelection && totalCount === 0),
+              },
+              {
+                id: `${id}-share-print-options`,
+                icon: Settings2,
+                label: t('actions.printOptions', { defaultValue: 'Print options' }),
+                onSelect: () => setIsPrintOptionsOpen(true),
+              },
+              {
+                id: `${id}-share-export`,
+                icon: Download,
+                label: hasSelection
+                  ? t('dashboard.exportSelectedAction', {
+                      count: selectedTicketIds.size,
+                      defaultValue: 'Export selected ({{count}})',
+                    })
+                  : t('dashboard.exportAction', { defaultValue: 'Export CSV' }),
+                onSelect: () => setIsExportDialogOpen(true),
+                disabled: !hasSelection,
+                separator: true,
+              },
+              {
+                id: `${id}-share-import`,
+                icon: Upload,
+                label: t('dashboard.importAction', { defaultValue: 'Import CSV' }),
+                onSelect: () => setIsImportDialogOpen(true),
+              },
+            ] satisfies ShareAction[]}
           />
-          <PrintOptionsButton
-            id={`${id}-print-options-button`}
-            columns={printColumns}
-            selectedColumnKeys={selectedTicketPrintColumnKeys}
-            onSelectedColumnKeysChange={setSelectedTicketPrintColumnKeys}
-            onReset={resetSelectedTicketPrintColumnKeys}
-          />
-          <Tooltip content={hasSelection
-            ? t('dashboard.exportSelectedTooltip', {
-              count: selectedTicketIds.size,
-              defaultValue: selectedTicketIds.size === 1
-                ? 'Export {{count}} selected ticket to CSV'
-                : 'Export {{count}} selected tickets to CSV',
-            })
-            : t('dashboard.exportDisabledTooltip', 'Select ticket(s) to export')
-          }>
-            <span>
-              <Button
-                id={`${id}-export-csv-button`}
-                variant="outline"
-                onClick={() => setIsExportDialogOpen(true)}
-                disabled={!hasSelection}
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Export CSV
-              </Button>
-            </span>
-          </Tooltip>
           <Button id="add-ticket-button" onClick={() => setIsQuickAddOpen(true)}>
             {t('dashboard.addTicket', 'Add Ticket')}
           </Button>
@@ -2097,6 +2092,35 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           className="tickets-print-table"
         />
       </div>
+
+      <PrintOptionsDialog
+        id={`${id}-print-options-dialog`}
+        open={isPrintOptionsOpen}
+        onOpenChange={setIsPrintOptionsOpen}
+        title={hasSelection
+          ? t('dashboard.print.optionsDialog.selectedTitle', {
+              count: selectedTicketIds.size,
+              defaultValue: 'Print options ({{count}} selected)',
+            })
+          : t('dashboard.print.optionsDialog.title', { defaultValue: 'Print options' })
+        }
+        description={t('dashboard.print.optionsDialog.description', {
+          defaultValue: 'Choose which columns to include when printing tickets.',
+        })}
+        columns={printColumns}
+        selectedColumnKeys={selectedTicketPrintColumnKeys}
+        onSelectedColumnKeysChange={setSelectedTicketPrintColumnKeys}
+        onReset={resetSelectedTicketPrintColumnKeys}
+        onPrint={() => triggerPrintTickets()}
+        isPrinting={isPreparingPrint}
+        printLabel={hasSelection
+          ? t('dashboard.print.selectedAction', {
+              count: selectedTicketIds.size,
+              defaultValue: 'Print selected ({{count}})',
+            })
+          : t('dashboard.print.action', 'Print')
+        }
+      />
 
       <QuickAddTicket
         id={`${id}-quick-add`}

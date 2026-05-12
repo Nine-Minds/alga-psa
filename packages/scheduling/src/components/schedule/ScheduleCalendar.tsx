@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { momentLocalizer, NavigateAction, View, ToolbarProps } from 'react-big-calendar';
 import moment from 'moment';
@@ -13,12 +14,13 @@ const DynamicBigCalendar = dynamic(() => import('./DynamicBigCalendar'), {
   ssr: false
 });
 import { Button } from '@alga-psa/ui/components/Button';
-import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
-  PrintOptionsButton,
+  PrintOptionsDialog,
   type PrintColumnOption,
   usePrintColumnSelection,
-} from '@alga-psa/ui/components/PrintOptionsButton';
+} from '@alga-psa/ui/components/PrintOptionsDialog';
+import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
 import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import Spinner from '@alga-psa/ui/components/Spinner';
@@ -39,14 +41,18 @@ import { DeleteEntityDialog } from '@alga-psa/ui';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { WorkItemDrawer } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/WorkItemDrawer';
 import { useDrawer } from "@alga-psa/ui";
-import { Trash, ChevronLeft, ChevronRight, CalendarDays as CalendarDaysIcon, Layers, Layers2 } from 'lucide-react';
+import { Trash, ChevronLeft, ChevronRight, CalendarDays as CalendarDaysIcon, Layers, Layers2, Printer, Settings2 } from 'lucide-react';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Label } from '@alga-psa/ui/components/Label';
 
 const localizer = momentLocalizer(moment);
 
-const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
+interface ScheduleCalendarProps {
+  headerActionsSlot?: HTMLElement | null;
+}
+
+const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }): React.ReactElement | null => {
   const { t } = useTranslation('msp/schedule');
   const { formatDate } = useFormatters();
   // Use the custom hook for schedule view preference
@@ -886,6 +892,9 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
     resetSelectedColumnKeys: resetSelectedSchedulePrintColumnKeys,
   } = usePrintColumnSelection('print-columns:schedule-agenda', printColumns);
 
+  const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
+
+  const { triggerPrint: triggerPrintSchedule, isPreparing: isPreparingSchedulePrint } = usePrintAction();
 
   const CustomToolbar = (toolbar: ToolbarProps) => {
     const { label, onNavigate, onView, view: currentView } = toolbar;
@@ -1169,37 +1178,70 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
     );
   }
 
+  const printActionsMenu = (
+    <ShareActionsMenu
+      id="schedule-share-actions"
+      triggerSize="sm"
+      tooltip={t('actions.print', { defaultValue: 'Print' })}
+      actions={[
+        {
+          id: 'schedule-share-print',
+          icon: Printer,
+          label: t('actions.print', { defaultValue: 'Print' }),
+          onSelect: () => { void triggerPrintSchedule(); },
+          disabled: isPreparingSchedulePrint,
+        },
+        {
+          id: 'schedule-share-print-options',
+          icon: Settings2,
+          label: t('actions.printOptions', { defaultValue: 'Print options' }),
+          onSelect: () => setIsPrintOptionsOpen(true),
+        },
+      ] satisfies ShareAction[]}
+    />
+  );
+
   return (
     <div className="h-full flex flex-col bg-[rgb(var(--color-background-50))]">
       <CalendarStyleProvider />
-      <div className="flex justify-end px-3 py-2">
-        <PrintButton
-          id="schedule-print-button"
-          variant="outline"
-          size="sm"
-        />
-        <PrintOptionsButton
-          id="schedule-print-options-button"
-          columns={printColumns}
-          selectedColumnKeys={selectedSchedulePrintColumnKeys}
-          onSelectedColumnKeysChange={setSelectedSchedulePrintColumnKeys}
-          onReset={resetSelectedSchedulePrintColumnKeys}
-        />
-      </div>
-      <div className="app-print-root app-print-only">
-        <PrintableTable
-          title={t('calendar.print.title', { defaultValue: 'Schedule Agenda' })}
-          subtitle={t('calendar.print.subtitle', {
-            defaultValue: '{{count}} scheduled entries',
-            count: events.length,
-          })}
-          rows={[...events].sort((a, b) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime())}
-          columns={selectedSchedulePrintColumns}
-          getRowKey={(event) => event.entry_id}
-          emptyMessage={t('calendar.print.noEntries', { defaultValue: 'No scheduled entries to print' })}
-        />
-      </div>
-      
+      {headerActionsSlot
+        ? createPortal(printActionsMenu, headerActionsSlot)
+        : (
+          <div className="flex justify-end px-3 py-2">
+            {printActionsMenu}
+          </div>
+        )}
+      {isPreparingSchedulePrint && (
+        <div className="app-print-root app-print-only">
+          <PrintableTable
+            title={t('calendar.print.title', { defaultValue: 'Schedule Agenda' })}
+            subtitle={t('calendar.print.subtitle', {
+              defaultValue: '{{count}} scheduled entries',
+              count: events.length,
+            })}
+            rows={[...events].sort((a, b) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime())}
+            columns={selectedSchedulePrintColumns}
+            getRowKey={(event) => event.entry_id}
+            emptyMessage={t('calendar.print.noEntries', { defaultValue: 'No scheduled entries to print' })}
+          />
+        </div>
+      )}
+      <PrintOptionsDialog
+        id="schedule-print-options-dialog"
+        open={isPrintOptionsOpen}
+        onOpenChange={setIsPrintOptionsOpen}
+        title={t('calendar.print.optionsDialog.title', { defaultValue: 'Print options' })}
+        description={t('calendar.print.optionsDialog.description', {
+          defaultValue: 'Choose which columns to include when printing the schedule.',
+        })}
+        columns={printColumns}
+        selectedColumnKeys={selectedSchedulePrintColumnKeys}
+        onSelectedColumnKeysChange={setSelectedSchedulePrintColumnKeys}
+        onReset={resetSelectedSchedulePrintColumnKeys}
+        onPrint={() => triggerPrintSchedule()}
+        isPrinting={isPreparingSchedulePrint}
+      />
+
       <Legend />
       {/* Main content with sidebar and calendar */}
       <div className="flex-grow flex overflow-hidden">

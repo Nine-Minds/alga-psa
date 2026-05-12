@@ -1268,7 +1268,8 @@
     "templateCreatedSuccess": "Modèle créé avec succès",
     "notAvailable": "N/D",
     "saveAsTemplate": "Enregistrer comme modèle",
-    "materials": "Matériaux"
+    "materials": "Matériaux",
+    "shareTooltip": "Imprimer, importer et exporter"
   },
   "projectPhases": {
     "addTask": "Ajouter une tâche",
@@ -1397,6 +1398,19 @@
         "assignee": "Assigné à",
         "dueDate": "Échéance",
         "hours": "Heures"
+      },
+      "optionsDialog": {
+        "title": "Options d'impression",
+        "description": "Choisissez les colonnes à inclure lors de l'impression des tâches."
+      },
+      "fields": {
+        "phase": "Phase",
+        "status": "Statut",
+        "assignee": "Assigné à",
+        "dueDate": "Date d'échéance",
+        "estimatedHours": "Heures estimées",
+        "wbsCode": "Code WBS",
+        "description": "Description"
       }
     }
   }

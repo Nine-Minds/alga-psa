@@ -46,6 +46,10 @@
         "duration": "Durée",
         "started": "Démarré",
         "completed": "Terminé"
+      },
+      "optionsDialog": {
+        "title": "Options d'impression",
+        "description": "Choisissez les colonnes à inclure lors de l'impression des travaux."
       }
     }
   },

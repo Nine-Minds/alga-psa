@@ -211,6 +211,10 @@
         "status": "Stato",
         "client": "Cliente",
         "location": "Posizione"
+      },
+      "optionsDialog": {
+        "title": "Opzioni di stampa",
+        "description": "Scegli quali colonne includere durante la stampa degli asset."
       }
     }
   },
@@ -379,6 +383,14 @@
     "errors": {
       "title": "Errore",
       "notFound": "Risorsa non trovata o non disponi dell'autorizzazione per visualizzarla."
+    },
+    "fields": {
+      "assetTag": "Etichetta dell'asset",
+      "serialNumber": "Numero di serie",
+      "assetType": "Tipo",
+      "client": "Cliente",
+      "status": "Stato",
+      "location": "Posizione"
     }
   },
   "assetDetails": {

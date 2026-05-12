@@ -80,8 +80,13 @@
         "phone": "11111",
         "client": "11111",
         "status": "11111"
+      },
+      "optionsDialog": {
+        "title": "11111",
+        "description": "11111"
       }
-    }
+    },
+    "shareTooltip": "11111"
   },
   "contactDetails": {
     "title": "11111",
@@ -109,7 +114,8 @@
       "useClientDestination": "11111",
       "inboundTicketDestinationHelp": "11111",
       "tags": "11111",
-      "notes": "11111"
+      "notes": "11111",
+      "status": "11111"
     },
     "status": {
       "label": "11111",

@@ -211,6 +211,10 @@
         "status": "Status",
         "client": "Kunde",
         "location": "Standort"
+      },
+      "optionsDialog": {
+        "title": "Druckoptionen",
+        "description": "Wählen Sie die beim Drucken von Assets enthaltenen Spalten."
       }
     }
   },
@@ -379,6 +383,14 @@
     "errors": {
       "title": "Fehler",
       "notFound": "Das Asset wurde nicht gefunden oder Sie haben keine Berechtigung, es anzuzeigen."
+    },
+    "fields": {
+      "assetTag": "Asset-Tag",
+      "serialNumber": "Seriennummer",
+      "assetType": "Typ",
+      "client": "Kunde",
+      "status": "Status",
+      "location": "Standort"
     }
   },
   "assetDetails": {
