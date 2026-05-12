@@ -151,7 +151,14 @@
       "created": "Utworzone",
       "closed": "Zamkniete",
       "open": "Otwarte",
-      "avgResolution": "Sr. rozwiazanie"
+      "avgResolution": "Sr. rozwiazanie",
+      "user": "Uzytkownik",
+      "totalHours": "Lacznie godzin",
+      "billableHours": "Godziny rozliczane",
+      "entries": "Wpisy",
+      "ticket": "Zgloszenie",
+      "entered": "Wprowadzono",
+      "age": "Wiek"
     },
     "statusValues": {
       "connected": "Polaczony",

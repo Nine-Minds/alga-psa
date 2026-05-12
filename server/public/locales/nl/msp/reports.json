@@ -151,7 +151,14 @@
       "created": "Aangemaakt",
       "closed": "Gesloten",
       "open": "Open",
-      "avgResolution": "Gem. oplossing"
+      "avgResolution": "Gem. oplossing",
+      "user": "Gebruiker",
+      "totalHours": "Totaal uren",
+      "billableHours": "Factureerbare uren",
+      "entries": "Vermeldingen",
+      "ticket": "Ticket",
+      "entered": "Ingevoerd",
+      "age": "Leeftijd"
     },
     "statusValues": {
       "connected": "Verbonden",

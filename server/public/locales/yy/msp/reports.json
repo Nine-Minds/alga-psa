@@ -151,7 +151,14 @@
       "created": "55555",
       "closed": "55555",
       "open": "55555",
-      "avgResolution": "55555"
+      "avgResolution": "55555",
+      "user": "55555",
+      "totalHours": "55555",
+      "billableHours": "55555",
+      "entries": "55555",
+      "ticket": "55555",
+      "entered": "55555",
+      "age": "55555"
     },
     "statusValues": {
       "connected": "55555",

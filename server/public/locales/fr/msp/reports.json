@@ -151,7 +151,14 @@
       "created": "Crees",
       "closed": "Fermes",
       "open": "Ouverts",
-      "avgResolution": "Resolution moyenne"
+      "avgResolution": "Resolution moyenne",
+      "user": "Utilisateur",
+      "totalHours": "Heures totales",
+      "billableHours": "Heures facturables",
+      "entries": "Entrees",
+      "ticket": "Ticket",
+      "entered": "Saisi",
+      "age": "Age"
     },
     "statusValues": {
       "connected": "Connecte",

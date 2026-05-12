@@ -151,7 +151,14 @@
       "created": "Erstellt",
       "closed": "Geschlossen",
       "open": "Offen",
-      "avgResolution": "Durchschn. Loesung"
+      "avgResolution": "Durchschn. Loesung",
+      "user": "Benutzer",
+      "totalHours": "Gesamtstunden",
+      "billableHours": "Abrechenbare Stunden",
+      "entries": "Eintraege",
+      "ticket": "Ticket",
+      "entered": "Eingegeben",
+      "age": "Alter"
     },
     "statusValues": {
       "connected": "Verbunden",

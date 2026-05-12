@@ -151,7 +151,14 @@
       "created": "Creati",
       "closed": "Chiusi",
       "open": "Aperti",
-      "avgResolution": "Risoluzione media"
+      "avgResolution": "Risoluzione media",
+      "user": "Utente",
+      "totalHours": "Ore totali",
+      "billableHours": "Ore fatturabili",
+      "entries": "Voci",
+      "ticket": "Ticket",
+      "entered": "Inserito",
+      "age": "Eta"
     },
     "statusValues": {
       "connected": "Connesso",

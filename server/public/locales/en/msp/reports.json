@@ -151,7 +151,14 @@
       "created": "Created",
       "closed": "Closed",
       "open": "Open",
-      "avgResolution": "Avg. resolution"
+      "avgResolution": "Avg. resolution",
+      "user": "User",
+      "totalHours": "Total hours",
+      "billableHours": "Billable hours",
+      "entries": "Entries",
+      "ticket": "Ticket",
+      "entered": "Entered",
+      "age": "Age"
     },
     "statusValues": {
       "connected": "Connected",
