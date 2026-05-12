@@ -1122,5 +1122,26 @@
   },
   "feedback": {
     "providePlaceholder": "Por favor, proporcione comentarios"
+  },
+  "deleteEntity": {
+    "checkingDependenciesTitle": "Comprobando dependencias",
+    "deleteTitle": "Eliminar {{entityName}}",
+    "cannotDeleteTitle": "No se puede eliminar",
+    "deleting": "Eliminando...",
+    "checkingDependenciesMessage": "Comprobando dependencias...",
+    "fallbackBlockMessage": "Elimine o reasigne estos elementos antes de eliminar.",
+    "confirmationMessage": "¿Está seguro de que desea eliminar \"{{entityName}}\"? Esta acción no se puede deshacer.",
+    "alternatives": {
+      "deactivate": {
+        "label": "Marcar como inactivo",
+        "description": "Desactiva el registro sin eliminar sus datos.",
+        "warning": "Los registros inactivos ya no se podrán seleccionar en nuevos flujos de trabajo."
+      },
+      "archive": {
+        "label": "Archivar",
+        "description": "Mueve el registro fuera del uso activo y conserva el historial.",
+        "warning": "Los registros archivados se ocultan en las vistas predeterminadas."
+      }
+    }
   }
 }

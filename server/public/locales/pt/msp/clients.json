@@ -132,7 +132,10 @@
     "deleteSelectedPrompt": "Are you sure you want to delete {{count}} selected {{clientsLabel}}? This action cannot be undone.",
     "singleInactiveSuccess": "{{name}} foi marcado como inativo com sucesso.",
     "singleInactiveWithContactsSuccess_one": "{{name}} e {{count}} contato foram desativados com sucesso.",
-    "singleInactiveWithContactsSuccess_other": "{{name}} e {{count}} contatos foram desativados com sucesso."
+    "singleInactiveWithContactsSuccess_other": "{{name}} e {{count}} contatos foram desativados com sucesso.",
+    "defaultClientDeleteError": "Não é possível excluir o cliente padrão. Primeiro defina outro cliente como padrão em Configurações gerais.",
+    "clientNotFound": "Cliente não encontrado.",
+    "deletePermissionDenied": "Permissão negada: não é possível excluir clientes."
   },
   "clientDetails": {
     "title": "Client Details",
@@ -216,7 +219,9 @@
     "inboundDomainAdded": "Domínio de e-mail de entrada adicionado",
     "inboundDomainAddFailed": "Falha ao adicionar o domínio",
     "inboundDomainRemoved": "Domínio de e-mail de entrada removido",
-    "inboundDomainRemoveFailed": "Falha ao remover o domínio"
+    "inboundDomainRemoveFailed": "Falha ao remover o domínio",
+    "deactivateClientDescription": "Desativa o registro sem excluir seus dados.",
+    "deactivateClientOnlyDescription": "Desative o cliente, mas mantenha seus contatos ativos."
   },
   "quickAddClient": {
     "title": "Add New Client",

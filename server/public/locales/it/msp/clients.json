@@ -132,7 +132,10 @@
     },
     "deleteSelectedPrompt": "Sei sicuro di voler eliminare {{count}} selezionato {{clientsLabel}}? Questa azione non può essere annullata.",
     "singleInactiveWithContactsSuccess_one": "{{name}} e {{count}} contatto sono stati disattivati con successo.",
-    "singleInactiveWithContactsSuccess_other": "{{name}} e {{count}} contatti sono stati disattivati con successo."
+    "singleInactiveWithContactsSuccess_other": "{{name}} e {{count}} contatti sono stati disattivati con successo.",
+    "defaultClientDeleteError": "Impossibile eliminare il cliente predefinito. Imposta prima un altro cliente come predefinito nelle impostazioni generali.",
+    "clientNotFound": "Cliente non trovato.",
+    "deletePermissionDenied": "Autorizzazione negata: impossibile eliminare i clienti."
   },
   "clientDetails": {
     "title": "Dettagli del cliente",
@@ -216,7 +219,9 @@
     "inboundDomainAdded": "Dominio email in entrata aggiunto",
     "inboundDomainAddFailed": "Impossibile aggiungere il dominio",
     "inboundDomainRemoved": "Dominio email in entrata rimosso",
-    "inboundDomainRemoveFailed": "Impossibile rimuovere il dominio"
+    "inboundDomainRemoveFailed": "Impossibile rimuovere il dominio",
+    "deactivateClientDescription": "Disattiva il record senza eliminarne i dati.",
+    "deactivateClientOnlyDescription": "Disattiva il cliente ma lascia attivi i suoi contatti."
   },
   "quickAddClient": {
     "title": "Aggiungi nuovo cliente",
