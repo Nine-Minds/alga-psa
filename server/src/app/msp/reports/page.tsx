@@ -1,4 +1,4 @@
-import Reports from '@alga-psa/ui/pages/Reports';
+import Reports from '@alga-psa/msp-composition/reports/Reports';
 import type { Metadata } from 'next';
 import { getSession } from '@alga-psa/auth';
 import { resolveTier } from '@alga-psa/types';
