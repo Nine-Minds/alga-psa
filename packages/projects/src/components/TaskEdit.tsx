@@ -6,6 +6,7 @@ import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTicketLinkWithDetai
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { getProjectTaskStatuses } from '../actions/projectActions';
 import TaskFormSkeleton from '@alga-psa/ui/components/skeletons/TaskFormSkeleton';
+import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 
 // Dynamic import for TaskForm
 const TaskForm = dynamic(() => import('./TaskForm'), {
@@ -74,23 +75,32 @@ export default function TaskEdit({
 
   return (
     <div className="h-full">
-      <Suspense fallback={<TaskFormSkeleton isEdit={true} />}>
-        <TaskForm
-          task={task}
-          phase={phase}
-          phases={phases}
-          onClose={onClose}
-          onSubmit={onTaskUpdated}
-          projectStatuses={selectedPhaseStatuses}
-          defaultStatus={selectedPhaseStatuses.find(s => s.project_status_mapping_id === task.project_status_mapping_id)}
-          users={users}
-          mode="edit"
-          onPhaseChange={handlePhaseChange}
-          inDrawer={inDrawer}
-          projectTreeData={projectTreeData}
-          onCommentCountChange={onCommentCountChange}
+      <div className="flex justify-end pb-2" data-print-hide>
+        <PrintButton
+          id={`project-task-${task.task_id}-print-button`}
+          variant="outline"
+          size="sm"
         />
-      </Suspense>
+      </div>
+      <div data-print-region>
+        <Suspense fallback={<TaskFormSkeleton isEdit={true} />}>
+          <TaskForm
+            task={task}
+            phase={phase}
+            phases={phases}
+            onClose={onClose}
+            onSubmit={onTaskUpdated}
+            projectStatuses={selectedPhaseStatuses}
+            defaultStatus={selectedPhaseStatuses.find(s => s.project_status_mapping_id === task.project_status_mapping_id)}
+            users={users}
+            mode="edit"
+            onPhaseChange={handlePhaseChange}
+            inDrawer={inDrawer}
+            projectTreeData={projectTreeData}
+            onCommentCountChange={onCommentCountChange}
+          />
+        </Suspense>
+      </div>
     </div>
   );
 }

@@ -43,7 +43,9 @@
     "saving": "Speichern...",
     "print": "Drucken",
     "printSelected_one": "Auswahl drucken ({{count}})",
-    "printSelected_other": "Auswahl drucken ({{count}})"
+    "printSelected_other": "Auswahl drucken ({{count}})",
+    "printOptions": "Druckoptionen",
+    "resetPrintOptions": "Druckoptionen zurücksetzen"
   },
   "status": {
     "loading": "Wird geladen...",
@@ -1134,5 +1136,8 @@
       "keepYours": "Eigene behalten",
       "takeTheirs": "Remote übernehmen"
     }
+  },
+  "labels": {
+    "printColumns": "Druckspalten"
   }
 }

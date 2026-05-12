@@ -68,6 +68,19 @@
       "message": "11111 {{suffix}} 11111 {{labels}} 11111 {{definitionSuffix}} 11111",
       "deleteType": "11111",
       "keepType": "11111"
+    },
+    "print": {
+      "title": "11111",
+      "subtitle": "11111 {{count}} 11111",
+      "noContacts": "11111",
+      "emptyValue": "-",
+      "columns": {
+        "name": "11111",
+        "email": "11111",
+        "phone": "11111",
+        "client": "11111",
+        "status": "11111"
+      }
     }
   },
   "contactDetails": {

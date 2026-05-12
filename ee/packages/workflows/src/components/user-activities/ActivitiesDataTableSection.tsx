@@ -17,6 +17,11 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import {
+  PrintOptionsButton,
+  type PrintColumnOption,
+  usePrintColumnSelection,
+} from '@alga-psa/ui/components/PrintOptionsButton';
 import { RefreshCw, List, LayoutList } from 'lucide-react';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import './userActivitiesPrint.css';
@@ -85,10 +90,17 @@ export function ActivitiesDataTableSection({
 }: ActivitiesDataTableSectionProps) {
   const { t } = useTranslation('msp/user-activities');
   const effectiveTitle = title ?? t('table.title.all', { defaultValue: 'All Activities' });
-  const LIST_VIEW_OPTIONS: ViewSwitcherOption<ListViewMode>[] = [
+const LIST_VIEW_OPTIONS: ViewSwitcherOption<ListViewMode>[] = [
     { value: 'flat', label: t('table.viewSwitcher.flat', { defaultValue: 'Flat' }), icon: List },
     { value: 'grouped', label: t('table.viewSwitcher.grouped', { defaultValue: 'Grouped' }), icon: LayoutList },
-  ];
+];
+
+function formatActivityPrintDate(dateString?: string): string {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString();
+}
   const [activities, setActivities] = useState<Activity[]>([]);
   const [error, setError] = useState<string | null>(null);
   const { openActivityDrawer } = useActivityDrawer();
@@ -342,6 +354,50 @@ export function ActivitiesDataTableSection({
   const filteredActivitiesForTable = useMemo(() => (
     dedupeRecurringActivities(activities)
   ), [activities]);
+
+  const activityPrintColumns = useMemo<PrintColumnOption<Activity>[]>(() => [
+    {
+      key: 'type',
+      label: t('table.columns.type', { defaultValue: 'Type' }),
+      header: t('table.columns.type', { defaultValue: 'Type' }),
+      render: (activity) => t(`table.activityTypes.${activity.type}`, {
+        defaultValue: activity.type,
+      }),
+      className: 'ua-print-type-column',
+    },
+    {
+      key: 'title',
+      label: t('table.columns.title', { defaultValue: 'Title' }),
+      header: t('table.columns.title', { defaultValue: 'Title' }),
+      render: (activity) => activity.title,
+      className: 'ua-print-title-column',
+    },
+    {
+      key: 'status',
+      label: t('table.columns.status', { defaultValue: 'Status' }),
+      header: t('table.columns.status', { defaultValue: 'Status' }),
+      render: (activity) => activity.status || t('table.values.emDash', { defaultValue: '—' }),
+    },
+    {
+      key: 'priority',
+      label: t('table.columns.priority', { defaultValue: 'Priority' }),
+      header: t('table.columns.priority', { defaultValue: 'Priority' }),
+      render: (activity) => activity.priorityName || activity.priority || t('table.values.emDash', { defaultValue: '—' }),
+    },
+    {
+      key: 'dueDate',
+      label: t('table.columns.dueDate', { defaultValue: 'Due Date' }),
+      header: t('table.columns.dueDate', { defaultValue: 'Due Date' }),
+      render: (activity) => formatActivityPrintDate(activity.dueDate) || t('table.values.noDueDate', { defaultValue: 'No due date' }),
+      className: 'ua-print-date-column',
+    },
+  ], [t]);
+  const {
+    selectedColumnKeys: selectedActivityPrintColumnKeys,
+    selectedColumns: selectedActivityPrintColumns,
+    setSelectedColumnKeys: setSelectedActivityPrintColumnKeys,
+    resetSelectedColumnKeys: resetSelectedActivityPrintColumnKeys,
+  } = usePrintColumnSelection('print-columns:user-activities', activityPrintColumns);
  
   return (
     <>
@@ -373,6 +429,13 @@ export function ActivitiesDataTableSection({
             label={t('table.actions.print', { defaultValue: 'Print' })}
             onBeforePrint={preparePrintActivities}
             onAfterPrint={cleanupPrintActivities}
+          />
+          <PrintOptionsButton
+            id={`${id}-print-options-button`}
+            columns={activityPrintColumns}
+            selectedColumnKeys={selectedActivityPrintColumnKeys}
+            onSelectedColumnKeysChange={setSelectedActivityPrintColumnKeys}
+            onReset={resetSelectedActivityPrintColumnKeys}
           />
         </div>
       </CardHeader>
@@ -434,6 +497,7 @@ export function ActivitiesDataTableSection({
       serverGroups={activityGroups}
       ungroupedCollapsed={ungroupedCollapsed}
       title={effectiveTitle}
+      columns={selectedActivityPrintColumns}
     />
     </>
   );

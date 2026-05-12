@@ -414,7 +414,10 @@
         "dueDate": "Date d'échéance"
       },
       "emptyValue": "—",
-      "noDueDate": "Aucune date d'échéance"
+      "noDueDate": "Aucune date d'échéance",
+      "values": {
+        "hasSla": "SLA"
+      }
     }
   },
   "bulk": {

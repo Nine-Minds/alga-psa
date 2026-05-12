@@ -16,6 +16,7 @@ interface PrintableActivitiesViewProps {
   ungroupedCollapsed?: boolean;
   /** Fallback title */
   title?: string;
+  columns?: PrintableTableColumn<Activity>[];
 }
 
 function formatDate(dateString?: string): string {
@@ -60,6 +61,7 @@ export function PrintableActivitiesView({
   serverGroups = [],
   ungroupedCollapsed = false,
   title,
+  columns: providedColumns,
 }: PrintableActivitiesViewProps) {
   const { t } = useTranslation('msp/user-activities');
   const effectiveTitle = title ?? t('printable.defaultTitle', { defaultValue: 'Activities' });
@@ -69,7 +71,7 @@ export function PrintableActivitiesView({
     month: 'long',
     day: 'numeric',
   });
-  const columns: PrintableTableColumn<Activity>[] = [
+  const defaultColumns: PrintableTableColumn<Activity>[] = [
     {
       key: 'type',
       header: t('table.columns.type', { defaultValue: 'Type' }),
@@ -99,6 +101,7 @@ export function PrintableActivitiesView({
       className: 'ua-print-date-column',
     },
   ];
+  const columns = providedColumns ?? defaultColumns;
 
   const renderTable = (sectionTitle: string, rows: Activity[]) => (
     <PrintableTable

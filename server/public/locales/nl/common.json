@@ -43,7 +43,9 @@
     "saving": "Opslaan...",
     "print": "Afdrukken",
     "printSelected_one": "Geselecteerde afdrukken ({{count}})",
-    "printSelected_other": "Geselecteerde afdrukken ({{count}})"
+    "printSelected_other": "Geselecteerde afdrukken ({{count}})",
+    "printOptions": "Afdrukopties",
+    "resetPrintOptions": "Afdrukopties resetten"
   },
   "status": {
     "loading": "Bezig met laden...",
@@ -1134,5 +1136,8 @@
       "keepYours": "Eigen behouden",
       "takeTheirs": "Externe gebruiken"
     }
+  },
+  "labels": {
+    "printColumns": "Afdrukkolommen"
   }
 }

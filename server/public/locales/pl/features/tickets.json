@@ -414,7 +414,10 @@
         "dueDate": "Termin"
       },
       "emptyValue": "—",
-      "noDueDate": "Brak terminu"
+      "noDueDate": "Brak terminu",
+      "values": {
+        "hasSla": "SLA"
+      }
     }
   },
   "bulk": {

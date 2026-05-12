@@ -34,7 +34,20 @@
       "minutesSeconds": "{{minutes}}m {{seconds}}s",
       "hoursMinutes": "{{hours}}h {{minutes}}m"
     },
-    "externalId": "ID: {{id}}..."
+    "externalId": "ID: {{id}}...",
+    "print": {
+      "title": "Jobs recentes",
+      "subtitle": "{{count}} jobs",
+      "noJobs": "Nenhum job para imprimir",
+      "columns": {
+        "jobName": "Nome do job",
+        "runner": "Executor",
+        "status": "Status",
+        "duration": "Duração",
+        "started": "Iniciado",
+        "completed": "Concluído"
+      }
+    }
   },
   "metrics": {
     "labels": {

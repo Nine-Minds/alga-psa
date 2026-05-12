@@ -197,6 +197,21 @@
       "client_name": "nazwa klienta",
       "location": "lokalizacja",
       "actions": "działania"
+    },
+    "print": {
+      "title": "Zasoby",
+      "selectedTitle": "Wybrane zasoby",
+      "subtitle": "{{count}} zasobów",
+      "noAssets": "Brak zasobów do wydruku",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Nazwa",
+        "tag": "Tag",
+        "type": "Typ",
+        "status": "Status",
+        "client": "Klient",
+        "location": "Lokalizacja"
+      }
     }
   },
   "assetDashboardGrid": {

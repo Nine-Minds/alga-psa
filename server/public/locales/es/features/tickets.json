@@ -414,7 +414,10 @@
         "dueDate": "Fecha de vencimiento"
       },
       "emptyValue": "—",
-      "noDueDate": "Sin fecha de vencimiento"
+      "noDueDate": "Sin fecha de vencimiento",
+      "values": {
+        "hasSla": "SLA"
+      }
     }
   },
   "bulk": {

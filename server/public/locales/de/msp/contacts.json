@@ -68,6 +68,19 @@
       "message": "Der folgende benutzerdefinierte Telefontyp{{suffix}} wird von keinem Kontakt mehr verwendet: {{labels}}. Die Typdefinition löschen{{definitionSuffix}} oder für spätere Verwendung behalten?",
       "deleteType": "Typ löschen",
       "keepType": "Typ behalten"
+    },
+    "print": {
+      "title": "Kontakte",
+      "subtitle": "{{count}} Kontakte",
+      "noContacts": "Keine Kontakte zum Drucken",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Name",
+        "email": "E-Mail",
+        "phone": "Telefon",
+        "client": "Kunde",
+        "status": "Status"
+      }
     }
   },
   "contactDetails": {

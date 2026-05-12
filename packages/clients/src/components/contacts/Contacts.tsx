@@ -9,6 +9,13 @@ import { getAllContacts, getContactsByClient, getAllClients } from '@alga-psa/cl
 import { exportContactsToCSV, deleteContact, updateContact, getContactLastUsagePhoneTypes, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
 import { Button } from '@alga-psa/ui/components/Button';
+import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import {
+  PrintOptionsButton,
+  type PrintColumnOption,
+  usePrintColumnSelection,
+} from '@alga-psa/ui/components/PrintOptionsButton';
+import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import { Pen, Eye, CloudDownload, MoreVertical, Upload, Trash2, XCircle, ExternalLink, Power, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -252,12 +259,12 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     });
   };
 
-  const getClientName = (clientId: string) => {
+  const getClientName = useCallback((clientId: string) => {
     const client = clients.find(c => c.client_id === clientId);
     return client
       ? client.client_name
       : t('contactsPage.unknownClient', { defaultValue: 'Unknown Client' });
-  };
+  }, [clients, t]);
 
   const handleContactAdded = (newContact: IContact) => {
     // Store tags for the new contact if provided
@@ -802,6 +809,71 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     id: contact.contact_name_id
   })), [filteredContacts]);
 
+  const printColumns = useMemo<PrintColumnOption<IContact>[]>(() => [
+    {
+      key: 'full_name',
+      label: t('contactsPage.table.name', { defaultValue: 'Name' }),
+      header: t('contactsPage.table.name', { defaultValue: 'Name' }),
+      render: (contact) => contact.full_name,
+    },
+    {
+      key: 'created_at',
+      label: t('contactsPage.table.created', { defaultValue: 'Created' }),
+      header: t('contactsPage.table.created', { defaultValue: 'Created' }),
+      render: (contact) => contact.created_at
+        ? new Date(contact.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : t('common.states.na', { defaultValue: 'N/A' }),
+    },
+    {
+      key: 'email',
+      label: t('contactsPage.table.email', { defaultValue: 'Email' }),
+      header: t('contactsPage.table.email', { defaultValue: 'Email' }),
+      render: (contact) => contact.email || t('contactsPage.print.emptyValue', { defaultValue: '-' }),
+    },
+    {
+      key: 'default_phone_number',
+      label: t('contactsPage.table.phoneNumber', { defaultValue: 'Phone Number' }),
+      header: t('contactsPage.table.phoneNumber', { defaultValue: 'Phone Number' }),
+      render: (contact) => contact.default_phone_number
+        || contact.phone_numbers?.find((phoneNumber: any) => phoneNumber.is_default)?.phone_number
+        || contact.phone_numbers?.[0]?.phone_number
+        || t('contactsPage.print.emptyValue', { defaultValue: '-' }),
+    },
+    {
+      key: 'client_name',
+      label: t('contactsPage.table.client', { defaultValue: 'Client' }),
+      header: t('contactsPage.table.client', { defaultValue: 'Client' }),
+      render: (contact) => contact.client_id
+        ? getClientName(contact.client_id)
+        : t('contactsPage.noClient', { defaultValue: 'No Client' }),
+    },
+    {
+      key: 'tags',
+      label: t('contactsPage.table.tags', { defaultValue: 'Tags' }),
+      header: t('contactsPage.table.tags', { defaultValue: 'Tags' }),
+      render: (contact) => {
+        const tags = contact.contact_name_id ? contactTagsRef.current[contact.contact_name_id] ?? [] : [];
+        return tags.length > 0
+          ? tags.map((tag) => tag.tag_text).join(', ')
+          : t('contactsPage.print.emptyValue', { defaultValue: '-' });
+      },
+    },
+    {
+      key: 'status',
+      label: t('contactsPage.print.columns.status', { defaultValue: 'Status' }),
+      header: t('contactsPage.print.columns.status', { defaultValue: 'Status' }),
+      render: (contact) => contact.is_inactive
+        ? t('common.states.inactive', { defaultValue: 'Inactive' })
+        : t('common.states.active', { defaultValue: 'Active' }),
+    },
+  ], [t, getClientName]);
+  const {
+    selectedColumnKeys: selectedContactPrintColumnKeys,
+    selectedColumns: selectedContactPrintColumns,
+    setSelectedColumnKeys: setSelectedContactPrintColumnKeys,
+    resetSelectedColumnKeys: resetSelectedContactPrintColumnKeys,
+  } = usePrintColumnSelection('print-columns:contacts-list', printColumns);
+
   if (isLoading) {
     return <ContactsSkeleton />;
   }
@@ -819,9 +891,21 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
             >
               {t('contactsPage.addContact', { defaultValue: '+ Add Contact' })}
             </Button>
+            <PrintButton
+              id="contacts-print-button"
+              variant="outline"
+              onBeforePrint={() => undefined}
+            />
+            <PrintOptionsButton
+              id="contacts-print-options-button"
+              columns={printColumns}
+              selectedColumnKeys={selectedContactPrintColumnKeys}
+              onSelectedColumnKeysChange={setSelectedContactPrintColumnKeys}
+              onReset={resetSelectedContactPrintColumnKeys}
+            />
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>
-                  <button className="border border-gray-300 rounded-md p-2 flex items-center gap-2">
+                  <button id="contacts-actions-button" className="border border-gray-300 rounded-md p-2 flex items-center gap-2">
                     <MoreVertical size={16} />
                     {t('contactsPage.actions', { defaultValue: 'Actions' })}
                   </button>
@@ -924,6 +1008,19 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
             onSortChange={handleSortChange}
             manualSorting={true}
           />
+          <div className="app-print-root app-print-only">
+            <PrintableTable
+              title={t('contactsPage.print.title', { defaultValue: 'Contacts' })}
+              subtitle={t('contactsPage.print.subtitle', {
+                count: filteredContacts.length,
+                defaultValue: '{{count}} contacts',
+              })}
+              rows={filteredContacts}
+              columns={selectedContactPrintColumns}
+              getRowKey={(contact) => contact.contact_name_id}
+              emptyMessage={t('contactsPage.print.noContacts', { defaultValue: 'No contacts to print' })}
+            />
+          </div>
         </div>
         <QuickAddContact
           isOpen={isQuickAddOpen}

@@ -68,6 +68,19 @@
       "message": "De volgende aangepaste telefoonsoort{{suffix}} wordt niet langer door een contact gebruikt: {{labels}}. Wil je de soortdefinitie verwijderen{{definitionSuffix}} of behouden voor toekomstig gebruik?",
       "deleteType": "Soort verwijderen",
       "keepType": "Soort behouden"
+    },
+    "print": {
+      "title": "Contacten",
+      "subtitle": "{{count}} contacten",
+      "noContacts": "Geen contacten om af te drukken",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Naam",
+        "email": "E-mail",
+        "phone": "Telefoon",
+        "client": "Klant",
+        "status": "Status"
+      }
     }
   },
   "contactDetails": {

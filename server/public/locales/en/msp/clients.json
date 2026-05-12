@@ -132,7 +132,25 @@
       "bucketUsageRecord": "bucket usage record",
       "bucketUsageRecords": "bucket usage records"
     },
-    "deleteSelectedPrompt": "Are you sure you want to delete {{count}} selected {{clientsLabel}}? This action cannot be undone."
+    "deleteSelectedPrompt": "Are you sure you want to delete {{count}} selected {{clientsLabel}}? This action cannot be undone.",
+    "clientTypes": {
+      "company": "Company",
+      "individual": "Individual"
+    },
+    "print": {
+      "title": "Clients",
+      "selectedTitle": "Selected Clients",
+      "subtitle": "{{count}} clients",
+      "noClients": "No clients to print",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Client",
+        "type": "Type",
+        "phone": "Phone",
+        "address": "Address",
+        "status": "Status"
+      }
+    }
   },
   "clientDetails": {
     "title": "Client Details",

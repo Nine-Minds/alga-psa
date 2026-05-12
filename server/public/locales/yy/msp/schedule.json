@@ -92,6 +92,20 @@
         "future": "55555",
         "all": "55555"
       }
+    },
+    "print": {
+      "title": "55555",
+      "subtitle": "55555 {{count}} 55555",
+      "noEntries": "55555",
+      "emptyValue": "-",
+      "columns": {
+        "title": "55555",
+        "type": "55555",
+        "start": "55555",
+        "end": "55555",
+        "assigned": "55555",
+        "status": "55555"
+      }
     }
   },
   "weeklyEvent": {

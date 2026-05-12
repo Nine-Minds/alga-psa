@@ -132,7 +132,25 @@
     },
     "deleteSelectedPrompt": "Czy na pewno chcesz usunąć {{count}} wybrane {{clientsLabel}}? Tej akcji nie można cofnąć.",
     "singleInactiveWithContactsSuccess_one": "{{name}} i {{count}} kontakt zostały pomyślnie dezaktywowane.",
-    "singleInactiveWithContactsSuccess_other": "{{name}} i {{count}} kontaktów zostało pomyślnie dezaktywowanych."
+    "singleInactiveWithContactsSuccess_other": "{{name}} i {{count}} kontaktów zostało pomyślnie dezaktywowanych.",
+    "clientTypes": {
+      "company": "Firma",
+      "individual": "Osoba"
+    },
+    "print": {
+      "title": "Klienci",
+      "selectedTitle": "Wybrani klienci",
+      "subtitle": "{{count}} klientów",
+      "noClients": "Brak klientów do wydruku",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Klient",
+        "type": "Typ",
+        "phone": "Telefon",
+        "address": "Adres",
+        "status": "Status"
+      }
+    }
   },
   "clientDetails": {
     "title": "Dane Klienta",

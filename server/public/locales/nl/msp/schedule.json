@@ -92,6 +92,20 @@
         "future": "Deze en toekomstige gebeurtenissen",
         "all": "Alle evenementen"
       }
+    },
+    "print": {
+      "title": "Planningsagenda",
+      "subtitle": "{{count}} geplande items",
+      "noEntries": "Geen geplande items om af te drukken",
+      "emptyValue": "-",
+      "columns": {
+        "title": "Titel",
+        "type": "Type",
+        "start": "Start",
+        "end": "Einde",
+        "assigned": "Toegewezen",
+        "status": "Status"
+      }
     }
   },
   "weeklyEvent": {

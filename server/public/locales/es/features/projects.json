@@ -1382,5 +1382,22 @@
     "unknownTask": "Tarea desconocida",
     "blocks": "Bloquea"
   },
-  "columnsHidden": "columna(s) ocultas por espacio limitado. Cambia el tamaño del navegador para ver más."
+  "columnsHidden": "columna(s) ocultas por espacio limitado. Cambia el tamaño del navegador para ver más.",
+  "projectPrint": {
+    "tasks": {
+      "title": "Tareas del proyecto",
+      "subtitle": "{{count}} tareas",
+      "noTasks": "No hay tareas del proyecto para imprimir",
+      "emptyValue": "-",
+      "hoursValue": "{{actual}} / {{estimated}}",
+      "columns": {
+        "task": "Tarea",
+        "phase": "Fase",
+        "status": "Estado",
+        "assignee": "Asignado a",
+        "dueDate": "Fecha límite",
+        "hours": "Horas"
+      }
+    }
+  }
 }

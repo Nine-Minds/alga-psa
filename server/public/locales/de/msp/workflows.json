@@ -111,6 +111,21 @@
       "bulkCancelSuccessCount": "{{count}} Ausführung(en) abgebrochen.",
       "bulkSkippedIneligibleCount": "{{count}} nicht zulässige Ausführung(en) übersprungen.",
       "bulkActionFailed": "Massenaktion fehlgeschlagen"
+    },
+    "print": {
+      "title": "Workflow-Läufe",
+      "selectedTitle": "Ausgewählte Workflow-Läufe",
+      "subtitle": "{{count}} Läufe",
+      "noRuns": "Keine Workflow-Läufe zum Drucken",
+      "columns": {
+        "run": "Lauf",
+        "workflow": "Workflow",
+        "version": "Version",
+        "status": "Status",
+        "started": "Gestartet",
+        "updated": "Aktualisiert",
+        "duration": "Dauer"
+      }
     }
   },
   "runDetails": {

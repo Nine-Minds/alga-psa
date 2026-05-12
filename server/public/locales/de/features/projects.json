@@ -1382,5 +1382,22 @@
     "unknownTask": "Unbekannte Aufgabe",
     "blocks": "Blockiert"
   },
-  "columnsHidden": "Spalte(n) aufgrund begrenzten Platzes ausgeblendet. Browser vergrößern, um mehr zu sehen."
+  "columnsHidden": "Spalte(n) aufgrund begrenzten Platzes ausgeblendet. Browser vergrößern, um mehr zu sehen.",
+  "projectPrint": {
+    "tasks": {
+      "title": "Projektaufgaben",
+      "subtitle": "{{count}} Aufgaben",
+      "noTasks": "Keine Projektaufgaben zum Drucken",
+      "emptyValue": "-",
+      "hoursValue": "{{actual}} / {{estimated}}",
+      "columns": {
+        "task": "Aufgabe",
+        "phase": "Phase",
+        "status": "Status",
+        "assignee": "Zugewiesen an",
+        "dueDate": "Fälligkeitsdatum",
+        "hours": "Stunden"
+      }
+    }
+  }
 }

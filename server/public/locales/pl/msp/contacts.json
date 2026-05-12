@@ -68,6 +68,19 @@
       "message": "Niestandardowy typ telefonu{{suffix}} nie jest już używany przez żaden kontakt: {{labels}}. Usunąć definicję typu{{definitionSuffix}} czy zachować ją na przyszłość?",
       "deleteType": "Usuń typ",
       "keepType": "Zachowaj typ"
+    },
+    "print": {
+      "title": "Kontakty",
+      "subtitle": "{{count}} kontaktów",
+      "noContacts": "Brak kontaktów do wydruku",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Nazwa",
+        "email": "E-mail",
+        "phone": "Telefon",
+        "client": "Klient",
+        "status": "Status"
+      }
     }
   },
   "contactDetails": {

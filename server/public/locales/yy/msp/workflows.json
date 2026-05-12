@@ -111,6 +111,21 @@
       "bulkCancelSuccessCount": "55555 {{count}} 55555",
       "bulkSkippedIneligibleCount": "55555 {{count}} 55555",
       "bulkActionFailed": "55555"
+    },
+    "print": {
+      "title": "55555",
+      "selectedTitle": "55555",
+      "subtitle": "55555 {{count}} 55555",
+      "noRuns": "55555",
+      "columns": {
+        "run": "55555",
+        "workflow": "55555",
+        "version": "55555",
+        "status": "55555",
+        "started": "55555",
+        "updated": "55555",
+        "duration": "55555"
+      }
     }
   },
   "runDetails": {

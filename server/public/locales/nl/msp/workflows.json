@@ -111,6 +111,21 @@
       "bulkCancelSuccessCount": "{{count}} uitvoering(en) geannuleerd.",
       "bulkSkippedIneligibleCount": "{{count}} niet-geschikte uitvoering(en) overgeslagen.",
       "bulkActionFailed": "Bulkactie mislukt"
+    },
+    "print": {
+      "title": "Workflow-runs",
+      "selectedTitle": "Geselecteerde workflow-runs",
+      "subtitle": "{{count}} runs",
+      "noRuns": "Geen workflow-runs om af te drukken",
+      "columns": {
+        "run": "Run",
+        "workflow": "Workflow",
+        "version": "Versie",
+        "status": "Status",
+        "started": "Gestart",
+        "updated": "Bijgewerkt",
+        "duration": "Duur"
+      }
     }
   },
   "runDetails": {

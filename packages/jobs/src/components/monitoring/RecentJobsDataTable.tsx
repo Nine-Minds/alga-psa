@@ -2,6 +2,13 @@
 
 import React from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import {
+  PrintOptionsButton,
+  type PrintColumnOption,
+  usePrintColumnSelection,
+} from '@alga-psa/ui/components/PrintOptionsButton';
+import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import JobDetailsDrawer from './JobDetailsDrawer';
 import { getJobDetailsWithHistory, type JobRecord } from '@alga-psa/jobs/actions';
@@ -208,6 +215,55 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
     },
   ], [formatDuration, formatRelativeTime, getStatusLabel, t]);
 
+  const printColumns = React.useMemo<PrintColumnOption<JobRecord>[]>(() => [
+    {
+      key: 'job',
+      label: t('recentTable.print.columns.jobName', { defaultValue: 'Job Name' }),
+      header: t('recentTable.print.columns.jobName', { defaultValue: 'Job Name' }),
+      render: (job) => job.type,
+    },
+    {
+      key: 'runner',
+      label: t('recentTable.print.columns.runner', { defaultValue: 'Runner' }),
+      header: t('recentTable.print.columns.runner', { defaultValue: 'Runner' }),
+      render: (job) => job.runner_type === 'temporal'
+        ? t('shared.runnerLabels.temporal', { defaultValue: 'Temporal' })
+        : t('shared.runnerLabels.pgboss', { defaultValue: 'PG Boss' }),
+    },
+    {
+      key: 'status',
+      label: t('recentTable.print.columns.status', { defaultValue: 'Status' }),
+      header: t('recentTable.print.columns.status', { defaultValue: 'Status' }),
+      render: (job) => getStatusLabel(job.status),
+    },
+    {
+      key: 'duration',
+      label: t('recentTable.print.columns.duration', { defaultValue: 'Duration' }),
+      header: t('recentTable.print.columns.duration', { defaultValue: 'Duration' }),
+      render: (job) => formatDuration(job.processed_at, job.updated_at),
+    },
+    {
+      key: 'started',
+      label: t('recentTable.print.columns.started', { defaultValue: 'Started' }),
+      header: t('recentTable.print.columns.started', { defaultValue: 'Started' }),
+      render: (job) => formatRelativeTime(job.processed_at),
+    },
+    {
+      key: 'completed',
+      label: t('recentTable.print.columns.completed', { defaultValue: 'Completed' }),
+      header: t('recentTable.print.columns.completed', { defaultValue: 'Completed' }),
+      render: (job) => job.status === 'processing' || job.status === 'pending'
+        ? t('shared.fallbacks.empty', { defaultValue: '-' })
+        : formatRelativeTime(job.updated_at),
+    },
+  ], [formatDuration, formatRelativeTime, getStatusLabel, t]);
+  const {
+    selectedColumnKeys: selectedJobPrintColumnKeys,
+    selectedColumns: selectedJobPrintColumns,
+    setSelectedColumnKeys: setSelectedJobPrintColumnKeys,
+    resetSelectedColumnKeys: resetSelectedJobPrintColumnKeys,
+  } = usePrintColumnSelection('print-columns:recent-jobs', printColumns);
+
   const hasActiveJobs = React.useCallback((jobs: JobRecord[]) => {
     return jobs.some(job => job.status === 'processing');
   }, []);
@@ -260,6 +316,33 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
 
   return (
     <div className="w-full">
+      <div className="mb-3 flex justify-end">
+        <PrintButton
+          id="recent-jobs-print-button"
+          variant="outline"
+          size="sm"
+        />
+        <PrintOptionsButton
+          id="recent-jobs-print-options-button"
+          columns={printColumns}
+          selectedColumnKeys={selectedJobPrintColumnKeys}
+          onSelectedColumnKeysChange={setSelectedJobPrintColumnKeys}
+          onReset={resetSelectedJobPrintColumnKeys}
+        />
+      </div>
+      <div className="app-print-root app-print-only">
+        <PrintableTable
+          title={t('recentTable.print.title', { defaultValue: 'Recent Jobs' })}
+          subtitle={t('recentTable.print.subtitle', {
+            defaultValue: '{{count}} jobs',
+            count: data.length,
+          })}
+          rows={data}
+          columns={selectedJobPrintColumns}
+          getRowKey={(job) => job.job_id ?? `${job.type}-${job.processed_at ?? job.updated_at ?? ''}`}
+          emptyMessage={t('recentTable.print.noJobs', { defaultValue: 'No jobs to print' })}
+        />
+      </div>
       <DataTable
         key={`${currentPage}-${pageSize}`}
         data={data}

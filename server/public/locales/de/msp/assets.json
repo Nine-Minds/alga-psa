@@ -197,6 +197,21 @@
       "client_name": "Kundenname",
       "location": "Standort",
       "actions": "Aktionen"
+    },
+    "print": {
+      "title": "Assets",
+      "selectedTitle": "Ausgewählte Assets",
+      "subtitle": "{{count}} Assets",
+      "noAssets": "Keine Assets zum Drucken",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Name",
+        "tag": "Tag",
+        "type": "Typ",
+        "status": "Status",
+        "client": "Kunde",
+        "location": "Standort"
+      }
     }
   },
   "assetDashboardGrid": {

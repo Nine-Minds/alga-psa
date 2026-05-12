@@ -43,7 +43,9 @@
     "saving": "Zapisywanie...",
     "print": "Drukuj",
     "printSelected_one": "Drukuj zaznaczone ({{count}})",
-    "printSelected_other": "Drukuj zaznaczone ({{count}})"
+    "printSelected_other": "Drukuj zaznaczone ({{count}})",
+    "printOptions": "Opcje drukowania",
+    "resetPrintOptions": "Resetuj opcje drukowania"
   },
   "status": {
     "loading": "Ładowanie...",
@@ -1134,5 +1136,8 @@
       "keepYours": "Zachowaj swoje",
       "takeTheirs": "Użyj zdalnej"
     }
+  },
+  "labels": {
+    "printColumns": "Kolumny wydruku"
   }
 }

@@ -68,6 +68,19 @@
       "message": "El siguiente tipo de teléfono personalizado{{suffix}} ya no lo usa ningún contacto: {{labels}}. ¿Eliminar la definición del tipo{{definitionSuffix}} o conservarla para uso futuro?",
       "deleteType": "Eliminar tipo",
       "keepType": "Conservar tipo"
+    },
+    "print": {
+      "title": "Contactos",
+      "subtitle": "{{count}} contactos",
+      "noContacts": "No hay contactos para imprimir",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Nombre",
+        "email": "Correo electrónico",
+        "phone": "Teléfono",
+        "client": "Cliente",
+        "status": "Estado"
+      }
     }
   },
   "contactDetails": {

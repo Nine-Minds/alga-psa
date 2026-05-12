@@ -132,7 +132,25 @@
     },
     "deleteSelectedPrompt": "Êtes-vous sûr de vouloir supprimer {{count}} sélectionné {{clientsLabel}} ? Cette action ne peut pas être annulée.",
     "singleInactiveWithContactsSuccess_one": "{{name}} et {{count}} contact ont été désactivés avec succès.",
-    "singleInactiveWithContactsSuccess_other": "{{name}} et {{count}} contacts ont été désactivés avec succès."
+    "singleInactiveWithContactsSuccess_other": "{{name}} et {{count}} contacts ont été désactivés avec succès.",
+    "clientTypes": {
+      "company": "Entreprise",
+      "individual": "Particulier"
+    },
+    "print": {
+      "title": "Clients",
+      "selectedTitle": "Clients sélectionnés",
+      "subtitle": "{{count}} clients",
+      "noClients": "Aucun client à imprimer",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Client",
+        "type": "Type",
+        "phone": "Téléphone",
+        "address": "Adresse",
+        "status": "Statut"
+      }
+    }
   },
   "clientDetails": {
     "title": "Détails du client",

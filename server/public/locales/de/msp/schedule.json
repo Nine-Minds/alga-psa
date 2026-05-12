@@ -92,6 +92,20 @@
         "future": "Dieses und zukünftige Ereignisse",
         "all": "Alle Ereignisse"
       }
+    },
+    "print": {
+      "title": "Terminagenda",
+      "subtitle": "{{count}} geplante Einträge",
+      "noEntries": "Keine Termine zum Drucken",
+      "emptyValue": "-",
+      "columns": {
+        "title": "Titel",
+        "type": "Typ",
+        "start": "Start",
+        "end": "Ende",
+        "assigned": "Zugewiesen",
+        "status": "Status"
+      }
     }
   },
   "weeklyEvent": {

@@ -77,6 +77,7 @@ export * from './PasswordResetWarning';
 export * from './PhoneInput';
 export * from './Popover';
 export * from './PrintButton';
+export * from './PrintOptionsButton';
 export * from './PrintableRegion';
 export * from './PrintableTable';
 export * from './Progress';

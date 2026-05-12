@@ -92,6 +92,20 @@
         "future": "This and future events",
         "all": "All events"
       }
+    },
+    "print": {
+      "title": "Agenda da programação",
+      "subtitle": "{{count}} entradas agendadas",
+      "noEntries": "Nenhuma entrada agendada para imprimir",
+      "emptyValue": "-",
+      "columns": {
+        "title": "Título",
+        "type": "Tipo",
+        "start": "Início",
+        "end": "Fim",
+        "assigned": "Atribuído",
+        "status": "Status"
+      }
     }
   },
   "weeklyEvent": {

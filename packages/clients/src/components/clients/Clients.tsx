@@ -1,9 +1,16 @@
 'use client';
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import type { IClient } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import {
+  PrintOptionsButton,
+  type PrintColumnOption,
+  usePrintColumnSelection,
+} from '@alga-psa/ui/components/PrintOptionsButton';
+import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import QuickAddClient from './QuickAddClient';
 import { getAllClients } from '@alga-psa/clients/actions';
 import {
@@ -41,6 +48,18 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 const COMPANY_VIEW_MODE_SETTING = 'client_list_view_mode';
 const CLIENTS_GRID_PAGE_SIZE_SETTING = 'clients_grid_page_size';
 const CLIENTS_LIST_PAGE_SIZE_SETTING = 'clients_list_page_size';
+const CLIENTS_PRINT_PAGE_SIZE = 5000;
+
+const formatClientPrintAddress = (client: IClient): string => {
+  return [
+    client.address_line1 ?? client.address,
+    client.address_line2 ?? client.address_2,
+    client.city,
+    client.state_province ?? client.state,
+    client.postal_code ?? client.zip,
+    client.country_name ?? client.country,
+  ].filter(Boolean).join(', ');
+};
 
 // Memoized search input component to prevent re-renders
 const SearchInput = memo(({
@@ -367,6 +386,7 @@ const Clients: React.FC = () => {
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [isSelectAllMode, setIsSelectAllMode] = useState(false);
   const [loadedClients, setLoadedClients] = useState<IClient[]>([]);
+  const [printClients, setPrintClients] = useState<IClient[]>([]);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isMultiDeleteDialogOpen, setIsMultiDeleteDialogOpen] = useState(false);
@@ -1200,6 +1220,153 @@ const Clients: React.FC = () => {
     }
   };
 
+  const hydratePrintClientTags = useCallback(async (clientsToPrint: IClient[]) => {
+    if (clientsToPrint.length === 0) return;
+
+    try {
+      const tags = await findTagsByEntityIds(
+        clientsToPrint.map((client) => client.client_id),
+        'client'
+      );
+      const nextClientTags: Record<string, ITag[]> = {};
+      tags.forEach((tag) => {
+        if (!nextClientTags[tag.tagged_id]) {
+          nextClientTags[tag.tagged_id] = [];
+        }
+        nextClientTags[tag.tagged_id].push(tag);
+      });
+      setClientTags((current) => ({ ...current, ...nextClientTags }));
+    } catch (error) {
+      console.error('Error fetching print client tags:', error);
+    }
+  }, []);
+
+  const preparePrintClients = useCallback(async () => {
+    if (selectedClients.length > 0) {
+      const selectedClientSet = new Set(selectedClients);
+      const loadedSelectedClients = loadedClients.filter((client) => selectedClientSet.has(client.client_id));
+
+      if (loadedSelectedClients.length === selectedClients.length) {
+        await hydratePrintClientTags(loadedSelectedClients);
+        setPrintClients(loadedSelectedClients);
+        return;
+      }
+
+      const response = await getAllClientsPaginated({
+        page: 1,
+        pageSize: CLIENTS_PRINT_PAGE_SIZE,
+        includeInactive: true,
+        loadLogos: false,
+        sortBy,
+        sortDirection,
+      });
+      const clientsToPrint = response.clients.filter((client) => selectedClientSet.has(client.client_id));
+      await hydratePrintClientTags(clientsToPrint);
+      setPrintClients(clientsToPrint);
+      return;
+    }
+
+    const response = await getAllClientsPaginated({
+      page: 1,
+      pageSize: CLIENTS_PRINT_PAGE_SIZE,
+      includeInactive: filterStatus !== 'active',
+      statusFilter: filterStatus,
+      searchTerm,
+      clientTypeFilter,
+      selectedTags,
+      loadLogos: false,
+      sortBy,
+      sortDirection,
+    });
+
+    await hydratePrintClientTags(response.clients);
+    setPrintClients(response.clients);
+  }, [
+    clientTypeFilter,
+    filterStatus,
+    hydratePrintClientTags,
+    loadedClients,
+    searchTerm,
+    selectedClients,
+    selectedTags,
+    sortBy,
+    sortDirection,
+  ]);
+
+  const clientPrintColumns = useMemo<PrintColumnOption<IClient>[]>(() => [
+    {
+      key: 'client_name',
+      label: t('clientsList.name', { defaultValue: 'Name' }),
+      header: t('clientsList.name', { defaultValue: 'Name' }),
+      render: (client) => client.client_name,
+    },
+    {
+      key: 'created_at',
+      label: t('clientsList.created', { defaultValue: 'Created' }),
+      header: t('clientsList.created', { defaultValue: 'Created' }),
+      render: (client) => client.created_at
+        ? new Date(client.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : t('common.states.na', { defaultValue: 'N/A' }),
+    },
+    {
+      key: 'client_type',
+      label: t('clientsList.type', { defaultValue: 'Type' }),
+      header: t('clientsList.type', { defaultValue: 'Type' }),
+      render: (client) => client.client_type
+        ? t(`clientsPage.clientTypes.${client.client_type}`, { defaultValue: client.client_type })
+        : t('clientsPage.print.emptyValue', { defaultValue: '-' }),
+    },
+    {
+      key: 'phone_no',
+      label: t('clientsList.phone', { defaultValue: 'Phone' }),
+      header: t('clientsList.phone', { defaultValue: 'Phone' }),
+      render: (client) => client.location_phone ?? client.phone_no ?? t('clientsPage.print.emptyValue', { defaultValue: '-' }),
+    },
+    {
+      key: 'address',
+      label: t('clientsList.address', { defaultValue: 'Address' }),
+      header: t('clientsList.address', { defaultValue: 'Address' }),
+      render: (client) => formatClientPrintAddress(client) || t('clientsPage.print.emptyValue', { defaultValue: '-' }),
+    },
+    {
+      key: 'account_manager_full_name',
+      label: t('clientsList.accountManager', { defaultValue: 'Account Manager' }),
+      header: t('clientsList.accountManager', { defaultValue: 'Account Manager' }),
+      render: (client) => client.account_manager_full_name || t('common.states.na', { defaultValue: 'N/A' }),
+    },
+    {
+      key: 'url',
+      label: t('clientsList.url', { defaultValue: 'URL' }),
+      header: t('clientsList.url', { defaultValue: 'URL' }),
+      render: (client) => client.url || t('common.states.na', { defaultValue: 'N/A' }),
+    },
+    {
+      key: 'tags',
+      label: t('clientsList.tags', { defaultValue: 'Tags' }),
+      header: t('clientsList.tags', { defaultValue: 'Tags' }),
+      render: (client) => {
+        const tags = clientTags[client.client_id] ?? [];
+        return tags.length > 0
+          ? tags.map((tag) => tag.tag_text).join(', ')
+          : t('clientsPage.print.emptyValue', { defaultValue: '-' });
+      },
+    },
+    {
+      key: 'status',
+      label: t('clientsPage.print.columns.status', { defaultValue: 'Status' }),
+      header: t('clientsPage.print.columns.status', { defaultValue: 'Status' }),
+      render: (client) => client.is_inactive
+        ? t('common.states.inactive', { defaultValue: 'Inactive' })
+        : t('common.states.active', { defaultValue: 'Active' }),
+    },
+  ], [clientTags, t]);
+  const {
+    selectedColumnKeys: selectedClientPrintColumnKeys,
+    selectedColumns: selectedClientPrintColumns,
+    setSelectedColumnKeys: setSelectedClientPrintColumnKeys,
+    resetSelectedColumnKeys: resetSelectedClientPrintColumnKeys,
+  } = usePrintColumnSelection('print-columns:clients-list', clientPrintColumns);
+
   const handleImportComplete = async (clients: IClient[], updateExisting: boolean) => {
     try {
       await importClientsFromCSV(clients, updateExisting);
@@ -1287,6 +1454,20 @@ const Clients: React.FC = () => {
                 </DropdownMenu.Item>
               </DropdownMenu.Content>
             </DropdownMenu.Root>
+            <PrintButton
+              id="clients-print-button"
+              variant="outline"
+              selectedCount={selectedClients.length}
+              onBeforePrint={preparePrintClients}
+              onAfterPrint={() => setPrintClients([])}
+            />
+            <PrintOptionsButton
+              id="clients-print-options-button"
+              columns={clientPrintColumns}
+              selectedColumnKeys={selectedClientPrintColumnKeys}
+              onSelectedColumnKeysChange={setSelectedClientPrintColumnKeys}
+              onReset={resetSelectedClientPrintColumnKeys}
+            />
           </div>
 
           <ViewSwitcher
@@ -1398,6 +1579,25 @@ const Clients: React.FC = () => {
           {t('common.actions.delete', { defaultValue: 'Delete' })}
           <TrashIcon className="h-5 w-5" />
         </Button>
+      </div>
+
+      <div className="app-print-root app-print-only">
+        <PrintableTable
+          title={selectedClients.length > 0
+            ? t('clientsPage.print.selectedTitle', {
+                count: selectedClients.length,
+                defaultValue: 'Selected Clients',
+              })
+            : t('clientsPage.print.title', { defaultValue: 'Clients' })}
+          subtitle={t('clientsPage.print.subtitle', {
+            count: printClients.length,
+            defaultValue: '{{count}} clients',
+          })}
+          rows={printClients}
+          columns={selectedClientPrintColumns}
+          getRowKey={(client) => client.client_id}
+          emptyMessage={t('clientsPage.print.noClients', { defaultValue: 'No clients to print' })}
+        />
       </div>
 
       {/* Clients */}

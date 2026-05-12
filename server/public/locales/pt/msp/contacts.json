@@ -68,6 +68,19 @@
       "message": "The following custom phone type{{suffix}} no longer used by any contact: {{labels}}. Delete the type definition{{definitionSuffix}}, or keep for future use?",
       "deleteType": "Delete Type",
       "keepType": "Keep Type"
+    },
+    "print": {
+      "title": "Contatos",
+      "subtitle": "{{count}} contatos",
+      "noContacts": "Nenhum contato para imprimir",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Nome",
+        "email": "E-mail",
+        "phone": "Telefone",
+        "client": "Cliente",
+        "status": "Status"
+      }
     }
   },
   "contactDetails": {

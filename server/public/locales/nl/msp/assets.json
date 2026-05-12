@@ -197,6 +197,21 @@
       "client_name": "naam van de klant",
       "location": "locatie",
       "actions": "acties"
+    },
+    "print": {
+      "title": "Assets",
+      "selectedTitle": "Geselecteerde assets",
+      "subtitle": "{{count}} assets",
+      "noAssets": "Geen assets om af te drukken",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Naam",
+        "tag": "Tag",
+        "type": "Type",
+        "status": "Status",
+        "client": "Klant",
+        "location": "Locatie"
+      }
     }
   },
   "assetDashboardGrid": {

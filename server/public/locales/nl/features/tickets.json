@@ -414,7 +414,10 @@
         "dueDate": "Vervaldatum"
       },
       "emptyValue": "—",
-      "noDueDate": "Geen vervaldatum"
+      "noDueDate": "Geen vervaldatum",
+      "values": {
+        "hasSla": "SLA"
+      }
     }
   },
   "bulk": {

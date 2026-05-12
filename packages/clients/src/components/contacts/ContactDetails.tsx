@@ -9,6 +9,7 @@ import { IUserWithRoles, IUser } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
+import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { ExternalLink, Pencil, Trash2 } from 'lucide-react';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -874,7 +875,12 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           </Button>
         )}
 
-        <div className="flex items-center gap-2 mr-8">
+        <div className="flex items-center gap-2 mr-8" data-print-hide>
+          <PrintButton
+            id={`${id}-print-button`}
+            variant="outline"
+            size="sm"
+          />
           <Button
             id={`${id}-delete-contact-button`}
             onClick={handleDeleteContact}
@@ -889,7 +895,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       </div>
 
       {/* Content Area */}
-      <div>
+      <div data-print-region>
         <CustomTabs
           tabs={quickView ? [tabContent[0]] : tabContent}
           defaultTab={searchParams?.get('tab')?.toLowerCase() || 'details'}

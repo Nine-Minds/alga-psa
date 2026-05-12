@@ -43,7 +43,9 @@
     "saving": "Saving...",
     "print": "Print",
     "printSelected_one": "Print selected ({{count}})",
-    "printSelected_other": "Print selected ({{count}})"
+    "printSelected_other": "Print selected ({{count}})",
+    "printOptions": "Print options",
+    "resetPrintOptions": "Reset print options"
   },
   "form": {
     "selectPlaceholder": "Select...",
@@ -1134,5 +1136,8 @@
       "keepYours": "Keep yours",
       "takeTheirs": "Take theirs"
     }
+  },
+  "labels": {
+    "printColumns": "Print columns"
   }
 }

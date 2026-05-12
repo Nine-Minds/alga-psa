@@ -43,7 +43,9 @@
     "saving": "Salvataggio...",
     "print": "Stampa",
     "printSelected_one": "Stampa selezionato ({{count}})",
-    "printSelected_other": "Stampa selezionati ({{count}})"
+    "printSelected_other": "Stampa selezionati ({{count}})",
+    "printOptions": "Opzioni di stampa",
+    "resetPrintOptions": "Reimposta opzioni di stampa"
   },
   "status": {
     "loading": "Caricamento...",
@@ -1134,5 +1136,8 @@
       "keepYours": "Mantieni il tuo",
       "takeTheirs": "Usa quello remoto"
     }
+  },
+  "labels": {
+    "printColumns": "Colonne di stampa"
   }
 }

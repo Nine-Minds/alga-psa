@@ -1382,5 +1382,22 @@
     "unknownTask": "Onbekende taak",
     "blocks": "Blokkeert"
   },
-  "columnsHidden": "kolom(men) verborgen door beperkte ruimte. Verklein/vergroot het browservenster om meer te zien."
+  "columnsHidden": "kolom(men) verborgen door beperkte ruimte. Verklein/vergroot het browservenster om meer te zien.",
+  "projectPrint": {
+    "tasks": {
+      "title": "Projecttaken",
+      "subtitle": "{{count}} taken",
+      "noTasks": "Geen projecttaken om af te drukken",
+      "emptyValue": "-",
+      "hoursValue": "{{actual}} / {{estimated}}",
+      "columns": {
+        "task": "Taak",
+        "phase": "Fase",
+        "status": "Status",
+        "assignee": "Toegewezen aan",
+        "dueDate": "Vervaldatum",
+        "hours": "Uren"
+      }
+    }
+  }
 }

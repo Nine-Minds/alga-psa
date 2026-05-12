@@ -1382,5 +1382,22 @@
     "unknownTask": "Tâche inconnue",
     "blocks": "Bloque"
   },
-  "columnsHidden": "colonne(s) masquée(s) par manque de place. Redimensionner le navigateur pour en voir plus."
+  "columnsHidden": "colonne(s) masquée(s) par manque de place. Redimensionner le navigateur pour en voir plus.",
+  "projectPrint": {
+    "tasks": {
+      "title": "Tâches du projet",
+      "subtitle": "{{count}} tâches",
+      "noTasks": "Aucune tâche de projet à imprimer",
+      "emptyValue": "-",
+      "hoursValue": "{{actual}} / {{estimated}}",
+      "columns": {
+        "task": "Tâche",
+        "phase": "Phase",
+        "status": "Statut",
+        "assignee": "Assigné à",
+        "dueDate": "Échéance",
+        "hours": "Heures"
+      }
+    }
+  }
 }

@@ -92,6 +92,20 @@
         "future": "Questo e gli eventi futuri",
         "all": "Tutti gli eventi"
       }
+    },
+    "print": {
+      "title": "Agenda pianificata",
+      "subtitle": "{{count}} voci pianificate",
+      "noEntries": "Nessuna voce pianificata da stampare",
+      "emptyValue": "-",
+      "columns": {
+        "title": "Titolo",
+        "type": "Tipo",
+        "start": "Inizio",
+        "end": "Fine",
+        "assigned": "Assegnato",
+        "status": "Stato"
+      }
     }
   },
   "weeklyEvent": {

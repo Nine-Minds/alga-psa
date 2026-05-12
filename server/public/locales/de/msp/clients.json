@@ -132,7 +132,25 @@
     },
     "deleteSelectedPrompt": "Sind Sie sicher, dass Sie {{count}} ausgewählte {{clientsLabel}} löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
     "singleInactiveWithContactsSuccess_one": "{{name}} und {{count}} Kontakt wurden erfolgreich deaktiviert.",
-    "singleInactiveWithContactsSuccess_other": "{{name}} und {{count}} Kontakte wurden erfolgreich deaktiviert."
+    "singleInactiveWithContactsSuccess_other": "{{name}} und {{count}} Kontakte wurden erfolgreich deaktiviert.",
+    "clientTypes": {
+      "company": "Unternehmen",
+      "individual": "Einzelperson"
+    },
+    "print": {
+      "title": "Kunden",
+      "selectedTitle": "Ausgewählte Kunden",
+      "subtitle": "{{count}} Kunden",
+      "noClients": "Keine Kunden zum Drucken",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Kunde",
+        "type": "Typ",
+        "phone": "Telefon",
+        "address": "Adresse",
+        "status": "Status"
+      }
+    }
   },
   "clientDetails": {
     "title": "Kundendaten",

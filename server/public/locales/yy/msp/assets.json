@@ -197,6 +197,21 @@
       "client_name": "55555",
       "location": "55555",
       "actions": "55555"
+    },
+    "print": {
+      "title": "55555",
+      "selectedTitle": "55555",
+      "subtitle": "55555 {{count}} 55555",
+      "noAssets": "55555",
+      "emptyValue": "-",
+      "columns": {
+        "name": "55555",
+        "tag": "55555",
+        "type": "55555",
+        "status": "55555",
+        "client": "55555",
+        "location": "55555"
+      }
     }
   },
   "assetDashboardGrid": {

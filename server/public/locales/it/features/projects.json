@@ -1382,5 +1382,22 @@
     "unknownTask": "Attività sconosciuta",
     "blocks": "Blocca"
   },
-  "columnsHidden": "colonna/e nascoste per spazio limitato. Ridimensiona il browser per vederne altre."
+  "columnsHidden": "colonna/e nascoste per spazio limitato. Ridimensiona il browser per vederne altre.",
+  "projectPrint": {
+    "tasks": {
+      "title": "Attività del progetto",
+      "subtitle": "{{count}} attività",
+      "noTasks": "Nessuna attività del progetto da stampare",
+      "emptyValue": "-",
+      "hoursValue": "{{actual}} / {{estimated}}",
+      "columns": {
+        "task": "Attività",
+        "phase": "Fase",
+        "status": "Stato",
+        "assignee": "Assegnatario",
+        "dueDate": "Scadenza",
+        "hours": "Ore"
+      }
+    }
+  }
 }

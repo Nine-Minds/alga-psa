@@ -414,7 +414,10 @@
         "dueDate": "Fälligkeitsdatum"
       },
       "emptyValue": "—",
-      "noDueDate": "Kein Fälligkeitsdatum"
+      "noDueDate": "Kein Fälligkeitsdatum",
+      "values": {
+        "hasSla": "SLA"
+      }
     }
   },
   "bulk": {
