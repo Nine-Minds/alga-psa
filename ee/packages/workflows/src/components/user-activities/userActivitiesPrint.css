@@ -2,28 +2,34 @@
  * Strips interactive chrome, renders each activity as a checklist row with
  * an empty checkbox square, and keeps group headings for context.
  *
- * Activated by toggling .ua-print-mode on <html> (or a parent) just before
- * window.print(), and removed afterwards.
+ * Activated by toggling .app-print-mode on <html> via the shared PrintButton.
+ * The legacy .ua-print-mode selector is kept while older callers migrate.
  */
 
 @media print {
+  html.app-print-mode,
+  html.app-print-mode body,
   html.ua-print-mode,
   html.ua-print-mode body {
     background: #fff !important;
   }
 
   /* Hide everything by default in print mode */
+  html.app-print-mode body *,
   html.ua-print-mode body * {
     visibility: hidden;
   }
 
   /* Re-show the print root and its contents */
+  html.app-print-mode .ua-print-root,
+  html.app-print-mode .ua-print-root *,
   html.ua-print-mode .ua-print-root,
   html.ua-print-mode .ua-print-root * {
     visibility: visible;
   }
 
   /* Position the print root at the top of the page */
+  html.app-print-mode .ua-print-root,
   html.ua-print-mode .ua-print-root {
     position: absolute;
     left: 0;
@@ -38,73 +44,55 @@
   }
 
   /* Things to hide even within the print root */
+  html.app-print-mode .ua-print-hide,
   html.ua-print-mode .ua-print-hide {
     display: none !important;
   }
 
   /* Things that are only visible when printing */
+  html.app-print-mode .ua-print-only,
   html.ua-print-mode .ua-print-only {
     display: block !important;
     visibility: visible !important;
   }
 
-  /* Print header (date + page title) */
-  html.ua-print-mode .ua-print-header {
-    font-size: 14pt;
-    font-weight: 700;
-    border-bottom: 1pt solid #000;
-    padding-bottom: 6pt;
-    margin-bottom: 12pt;
+  html.app-print-mode .ua-print-root,
+  html.ua-print-mode .ua-print-root {
+    padding: 14pt;
   }
 
-  html.ua-print-mode .ua-print-header-date {
-    font-size: 10pt;
-    font-weight: 400;
+  html.app-print-mode .ua-print-root .app-print-table-section + .app-print-table-section,
+  html.ua-print-mode .ua-print-root .app-print-table-section + .app-print-table-section {
+    margin-top: 16pt;
+  }
+
+  html.app-print-mode .ua-print-type-column,
+  html.ua-print-mode .ua-print-type-column {
+    width: 16%;
+  }
+
+  html.app-print-mode .ua-print-title-column,
+  html.ua-print-mode .ua-print-title-column {
+    width: 42%;
+  }
+
+  html.app-print-mode .ua-print-date-column,
+  html.ua-print-mode .ua-print-date-column {
+    width: 16%;
+  }
+
+  html.app-print-mode .ua-print-root td,
+  html.ua-print-mode .ua-print-root td {
+    font-size: 9.5pt;
+  }
+
+  html.app-print-mode .ua-print-root .app-print-table-header p,
+  html.ua-print-mode .ua-print-root .app-print-table-header p {
     color: #444;
-    margin-left: 12pt;
-  }
-
-  /* Group name heading */
-  html.ua-print-mode .ua-print-group-name {
-    font-size: 12pt;
-    font-weight: 700;
-    margin-top: 12pt;
-    margin-bottom: 4pt;
-    page-break-after: avoid;
-  }
-
-  /* Activity row */
-  html.ua-print-mode .ua-print-row {
-    display: flex !important;
-    align-items: flex-start;
-    gap: 6pt;
-    padding: 3pt 0;
-    page-break-inside: avoid;
-  }
-
-  /* Activity type icon (SVG from lucide-react) */
-  html.ua-print-mode .ua-print-type-icon {
-    flex-shrink: 0;
-    width: 11pt;
-    height: 11pt;
-    color: #444;
-    margin-top: 2pt;
-  }
-
-  /* Activity text columns */
-  html.ua-print-mode .ua-print-title {
-    flex: 1;
-    font-weight: 500;
-  }
-
-  html.ua-print-mode .ua-print-meta {
-    flex-shrink: 0;
-    font-size: 9pt;
-    color: #444;
-    margin-left: 12pt;
   }
 
   /* Groups should not split across pages where possible */
+  html.app-print-mode .ua-print-group,
   html.ua-print-mode .ua-print-group {
     page-break-inside: avoid;
   }
@@ -112,6 +100,6 @@
 
 /* Hide print-only elements when NOT printing */
 .ua-print-only,
-.ua-print-header {
+.app-print-only {
   display: none;
 }

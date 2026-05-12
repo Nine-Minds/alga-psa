@@ -40,7 +40,14 @@
     "duplicate": "Duplizieren",
     "openMenu": "Menü öffnen",
     "confirmDeletion": "Löschung bestätigen",
-    "saving": "Speichern..."
+    "saving": "Speichern...",
+    "print": "Drucken",
+    "printSelected_one": "Auswahl drucken ({{count}})",
+    "printSelected_other": "Auswahl drucken ({{count}})",
+    "printOptions": "Druckoptionen",
+    "resetPrintOptions": "Druckoptionen zurücksetzen",
+    "share": "Teilen",
+    "done": "Fertig"
   },
   "status": {
     "loading": "Wird geladen...",
@@ -1131,5 +1138,8 @@
       "keepYours": "Eigene behalten",
       "takeTheirs": "Remote übernehmen"
     }
+  },
+  "labels": {
+    "printColumns": "Druckspalten"
   }
 }

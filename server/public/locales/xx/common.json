@@ -40,7 +40,14 @@
     "duplicate": "11111",
     "openMenu": "11111",
     "confirmDeletion": "11111",
-    "saving": "11111"
+    "saving": "11111",
+    "print": "11111",
+    "printSelected_one": "11111 {{count}} 11111",
+    "printSelected_other": "11111 {{count}} 11111",
+    "printOptions": "11111",
+    "resetPrintOptions": "11111",
+    "share": "11111",
+    "done": "11111"
   },
   "form": {
     "selectPlaceholder": "11111",
@@ -1131,5 +1138,8 @@
       "keepYours": "11111",
       "takeTheirs": "11111"
     }
+  },
+  "labels": {
+    "printColumns": "11111"
   }
 }

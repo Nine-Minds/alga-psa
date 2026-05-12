@@ -40,6 +40,8 @@ import { DeleteEntityDialog } from '@alga-psa/ui';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { Button } from '@alga-psa/ui/components/Button';
+import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { PrintableDetailHeader, type PrintableDetailField } from '@alga-psa/ui/components/PrintableDetailHeader';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
@@ -1731,7 +1733,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             </Button>
           )}
 
-          <div className="flex items-center gap-2 mr-8">
+          <div className="flex items-center gap-2 mr-8" data-print-hide>
             {showEntraSyncAction && (
               <div className="flex flex-col items-end gap-1">
                 <Button
@@ -1760,6 +1762,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 ) : null}
               </div>
             )}
+            <PrintButton
+              id={`${id}-print-button`}
+              variant="outline"
+              size="sm"
+            />
             <Button
               id={`${id}-delete-client-button`}
               onClick={handleDeleteClient}
@@ -1775,7 +1782,36 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       </div>
 
       {/* Content Area */}
-      <div>
+      <div data-print-region data-print-title={editedClient.client_name}>
+        <div className="app-print-section">
+          <PrintableDetailHeader
+            title={editedClient.client_name}
+            subtitle={[
+              editedClient.client_type
+                ? t(`clientsPage.clientTypes.${editedClient.client_type}`, {
+                    defaultValue: editedClient.client_type,
+                  })
+                : undefined,
+              editedClient.url,
+            ].filter(Boolean).join(' — ')}
+            fields={[
+              {
+                label: t('clientDetails.fields.accountManager', { defaultValue: 'Account Manager' }),
+                value: editedClient.account_manager_full_name,
+              },
+              {
+                label: t('clientDetails.fields.url', { defaultValue: 'URL' }),
+                value: editedClient.url,
+              },
+              {
+                label: t('clientDetails.fields.status', { defaultValue: 'Status' }),
+                value: editedClient.is_inactive
+                  ? t('common.states.inactive', { defaultValue: 'Inactive' })
+                  : t('common.states.active', { defaultValue: 'Active' }),
+              },
+            ] satisfies PrintableDetailField[]}
+          />
+        </div>
         <CustomTabs
           tabs={quickView ? [tabContent[0]] : tabContent}
           // In quick view we only render the Details tab. Force default to details

@@ -132,7 +132,30 @@
     },
     "deleteSelectedPrompt": "Sei sicuro di voler eliminare {{count}} selezionato {{clientsLabel}}? Questa azione non può essere annullata.",
     "singleInactiveWithContactsSuccess_one": "{{name}} e {{count}} contatto sono stati disattivati con successo.",
-    "singleInactiveWithContactsSuccess_other": "{{name}} e {{count}} contatti sono stati disattivati con successo."
+    "singleInactiveWithContactsSuccess_other": "{{name}} e {{count}} contatti sono stati disattivati con successo.",
+    "clientTypes": {
+      "company": "Azienda",
+      "individual": "Persona"
+    },
+    "print": {
+      "title": "Clienti",
+      "selectedTitle": "Clienti selezionati",
+      "subtitle": "{{count}} clienti",
+      "noClients": "Nessun cliente da stampare",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Cliente",
+        "type": "Tipo",
+        "phone": "Telefono",
+        "address": "Indirizzo",
+        "status": "Stato"
+      },
+      "optionsDialog": {
+        "title": "Opzioni di stampa",
+        "description": "Scegli quali colonne includere durante la stampa dei clienti."
+      }
+    },
+    "shareTooltip": "Stampa, importa ed esporta"
   },
   "clientDetails": {
     "title": "Dettagli del cliente",
@@ -216,7 +239,12 @@
     "inboundDomainAdded": "Dominio email in entrata aggiunto",
     "inboundDomainAddFailed": "Impossibile aggiungere il dominio",
     "inboundDomainRemoved": "Dominio email in entrata rimosso",
-    "inboundDomainRemoveFailed": "Impossibile rimuovere il dominio"
+    "inboundDomainRemoveFailed": "Impossibile rimuovere il dominio",
+    "fields": {
+      "accountManager": "Account manager",
+      "url": "URL",
+      "status": "Stato"
+    }
   },
   "quickAddClient": {
     "title": "Aggiungi nuovo cliente",

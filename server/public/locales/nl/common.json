@@ -40,7 +40,14 @@
     "duplicate": "Dupliceren",
     "openMenu": "Menu openen",
     "confirmDeletion": "Verwijderen bevestigen",
-    "saving": "Opslaan..."
+    "saving": "Opslaan...",
+    "print": "Afdrukken",
+    "printSelected_one": "Geselecteerde afdrukken ({{count}})",
+    "printSelected_other": "Geselecteerde afdrukken ({{count}})",
+    "printOptions": "Afdrukopties",
+    "resetPrintOptions": "Afdrukopties resetten",
+    "share": "Delen",
+    "done": "Klaar"
   },
   "status": {
     "loading": "Bezig met laden...",
@@ -1131,5 +1138,8 @@
       "keepYours": "Eigen behouden",
       "takeTheirs": "Externe gebruiken"
     }
+  },
+  "labels": {
+    "printColumns": "Afdrukkolommen"
   }
 }

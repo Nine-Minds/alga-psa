@@ -34,7 +34,24 @@
       "minutesSeconds": "{{minutes}}m {{seconds}}s",
       "hoursMinutes": "{{hours}}h {{minutes}}m"
     },
-    "externalId": "ID: {{id}}..."
+    "externalId": "ID: {{id}}...",
+    "print": {
+      "title": "Recent Jobs",
+      "subtitle": "{{count}} jobs",
+      "noJobs": "No jobs to print",
+      "columns": {
+        "jobName": "Job Name",
+        "runner": "Runner",
+        "status": "Status",
+        "duration": "Duration",
+        "started": "Started",
+        "completed": "Completed"
+      },
+      "optionsDialog": {
+        "title": "Print options",
+        "description": "Choose which columns to include when printing recent jobs."
+      }
+    }
   },
   "metrics": {
     "labels": {

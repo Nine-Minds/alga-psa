@@ -92,6 +92,24 @@
         "future": "Este y futuros eventos.",
         "all": "Todos los eventos"
       }
+    },
+    "print": {
+      "title": "Agenda del calendario",
+      "subtitle": "{{count}} entradas programadas",
+      "noEntries": "No hay entradas programadas para imprimir",
+      "emptyValue": "-",
+      "columns": {
+        "title": "Título",
+        "type": "Tipo",
+        "start": "Inicio",
+        "end": "Fin",
+        "assigned": "Asignado",
+        "status": "Estado"
+      },
+      "optionsDialog": {
+        "title": "Opciones de impresión",
+        "description": "Elige qué columnas incluir al imprimir el calendario."
+      }
     }
   },
   "weeklyEvent": {

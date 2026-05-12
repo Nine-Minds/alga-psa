@@ -1268,7 +1268,8 @@
     "saveAsTemplate": "Save as Template",
     "materials": "Materials",
     "hoursUsageDescription": "Shows budget hours usage for the entire project",
-    "templateCreatedSuccess": "Template created successfully"
+    "templateCreatedSuccess": "Template created successfully",
+    "shareTooltip": "Imprimir, importar e exportar"
   },
   "comments": {
     "title": "Comments",
@@ -1382,5 +1383,35 @@
     "unknownTask": "Unknown task",
     "blocks": "Blocks"
   },
-  "columnsHidden": "coluna(s) ocultas por espaço limitado. Redimensione o navegador para ver mais."
+  "columnsHidden": "coluna(s) ocultas por espaço limitado. Redimensione o navegador para ver mais.",
+  "projectPrint": {
+    "tasks": {
+      "title": "Tarefas do projeto",
+      "subtitle": "{{count}} tarefas",
+      "noTasks": "Nenhuma tarefa do projeto para imprimir",
+      "emptyValue": "-",
+      "hoursValue": "{{actual}} / {{estimated}}",
+      "columns": {
+        "task": "Tarefa",
+        "phase": "Fase",
+        "status": "Status",
+        "assignee": "Responsável",
+        "dueDate": "Data de vencimento",
+        "hours": "Horas"
+      },
+      "optionsDialog": {
+        "title": "Opções de impressão",
+        "description": "Escolha quais colunas incluir ao imprimir as tarefas do projeto."
+      },
+      "fields": {
+        "phase": "Fase",
+        "status": "Status",
+        "assignee": "Atribuído a",
+        "dueDate": "Data de vencimento",
+        "estimatedHours": "Horas estimadas",
+        "wbsCode": "Código EAP",
+        "description": "Descrição"
+      }
+    }
+  }
 }

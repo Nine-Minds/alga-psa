@@ -132,7 +132,30 @@
     },
     "deleteSelectedPrompt": "Sind Sie sicher, dass Sie {{count}} ausgewählte {{clientsLabel}} löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
     "singleInactiveWithContactsSuccess_one": "{{name}} und {{count}} Kontakt wurden erfolgreich deaktiviert.",
-    "singleInactiveWithContactsSuccess_other": "{{name}} und {{count}} Kontakte wurden erfolgreich deaktiviert."
+    "singleInactiveWithContactsSuccess_other": "{{name}} und {{count}} Kontakte wurden erfolgreich deaktiviert.",
+    "clientTypes": {
+      "company": "Unternehmen",
+      "individual": "Einzelperson"
+    },
+    "print": {
+      "title": "Kunden",
+      "selectedTitle": "Ausgewählte Kunden",
+      "subtitle": "{{count}} Kunden",
+      "noClients": "Keine Kunden zum Drucken",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Kunde",
+        "type": "Typ",
+        "phone": "Telefon",
+        "address": "Adresse",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Druckoptionen",
+        "description": "Wählen Sie die beim Drucken von Kunden enthaltenen Spalten."
+      }
+    },
+    "shareTooltip": "Drucken, importieren und exportieren"
   },
   "clientDetails": {
     "title": "Kundendaten",
@@ -216,7 +239,12 @@
     "inboundDomainAdded": "Eingehende E-Mail-Domäne hinzugefügt",
     "inboundDomainAddFailed": "Domäne konnte nicht hinzugefügt werden",
     "inboundDomainRemoved": "Eingehende E-Mail-Domäne entfernt",
-    "inboundDomainRemoveFailed": "Domäne konnte nicht entfernt werden"
+    "inboundDomainRemoveFailed": "Domäne konnte nicht entfernt werden",
+    "fields": {
+      "accountManager": "Kundenbetreuer",
+      "url": "URL",
+      "status": "Status"
+    }
   },
   "quickAddClient": {
     "title": "Neuen Kunden hinzufügen",

@@ -1268,7 +1268,8 @@
     "templateCreatedSuccess": "Plantilla creada correctamente",
     "notAvailable": "N/D",
     "saveAsTemplate": "Guardar como plantilla",
-    "materials": "Materiales"
+    "materials": "Materiales",
+    "shareTooltip": "Imprimir, importar y exportar"
   },
   "projectPhases": {
     "addTask": "Agregar tarea",
@@ -1382,5 +1383,35 @@
     "unknownTask": "Tarea desconocida",
     "blocks": "Bloquea"
   },
-  "columnsHidden": "columna(s) ocultas por espacio limitado. Cambia el tamaño del navegador para ver más."
+  "columnsHidden": "columna(s) ocultas por espacio limitado. Cambia el tamaño del navegador para ver más.",
+  "projectPrint": {
+    "tasks": {
+      "title": "Tareas del proyecto",
+      "subtitle": "{{count}} tareas",
+      "noTasks": "No hay tareas del proyecto para imprimir",
+      "emptyValue": "-",
+      "hoursValue": "{{actual}} / {{estimated}}",
+      "columns": {
+        "task": "Tarea",
+        "phase": "Fase",
+        "status": "Estado",
+        "assignee": "Asignado a",
+        "dueDate": "Fecha límite",
+        "hours": "Horas"
+      },
+      "optionsDialog": {
+        "title": "Opciones de impresión",
+        "description": "Elige qué columnas incluir al imprimir las tareas del proyecto."
+      },
+      "fields": {
+        "phase": "Fase",
+        "status": "Estado",
+        "assignee": "Asignado a",
+        "dueDate": "Fecha de vencimiento",
+        "estimatedHours": "Horas estimadas",
+        "wbsCode": "Código WBS",
+        "description": "Descripción"
+      }
+    }
+  }
 }

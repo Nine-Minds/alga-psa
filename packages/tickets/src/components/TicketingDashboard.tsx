@@ -18,6 +18,14 @@ import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { TagFilter } from '@alga-psa/ui/components';
+import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
+import {
+  PrintOptionsDialog,
+  type PrintColumnOption,
+  usePrintColumnSelection,
+} from '@alga-psa/ui/components/PrintOptionsDialog';
+import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
+import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { IBoard, IClient, IUser, ITeam } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -28,11 +36,10 @@ import { ColumnDefinition } from '@alga-psa/types';
 import { deleteTicket, deleteTickets, moveTicketsToBoard } from '../actions/ticketActions';
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { bundleTicketsAction, getBundleMasterStatusAction } from '../actions/ticketBundleActions';
-import { fetchBundleChildrenForMaster, getAllMatchingTicketIds } from '../actions/optimizedTicketActions';
+import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds } from '../actions/optimizedTicketActions';
 import TicketExportDialog from './TicketExportDialog';
 import TicketImportDialog from './TicketImportDialog';
-import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { XCircle, Clock, Download, Upload, ChevronDown } from 'lucide-react';
+import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -108,6 +115,7 @@ const useDebounce = <T,>(value: T, delay: number): T => {
 const TICKET_LIST_DENSITY_STORAGE_KEY = 'ticket_list_density_level';
 const EMPTY_STRING_ARRAY: string[] = [];
 const TICKET_LIST_DENSITY_PRESETS = [0, 25, 50, 75, 100] as const;
+const TICKET_PRINT_FALLBACK_PAGE_SIZE = 500;
 
 type TicketListDensityPreset = (typeof TICKET_LIST_DENSITY_PRESETS)[number];
 
@@ -118,6 +126,41 @@ const normalizeTicketListDensityLevel = (value: number): TicketListDensityPreset
     return Math.abs(preset - clamped) < Math.abs(closest - clamped) ? preset : closest;
   }, TICKET_LIST_DENSITY_PRESETS[0]);
 };
+
+function formatPrintDate(value?: string | null): string {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function formatPrintDateTime(value?: string | null): string {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function getTicketColumnValue(ticket: ITicketListItem, dataIndex: string | string[]): unknown {
+  const path = Array.isArray(dataIndex) ? dataIndex : [dataIndex];
+  return path.reduce<unknown>((value, key) => (
+    value && typeof value === 'object' ? (value as Record<string, unknown>)[key] : undefined
+  ), ticket);
+}
+
+function formatTicketPrintValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '';
+  if (value instanceof Date) return value.toLocaleString();
+  if (Array.isArray(value)) return value.filter(Boolean).join(', ');
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
 
 const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   id = 'ticketing-dashboard',
@@ -190,6 +233,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isMultiClientBundleConfirmOpen, setIsMultiClientBundleConfirmOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [printTickets, setPrintTickets] = useState<ITicketListItem[] | null>(null);
+  const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
 
   const [boards] = useState<IBoard[]>(initialBoards);
   const [clients] = useState<IClient[]>(initialClients);
@@ -1316,6 +1361,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     assignedTeamIds: selectedTeams.length > 0 ? selectedTeams : undefined,
     includeUnassigned: includeUnassigned || undefined,
     dueDateFilter: selectedDueDateFilter !== 'all' ? selectedDueDateFilter as ITicketListFilters['dueDateFilter'] : undefined,
+    dueDateFrom: filterValues.dueDateFrom,
+    dueDateTo: filterValues.dueDateTo,
     responseState: selectedResponseState !== 'all' ? selectedResponseState : undefined,
     slaStatusFilter: allowSlaStatusFilter && selectedSlaStatus !== 'all' ? selectedSlaStatus as ITicketListFilters['slaStatusFilter'] : undefined,
     sortBy,
@@ -1325,8 +1372,158 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     selectedBoard, selectedStatus, selectedPriority, selectedCategories,
     selectedClient, debouncedSearchQuery, boardFilterState, selectedTags,
     selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
-    selectedResponseState, allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView,
+    filterValues.dueDateFrom, filterValues.dueDateTo, selectedResponseState,
+    allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView,
   ]);
+
+  const printColumns = useMemo<PrintColumnOption<ITicketListItem>[]>(() => {
+    const availableColumns = createTicketColumns({
+      categories,
+      boards,
+      displaySettings: {
+        ...displaySettings,
+        list: {
+          ...displaySettings?.list,
+          tagsInlineUnderTitle: false,
+        },
+      },
+      onTicketClick: handleTicketClick,
+      onDeleteClick: handleDeleteTicket,
+      ticketTagsRef,
+      onTagsChange: handleTagsChange,
+      showActions: false,
+      showTags: true,
+      showClient: true,
+      onClientClick: onQuickViewClient,
+      additionalAgentAvatarUrls,
+      teamAvatarUrls,
+      isBundleExpanded: bundleView === 'bundled' ? isBundleExpanded : undefined,
+      onToggleBundleExpanded: bundleView === 'bundled' ? toggleBundleExpanded : undefined,
+      showAllAvailableColumns: true,
+      t,
+    });
+
+    const renderByDataIndex: Partial<Record<string, (ticket: ITicketListItem) => React.ReactNode>> = {
+      ticket_number: (ticket) => ticket.ticket_number,
+      title: (ticket) => ticket.title,
+      status_name: (ticket) => ticket.status_name || t('dashboard.print.emptyValue', '—'),
+      priority_name: (ticket) => ticket.priority_name || t('dashboard.print.emptyValue', '—'),
+      sla_policy_id: (ticket) => ticket.sla_policy_id ? t('dashboard.print.values.hasSla', 'SLA') : t('dashboard.print.emptyValue', '—'),
+      board_name: (ticket) => ticket.board_name || t('dashboard.print.emptyValue', '—'),
+      category_name: (ticket) => {
+        if (ticket.subcategory_id) {
+          const subcategory = categories.find((category) => category.category_id === ticket.subcategory_id);
+          const parent = subcategory?.parent_category
+            ? categories.find((category) => category.category_id === subcategory.parent_category)
+            : null;
+          if (subcategory && parent) return `${parent.category_name} → ${subcategory.category_name}`;
+          if (subcategory) return subcategory.category_name;
+        }
+        return ticket.category_name || t('dashboard.print.emptyValue', '—');
+      },
+      client_name: (ticket) => ticket.client_name || t('dashboard.print.emptyValue', '—'),
+      assigned_to_name: (ticket) => {
+        const primary = ticket.assigned_to_name || ticket.assigned_team_name || t('dashboard.print.emptyValue', '—');
+        const additionalAgents = ticket.additional_agents?.map((agent) => agent.name).filter(Boolean) ?? [];
+        return additionalAgents.length > 0 ? `${primary}; +${additionalAgents.length}: ${additionalAgents.join(', ')}` : primary;
+      },
+      due_date: (ticket) => formatPrintDate(ticket.due_date) || t('dashboard.print.noDueDate', 'No due date'),
+      entered_at: (ticket) => formatPrintDateTime(ticket.entered_at) || t('dashboard.print.emptyValue', '—'),
+      entered_by_name: (ticket) => ticket.entered_by_name || t('dashboard.print.emptyValue', '—'),
+      tags: (ticket) => {
+        const tags = ticket.ticket_id ? ticketTagsRef.current[ticket.ticket_id] ?? [] : [];
+        return tags.length > 0
+          ? tags.map((tag) => tag.tag_text).join(', ')
+          : t('dashboard.print.emptyValue', '—');
+      },
+    };
+
+    return availableColumns.map((column) => {
+      const dataIndexKey = Array.isArray(column.dataIndex) ? column.dataIndex.join('.') : column.dataIndex;
+      const knownRenderer = renderByDataIndex[dataIndexKey];
+
+      return {
+        key: dataIndexKey,
+        label: column.title,
+        header: column.title,
+        className: dataIndexKey === 'ticket_number'
+          ? 'tickets-print-number-column'
+          : dataIndexKey === 'title'
+            ? 'tickets-print-title-column'
+            : dataIndexKey === 'due_date' || dataIndexKey === 'entered_at'
+              ? 'tickets-print-date-column'
+              : undefined,
+        render: knownRenderer ?? ((ticket) => (
+          formatTicketPrintValue(getTicketColumnValue(ticket, column.dataIndex))
+          || t('dashboard.print.emptyValue', '—')
+        )),
+      };
+    });
+  }, [
+    additionalAgentAvatarUrls,
+    boards,
+    bundleView,
+    categories,
+    displaySettings,
+    handleDeleteTicket,
+    handleTagsChange,
+    handleTicketClick,
+    isBundleExpanded,
+    onQuickViewClient,
+    t,
+    teamAvatarUrls,
+    ticketTagsRef,
+    toggleBundleExpanded,
+  ]);
+  const {
+    selectedColumnKeys: selectedTicketPrintColumnKeys,
+    selectedColumns: selectedTicketPrintColumns,
+    setSelectedColumnKeys: setSelectedTicketPrintColumnKeys,
+    resetSelectedColumnKeys: resetSelectedTicketPrintColumnKeys,
+  } = usePrintColumnSelection('print-columns:tickets-list', printColumns);
+
+  const preparePrintTickets = useCallback(async () => {
+    if (hasSelection && !allMatchingMode) {
+      const selectedRows = displayedTickets.filter((ticket) => (
+        Boolean(ticket.ticket_id && selectedTicketIds.has(ticket.ticket_id))
+      ));
+      setPrintTickets(selectedRows);
+      return;
+    }
+
+    const printPageSize = Math.max(
+      totalCount,
+      selectedTicketIds.size,
+      pageSize,
+      TICKET_PRINT_FALLBACK_PAGE_SIZE
+    );
+    const result = await fetchTicketsWithPagination(exportFilters, 1, printPageSize);
+    ticketTagsRef.current = {
+      ...ticketTagsRef.current,
+      ...result.metadata.ticketTags,
+    };
+    const rows = hasSelection
+      ? result.tickets.filter((ticket) => Boolean(ticket.ticket_id && selectedTicketIds.has(ticket.ticket_id)))
+      : result.tickets;
+    setPrintTickets(rows);
+  }, [
+    allMatchingMode,
+    displayedTickets,
+    exportFilters,
+    hasSelection,
+    pageSize,
+    selectedTicketIds,
+    totalCount,
+  ]);
+
+  const cleanupPrintTickets = useCallback(() => {
+    setPrintTickets(null);
+  }, []);
+
+  const { triggerPrint: triggerPrintTickets, isPreparing: isPreparingPrint } = usePrintAction({
+    onBeforePrint: preparePrintTickets,
+    onAfterPrint: cleanupPrintTickets,
+  });
 
   const handleTicketAdded = useCallback((newTicket: ITicket) => {
     // Store tags for the new ticket if provided
@@ -1516,37 +1713,50 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               {t('bulk.bundleTickets', 'Bundle Tickets')}
             </Button>
           )}
-          <Button
-            id={`${id}-import-csv-button`}
-            variant="outline"
-            onClick={() => setIsImportDialogOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <Upload className="h-4 w-4" />
-            Import CSV
-          </Button>
-          <Tooltip content={hasSelection
-            ? t('dashboard.exportSelectedTooltip', {
-              count: selectedTicketIds.size,
-              defaultValue: selectedTicketIds.size === 1
-                ? 'Export {{count}} selected ticket to CSV'
-                : 'Export {{count}} selected tickets to CSV',
-            })
-            : t('dashboard.exportDisabledTooltip', 'Select ticket(s) to export')
-          }>
-            <span>
-              <Button
-                id={`${id}-export-csv-button`}
-                variant="outline"
-                onClick={() => setIsExportDialogOpen(true)}
-                disabled={!hasSelection}
-                className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Export CSV
-              </Button>
-            </span>
-          </Tooltip>
+          <ShareActionsMenu
+            id={`${id}-share-actions`}
+            disabled={isLoadingMore && !hasSelection}
+            tooltip={t('dashboard.shareTooltip', { defaultValue: 'Print, import and export' })}
+            actions={[
+              {
+                id: `${id}-share-print`,
+                icon: Printer,
+                label: hasSelection
+                  ? t('dashboard.print.selectedAction', {
+                      count: selectedTicketIds.size,
+                      defaultValue: 'Print selected ({{count}})',
+                    })
+                  : t('dashboard.print.action', 'Print'),
+                onSelect: () => { void triggerPrintTickets(); },
+                disabled: isPreparingPrint || (!hasSelection && totalCount === 0),
+              },
+              {
+                id: `${id}-share-print-options`,
+                icon: Settings2,
+                label: t('actions.printOptions', { defaultValue: 'Print options' }),
+                onSelect: () => setIsPrintOptionsOpen(true),
+              },
+              {
+                id: `${id}-share-export`,
+                icon: Download,
+                label: hasSelection
+                  ? t('dashboard.exportSelectedAction', {
+                      count: selectedTicketIds.size,
+                      defaultValue: 'Export selected ({{count}})',
+                    })
+                  : t('dashboard.exportAction', { defaultValue: 'Export CSV' }),
+                onSelect: () => setIsExportDialogOpen(true),
+                disabled: !hasSelection,
+                separator: true,
+              },
+              {
+                id: `${id}-share-import`,
+                icon: Upload,
+                label: t('dashboard.importAction', { defaultValue: 'Import CSV' }),
+                onSelect: () => setIsImportDialogOpen(true),
+              },
+            ] satisfies ShareAction[]}
+          />
           <Button id="add-ticket-button" onClick={() => setIsQuickAddOpen(true)}>
             {t('dashboard.addTicket', 'Add Ticket')}
           </Button>
@@ -1861,6 +2071,56 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         )}
         </div>
       </div>
+
+      <div className="app-print-root app-print-only">
+        <PrintableTable
+          title={hasSelection
+            ? t('dashboard.print.selectedTitle', {
+                count: selectedTicketIds.size,
+                defaultValue: 'Selected Tickets ({{count}})',
+              })
+            : t('dashboard.print.title', 'Tickets')
+          }
+          subtitle={t('dashboard.print.subtitle', {
+            count: printTickets?.length ?? 0,
+            defaultValue: '{{count}} tickets',
+          })}
+          rows={printTickets ?? []}
+          columns={selectedTicketPrintColumns}
+          getRowKey={(ticket) => ticket.ticket_id ?? ticket.ticket_number}
+          emptyMessage={t('dashboard.print.noTickets', 'No tickets to print')}
+          className="tickets-print-table"
+        />
+      </div>
+
+      <PrintOptionsDialog
+        id={`${id}-print-options-dialog`}
+        open={isPrintOptionsOpen}
+        onOpenChange={setIsPrintOptionsOpen}
+        title={hasSelection
+          ? t('dashboard.print.optionsDialog.selectedTitle', {
+              count: selectedTicketIds.size,
+              defaultValue: 'Print options ({{count}} selected)',
+            })
+          : t('dashboard.print.optionsDialog.title', { defaultValue: 'Print options' })
+        }
+        description={t('dashboard.print.optionsDialog.description', {
+          defaultValue: 'Choose which columns to include when printing tickets.',
+        })}
+        columns={printColumns}
+        selectedColumnKeys={selectedTicketPrintColumnKeys}
+        onSelectedColumnKeysChange={setSelectedTicketPrintColumnKeys}
+        onReset={resetSelectedTicketPrintColumnKeys}
+        onPrint={() => triggerPrintTickets()}
+        isPrinting={isPreparingPrint}
+        printLabel={hasSelection
+          ? t('dashboard.print.selectedAction', {
+              count: selectedTicketIds.size,
+              defaultValue: 'Print selected ({{count}})',
+            })
+          : t('dashboard.print.action', 'Print')
+        }
+      />
 
       <QuickAddTicket
         id={`${id}-quick-add`}

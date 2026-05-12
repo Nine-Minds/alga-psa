@@ -132,7 +132,30 @@
     },
     "deleteSelectedPrompt": "Czy na pewno chcesz usunąć {{count}} wybrane {{clientsLabel}}? Tej akcji nie można cofnąć.",
     "singleInactiveWithContactsSuccess_one": "{{name}} i {{count}} kontakt zostały pomyślnie dezaktywowane.",
-    "singleInactiveWithContactsSuccess_other": "{{name}} i {{count}} kontaktów zostało pomyślnie dezaktywowanych."
+    "singleInactiveWithContactsSuccess_other": "{{name}} i {{count}} kontaktów zostało pomyślnie dezaktywowanych.",
+    "clientTypes": {
+      "company": "Firma",
+      "individual": "Osoba"
+    },
+    "print": {
+      "title": "Klienci",
+      "selectedTitle": "Wybrani klienci",
+      "subtitle": "{{count}} klientów",
+      "noClients": "Brak klientów do wydruku",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Klient",
+        "type": "Typ",
+        "phone": "Telefon",
+        "address": "Adres",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Opcje drukowania",
+        "description": "Wybierz, które kolumny dołączyć podczas drukowania klientów."
+      }
+    },
+    "shareTooltip": "Drukuj, importuj i eksportuj"
   },
   "clientDetails": {
     "title": "Dane Klienta",
@@ -216,7 +239,12 @@
     "inboundDomainAdded": "Dodano przychodzącą domenę e-mail",
     "inboundDomainAddFailed": "Nie udało się dodać domeny",
     "inboundDomainRemoved": "Usunięto przychodzącą domenę e-mail",
-    "inboundDomainRemoveFailed": "Nie udało się usunąć domeny"
+    "inboundDomainRemoveFailed": "Nie udało się usunąć domeny",
+    "fields": {
+      "accountManager": "Opiekun klienta",
+      "url": "URL",
+      "status": "Status"
+    }
   },
   "quickAddClient": {
     "title": "Dodaj nowego klienta",
