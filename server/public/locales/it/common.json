@@ -1122,5 +1122,26 @@
   },
   "feedback": {
     "providePlaceholder": "Per favore fornisci un feedback"
+  },
+  "deleteEntity": {
+    "checkingDependenciesTitle": "Verifica delle dipendenze",
+    "deleteTitle": "Elimina {{entityName}}",
+    "cannotDeleteTitle": "Impossibile eliminare",
+    "deleting": "Eliminazione...",
+    "checkingDependenciesMessage": "Verifica delle dipendenze...",
+    "fallbackBlockMessage": "Rimuovi o riassegna questi elementi prima di eliminare.",
+    "confirmationMessage": "Sei sicuro di voler eliminare \"{{entityName}}\"? Questa azione non può essere annullata.",
+    "alternatives": {
+      "deactivate": {
+        "label": "Segna come inattivo",
+        "description": "Disattiva il record senza eliminarne i dati.",
+        "warning": "I record inattivi non saranno più selezionabili nei nuovi flussi di lavoro."
+      },
+      "archive": {
+        "label": "Archivia",
+        "description": "Sposta il record fuori dall’uso attivo preservando la cronologia.",
+        "warning": "I record archiviati sono nascosti nelle viste predefinite."
+      }
+    }
   }
 }

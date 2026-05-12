@@ -1122,5 +1122,26 @@
   },
   "feedback": {
     "providePlaceholder": "Veuillez fournir un commentaire"
+  },
+  "deleteEntity": {
+    "checkingDependenciesTitle": "Vérification des dépendances",
+    "deleteTitle": "Supprimer {{entityName}}",
+    "cannotDeleteTitle": "Suppression impossible",
+    "deleting": "Suppression...",
+    "checkingDependenciesMessage": "Vérification des dépendances...",
+    "fallbackBlockMessage": "Veuillez supprimer ou réaffecter ces éléments avant la suppression.",
+    "confirmationMessage": "Êtes-vous sûr de vouloir supprimer \"{{entityName}}\" ? Cette action ne peut pas être annulée.",
+    "alternatives": {
+      "deactivate": {
+        "label": "Marquer comme inactif",
+        "description": "Désactive l’enregistrement sans supprimer ses données.",
+        "warning": "Les enregistrements inactifs ne pourront plus être sélectionnés dans les nouveaux flux de travail."
+      },
+      "archive": {
+        "label": "Archiver",
+        "description": "Retire l’enregistrement de l’usage actif tout en conservant l’historique.",
+        "warning": "Les enregistrements archivés sont masqués dans les vues par défaut."
+      }
+    }
   }
 }

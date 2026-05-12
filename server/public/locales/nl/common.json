@@ -1122,5 +1122,26 @@
   },
   "feedback": {
     "providePlaceholder": "Geef feedback"
+  },
+  "deleteEntity": {
+    "checkingDependenciesTitle": "Afhankelijkheden controleren",
+    "deleteTitle": "{{entityName}} verwijderen",
+    "cannotDeleteTitle": "Kan niet worden verwijderd",
+    "deleting": "Verwijderen...",
+    "checkingDependenciesMessage": "Afhankelijkheden controleren...",
+    "fallbackBlockMessage": "Verwijder deze items of wijs ze opnieuw toe voordat u verwijdert.",
+    "confirmationMessage": "Weet u zeker dat u \"{{entityName}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "alternatives": {
+      "deactivate": {
+        "label": "Markeer als inactief",
+        "description": "Deactiveert de record zonder de gegevens te verwijderen.",
+        "warning": "Inactieve records zijn niet meer selecteerbaar in nieuwe workflows."
+      },
+      "archive": {
+        "label": "Archiveren",
+        "description": "Verplaatst de record uit actief gebruik en bewaart de geschiedenis.",
+        "warning": "Gearchiveerde records worden verborgen in standaardweergaven."
+      }
+    }
   }
 }

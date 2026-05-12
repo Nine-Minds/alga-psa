@@ -1122,5 +1122,26 @@
   },
   "feedback": {
     "providePlaceholder": "Prosimy o przekazanie opinii"
+  },
+  "deleteEntity": {
+    "checkingDependenciesTitle": "Sprawdzanie zależności",
+    "deleteTitle": "Usuń {{entityName}}",
+    "cannotDeleteTitle": "Nie można usunąć",
+    "deleting": "Usuwanie...",
+    "checkingDependenciesMessage": "Sprawdzanie zależności...",
+    "fallbackBlockMessage": "Usuń lub ponownie przypisz te elementy przed usunięciem.",
+    "confirmationMessage": "Czy na pewno chcesz usunąć \"{{entityName}}\"? Tej akcji nie można cofnąć.",
+    "alternatives": {
+      "deactivate": {
+        "label": "Oznacz jako nieaktywne",
+        "description": "Dezaktywuje rekord bez usuwania jego danych.",
+        "warning": "Nieaktywne rekordy nie będą już dostępne do wyboru w nowych przepływach pracy."
+      },
+      "archive": {
+        "label": "Archiwizuj",
+        "description": "Przenosi rekord poza aktywne użycie, zachowując historię.",
+        "warning": "Zarchiwizowane rekordy są ukryte w widokach domyślnych."
+      }
+    }
   }
 }

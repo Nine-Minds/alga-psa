@@ -132,7 +132,10 @@
       "bucketUsageRecord": "55555",
       "bucketUsageRecords": "55555"
     },
-    "deleteSelectedPrompt": "55555 {{count}} 55555 {{clientsLabel}} 55555"
+    "deleteSelectedPrompt": "55555 {{count}} 55555 {{clientsLabel}} 55555",
+    "defaultClientDeleteError": "55555",
+    "clientNotFound": "55555",
+    "deletePermissionDenied": "55555"
   },
   "clientDetails": {
     "title": "55555",
@@ -216,7 +219,9 @@
     "status": {
       "label": "55555",
       "helper": "55555"
-    }
+    },
+    "deactivateClientDescription": "55555",
+    "deactivateClientOnlyDescription": "55555"
   },
   "quickAddClient": {
     "title": "55555",

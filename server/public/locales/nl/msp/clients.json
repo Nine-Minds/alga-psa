@@ -132,7 +132,10 @@
     },
     "deleteSelectedPrompt": "Weet u zeker dat u {{count}} geselecteerde {{clientsLabel}} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
     "singleInactiveWithContactsSuccess_one": "{{name}} en {{count}} contact zijn succesvol gedeactiveerd.",
-    "singleInactiveWithContactsSuccess_other": "{{name}} en {{count}} contacten zijn succesvol gedeactiveerd."
+    "singleInactiveWithContactsSuccess_other": "{{name}} en {{count}} contacten zijn succesvol gedeactiveerd.",
+    "defaultClientDeleteError": "De standaardklant kan niet worden verwijderd. Stel eerst een andere klant als standaard in bij Algemene instellingen.",
+    "clientNotFound": "Klant niet gevonden.",
+    "deletePermissionDenied": "Toestemming geweigerd: klanten kunnen niet worden verwijderd."
   },
   "clientDetails": {
     "title": "Klantgegevens",
@@ -216,7 +219,9 @@
     "inboundDomainAdded": "Inkomend e-maildomein toegevoegd",
     "inboundDomainAddFailed": "Kan domein niet toevoegen",
     "inboundDomainRemoved": "Inkomend e-maildomein verwijderd",
-    "inboundDomainRemoveFailed": "Kan domein niet verwijderen"
+    "inboundDomainRemoveFailed": "Kan domein niet verwijderen",
+    "deactivateClientDescription": "Deactiveert de record zonder de gegevens te verwijderen.",
+    "deactivateClientOnlyDescription": "Deactiveer de klant maar laat de contacten actief."
   },
   "quickAddClient": {
     "title": "Nieuwe klant toevoegen",
