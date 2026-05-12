@@ -1141,5 +1141,26 @@
   },
   "labels": {
     "printColumns": "11111"
+  },
+  "deleteEntity": {
+    "checkingDependenciesTitle": "11111",
+    "deleteTitle": "11111 {{entityName}}",
+    "cannotDeleteTitle": "11111",
+    "deleting": "11111",
+    "checkingDependenciesMessage": "11111",
+    "fallbackBlockMessage": "11111",
+    "confirmationMessage": "11111 {{entityName}} 11111",
+    "alternatives": {
+      "deactivate": {
+        "label": "11111",
+        "description": "11111",
+        "warning": "11111"
+      },
+      "archive": {
+        "label": "11111",
+        "description": "11111",
+        "warning": "11111"
+      }
+    }
   }
 }

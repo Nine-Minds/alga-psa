@@ -156,6 +156,10 @@
       }
     },
     "shareTooltip": "11111"
+    ,
+    "defaultClientDeleteError": "11111",
+    "clientNotFound": "11111",
+    "deletePermissionDenied": "11111"
   },
   "clientDetails": {
     "title": "11111",
@@ -245,6 +249,9 @@
       "url": "11111",
       "status": "11111"
     }
+    ,
+    "deactivateClientDescription": "11111",
+    "deactivateClientOnlyDescription": "11111"
   },
   "quickAddClient": {
     "title": "11111",

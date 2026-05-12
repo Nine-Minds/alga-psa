@@ -156,6 +156,10 @@
       }
     },
     "shareTooltip": "Print, import and export"
+    ,
+    "defaultClientDeleteError": "Cannot delete the default client. Please set another client as default in General Settings first.",
+    "clientNotFound": "Client not found.",
+    "deletePermissionDenied": "Permission denied: Cannot delete clients."
   },
   "clientDetails": {
     "title": "Client Details",
@@ -245,6 +249,9 @@
       "url": "URL",
       "status": "Status"
     }
+    ,
+    "deactivateClientDescription": "Deactivates the record without deleting its data.",
+    "deactivateClientOnlyDescription": "Deactivate the client but leave its contacts active."
   },
   "quickAddClient": {
     "title": "Add New Client",

@@ -1141,5 +1141,26 @@
   },
   "labels": {
     "printColumns": "Colunas de impressão"
+  },
+  "deleteEntity": {
+    "checkingDependenciesTitle": "Verificando dependências",
+    "deleteTitle": "Excluir {{entityName}}",
+    "cannotDeleteTitle": "Não é possível excluir",
+    "deleting": "Excluindo...",
+    "checkingDependenciesMessage": "Verificando dependências...",
+    "fallbackBlockMessage": "Remova ou reatribua estes itens antes de excluir.",
+    "confirmationMessage": "Tem certeza de que deseja excluir \"{{entityName}}\"? Esta ação não pode ser desfeita.",
+    "alternatives": {
+      "deactivate": {
+        "label": "Marcar como inativo",
+        "description": "Desativa o registro sem excluir seus dados.",
+        "warning": "Registros inativos não poderão mais ser selecionados em novos fluxos de trabalho."
+      },
+      "archive": {
+        "label": "Arquivar",
+        "description": "Move o registro para fora do uso ativo preservando o histórico.",
+        "warning": "Registros arquivados ficam ocultos nas visualizações padrão."
+      }
+    }
   }
 }

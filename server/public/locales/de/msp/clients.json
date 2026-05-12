@@ -156,6 +156,10 @@
       }
     },
     "shareTooltip": "Drucken, importieren und exportieren"
+    ,
+    "defaultClientDeleteError": "Der Standardkunde kann nicht gelöscht werden. Legen Sie zuerst in den allgemeinen Einstellungen einen anderen Kunden als Standard fest.",
+    "clientNotFound": "Kunde nicht gefunden.",
+    "deletePermissionDenied": "Berechtigung verweigert: Kunden können nicht gelöscht werden."
   },
   "clientDetails": {
     "title": "Kundendaten",
@@ -245,6 +249,9 @@
       "url": "URL",
       "status": "Status"
     }
+    ,
+    "deactivateClientDescription": "Deaktiviert den Datensatz, ohne seine Daten zu löschen.",
+    "deactivateClientOnlyDescription": "Deaktiviert den Kunden, lässt seine Kontakte aber aktiv."
   },
   "quickAddClient": {
     "title": "Neuen Kunden hinzufügen",

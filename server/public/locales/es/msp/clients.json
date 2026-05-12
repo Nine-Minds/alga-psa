@@ -156,6 +156,10 @@
       }
     },
     "shareTooltip": "Imprimir, importar y exportar"
+    ,
+    "defaultClientDeleteError": "No se puede eliminar el cliente predeterminado. Primero establezca otro cliente como predeterminado en Configuración general.",
+    "clientNotFound": "Cliente no encontrado.",
+    "deletePermissionDenied": "Permiso denegado: no se pueden eliminar clientes."
   },
   "clientDetails": {
     "title": "Detalles del cliente",
@@ -245,6 +249,9 @@
       "url": "URL",
       "status": "Estado"
     }
+    ,
+    "deactivateClientDescription": "Desactiva el registro sin eliminar sus datos.",
+    "deactivateClientOnlyDescription": "Desactiva el cliente, pero deja activos sus contactos."
   },
   "quickAddClient": {
     "title": "Agregar nuevo cliente",

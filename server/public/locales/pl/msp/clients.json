@@ -156,6 +156,10 @@
       }
     },
     "shareTooltip": "Drukuj, importuj i eksportuj"
+    ,
+    "defaultClientDeleteError": "Nie można usunąć domyślnego klienta. Najpierw ustaw innego klienta jako domyślnego w Ustawieniach ogólnych.",
+    "clientNotFound": "Nie znaleziono klienta.",
+    "deletePermissionDenied": "Odmowa uprawnień: nie można usuwać klientów."
   },
   "clientDetails": {
     "title": "Dane Klienta",
@@ -245,6 +249,9 @@
       "url": "URL",
       "status": "Status"
     }
+    ,
+    "deactivateClientDescription": "Dezaktywuje rekord bez usuwania jego danych.",
+    "deactivateClientOnlyDescription": "Dezaktywuj klienta, ale pozostaw jego kontakty aktywne."
   },
   "quickAddClient": {
     "title": "Dodaj nowego klienta",
