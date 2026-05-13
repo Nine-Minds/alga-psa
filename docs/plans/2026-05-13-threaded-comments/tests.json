@@ -42,7 +42,7 @@
   { "id": "T041", "description": "Email outbound: References header is comment_threads.email_references + previous Message-ID appended; new entry persisted into the column", "implemented": true, "featureIds": ["F036"] },
   { "id": "T042", "description": "Email outbound: a row is created in email_reply_tokens with comment_id of the new outbound comment; recipient_email matches", "implemented": true, "featureIds": ["F037"] },
   { "id": "T043", "description": "Email outbound: email_sending_logs row has comment_thread_id, rfc_message_id, reply_token_hash, provider_message_id populated", "implemented": true, "featureIds": ["F038"] },
-  { "id": "T044", "description": "Email round-trip: outbound + simulated inbound with matching In-Reply-To lands the reply back in the originating thread", "implemented": false, "featureIds": ["F029", "F034", "F035"] },
+  { "id": "T044", "description": "Email round-trip: outbound + simulated inbound with matching In-Reply-To lands the reply back in the originating thread", "implemented": true, "featureIds": ["F029", "F034", "F035"] },
   { "id": "T045", "description": "UI: CommentThreadList renders one HybridThreadGroup per thread sorted by last_activity_at; respects newestFirst toggle", "implemented": false, "featureIds": ["F039", "F049"] },
   { "id": "T046", "description": "UI: HybridThreadNode renders child threads recursively; each level past 0 marked as sub-thread", "implemented": false, "featureIds": ["F040"] },
   { "id": "T047", "description": "UI: clicking Collapse hides children and switches bar to show Expand + Open in drawer", "implemented": false, "featureIds": ["F041"] },
