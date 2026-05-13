@@ -174,6 +174,15 @@ export const createTaskComment = withAuth(async (
       })
       .returning('*');
 
+    if (isReply) {
+      await trx('comment_threads')
+        .where({ tenant, thread_id: threadId })
+        .update({
+          reply_count: trx.raw('reply_count + 1'),
+          last_activity_at: now,
+        });
+    }
+
     // Publish event (mention extraction happens in event handler)
     await publishEvent({
       eventType: 'TASK_COMMENT_ADDED',

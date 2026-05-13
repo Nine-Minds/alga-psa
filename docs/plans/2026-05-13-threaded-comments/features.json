@@ -17,7 +17,7 @@
   { "id": "F016", "description": "Model: comments.findCommentsByTicketId returns thread_id + parent_comment_id + deleted_at; ordered by created_at asc; includes soft-deleted comments so tree stays well-formed", "implemented": true, "prdRefs": ["Functional Requirements §6"] },
   { "id": "F017", "description": "Model: projectTaskComment.createTaskComment — same NULL-parent thread creation flow", "implemented": true, "prdRefs": ["Functional Requirements §4", "Functional Requirements §12"] },
   { "id": "F018", "description": "Model: projectTaskComment.createTaskComment — same parent-inheritance flow with validation", "implemented": true, "prdRefs": ["Functional Requirements §5"] },
-  { "id": "F019", "description": "Model: projectTaskComment — reply_count + last_activity_at maintenance on insert", "implemented": false, "prdRefs": ["Functional Requirements §5"] },
+  { "id": "F019", "description": "Model: projectTaskComment — reply_count + last_activity_at maintenance on insert", "implemented": true, "prdRefs": ["Functional Requirements §5"] },
   { "id": "F020", "description": "Model: projectTaskComment.deleteTaskComment — leaf vs root-with-children soft-delete behavior mirroring tickets", "implemented": false, "prdRefs": ["Functional Requirements §6"] },
   { "id": "F021", "description": "Model: projectTaskComment.getTaskComments returns thread_id + parent_comment_id + deleted_at", "implemented": false, "prdRefs": ["Functional Requirements §6"] },
   { "id": "F022", "description": "Action: commentActions.createComment accepts optional parent_comment_id in payload; passes through to model", "implemented": false, "prdRefs": ["Server Actions"] },
