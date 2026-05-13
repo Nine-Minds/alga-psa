@@ -288,4 +288,65 @@ describe('ticket comment threading model', () => {
       }
     }
   });
+
+  it('T019: inserting a reply increments reply_count and bumps last_activity_at', async () => {
+    const context = await knex('tickets as t')
+      .join('users as u', 'u.tenant', 't.tenant')
+      .select('t.tenant', 't.ticket_id', 'u.user_id')
+      .first();
+    expect(context).toBeTruthy();
+
+    const rootCommentId = await Comment.insert(knex, context.tenant, {
+      ticket_id: context.ticket_id,
+      user_id: context.user_id,
+      author_type: 'internal',
+      note: 'Root comment for reply counter test',
+      markdown_content: 'Root comment for reply counter test',
+      is_internal: false,
+      is_resolution: false,
+    });
+
+    let threadId: string | undefined;
+    let replyCommentId: string | undefined;
+
+    try {
+      const before = await knex('comments as c')
+        .join('comment_threads as ct', function() {
+          this.on('c.tenant', 'ct.tenant').andOn('c.thread_id', 'ct.thread_id');
+        })
+        .select('ct.thread_id', 'ct.reply_count', 'ct.last_activity_at')
+        .where('c.tenant', context.tenant)
+        .where('c.comment_id', rootCommentId)
+        .first();
+      threadId = before.thread_id;
+
+      replyCommentId = await Comment.insert(knex, context.tenant, {
+        ticket_id: context.ticket_id,
+        user_id: context.user_id,
+        author_type: 'internal',
+        note: 'Reply comment for counter test',
+        markdown_content: 'Reply comment for counter test',
+        is_internal: false,
+        is_resolution: false,
+        parent_comment_id: rootCommentId,
+      });
+
+      const after = await knex('comment_threads')
+        .select('reply_count', 'last_activity_at')
+        .where({ tenant: context.tenant, thread_id: threadId })
+        .first();
+      expect(after.reply_count).toBe(Number(before.reply_count) + 1);
+      expect(new Date(after.last_activity_at).getTime()).toBeGreaterThanOrEqual(
+        new Date(before.last_activity_at).getTime()
+      );
+    } finally {
+      if (replyCommentId) {
+        await knex('comments').where({ tenant: context.tenant, comment_id: replyCommentId }).delete();
+      }
+      await knex('comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
+      if (threadId) {
+        await knex('comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
+      }
+    }
+  });
 });
