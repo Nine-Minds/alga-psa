@@ -5,6 +5,8 @@ type Criteria = Record<string, unknown>;
 
 const dbState = vi.hoisted(() => ({
   commentRows: new Map<string, { thread_id: string | null; parent_comment_id: string | null }>(),
+  latestOutboundRows: new Map<string, { rfc_message_id: string | null }>(),
+  threadRows: new Map<string, { email_references: string[] | null }>(),
   insertedLogs: [] as Record<string, unknown>[],
   threadUpdates: [] as Array<{ where: Criteria; patch: Record<string, unknown> }>,
 }));
@@ -38,6 +40,14 @@ function makeQueryBuilder(table: string) {
       if (table === 'comments') {
         const commentId = String(whereCriteria.comment_id ?? '');
         return dbState.commentRows.get(commentId) ?? null;
+      }
+      if (table === 'email_sending_logs') {
+        const threadId = String(whereCriteria.comment_thread_id ?? '');
+        return dbState.latestOutboundRows.get(threadId) ?? null;
+      }
+      if (table === 'comment_threads') {
+        const threadId = String(whereCriteria.thread_id ?? '');
+        return dbState.threadRows.get(threadId) ?? null;
       }
       return null;
     }),
@@ -99,6 +109,8 @@ async function waitForThreadUpdate(timeoutMs = 500) {
 describe('BaseEmailService comment thread outbound headers', () => {
   beforeEach(() => {
     dbState.commentRows.clear();
+    dbState.latestOutboundRows.clear();
+    dbState.threadRows.clear();
     dbState.insertedLogs.length = 0;
     dbState.threadUpdates.length = 0;
   });
@@ -165,5 +177,64 @@ describe('BaseEmailService comment thread outbound headers', () => {
         email_provider_thread_id: 'provider-thread-t039',
       },
     });
+  });
+
+  it('T040: reply send sets In-Reply-To from the latest outbound message in the comment thread', async () => {
+    const tenantId = 'tenant-t040';
+    const commentId = 'comment-t040';
+    const threadId = 'thread-t040';
+    const previousMessageId = '<previous-t040@example.test>';
+    let capturedMessage: EmailMessage | null = null;
+
+    dbState.commentRows.set(commentId, {
+      thread_id: threadId,
+      parent_comment_id: 'parent-comment-t040',
+    });
+    dbState.latestOutboundRows.set(threadId, {
+      rfc_message_id: previousMessageId,
+    });
+    dbState.threadRows.set(threadId, {
+      email_references: [],
+    });
+
+    const provider: IEmailProvider = {
+      providerId: 'test-provider',
+      providerType: 'test',
+      capabilities,
+      async initialize() {
+        // no-op
+      },
+      async sendEmail(message: EmailMessage, _tenantId: string): Promise<EmailSendResult> {
+        capturedMessage = message;
+        return {
+          success: true,
+          messageId: 'provider-message-t040',
+          providerMessageId: 'provider-message-t040',
+          providerId: 'test-provider',
+          providerType: 'test',
+          sentAt: new Date('2026-05-13T12:05:00.000Z'),
+        };
+      },
+      async healthCheck() {
+        return { healthy: true };
+      },
+    };
+
+    const service = new TestEmailService(provider);
+    const result = await service.sendEmail({
+      tenantId,
+      to: 'client@example.com',
+      subject: 'Reply comment',
+      html: '<p>Reply comment</p>',
+      replyContext: {
+        ticketId: 'ticket-t040',
+        commentId,
+        threadId: 'provider-thread-t040',
+      },
+    });
+
+    expect(result.success).toBe(true);
+    expect(capturedMessage?.headers?.['In-Reply-To']).toBe(previousMessageId);
+    expect(capturedMessage?.headers?.['Message-ID']).toMatch(/^<.+@tenant-t040\.alga-psa\.local>$/);
   });
 });
