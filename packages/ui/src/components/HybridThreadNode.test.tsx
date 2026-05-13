@@ -1,5 +1,7 @@
 /** @vitest-environment jsdom */
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
@@ -233,5 +235,31 @@ describe('HybridThreadNode', () => {
     expect(screen.getByTestId('comment-depth-5')).toHaveAttribute('data-depth', '5');
     expect(screen.getByTestId('comment-depth-5')).toHaveAttribute('data-visual-depth', '4');
     expect(container.querySelectorAll('.thread-children.depth-4').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('T052: marks nested thread bars as dashed sub-thread bars while root bars use the base style', () => {
+    const group = buildGroup();
+
+    const { container } = render(
+      <HybridThreadNode<TestComment>
+        group={group}
+        comment={group.root}
+        getCommentId={(comment) => comment.id}
+        renderComment={(comment) => <div data-testid={`comment-${comment.id}`}>{comment.id}</div>}
+      />
+    );
+
+    const bars = container.querySelectorAll('.comment-thread-bar');
+    expect(bars).toHaveLength(2);
+    expect(bars[0]).toHaveClass('depth-0');
+    expect(bars[0]).not.toHaveClass('comment-thread-bar-subthread');
+    expect(bars[1]).toHaveClass('depth-1');
+    expect(bars[1]).toHaveClass('comment-thread-bar-subthread');
+
+    const css = readFileSync(resolve(process.cwd(), '../packages/ui/src/components/CommentThread.module.css'), 'utf8');
+    expect(css).toContain('background: #f9fafb;');
+    expect(css).toContain(':global(.comment-thread-bar-subthread)');
+    expect(css).toContain('border-style: dashed;');
+    expect(css).toContain('background: #ffffff;');
   });
 });
