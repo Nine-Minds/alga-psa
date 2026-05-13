@@ -54,7 +54,7 @@
   { "id": "T053", "description": "UI: Reply button only visible on hover; keyboard-accessible focus also reveals it (.c-actions opacity rules)", "implemented": true, "featureIds": ["F046", "F051"] },
   { "id": "T054", "description": "UI: soft-deleted comments render '[deleted]' placeholder with reduced opacity; no Reply button", "implemented": true, "featureIds": ["F058"] },
   { "id": "T055", "description": "UI: tab counts at thread level — All counts threads, Client = threads whose root non-internal, Internal = threads whose root internal, Resolution = threads with any is_resolution=true comment", "implemented": true, "featureIds": ["F048"] },
-  { "id": "T056", "description": "UI: ticket thread sort order toggle re-sorts threads by last_activity_at; within-thread replies still chronological regardless of toggle", "implemented": false, "featureIds": ["F049", "F061"] },
+  { "id": "T056", "description": "UI: ticket thread sort order toggle re-sorts threads by last_activity_at; within-thread replies still chronological regardless of toggle", "implemented": true, "featureIds": ["F049", "F061"] },
   { "id": "T057", "description": "Playwright e2e (ticket): hover comment → Reply button appears → click → inline composer opens", "implemented": false, "featureIds": ["F046", "F051"] },
   { "id": "T058", "description": "Playwright e2e (ticket): submit inline reply → indented child renders under parent with thread bar showing 1 reply", "implemented": false, "featureIds": ["F052"] },
   { "id": "T059", "description": "Playwright e2e (ticket): collapse a thread → children hide → bar shows Expand + Open in drawer; click Expand to restore", "implemented": false, "featureIds": ["F041"] },
