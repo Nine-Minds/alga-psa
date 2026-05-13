@@ -83,8 +83,9 @@ export function replaceTemplateVariables(
     (_match, _condition, blockContent) => blockContent
   );
 
-  // Then replace simple {{variable}} placeholders
-  result = result.replace(/\{\{([^}]+)\}\}/g, (match, key) => {
+  // Then replace simple {{variable}} and raw-HTML {{{variable}}} placeholders.
+  // In the iframe preview we render HTML either way, so we treat both forms the same.
+  result = result.replace(/\{{2,3}([^{}]+)\}{2,3}/g, (match, key) => {
     const trimmedKey = key.trim();
     return trimmedKey in data ? data[trimmedKey] : match;
   });
