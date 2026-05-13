@@ -323,4 +323,45 @@ describe('comment_threads migrations', () => {
       });
     }
   });
+
+  it('T009: rejects null thread_id inserts after NOT NULL enforcement', async () => {
+    const ticketContext = await knex('tickets as t')
+      .join('users as u', 'u.tenant', 't.tenant')
+      .select('t.tenant', 't.ticket_id', 'u.user_id')
+      .first();
+    expect(ticketContext).toBeTruthy();
+
+    const taskContext = await knex('project_tasks as pt')
+      .join('users as u', 'u.tenant', 'pt.tenant')
+      .select('pt.tenant', 'pt.task_id', 'u.user_id')
+      .first();
+    expect(taskContext).toBeTruthy();
+
+    const ids = await knex.raw(`
+      SELECT
+        gen_random_uuid() AS comment_id,
+        gen_random_uuid() AS task_comment_id
+    `);
+
+    await expect(knex('comments').insert({
+      tenant: ticketContext.tenant,
+      comment_id: ids.rows[0].comment_id,
+      ticket_id: ticketContext.ticket_id,
+      user_id: ticketContext.user_id,
+      thread_id: null,
+      note: 'Invalid comment without a thread',
+      is_internal: false,
+      is_resolution: false,
+    })).rejects.toThrow(/null value in column "thread_id"/);
+
+    await expect(knex('project_task_comments').insert({
+      tenant: taskContext.tenant,
+      task_comment_id: ids.rows[0].task_comment_id,
+      task_id: taskContext.task_id,
+      user_id: taskContext.user_id,
+      author_type: 'internal',
+      thread_id: null,
+      note: 'Invalid task comment without a thread',
+    })).rejects.toThrow(/null value in column "thread_id"/);
+  });
 });
