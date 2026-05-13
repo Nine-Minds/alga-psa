@@ -27,7 +27,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(),
 }));
 
-import { createTaskComment, deleteTaskComment } from '../../../../packages/projects/src/actions/projectTaskCommentActions';
+import { createTaskComment, deleteTaskComment, getTaskComments } from '../../../../packages/projects/src/actions/projectTaskCommentActions';
 
 const blockNote = (text: string) => JSON.stringify([
   {
@@ -272,6 +272,73 @@ describe('project task comment threading model', () => {
         .where({ tenant: context.tenant })
         .whereIn('thread_id', [leafThreadId, softDeleteThreadId].filter(Boolean))
         .delete();
+    }
+  });
+
+  it('T026: getTaskComments returns threading fields including soft-deleted roots', async () => {
+    const context = await knex('project_tasks as pt')
+      .join('project_phases as pp', function() {
+        this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
+      })
+      .select('pt.tenant', 'pt.task_id')
+      .where('pt.tenant', dbRef.tenant)
+      .first();
+    expect(context).toBeTruthy();
+
+    const rootCommentId = await createTaskComment({
+      taskId: context.task_id,
+      note: blockNote('Task root for read contract test'),
+    });
+
+    let threadId: string | undefined;
+    let replyCommentId: string | undefined;
+
+    try {
+      const root = await knex('project_task_comments')
+        .select('thread_id')
+        .where({ tenant: context.tenant, task_comment_id: rootCommentId })
+        .first();
+      threadId = root.thread_id;
+
+      replyCommentId = await createTaskComment({
+        taskId: context.task_id,
+        note: blockNote('Task reply for read contract test'),
+        parent_comment_id: rootCommentId,
+      });
+
+      await deleteTaskComment(rootCommentId);
+
+      const comments = await getTaskComments(context.task_id);
+      const readRoot = comments.find((comment) => comment.taskCommentId === rootCommentId);
+      const readReply = comments.find((comment) => comment.taskCommentId === replyCommentId);
+
+      expect(readRoot).toMatchObject({
+        taskCommentId: rootCommentId,
+        threadId,
+        parentCommentId: null,
+        note: '[deleted]',
+      });
+      expect(readRoot?.deletedAt).toBeTruthy();
+      expect(readReply).toMatchObject({
+        taskCommentId: replyCommentId,
+        threadId,
+        parentCommentId: rootCommentId,
+      });
+      expect(readReply?.deletedAt ?? null).toBeNull();
+    } finally {
+      if (replyCommentId) {
+        await knex('project_task_comments')
+          .where({ tenant: context.tenant, task_comment_id: replyCommentId })
+          .delete();
+      }
+      await knex('project_task_comments')
+        .where({ tenant: context.tenant, task_comment_id: rootCommentId })
+        .delete();
+      if (threadId) {
+        await knex('comment_threads')
+          .where({ tenant: context.tenant, thread_id: threadId })
+          .delete();
+      }
     }
   });
 });
