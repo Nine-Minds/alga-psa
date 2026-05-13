@@ -25,7 +25,7 @@
   { "id": "T024", "description": "Model: createTaskComment with parent inherits thread_id and increments counters", "implemented": true, "featureIds": ["F018", "F019"] },
   { "id": "T025", "description": "Model: deleteTaskComment leaf vs root-with-children behavior matches tickets", "implemented": true, "featureIds": ["F020"] },
   { "id": "T026", "description": "Model: getTaskComments returns thread_id, parent_comment_id, deleted_at", "implemented": true, "featureIds": ["F021"] },
-  { "id": "T027", "description": "Action: commentActions.createComment accepts parent_comment_id in payload and forwards to model", "implemented": false, "featureIds": ["F022"] },
+  { "id": "T027", "description": "Action: commentActions.createComment accepts parent_comment_id in payload and forwards to model", "implemented": true, "featureIds": ["F022"] },
   { "id": "T028", "description": "Action: TICKET_COMMENT_ADDED event payload includes thread_id, parent_comment_id, is_reply boolean", "implemented": false, "featureIds": ["F023"] },
   { "id": "T029", "description": "Action: client-user attempting to create internal reply is rejected with 403/permission error", "implemented": false, "featureIds": ["F024"] },
   { "id": "T030", "description": "Action: projectTaskCommentActions.createTaskComment accepts parent_comment_id and forwards to model", "implemented": false, "featureIds": ["F025"] },
