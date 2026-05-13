@@ -149,6 +149,25 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
   const [openPanelCommentId, setOpenPanelCommentId] = useState<string | null>(null);
   const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
+  const drawerReturnFocusRef = useRef<HTMLElement | null>(null);
+
+  const openCommentThreadPanel = useCallback((commentId: string) => {
+    drawerReturnFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    setOpenPanelCommentId(commentId);
+  }, []);
+
+  const closeCommentThreadPanel = useCallback(() => {
+    const returnFocusTo = drawerReturnFocusRef.current;
+    setOpenPanelCommentId(null);
+    window.setTimeout(() => {
+      if (returnFocusTo?.isConnected) {
+        returnFocusTo.focus();
+      }
+      drawerReturnFocusRef.current = null;
+    }, 0);
+  }, []);
 
   const discardComposeEditor = React.useCallback(() => {
     onNewCommentContentChange(DEFAULT_BLOCK);
@@ -468,7 +487,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             comment={group.root}
             getCommentId={(comment) => comment.comment_id}
             renderComment={(comment) => renderCommentItem(comment)}
-            onOpenPanel={(commentId) => setOpenPanelCommentId(commentId)}
+            onOpenPanel={openCommentThreadPanel}
           />
         )}
       />
@@ -767,7 +786,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       <CommentThreadDrawer<IComment>
         id={`${compId}-comment-thread-drawer`}
         isOpen={Boolean(openPanelThreadGroup)}
-        onClose={() => setOpenPanelCommentId(null)}
+        onClose={closeCommentThreadPanel}
         group={openPanelThreadGroup}
         getCommentId={(comment) => comment.comment_id}
         renderComment={(comment) => renderCommentItem(comment)}
@@ -778,7 +797,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         onSubmitReply={async ({ content, parentCommentId, isInternal }) => {
           const success = await onAddReplyComment?.(content, parentCommentId, isInternal);
           if (success) {
-            setOpenPanelCommentId(null);
+            closeCommentThreadPanel();
           }
         }}
       />

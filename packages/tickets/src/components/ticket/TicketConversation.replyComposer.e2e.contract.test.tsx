@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TicketConversation from './TicketConversation';
 
@@ -462,6 +462,33 @@ describe('TicketConversation threaded reply e2e contract', () => {
     expect(screen.getByTestId('comment-1')).toBeInTheDocument();
     expect(screen.queryByTestId('existing-reply')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument();
+  });
+
+  it('T079: drawer focus moves inside and returns to the originating thread bar on close', async () => {
+    const user = userEvent.setup();
+
+    await act(async () => {
+      render(<TicketConversationWithExistingReply />);
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Collapse' }));
+    const openButton = screen.getByRole('button', { name: 'Open in drawer' });
+    openButton.focus();
+    expect(document.activeElement).toBe(openButton);
+
+    await user.click(openButton);
+
+    const dialog = screen.getByRole('dialog');
+    await waitFor(() => {
+      expect(dialog).toContainElement(document.activeElement as HTMLElement);
+    });
+
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(document.activeElement).toBe(openButton);
+    });
   });
 
   it('T061: replying in the drawer closes it and shows the new reply inline', async () => {
