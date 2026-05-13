@@ -10,6 +10,7 @@ Working notes for implementing nested/threaded comment responses on tickets and 
 ## Decisions
 
 - (2026-05-13) **Thread as first-class entity.** Every top-level comment is the head of a `comment_threads` row. Inbound/outbound email correlation happens at thread granularity, not ticket. New "Add Comment" always creates a new thread; existing flat comments backfill as single-comment threads.
+- (2026-05-13) **F001 migration split.** Created `comment_threads` in `20260513100000_create_comment_threads.cjs` with only the base table, parent CHECK, and ticket/task FKs. Deferred indexes, comment-column FKs, and backfill to their own checklist migrations to preserve the PRD's staged rollout and make each commit reviewable.
 - (2026-05-13) **Hybrid (Nested + collapsible drawer)** is the only production reply model. Other modes from the prototype (Flat, Single-level only, Deep nesting only, Quote-reply, Side-panel only) are exploration-only and not shipping. The prototype's Tweaks panel is not part of production.
 - (2026-05-13) **Scope:** Tickets + project tasks together in one PR. Email integration is full bidirectional (inbound matching + outbound RFC headers + reply tokens) for tickets only — tasks don't accept inbound email today.
 - (2026-05-13) **Backfill model:** one thread per existing comment. Cleanest cut-over; visually identical to today (no thread bars on legacy comments).
