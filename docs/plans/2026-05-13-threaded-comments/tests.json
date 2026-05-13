@@ -18,7 +18,7 @@
   { "id": "T017", "description": "Model: createComment rejects when parent_comment_id refers to a soft-deleted parent", "implemented": true, "featureIds": ["F013"] },
   { "id": "T018", "description": "Model: createComment rejects internal reply on a client-visible thread root (and vice versa)", "implemented": true, "featureIds": ["F013", "F024"] },
   { "id": "T019", "description": "Model: inserting a reply increments comment_threads.reply_count by 1 and bumps last_activity_at", "implemented": true, "featureIds": ["F014"] },
-  { "id": "T020", "description": "Model: deleting a leaf comment hard-deletes the row and decrements reply_count", "implemented": false, "featureIds": ["F015"] },
+  { "id": "T020", "description": "Model: deleting a leaf comment hard-deletes the row and decrements reply_count", "implemented": true, "featureIds": ["F015"] },
   { "id": "T021", "description": "Model: deleting a root comment that has children soft-deletes (deleted_at set, note replaced with '[deleted]'); children unaffected", "implemented": false, "featureIds": ["F015"] },
   { "id": "T022", "description": "Model: findCommentsByTicketId returns thread_id, parent_comment_id, deleted_at for every comment including soft-deleted", "implemented": false, "featureIds": ["F016"] },
   { "id": "T023", "description": "Model: createTaskComment with NULL parent creates new comment_threads row with project_task_id set", "implemented": false, "featureIds": ["F017"] },

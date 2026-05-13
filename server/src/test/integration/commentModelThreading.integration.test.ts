@@ -349,4 +349,72 @@ describe('ticket comment threading model', () => {
       }
     }
   });
+
+  it('T020: deleting a leaf reply hard-deletes it and decrements reply_count', async () => {
+    const context = await knex('tickets as t')
+      .join('users as u', 'u.tenant', 't.tenant')
+      .select('t.tenant', 't.ticket_id', 'u.user_id')
+      .first();
+    expect(context).toBeTruthy();
+
+    const rootCommentId = await Comment.insert(knex, context.tenant, {
+      ticket_id: context.ticket_id,
+      user_id: context.user_id,
+      author_type: 'internal',
+      note: 'Root comment for leaf delete test',
+      markdown_content: 'Root comment for leaf delete test',
+      is_internal: false,
+      is_resolution: false,
+    });
+
+    let threadId: string | undefined;
+    let replyCommentId: string | undefined;
+
+    try {
+      const root = await knex('comments')
+        .select('thread_id')
+        .where({ tenant: context.tenant, comment_id: rootCommentId })
+        .first();
+      threadId = root.thread_id;
+
+      replyCommentId = await Comment.insert(knex, context.tenant, {
+        ticket_id: context.ticket_id,
+        user_id: context.user_id,
+        author_type: 'internal',
+        note: 'Leaf reply for delete test',
+        markdown_content: 'Leaf reply for delete test',
+        is_internal: false,
+        is_resolution: false,
+        parent_comment_id: rootCommentId,
+      });
+
+      const beforeDelete = await knex('comment_threads')
+        .select('reply_count')
+        .where({ tenant: context.tenant, thread_id: threadId })
+        .first();
+      expect(beforeDelete.reply_count).toBe(1);
+
+      await Comment.delete(knex, context.tenant, replyCommentId);
+
+      const deletedReply = await knex('comments')
+        .select('comment_id')
+        .where({ tenant: context.tenant, comment_id: replyCommentId })
+        .first();
+      expect(deletedReply).toBeUndefined();
+
+      const afterDelete = await knex('comment_threads')
+        .select('reply_count')
+        .where({ tenant: context.tenant, thread_id: threadId })
+        .first();
+      expect(afterDelete.reply_count).toBe(0);
+    } finally {
+      if (replyCommentId) {
+        await knex('comments').where({ tenant: context.tenant, comment_id: replyCommentId }).delete();
+      }
+      await knex('comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
+      if (threadId) {
+        await knex('comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
+      }
+    }
+  });
 });
