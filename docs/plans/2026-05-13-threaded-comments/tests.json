@@ -78,5 +78,5 @@
   { "id": "T077", "description": "Concurrency: two replies created in parallel on the same thread both succeed; reply_count increments to +2; no lost update", "implemented": true, "featureIds": ["F014"] },
   { "id": "T078", "description": "RBAC: client user can reply to a client-visible thread on their own ticket; cannot reply on internal thread; cannot reply on a ticket they don't have access to", "implemented": true, "featureIds": ["F024"] },
   { "id": "T079", "description": "Drawer focus management: opening the drawer moves focus into the drawer; closing returns focus to the originating thread bar (matches Radix Dialog focus behavior)", "implemented": true, "featureIds": ["F044"] },
-  { "id": "T080", "description": "UI: 'Add Comment' top-level submit always creates a new thread (parent_comment_id absent) — never accidentally lands inside the most recent thread", "implemented": false, "featureIds": ["F012", "F022"] }
+  { "id": "T080", "description": "UI: 'Add Comment' top-level submit always creates a new thread (parent_comment_id absent) — never accidentally lands inside the most recent thread", "implemented": true, "featureIds": ["F012", "F022"] }
 ]

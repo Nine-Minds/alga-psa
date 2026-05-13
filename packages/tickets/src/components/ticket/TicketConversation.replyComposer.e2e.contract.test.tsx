@@ -370,6 +370,50 @@ function TicketConversationTabsHarness() {
   );
 }
 
+function StatefulTicketConversationForTopLevelAdd({ onReplyAttempt }: { onReplyAttempt: NonNullable<TicketConversationProps['onAddReplyComment']> }) {
+  const [conversations, setConversations] = React.useState([
+    ...defaultProps.conversations,
+    {
+      tenant: 'tenant-1',
+      comment_id: 'existing-reply',
+      thread_id: 'thread-1',
+      parent_comment_id: 'comment-1',
+      user_id: 'user-1',
+      author_type: 'internal',
+      note: NOTE,
+      is_internal: false,
+      is_resolution: false,
+      created_at: '2026-05-13T09:05:00.000Z',
+    } as any,
+  ]);
+
+  return (
+    <TicketConversation
+      {...defaultProps}
+      conversations={conversations}
+      onAddReplyComment={onReplyAttempt}
+      onAddNewComment={async () => {
+        setConversations((current) => [
+          ...current,
+          {
+            tenant: 'tenant-1',
+            comment_id: 'new-root',
+            thread_id: 'thread-2',
+            parent_comment_id: null,
+            user_id: 'current-user',
+            author_type: 'internal',
+            note: NOTE,
+            is_internal: false,
+            is_resolution: false,
+            created_at: '2026-05-13T09:10:00.000Z',
+          } as any,
+        ]);
+        return true;
+      }}
+    />
+  );
+}
+
 describe('TicketConversation threaded reply e2e contract', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'IntersectionObserver', {
@@ -569,5 +613,21 @@ describe('TicketConversation threaded reply e2e contract', () => {
     expect(screen.getByTestId('legacy-2')).toBeInTheDocument();
     expect(container.querySelector('.comment-thread-bar')).toBeNull();
     expect(container.querySelector('.thread-children')).toBeNull();
+  });
+
+  it('T080: top-level Add Comment creates a separate root thread, not a reply', async () => {
+    const user = userEvent.setup();
+    const addReplyCommentMock = vi.fn(async (..._args: Parameters<NonNullable<TicketConversationProps['onAddReplyComment']>>) => true);
+    const addReplyComment: NonNullable<TicketConversationProps['onAddReplyComment']> = addReplyCommentMock;
+
+    render(<StatefulTicketConversationForTopLevelAdd onReplyAttempt={addReplyComment} />);
+
+    await user.click(screen.getByRole('button', { name: 'Add Comment' }));
+    await user.click(document.getElementById('ticket-conversation-add-comment-btn')!);
+
+    const newRoot = await screen.findByTestId('new-root');
+    expect(newRoot.closest('.thread-children')).toBeNull();
+    expect(addReplyCommentMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId('existing-reply').closest('.thread-children')).toHaveClass('depth-1');
   });
 });
