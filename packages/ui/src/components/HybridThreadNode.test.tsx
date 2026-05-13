@@ -195,4 +195,43 @@ describe('HybridThreadNode', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByTestId('inline-comment-drawer-reply')).toBeInTheDocument();
   });
+
+  it('T051: caps visual indentation at depth 4 while rendering deeper data', () => {
+    const deepComments: TestComment[] = [
+      { id: 'root', threadId: 'thread-1', parentId: null, createdAt: '2026-05-13T09:00:00.000Z' },
+      { id: 'depth-1', threadId: 'thread-1', parentId: 'root', createdAt: '2026-05-13T09:01:00.000Z' },
+      { id: 'depth-2', threadId: 'thread-1', parentId: 'depth-1', createdAt: '2026-05-13T09:02:00.000Z' },
+      { id: 'depth-3', threadId: 'thread-1', parentId: 'depth-2', createdAt: '2026-05-13T09:03:00.000Z' },
+      { id: 'depth-4', threadId: 'thread-1', parentId: 'depth-3', createdAt: '2026-05-13T09:04:00.000Z' },
+      { id: 'depth-5', threadId: 'thread-1', parentId: 'depth-4', createdAt: '2026-05-13T09:05:00.000Z' },
+    ];
+    const group = buildCommentThreadGroups<TestComment>({
+      comments: deepComments,
+      getCommentId: (comment) => comment.id,
+      getThreadId: (comment) => comment.threadId,
+      getParentCommentId: (comment) => comment.parentId,
+      getCreatedAt: (comment) => comment.createdAt,
+    })[0];
+
+    const { container } = render(
+      <HybridThreadNode<TestComment>
+        group={group}
+        comment={group.root}
+        getCommentId={(comment) => comment.id}
+        renderComment={(comment, context) => (
+          <div
+            data-testid={`comment-${comment.id}`}
+            data-depth={context.depth}
+            data-visual-depth={context.visualDepth}
+          >
+            {comment.id}
+          </div>
+        )}
+      />
+    );
+
+    expect(screen.getByTestId('comment-depth-5')).toHaveAttribute('data-depth', '5');
+    expect(screen.getByTestId('comment-depth-5')).toHaveAttribute('data-visual-depth', '4');
+    expect(container.querySelectorAll('.thread-children.depth-4').length).toBeGreaterThanOrEqual(2);
+  });
 });

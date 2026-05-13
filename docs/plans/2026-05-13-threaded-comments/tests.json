@@ -49,7 +49,7 @@
   { "id": "T048", "description": "UI: clicking Open in drawer opens the drawer with the right root + replies", "implemented": true, "featureIds": ["F042", "F044"] },
   { "id": "T049", "description": "UI: InlineReplyComposer shows Mark-as-Internal switch only; no Mark-as-Resolution; is_internal default matches parent's is_internal", "implemented": true, "featureIds": ["F043"] },
   { "id": "T050", "description": "UI: Drawer composer submits create with parent_comment_id; drawer closes; inline list shows new reply after close", "implemented": true, "featureIds": ["F044", "F053"] },
-  { "id": "T051", "description": "UI: depth-4 CSS cap — indent does not grow past depth 4 even with depth-5 data", "implemented": false, "featureIds": ["F059"] },
+  { "id": "T051", "description": "UI: depth-4 CSS cap — indent does not grow past depth 4 even with depth-5 data", "implemented": true, "featureIds": ["F059"] },
   { "id": "T052", "description": "UI: sub-thread bar (depth >= 1) uses dashed border + white background; depth-0 uses solid grey background", "implemented": false, "featureIds": ["F060"] },
   { "id": "T053", "description": "UI: Reply button only visible on hover; keyboard-accessible focus also reveals it (.c-actions opacity rules)", "implemented": false, "featureIds": ["F046", "F051"] },
   { "id": "T054", "description": "UI: soft-deleted comments render '[deleted]' placeholder with reduced opacity; no Reply button", "implemented": false, "featureIds": ["F058"] },
