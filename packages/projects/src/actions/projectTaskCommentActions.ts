@@ -92,20 +92,11 @@ export const createTaskComment = withAuth(async (
     // Convert BlockNote to markdown
     const markdownContent = convertBlockNoteToMarkdown(comment.note);
 
-    // Insert comment (convert camelCase to snake_case for DB)
-    const [newComment] = await trx('project_task_comments')
-      .insert({
-        task_id: comment.taskId,
-        user_id: userId,
-        tenant,
-        author_type: 'internal',
-        note: comment.note,
-        markdown_content: markdownContent,
-        created_at: new Date().toISOString()
-      })
-      .returning('*');
+    if (comment.parentCommentId) {
+      throw new Error('Reply comments require parent thread resolution before insert');
+    }
 
-    // Get project context for notifications
+    // Get project context for notifications and validate task before inserting thread/comment rows
     const task = await trx('project_tasks')
       .join('project_phases', function() {
         this.on('project_tasks.phase_id', 'project_phases.phase_id')
@@ -119,6 +110,45 @@ export const createTaskComment = withAuth(async (
     if (!task) {
       throw new Error('Task not found');
     }
+
+    const now = new Date().toISOString();
+    const idsResult = await trx.raw('SELECT gen_random_uuid() AS task_comment_id, gen_random_uuid() AS thread_id');
+    const generatedIds = idsResult.rows?.[0];
+    const taskCommentId = generatedIds?.task_comment_id;
+    const threadId = generatedIds?.thread_id;
+
+    if (!taskCommentId || !threadId) {
+      throw new Error('Failed to generate task comment/thread identifiers');
+    }
+
+    await trx('comment_threads').insert({
+      tenant,
+      thread_id: threadId,
+      ticket_id: null,
+      project_task_id: comment.taskId,
+      root_comment_id: taskCommentId,
+      is_internal: false,
+      reply_count: 0,
+      last_activity_at: now,
+      created_at: now,
+      created_by: userId,
+    });
+
+    // Insert comment (convert camelCase to snake_case for DB)
+    const [newComment] = await trx('project_task_comments')
+      .insert({
+        task_comment_id: taskCommentId,
+        task_id: comment.taskId,
+        thread_id: threadId,
+        parent_comment_id: null,
+        user_id: userId,
+        tenant,
+        author_type: 'internal',
+        note: comment.note,
+        markdown_content: markdownContent,
+        created_at: now
+      })
+      .returning('*');
 
     // Publish event (mention extraction happens in event handler)
     await publishEvent({
