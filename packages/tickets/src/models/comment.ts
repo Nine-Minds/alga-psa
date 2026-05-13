@@ -218,7 +218,49 @@ const Comment = {
 
   delete: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string): Promise<void> => {
     try {
+      const existingComment = await knexOrTrx<IComment>('comments')
+        .select('comment_id', 'parent_comment_id', 'thread_id')
+        .where('comment_id', id)
+        .andWhere('tenant', tenant)
+        .first();
+
+      if (!existingComment) {
+        return;
+      }
+
+      const child = await knexOrTrx<IComment>('comments')
+        .select('comment_id')
+        .where('parent_comment_id', id)
+        .andWhere('tenant', tenant)
+        .first();
+
+      if (child) {
+        const now = new Date().toISOString();
+        await knexOrTrx<IComment>('comments')
+          .where('comment_id', id)
+          .andWhere('tenant', tenant)
+          .update({
+            note: '[deleted]',
+            markdown_content: '[deleted]',
+            deleted_at: now,
+            updated_at: now,
+          });
+        return;
+      }
+
       await knexOrTrx<IComment>('comments').where('comment_id', id).andWhere('tenant', tenant).del();
+
+      if (existingComment.parent_comment_id) {
+        await knexOrTrx('comment_threads')
+          .where({ tenant, thread_id: existingComment.thread_id })
+          .update({
+            reply_count: knexOrTrx.raw('GREATEST(reply_count - 1, 0)'),
+          });
+      } else {
+        await knexOrTrx('comment_threads')
+          .where({ tenant, thread_id: existingComment.thread_id })
+          .del();
+      }
     } catch (error) {
       console.error(`Error deleting comment with id ${id}:`, error);
       throw error;
