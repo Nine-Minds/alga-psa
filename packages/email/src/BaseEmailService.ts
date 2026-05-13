@@ -509,6 +509,16 @@ export abstract class BaseEmailService {
       const { replyTokenHash, replyTokenSuffix } = getReplyTokenFingerprint(
         params.replyContext?.conversationToken
       );
+      const comment = params.replyContext?.commentId
+        ? await knex('comments')
+          .select('thread_id', 'parent_comment_id')
+          .where({
+            tenant: params.tenantId,
+            comment_id: params.replyContext.commentId,
+          })
+          .first<{ thread_id?: string | null; parent_comment_id?: string | null }>()
+        : null;
+      const commentThreadId = comment?.thread_id ?? null;
       const baseMetadata =
         params.providerResult.metadata && typeof params.providerResult.metadata === 'object'
           ? { ...params.providerResult.metadata }
@@ -525,6 +535,7 @@ export abstract class BaseEmailService {
             providerMessageId,
             rfcMessageId,
             threadId: params.replyContext?.threadId ?? null,
+            commentThreadId,
             ticketId: params.replyContext?.ticketId ?? null,
             projectId: params.replyContext?.projectId ?? null,
             commentId: params.replyContext?.commentId ?? null,
@@ -556,20 +567,13 @@ export abstract class BaseEmailService {
         contact_id: params.contactId ?? null,
         notification_subtype_id: params.notificationSubtypeId ?? null,
         thread_id: params.replyContext?.threadId ?? null,
+        comment_thread_id: commentThreadId,
         comment_id: params.replyContext?.commentId ?? null,
         reply_token_hash: replyTokenHash,
         reply_token_suffix: replyTokenSuffix,
       });
 
       if (params.providerResult.success && params.replyContext?.commentId && rfcMessageId) {
-        const comment = await knex('comments')
-          .select('thread_id', 'parent_comment_id')
-          .where({
-            tenant: params.tenantId,
-            comment_id: params.replyContext.commentId,
-          })
-          .first();
-
         if (comment?.thread_id && !comment.parent_comment_id) {
           await knex('comment_threads')
             .where({
