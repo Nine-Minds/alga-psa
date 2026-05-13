@@ -630,6 +630,27 @@ async function resolveReplyTargetFromOutboundMessageId(params: {
     : null;
 }
 
+async function resolveReplyTargetFromReferences(params: {
+  tenantId: string;
+  references?: string[];
+}): Promise<{ ticketId: string; threadId: string; parentCommentId: string } | null> {
+  const references = (params.references ?? [])
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  for (let index = references.length - 1; index >= 0; index -= 1) {
+    const target = await resolveReplyTargetFromOutboundMessageId({
+      tenantId: params.tenantId,
+      rfcMessageId: references[index],
+    });
+    if (target) {
+      return target;
+    }
+  }
+
+  return null;
+}
+
 function normalizeEmbeddedContentId(value: string | undefined | null): string {
   if (!value) return '';
   return String(value).trim().replace(/^cid:/i, '').replace(/^<|>$/g, '').toLowerCase();
@@ -1260,12 +1281,18 @@ export async function processInboundEmailInApp(
     }
 
     try {
-      const threadTarget = emailData.inReplyTo
+      let threadTarget = emailData.inReplyTo
         ? await resolveReplyTargetFromOutboundMessageId({
             tenantId,
             rfcMessageId: emailData.inReplyTo,
           })
         : null;
+      if (!threadTarget) {
+        threadTarget = await resolveReplyTargetFromReferences({
+          tenantId,
+          references: emailData.references,
+        });
+      }
 
       if (threadTarget) {
         threadedTicketId = threadTarget.ticketId;
