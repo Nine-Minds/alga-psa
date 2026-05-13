@@ -125,4 +125,68 @@ describe('ticket comment threading actions', () => {
       }
     }
   });
+
+  it('T028: TICKET_COMMENT_ADDED payload includes reply threading fields', async () => {
+    const context = await knex('tickets')
+      .select('tenant', 'ticket_id')
+      .where({ tenant: dbRef.tenant })
+      .first();
+    expect(context).toBeTruthy();
+
+    const rootCommentId = await createComment({
+      ticket_id: context.ticket_id,
+      user_id: userRef.user.user_id,
+      note: blockNote('Root ticket comment for event payload test'),
+      is_internal: false,
+      is_resolution: false,
+    });
+
+    let threadId: string | undefined;
+    let replyCommentId: string | undefined;
+
+    try {
+      const root = await knex('comments')
+        .select('thread_id')
+        .where({ tenant: context.tenant, comment_id: rootCommentId })
+        .first();
+      threadId = root.thread_id;
+
+      publishEventMock.mockClear();
+      replyCommentId = await createComment({
+        ticket_id: context.ticket_id,
+        user_id: userRef.user.user_id,
+        note: blockNote('Reply ticket comment for event payload test'),
+        is_internal: false,
+        is_resolution: false,
+        parent_comment_id: rootCommentId,
+      });
+
+      const addedEvent = publishEventMock.mock.calls
+        .map(([event]) => event)
+        .find((event) => event.eventType === 'TICKET_COMMENT_ADDED');
+      expect(addedEvent).toBeTruthy();
+      expect(addedEvent.payload).toMatchObject({
+        tenantId: context.tenant,
+        ticketId: context.ticket_id,
+        userId: userRef.user.user_id,
+        thread_id: threadId,
+        parent_comment_id: rootCommentId,
+        is_reply: true,
+        comment: {
+          id: replyCommentId,
+          thread_id: threadId,
+          parent_comment_id: rootCommentId,
+          is_reply: true,
+        },
+      });
+    } finally {
+      if (replyCommentId) {
+        await knex('comments').where({ tenant: context.tenant, comment_id: replyCommentId }).delete();
+      }
+      await knex('comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
+      if (threadId) {
+        await knex('comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
+      }
+    }
+  });
 });
