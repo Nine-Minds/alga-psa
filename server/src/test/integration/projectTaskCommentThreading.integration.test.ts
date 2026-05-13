@@ -27,7 +27,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn(),
 }));
 
-import { createTaskComment } from '../../../../packages/projects/src/actions/projectTaskCommentActions';
+import { createTaskComment, deleteTaskComment } from '../../../../packages/projects/src/actions/projectTaskCommentActions';
 
 const blockNote = (text: string) => JSON.stringify([
   {
@@ -178,6 +178,100 @@ describe('project task comment threading model', () => {
           .where({ tenant: context.tenant, thread_id: threadId })
           .delete();
       }
+    }
+  });
+
+  it('T025: deleteTaskComment hard-deletes leaf replies and soft-deletes roots with children', async () => {
+    const context = await knex('project_tasks as pt')
+      .join('project_phases as pp', function() {
+        this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
+      })
+      .select('pt.tenant', 'pt.task_id')
+      .where('pt.tenant', dbRef.tenant)
+      .first();
+    expect(context).toBeTruthy();
+
+    const leafRootId = await createTaskComment({
+      taskId: context.task_id,
+      note: blockNote('Task root for leaf delete test'),
+    });
+    const softDeleteRootId = await createTaskComment({
+      taskId: context.task_id,
+      note: blockNote('Task root for soft-delete test'),
+    });
+
+    let leafThreadId: string | undefined;
+    let leafReplyId: string | undefined;
+    let softDeleteThreadId: string | undefined;
+    let softDeleteReplyId: string | undefined;
+
+    try {
+      const roots = await knex('project_task_comments')
+        .select('task_comment_id', 'thread_id')
+        .where({ tenant: context.tenant })
+        .whereIn('task_comment_id', [leafRootId, softDeleteRootId]);
+      leafThreadId = roots.find((root) => root.task_comment_id === leafRootId)?.thread_id;
+      softDeleteThreadId = roots.find((root) => root.task_comment_id === softDeleteRootId)?.thread_id;
+
+      leafReplyId = await createTaskComment({
+        taskId: context.task_id,
+        note: blockNote('Task leaf reply to hard-delete'),
+        parent_comment_id: leafRootId,
+      });
+      softDeleteReplyId = await createTaskComment({
+        taskId: context.task_id,
+        note: blockNote('Task child that survives root soft-delete'),
+        parent_comment_id: softDeleteRootId,
+      });
+
+      await deleteTaskComment(leafReplyId);
+
+      const deletedLeaf = await knex('project_task_comments')
+        .select('task_comment_id')
+        .where({ tenant: context.tenant, task_comment_id: leafReplyId })
+        .first();
+      expect(deletedLeaf).toBeUndefined();
+
+      const leafThread = await knex('comment_threads')
+        .select('reply_count')
+        .where({ tenant: context.tenant, thread_id: leafThreadId })
+        .first();
+      expect(leafThread.reply_count).toBe(0);
+
+      await deleteTaskComment(softDeleteRootId);
+
+      const deletedRoot = await knex('project_task_comments')
+        .select('task_comment_id', 'note', 'markdown_content', 'deleted_at')
+        .where({ tenant: context.tenant, task_comment_id: softDeleteRootId })
+        .first();
+      expect(deletedRoot).toMatchObject({
+        task_comment_id: softDeleteRootId,
+        note: '[deleted]',
+        markdown_content: '[deleted]',
+      });
+      expect(deletedRoot.deleted_at).toBeTruthy();
+
+      const child = await knex('project_task_comments')
+        .select('task_comment_id', 'parent_comment_id')
+        .where({ tenant: context.tenant, task_comment_id: softDeleteReplyId })
+        .first();
+      expect(child).toMatchObject({
+        task_comment_id: softDeleteReplyId,
+        parent_comment_id: softDeleteRootId,
+      });
+    } finally {
+      await knex('project_task_comments')
+        .where({ tenant: context.tenant })
+        .whereIn('task_comment_id', [leafReplyId, softDeleteReplyId].filter(Boolean))
+        .delete();
+      await knex('project_task_comments')
+        .where({ tenant: context.tenant })
+        .whereIn('task_comment_id', [leafRootId, softDeleteRootId])
+        .delete();
+      await knex('comment_threads')
+        .where({ tenant: context.tenant })
+        .whereIn('thread_id', [leafThreadId, softDeleteThreadId].filter(Boolean))
+        .delete();
     }
   });
 });
