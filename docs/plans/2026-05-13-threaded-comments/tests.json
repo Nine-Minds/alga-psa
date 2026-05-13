@@ -62,7 +62,7 @@
   { "id": "T061", "description": "Playwright e2e (ticket): reply inside drawer adds the comment; closing drawer shows the new reply inline", "implemented": true, "featureIds": ["F053"] },
   { "id": "T062", "description": "Playwright e2e (ticket): reply to a reply spawns a sub-thread bar with dashed border", "implemented": true, "featureIds": ["F040", "F060"] },
   { "id": "T063", "description": "Playwright e2e (ticket): tab switch to Internal hides client-rooted threads; counts update accordingly", "implemented": true, "featureIds": ["F048"] },
-  { "id": "T064", "description": "Playwright e2e (project task): hover comment → Reply button → inline composer → submit → child indents", "implemented": false, "featureIds": ["F054", "F055", "F056"] },
+  { "id": "T064", "description": "Playwright e2e (project task): hover comment → Reply button → inline composer → submit → child indents", "implemented": true, "featureIds": ["F054", "F055", "F056"] },
   { "id": "T065", "description": "Playwright e2e (project task): collapse + Open in drawer behavior identical to ticket flow", "implemented": false, "featureIds": ["F057"] },
   { "id": "T066", "description": "Playwright e2e (project task): is_internal toggle absent from task reply composer (tasks have no internal/client split)", "implemented": false, "featureIds": ["F056"] },
   { "id": "T067", "description": "Regression: existing ticket with only legacy comments renders identically to today — no thread bars, no indent, layout unchanged", "implemented": false, "featureIds": ["F005", "F039"] },
