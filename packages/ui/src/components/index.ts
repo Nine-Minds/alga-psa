@@ -18,6 +18,8 @@ export { default as ClientAvatar } from './ClientAvatar';
 export * from './ClientPicker';
 export * from './ColorPicker';
 export { default as ColorPicker } from './ColorPicker';
+export * from './CommentThreadDrawer';
+export { default as CommentThreadDrawer } from './CommentThreadDrawer';
 export * from './CommentThreadList';
 export { default as CommentThreadList } from './CommentThreadList';
 export * from './CollapseToggleButton';
