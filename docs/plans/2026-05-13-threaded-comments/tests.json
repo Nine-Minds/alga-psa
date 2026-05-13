@@ -14,7 +14,7 @@
   { "id": "T013", "description": "Types: IProjectTaskComment has thread_id, parent_comment_id, deleted_at as expected types", "implemented": true, "featureIds": ["F011"] },
   { "id": "T014", "description": "Model: createComment with parent_comment_id=NULL creates a new comment_threads row + comment whose thread_id matches; root_comment_id equals new comment_id", "implemented": true, "featureIds": ["F012"] },
   { "id": "T015", "description": "Model: createComment with parent_comment_id inherits parent's thread_id; new comment.parent_comment_id matches", "implemented": true, "featureIds": ["F013"] },
-  { "id": "T016", "description": "Model: createComment rejects when parent_comment_id refers to a comment on a DIFFERENT ticket", "implemented": false, "featureIds": ["F013"] },
+  { "id": "T016", "description": "Model: createComment rejects when parent_comment_id refers to a comment on a DIFFERENT ticket", "implemented": true, "featureIds": ["F013"] },
   { "id": "T017", "description": "Model: createComment rejects when parent_comment_id refers to a soft-deleted parent", "implemented": false, "featureIds": ["F013"] },
   { "id": "T018", "description": "Model: createComment rejects internal reply on a client-visible thread root (and vice versa)", "implemented": false, "featureIds": ["F013", "F024"] },
   { "id": "T019", "description": "Model: inserting a reply increments comment_threads.reply_count by 1 and bumps last_activity_at", "implemented": false, "featureIds": ["F014"] },
