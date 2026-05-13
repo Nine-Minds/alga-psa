@@ -11,7 +11,7 @@ import { IDocument } from '@alga-psa/types';
 import { PartialBlock } from '@blocknote/core';
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { CommentThreadList, HybridThreadNode } from '@alga-psa/ui/components';
+import { CommentThreadList, HybridThreadNode, buildCommentThreadGroups } from '@alga-psa/ui/components';
 
 // Dynamic import for TextEditor
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
@@ -447,6 +447,34 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     );
   };
 
+  const threadGroups = useMemo(
+    () => buildCommentThreadGroups<IComment>({
+      comments: conversations,
+      getCommentId: (comment) => comment.comment_id,
+      getThreadId: (comment) => comment.thread_id || comment.comment_id,
+      getParentCommentId: (comment) => comment.parent_comment_id,
+      getCreatedAt: (comment) => comment.created_at,
+      getUpdatedAt: (comment) => comment.updated_at,
+    }),
+    [conversations]
+  );
+
+  const commentsForThreads = useCallback(
+    (predicate: (group: typeof threadGroups[number]) => boolean): IComment[] =>
+      threadGroups.filter(predicate).flatMap((group) => group.comments),
+    [threadGroups]
+  );
+
+  const allTabComments = hideInternalTab
+    ? commentsForThreads((group) => !group.root.is_internal)
+    : conversations;
+  const clientTabComments = commentsForThreads((group) => !group.root.is_internal);
+  const internalTabComments = commentsForThreads((group) => Boolean(group.root.is_internal));
+  const resolutionTabComments = commentsForThreads((group) =>
+    (!hideInternalTab || !group.root.is_internal) &&
+    group.comments.some((comment) => Boolean(comment.is_resolution))
+  );
+
   const renderExternalComments = (): React.JSX.Element | null => {
     if (!externalComments || externalComments.length === 0) {
       return null;
@@ -501,9 +529,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         <ReflectionContainer id={`${id}-all-comments`} label="All Comments">
           {renderComments(hideInternalTab
             // For client portal, "All Comments" should exclude internal comments (same as "Client Visible")
-            ? conversations.filter(conversation => !conversation.is_internal)
+            ? allTabComments
             // For MSP portal, "All Comments" includes all comments
-            : conversations)}
+            : allTabComments)}
         </ReflectionContainer>
       )
     },
@@ -512,7 +540,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       label: t('conversation.client', 'Client'),
       content: (
         <ReflectionContainer id={`${id}-client-visible-comments`} label="Client Comments">
-          {renderComments(conversations.filter(conversation => !conversation.is_internal))}
+          {renderComments(clientTabComments)}
           {renderExternalComments()}
         </ReflectionContainer>
       )
@@ -523,7 +551,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       content: (
         <ReflectionContainer id={`${id}-internal-comments`} label="Internal Comments">
           <h3 className="text-lg font-medium mb-4">{t('conversation.internalComments', 'Internal Comments')}</h3>
-          {renderComments(conversations.filter(conversation => conversation.is_internal))}
+          {renderComments(internalTabComments)}
         </ReflectionContainer>
       )
     },
@@ -533,9 +561,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       content: (
         <ReflectionContainer id={`${id}-resolution-comments`} label="Resolution Comments">
           <h3 className="text-lg font-medium mb-4">{t('conversation.resolutionComments', 'Resolution Comments')}</h3>
-          {renderComments(conversations.filter(conversation =>
-            conversation.is_resolution && (!hideInternalTab || !conversation.is_internal)
-          ))}
+          {renderComments(resolutionTabComments)}
         </ReflectionContainer>
       )
     }
