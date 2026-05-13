@@ -651,6 +651,36 @@ async function resolveReplyTargetFromReferences(params: {
   return null;
 }
 
+async function resolveReplyTargetFromProviderThreadId(params: {
+  tenantId: string;
+  providerThreadId?: string | null;
+}): Promise<{ ticketId: string; threadId: string; parentCommentId: string } | null> {
+  const providerThreadId = params.providerThreadId?.trim();
+  if (!providerThreadId) {
+    return null;
+  }
+
+  const { withAdminTransaction } = await import('@alga-psa/db');
+  const row = await withAdminTransaction(async (trx: any) => {
+    return trx('comment_threads')
+      .select('thread_id as threadId')
+      .where({
+        tenant: params.tenantId,
+        email_provider_thread_id: providerThreadId,
+      })
+      .whereNotNull('ticket_id')
+      .orderBy('last_activity_at', 'desc')
+      .first();
+  });
+
+  return row?.threadId
+    ? resolveReplyTargetFromCommentThread({
+        tenantId: params.tenantId,
+        threadId: row.threadId,
+      })
+    : null;
+}
+
 function normalizeEmbeddedContentId(value: string | undefined | null): string {
   if (!value) return '';
   return String(value).trim().replace(/^cid:/i, '').replace(/^<|>$/g, '').toLowerCase();
@@ -1291,6 +1321,12 @@ export async function processInboundEmailInApp(
         threadTarget = await resolveReplyTargetFromReferences({
           tenantId,
           references: emailData.references,
+        });
+      }
+      if (!threadTarget) {
+        threadTarget = await resolveReplyTargetFromProviderThreadId({
+          tenantId,
+          providerThreadId: emailData.threadId,
         });
       }
 
