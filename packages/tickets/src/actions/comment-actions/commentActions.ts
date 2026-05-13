@@ -232,18 +232,25 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
         // Publish TICKET_COMMENT_ADDED event for mention notifications
         // Note: Using try-catch to avoid blocking comment creation if event publishing fails
         try {
+          const eventComment = await Comment.get(trx, commentTenant, commentId);
           await publishEvent({
             eventType: 'TICKET_COMMENT_ADDED',
             payload: {
               tenantId: commentTenant,
               ticketId: comment.ticket_id!,
               userId: comment.user_id,
+              thread_id: eventComment?.thread_id,
+              parent_comment_id: eventComment?.parent_comment_id ?? null,
+              is_reply: Boolean(eventComment?.parent_comment_id),
               comment: {
                 id: commentId,
                 content: comment.note!,
                 author: authorName,
                 isInternal: comment.is_internal || false,
-                authorType: comment.author_type // F039: Include author_type in event payload
+                authorType: comment.author_type, // F039: Include author_type in event payload
+                thread_id: eventComment?.thread_id,
+                parent_comment_id: eventComment?.parent_comment_id ?? null,
+                is_reply: Boolean(eventComment?.parent_comment_id)
               }
             }
           });
