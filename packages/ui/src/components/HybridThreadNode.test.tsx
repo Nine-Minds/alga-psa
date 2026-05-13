@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { buildCommentThreadGroups } from './CommentThreadList';
 import HybridThreadNode from './HybridThreadNode';
@@ -63,5 +63,27 @@ describe('HybridThreadNode', () => {
     expect(screen.getByTestId('comment-subreply')).toHaveAttribute('data-subthread', 'true');
     expect(screen.getByTestId('comment-subreply')).toHaveAttribute('data-depth', '2');
     expect(screen.getByTestId('comment-subreply')).toHaveAttribute('data-has-children', 'false');
+  });
+
+  it('T047: collapsing a thread hides children and switches the bar to Expand and Open in drawer', () => {
+    const group = buildGroup();
+
+    render(
+      <HybridThreadNode<TestComment>
+        group={group}
+        comment={group.root}
+        getCommentId={(comment) => comment.id}
+        onOpenPanel={() => undefined}
+        renderComment={(comment) => <div data-testid={`comment-${comment.id}`}>{comment.id}</div>}
+      />
+    );
+
+    expect(screen.getByTestId('comment-reply')).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Collapse' })[0]);
+
+    expect(screen.queryByTestId('comment-reply')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open in drawer' })).toBeInTheDocument();
   });
 });
