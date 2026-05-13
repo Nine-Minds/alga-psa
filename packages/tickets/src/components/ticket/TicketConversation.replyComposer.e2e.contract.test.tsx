@@ -176,6 +176,35 @@ const defaultProps: TicketConversationProps = {
   onContentChange: vi.fn(),
 };
 
+function StatefulTicketConversationForReplies() {
+  const [conversations, setConversations] = React.useState(defaultProps.conversations);
+
+  return (
+    <TicketConversation
+      {...defaultProps}
+      conversations={conversations}
+      onAddReplyComment={async (_content, parentCommentId, isInternal) => {
+        setConversations((current) => [
+          ...current,
+          {
+            tenant: 'tenant-1',
+            comment_id: 'reply-1',
+            thread_id: 'thread-1',
+            parent_comment_id: parentCommentId,
+            user_id: 'current-user',
+            author_type: 'internal',
+            note: NOTE,
+            is_internal: isInternal,
+            is_resolution: false,
+            created_at: '2026-05-13T09:05:00.000Z',
+          } as any,
+        ]);
+        return true;
+      }}
+    />
+  );
+}
+
 describe('TicketConversation threaded reply e2e contract', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'IntersectionObserver', {
@@ -206,5 +235,21 @@ describe('TicketConversation threaded reply e2e contract', () => {
     expect(screen.getByTestId('ticket-conversation-reply-comment-1')).toBeInTheDocument();
     expect(screen.getByTestId('inline-reply-editor')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reply' })).toBeInTheDocument();
+  });
+
+  it('T058: submitting an inline reply renders an indented child with a thread bar', async () => {
+    const user = userEvent.setup();
+
+    await act(async () => {
+      render(<StatefulTicketConversationForReplies />);
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Reply to comment' }));
+    await user.click(screen.getByRole('button', { name: 'Reply' }));
+
+    expect(await screen.findByTestId('reply-1')).toBeInTheDocument();
+    expect(screen.getByText('1 reply')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Collapse' })).toBeInTheDocument();
+    expect(screen.getByTestId('reply-1').closest('.thread-children')).toHaveClass('depth-1');
   });
 });
