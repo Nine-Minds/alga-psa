@@ -392,4 +392,62 @@ describe('comment_threads migrations', () => {
     expect(String(index?.indexdef)).toContain(`(${tenantColumn}, comment_thread_id, created_at DESC)`);
     expect(String(index?.indexdef)).toContain('WHERE (comment_thread_id IS NOT NULL)');
   });
+
+  it('T072: deleting a ticket cascades to comment_threads', async () => {
+    const context = await knex('tickets as t')
+      .join('statuses as s', 's.tenant', 't.tenant')
+      .join('priorities as p', 'p.tenant', 't.tenant')
+      .join('boards as b', 'b.tenant', 't.tenant')
+      .join('clients as c', 'c.tenant', 't.tenant')
+      .select('t.tenant', 's.status_id', 'p.priority_id', 'b.board_id', 'c.client_id')
+      .first();
+    expect(context).toBeTruthy();
+
+    const generated = await knex.raw(`
+      SELECT
+        gen_random_uuid() AS ticket_id,
+        gen_random_uuid() AS thread_id,
+        gen_random_uuid() AS root_comment_id
+    `);
+    const rollback = new Error('rollback T072');
+
+    await knex.transaction(async (trx) => {
+      await trx('tickets').insert({
+        tenant: context.tenant,
+        ticket_id: generated.rows[0].ticket_id,
+        ticket_number: `T072-${Date.now()}`,
+        title: 'T072 cascade ticket',
+        status_id: context.status_id,
+        priority_id: context.priority_id,
+        board_id: context.board_id,
+        client_id: context.client_id,
+        entered_at: new Date(),
+        updated_at: new Date(),
+      });
+
+      await trx('comment_threads').insert({
+        tenant: context.tenant,
+        thread_id: generated.rows[0].thread_id,
+        ticket_id: generated.rows[0].ticket_id,
+        root_comment_id: generated.rows[0].root_comment_id,
+        is_internal: false,
+        reply_count: 0,
+      });
+
+      await trx('tickets')
+        .where({ tenant: context.tenant, ticket_id: generated.rows[0].ticket_id })
+        .delete();
+
+      const thread = await trx('comment_threads')
+        .where({ tenant: context.tenant, thread_id: generated.rows[0].thread_id })
+        .first();
+      expect(thread).toBeUndefined();
+
+      throw rollback;
+    }).catch((error) => {
+      if (error !== rollback) {
+        throw error;
+      }
+    });
+  });
 });
