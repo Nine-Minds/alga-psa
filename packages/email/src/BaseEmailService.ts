@@ -131,6 +131,55 @@ function buildGeneratedRfcMessageId(tenantId?: string): string {
   return `<${randomUUID()}@${domainPart}>`;
 }
 
+async function addCommentThreadReplyHeaders(params: {
+  tenantId?: string;
+  commentId?: string;
+  headers: Record<string, string>;
+  serviceName: string;
+}): Promise<void> {
+  if (!params.tenantId || !params.commentId || getHeaderValue(params.headers, 'In-Reply-To')) {
+    return;
+  }
+
+  try {
+    const { knex } = await createTenantKnex(params.tenantId);
+    const comment = await knex('comments')
+      .select('thread_id', 'parent_comment_id')
+      .where({
+        tenant: params.tenantId,
+        comment_id: params.commentId,
+      })
+      .first<{ thread_id?: string | null; parent_comment_id?: string | null }>();
+
+    if (!comment?.thread_id || !comment.parent_comment_id) {
+      return;
+    }
+
+    const latestOutbound = await knex('email_sending_logs')
+      .select('rfc_message_id')
+      .where({
+        tenant: params.tenantId,
+        comment_thread_id: comment.thread_id,
+        status: 'sent',
+      })
+      .whereNotNull('rfc_message_id')
+      .orderBy('created_at', 'desc')
+      .orderBy('id', 'desc')
+      .first<{ rfc_message_id?: string | null }>();
+
+    const inReplyTo = normalizeHeaderValue(latestOutbound?.rfc_message_id ?? undefined);
+    if (inReplyTo) {
+      params.headers['In-Reply-To'] = inReplyTo;
+    }
+  } catch (error) {
+    logger.warn(`[${params.serviceName}] Failed to resolve comment thread reply headers`, {
+      tenantId: params.tenantId,
+      commentId: params.commentId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
+
 function deriveOutboundMessageIds(result: ProviderEmailSendResult, message?: ProviderEmailMessage): {
   providerMessageId: string | null;
   rfcMessageId: string | null;
@@ -262,6 +311,12 @@ export abstract class BaseEmailService {
       });
       
       const headers = { ...(params.headers ?? {}) };
+      await addCommentThreadReplyHeaders({
+        tenantId: params.tenantId,
+        commentId: params.replyContext?.commentId,
+        headers,
+        serviceName: this.getServiceName(),
+      });
       if (params.replyContext?.commentId && !getHeaderValue(headers, 'Message-ID')) {
         headers['Message-ID'] = buildGeneratedRfcMessageId(params.tenantId);
       }
