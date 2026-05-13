@@ -24,7 +24,7 @@ import {
 import { bootstrapInboundWebhookActions } from '@/lib/inboundWebhooks/actions/bootstrap';
 import { listActions, type InboundActionTargetField } from '@/lib/inboundWebhooks/actions/registry';
 import { createInboundDelivery, updateInboundDeliveryOutcome } from '@/lib/inboundWebhooks/deliveryPersistence';
-import { dispatchInboundWebhookHandler } from '@/lib/inboundWebhooks/dispatcher';
+import { dispatchInboundWebhookHandler, InboundWebhookActionError } from '@/lib/inboundWebhooks/dispatcher';
 
 interface InboundWebhookRow {
   tenant: string;
@@ -852,11 +852,15 @@ async function dispatchAndRecordOutcome(args: {
       durationMs: Date.now() - args.startedAt,
     });
   } catch (error) {
+    const handlerOutcome =
+      error instanceof InboundWebhookActionError
+        ? error.toOutcome()
+        : { error: error instanceof Error ? error.message : 'Inbound webhook dispatch failed' };
     await updateInboundDeliveryOutcome(args.knex, {
       tenant: args.webhook.tenant,
       deliveryId: args.deliveryId,
       dispatchStatus: 'failed',
-      handlerOutcome: { error: error instanceof Error ? error.message : 'Inbound webhook dispatch failed' },
+      handlerOutcome,
       responseStatus: 500,
       responseBody: { delivery_id: args.deliveryId, error: 'dispatch_failed' },
       durationMs: Date.now() - args.startedAt,

@@ -1,18 +1,18 @@
-let bootstrapped = false;
+let bootstrapPromise: Promise<void> | null = null;
 
 export async function bootstrapInboundWebhookActions(): Promise<void> {
-  if (bootstrapped) {
-    return;
+  if (!bootstrapPromise) {
+    bootstrapPromise = Promise.all([
+      import('@alga-psa/tickets/actions/inboundActions'),
+      import('@alga-psa/clients/actions/inboundActions'),
+      import('@alga-psa/assets/actions/inboundActions'),
+      import('@alga-psa/billing/actions/inboundActions'),
+      import('@alga-psa/scheduling/actions/inboundActions'),
+      import('@alga-psa/projects/actions/inboundActions'),
+      import('@alga-psa/tags/actions/inboundActions'),
+    ]).then(() => undefined);
   }
-
-  await import('@alga-psa/tickets/actions/inboundActions');
-  await import('@alga-psa/clients/actions/inboundActions');
-  await import('@alga-psa/assets/actions/inboundActions');
-  await import('@alga-psa/billing/actions/inboundActions');
-  await import('@alga-psa/scheduling/actions/inboundActions');
-  await import('@alga-psa/projects/actions/inboundActions');
-  await import('@alga-psa/tags/actions/inboundActions');
-  bootstrapped = true;
+  return bootstrapPromise;
 }
 
 export function resetInboundWebhookActionBootstrapForTest(): void {
@@ -20,5 +20,5 @@ export function resetInboundWebhookActionBootstrapForTest(): void {
     throw new Error('resetInboundWebhookActionBootstrapForTest may only be used in tests');
   }
 
-  bootstrapped = false;
+  bootstrapPromise = null;
 }

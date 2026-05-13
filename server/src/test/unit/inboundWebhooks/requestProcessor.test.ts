@@ -26,6 +26,38 @@ class TestInboundWebhookMappingError extends Error {
   }
 }
 
+class TestInboundWebhookActionError extends Error {
+  public readonly action: string;
+  public readonly entityType?: string;
+  public readonly externalId?: string;
+  public readonly metadata?: Record<string, unknown>;
+
+  constructor(args: {
+    action: string;
+    message: string;
+    entityType?: string;
+    externalId?: string;
+    metadata?: Record<string, unknown>;
+  }) {
+    super(args.message);
+    this.name = 'InboundWebhookActionError';
+    this.action = args.action;
+    this.entityType = args.entityType;
+    this.externalId = args.externalId;
+    this.metadata = args.metadata;
+  }
+
+  toOutcome(): Record<string, unknown> {
+    return {
+      action: this.action,
+      error: this.message,
+      entity_type: this.entityType,
+      external_id: this.externalId,
+      metadata: this.metadata,
+    };
+  }
+}
+
 vi.mock('@/lib/db/db', () => ({
   getConnection: (...args: unknown[]) => getConnection(...args),
 }));
@@ -73,6 +105,7 @@ vi.mock('@/lib/inboundWebhooks/sampleCapture', () => ({
 vi.mock('@/lib/inboundWebhooks/dispatcher', () => ({
   dispatchInboundWebhookHandler: (...args: unknown[]) => dispatchInboundWebhookHandler(...args),
   InboundWebhookMappingError: TestInboundWebhookMappingError,
+  InboundWebhookActionError: TestInboundWebhookActionError,
 }));
 
 function hmacSignature(secret: string, body: string): string {
@@ -232,7 +265,7 @@ describe('inbound webhook request processor', () => {
     );
   });
 
-  it('T181: returns 404 before lookup or dispatch when inbound webhooks flag is disabled', async () => {
+  it('T181: returns 401 before lookup or dispatch when inbound webhooks flag is disabled', async () => {
     isInboundWebhooksEnabled.mockResolvedValue(false);
     const request = new NextRequest('http://localhost/api/inbound/tenant-slug/rmm-alerts', {
       method: 'POST',
@@ -251,7 +284,7 @@ describe('inbound webhook request processor', () => {
     });
 
     await expect(response.text()).resolves.toBe('');
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(401);
     expect(resolveInboundWebhookTenantSlug).toHaveBeenCalledWith('tenant-slug');
     expect(isInboundWebhooksEnabled).toHaveBeenCalledWith({ tenantId: 'tenant-a' });
     expect(runWithTenant).not.toHaveBeenCalled();
@@ -309,7 +342,7 @@ describe('inbound webhook request processor', () => {
     });
 
     await expect(disabledResponse.text()).resolves.toBe('');
-    expect(disabledResponse.status).toBe(404);
+    expect(disabledResponse.status).toBe(401);
     expect(isInboundWebhooksEnabled).toHaveBeenCalledWith({ tenantId: 'tenant-b' });
     expect(runWithTenant).not.toHaveBeenCalled();
     expect(lookupInboundWebhookBySlug).not.toHaveBeenCalled();

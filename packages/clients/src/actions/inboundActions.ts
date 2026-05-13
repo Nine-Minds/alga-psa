@@ -1,6 +1,14 @@
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { IClient } from '@alga-psa/types';
 import { ContactModel, type CreateContactInput, type UpdateContactInput } from '@alga-psa/shared/models/contactModel';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import {
+  buildClientCreatedPayload,
+  buildClientStatusChangedPayload,
+} from '@alga-psa/workflow-streams';
+import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
+
+import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
 
 import { registerAction, type InboundActionDefinition } from '@/lib/inboundWebhooks/actions/registry';
 import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@/lib/inboundWebhooks/externalEntityMappings';
@@ -76,7 +84,7 @@ const upsertClientByExternalIdAction: InboundActionDefinition<UpsertClientByExte
   ],
   async handle(ctx, mappedValues) {
     const { knex } = await createTenantKnex(ctx.tenant);
-    const client = await withTransaction(knex, async (trx) => {
+    const { client, wasCreated } = await withTransaction(knex, async (trx) => {
       const existingMapping = await lookupAlgaEntityByExternalId(
         ctx.tenant,
         ctx.webhookSlug,
@@ -106,7 +114,7 @@ const upsertClientByExternalIdAction: InboundActionDefinition<UpsertClientByExte
             updated_at: new Date().toISOString(),
           })
           .returning('*');
-        return updated;
+        return { client: updated, wasCreated: false };
       }
 
       const [created] = await trx<IClient>('clients')
@@ -118,13 +126,46 @@ const upsertClientByExternalIdAction: InboundActionDefinition<UpsertClientByExte
         })
         .returning('*');
 
+      await ensureDefaultContractForClientIfBillingConfigured(trx, {
+        tenant: ctx.tenant,
+        clientId: created.client_id,
+      });
+
       await writeEntityMapping(ctx.tenant, ctx.webhookSlug, 'client', created.client_id, mappedValues.external_id, {
         knex: trx,
         metadata: { source: 'inbound_webhook', delivery_id: ctx.deliveryId },
       });
 
-      return created;
+      return { client: created, wasCreated: true };
     });
+
+    if (wasCreated) {
+      // Mirror createClient post-commit side effects (tax settings, workflow event).
+      try {
+        await createDefaultTaxSettingsAsync(client.client_id);
+      } catch (taxError) {
+        // Tax settings are best-effort for inbound webhooks; surface in delivery outcome metadata.
+        console.error(`Failed to create default tax settings for inbound client ${client.client_id}:`, taxError);
+      }
+
+      const createdAt = client.created_at ?? new Date().toISOString();
+      const status =
+        (client as any)?.properties?.status ?? (client.is_inactive ? 'inactive' : 'active');
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_CREATED',
+        payload: buildClientCreatedPayload({
+          clientId: client.client_id,
+          clientName: client.client_name,
+          createdAt: String(createdAt),
+          status,
+        }),
+        ctx: {
+          tenantId: ctx.tenant,
+          occurredAt: String(createdAt),
+        },
+        idempotencyKey: `client_created:${client.client_id}`,
+      });
+    }
 
     return {
       success: true,
@@ -133,6 +174,7 @@ const upsertClientByExternalIdAction: InboundActionDefinition<UpsertClientByExte
       externalId: mappedValues.external_id,
       metadata: {
         client_name: client.client_name,
+        created: wasCreated,
       },
     };
   },
@@ -149,7 +191,7 @@ const setClientActiveByExternalIdAction: InboundActionDefinition<SetClientActive
   ],
   async handle(ctx, mappedValues) {
     const { knex } = await createTenantKnex(ctx.tenant);
-    const updated = await withTransaction(knex, async (trx) => {
+    const result = await withTransaction(knex, async (trx) => {
       const lookup = await lookupAlgaEntityByExternalId(
         ctx.tenant,
         ctx.webhookSlug,
@@ -162,6 +204,10 @@ const setClientActiveByExternalIdAction: InboundActionDefinition<SetClientActive
         return null;
       }
 
+      const previous = await trx<IClient>('clients')
+        .where({ tenant: ctx.tenant, client_id: lookup.algaEntityId })
+        .first('is_inactive');
+
       const [client] = await trx<IClient>('clients')
         .where({ tenant: ctx.tenant, client_id: lookup.algaEntityId })
         .update({
@@ -170,16 +216,38 @@ const setClientActiveByExternalIdAction: InboundActionDefinition<SetClientActive
         })
         .returning('*');
 
-      return client ?? null;
+      const previousStatus = previous?.is_inactive ? 'inactive' : 'active';
+
+      return client ? { client, previousStatus } : null;
     });
 
-    if (!updated) {
+    if (!result) {
       return {
         success: false,
         entityType: 'client',
         externalId: mappedValues.external_id,
         message: `lookup_miss: client external_id "${mappedValues.external_id}" is not mapped for webhook "${ctx.webhookSlug}"`,
       };
+    }
+
+    const { client: updated, previousStatus } = result;
+    const newStatus = updated.is_inactive ? 'inactive' : 'active';
+    if (previousStatus !== newStatus) {
+      const updatedAt = updated.updated_at ?? new Date().toISOString();
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_STATUS_CHANGED',
+        payload: buildClientStatusChangedPayload({
+          clientId: updated.client_id,
+          previousStatus,
+          newStatus,
+          changedAt: String(updatedAt),
+        }),
+        ctx: {
+          tenantId: ctx.tenant,
+          occurredAt: String(updatedAt),
+        },
+        idempotencyKey: `client_status_changed:${updated.client_id}:${ctx.deliveryId}`,
+      });
     }
 
     return {
@@ -189,6 +257,7 @@ const setClientActiveByExternalIdAction: InboundActionDefinition<SetClientActive
       externalId: mappedValues.external_id,
       metadata: {
         active: !updated.is_inactive,
+        status_changed: previousStatus !== newStatus,
       },
     };
   },

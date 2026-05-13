@@ -2,6 +2,8 @@ import { evaluateExpressionSource } from '@alga-psa/workflows/runtime/expression
 import type { Knex } from 'knex';
 import type { InboundWebhookIdempotencySource } from './types';
 
+const IDEMPOTENCY_JSONATA_TIMEOUT_MS = 500;
+
 export async function extractInboundWebhookIdempotencyKey(args: {
   source: InboundWebhookIdempotencySource | null;
   headers: Headers | Record<string, string | string[] | undefined>;
@@ -18,6 +20,7 @@ export async function extractInboundWebhookIdempotencyKey(args: {
   const result = await evaluateExpressionSource(
     args.source.value,
     args.body && typeof args.body === 'object' ? (args.body as Record<string, unknown>) : { value: args.body },
+    IDEMPOTENCY_JSONATA_TIMEOUT_MS,
   );
 
   if (result === null || result === undefined) {

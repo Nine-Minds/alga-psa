@@ -459,8 +459,10 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
     responses: {
       200: { description: 'Request accepted or treated as duplicate no-op.', schema: ReceiverAcceptedEnvelope },
       400: { description: 'Invalid request payload or handler validation failure.', schema: ApiError },
-      401: { description: 'Authentication failed. Response body is intentionally empty at runtime.' },
-      404: { description: 'Inbound webhook receiver disabled by feature flag.' },
+      401: {
+        description:
+          'Authentication failed, unknown receiver, or receiver disabled by feature flag. Response body is intentionally empty to avoid leaking which webhooks exist.',
+      },
       429: { description: 'Per-webhook rate limit exceeded.', schema: ApiError },
       500: { description: 'Unexpected dispatch failure.', schema: ApiError },
     },

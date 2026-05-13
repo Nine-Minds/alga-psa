@@ -14,18 +14,15 @@ const inboundWebhooksSource = adminWebhooksSource.slice(
 
 describe('AdminWebhooksSetup inbound UI contract', () => {
   it('T130: renders a tabbed webhooks settings shell with inbound and outbound tabs', () => {
-    expect(adminWebhooksSource).toContain('<Tabs value={activeTab}');
-    expect(adminWebhooksSource).toContain('<TabsList className="mb-6">');
-    expect(adminWebhooksSource).toContain('<TabsTrigger id="webhooks-inbound-tab" value="inbound">');
-    expect(adminWebhooksSource).toContain('<TabsTrigger id="webhooks-outbound-tab" value="outbound">');
-    expect(adminWebhooksSource).toContain('<TabsContent value="inbound">');
-    expect(adminWebhooksSource).toContain('<TabsContent value="outbound">');
+    expect(adminWebhooksSource).toContain('<ViewSwitcher');
+    expect(adminWebhooksSource).toContain("id: 'webhooks-inbound-view-btn'");
+    expect(adminWebhooksSource).toContain("id: 'webhooks-outbound-view-btn'");
+    expect(adminWebhooksSource).toContain("activeTab === 'inbound'");
     expect(adminWebhooksSource).toContain('<InboundWebhooksListView />');
     expect(adminWebhooksSource).toContain('<OutboundWebhooksSetup />');
   });
 
   it('T131: keeps the outbound webhook setup wired to the existing outbound actions', () => {
-    expect(adminWebhooksSource).toContain('<TabsContent value="outbound">');
     expect(adminWebhooksSource).toContain('<OutboundWebhooksSetup />');
     expect(adminWebhooksSource).toContain('function OutboundWebhooksSetup()');
 
@@ -139,7 +136,8 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain('id="inbound-webhook-handler-type"');
     expect(adminWebhooksSource).toContain("value: 'direct_action'");
     expect(adminWebhooksSource).toContain("value: 'workflow'");
-    expect(adminWebhooksSource).toContain("handlerType: value as InboundWebhookConfig['handlerType']");
+    expect(adminWebhooksSource).toContain("const nextType = value as InboundWebhookConfig['handlerType']");
+    expect(adminWebhooksSource).toContain('handlerType: nextType');
     expect(adminWebhooksSource).toContain("identityForm.handlerType === 'direct_action'");
     expect(adminWebhooksSource).toContain("t('security.webhooks.inbound.handler.directActionTitle')");
     expect(adminWebhooksSource).toContain("t('security.webhooks.inbound.handler.workflowTitle')");
@@ -196,7 +194,7 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
   it('T145: sample capture button toggles capture mode and shows active window status', () => {
     expect(adminWebhooksSource).toContain('captureSamplePayload');
     expect(adminWebhooksSource).toContain('const sampleCaptureActive = identityForm.sampleCaptureExpiresAt');
-    expect(adminWebhooksSource).toContain('new Date(identityForm.sampleCaptureExpiresAt).getTime() > Date.now()');
+    expect(adminWebhooksSource).toContain('new Date(identityForm.sampleCaptureExpiresAt).getTime() > now');
     expect(adminWebhooksSource).toContain('const handleCaptureSample = useCallback');
     expect(adminWebhooksSource).toContain('captureSamplePayload(identityForm.inboundWebhookId)');
     expect(adminWebhooksSource).toContain('sampleCaptureExpiresAt: updated.sampleCaptureExpiresAt');
@@ -312,7 +310,6 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain("if (!inboundWebhooksEnabled && activeTab === 'inbound')");
     expect(adminWebhooksSource).toContain("setActiveTab('outbound')");
     expect(adminWebhooksSource).toContain('{inboundWebhooksEnabled ? (');
-    expect(adminWebhooksSource).toContain('<TabsTrigger id="webhooks-inbound-tab" value="inbound">');
-    expect(adminWebhooksSource).toContain('<TabsContent value="inbound">');
+    expect(adminWebhooksSource).toContain("id: 'webhooks-inbound-view-btn'");
   });
 });

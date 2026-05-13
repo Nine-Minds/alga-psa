@@ -1,9 +1,18 @@
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { ingestNormalizedRmmDeviceSnapshot } from '@alga-psa/integrations/lib/rmm/sharedAssetIngestionService';
 import type { NormalizedRmmExternalDeviceSnapshot } from '@alga-psa/integrations/lib/rmm/contracts';
+import type { RmmProvider } from '@alga-psa/types';
 
 import { registerAction, type InboundActionDefinition } from '@/lib/inboundWebhooks/actions/registry';
 import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@/lib/inboundWebhooks/externalEntityMappings';
+
+const KNOWN_RMM_PROVIDERS = new Set<RmmProvider>([
+  'ninjaone',
+  'tacticalrmm',
+  'tanium',
+  'datto',
+  'connectwise_automate',
+]);
 
 type SupportedPlainAssetType = 'workstation' | 'server' | 'network_device' | 'mobile_device' | 'printer' | 'unknown';
 
@@ -56,9 +65,20 @@ const upsertAssetByExternalIdAction: InboundActionDefinition<UpsertAssetByExtern
     });
 
     if (isRmmSnapshot(mappedValues.rmm_snapshot)) {
+      const rawProvider = mappedValues.rmm_snapshot.provider;
+      if (typeof rawProvider !== 'string' || !KNOWN_RMM_PROVIDERS.has(rawProvider as RmmProvider)) {
+        return {
+          success: false,
+          entityType: 'asset',
+          externalId: mappedValues.external_id,
+          message: `RMM snapshot provider "${String(rawProvider)}" is not a supported provider. ` +
+            `Set provider to one of: ${[...KNOWN_RMM_PROVIDERS].join(', ')}.`,
+          metadata: { reason: 'unsupported_rmm_provider' },
+        };
+      }
       const snapshot: NormalizedRmmExternalDeviceSnapshot = {
         ...(mappedValues.rmm_snapshot as unknown as NormalizedRmmExternalDeviceSnapshot),
-        provider: ctx.webhookSlug as NormalizedRmmExternalDeviceSnapshot['provider'],
+        provider: rawProvider as RmmProvider,
         integrationId: ctx.webhookSlug,
         externalDeviceId: mappedValues.external_id,
         externalScopeId: mappedValues.external_scope_id ?? String(mappedValues.rmm_snapshot.externalScopeId ?? 'default'),
@@ -101,16 +121,18 @@ const upsertAssetByExternalIdAction: InboundActionDefinition<UpsertAssetByExtern
         { knex: trx },
       );
       const now = new Date().toISOString();
-      const payload = {
+      const payload: Record<string, unknown> = {
         asset_type: mappedValues.asset_type ?? 'unknown',
         client_id: resolvedClientId ?? null,
-        asset_tag: mappedValues.asset_tag ?? `${ctx.webhookSlug}:${mappedValues.external_id}`,
         serial_number: mappedValues.serial_number ?? '',
         name: mappedValues.name ?? mappedValues.external_id,
         status: mappedValues.status ?? 'active',
         location: mappedValues.location ?? '',
         updated_at: now,
       };
+      if (mappedValues.asset_tag !== undefined) {
+        payload.asset_tag = mappedValues.asset_tag;
+      }
 
       if (lookup) {
         const [updated] = await trx('assets')

@@ -228,6 +228,8 @@
           "createTitle": "11111",
           "editTitle": "11111",
           "cancel": "11111",
+          "create": "11111",
+          "save": "11111",
           "saveUnavailable": "11111"
         },
         "identity": {
@@ -302,6 +304,7 @@
           "directActionHelp": "11111",
           "action": "11111",
           "actionPlaceholder": "11111",
+          "actionEmpty": "11111",
           "targetFields": "11111",
           "required": "11111",
           "optional": "11111",
@@ -310,6 +313,7 @@
           "workflowHelp": "11111",
           "workflow": "11111",
           "workflowPlaceholder": "11111",
+          "workflowEmpty": "11111",
           "envelopeTitle": "11111"
         },
         "sample": {
@@ -335,6 +339,7 @@
           "loadFailed": "11111",
           "pageSummary": "11111",
           "durationMs": "11111",
+          "allStatuses": "11111",
           "columns": {
             "received": "11111",
             "status": "11111",
@@ -354,6 +359,7 @@
           "title": "11111",
           "close": "11111",
           "replay": "11111",
+          "replayConfirm": "11111",
           "replayFailed": "11111",
           "received": "11111",
           "status": "11111",

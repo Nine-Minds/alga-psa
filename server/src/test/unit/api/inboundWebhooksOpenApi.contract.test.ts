@@ -191,7 +191,6 @@ describe('inbound webhook OpenAPI contracts', () => {
       expect.objectContaining({
         '200': expect.any(Object),
         '401': expect.any(Object),
-        '404': expect.any(Object),
         '429': expect.any(Object),
         '500': expect.any(Object),
       }),

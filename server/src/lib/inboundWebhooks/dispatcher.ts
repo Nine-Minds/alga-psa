@@ -16,6 +16,38 @@ export class InboundWebhookMappingError extends Error {
   }
 }
 
+export class InboundWebhookActionError extends Error {
+  public readonly action: string;
+  public readonly entityType?: string;
+  public readonly externalId?: string;
+  public readonly metadata?: Record<string, unknown>;
+
+  constructor(args: {
+    action: string;
+    message: string;
+    entityType?: string;
+    externalId?: string;
+    metadata?: Record<string, unknown>;
+  }) {
+    super(args.message);
+    this.name = 'InboundWebhookActionError';
+    this.action = args.action;
+    this.entityType = args.entityType;
+    this.externalId = args.externalId;
+    this.metadata = args.metadata;
+  }
+
+  toOutcome(): Record<string, unknown> {
+    return {
+      action: this.action,
+      error: this.message,
+      entity_type: this.entityType,
+      external_id: this.externalId,
+      metadata: this.metadata,
+    };
+  }
+}
+
 export interface DispatchInboundWebhookHandlerInput {
   webhook: Pick<InboundWebhookConfigLookupRow, 'tenant' | 'slug' | 'handler_type' | 'handler_config'>;
   deliveryId: string;
@@ -69,7 +101,13 @@ async function dispatchDirectAction(input: DispatchInboundWebhookHandlerInput): 
   );
 
   if (!result.success) {
-    throw new Error(result.message || `Inbound action "${action.name}" failed`);
+    throw new InboundWebhookActionError({
+      action: action.name,
+      message: result.message || `Inbound action "${action.name}" failed`,
+      entityType: result.entityType,
+      externalId: result.externalId,
+      metadata: result.metadata,
+    });
   }
 
   return {

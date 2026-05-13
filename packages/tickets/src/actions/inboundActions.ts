@@ -239,6 +239,12 @@ const addTicketCommentByExternalIdAction: InboundActionDefinition<AddTicketComme
     { name: 'contact_id', type: 'ref', required: false, refEntityType: 'contact', description: 'Contact author ID' },
   ],
   async handle(ctx, mappedValues) {
+    if (mappedValues.author_id && mappedValues.contact_id) {
+      throw new Error(
+        'VALIDATION_ERROR: author_id and contact_id cannot both be set on a single comment',
+      );
+    }
+
     const { knex } = await createTenantKnex(ctx.tenant);
     const comment = await withTransaction(knex, async (trx) => {
       const lookup = await lookupAlgaEntityByExternalId(

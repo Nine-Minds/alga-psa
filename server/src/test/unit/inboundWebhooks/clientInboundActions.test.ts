@@ -7,6 +7,9 @@ const mocks = vi.hoisted(() => ({
   writeEntityMapping: vi.fn(),
   createContact: vi.fn(),
   updateContact: vi.fn(),
+  publishWorkflowEvent: vi.fn().mockResolvedValue(undefined),
+  ensureDefaultContractForClientIfBillingConfigured: vi.fn().mockResolvedValue(undefined),
+  createDefaultTaxSettingsAsync: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -24,6 +27,26 @@ vi.mock('@alga-psa/shared/models/contactModel', () => ({
     createContact: mocks.createContact,
     updateContact: mocks.updateContact,
   },
+}));
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: mocks.publishWorkflowEvent,
+}));
+
+vi.mock('@alga-psa/workflow-streams', () => ({
+  buildClientCreatedPayload: (params: Record<string, unknown>) => ({ ...params, eventType: 'CLIENT_CREATED' }),
+  buildClientStatusChangedPayload: (params: Record<string, unknown>) => ({
+    ...params,
+    eventType: 'CLIENT_STATUS_CHANGED',
+  }),
+}));
+
+vi.mock('@alga-psa/shared/billingClients/defaultContract', () => ({
+  ensureDefaultContractForClientIfBillingConfigured: mocks.ensureDefaultContractForClientIfBillingConfigured,
+}));
+
+vi.mock('@alga-psa/clients/lib/billingHelpers', () => ({
+  createDefaultTaxSettingsAsync: mocks.createDefaultTaxSettingsAsync,
 }));
 
 async function loadClientInboundActions() {
@@ -109,6 +132,7 @@ describe('client inbound webhook actions', () => {
       externalId: 'company-42',
       metadata: {
         client_name: 'Acme Corp',
+        created: true,
       },
     });
 
@@ -132,6 +156,14 @@ describe('client inbound webhook actions', () => {
           inbound_webhook_external_id: 'company-42',
         },
       }),
+    );
+    expect(mocks.ensureDefaultContractForClientIfBillingConfigured).toHaveBeenCalledWith(
+      trx,
+      expect.objectContaining({ tenant: 'tenant-a', clientId: 'client-1' }),
+    );
+    expect(mocks.createDefaultTaxSettingsAsync).toHaveBeenCalledWith('client-1');
+    expect(mocks.publishWorkflowEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: 'CLIENT_CREATED' }),
     );
     expect(mocks.writeEntityMapping).toHaveBeenCalledWith(
       'tenant-a',
@@ -195,6 +227,7 @@ describe('client inbound webhook actions', () => {
       externalId: 'company-42',
       metadata: {
         client_name: 'Acme Corp',
+        created: false,
       },
     });
 
@@ -212,6 +245,8 @@ describe('client inbound webhook actions', () => {
     );
     expect(clientsQuery.insert).not.toHaveBeenCalled();
     expect(mocks.writeEntityMapping).not.toHaveBeenCalled();
+    expect(mocks.ensureDefaultContractForClientIfBillingConfigured).not.toHaveBeenCalled();
+    expect(mocks.createDefaultTaxSettingsAsync).not.toHaveBeenCalled();
   });
 
   it('T1022: setClientActiveByExternalId toggles active state through is_inactive', async () => {
@@ -251,6 +286,7 @@ describe('client inbound webhook actions', () => {
       externalId: 'company-42',
       metadata: {
         active: false,
+        status_changed: true,
       },
     });
 
@@ -259,6 +295,9 @@ describe('client inbound webhook actions', () => {
       expect.objectContaining({
         is_inactive: true,
       }),
+    );
+    expect(mocks.publishWorkflowEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: 'CLIENT_STATUS_CHANGED' }),
     );
   });
 

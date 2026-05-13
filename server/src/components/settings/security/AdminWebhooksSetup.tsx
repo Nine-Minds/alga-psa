@@ -15,13 +15,14 @@ import {
   DialogContent,
   DialogFooter,
 } from '@alga-psa/ui/components/Dialog';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
+import ViewSwitcher, { type ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { ArrowLeft, MoreVertical } from 'lucide-react';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { buildTenantPortalSlug } from '@alga-psa/validation';
@@ -307,27 +308,34 @@ export default function AdminWebhooksSetup() {
     }
   }, [activeTab, inboundWebhooksEnabled]);
 
+  const viewOptions: ViewSwitcherOption<'inbound' | 'outbound'>[] = inboundWebhooksEnabled
+    ? [
+        { value: 'inbound', label: t('security.webhooks.tabs.inbound'), id: 'webhooks-inbound-view-btn' },
+        { value: 'outbound', label: t('security.webhooks.tabs.outbound'), id: 'webhooks-outbound-view-btn' },
+      ]
+    : [
+        { value: 'outbound', label: t('security.webhooks.tabs.outbound'), id: 'webhooks-outbound-view-btn' },
+      ];
+
   return (
-    <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'inbound' | 'outbound')}>
-      <TabsList className="mb-6">
-        {inboundWebhooksEnabled ? (
-          <TabsTrigger id="webhooks-inbound-tab" value="inbound">
-            {t('security.webhooks.tabs.inbound')}
-          </TabsTrigger>
-        ) : null}
-        <TabsTrigger id="webhooks-outbound-tab" value="outbound">
-          {t('security.webhooks.tabs.outbound')}
-        </TabsTrigger>
-      </TabsList>
+    <div>
       {inboundWebhooksEnabled ? (
-        <TabsContent value="inbound">
-          <InboundWebhooksListView />
-        </TabsContent>
+        <div className="mb-6 inline-block">
+          <ViewSwitcher
+            currentView={activeTab}
+            onChange={setActiveTab}
+            options={viewOptions}
+            className="inline-flex"
+            aria-label={t('security.webhooks.title')}
+          />
+        </div>
       ) : null}
-      <TabsContent value="outbound">
+      {activeTab === 'inbound' && inboundWebhooksEnabled ? (
+        <InboundWebhooksListView />
+      ) : (
         <OutboundWebhooksSetup />
-      </TabsContent>
-    </Tabs>
+      )}
+    </div>
   );
 }
 
@@ -473,6 +481,10 @@ function InboundWebhooksListView() {
     secret: string;
   } | null>(null);
   const [focusedMappingField, setFocusedMappingField] = useState<string | null>(null);
+  const [inboundViewMode, setInboundViewMode] = useState<'list' | 'deliveries'>('list');
+  const [viewWebhookId, setViewWebhookId] = useState<string | null>(null);
+  const [replayConfirmDeliveryId, setReplayConfirmDeliveryId] = useState<string | null>(null);
+  const [isReplayInFlight, setIsReplayInFlight] = useState(false);
   const neverLabel = t('security.webhooks.common.never');
 
   const loadInboundWebhooks = useCallback(async () => {
@@ -530,15 +542,42 @@ function InboundWebhooksListView() {
   }, [t]);
 
   useEffect(() => {
-    if (!identityDialogOpen || !identityForm.inboundWebhookId) {
+    const activeWebhookId =
+      inboundViewMode === 'deliveries'
+        ? viewWebhookId
+        : identityDialogOpen
+          ? identityForm.inboundWebhookId
+          : null;
+
+    if (!activeWebhookId) {
       setInboundDeliveryPage(null);
       setInboundDeliveryPageNumber(1);
       setInboundDeliveryStatusFilter('all');
       return;
     }
 
-    void loadInboundDialogDeliveries(identityForm.inboundWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter);
-  }, [identityDialogOpen, identityForm.inboundWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter, loadInboundDialogDeliveries]);
+    void loadInboundDialogDeliveries(activeWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter);
+  }, [identityDialogOpen, identityForm.inboundWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter, inboundViewMode, loadInboundDialogDeliveries, viewWebhookId]);
+
+  const handleInboundViewClick = useCallback(async (webhook: InboundWebhookConfig) => {
+    setViewWebhookId(webhook.inboundWebhookId);
+    setInboundViewMode('deliveries');
+    setInboundDeliveryPageNumber(1);
+    setInboundDeliveryStatusFilter('all');
+    try {
+      await loadInboundDialogDeliveries(webhook.inboundWebhookId, 1, 'all');
+      setError(null);
+    } catch (loadError) {
+      console.error('Failed to load inbound webhook deliveries:', loadError);
+      setError(t('security.webhooks.inbound.messages.loadFailed'));
+    }
+  }, [loadInboundDialogDeliveries, t]);
+
+  const handleBackToInboundList = useCallback(() => {
+    setInboundViewMode('list');
+    setViewWebhookId(null);
+    setSelectedInboundDelivery(null);
+  }, []);
 
   const columns = useMemo<ColumnDefinition<InboundWebhookConfig>[]>(() => [
     {
@@ -606,7 +645,10 @@ function InboundWebhooksListView() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem id={`inbound-webhook-view-${webhook.inboundWebhookId}`} disabled>
+            <DropdownMenuItem
+              id={`inbound-webhook-view-${webhook.inboundWebhookId}`}
+              onClick={() => void handleInboundViewClick(webhook)}
+            >
               {t('security.webhooks.list.actions.view')}
             </DropdownMenuItem>
             <DropdownMenuItem
@@ -656,7 +698,7 @@ function InboundWebhooksListView() {
         </DropdownMenu>
       ),
     },
-  ], [lastDeliveries, neverLabel, t]);
+  ], [handleInboundViewClick, lastDeliveries, neverLabel, t]);
 
   const handleTablePageSizeChange = useCallback((newPageSize: number) => {
     setTablePageSize(newPageSize);
@@ -768,7 +810,7 @@ function InboundWebhooksListView() {
   ], [neverLabel, t]);
 
   const inboundDeliveryStatusOptions = useMemo(() => [
-    { value: 'all', label: t('security.webhooks.apiKeys.list.filters.allStatuses') },
+    { value: 'all', label: t('security.webhooks.inbound.deliveryLog.allStatuses') },
     { value: 'pending', label: t('security.webhooks.inbound.deliveryLog.status.pending') },
     { value: 'dispatched', label: t('security.webhooks.inbound.deliveryLog.status.dispatched') },
     { value: 'duplicate', label: t('security.webhooks.inbound.deliveryLog.status.duplicate') },
@@ -780,8 +822,21 @@ function InboundWebhooksListView() {
     [identityForm.samplePayload],
   );
 
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!identityForm.sampleCaptureExpiresAt) {
+      return undefined;
+    }
+    const expiresAt = new Date(identityForm.sampleCaptureExpiresAt).getTime();
+    if (expiresAt <= Date.now()) {
+      return undefined;
+    }
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [identityForm.sampleCaptureExpiresAt]);
+
   const sampleCaptureActive = identityForm.sampleCaptureExpiresAt
-    ? new Date(identityForm.sampleCaptureExpiresAt).getTime() > Date.now()
+    ? new Date(identityForm.sampleCaptureExpiresAt).getTime() > now
     : false;
 
   const handleCaptureSample = useCallback(async () => {
@@ -846,19 +901,31 @@ function InboundWebhooksListView() {
     }
   }, [identityForm.inboundWebhookId, t]);
 
-  const handleReplayInboundDelivery = useCallback(async (deliveryId: string) => {
+  const handleReplayInboundDelivery = useCallback((deliveryId: string) => {
+    setReplayConfirmDeliveryId(deliveryId);
+  }, []);
+
+  const handleConfirmReplay = useCallback(async () => {
+    if (!replayConfirmDeliveryId) {
+      return;
+    }
+    setIsReplayInFlight(true);
     try {
-      const replayed = await replayInboundDelivery(deliveryId);
+      const replayed = await replayInboundDelivery(replayConfirmDeliveryId);
       setSelectedInboundDelivery(replayed);
-      if (identityForm.inboundWebhookId) {
-        await loadInboundDialogDeliveries(identityForm.inboundWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter);
+      const reloadTargetId = viewWebhookId ?? identityForm.inboundWebhookId;
+      if (reloadTargetId) {
+        await loadInboundDialogDeliveries(reloadTargetId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter);
       }
       setError(null);
+      setReplayConfirmDeliveryId(null);
     } catch (replayError) {
       console.error('Failed to replay inbound webhook delivery:', replayError);
       setError(replayError instanceof Error ? replayError.message : t('security.webhooks.inbound.deliveryDetail.replayFailed'));
+    } finally {
+      setIsReplayInFlight(false);
     }
-  }, [identityForm.inboundWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter, loadInboundDialogDeliveries, t]);
+  }, [identityForm.inboundWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter, loadInboundDialogDeliveries, replayConfirmDeliveryId, t, viewWebhookId]);
 
   const handleSendInboundTest = useCallback(async () => {
     if (!identityForm.inboundWebhookId) {
@@ -936,8 +1003,15 @@ function InboundWebhooksListView() {
     }
   }, [identityForm.authType, identityForm.inboundWebhookId, t]);
 
+  const viewingWebhook = useMemo(
+    () => (viewWebhookId ? webhooks.find((w) => w.inboundWebhookId === viewWebhookId) ?? null : null),
+    [viewWebhookId, webhooks],
+  );
+
   return (
     <div className="space-y-6">
+      {inboundViewMode === 'list' ? (
+        <>
       <Card className="p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
@@ -988,6 +1062,68 @@ function InboundWebhooksListView() {
           />
         )}
       </Card>
+        </>
+      ) : (
+        <Card className="p-6">
+          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="flex items-start gap-3">
+              <Button
+                id="inbound-webhook-deliveries-back"
+                variant="ghost"
+                onClick={handleBackToInboundList}
+                className="h-9 w-9 p-0"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div>
+                <h2 className="text-xl font-semibold">
+                  {t('security.webhooks.inbound.deliveryLog.title')}
+                </h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  {viewingWebhook?.name ?? ''}
+                </p>
+                {viewingWebhook ? (
+                  <p className="mt-1 font-mono text-xs text-gray-500">{viewingWebhook.slug}</p>
+                ) : null}
+              </div>
+            </div>
+            <div className="max-w-xs">
+              <CustomSelect
+                id="inbound-webhook-deliveries-status-filter"
+                label={t('security.webhooks.inbound.deliveryLog.columns.status')}
+                value={inboundDeliveryStatusFilter}
+                onValueChange={(value) => {
+                  setInboundDeliveryStatusFilter(value as InboundWebhookDispatchStatus | 'all');
+                  setInboundDeliveryPageNumber(1);
+                }}
+                options={inboundDeliveryStatusOptions}
+              />
+            </div>
+          </div>
+
+          {error ? (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900">
+              {error}
+            </div>
+          ) : null}
+
+          {inboundDeliveryPage && inboundDeliveryPage.data.length > 0 ? (
+            <DataTable<InboundWebhookDelivery>
+              id="inbound-webhook-deliveries-page-table"
+              data={inboundDeliveryPage.data}
+              columns={inboundDeliveryColumns}
+              pagination
+              currentPage={inboundDeliveryPageNumber}
+              onPageChange={setInboundDeliveryPageNumber}
+              pageSize={inboundDeliveryPage.limit}
+            />
+          ) : (
+            <div className="rounded-lg border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500">
+              {t('security.webhooks.inbound.deliveryLog.empty')}
+            </div>
+          )}
+        </Card>
+      )}
 
       <Dialog
         id="inbound-webhook-secret"
@@ -1314,10 +1450,19 @@ function InboundWebhooksListView() {
               label={t('security.webhooks.inbound.handler.type')}
               value={identityForm.handlerType}
               onValueChange={(value) => {
-                setIdentityForm((current) => ({
-                  ...current,
-                  handlerType: value as InboundWebhookConfig['handlerType'],
-                }));
+                const nextType = value as InboundWebhookConfig['handlerType'];
+                setIdentityForm((current) => {
+                  if (current.handlerType === nextType) {
+                    return current;
+                  }
+                  return {
+                    ...current,
+                    handlerType: nextType,
+                    directActionName: nextType === 'direct_action' ? current.directActionName : '',
+                    fieldMapping: nextType === 'direct_action' ? current.fieldMapping : {},
+                    workflowId: nextType === 'workflow' ? current.workflowId : '',
+                  };
+                });
               }}
               options={handlerTypeOptions}
             />
@@ -1383,6 +1528,14 @@ function InboundWebhooksListView() {
                     }}
                     options={inboundActionOptions}
                   />
+                  {inboundActionOptions.length === 0 ? (
+                    <p
+                      id="inbound-webhook-direct-action-empty"
+                      className="mt-2 text-xs text-amber-700"
+                    >
+                      {t('security.webhooks.inbound.handler.actionEmpty')}
+                    </p>
+                  ) : null}
                 </div>
                 {selectedInboundAction ? (
                   <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(16rem,1fr)]">
@@ -1489,6 +1642,14 @@ function InboundWebhooksListView() {
                     }}
                     options={workflowSelectOptions}
                   />
+                  {workflowSelectOptions.length === 0 ? (
+                    <p
+                      id="inbound-webhook-workflow-empty"
+                      className="mt-2 text-xs text-amber-700"
+                    >
+                      {t('security.webhooks.inbound.handler.workflowEmpty')}
+                    </p>
+                  ) : null}
                 </div>
                 <div className="mt-4 rounded-md border border-blue-200 bg-blue-50 p-3">
                   <h5 className="text-sm font-medium text-blue-950">
@@ -1571,7 +1732,11 @@ function InboundWebhooksListView() {
             id="inbound-webhook-identity-save"
             onClick={() => void handleSaveInboundWebhook()}
           >
-            {t('security.webhooks.inbound.dialog.saveUnavailable')}
+            {t(
+              identityForm.inboundWebhookId
+                ? 'security.webhooks.inbound.dialog.save'
+                : 'security.webhooks.inbound.dialog.create',
+            )}
           </Button>
         </DialogFooter>
       </Dialog>
@@ -1697,6 +1862,22 @@ function InboundWebhooksListView() {
           </Button>
         </DialogFooter>
       </Dialog>
+
+      <ConfirmationDialog
+        id="inbound-webhook-replay-confirm"
+        isOpen={replayConfirmDeliveryId !== null}
+        onClose={() => {
+          if (!isReplayInFlight) {
+            setReplayConfirmDeliveryId(null);
+          }
+        }}
+        onConfirm={handleConfirmReplay}
+        title={t('security.webhooks.inbound.deliveryDetail.replay')}
+        message={t('security.webhooks.inbound.deliveryDetail.replayConfirm')}
+        confirmLabel={t('security.webhooks.inbound.deliveryDetail.replay')}
+        cancelLabel={t('security.webhooks.inbound.dialog.cancel')}
+        isConfirming={isReplayInFlight}
+      />
     </div>
   );
 }

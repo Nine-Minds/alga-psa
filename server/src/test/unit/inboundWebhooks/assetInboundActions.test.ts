@@ -123,7 +123,7 @@ describe('asset inbound webhook actions', () => {
       resolvedClientId: 'client-1',
       knex: tenantKnex,
       snapshot: expect.objectContaining({
-        provider: 'rmm-alerts',
+        provider: 'ninjaone',
         integrationId: 'rmm-alerts',
         externalDeviceId: 'device-42',
         externalScopeId: 'site-7',
@@ -137,7 +137,7 @@ describe('asset inbound webhook actions', () => {
 
   it('T1041: RMM-path asset upsert preserves the normalized ingestion snapshot shape', async () => {
     const normalizedSnapshot = {
-      provider: 'tactical_rmm',
+      provider: 'tacticalrmm',
       integrationId: 'tactical-instance',
       externalDeviceId: 'tactical-device',
       externalScopeId: 'tactical-site',
@@ -188,12 +188,44 @@ describe('asset inbound webhook actions', () => {
       knex: tenantKnex,
       snapshot: {
         ...normalizedSnapshot,
-        provider: 'rmm-alerts',
+        provider: 'tacticalrmm',
         integrationId: 'rmm-alerts',
         externalDeviceId: 'device-42',
         externalScopeId: 'tactical-site',
       },
     });
+  });
+
+  it('T1040b: rejects RMM snapshot with unsupported provider', async () => {
+    const { getAction } = await loadAssetInboundActions();
+    const action = getAction('upsertAssetByExternalId');
+
+    await expect(
+      action?.handle(
+        {
+          tenant: 'tenant-a',
+          webhookSlug: 'rmm-alerts',
+          deliveryId: 'delivery-1',
+          headers: {},
+          rawBody: {},
+          idempotencyKey: 'device-42',
+        },
+        {
+          external_id: 'device-42',
+          client_id: 'client-1',
+          rmm_snapshot: {
+            provider: 'not-a-real-rmm',
+            externalDeviceId: 'whatever',
+          },
+        },
+      ),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        success: false,
+        metadata: { reason: 'unsupported_rmm_provider' },
+      }),
+    );
+    expect(mocks.ingestNormalizedRmmDeviceSnapshot).not.toHaveBeenCalled();
   });
 
   it('T1042: upsertAssetByExternalId uses the plain asset upsert path for non-RMM payloads', async () => {

@@ -228,6 +228,8 @@
           "createTitle": "Créer un webhook entrant",
           "editTitle": "Modifier le webhook entrant",
           "cancel": "Annuler",
+          "create": "Créer le webhook",
+          "save": "Enregistrer les modifications",
           "saveUnavailable": "Continuer"
         },
         "identity": {
@@ -302,6 +304,7 @@
           "directActionHelp": "Select an inbound action and map payload fields to its target fields.",
           "action": "Action",
           "actionPlaceholder": "Select an action",
+          "actionEmpty": "No inbound actions are registered. Ensure the server has bootstrapped the action registry before saving.",
           "targetFields": "Target fields",
           "required": "Required",
           "optional": "Optional",
@@ -310,6 +313,7 @@
           "workflowHelp": "Select a workflow to start with the normalized webhook envelope.",
           "workflow": "Workflow",
           "workflowPlaceholder": "Select a workflow",
+          "workflowEmpty": "No workflows are visible in this tenant. Publish or unhide a workflow to use the workflow handler.",
           "envelopeTitle": "Workflow input envelope"
         },
         "sample": {
@@ -335,6 +339,7 @@
           "loadFailed": "Failed to load inbound webhook deliveries.",
           "pageSummary": "Page {{page}} of {{total}}",
           "durationMs": "{{duration}} ms",
+          "allStatuses": "All Statuses",
           "columns": {
             "received": "Received",
             "status": "Status",
@@ -354,6 +359,7 @@
           "title": "Delivery detail",
           "close": "Close",
           "replay": "Replay",
+          "replayConfirm": "Re-dispatch this delivery through the current webhook configuration? Any side effects (ticket creation, status changes, etc.) will run again.",
           "replayFailed": "Failed to replay delivery.",
           "received": "Received",
           "status": "Status",

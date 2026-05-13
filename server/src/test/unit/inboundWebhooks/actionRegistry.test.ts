@@ -72,7 +72,7 @@ describe('inbound action registry', () => {
       '@alga-psa/projects/actions/inboundActions',
       '@alga-psa/tags/actions/inboundActions',
     ]) {
-      expect(bootstrapSource).toContain(`await import('${contribution}')`);
+      expect(bootstrapSource).toContain(`import('${contribution}')`);
     }
 
     expect(serverActionsSource).toContain('await bootstrapInboundWebhookActions();');

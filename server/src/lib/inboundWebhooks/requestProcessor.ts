@@ -6,7 +6,7 @@ import { runWithTenant } from '@/lib/db';
 import { verifyInboundWebhookAuth } from './authVerifier';
 import { lookupInboundWebhookBySlug } from './configLookup';
 import { createInboundDelivery, updateInboundDeliveryOutcome } from './deliveryPersistence';
-import { dispatchInboundWebhookHandler, InboundWebhookMappingError } from './dispatcher';
+import { dispatchInboundWebhookHandler, InboundWebhookActionError, InboundWebhookMappingError } from './dispatcher';
 import { extractInboundWebhookIdempotencyKey, findDuplicateInboundDelivery } from './idempotency';
 import { checkInboundWebhookRateLimit } from './rateLimitConfig';
 import { unauthorizedInboundWebhookResponse } from './responses';
@@ -33,7 +33,7 @@ export async function processInboundWebhookRequest(input: ProcessInboundWebhookR
 
   const featureEnabled = await isInboundWebhooksEnabled({ tenantId: tenant });
   if (!featureEnabled) {
-    return new NextResponse(null, { status: 404 });
+    return unauthorizedInboundWebhookResponse();
   }
 
   return runWithTenant(tenant, async () => {
@@ -241,11 +241,13 @@ export async function processInboundWebhookRequest(input: ProcessInboundWebhookR
         delivery_id: deliveryId,
         error: isMappingError ? 'mapping_failed' : 'dispatch_failed',
       };
+      const handlerOutcome =
+        error instanceof InboundWebhookActionError ? error.toOutcome() : { error: message };
       await updateInboundDeliveryOutcome(knex, {
         tenant,
         deliveryId,
         dispatchStatus: 'failed',
-        handlerOutcome: { error: message },
+        handlerOutcome,
         responseStatus,
         responseBody,
         durationMs: Date.now() - startedAt,
