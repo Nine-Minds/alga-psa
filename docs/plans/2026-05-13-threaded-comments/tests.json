@@ -37,7 +37,7 @@
   { "id": "T036", "description": "Email inbound: provider thread id exact match on comment_threads.email_provider_thread_id resolves to that thread", "implemented": true, "featureIds": ["F031", "F033"] },
   { "id": "T037", "description": "Email inbound: when no resolution strategy matches but ticket matches (subject heuristic / email_metadata), a new top-level thread is created on that ticket", "implemented": true, "featureIds": ["F032"] },
   { "id": "T038", "description": "Email inbound: resolution precedence — reply token wins over In-Reply-To when both present", "implemented": true, "featureIds": ["F028", "F029"] },
-  { "id": "T039", "description": "Email outbound: top-level send generates a fresh RFC Message-ID and writes it to comment_threads.email_message_id; outgoing email has no In-Reply-To header", "implemented": false, "featureIds": ["F034"] },
+  { "id": "T039", "description": "Email outbound: top-level send generates a fresh RFC Message-ID and writes it to comment_threads.email_message_id; outgoing email has no In-Reply-To header", "implemented": true, "featureIds": ["F034"] },
   { "id": "T040", "description": "Email outbound: reply in existing thread sets In-Reply-To to the latest outbound rfc_message_id stored in email_sending_logs for that comment_thread_id", "implemented": false, "featureIds": ["F035"] },
   { "id": "T041", "description": "Email outbound: References header is comment_threads.email_references + previous Message-ID appended; new entry persisted into the column", "implemented": false, "featureIds": ["F036"] },
   { "id": "T042", "description": "Email outbound: a row is created in email_reply_tokens with comment_id of the new outbound comment; recipient_email matches", "implemented": false, "featureIds": ["F037"] },
