@@ -156,6 +156,10 @@
       }
     },
     "shareTooltip": "Imprimer, importer et exporter"
+    ,
+    "defaultClientDeleteError": "Impossible de supprimer le client par défaut. Définissez d’abord un autre client comme client par défaut dans les paramètres généraux.",
+    "clientNotFound": "Client introuvable.",
+    "deletePermissionDenied": "Autorisation refusée : impossible de supprimer des clients."
   },
   "clientDetails": {
     "title": "Détails du client",
@@ -245,6 +249,9 @@
       "url": "URL",
       "status": "Statut"
     }
+    ,
+    "deactivateClientDescription": "Désactive l’enregistrement sans supprimer ses données.",
+    "deactivateClientOnlyDescription": "Désactive le client, mais laisse ses contacts actifs."
   },
   "quickAddClient": {
     "title": "Ajouter un nouveau client",

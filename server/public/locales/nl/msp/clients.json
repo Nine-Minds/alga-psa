@@ -156,6 +156,10 @@
       }
     },
     "shareTooltip": "Afdrukken, importeren en exporteren"
+    ,
+    "defaultClientDeleteError": "De standaardklant kan niet worden verwijderd. Stel eerst een andere klant als standaard in bij Algemene instellingen.",
+    "clientNotFound": "Klant niet gevonden.",
+    "deletePermissionDenied": "Toestemming geweigerd: klanten kunnen niet worden verwijderd."
   },
   "clientDetails": {
     "title": "Klantgegevens",
@@ -245,6 +249,9 @@
       "url": "URL",
       "status": "Status"
     }
+    ,
+    "deactivateClientDescription": "Deactiveert de record zonder de gegevens te verwijderen.",
+    "deactivateClientOnlyDescription": "Deactiveer de klant maar laat de contacten actief."
   },
   "quickAddClient": {
     "title": "Nieuwe klant toevoegen",

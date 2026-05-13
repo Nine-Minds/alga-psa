@@ -327,12 +327,89 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     };
   }, [entraSyncRunId, fetchEntraSyncRunStatus]);
 
+  const localizeClientDeleteValidation = useCallback((result: DeletionValidationResult): DeletionValidationResult => {
+    const hasClientOnlyAlternative = result.alternatives.some((alternative) => alternative.action === 'deactivate_client_only');
+    const dependencyLabel = (type: string, count: number, fallback: string) => {
+      const dependencyKeys: Record<string, [string, string, string, string]> = {
+        contact: ['clientsPage.dependency.contact', 'contact', 'clientsPage.dependency.contacts', 'contacts'],
+        ticket: ['clientsPage.dependency.ticket', 'ticket', 'clientsPage.dependency.tickets', 'tickets'],
+        project: ['clientsPage.dependency.project', 'project', 'clientsPage.dependency.projects', 'projects'],
+        invoice: ['clientsPage.dependency.invoice', 'invoice', 'clientsPage.dependency.invoices', 'invoices'],
+        document: ['clientsPage.dependency.document', 'document', 'clientsPage.dependency.documents', 'documents'],
+        interaction: ['clientsPage.dependency.interaction', 'interaction', 'clientsPage.dependency.interactions', 'interactions'],
+        asset: ['clientsPage.dependency.asset', 'asset', 'clientsPage.dependency.assets', 'assets'],
+        usage: ['clientsPage.dependency.serviceUsageRecord', 'service usage record', 'clientsPage.dependency.serviceUsageRecords', 'service usage records'],
+        bucket_usage: ['clientsPage.dependency.bucketUsageRecord', 'bucket usage record', 'clientsPage.dependency.bucketUsageRecords', 'bucket usage records'],
+      };
+      const keys = dependencyKeys[type];
+      if (!keys) return fallback;
+      const [singularKey, singularDefault, pluralKey, pluralDefault] = keys;
+      return count === 1
+        ? t(singularKey, { defaultValue: singularDefault })
+        : t(pluralKey, { defaultValue: pluralDefault });
+    };
+
+    const message = (() => {
+      if (result.code === 'DEPENDENCIES_EXIST') {
+        return t('clientsPage.deleteClientUnable', { defaultValue: 'Unable to delete this client.' });
+      }
+      if (result.code === 'IS_DEFAULT') {
+        return t('clientsPage.defaultClientDeleteError', {
+          defaultValue: 'Cannot delete the default client. Please set another client as default in General Settings first.',
+        });
+      }
+      if (result.code === 'NOT_FOUND') {
+        return t('clientsPage.clientNotFound', { defaultValue: 'Client not found.' });
+      }
+      if (result.code === 'PERMISSION_DENIED') {
+        return t('clientsPage.deletePermissionDenied', {
+          defaultValue: 'Permission denied: Cannot delete clients.',
+        });
+      }
+      return result.message;
+    })();
+
+    return {
+      ...result,
+      message,
+      dependencies: result.dependencies.map((dependency) => ({
+        ...dependency,
+        label: dependencyLabel(dependency.type, dependency.count, dependency.label),
+      })),
+      alternatives: result.alternatives.map((alternative) => {
+        if (alternative.action === 'deactivate_client_only') {
+          return {
+            ...alternative,
+            label: t('clientDetails.clientOnly', { defaultValue: 'Client Only' }),
+            description: t('clientDetails.deactivateClientOnlyDescription', {
+              defaultValue: 'Deactivate the client but leave its contacts active.',
+            }),
+          };
+        }
+
+        if (alternative.action === 'deactivate') {
+          return {
+            ...alternative,
+            label: hasClientOnlyAlternative
+              ? t('clientDetails.clientAndContacts', { defaultValue: 'Client & Contacts' })
+              : t('clientsPage.markAsInactive', { defaultValue: 'Mark as Inactive' }),
+            description: t('clientDetails.deactivateClientDescription', {
+              defaultValue: 'Deactivates the record without deleting its data.',
+            }),
+          };
+        }
+
+        return alternative;
+      }),
+    };
+  }, [t]);
+
 
   const runDeleteValidation = useCallback(async () => {
     setIsDeleteValidating(true);
     try {
       const result = await validateClientDeletion(editedClient.client_id);
-      setDeleteValidation(result);
+      setDeleteValidation(localizeClientDeleteValidation(result));
     } catch (error: any) {
       console.error('Failed to validate client deletion:', error);
       setDeleteValidation({
@@ -347,7 +424,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     } finally {
       setIsDeleteValidating(false);
     }
-  }, [editedClient.client_id]);
+  }, [editedClient.client_id, localizeClientDeleteValidation, t]);
 
   const handleDeleteClient = () => {
     setIsDeleteDialogOpen(true);
@@ -360,7 +437,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       const result = await deleteClient(editedClient.client_id);
 
       if (!result.success) {
-        setDeleteValidation(result);
+        setDeleteValidation(localizeClientDeleteValidation(result));
         return;
       }
 
@@ -383,13 +460,13 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   };
 
   const handleDeleteAlternativeAction = async (action: string) => {
-    if (action !== 'deactivate') {
-      return;
-    }
-
     setIsDeleteProcessing(true);
     try {
-      await handleMarkClientInactiveAll();
+      if (action === 'deactivate') {
+        await handleMarkClientInactiveAll();
+      } else if (action === 'deactivate_client_only') {
+        await handleMarkClientInactiveOnly();
+      }
     } finally {
       setIsDeleteProcessing(false);
     }

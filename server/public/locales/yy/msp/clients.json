@@ -156,6 +156,10 @@
       }
     },
     "shareTooltip": "55555"
+    ,
+    "defaultClientDeleteError": "55555",
+    "clientNotFound": "55555",
+    "deletePermissionDenied": "55555"
   },
   "clientDetails": {
     "title": "55555",
@@ -245,6 +249,9 @@
       "url": "55555",
       "status": "55555"
     }
+    ,
+    "deactivateClientDescription": "55555",
+    "deactivateClientOnlyDescription": "55555"
   },
   "quickAddClient": {
     "title": "55555",
