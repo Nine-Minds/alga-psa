@@ -360,6 +360,10 @@ function createQuery(getter: () => any) {
   const builder: any = {
     select: () => builder,
     leftJoin: () => builder,
+    modify: (callback: (queryBuilder: any) => void) => {
+      callback(builder);
+      return builder;
+    },
     where: () => builder,
     orderBy: () => builder,
     toSQL: () => ({ sql: 'mock-query', bindings: [] }),
@@ -885,12 +889,16 @@ function createMockKnex() {
         return systemTemplateBuilder();
       case 'email_reply_tokens':
         return tokenTableBuilder();
+      case 'comments as cm':
+        return createQuery(() => null);
       case 'tickets as t':
         return ticketTableBuilder();
       case 'projects as p':
         return projectTableBuilder();
       case 'users':
         return userTableBuilder();
+      case 'tenant_settings':
+        return createQuery(() => null);
       case 'ticket_resources as tr':
         return resourceTableBuilder();
       case 'portal_domains':
@@ -1482,7 +1490,7 @@ describe('ticket email subscriber deduplication', () => {
     expect(sharedCount).toBe(1);
   });
 
-  it('sends one ticket comment email when additional resource shares email with assignee', async () => {
+  it('T076: sends one ticket comment email per recipient with distinct reply tokens', async () => {
     seedTemplate('ticket-comment-added', 'New Comment {{ticket.title}}', '<p>{{comment.content}}</p>');
 
     const tenantId = randomUUID();
@@ -1538,6 +1546,19 @@ describe('ticket email subscriber deduplication', () => {
     const recipients = sendEmailMock.mock.calls.map((call) => call[0].to);
     expect(recipients.filter((email) => email === contactEmail).length).toBe(1);
     expect(recipients.filter((email) => email === sharedEmail).length).toBe(1);
+
+    const tokenRows = Array.from(tokenStore.values()).filter((row) => row.comment_id === commentId);
+    expect(tokenRows).toHaveLength(2);
+    expect(tokenRows.map((row) => row.recipient_email).sort()).toEqual([contactEmail, sharedEmail].sort());
+    expect(new Set(tokenRows.map((row) => row.token)).size).toBe(2);
+    for (const row of tokenRows) {
+      expect(row).toMatchObject({
+        tenant: tenantId,
+        ticket_id: ticketId,
+        comment_id: commentId,
+        entity_type: 'ticket',
+      });
+    }
   });
 });
 
