@@ -106,6 +106,17 @@ async function waitForThreadUpdate(timeoutMs = 500) {
   }
 }
 
+async function waitForInsertedLog(timeoutMs = 500) {
+  const startedAt = Date.now();
+  while (dbState.insertedLogs.length === 0) {
+    if (Date.now() - startedAt > timeoutMs) {
+      throw new Error('Timed out waiting for email_sending_logs insert');
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  return dbState.insertedLogs[0];
+}
+
 describe('BaseEmailService comment thread outbound headers', () => {
   beforeEach(() => {
     dbState.commentRows.clear();
@@ -303,5 +314,72 @@ describe('BaseEmailService comment thread outbound headers', () => {
         email_references: expectedReferences,
       },
     });
+  });
+
+  it('T043: email_sending_logs row stores comment thread, RFC Message-ID, provider id, and reply token hash', async () => {
+    const tenantId = 'tenant-t043';
+    const commentId = 'comment-t043';
+    const threadId = 'thread-t043';
+    const conversationToken = 'conversation-token-t043';
+    const providerMessageId = 'provider-message-t043';
+
+    dbState.commentRows.set(commentId, {
+      thread_id: threadId,
+      parent_comment_id: null,
+    });
+
+    const provider: IEmailProvider = {
+      providerId: 'test-provider',
+      providerType: 'test',
+      capabilities,
+      async initialize() {
+        // no-op
+      },
+      async sendEmail(_message: EmailMessage, _tenantId: string): Promise<EmailSendResult> {
+        return {
+          success: true,
+          messageId: providerMessageId,
+          providerMessageId,
+          providerId: 'test-provider',
+          providerType: 'test',
+          sentAt: new Date('2026-05-13T12:15:00.000Z'),
+        };
+      },
+      async healthCheck() {
+        return { healthy: true };
+      },
+    };
+
+    const service = new TestEmailService(provider);
+    const result = await service.sendEmail({
+      tenantId,
+      to: 'client@example.com',
+      subject: 'Logged comment',
+      html: '<p>Logged comment</p>',
+      replyContext: {
+        ticketId: 'ticket-t043',
+        commentId,
+        threadId: 'provider-thread-t043',
+        conversationToken,
+      },
+    });
+
+    expect(result.success).toBe(true);
+
+    const log = await waitForInsertedLog();
+
+    expect(log).toMatchObject({
+      tenant: tenantId,
+      message_id: providerMessageId,
+      provider_message_id: providerMessageId,
+      provider_id: 'test-provider',
+      provider_type: 'test',
+      thread_id: 'provider-thread-t043',
+      comment_thread_id: threadId,
+      comment_id: commentId,
+      reply_token_suffix: conversationToken.slice(-8),
+    });
+    expect(log.rfc_message_id).toMatch(/^<.+@tenant-t043\.alga-psa\.local>$/);
+    expect(log.reply_token_hash).toEqual(expect.stringMatching(/^[a-f0-9]{64}$/));
   });
 });
