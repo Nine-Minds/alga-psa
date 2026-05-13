@@ -384,4 +384,84 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
     );
   });
 
+  it('T036: provider thread id resolves directly through comment_threads', async () => {
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: 'Provider thread reply body',
+      sanitizedHtml: undefined,
+      confidence: 0.95,
+      strategy: 'plain',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: {},
+    });
+
+    let commentThreadQueryCount = 0;
+    withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
+      const trx = vi.fn((table: string) => {
+        if (table === 'tickets as t' || table === 'comments as c' || table === 'tickets') {
+          return makeQueryBuilder(undefined);
+        }
+
+        if (table === 'comment_threads') {
+          commentThreadQueryCount += 1;
+          const firstResult = commentThreadQueryCount === 1
+            ? { threadId: 'thread-provider-123' }
+            : { ticketId: 'ticket-provider-123', threadId: 'thread-provider-123' };
+          const builder: any = {
+            select: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            whereNotNull: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            first: vi.fn().mockResolvedValue(firstResult),
+          };
+          return builder;
+        }
+
+        if (table === 'comments') {
+          const builder: any = {
+            select: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            first: vi.fn().mockResolvedValue({ parentCommentId: 'latest-comment-provider-123' }),
+          };
+          return builder;
+        }
+
+        throw new Error(`Unexpected table in unit test: ${table}`);
+      });
+
+      return callback(trx);
+    });
+
+    const { processInboundEmailInApp } = await import(
+      '@alga-psa/shared/services/email/processInboundEmailInApp'
+    );
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        id: 'email-provider-thread-1',
+        threadId: 'provider-thread-abc',
+      }),
+    });
+
+    expect(result).toMatchObject({
+      outcome: 'replied',
+      matchedBy: 'thread_headers',
+      ticketId: 'ticket-provider-123',
+      commentId: 'comment-1',
+    });
+    expect(commentThreadQueryCount).toBe(2);
+    expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
+    expect(createTicketFromEmailMock).not.toHaveBeenCalled();
+    expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ticket_id: 'ticket-provider-123',
+        parent_comment_id: 'latest-comment-provider-123',
+      }),
+      'tenant-1'
+    );
+  });
+
 });
