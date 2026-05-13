@@ -92,10 +92,6 @@ export const createTaskComment = withAuth(async (
     // Convert BlockNote to markdown
     const markdownContent = convertBlockNoteToMarkdown(comment.note);
 
-    if (comment.parentCommentId) {
-      throw new Error('Reply comments require parent thread resolution before insert');
-    }
-
     // Get project context for notifications and validate task before inserting thread/comment rows
     const task = await trx('project_tasks')
       .join('project_phases', function() {
@@ -112,27 +108,55 @@ export const createTaskComment = withAuth(async (
     }
 
     const now = new Date().toISOString();
-    const idsResult = await trx.raw('SELECT gen_random_uuid() AS task_comment_id, gen_random_uuid() AS thread_id');
-    const generatedIds = idsResult.rows?.[0];
-    const taskCommentId = generatedIds?.task_comment_id;
-    const threadId = generatedIds?.thread_id;
+    const parentCommentId = comment.parentCommentId || null;
+    const isReply = Boolean(parentCommentId);
+    let taskCommentId: string | undefined;
+    let threadId: string | undefined;
+
+    if (isReply) {
+      const parent = await trx('project_task_comments')
+        .select('task_comment_id', 'task_id', 'thread_id', 'deleted_at')
+        .where({ tenant, task_comment_id: parentCommentId })
+        .first();
+
+      if (!parent) {
+        throw new Error('Parent task comment not found');
+      }
+
+      if (parent.task_id !== comment.taskId) {
+        throw new Error('Parent task comment must belong to the same task');
+      }
+
+      if (parent.deleted_at) {
+        throw new Error('Cannot reply to a deleted task comment');
+      }
+
+      const idsResult = await trx.raw('SELECT gen_random_uuid() AS task_comment_id');
+      taskCommentId = idsResult.rows?.[0]?.task_comment_id;
+      threadId = parent.thread_id;
+    } else {
+      const idsResult = await trx.raw('SELECT gen_random_uuid() AS task_comment_id, gen_random_uuid() AS thread_id');
+      const generatedIds = idsResult.rows?.[0];
+      taskCommentId = generatedIds?.task_comment_id;
+      threadId = generatedIds?.thread_id;
+
+      await trx('comment_threads').insert({
+        tenant,
+        thread_id: threadId,
+        ticket_id: null,
+        project_task_id: comment.taskId,
+        root_comment_id: taskCommentId,
+        is_internal: false,
+        reply_count: 0,
+        last_activity_at: now,
+        created_at: now,
+        created_by: userId,
+      });
+    }
 
     if (!taskCommentId || !threadId) {
       throw new Error('Failed to generate task comment/thread identifiers');
     }
-
-    await trx('comment_threads').insert({
-      tenant,
-      thread_id: threadId,
-      ticket_id: null,
-      project_task_id: comment.taskId,
-      root_comment_id: taskCommentId,
-      is_internal: false,
-      reply_count: 0,
-      last_activity_at: now,
-      created_at: now,
-      created_by: userId,
-    });
 
     // Insert comment (convert camelCase to snake_case for DB)
     const [newComment] = await trx('project_task_comments')
@@ -140,7 +164,7 @@ export const createTaskComment = withAuth(async (
         task_comment_id: taskCommentId,
         task_id: comment.taskId,
         thread_id: threadId,
-        parent_comment_id: null,
+        parent_comment_id: parentCommentId,
         user_id: userId,
         tenant,
         author_type: 'internal',
