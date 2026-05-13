@@ -61,4 +61,25 @@ describe('comment_threads migrations', () => {
       String(constraint.definition).includes('REFERENCES project_tasks(tenant, task_id)')
     )).toBe(true);
   });
+
+  it('T002: creates comment_threads lookup indexes for parent lists and email message IDs', async () => {
+    const indexes = await knex('pg_indexes')
+      .select('indexname', 'indexdef')
+      .where({ schemaname: 'public', tablename: 'comment_threads' });
+
+    const byName = new Map(indexes.map((index) => [index.indexname, String(index.indexdef)]));
+
+    expect(byName.get('comment_threads_ticket_idx')).toContain(
+      'CREATE INDEX comment_threads_ticket_idx ON public.comment_threads USING btree (tenant, ticket_id, last_activity_at DESC)'
+    );
+    expect(byName.get('comment_threads_task_idx')).toContain(
+      'CREATE INDEX comment_threads_task_idx ON public.comment_threads USING btree (tenant, project_task_id, last_activity_at DESC)'
+    );
+
+    const emailIndex = byName.get('comment_threads_email_msgid_idx');
+    expect(emailIndex).toContain(
+      'CREATE INDEX comment_threads_email_msgid_idx ON public.comment_threads USING btree (tenant, email_message_id)'
+    );
+    expect(emailIndex).toContain('WHERE (email_message_id IS NOT NULL)');
+  });
 });
