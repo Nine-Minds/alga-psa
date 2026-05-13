@@ -1,5 +1,5 @@
 [
-  { "id": "T001", "description": "Migration: comment_threads table created with all columns, PK (tenant, thread_id), CHECK exactly-one of ticket_id/project_task_id, expected FKs", "implemented": false, "featureIds": ["F001"] },
+  { "id": "T001", "description": "Migration: comment_threads table created with all columns, PK (tenant, thread_id), CHECK exactly-one of ticket_id/project_task_id, expected FKs", "implemented": true, "featureIds": ["F001"] },
   { "id": "T002", "description": "Migration: indexes exist on comment_threads — (tenant, ticket_id, last_activity_at DESC), (tenant, project_task_id, last_activity_at DESC), partial on email_message_id", "implemented": false, "featureIds": ["F002"] },
   { "id": "T003", "description": "Migration: comments has nullable thread_id, parent_comment_id, deleted_at columns post-migration with correct FKs", "implemented": false, "featureIds": ["F003"] },
   { "id": "T004", "description": "Migration: project_task_comments has nullable thread_id, parent_comment_id, deleted_at columns post-migration with correct FKs", "implemented": false, "featureIds": ["F004"] },

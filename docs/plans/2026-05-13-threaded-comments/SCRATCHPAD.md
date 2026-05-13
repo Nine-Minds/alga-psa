@@ -94,6 +94,11 @@ Working notes for implementing nested/threaded comment responses on tickets and 
 
 ## Commands / Runbooks
 
+- (2026-05-13) T001 migration test:
+  ```
+  cd server && npx vitest run src/test/integration/commentThreadsMigration.integration.test.ts
+  ```
+  Result after F062 seed fix: passed (`1 passed`).
 - (2026-05-13) Run migrations locally:
   ```
   cd server && npm run db:migrate:latest
