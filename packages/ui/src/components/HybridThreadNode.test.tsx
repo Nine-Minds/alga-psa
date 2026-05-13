@@ -1,10 +1,15 @@
 /** @vitest-environment jsdom */
 
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { buildCommentThreadGroups } from './CommentThreadList';
+import CommentThreadDrawer from './CommentThreadDrawer';
 import HybridThreadNode from './HybridThreadNode';
+
+vi.mock('../editor', () => ({
+  TextEditor: () => <textarea aria-label="Reply editor" />,
+}));
 
 interface TestComment {
   id: string;
@@ -85,5 +90,43 @@ describe('HybridThreadNode', () => {
     expect(screen.queryByTestId('comment-reply')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Open in drawer' })).toBeInTheDocument();
+  });
+
+  it('T048: clicking Open in drawer opens the drawer with the selected root and replies', () => {
+    const group = buildGroup();
+
+    function Harness() {
+      const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
+      return (
+        <>
+          <HybridThreadNode<TestComment>
+            group={group}
+            comment={group.root}
+            getCommentId={(comment) => comment.id}
+            onOpenPanel={() => setIsDrawerOpen(true)}
+            renderComment={(comment) => <div data-testid={`inline-comment-${comment.id}`}>{comment.id}</div>}
+          />
+          <CommentThreadDrawer<TestComment>
+            isOpen={isDrawerOpen}
+            onClose={() => setIsDrawerOpen(false)}
+            group={isDrawerOpen ? group : null}
+            getCommentId={(comment) => comment.id}
+            replyRoomName={(parentCommentId) => `reply-${parentCommentId}`}
+            onSubmitReply={() => undefined}
+            renderComment={(comment) => <div data-testid={`drawer-comment-${comment.id}`}>{comment.id}</div>}
+          />
+        </>
+      );
+    }
+
+    render(<Harness />);
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Collapse' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Open in drawer' }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByTestId('drawer-comment-root')).toBeInTheDocument();
+    expect(within(dialog).getByTestId('drawer-comment-reply')).toBeInTheDocument();
+    expect(within(dialog).getByTestId('drawer-comment-subreply')).toBeInTheDocument();
   });
 });
