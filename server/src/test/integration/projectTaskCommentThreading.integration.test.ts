@@ -22,9 +22,12 @@ vi.mock('@alga-psa/auth', () => ({
   hasPermission: vi.fn(async () => true),
 }));
 
+const publishEventMock = vi.hoisted(() => vi.fn());
+const publishWorkflowEventMock = vi.hoisted(() => vi.fn());
+
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishEvent: vi.fn(),
-  publishWorkflowEvent: vi.fn(),
+  publishEvent: publishEventMock,
+  publishWorkflowEvent: publishWorkflowEventMock,
 }));
 
 import { createTaskComment, deleteTaskComment, getTaskComments } from '../../../../packages/projects/src/actions/projectTaskCommentActions';
@@ -325,6 +328,71 @@ describe('project task comment threading model', () => {
         parentCommentId: rootCommentId,
       });
       expect(readReply?.deletedAt ?? null).toBeNull();
+    } finally {
+      if (replyCommentId) {
+        await knex('project_task_comments')
+          .where({ tenant: context.tenant, task_comment_id: replyCommentId })
+          .delete();
+      }
+      await knex('project_task_comments')
+        .where({ tenant: context.tenant, task_comment_id: rootCommentId })
+        .delete();
+      if (threadId) {
+        await knex('comment_threads')
+          .where({ tenant: context.tenant, thread_id: threadId })
+          .delete();
+      }
+    }
+  });
+
+  it('T031: TASK_COMMENT_ADDED payload includes reply threading fields', async () => {
+    const context = await knex('project_tasks as pt')
+      .join('project_phases as pp', function() {
+        this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
+      })
+      .select('pt.tenant', 'pt.task_id')
+      .where('pt.tenant', dbRef.tenant)
+      .first();
+    expect(context).toBeTruthy();
+
+    const rootCommentId = await createTaskComment({
+      taskId: context.task_id,
+      note: blockNote('Task root for event payload test'),
+    });
+
+    let threadId: string | undefined;
+    let replyCommentId: string | undefined;
+
+    try {
+      const root = await knex('project_task_comments')
+        .select('thread_id')
+        .where({ tenant: context.tenant, task_comment_id: rootCommentId })
+        .first();
+      threadId = root.thread_id;
+
+      publishEventMock.mockClear();
+      replyCommentId = await createTaskComment({
+        taskId: context.task_id,
+        note: blockNote('Task reply for event payload test'),
+        parent_comment_id: rootCommentId,
+      });
+
+      const addedEvent = publishEventMock.mock.calls
+        .map(([event]) => event)
+        .find((event) => event.eventType === 'TASK_COMMENT_ADDED');
+      expect(addedEvent).toBeTruthy();
+      expect(addedEvent.payload).toMatchObject({
+        tenantId: context.tenant,
+        taskId: context.task_id,
+        userId: userRef.user?.user_id,
+        taskCommentId: replyCommentId,
+        threadId,
+        parentCommentId: rootCommentId,
+        isReply: true,
+        thread_id: threadId,
+        parent_comment_id: rootCommentId,
+        is_reply: true,
+      });
     } finally {
       if (replyCommentId) {
         await knex('project_task_comments')
