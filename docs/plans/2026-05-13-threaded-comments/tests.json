@@ -31,7 +31,7 @@
   { "id": "T030", "description": "Action: projectTaskCommentActions.createTaskComment accepts parent_comment_id and forwards to model", "implemented": true, "featureIds": ["F025"] },
   { "id": "T031", "description": "Action: TASK_COMMENT_ADDED event payload includes thread_id, parent_comment_id, is_reply", "implemented": true, "featureIds": ["F026"] },
   { "id": "T032", "description": "Action: assertOwnCommentOrInternalUser allows client to delete own reply; rejects deleting another client's reply", "implemented": true, "featureIds": ["F027"] },
-  { "id": "T033", "description": "Email inbound: reply token in body resolves to a comment_id; resulting comment lands in same thread with parent=latest comment in that thread", "implemented": false, "featureIds": ["F028", "F033"] },
+  { "id": "T033", "description": "Email inbound: reply token in body resolves to a comment_id; resulting comment lands in same thread with parent=latest comment in that thread", "implemented": true, "featureIds": ["F028", "F033"] },
   { "id": "T034", "description": "Email inbound: In-Reply-To matching email_sending_logs.rfc_message_id resolves to that comment's thread", "implemented": false, "featureIds": ["F029", "F033"] },
   { "id": "T035", "description": "Email inbound: References[] chain walked end-to-start; first match wins; resolves to expected thread", "implemented": false, "featureIds": ["F030", "F033"] },
   { "id": "T036", "description": "Email inbound: provider thread id exact match on comment_threads.email_provider_thread_id resolves to that thread", "implemented": false, "featureIds": ["F031", "F033"] },
