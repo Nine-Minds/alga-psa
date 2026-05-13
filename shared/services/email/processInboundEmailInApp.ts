@@ -571,6 +571,65 @@ async function resolveReplyTargetFromComment(params: {
   });
 }
 
+async function resolveReplyTargetFromCommentThread(params: {
+  tenantId: string;
+  threadId: string;
+}): Promise<{ ticketId: string; threadId: string; parentCommentId: string } | null> {
+  const { withAdminTransaction } = await import('@alga-psa/db');
+  return withAdminTransaction(async (trx: any) => {
+    const thread = await trx('comment_threads')
+      .select('ticket_id as ticketId', 'thread_id as threadId')
+      .where({ tenant: params.tenantId, thread_id: params.threadId })
+      .first();
+
+    if (!thread?.ticketId || !thread?.threadId) {
+      return null;
+    }
+
+    const latest = await trx('comments')
+      .select('comment_id as parentCommentId')
+      .where({ tenant: params.tenantId, thread_id: thread.threadId })
+      .orderBy('created_at', 'desc')
+      .orderBy('comment_id', 'desc')
+      .first();
+
+    return latest?.parentCommentId
+      ? {
+          ticketId: thread.ticketId,
+          threadId: thread.threadId,
+          parentCommentId: latest.parentCommentId,
+        }
+      : null;
+  });
+}
+
+async function resolveReplyTargetFromOutboundMessageId(params: {
+  tenantId: string;
+  rfcMessageId: string;
+}): Promise<{ ticketId: string; threadId: string; parentCommentId: string } | null> {
+  const normalizedMessageId = params.rfcMessageId.trim();
+  if (!normalizedMessageId) {
+    return null;
+  }
+
+  const { withAdminTransaction } = await import('@alga-psa/db');
+  const row = await withAdminTransaction(async (trx: any) => {
+    return trx('email_sending_logs')
+      .select('comment_thread_id as threadId')
+      .where({ tenant: params.tenantId, rfc_message_id: normalizedMessageId })
+      .whereNotNull('comment_thread_id')
+      .orderBy('created_at', 'desc')
+      .first();
+  });
+
+  return row?.threadId
+    ? resolveReplyTargetFromCommentThread({
+        tenantId: params.tenantId,
+        threadId: row.threadId,
+      })
+    : null;
+}
+
 function normalizeEmbeddedContentId(value: string | undefined | null): string {
   if (!value) return '';
   return String(value).trim().replace(/^cid:/i, '').replace(/^<|>$/g, '').toLowerCase();
@@ -1194,31 +1253,50 @@ export async function processInboundEmailInApp(
 
   // Thread headers fallback.
   let threadedTicketId: string | null = null;
+  let threadedParentCommentId: string | null = null;
   if (!rerouteToNewTicket) {
     if (diagnostics) {
       diagnostics.threading.headerLookupAttempted = true;
     }
 
     try {
-      const ticket = await findTicketByEmailThread(
-        {
-          threadId: emailData.threadId,
-          inReplyTo: emailData.inReplyTo,
-          references: emailData.references,
-          originalMessageId: emailData.inReplyTo ?? emailData.id,
-        },
-        tenantId
-      );
-      if (ticket?.ticketId) {
-        threadedTicketId = ticket.ticketId;
+      const threadTarget = emailData.inReplyTo
+        ? await resolveReplyTargetFromOutboundMessageId({
+            tenantId,
+            rfcMessageId: emailData.inReplyTo,
+          })
+        : null;
+
+      if (threadTarget) {
+        threadedTicketId = threadTarget.ticketId;
+        threadedParentCommentId = threadTarget.parentCommentId;
         if (diagnostics) {
           diagnostics.threading.headerLookupMatched = true;
           diagnostics.threading.headerLookupMissReason = null;
           diagnostics.threading.matchedBy = 'thread_headers';
-          diagnostics.threading.matchedTicketId = ticket.ticketId;
+          diagnostics.threading.matchedTicketId = threadTarget.ticketId;
         }
-      } else if (diagnostics) {
-        diagnostics.threading.headerLookupMissReason = 'header_no_match';
+      } else {
+        const ticket = await findTicketByEmailThread(
+          {
+            threadId: emailData.threadId,
+            inReplyTo: emailData.inReplyTo,
+            references: emailData.references,
+            originalMessageId: emailData.inReplyTo ?? emailData.id,
+          },
+          tenantId
+        );
+        if (ticket?.ticketId) {
+          threadedTicketId = ticket.ticketId;
+          if (diagnostics) {
+            diagnostics.threading.headerLookupMatched = true;
+            diagnostics.threading.headerLookupMissReason = null;
+            diagnostics.threading.matchedBy = 'thread_headers';
+            diagnostics.threading.matchedTicketId = ticket.ticketId;
+          }
+        } else if (diagnostics) {
+          diagnostics.threading.headerLookupMissReason = 'header_no_match';
+        }
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -1239,6 +1317,7 @@ export async function processInboundEmailInApp(
     const handled = await handleThreadedReply({
       ticketId: threadedTicketId,
       matchedBy: 'thread_headers',
+      parentCommentId: threadedParentCommentId,
     });
     if (handled) {
       return handled;
