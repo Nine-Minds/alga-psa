@@ -2,6 +2,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
+const commentBackfillMigration = require('../../../migrations/20260513102000_backfill_comment_threads_for_comments.cjs');
+
 describe('comment_threads migrations', () => {
   let knex: Knex;
 
@@ -145,5 +147,62 @@ describe('comment_threads migrations', () => {
       String(constraint.definition).includes('FOREIGN KEY (tenant, parent_comment_id)') &&
       String(constraint.definition).includes('REFERENCES project_task_comments(tenant, task_comment_id)')
     )).toBe(true);
+  });
+
+  it('T005: backfills legacy ticket comments into one thread per comment', async () => {
+    const context = await knex('tickets as t')
+      .join('users as u', 'u.tenant', 't.tenant')
+      .select('t.tenant', 't.ticket_id', 'u.user_id')
+      .first();
+    expect(context).toBeTruthy();
+
+    const generated = await knex.raw('SELECT gen_random_uuid() AS comment_id');
+    const commentId = generated.rows[0].comment_id;
+    const createdAt = '2026-05-13T12:00:00.000Z';
+
+    await knex.schema.alterTable('comments', (table) => {
+      table.uuid('thread_id').nullable().alter();
+    });
+
+    try {
+      await knex('comments').insert({
+        tenant: context.tenant,
+        comment_id: commentId,
+        ticket_id: context.ticket_id,
+        user_id: context.user_id,
+        thread_id: null,
+        note: 'Legacy comment inserted without a thread for backfill coverage',
+        is_internal: false,
+        is_resolution: false,
+        created_at: createdAt,
+      });
+
+      await commentBackfillMigration.up(knex);
+
+      const comment = await knex('comments')
+        .select('thread_id')
+        .where({ tenant: context.tenant, comment_id: commentId })
+        .first();
+      expect(comment?.thread_id).toBe(commentId);
+
+      const thread = await knex('comment_threads')
+        .select('thread_id', 'ticket_id', 'root_comment_id', 'is_internal', 'reply_count', 'created_by')
+        .where({ tenant: context.tenant, thread_id: commentId })
+        .first();
+      expect(thread).toMatchObject({
+        thread_id: commentId,
+        ticket_id: context.ticket_id,
+        root_comment_id: commentId,
+        is_internal: false,
+        reply_count: 0,
+        created_by: context.user_id,
+      });
+    } finally {
+      await knex('comments').where({ tenant: context.tenant, comment_id: commentId }).delete();
+      await knex('comment_threads').where({ tenant: context.tenant, thread_id: commentId }).delete();
+      await knex.schema.alterTable('comments', (table) => {
+        table.uuid('thread_id').notNullable().alter();
+      });
+    }
   });
 });

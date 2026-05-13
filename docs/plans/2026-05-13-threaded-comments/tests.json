@@ -3,7 +3,7 @@
   { "id": "T002", "description": "Migration: indexes exist on comment_threads — (tenant, ticket_id, last_activity_at DESC), (tenant, project_task_id, last_activity_at DESC), partial on email_message_id", "implemented": true, "featureIds": ["F002"] },
   { "id": "T003", "description": "Migration: comments has nullable thread_id, parent_comment_id, deleted_at columns post-migration with correct FKs", "implemented": true, "featureIds": ["F003"] },
   { "id": "T004", "description": "Migration: project_task_comments has nullable thread_id, parent_comment_id, deleted_at columns post-migration with correct FKs", "implemented": true, "featureIds": ["F004"] },
-  { "id": "T005", "description": "Backfill: every pre-existing comments row has thread_id populated; comment_threads has one row per such comment with root_comment_id=comment_id, reply_count=0", "implemented": false, "featureIds": ["F005"] },
+  { "id": "T005", "description": "Backfill: every pre-existing comments row has thread_id populated; comment_threads has one row per such comment with root_comment_id=comment_id, reply_count=0", "implemented": true, "featureIds": ["F005"] },
   { "id": "T006", "description": "Backfill: comment_threads.email_message_id is set from comment.metadata.email.messageId when present; NULL otherwise", "implemented": false, "featureIds": ["F005"] },
   { "id": "T007", "description": "Backfill: running migration twice does not duplicate threads (idempotent)", "implemented": false, "featureIds": ["F005", "F006"] },
   { "id": "T008", "description": "Backfill: every pre-existing project_task_comments row has thread_id populated; analogous thread row exists", "implemented": false, "featureIds": ["F006"] },
