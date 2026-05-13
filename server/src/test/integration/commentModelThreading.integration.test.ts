@@ -225,4 +225,67 @@ describe('ticket comment threading model', () => {
       }
     }
   });
+
+  it('T018: rejects reply visibility that differs from the thread root', async () => {
+    const context = await knex('tickets as t')
+      .join('users as u', 'u.tenant', 't.tenant')
+      .select('t.tenant', 't.ticket_id', 'u.user_id')
+      .first();
+    expect(context).toBeTruthy();
+
+    const clientRootId = await Comment.insert(knex, context.tenant, {
+      ticket_id: context.ticket_id,
+      user_id: context.user_id,
+      author_type: 'internal',
+      note: 'Client-visible root for visibility test',
+      markdown_content: 'Client-visible root for visibility test',
+      is_internal: false,
+      is_resolution: false,
+    });
+    const internalRootId = await Comment.insert(knex, context.tenant, {
+      ticket_id: context.ticket_id,
+      user_id: context.user_id,
+      author_type: 'internal',
+      note: 'Internal root for visibility test',
+      markdown_content: 'Internal root for visibility test',
+      is_internal: true,
+      is_resolution: false,
+    });
+
+    const roots = await knex('comments')
+      .select('comment_id', 'thread_id')
+      .where({ tenant: context.tenant })
+      .whereIn('comment_id', [clientRootId, internalRootId]);
+    const threadIds = roots.map((root) => root.thread_id);
+
+    try {
+      await expect(Comment.insert(knex, context.tenant, {
+        ticket_id: context.ticket_id,
+        user_id: context.user_id,
+        author_type: 'internal',
+        note: 'Invalid internal reply on client thread',
+        markdown_content: 'Invalid internal reply on client thread',
+        is_internal: true,
+        is_resolution: false,
+        parent_comment_id: clientRootId,
+      })).rejects.toThrow('Reply visibility must match the thread root visibility');
+
+      await expect(Comment.insert(knex, context.tenant, {
+        ticket_id: context.ticket_id,
+        user_id: context.user_id,
+        author_type: 'internal',
+        note: 'Invalid client-visible reply on internal thread',
+        markdown_content: 'Invalid client-visible reply on internal thread',
+        is_internal: false,
+        is_resolution: false,
+        parent_comment_id: internalRootId,
+      })).rejects.toThrow('Reply visibility must match the thread root visibility');
+    } finally {
+      await knex('comments').where({ tenant: context.tenant }).whereIn('parent_comment_id', [clientRootId, internalRootId]).delete();
+      await knex('comments').where({ tenant: context.tenant }).whereIn('comment_id', [clientRootId, internalRootId]).delete();
+      if (threadIds.length > 0) {
+        await knex('comment_threads').where({ tenant: context.tenant }).whereIn('thread_id', threadIds).delete();
+      }
+    }
+  });
 });
