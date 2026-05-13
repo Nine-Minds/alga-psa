@@ -21,6 +21,7 @@ Working notes for implementing nested/threaded comment responses on tickets and 
 
 ## Discoveries / Constraints
 
+- (2026-05-13) **F002 indexes.** Added `20260513100500_add_comment_threads_indexes.cjs` with `comment_threads_ticket_idx`, `comment_threads_task_idx`, and partial `comment_threads_email_msgid_idx`. The list indexes include `last_activity_at DESC` because thread ordering is by thread activity, not individual comment chronology.
 - (2026-05-13) **No existing threading columns.** `comments` and `project_task_comments` are flat today; no `parent_id`, `reply_to_id`, or `thread_id`. Confirmed by reading `packages/types/src/interfaces/comment.interface.ts` (line 38).
 - (2026-05-13) **Separate tables.** Tickets use `comments`; project tasks use `project_task_comments` (migration `20251118140000_create_project_task_comments.cjs`). No sharing — keep `comment_threads` polymorphic across both.
 - (2026-05-13) **Today the ticket IS the email thread.** `tickets.email_metadata` (jsonb) stores `messageId`, `threadId`, `inReplyTo`, `references` for inbound matching. All inbound emails for a ticket collapse to flat comments. This is what the thread-as-entity refactor unblocks.
