@@ -186,4 +186,99 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
     expect(commentsQueryCount).toBe(2);
   });
 
+  it('T034: In-Reply-To resolves outbound message id to comment thread', async () => {
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: 'Header reply body',
+      sanitizedHtml: undefined,
+      confidence: 0.95,
+      strategy: 'plain',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: {},
+    });
+
+    let commentsQueryCount = 0;
+    withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
+      const trx = vi.fn((table: string) => {
+        if (table === 'tickets as t' || table === 'comments as c' || table === 'tickets') {
+          return makeQueryBuilder(undefined);
+        }
+
+        if (table === 'email_sending_logs') {
+          const builder: any = {
+            select: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            whereNotNull: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            first: vi.fn().mockResolvedValue({ threadId: 'thread-789' }),
+          };
+          return builder;
+        }
+
+        if (table === 'comment_threads') {
+          const builder: any = {
+            select: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            first: vi.fn().mockResolvedValue({
+              ticketId: 'ticket-thread-789',
+              threadId: 'thread-789',
+            }),
+          };
+          return builder;
+        }
+
+        if (table === 'comments') {
+          commentsQueryCount += 1;
+          const builder: any = {
+            select: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            first: vi.fn().mockResolvedValue({ parentCommentId: 'latest-comment-789' }),
+          };
+          return builder;
+        }
+
+        throw new Error(`Unexpected table in unit test: ${table}`);
+      });
+
+      return callback(trx);
+    });
+
+    const { processInboundEmailInApp } = await import(
+      '@alga-psa/shared/services/email/processInboundEmailInApp'
+    );
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        id: 'email-in-reply-to-1',
+        inReplyTo: '<outbound-789@example.test>',
+      }),
+    });
+
+    expect(result).toMatchObject({
+      outcome: 'replied',
+      matchedBy: 'thread_headers',
+      ticketId: 'ticket-thread-789',
+      commentId: 'comment-1',
+    });
+    expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
+    expect(createTicketFromEmailMock).not.toHaveBeenCalled();
+    expect(findContactByEmailMock).toHaveBeenCalledWith('client@example.com', 'tenant-1', {
+      ticketId: 'ticket-thread-789',
+    });
+    expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ticket_id: 'ticket-thread-789',
+        parent_comment_id: 'latest-comment-789',
+        inboundReplyEvent: expect.objectContaining({
+          matchedBy: 'thread_headers',
+        }),
+      }),
+      'tenant-1'
+    );
+    expect(commentsQueryCount).toBe(1);
+  });
+
 });
