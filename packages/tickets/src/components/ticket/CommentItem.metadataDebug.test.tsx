@@ -123,6 +123,50 @@ describe('CommentItem metadata debug control', () => {
     expect(screen.queryByRole('button', { name: 'Reply to comment' })).not.toBeInTheDocument();
   });
 
+  it('T069: saves a legacy edited comment without threading fields while model advances updated_at', async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    const legacyComment = buildComment({
+      thread_id: undefined,
+      parent_comment_id: undefined,
+      updated_at: undefined,
+    });
+
+    render(
+      <CommentItem
+        conversation={legacyComment}
+        currentUserId="user-1"
+        isEditing={true}
+        currentComment={legacyComment}
+        ticketId="t1"
+        userMap={userMap}
+        contactMap={{}}
+        onContentChange={() => {}}
+        onSave={onSave}
+        onClose={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onReply={() => {}}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
+      note: expect.any(String),
+      is_internal: false,
+      is_resolution: false,
+    }));
+    expect(onSave.mock.calls[0][0]).not.toHaveProperty('thread_id');
+    expect(onSave.mock.calls[0][0]).not.toHaveProperty('parent_comment_id');
+
+    const modelSource = fs.readFileSync(
+      path.resolve(__dirname, '../../models/comment.ts'),
+      'utf8'
+    );
+    expect(modelSource).toContain('updated_at: new Date().toISOString()');
+  });
+
   it('hides the metadata control without Admin Settings access or when metadata is empty', () => {
     const { rerender } = render(
       <CommentItem
