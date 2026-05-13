@@ -38,10 +38,33 @@ import { deleteTeamsMeeting } from '@alga-psa/ee-microsoft-teams/lib/meetings/de
 import { getTeamsMeetingCapability } from '@alga-psa/ee-microsoft-teams/lib/actions/meetings/meetingCapabilityActions';
 import { resolveTeamsMeetingService } from '@alga-psa/scheduling/lib/teamsMeetingService';
 
-function buildTeamsIntegrationKnex(row: Record<string, unknown> | undefined | null) {
-  const first = vi.fn().mockResolvedValue(row ?? undefined);
-  const where = vi.fn(() => ({ first }));
-  const knex = vi.fn(() => ({ where }));
+function buildTeamsIntegrationKnex(
+  row: Record<string, unknown> | undefined | null,
+  options: { hasTeamsAddOn?: boolean } = {}
+) {
+  const hasTeamsAddOn = options.hasTeamsAddOn ?? true;
+  const first = vi.fn(async function first(this: { table?: string; filters?: Record<string, unknown>[] }) {
+    if (this?.table === 'tenant_addons') {
+      return hasTeamsAddOn ? { addon_key: 'teams' } : undefined;
+    }
+
+    return row ?? undefined;
+  });
+  const where = vi.fn(function where(this: { table?: string; filters?: Record<string, unknown>[] }, conditions: Record<string, unknown>) {
+    const query = {
+      table: this?.table,
+      filters: [...(this?.filters ?? []), conditions],
+      where,
+      andWhere(callback: (builder: any) => void) {
+        callback({ whereNull: () => ({ orWhere: () => undefined }) });
+        return query;
+      },
+      first,
+    };
+    return query;
+  });
+  const knex: any = vi.fn((table: string) => ({ table, filters: [], where }));
+  knex.fn = { now: vi.fn(() => 'now()') };
   return { knex, where, first };
 }
 
@@ -121,6 +144,26 @@ describe('Teams meeting helpers', () => {
           status: 201,
         })
       );
+    });
+
+    it('returns null without calling Graph when the Teams add-on is inactive', async () => {
+      const db = buildTeamsIntegrationKnex({
+        tenant: 'tenant-1',
+        install_status: 'active',
+        selected_profile_id: 'profile-1',
+        default_meeting_organizer_upn: 'organizer@example.com',
+      }, { hasTeamsAddOn: false });
+      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
+
+      await expect(createTeamsMeeting({
+        tenantId: 'tenant-1',
+        subject: 'Virtual consultation',
+        startDateTime: '2026-04-24T14:00:00.000Z',
+        endDateTime: '2026-04-24T14:30:00.000Z',
+      })).resolves.toBeNull();
+
+      expect(fetchMicrosoftGraphAppTokenMock).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('returns null and logs a warning when Graph responds 403', async () => {
@@ -499,6 +542,21 @@ describe('Teams meeting helpers', () => {
   });
 
   describe('getTeamsMeetingCapability', () => {
+    it('returns addon_required when the Teams add-on is inactive', async () => {
+      const db = buildTeamsIntegrationKnex({
+        tenant: 'tenant-1',
+        install_status: 'active',
+        selected_profile_id: 'profile-1',
+        default_meeting_organizer_upn: 'organizer@example.com',
+      }, { hasTeamsAddOn: false });
+      createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });
+
+      await expect(getTeamsMeetingCapability('tenant-1')).resolves.toEqual({
+        available: false,
+        reason: 'addon_required',
+      });
+    });
+
     it('returns not_configured when no teams integration row exists', async () => {
       const db = buildTeamsIntegrationKnex(undefined);
       createTenantKnexMock.mockResolvedValue({ knex: db.knex, tenant: 'tenant-1' });

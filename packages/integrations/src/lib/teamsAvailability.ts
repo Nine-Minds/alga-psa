@@ -1,6 +1,9 @@
+import { ADD_ONS } from '@alga-psa/types';
+
 export type TeamsAvailabilityDisabledReason =
   | 'ce_unavailable'
-  | 'tenant_not_configured';
+  | 'tenant_not_configured'
+  | 'addon_required';
 
 export type TeamsAvailability =
   | {
@@ -30,6 +33,7 @@ export interface GetTeamsAvailabilityInput {
 export const TEAMS_AVAILABILITY_MESSAGES: Record<TeamsAvailabilityDisabledReason, string> = {
   ce_unavailable: 'Microsoft Teams integration is only available in Enterprise Edition.',
   tenant_not_configured: 'Microsoft Teams integration requires tenant context.',
+  addon_required: 'Microsoft Teams integration requires the Teams add-on.',
 };
 
 export function isTeamsEnterpriseEdition(env: NodeJS.ProcessEnv = process.env): boolean {
@@ -63,20 +67,29 @@ export function resolveTeamsAvailability(input: ResolveTeamsAvailabilityInput = 
   };
 }
 
+async function tenantHasTeamsAddOn(tenantId: string): Promise<boolean> {
+  const { createTenantKnex } = await import('@alga-psa/db');
+  const { knex } = await createTenantKnex(tenantId);
+  const row = await knex('tenant_addons')
+    .where({ tenant: tenantId, addon_key: ADD_ONS.TEAMS })
+    .andWhere((builder: any) => {
+      builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
+    })
+    .first('addon_key');
+
+  return Boolean(row);
+}
+
 export async function getTeamsAvailability(input: GetTeamsAvailabilityInput = {}): Promise<TeamsAvailability> {
-  const enterpriseEnabled = input.isEnterpriseEdition ?? isTeamsEnterpriseEdition();
+  const baseAvailability = resolveTeamsAvailability(input);
+  if (baseAvailability.enabled === false) {
+    return baseAvailability;
+  }
+
   const tenantId = (input.tenantId || '').trim();
-
-  if (!enterpriseEnabled) {
-    return disabledAvailability('ce_unavailable');
+  if (tenantId && !(await tenantHasTeamsAddOn(tenantId))) {
+    return disabledAvailability('addon_required');
   }
 
-  if (input.requireTenantContext !== false && !tenantId) {
-    return disabledAvailability('tenant_not_configured');
-  }
-
-  return {
-    enabled: true,
-    reason: 'enabled',
-  };
+  return baseAvailability;
 }

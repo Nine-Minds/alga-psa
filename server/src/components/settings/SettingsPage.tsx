@@ -66,7 +66,7 @@ import { ProjectSettings } from '@alga-psa/projects/components';
 
 import { SecretsManagement } from './secrets';
 import { useTier, useTierFeature } from '@/context/TierContext';
-import { TIER_FEATURES, FEATURE_MINIMUM_TIER } from '@alga-psa/types';
+import { ADD_ONS, TIER_FEATURES, FEATURE_MINIMUM_TIER } from '@alga-psa/types';
 import { useProduct } from '@/context/ProductContext';
 import { getAllowedSettingsTabIds } from '@/lib/settingsProductTabs';
 
@@ -99,10 +99,10 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-  const canUseEntraSync = useTierFeature(TIER_FEATURES.ENTRA_SYNC);
   const canUseCipp = useTierFeature(TIER_FEATURES.CIPP);
-  const canUseTeams = useTierFeature(TIER_FEATURES.TEAMS_INTEGRATION);
-  const { hasFeature } = useTier();
+  const { hasFeature, hasAddOn } = useTier();
+  const canUseEntraSync = hasAddOn(ADD_ONS.ENTERPRISE);
+  const canUseTeams = hasAddOn(ADD_ONS.TEAMS);
   const { productCode } = useProduct();
   const isAlgaDesk = productCode === 'algadesk';
   const allowedTabIds = useMemo(() => getAllowedSettingsTabIds(productCode), [productCode]);

@@ -4,7 +4,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
-import { getTeamsAvailability } from '../../lib/teamsAvailability';
+import { getTeamsAvailability, resolveTeamsAvailability } from '../../lib/teamsAvailability';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
 import type { TeamsAppPackageStatusResponse } from './teamsContracts';
 import type { TeamsInstallStatus } from './teamsShared';
@@ -221,8 +221,12 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
           {
             scopes: ['personal'],
             commands: [
-              { title: 'my work', description: 'Open your Alga PSA work list in Teams.' },
-              { title: 'ticket search', description: 'Search Alga PSA tickets from Teams.' },
+              { title: 'my tickets', description: 'Show the technician work queue.' },
+              { title: 'ticket <id>', description: 'Open a specific ticket summary.' },
+              { title: 'assign ticket', description: 'Assign a ticket from Teams.' },
+              { title: 'add note', description: 'Append an internal note.' },
+              { title: 'reply to contact', description: 'Send a customer-facing reply.' },
+              { title: 'log time', description: 'Create a time entry.' },
             ],
           },
         ],
@@ -233,41 +237,57 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
         botId: profile.client_id,
         commands: [
           {
-            id: 'searchTickets',
+            id: 'searchRecords',
             type: 'query',
-            title: 'Search tickets',
-            description: 'Find tickets and work items from Alga PSA',
+            title: 'Search PSA records',
+            description: 'Find tickets, tasks, contacts, and approvals.',
             context: ['compose', 'commandBox'],
             parameters: [
               {
                 name: 'query',
-                title: 'Search',
-                description: 'Ticket number, requester, or summary',
+                title: 'Search query',
+                description: 'Search for PSA records',
                 inputType: 'text',
               },
             ],
+          },
+          {
+            id: 'createTicketFromMessage',
+            type: 'action',
+            title: 'Create ticket from message',
+            description: 'Create a PSA ticket from the selected Teams message.',
+            context: ['message'],
+            fetchTask: true,
+          },
+          {
+            id: 'updateFromMessage',
+            type: 'action',
+            title: 'Update PSA record from message',
+            description: 'Append the selected Teams message to an existing PSA record.',
+            context: ['message'],
+            fetchTask: true,
           },
         ],
       },
     ],
     activities: {
       activityTypes: [
-        {
-          type: 'ticketAssigned',
-          description: 'Ticket assigned',
-          templateText: '{actor} assigned ticket {ticketNumber} to you.',
-        },
+        { type: 'assignmentCreated', description: 'Work assignment notification', templateText: '{actor} assigned {item}' },
+        { type: 'customerReplyReceived', description: 'Customer reply notification', templateText: '{item} received a customer reply' },
+        { type: 'approvalRequested', description: 'Approval request notification', templateText: '{actor} requested approval for {item}' },
+        { type: 'workEscalated', description: 'Escalation notification', templateText: '{item} was escalated' },
+        { type: 'slaRiskDetected', description: 'SLA risk notification', templateText: '{item} is at SLA risk' },
       ],
     },
     authorization: {
       permissions: {
         resourceSpecific: [
-          { type: 'Application', name: 'ChannelMessage.Read.Group' },
+          { type: 'Application', name: 'TeamsActivity.Send.User' },
         ],
       },
     },
     permissions: ['identity', 'messageTeamMembers'],
-    validDomains: [host],
+    validDomains: [host, 'token.botframework.com'],
     webApplicationInfo: {
       id: profile.client_id,
       resource: appIdUri,
@@ -275,11 +295,11 @@ function buildTeamsAppManifest(baseUrl: string, tenant: string, profile: Microso
   };
 }
 
-function buildPersistedPackageMetadata(baseUrl: string, manifest: TeamsAppManifest): PersistedTeamsPackageMetadata {
+function buildPersistedPackageMetadata(baseUrl: string, tenant: string, manifest: TeamsAppManifest): PersistedTeamsPackageMetadata {
   return {
     manifestVersion: manifest.manifestVersion,
     packageVersion: manifest.version,
-    fileName: `alga-psa-teams-${manifest.version}.zip`,
+    fileName: `alga-psa-teams-${tenant}.zip`,
     baseUrl,
     validDomains: manifest.validDomains,
     webApplicationInfo: manifest.webApplicationInfo,
@@ -330,15 +350,27 @@ async function getTeamsAppPackageStatusImpl(
     if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
     if (!(await canManageTeamsSettings(user))) return { success: false, error: 'Forbidden' };
 
+    const availability = await getTeamsAvailability({
+      tenantId: tenant,
+      userId: (user as any)?.user_id,
+    });
+    if (availability.enabled === false) {
+      return { success: false, error: availability.message };
+    }
+
     const { knex } = await createTenantKnex();
     const integration = await getTeamsIntegrationRow(knex, tenant);
-    if (!integration?.selected_profile_id) {
-      return { success: false, error: 'Select a Microsoft profile for Teams before generating the package' };
+    if (!integration) {
+      return { success: false, error: 'Teams is not configured for this tenant' };
+    }
+
+    if (!integration.selected_profile_id) {
+      return { success: false, error: 'Select a Microsoft profile before generating a Teams package' };
     }
 
     const profile = await getMicrosoftProfileRow(knex, tenant, integration.selected_profile_id);
     if (!profile || profile.is_archived) {
-      return { success: false, error: 'Selected Microsoft profile is unavailable' };
+      return { success: false, error: 'Selected Microsoft profile is unavailable for Teams package generation' };
     }
 
     const readiness = await getMicrosoftProfileReadiness(tenant, {
@@ -353,14 +385,14 @@ async function getTeamsAppPackageStatusImpl(
 
     const baseUrl = await getDeploymentBaseUrl();
     const manifest = buildTeamsAppManifest(baseUrl, tenant, profile);
-    const packageMetadata = buildPersistedPackageMetadata(baseUrl, manifest);
+    const packageMetadata = buildPersistedPackageMetadata(baseUrl, tenant, manifest);
 
     await knex('teams_integrations')
       .where({ tenant })
       .update({
         app_id: profile.client_id,
         bot_id: profile.client_id,
-        package_metadata: JSON.stringify(packageMetadata),
+        package_metadata: packageMetadata,
         updated_by: (user as any)?.user_id || null,
         updated_at: new Date(),
       });
@@ -402,10 +434,7 @@ export const getTeamsAppPackageStatus = withAuth(async (
   user,
   { tenant }
 ): Promise<TeamsAppPackageStatusResponse> => {
-  const availability = await getTeamsAvailability({
-    tenantId: tenant,
-    userId: (user as any)?.user_id,
-  });
+  const availability = resolveTeamsAvailability({ tenantId: tenant });
   if (availability.enabled === false) {
     return { success: false, error: availability.message };
   }

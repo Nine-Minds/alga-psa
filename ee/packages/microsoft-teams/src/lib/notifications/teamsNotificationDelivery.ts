@@ -2,6 +2,7 @@ import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex } from '@alga-psa/db';
 import { getSSORegistry } from '@alga-psa/auth';
+import { ADD_ONS } from '@alga-psa/types';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildNotificationDeliveredPayload,
@@ -190,6 +191,16 @@ async function getTeamsIntegrationRow(knex: any, tenant: string): Promise<TeamsI
   return row || undefined;
 }
 
+async function tenantHasTeamsAddOn(knex: any, tenant: string): Promise<boolean> {
+  const row = await knex('tenant_addons')
+    .where({ tenant, addon_key: ADD_ONS.TEAMS })
+    .andWhere((builder: any) => {
+      builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
+    })
+    .first('addon_key');
+  return Boolean(row);
+}
+
 async function getMicrosoftProfileRow(
   knex: any,
   tenant: string,
@@ -251,6 +262,10 @@ export async function deliverTeamsNotificationImpl(
   }
 
   const { knex } = await createTenantKnex();
+  if (!(await tenantHasTeamsAddOn(knex, notification.tenant))) {
+    return { status: 'skipped', reason: 'addon_inactive' };
+  }
+
   const integration = await getTeamsIntegrationRow(knex, notification.tenant);
 
   if (!integration || normalizeString(integration.install_status) !== 'active') {
