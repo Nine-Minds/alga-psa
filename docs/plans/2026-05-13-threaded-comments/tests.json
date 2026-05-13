@@ -71,7 +71,7 @@
   { "id": "T070", "description": "Regression: reactions on comments continue to attach via commentReactionActions; reactions allowed on replies too", "implemented": true, "featureIds": ["F046"] },
   { "id": "T071", "description": "Performance: opening a ticket with 100 threads x 5 replies each renders within current SLA budget (existing perf test threshold)", "implemented": true, "featureIds": ["F002", "F039"] },
   { "id": "T072", "description": "DB integrity: deleting a ticket cascades to comment_threads via FK (and to comments via existing FK)", "implemented": true, "featureIds": ["F001"] },
-  { "id": "T073", "description": "DB integrity: deleting a project_task cascades to comment_threads via FK", "implemented": false, "featureIds": ["F001"] },
+  { "id": "T073", "description": "DB integrity: deleting a project_task cascades to comment_threads via FK", "implemented": true, "featureIds": ["F001"] },
   { "id": "T074", "description": "DB integrity: CHECK (exactly-one of ticket_id/project_task_id) prevents inserting a thread with both NULL or both set", "implemented": false, "featureIds": ["F001"] },
   { "id": "T075", "description": "Email idempotency: receiving the same provider message twice does not duplicate the comment (existing email_processed_messages dedupe still effective with new thread routing)", "implemented": false, "featureIds": ["F028", "F029", "F033"] },
   { "id": "T076", "description": "Email: outbound to multiple recipients issues distinct reply_tokens per recipient as today", "implemented": false, "featureIds": ["F037"] },

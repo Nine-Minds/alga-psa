@@ -450,4 +450,57 @@ describe('comment_threads migrations', () => {
       }
     });
   });
+
+  it('T073: deleting a project task cascades to comment_threads', async () => {
+    const context = await knex('project_phases as pp')
+      .join('project_status_mappings as psm', function() {
+        this.on('psm.tenant', 'pp.tenant').andOn('psm.project_id', 'pp.project_id');
+      })
+      .select('pp.tenant', 'pp.phase_id', 'psm.project_status_mapping_id')
+      .first();
+    expect(context).toBeTruthy();
+
+    const generated = await knex.raw(`
+      SELECT
+        gen_random_uuid() AS task_id,
+        gen_random_uuid() AS thread_id,
+        gen_random_uuid() AS root_comment_id
+    `);
+    const rollback = new Error('rollback T073');
+
+    await knex.transaction(async (trx) => {
+      await trx('project_tasks').insert({
+        tenant: context.tenant,
+        task_id: generated.rows[0].task_id,
+        phase_id: context.phase_id,
+        task_name: 'T073 cascade task',
+        project_status_mapping_id: context.project_status_mapping_id,
+        wbs_code: 'T073',
+      });
+
+      await trx('comment_threads').insert({
+        tenant: context.tenant,
+        thread_id: generated.rows[0].thread_id,
+        project_task_id: generated.rows[0].task_id,
+        root_comment_id: generated.rows[0].root_comment_id,
+        is_internal: false,
+        reply_count: 0,
+      });
+
+      await trx('project_tasks')
+        .where({ tenant: context.tenant, task_id: generated.rows[0].task_id })
+        .delete();
+
+      const thread = await trx('comment_threads')
+        .where({ tenant: context.tenant, thread_id: generated.rows[0].thread_id })
+        .first();
+      expect(thread).toBeUndefined();
+
+      throw rollback;
+    }).catch((error) => {
+      if (error !== rollback) {
+        throw error;
+      }
+    });
+  });
 });
