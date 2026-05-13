@@ -364,4 +364,32 @@ describe('comment_threads migrations', () => {
       note: 'Invalid task comment without a thread',
     })).rejects.toThrow(/null value in column "thread_id"/);
   });
+
+  it('T010: adds comment_thread_id linkage to email_sending_logs', async () => {
+    await expect(knex.schema.hasColumn('email_sending_logs', 'comment_thread_id')).resolves.toBe(true);
+
+    const tenantColumn = await knex.schema.hasColumn('email_sending_logs', 'tenant') ? 'tenant' : 'tenant_id';
+    const foreignKeys = await knex('pg_constraint as c')
+      .join('pg_class as rel', 'rel.oid', 'c.conrelid')
+      .select('c.conname', 'c.contype', knex.raw('pg_get_constraintdef(c.oid) as definition'))
+      .where('rel.relname', 'email_sending_logs')
+      .where('c.contype', 'f');
+
+    expect(foreignKeys.some((constraint) =>
+      constraint.conname === 'email_sending_logs_comment_thread_fk' &&
+      String(constraint.definition).includes(`FOREIGN KEY (${tenantColumn}, comment_thread_id)`) &&
+      String(constraint.definition).includes('REFERENCES comment_threads(tenant, thread_id)')
+    )).toBe(true);
+
+    const index = await knex('pg_indexes')
+      .select('indexdef')
+      .where({
+        schemaname: 'public',
+        tablename: 'email_sending_logs',
+        indexname: 'idx_email_sending_logs_tenant_comment_thread',
+      })
+      .first();
+    expect(String(index?.indexdef)).toContain(`(${tenantColumn}, comment_thread_id, created_at DESC)`);
+    expect(String(index?.indexdef)).toContain('WHERE (comment_thread_id IS NOT NULL)');
+  });
 });
