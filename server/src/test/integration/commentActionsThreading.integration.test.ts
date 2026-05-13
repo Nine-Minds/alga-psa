@@ -189,4 +189,82 @@ describe('ticket comment threading actions', () => {
       }
     }
   });
+
+  it('T029: client users cannot create internal replies', async () => {
+    const context = await knex('tickets')
+      .select('tenant', 'ticket_id')
+      .where({ tenant: dbRef.tenant })
+      .first();
+    expect(context).toBeTruthy();
+
+    let clientUser = await knex('users')
+      .select('user_id')
+      .where({ tenant: context.tenant, user_type: 'client' })
+      .first();
+
+    let createdClientUserId: string | undefined;
+    if (!clientUser) {
+      const [createdClientUser] = await knex('users')
+        .insert({
+          tenant: context.tenant,
+          username: `thread-client-${Date.now()}`,
+          hashed_password: 'not-used',
+          first_name: 'Thread',
+          last_name: 'Client',
+          email: `thread-client-${Date.now()}@example.test`,
+          user_type: 'client',
+        })
+        .returning('user_id');
+      createdClientUserId = createdClientUser.user_id;
+      clientUser = { user_id: createdClientUserId };
+    }
+
+    const rootCommentId = await createComment({
+      ticket_id: context.ticket_id,
+      user_id: userRef.user.user_id,
+      note: blockNote('Root ticket comment for client RBAC test'),
+      is_internal: false,
+      is_resolution: false,
+    });
+
+    let threadId: string | undefined;
+
+    try {
+      const root = await knex('comments')
+        .select('thread_id')
+        .where({ tenant: context.tenant, comment_id: rootCommentId })
+        .first();
+      threadId = root.thread_id;
+
+      await expect(createComment({
+        ticket_id: context.ticket_id,
+        user_id: clientUser.user_id,
+        note: blockNote('Invalid internal reply from client user'),
+        is_internal: true,
+        is_resolution: false,
+        parent_comment_id: rootCommentId,
+      })).rejects.toThrow('Failed to create comment');
+
+      const invalidReply = await knex('comments')
+        .select('comment_id')
+        .where({
+          tenant: context.tenant,
+          ticket_id: context.ticket_id,
+          user_id: clientUser.user_id,
+          parent_comment_id: rootCommentId,
+          is_internal: true,
+        })
+        .first();
+      expect(invalidReply).toBeUndefined();
+    } finally {
+      await knex('comments').where({ tenant: context.tenant, parent_comment_id: rootCommentId }).delete();
+      await knex('comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
+      if (threadId) {
+        await knex('comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
+      }
+      if (createdClientUserId) {
+        await knex('users').where({ tenant: context.tenant, user_id: createdClientUserId }).delete();
+      }
+    }
+  });
 });
