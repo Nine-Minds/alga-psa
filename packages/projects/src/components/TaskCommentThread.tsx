@@ -31,6 +31,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<{ user_id: string; name: string; avatarUrl: string | null } | null>(null);
   const [showEditor, setShowEditor] = useState(false);
+  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
   const [reverseOrder, setReverseOrder] = useState(false);
   const [reactionsMap, setReactionsMap] = useState<Record<string, IAggregatedReaction[]>>({});
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
@@ -84,6 +85,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   const handleCommentAdded = async () => {
     await loadComments();
     setShowEditor(false);
+    setReplyingToCommentId(null);
   };
 
   const handleCommentUpdated = async () => {
@@ -136,15 +138,29 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   }, [currentUser?.user_id, currentUser?.name]);
 
   const renderTaskComment = (comment: IProjectTaskCommentWithUser) => (
-    <TaskComment
-      comment={comment}
-      onUpdate={handleCommentUpdated}
-      onDelete={handleCommentDeleted}
-      currentUserId={currentUser?.user_id}
-      reactions={reactionsMap[comment.taskCommentId] || []}
-      onToggleReaction={handleToggleReaction}
-      userNames={reactionUserNames}
-    />
+    <>
+      <TaskComment
+        comment={comment}
+        onUpdate={handleCommentUpdated}
+        onDelete={handleCommentDeleted}
+        onReply={() => setReplyingToCommentId(comment.taskCommentId)}
+        currentUserId={currentUser?.user_id}
+        reactions={reactionsMap[comment.taskCommentId] || []}
+        onToggleReaction={handleToggleReaction}
+        userNames={reactionUserNames}
+      />
+      {replyingToCommentId === comment.taskCommentId && (
+        <div className="inline-reply-composer">
+          <TaskCommentForm
+            taskId={taskId}
+            projectId={projectId}
+            parentCommentId={comment.taskCommentId}
+            onCommentAdded={handleCommentAdded}
+            onCancel={() => setReplyingToCommentId(null)}
+          />
+        </div>
+      )}
+    </>
   );
 
   return (

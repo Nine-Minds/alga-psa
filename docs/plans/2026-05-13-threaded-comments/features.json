@@ -54,7 +54,7 @@
   { "id": "F053", "description": "Tickets UI: when drawer is open, replying inside drawer also calls createComment with parent_comment_id; on close, inline list reflects the new reply", "implemented": true, "prdRefs": ["Users and Primary Flows §3"] },
   { "id": "F054", "description": "Project Tasks UI: TaskComment — add Reply button on hover", "implemented": true, "prdRefs": ["Functional Requirements §12"] },
   { "id": "F055", "description": "Project Tasks UI: TaskCommentThread — replace flat list render with <CommentThreadList>", "implemented": true, "prdRefs": ["Functional Requirements §12"] },
-  { "id": "F056", "description": "Project Tasks UI: TaskCommentForm — pass parent_comment_id when invoked as reply; default inherits is_internal=false (tasks have no internal/client split)", "implemented": false, "prdRefs": ["Functional Requirements §12"] },
+  { "id": "F056", "description": "Project Tasks UI: TaskCommentForm — pass parent_comment_id when invoked as reply; default inherits is_internal=false (tasks have no internal/client split)", "implemented": true, "prdRefs": ["Functional Requirements §12"] },
   { "id": "F057", "description": "Project Tasks UI: drawer wiring identical to ticket flow", "implemented": false, "prdRefs": ["Users and Primary Flows §3"] },
   { "id": "F058", "description": "UI: soft-deleted comments render as '[deleted]' placeholder with reduced opacity; Reply button suppressed; preserves tree structure", "implemented": false, "prdRefs": ["Functional Requirements §6"] },
   { "id": "F059", "description": "UI: depth-4 cap in CSS — .depth-4 .thread-children { margin-left: 16px; } and no further indent past it; data still nests", "implemented": false, "prdRefs": ["Functional Requirements §13"] },
