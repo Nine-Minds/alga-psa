@@ -13,8 +13,12 @@ interface TokenRecord {
   tenant: string;
   token: string;
   ticket_id?: string | null;
+  project_id?: string | null;
   comment_id?: string | null;
   metadata?: string | null;
+  template?: string | null;
+  recipient_email?: string | null;
+  entity_type?: string | null;
 }
 
 interface TicketRecord {
@@ -930,6 +934,21 @@ vi.mock('@alga-psa/email', () => ({
     getInstance: () => ({ sendEmail: sendEmailMock }),
     getTenantEmailSettings: async () => null,
   },
+  StaticTemplateProcessor: class {
+    constructor(
+      private readonly subject: string,
+      private readonly html: string,
+      private readonly text: string,
+    ) {}
+
+    async process() {
+      return {
+        subject: this.subject,
+        html: this.html,
+        text: this.text,
+      };
+    }
+  },
 }));
 
 vi.mock('@alga-psa/event-bus', () => ({
@@ -1108,7 +1127,7 @@ describe('sendEventEmail reply markers', () => {
     expect(tokenStore.has(tokenMatch![1])).toBe(true);
   });
 
-  it('includes comment and thread markers for comment notifications', async () => {
+  it('T042: persists a reply token row scoped to the outbound comment and recipient', async () => {
     const templateName = `template-${randomUUID()}`;
     seedTemplate(templateName, 'Comment Added {{body}}', '<p>{{body}}</p>');
 
@@ -1139,7 +1158,14 @@ describe('sendEventEmail reply markers', () => {
     const processed = await templateProcessor.process({ templateData });
     expect(processed.html).toContain(`data-alga-comment-id="${commentId}`);
     expect(processed.text).toContain('ALGA-THREAD-ID:thread-123');
-    expect(tokenStore.get(conversationToken)?.comment_id).toBe(commentId);
+    expect(tokenStore.get(conversationToken)).toMatchObject({
+      tenant: tenantId,
+      token: conversationToken,
+      ticket_id: ticketId,
+      comment_id: commentId,
+      recipient_email: 'user@example.com',
+      entity_type: 'ticket',
+    });
   });
 });
 
