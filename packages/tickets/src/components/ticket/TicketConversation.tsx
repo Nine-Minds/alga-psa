@@ -66,6 +66,7 @@ interface TicketConversationProps {
   editorKey: number;
   onNewCommentContentChange: (content: PartialBlock[]) => void;
   onAddNewComment: (isInternal: boolean, isResolution: boolean, closeStatusId?: string | null) => Promise<boolean>;
+  onAddReplyComment?: (content: PartialBlock[], parentCommentId: string, isInternal: boolean) => Promise<boolean>;
   onTabChange: (tab: string) => void;
   onEdit: (conversation: IComment) => void;
   onSave: (updates: Partial<IComment>) => void;
@@ -111,6 +112,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   editorKey,
   onNewCommentContentChange,
   onAddNewComment,
+  onAddReplyComment,
   onTabChange,
   onEdit,
   onSave,
@@ -435,7 +437,12 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             showInternalToggle={!hideInternalTab}
             uploadFile={existingCommentUploadSession.uploadFile}
             searchMentions={searchUsersForMentions}
-            onSubmit={async () => {}}
+            onSubmit={async ({ content, parentCommentId, isInternal }) => {
+              const success = await onAddReplyComment?.(content, parentCommentId, isInternal);
+              if (success) {
+                setReplyingToCommentId(null);
+              }
+            }}
             onCancel={() => setReplyingToCommentId(null)}
           />
         )}
