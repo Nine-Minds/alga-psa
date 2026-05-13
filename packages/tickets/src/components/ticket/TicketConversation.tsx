@@ -11,6 +11,7 @@ import { IDocument } from '@alga-psa/types';
 import { PartialBlock } from '@blocknote/core';
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { CommentThreadList, HybridThreadNode } from '@alga-psa/ui/components';
 
 // Dynamic import for TextEditor
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
@@ -389,25 +390,18 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     }
   }, [currentUser?.id, currentUser?.name]);
 
-  const renderComments = (comments: IComment[]): React.JSX.Element[] => {
-    // Use the sorted comments based on the reverseOrder state
-    const commentsToRender = reverseOrder ? [...comments].reverse() : comments;
-    
-    return commentsToRender.map((conversation): React.JSX.Element => {
+  const renderCommentItem = (conversation: IComment): React.JSX.Element => {
       const override = overrides[conversation.comment_id || ''];
       const mergedConversation = override
         ? { ...conversation, ...(override.note ? { note: override.note } : {}), ...(override.updated_at ? { updated_at: override.updated_at } : {}) }
         : conversation;
-      const itemKey = `${conversation.comment_id}-${conversation.updated_at || ''}-${(conversation.note || '').length}`;
       if (process.env.NODE_ENV !== 'production') console.log('[TicketConversation][renderComments] Rendering', {
-        key: itemKey,
         comment_id: mergedConversation.comment_id,
         updated_at: mergedConversation.updated_at,
         noteLen: (mergedConversation.note || '').length,
       });
       return (
       <CommentItem
-        key={itemKey}
         id={`${id}-comment-${mergedConversation.comment_id}`}
         conversation={mergedConversation}
         currentUserId={currentUser?.id}
@@ -429,7 +423,28 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         canViewCommentMetadataDebug={canViewCommentMetadataDebug}
       />
     );
-    });
+  };
+
+  const renderComments = (comments: IComment[]): React.ReactNode => {
+    return (
+      <CommentThreadList<IComment>
+        comments={comments}
+        newestFirst={reverseOrder}
+        getCommentId={(comment) => comment.comment_id}
+        getThreadId={(comment) => comment.thread_id || comment.comment_id}
+        getParentCommentId={(comment) => comment.parent_comment_id}
+        getCreatedAt={(comment) => comment.created_at}
+        getUpdatedAt={(comment) => comment.updated_at}
+        renderThreadGroup={(group) => (
+          <HybridThreadNode<IComment>
+            group={group}
+            comment={group.root}
+            getCommentId={(comment) => comment.comment_id}
+            renderComment={(comment) => renderCommentItem(comment)}
+          />
+        )}
+      />
+    );
   };
 
   const renderExternalComments = (): React.JSX.Element | null => {
