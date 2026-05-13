@@ -73,7 +73,9 @@ async function assertOwnCommentOrInternalUser(
 export const createTaskComment = withAuth(async (
   user,
   { tenant },
-  comment: Omit<IProjectTaskComment, 'taskCommentId' | 'tenant' | 'createdAt' | 'authorType' | 'markdownContent' | 'userId'>
+  comment: Omit<IProjectTaskComment, 'taskCommentId' | 'tenant' | 'createdAt' | 'authorType' | 'markdownContent' | 'userId'> & {
+    parent_comment_id?: string | null;
+  }
 ): Promise<string> => {
   const { knex: db } = await createTenantKnex();
 
@@ -108,7 +110,7 @@ export const createTaskComment = withAuth(async (
     }
 
     const now = new Date().toISOString();
-    const parentCommentId = comment.parentCommentId || null;
+    const parentCommentId = comment.parentCommentId || comment.parent_comment_id || null;
     const isReply = Boolean(parentCommentId);
     let taskCommentId: string | undefined;
     let threadId: string | undefined;
