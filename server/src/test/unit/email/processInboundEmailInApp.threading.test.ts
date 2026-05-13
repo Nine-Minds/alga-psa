@@ -531,4 +531,84 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
     );
   });
 
+  it('T038: reply token wins over In-Reply-To when both are present', async () => {
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: 'Precedence reply body',
+      sanitizedHtml: undefined,
+      confidence: 0.95,
+      strategy: 'plain',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: { conversationToken: 'reply-token-precedence' },
+    });
+    findTicketByReplyTokenMock.mockResolvedValue({
+      ticketId: 'ticket-token-precedence',
+      commentId: 'root-comment-precedence',
+    });
+
+    let emailLogQueried = false;
+    let commentsQueryCount = 0;
+    withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
+      const trx = vi.fn((table: string) => {
+        if (table === 'tickets as t' || table === 'comments as c' || table === 'tickets') {
+          return makeQueryBuilder(undefined);
+        }
+
+        if (table === 'comments') {
+          commentsQueryCount += 1;
+          const firstResult = commentsQueryCount === 1
+            ? { ticketId: 'ticket-token-precedence', threadId: 'thread-token-precedence' }
+            : { parentCommentId: 'latest-token-precedence' };
+          const builder: any = {
+            select: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            first: vi.fn().mockResolvedValue(firstResult),
+          };
+          return builder;
+        }
+
+        if (table === 'email_sending_logs') {
+          emailLogQueried = true;
+          return makeQueryBuilder({ threadId: 'thread-header-that-should-not-win' });
+        }
+
+        throw new Error(`Unexpected table in unit test: ${table}`);
+      });
+
+      return callback(trx);
+    });
+
+    const { processInboundEmailInApp } = await import(
+      '@alga-psa/shared/services/email/processInboundEmailInApp'
+    );
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        id: 'email-precedence-1',
+        inReplyTo: '<header-message-that-should-not-win@example.test>',
+      }),
+    });
+
+    expect(result).toMatchObject({
+      outcome: 'replied',
+      matchedBy: 'reply_token',
+      ticketId: 'ticket-token-precedence',
+      commentId: 'comment-1',
+    });
+    expect(emailLogQueried).toBe(false);
+    expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ticket_id: 'ticket-token-precedence',
+        parent_comment_id: 'latest-token-precedence',
+        inboundReplyEvent: expect.objectContaining({
+          matchedBy: 'reply_token',
+        }),
+      }),
+      'tenant-1'
+    );
+  });
+
 });
