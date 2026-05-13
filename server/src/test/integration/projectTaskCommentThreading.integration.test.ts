@@ -409,4 +409,136 @@ describe('project task comment threading model', () => {
       }
     }
   });
+
+  it('T032: client users can delete own task replies but not another client reply', async () => {
+    const context = await knex('project_tasks as pt')
+      .join('project_phases as pp', function() {
+        this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
+      })
+      .select('pt.tenant', 'pt.task_id')
+      .where('pt.tenant', dbRef.tenant)
+      .first();
+    expect(context).toBeTruthy();
+
+    const ids = await knex.raw(`
+      SELECT
+        gen_random_uuid() AS thread_id,
+        gen_random_uuid() AS root_comment_id,
+        gen_random_uuid() AS own_reply_id,
+        gen_random_uuid() AS other_reply_id,
+        gen_random_uuid() AS client_user_id,
+        gen_random_uuid() AS other_client_user_id
+    `);
+    const generated = ids.rows[0];
+    const now = new Date().toISOString();
+    const originalUser = userRef.user;
+
+    try {
+      await knex('users').insert([
+        {
+          tenant: context.tenant,
+          user_id: generated.client_user_id,
+          username: `task-client-own-${Date.now()}`,
+          hashed_password: 'not-used',
+          first_name: 'Task',
+          last_name: 'Client Own',
+          email: `task-client-own-${Date.now()}@example.test`,
+          user_type: 'client',
+        },
+        {
+          tenant: context.tenant,
+          user_id: generated.other_client_user_id,
+          username: `task-client-other-${Date.now()}`,
+          hashed_password: 'not-used',
+          first_name: 'Task',
+          last_name: 'Client Other',
+          email: `task-client-other-${Date.now()}@example.test`,
+          user_type: 'client',
+        },
+      ]);
+
+      await knex('comment_threads').insert({
+        tenant: context.tenant,
+        thread_id: generated.thread_id,
+        ticket_id: null,
+        project_task_id: context.task_id,
+        root_comment_id: generated.root_comment_id,
+        is_internal: false,
+        reply_count: 2,
+        last_activity_at: now,
+        created_at: now,
+        created_by: originalUser?.user_id,
+      });
+
+      await knex('project_task_comments').insert([
+        {
+          tenant: context.tenant,
+          task_comment_id: generated.root_comment_id,
+          task_id: context.task_id,
+          thread_id: generated.thread_id,
+          parent_comment_id: null,
+          user_id: originalUser?.user_id,
+          author_type: 'internal',
+          note: blockNote('Task root for ownership delete test'),
+          markdown_content: 'Task root for ownership delete test',
+          created_at: now,
+        },
+        {
+          tenant: context.tenant,
+          task_comment_id: generated.own_reply_id,
+          task_id: context.task_id,
+          thread_id: generated.thread_id,
+          parent_comment_id: generated.root_comment_id,
+          user_id: generated.client_user_id,
+          author_type: 'internal',
+          note: blockNote('Own task reply for ownership delete test'),
+          markdown_content: 'Own task reply for ownership delete test',
+          created_at: now,
+        },
+        {
+          tenant: context.tenant,
+          task_comment_id: generated.other_reply_id,
+          task_id: context.task_id,
+          thread_id: generated.thread_id,
+          parent_comment_id: generated.root_comment_id,
+          user_id: generated.other_client_user_id,
+          author_type: 'internal',
+          note: blockNote('Other task reply for ownership delete test'),
+          markdown_content: 'Other task reply for ownership delete test',
+          created_at: now,
+        },
+      ]);
+
+      userRef.user = { user_id: generated.client_user_id, user_type: 'client' };
+      await deleteTaskComment(generated.own_reply_id);
+
+      const ownReply = await knex('project_task_comments')
+        .select('task_comment_id')
+        .where({ tenant: context.tenant, task_comment_id: generated.own_reply_id })
+        .first();
+      expect(ownReply).toBeUndefined();
+
+      await expect(deleteTaskComment(generated.other_reply_id))
+        .rejects.toThrow('You can only delete your own comments');
+
+      const otherReply = await knex('project_task_comments')
+        .select('task_comment_id')
+        .where({ tenant: context.tenant, task_comment_id: generated.other_reply_id })
+        .first();
+      expect(otherReply).toBeTruthy();
+    } finally {
+      userRef.user = originalUser;
+      await knex('project_task_comments')
+        .where({ tenant: context.tenant })
+        .whereIn('task_comment_id', [generated.own_reply_id, generated.other_reply_id, generated.root_comment_id])
+        .delete();
+      await knex('comment_threads')
+        .where({ tenant: context.tenant, thread_id: generated.thread_id })
+        .delete();
+      await knex('users')
+        .where({ tenant: context.tenant })
+        .whereIn('user_id', [generated.client_user_id, generated.other_client_user_id])
+        .delete();
+    }
+  });
 });
