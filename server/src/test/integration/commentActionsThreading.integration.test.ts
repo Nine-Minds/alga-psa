@@ -267,4 +267,157 @@ describe('ticket comment threading actions', () => {
       }
     }
   });
+
+  it('T078: client reply RBAC allows own client-visible thread and rejects internal or inaccessible threads', async () => {
+    const context = await knex('tickets as t')
+      .join('users as u', function() {
+        this.on('u.tenant', 't.tenant').andOnVal('u.user_type', 'internal');
+      })
+      .select(
+        't.tenant',
+        't.ticket_id',
+        't.client_id',
+        't.status_id',
+        't.priority_id',
+        't.board_id',
+        'u.user_id as internal_user_id'
+      )
+      .where({ 't.tenant': dbRef.tenant })
+      .whereNotNull('t.client_id')
+      .first();
+    expect(context).toBeTruthy();
+
+    const generated = await knex.raw(`
+      SELECT
+        gen_random_uuid() AS client_user_id,
+        gen_random_uuid() AS other_client_id,
+        gen_random_uuid() AS other_ticket_id
+    `);
+    const ids = generated.rows[0];
+    const originalUser = userRef.user;
+    let clientVisibleRootId: string | undefined;
+    let internalRootId: string | undefined;
+    let inaccessibleRootId: string | undefined;
+    let allowedReplyId: string | undefined;
+
+    await knex('clients').insert({
+      tenant: context.tenant,
+      client_id: ids.other_client_id,
+      client_name: `T078 Other Client ${Date.now()}`,
+      billing_cycle: 'monthly',
+    });
+
+    await knex('tickets').insert({
+      tenant: context.tenant,
+      ticket_id: ids.other_ticket_id,
+      ticket_number: `T078-${Date.now()}`,
+      title: 'T078 inaccessible client ticket',
+      status_id: context.status_id,
+      priority_id: context.priority_id,
+      board_id: context.board_id,
+      client_id: ids.other_client_id,
+      entered_at: new Date(),
+      updated_at: new Date(),
+    });
+
+    await knex('users').insert({
+      tenant: context.tenant,
+      user_id: ids.client_user_id,
+      username: `t078-client-${Date.now()}`,
+      hashed_password: 'not-used',
+      first_name: 'T078',
+      last_name: 'Client',
+      email: `t078-client-${Date.now()}@example.test`,
+      user_type: 'client',
+    });
+
+    try {
+      clientVisibleRootId = await createComment({
+        ticket_id: context.ticket_id,
+        user_id: context.internal_user_id,
+        note: blockNote('T078 client-visible root'),
+        is_internal: false,
+        is_resolution: false,
+      });
+
+      internalRootId = await createComment({
+        ticket_id: context.ticket_id,
+        user_id: context.internal_user_id,
+        note: blockNote('T078 internal root'),
+        is_internal: true,
+        is_resolution: false,
+      });
+
+      inaccessibleRootId = await createComment({
+        ticket_id: ids.other_ticket_id,
+        user_id: context.internal_user_id,
+        note: blockNote('T078 inaccessible root'),
+        is_internal: false,
+        is_resolution: false,
+      });
+
+      userRef.user = {
+        user_id: ids.client_user_id,
+        user_type: 'client',
+        first_name: 'T078',
+        last_name: 'Client',
+        clientId: context.client_id,
+      };
+
+      allowedReplyId = await createComment({
+        ticket_id: context.ticket_id,
+        user_id: ids.client_user_id,
+        note: blockNote('T078 allowed client reply'),
+        is_internal: false,
+        is_resolution: false,
+        parent_comment_id: clientVisibleRootId,
+      });
+
+      const allowedReply = await knex('comments')
+        .select('comment_id', 'author_type', 'is_internal', 'parent_comment_id')
+        .where({ tenant: context.tenant, comment_id: allowedReplyId })
+        .first();
+      expect(allowedReply).toMatchObject({
+        comment_id: allowedReplyId,
+        author_type: 'client',
+        is_internal: false,
+        parent_comment_id: clientVisibleRootId,
+      });
+
+      await expect(createComment({
+        ticket_id: context.ticket_id,
+        user_id: ids.client_user_id,
+        note: blockNote('T078 denied internal-thread reply'),
+        is_internal: false,
+        is_resolution: false,
+        parent_comment_id: internalRootId,
+      })).rejects.toThrow('Failed to create comment');
+
+      await expect(createComment({
+        ticket_id: ids.other_ticket_id,
+        user_id: ids.client_user_id,
+        note: blockNote('T078 denied inaccessible ticket reply'),
+        is_internal: false,
+        is_resolution: false,
+        parent_comment_id: inaccessibleRootId,
+      })).rejects.toThrow('Failed to create comment');
+    } finally {
+      userRef.user = originalUser;
+      await knex('comments')
+        .where({ tenant: context.tenant })
+        .whereIn('parent_comment_id', [clientVisibleRootId, internalRootId, inaccessibleRootId].filter(Boolean))
+        .delete();
+      await knex('comments')
+        .where({ tenant: context.tenant })
+        .whereIn('comment_id', [clientVisibleRootId, internalRootId, inaccessibleRootId].filter(Boolean))
+        .delete();
+      await knex('comment_threads')
+        .where({ tenant: context.tenant })
+        .whereIn('root_comment_id', [clientVisibleRootId, internalRootId, inaccessibleRootId].filter(Boolean))
+        .delete();
+      await knex('users').where({ tenant: context.tenant, user_id: ids.client_user_id }).delete();
+      await knex('tickets').where({ tenant: context.tenant, ticket_id: ids.other_ticket_id }).delete();
+      await knex('clients').where({ tenant: context.tenant, client_id: ids.other_client_id }).delete();
+    }
+  });
 });
