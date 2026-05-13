@@ -82,4 +82,36 @@ describe('comment_threads migrations', () => {
     );
     expect(emailIndex).toContain('WHERE (email_message_id IS NOT NULL)');
   });
+
+  it('T003: adds comments threading columns and tenant-scoped foreign keys', async () => {
+    for (const column of ['thread_id', 'parent_comment_id', 'deleted_at']) {
+      await expect(knex.schema.hasColumn('comments', column)).resolves.toBe(true);
+    }
+
+    const columns = await knex('information_schema.columns')
+      .select('column_name', 'is_nullable')
+      .where({ table_schema: 'public', table_name: 'comments' })
+      .whereIn('column_name', ['thread_id', 'parent_comment_id', 'deleted_at']);
+
+    const nullableByColumn = new Map(columns.map((column) => [column.column_name, column.is_nullable]));
+    expect(nullableByColumn.get('parent_comment_id')).toBe('YES');
+    expect(nullableByColumn.get('deleted_at')).toBe('YES');
+
+    const foreignKeys = await knex('pg_constraint as c')
+      .join('pg_class as rel', 'rel.oid', 'c.conrelid')
+      .select('c.conname', 'c.contype', knex.raw('pg_get_constraintdef(c.oid) as definition'))
+      .where('rel.relname', 'comments')
+      .where('c.contype', 'f');
+
+    expect(foreignKeys.some((constraint) =>
+      constraint.conname === 'comments_thread_fk' &&
+      String(constraint.definition).includes('FOREIGN KEY (tenant, thread_id)') &&
+      String(constraint.definition).includes('REFERENCES comment_threads(tenant, thread_id)')
+    )).toBe(true);
+    expect(foreignKeys.some((constraint) =>
+      constraint.conname === 'comments_parent_comment_fk' &&
+      String(constraint.definition).includes('FOREIGN KEY (tenant, parent_comment_id)') &&
+      String(constraint.definition).includes('REFERENCES comments(tenant, comment_id)')
+    )).toBe(true);
+  });
 });
