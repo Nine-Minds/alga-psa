@@ -28,6 +28,7 @@ import {
   Layers,
   LayoutDashboard,
   LayoutTemplate,
+  ListTodo,
   ListTree,
   Mail,
   MapPin,
@@ -43,11 +44,13 @@ import {
   Settings,
   Shield,
   SlidersHorizontal,
+  SquareDashedKanban,
   Timer,
   User,
   UserCog,
   Users,
-  Star
+  Star,
+  Ticket
 } from 'lucide-react';
 
 // Navigation modes for the unified sidebar
@@ -88,7 +91,7 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'Tickets',
         translationKey: 'nav.tickets',
-        icon: MessageSquare,
+        icon: Ticket,
         href: '/msp/tickets'
       },
       {
@@ -106,10 +109,10 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'Projects',
         translationKey: 'nav.projects',
-        icon: Layers,
+        icon: ListTodo,
         subItems: [
-          { name: 'All Projects', translationKey: 'nav.projectsAll', icon: Layers, href: '/msp/projects' },
-          { name: 'Templates', translationKey: 'nav.projectsTemplates', icon: FileText, href: '/msp/projects/templates' }
+          { name: 'All Projects', translationKey: 'nav.projectsAll', icon: ListTodo, href: '/msp/projects' },
+          { name: 'Templates', translationKey: 'nav.projectsTemplates', icon: SquareDashedKanban, href: '/msp/projects/templates' }
         ]
       },
       {
