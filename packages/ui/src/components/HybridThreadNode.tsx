@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { CommentThreadGroup } from './CommentThreadList';
+import './CommentThread.module.css';
 
 export interface HybridThreadNodeRenderContext {
   depth: number;
