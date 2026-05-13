@@ -417,4 +417,74 @@ describe('ticket comment threading model', () => {
       }
     }
   });
+
+  it('T021: deleting a root with children soft-deletes it and leaves children intact', async () => {
+    const context = await knex('tickets as t')
+      .join('users as u', 'u.tenant', 't.tenant')
+      .select('t.tenant', 't.ticket_id', 'u.user_id')
+      .first();
+    expect(context).toBeTruthy();
+
+    const rootCommentId = await Comment.insert(knex, context.tenant, {
+      ticket_id: context.ticket_id,
+      user_id: context.user_id,
+      author_type: 'internal',
+      note: 'Root comment for soft-delete test',
+      markdown_content: 'Root comment for soft-delete test',
+      is_internal: false,
+      is_resolution: false,
+    });
+
+    let threadId: string | undefined;
+    let replyCommentId: string | undefined;
+
+    try {
+      const root = await knex('comments')
+        .select('thread_id')
+        .where({ tenant: context.tenant, comment_id: rootCommentId })
+        .first();
+      threadId = root.thread_id;
+
+      replyCommentId = await Comment.insert(knex, context.tenant, {
+        ticket_id: context.ticket_id,
+        user_id: context.user_id,
+        author_type: 'internal',
+        note: 'Child reply that must survive root soft-delete',
+        markdown_content: 'Child reply that must survive root soft-delete',
+        is_internal: false,
+        is_resolution: false,
+        parent_comment_id: rootCommentId,
+      });
+
+      await Comment.delete(knex, context.tenant, rootCommentId);
+
+      const deletedRoot = await knex('comments')
+        .select('comment_id', 'note', 'markdown_content', 'deleted_at')
+        .where({ tenant: context.tenant, comment_id: rootCommentId })
+        .first();
+      expect(deletedRoot).toMatchObject({
+        comment_id: rootCommentId,
+        note: '[deleted]',
+        markdown_content: '[deleted]',
+      });
+      expect(deletedRoot.deleted_at).toBeTruthy();
+
+      const child = await knex('comments')
+        .select('comment_id', 'parent_comment_id')
+        .where({ tenant: context.tenant, comment_id: replyCommentId })
+        .first();
+      expect(child).toMatchObject({
+        comment_id: replyCommentId,
+        parent_comment_id: rootCommentId,
+      });
+    } finally {
+      if (replyCommentId) {
+        await knex('comments').where({ tenant: context.tenant, comment_id: replyCommentId }).delete();
+      }
+      await knex('comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
+      if (threadId) {
+        await knex('comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
+      }
+    }
+  });
 });
