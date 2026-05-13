@@ -784,7 +784,12 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         replyRoomName={(parentCommentId) => `ticket-${ticket.ticket_id}-reply-${parentCommentId}`}
         initialInternal={Boolean(openPanelComment?.is_internal ?? openPanelThreadGroup?.root.is_internal)}
         showInternalToggle={!hideInternalTab}
-        onSubmitReply={async () => {}}
+        onSubmitReply={async ({ content, parentCommentId, isInternal }) => {
+          const success = await onAddReplyComment?.(content, parentCommentId, isInternal);
+          if (success) {
+            setOpenPanelCommentId(null);
+          }
+        }}
       />
     </div>
   );
