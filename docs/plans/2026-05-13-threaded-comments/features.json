@@ -59,5 +59,6 @@
   { "id": "F058", "description": "UI: soft-deleted comments render as '[deleted]' placeholder with reduced opacity; Reply button suppressed; preserves tree structure", "implemented": true, "prdRefs": ["Functional Requirements §6"] },
   { "id": "F059", "description": "UI: depth-4 cap in CSS — .depth-4 .thread-children { margin-left: 16px; } and no further indent past it; data still nests", "implemented": true, "prdRefs": ["Functional Requirements §13"] },
   { "id": "F060", "description": "UI: subthread bars (depth >= 1) use dashed border + white background per design; indigo-violet count color", "implemented": true, "prdRefs": ["UX / UI Notes"] },
-  { "id": "F061", "description": "Persistence: ticket conversation 'oldest/newest first' preference applies at thread granularity (existing ticketConversationOrderPreference helper continues to work; just consumed at thread sort time)", "implemented": true, "prdRefs": ["UX / UI Notes"] }
+  { "id": "F061", "description": "Persistence: ticket conversation 'oldest/newest first' preference applies at thread granularity (existing ticketConversationOrderPreference helper continues to work; just consumed at thread sort time)", "implemented": true, "prdRefs": ["UX / UI Notes"] },
+  { "id": "F062", "description": "Seed compatibility: update dev comment seed to create comment_threads rows and set comments.thread_id after NOT NULL enforcement", "implemented": true, "prdRefs": ["Rollout / Migration"] }
 ]
