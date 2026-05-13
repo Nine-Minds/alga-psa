@@ -14,6 +14,22 @@ vi.mock('@alga-psa/ui/editor', () => ({
   TextEditor: () => <div data-testid="text-editor" />,
 }));
 
+vi.mock('@alga-psa/ui/components/ReactionDisplay', () => ({
+  ReactionDisplay: ({ reactions, onToggle }: any) => (
+    <div>
+      {reactions.map((reaction: any) => (
+        <button
+          key={reaction.emoji}
+          type="button"
+          onClick={() => onToggle(reaction.emoji)}
+        >
+          {reaction.emoji} {reaction.count} reaction
+        </button>
+      ))}
+    </div>
+  ),
+}));
+
 vi.mock('@alga-psa/user-composition/actions', () => ({
   searchUsersForMentions: vi.fn(),
 }));
@@ -165,6 +181,45 @@ describe('CommentItem metadata debug control', () => {
       'utf8'
     );
     expect(modelSource).toContain('updated_at: new Date().toISOString()');
+  });
+
+  it('T070: keeps reactions wired to reply comment ids', async () => {
+    const user = userEvent.setup();
+    const onToggleReaction = vi.fn();
+
+    render(
+      <CommentItem
+        conversation={buildComment({
+          comment_id: 'reply-1',
+          thread_id: 'thread-1',
+          parent_comment_id: 'root-1',
+        })}
+        currentUserId="user-1"
+        isEditing={false}
+        currentComment={null}
+        ticketId="t1"
+        userMap={userMap}
+        contactMap={{}}
+        onContentChange={() => {}}
+        onSave={() => {}}
+        onClose={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onReply={() => {}}
+        reactions={[{
+          emoji: '👍',
+          count: 1,
+          userIds: ['user-1'],
+          currentUserReacted: true,
+        }]}
+        onToggleReaction={onToggleReaction}
+        userNames={{ 'user-1': 'A User' }}
+      />
+    );
+
+    await user.click(screen.getByRole('button', { name: '👍 1 reaction' }));
+
+    expect(onToggleReaction).toHaveBeenCalledWith('reply-1', '👍');
   });
 
   it('hides the metadata control without Admin Settings access or when metadata is empty', () => {
