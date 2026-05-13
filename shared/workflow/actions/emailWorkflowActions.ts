@@ -1324,6 +1324,7 @@ export async function createCommentFromEmail(
   commentData: {
     ticket_id: string;
     content: string;
+    parent_comment_id?: string;
     format?: string;
     source?: string;
     author_type?: string;
@@ -1379,6 +1380,7 @@ export async function createCommentFromEmail(
       const result = await TicketModel.createComment({
         ticket_id: commentData.ticket_id,
         content,
+        parent_comment_id: commentData.parent_comment_id,
         is_internal: false,
         is_resolution: false,
         author_type: ticketModelAuthorType,

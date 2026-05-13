@@ -539,6 +539,38 @@ async function findExistingEmailTicket(params: {
   });
 }
 
+async function resolveReplyTargetFromComment(params: {
+  tenantId: string;
+  commentId: string;
+}): Promise<{ ticketId: string; threadId: string; parentCommentId: string } | null> {
+  const { withAdminTransaction } = await import('@alga-psa/db');
+  return withAdminTransaction(async (trx: any) => {
+    const source = await trx('comments')
+      .select('ticket_id as ticketId', 'thread_id as threadId')
+      .where({ tenant: params.tenantId, comment_id: params.commentId })
+      .first();
+
+    if (!source?.ticketId || !source?.threadId) {
+      return null;
+    }
+
+    const latest = await trx('comments')
+      .select('comment_id as parentCommentId')
+      .where({ tenant: params.tenantId, thread_id: source.threadId })
+      .orderBy('created_at', 'desc')
+      .orderBy('comment_id', 'desc')
+      .first();
+
+    return latest?.parentCommentId
+      ? {
+          ticketId: source.ticketId,
+          threadId: source.threadId,
+          parentCommentId: latest.parentCommentId,
+        }
+      : null;
+  });
+}
+
 function normalizeEmbeddedContentId(value: string | undefined | null): string {
   if (!value) return '';
   return String(value).trim().replace(/^cid:/i, '').replace(/^<|>$/g, '').toLowerCase();
@@ -887,6 +919,7 @@ export async function processInboundEmailInApp(
   const handleThreadedReply = async (params: {
     ticketId: string;
     matchedBy: 'reply_token' | 'thread_headers';
+    parentCommentId?: string | null;
   }): Promise<ProcessInboundEmailInAppResult | null> => {
     const existingCommentId = await findExistingEmailComment({
       tenantId,
@@ -1042,6 +1075,7 @@ export async function processInboundEmailInApp(
       {
         ticket_id: params.ticketId,
         content: serializedBlocks,
+        parent_comment_id: params.parentCommentId ?? undefined,
         source: 'email',
         author_type: matchedSenderIsInternalUser ? 'internal' : 'contact',
         author_id: matchedSenderContact?.user_id,
@@ -1116,16 +1150,26 @@ export async function processInboundEmailInApp(
     try {
       const match = await findTicketByReplyToken(String(token), tenantId);
       if (match?.ticketId) {
+        const replyTarget = match.commentId
+          ? await resolveReplyTargetFromComment({
+              tenantId,
+              commentId: match.commentId,
+            })
+          : null;
+        const ticketId = replyTarget?.ticketId ?? match.ticketId;
+
         if (diagnostics) {
           diagnostics.threading.tokenLookupMatched = true;
           diagnostics.threading.tokenLookupMissReason = null;
           diagnostics.threading.matchedBy = 'reply_token';
-          diagnostics.threading.matchedTicketId = match.ticketId;
+          diagnostics.threading.matchedTicketId = ticketId;
+          diagnostics.threading.matchedCommentId = match.commentId ?? null;
         }
 
         const handled = await handleThreadedReply({
-          ticketId: match.ticketId,
+          ticketId,
           matchedBy: 'reply_token',
+          parentCommentId: replyTarget?.parentCommentId ?? null,
         });
         if (handled) {
           return handled;
