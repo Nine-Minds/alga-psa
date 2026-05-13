@@ -32,6 +32,21 @@ const countPortalUsers = async (
   return Number(result?.count ?? 0);
 };
 
+const countContractLineServiceDeps = async (
+  trx: Knex | Knex.Transaction,
+  options: { tenant: string; entityId: string }
+): Promise<number> => {
+  const result = await trx('contract_line_services as cls')
+    .innerJoin('contract_lines as cl', function () {
+      this.on('cl.tenant', '=', 'cls.tenant').andOn('cl.contract_line_id', '=', 'cls.contract_line_id');
+    })
+    .where({ 'cls.tenant': options.tenant, 'cls.service_id': options.entityId })
+    .count<{ count: string }>('* as count')
+    .first();
+
+  return Number(result?.count ?? 0);
+};
+
 const countTimeEntryBilling = async (
   trx: Knex | Knex.Transaction,
   options: { tenant: string; entityId: string }
@@ -385,7 +400,9 @@ export const DELETION_CONFIGS: Record<string, EntityDeletionConfig> = {
         type: 'contract_line_service',
         table: 'contract_line_services',
         foreignKey: 'service_id',
-        label: 'contract line configuration'
+        countQuery: countContractLineServiceDeps,
+        label: 'contract line configuration',
+        viewUrlTemplate: '/msp/billing?tab=contract-lines'
       },
       { type: 'contract_template_line_default', table: 'contract_template_line_defaults', foreignKey: 'service_id', label: 'contract template default' },
       { type: 'contract_template_line_service', table: 'contract_template_line_services', foreignKey: 'service_id', label: 'contract template service' },
