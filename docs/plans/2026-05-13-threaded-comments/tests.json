@@ -58,7 +58,7 @@
   { "id": "T057", "description": "Playwright e2e (ticket): hover comment → Reply button appears → click → inline composer opens", "implemented": true, "featureIds": ["F046", "F051"] },
   { "id": "T058", "description": "Playwright e2e (ticket): submit inline reply → indented child renders under parent with thread bar showing 1 reply", "implemented": true, "featureIds": ["F052"] },
   { "id": "T059", "description": "Playwright e2e (ticket): collapse a thread → children hide → bar shows Expand + Open in drawer; click Expand to restore", "implemented": true, "featureIds": ["F041"] },
-  { "id": "T060", "description": "Playwright e2e (ticket): click Open in drawer → drawer opens with root + replies; close returns inline view unchanged", "implemented": false, "featureIds": ["F042", "F044"] },
+  { "id": "T060", "description": "Playwright e2e (ticket): click Open in drawer → drawer opens with root + replies; close returns inline view unchanged", "implemented": true, "featureIds": ["F042", "F044"] },
   { "id": "T061", "description": "Playwright e2e (ticket): reply inside drawer adds the comment; closing drawer shows the new reply inline", "implemented": false, "featureIds": ["F053"] },
   { "id": "T062", "description": "Playwright e2e (ticket): reply to a reply spawns a sub-thread bar with dashed border", "implemented": false, "featureIds": ["F040", "F060"] },
   { "id": "T063", "description": "Playwright e2e (ticket): tab switch to Internal hides client-rooted threads; counts update accordingly", "implemented": false, "featureIds": ["F048"] },

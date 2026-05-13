@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TicketConversation from './TicketConversation';
 
@@ -296,5 +296,29 @@ describe('TicketConversation threaded reply e2e contract', () => {
 
     expect(screen.getByTestId('existing-reply')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Collapse' })).toBeInTheDocument();
+  });
+
+  it('T060: opens the collapsed ticket thread in a drawer and closes back to inline state', async () => {
+    const user = userEvent.setup();
+
+    await act(async () => {
+      render(<TicketConversationWithExistingReply />);
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Collapse' }));
+    expect(screen.queryByTestId('existing-reply')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Open in drawer' }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByTestId('comment-1')).toBeInTheDocument();
+    expect(within(dialog).getByTestId('existing-reply')).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByTestId('comment-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('existing-reply')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument();
   });
 });
