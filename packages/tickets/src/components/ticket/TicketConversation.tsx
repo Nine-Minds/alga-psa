@@ -11,7 +11,7 @@ import { IDocument } from '@alga-psa/types';
 import { PartialBlock } from '@blocknote/core';
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { CommentThreadList, HybridThreadNode, buildCommentThreadGroups } from '@alga-psa/ui/components';
+import { CommentThreadDrawer, CommentThreadList, HybridThreadNode, buildCommentThreadGroups } from '@alga-psa/ui/components';
 
 // Dynamic import for TextEditor
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
@@ -144,6 +144,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [contactAvatarUrls, setContactAvatarUrls] = useState<Record<string, string | null>>({});
   const [reactionsMap, setReactionsMap] = useState<Record<string, IAggregatedReaction[]>>({});
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
+  const [openPanelCommentId, setOpenPanelCommentId] = useState<string | null>(null);
 
   const discardComposeEditor = React.useCallback(() => {
     onNewCommentContentChange(DEFAULT_BLOCK);
@@ -441,6 +442,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             comment={group.root}
             getCommentId={(comment) => comment.comment_id}
             renderComment={(comment) => renderCommentItem(comment)}
+            onOpenPanel={(commentId) => setOpenPanelCommentId(commentId)}
           />
         )}
       />
@@ -474,6 +476,14 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     (!hideInternalTab || !group.root.is_internal) &&
     group.comments.some((comment) => Boolean(comment.is_resolution))
   );
+  const openPanelThreadGroup = openPanelCommentId
+    ? threadGroups.find((group) =>
+      group.comments.some((comment) => comment.comment_id === openPanelCommentId)
+    ) ?? null
+    : null;
+  const openPanelComment = openPanelCommentId && openPanelThreadGroup
+    ? openPanelThreadGroup.comments.find((comment) => comment.comment_id === openPanelCommentId) ?? openPanelThreadGroup.root
+    : null;
 
   const renderExternalComments = (): React.JSX.Element | null => {
     if (!externalComments || externalComments.length === 0) {
@@ -738,6 +748,19 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         thirdButtonLabel={t('conversation.keepUploadedImages', 'Keep Images')}
         cancelLabel={t('common.continueEditing', 'Continue Editing')}
         isConfirming={composeUploadSession.isDeletingDraftImages}
+      />
+      <CommentThreadDrawer<IComment>
+        id={`${compId}-comment-thread-drawer`}
+        isOpen={Boolean(openPanelThreadGroup)}
+        onClose={() => setOpenPanelCommentId(null)}
+        group={openPanelThreadGroup}
+        getCommentId={(comment) => comment.comment_id}
+        renderComment={(comment) => renderCommentItem(comment)}
+        replyParentCommentId={openPanelComment?.comment_id ?? null}
+        replyRoomName={(parentCommentId) => `ticket-${ticket.ticket_id}-reply-${parentCommentId}`}
+        initialInternal={Boolean(openPanelComment?.is_internal ?? openPanelThreadGroup?.root.is_internal)}
+        showInternalToggle={!hideInternalTab}
+        onSubmitReply={async () => {}}
       />
     </div>
   );
