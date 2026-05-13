@@ -464,4 +464,71 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
     );
   });
 
+  it('T037: legacy ticket-level fallback creates a top-level thread reply', async () => {
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: 'Legacy fallback reply body',
+      sanitizedHtml: undefined,
+      confidence: 0.95,
+      strategy: 'plain',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: {},
+    });
+    findTicketByEmailThreadMock.mockResolvedValue({
+      ticketId: 'ticket-legacy-fallback-123',
+    });
+
+    withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
+      const trx = vi.fn((table: string) => {
+        if (table === 'tickets as t' || table === 'comments as c' || table === 'tickets') {
+          return makeQueryBuilder(undefined);
+        }
+
+        if (table === 'email_sending_logs' || table === 'comment_threads') {
+          const builder: any = {
+            select: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            whereNotNull: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            first: vi.fn().mockResolvedValue(undefined),
+          };
+          return builder;
+        }
+
+        throw new Error(`Unexpected table in unit test: ${table}`);
+      });
+
+      return callback(trx);
+    });
+
+    const { processInboundEmailInApp } = await import(
+      '@alga-psa/shared/services/email/processInboundEmailInApp'
+    );
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        id: 'email-legacy-fallback-1',
+        threadId: 'legacy-provider-thread-id',
+        inReplyTo: '<legacy-ticket-message@example.test>',
+        references: ['<legacy-ticket-message@example.test>'],
+      }),
+    });
+
+    expect(result).toMatchObject({
+      outcome: 'replied',
+      matchedBy: 'thread_headers',
+      ticketId: 'ticket-legacy-fallback-123',
+      commentId: 'comment-1',
+    });
+    expect(createTicketFromEmailMock).not.toHaveBeenCalled();
+    expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        parent_comment_id: expect.anything(),
+      }),
+      'tenant-1'
+    );
+  });
+
 });
