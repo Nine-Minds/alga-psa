@@ -99,6 +99,30 @@ describe('CommentItem metadata debug control', () => {
     expect(css).toContain('opacity: 1;');
   });
 
+  it('T054: renders a soft-deleted ticket comment as a placeholder without Reply', () => {
+    render(
+      <CommentItem
+        conversation={buildComment({ deleted_at: new Date().toISOString(), note: '[deleted]' })}
+        currentUserId="user-1"
+        isEditing={false}
+        currentComment={null}
+        ticketId="t1"
+        userMap={userMap}
+        contactMap={{}}
+        onContentChange={() => {}}
+        onSave={() => {}}
+        onClose={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onReply={() => {}}
+      />
+    );
+
+    const deletedPlaceholder = screen.getByText('[deleted]');
+    expect(deletedPlaceholder).toHaveClass('opacity-70');
+    expect(screen.queryByRole('button', { name: 'Reply to comment' })).not.toBeInTheDocument();
+  });
+
   it('hides the metadata control without Admin Settings access or when metadata is empty', () => {
     const { rerender } = render(
       <CommentItem
