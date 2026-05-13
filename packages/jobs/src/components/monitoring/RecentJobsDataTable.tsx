@@ -150,31 +150,6 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
       ),
     },
     {
-      title: t('recentTable.columns.runner', { defaultValue: 'Runner' }),
-      dataIndex: 'runner_type',
-      render: (runner: string, record: JobRecord) => (
-        <div className="flex flex-col items-start">
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-            runner === 'temporal' 
-              ? 'bg-purple-100 text-purple-700 border border-purple-200' 
-              : 'bg-blue-100 text-blue-700 border border-blue-200'
-          }`}>
-            {runner === 'temporal'
-              ? t('shared.runnerLabels.temporal', { defaultValue: 'Temporal' })
-              : t('shared.runnerLabels.pgboss', { defaultValue: 'PG Boss' })}
-          </span>
-          {record.external_id && (
-            <span className="text-[10px] text-[rgb(var(--color-text-400))] font-mono mt-0.5" title={record.external_id}>
-              {t('recentTable.externalId', {
-                defaultValue: 'ID: {{id}}...',
-                id: record.external_id.slice(0, 8),
-              })}
-            </span>
-          )}
-        </div>
-      ),
-    },
-    {
       title: t('recentTable.columns.status', { defaultValue: 'Status' }),
       dataIndex: 'status',
       render: (status: string) => <StatusBadge status={status} label={getStatusLabel(status)} />,
@@ -222,14 +197,6 @@ export default function RecentJobsDataTable({ initialData = [] }: RecentJobsData
       label: t('recentTable.print.columns.jobName', { defaultValue: 'Job Name' }),
       header: t('recentTable.print.columns.jobName', { defaultValue: 'Job Name' }),
       render: (job) => job.type,
-    },
-    {
-      key: 'runner',
-      label: t('recentTable.print.columns.runner', { defaultValue: 'Runner' }),
-      header: t('recentTable.print.columns.runner', { defaultValue: 'Runner' }),
-      render: (job) => job.runner_type === 'temporal'
-        ? t('shared.runnerLabels.temporal', { defaultValue: 'Temporal' })
-        : t('shared.runnerLabels.pgboss', { defaultValue: 'PG Boss' }),
     },
     {
       key: 'status',
