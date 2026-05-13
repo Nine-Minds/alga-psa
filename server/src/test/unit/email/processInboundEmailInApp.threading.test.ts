@@ -281,4 +281,107 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
     expect(commentsQueryCount).toBe(1);
   });
 
+  it('T035: References are walked from newest to oldest and first match wins', async () => {
+    parseEmailReplyBodyMock.mockResolvedValue({
+      sanitizedText: 'References reply body',
+      sanitizedHtml: undefined,
+      confidence: 0.95,
+      strategy: 'plain',
+      appliedHeuristics: [],
+      warnings: [],
+      tokens: {},
+    });
+
+    const rfcLookups: string[] = [];
+    withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
+      const trx = vi.fn((table: string) => {
+        if (table === 'tickets as t' || table === 'comments as c' || table === 'tickets') {
+          return makeQueryBuilder(undefined);
+        }
+
+        if (table === 'email_sending_logs') {
+          let rfcMessageId = '';
+          const builder: any = {
+            select: vi.fn().mockReturnThis(),
+            where: vi.fn((criteria: Record<string, unknown>) => {
+              rfcMessageId = String(criteria.rfc_message_id ?? '');
+              rfcLookups.push(rfcMessageId);
+              return builder;
+            }),
+            whereNotNull: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            first: vi.fn(async () =>
+              rfcMessageId === '<target-reference@example.test>'
+                ? { threadId: 'thread-ref-123' }
+                : undefined
+            ),
+          };
+          return builder;
+        }
+
+        if (table === 'comment_threads') {
+          const builder: any = {
+            select: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            first: vi.fn().mockResolvedValue({
+              ticketId: 'ticket-ref-123',
+              threadId: 'thread-ref-123',
+            }),
+          };
+          return builder;
+        }
+
+        if (table === 'comments') {
+          const builder: any = {
+            select: vi.fn().mockReturnThis(),
+            where: vi.fn().mockReturnThis(),
+            orderBy: vi.fn().mockReturnThis(),
+            first: vi.fn().mockResolvedValue({ parentCommentId: 'latest-comment-ref-123' }),
+          };
+          return builder;
+        }
+
+        throw new Error(`Unexpected table in unit test: ${table}`);
+      });
+
+      return callback(trx);
+    });
+
+    const { processInboundEmailInApp } = await import(
+      '@alga-psa/shared/services/email/processInboundEmailInApp'
+    );
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        id: 'email-references-1',
+        references: [
+          '<old-reference@example.test>',
+          '<target-reference@example.test>',
+          '<newer-unmatched-reference@example.test>',
+        ],
+      }),
+    });
+
+    expect(result).toMatchObject({
+      outcome: 'replied',
+      matchedBy: 'thread_headers',
+      ticketId: 'ticket-ref-123',
+      commentId: 'comment-1',
+    });
+    expect(rfcLookups).toEqual([
+      '<newer-unmatched-reference@example.test>',
+      '<target-reference@example.test>',
+    ]);
+    expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
+    expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ticket_id: 'ticket-ref-123',
+        parent_comment_id: 'latest-comment-ref-123',
+      }),
+      'tenant-1'
+    );
+  });
+
 });

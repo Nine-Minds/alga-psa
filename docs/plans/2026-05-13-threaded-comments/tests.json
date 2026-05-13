@@ -33,7 +33,7 @@
   { "id": "T032", "description": "Action: assertOwnCommentOrInternalUser allows client to delete own reply; rejects deleting another client's reply", "implemented": true, "featureIds": ["F027"] },
   { "id": "T033", "description": "Email inbound: reply token in body resolves to a comment_id; resulting comment lands in same thread with parent=latest comment in that thread", "implemented": true, "featureIds": ["F028", "F033"] },
   { "id": "T034", "description": "Email inbound: In-Reply-To matching email_sending_logs.rfc_message_id resolves to that comment's thread", "implemented": true, "featureIds": ["F029", "F033"] },
-  { "id": "T035", "description": "Email inbound: References[] chain walked end-to-start; first match wins; resolves to expected thread", "implemented": false, "featureIds": ["F030", "F033"] },
+  { "id": "T035", "description": "Email inbound: References[] chain walked end-to-start; first match wins; resolves to expected thread", "implemented": true, "featureIds": ["F030", "F033"] },
   { "id": "T036", "description": "Email inbound: provider thread id exact match on comment_threads.email_provider_thread_id resolves to that thread", "implemented": false, "featureIds": ["F031", "F033"] },
   { "id": "T037", "description": "Email inbound: when no resolution strategy matches but ticket matches (subject heuristic / email_metadata), a new top-level thread is created on that ticket", "implemented": false, "featureIds": ["F032"] },
   { "id": "T038", "description": "Email inbound: resolution precedence — reply token wins over In-Reply-To when both present", "implemented": false, "featureIds": ["F028", "F029"] },
