@@ -234,6 +234,8 @@ export const getTaskComments = withAuth(async (
   return comments.map((comment: any) => ({
     taskCommentId: comment.task_comment_id,
     taskId: comment.task_id,
+    threadId: comment.thread_id,
+    parentCommentId: comment.parent_comment_id,
     userId: comment.user_id,
     authorType: comment.author_type,
     note: comment.note,
@@ -241,6 +243,7 @@ export const getTaskComments = withAuth(async (
     createdAt: comment.created_at,
     updatedAt: comment.updated_at,
     editedAt: comment.edited_at,
+    deletedAt: comment.deleted_at,
     tenant: comment.tenant,
     firstName: comment.first_name,
     lastName: comment.last_name,
