@@ -90,12 +90,12 @@ export function ContentCard({
   if (collapsible && title) {
     return (
       <div id={id} className={`${styles['card']} p-6 space-y-4 ${className}`}>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <Button
             id={`${id || 'content-card'}-toggle`}
             variant="ghost"
             size="sm"
-            className="flex items-center gap-1 p-0 h-auto hover:bg-transparent"
+            className="flex items-center gap-1 p-0 h-auto min-w-0 hover:bg-transparent"
             onClick={() => setIsExpanded(!isExpanded)}
           >
             {isExpanded ? (
@@ -103,12 +103,12 @@ export function ContentCard({
             ) : (
               <ChevronRight className="w-4 h-4 text-gray-500 flex-shrink-0" />
             )}
-            <h2 className={`${styles['panel-header']} flex items-center`}>
-              {headerIcon && <span className="mr-2 inline-flex">{headerIcon}</span>}
-              {title}
+            <h2 className={`${styles['panel-header']} flex items-center min-w-0`}>
+              {headerIcon && <span className="mr-2 inline-flex flex-shrink-0">{headerIcon}</span>}
+              <span className="truncate">{title}</span>
             </h2>
             {!isExpanded && count != null && count > 0 && (
-              <span className="ml-2 text-xs bg-gray-100 text-gray-600 rounded-full px-2 py-0.5">
+              <span className="ml-2 text-xs bg-gray-100 text-gray-600 rounded-full px-2 py-0.5 flex-shrink-0">
                 {count}
               </span>
             )}
@@ -118,12 +118,13 @@ export function ContentCard({
               id={addButton.id}
               variant="outline"
               size="sm"
+              className="flex-shrink-0 whitespace-nowrap"
               onClick={() => {
                 addButton.onClick();
                 if (!isExpanded) setIsExpanded(true);
               }}
             >
-              <Plus className="w-4 h-4 mr-1" />
+              <Plus className="w-4 h-4 mr-1 flex-shrink-0" />
               {addButton.label || 'Add'}
             </Button>
           )}
