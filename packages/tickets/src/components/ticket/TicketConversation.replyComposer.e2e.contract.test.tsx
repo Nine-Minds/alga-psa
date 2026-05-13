@@ -271,6 +271,49 @@ function StatefulTicketConversationForDrawerReplies() {
   );
 }
 
+function StatefulTicketConversationForNestedReplies() {
+  const [conversations, setConversations] = React.useState([
+    ...defaultProps.conversations,
+    {
+      tenant: 'tenant-1',
+      comment_id: 'existing-reply',
+      thread_id: 'thread-1',
+      parent_comment_id: 'comment-1',
+      user_id: 'user-1',
+      author_type: 'internal',
+      note: NOTE,
+      is_internal: false,
+      is_resolution: false,
+      created_at: '2026-05-13T09:05:00.000Z',
+    } as any,
+  ]);
+
+  return (
+    <TicketConversation
+      {...defaultProps}
+      conversations={conversations}
+      onAddReplyComment={async (_content, parentCommentId, isInternal) => {
+        setConversations((current) => [
+          ...current,
+          {
+            tenant: 'tenant-1',
+            comment_id: 'nested-reply',
+            thread_id: 'thread-1',
+            parent_comment_id: parentCommentId,
+            user_id: 'current-user',
+            author_type: 'internal',
+            note: NOTE,
+            is_internal: isInternal,
+            is_resolution: false,
+            created_at: '2026-05-13T09:10:00.000Z',
+          } as any,
+        ]);
+        return true;
+      }}
+    />
+  );
+}
+
 describe('TicketConversation threaded reply e2e contract', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'IntersectionObserver', {
@@ -379,5 +422,21 @@ describe('TicketConversation threaded reply e2e contract', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(await screen.findByTestId('drawer-reply')).toBeInTheDocument();
     expect(screen.getByTestId('drawer-reply').closest('.thread-children')).toHaveClass('depth-1');
+  });
+
+  it('T062: replying to a reply renders a dashed sub-thread bar', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<StatefulTicketConversationForNestedReplies />);
+
+    await user.click(document.getElementById('reply-comment-existing-reply-button')!);
+    await user.click(screen.getByRole('button', { name: 'Reply' }));
+
+    expect(await screen.findByTestId('nested-reply')).toBeInTheDocument();
+
+    const subThreadBar = container.querySelector('.comment-thread-bar-subthread');
+    expect(subThreadBar).not.toBeNull();
+    expect(subThreadBar).toHaveClass('depth-1');
+    expect(subThreadBar).toHaveTextContent('1 reply');
+    expect(screen.getByTestId('nested-reply').closest('.thread-children-subthread')).not.toBeNull();
   });
 });
