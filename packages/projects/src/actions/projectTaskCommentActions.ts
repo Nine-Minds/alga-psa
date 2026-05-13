@@ -340,15 +340,44 @@ export const deleteTaskComment = withAuth(async (
 
     await assertOwnCommentOrInternalUser(trx, user, tenant, taskCommentId, existingComment.user_id, 'delete');
 
-    // Delete reactions before comment (CitusDB doesn't support ON DELETE CASCADE)
+    const child = await trx('project_task_comments')
+      .select('task_comment_id')
+      .where({ parent_comment_id: taskCommentId, tenant })
+      .first();
+
+    if (child) {
+      const now = new Date().toISOString();
+      await trx('project_task_comments')
+        .where({ task_comment_id: taskCommentId, tenant })
+        .update({
+          note: '[deleted]',
+          markdown_content: '[deleted]',
+          deleted_at: now,
+          updated_at: now,
+        });
+      return;
+    }
+
+    // Delete reactions before hard-deleting the comment (CitusDB doesn't support ON DELETE CASCADE)
     await trx('project_task_comment_reactions')
       .where({ task_comment_id: taskCommentId, tenant })
       .del();
 
-    // Hard delete
     await trx('project_task_comments')
       .where({ task_comment_id: taskCommentId, tenant })
       .del();
+
+    if (existingComment.parent_comment_id) {
+      await trx('comment_threads')
+        .where({ tenant, thread_id: existingComment.thread_id })
+        .update({
+          reply_count: trx.raw('GREATEST(reply_count - 1, 0)'),
+        });
+    } else {
+      await trx('comment_threads')
+        .where({ tenant, thread_id: existingComment.thread_id })
+        .del();
+    }
   });
 });
 
