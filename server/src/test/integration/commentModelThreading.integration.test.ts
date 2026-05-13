@@ -350,6 +350,84 @@ describe('ticket comment threading model', () => {
     }
   });
 
+  it('T077: concurrent replies on the same thread both increment reply_count', async () => {
+    const context = await knex('tickets as t')
+      .join('users as u', 'u.tenant', 't.tenant')
+      .select('t.tenant', 't.ticket_id', 'u.user_id')
+      .first();
+    expect(context).toBeTruthy();
+
+    const rootCommentId = await Comment.insert(knex, context.tenant, {
+      ticket_id: context.ticket_id,
+      user_id: context.user_id,
+      author_type: 'internal',
+      note: 'Root comment for concurrent reply counter test',
+      markdown_content: 'Root comment for concurrent reply counter test',
+      is_internal: false,
+      is_resolution: false,
+    });
+
+    let threadId: string | undefined;
+    let replyCommentIds: string[] = [];
+
+    try {
+      const root = await knex('comments')
+        .select('thread_id')
+        .where({ tenant: context.tenant, comment_id: rootCommentId })
+        .first();
+      threadId = root.thread_id;
+
+      replyCommentIds = await Promise.all([
+        Comment.insert(knex, context.tenant, {
+          ticket_id: context.ticket_id,
+          user_id: context.user_id,
+          author_type: 'internal',
+          note: 'Concurrent reply A',
+          markdown_content: 'Concurrent reply A',
+          is_internal: false,
+          is_resolution: false,
+          parent_comment_id: rootCommentId,
+        }),
+        Comment.insert(knex, context.tenant, {
+          ticket_id: context.ticket_id,
+          user_id: context.user_id,
+          author_type: 'internal',
+          note: 'Concurrent reply B',
+          markdown_content: 'Concurrent reply B',
+          is_internal: false,
+          is_resolution: false,
+          parent_comment_id: rootCommentId,
+        }),
+      ]);
+
+      const thread = await knex('comment_threads')
+        .select('reply_count')
+        .where({ tenant: context.tenant, thread_id: threadId })
+        .first();
+      expect(thread.reply_count).toBe(2);
+
+      const replies = await knex('comments')
+        .select('comment_id', 'thread_id', 'parent_comment_id')
+        .where({ tenant: context.tenant, parent_comment_id: rootCommentId })
+        .whereIn('comment_id', replyCommentIds);
+      expect(replies).toHaveLength(2);
+      for (const reply of replies) {
+        expect(reply).toMatchObject({
+          thread_id: threadId,
+          parent_comment_id: rootCommentId,
+        });
+      }
+    } finally {
+      if (replyCommentIds.length > 0) {
+        await knex('comments').where({ tenant: context.tenant }).whereIn('comment_id', replyCommentIds).delete();
+      }
+      await knex('comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
+      if (threadId) {
+        await knex('comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
+      }
+    }
+  });
+
   it('T020: deleting a leaf reply hard-deletes it and decrements reply_count', async () => {
     const context = await knex('tickets as t')
       .join('users as u', 'u.tenant', 't.tenant')
