@@ -176,4 +176,53 @@ describe('ticket comment threading model', () => {
       }
     }
   });
+
+  it('T017: rejects replies to a soft-deleted parent comment', async () => {
+    const context = await knex('tickets as t')
+      .join('users as u', 'u.tenant', 't.tenant')
+      .select('t.tenant', 't.ticket_id', 'u.user_id')
+      .first();
+    expect(context).toBeTruthy();
+
+    const parentCommentId = await Comment.insert(knex, context.tenant, {
+      ticket_id: context.ticket_id,
+      user_id: context.user_id,
+      author_type: 'internal',
+      note: 'Soft-deleted parent comment',
+      markdown_content: 'Soft-deleted parent comment',
+      is_internal: false,
+      is_resolution: false,
+    });
+
+    let threadId: string | undefined;
+
+    try {
+      const parent = await knex('comments')
+        .select('thread_id')
+        .where({ tenant: context.tenant, comment_id: parentCommentId })
+        .first();
+      threadId = parent.thread_id;
+
+      await knex('comments')
+        .where({ tenant: context.tenant, comment_id: parentCommentId })
+        .update({ deleted_at: new Date().toISOString() });
+
+      await expect(Comment.insert(knex, context.tenant, {
+        ticket_id: context.ticket_id,
+        user_id: context.user_id,
+        author_type: 'internal',
+        note: 'Invalid reply to deleted parent',
+        markdown_content: 'Invalid reply to deleted parent',
+        is_internal: false,
+        is_resolution: false,
+        parent_comment_id: parentCommentId,
+      })).rejects.toThrow('Cannot reply to a deleted comment');
+    } finally {
+      await knex('comments').where({ tenant: context.tenant, parent_comment_id: parentCommentId }).delete();
+      await knex('comments').where({ tenant: context.tenant, comment_id: parentCommentId }).delete();
+      if (threadId) {
+        await knex('comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
+      }
+    }
+  });
 });
