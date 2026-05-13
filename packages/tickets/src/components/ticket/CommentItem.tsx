@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { PartialBlock } from '@blocknote/core';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
-import { Pencil, Trash, Lock, CheckCircle, Cog } from 'lucide-react';
+import { Pencil, Trash, Lock, CheckCircle, Cog, CornerUpLeft } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { IComment } from '@alga-psa/types';
@@ -39,6 +39,7 @@ interface CommentItemProps {
   onClose: () => void;
   onEdit: (conversation: IComment) => void;
   onDelete: (comment: IComment) => void;
+  onReply?: (comment: IComment) => void;
   hideInternalTab?: boolean;
   uploadFile?: (file: File, blockId?: string) => Promise<string>;
   reactions?: IAggregatedReaction[];
@@ -116,6 +117,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   onClose,
   onEdit,
   onDelete,
+  onReply,
   hideInternalTab = false,
   uploadFile,
   reactions,
@@ -399,26 +401,41 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 </p>
               </div>
             </div>
-            {canEdit && (
-              <div className="space-x-2">
-                <Button
-                  id={`edit-comment-${conversation.comment_id}-button`}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onEdit(conversation)}
-                  aria-label={t('conversation.editCommentAriaLabel')}
-                >
-                  <Pencil className="w-4 h-4" />
-                </Button>
-                <Button
-                  id={`delete-comment-${conversation.comment_id}-button`}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDelete(conversation)}
-                  aria-label={t('conversation.deleteCommentAriaLabel')}
-                >
-                  <Trash className="w-4 h-4" />
-                </Button>
+            {(onReply || canEdit) && (
+              <div className="c-actions space-x-2">
+                {onReply && (
+                  <Button
+                    id={`reply-comment-${conversation.comment_id}-button`}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onReply(conversation)}
+                    aria-label={t('conversation.replyCommentAriaLabel', 'Reply to comment')}
+                  >
+                    <CornerUpLeft className="w-4 h-4" />
+                  </Button>
+                )}
+                {canEdit && (
+                  <>
+                    <Button
+                      id={`edit-comment-${conversation.comment_id}-button`}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onEdit(conversation)}
+                      aria-label={t('conversation.editCommentAriaLabel')}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      id={`delete-comment-${conversation.comment_id}-button`}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDelete(conversation)}
+                      aria-label={t('conversation.deleteCommentAriaLabel')}
+                    >
+                      <Trash className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
               </div>
             )}
           </div>
