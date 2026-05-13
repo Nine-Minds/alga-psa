@@ -205,6 +205,29 @@ function StatefulTicketConversationForReplies() {
   );
 }
 
+function TicketConversationWithExistingReply() {
+  return (
+    <TicketConversation
+      {...defaultProps}
+      conversations={[
+        ...defaultProps.conversations,
+        {
+          tenant: 'tenant-1',
+          comment_id: 'existing-reply',
+          thread_id: 'thread-1',
+          parent_comment_id: 'comment-1',
+          user_id: 'user-1',
+          author_type: 'internal',
+          note: NOTE,
+          is_internal: false,
+          is_resolution: false,
+          created_at: '2026-05-13T09:05:00.000Z',
+        } as any,
+      ]}
+    />
+  );
+}
+
 describe('TicketConversation threaded reply e2e contract', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'IntersectionObserver', {
@@ -251,5 +274,27 @@ describe('TicketConversation threaded reply e2e contract', () => {
     expect(screen.getByText('1 reply')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Collapse' })).toBeInTheDocument();
     expect(screen.getByTestId('reply-1').closest('.thread-children')).toHaveClass('depth-1');
+  });
+
+  it('T059: collapsing a ticket thread hides children, shows drawer action, and expands back', async () => {
+    const user = userEvent.setup();
+
+    await act(async () => {
+      render(<TicketConversationWithExistingReply />);
+    });
+
+    expect(screen.getByTestId('existing-reply')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Collapse' }));
+
+    expect(screen.queryByTestId('existing-reply')).not.toBeInTheDocument();
+    expect(screen.getByText('1 reply')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open in drawer' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Expand' }));
+
+    expect(screen.getByTestId('existing-reply')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Collapse' })).toBeInTheDocument();
   });
 });
