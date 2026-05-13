@@ -129,4 +129,70 @@ describe('HybridThreadNode', () => {
     expect(within(dialog).getByTestId('drawer-comment-reply')).toBeInTheDocument();
     expect(within(dialog).getByTestId('drawer-comment-subreply')).toBeInTheDocument();
   });
+
+  it('T050: drawer composer submits with the parent id, closes, and refreshes inline replies', () => {
+    const onSubmit = vi.fn();
+
+    function Harness() {
+      const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
+      const [threadComments, setThreadComments] = React.useState<TestComment[]>([
+        { id: 'root', threadId: 'thread-1', parentId: null, createdAt: '2026-05-13T09:00:00.000Z' },
+      ]);
+      const group = buildCommentThreadGroups<TestComment>({
+        comments: threadComments,
+        getCommentId: (comment) => comment.id,
+        getThreadId: (comment) => comment.threadId,
+        getParentCommentId: (comment) => comment.parentId,
+        getCreatedAt: (comment) => comment.createdAt,
+      })[0];
+
+      return (
+        <>
+          <button type="button" onClick={() => setIsDrawerOpen(true)}>
+            Open drawer
+          </button>
+          <HybridThreadNode<TestComment>
+            group={group}
+            comment={group.root}
+            getCommentId={(comment) => comment.id}
+            renderComment={(comment) => <div data-testid={`inline-comment-${comment.id}`}>{comment.id}</div>}
+          />
+          <CommentThreadDrawer<TestComment>
+            isOpen={isDrawerOpen}
+            onClose={() => setIsDrawerOpen(false)}
+            group={isDrawerOpen ? group : null}
+            getCommentId={(comment) => comment.id}
+            replyParentCommentId="root"
+            replyRoomName={(parentCommentId) => `reply-${parentCommentId}`}
+            showInternalToggle={false}
+            onSubmitReply={(params) => {
+              onSubmit(params);
+              setThreadComments((currentComments) => [
+                ...currentComments,
+                {
+                  id: 'drawer-reply',
+                  threadId: 'thread-1',
+                  parentId: params.parentCommentId,
+                  createdAt: '2026-05-13T09:05:00.000Z',
+                },
+              ]);
+              setIsDrawerOpen(false);
+            }}
+            renderComment={(comment) => <div data-testid={`drawer-comment-${comment.id}`}>{comment.id}</div>}
+          />
+        </>
+      );
+    }
+
+    render(<Harness />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open drawer' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Reply' }));
+
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
+      parentCommentId: 'root',
+    }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByTestId('inline-comment-drawer-reply')).toBeInTheDocument();
+  });
 });
