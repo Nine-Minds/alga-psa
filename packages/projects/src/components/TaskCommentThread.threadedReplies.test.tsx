@@ -187,4 +187,17 @@ describe('TaskCommentThread threaded replies', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument();
   });
+
+  it('T066: omits the internal visibility toggle from the task reply composer', async () => {
+    const user = userEvent.setup();
+
+    render(<TaskCommentThread taskId="task-1" projectId="project-1" />);
+
+    expect(await screen.findByTestId('task-comment-root')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Reply to comment' }));
+
+    expect(screen.getByTestId('task-comment-editor')).toBeInTheDocument();
+    expect(screen.queryByText('Mark as Internal')).not.toBeInTheDocument();
+  });
 });

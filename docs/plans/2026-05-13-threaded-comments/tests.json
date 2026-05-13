@@ -64,7 +64,7 @@
   { "id": "T063", "description": "Playwright e2e (ticket): tab switch to Internal hides client-rooted threads; counts update accordingly", "implemented": true, "featureIds": ["F048"] },
   { "id": "T064", "description": "Playwright e2e (project task): hover comment → Reply button → inline composer → submit → child indents", "implemented": true, "featureIds": ["F054", "F055", "F056"] },
   { "id": "T065", "description": "Playwright e2e (project task): collapse + Open in drawer behavior identical to ticket flow", "implemented": true, "featureIds": ["F057"] },
-  { "id": "T066", "description": "Playwright e2e (project task): is_internal toggle absent from task reply composer (tasks have no internal/client split)", "implemented": false, "featureIds": ["F056"] },
+  { "id": "T066", "description": "Playwright e2e (project task): is_internal toggle absent from task reply composer (tasks have no internal/client split)", "implemented": true, "featureIds": ["F056"] },
   { "id": "T067", "description": "Regression: existing ticket with only legacy comments renders identically to today — no thread bars, no indent, layout unchanged", "implemented": false, "featureIds": ["F005", "F039"] },
   { "id": "T068", "description": "Regression: existing project task with legacy comments renders unchanged", "implemented": false, "featureIds": ["F006", "F055"] },
   { "id": "T069", "description": "Regression: editing a legacy comment still works; updated_at advanced; tree unaffected", "implemented": false, "featureIds": ["F005"] },
