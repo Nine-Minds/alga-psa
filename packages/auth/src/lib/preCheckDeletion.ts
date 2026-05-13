@@ -23,6 +23,7 @@ function permissionEntityFor(entityType: string): string {
   if (entityType === 'status') return 'settings';
   if (entityType === 'role') return 'security_settings';
   if (entityType === 'invoice_template') return 'invoice';
+  if (entityType === 'tax_rate') return 'billing';
   return entityType;
 }
 
