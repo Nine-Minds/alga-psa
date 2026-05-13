@@ -1,5 +1,5 @@
 import logger from '@alga-psa/core/logger';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import {
   IEmailProvider,
   EmailMessage as ProviderEmailMessage,
@@ -111,7 +111,27 @@ function getMetadataString(
   return null;
 }
 
-function deriveOutboundMessageIds(result: ProviderEmailSendResult): {
+function normalizeHeaderValue(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed || null;
+}
+
+function getHeaderValue(headers: Record<string, string> | undefined, name: string): string | null {
+  if (!headers) {
+    return null;
+  }
+
+  const lowerName = name.toLowerCase();
+  const key = Object.keys(headers).find((candidate) => candidate.toLowerCase() === lowerName);
+  return key ? normalizeHeaderValue(headers[key]) : null;
+}
+
+function buildGeneratedRfcMessageId(tenantId?: string): string {
+  const domainPart = tenantId ? `${tenantId}.alga-psa.local` : 'alga-psa.local';
+  return `<${randomUUID()}@${domainPart}>`;
+}
+
+function deriveOutboundMessageIds(result: ProviderEmailSendResult, message?: ProviderEmailMessage): {
   providerMessageId: string | null;
   rfcMessageId: string | null;
 } {
@@ -129,6 +149,7 @@ function deriveOutboundMessageIds(result: ProviderEmailSendResult): {
       'messageIdHeader',
       'message_id_header',
     ]) ??
+    getHeaderValue(message?.headers, 'Message-ID') ??
     (result.messageId && /@/.test(result.messageId) ? result.messageId : null);
 
   return {
@@ -240,6 +261,11 @@ export abstract class BaseEmailService {
         name: from.name || null
       });
       
+      const headers = { ...(params.headers ?? {}) };
+      if (params.replyContext?.commentId && !getHeaderValue(headers, 'Message-ID')) {
+        headers['Message-ID'] = buildGeneratedRfcMessageId(params.tenantId);
+      }
+
       // Convert to provider email message format
       emailMessage = {
         from,
@@ -251,7 +277,7 @@ export abstract class BaseEmailService {
         html,
         text,
         attachments: params.attachments,
-        headers: params.headers
+        headers
       };
 
       // Send via provider
@@ -281,6 +307,8 @@ export abstract class BaseEmailService {
       return {
         success: result.success,
         messageId: result.messageId,
+        providerMessageId: result.providerMessageId,
+        rfcMessageId: result.rfcMessageId ?? getHeaderValue(emailMessage.headers, 'Message-ID') ?? undefined,
         error: result.error,
         providerId: result.providerId,
         providerType: result.providerType,
@@ -341,7 +369,7 @@ export abstract class BaseEmailService {
       const toAddresses = params.message.to.map((addr) => addr.email);
       const ccAddresses = params.message.cc?.map((addr) => addr.email) ?? null;
       const bccAddresses = params.message.bcc?.map((addr) => addr.email) ?? null;
-      const { providerMessageId, rfcMessageId } = deriveOutboundMessageIds(params.providerResult);
+      const { providerMessageId, rfcMessageId } = deriveOutboundMessageIds(params.providerResult, params.message);
       const { replyTokenHash, replyTokenSuffix } = getReplyTokenFingerprint(
         params.replyContext?.conversationToken
       );
@@ -396,6 +424,28 @@ export abstract class BaseEmailService {
         reply_token_hash: replyTokenHash,
         reply_token_suffix: replyTokenSuffix,
       });
+
+      if (params.providerResult.success && params.replyContext?.commentId && rfcMessageId) {
+        const comment = await knex('comments')
+          .select('thread_id', 'parent_comment_id')
+          .where({
+            tenant: params.tenantId,
+            comment_id: params.replyContext.commentId,
+          })
+          .first();
+
+        if (comment?.thread_id && !comment.parent_comment_id) {
+          await knex('comment_threads')
+            .where({
+              tenant: params.tenantId,
+              thread_id: comment.thread_id,
+            })
+            .update({
+              email_message_id: rfcMessageId,
+              email_provider_thread_id: params.replyContext.threadId ?? null,
+            });
+        }
+      }
     } catch (error) {
       logger.warn(`[${this.getServiceName()}] Failed to write email_sending_logs record`, {
         tenantId: params.tenantId,
