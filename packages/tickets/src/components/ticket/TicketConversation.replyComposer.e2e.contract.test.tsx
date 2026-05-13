@@ -43,12 +43,22 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/CustomTabs', () => ({
-  default: ({ tabs, extraContent }: any) => (
-    <div>
-      {extraContent}
-      <div>{tabs[0]?.content}</div>
-    </div>
-  ),
+  default: ({ tabs, extraContent, value, onTabChange }: any) => {
+    const activeTab = tabs.find((tab: any) => tab.id === value) ?? tabs[0];
+    return (
+      <div>
+        <div>
+          {tabs.map((tab: any) => (
+            <button key={tab.id} type="button" onClick={() => onTabChange?.(tab.id)}>
+              {tab.label}
+            </button>
+          ))}
+          {extraContent}
+        </div>
+        <div>{activeTab?.content}</div>
+      </div>
+    );
+  },
 }));
 
 vi.mock('@alga-psa/ui/components/Button', () => ({
@@ -314,6 +324,52 @@ function StatefulTicketConversationForNestedReplies() {
   );
 }
 
+function TicketConversationTabsHarness() {
+  const [activeTab, setActiveTab] = React.useState('all-comments');
+
+  return (
+    <TicketConversation
+      {...defaultProps}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      conversations={[
+        {
+          ...defaultProps.conversations[0],
+          comment_id: 'client-root',
+          thread_id: 'client-thread',
+          parent_comment_id: null,
+          is_internal: false,
+          created_at: '2026-05-13T09:00:00.000Z',
+        } as any,
+        {
+          tenant: 'tenant-1',
+          comment_id: 'client-reply',
+          thread_id: 'client-thread',
+          parent_comment_id: 'client-root',
+          user_id: 'user-1',
+          author_type: 'internal',
+          note: NOTE,
+          is_internal: false,
+          is_resolution: false,
+          created_at: '2026-05-13T09:05:00.000Z',
+        } as any,
+        {
+          tenant: 'tenant-1',
+          comment_id: 'internal-root',
+          thread_id: 'internal-thread',
+          parent_comment_id: null,
+          user_id: 'user-1',
+          author_type: 'internal',
+          note: NOTE,
+          is_internal: true,
+          is_resolution: false,
+          created_at: '2026-05-13T10:00:00.000Z',
+        } as any,
+      ]}
+    />
+  );
+}
+
 describe('TicketConversation threaded reply e2e contract', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'IntersectionObserver', {
@@ -438,5 +494,24 @@ describe('TicketConversation threaded reply e2e contract', () => {
     expect(subThreadBar).toHaveClass('depth-1');
     expect(subThreadBar).toHaveTextContent('1 reply');
     expect(screen.getByTestId('nested-reply').closest('.thread-children-subthread')).not.toBeNull();
+  });
+
+  it('T063: switching to Internal hides client-rooted threads and preserves thread counts', async () => {
+    const user = userEvent.setup();
+
+    render(<TicketConversationTabsHarness />);
+
+    expect(screen.getByRole('button', { name: 'All Comments (2)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Client (1)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Internal (1)' })).toBeInTheDocument();
+    expect(screen.getByTestId('client-root')).toBeInTheDocument();
+    expect(screen.getByTestId('client-reply')).toBeInTheDocument();
+    expect(screen.getByTestId('internal-root')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Internal (1)' }));
+
+    expect(screen.queryByTestId('client-root')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('client-reply')).not.toBeInTheDocument();
+    expect(screen.getByTestId('internal-root')).toBeInTheDocument();
   });
 });
