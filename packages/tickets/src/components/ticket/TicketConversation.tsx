@@ -11,7 +11,7 @@ import { IDocument } from '@alga-psa/types';
 import { PartialBlock } from '@blocknote/core';
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { CommentThreadDrawer, CommentThreadList, HybridThreadNode, buildCommentThreadGroups } from '@alga-psa/ui/components';
+import { CommentThreadDrawer, CommentThreadList, HybridThreadNode, InlineReplyComposer, buildCommentThreadGroups } from '@alga-psa/ui/components';
 
 // Dynamic import for TextEditor
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
@@ -145,6 +145,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [reactionsMap, setReactionsMap] = useState<Record<string, IAggregatedReaction[]>>({});
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
   const [openPanelCommentId, setOpenPanelCommentId] = useState<string | null>(null);
+  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
 
   const discardComposeEditor = React.useCallback(() => {
     onNewCommentContentChange(DEFAULT_BLOCK);
@@ -402,27 +403,43 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         noteLen: (mergedConversation.note || '').length,
       });
       return (
-      <CommentItem
-        id={`${id}-comment-${mergedConversation.comment_id}`}
-        conversation={mergedConversation}
-        currentUserId={currentUser?.id}
-        isEditing={isEditing && currentComment?.comment_id === mergedConversation.comment_id}
-        currentComment={currentComment}
-        ticketId={ticket.ticket_id || ''}
-        userMap={userMap}
-        contactMap={contactMap}
-        onContentChange={onContentChange}
-        onSave={onSave}
-        onClose={onClose}
-        onEdit={() => onEdit(mergedConversation)}
-        onDelete={onDelete}
-        hideInternalTab={hideInternalTab}
-        uploadFile={existingCommentUploadSession.uploadFile}
-        reactions={reactionsMap[mergedConversation.comment_id || ''] || []}
-        onToggleReaction={handleToggleReaction}
-        userNames={reactionUserNames}
-        canViewCommentMetadataDebug={canViewCommentMetadataDebug}
-      />
+      <>
+        <CommentItem
+          id={`${id}-comment-${mergedConversation.comment_id}`}
+          conversation={mergedConversation}
+          currentUserId={currentUser?.id}
+          isEditing={isEditing && currentComment?.comment_id === mergedConversation.comment_id}
+          currentComment={currentComment}
+          ticketId={ticket.ticket_id || ''}
+          userMap={userMap}
+          contactMap={contactMap}
+          onContentChange={onContentChange}
+          onSave={onSave}
+          onClose={onClose}
+          onEdit={() => onEdit(mergedConversation)}
+          onDelete={onDelete}
+          onReply={() => setReplyingToCommentId(mergedConversation.comment_id ?? null)}
+          hideInternalTab={hideInternalTab}
+          uploadFile={existingCommentUploadSession.uploadFile}
+          reactions={reactionsMap[mergedConversation.comment_id || ''] || []}
+          onToggleReaction={handleToggleReaction}
+          userNames={reactionUserNames}
+          canViewCommentMetadataDebug={canViewCommentMetadataDebug}
+        />
+        {replyingToCommentId === mergedConversation.comment_id && mergedConversation.comment_id && (
+          <InlineReplyComposer
+            id={`${compId}-reply-${mergedConversation.comment_id}`}
+            parentCommentId={mergedConversation.comment_id}
+            roomName={`ticket-${ticket.ticket_id}-reply-${mergedConversation.comment_id}`}
+            initialInternal={Boolean(mergedConversation.is_internal)}
+            showInternalToggle={!hideInternalTab}
+            uploadFile={existingCommentUploadSession.uploadFile}
+            searchMentions={searchUsersForMentions}
+            onSubmit={async () => {}}
+            onCancel={() => setReplyingToCommentId(null)}
+          />
+        )}
+      </>
     );
   };
 
