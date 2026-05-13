@@ -1,6 +1,6 @@
 import { describe, expectTypeOf, it } from 'vitest';
 
-import type { ICommentThread } from '@alga-psa/types';
+import type { IComment, ICommentThread } from '@alga-psa/types';
 
 describe('comment thread typing', () => {
   it('T011: exports ICommentThread with the persisted comment_threads field contract', () => {
@@ -19,5 +19,11 @@ describe('comment thread typing', () => {
       created_at: string;
       created_by: string | null;
     }>();
+  });
+
+  it('T012: exposes ticket comment threading fields on IComment create/read payloads', () => {
+    expectTypeOf<IComment['thread_id']>().toEqualTypeOf<string | undefined>();
+    expectTypeOf<IComment['parent_comment_id']>().toEqualTypeOf<string | null | undefined>();
+    expectTypeOf<IComment['deleted_at']>().toEqualTypeOf<string | null | undefined>();
   });
 });
