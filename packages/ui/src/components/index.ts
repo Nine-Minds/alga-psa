@@ -68,6 +68,8 @@ export * from './IconPicker';
 export * from './Input';
 export * from './InteractionIcon';
 export { default as InteractionIcon } from './InteractionIcon';
+export * from './InlineReplyComposer';
+export { default as InlineReplyComposer } from './InlineReplyComposer';
 export * from './Label';
 export * from './LanguagePreference';
 export * from './LoadingIndicator';
