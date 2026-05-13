@@ -228,6 +228,49 @@ function TicketConversationWithExistingReply() {
   );
 }
 
+function StatefulTicketConversationForDrawerReplies() {
+  const [conversations, setConversations] = React.useState([
+    ...defaultProps.conversations,
+    {
+      tenant: 'tenant-1',
+      comment_id: 'existing-reply',
+      thread_id: 'thread-1',
+      parent_comment_id: 'comment-1',
+      user_id: 'user-1',
+      author_type: 'internal',
+      note: NOTE,
+      is_internal: false,
+      is_resolution: false,
+      created_at: '2026-05-13T09:05:00.000Z',
+    } as any,
+  ]);
+
+  return (
+    <TicketConversation
+      {...defaultProps}
+      conversations={conversations}
+      onAddReplyComment={async (_content, parentCommentId, isInternal) => {
+        setConversations((current) => [
+          ...current,
+          {
+            tenant: 'tenant-1',
+            comment_id: 'drawer-reply',
+            thread_id: 'thread-1',
+            parent_comment_id: parentCommentId,
+            user_id: 'current-user',
+            author_type: 'internal',
+            note: NOTE,
+            is_internal: isInternal,
+            is_resolution: false,
+            created_at: '2026-05-13T09:10:00.000Z',
+          } as any,
+        ]);
+        return true;
+      }}
+    />
+  );
+}
+
 describe('TicketConversation threaded reply e2e contract', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'IntersectionObserver', {
@@ -320,5 +363,21 @@ describe('TicketConversation threaded reply e2e contract', () => {
     expect(screen.getByTestId('comment-1')).toBeInTheDocument();
     expect(screen.queryByTestId('existing-reply')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument();
+  });
+
+  it('T061: replying in the drawer closes it and shows the new reply inline', async () => {
+    const user = userEvent.setup();
+
+    await act(async () => {
+      render(<StatefulTicketConversationForDrawerReplies />);
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Collapse' }));
+    await user.click(screen.getByRole('button', { name: 'Open in drawer' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Reply' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(await screen.findByTestId('drawer-reply')).toBeInTheDocument();
+    expect(screen.getByTestId('drawer-reply').closest('.thread-children')).toHaveClass('depth-1');
   });
 });

@@ -463,6 +463,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         getUpdatedAt={(comment) => comment.updated_at}
         renderThreadGroup={(group) => (
           <HybridThreadNode<IComment>
+            key={`${group.threadId}-${group.replyCount}`}
             group={group}
             comment={group.root}
             getCommentId={(comment) => comment.comment_id}
