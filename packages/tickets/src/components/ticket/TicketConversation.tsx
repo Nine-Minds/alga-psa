@@ -49,6 +49,7 @@ import {
   getStoredTicketConversationNewestFirst,
   setStoredTicketConversationNewestFirst,
 } from './ticketConversationOrderPreference';
+import { buildTicketThreadTabState } from './ticketConversationThreadTabs';
 import { toggleCommentReaction, getCommentsReactionsBatch } from '../../actions/comment-actions/commentReactionActions';
 import type { IAggregatedReaction } from '@alga-psa/types';
 
@@ -485,20 +486,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     [conversations]
   );
 
-  const commentsForThreads = useCallback(
-    (predicate: (group: typeof threadGroups[number]) => boolean): IComment[] =>
-      threadGroups.filter(predicate).flatMap((group) => group.comments),
-    [threadGroups]
-  );
-
-  const allTabComments = hideInternalTab
-    ? commentsForThreads((group) => !group.root.is_internal)
-    : conversations;
-  const clientTabComments = commentsForThreads((group) => !group.root.is_internal);
-  const internalTabComments = commentsForThreads((group) => Boolean(group.root.is_internal));
-  const resolutionTabComments = commentsForThreads((group) =>
-    (!hideInternalTab || !group.root.is_internal) &&
-    group.comments.some((comment) => Boolean(comment.is_resolution))
+  const threadTabState = useMemo(
+    () => buildTicketThreadTabState(threadGroups, hideInternalTab),
+    [threadGroups, hideInternalTab]
   );
   const openPanelThreadGroup = openPanelCommentId
     ? threadGroups.find((group) =>
@@ -558,44 +548,44 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const baseTabs = [
     {
       id: ALL_COMMENTS_TAB_ID,
-      label: t('conversation.allComments', 'All Comments'),
+      label: `${t('conversation.allComments', 'All Comments')} (${threadTabState.counts.all})`,
       content: (
         <ReflectionContainer id={`${id}-all-comments`} label="All Comments">
           {renderComments(hideInternalTab
             // For client portal, "All Comments" should exclude internal comments (same as "Client Visible")
-            ? allTabComments
+            ? threadTabState.allTabComments
             // For MSP portal, "All Comments" includes all comments
-            : allTabComments)}
+            : threadTabState.allTabComments)}
         </ReflectionContainer>
       )
     },
     {
       id: CLIENT_TAB_ID,
-      label: t('conversation.client', 'Client'),
+      label: `${t('conversation.client', 'Client')} (${threadTabState.counts.client})`,
       content: (
         <ReflectionContainer id={`${id}-client-visible-comments`} label="Client Comments">
-          {renderComments(clientTabComments)}
+          {renderComments(threadTabState.clientTabComments)}
           {renderExternalComments()}
         </ReflectionContainer>
       )
     },
     {
       id: INTERNAL_TAB_ID,
-      label: t('conversation.internal', 'Internal'),
+      label: `${t('conversation.internal', 'Internal')} (${threadTabState.counts.internal})`,
       content: (
         <ReflectionContainer id={`${id}-internal-comments`} label="Internal Comments">
           <h3 className="text-lg font-medium mb-4">{t('conversation.internalComments', 'Internal Comments')}</h3>
-          {renderComments(internalTabComments)}
+          {renderComments(threadTabState.internalTabComments)}
         </ReflectionContainer>
       )
     },
     {
       id: RESOLUTION_TAB_ID,
-      label: t('conversation.resolution', 'Resolution'),
+      label: `${t('conversation.resolution', 'Resolution')} (${threadTabState.counts.resolution})`,
       content: (
         <ReflectionContainer id={`${id}-resolution-comments`} label="Resolution Comments">
           <h3 className="text-lg font-medium mb-4">{t('conversation.resolutionComments', 'Resolution Comments')}</h3>
-          {renderComments(resolutionTabComments)}
+          {renderComments(threadTabState.resolutionTabComments)}
         </ReflectionContainer>
       )
     }
