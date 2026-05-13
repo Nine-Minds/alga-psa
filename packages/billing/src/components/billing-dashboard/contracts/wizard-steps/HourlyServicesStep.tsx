@@ -13,6 +13,7 @@ import { BucketOverlayFields } from '../BucketOverlayFields';
 import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 
 interface HourlyServicesStepProps {
   data: ContractWizardData;
@@ -105,6 +106,11 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
     if (!cents) return `${currencySymbol}0.00`;
     return `${currencySymbol}${(cents / 100).toFixed(2)}`;
   };
+
+  const formatBillingFrequency = useFormatBillingFrequency();
+  const hasAlternateBillingFrequency =
+    data.hourly_billing_frequency !== undefined &&
+    data.hourly_billing_frequency !== data.billing_frequency;
 
   return (
     <div className="space-y-6">
@@ -307,6 +313,15 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
       )}
 
       {data.hourly_services.length > 0 && (
+        <BillingFrequencyOverrideSelect
+          contractBillingFrequency={data.billing_frequency}
+          value={data.hourly_billing_frequency}
+          onChange={(value) => updateData({ hourly_billing_frequency: value })}
+          label={t('wizardHourly.alternateFrequencyLabel', { defaultValue: 'Alternate Billing Frequency (Optional)' })}
+        />
+      )}
+
+      {data.hourly_services.length > 0 && (
         <Alert variant="info" className="mt-6">
           <AlertDescription>
             <h4 className="text-sm font-semibold mb-2">
@@ -335,18 +350,79 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
                   })}
                 </p>
               )}
+              {hasAlternateBillingFrequency && data.hourly_billing_frequency && (
+                <p>
+                  <strong>
+                    {t('wizardHourly.summary.labels.alternateFrequency', {
+                      defaultValue: 'Alternate Billing Frequency:',
+                    })}
+                  </strong>{' '}
+                  {formatBillingFrequency(data.hourly_billing_frequency)}
+                </p>
+              )}
+              {data.hourly_services.some((service) => service.bucket_overlay) && (
+                <div className="pt-2">
+                  <p className="font-semibold">
+                    {t('wizardHourly.summary.labels.bucketsHeading', { defaultValue: 'Buckets:' })}
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {data.hourly_services.map((service, index) => {
+                      if (!service.bucket_overlay) return null;
+                      const overlay = service.bucket_overlay;
+                      const includedHours =
+                        overlay.total_minutes !== undefined ? overlay.total_minutes / 60 : undefined;
+                      const serviceLabel =
+                        service.service_name ||
+                        t('wizardHourly.summary.labels.serviceFallback', {
+                          defaultValue: 'Service {{index}}',
+                          index: index + 1,
+                        });
+                      return (
+                        <li key={`hourly-bucket-summary-${index}`}>
+                          <span className="block">
+                            <strong>{serviceLabel}</strong>
+                          </span>
+                          {includedHours !== undefined && (
+                            <span className="block">
+                              <strong>
+                                {t('wizardHourly.summary.labels.includedHours', { defaultValue: 'Included Hours:' })}
+                              </strong>{' '}
+                              {t('wizardHourly.summary.values.hours', {
+                                defaultValue: '{{count}} hours',
+                                count: includedHours,
+                              })}
+                            </span>
+                          )}
+                          {overlay.overage_rate !== undefined && (
+                            <span className="block">
+                              <strong>
+                                {t('wizardHourly.summary.labels.overageRate', { defaultValue: 'Overage Rate:' })}
+                              </strong>{' '}
+                              {t('wizardHourly.summary.values.overageRatePerHour', {
+                                defaultValue: '{{rate}}/hour',
+                                rate: formatCurrency(overlay.overage_rate),
+                              })}
+                            </span>
+                          )}
+                          {overlay.allow_rollover !== undefined && (
+                            <span className="block">
+                              <strong>
+                                {t('wizardHourly.summary.labels.rollover', { defaultValue: 'Rollover:' })}
+                              </strong>{' '}
+                              {overlay.allow_rollover
+                                ? t('wizardHourly.summary.values.rolloverEnabled', { defaultValue: 'Enabled' })
+                                : t('wizardHourly.summary.values.rolloverDisabled', { defaultValue: 'Disabled' })}
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
             </div>
           </AlertDescription>
         </Alert>
-      )}
-
-      {data.hourly_services.length > 0 && (
-        <BillingFrequencyOverrideSelect
-          contractBillingFrequency={data.billing_frequency}
-          value={data.hourly_billing_frequency}
-          onChange={(value) => updateData({ hourly_billing_frequency: value })}
-          label={t('wizardHourly.alternateFrequencyLabel', { defaultValue: 'Alternate Billing Frequency (Optional)' })}
-        />
       )}
     </div>
   );

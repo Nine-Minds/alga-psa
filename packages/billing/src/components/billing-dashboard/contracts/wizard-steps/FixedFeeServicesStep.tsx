@@ -16,6 +16,7 @@ import { BillingFrequencyOverrideSelect } from '../BillingFrequencyOverrideSelec
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatBillingFrequency } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 
 interface FixedFeeServicesStepProps {
   data: ContractWizardData;
@@ -108,6 +109,11 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
     billingFrequency: data.fixed_billing_frequency ?? data.billing_frequency,
     enableProration: data.enable_proration,
   }, t);
+
+  const formatBillingFrequency = useFormatBillingFrequency();
+  const hasAlternateBillingFrequency =
+    data.fixed_billing_frequency !== undefined &&
+    data.fixed_billing_frequency !== data.billing_frequency;
 
   return (
     <ReflectionContainer id="fixed-fee-services-step">
@@ -281,6 +287,15 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
         )}
 
         {data.fixed_services.length > 0 && (
+          <BillingFrequencyOverrideSelect
+            contractBillingFrequency={data.billing_frequency}
+            value={data.fixed_billing_frequency}
+            onChange={(value) => updateData({ fixed_billing_frequency: value })}
+            label={t('wizardFixed.alternateFrequencyLabel', { defaultValue: 'Alternate Billing Frequency (Optional)' })}
+          />
+        )}
+
+        {data.fixed_services.length > 0 && (
           <Alert variant="info" className="mt-6">
             <AlertDescription>
               <h4 className="text-sm font-semibold mb-2">
@@ -309,8 +324,28 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                 <p>{recurringPreview.billingTimingSummary}</p>
                 <p>{recurringPreview.firstInvoiceSummary}</p>
                 <p>{recurringPreview.partialPeriodSummary}</p>
+                {hasAlternateBillingFrequency && data.fixed_billing_frequency && (
+                  <p>
+                    <strong>
+                      {t('wizardFixed.preview.labels.alternateFrequency', {
+                        defaultValue: 'Alternate Billing Frequency:',
+                      })}
+                    </strong>{' '}
+                    {formatBillingFrequency(data.fixed_billing_frequency)}
+                  </p>
+                )}
                 <div className="pt-2">
-                  <p><strong>{recurringPreview.materializedPeriodsHeading}:</strong></p>
+                  <p className="flex items-center gap-1">
+                    <strong>{recurringPreview.materializedPeriodsHeading}:</strong>
+                    <Tooltip
+                      content={t('wizardFixed.preview.materializedPeriods.tooltip', {
+                        defaultValue:
+                          'A preview of the next few service periods and the invoice windows that would be generated for them based on the current settings. These help you sanity-check the cadence before saving — actual invoices are produced later by the billing run.',
+                      })}
+                    >
+                      <HelpCircle className="h-3.5 w-3.5 text-[rgb(var(--color-text-300))] cursor-help" />
+                    </Tooltip>
+                  </p>
                   <p>{recurringPreview.materializedPeriodsSummary}</p>
                   <ul className="list-disc pl-5 space-y-1">
                     {recurringPreview.materializedPeriods.map((period) => (
@@ -330,15 +365,6 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
               </div>
             </AlertDescription>
           </Alert>
-        )}
-
-        {data.fixed_services.length > 0 && (
-          <BillingFrequencyOverrideSelect
-            contractBillingFrequency={data.billing_frequency}
-            value={data.fixed_billing_frequency}
-            onChange={(value) => updateData({ fixed_billing_frequency: value })}
-            label={t('wizardFixed.alternateFrequencyLabel', { defaultValue: 'Alternate Billing Frequency (Optional)' })}
-          />
         )}
       </div>
     </ReflectionContainer>
