@@ -9,7 +9,7 @@
   { "id": "T008", "description": "Backfill: every pre-existing project_task_comments row has thread_id populated; analogous thread row exists", "implemented": true, "featureIds": ["F006"] },
   { "id": "T009", "description": "Migration: post-NOT-NULL enforcement, attempting INSERT with NULL thread_id is rejected for both tables", "implemented": true, "featureIds": ["F007"] },
   { "id": "T010", "description": "Migration: email_sending_logs has new comment_thread_id column post-migration", "implemented": true, "featureIds": ["F008"] },
-  { "id": "T011", "description": "Types: ICommentThread compiles and exports all expected fields", "implemented": false, "featureIds": ["F009"] },
+  { "id": "T011", "description": "Types: ICommentThread compiles and exports all expected fields", "implemented": true, "featureIds": ["F009"] },
   { "id": "T012", "description": "Types: IComment has thread_id, parent_comment_id, deleted_at as expected types", "implemented": false, "featureIds": ["F010"] },
   { "id": "T013", "description": "Types: IProjectTaskComment has thread_id, parent_comment_id, deleted_at as expected types", "implemented": false, "featureIds": ["F011"] },
   { "id": "T014", "description": "Model: createComment with parent_comment_id=NULL creates a new comment_threads row + comment whose thread_id matches; root_comment_id equals new comment_id", "implemented": false, "featureIds": ["F012"] },
