@@ -13,6 +13,7 @@ import { getCurrentUser, getCurrentUserAvatarUrl } from '@alga-psa/user-composit
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from 'react-i18next';
+import { CommentThreadList, HybridThreadNode } from '@alga-psa/ui/components';
 
 interface TaskCommentThreadProps {
   taskId: string;
@@ -134,12 +135,17 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
     }
   }, [currentUser?.user_id, currentUser?.name]);
 
-  // Sort comments based on reverseOrder
-  const sortedComments = [...comments].sort((a, b) => {
-    const dateA = new Date(a.createdAt).getTime();
-    const dateB = new Date(b.createdAt).getTime();
-    return reverseOrder ? dateB - dateA : dateA - dateB;
-  });
+  const renderTaskComment = (comment: IProjectTaskCommentWithUser) => (
+    <TaskComment
+      comment={comment}
+      onUpdate={handleCommentUpdated}
+      onDelete={handleCommentDeleted}
+      currentUserId={currentUser?.user_id}
+      reactions={reactionsMap[comment.taskCommentId] || []}
+      onToggleReaction={handleToggleReaction}
+      userNames={reactionUserNames}
+    />
+  );
 
   return (
     <div
@@ -243,18 +249,23 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
           {...withDataAutomationId({ id: 'task-comments-list' })}
           className="space-y-3"
         >
-          {sortedComments.map((comment) => (
-            <TaskComment
-              key={comment.taskCommentId}
-              comment={comment}
-              onUpdate={handleCommentUpdated}
-              onDelete={handleCommentDeleted}
-              currentUserId={currentUser?.user_id}
-              reactions={reactionsMap[comment.taskCommentId] || []}
-              onToggleReaction={handleToggleReaction}
-              userNames={reactionUserNames}
-            />
-          ))}
+          <CommentThreadList<IProjectTaskCommentWithUser>
+            comments={comments}
+            newestFirst={reverseOrder}
+            getCommentId={(comment) => comment.taskCommentId}
+            getThreadId={(comment) => comment.threadId || comment.taskCommentId}
+            getParentCommentId={(comment) => comment.parentCommentId}
+            getCreatedAt={(comment) => comment.createdAt}
+            getUpdatedAt={(comment) => comment.updatedAt}
+            renderThreadGroup={(group) => (
+              <HybridThreadNode<IProjectTaskCommentWithUser>
+                group={group}
+                comment={group.root}
+                getCommentId={(comment) => comment.taskCommentId}
+                renderComment={(comment) => renderTaskComment(comment)}
+              />
+            )}
+          />
         </div>
       )}
     </div>
