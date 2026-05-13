@@ -44,7 +44,7 @@
   { "id": "T043", "description": "Email outbound: email_sending_logs row has comment_thread_id, rfc_message_id, reply_token_hash, provider_message_id populated", "implemented": true, "featureIds": ["F038"] },
   { "id": "T044", "description": "Email round-trip: outbound + simulated inbound with matching In-Reply-To lands the reply back in the originating thread", "implemented": true, "featureIds": ["F029", "F034", "F035"] },
   { "id": "T045", "description": "UI: CommentThreadList renders one HybridThreadGroup per thread sorted by last_activity_at; respects newestFirst toggle", "implemented": true, "featureIds": ["F039", "F049"] },
-  { "id": "T046", "description": "UI: HybridThreadNode renders child threads recursively; each level past 0 marked as sub-thread", "implemented": false, "featureIds": ["F040"] },
+  { "id": "T046", "description": "UI: HybridThreadNode renders child threads recursively; each level past 0 marked as sub-thread", "implemented": true, "featureIds": ["F040"] },
   { "id": "T047", "description": "UI: clicking Collapse hides children and switches bar to show Expand + Open in drawer", "implemented": false, "featureIds": ["F041"] },
   { "id": "T048", "description": "UI: clicking Open in drawer opens the drawer with the right root + replies", "implemented": false, "featureIds": ["F042", "F044"] },
   { "id": "T049", "description": "UI: InlineReplyComposer shows Mark-as-Internal switch only; no Mark-as-Resolution; is_internal default matches parent's is_internal", "implemented": false, "featureIds": ["F043"] },
