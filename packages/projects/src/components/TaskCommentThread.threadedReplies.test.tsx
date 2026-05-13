@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TaskCommentThread from './TaskCommentThread';
 import type { IProjectTaskCommentWithUser } from '@alga-psa/types';
@@ -153,5 +153,38 @@ describe('TaskCommentThread threaded replies', () => {
     expect(await screen.findByTestId('task-comment-reply-1')).toBeInTheDocument();
     expect(screen.getByText('1 reply')).toBeInTheDocument();
     expect(screen.getByTestId('task-comment-reply-1').closest('.thread-children')).toHaveClass('depth-1');
+  });
+
+  it('T065: collapses a task thread and opens the thread drawer', async () => {
+    const user = userEvent.setup();
+    taskStore.comments = [
+      buildTaskComment(),
+      buildTaskComment({
+        taskCommentId: 'reply-1',
+        parentCommentId: 'root',
+        createdAt: '2026-05-13T09:05:00.000Z',
+      }),
+    ];
+
+    render(<TaskCommentThread taskId="task-1" projectId="project-1" />);
+
+    expect(await screen.findByTestId('task-comment-reply-1')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Collapse' }));
+
+    expect(screen.queryByTestId('task-comment-reply-1')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open in drawer' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Open in drawer' }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByTestId('task-comment-root')).toBeInTheDocument();
+    expect(within(dialog).getByTestId('task-comment-reply-1')).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Close' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument();
   });
 });
