@@ -22,7 +22,7 @@
   { "id": "T021", "description": "Model: deleting a root comment that has children soft-deletes (deleted_at set, note replaced with '[deleted]'); children unaffected", "implemented": true, "featureIds": ["F015"] },
   { "id": "T022", "description": "Model: findCommentsByTicketId returns thread_id, parent_comment_id, deleted_at for every comment including soft-deleted", "implemented": true, "featureIds": ["F016"] },
   { "id": "T023", "description": "Model: createTaskComment with NULL parent creates new comment_threads row with project_task_id set", "implemented": true, "featureIds": ["F017"] },
-  { "id": "T024", "description": "Model: createTaskComment with parent inherits thread_id and increments counters", "implemented": false, "featureIds": ["F018", "F019"] },
+  { "id": "T024", "description": "Model: createTaskComment with parent inherits thread_id and increments counters", "implemented": true, "featureIds": ["F018", "F019"] },
   { "id": "T025", "description": "Model: deleteTaskComment leaf vs root-with-children behavior matches tickets", "implemented": false, "featureIds": ["F020"] },
   { "id": "T026", "description": "Model: getTaskComments returns thread_id, parent_comment_id, deleted_at", "implemented": false, "featureIds": ["F021"] },
   { "id": "T027", "description": "Action: commentActions.createComment accepts parent_comment_id in payload and forwards to model", "implemented": false, "featureIds": ["F022"] },

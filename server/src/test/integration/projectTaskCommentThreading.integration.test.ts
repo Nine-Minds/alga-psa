@@ -110,4 +110,74 @@ describe('project task comment threading model', () => {
       }
     }
   });
+
+  it('T024: task replies inherit thread_id and increment reply_count', async () => {
+    const context = await knex('project_tasks as pt')
+      .join('project_phases as pp', function() {
+        this.on('pt.phase_id', 'pp.phase_id').andOn('pt.tenant', 'pp.tenant');
+      })
+      .select('pt.tenant', 'pt.task_id')
+      .where('pt.tenant', dbRef.tenant)
+      .first();
+    expect(context).toBeTruthy();
+
+    const rootCommentId = await createTaskComment({
+      taskId: context.task_id,
+      note: blockNote('Root task comment for reply inheritance test'),
+    });
+
+    let threadId: string | undefined;
+    let replyCommentId: string | undefined;
+
+    try {
+      const root = await knex('project_task_comments')
+        .select('thread_id')
+        .where({ tenant: context.tenant, task_comment_id: rootCommentId })
+        .first();
+      threadId = root.thread_id;
+
+      const before = await knex('comment_threads')
+        .select('reply_count', 'last_activity_at')
+        .where({ tenant: context.tenant, thread_id: threadId })
+        .first();
+
+      replyCommentId = await createTaskComment({
+        taskId: context.task_id,
+        note: blockNote('Reply task comment for thread inheritance test'),
+        parent_comment_id: rootCommentId,
+      });
+
+      const reply = await knex('project_task_comments')
+        .select('thread_id', 'parent_comment_id')
+        .where({ tenant: context.tenant, task_comment_id: replyCommentId })
+        .first();
+      expect(reply).toMatchObject({
+        thread_id: threadId,
+        parent_comment_id: rootCommentId,
+      });
+
+      const after = await knex('comment_threads')
+        .select('reply_count', 'last_activity_at')
+        .where({ tenant: context.tenant, thread_id: threadId })
+        .first();
+      expect(after.reply_count).toBe(Number(before.reply_count) + 1);
+      expect(new Date(after.last_activity_at).getTime()).toBeGreaterThanOrEqual(
+        new Date(before.last_activity_at).getTime()
+      );
+    } finally {
+      if (replyCommentId) {
+        await knex('project_task_comments')
+          .where({ tenant: context.tenant, task_comment_id: replyCommentId })
+          .delete();
+      }
+      await knex('project_task_comments')
+        .where({ tenant: context.tenant, task_comment_id: rootCommentId })
+        .delete();
+      if (threadId) {
+        await knex('comment_threads')
+          .where({ tenant: context.tenant, thread_id: threadId })
+          .delete();
+      }
+    }
+  });
 });
