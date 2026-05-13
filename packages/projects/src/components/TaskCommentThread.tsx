@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { ArrowUpDown, Lock } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import TaskComment from './TaskComment';
 import { TaskCommentForm } from './TaskCommentForm';
-import { getTaskComments } from '../actions/projectTaskCommentActions';
+import { createTaskComment, getTaskComments } from '../actions/projectTaskCommentActions';
 import { toggleTaskCommentReaction, getTaskCommentsReactionsBatch } from '../actions/projectTaskCommentReactionActions';
 import { IProjectTaskCommentWithUser, IAggregatedReaction } from '@alga-psa/types';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -13,7 +13,7 @@ import { getCurrentUser, getCurrentUserAvatarUrl } from '@alga-psa/user-composit
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from 'react-i18next';
-import { CommentThreadList, HybridThreadNode } from '@alga-psa/ui/components';
+import { CommentThreadDrawer, CommentThreadList, HybridThreadNode, buildCommentThreadGroups } from '@alga-psa/ui/components';
 
 interface TaskCommentThreadProps {
   taskId: string;
@@ -32,6 +32,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   const [currentUser, setCurrentUser] = useState<{ user_id: string; name: string; avatarUrl: string | null } | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
+  const [openPanelCommentId, setOpenPanelCommentId] = useState<string | null>(null);
   const [reverseOrder, setReverseOrder] = useState(false);
   const [reactionsMap, setReactionsMap] = useState<Record<string, IAggregatedReaction[]>>({});
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
@@ -136,6 +137,40 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
       console.error('Failed to toggle reaction:', err);
     }
   }, [currentUser?.user_id, currentUser?.name]);
+
+  const threadGroups = useMemo(
+    () => buildCommentThreadGroups<IProjectTaskCommentWithUser>({
+      comments,
+      getCommentId: (comment) => comment.taskCommentId,
+      getThreadId: (comment) => comment.threadId || comment.taskCommentId,
+      getParentCommentId: (comment) => comment.parentCommentId,
+      getCreatedAt: (comment) => comment.createdAt,
+      getUpdatedAt: (comment) => comment.updatedAt,
+    }),
+    [comments]
+  );
+
+  const openPanelThreadGroup = openPanelCommentId
+    ? threadGroups.find((group) =>
+      group.comments.some((comment) => comment.taskCommentId === openPanelCommentId)
+    ) ?? null
+    : null;
+  const openPanelComment = openPanelCommentId && openPanelThreadGroup
+    ? openPanelThreadGroup.comments.find((comment) => comment.taskCommentId === openPanelCommentId) ?? openPanelThreadGroup.root
+    : null;
+
+  const handleDrawerReplySubmit = async (params: {
+    parentCommentId: string;
+    content: any[];
+  }) => {
+    await createTaskComment({
+      taskId,
+      note: JSON.stringify(params.content),
+      parent_comment_id: params.parentCommentId,
+    });
+    await loadComments();
+    setOpenPanelCommentId(null);
+  };
 
   const renderTaskComment = (comment: IProjectTaskCommentWithUser) => (
     <>
@@ -279,11 +314,25 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
                 comment={group.root}
                 getCommentId={(comment) => comment.taskCommentId}
                 renderComment={(comment) => renderTaskComment(comment)}
+                onOpenPanel={(commentId) => setOpenPanelCommentId(commentId)}
               />
             )}
           />
         </div>
       )}
+      <CommentThreadDrawer<IProjectTaskCommentWithUser>
+        id={`task-${taskId}-comment-thread-drawer`}
+        isOpen={Boolean(openPanelThreadGroup)}
+        onClose={() => setOpenPanelCommentId(null)}
+        group={openPanelThreadGroup}
+        getCommentId={(comment) => comment.taskCommentId}
+        renderComment={(comment) => renderTaskComment(comment)}
+        replyParentCommentId={openPanelComment?.taskCommentId ?? null}
+        replyRoomName={(parentCommentId) => `task-${taskId}-reply-${parentCommentId}`}
+        initialInternal={false}
+        showInternalToggle={false}
+        onSubmitReply={handleDrawerReplySubmit}
+      />
     </div>
   );
 };
