@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
 const commentBackfillMigration = require('../../../migrations/20260513102000_backfill_comment_threads_for_comments.cjs');
+const taskCommentBackfillMigration = require('../../../migrations/20260513102500_backfill_comment_threads_for_project_task_comments.cjs');
 
 describe('comment_threads migrations', () => {
   let knex: Knex;
@@ -248,5 +249,22 @@ describe('comment_threads migrations', () => {
         table.uuid('thread_id').notNullable().alter();
       });
     }
+  });
+
+  it('T007: rerunning ticket and task backfills does not duplicate threads', async () => {
+    const before = await knex('comment_threads')
+      .count<{ count: string }[]>({ count: '*' })
+      .first();
+    const beforeCount = Number(before?.count ?? 0);
+
+    await commentBackfillMigration.up(knex);
+    await taskCommentBackfillMigration.up(knex);
+
+    const after = await knex('comment_threads')
+      .count<{ count: string }[]>({ count: '*' })
+      .first();
+    const afterCount = Number(after?.count ?? 0);
+
+    expect(afterCount).toBe(beforeCount);
   });
 });
