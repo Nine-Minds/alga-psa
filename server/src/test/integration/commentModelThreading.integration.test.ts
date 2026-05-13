@@ -61,4 +61,61 @@ describe('ticket comment threading model', () => {
       }
     }
   });
+
+  it('T015: replies inherit the parent comment thread', async () => {
+    const context = await knex('tickets as t')
+      .join('users as u', 'u.tenant', 't.tenant')
+      .select('t.tenant', 't.ticket_id', 'u.user_id')
+      .first();
+    expect(context).toBeTruthy();
+
+    const rootCommentId = await Comment.insert(knex, context.tenant, {
+      ticket_id: context.ticket_id,
+      user_id: context.user_id,
+      author_type: 'internal',
+      note: 'Root comment for reply inheritance test',
+      markdown_content: 'Root comment for reply inheritance test',
+      is_internal: false,
+      is_resolution: false,
+    });
+
+    let threadId: string | undefined;
+    let replyCommentId: string | undefined;
+
+    try {
+      const root = await knex('comments')
+        .select('thread_id')
+        .where({ tenant: context.tenant, comment_id: rootCommentId })
+        .first();
+      threadId = root.thread_id;
+
+      replyCommentId = await Comment.insert(knex, context.tenant, {
+        ticket_id: context.ticket_id,
+        user_id: context.user_id,
+        author_type: 'internal',
+        note: 'Reply comment for inheritance test',
+        markdown_content: 'Reply comment for inheritance test',
+        is_internal: false,
+        is_resolution: false,
+        parent_comment_id: rootCommentId,
+      });
+
+      const reply = await knex('comments')
+        .select('thread_id', 'parent_comment_id')
+        .where({ tenant: context.tenant, comment_id: replyCommentId })
+        .first();
+      expect(reply).toMatchObject({
+        thread_id: threadId,
+        parent_comment_id: rootCommentId,
+      });
+    } finally {
+      if (replyCommentId) {
+        await knex('comments').where({ tenant: context.tenant, comment_id: replyCommentId }).delete();
+      }
+      await knex('comments').where({ tenant: context.tenant, comment_id: rootCommentId }).delete();
+      if (threadId) {
+        await knex('comment_threads').where({ tenant: context.tenant, thread_id: threadId }).delete();
+      }
+    }
+  });
 });
