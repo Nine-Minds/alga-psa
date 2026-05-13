@@ -88,6 +88,7 @@ interface TaskListViewProps {
   selectedPriorityFilter?: string;
   selectedTaskTags?: string[];
   selectedAgentFilter?: string[];
+  selectedTeamFilter?: string[];
   includeUnassignedAgents?: boolean;
   primaryAgentOnly?: boolean;
   searchQuery?: string;
@@ -128,6 +129,7 @@ export default function TaskListView({
   selectedPriorityFilter = 'all',
   selectedTaskTags = [],
   selectedAgentFilter = [],
+  selectedTeamFilter = [],
   includeUnassignedAgents = false,
   primaryAgentOnly = false,
   searchQuery = '',
@@ -286,8 +288,8 @@ export default function TaskListView({
       });
     }
 
-    // Apply agent filter
-    if (selectedAgentFilter.length > 0 || includeUnassignedAgents) {
+    // Apply agent / team filter
+    if (selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents) {
       filtered = filtered.filter(task => {
         // Check if task is unassigned (no primary assignee)
         const isUnassigned = !task.assigned_to;
@@ -317,12 +319,17 @@ export default function TaskListView({
           }
         }
 
+        // If specific teams are selected, match by the task's assigned team
+        if (selectedTeamFilter.length > 0 && task.assigned_team_id && selectedTeamFilter.includes(task.assigned_team_id)) {
+          return true;
+        }
+
         return false;
       });
     }
 
     return filtered;
-  }, [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, taskResources, taskDescriptionTextMap]);
+  }, [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly, taskResources, taskDescriptionTextMap]);
 
   // Group tasks by phase and status - include ALL phases and ALL statuses for drag-and-drop
   const phaseGroups = useMemo((): PhaseGroup[] => {
