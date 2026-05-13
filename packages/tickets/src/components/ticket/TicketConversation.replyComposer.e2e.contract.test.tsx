@@ -514,4 +514,33 @@ describe('TicketConversation threaded reply e2e contract', () => {
     expect(screen.queryByTestId('client-reply')).not.toBeInTheDocument();
     expect(screen.getByTestId('internal-root')).toBeInTheDocument();
   });
+
+  it('T067: legacy flat ticket comments render without thread bars or indentation', () => {
+    const { container } = render(
+      <TicketConversation
+        {...defaultProps}
+        conversations={[
+          {
+            ...defaultProps.conversations[0],
+            comment_id: 'legacy-1',
+            thread_id: undefined,
+            parent_comment_id: undefined,
+            created_at: '2026-05-13T09:00:00.000Z',
+          } as any,
+          {
+            ...defaultProps.conversations[0],
+            comment_id: 'legacy-2',
+            thread_id: undefined,
+            parent_comment_id: undefined,
+            created_at: '2026-05-13T09:05:00.000Z',
+          } as any,
+        ]}
+      />
+    );
+
+    expect(screen.getByTestId('legacy-1')).toBeInTheDocument();
+    expect(screen.getByTestId('legacy-2')).toBeInTheDocument();
+    expect(container.querySelector('.comment-thread-bar')).toBeNull();
+    expect(container.querySelector('.thread-children')).toBeNull();
+  });
 });
