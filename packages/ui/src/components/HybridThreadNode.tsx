@@ -21,7 +21,11 @@ export interface HybridThreadNodeProps<TComment> {
     depth: number;
     visualDepth: number;
     isSubThread: boolean;
+    isExpanded: boolean;
+    onToggleCollapse: () => void;
+    onOpenPanel?: () => void;
   }) => React.ReactNode;
+  onOpenPanel?: (commentId: string) => void;
   depth?: number;
 }
 
@@ -31,10 +35,16 @@ function defaultThreadBar<TComment>({
   children,
   visualDepth,
   isSubThread,
+  isExpanded,
+  onToggleCollapse,
+  onOpenPanel,
 }: {
   children: TComment[];
   visualDepth: number;
   isSubThread: boolean;
+  isExpanded: boolean;
+  onToggleCollapse: () => void;
+  onOpenPanel?: () => void;
 }) {
   return (
     <div
@@ -44,7 +54,15 @@ function defaultThreadBar<TComment>({
         isSubThread ? 'comment-thread-bar-subthread' : null,
       ].filter(Boolean).join(' ')}
     >
-      {children.length} {children.length === 1 ? 'reply' : 'replies'}
+      <span>{children.length} {children.length === 1 ? 'reply' : 'replies'}</span>
+      <button type="button" className="comment-thread-bar-action" onClick={onToggleCollapse}>
+        {isExpanded ? 'Collapse' : 'Expand'}
+      </button>
+      {!isExpanded && onOpenPanel && (
+        <button type="button" className="comment-thread-bar-action" onClick={onOpenPanel}>
+          Open in drawer
+        </button>
+      )}
     </div>
   );
 }
@@ -55,8 +73,10 @@ export function HybridThreadNode<TComment>({
   getCommentId,
   renderComment,
   renderThreadBar = defaultThreadBar,
+  onOpenPanel,
   depth = 0,
 }: HybridThreadNodeProps<TComment>): React.ReactElement | null {
+  const [isExpanded, setIsExpanded] = React.useState(true);
   const commentId = getCommentId(comment);
   if (!commentId) {
     return null;
@@ -84,29 +104,35 @@ export function HybridThreadNode<TComment>({
             depth,
             visualDepth,
             isSubThread,
+            isExpanded,
+            onToggleCollapse: () => setIsExpanded((current) => !current),
+            onOpenPanel: onOpenPanel ? () => onOpenPanel(commentId) : undefined,
           })}
-          <div
-            className={[
-              'thread-children',
-              `depth-${childVisualDepth}`,
-              isSubThread ? 'thread-children-subthread' : null,
-            ].filter(Boolean).join(' ')}
-          >
-            {children.map((child) => {
-              const childId = getCommentId(child);
-              return (
-                <HybridThreadNode
-                  key={childId ?? `${commentId}-${group.comments.indexOf(child)}`}
-                  group={group}
-                  comment={child}
-                  getCommentId={getCommentId}
-                  renderComment={renderComment}
-                  renderThreadBar={renderThreadBar}
-                  depth={depth + 1}
-                />
-              );
-            })}
-          </div>
+          {isExpanded && (
+            <div
+              className={[
+                'thread-children',
+                `depth-${childVisualDepth}`,
+                isSubThread ? 'thread-children-subthread' : null,
+              ].filter(Boolean).join(' ')}
+            >
+              {children.map((child) => {
+                const childId = getCommentId(child);
+                return (
+                  <HybridThreadNode
+                    key={childId ?? `${commentId}-${group.comments.indexOf(child)}`}
+                    group={group}
+                    comment={child}
+                    getCommentId={getCommentId}
+                    renderComment={renderComment}
+                    renderThreadBar={renderThreadBar}
+                    onOpenPanel={onOpenPanel}
+                    depth={depth + 1}
+                  />
+                );
+              })}
+            </div>
+          )}
         </>
       )}
     </div>
