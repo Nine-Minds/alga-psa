@@ -267,4 +267,60 @@ describe('comment_threads migrations', () => {
 
     expect(afterCount).toBe(beforeCount);
   });
+
+  it('T008: backfills legacy project task comments into one thread per comment', async () => {
+    const context = await knex('project_tasks as pt')
+      .join('users as u', 'u.tenant', 'pt.tenant')
+      .select('pt.tenant', 'pt.task_id', 'u.user_id')
+      .first();
+    expect(context).toBeTruthy();
+
+    const generated = await knex.raw('SELECT gen_random_uuid() AS task_comment_id');
+    const taskCommentId = generated.rows[0].task_comment_id;
+    const createdAt = '2026-05-13T12:05:00.000Z';
+
+    await knex.schema.alterTable('project_task_comments', (table) => {
+      table.uuid('thread_id').nullable().alter();
+    });
+
+    try {
+      await knex('project_task_comments').insert({
+        tenant: context.tenant,
+        task_comment_id: taskCommentId,
+        task_id: context.task_id,
+        user_id: context.user_id,
+        author_type: 'internal',
+        thread_id: null,
+        note: 'Legacy task comment inserted without a thread for backfill coverage',
+        created_at: createdAt,
+      });
+
+      await taskCommentBackfillMigration.up(knex);
+
+      const comment = await knex('project_task_comments')
+        .select('thread_id')
+        .where({ tenant: context.tenant, task_comment_id: taskCommentId })
+        .first();
+      expect(comment?.thread_id).toBe(taskCommentId);
+
+      const thread = await knex('comment_threads')
+        .select('thread_id', 'project_task_id', 'root_comment_id', 'is_internal', 'reply_count', 'created_by')
+        .where({ tenant: context.tenant, thread_id: taskCommentId })
+        .first();
+      expect(thread).toMatchObject({
+        thread_id: taskCommentId,
+        project_task_id: context.task_id,
+        root_comment_id: taskCommentId,
+        is_internal: false,
+        reply_count: 0,
+        created_by: context.user_id,
+      });
+    } finally {
+      await knex('project_task_comments').where({ tenant: context.tenant, task_comment_id: taskCommentId }).delete();
+      await knex('comment_threads').where({ tenant: context.tenant, thread_id: taskCommentId }).delete();
+      await knex.schema.alterTable('project_task_comments', (table) => {
+        table.uuid('thread_id').notNullable().alter();
+      });
+    }
+  });
 });
