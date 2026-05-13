@@ -129,7 +129,7 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
     let commentsQueryCount = 0;
     withAdminTransactionMock.mockImplementation(async (callback: (trx: any) => Promise<any>) => {
       const trx = vi.fn((table: string) => {
-        if (table === 'tickets as t' || table === 'comments as c') {
+        if (table === 'tickets as t' || table === 'comments as c' || table === 'tickets') {
           return makeQueryBuilder(undefined);
         }
 
@@ -185,4 +185,5 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
     );
     expect(commentsQueryCount).toBe(2);
   });
+
 });
