@@ -503,4 +503,38 @@ describe('comment_threads migrations', () => {
       }
     });
   });
+
+  it('T074: comment_threads exactly-one parent check rejects missing or double parents', async () => {
+    const context = await knex('tickets as t')
+      .join('project_tasks as pt', 'pt.tenant', 't.tenant')
+      .select('t.tenant', 't.ticket_id', 'pt.task_id')
+      .first();
+    expect(context).toBeTruthy();
+
+    const generated = await knex.raw(`
+      SELECT
+        gen_random_uuid() AS no_parent_thread_id,
+        gen_random_uuid() AS no_parent_root_id,
+        gen_random_uuid() AS double_parent_thread_id,
+        gen_random_uuid() AS double_parent_root_id
+    `);
+
+    await expect(knex('comment_threads').insert({
+      tenant: context.tenant,
+      thread_id: generated.rows[0].no_parent_thread_id,
+      root_comment_id: generated.rows[0].no_parent_root_id,
+      is_internal: false,
+      reply_count: 0,
+    })).rejects.toThrow(/comment_threads_exactly_one_parent_check|violates check constraint/);
+
+    await expect(knex('comment_threads').insert({
+      tenant: context.tenant,
+      thread_id: generated.rows[0].double_parent_thread_id,
+      ticket_id: context.ticket_id,
+      project_task_id: context.task_id,
+      root_comment_id: generated.rows[0].double_parent_root_id,
+      is_internal: false,
+      reply_count: 0,
+    })).rejects.toThrow(/comment_threads_exactly_one_parent_check|violates check constraint/);
+  });
 });
