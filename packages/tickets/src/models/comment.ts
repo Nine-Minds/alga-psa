@@ -55,13 +55,47 @@ const Comment = {
         }
       }
 
+      if (!comment.ticket_id) {
+        throw new Error('ticket_id is required for comments');
+      }
+
+      if (comment.parent_comment_id) {
+        throw new Error('Reply comments require parent thread resolution before insert');
+      }
+
+      const now = new Date().toISOString();
+      const idsResult = await knexOrTrx.raw('SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id');
+      const generatedIds = idsResult.rows?.[0];
+      const commentId = comment.comment_id || generatedIds?.comment_id;
+      const threadId = comment.thread_id || generatedIds?.thread_id;
+
+      if (!commentId || !threadId) {
+        throw new Error('Failed to generate comment/thread identifiers');
+      }
+
+      await knexOrTrx('comment_threads').insert({
+        tenant,
+        thread_id: threadId,
+        ticket_id: comment.ticket_id,
+        project_task_id: null,
+        root_comment_id: commentId,
+        is_internal: Boolean(comment.is_internal),
+        reply_count: 0,
+        last_activity_at: now,
+        created_at: now,
+        created_by: comment.user_id || null,
+      });
+
       // Explicitly include markdown_content in the insert operation
       const result = await knexOrTrx<IComment>('comments')
         .insert({
           ...comment,
+          comment_id: commentId,
+          thread_id: threadId,
+          parent_comment_id: null,
           tenant: tenant,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          created_at: now,
+          updated_at: now,
           is_system_generated: Boolean((comment as any).is_system_generated),
           markdown_content: comment.markdown_content || '[No markdown content]',
         })
@@ -142,4 +176,3 @@ const Comment = {
 };
 
 export default Comment;
-

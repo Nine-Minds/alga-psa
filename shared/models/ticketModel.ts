@@ -1157,6 +1157,7 @@ export class TicketModel {
     }
 
     const commentId = uuidv4();
+    const threadId = uuidv4();
     const now = new Date();
 
     // Map legacy/alias author types to current enum: internal | client | unknown
@@ -1184,9 +1185,24 @@ export class TicketModel {
       user_id: validatedData.author_id || null,
       contact_id: validatedData.contact_id || null,
       metadata: validatedData.metadata ? JSON.stringify(validatedData.metadata) : null,
+      thread_id: threadId,
+      parent_comment_id: null,
       created_at: now,
       updated_at: now
     };
+
+    await trx('comment_threads').insert({
+      tenant,
+      thread_id: threadId,
+      ticket_id: validatedData.ticket_id,
+      project_task_id: null,
+      root_comment_id: commentId,
+      is_internal: validatedData.is_internal || false,
+      reply_count: 0,
+      last_activity_at: now,
+      created_at: now,
+      created_by: validatedData.author_id || null,
+    });
 
     await trx('comments').insert(baseCommentData);
 
