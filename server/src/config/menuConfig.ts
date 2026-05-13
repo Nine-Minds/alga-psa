@@ -140,6 +140,12 @@ export const navigationSections: NavigationSection[] = [
         href: '/msp/assets'
       },
       {
+        name: 'Reports',
+        translationKey: 'nav.billing.reports',
+        icon: FileBarChart,
+        href: '/msp/reports'
+      },
+      {
         name: 'Time Management',
         translationKey: 'nav.timeManagement',
         icon: Clock,
