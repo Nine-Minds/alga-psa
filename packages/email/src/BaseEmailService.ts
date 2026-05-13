@@ -126,9 +126,31 @@ function getHeaderValue(headers: Record<string, string> | undefined, name: strin
   return key ? normalizeHeaderValue(headers[key]) : null;
 }
 
+interface CommentThreadReplyHeaderContext {
+  commentThreadId: string;
+  references: string[];
+}
+
 function buildGeneratedRfcMessageId(tenantId?: string): string {
   const domainPart = tenantId ? `${tenantId}.alga-psa.local` : 'alga-psa.local';
   return `<${randomUUID()}@${domainPart}>`;
+}
+
+function dedupeHeaderValues(values: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+
+  for (const value of values) {
+    const normalized = normalizeHeaderValue(value ?? undefined);
+    if (!normalized || seen.has(normalized)) {
+      continue;
+    }
+
+    seen.add(normalized);
+    deduped.push(normalized);
+  }
+
+  return deduped;
 }
 
 async function addCommentThreadReplyHeaders(params: {
@@ -136,9 +158,9 @@ async function addCommentThreadReplyHeaders(params: {
   commentId?: string;
   headers: Record<string, string>;
   serviceName: string;
-}): Promise<void> {
-  if (!params.tenantId || !params.commentId || getHeaderValue(params.headers, 'In-Reply-To')) {
-    return;
+}): Promise<CommentThreadReplyHeaderContext | null> {
+  if (!params.tenantId || !params.commentId) {
+    return null;
   }
 
   try {
@@ -152,29 +174,82 @@ async function addCommentThreadReplyHeaders(params: {
       .first<{ thread_id?: string | null; parent_comment_id?: string | null }>();
 
     if (!comment?.thread_id || !comment.parent_comment_id) {
-      return;
+      return null;
     }
 
-    const latestOutbound = await knex('email_sending_logs')
-      .select('rfc_message_id')
-      .where({
-        tenant: params.tenantId,
-        comment_thread_id: comment.thread_id,
-        status: 'sent',
-      })
-      .whereNotNull('rfc_message_id')
-      .orderBy('created_at', 'desc')
-      .orderBy('id', 'desc')
-      .first<{ rfc_message_id?: string | null }>();
+    const [latestOutbound, thread] = await Promise.all([
+      knex('email_sending_logs')
+        .select('rfc_message_id')
+        .where({
+          tenant: params.tenantId,
+          comment_thread_id: comment.thread_id,
+          status: 'sent',
+        })
+        .whereNotNull('rfc_message_id')
+        .orderBy('created_at', 'desc')
+        .orderBy('id', 'desc')
+        .first<{ rfc_message_id?: string | null }>(),
+      knex('comment_threads')
+        .select('email_references')
+        .where({
+          tenant: params.tenantId,
+          thread_id: comment.thread_id,
+        })
+        .first<{ email_references?: string[] | string | null }>(),
+    ]);
 
     const inReplyTo = normalizeHeaderValue(latestOutbound?.rfc_message_id ?? undefined);
-    if (inReplyTo) {
-      params.headers['In-Reply-To'] = inReplyTo;
+    if (!inReplyTo) {
+      return null;
     }
+
+    const storedReferences = Array.isArray(thread?.email_references)
+      ? thread.email_references
+      : [];
+    const references = dedupeHeaderValues([...storedReferences, inReplyTo]);
+
+    params.headers['In-Reply-To'] = inReplyTo;
+    if (references.length > 0) {
+      params.headers.References = references.join(' ');
+    }
+
+    return {
+      commentThreadId: comment.thread_id,
+      references,
+    };
   } catch (error) {
     logger.warn(`[${params.serviceName}] Failed to resolve comment thread reply headers`, {
       tenantId: params.tenantId,
       commentId: params.commentId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    return null;
+  }
+}
+
+async function persistCommentThreadReferences(params: {
+  tenantId?: string;
+  context: CommentThreadReplyHeaderContext | null;
+  serviceName: string;
+}): Promise<void> {
+  if (!params.tenantId || !params.context || params.context.references.length === 0) {
+    return;
+  }
+
+  try {
+    const { knex } = await createTenantKnex(params.tenantId);
+    await knex('comment_threads')
+      .where({
+        tenant: params.tenantId,
+        thread_id: params.context.commentThreadId,
+      })
+      .update({
+        email_references: params.context.references,
+      });
+  } catch (error) {
+    logger.warn(`[${params.serviceName}] Failed to persist comment thread references`, {
+      tenantId: params.tenantId,
+      commentThreadId: params.context.commentThreadId,
       error: error instanceof Error ? error.message : 'Unknown error',
     });
   }
@@ -311,7 +386,7 @@ export abstract class BaseEmailService {
       });
       
       const headers = { ...(params.headers ?? {}) };
-      await addCommentThreadReplyHeaders({
+      const commentThreadHeaderContext = await addCommentThreadReplyHeaders({
         tenantId: params.tenantId,
         commentId: params.replyContext?.commentId,
         headers,
@@ -351,6 +426,12 @@ export abstract class BaseEmailService {
       });
 
       if (result.success) {
+        await persistCommentThreadReferences({
+          tenantId: params.tenantId,
+          context: commentThreadHeaderContext,
+          serviceName: this.getServiceName(),
+        });
+
         logger.info(`[${this.getServiceName()}] Email sent successfully:`, {
           messageId: result.messageId,
           to: emailMessage.to,
