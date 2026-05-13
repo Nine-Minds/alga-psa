@@ -205,4 +205,48 @@ describe('comment_threads migrations', () => {
       });
     }
   });
+
+  it('T006: backfills comment thread email_message_id from comment email metadata', async () => {
+    const context = await knex('tickets as t')
+      .join('users as u', 'u.tenant', 't.tenant')
+      .select('t.tenant', 't.ticket_id', 'u.user_id')
+      .first();
+    expect(context).toBeTruthy();
+
+    const generated = await knex.raw('SELECT gen_random_uuid() AS comment_id');
+    const commentId = generated.rows[0].comment_id;
+    const messageId = '<legacy-comment@example.test>';
+
+    await knex.schema.alterTable('comments', (table) => {
+      table.uuid('thread_id').nullable().alter();
+    });
+
+    try {
+      await knex('comments').insert({
+        tenant: context.tenant,
+        comment_id: commentId,
+        ticket_id: context.ticket_id,
+        user_id: context.user_id,
+        thread_id: null,
+        note: 'Legacy email comment inserted without a thread for metadata backfill coverage',
+        is_internal: false,
+        is_resolution: false,
+        metadata: { email: { messageId } },
+      });
+
+      await commentBackfillMigration.up(knex);
+
+      const thread = await knex('comment_threads')
+        .select('email_message_id')
+        .where({ tenant: context.tenant, thread_id: commentId })
+        .first();
+      expect(thread?.email_message_id).toBe(messageId);
+    } finally {
+      await knex('comments').where({ tenant: context.tenant, comment_id: commentId }).delete();
+      await knex('comment_threads').where({ tenant: context.tenant, thread_id: commentId }).delete();
+      await knex.schema.alterTable('comments', (table) => {
+        table.uuid('thread_id').notNullable().alter();
+      });
+    }
+  });
 });
