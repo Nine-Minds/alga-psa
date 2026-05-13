@@ -1,0 +1,83 @@
+# Scratchpad — Threaded Comment Responses
+
+- Plan slug: `2026-05-13-threaded-comments`
+- Created: `2026-05-13`
+
+## What This Is
+
+Working notes for implementing nested/threaded comment responses on tickets and project tasks, plus the supporting first-class `comment_threads` entity that carries email-thread identity. See `PRD.md` for scope, `features.json` for the commit-sized work list, `tests.json` for the test plan.
+
+## Decisions
+
+- (2026-05-13) **Thread as first-class entity.** Every top-level comment is the head of a `comment_threads` row. Inbound/outbound email correlation happens at thread granularity, not ticket. New "Add Comment" always creates a new thread; existing flat comments backfill as single-comment threads.
+- (2026-05-13) **Hybrid (Nested + collapsible drawer)** is the only production reply model. Other modes from the prototype (Flat, Single-level only, Deep nesting only, Quote-reply, Side-panel only) are exploration-only and not shipping. The prototype's Tweaks panel is not part of production.
+- (2026-05-13) **Scope:** Tickets + project tasks together in one PR. Email integration is full bidirectional (inbound matching + outbound RFC headers + reply tokens) for tickets only — tasks don't accept inbound email today.
+- (2026-05-13) **Backfill model:** one thread per existing comment. Cleanest cut-over; visually identical to today (no thread bars on legacy comments).
+- (2026-05-13) **Depth cap:** visual indent capped at 4 levels (matches the design prototype); data has no cap so the model accommodates real-world deep threads.
+- (2026-05-13) **Soft-delete only for roots with children.** Leaf comments hard-delete as today. Soft-delete = `deleted_at` set + `note = '[deleted]'`. Keeps tree well-formed without orphaning children.
+- (2026-05-13) **Visibility invariant:** a thread's `is_internal` flag denormalizes from its root. Reply must be compatible with root (can't make a reply client-visible inside an internal thread, etc.). Inbound emails inherit thread visibility — clients can only reply to client-visible threads.
+- (2026-05-13) **Inbound resolution precedence:** reply-token > In-Reply-To > References (end→start) > provider thread id > ticket-fallback (new top-level thread). First match wins.
+
+## Discoveries / Constraints
+
+- (2026-05-13) **No existing threading columns.** `comments` and `project_task_comments` are flat today; no `parent_id`, `reply_to_id`, or `thread_id`. Confirmed by reading `packages/types/src/interfaces/comment.interface.ts` (line 38).
+- (2026-05-13) **Separate tables.** Tickets use `comments`; project tasks use `project_task_comments` (migration `20251118140000_create_project_task_comments.cjs`). No sharing — keep `comment_threads` polymorphic across both.
+- (2026-05-13) **Today the ticket IS the email thread.** `tickets.email_metadata` (jsonb) stores `messageId`, `threadId`, `inReplyTo`, `references` for inbound matching. All inbound emails for a ticket collapse to flat comments. This is what the thread-as-entity refactor unblocks.
+- (2026-05-13) **Outbound currently uses reply tokens, not RFC headers.** `email_reply_tokens` maps token → `(ticket_id | comment_id | project_id)`. The token marker `[ALGA-REPLY-TOKEN:...]` is embedded in the body. New work: ALSO set proper `In-Reply-To`/`References` so mail clients thread our messages, AND keep issuing tokens scoped to the new outbound comment.
+- (2026-05-13) **`email_sending_logs` already has a `thread_id` column** (migration `20260331110000_add_email_threading_diagnostics_columns.cjs`). It looks like it refers to the provider's threadId. We will add a separate `comment_thread_id` column rather than overload — clearer and avoids semantic drift. If safe, rename the existing one to `email_provider_thread_id` in the same migration.
+- (2026-05-13) **Drawer is a Radix Dialog.** Per `MEMORY.md`, the existing `packages/ui` `Drawer` uses Radix's `Dialog` internally with `modal={true}`. Nested dialogs are already handled by `InsideDialogContext` in `ModalityContext.tsx` — no extra wiring needed for the comment drawer.
+- (2026-05-13) **Project task comments are internal-only today.** `author_type` is hardcoded 'internal' in `IProjectTaskComment`. So the task inline reply composer should NOT show a Mark-as-Internal toggle (different from ticket flow).
+- (2026-05-13) **Reactions** already attach via `commentReactionActions`; nothing to change for replies — same per-comment reaction model applies.
+- (2026-05-13) **Existing `ticketConversationOrderPreference`** stores newest-first preference per user. Reused as-is; applied to thread ordering after this change.
+
+## Commands / Runbooks
+
+- (2026-05-13) Run migrations locally:
+  ```
+  cd server && npm run db:migrate:latest
+  ```
+- (2026-05-13) Dev server (Docker, builds from current worktree per the alga-dev-env-manager skill):
+  ```
+  alga dev up
+  alga dev rebuild server   # after schema or types change
+  ```
+- (2026-05-13) Run a single migration backwards (for iterating on backfill logic):
+  ```
+  cd server && npx knex migrate:down
+  ```
+- (2026-05-13) Playwright e2e — see the `playwright-testing` skill conventions; tests live under `server/src/__tests__/e2e/`.
+- (2026-05-13) Email loop test (manual): use `shared/services/email/processInboundEmailInApp.ts` test fixture path; or trigger via the IMAP/MS Graph mock.
+
+## Links / References
+
+- **Design handoff bundle** (extracted): `/tmp/design_extract/comment-responses/`
+  - `README.md` — handoff instructions
+  - `chats/chat1.md` — user's design conversation; the source of intent
+  - `project/Comment responses.html` — entry HTML
+  - `project/conversation.jsx`, `comment.jsx`, `data.jsx`, `app.jsx` — prototype implementation we're recreating in real components
+  - `project/styles.css` — pixel-level visual reference for thread bars, drawer, indent rail, depth cap
+- **Implementation plan**: `/Users/natalliabukhtsik/.claude/plans/immutable-foraging-wirth.md`
+- **Key existing files**:
+  - `packages/tickets/src/components/ticket/TicketConversation.tsx`
+  - `packages/tickets/src/components/ticket/CommentItem.tsx`
+  - `packages/tickets/src/components/ticket/TicketDetails.module.css`
+  - `packages/tickets/src/models/comment.ts`
+  - `packages/tickets/src/actions/comment-actions/commentActions.ts`
+  - `packages/projects/src/components/TaskComment.tsx`
+  - `packages/projects/src/components/TaskCommentThread.tsx`
+  - `packages/projects/src/components/TaskCommentForm.tsx`
+  - `packages/projects/src/models/projectTaskComment.ts`
+  - `packages/projects/src/actions/projectTaskCommentActions.ts`
+  - `packages/types/src/interfaces/comment.interface.ts`
+  - `packages/types/src/interfaces/projectTaskComment.interface.ts`
+  - `shared/services/email/processInboundEmailInApp.ts`
+  - `shared/workflow/actions/emailWorkflowActions.ts`
+  - `server/migrations/202409071803_initial_schema.cjs` (comments table origin)
+  - `server/migrations/20251118140000_create_project_task_comments.cjs` (project_task_comments origin)
+  - `server/migrations/20260331110000_add_email_threading_diagnostics_columns.cjs` (email_sending_logs thread fields)
+
+## Open Questions
+
+- Exact rename/co-existence strategy for `email_sending_logs.thread_id` (provider) vs new `comment_thread_id`. Default plan: add new column, leave the old one alone; revisit if it causes confusion.
+- Should `comment_threads.email_references` be capped in length (mail clients can emit 50+ References entries)? Default plan: no cap initially; revisit if storage growth is an issue.
+- Whether project-task comment soft-delete needs the same "[deleted]" UX text or a different copy (tasks have less context). Default plan: same text, revisit during UI review.
