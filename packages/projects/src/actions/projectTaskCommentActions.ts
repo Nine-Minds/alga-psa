@@ -194,6 +194,12 @@ export const createTaskComment = withAuth(async (
         projectId: task.project_id,
         userId,
         taskCommentId: newComment.task_comment_id,
+        threadId,
+        parentCommentId,
+        isReply,
+        thread_id: threadId,
+        parent_comment_id: parentCommentId,
+        is_reply: isReply,
         taskName: task.task_name,
         commentContent: comment.note,  // BlockNote JSON with embedded mentions
         isUpdate: false  // Flag to indicate this is a new comment, not an update
