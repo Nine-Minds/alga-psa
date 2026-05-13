@@ -237,4 +237,71 @@ describe('BaseEmailService comment thread outbound headers', () => {
     expect(capturedMessage?.headers?.['In-Reply-To']).toBe(previousMessageId);
     expect(capturedMessage?.headers?.['Message-ID']).toMatch(/^<.+@tenant-t040\.alga-psa\.local>$/);
   });
+
+  it('T041: reply send appends previous Message-ID to References and persists the chain', async () => {
+    const tenantId = 'tenant-t041';
+    const commentId = 'comment-t041';
+    const threadId = 'thread-t041';
+    const storedReferences = ['<root-t041@example.test>', '<middle-t041@example.test>'];
+    const previousMessageId = '<latest-t041@example.test>';
+    let capturedMessage: EmailMessage | null = null;
+
+    dbState.commentRows.set(commentId, {
+      thread_id: threadId,
+      parent_comment_id: 'parent-comment-t041',
+    });
+    dbState.latestOutboundRows.set(threadId, {
+      rfc_message_id: previousMessageId,
+    });
+    dbState.threadRows.set(threadId, {
+      email_references: storedReferences,
+    });
+
+    const provider: IEmailProvider = {
+      providerId: 'test-provider',
+      providerType: 'test',
+      capabilities,
+      async initialize() {
+        // no-op
+      },
+      async sendEmail(message: EmailMessage, _tenantId: string): Promise<EmailSendResult> {
+        capturedMessage = message;
+        return {
+          success: true,
+          messageId: 'provider-message-t041',
+          providerMessageId: 'provider-message-t041',
+          providerId: 'test-provider',
+          providerType: 'test',
+          sentAt: new Date('2026-05-13T12:10:00.000Z'),
+        };
+      },
+      async healthCheck() {
+        return { healthy: true };
+      },
+    };
+
+    const service = new TestEmailService(provider);
+    const result = await service.sendEmail({
+      tenantId,
+      to: 'client@example.com',
+      subject: 'Reply with references',
+      html: '<p>Reply with references</p>',
+      replyContext: {
+        ticketId: 'ticket-t041',
+        commentId,
+        threadId: 'provider-thread-t041',
+      },
+    });
+
+    const expectedReferences = [...storedReferences, previousMessageId];
+
+    expect(result.success).toBe(true);
+    expect(capturedMessage?.headers?.References).toBe(expectedReferences.join(' '));
+    expect(dbState.threadUpdates).toContainEqual({
+      where: { tenant: tenantId, thread_id: threadId },
+      patch: {
+        email_references: expectedReferences,
+      },
+    });
+  });
 });

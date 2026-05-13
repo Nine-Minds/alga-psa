@@ -39,7 +39,7 @@
   { "id": "T038", "description": "Email inbound: resolution precedence — reply token wins over In-Reply-To when both present", "implemented": true, "featureIds": ["F028", "F029"] },
   { "id": "T039", "description": "Email outbound: top-level send generates a fresh RFC Message-ID and writes it to comment_threads.email_message_id; outgoing email has no In-Reply-To header", "implemented": true, "featureIds": ["F034"] },
   { "id": "T040", "description": "Email outbound: reply in existing thread sets In-Reply-To to the latest outbound rfc_message_id stored in email_sending_logs for that comment_thread_id", "implemented": true, "featureIds": ["F035"] },
-  { "id": "T041", "description": "Email outbound: References header is comment_threads.email_references + previous Message-ID appended; new entry persisted into the column", "implemented": false, "featureIds": ["F036"] },
+  { "id": "T041", "description": "Email outbound: References header is comment_threads.email_references + previous Message-ID appended; new entry persisted into the column", "implemented": true, "featureIds": ["F036"] },
   { "id": "T042", "description": "Email outbound: a row is created in email_reply_tokens with comment_id of the new outbound comment; recipient_email matches", "implemented": false, "featureIds": ["F037"] },
   { "id": "T043", "description": "Email outbound: email_sending_logs row has comment_thread_id, rfc_message_id, reply_token_hash, provider_message_id populated", "implemented": false, "featureIds": ["F038"] },
   { "id": "T044", "description": "Email round-trip: outbound + simulated inbound with matching In-Reply-To lands the reply back in the originating thread", "implemented": false, "featureIds": ["F029", "F034", "F035"] },
