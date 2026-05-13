@@ -62,6 +62,8 @@ export * from './EntityImageUpload';
 export { default as EntityImageUpload } from './EntityImageUpload';
 export * from './GenericDialog';
 export { default as GenericDialog } from './GenericDialog';
+export * from './HybridThreadNode';
+export { default as HybridThreadNode } from './HybridThreadNode';
 export * from './IconPicker';
 export * from './Input';
 export * from './InteractionIcon';
