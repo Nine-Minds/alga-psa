@@ -51,7 +51,7 @@
   { "id": "T050", "description": "UI: Drawer composer submits create with parent_comment_id; drawer closes; inline list shows new reply after close", "implemented": true, "featureIds": ["F044", "F053"] },
   { "id": "T051", "description": "UI: depth-4 CSS cap — indent does not grow past depth 4 even with depth-5 data", "implemented": true, "featureIds": ["F059"] },
   { "id": "T052", "description": "UI: sub-thread bar (depth >= 1) uses dashed border + white background; depth-0 uses solid grey background", "implemented": true, "featureIds": ["F060"] },
-  { "id": "T053", "description": "UI: Reply button only visible on hover; keyboard-accessible focus also reveals it (.c-actions opacity rules)", "implemented": false, "featureIds": ["F046", "F051"] },
+  { "id": "T053", "description": "UI: Reply button only visible on hover; keyboard-accessible focus also reveals it (.c-actions opacity rules)", "implemented": true, "featureIds": ["F046", "F051"] },
   { "id": "T054", "description": "UI: soft-deleted comments render '[deleted]' placeholder with reduced opacity; no Reply button", "implemented": false, "featureIds": ["F058"] },
   { "id": "T055", "description": "UI: tab counts at thread level — All counts threads, Client = threads whose root non-internal, Internal = threads whose root internal, Resolution = threads with any is_resolution=true comment", "implemented": false, "featureIds": ["F048"] },
   { "id": "T056", "description": "UI: ticket thread sort order toggle re-sorts threads by last_activity_at; within-thread replies still chronological regardless of toggle", "implemented": false, "featureIds": ["F049", "F061"] },

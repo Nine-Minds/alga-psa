@@ -1,5 +1,7 @@
 /* @vitest-environment jsdom */
 
+import fs from 'node:fs';
+import path from 'node:path';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -58,6 +60,45 @@ const userMap = {
 };
 
 describe('CommentItem metadata debug control', () => {
+  it('T053: wires Reply in the hover/focus action row and keeps c-actions reveal CSS', async () => {
+    const user = userEvent.setup();
+    const onReply = vi.fn();
+
+    render(
+      <CommentItem
+        conversation={buildComment({})}
+        currentUserId="other"
+        isEditing={false}
+        currentComment={null}
+        ticketId="t1"
+        userMap={userMap}
+        contactMap={{}}
+        onContentChange={() => {}}
+        onSave={() => {}}
+        onClose={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onReply={onReply}
+      />
+    );
+
+    const replyButton = screen.getByRole('button', { name: 'Reply to comment' });
+    expect(replyButton.closest('.c-actions')).not.toBeNull();
+
+    await user.click(replyButton);
+    expect(onReply).toHaveBeenCalledWith(expect.objectContaining({ comment_id: 'comment-1' }));
+
+    const css = fs.readFileSync(
+      path.resolve(__dirname, '../../../../ui/src/components/CommentThread.module.css'),
+      'utf8'
+    );
+    expect(css).toContain(':global(.c-actions)');
+    expect(css).toContain('opacity: 0;');
+    expect(css).toContain(':global(.group\\/comment:hover .c-actions)');
+    expect(css).toContain(':global(.group\\/comment:focus-within .c-actions)');
+    expect(css).toContain('opacity: 1;');
+  });
+
   it('hides the metadata control without Admin Settings access or when metadata is empty', () => {
     const { rerender } = render(
       <CommentItem
