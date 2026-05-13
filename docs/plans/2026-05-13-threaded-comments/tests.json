@@ -66,7 +66,7 @@
   { "id": "T065", "description": "Playwright e2e (project task): collapse + Open in drawer behavior identical to ticket flow", "implemented": true, "featureIds": ["F057"] },
   { "id": "T066", "description": "Playwright e2e (project task): is_internal toggle absent from task reply composer (tasks have no internal/client split)", "implemented": true, "featureIds": ["F056"] },
   { "id": "T067", "description": "Regression: existing ticket with only legacy comments renders identically to today — no thread bars, no indent, layout unchanged", "implemented": true, "featureIds": ["F005", "F039"] },
-  { "id": "T068", "description": "Regression: existing project task with legacy comments renders unchanged", "implemented": false, "featureIds": ["F006", "F055"] },
+  { "id": "T068", "description": "Regression: existing project task with legacy comments renders unchanged", "implemented": true, "featureIds": ["F006", "F055"] },
   { "id": "T069", "description": "Regression: editing a legacy comment still works; updated_at advanced; tree unaffected", "implemented": false, "featureIds": ["F005"] },
   { "id": "T070", "description": "Regression: reactions on comments continue to attach via commentReactionActions; reactions allowed on replies too", "implemented": false, "featureIds": ["F046"] },
   { "id": "T071", "description": "Performance: opening a ticket with 100 threads x 5 replies each renders within current SLA budget (existing perf test threshold)", "implemented": false, "featureIds": ["F002", "F039"] },

@@ -200,4 +200,28 @@ describe('TaskCommentThread threaded replies', () => {
     expect(screen.getByTestId('task-comment-editor')).toBeInTheDocument();
     expect(screen.queryByText('Mark as Internal')).not.toBeInTheDocument();
   });
+
+  it('T068: legacy flat task comments render without thread bars or indentation', async () => {
+    taskStore.comments = [
+      buildTaskComment({
+        taskCommentId: 'legacy-1',
+        threadId: undefined,
+        parentCommentId: undefined,
+        createdAt: '2026-05-13T09:00:00.000Z',
+      }),
+      buildTaskComment({
+        taskCommentId: 'legacy-2',
+        threadId: undefined,
+        parentCommentId: undefined,
+        createdAt: '2026-05-13T09:05:00.000Z',
+      }),
+    ];
+
+    const { container } = render(<TaskCommentThread taskId="task-1" projectId="project-1" />);
+
+    expect(await screen.findByTestId('task-comment-legacy-1')).toBeInTheDocument();
+    expect(screen.getByTestId('task-comment-legacy-2')).toBeInTheDocument();
+    expect(container.querySelector('.comment-thread-bar')).toBeNull();
+    expect(container.querySelector('.thread-children')).toBeNull();
+  });
 });
