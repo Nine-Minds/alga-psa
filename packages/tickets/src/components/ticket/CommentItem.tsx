@@ -175,12 +175,14 @@ const CommentItem: React.FC<CommentItemProps> = ({
     [conversation]
   );
   const authorEmail = getAuthorEmail();
+  const isDeleted = Boolean(conversation.deleted_at);
 
   // Only allow users to edit their own comments
   const canEdit = useMemo(() => {
+    if (isDeleted) return false;
     if (conversation.is_system_generated) return false;
     return currentUserId === conversation.user_id;
-  }, [conversation.user_id, currentUserId]);
+  }, [conversation.user_id, currentUserId, isDeleted]);
 
   const handleSave = () => {
     const updates: Partial<IComment> = {
@@ -401,9 +403,9 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 </p>
               </div>
             </div>
-            {(onReply || canEdit) && (
+            {((onReply && !isDeleted) || canEdit) && (
               <div className="c-actions space-x-2">
-                {onReply && (
+                {onReply && !isDeleted && (
                   <Button
                     id={`reply-comment-${conversation.comment_id}-button`}
                     variant="ghost"
@@ -439,7 +441,14 @@ const CommentItem: React.FC<CommentItemProps> = ({
               </div>
             )}
           </div>
-            {isEditing && currentComment?.comment_id === conversation.comment_id ? (
+            {isDeleted ? (
+              <div
+                {...withDataAutomationId({ id: `${commentId}-content` })}
+                className="mt-1 text-sm text-gray-500 opacity-70"
+              >
+                [deleted]
+              </div>
+            ) : isEditing && currentComment?.comment_id === conversation.comment_id ? (
               editorContent
             ) : (
             (() => {

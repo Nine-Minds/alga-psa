@@ -74,8 +74,9 @@ const TaskComment: React.FC<TaskCommentProps> = ({
 
   // Only allow users to edit their own comments
   const canEdit = useMemo(() => {
+    if (comment.deletedAt) return false;
     return currentUserId === comment.userId;
-  }, [comment.userId, currentUserId]);
+  }, [comment.deletedAt, comment.userId, currentUserId]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -211,9 +212,9 @@ const TaskComment: React.FC<TaskCommentProps> = ({
                 </p>
               </div>
             </div>
-            {(onReply || (canEdit && !isEditing)) && (
+            {((onReply && !comment.deletedAt) || (canEdit && !isEditing)) && (
               <div className="c-actions space-x-2">
-                {onReply && (
+                {onReply && !comment.deletedAt && (
                   <Button
                     id={`reply-comment-${comment.taskCommentId}-button`}
                     variant="ghost"
@@ -249,7 +250,14 @@ const TaskComment: React.FC<TaskCommentProps> = ({
               </div>
             )}
           </div>
-          {isEditing ? (
+          {comment.deletedAt ? (
+            <div
+              {...withDataAutomationId({ id: `${commentId}-content` })}
+              className="mt-1 text-sm text-gray-500 opacity-70"
+            >
+              [deleted]
+            </div>
+          ) : isEditing ? (
             <div className="mt-2">
               <TextEditor
                 {...withDataAutomationId({ id: `${commentId}-text-editor` })}
