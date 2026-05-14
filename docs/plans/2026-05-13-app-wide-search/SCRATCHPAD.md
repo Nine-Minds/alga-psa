@@ -1372,6 +1372,8 @@ npm run search:backfill
 
 - **2026-05-13 — T127 quiet typeahead threshold.** Added UI contract coverage that `SearchPalette` only opens typeahead for `trimmedQuery.length >= 2` and clears result state below that threshold, matching the PRD empty-state behavior. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T128 server-rendered search results.** Added route contract coverage that `/msp/search` is dynamic, reads `q` from `searchParams`, awaits `searchAppAction` for non-empty queries, and passes the resolved `initialResult` into `SearchPageClient` for first render. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

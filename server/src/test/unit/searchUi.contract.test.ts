@@ -59,4 +59,14 @@ describe('app-wide search UI contracts', () => {
     expect(source).toContain('setResults([])');
     expect(source).toContain('setTotalCount(0)');
   });
+
+  it('T128 resolves /msp/search results in the server page before rendering the client shell', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/app/msp/search/page.tsx'), 'utf8');
+
+    expect(source).toContain("export const dynamic = 'force-dynamic'");
+    expect(source).toContain("const query = firstParam(params.q)?.trim() ?? ''");
+    expect(source).toContain('query.length > 0');
+    expect(source).toContain('await searchAppAction({');
+    expect(source).toContain('initialResult={result}');
+  });
 });

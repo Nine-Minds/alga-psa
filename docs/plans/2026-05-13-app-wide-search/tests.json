@@ -142,7 +142,7 @@
   { "id": "T126", "featureIds": ["F107"], "description": "Last typeahead row reads `See all N results` (i18n) and links to `/msp/search?q={query}`", "implemented": true },
   { "id": "T127", "featureIds": ["F106"], "description": "Typeahead does NOT render before query length ≥ 2", "implemented": true },
 
-  { "id": "T128", "featureIds": ["F109"], "description": "GET /msp/search?q=foo renders server-side with results in the initial HTML", "implemented": false },
+  { "id": "T128", "featureIds": ["F109"], "description": "GET /msp/search?q=foo renders server-side with results in the initial HTML", "implemented": true },
   { "id": "T129", "featureIds": ["F110"], "description": "Typing in the results-page input updates the URL via router.replace, debounced 200ms", "implemented": false },
   { "id": "T130", "featureIds": ["F110"], "description": "Opening a deep-linked /msp/search?q=foo&type=ticket&cursor=...&sort=recent restores the same state", "implemented": false },
   { "id": "T131", "featureIds": ["F111"], "description": "Filter chips render with count badges that match `groups` from the action response", "implemented": false },
