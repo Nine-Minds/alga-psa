@@ -104,4 +104,22 @@ describe('search query parsing', () => {
       score: 0.42,
     });
   });
+
+  it('T094 includes pg_trgm similarity in the composite score', async () => {
+    const knex = {
+      raw: vi.fn(async () => ({ rows: [] })),
+    };
+
+    await runSearchQuery({
+      knex: knex as never,
+      tenant: '00000000-0000-0000-0000-000000000001',
+      query: 'exhcange',
+      allowedTypes: ['client'],
+    });
+
+    const sql = knex.raw.mock.calls[0]?.[0] as string;
+    expect(sql).toContain('similarity(s.title, q.raw)');
+    expect(sql).toContain("similarity(coalesce(s.subtitle, ''), q.raw)");
+    expect(sql).toContain('* 0.4');
+  });
 });
