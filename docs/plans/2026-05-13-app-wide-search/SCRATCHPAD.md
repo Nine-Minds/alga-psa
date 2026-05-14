@@ -593,6 +593,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - `Cmd+K` / `Ctrl+K` prevents the browser default, focuses the sidebar search input when expanded, and requests sidebar expansion before focusing when collapsed.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F106 — Native-anchor typeahead rows.**
+  - Typeahead suggestions now render at most five rows and each row is a real `<a href={result.url}>` inside `cmdk`.
+  - This preserves browser-native Cmd/Ctrl-click, middle-click, and context-menu behavior while keeping title-only suggestion text.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

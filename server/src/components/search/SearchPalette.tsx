@@ -120,13 +120,19 @@ export default function SearchPalette({
                 {t('search.loading', { defaultValue: 'Searching...' })}
               </Command.Loading>
             )}
-            {!isPending && results.length === 0 ? null : results.map((result) => (
+            {!isPending && results.length === 0 ? null : results.slice(0, 5).map((result) => (
               <Command.Item
                 key={`${result.type}-${result.id}`}
                 value={`${result.type}-${result.id}`}
-                className="cursor-pointer rounded px-3 py-2 aria-selected:bg-white/10"
+                asChild
               >
-                <span className="block truncate">{result.title}</span>
+                <a
+                  id={`app-search-result-row-${result.type}-${result.id}`}
+                  href={result.url}
+                  className="block cursor-pointer rounded px-3 py-2 aria-selected:bg-white/10"
+                >
+                  <span className="block truncate">{result.title}</span>
+                </a>
               </Command.Item>
             ))}
           </Command.List>
