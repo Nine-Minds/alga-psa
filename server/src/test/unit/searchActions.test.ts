@@ -406,6 +406,37 @@ describe('search actions', () => {
     }));
   });
 
+  it('T187 only queries entity types covered by the user permission set', async () => {
+    const knex = { tenant: 'knex' };
+    const acl = {
+      userId: 'user-type-filter',
+      tenant: 'tenant-type-filter',
+      permissions: ['client:read'],
+      isInternal: true,
+      accessibleClientIds: ['client-1'],
+    };
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-type-filter' });
+    mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
+    mocks.runSearchQuery.mockResolvedValue([]);
+    mocks.verifyResultVisibility.mockResolvedValue([]);
+
+    await searchAppAction(
+      {
+        user_id: 'user-type-filter',
+        tenant: 'tenant-type-filter',
+        user_type: 'client',
+        clientId: 'client-1',
+      },
+      { tenant: 'tenant-type-filter' },
+      { query: 'acme', types: ['client', 'ticket', 'document'], limit: 10 },
+    );
+
+    expect(mocks.runSearchQuery).toHaveBeenCalledWith(expect.objectContaining({
+      allowedTypes: ['client'],
+    }));
+  });
+
   it('T118 returns at most five typeahead rows without snippets', async () => {
     const knex = { tenant: 'knex' };
     const acl = {

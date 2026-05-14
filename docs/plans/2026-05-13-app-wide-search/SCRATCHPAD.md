@@ -1490,6 +1490,8 @@ npm run search:backfill
 
 - **2026-05-13 — T186 mixed identifier/free-text ranking.** Expanded query parsing to extract identifier-like tokens from mixed queries (e.g. `TIC-1023 vpn`) and added coverage that the exact identifier row is pinned above regular free-text matches. Validation: `cd server && npx vitest run src/test/unit/searchQuery.test.ts --coverage=false`.
 
+- **2026-05-13 — T187 permission-prefiltered type union.** Added action-layer permission-to-object-type filtering before query execution, so a user with only `client:read` cannot query ticket/document types even when requested. Validation: `cd server && npx vitest run src/test/unit/searchActions.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

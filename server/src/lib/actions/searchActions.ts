@@ -88,6 +88,35 @@ export interface SearchTypeaheadResult {
 const SEARCH_OBJECT_TYPE_SET = new Set<string>(SEARCH_OBJECT_TYPES);
 const fullSearchLimiter = new RateLimiterMemory({ points: 10, duration: 1 });
 const typeaheadSearchLimiter = new RateLimiterMemory({ points: 30, duration: 1 });
+const TYPE_REQUIRED_PERMISSION: Record<SearchObjectType, string> = {
+  client: 'client:read',
+  contact: 'contact:read',
+  user: 'user:read',
+  ticket: 'ticket:read',
+  ticket_comment: 'ticket:read',
+  project: 'project:read',
+  project_phase: 'project:read',
+  project_task: 'project:read',
+  project_task_comment: 'project:read',
+  asset: 'asset:read',
+  invoice: 'invoice:read',
+  invoice_item: 'invoice:read',
+  invoice_annotation: 'invoice:read',
+  contract: 'contract:read',
+  client_contract: 'contract:read',
+  document: 'document:read',
+  kb_article: 'kb:read',
+  service_catalog: 'service_catalog:read',
+  service_request_submission: 'service_request:read',
+  service_request_definition: 'admin',
+  workflow_task: 'workflow_task:read',
+  interaction: 'interaction:read',
+  schedule_entry: 'schedule:read',
+  time_entry: 'time:read',
+  board: 'ticket:read',
+  category: 'ticket:read',
+  tag: 'ticket:read',
+};
 
 export class SearchRateLimitError extends Error {
   public readonly code = 'SEARCH_RATE_LIMITED';
@@ -142,6 +171,14 @@ function resolveAllowedTypes(inputTypes: SearchObjectType[] | undefined): Search
   return registered.filter((type) => requested.has(type));
 }
 
+function filterTypesByPermission(
+  types: SearchObjectType[],
+  permissions: readonly string[],
+): SearchObjectType[] {
+  const permissionSet = new Set(permissions);
+  return types.filter((type) => permissionSet.has(TYPE_REQUIRED_PERMISSION[type]));
+}
+
 function emptyGroups(): Record<SearchObjectType, number> {
   return Object.fromEntries(
     SEARCH_OBJECT_TYPES.map((type) => [type, 0]),
@@ -194,9 +231,10 @@ export const searchAppAction = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
     const limit = normalizeLimit(parsedInput.limit);
-    const allowedTypes = resolveAllowedTypes(parsedInput.types);
+    const requestedTypes = resolveAllowedTypes(parsedInput.types);
     const accessibleClientIds = await resolveAccessibleClientIds(knex, tenant, user);
     const acl = await resolveSearchAclPrincipal(knex, user, accessibleClientIds);
+    const allowedTypes = filterTypesByPermission(requestedTypes, acl.permissions);
 
     const hits = await runSearchQuery({
       knex,
@@ -264,9 +302,10 @@ export const searchAppTypeaheadAction = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
-    const allowedTypes = resolveAllowedTypes(parsedInput.types);
+    const requestedTypes = resolveAllowedTypes(parsedInput.types);
     const accessibleClientIds = await resolveAccessibleClientIds(knex, tenant, user);
     const acl = await resolveSearchAclPrincipal(knex, user, accessibleClientIds);
+    const allowedTypes = filterTypesByPermission(requestedTypes, acl.permissions);
 
     const hits = await runSearchTypeaheadQuery({
       knex,
