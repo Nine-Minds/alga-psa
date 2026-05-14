@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T005 no-Citus migration path.** Extended `searchMigration.contract.test.ts` with a mocked migration `up` execution where `pg_extension` reports Citus is absent. The test asserts the migration never checks `pg_dist_partition`, never calls `create_distributed_table`, and emits the documented skip warning instead of failing. Validation: `npx vitest run src/test/unit/searchMigration.contract.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T004 Citus distribution migration path.** Extended `searchMigration.contract.test.ts` with a mocked migration `up` execution where the `citus` extension is present. The test asserts the migration checks `pg_dist_partition` for `app_search_index` and calls `SELECT create_distributed_table('app_search_index', 'tenant')` only after confirming the table is not already distributed. Validation: `npx vitest run src/test/unit/searchMigration.contract.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T003 pg_trgm idempotent extension contract.** Extended `searchMigration.contract.test.ts` to assert the migration contains `CREATE EXTENSION IF NOT EXISTS pg_trgm` and not the non-idempotent `CREATE EXTENSION pg_trgm` form. Validation: `npx vitest run src/test/unit/searchMigration.contract.test.ts --coverage=false` from `server/` passed.

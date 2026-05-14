@@ -3,7 +3,7 @@
   { "id": "T002", "featureIds": ["F003"], "description": "Primary key is `(tenant, object_type, object_id)` and `tenant` is NOT NULL", "implemented": true },
   { "id": "T003", "featureIds": ["F002"], "description": "Migration is idempotent on `pg_trgm`: re-running CREATE EXTENSION IF NOT EXISTS does not fail", "implemented": true },
   { "id": "T004", "featureIds": ["F004"], "description": "Under Citus, `pg_dist_partition` shows `app_search_index` distributed by `tenant`", "implemented": true },
-  { "id": "T005", "featureIds": ["F004"], "description": "Without Citus extension, migration completes without invoking `create_distributed_table`", "implemented": false },
+  { "id": "T005", "featureIds": ["F004"], "description": "Without Citus extension, migration completes without invoking `create_distributed_table`", "implemented": true },
   { "id": "T006", "featureIds": ["F005"], "description": "GIN index on `search_vector` is present and is selected by EXPLAIN for an `@@` query", "implemented": false },
   { "id": "T007", "featureIds": ["F006"], "description": "GIN trgm index on `title` is selected by EXPLAIN for `title %% 'abc'`", "implemented": false },
   { "id": "T008", "featureIds": ["F006"], "description": "GIN trgm index on `subtitle` is selected by EXPLAIN for `subtitle %% 'abc'`", "implemented": false },

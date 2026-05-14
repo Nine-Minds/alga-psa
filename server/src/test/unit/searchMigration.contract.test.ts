@@ -117,4 +117,20 @@ describe('app_search_index migration contract', () => {
     expect(pgDistPartitionCheck).toContain("logicalrelid = 'app_search_index'::regclass");
     expect(rawCalls).toContain("SELECT create_distributed_table('app_search_index', 'tenant')");
   });
+
+  it('T005 skips create_distributed_table when Citus is not installed', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    try {
+      const rawCalls = await runMigrationUpWithMockedCitusState({ citusEnabled: false });
+
+      expect(rawCalls.some((sql) => sql.includes('FROM pg_dist_partition'))).toBe(false);
+      expect(rawCalls.some((sql) => sql.includes('create_distributed_table'))).toBe(false);
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[create_app_search_index] Skipping create_distributed_table (Citus extension unavailable)',
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
 });
