@@ -351,6 +351,16 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - `subtitle` ← derived from `interaction_types.type_name` + counterparty (client, contact, or linked ticket)
   - `acl.requiredPermission` = `'interaction:read'`
 
+## Implementation log — 2026-05-14
+
+- **F061 — Schedule/time-entry search events.**
+  - Added missing `TIME_ENTRY_CREATED`, `TIME_ENTRY_UPDATED`, `TIME_ENTRY_DELETED`, and `TIME_ENTRY_CHANGES_REQUESTED` event types to `packages/event-schemas/src/schemas/eventBusSchema.ts`; kept existing `TIME_ENTRY_SUBMITTED` and `TIME_ENTRY_APPROVED`.
+  - Relaxed `TimeEntryEventPayloadSchema` to match real payloads from both REST services and server actions (`workItemType` is stored as lowercase DB values and `workItemId` can be non-ticket/non-project values).
+  - Wired `scheduleEntryIndexer.sourceEvents` to `SCHEDULE_ENTRY_CREATED/UPDATED/DELETED` and `timeEntryIndexer.sourceEvents` to all time-entry CRUD/status events.
+  - Existing schedule actions already publish schedule events; added schedule-entry publishes for the `TimeSheetService` schedule mutation path.
+  - Added time-entry publishes to `packages/scheduling/src/actions/timeEntryCrudActions.ts` for create/update/delete and approval status transitions. Event publish failures are logged and do not block the user-facing action, matching the action-layer pattern used elsewhere.
+  - Validation: `npm -w @alga-psa/event-schemas run typecheck`, `npm -w @alga-psa/scheduling run typecheck`, `git diff --check`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

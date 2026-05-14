@@ -249,8 +249,12 @@ export const EVENT_TYPES = [
   'PROJECT_APPROVAL_REJECTED',
 
   // Time entries (legacy)
+  'TIME_ENTRY_CREATED',
+  'TIME_ENTRY_UPDATED',
+  'TIME_ENTRY_DELETED',
   'TIME_ENTRY_SUBMITTED',
   'TIME_ENTRY_APPROVED',
+  'TIME_ENTRY_CHANGES_REQUESTED',
 
   // Billing (existing + legacy)
   'INVOICE_CREATED',
@@ -572,9 +576,14 @@ export const TicketCommentUpdatedPayloadSchema = TicketEventPayloadSchema.extend
 // Time entry event payload schema
 export const TimeEntryEventPayloadSchema = BasePayloadSchema.extend({
   timeEntryId: z.string().uuid(),
-  userId: z.string().uuid(),
-  workItemId: z.string().uuid(),
-  workItemType: z.enum(['TICKET', 'PROJECT_TASK']),
+  userId: z.string().uuid().optional(),
+  workItemId: z.string().nullable().optional(),
+  workItemType: z.string().nullable().optional(),
+  approvedBy: z.string().uuid().optional(),
+  requestedBy: z.string().uuid().optional(),
+  reason: z.string().optional(),
+  changes: z.record(z.unknown()).optional(),
+  timestamp: z.string().datetime().optional(),
 });
 
 // Invoice event payload schema
@@ -1057,8 +1066,12 @@ export const EventPayloadSchemas = {
   PROJECT_APPROVAL_REJECTED: projectApprovalRejectedEventPayloadSchema,
 
   // Time entries (legacy)
+  TIME_ENTRY_CREATED: TimeEntryEventPayloadSchema,
+  TIME_ENTRY_UPDATED: TimeEntryEventPayloadSchema,
+  TIME_ENTRY_DELETED: TimeEntryEventPayloadSchema,
   TIME_ENTRY_SUBMITTED: TimeEntryEventPayloadSchema,
   TIME_ENTRY_APPROVED: TimeEntryEventPayloadSchema,
+  TIME_ENTRY_CHANGES_REQUESTED: TimeEntryEventPayloadSchema,
 
   // Billing (existing + legacy)
   INVOICE_CREATED: InvoiceSearchEventPayloadSchema,
@@ -1278,6 +1291,10 @@ export type TaskCommentAddedEvent = z.infer<typeof EventSchemas.TASK_COMMENT_ADD
 export type TaskCommentUpdatedEvent = z.infer<typeof EventSchemas.TASK_COMMENT_UPDATED>;
 export type TimeEntrySubmittedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_SUBMITTED>;
 export type TimeEntryApprovedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_APPROVED>;
+export type TimeEntryCreatedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_CREATED>;
+export type TimeEntryUpdatedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_UPDATED>;
+export type TimeEntryDeletedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_DELETED>;
+export type TimeEntryChangesRequestedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_CHANGES_REQUESTED>;
 export type InvoiceGeneratedEvent = z.infer<typeof EventSchemas.INVOICE_GENERATED>;
 export type InvoiceFinalizedEvent = z.infer<typeof EventSchemas.INVOICE_FINALIZED>;
 export type CustomEvent = z.infer<typeof EventSchemas.CUSTOM_EVENT>;

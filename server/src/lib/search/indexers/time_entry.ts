@@ -123,7 +123,14 @@ function baseTimeEntryQuery(knex: Knex, tenant: string) {
 
 export const timeEntryIndexer: EntityIndexer = {
   objectType: 'time_entry',
-  sourceEvents: [],
+  sourceEvents: [
+    'TIME_ENTRY_CREATED',
+    'TIME_ENTRY_UPDATED',
+    'TIME_ENTRY_DELETED',
+    'TIME_ENTRY_SUBMITTED',
+    'TIME_ENTRY_APPROVED',
+    'TIME_ENTRY_CHANGES_REQUESTED',
+  ],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await baseTimeEntryQuery(knex, tenant)

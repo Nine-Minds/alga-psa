@@ -68,7 +68,11 @@ function baseScheduleEntryQuery(knex: Knex, tenant: string) {
 
 export const scheduleEntryIndexer: EntityIndexer = {
   objectType: 'schedule_entry',
-  sourceEvents: [],
+  sourceEvents: [
+    'SCHEDULE_ENTRY_CREATED',
+    'SCHEDULE_ENTRY_UPDATED',
+    'SCHEDULE_ENTRY_DELETED',
+  ],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await baseScheduleEntryQuery(knex, tenant)
