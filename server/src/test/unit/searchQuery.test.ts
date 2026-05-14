@@ -159,4 +159,41 @@ describe('search query parsing', () => {
       score: 1000,
     });
   });
+
+  it('T096 pins an exact asset-tag style identifier match', async () => {
+    const knex = {
+      raw: vi.fn(async () => ({
+        rows: [{
+          object_type: 'asset',
+          object_id: 'asset-42',
+          parent_type: null,
+          parent_id: null,
+          title: 'Lenovo Laptop',
+          subtitle: 'LAP-0042',
+          url: '/msp/assets/asset-42',
+          score: 1000,
+          source_updated_at: '2026-05-13T12:00:00.000Z',
+          metadata: { identifier: 'LAP-0042' },
+          snippet: null,
+        }],
+      })),
+    };
+
+    const results = await runSearchQuery({
+      knex: knex as never,
+      tenant: '00000000-0000-0000-0000-000000000001',
+      query: 'LAP-0042',
+      allowedTypes: ['asset'],
+    });
+
+    const [sql, bindings] = knex.raw.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain("lower(coalesce(s.metadata->>'identifier', '')) = q.identifier");
+    expect(bindings[2]).toBe('lap-0042');
+    expect(results[0]).toMatchObject({
+      type: 'asset',
+      id: 'asset-42',
+      title: 'Lenovo Laptop',
+      score: 1000,
+    });
+  });
 });

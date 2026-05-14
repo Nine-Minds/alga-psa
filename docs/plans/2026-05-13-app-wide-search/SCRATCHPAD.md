@@ -1128,6 +1128,8 @@ npm run search:backfill
 
 - **2026-05-13 — T095 ticket identifier pin.** Added query coverage for `TIC-1023`: parser binding lowercases the identifier to `tic-1023`, SQL checks `metadata->>'identifier'`, assigns exact matches score `1000`, and the mapped ticket hit remains first in the simulated result set. Validation: `npx vitest run src/test/unit/searchQuery.test.ts --coverage=false` from `server/` passed.
 
+- **2026-05-13 — T096 asset identifier pin.** Added asset-tag coverage for `LAP-0042`, verifying the same identifier exact-match SQL/binding path pins an asset result with score `1000`. Validation: `npx vitest run src/test/unit/searchQuery.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T060 project-family event contract.** Extended `searchEventPublishing.contract.test.ts` to assert project actions emit project create/update/delete and phase create/update/delete events, task actions emit task create/update/delete events, and task-comment actions emit task-comment create/update/delete events. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T059 user CRUD/role event contract.** Extended `searchEventPublishing.contract.test.ts` to assert `packages/users/src/actions/user-actions/userActions.ts` emits `USER_CREATED`, `USER_UPDATED`, `USER_DELETED`, and `USER_ROLES_UPDATED` with tenant context and stable idempotency keys, covering user role-change ACL reindex triggers. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
