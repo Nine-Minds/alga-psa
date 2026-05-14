@@ -598,6 +598,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - This preserves browser-native Cmd/Ctrl-click, middle-click, and context-menu behavior while keeping title-only suggestion text.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F107 — See-all typeahead row.**
+  - Added a permanent last `cmdk` row linking to `/msp/search?q={query}` once the query has at least two trimmed characters.
+  - The row uses the typeahead action's `totalCount` value and remains a native anchor, so users can open the full results page in a new tab.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

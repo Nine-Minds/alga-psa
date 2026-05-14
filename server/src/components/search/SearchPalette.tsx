@@ -22,6 +22,7 @@ export default function SearchPalette({
   const { t } = useTranslation('msp/core');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResultRow[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [focusAfterExpand, setFocusAfterExpand] = useState(false);
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -61,6 +62,7 @@ export default function SearchPalette({
   useEffect(() => {
     if (trimmedQuery.length < 2) {
       setResults([]);
+      setTotalCount(0);
       return;
     }
 
@@ -72,11 +74,13 @@ export default function SearchPalette({
           const response = await searchAppTypeaheadAction({ query: trimmedQuery });
           if (requestIdRef.current === requestId) {
             setResults(response.results);
+            setTotalCount(response.totalCount);
           }
         } catch (error) {
           console.error('Failed to load app search suggestions', error);
           if (requestIdRef.current === requestId) {
             setResults([]);
+            setTotalCount(0);
           }
         }
       });
@@ -120,7 +124,7 @@ export default function SearchPalette({
                 {t('search.loading', { defaultValue: 'Searching...' })}
               </Command.Loading>
             )}
-            {!isPending && results.length === 0 ? null : results.slice(0, 5).map((result) => (
+            {isPending ? null : results.slice(0, 5).map((result) => (
               <Command.Item
                 key={`${result.type}-${result.id}`}
                 value={`${result.type}-${result.id}`}
@@ -135,6 +139,20 @@ export default function SearchPalette({
                 </a>
               </Command.Item>
             ))}
+            {!isPending && (
+              <Command.Item value="see-all-results" asChild>
+                <a
+                  id="app-search-see-all-results"
+                  href={`/msp/search?q=${encodeURIComponent(trimmedQuery)}`}
+                  className="mt-1 block cursor-pointer rounded border-t border-gray-700 px-3 py-2 text-purple-300 aria-selected:bg-white/10"
+                >
+                  {t('search.seeAllResults', {
+                    count: totalCount,
+                    defaultValue: `See all ${totalCount} results`,
+                  })}
+                </a>
+              </Command.Item>
+            )}
           </Command.List>
         )}
       </Command>
