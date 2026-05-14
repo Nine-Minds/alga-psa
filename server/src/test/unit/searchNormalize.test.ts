@@ -133,4 +133,12 @@ describe('search normalization utilities', () => {
     expect(output).not.toContain('password');
     expect(output).not.toContain('api-key');
   });
+
+  it('T018 returns an empty string for non-object JSONB payloads', () => {
+    expect(flattenJsonbPayload(null)).toBe('');
+    expect(flattenJsonbPayload(undefined)).toBe('');
+    expect(flattenJsonbPayload('plain scalar')).toBe('');
+    expect(flattenJsonbPayload(42)).toBe('');
+    expect(flattenJsonbPayload(true)).toBe('');
+  });
 });
