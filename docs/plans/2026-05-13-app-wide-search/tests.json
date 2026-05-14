@@ -10,7 +10,7 @@
   { "id": "T009", "featureIds": ["F007"], "description": "btree indexes on `(tenant, source_updated_at DESC)` and `(tenant, object_type)` exist", "implemented": true },
   { "id": "T010", "featureIds": ["F008"], "description": "Migration down drops the table; re-running up succeeds afterwards", "implemented": true },
 
-  { "id": "T011", "featureIds": ["F009"], "description": "All 27 entity types compile-time exhaustive-check via a switch over `SearchObjectType`", "implemented": false },
+  { "id": "T011", "featureIds": ["F009"], "description": "All 27 entity types compile-time exhaustive-check via a switch over `SearchObjectType`", "implemented": true },
   { "id": "T012", "featureIds": ["F010", "F011"], "description": "SearchDoc / AclMetadata interfaces require ACL fields when the entity has non-trivial ACL (compile-time)", "implemented": false },
 
   { "id": "T013", "featureIds": ["F012"], "description": "`flattenBlockNote` extracts visible text from a real document's BlockNote JSON fixture", "implemented": false },
