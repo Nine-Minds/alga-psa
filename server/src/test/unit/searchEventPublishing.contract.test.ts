@@ -20,4 +20,15 @@ describe('search index source event publishing contracts', () => {
     expect(source).toContain('tenantId: tenant');
     expect(source).toContain('idempotencyKey: `client_created:${createdClient.client_id}`');
   });
+
+  it('T056 client update publishes CLIENT_UPDATED with tenant and client id', () => {
+    const source = readRepoFile('packages/clients/src/actions/clientActions.ts');
+
+    expect(source).toContain('const updatedPayload = buildClientUpdatedPayload({');
+    expect(source).toContain('clientId,');
+    expect(source).toContain("eventType: 'CLIENT_UPDATED'");
+    expect(source).toContain('payload: updatedPayload');
+    expect(source).toContain('ctx: { tenantId: tenant, occurredAt, actor }');
+    expect(source).toContain('idempotencyKey: `client_updated:${clientId}:${occurredAt}`');
+  });
 });
