@@ -738,6 +738,8 @@ npm run search:backfill
 
 - **2026-05-13 — F058 service-request events.** Added `SERVICE_REQUEST_SUBMISSION_CREATED/UPDATED/DELETED` and `SERVICE_REQUEST_DEFINITION_CREATED/UPDATED/DELETED` schemas, registered them on the submission/definition indexers, and added `server/src/lib/service-requests/searchEvents.ts` as the shared publish helper. Submission create and execution-status transitions now publish events; definition creation, duplication/template creation, draft saves, publish, archive, and unarchive publish definition events. There is no current hard-delete path for service-request definitions/submissions, so the `*_DELETED` event types are reserved for the future subscriber delete branch. Validation: `npm -w @alga-psa/event-schemas run typecheck`; `git diff --check`.
 
+- **2026-05-13 — F059 workflow-task events.** Added `WORKFLOW_TASK_CREATED/UPDATED/DELETED/ASSIGNMENT_CHANGED` schemas and registered them on `workflowTaskIndexer.sourceEvents`. The CE/shared write points are `shared/workflow/persistence/workflowTaskModel.ts` and `shared/task-inbox/taskInboxService.ts`, so task create, inline task create, status updates, response updates, and completion now publish workflow-task search events from there. The assignment-change event name is registered for assignment mutators; current CE shared code does not expose a dedicated assignment update method beyond create-time assignees. Validation: `npm -w @alga-psa/event-schemas run typecheck`, `npm -w @alga-psa/shared run typecheck`, and `git diff --check`.
+
 ---
 
 ## Implementation order suggestion (not prescriptive)

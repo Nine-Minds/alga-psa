@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 /**
  * Interface for workflow task definition
@@ -58,6 +59,41 @@ export enum WorkflowTaskStatus {
   EXPIRED = 'expired'
 }
 
+type WorkflowTaskSearchEventType =
+  | 'WORKFLOW_TASK_CREATED'
+  | 'WORKFLOW_TASK_UPDATED'
+  | 'WORKFLOW_TASK_DELETED'
+  | 'WORKFLOW_TASK_ASSIGNMENT_CHANGED';
+
+export async function publishWorkflowTaskSearchEvent(
+  eventType: WorkflowTaskSearchEventType,
+  tenant: string,
+  taskId: string,
+  options: {
+    userId?: string;
+    status?: string;
+    assignedUserIds?: string[];
+    changedFields?: string[];
+  } = {},
+): Promise<void> {
+  try {
+    await publishEvent({
+      eventType,
+      payload: {
+        tenantId: tenant,
+        taskId,
+        userId: options.userId,
+        status: options.status,
+        assignedUserIds: options.assignedUserIds,
+        changedFields: options.changedFields,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (eventError) {
+    console.error(`[WorkflowTaskModel] Failed to publish ${eventType} search event:`, eventError);
+  }
+}
+
 /**
  * Interface for task history entry
  */
@@ -114,6 +150,13 @@ const WorkflowTaskModel = {
       if (!result || !result.task_id) {
         throw new Error('Task creation failed, no task_id returned.');
       }
+
+      await publishWorkflowTaskSearchEvent('WORKFLOW_TASK_CREATED', tenant, result.task_id, {
+        userId: task.created_by,
+        status: task.status,
+        assignedUserIds: task.assigned_users,
+        changedFields: ['title', 'description', 'assigned_users', 'status'],
+      });
       
       return result.task_id;
     } catch (error) {
@@ -266,6 +309,14 @@ const WorkflowTaskModel = {
           tenant
         })
         .update(updates);
+
+      if (result > 0) {
+        await publishWorkflowTaskSearchEvent('WORKFLOW_TASK_UPDATED', tenant, taskId, {
+          userId,
+          status,
+          changedFields: Object.keys(updates),
+        });
+      }
       
       return result > 0;
     } catch (error) {
@@ -293,6 +344,12 @@ const WorkflowTaskModel = {
           response_data: responseData,
           updated_at: new Date().toISOString()
         });
+
+      if (result > 0) {
+        await publishWorkflowTaskSearchEvent('WORKFLOW_TASK_UPDATED', tenant, taskId, {
+          changedFields: ['response_data'],
+        });
+      }
       
       return result > 0;
     } catch (error) {
@@ -326,6 +383,14 @@ const WorkflowTaskModel = {
           // completed_by: userId,
           updated_at: now
         });
+
+      if (result > 0) {
+        await publishWorkflowTaskSearchEvent('WORKFLOW_TASK_UPDATED', tenant, taskId, {
+          userId,
+          status: WorkflowTaskStatus.COMPLETED,
+          changedFields: ['status', 'response_data', 'completed_at'],
+        });
+      }
       
       return result > 0;
     } catch (error) {

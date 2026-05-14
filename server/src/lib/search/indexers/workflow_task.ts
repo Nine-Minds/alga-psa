@@ -73,7 +73,12 @@ function toSearchDoc(tenant: string, row: WorkflowTaskSearchRow): SearchDoc {
 
 export const workflowTaskIndexer: EntityIndexer = {
   objectType: 'workflow_task',
-  sourceEvents: [],
+  sourceEvents: [
+    'WORKFLOW_TASK_CREATED',
+    'WORKFLOW_TASK_UPDATED',
+    'WORKFLOW_TASK_DELETED',
+    'WORKFLOW_TASK_ASSIGNMENT_CHANGED',
+  ],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await knex<WorkflowTaskSearchRow>('workflow_tasks')

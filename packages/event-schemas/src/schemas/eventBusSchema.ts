@@ -339,6 +339,10 @@ export const EVENT_TYPES = [
   'SERVICE_REQUEST_DEFINITION_CREATED',
   'SERVICE_REQUEST_DEFINITION_UPDATED',
   'SERVICE_REQUEST_DEFINITION_DELETED',
+  'WORKFLOW_TASK_CREATED',
+  'WORKFLOW_TASK_UPDATED',
+  'WORKFLOW_TASK_DELETED',
+  'WORKFLOW_TASK_ASSIGNMENT_CHANGED',
 
   // Email providers + inbound email (already present)
   'INBOUND_EMAIL_RECEIVED',
@@ -648,6 +652,15 @@ export const ServiceRequestDefinitionEventPayloadSchema = BasePayloadSchema.exte
   definitionId: z.string().uuid(),
   userId: z.string().uuid().optional(),
   lifecycleState: z.string().optional(),
+  changedFields: z.array(z.string()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const WorkflowTaskEventPayloadSchema = BasePayloadSchema.extend({
+  taskId: z.string().min(1),
+  userId: z.string().uuid().optional(),
+  status: z.string().optional(),
+  assignedUserIds: z.array(z.string().uuid()).optional(),
   changedFields: z.array(z.string()).optional(),
   timestamp: z.string().datetime().optional(),
 });
@@ -1122,6 +1135,10 @@ export const EventPayloadSchemas = {
   SERVICE_REQUEST_DEFINITION_CREATED: ServiceRequestDefinitionEventPayloadSchema,
   SERVICE_REQUEST_DEFINITION_UPDATED: ServiceRequestDefinitionEventPayloadSchema,
   SERVICE_REQUEST_DEFINITION_DELETED: ServiceRequestDefinitionEventPayloadSchema,
+  WORKFLOW_TASK_CREATED: WorkflowTaskEventPayloadSchema,
+  WORKFLOW_TASK_UPDATED: WorkflowTaskEventPayloadSchema,
+  WORKFLOW_TASK_DELETED: WorkflowTaskEventPayloadSchema,
+  WORKFLOW_TASK_ASSIGNMENT_CHANGED: WorkflowTaskEventPayloadSchema,
 
   // Email providers + inbound email (already present)
   INBOUND_EMAIL_RECEIVED: InboundEmailReceivedPayloadSchema,
