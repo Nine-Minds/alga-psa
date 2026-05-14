@@ -869,4 +869,40 @@ describe('search entity indexers', () => {
     expect(queryBuilder.andWhere).toHaveBeenCalledWith('te.entry_id', 'time-entry-1');
     expect(doc).toBeNull();
   });
+
+  it('T053 time-entry indexer produces a row for any non-empty notes string', async () => {
+    const { knex } = createFirstRowKnex({
+      entry_id: 'time-entry-2',
+      user_id: '11111111-1111-4111-8111-111111111111',
+      start_time: '2026-05-13T10:00:00.000Z',
+      work_date: '2026-05-13',
+      notes: 'x',
+      work_item_id: 'ticket-1',
+      work_item_type: 'ticket',
+      ticket_number: 'TIC-1023',
+      ticket_title: 'Exchange outage',
+      task_name: null,
+      project_id: null,
+      interaction_title: null,
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await timeEntryIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'time-entry-2',
+    );
+
+    expect(doc).toMatchObject({
+      objectType: 'time_entry',
+      objectId: 'time-entry-2',
+      title: 'TIC-1023 | Exchange outage | 2026-05-13',
+      body: 'x',
+      url: '/msp/tickets/ticket-1',
+      acl: {
+        requiredPermission: 'time:read',
+        visibleToUserIds: ['11111111-1111-4111-8111-111111111111'],
+      },
+    });
+  });
 });

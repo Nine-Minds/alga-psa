@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T053 time entry non-empty notes indexing.** Extended `searchIndexers.test.ts` to assert `timeEntryIndexer.loadOne` produces a `time_entry` SearchDoc for a one-character note, links to the parent ticket, and scopes visibility to the time-entry owner. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T052 time entry empty-notes skip.** Extended `searchIndexers.test.ts` to assert `timeEntryIndexer.loadOne` adds `whereNotNull('te.notes')` and `te.notes <> ''` filters and returns `null` when no row survives those filters, enforcing the PRD skip rule for empty notes. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T051 schedule entry assignee ACL.** Extended `searchIndexers.test.ts` to assert `scheduleEntryIndexer.loadOne` aggregates schedule assignees, maps them into `acl.visibleToUserIds`, and preserves `schedule:read`, body notes, and schedule URL. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
