@@ -12,6 +12,7 @@ vi.mock('../../lib/search/upsert', () => ({
 
 import {
   deleteRowsMissingFromSource,
+  insertRowsMissingFromIndex,
   reindexRowsAfterWatermark,
 } from '../../lib/jobs/handlers/searchReconcileHandler';
 import type { EntityIndexer, SearchDoc } from '../../lib/search/types';
@@ -116,5 +117,57 @@ describe('search reconciliation', () => {
       'client',
       'client-missing',
     );
+  });
+
+  it('T087 inserts source rows that are missing from the index', async () => {
+    const presentDoc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'client',
+      objectId: 'client-present',
+      title: 'Present client',
+      url: '/msp/clients/client-present',
+      acl: { requiredPermission: 'client:read' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    };
+    const missingDoc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'client',
+      objectId: 'client-missing',
+      title: 'Missing client',
+      url: '/msp/clients/client-missing',
+      acl: { requiredPermission: 'client:read' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    };
+    const query = {
+      select: vi.fn(() => query),
+      where: vi.fn(() => query),
+      andWhere: vi.fn(() => query),
+      whereIn: vi.fn(() => query),
+      then: (
+        resolve: (rows: Array<{ object_id: string }>) => unknown,
+        reject: (reason?: unknown) => unknown,
+      ) => Promise.resolve([{ object_id: 'client-present' }]).then(resolve, reject),
+    };
+    const knex = vi.fn((table: string) => {
+      expect(table).toBe('app_search_index');
+      return query;
+    });
+    const indexer: EntityIndexer = {
+      objectType: 'client',
+      sourceEvents: [],
+      loadOne: vi.fn(),
+      loadBatch: vi.fn(async (_knex, _tenant, cursor) => (
+        cursor === null ? [presentDoc, missingDoc] : []
+      )),
+    };
+
+    const result = await insertRowsMissingFromIndex(knex as never, 'tenant-1', indexer);
+
+    expect(query.where).toHaveBeenCalledWith('tenant', 'tenant-1');
+    expect(query.andWhere).toHaveBeenCalledWith('object_type', 'client');
+    expect(query.whereIn).toHaveBeenCalledWith('object_id', ['client-present', 'client-missing']);
+    expect(result).toEqual({ scanned: 2, inserted: 1 });
+    expect(mocks.upsertSearchDoc).toHaveBeenCalledTimes(1);
+    expect(mocks.upsertSearchDoc).toHaveBeenCalledWith(knex, missingDoc);
   });
 });
