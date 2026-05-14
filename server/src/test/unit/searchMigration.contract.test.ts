@@ -13,6 +13,7 @@ const migrationPath = path.resolve(
 const searchQueryPath = path.resolve(testDir, '../../../src/lib/search/query.ts');
 const migration = require(migrationPath) as {
   up: (knex: { raw: (sql: string) => Promise<{ rows?: Array<Record<string, unknown>> }> }) => Promise<void>;
+  down: (knex: { schema: { dropTableIfExists: (tableName: string) => Promise<void> } }) => Promise<void>;
 };
 
 function readSearchIndexMigration(): string {
@@ -176,5 +177,17 @@ describe('app_search_index migration contract', () => {
     expect(migration).toMatch(
       /CREATE INDEX app_search_index_type\s+ON app_search_index \(tenant, object_type\)/,
     );
+  });
+
+  it('T010 drops app_search_index on down and allows the up path to run again', async () => {
+    const dropTableIfExists = vi.fn(async () => {});
+
+    await migration.down({
+      schema: { dropTableIfExists },
+    });
+    const rawCalls = await runMigrationUpWithMockedCitusState({ citusEnabled: false });
+
+    expect(dropTableIfExists).toHaveBeenCalledWith('app_search_index');
+    expect(rawCalls.some((sql) => sql.includes('CREATE TABLE app_search_index'))).toBe(true);
   });
 });

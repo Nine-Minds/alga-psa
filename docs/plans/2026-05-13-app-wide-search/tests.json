@@ -8,7 +8,7 @@
   { "id": "T007", "featureIds": ["F006"], "description": "GIN trgm index on `title` is selected by EXPLAIN for `title %% 'abc'`", "implemented": true },
   { "id": "T008", "featureIds": ["F006"], "description": "GIN trgm index on `subtitle` is selected by EXPLAIN for `subtitle %% 'abc'`", "implemented": true },
   { "id": "T009", "featureIds": ["F007"], "description": "btree indexes on `(tenant, source_updated_at DESC)` and `(tenant, object_type)` exist", "implemented": true },
-  { "id": "T010", "featureIds": ["F008"], "description": "Migration down drops the table; re-running up succeeds afterwards", "implemented": false },
+  { "id": "T010", "featureIds": ["F008"], "description": "Migration down drops the table; re-running up succeeds afterwards", "implemented": true },
 
   { "id": "T011", "featureIds": ["F009"], "description": "All 27 entity types compile-time exhaustive-check via a switch over `SearchObjectType`", "implemented": false },
   { "id": "T012", "featureIds": ["F010", "F011"], "description": "SearchDoc / AclMetadata interfaces require ACL fields when the entity has non-trivial ACL (compile-time)", "implemented": false },
