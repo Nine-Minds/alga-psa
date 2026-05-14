@@ -1480,6 +1480,8 @@ npm run search:backfill
 
 - **2026-05-13 — T181 large document data-URI fixture.** Added document-indexer coverage for a 10MB BlockNote payload with embedded image data URI: visible text remains, `data:image` is stripped, and indexed body stays ≤64KB. Validation: `cd server && npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false`.
 
+- **2026-05-13 — T182 service-request secret payload fixture.** Added service-request-submission indexer coverage that visible payload strings are indexed while `password`, `api_key`, and `authorization` values are excluded from the body. Validation: `cd server && npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

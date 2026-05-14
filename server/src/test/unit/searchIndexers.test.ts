@@ -793,6 +793,35 @@ describe('search entity indexers', () => {
     expect(doc?.body).not.toContain('do-not-index');
   });
 
+  it('T182 service-request-submission indexer excludes password payload values', async () => {
+    const { knex } = createFirstRowKnex({
+      submission_id: 'submission-secret',
+      client_id: 'client-1',
+      request_name: 'Credentialed onboarding request',
+      submitted_payload: {
+        summary: 'Install monitoring agent',
+        nested: {
+          password: 'super-secret-password',
+          api_key: 'secret-api-key',
+          authorization: 'Bearer secret-token',
+          visible_note: 'Rack 12',
+        },
+      },
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await serviceRequestSubmissionIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'submission-secret',
+    );
+
+    expect(doc?.body).toBe('Install monitoring agent Rack 12');
+    expect(doc?.body).not.toContain('super-secret-password');
+    expect(doc?.body).not.toContain('secret-api-key');
+    expect(doc?.body).not.toContain('secret-token');
+  });
+
   it('T049 service-request-definition indexer requires admin permission', async () => {
     const { knex } = createFirstRowKnex({
       definition_id: 'definition-1',
