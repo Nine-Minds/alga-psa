@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T039 asset identifier metadata.** Extended `searchIndexers.test.ts` to assert `assetIndexer.loadOne` copies `asset_tag` into `metadata.identifier`, enabling exact identifier ranking for asset-tag searches such as `LAP-0042`. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T038 asset JSONB attribute flattening.** Extended `searchIndexers.test.ts` to assert `assetIndexer.loadOne` includes location plus flattened JSONB attribute string values in the body while excluding secret-like keys/values such as `password`. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T037 project-task-comment BlockNote fallback.** Extended `searchIndexers.test.ts` to assert `projectTaskCommentIndexer.loadOne` flattens BlockNote JSON from `note` when `markdown_content` is null, preserving searchable visible comment text. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.

@@ -441,4 +441,25 @@ describe('search entity indexers', () => {
     expect(doc?.body).not.toContain('password');
     expect(doc?.body).not.toContain('do-not-index');
   });
+
+  it('T039 asset indexer metadata.identifier equals asset_tag', async () => {
+    const { knex } = createFirstRowKnex({
+      asset_id: 'asset-2',
+      name: 'Technician laptop',
+      asset_tag: 'LAP-0042',
+      serial_number: 'SN-0042',
+      location: null,
+      attributes: {},
+      client_id: 'client-1',
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await assetIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'asset-2',
+    );
+
+    expect(doc?.metadata).toEqual({ identifier: 'LAP-0042' });
+  });
 });
