@@ -114,7 +114,7 @@
 
   { "id": "F100", "description": "Implement `searchAppAction` as a `withAuth` server action returning `SearchAppResult` (full results, snippets, grouping)", "prdRefs": ["12"], "implemented": true },
   { "id": "F101", "description": "Implement `searchAppTypeaheadAction` as a `withAuth` server action returning top-5 title-only suggestions", "prdRefs": ["12"], "implemented": true },
-  { "id": "F102", "description": "Add Zod input schema validating query (1–200 chars), types subset, limit (≤100), cursor", "prdRefs": ["12", "18-Q2"], "implemented": false },
+  { "id": "F102", "description": "Add Zod input schema validating query (1–200 chars), types subset, limit (≤100), cursor", "prdRefs": ["12", "18-Q2"], "implemented": true },
   { "id": "F103", "description": "Add Zod output schema for `SearchAppResult` and `SearchResultRow` (or assert at action boundary)", "prdRefs": ["12"], "implemented": false },
 
   { "id": "F104", "description": "Create `server/src/components/search/SearchPalette.tsx` using `cmdk` for the sidebar typeahead", "prdRefs": ["6.1"], "implemented": false },

@@ -3,6 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { z } from 'zod';
 
 import { registeredObjectTypes } from '../search';
 import {
@@ -16,12 +17,16 @@ import {
 } from '../search/query';
 import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '../search/types';
 
-export interface SearchAppInput {
-  query: string;
-  types?: SearchObjectType[];
-  limit?: number;
-  cursor?: string;
-}
+const searchObjectTypeSchema = z.enum(SEARCH_OBJECT_TYPES);
+
+export const searchAppInputSchema = z.object({
+  query: z.string().trim().min(1).max(200),
+  types: z.array(searchObjectTypeSchema).optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+  cursor: z.string().min(1).optional(),
+});
+
+export type SearchAppInput = z.infer<typeof searchAppInputSchema>;
 
 export interface SearchResultRow {
   type: SearchObjectType;
@@ -108,19 +113,20 @@ export const searchAppAction = withAuth(async (
   { tenant },
   input: SearchAppInput,
 ): Promise<SearchAppResult> => {
+  const parsedInput = searchAppInputSchema.parse(input);
   const { knex } = await createTenantKnex();
-  const limit = normalizeLimit(input.limit);
-  const allowedTypes = resolveAllowedTypes(input.types);
+  const limit = normalizeLimit(parsedInput.limit);
+  const allowedTypes = resolveAllowedTypes(parsedInput.types);
   const accessibleClientIds = await resolveAccessibleClientIds(knex, tenant, user);
   const acl = await resolveSearchAclPrincipal(knex, user, accessibleClientIds);
 
   const hits = await runSearchQuery({
     knex,
     tenant,
-    query: input.query,
+    query: parsedInput.query,
     allowedTypes,
     limit: limit + 1,
-    cursor: input.cursor,
+    cursor: parsedInput.cursor,
     includeSnippets: true,
     acl,
   });
@@ -146,17 +152,22 @@ export const searchAppTypeaheadAction = withAuth(async (
   { tenant },
   input: Pick<SearchAppInput, 'query' | 'types' | 'cursor'>,
 ): Promise<SearchTypeaheadResult> => {
+  const parsedInput = searchAppInputSchema.pick({
+    query: true,
+    types: true,
+    cursor: true,
+  }).parse(input);
   const { knex } = await createTenantKnex();
-  const allowedTypes = resolveAllowedTypes(input.types);
+  const allowedTypes = resolveAllowedTypes(parsedInput.types);
   const accessibleClientIds = await resolveAccessibleClientIds(knex, tenant, user);
   const acl = await resolveSearchAclPrincipal(knex, user, accessibleClientIds);
 
   const hits = await runSearchTypeaheadQuery({
     knex,
     tenant,
-    query: input.query,
+    query: parsedInput.query,
     allowedTypes,
-    cursor: input.cursor,
+    cursor: parsedInput.cursor,
     acl,
   });
 

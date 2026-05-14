@@ -572,6 +572,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - It uses the same registered-type and ACL resolution path as full search, but calls `runSearchTypeaheadQuery()` and returns at most five rows with `snippet` stripped.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F102 — Search action input schema.**
+  - Added `searchAppInputSchema` in `searchActions.ts` with Zod validation for `query` (trimmed, 1-200 chars), `types` (`SearchObjectType` enum values), `limit` (1-100), and optional `cursor`.
+  - Both full search and typeahead actions parse input at the action boundary before touching the database.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
