@@ -206,6 +206,63 @@ describe('search actions', () => {
     )).rejects.toBeInstanceOf(SearchRateLimitError);
   });
 
+  it('T160 returns ACME client as the top full-search result across client and ticket hits', async () => {
+    const knex = { tenant: 'knex' };
+    const acl = {
+      userId: 'user-acceptance-acme',
+      tenant: 'tenant-acceptance-acme',
+      permissions: ['client:read', 'ticket:read'],
+      isInternal: true,
+      accessibleClientIds: ['client-acme'],
+    };
+    const hits = [
+      {
+        type: 'client',
+        id: 'client-acme',
+        title: 'ACME Corp',
+        subtitle: 'support@acme.example',
+        url: '/msp/clients/client-acme',
+        score: 9.8,
+        updatedAt: new Date('2026-05-13T12:00:00.000Z'),
+        metadata: {},
+      },
+      {
+        type: 'ticket',
+        id: 'ticket-acme-1',
+        title: 'ACME printer offline',
+        subtitle: 'ACME Corp | TIC-1023',
+        url: '/msp/tickets/ticket-acme-1',
+        score: 8.5,
+        updatedAt: new Date('2026-05-13T11:00:00.000Z'),
+        metadata: { identifier: 'TIC-1023' },
+      },
+    ];
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-acceptance-acme' });
+    mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
+    mocks.runSearchQuery.mockResolvedValue(hits);
+    mocks.verifyResultVisibility.mockResolvedValue(hits);
+
+    const result = await searchAppAction(
+      {
+        user_id: 'user-acceptance-acme',
+        tenant: 'tenant-acceptance-acme',
+        user_type: 'client',
+        clientId: 'client-acme',
+      },
+      { tenant: 'tenant-acceptance-acme' },
+      { query: 'acme', limit: 10 },
+    );
+
+    expect(result.results[0]).toMatchObject({
+      type: 'client',
+      id: 'client-acme',
+      title: 'ACME Corp',
+    });
+    expect(result.groups.client).toBe(1);
+    expect(result.groups.ticket).toBe(1);
+  });
+
   it('T106 resolves the user permission set exactly once per full search action call', async () => {
     const knex = { tenant: 'knex' };
     const acl = {

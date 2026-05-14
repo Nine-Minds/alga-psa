@@ -179,7 +179,7 @@
   { "id": "T158", "featureIds": ["F129"], "description": "`/msp/invoices/{id}#item-{iid}` and `#annotation-{aid}` scroll and highlight correctly", "implemented": true },
   { "id": "T159", "featureIds": ["F130"], "description": "`/msp/projects/{pid}/tasks/{tid}#comment-{cid}` scrolls and highlights correctly", "implemented": true },
 
-  { "id": "T160", "featureIds": ["F100", "F022", "F025"], "description": "End-to-end: seed a tenant with clients + tickets; search 'acme' as the technician → ACME Corp is top result (Acceptance #1)", "implemented": false },
+  { "id": "T160", "featureIds": ["F100", "F022", "F025"], "description": "End-to-end: seed a tenant with clients + tickets; search 'acme' as the technician → ACME Corp is top result (Acceptance #1)", "implemented": true },
   { "id": "T161", "featureIds": ["F100", "F109"], "description": "End-to-end: pressing Enter on the sidebar input lands on `/msp/search?q={query}` (Acceptance #2)", "implemented": false },
   { "id": "T162", "featureIds": ["F116"], "description": "End-to-end: Cmd/Ctrl+click on a result opens in a new tab and original tab keeps its state (Acceptance #3)", "implemented": false },
   { "id": "T163", "featureIds": ["F087"], "description": "End-to-end: 'TIC-1023' and 'tic-10' both find the right ticket (Acceptance #4)", "implemented": false },

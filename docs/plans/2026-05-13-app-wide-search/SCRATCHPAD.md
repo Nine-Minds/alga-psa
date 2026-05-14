@@ -1436,6 +1436,8 @@ npm run search:backfill
 
 - **2026-05-13 — T159 project task comment hash anchors.** Added contract coverage that `/msp/projects/{id}/tasks/{taskId}` redirects preserve the hash, `ProjectPage` keeps `#comment-*` while task selection is stable, and `TaskComment` scrolls/highlights the `comment-{taskCommentId}` target. Validation: `cd server && npx vitest run src/test/unit/searchHashAnchors.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T160 ACME top result acceptance.** Added action-level acceptance coverage that a search returning ACME client and ACME ticket hits preserves the client as result #1 and reports grouped counts for both client and ticket. Validation: `cd server && npx vitest run src/test/unit/searchActions.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
