@@ -290,6 +290,7 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
 - **2026-05-13 — F017 complete.** `EntityIndexer` in `types.ts` defines `objectType`, `sourceEvents`, `loadOne`, and paged `loadBatch` methods. `sourceEvents` is typed as `readonly EventType[]` from `@alga-psa/event-schemas`; loaders accept an explicit `tenant`. Validation: targeted `rg` on the interface.
 - **2026-05-13 — F018 complete.** Added `server/src/lib/search/index.ts` registry with `getIndexer`, `allIndexers`, and `registeredObjectTypes`. Added empty CE `ceIndexers` export and a CE-side `@ee/lib/search/indexers` stub returning `eeIndexers = []` under `packages/ee/src`, matching the repo's current alias pattern. Note: the later F131 stub-registration cleanup should reconcile this with the plan's `ee/server/src/...` wording if needed. Validation: targeted `rg` on registry exports and imports.
 - **2026-05-13 — F019 complete.** Added `upsertSearchDoc(knex, doc)` in `server/src/lib/search/upsert.ts`. It inserts all denormalized search/ACL columns, computes `search_vector` server-side with `buildTsvectorSql`, and updates existing rows via `ON CONFLICT (tenant, object_type, object_id)`. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/upsert.ts`.
+- **2026-05-13 — F020 complete.** Added `deleteSearchDoc(knex, tenant, objectType, objectId)` in `upsert.ts`; it deletes by `(tenant, object_type, object_id)` and is naturally a no-op when the row is absent. Validation: targeted `rg` on function and WHERE/delete chain.
 
 ---
 
