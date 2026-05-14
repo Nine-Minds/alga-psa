@@ -454,7 +454,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             parentCommentId={mergedConversation.comment_id}
             roomName={`ticket-${ticket.ticket_id}-reply-${mergedConversation.comment_id}`}
             initialInternal={Boolean(mergedConversation.is_internal)}
-            showInternalToggle={!hideInternalTab}
+            showInternalToggle={false}
             uploadFile={existingCommentUploadSession.uploadFile}
             searchMentions={searchUsersForMentions}
             onSubmit={async ({ content, parentCommentId, isInternal }) => {
@@ -793,7 +793,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         replyParentCommentId={openPanelComment?.comment_id ?? null}
         replyRoomName={(parentCommentId) => `ticket-${ticket.ticket_id}-reply-${parentCommentId}`}
         initialInternal={Boolean(openPanelComment?.is_internal ?? openPanelThreadGroup?.root.is_internal)}
-        showInternalToggle={!hideInternalTab}
+        showInternalToggle={false}
         onSubmitReply={async ({ content, parentCommentId, isInternal }) => {
           const success = await onAddReplyComment?.(content, parentCommentId, isInternal);
           if (success) {

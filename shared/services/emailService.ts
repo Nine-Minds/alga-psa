@@ -454,8 +454,31 @@ export class EmailService {
       const commentId = uuidv4();
       const now = new Date();
 
+      // comments.thread_id is NOT NULL — create the thread row first.
+      const emailThreadIds = await this.knex.raw(
+        'SELECT gen_random_uuid() AS thread_id'
+      );
+      const emailThreadId = emailThreadIds.rows?.[0]?.thread_id as string | undefined;
+      if (!emailThreadId) {
+        throw new Error('Failed to generate comment thread identifier');
+      }
+
+      await this.knex('comment_threads').insert({
+        tenant: this.tenant,
+        thread_id: emailThreadId,
+        ticket_id: input.ticket_id,
+        project_task_id: null,
+        root_comment_id: commentId,
+        is_internal: false,
+        reply_count: 0,
+        last_activity_at: now,
+        created_at: now,
+        created_by: null,
+      });
+
       await this.knex('comments').insert({
         comment_id: commentId,
+        thread_id: emailThreadId,
         tenant: this.tenant,
         ticket_id: input.ticket_id,
         comment_text: input.content,

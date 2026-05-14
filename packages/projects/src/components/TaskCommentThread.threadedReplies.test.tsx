@@ -174,9 +174,9 @@ describe('TaskCommentThread threaded replies', () => {
 
     expect(screen.queryByTestId('task-comment-reply-1')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open in drawer' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show in drawer' })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Open in drawer' }));
+    await user.click(screen.getByRole('button', { name: 'Show in drawer' }));
 
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByTestId('task-comment-root')).toBeInTheDocument();

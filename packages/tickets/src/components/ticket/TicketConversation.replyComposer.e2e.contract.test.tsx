@@ -476,7 +476,7 @@ describe('TicketConversation threaded reply e2e contract', () => {
     expect(screen.queryByTestId('existing-reply')).not.toBeInTheDocument();
     expect(screen.getByText('1 reply')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open in drawer' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show in drawer' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Expand' }));
 
@@ -494,7 +494,7 @@ describe('TicketConversation threaded reply e2e contract', () => {
     await user.click(screen.getByRole('button', { name: 'Collapse' }));
     expect(screen.queryByTestId('existing-reply')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Open in drawer' }));
+    await user.click(screen.getByRole('button', { name: 'Show in drawer' }));
 
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByTestId('comment-1')).toBeInTheDocument();
@@ -516,7 +516,7 @@ describe('TicketConversation threaded reply e2e contract', () => {
     });
 
     await user.click(screen.getByRole('button', { name: 'Collapse' }));
-    const openButton = screen.getByRole('button', { name: 'Open in drawer' });
+    const openButton = screen.getByRole('button', { name: 'Show in drawer' });
     openButton.focus();
     expect(document.activeElement).toBe(openButton);
 
@@ -543,7 +543,7 @@ describe('TicketConversation threaded reply e2e contract', () => {
     });
 
     await user.click(screen.getByRole('button', { name: 'Collapse' }));
-    await user.click(screen.getByRole('button', { name: 'Open in drawer' }));
+    await user.click(screen.getByRole('button', { name: 'Show in drawer' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Reply' }));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

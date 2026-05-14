@@ -1202,16 +1202,43 @@ export class TicketService extends BaseService<ITicket> {
         throw new NotFoundError('Ticket not found');
       }
 
+      // comments.thread_id is NOT NULL — generate IDs and create the thread row first.
+      const apiCommentIds = await trx.raw(
+        'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
+      );
+      const apiGeneratedIds = apiCommentIds.rows?.[0] as
+        | { comment_id: string; thread_id: string }
+        | undefined;
+      if (!apiGeneratedIds?.comment_id || !apiGeneratedIds?.thread_id) {
+        throw new Error('Failed to generate comment/thread identifiers');
+      }
+      const apiNowIso = new Date().toISOString();
+      const apiIsInternal = data.is_internal || false;
+
+      await trx('comment_threads').insert({
+        tenant: context.tenant,
+        thread_id: apiGeneratedIds.thread_id,
+        ticket_id: ticketId,
+        project_task_id: null,
+        root_comment_id: apiGeneratedIds.comment_id,
+        is_internal: apiIsInternal,
+        reply_count: 0,
+        last_activity_at: apiNowIso,
+        created_at: apiNowIso,
+        created_by: context.userId || null,
+      });
+
       const commentData = {
-        comment_id: knex.raw('gen_random_uuid()'),
+        comment_id: apiGeneratedIds.comment_id,
+        thread_id: apiGeneratedIds.thread_id,
         ticket_id: ticketId,
         note: data.comment_text,
-        is_internal: data.is_internal || false,
+        is_internal: apiIsInternal,
         is_resolution: data.is_resolution || false,
         user_id: context.userId,
         tenant: context.tenant,
-        created_at: knex.raw('now()'),
-        updated_at: knex.raw('now()'),
+        created_at: apiNowIso,
+        updated_at: apiNowIso,
         metadata: data.metadata,
       };
 

@@ -333,6 +333,13 @@
       }
     }
   },
+  "commentThread": {
+    "replies_one": "{{count}} 11111",
+    "replies_other": "{{count}} 11111",
+    "collapse": "11111",
+    "expand": "11111",
+    "showInDrawer": "11111"
+  },
   "pagination": {
     "previous": "11111",
     "next": "11111",

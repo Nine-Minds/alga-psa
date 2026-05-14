@@ -6,37 +6,54 @@
 :global(.comment-thread-bar) {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.375rem;
   margin: 0.375rem 0 0.375rem 1.5rem;
-  padding: 0.25rem 0.625rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 9999px;
-  background: #f9fafb;
-  color: #4f46e5;
   font-size: 0.8125rem;
   font-weight: 500;
   line-height: 1.25rem;
 }
 
-:global(.comment-thread-bar-subthread) {
+:global(.comment-thread-bar-pill) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  padding: 0.1875rem 0.625rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 9999px;
+  background: #f9fafb;
+  color: #4f46e5;
+  font: inherit;
+  line-height: 1.25rem;
+  white-space: nowrap;
+}
+
+:global(.comment-thread-bar-count) {
+  color: #4b5563;
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+}
+
+:global(.comment-thread-bar-pill-button) {
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+:global(.comment-thread-bar-pill-button:hover),
+:global(.comment-thread-bar-pill-button:focus-visible) {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #3730a3;
+  outline: none;
+}
+
+:global(.comment-thread-bar-subthread) :global(.comment-thread-bar-pill) {
   border-style: dashed;
   background: #ffffff;
 }
 
-:global(.comment-thread-bar-action) {
-  border: 0;
-  background: transparent;
-  color: #4f46e5;
-  cursor: pointer;
-  font: inherit;
-  padding: 0;
-}
-
-:global(.comment-thread-bar-action:hover),
-:global(.comment-thread-bar-action:focus-visible) {
-  color: #3730a3;
-  text-decoration: underline;
-  outline: none;
+:global(.comment-thread-bar-subthread) :global(.comment-thread-bar-count) {
+  background: #ffffff;
 }
 
 :global(.thread-children) {

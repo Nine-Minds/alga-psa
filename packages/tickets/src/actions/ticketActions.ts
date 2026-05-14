@@ -1361,16 +1361,43 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
       throw new Error('Ticket not found');
     }
 
-      // Insert comment
+      // comments.thread_id is NOT NULL, so create the thread row first.
+      const idsResult = await trx.raw(
+        'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
+      );
+      const generatedIds = idsResult.rows?.[0] as
+        | { comment_id: string; thread_id: string }
+        | undefined;
+      if (!generatedIds?.comment_id || !generatedIds?.thread_id) {
+        throw new Error('Failed to generate comment/thread identifiers');
+      }
+      const nowIso = new Date().toISOString();
+
+      await trx('comment_threads').insert({
+        tenant,
+        thread_id: generatedIds.thread_id,
+        ticket_id: ticketId,
+        project_task_id: null,
+        root_comment_id: generatedIds.comment_id,
+        is_internal: isInternal,
+        reply_count: 0,
+        last_activity_at: nowIso,
+        created_at: nowIso,
+        created_by: user.user_id || null,
+      });
+
       const [newComment] = await trx('comments').insert({
-      tenant,
-      ticket_id: ticketId,
-      user_id: user.user_id,
-      author_type: 'internal',
-      note: comment,
-      is_internal: isInternal,
-      is_resolution: false
-    }).returning('*');
+        tenant,
+        comment_id: generatedIds.comment_id,
+        thread_id: generatedIds.thread_id,
+        ticket_id: ticketId,
+        user_id: user.user_id,
+        author_type: 'internal',
+        note: comment,
+        is_internal: isInternal,
+        is_resolution: false,
+        created_at: nowIso,
+      }).returning('*');
 
       // Publish comment added event
       await publishEvent({

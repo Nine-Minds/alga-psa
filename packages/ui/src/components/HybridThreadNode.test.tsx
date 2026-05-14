@@ -72,7 +72,7 @@ describe('HybridThreadNode', () => {
     expect(screen.getByTestId('comment-subreply')).toHaveAttribute('data-has-children', 'false');
   });
 
-  it('T047: collapsing a thread hides children and switches the bar to Expand and Open in drawer', () => {
+  it('T047: collapsing a thread hides children and switches the bar to Expand and Show in drawer', () => {
     const group = buildGroup();
 
     render(
@@ -91,10 +91,10 @@ describe('HybridThreadNode', () => {
 
     expect(screen.queryByTestId('comment-reply')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open in drawer' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show in drawer' })).toBeInTheDocument();
   });
 
-  it('T048: clicking Open in drawer opens the drawer with the selected root and replies', () => {
+  it('T048: clicking Show in drawer opens the drawer with the selected root and replies', () => {
     const group = buildGroup();
 
     function Harness() {
@@ -124,7 +124,7 @@ describe('HybridThreadNode', () => {
     render(<Harness />);
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Collapse' })[0]);
-    fireEvent.click(screen.getByRole('button', { name: 'Open in drawer' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Show in drawer' }));
 
     const dialog = screen.getByRole('dialog');
     expect(within(dialog).getByTestId('drawer-comment-root')).toBeInTheDocument();

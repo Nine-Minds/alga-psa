@@ -319,6 +319,13 @@
       }
     }
   },
+  "commentThread": {
+    "replies_one": "{{count}} respuesta",
+    "replies_other": "{{count}} respuestas",
+    "collapse": "Contraer",
+    "expand": "Expandir",
+    "showInDrawer": "Mostrar en el panel"
+  },
   "pagination": {
     "previous": "Anterior",
     "next": "Siguiente",

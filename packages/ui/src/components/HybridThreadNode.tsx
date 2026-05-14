@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { ChevronDown, ChevronUp, ExternalLink, MessageCircle } from 'lucide-react';
+import { useTranslation } from '../lib/i18n/client';
 import type { CommentThreadGroup } from './CommentThreadList';
 import './CommentThread.module.css';
 
@@ -32,21 +34,34 @@ export interface HybridThreadNodeProps<TComment> {
 
 const MAX_VISUAL_DEPTH = 4;
 
-function defaultThreadBar<TComment>({
-  children,
-  visualDepth,
-  isSubThread,
-  isExpanded,
-  onToggleCollapse,
-  onOpenPanel,
-}: {
+interface DefaultThreadBarProps<TComment> {
   children: TComment[];
   visualDepth: number;
   isSubThread: boolean;
   isExpanded: boolean;
   onToggleCollapse: () => void;
   onOpenPanel?: () => void;
-}) {
+}
+
+function DefaultThreadBar<TComment>({
+  children,
+  visualDepth,
+  isSubThread,
+  isExpanded,
+  onToggleCollapse,
+  onOpenPanel,
+}: DefaultThreadBarProps<TComment>) {
+  const { t } = useTranslation('common');
+  const iconProps = { 'aria-hidden': true, focusable: false } as const;
+  const replyCount = children.length;
+  const repliesLabel = t('commentThread.replies', {
+    count: replyCount,
+    defaultValue: replyCount === 1 ? `${replyCount} reply` : `${replyCount} replies`,
+  });
+  const toggleLabel = isExpanded
+    ? t('commentThread.collapse', 'Collapse')
+    : t('commentThread.expand', 'Expand');
+  const showInDrawerLabel = t('commentThread.showInDrawer', 'Show in drawer');
   return (
     <div
       className={[
@@ -55,17 +70,38 @@ function defaultThreadBar<TComment>({
         isSubThread ? 'comment-thread-bar-subthread' : null,
       ].filter(Boolean).join(' ')}
     >
-      <span>{children.length} {children.length === 1 ? 'reply' : 'replies'}</span>
-      <button type="button" className="comment-thread-bar-action" onClick={onToggleCollapse}>
-        {isExpanded ? 'Collapse' : 'Expand'}
+      <span className="comment-thread-bar-pill comment-thread-bar-count">
+        <MessageCircle size={12} strokeWidth={2} {...iconProps} />
+        {repliesLabel}
+      </span>
+      <button
+        type="button"
+        className="comment-thread-bar-pill comment-thread-bar-pill-button"
+        onClick={onToggleCollapse}
+      >
+        {isExpanded ? (
+          <ChevronUp size={12} strokeWidth={2} {...iconProps} />
+        ) : (
+          <ChevronDown size={12} strokeWidth={2} {...iconProps} />
+        )}
+        {toggleLabel}
       </button>
       {!isExpanded && onOpenPanel && (
-        <button type="button" className="comment-thread-bar-action" onClick={onOpenPanel}>
-          Open in drawer
+        <button
+          type="button"
+          className="comment-thread-bar-pill comment-thread-bar-pill-button"
+          onClick={onOpenPanel}
+        >
+          <ExternalLink size={12} strokeWidth={2} {...iconProps} />
+          {showInDrawerLabel}
         </button>
       )}
     </div>
   );
+}
+
+function defaultThreadBar<TComment>(params: DefaultThreadBarProps<TComment>) {
+  return <DefaultThreadBar<TComment> {...params} />;
 }
 
 export function HybridThreadNode<TComment>({
@@ -79,11 +115,17 @@ export function HybridThreadNode<TComment>({
 }: HybridThreadNodeProps<TComment>): React.ReactElement | null {
   const [isExpanded, setIsExpanded] = React.useState(true);
   const commentId = getCommentId(comment);
+  const children = commentId ? group.childrenByParentId.get(commentId) ?? [] : [];
+  const prevChildCountRef = React.useRef(children.length);
+  React.useEffect(() => {
+    if (children.length > prevChildCountRef.current) {
+      setIsExpanded(true);
+    }
+    prevChildCountRef.current = children.length;
+  }, [children.length]);
   if (!commentId) {
     return null;
   }
-
-  const children = group.childrenByParentId.get(commentId) ?? [];
   const visualDepth = Math.min(depth, MAX_VISUAL_DEPTH);
   const childVisualDepth = Math.min(depth + 1, MAX_VISUAL_DEPTH);
   const hasChildren = children.length > 0;
