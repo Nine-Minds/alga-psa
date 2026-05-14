@@ -9,8 +9,12 @@ const migrationPath = path.resolve(
   '../../../migrations/20260513120000_create_app_search_index.cjs',
 );
 
+function readSearchIndexMigration(): string {
+  return readFileSync(migrationPath, 'utf8');
+}
+
 function appSearchIndexCreateTableBody(): string {
-  const migration = readFileSync(migrationPath, 'utf8');
+  const migration = readSearchIndexMigration();
   const tableMatch = migration.match(/CREATE TABLE app_search_index \(([\s\S]*?)\n\s*\)\s*`/);
   if (!tableMatch) {
     throw new Error('Could not find app_search_index CREATE TABLE statement');
@@ -70,5 +74,12 @@ describe('app_search_index migration contract', () => {
 
     expect(columns.tenant).toBe('tenant uuid NOT NULL');
     expect(tableBody).toContain('PRIMARY KEY (tenant, object_type, object_id)');
+  });
+
+  it('T003 enables pg_trgm with the idempotent extension form', () => {
+    const migration = readSearchIndexMigration();
+
+    expect(migration).toContain("CREATE EXTENSION IF NOT EXISTS pg_trgm");
+    expect(migration).not.toContain("CREATE EXTENSION pg_trgm");
   });
 });
