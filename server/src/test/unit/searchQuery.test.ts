@@ -73,6 +73,25 @@ describe('search query parsing', () => {
     expect(sql).toContain('ORDER BY score DESC, source_updated_at DESC, object_id ASC');
   });
 
+  it('T138 orders recent results by source_updated_at only, ignoring relevance score ordering', async () => {
+    const knex = {
+      raw: vi.fn(async () => ({ rows: [] })),
+    };
+
+    await runSearchQuery({
+      knex: knex as never,
+      tenant: '00000000-0000-0000-0000-000000000001',
+      query: 'acme',
+      allowedTypes: ['client'],
+      sort: 'recent',
+    });
+
+    const sql = knex.raw.mock.calls[0]?.[0] as string;
+    const orderByClause = sql.slice(sql.indexOf('ORDER BY'), sql.indexOf('LIMIT ?'));
+    expect(orderByClause).toContain('ORDER BY source_updated_at DESC, object_id ASC');
+    expect(orderByClause).not.toContain('score DESC');
+  });
+
   it('T093 returns rows from the pg_trgm fallback branch', async () => {
     const knex = {
       raw: vi.fn(async (sql: string) => {

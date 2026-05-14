@@ -1392,6 +1392,8 @@ npm run search:backfill
 
 - **2026-05-13 — T137 native result anchors.** Added UI contract coverage that `renderResultRow` returns an `<a href={row.url}>` with stable row IDs and no click handler or `preventDefault`, preserving browser Cmd/Ctrl-click behavior. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T138 recent sort SQL.** Added query-layer coverage that `sort: 'recent'` orders by `source_updated_at DESC, object_id ASC` and does not include `score DESC` in the `ORDER BY` clause. Validation: `cd server && npx vitest run src/test/unit/searchQuery.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

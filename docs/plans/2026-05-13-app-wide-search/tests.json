@@ -152,7 +152,7 @@
   { "id": "T135", "featureIds": ["F115"], "description": "Empty state echoes the query back and suggests removing the type filter", "implemented": true },
   { "id": "T136", "featureIds": ["F115"], "description": "Loading skeleton renders on first input change and disappears when results arrive", "implemented": true },
   { "id": "T137", "featureIds": ["F116"], "description": "Every results-page row is a native `<a href>`; Cmd/Ctrl+click opens in new tab", "implemented": true },
-  { "id": "T138", "featureIds": ["F117"], "description": "sort=recent orders results by source_updated_at DESC, ignoring relevance score", "implemented": false },
+  { "id": "T138", "featureIds": ["F117"], "description": "sort=recent orders results by source_updated_at DESC, ignoring relevance score", "implemented": true },
 
   { "id": "T139", "featureIds": ["F118"], "description": "Sidebar input exposes ARIA combobox role, aria-expanded reflects open state, aria-activedescendant updates on arrow keys", "implemented": false },
   { "id": "T140", "featureIds": ["F119"], "description": "Down-arrow on the sidebar input moves focus into typeahead; up-arrow at top wraps back to input", "implemented": false },
