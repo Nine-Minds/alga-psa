@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -178,5 +180,13 @@ describe('search backfill script', () => {
     expect(loadBatch).toHaveBeenNthCalledWith(1, knex, 'tenant-a', null, 500);
     expect(loadBatch).toHaveBeenNthCalledWith(2, knex, 'tenant-b', null, 500);
     expect(mocks.upsertSearchDoc).toHaveBeenCalledTimes(2);
+  });
+
+  it('T084 wires npm run search:backfill in root package.json', () => {
+    const packageJson = JSON.parse(
+      readFileSync(resolve(process.cwd(), '../package.json'), 'utf8'),
+    ) as { scripts?: Record<string, string> };
+
+    expect(packageJson.scripts?.['search:backfill']).toBe('tsx server/src/scripts/search-backfill.ts');
   });
 });
