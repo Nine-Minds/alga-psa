@@ -538,6 +538,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Empty `visible_to_user_ids` remains unrestricted by user ID and is controlled by the other ACL columns.
   - Validation: `git diff --check`; `npm -w server run typecheck` from F094 still covers the helper.
 
+- **F096 — Internal/private/client-scope ACL predicates.**
+  - Covered by the F093 ACL predicate: `is_internal_only` requires an internal user, `is_private` requires membership via `visible_to_user_ids`, and `client_scope_id` must be in `accessibleClientIds`.
+  - For CE v1 documents, `is_private` remains false by indexer policy; the column is still enforced for future rows or synthetic tests.
+  - Validation: `git diff --check`; `npm -w server run typecheck` from F094 still covers the helper.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

@@ -106,7 +106,7 @@
   { "id": "F093", "description": "Implement `aclPredicateSql(user)` that returns a parameterized SQL fragment combining required_permission, visible_to_user_ids, visible_to_roles, is_internal_only, is_private, client_scope_id checks", "prdRefs": ["14.1"], "implemented": true },
   { "id": "F094", "description": "Resolve the user's set of granted permissions once at request time and pass as an array parameter to `required_permission = ANY($perms)` style check", "prdRefs": ["14.1"], "implemented": true },
   { "id": "F095", "description": "Implement `visible_to_user_ids && ARRAY[$user_id]::uuid[]` overlap test as part of acl predicate", "prdRefs": ["14.1"], "implemented": true },
-  { "id": "F096", "description": "Implement `is_internal_only` filter against user.is_internal AND `is_private` filter against share-list membership AND `client_scope_id` filter against accessible-clients", "prdRefs": ["14.1"], "implemented": false },
+  { "id": "F096", "description": "Implement `is_internal_only` filter against user.is_internal AND `is_private` filter against share-list membership AND `client_scope_id` filter against accessible-clients", "prdRefs": ["14.1"], "implemented": true },
 
   { "id": "F097", "description": "Implement `verifyResultVisibility(user, rows)` that runs each row through the entity's authoritative permission check", "prdRefs": ["14.1", "14.3"], "implemented": false },
   { "id": "F098", "description": "Wire per-entity assert helpers: ticket (assertTicketReadable), project (assertProjectReadable), document (share-list), workflow_task (assignee)", "prdRefs": ["14.2"], "implemented": false },
