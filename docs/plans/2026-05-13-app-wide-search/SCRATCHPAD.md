@@ -732,6 +732,8 @@ npm run search:backfill
 
 - **2026-05-13 — F055 contract/client-contract events.** Existing `CONTRACT_*` workflow events were mostly assignment-oriented and client-contract rows had no distinct source events. Added `CONTRACT_DELETED` plus `CLIENT_CONTRACT_CREATED/UPDATED/DELETED` schemas, widened contract event schemas with a generic search payload union, published contract CRUD events from `packages/billing/src/actions/contractActions.ts`, and published client-contract create/update/deactivate events from `packages/clients/src/actions/clientContractActions.ts`. Updated the contract and client-contract indexer source events. Validation: `npm -w @alga-psa/event-schemas run typecheck`, `npm -w @alga-psa/billing run typecheck`, `npm -w @alga-psa/clients run typecheck`, and `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/contract.ts server/src/lib/search/indexers/client_contract.ts`.
 
+- **2026-05-13 — F056 document/KB events.** Added `DOCUMENT_UPDATED` plus `KB_ARTICLE_CREATED/UPDATED/DELETED` schemas. `documentIndexer.sourceEvents` now covers uploaded/updated/deleted/generated/associated/detached events, and `kbArticleIndexer.sourceEvents` covers the KB article CRUD family. Published `DOCUMENT_UPDATED` from document metadata, upload, and BlockNote content create/update/delete paths, and `DOCUMENT_DELETED` from hard-delete. Existing post-commit `DOCUMENT_ASSOCIATED` / `DOCUMENT_DETACHED` workflow publishes remain the association insert/delete signal for search re-indexing. Published KB article create/update/delete events from the KB actions. Validation: `npm -w @alga-psa/event-schemas run typecheck` and `npm -w @alga-psa/documents run typecheck`.
+
 ---
 
 ## Implementation order suggestion (not prescriptive)

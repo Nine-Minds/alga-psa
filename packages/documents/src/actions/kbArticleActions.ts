@@ -6,6 +6,7 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 import type {
   ArticleAudience,
   ArticleStatus,
@@ -96,6 +97,36 @@ function generateSlug(title: string): string {
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .substring(0, 100);
+}
+
+async function publishKbArticleSearchEvent(
+  eventType: 'KB_ARTICLE_CREATED' | 'KB_ARTICLE_UPDATED' | 'KB_ARTICLE_DELETED',
+  tenant: string,
+  articleId: string,
+  options: {
+    documentId?: string;
+    userId?: string;
+    changedFields?: string[];
+    status?: string;
+  },
+): Promise<void> {
+  try {
+    const occurredAt = new Date().toISOString();
+    await publishEvent({
+      eventType,
+      payload: {
+        tenantId: tenant,
+        occurredAt,
+        articleId,
+        documentId: options.documentId,
+        userId: options.userId,
+        changedFields: options.changedFields,
+        status: options.status,
+      },
+    });
+  } catch (eventError) {
+    console.error(`[kbArticleActions] Failed to publish ${eventType} search event:`, eventError);
+  }
 }
 
 /**
@@ -228,7 +259,14 @@ export const createArticle = withAuth(
       return permissionError('Permission denied');
     }
 
-    return _createArticleInternal(knex, user, tenant, input);
+    const article = await _createArticleInternal(knex, user, tenant, input);
+    await publishKbArticleSearchEvent('KB_ARTICLE_CREATED', tenant, article.article_id, {
+      documentId: article.document_id,
+      userId: user.user_id,
+      changedFields: ['document_name', 'content'],
+      status: article.status,
+    });
+    return article;
   }
 );
 
@@ -253,7 +291,7 @@ export const updateArticle = withAuth(
       throw new Error('articleId is required');
     }
 
-    return withTransaction(knex, async (trx) => {
+    const article = await withTransaction(knex, async (trx) => {
       const existing = await trx('kb_articles')
         .where({ tenant, article_id: articleId })
         .first();
@@ -325,6 +363,14 @@ export const updateArticle = withAuth(
 
       return article as unknown as IKBArticle;
     });
+
+    await publishKbArticleSearchEvent('KB_ARTICLE_UPDATED', tenant, article.article_id, {
+      documentId: article.document_id,
+      userId: user.user_id,
+      changedFields: Object.keys(input),
+      status: article.status,
+    });
+    return article;
   }
 );
 
@@ -348,7 +394,7 @@ export const publishArticle = withAuth(
       throw new Error('articleId is required');
     }
 
-    return withTransaction(knex, async (trx) => {
+    const article = await withTransaction(knex, async (trx) => {
       const existing = await trx('kb_articles')
         .where({ tenant, article_id: articleId })
         .first();
@@ -385,6 +431,14 @@ export const publishArticle = withAuth(
 
       return article as unknown as IKBArticle;
     });
+
+    await publishKbArticleSearchEvent('KB_ARTICLE_UPDATED', tenant, article.article_id, {
+      documentId: article.document_id,
+      userId: user.user_id,
+      changedFields: ['status', 'published_at', 'is_client_visible'],
+      status: article.status,
+    });
+    return article;
   }
 );
 
@@ -408,7 +462,7 @@ export const archiveArticle = withAuth(
       throw new Error('articleId is required');
     }
 
-    return withTransaction(knex, async (trx) => {
+    const article = await withTransaction(knex, async (trx) => {
       const existing = await trx('kb_articles')
         .where({ tenant, article_id: articleId })
         .first();
@@ -441,6 +495,14 @@ export const archiveArticle = withAuth(
 
       return article as unknown as IKBArticle;
     });
+
+    await publishKbArticleSearchEvent('KB_ARTICLE_UPDATED', tenant, article.article_id, {
+      documentId: article.document_id,
+      userId: user.user_id,
+      changedFields: ['status', 'is_client_visible'],
+      status: article.status,
+    });
+    return article;
   }
 );
 
@@ -466,7 +528,7 @@ export const deleteArticle = withAuth(
       throw new Error('articleId is required');
     }
 
-    return withTransaction(knex, async (trx) => {
+    const deleted = await withTransaction(knex, async (trx) => {
       const existing = await trx('kb_articles')
         .where({ tenant, article_id: articleId })
         .first();
@@ -495,8 +557,17 @@ export const deleteArticle = withAuth(
         .where({ tenant, document_id: existing.document_id })
         .del();
 
-      return { success: true };
+      return {
+        success: true as const,
+        documentId: existing.document_id as string,
+      };
     });
+
+    await publishKbArticleSearchEvent('KB_ARTICLE_DELETED', tenant, articleId, {
+      documentId: deleted.documentId,
+      userId: user.user_id,
+    });
+    return { success: true };
   }
 );
 

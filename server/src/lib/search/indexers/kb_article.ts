@@ -56,7 +56,7 @@ function baseKbArticleQuery(knex: Knex, tenant: string) {
 
 export const kbArticleIndexer: EntityIndexer = {
   objectType: 'kb_article',
-  sourceEvents: [],
+  sourceEvents: ['KB_ARTICLE_CREATED', 'KB_ARTICLE_UPDATED', 'KB_ARTICLE_DELETED'],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await baseKbArticleQuery(knex, tenant)

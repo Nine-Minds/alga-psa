@@ -37,7 +37,14 @@ function toSearchDoc(tenant: string, row: DocumentSearchRow): SearchDoc {
 
 export const documentIndexer: EntityIndexer = {
   objectType: 'document',
-  sourceEvents: ['DOCUMENT_UPLOADED', 'DOCUMENT_GENERATED', 'DOCUMENT_ASSOCIATED', 'DOCUMENT_DETACHED'],
+  sourceEvents: [
+    'DOCUMENT_UPLOADED',
+    'DOCUMENT_UPDATED',
+    'DOCUMENT_DELETED',
+    'DOCUMENT_GENERATED',
+    'DOCUMENT_ASSOCIATED',
+    'DOCUMENT_DETACHED',
+  ],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await knex<DocumentSearchRow>('documents')

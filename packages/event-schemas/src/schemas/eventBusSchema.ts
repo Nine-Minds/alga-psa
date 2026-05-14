@@ -85,7 +85,9 @@ import {
   documentSignatureExpiredEventPayloadSchema,
   documentSignatureRequestedEventPayloadSchema,
   documentSignedEventPayloadSchema,
+  documentUpdatedEventPayloadSchema,
   documentUploadedEventPayloadSchema,
+  kbArticleEventPayloadSchema,
 } from './domain/documentEventSchemas';
 import {
   csatAlertTriggeredEventPayloadSchema,
@@ -317,6 +319,7 @@ export const EVENT_TYPES = [
 
   // Documents (domain expansion)
   'DOCUMENT_UPLOADED',
+  'DOCUMENT_UPDATED',
   'DOCUMENT_DELETED',
   'DOCUMENT_ASSOCIATED',
   'DOCUMENT_DETACHED',
@@ -324,6 +327,9 @@ export const EVENT_TYPES = [
   'DOCUMENT_SIGNATURE_REQUESTED',
   'DOCUMENT_SIGNED',
   'DOCUMENT_SIGNATURE_EXPIRED',
+  'KB_ARTICLE_CREATED',
+  'KB_ARTICLE_UPDATED',
+  'KB_ARTICLE_DELETED',
 
   // Email providers + inbound email (already present)
   'INBOUND_EMAIL_RECEIVED',
@@ -1061,6 +1067,7 @@ export const EventPayloadSchemas = {
 
   // Documents (domain expansion)
   DOCUMENT_UPLOADED: documentUploadedEventPayloadSchema,
+  DOCUMENT_UPDATED: documentUpdatedEventPayloadSchema,
   DOCUMENT_DELETED: documentDeletedEventPayloadSchema,
   DOCUMENT_ASSOCIATED: documentAssociatedEventPayloadSchema,
   DOCUMENT_DETACHED: documentDetachedEventPayloadSchema,
@@ -1068,6 +1075,9 @@ export const EventPayloadSchemas = {
   DOCUMENT_SIGNATURE_REQUESTED: documentSignatureRequestedEventPayloadSchema,
   DOCUMENT_SIGNED: documentSignedEventPayloadSchema,
   DOCUMENT_SIGNATURE_EXPIRED: documentSignatureExpiredEventPayloadSchema,
+  KB_ARTICLE_CREATED: kbArticleEventPayloadSchema,
+  KB_ARTICLE_UPDATED: kbArticleEventPayloadSchema,
+  KB_ARTICLE_DELETED: kbArticleEventPayloadSchema,
 
   // Email providers + inbound email (already present)
   INBOUND_EMAIL_RECEIVED: InboundEmailReceivedPayloadSchema,

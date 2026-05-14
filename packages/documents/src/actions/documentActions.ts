@@ -37,7 +37,7 @@ import { deleteEntityWithValidation } from '@alga-psa/core';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { DocumentHandlerRegistry } from '@alga-psa/documents/handlers/DocumentHandlerRegistry';
 import { generateDocumentPreviews } from '../lib/documentPreviewGenerator';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildDocumentAssociatedPayload,
   buildDocumentDetachedPayload,
@@ -64,6 +64,54 @@ async function loadSharp() {
       `Failed to load optional dependency "sharp" (required for document previews). ` +
         `Ensure platform-specific sharp binaries are installed. Original error: ${error instanceof Error ? error.message : String(error)}`
     );
+  }
+}
+
+async function publishDocumentUpdatedSearchEvent(
+  tenant: string,
+  documentId: string,
+  userId: string | undefined,
+  changedFields: string[],
+  source: string,
+): Promise<void> {
+  try {
+    const occurredAt = new Date().toISOString();
+    await publishEvent({
+      eventType: 'DOCUMENT_UPDATED',
+      payload: {
+        tenantId: tenant,
+        occurredAt,
+        documentId,
+        updatedByUserId: userId,
+        updatedAt: occurredAt,
+        changedFields,
+      },
+    });
+  } catch (eventError) {
+    console.error(`[${source}] Failed to publish DOCUMENT_UPDATED search event:`, eventError);
+  }
+}
+
+async function publishDocumentDeletedSearchEvent(
+  tenant: string,
+  documentId: string,
+  userId: string | undefined,
+  source: string,
+): Promise<void> {
+  try {
+    const occurredAt = new Date().toISOString();
+    await publishEvent({
+      eventType: 'DOCUMENT_DELETED',
+      payload: {
+        tenantId: tenant,
+        occurredAt,
+        documentId,
+        deletedByUserId: userId,
+        deletedAt: occurredAt,
+      },
+    });
+  } catch (eventError) {
+    console.error(`[${source}] Failed to publish DOCUMENT_DELETED search event:`, eventError);
   }
 }
 
@@ -707,6 +755,14 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
     const cache = CacheFactory.getPreviewCache(tenant);
     await cache.delete(documentId);
     console.log(`[updateDocument] Invalidated preview cache for document ${documentId}`);
+
+    await publishDocumentUpdatedSearchEvent(
+      tenant,
+      documentId,
+      user.user_id,
+      Object.keys(data),
+      'updateDocument',
+    );
   } catch (error) {
     console.error(error);
     throw new Error("Failed to update the document");
@@ -848,6 +904,8 @@ export const deleteDocument = withAuth(async (
         })
       );
     }
+
+    await publishDocumentDeletedSearchEvent(tenant, documentId, user.user_id, 'deleteDocument');
 
     const filesToDelete: string[] = [];
 
@@ -2506,6 +2564,14 @@ export const uploadDocument = withAuth(async (
           })
         );
       }
+
+      await publishDocumentUpdatedSearchEvent(
+        tenant,
+        document.document_id,
+        user.user_id,
+        ['document_name', 'file_id', 'storage_path'],
+        'uploadDocument',
+      );
 
       // Generate previews after the transaction completes.
       // Awaited so the preview is ready before the response reaches the client.

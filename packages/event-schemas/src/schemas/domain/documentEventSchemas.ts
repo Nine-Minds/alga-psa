@@ -25,6 +25,15 @@ export const documentDeletedEventPayloadSchema = BaseDomainEventPayloadSchema.ex
 
 export type DocumentDeletedEventPayload = z.infer<typeof documentDeletedEventPayloadSchema>;
 
+export const documentUpdatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  documentId: documentIdSchema,
+  updatedByUserId: userIdSchema.optional(),
+  updatedAt: z.string().datetime().optional(),
+  changedFields: z.array(z.string()).optional(),
+}).describe('Payload for DOCUMENT_UPDATED');
+
+export type DocumentUpdatedEventPayload = z.infer<typeof documentUpdatedEventPayloadSchema>;
+
 export const documentAssociatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   documentId: documentIdSchema,
   entityType: z.string().min(1),
@@ -94,3 +103,13 @@ export const documentSignatureExpiredEventPayloadSchema = BaseDomainEventPayload
 }).describe('Payload for DOCUMENT_SIGNATURE_EXPIRED');
 
 export type DocumentSignatureExpiredEventPayload = z.infer<typeof documentSignatureExpiredEventPayloadSchema>;
+
+export const kbArticleEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  articleId: z.string().uuid(),
+  documentId: documentIdSchema.optional(),
+  userId: userIdSchema.optional(),
+  changedFields: z.array(z.string()).optional(),
+  status: z.string().optional(),
+}).describe('Payload for KB_ARTICLE_* search indexing events');
+
+export type KbArticleEventPayload = z.infer<typeof kbArticleEventPayloadSchema>;
