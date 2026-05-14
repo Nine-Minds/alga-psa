@@ -699,7 +699,7 @@
     "pageTitle": "Edytuj zasób"
   },
   "associatedAssets": {
-    "title": "Powiązane zasoby",
+    "title": "Zasoby",
     "description": "Zarządzanie relacjami zasobów nadrzędnych i podrzędnych z połączonymi działaniami dotyczącymi zasobów",
     "loading": {
       "assets": "Ładowanie zasobów..."
