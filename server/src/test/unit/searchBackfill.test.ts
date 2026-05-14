@@ -137,4 +137,46 @@ describe('search backfill script', () => {
     expect(mocks.upsertSearchDoc).toHaveBeenCalledTimes(4);
     expect(Array.from(rows.entries())).toEqual(firstRunRows);
   });
+
+  it('T083 discovers and iterates all tenants when --tenant is omitted', async () => {
+    const tenantRows = [{ tenant: 'tenant-a' }, { tenant: 'tenant-b' }];
+    const tenantQuery = {
+      select: vi.fn(() => tenantQuery),
+      orderBy: vi.fn(() => tenantQuery),
+      then: (
+        resolve: (rows: typeof tenantRows) => unknown,
+        reject: (reason?: unknown) => unknown,
+      ) => Promise.resolve(tenantRows).then(resolve, reject),
+    };
+    const knex = vi.fn((table: string) => {
+      if (table === 'tenants') {
+        return tenantQuery;
+      }
+      throw new Error(`Unexpected table ${table}`);
+    });
+    const loadBatch = vi.spyOn(clientIndexer, 'loadBatch').mockImplementation(
+      async (_knex, tenant, cursor) => (
+        cursor === null
+          ? [{
+            tenant,
+            objectType: 'client',
+            objectId: `${tenant}-client`,
+            title: `Client ${tenant}`,
+            url: `/msp/clients/${tenant}-client`,
+            acl: { requiredPermission: 'client:read' },
+            sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+          }]
+          : []
+      ),
+    );
+
+    await runSearchBackfill({ type: 'client' }, knex as never);
+
+    expect(knex).toHaveBeenCalledWith('tenants');
+    expect(tenantQuery.select).toHaveBeenCalledWith('tenant');
+    expect(tenantQuery.orderBy).toHaveBeenCalledWith('tenant', 'asc');
+    expect(loadBatch).toHaveBeenNthCalledWith(1, knex, 'tenant-a', null, 500);
+    expect(loadBatch).toHaveBeenNthCalledWith(2, knex, 'tenant-b', null, 500);
+    expect(mocks.upsertSearchDoc).toHaveBeenCalledTimes(2);
+  });
 });
