@@ -11,6 +11,7 @@ import { documentIndexer } from '../../lib/search/indexers/document';
 import { invoiceAnnotationIndexer } from '../../lib/search/indexers/invoice_annotation';
 import { invoiceItemIndexer } from '../../lib/search/indexers/invoice_item';
 import { invoiceIndexer } from '../../lib/search/indexers/invoice';
+import { interactionIndexer } from '../../lib/search/indexers/interaction';
 import { kbArticleIndexer } from '../../lib/search/indexers/kb_article';
 import { projectPhaseIndexer } from '../../lib/search/indexers/project_phase';
 import { projectTaskCommentIndexer } from '../../lib/search/indexers/project_task_comment';
@@ -982,6 +983,46 @@ describe('search entity indexers', () => {
         ],
       },
     });
+  });
+
+  it('T197 interaction indexer flattens BlockNote notes without JSON syntax', async () => {
+    const { knex, queryBuilder } = createFirstRowKnex({
+      interaction_id: 'interaction-1',
+      title: 'Laser support follow-up',
+      notes: JSON.stringify([
+        {
+          id: 'note-1',
+          type: 'bulletListItem',
+          content: [{ type: 'text', text: 'Added Sciton Tribrid Laser' }],
+        },
+      ]),
+      type_name: 'Phone call',
+      client_name: 'ACME Corp',
+      contact_name: 'Ada Lovelace',
+      ticket_number: 'TIC-1023',
+      ticket_title: 'Laser onboarding',
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await interactionIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'interaction-1',
+    );
+
+    expect(knex).toHaveBeenCalledWith('interactions as i');
+    expect(queryBuilder.leftJoin).toHaveBeenCalledWith('interaction_types as it', expect.any(Function));
+    expect(doc).toMatchObject({
+      objectType: 'interaction',
+      objectId: 'interaction-1',
+      title: 'Laser support follow-up',
+      subtitle: 'Phone call | ACME Corp | Ada Lovelace | TIC-1023 | Laser onboarding',
+      body: 'Added Sciton Tribrid Laser',
+      url: '/msp/interactions/interaction-1',
+      acl: { requiredPermission: 'interaction:read' },
+    });
+    expect(doc?.body).not.toContain('{');
+    expect(doc?.body).not.toContain('"type"');
   });
 
   it('T052 time-entry indexer skips rows with null or empty notes', async () => {
