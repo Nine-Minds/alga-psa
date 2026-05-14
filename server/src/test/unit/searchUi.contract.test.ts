@@ -40,4 +40,14 @@ describe('app-wide search UI contracts', () => {
     expect(resultAnchorBlock).not.toContain('onClick=');
     expect(resultAnchorBlock).not.toContain('preventDefault');
   });
+
+  it('T126 renders the i18n see-all typeahead row with the encoded results URL', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/search/SearchPalette.tsx'), 'utf8');
+
+    expect(source).toContain('const seeAllUrl = `/msp/search?q=${encodeURIComponent(trimmedQuery)}`');
+    expect(source).toContain('id="app-search-option-see-all-results"');
+    expect(source).toContain('href={seeAllUrl}');
+    expect(source).toContain("t('search.seeAllResults'");
+    expect(source).toContain('count: totalCount');
+  });
 });

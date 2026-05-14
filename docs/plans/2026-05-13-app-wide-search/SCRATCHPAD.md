@@ -1368,6 +1368,8 @@ npm run search:backfill
 
 - **2026-05-13 — T125 typeahead native new-tab behavior.** Added UI contract coverage that result anchors do not install click handlers or call `preventDefault`, preserving Cmd/Ctrl-click and middle-click browser behavior. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T126 see-all typeahead row.** Added UI contract coverage that the final typeahead row uses the `search.seeAllResults` i18n key, passes `totalCount`, and links to `/msp/search?q=${encodeURIComponent(trimmedQuery)}` via a native anchor. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
