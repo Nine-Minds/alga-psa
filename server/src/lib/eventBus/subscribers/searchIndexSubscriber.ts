@@ -1,9 +1,10 @@
 import logger from '@alga-psa/core/logger';
 import type { Event, EventType } from '@alga-psa/event-schemas';
 import { createTenantKnex } from '@alga-psa/db';
+import type { Knex } from 'knex';
 
 import { getEventBus } from '../index';
-import { allIndexers } from '../../search';
+import { allIndexers, getIndexer } from '../../search';
 import { deleteSearchDoc, upsertSearchDoc } from '../../search/upsert';
 import type { EntityIndexer, SearchObjectType } from '../../search/types';
 
@@ -89,6 +90,28 @@ function isDeleteEvent(eventType: EventType): boolean {
 
 export function isSearchIndexLiveEnabled(): boolean {
   return process.env.SEARCH_INDEX_LIVE === 'true';
+}
+
+async function reindexTicketComments(knex: Knex, tenant: string, ticketId: string): Promise<number> {
+  const commentIndexer = getIndexer('ticket_comment');
+  if (!commentIndexer) {
+    logger.warn('[SearchIndexSubscriber] Ticket comment indexer is not registered');
+    return 0;
+  }
+
+  const rows = await knex<{ comment_id: string }>('comments')
+    .select('comment_id')
+    .where({ tenant, ticket_id: ticketId })
+    .orderBy('comment_id', 'asc');
+
+  for (const row of rows) {
+    const doc = await commentIndexer.loadOne(knex, tenant, row.comment_id);
+    if (doc) {
+      await upsertSearchDoc(knex, doc);
+    }
+  }
+
+  return rows.length;
 }
 
 export async function registerSearchIndexSubscriber(): Promise<void> {
@@ -213,5 +236,15 @@ async function handleSearchIndexEvent(event: Event): Promise<void> {
       objectType: indexer.objectType,
       objectId,
     });
+
+    if (event.eventType === 'TICKET_UPDATED' && indexer.objectType === 'ticket') {
+      const count = await reindexTicketComments(knex, tenant, objectId);
+      logger.debug('[SearchIndexSubscriber] Cascaded ticket comment re-index', {
+        eventType: event.eventType,
+        eventId: event.id,
+        ticketId: objectId,
+        count,
+      });
+    }
   }
 }

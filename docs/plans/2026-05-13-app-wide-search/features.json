@@ -73,7 +73,7 @@
   { "id": "F066", "description": "Subscriber handles DELETED by calling `deleteSearchDoc`", "prdRefs": ["11.1"], "implemented": true },
   { "id": "F067", "description": "Subscriber is gated by env var `SEARCH_INDEX_LIVE` (default `false`); when false, events are acknowledged but no DB writes occur", "prdRefs": ["11.1", "16"], "implemented": true },
 
-  { "id": "F068", "description": "On TICKET_UPDATED, cascade a re-index of all the ticket's comments (denormalized parent title)", "prdRefs": ["11.1"], "implemented": false },
+  { "id": "F068", "description": "On TICKET_UPDATED, cascade a re-index of all the ticket's comments (denormalized parent title)", "prdRefs": ["11.1"], "implemented": true },
   { "id": "F069", "description": "On INVOICE_UPDATED, cascade re-index of its items and annotations", "prdRefs": ["11.1"], "implemented": false },
   { "id": "F070", "description": "On PROJECT_UPDATED, cascade re-index of phases, tasks, task-comments (paged async job)", "prdRefs": ["11.1"], "implemented": false },
   { "id": "F071", "description": "On `document_associations` insert/delete affecting a document, re-index the document row (its `client_scope_id` may have changed if the primary association was the source)", "prdRefs": ["11.5"], "implemented": false },

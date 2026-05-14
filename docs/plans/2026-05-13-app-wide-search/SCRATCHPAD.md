@@ -393,6 +393,10 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - The event handler resolves and acknowledges events but returns before opening a DB connection or writing rows when live indexing is disabled.
   - The env var is read at event-handling time, so future events see a changed value without code changes; process env propagation still depends on the deployment/runtime.
 
+- **F068 — Ticket comment cascade.**
+  - On `TICKET_UPDATED`, after the ticket document is upserted, the subscriber selects all comment IDs for the same `(tenant, ticket_id)` and re-upserts each `ticket_comment` document.
+  - Rationale: ticket-comment search rows denormalize the parent ticket title, so ticket title edits must refresh existing comment rows even when comment bodies did not change.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
