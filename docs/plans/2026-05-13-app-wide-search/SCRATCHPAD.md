@@ -269,6 +269,10 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   npm run search:backfill -- --tenant=<uuid>
 ```
 
+## Implementation log
+
+- **2026-05-13 — F001 complete.** Added migration file `server/migrations/20260513120000_create_app_search_index.cjs`. The file already includes the planned table/index/down-migration body because those pieces are inseparable from a useful migration skeleton. Validation: `node --check server/migrations/20260513120000_create_app_search_index.cjs`.
+
 ---
 
 ## Gotchas
