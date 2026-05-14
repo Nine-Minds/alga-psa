@@ -1444,6 +1444,8 @@ npm run search:backfill
 
 - **2026-05-13 — T163 ticket identifier acceptance.** Added a metadata identifier prefix branch (`LIKE q.identifier || '%'`) scored at 900 below exact matches (1000), so shortened IDs such as `tic-10` can find `TIC-1023`. Added query-layer coverage for the exact and prefix SQL branches. Validation: `cd server && npx vitest run src/test/unit/searchQuery.test.ts --coverage=false`.
 
+- **2026-05-13 — T164 ticket-comment search-to-highlight acceptance.** Added contract coverage that `ticketCommentIndexer` emits `/msp/tickets/{ticket_id}#comment-{comment_id}` URLs with markdown-flattened body content and the ticket `CommentItem` honors the same hash by scrolling/highlighting. Validation: `cd server && npx vitest run src/test/unit/searchHashAnchors.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

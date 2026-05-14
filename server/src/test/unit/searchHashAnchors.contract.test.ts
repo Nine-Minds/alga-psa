@@ -53,4 +53,16 @@ describe('app-wide search hash-anchor contracts', () => {
     expect(taskCommentSource).toContain("document.getElementById(searchAnchorId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })");
     expect(taskCommentSource).toContain('search-highlight border-yellow-400 bg-yellow-50');
   });
+
+  it('T164 ticket-comment search results link to the ticket comment hash highlight target', () => {
+    const indexerSource = readRepoFile('server/src/lib/search/indexers/ticket_comment.ts');
+    const commentItemSource = readRepoFile('packages/tickets/src/components/ticket/CommentItem.tsx');
+
+    expect(indexerSource).toContain('url: `/msp/tickets/${row.ticket_id}#comment-${row.comment_id}`');
+    expect(indexerSource).toContain("parentType: 'ticket'");
+    expect(indexerSource).toContain('body: row.note ? flattenMarkdown(row.note) : undefined');
+    expect(commentItemSource).toContain('const expectedHash = `#comment-${conversation.comment_id}`');
+    expect(commentItemSource).toContain('target?.scrollIntoView({ behavior: \'smooth\', block: \'center\' })');
+    expect(commentItemSource).toContain('search-highlight ring-2 ring-yellow-400 bg-yellow-50');
+  });
 });
