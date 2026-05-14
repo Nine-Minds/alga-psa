@@ -39,7 +39,7 @@ function toSearchDoc(tenant: string, row: ContactSearchRow): SearchDoc {
 
 export const contactIndexer: EntityIndexer = {
   objectType: 'contact',
-  sourceEvents: ['CONTACT_CREATED', 'CONTACT_UPDATED', 'CONTACT_ARCHIVED'],
+  sourceEvents: ['CONTACT_CREATED', 'CONTACT_UPDATED', 'CONTACT_ARCHIVED', 'CONTACT_DELETED'],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await knex<ContactSearchRow>('contacts')

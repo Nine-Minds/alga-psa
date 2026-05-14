@@ -221,6 +221,25 @@ export const deleteContact = withAuth(async (
       return acc;
     }, {});
 
+    if (result.deleted) {
+      const occurredAt = new Date().toISOString();
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_DELETED',
+        payload: {
+          contactId,
+          clientId: typeof contact.client_id === 'string' ? contact.client_id : undefined,
+          deletedByUserId: user.user_id,
+          deletedAt: occurredAt,
+        },
+        ctx: {
+          tenantId: tenant,
+          occurredAt,
+          actor: maybeUserActor(user),
+        },
+        idempotencyKey: `contact_deleted:${contactId}:${occurredAt}`,
+      });
+    }
+
     return {
       ...result,
       deleted: result.deleted,

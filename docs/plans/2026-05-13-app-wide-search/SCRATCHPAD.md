@@ -720,6 +720,8 @@ npm run search:backfill
 
 - **2026-05-13 — F049 client CRUD events.** `CLIENT_CREATED` and `CLIENT_UPDATED` already existed in `packages/event-schemas` and were already published from both the server `ClientService` and package client actions. Added missing `CLIENT_DELETED` event type + payload schema, published it after successful hard-delete in both delete paths, and added `CLIENT_DELETED` to `clientIndexer.sourceEvents` so the future search subscriber can remove the row. Validation: `npm -w @alga-psa/event-schemas run typecheck` and `npm -w @alga-psa/clients run typecheck` pass. `npm -w server run typecheck` is currently blocked before project files by generated `.next/dev/types/routes.d.ts` syntax errors (lines 755+); no search/client-service-specific errors were reachable from that run.
 
+- **2026-05-13 — F050 contact CRUD events.** `CONTACT_CREATED`, `CONTACT_UPDATED`, and `CONTACT_ARCHIVED` already existed in `packages/event-schemas` and were already published from the server/package contact create-update paths. Added missing `CONTACT_DELETED` event type + payload schema, publish after successful hard-delete in the package `deleteContact` action, and added `CONTACT_DELETED` to `contactIndexer.sourceEvents`. Validation: `npm -w @alga-psa/event-schemas run typecheck`, `npm -w @alga-psa/clients run typecheck`, and `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/contact.ts`.
+
 ---
 
 ## Implementation order suggestion (not prescriptive)
