@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T028 client batch backfill mapping.** Extended `searchIndexers.test.ts` with a thenable mocked `clients` query to exercise `clientIndexer.loadBatch` as the backfill CLI uses it. The test asserts tenant scoping, stable `client_id` ordering, batch limit, and one returned `SearchDoc` per seeded client row with `client:read` ACL. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T027 client indexer loadOne mapping.** Added `server/src/test/unit/searchIndexers.test.ts` with a mocked `clients` query chain to assert `clientIndexer.loadOne` filters by tenant and client id, maps `client_name` to title, email/phone to subtitle, notes to body, canonical client URL, and `requiredPermission='client:read'`. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T026 concurrent upsert conflict contract.** Extended `searchUpsert.test.ts` with two concurrent `upsertSearchDoc` calls for the same `(tenant, object_type, object_id)` and an in-memory raw handler keyed by that conflict target. The test asserts both calls use `ON CONFLICT (tenant, object_type, object_id)`, only one logical row remains, and the later call's searchable fields win. Validation: `npx vitest run src/test/unit/searchUpsert.test.ts --coverage=false` from `server/` passed.

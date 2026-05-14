@@ -13,6 +13,19 @@ function createFirstRowKnex(row: unknown) {
   return { knex, queryBuilder };
 }
 
+function createBatchKnex(rows: unknown[]) {
+  const queryBuilder = {
+    select: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    andWhere: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    then: vi.fn((resolve, reject) => Promise.resolve(rows).then(resolve, reject)),
+  };
+  const knex = vi.fn().mockReturnValue(queryBuilder);
+  return { knex, queryBuilder };
+}
+
 describe('search entity indexers', () => {
   it('T027 client loadOne maps client fields into a SearchDoc', async () => {
     const { knex, queryBuilder } = createFirstRowKnex({
@@ -48,5 +61,45 @@ describe('search entity indexers', () => {
       acl: { requiredPermission: 'client:read' },
     });
     expect(doc?.sourceUpdatedAt.toISOString()).toBe('2026-05-13T10:00:00.000Z');
+  });
+
+  it('T028 client loadBatch maps every seeded tenant client row for backfill', async () => {
+    const { knex, queryBuilder } = createBatchKnex([
+      {
+        client_id: 'client-1',
+        client_name: 'ACME Corp',
+        email: 'support@acme.example',
+        phone_no: null,
+        notes: 'First client',
+        updated_at: '2026-05-13T10:00:00.000Z',
+      },
+      {
+        client_id: 'client-2',
+        client_name: 'Exchange LLC',
+        email: null,
+        phone_no: '555-0101',
+        notes: 'Second client',
+        updated_at: '2026-05-13T11:00:00.000Z',
+      },
+    ]);
+
+    const docs = await clientIndexer.loadBatch(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      undefined,
+      500,
+    );
+
+    expect(knex).toHaveBeenCalledWith('clients');
+    expect(queryBuilder.where).toHaveBeenCalledWith(
+      'tenant',
+      '11111111-1111-4111-8111-111111111111',
+    );
+    expect(queryBuilder.orderBy).toHaveBeenCalledWith('client_id', 'asc');
+    expect(queryBuilder.limit).toHaveBeenCalledWith(500);
+    expect(docs).toHaveLength(2);
+    expect(docs.map((doc) => doc.objectId)).toEqual(['client-1', 'client-2']);
+    expect(docs.every((doc) => doc.objectType === 'client')).toBe(true);
+    expect(docs.every((doc) => doc.acl.requiredPermission === 'client:read')).toBe(true);
   });
 });
