@@ -10,7 +10,10 @@ vi.mock('../../lib/search/upsert', () => ({
   deleteSearchDoc: mocks.deleteSearchDoc,
 }));
 
-import { reindexRowsAfterWatermark } from '../../lib/jobs/handlers/searchReconcileHandler';
+import {
+  deleteRowsMissingFromSource,
+  reindexRowsAfterWatermark,
+} from '../../lib/jobs/handlers/searchReconcileHandler';
 import type { EntityIndexer, SearchDoc } from '../../lib/search/types';
 
 describe('search reconciliation', () => {
@@ -60,5 +63,58 @@ describe('search reconciliation', () => {
     expect(result).toEqual({ scanned: 2, reindexed: 1 });
     expect(mocks.upsertSearchDoc).toHaveBeenCalledTimes(1);
     expect(mocks.upsertSearchDoc).toHaveBeenCalledWith(knex, newerDoc);
+  });
+
+  it('T086 deletes indexed rows whose source row is missing', async () => {
+    const existingDoc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'client',
+      objectId: 'client-present',
+      title: 'Present client',
+      url: '/msp/clients/client-present',
+      acl: { requiredPermission: 'client:read' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    };
+    const indexedRows = [
+      { object_id: 'client-present' },
+      { object_id: 'client-missing' },
+    ];
+    const query = {
+      select: vi.fn(() => query),
+      where: vi.fn(() => query),
+      andWhere: vi.fn(() => query),
+      orderBy: vi.fn(() => query),
+      limit: vi.fn(() => query),
+      then: (
+        resolve: (rows: typeof indexedRows) => unknown,
+        reject: (reason?: unknown) => unknown,
+      ) => Promise.resolve(indexedRows).then(resolve, reject),
+    };
+    const knex = vi.fn((table: string) => {
+      expect(table).toBe('app_search_index');
+      return query;
+    });
+    const indexer: EntityIndexer = {
+      objectType: 'client',
+      sourceEvents: [],
+      loadOne: vi.fn(async (_knex, _tenant, id) => (
+        id === 'client-present' ? existingDoc : null
+      )),
+      loadBatch: vi.fn(),
+    };
+
+    const result = await deleteRowsMissingFromSource(knex as never, 'tenant-1', indexer);
+
+    expect(query.where).toHaveBeenCalledWith('tenant', 'tenant-1');
+    expect(query.andWhere).toHaveBeenCalledWith('object_type', 'client');
+    expect(indexer.loadOne).toHaveBeenNthCalledWith(1, knex, 'tenant-1', 'client-present');
+    expect(indexer.loadOne).toHaveBeenNthCalledWith(2, knex, 'tenant-1', 'client-missing');
+    expect(result).toEqual({ checked: 2, deleted: 1 });
+    expect(mocks.deleteSearchDoc).toHaveBeenCalledWith(
+      knex,
+      'tenant-1',
+      'client',
+      'client-missing',
+    );
   });
 });

@@ -93,7 +93,7 @@
   { "id": "T084", "featureIds": ["F078"], "description": "`npm run search:backfill` is wired in root package.json", "implemented": true },
 
   { "id": "T085", "featureIds": ["F079", "F080"], "description": "Reconciliation re-indexes a row whose `source_updated_at` advanced after the last index update", "implemented": true },
-  { "id": "T086", "featureIds": ["F081"], "description": "Reconciliation deletes an index row whose source row was deleted directly via SQL (event missed)", "implemented": false },
+  { "id": "T086", "featureIds": ["F081"], "description": "Reconciliation deletes an index row whose source row was deleted directly via SQL (event missed)", "implemented": true },
   { "id": "T087", "featureIds": ["F082"], "description": "Reconciliation re-creates an index row that was manually deleted while source still exists", "implemented": false },
   { "id": "T088", "featureIds": ["F083"], "description": "Reconciliation job is registered with pg-boss at startup with a daily cron schedule", "implemented": false },
 

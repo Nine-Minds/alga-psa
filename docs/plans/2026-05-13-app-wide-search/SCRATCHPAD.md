@@ -1108,6 +1108,8 @@ npm run search:backfill
 
 - **2026-05-13 — T085 reconciliation watermark re-index.** Added unit coverage for `reindexRowsAfterWatermark`: with an index watermark at noon, an older source doc is skipped while a newer source doc is upserted and counted as reindexed. Validation: `npx vitest run src/test/unit/searchReconcile.test.ts --coverage=false` from `server/` passed.
 
+- **2026-05-13 — T086 reconciliation stale delete.** Added unit coverage for `deleteRowsMissingFromSource`: indexed ids are checked with `indexer.loadOne`, present sources are kept, and a missing source row causes `deleteSearchDoc(knex, tenant, objectType, objectId)`. Validation: `npx vitest run src/test/unit/searchReconcile.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T060 project-family event contract.** Extended `searchEventPublishing.contract.test.ts` to assert project actions emit project create/update/delete and phase create/update/delete events, task actions emit task create/update/delete events, and task-comment actions emit task-comment create/update/delete events. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T059 user CRUD/role event contract.** Extended `searchEventPublishing.contract.test.ts` to assert `packages/users/src/actions/user-actions/userActions.ts` emits `USER_CREATED`, `USER_UPDATED`, `USER_DELETED`, and `USER_ROLES_UPDATED` with tenant context and stable idempotency keys, covering user role-change ACL reindex triggers. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
