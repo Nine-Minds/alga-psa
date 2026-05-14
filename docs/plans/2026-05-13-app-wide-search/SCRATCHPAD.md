@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T045 document ACL defaults.** Extended `searchIndexers.test.ts` to assert `documentIndexer.loadOne` sets `acl.clientScopeId` from `documents.client_id` and intentionally leaves v1-unused private/share-list hints (`isPrivate`, `visibleToUserIds`) unset. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T044 document body byte cap.** Extended `searchIndexers.test.ts` with a large BlockNote document fixture and asserted `documentIndexer.loadOne` truncates flattened body content to at most 65,536 UTF-8 bytes before indexing. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T043 active contract label.** Extended `searchIndexers.test.ts` to assert `contractIndexer.loadOne` maps an active contract to `subtitle='Contract'`, keeping quote labeling limited to draft contracts. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.

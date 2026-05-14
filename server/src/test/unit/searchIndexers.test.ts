@@ -626,4 +626,27 @@ describe('search entity indexers', () => {
     expect(Buffer.byteLength(doc?.body ?? '', 'utf8')).toBeLessThanOrEqual(65_536);
     expect(doc?.body).toHaveLength(65_536);
   });
+
+  it('T045 document indexer sets client scope and leaves private ACL hints unset', async () => {
+    const { knex } = createFirstRowKnex({
+      document_id: 'document-2',
+      document_name: 'Client runbook',
+      content: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Runbook' }] }]),
+      client_id: 'client-1',
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await documentIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'document-2',
+    );
+
+    expect(doc?.acl).toMatchObject({
+      requiredPermission: 'document:read',
+      clientScopeId: 'client-1',
+    });
+    expect(doc?.acl).not.toHaveProperty('isPrivate');
+    expect(doc?.acl).not.toHaveProperty('visibleToUserIds');
+  });
 });
