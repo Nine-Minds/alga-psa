@@ -170,7 +170,7 @@
 
   { "id": "T151", "featureIds": ["F124"], "description": "Env reference doc lists `SEARCH_INDEX_LIVE` with default and effect described", "implemented": true },
   { "id": "T152", "featureIds": ["F125"], "description": "Deploy runbook walks through migrate → deploy → backfill → flip env → enable UI", "implemented": true },
-  { "id": "T153", "featureIds": ["F126"], "description": "Each search action call increments `search.query.count` and records `search.query.latency_ms`", "implemented": false },
+  { "id": "T153", "featureIds": ["F126"], "description": "Each search action call increments `search.query.count` and records `search.query.latency_ms`", "implemented": true },
   { "id": "T154", "featureIds": ["F126"], "description": "Queries returning zero results increment `search.query.empty`", "implemented": false },
   { "id": "T155", "featureIds": ["F127"], "description": "Rate limit on typeahead action returns a 429-equivalent error after 30 calls/sec from one user", "implemented": false },
   { "id": "T156", "featureIds": ["F127"], "description": "Rate limit on full search returns a 429-equivalent error after 10 calls/sec from one user", "implemented": false },

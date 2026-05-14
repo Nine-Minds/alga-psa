@@ -1422,6 +1422,8 @@ npm run search:backfill
 
 - **2026-05-13 — T152 search deploy runbook sequence.** Added deploy contract coverage that `docs/deployment/app-wide-search-runbook.md` orders rollout as migrate → deploy with `SEARCH_INDEX_LIVE=false` → `npm run search:backfill` → flip `SEARCH_INDEX_LIVE=true`/roll server-workers → verify `search:reconcile`. Validation: `cd server && npx vitest run src/test/unit/searchDeploy.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T153 search count/latency telemetry.** Mocked the logger in `searchActions.test.ts` and added coverage that a full search emits `search.query.count` and `search.query.latency_ms` with variant, tenant, user id, and numeric latency value. Validation: `cd server && npx vitest run src/test/unit/searchActions.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
