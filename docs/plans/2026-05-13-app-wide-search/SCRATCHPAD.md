@@ -702,6 +702,8 @@ npm run search:backfill
 
 - **2026-05-13 — F040 service request submission indexer.** Added `serviceRequestSubmissionIndexer` and registered it. It indexes `request_name`, flattens `submitted_payload` via the secret-skipping JSONB flattener, links to `/msp/service-requests/{submission_id}`, sets `requiredPermission='service_request:read'`, and carries `client_id` into `clientScopeId`. `sourceEvents` remains empty until F058 adds the service-request event family. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/service_request_submission.ts server/src/lib/search/indexers/index.ts`.
 
+- **2026-05-13 — F041 service request definition indexer.** Added `serviceRequestDefinitionIndexer` and registered it. It indexes `service_request_definitions.name` and `description`, links to `/msp/service-requests/definitions/{definition_id}`, and sets the admin-only ACL hint with `requiredPermission='admin'`. Event hooks remain empty until F058. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/service_request_definition.ts server/src/lib/search/indexers/index.ts`.
+
 ---
 
 ## Implementation order suggestion (not prescriptive)

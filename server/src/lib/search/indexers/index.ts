@@ -15,6 +15,7 @@ import { projectTaskCommentIndexer } from './project_task_comment';
 import { projectTaskIndexer } from './project_task';
 import { projectIndexer } from './project';
 import { serviceCatalogIndexer } from './service_catalog';
+import { serviceRequestDefinitionIndexer } from './service_request_definition';
 import { serviceRequestSubmissionIndexer } from './service_request_submission';
 import { ticketCommentIndexer } from './ticket_comment';
 import { ticketIndexer } from './ticket';
@@ -32,6 +33,7 @@ export const ceIndexers: EntityIndexer[] = [
   invoiceAnnotationIndexer,
   kbArticleIndexer,
   serviceCatalogIndexer,
+  serviceRequestDefinitionIndexer,
   serviceRequestSubmissionIndexer,
   userIndexer,
   ticketIndexer,
