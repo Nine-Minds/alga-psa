@@ -1398,6 +1398,8 @@ npm run search:backfill
 
 - **2026-05-13 — T140 sidebar arrow navigation.** Adjusted `SearchPalette` arrow-key state so Down advances into options and wraps back to the input state, while Up from the first option returns to input (`activeIndex = -1`) instead of jumping to the last row. Added UI contract coverage for that behavior. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T141 sidebar Escape close.** Added UI contract coverage that Escape prevents default, clears typeahead state, marks the list dismissed, resets active option state, and does not blur the combobox input. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

@@ -188,4 +188,19 @@ describe('app-wide search UI contracts', () => {
     expect(source).toContain('if (current === 0)');
     expect(source).toContain('return -1');
   });
+
+  it('T141 closes the sidebar typeahead on Escape without blurring the input', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/search/SearchPalette.tsx'), 'utf8');
+    const escapeBlock = source.slice(
+      source.indexOf("if (event.key === 'Escape')"),
+      source.indexOf("if (event.key === 'Enter')"),
+    );
+
+    expect(escapeBlock).toContain('event.preventDefault()');
+    expect(escapeBlock).toContain('setResults([])');
+    expect(escapeBlock).toContain('setTotalCount(0)');
+    expect(escapeBlock).toContain('setActiveIndex(-1)');
+    expect(escapeBlock).toContain('setIsDismissed(true)');
+    expect(escapeBlock).not.toContain('blur()');
+  });
 });
