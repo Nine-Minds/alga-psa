@@ -277,7 +277,7 @@ describe('search query parsing', () => {
     expect(sql).toContain('score < ?::double precision');
     expect(sql).toContain('source_updated_at < ?::timestamptz');
     expect(sql).toContain('object_id > ?');
-    expect(bindings.slice(6, 13)).toEqual([
+    expect(bindings.slice(5, 12)).toEqual([
       3.14,
       3.14,
       3.14,
@@ -306,6 +306,24 @@ describe('search query parsing', () => {
     expect(sql).toContain('ts_headline(');
     expect(sql).toContain('StartSel=__SEARCH_MARK_START__');
     expect(sql).toContain('StopSel=__SEARCH_MARK_STOP__');
+  });
+
+  it('T104 omits ts_headline from typeahead SQL when snippets are disabled', async () => {
+    const knex = {
+      raw: vi.fn(async () => ({ rows: [] })),
+    };
+
+    await runSearchQuery({
+      knex: knex as never,
+      tenant: '00000000-0000-0000-0000-000000000001',
+      query: 'acme',
+      allowedTypes: ['client'],
+      includeSnippets: false,
+    });
+
+    const sql = knex.raw.mock.calls[0]?.[0] as string;
+    expect(sql).toContain('NULL AS snippet');
+    expect(sql).not.toContain('ts_headline');
   });
 
   it('T102 rebuilds snippets with only mark tags and escapes source HTML', () => {

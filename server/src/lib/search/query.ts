@@ -288,6 +288,16 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
   const orderBySql = sort === 'recent'
     ? 'source_updated_at DESC, object_id ASC'
     : 'score DESC, source_updated_at DESC, object_id ASC';
+  const snippetSelectSql = includeSnippets
+    ? `
+          ts_headline(
+            'english',
+            coalesce(s.body, ''),
+            q.tsq,
+            'MaxFragments=2,StartSel=${HEADLINE_START_SENTINEL},StopSel=${HEADLINE_STOP_SENTINEL}'
+          ) AS snippet
+      `
+    : 'NULL AS snippet';
 
   const result = await options.knex.raw<{ rows: SearchIndexHitRow[] }>(
     `
@@ -308,15 +318,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
           s.url,
           s.source_updated_at,
           s.metadata,
-          CASE
-            WHEN ?::boolean THEN ts_headline(
-              'english',
-              coalesce(s.body, ''),
-              q.tsq,
-              'MaxFragments=2,StartSel=${HEADLINE_START_SENTINEL},StopSel=${HEADLINE_STOP_SENTINEL}'
-            )
-            ELSE NULL
-          END AS snippet,
+          ${snippetSelectSql},
           CASE
             WHEN q.identifier IS NOT NULL
               AND lower(coalesce(s.metadata->>'identifier', '')) = q.identifier
@@ -361,7 +363,6 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
       parsed.raw,
       parsed.raw,
       parsed.identifier ?? null,
-      includeSnippets,
       options.tenant,
       options.allowedTypes,
       ...aclPredicate.bindings,
