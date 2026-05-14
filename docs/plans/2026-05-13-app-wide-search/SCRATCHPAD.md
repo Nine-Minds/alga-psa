@@ -418,6 +418,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Tightened several cascade queries from object-style `.where({ ... })` to chained column predicates because the server typecheck reached those earlier subscriber lines and rejected the overload.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F073 — Search backfill CLI entrypoint.**
+  - Created `server/src/scripts/search-backfill.ts` with a typed `parseSearchBackfillArgs()` and `runSearchBackfill()` entrypoint.
+  - The file is intentionally a scaffold in this commit; F074-F077 fill tenant discovery, indexer selection, paging, and idempotent upsert behavior in separate commits.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
