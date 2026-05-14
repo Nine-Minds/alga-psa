@@ -1526,6 +1526,8 @@ npm run search:backfill
 
 - **2026-05-13 — T204 missing-label fallback.** Added UI contract coverage that search filter and group labels pass `defaultValue: humanizeObjectType(type)` through i18n, with `service_request_submission` falling back to `Service request submission` when a locale key is absent. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T205 reconciliation orphan safety.** Added reconciliation coverage that a requested unregistered object type is resolved through `getIndexer(data.type)`, logs a skip, returns an empty indexer list, and therefore does not attempt source loading or mutation for orphan rows such as `ee_chat_history`. Validation: `cd server && npx vitest run src/test/unit/searchReconcile.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

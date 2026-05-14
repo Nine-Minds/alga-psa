@@ -252,4 +252,17 @@ describe('search reconciliation', () => {
     expect(reconcileHandler).toContain('staleDeleted: staleCounts.deleted');
     expect(reconcileHandler).toContain('missingInserted: missingCounts.inserted');
   });
+
+  it('T205 skips unregistered orphan object types during reconciliation', () => {
+    const reconcileHandler = readFileSync(
+      resolve(process.cwd(), 'src/lib/jobs/handlers/searchReconcileHandler.ts'),
+      'utf8',
+    );
+
+    expect(reconcileHandler).toContain('const indexer = getIndexer(data.type)');
+    expect(reconcileHandler).toContain("logger.info('[SearchReconcileJob] Skipping unregistered search object_type'");
+    expect(reconcileHandler).toContain('return [];');
+    expect(reconcileHandler).toContain('const indexers = resolveReconcileIndexers(data)');
+    expect(reconcileHandler).toContain('for (const indexer of indexers)');
+  });
 });
