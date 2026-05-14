@@ -256,4 +256,36 @@ describe('search ACL SQL predicate', () => {
     expect(commentQuery.where).toHaveBeenCalledWith('comment_id', 'comment-1');
     expect(knex).not.toHaveBeenCalledWith('tickets');
   });
+
+  it('T167 drops project hits outside the user accessible client scope', async () => {
+    const projectQuery = {
+      select: vi.fn(() => projectQuery),
+      where: vi.fn(() => projectQuery),
+      first: vi.fn(() => projectQuery),
+      andWhere: vi.fn(() => projectQuery),
+      then: (
+        resolve: (value: { client_id: string }) => unknown,
+        reject: (reason?: unknown) => unknown,
+      ) => Promise.resolve({ client_id: 'client-x' }).then(resolve, reject),
+    };
+    const knex = vi.fn((table: string) => {
+      expect(table).toBe('projects');
+      return projectQuery;
+    });
+
+    await expect(verifyResultVisibility(
+      knex as never,
+      {
+        userId: '00000000-0000-0000-0000-000000000001',
+        tenant: 'tenant-1',
+        permissions: ['project:read'],
+        isInternal: true,
+        accessibleClientIds: ['client-a'],
+      },
+      [{ type: 'project' as const, id: 'project-1' }],
+    )).resolves.toEqual([]);
+
+    expect(projectQuery.where).toHaveBeenCalledWith('project_id', 'project-1');
+    expect(projectQuery.andWhere).toHaveBeenCalledWith('tenant', 'tenant-1');
+  });
 });
