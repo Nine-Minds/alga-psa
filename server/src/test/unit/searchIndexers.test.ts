@@ -19,6 +19,7 @@ import { serviceRequestSubmissionIndexer } from '../../lib/search/indexers/servi
 import { ticketIndexer } from '../../lib/search/indexers/ticket';
 import { ticketCommentIndexer } from '../../lib/search/indexers/ticket_comment';
 import { userIndexer } from '../../lib/search/indexers/user';
+import { workflowTaskIndexer } from '../../lib/search/indexers/workflow_task';
 
 function createFirstRowKnex(row: unknown) {
   const joinBuilder = {
@@ -771,6 +772,41 @@ describe('search entity indexers', () => {
       body: 'Admin-managed definition',
       url: '/msp/service-requests/definitions/definition-1',
       acl: { requiredPermission: 'admin' },
+    });
+  });
+
+  it('T050 workflow-task indexer populates visible_to_user_ids from assigned_users', async () => {
+    const { knex } = createFirstRowKnex({
+      task_id: 'workflow-task-1',
+      title: 'Approve onboarding',
+      description: 'Review service request',
+      assigned_users: [
+        { user_id: '11111111-1111-4111-8111-111111111111' },
+        { userId: '22222222-2222-4222-8222-222222222222' },
+        '11111111-1111-4111-8111-111111111111',
+      ],
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await workflowTaskIndexer.loadOne(
+      knex as never,
+      'tenant-1',
+      'workflow-task-1',
+    );
+
+    expect(doc).toMatchObject({
+      objectType: 'workflow_task',
+      objectId: 'workflow-task-1',
+      title: 'Approve onboarding',
+      body: 'Review service request',
+      url: '/msp/workflow-tasks/workflow-task-1',
+      acl: {
+        requiredPermission: 'workflow_task:read',
+        visibleToUserIds: [
+          '11111111-1111-4111-8111-111111111111',
+          '22222222-2222-4222-8222-222222222222',
+        ],
+      },
     });
   });
 });
