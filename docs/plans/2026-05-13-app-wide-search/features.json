@@ -24,7 +24,7 @@
   { "id": "F020", "description": "Implement `deleteSearchDoc(knex, tenant, objectType, objectId)`", "prdRefs": ["11.1"], "implemented": true },
   { "id": "F021", "description": "Provide a typed `composeAclHints(opts)` helper to consistently build the denormalized ACL columns from indexer code", "prdRefs": ["9.1", "14"], "implemented": true },
 
-  { "id": "F022", "description": "Implement `clientIndexer` in `server/src/lib/search/indexers/client.ts` (title=client_name, subtitle=email/phone, body=notes, acl: required_permission='client:read')", "prdRefs": ["7", "10"], "implemented": false },
+  { "id": "F022", "description": "Implement `clientIndexer` in `server/src/lib/search/indexers/client.ts` (title=client_name, subtitle=email/phone, body=notes, acl: required_permission='client:read')", "prdRefs": ["7", "10"], "implemented": true },
   { "id": "F023", "description": "Implement `contactIndexer` (title=full_name, subtitle=email/phone/role, acl: required_permission='contact:read')", "prdRefs": ["7"], "implemented": false },
   { "id": "F024", "description": "Implement `userIndexer` for team members (internal users only; title=full name; subtitle=username/email/title; acl: required_permission='user:read')", "prdRefs": ["7"], "implemented": false },
   { "id": "F025", "description": "Implement `ticketIndexer` (title=ticket.title, subtitle=denormalized client name + ticket_number, acl: required_permission='ticket:read', visible_to_roles from board scope, metadata.identifier=ticket_number)", "prdRefs": ["7", "13.3"], "implemented": false },

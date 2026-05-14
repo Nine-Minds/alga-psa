@@ -1,3 +1,5 @@
 import type { EntityIndexer } from '../types';
 
-export const ceIndexers: EntityIndexer[] = [];
+import { clientIndexer } from './client';
+
+export const ceIndexers: EntityIndexer[] = [clientIndexer];
