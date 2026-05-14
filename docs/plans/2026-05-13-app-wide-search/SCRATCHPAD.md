@@ -710,6 +710,8 @@ npm run search:backfill
 
 - **2026-05-13 — F044 schedule entry indexer.** Added `scheduleEntryIndexer` and registered it. Current migrations removed `schedule_entries.user_id` and use `schedule_entry_assignees`, so the indexer aggregates assignee `user_id`s from that pivot table into `visibleToUserIds` instead of reading a non-existent owner column. It indexes `title`/`notes`, links to `/msp/schedule/{entry_id}`, and sets `requiredPermission='schedule:read'`. Event hooks remain empty until F061. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/schedule_entry.ts server/src/lib/search/indexers/index.ts`.
 
+- **2026-05-13 — F045 time entry indexer.** Added `timeEntryIndexer` and registered it. It enforces the PRD rule in SQL (`notes IS NOT NULL AND notes <> ''`), indexes note text only for rows with content, carries `time_entries.user_id` into `visibleToUserIds`, and sets `requiredPermission='time:read'`. URLs point at the parent ticket, project task, or interaction when enough work-item data exists, with `/msp/time-entries/{entry_id}` as a fallback. Event hooks remain empty until F061. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/time_entry.ts server/src/lib/search/indexers/index.ts`.
+
 ---
 
 ## Implementation order suggestion (not prescriptive)

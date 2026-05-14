@@ -21,6 +21,7 @@ import { serviceRequestDefinitionIndexer } from './service_request_definition';
 import { serviceRequestSubmissionIndexer } from './service_request_submission';
 import { ticketCommentIndexer } from './ticket_comment';
 import { ticketIndexer } from './ticket';
+import { timeEntryIndexer } from './time_entry';
 import { userIndexer } from './user';
 import { workflowTaskIndexer } from './workflow_task';
 
@@ -47,5 +48,6 @@ export const ceIndexers: EntityIndexer[] = [
   projectTaskIndexer,
   projectTaskCommentIndexer,
   scheduleEntryIndexer,
+  timeEntryIndexer,
   workflowTaskIndexer,
 ];
