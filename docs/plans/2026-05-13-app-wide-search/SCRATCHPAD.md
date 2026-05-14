@@ -406,6 +406,10 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Rationale: phase/task/comment rows denormalize parent project information and inherit project ACL hints, so project edits must refresh children.
   - This is implemented inside the async event-bus handler rather than a separate pg-boss job for now; the work is paged and bounded per batch to avoid a single large read.
 
+- **F071 — Document-association re-index.**
+  - Already covered by the F056 event publishes plus F065 subscriber upsert path: `DOCUMENT_ASSOCIATED` and `DOCUMENT_DETACHED` carry `documentId`, and `documentIndexer.sourceEvents` includes both events.
+  - When those events arrive with `SEARCH_INDEX_LIVE=true`, the subscriber resolves the `document` indexer and reloads/upserts the document row.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
