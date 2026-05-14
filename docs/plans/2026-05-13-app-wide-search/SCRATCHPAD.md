@@ -276,6 +276,7 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
 - **2026-05-13 — F003 complete.** Migration creates `app_search_index` with PRD §9.1 columns, UUID/text ACL hint arrays, `tsvector` search column, timestamps, and primary key `(tenant, object_type, object_id)`. Validation: `node --check ...` plus targeted `rg` for table, PK, ACL, and search-vector columns.
 - **2026-05-13 — F004 complete.** Migration checks `pg_extension` for `citus`, checks `pg_dist_partition` for pre-existing distribution, and only then calls `create_distributed_table('app_search_index', 'tenant')`. It exports `transaction: false` because Citus distribution cannot run in a transaction block.
 - **2026-05-13 — F005 complete.** Migration creates `app_search_index_vector_gin` using `gin (search_vector)` for FTS matching. Validation: targeted `rg` on the migration.
+- **2026-05-13 — F006 complete.** Migration creates `app_search_index_title_trgm` and `app_search_index_subtitle_trgm` using `gin_trgm_ops` for the fuzzy fallback branch. Validation: targeted `rg` on both index names/opclasses.
 
 ---
 
