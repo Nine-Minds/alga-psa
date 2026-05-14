@@ -129,6 +129,36 @@ export default function SearchPageClient({
     return params.toString() ? `${pathname}?${params.toString()}` : pathname;
   };
 
+  const submitQuery = () => {
+    const normalizedQuery = query.trim();
+    const params = new URLSearchParams();
+    if (normalizedQuery) {
+      params.set('q', normalizedQuery);
+    }
+    if (activeType !== 'all') {
+      params.set('type', activeType);
+    }
+    if (initialSort !== 'relevance') {
+      params.set('sort', initialSort);
+    }
+
+    router.push(params.toString() ? `${pathname}?${params.toString()}` : pathname);
+  };
+
+  const handleSearchInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      submitQuery();
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setQuery(initialQuery);
+      event.currentTarget.blur();
+    }
+  };
+
   const humanizeType = (type: string) => type
     .split('_')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -182,6 +212,7 @@ export default function SearchPageClient({
             id="app-search-page-input"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={handleSearchInputKeyDown}
             placeholder={t('search.placeholder', { defaultValue: 'Search' })}
             className="h-11 w-full rounded-md border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
           />

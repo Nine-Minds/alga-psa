@@ -24,13 +24,16 @@ export default function SearchPalette({
   const [results, setResults] = useState<SearchResultRow[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [isDismissed, setIsDismissed] = useState(false);
   const [focusAfterExpand, setFocusAfterExpand] = useState(false);
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
   const requestIdRef = useRef(0);
   const trimmedQuery = query.trim();
-  const isOpen = !collapsed && trimmedQuery.length >= 2;
+  const isOpen = !collapsed && trimmedQuery.length >= 2 && !isDismissed;
   const visibleResults = results.slice(0, 5);
+  const optionCount = isOpen ? visibleResults.length + 1 : 0;
+  const seeAllUrl = `/msp/search?q=${encodeURIComponent(trimmedQuery)}`;
   const activeDescendantId = activeIndex >= 0
     ? activeIndex < visibleResults.length
       ? `app-search-option-${visibleResults[activeIndex].type}-${visibleResults[activeIndex].id}`
@@ -99,6 +102,64 @@ export default function SearchPalette({
     return () => window.clearTimeout(timer);
   }, [trimmedQuery]);
 
+  const navigateToActiveOption = () => {
+    if (!trimmedQuery) {
+      return;
+    }
+
+    if (activeIndex >= 0 && activeIndex < visibleResults.length) {
+      window.location.assign(visibleResults[activeIndex].url);
+      return;
+    }
+
+    window.location.assign(seeAllUrl);
+  };
+
+  const handleInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown') {
+      if (optionCount === 0) {
+        return;
+      }
+      event.preventDefault();
+      setActiveIndex((current) => (current + 1) % optionCount);
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      if (optionCount === 0) {
+        return;
+      }
+      event.preventDefault();
+      setActiveIndex((current) => (current <= 0 ? optionCount - 1 : current - 1));
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      if (!isOpen) {
+        return;
+      }
+      event.preventDefault();
+      setResults([]);
+      setTotalCount(0);
+      setActiveIndex(-1);
+      setIsDismissed(true);
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      if (!trimmedQuery) {
+        return;
+      }
+      event.preventDefault();
+      navigateToActiveOption();
+    }
+  };
+
+  const handleQueryChange = (value: string) => {
+    setQuery(value);
+    setIsDismissed(false);
+  };
+
   if (collapsed) {
     return (
       <button
@@ -127,7 +188,8 @@ export default function SearchPalette({
             aria-controls="app-search-typeahead-list"
             aria-activedescendant={activeDescendantId}
             value={query}
-            onValueChange={setQuery}
+            onValueChange={handleQueryChange}
+            onKeyDown={handleInputKeyDown}
             placeholder={t('search.placeholder', { defaultValue: 'Search' })}
             className="h-10 w-full rounded-md border border-gray-500/70 bg-white/10 py-2 pl-8 pr-3 text-sm text-sidebar-text outline-none placeholder:text-gray-400 focus:border-purple-400 focus:ring-2 focus:ring-purple-500/30"
           />
@@ -142,7 +204,7 @@ export default function SearchPalette({
                 {t('search.loading', { defaultValue: 'Searching...' })}
               </Command.Loading>
             )}
-            {isPending ? null : visibleResults.map((result) => (
+            {isPending ? null : visibleResults.map((result, index) => (
               <Command.Item
                 key={`${result.type}-${result.id}`}
                 value={`${result.type}-${result.id}`}
@@ -152,7 +214,9 @@ export default function SearchPalette({
                   id={`app-search-option-${result.type}-${result.id}`}
                   data-result-row-id={`app-search-result-row-${result.type}-${result.id}`}
                   href={result.url}
-                  className="block cursor-pointer rounded px-3 py-2 aria-selected:bg-white/10"
+                  className={`block cursor-pointer rounded px-3 py-2 aria-selected:bg-white/10 ${
+                    activeIndex === index ? 'bg-white/10' : ''
+                  }`}
                 >
                   <span className="block truncate">{result.title}</span>
                 </a>
@@ -162,8 +226,10 @@ export default function SearchPalette({
               <Command.Item value="see-all-results" asChild>
                 <a
                   id="app-search-option-see-all-results"
-                  href={`/msp/search?q=${encodeURIComponent(trimmedQuery)}`}
-                  className="mt-1 block cursor-pointer rounded border-t border-gray-700 px-3 py-2 text-purple-300 aria-selected:bg-white/10"
+                  href={seeAllUrl}
+                  className={`mt-1 block cursor-pointer rounded border-t border-gray-700 px-3 py-2 text-purple-300 aria-selected:bg-white/10 ${
+                    activeIndex === visibleResults.length ? 'bg-white/10' : ''
+                  }`}
                 >
                   {t('search.seeAllResults', {
                     count: totalCount,

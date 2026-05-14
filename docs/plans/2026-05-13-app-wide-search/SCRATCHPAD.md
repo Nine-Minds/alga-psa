@@ -664,6 +664,12 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Arrow-key state updates are handled in the next keyboard checkpoint (F119).
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F119 — Search keyboard navigation.**
+  - Sidebar search now handles ArrowDown/ArrowUp with wrapping selection across suggestions plus the see-all row; `aria-activedescendant` tracks the selected option.
+  - Enter opens the selected suggestion or submits to `/msp/search?q=...`; Escape dismisses the typeahead without trapping Tab behavior.
+  - Results-page input handles Enter for immediate URL submission and Escape to restore the URL-backed query and blur.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
