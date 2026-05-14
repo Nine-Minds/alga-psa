@@ -15,4 +15,17 @@ describe('search ACL SQL predicate', () => {
     expect(fragment.bindings[0]).toEqual(['client:read']);
     expect(fragment.bindings[0]).not.toContain('ticket:read');
   });
+
+  it('T107 requires visible_to_user_ids overlap when the row has a user restriction', () => {
+    const userId = '00000000-0000-0000-0000-000000000001';
+    const fragment = aclPredicateSql({
+      userId,
+      permissions: ['client:read'],
+    });
+
+    expect(fragment.sql).toContain(
+      '(cardinality(visible_to_user_ids) = 0 OR visible_to_user_ids && ARRAY[?]::uuid[])',
+    );
+    expect(fragment.bindings[1]).toBe(userId);
+  });
 });
