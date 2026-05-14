@@ -327,7 +327,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           style={{ color: taskType?.color || '#6B7280' }}
         />
       </div>
-      
+
+      {/* Header strip — clicks here (around the checkbox / action menu) should not open the task */}
+      <div
+        className={`absolute top-0 left-0 right-0 cursor-default ${zoomLevel <= 15 ? 'h-5' : 'h-7'}`}
+        onClick={(e) => e.stopPropagation()}
+        aria-hidden="true"
+      />
 
       {/* Action Menu Button */}
       <div className={`absolute ${zoomLevel <= 15 ? 'top-0.5 right-0.5' : 'top-1 right-1'} z-10`}>
