@@ -57,4 +57,39 @@ describe('search normalization utilities', () => {
     expect(output).not.toContain('data:image');
     expect(output).not.toContain('iVBORw0KGgo');
   });
+
+  it('T015 handles deeply nested BlockNote lists and inline marks without throwing', () => {
+    const deeplyNestedList = [
+      {
+        id: 'level-1',
+        type: 'bulletListItem',
+        content: [{ type: 'text', text: 'Level one', styles: { bold: true } }],
+        children: [
+          {
+            id: 'level-2',
+            type: 'bulletListItem',
+            content: [{ type: 'text', text: 'Level two', styles: { italic: true } }],
+            children: [
+              {
+                id: 'level-3',
+                type: 'numberedListItem',
+                content: [{ type: 'text', text: 'Level three', styles: { underline: true } }],
+                children: [
+                  {
+                    id: 'level-4',
+                    type: 'checkListItem',
+                    content: [{ type: 'text', text: 'Level four', styles: { code: true } }],
+                    children: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ];
+
+    expect(() => flattenBlockNote(deeplyNestedList)).not.toThrow();
+    expect(flattenBlockNote(deeplyNestedList)).toBe('Level one Level two Level three Level four');
+  });
 });

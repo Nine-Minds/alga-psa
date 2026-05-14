@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T015 nested BlockNote list flattening.** Extended `searchNormalize.test.ts` with a four-level nested BlockNote list fixture using inline mark styles. The test asserts `flattenBlockNote` does not throw and returns all nested visible text in order. Validation: `npx vitest run src/test/unit/searchNormalize.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T014 BlockNote image data stripping.** Extended `searchNormalize.test.ts` with a BlockNote text payload containing a `data:image/png;base64,...` string between visible text leaves. The test asserts the data URI and base64 fragment are absent from `flattenBlockNote` output while surrounding visible text remains. Validation: `npx vitest run src/test/unit/searchNormalize.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T013 BlockNote visible-text flattening.** Added `server/src/test/unit/searchNormalize.test.ts` with a realistic BlockNote fixture containing headings, nested bullet-list content, inline marks, and multiple text leaves. The test asserts `flattenBlockNote` emits the visible text in document order without JSON/formatting noise. Validation: `npx vitest run src/test/unit/searchNormalize.test.ts --coverage=false` from `server/` passed.
