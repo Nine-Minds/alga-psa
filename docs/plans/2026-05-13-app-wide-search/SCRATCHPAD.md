@@ -706,6 +706,8 @@ npm run search:backfill
 
 - **2026-05-13 — F042 workflow task indexer.** Added `workflowTaskIndexer` with explicit `tenant` predicates on both `loadOne` and `loadBatch`, even though `workflow_tasks.task_id` is the only PK in the current schema. It indexes `title` and `description`, links to `/msp/workflow-tasks/{task_id}`, sets `requiredPermission='workflow_task:read'`, and parses `assigned_users` JSONB into de-duplicated `visibleToUserIds` from string arrays or object arrays (`user_id`, `userId`, `id`). Event hooks remain empty until F059. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/workflow_task.ts server/src/lib/search/indexers/index.ts`.
 
+- **2026-05-13 — F043 interaction indexer.** Added `interactionIndexer` and registered it. It flattens/truncates BlockNote `interactions.notes`, builds subtitles from `interaction_types.type_name` plus any available client/contact/ticket labels, links to `/msp/interactions/{interaction_id}`, and sets `requiredPermission='interaction:read'`. Current schema allows a nullable title because it was renamed from legacy `description`, so the indexer falls back to `Untitled interaction` only when the stored title is blank. Event hooks remain empty until F060. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/interaction.ts server/src/lib/search/indexers/index.ts`.
+
 ---
 
 ## Implementation order suggestion (not prescriptive)

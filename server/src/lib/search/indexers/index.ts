@@ -6,6 +6,7 @@ import { clientIndexer } from './client';
 import { contactIndexer } from './contact';
 import { contractIndexer } from './contract';
 import { documentIndexer } from './document';
+import { interactionIndexer } from './interaction';
 import { invoiceAnnotationIndexer } from './invoice_annotation';
 import { invoiceItemIndexer } from './invoice_item';
 import { invoiceIndexer } from './invoice';
@@ -29,6 +30,7 @@ export const ceIndexers: EntityIndexer[] = [
   contactIndexer,
   contractIndexer,
   documentIndexer,
+  interactionIndexer,
   invoiceIndexer,
   invoiceItemIndexer,
   invoiceAnnotationIndexer,
