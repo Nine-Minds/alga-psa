@@ -521,4 +521,40 @@ describe('search index subscriber event handling', () => {
     expect(mocks.upsertSearchDoc).toHaveBeenCalledWith(knex, userDoc);
     expect(mocks.scheduleSearchVisibleUserReindexJob).toHaveBeenCalledWith('tenant-1', 'user-1');
   });
+
+  it('T170 upserts a ticket search document for TICKET_CREATED immediately', async () => {
+    const knex = { client: 'knex' };
+    const doc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'ticket',
+      objectId: 'ticket-1',
+      title: 'New printer issue',
+      subtitle: 'ACME Corp | TIC-1023',
+      url: '/msp/tickets/ticket-1',
+      metadata: { identifier: 'TIC-1023' },
+      acl: { requiredPermission: 'ticket:read', clientScopeId: 'client-1' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    };
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+    vi.spyOn(ticketIndexer, 'loadOne').mockResolvedValue(doc);
+
+    const event: Event = {
+      id: 'event-11',
+      eventType: 'TICKET_CREATED',
+      timestamp: '2026-05-13T12:00:00.000Z',
+      payload: {
+        tenant: 'tenant-1',
+        ticket_id: 'ticket-1',
+      },
+    } as Event;
+
+    await handleSearchIndexEventForTest(event);
+
+    expect(mocks.createTenantKnex).toHaveBeenCalledWith('tenant-1');
+    expect(ticketIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'ticket-1');
+    expect(mocks.upsertSearchDoc).toHaveBeenCalledWith(knex, doc);
+    expect(mocks.deleteSearchDoc).not.toHaveBeenCalled();
+  });
+
 });

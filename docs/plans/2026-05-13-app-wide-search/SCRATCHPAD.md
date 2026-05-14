@@ -1456,6 +1456,8 @@ npm run search:backfill
 
 - **2026-05-13 — T169 misspelled Exchange acceptance.** Added query-layer acceptance coverage that the pg_trgm fallback path returns `Exchange` as the first hit for misspelled `exhcange` and preserves the higher score over weaker fuzzy matches. Validation: `cd server && npx vitest run src/test/unit/searchQuery.test.ts --coverage=false`.
 
+- **2026-05-13 — T170 live ticket-create indexing.** Added subscriber acceptance coverage that a `TICKET_CREATED` event resolves the ticket indexer, loads the ticket document, and calls `upsertSearchDoc` during the event handler path. Validation: `cd server && npx vitest run src/test/unit/searchIndexSubscriber.behavior.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
