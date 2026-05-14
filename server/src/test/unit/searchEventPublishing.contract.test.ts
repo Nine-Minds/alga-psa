@@ -228,4 +228,45 @@ describe('search index source event publishing contracts', () => {
     expect(source).toContain('deleteTask: async');
     expect(source).toContain("changedFields: ['assigned_users']");
   });
+
+  it('T068 interaction, schedule, time-entry, board, category, and tag CRUD emit events', () => {
+    const interactionSource = readRepoFile('packages/clients/src/actions/interactionActions.ts');
+    const scheduleSource = readRepoFile('packages/scheduling/src/actions/scheduleActions.ts');
+    const timeEntrySource =
+      readRepoFile('packages/scheduling/src/actions/timeEntryCrudActions.ts') +
+      readRepoFile('server/src/lib/api/services/TimeEntryService.ts');
+    const boardSource =
+      readRepoFile('packages/tickets/src/actions/board-actions/boardActions.ts') +
+      readRepoFile('server/src/lib/api/services/BoardService.ts');
+    const categorySource =
+      readRepoFile('packages/tickets/src/actions/ticketCategoryActions.ts') +
+      readRepoFile('packages/reference-data/src/actions/referenceDataActions.ts');
+    const tagSource =
+      readRepoFile('packages/tags/src/actions/tagActions.ts') +
+      readRepoFile('server/src/lib/api/services/TagService.ts');
+
+    for (const eventType of ['INTERACTION_CREATED', 'INTERACTION_UPDATED', 'INTERACTION_DELETED']) {
+      expect(interactionSource).toContain(`'${eventType}'`);
+    }
+
+    for (const eventType of ['SCHEDULE_ENTRY_CREATED', 'SCHEDULE_ENTRY_UPDATED', 'SCHEDULE_ENTRY_DELETED']) {
+      expect(scheduleSource).toContain(`'${eventType}'`);
+    }
+
+    for (const eventType of ['TIME_ENTRY_CREATED', 'TIME_ENTRY_UPDATED', 'TIME_ENTRY_DELETED']) {
+      expect(timeEntrySource).toContain(`'${eventType}'`);
+    }
+
+    for (const eventType of ['BOARD_CREATED', 'BOARD_UPDATED', 'BOARD_DELETED']) {
+      expect(boardSource).toContain(`'${eventType}'`);
+    }
+
+    for (const eventType of ['CATEGORY_CREATED', 'CATEGORY_UPDATED', 'CATEGORY_DELETED']) {
+      expect(categorySource).toContain(`'${eventType}'`);
+    }
+
+    for (const eventType of ['TAG_DEFINITION_CREATED', 'TAG_DEFINITION_UPDATED', 'TAG_DEFINITION_DELETED']) {
+      expect(tagSource).toContain(`'${eventType}'`);
+    }
+  });
 });
