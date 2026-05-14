@@ -108,7 +108,7 @@
   { "id": "F095", "description": "Implement `visible_to_user_ids && ARRAY[$user_id]::uuid[]` overlap test as part of acl predicate", "prdRefs": ["14.1"], "implemented": true },
   { "id": "F096", "description": "Implement `is_internal_only` filter against user.is_internal AND `is_private` filter against share-list membership AND `client_scope_id` filter against accessible-clients", "prdRefs": ["14.1"], "implemented": true },
 
-  { "id": "F097", "description": "Implement `verifyResultVisibility(user, rows)` that runs each row through the entity's authoritative permission check", "prdRefs": ["14.1", "14.3"], "implemented": false },
+  { "id": "F097", "description": "Implement `verifyResultVisibility(user, rows)` that runs each row through the entity's authoritative permission check", "prdRefs": ["14.1", "14.3"], "implemented": true },
   { "id": "F098", "description": "Wire per-entity assert helpers: ticket (assertTicketReadable), project (assertProjectReadable), document (share-list), workflow_task (assignee)", "prdRefs": ["14.2"], "implemented": false },
   { "id": "F099", "description": "Emit telemetry `search.acl_drift` counter (server log + Sentry) when SQL filter and record-level check disagree", "prdRefs": ["14.3"], "implemented": false },
 

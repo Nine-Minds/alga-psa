@@ -543,6 +543,12 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - For CE v1 documents, `is_private` remains false by indexer policy; the column is still enforced for future rows or synthetic tests.
   - Validation: `git diff --check`; `npm -w server run typecheck` from F094 still covers the helper.
 
+- **F097 — Record-level visibility pass framework.**
+  - Added `registerSearchVisibilityVerifier(objectType, verifier)` and `verifyResultVisibility(knex, user, rows)` to `server/src/lib/search/acl.ts`.
+  - Rows without a registered verifier pass through; rows with a verifier are kept only when the authoritative per-entity verifier returns true.
+  - F098 wires concrete entity verifiers; F099 adds drift telemetry for dropped rows.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

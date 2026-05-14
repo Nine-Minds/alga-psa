@@ -2,7 +2,7 @@ import User from '@alga-psa/db/models/user';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
-import type { AclMetadata } from './types';
+import type { AclMetadata, SearchObjectType } from './types';
 
 const RESOURCE_CANONICAL_MAP: Record<string, string> = {
   timeentry: 'time_entry',
@@ -36,6 +36,20 @@ export interface SqlFragment {
   sql: string;
   bindings: unknown[];
 }
+
+export interface SearchVisibilityRow {
+  type: SearchObjectType;
+  id: string;
+  parentId?: string;
+}
+
+export type SearchVisibilityVerifier<TRow extends SearchVisibilityRow = SearchVisibilityRow> = (
+  knex: Knex,
+  user: SearchAclPrincipal,
+  row: TRow,
+) => Promise<boolean>;
+
+const visibilityVerifiers = new Map<SearchObjectType, SearchVisibilityVerifier>();
 
 export function composeAclHints(opts: AclMetadata = {}): ComposedAclHints {
   return {
@@ -101,4 +115,33 @@ export async function resolveSearchAclPrincipal(
     isInternal: !isClientPortal,
     accessibleClientIds,
   };
+}
+
+export function registerSearchVisibilityVerifier(
+  objectType: SearchObjectType,
+  verifier: SearchVisibilityVerifier,
+): void {
+  visibilityVerifiers.set(objectType, verifier);
+}
+
+export async function verifyResultVisibility<TRow extends SearchVisibilityRow>(
+  knex: Knex,
+  user: SearchAclPrincipal,
+  rows: TRow[],
+): Promise<TRow[]> {
+  const visibleRows: TRow[] = [];
+
+  for (const row of rows) {
+    const verifier = visibilityVerifiers.get(row.type);
+    if (!verifier) {
+      visibleRows.push(row);
+      continue;
+    }
+
+    if (await verifier(knex, user, row)) {
+      visibleRows.push(row);
+    }
+  }
+
+  return visibleRows;
 }
