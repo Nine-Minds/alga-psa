@@ -16,7 +16,7 @@
   { "id": "T013", "featureIds": ["F012"], "description": "`flattenBlockNote` extracts visible text from a real document's BlockNote JSON fixture", "implemented": true },
   { "id": "T014", "featureIds": ["F012"], "description": "`flattenBlockNote` drops image data URI payloads (no `data:image/...` substring in output)", "implemented": true },
   { "id": "T015", "featureIds": ["F012"], "description": "`flattenBlockNote` handles deeply nested lists and inline marks without throwing", "implemented": true },
-  { "id": "T016", "featureIds": ["F013"], "description": "`flattenMarkdown` strips headings, lists, link syntax, bold/italic markers, code fences, leaves plain text", "implemented": false },
+  { "id": "T016", "featureIds": ["F013"], "description": "`flattenMarkdown` strips headings, lists, link syntax, bold/italic markers, code fences, leaves plain text", "implemented": true },
   { "id": "T017", "featureIds": ["F014"], "description": "`flattenJsonbPayload` concatenates string leaves and skips keys matching the secret regex (`password|secret|token|api_key|authorization`)", "implemented": false },
   { "id": "T018", "featureIds": ["F014"], "description": "`flattenJsonbPayload` returns an empty string for non-object/non-array inputs", "implemented": false },
   { "id": "T019", "featureIds": ["F015"], "description": "`truncateForIndex` enforces ≤ max bytes on a UTF-8 multibyte string without splitting a code point", "implemented": false },

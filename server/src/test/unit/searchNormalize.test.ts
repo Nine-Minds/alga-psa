@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { flattenBlockNote } from '../../lib/search/normalize';
+import { flattenBlockNote, flattenMarkdown } from '../../lib/search/normalize';
 
 describe('search normalization utilities', () => {
   it('T013 extracts visible text from a realistic BlockNote document payload', () => {
@@ -91,5 +91,24 @@ describe('search normalization utilities', () => {
 
     expect(() => flattenBlockNote(deeplyNestedList)).not.toThrow();
     expect(flattenBlockNote(deeplyNestedList)).toBe('Level one Level two Level three Level four');
+  });
+
+  it('T016 strips markdown syntax while preserving readable text', () => {
+    const markdown = [
+      '# Incident Summary',
+      '',
+      '- **Exchange** mailbox _migration_ finished',
+      '- See [runbook](https://example.com/runbook)',
+      '',
+      '```ts',
+      'const ticket = "TIC-1023";',
+      '```',
+      '',
+      '> Follow-up required',
+    ].join('\n');
+
+    expect(flattenMarkdown(markdown)).toBe(
+      'Incident Summary Exchange mailbox migration finished See runbook const ticket = "TIC-1023"; Follow-up required',
+    );
   });
 });
