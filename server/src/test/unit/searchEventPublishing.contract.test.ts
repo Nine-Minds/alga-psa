@@ -173,4 +173,20 @@ describe('search index source event publishing contracts', () => {
     expect(shareLinkSource).toContain("['document_share_links']");
     expect(shareLinkSource).toContain("eventType: 'DOCUMENT_UPDATED'");
   });
+
+  it('T065 service catalog CRUD emits SERVICE_CATALOG_* events', () => {
+    const apiServiceSource = readRepoFile('server/src/lib/api/services/ServiceCatalogService.ts');
+    const actionSource = readRepoFile('packages/billing/src/actions/serviceActions.ts');
+
+    for (const eventType of [
+      'SERVICE_CATALOG_CREATED',
+      'SERVICE_CATALOG_UPDATED',
+      'SERVICE_CATALOG_DELETED',
+    ]) {
+      expect(apiServiceSource).toContain(`'${eventType}'`);
+      expect(actionSource).toContain(`'${eventType}'`);
+    }
+
+    expect(apiServiceSource + actionSource).toContain('publishServiceCatalogSearchEvent');
+  });
 });
