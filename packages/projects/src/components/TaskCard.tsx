@@ -6,7 +6,7 @@ import { IProjectTask, IProjectTicketLinkWithDetails, ITaskType, IProjectTaskDep
 import { IUserWithRoles } from '@alga-psa/types';
 import { IPriority, IStandardPriority } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
-import { CheckSquare, Square, Ticket, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip, Ban, GitBranch, Link2, Tag, MessageSquare } from 'lucide-react';
+import { CheckSquare, Square, Ticket, MoreVertical, Move, Copy, Edit, Trash2, Bug, Sparkles, TrendingUp, Flag, BookOpen, Paperclip, Ban, GitBranch, Link2, Tag, MessageSquare, ClipboardList } from 'lucide-react';
 import { extractTaskDescriptionText } from '../lib/taskRichText';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
@@ -65,7 +65,7 @@ interface TaskCardProps {
 }
 
 const taskTypeIcons: Record<string, React.ComponentType<any>> = {
-  task: CheckSquare,
+  task: ClipboardList,
   bug: Bug,
   feature: Sparkles,
   improvement: TrendingUp,
@@ -170,7 +170,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     }
   }, [providedDocumentCount]);
 
-  const Icon = taskTypeIcons[task.task_type_key || 'task'] || CheckSquare;
+  const Icon = taskTypeIcons[task.task_type_key || 'task'] || ClipboardList;
 
   // Sync ticket links from props when they change
   useEffect(() => {
@@ -307,7 +307,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     >
       {/* Selection checkbox */}
       <div
-        className={`absolute ${zoomLevel <= 15 ? 'top-1 right-6' : 'top-1.5 right-8'} z-10 flex items-center`}
+        className={`absolute ${zoomLevel <= 15 ? 'top-1 left-1' : 'top-1.5 left-2'} z-10 flex items-center`}
         onClick={(e) => e.stopPropagation()}
       >
         <input
@@ -321,7 +321,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       </div>
 
       {/* Task type indicator */}
-      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 left-1' : 'top-2 left-2'}`} title={taskType?.type_name || t('task', 'Task')}>
+      <div className={`absolute ${zoomLevel <= 15 ? 'top-1 right-6' : 'top-2 right-8'}`} title={taskType?.type_name || t('task', 'Task')}>
         <Icon
           className={zoomLevel <= 15 ? 'w-3 h-3' : 'w-4 h-4'}
           style={{ color: taskType?.color || '#6B7280' }}

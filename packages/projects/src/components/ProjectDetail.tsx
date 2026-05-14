@@ -46,8 +46,9 @@ import KanbanZoomControl, { calculateColumnWidth } from './KanbanZoomControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
-import { HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, CheckSquare, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus } from 'lucide-react';
+import { HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { generateKeyBetween } from 'fractional-indexing';
 import KanbanBoardSkeleton from '@alga-psa/ui/components/skeletons/KanbanBoardSkeleton';
 import { useUserPreferencesBatch } from '@alga-psa/user-composition/hooks';
@@ -70,7 +71,7 @@ const STATUS_FALLBACK_BORDERS = ['#d1d5db', '#a5b4fc', '#86efac', '#fde047'];
 
 // Task type icons for the filter dropdown
 const taskTypeIcons: Record<string, React.ComponentType<any>> = {
-  task: CheckSquare,
+  task: ClipboardList,
   bug: Bug,
   feature: Sparkles,
   improvement: TrendingUp,
@@ -250,7 +251,7 @@ export default function ProjectDetail({
   const [taskToMove, setTaskToMove] = useState<IProjectTask | null>(null);
 
   // Bulk task selection / actions
-  const { selectedTaskIds, clearSelection } = useTaskSelection();
+  const { selectedTaskIds, clearSelection, setTasksSelected } = useTaskSelection();
   const [isBulkMoveOpen, setIsBulkMoveOpen] = useState(false);
   const [isBulkAssignOpen, setIsBulkAssignOpen] = useState(false);
   const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
@@ -2813,7 +2814,7 @@ export default function ProjectDetail({
               options={[
                 { value: 'all', label: t('projectDetail.allTypes', 'All Types') },
                 ...taskTypes.map(t => {
-                  const Icon = taskTypeIcons[t.type_key] || CheckSquare;
+                  const Icon = taskTypeIcons[t.type_key] || ClipboardList;
                   return {
                     value: t.type_key,
                     label: (
@@ -3041,7 +3042,7 @@ export default function ProjectDetail({
               options={[
                 { value: 'all', label: t('projectDetail.allTypes', 'All Types') },
                 ...taskTypes.map(t => {
-                  const Icon = taskTypeIcons[t.type_key] || CheckSquare;
+                  const Icon = taskTypeIcons[t.type_key] || ClipboardList;
                   return {
                     value: t.type_key,
                     label: (
@@ -3348,6 +3349,12 @@ export default function ProjectDetail({
                   <div className={styles.kanbanStatusStripTrack}>
                     {visibleKanbanStatuses.map((status, index) => {
                       const { itemStyle, countStyle } = getStatusStripStyles(status, index);
+                      const stripTaskIds = filteredTasks
+                        .filter(t => t.project_status_mapping_id === status.project_status_mapping_id)
+                        .map(t => t.task_id);
+                      const stripAllSelected = stripTaskIds.length > 0
+                        && stripTaskIds.every(id => selectedTaskIds.has(id));
+                      const stripSomeSelected = stripTaskIds.some(id => selectedTaskIds.has(id));
                       return (
                         <div
                           key={status.project_status_mapping_id}
@@ -3360,6 +3367,17 @@ export default function ProjectDetail({
                           }}
                           title={status.custom_name || status.name}
                         >
+                          {stripTaskIds.length > 0 && (
+                            <Checkbox
+                              id={`select-sticky-status-${status.project_status_mapping_id}`}
+                              checked={stripAllSelected}
+                              indeterminate={stripSomeSelected && !stripAllSelected}
+                              onChange={() => setTasksSelected(stripTaskIds, !stripAllSelected)}
+                              size="sm"
+                              containerClassName="mb-0 flex-shrink-0"
+                              skipRegistration
+                            />
+                          )}
                           <span className={styles.kanbanStatusStripName}>
                             {status.custom_name || status.name}
                           </span>
