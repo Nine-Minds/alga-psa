@@ -1098,6 +1098,8 @@ npm run search:backfill
 
 - **2026-05-13 — T080 tenant/type backfill.** Added unit coverage for `runSearchBackfill({ tenant, type: 'client' }, knex)`: it resolves only the client indexer, skips tenant catalog discovery, calls `clientIndexer.loadBatch(knex, tenant, null, 500)`, and upserts every returned doc. Validation: `npx vitest run src/test/unit/searchBackfill.test.ts --coverage=false` from `server/` passed.
 
+- **2026-05-13 — T081 backfill batching guard.** Added a synthetic 10k-row backfill test that returns exactly 500 docs for 20 pages, verifies the cursor advances by last object id, and confirms 10,000 upserts without materializing the full source set in one call. Validation: `npx vitest run src/test/unit/searchBackfill.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T060 project-family event contract.** Extended `searchEventPublishing.contract.test.ts` to assert project actions emit project create/update/delete and phase create/update/delete events, task actions emit task create/update/delete events, and task-comment actions emit task-comment create/update/delete events. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T059 user CRUD/role event contract.** Extended `searchEventPublishing.contract.test.ts` to assert `packages/users/src/actions/user-actions/userActions.ts` emits `USER_CREATED`, `USER_UPDATED`, `USER_DELETED`, and `USER_ROLES_UPDATED` with tenant context and stable idempotency keys, covering user role-change ACL reindex triggers. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.

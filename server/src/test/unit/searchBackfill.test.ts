@@ -9,8 +9,8 @@ vi.mock('../../lib/search/upsert', () => ({
 }));
 
 import { clientIndexer } from '../../lib/search/indexers/client';
-import { runSearchBackfill } from '../../scripts/search-backfill';
-import type { SearchDoc } from '../../lib/search/types';
+import { runSearchBackfill, upsertBackfillBatches } from '../../scripts/search-backfill';
+import type { EntityIndexer, SearchDoc } from '../../lib/search/types';
 
 describe('search backfill script', () => {
   beforeEach(() => {
@@ -51,5 +51,44 @@ describe('search backfill script', () => {
     expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(1, knex, docs[0]);
     expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(2, knex, docs[1]);
     expect(knex).not.toHaveBeenCalledWith('tenants');
+  });
+
+  it('T081 processes a 10k-row table in 500-row batches', async () => {
+    const knex = vi.fn();
+    let nextIndex = 0;
+    const makeDoc = (index: number): SearchDoc => ({
+      tenant: 'tenant-1',
+      objectType: 'client',
+      objectId: `client-${index.toString().padStart(5, '0')}`,
+      title: `Client ${index}`,
+      url: `/msp/clients/client-${index}`,
+      acl: { requiredPermission: 'client:read' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    });
+    const loadBatch = vi.fn(async (_knex, _tenant, _cursor, limit: number) => {
+      expect(limit).toBe(500);
+      if (nextIndex >= 10_000) {
+        return [];
+      }
+
+      const docs = Array.from({ length: 500 }, (_, offset) => makeDoc(nextIndex + offset));
+      nextIndex += docs.length;
+      return docs;
+    });
+    const indexer: EntityIndexer = {
+      objectType: 'client',
+      sourceEvents: [],
+      loadOne: vi.fn(),
+      loadBatch,
+    };
+
+    const total = await upsertBackfillBatches(knex as never, 'tenant-1', indexer);
+
+    expect(total).toBe(10_000);
+    expect(loadBatch).toHaveBeenCalledTimes(21);
+    expect(loadBatch.mock.calls[0]).toEqual([knex, 'tenant-1', null, 500]);
+    expect(loadBatch.mock.calls[1]?.[2]).toBe('client-00499');
+    expect(loadBatch.mock.calls[20]?.[2]).toBe('client-09999');
+    expect(mocks.upsertSearchDoc).toHaveBeenCalledTimes(10_000);
   });
 });
