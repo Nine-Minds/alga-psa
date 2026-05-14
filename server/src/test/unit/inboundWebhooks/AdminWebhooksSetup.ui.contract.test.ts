@@ -144,7 +144,7 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain("t('security.webhooks.inbound.handler.workflowTitle')");
   });
 
-  it('gates workflow consumers to Enterprise edition using the shared feature flag', () => {
+  it('gates workflow consumers to Enterprise edition using the shared edition flag', () => {
     expect(adminWebhooksSource).toContain("import { isEnterprise } from '@alga-psa/core/features'");
     expect(adminWebhooksSource).toContain('const inboundWebhookWorkflowHandlersEnabled = isEnterprise');
     expect(adminWebhooksSource).toContain("nextType === 'workflow' && !inboundWebhookWorkflowHandlersEnabled");
@@ -323,12 +323,12 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(inboundWebhooksSource).toContain('id={`inbound-webhook-delivery-view-${delivery.deliveryId}`}');
   });
 
-  it('T180: feature flag off hides the Settings inbound tab', () => {
-    expect(adminWebhooksSource).toContain("useFeatureFlag('inbound_webhooks_enabled', { defaultValue: false })");
+  it('T180: renders the Settings inbound tab without a rollout feature flag', () => {
+    expect(adminWebhooksSource).not.toContain('useFeatureFlag(');
     expect(adminWebhooksSource).toContain("useState<'inbound' | 'outbound'>('outbound')");
-    expect(adminWebhooksSource).toContain("if (!inboundWebhooksEnabled && activeTab === 'inbound')");
-    expect(adminWebhooksSource).toContain("setActiveTab('outbound')");
-    expect(adminWebhooksSource).toContain('{inboundWebhooksEnabled ? (');
+    expect(adminWebhooksSource).toContain('<ViewSwitcher');
+    expect(adminWebhooksSource).toContain("activeTab === 'inbound'");
+    expect(adminWebhooksSource).toContain('<InboundWebhooksListView />');
     expect(adminWebhooksSource).toContain("id: 'webhooks-inbound-view-btn'");
   });
 });

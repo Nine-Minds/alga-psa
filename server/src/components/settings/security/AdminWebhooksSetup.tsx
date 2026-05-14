@@ -28,7 +28,6 @@ import { ArrowLeft, MoreVertical } from 'lucide-react';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { buildTenantPortalSlug } from '@alga-psa/validation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { isEnterprise } from '@alga-psa/core/features';
 import { buildWebhookPayloadExpressionPathOptions } from '@shared/workflow/expression-authoring/adapters/webhookPayloadContextAdapter';
 import {
@@ -318,38 +317,25 @@ function getInboundDeliveryStatusBadgeVariant(status: InboundWebhookDispatchStat
 
 export default function AdminWebhooksSetup() {
   const { t } = useTranslation('msp/profile');
-  const { enabled: inboundWebhooksEnabled } = useFeatureFlag('inbound_webhooks_enabled', { defaultValue: false });
   const [activeTab, setActiveTab] = useState<'inbound' | 'outbound'>('outbound');
 
-  useEffect(() => {
-    if (!inboundWebhooksEnabled && activeTab === 'inbound') {
-      setActiveTab('outbound');
-    }
-  }, [activeTab, inboundWebhooksEnabled]);
-
-  const viewOptions: ViewSwitcherOption<'inbound' | 'outbound'>[] = inboundWebhooksEnabled
-    ? [
-        { value: 'inbound', label: t('security.webhooks.tabs.inbound'), id: 'webhooks-inbound-view-btn' },
-        { value: 'outbound', label: t('security.webhooks.tabs.outbound'), id: 'webhooks-outbound-view-btn' },
-      ]
-    : [
-        { value: 'outbound', label: t('security.webhooks.tabs.outbound'), id: 'webhooks-outbound-view-btn' },
-      ];
+  const viewOptions: ViewSwitcherOption<'inbound' | 'outbound'>[] = [
+    { value: 'inbound', label: t('security.webhooks.tabs.inbound'), id: 'webhooks-inbound-view-btn' },
+    { value: 'outbound', label: t('security.webhooks.tabs.outbound'), id: 'webhooks-outbound-view-btn' },
+  ];
 
   return (
     <div>
-      {inboundWebhooksEnabled ? (
-        <div className="mb-6 inline-block">
-          <ViewSwitcher
-            currentView={activeTab}
-            onChange={setActiveTab}
-            options={viewOptions}
-            className="inline-flex"
-            aria-label={t('security.webhooks.title')}
-          />
-        </div>
-      ) : null}
-      {activeTab === 'inbound' && inboundWebhooksEnabled ? (
+      <div className="mb-6 inline-block">
+        <ViewSwitcher
+          currentView={activeTab}
+          onChange={setActiveTab}
+          options={viewOptions}
+          className="inline-flex"
+          aria-label={t('security.webhooks.title')}
+        />
+      </div>
+      {activeTab === 'inbound' ? (
         <InboundWebhooksListView />
       ) : (
         <OutboundWebhooksSetup />

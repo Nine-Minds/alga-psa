@@ -461,7 +461,7 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
       400: { description: 'Invalid request payload or handler validation failure.', schema: ApiError },
       401: {
         description:
-          'Authentication failed, unknown receiver, or receiver disabled by feature flag. Response body is intentionally empty to avoid leaking which webhooks exist.',
+          'Authentication failed or receiver is unknown/inactive. Response body is intentionally empty to avoid leaking which webhooks exist.',
       },
       429: { description: 'Per-webhook rate limit exceeded.', schema: ApiError },
       500: { description: 'Unexpected dispatch failure.', schema: ApiError },
@@ -469,7 +469,6 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
     extensions: {
       'x-tenant-scoped': true,
       'x-auth-mechanism': 'per-webhook auth configuration',
-      'x-feature-flag': 'inbound_webhooks_enabled',
       'x-rbac-resource': 'inbound_webhook',
       'x-handler': 'server/src/app/api/inbound/[tenantSlug]/[webhookSlug]/route.ts',
     },

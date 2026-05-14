@@ -11,7 +11,6 @@ import { extractInboundWebhookIdempotencyKey, findDuplicateInboundDelivery } fro
 import { checkInboundWebhookRateLimit } from './rateLimitConfig';
 import { unauthorizedInboundWebhookResponse } from './responses';
 import { captureInboundWebhookSampleIfRequested } from './sampleCapture';
-import { isInboundWebhooksEnabled } from './featureFlag';
 import type { InboundWebhookIdempotencySource } from './types';
 
 interface ProcessInboundWebhookRequestInput {
@@ -28,11 +27,6 @@ export async function processInboundWebhookRequest(input: ProcessInboundWebhookR
   const { resolveInboundWebhookTenantSlug } = await import('./tenantResolver');
   const tenant = await resolveInboundWebhookTenantSlug(tenantSlug);
   if (!tenant) {
-    return unauthorizedInboundWebhookResponse();
-  }
-
-  const featureEnabled = await isInboundWebhooksEnabled({ tenantId: tenant });
-  if (!featureEnabled) {
     return unauthorizedInboundWebhookResponse();
   }
 
