@@ -125,7 +125,7 @@ export default function SearchPalette({
         return;
       }
       event.preventDefault();
-      setActiveIndex((current) => (current + 1) % optionCount);
+      setActiveIndex((current) => (current >= optionCount - 1 ? -1 : current + 1));
       return;
     }
 
@@ -134,7 +134,15 @@ export default function SearchPalette({
         return;
       }
       event.preventDefault();
-      setActiveIndex((current) => (current <= 0 ? optionCount - 1 : current - 1));
+      setActiveIndex((current) => {
+        if (current === -1) {
+          return optionCount - 1;
+        }
+        if (current === 0) {
+          return -1;
+        }
+        return current - 1;
+      });
       return;
     }
 

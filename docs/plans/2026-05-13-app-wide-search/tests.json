@@ -155,7 +155,7 @@
   { "id": "T138", "featureIds": ["F117"], "description": "sort=recent orders results by source_updated_at DESC, ignoring relevance score", "implemented": true },
 
   { "id": "T139", "featureIds": ["F118"], "description": "Sidebar input exposes ARIA combobox role, aria-expanded reflects open state, aria-activedescendant updates on arrow keys", "implemented": true },
-  { "id": "T140", "featureIds": ["F119"], "description": "Down-arrow on the sidebar input moves focus into typeahead; up-arrow at top wraps back to input", "implemented": false },
+  { "id": "T140", "featureIds": ["F119"], "description": "Down-arrow on the sidebar input moves focus into typeahead; up-arrow at top wraps back to input", "implemented": true },
   { "id": "T141", "featureIds": ["F119"], "description": "Esc closes typeahead and restores focus to the input", "implemented": false },
   { "id": "T142", "featureIds": ["F119"], "description": "Enter on input (no row focused) navigates to /msp/search?q=...", "implemented": false },
   { "id": "T143", "featureIds": ["F119"], "description": "Enter on a focused row navigates to that row's url", "implemented": false },

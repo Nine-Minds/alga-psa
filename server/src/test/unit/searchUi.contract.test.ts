@@ -178,4 +178,14 @@ describe('app-wide search UI contracts', () => {
     expect(source).toContain('aria-controls="app-search-typeahead-list"');
     expect(source).toContain('aria-activedescendant={activeDescendantId}');
   });
+
+  it('T140 moves the sidebar active option with arrows and returns Up from the first option to the input', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/search/SearchPalette.tsx'), 'utf8');
+
+    expect(source).toContain("if (event.key === 'ArrowDown')");
+    expect(source).toContain('setActiveIndex((current) => (current >= optionCount - 1 ? -1 : current + 1))');
+    expect(source).toContain("if (event.key === 'ArrowUp')");
+    expect(source).toContain('if (current === 0)');
+    expect(source).toContain('return -1');
+  });
 });
