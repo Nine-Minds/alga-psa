@@ -8,6 +8,7 @@ import { documentIndexer } from '../../lib/search/indexers/document';
 import { invoiceAnnotationIndexer } from '../../lib/search/indexers/invoice_annotation';
 import { invoiceItemIndexer } from '../../lib/search/indexers/invoice_item';
 import { invoiceIndexer } from '../../lib/search/indexers/invoice';
+import { kbArticleIndexer } from '../../lib/search/indexers/kb_article';
 import { projectPhaseIndexer } from '../../lib/search/indexers/project_phase';
 import { projectTaskCommentIndexer } from '../../lib/search/indexers/project_task_comment';
 import { projectTaskIndexer } from '../../lib/search/indexers/project_task';
@@ -648,5 +649,39 @@ describe('search entity indexers', () => {
     });
     expect(doc?.acl).not.toHaveProperty('isPrivate');
     expect(doc?.acl).not.toHaveProperty('visibleToUserIds');
+  });
+
+  it('T046 KB article indexer pulls title and content through the document join', async () => {
+    const { knex, queryBuilder, joinBuilder } = createFirstRowKnex({
+      article_id: 'article-1',
+      document_id: 'document-1',
+      document_name: 'Exchange runbook',
+      content: JSON.stringify([
+        { type: 'paragraph', content: [{ type: 'text', text: 'Restart transport service' }] },
+      ]),
+      updated_at: null,
+      document_updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await kbArticleIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'article-1',
+    );
+
+    expect(knex).toHaveBeenCalledWith('kb_articles as ka');
+    expect(queryBuilder.join).toHaveBeenCalledWith('documents as d', expect.any(Function));
+    expect(joinBuilder.on).toHaveBeenCalledWith('d.tenant', 'ka.tenant');
+    expect(joinBuilder.andOn).toHaveBeenCalledWith('d.document_id', 'ka.document_id');
+    expect(doc).toMatchObject({
+      objectType: 'kb_article',
+      objectId: 'article-1',
+      parentType: 'document',
+      parentId: 'document-1',
+      title: 'Exchange runbook',
+      body: 'Restart transport service',
+      url: '/msp/knowledge-base/article-1',
+      acl: { requiredPermission: 'kb:read' },
+    });
   });
 });
