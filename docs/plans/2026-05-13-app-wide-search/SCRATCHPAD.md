@@ -1448,6 +1448,8 @@ npm run search:backfill
 
 - **2026-05-13 — T165 internal-comment positive visibility.** Added ACL verifier coverage that an internal user keeps an internal ticket-comment search row when the comment exists and its parent ticket is readable. Validation: `cd server && npx vitest run src/test/unit/searchAcl.test.ts --coverage=false`.
 
+- **2026-05-13 — T166 internal-comment negative visibility.** Added ACL verifier coverage that a non-internal user loses an internal ticket-comment search row and the verifier short-circuits before loading the parent ticket. Validation: `cd server && npx vitest run src/test/unit/searchAcl.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

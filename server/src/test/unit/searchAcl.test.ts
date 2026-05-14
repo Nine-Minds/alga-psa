@@ -225,4 +225,35 @@ describe('search ACL SQL predicate', () => {
     expect(commentQuery.where).toHaveBeenCalledWith('comment_id', 'comment-1');
     expect(ticketQuery.where).toHaveBeenCalledWith('ticket_id', 'ticket-1');
   });
+
+  it('T166 drops internal ticket-comment hits for non-internal users', async () => {
+    const commentQuery = {
+      select: vi.fn(() => commentQuery),
+      where: vi.fn(() => commentQuery),
+      first: vi.fn(() => commentQuery),
+      andWhere: vi.fn(() => commentQuery),
+      then: (
+        resolve: (value: { ticket_id: string; is_internal: boolean }) => unknown,
+        reject: (reason?: unknown) => unknown,
+      ) => Promise.resolve({ ticket_id: 'ticket-1', is_internal: true }).then(resolve, reject),
+    };
+    const knex = vi.fn((table: string) => {
+      if (table === 'comments') return commentQuery;
+      throw new Error(`Unexpected table ${table}`);
+    });
+
+    await expect(verifyResultVisibility(
+      knex as never,
+      {
+        userId: '00000000-0000-0000-0000-000000000002',
+        tenant: 'tenant-1',
+        permissions: ['ticket:read'],
+        isInternal: false,
+      },
+      [{ type: 'ticket_comment' as const, id: 'comment-1' }],
+    )).resolves.toEqual([]);
+
+    expect(commentQuery.where).toHaveBeenCalledWith('comment_id', 'comment-1');
+    expect(knex).not.toHaveBeenCalledWith('tickets');
+  });
 });
