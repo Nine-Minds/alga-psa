@@ -1424,6 +1424,8 @@ npm run search:backfill
 
 - **2026-05-13 — T153 search count/latency telemetry.** Mocked the logger in `searchActions.test.ts` and added coverage that a full search emits `search.query.count` and `search.query.latency_ms` with variant, tenant, user id, and numeric latency value. Validation: `cd server && npx vitest run src/test/unit/searchActions.test.ts --coverage=false`.
 
+- **2026-05-13 — T154 empty search telemetry.** Added search-action coverage that a full search with zero visible results emits `search.query.empty` with full-search variant, tenant, and user id. Validation: `cd server && npx vitest run src/test/unit/searchActions.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

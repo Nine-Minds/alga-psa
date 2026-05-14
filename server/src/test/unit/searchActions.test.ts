@@ -99,6 +99,40 @@ describe('search actions', () => {
     }));
   });
 
+  it('T154 emits search.query.empty when a full search returns zero visible results', async () => {
+    const knex = { tenant: 'knex' };
+    const acl = {
+      userId: 'user-telemetry-empty',
+      tenant: 'tenant-1',
+      permissions: ['client:read'],
+      isInternal: true,
+      accessibleClientIds: ['client-1'],
+    };
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+    mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
+    mocks.runSearchQuery.mockResolvedValue([]);
+    mocks.verifyResultVisibility.mockResolvedValue([]);
+
+    await searchAppAction(
+      {
+        user_id: 'user-telemetry-empty',
+        tenant: 'tenant-1',
+        user_type: 'client',
+        clientId: 'client-1',
+      },
+      { tenant: 'tenant-1' },
+      { query: 'missing', limit: 10 },
+    );
+
+    expect(mocks.loggerInfo).toHaveBeenCalledWith('[Search] metric', expect.objectContaining({
+      metric: 'search.query.empty',
+      variant: 'full',
+      tenant: 'tenant-1',
+      userId: 'user-telemetry-empty',
+    }));
+  });
+
   it('T106 resolves the user permission set exactly once per full search action call', async () => {
     const knex = { tenant: 'knex' };
     const acl = {
