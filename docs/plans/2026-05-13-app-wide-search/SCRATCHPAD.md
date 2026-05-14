@@ -701,6 +701,12 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - The runbook covers migrate, deploy with `SEARCH_INDEX_LIVE=false`, run `npm run search:backfill`, flip live indexing on, roll server/workers, sample index health, and confirm `search:reconcile`.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F126 — Search action telemetry.**
+  - Added structured server logs for `search.query.count`, `search.query.empty`, and `search.query.latency_ms` in both `searchAppAction` and `searchAppTypeaheadAction`.
+  - Each telemetry payload includes variant (`full` or `typeahead`), tenant, user ID, and latency value for the histogram-style metric.
+  - `search.acl_drift` was already emitted by `verifyResultVisibility()` in F099 via server log plus optional Sentry capture.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

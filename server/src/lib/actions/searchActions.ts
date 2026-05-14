@@ -1,6 +1,7 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
+import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { z } from 'zod';
@@ -85,6 +86,16 @@ export interface SearchTypeaheadResult {
 
 const SEARCH_OBJECT_TYPE_SET = new Set<string>(SEARCH_OBJECT_TYPES);
 
+function emitSearchTelemetry(
+  metric: 'search.query.count' | 'search.query.empty' | 'search.query.latency_ms',
+  payload: Record<string, unknown>,
+): void {
+  logger.info('[Search] metric', {
+    metric,
+    ...payload,
+  });
+}
+
 function normalizeLimit(limit: number | undefined): number {
   const parsed = Number(limit ?? 30);
   if (!Number.isFinite(parsed)) {
@@ -144,41 +155,65 @@ export const searchAppAction = withAuth(async (
   { tenant },
   input: SearchAppInput,
 ): Promise<SearchAppResult> => {
+  const startedAt = Date.now();
   const parsedInput = searchAppInputSchema.parse(input);
-  const { knex } = await createTenantKnex();
-  const limit = normalizeLimit(parsedInput.limit);
-  const allowedTypes = resolveAllowedTypes(parsedInput.types);
-  const accessibleClientIds = await resolveAccessibleClientIds(knex, tenant, user);
-  const acl = await resolveSearchAclPrincipal(knex, user, accessibleClientIds);
-
-  const hits = await runSearchQuery({
-    knex,
+  emitSearchTelemetry('search.query.count', {
+    variant: 'full',
     tenant,
-    query: parsedInput.query,
-    allowedTypes,
-    limit: limit + 1,
-    cursor: parsedInput.cursor,
-    sort: parsedInput.sort,
-    includeSnippets: true,
-    acl,
+    userId: user.user_id,
   });
 
-  const visibleHits = await verifyResultVisibility(knex, acl, hits);
-  const pageHits = visibleHits.slice(0, limit);
-  const groups = emptyGroups();
-  for (const hit of visibleHits) {
-    groups[hit.type] += 1;
+  try {
+    const { knex } = await createTenantKnex();
+    const limit = normalizeLimit(parsedInput.limit);
+    const allowedTypes = resolveAllowedTypes(parsedInput.types);
+    const accessibleClientIds = await resolveAccessibleClientIds(knex, tenant, user);
+    const acl = await resolveSearchAclPrincipal(knex, user, accessibleClientIds);
+
+    const hits = await runSearchQuery({
+      knex,
+      tenant,
+      query: parsedInput.query,
+      allowedTypes,
+      limit: limit + 1,
+      cursor: parsedInput.cursor,
+      sort: parsedInput.sort,
+      includeSnippets: true,
+      acl,
+    });
+
+    const visibleHits = await verifyResultVisibility(knex, acl, hits);
+    const pageHits = visibleHits.slice(0, limit);
+    const groups = emptyGroups();
+    for (const hit of visibleHits) {
+      groups[hit.type] += 1;
+    }
+
+    const lastHit = pageHits[pageHits.length - 1];
+    const result: SearchAppResult = {
+      results: pageHits.map(toSearchResultRow),
+      groups,
+      totalCount: visibleHits.length,
+      nextCursor: visibleHits.length > limit && lastHit ? encodeSearchCursor(lastHit) : undefined,
+    };
+
+    if (result.totalCount === 0) {
+      emitSearchTelemetry('search.query.empty', {
+        variant: 'full',
+        tenant,
+        userId: user.user_id,
+      });
+    }
+
+    return searchAppResultSchema.parse(result) as SearchAppResult;
+  } finally {
+    emitSearchTelemetry('search.query.latency_ms', {
+      variant: 'full',
+      tenant,
+      userId: user.user_id,
+      value: Date.now() - startedAt,
+    });
   }
-
-  const lastHit = pageHits[pageHits.length - 1];
-  const result: SearchAppResult = {
-    results: pageHits.map(toSearchResultRow),
-    groups,
-    totalCount: visibleHits.length,
-    nextCursor: visibleHits.length > limit && lastHit ? encodeSearchCursor(lastHit) : undefined,
-  };
-
-  return searchAppResultSchema.parse(result) as SearchAppResult;
 });
 
 export const searchAppTypeaheadAction = withAuth(async (
@@ -186,33 +221,57 @@ export const searchAppTypeaheadAction = withAuth(async (
   { tenant },
   input: Pick<SearchAppInput, 'query' | 'types' | 'cursor'>,
 ): Promise<SearchTypeaheadResult> => {
+  const startedAt = Date.now();
   const parsedInput = searchAppInputSchema.pick({
     query: true,
     types: true,
     cursor: true,
   }).parse(input);
-  const { knex } = await createTenantKnex();
-  const allowedTypes = resolveAllowedTypes(parsedInput.types);
-  const accessibleClientIds = await resolveAccessibleClientIds(knex, tenant, user);
-  const acl = await resolveSearchAclPrincipal(knex, user, accessibleClientIds);
-
-  const hits = await runSearchTypeaheadQuery({
-    knex,
+  emitSearchTelemetry('search.query.count', {
+    variant: 'typeahead',
     tenant,
-    query: parsedInput.query,
-    allowedTypes,
-    cursor: parsedInput.cursor,
-    acl,
+    userId: user.user_id,
   });
 
-  const visibleHits = await verifyResultVisibility(knex, acl, hits);
-  const result: SearchTypeaheadResult = {
-    results: visibleHits.slice(0, 5).map((hit) => ({
-      ...toSearchResultRow(hit),
-      snippet: undefined,
-    })),
-    totalCount: visibleHits.length,
-  };
+  try {
+    const { knex } = await createTenantKnex();
+    const allowedTypes = resolveAllowedTypes(parsedInput.types);
+    const accessibleClientIds = await resolveAccessibleClientIds(knex, tenant, user);
+    const acl = await resolveSearchAclPrincipal(knex, user, accessibleClientIds);
 
-  return searchTypeaheadResultSchema.parse(result);
+    const hits = await runSearchTypeaheadQuery({
+      knex,
+      tenant,
+      query: parsedInput.query,
+      allowedTypes,
+      cursor: parsedInput.cursor,
+      acl,
+    });
+
+    const visibleHits = await verifyResultVisibility(knex, acl, hits);
+    const result: SearchTypeaheadResult = {
+      results: visibleHits.slice(0, 5).map((hit) => ({
+        ...toSearchResultRow(hit),
+        snippet: undefined,
+      })),
+      totalCount: visibleHits.length,
+    };
+
+    if (result.totalCount === 0) {
+      emitSearchTelemetry('search.query.empty', {
+        variant: 'typeahead',
+        tenant,
+        userId: user.user_id,
+      });
+    }
+
+    return searchTypeaheadResultSchema.parse(result);
+  } finally {
+    emitSearchTelemetry('search.query.latency_ms', {
+      variant: 'typeahead',
+      tenant,
+      userId: user.user_id,
+      value: Date.now() - startedAt,
+    });
+  }
 });
