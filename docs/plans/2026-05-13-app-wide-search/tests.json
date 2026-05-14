@@ -143,7 +143,7 @@
   { "id": "T127", "featureIds": ["F106"], "description": "Typeahead does NOT render before query length ≥ 2", "implemented": true },
 
   { "id": "T128", "featureIds": ["F109"], "description": "GET /msp/search?q=foo renders server-side with results in the initial HTML", "implemented": true },
-  { "id": "T129", "featureIds": ["F110"], "description": "Typing in the results-page input updates the URL via router.replace, debounced 200ms", "implemented": false },
+  { "id": "T129", "featureIds": ["F110"], "description": "Typing in the results-page input updates the URL via router.replace, debounced 200ms", "implemented": true },
   { "id": "T130", "featureIds": ["F110"], "description": "Opening a deep-linked /msp/search?q=foo&type=ticket&cursor=...&sort=recent restores the same state", "implemented": false },
   { "id": "T131", "featureIds": ["F111"], "description": "Filter chips render with count badges that match `groups` from the action response", "implemented": false },
   { "id": "T132", "featureIds": ["F112"], "description": "type=All renders grouped sections with max 10 rows per group", "implemented": false },

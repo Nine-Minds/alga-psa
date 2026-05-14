@@ -69,4 +69,14 @@ describe('app-wide search UI contracts', () => {
     expect(source).toContain('await searchAppAction({');
     expect(source).toContain('initialResult={result}');
   });
+
+  it('T129 debounces results-page input changes into router.replace URL updates', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/app/msp/search/SearchPageClient.tsx'), 'utf8');
+
+    expect(source).toContain('const timer = window.setTimeout(() => {');
+    expect(source).toContain('}, 200)');
+    expect(source).toContain('nextParams.set(\'q\', normalizedQuery)');
+    expect(source).toContain('router.replace(nextUrl, { scroll: false })');
+    expect(source).toContain('return () => window.clearTimeout(timer)');
+  });
 });

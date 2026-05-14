@@ -1374,6 +1374,8 @@ npm run search:backfill
 
 - **2026-05-13 — T128 server-rendered search results.** Added route contract coverage that `/msp/search` is dynamic, reads `q` from `searchParams`, awaits `searchAppAction` for non-empty queries, and passes the resolved `initialResult` into `SearchPageClient` for first render. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T129 debounced URL updates.** Added results-page UI contract coverage that input changes debounce for 200ms, write `q` into `URLSearchParams`, call `router.replace(nextUrl, { scroll: false })`, and clear timers on cleanup. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
