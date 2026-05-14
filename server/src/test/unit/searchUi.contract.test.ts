@@ -231,4 +231,10 @@ describe('app-wide search UI contracts', () => {
     expect(navigateBlock).toContain('window.location.assign(visibleResults[activeIndex].url)');
     expect(navigateBlock).toContain('return;');
   });
+
+  it('T144 exposes stable app-search-input id on the sidebar input', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/search/SearchPalette.tsx'), 'utf8');
+
+    expect(source).toContain('id="app-search-input"');
+  });
 });

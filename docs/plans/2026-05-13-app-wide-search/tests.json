@@ -159,7 +159,7 @@
   { "id": "T141", "featureIds": ["F119"], "description": "Esc closes typeahead and restores focus to the input", "implemented": true },
   { "id": "T142", "featureIds": ["F119"], "description": "Enter on input (no row focused) navigates to /msp/search?q=...", "implemented": true },
   { "id": "T143", "featureIds": ["F119"], "description": "Enter on a focused row navigates to that row's url", "implemented": true },
-  { "id": "T144", "featureIds": ["F120"], "description": "Stable id `app-search-input` is present on the sidebar input", "implemented": false },
+  { "id": "T144", "featureIds": ["F120"], "description": "Stable id `app-search-input` is present on the sidebar input", "implemented": true },
   { "id": "T145", "featureIds": ["F120"], "description": "Every result row has id matching `app-search-result-row-{type}-{id}` (kebab-case)", "implemented": false },
   { "id": "T146", "featureIds": ["F120"], "description": "Every filter chip on the results page has id matching `app-search-filter-chip-{type}`", "implemented": false },
 
