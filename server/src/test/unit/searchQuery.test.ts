@@ -223,6 +223,45 @@ describe('search query parsing', () => {
     });
   });
 
+  it('T163 matches both full and shortened ticket identifiers through metadata identifier branches', async () => {
+    const knex = {
+      raw: vi.fn(async () => ({
+        rows: [{
+          object_type: 'ticket',
+          object_id: 'ticket-1023',
+          parent_type: null,
+          parent_id: null,
+          title: 'Cannot access VPN',
+          subtitle: 'ACME Corp | TIC-1023',
+          url: '/msp/tickets/ticket-1023',
+          score: 900,
+          source_updated_at: '2026-05-13T12:00:00.000Z',
+          metadata: { identifier: 'TIC-1023' },
+          snippet: null,
+        }],
+      })),
+    };
+
+    const results = await runSearchQuery({
+      knex: knex as never,
+      tenant: '00000000-0000-0000-0000-000000000001',
+      query: 'tic-10',
+      allowedTypes: ['ticket'],
+    });
+
+    const [sql, bindings] = knex.raw.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain("lower(coalesce(s.metadata->>'identifier', '')) = q.identifier");
+    expect(sql).toContain("lower(coalesce(s.metadata->>'identifier', '')) LIKE q.identifier || '%'");
+    expect(sql).toContain('THEN 1000');
+    expect(sql).toContain('THEN 900');
+    expect(bindings[2]).toBe('tic-10');
+    expect(results[0]).toMatchObject({
+      type: 'ticket',
+      id: 'ticket-1023',
+      score: 900,
+    });
+  });
+
   it('T097 applies time decay so newer equivalent rows rank higher', async () => {
     const knex = {
       raw: vi.fn(async () => ({ rows: [] })),

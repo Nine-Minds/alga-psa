@@ -323,6 +323,9 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
             WHEN q.identifier IS NOT NULL
               AND lower(coalesce(s.metadata->>'identifier', '')) = q.identifier
             THEN 1000
+            WHEN q.identifier IS NOT NULL
+              AND lower(coalesce(s.metadata->>'identifier', '')) LIKE q.identifier || '%'
+            THEN 900
             ELSE (
               (
                 ts_rank_cd(s.search_vector, q.tsq)
@@ -349,6 +352,10 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
             OR (
               q.identifier IS NOT NULL
               AND lower(coalesce(s.metadata->>'identifier', '')) = q.identifier
+            )
+            OR (
+              q.identifier IS NOT NULL
+              AND lower(coalesce(s.metadata->>'identifier', '')) LIKE q.identifier || '%'
             )
           )
       )

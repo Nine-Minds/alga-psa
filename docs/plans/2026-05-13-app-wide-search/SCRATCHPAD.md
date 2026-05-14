@@ -1442,6 +1442,8 @@ npm run search:backfill
 
 - **2026-05-13 — T162 result new-tab acceptance.** Added UI acceptance coverage that results-page rows are plain `<a href={row.url}>` anchors with no click interception, while page state remains URL-backed through initial cursor/sort/query props. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T163 ticket identifier acceptance.** Added a metadata identifier prefix branch (`LIKE q.identifier || '%'`) scored at 900 below exact matches (1000), so shortened IDs such as `tic-10` can find `TIC-1023`. Added query-layer coverage for the exact and prefix SQL branches. Validation: `cd server && npx vitest run src/test/unit/searchQuery.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
