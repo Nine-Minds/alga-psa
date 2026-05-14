@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T026 concurrent upsert conflict contract.** Extended `searchUpsert.test.ts` with two concurrent `upsertSearchDoc` calls for the same `(tenant, object_type, object_id)` and an in-memory raw handler keyed by that conflict target. The test asserts both calls use `ON CONFLICT (tenant, object_type, object_id)`, only one logical row remains, and the later call's searchable fields win. Validation: `npx vitest run src/test/unit/searchUpsert.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T025 search index delete helper.** Extended `searchUpsert.test.ts` with a mocked Knex query-builder chain to assert `deleteSearchDoc` targets `app_search_index`, scopes the delete by tenant/object_type/object_id, and resolves cleanly when the underlying delete affects zero rows. Validation: `npx vitest run src/test/unit/searchUpsert.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T024 upsert conflict refresh.** Extended `searchUpsert.test.ts` to assert the `ON CONFLICT` branch refreshes title/body/source timestamp, assigns `search_vector = EXCLUDED.search_vector`, and sets `indexed_at = now()`. The test also checks updated title/body values flow into the SQL bindings. Validation: `npx vitest run src/test/unit/searchUpsert.test.ts --coverage=false` from `server/` passed.

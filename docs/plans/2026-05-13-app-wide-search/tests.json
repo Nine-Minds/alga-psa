@@ -27,7 +27,7 @@
   { "id": "T023", "featureIds": ["F019"], "description": "`upsertSearchDoc` inserts a new row when none exists for (tenant, type, id)", "implemented": true },
   { "id": "T024", "featureIds": ["F019"], "description": "`upsertSearchDoc` updates an existing row, refreshing `search_vector` and `indexed_at`", "implemented": true },
   { "id": "T025", "featureIds": ["F020"], "description": "`deleteSearchDoc` removes the row and is a no-op when none exists", "implemented": true },
-  { "id": "T026", "featureIds": ["F019"], "description": "Concurrent `upsertSearchDoc` calls for the same (tenant, type, id) end up with one row (last write wins)", "implemented": false },
+  { "id": "T026", "featureIds": ["F019"], "description": "Concurrent `upsertSearchDoc` calls for the same (tenant, type, id) end up with one row (last write wins)", "implemented": true },
 
   { "id": "T027", "featureIds": ["F022"], "description": "Client indexer loadOne returns a SearchDoc with title=client_name and required_permission='client:read'", "implemented": false },
   { "id": "T028", "featureIds": ["F022"], "description": "Backfilling client indexer for a seeded tenant produces an index row for every client in that tenant", "implemented": false },

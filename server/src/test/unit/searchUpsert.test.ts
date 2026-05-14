@@ -106,4 +106,31 @@ describe('search index upsert helpers', () => {
     });
     expect(queryBuilder.delete).toHaveBeenCalledTimes(1);
   });
+
+  it('T026 concurrent upserts for the same key use the conflict target and last call wins', async () => {
+    const store = new Map<string, { title: unknown; body: unknown }>();
+    const knex = {
+      raw: vi.fn(async (sql: string, bindings: unknown[]) => {
+        expect(sql).toContain('ON CONFLICT (tenant, object_type, object_id)');
+        const key = [bindings[0], bindings[1], bindings[2]].join(':');
+        store.set(key, {
+          title: bindings[5],
+          body: bindings[7],
+        });
+        return { rows: [] };
+      }),
+    };
+
+    await Promise.all([
+      upsertSearchDoc(knex as never, sampleDoc({ title: 'ACME old', body: 'old body' })),
+      upsertSearchDoc(knex as never, sampleDoc({ title: 'ACME newest', body: 'new body' })),
+    ]);
+
+    expect(knex.raw).toHaveBeenCalledTimes(2);
+    expect(store).toHaveLength(1);
+    expect([...store.values()][0]).toEqual({
+      title: 'ACME newest',
+      body: 'new body',
+    });
+  });
 });
