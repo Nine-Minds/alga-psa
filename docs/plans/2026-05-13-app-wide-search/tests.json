@@ -115,7 +115,7 @@
   { "id": "T103", "featureIds": ["F091"], "description": "Sanitizer is robust to unpaired sentinels (malformed ts_headline output) — falls back to fully escaped output instead of throwing", "implemented": true },
   { "id": "T104", "featureIds": ["F092"], "description": "Typeahead action SQL does NOT include ts_headline (verified via captured query string or telemetry)", "implemented": true },
 
-  { "id": "T105", "featureIds": ["F093"], "description": "acl_predicate excludes rows whose `required_permission` is not in the user's permission set", "implemented": false },
+  { "id": "T105", "featureIds": ["F093"], "description": "acl_predicate excludes rows whose `required_permission` is not in the user's permission set", "implemented": true },
   { "id": "T106", "featureIds": ["F094"], "description": "User permission set is resolved exactly once per action call (not per-row)", "implemented": false },
   { "id": "T107", "featureIds": ["F095"], "description": "Row with non-empty `visible_to_user_ids` is excluded for users not in the array", "implemented": false },
   { "id": "T108", "featureIds": ["F095"], "description": "Row with empty `visible_to_user_ids` is visible to all users with the required permission", "implemented": false },
