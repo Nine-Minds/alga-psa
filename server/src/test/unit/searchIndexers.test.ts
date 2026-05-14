@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { clientIndexer } from '../../lib/search/indexers/client';
 import { contactIndexer } from '../../lib/search/indexers/contact';
 import { ticketIndexer } from '../../lib/search/indexers/ticket';
+import { ticketCommentIndexer } from '../../lib/search/indexers/ticket_comment';
 import { userIndexer } from '../../lib/search/indexers/user';
 
 function createFirstRowKnex(row: unknown) {
@@ -11,6 +12,10 @@ function createFirstRowKnex(row: unknown) {
     andOn: vi.fn().mockReturnThis(),
   };
   const queryBuilder = {
+    join: vi.fn((_table: string, joinCallback: (this: typeof joinBuilder) => void) => {
+      joinCallback.call(joinBuilder);
+      return queryBuilder;
+    }),
     leftJoin: vi.fn((_table: string, joinCallback: (this: typeof joinBuilder) => void) => {
       joinCallback.call(joinBuilder);
       return queryBuilder;
@@ -189,6 +194,47 @@ describe('search entity indexers', () => {
       url: '/msp/tickets/ticket-1',
       metadata: { identifier: 'TIC-1023' },
       acl: { requiredPermission: 'ticket:read' },
+    });
+  });
+
+  it('T032 ticket-comment indexer marks internal comments as internal-only', async () => {
+    const { knex, queryBuilder, joinBuilder } = createFirstRowKnex({
+      comment_id: 'comment-1',
+      ticket_id: 'ticket-1',
+      note: '**Internal** exchange note',
+      is_internal: true,
+      ticket_title: 'Exchange outage',
+      ticket_number: 'TIC-1023',
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await ticketCommentIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'comment-1',
+    );
+
+    expect(knex).toHaveBeenCalledWith('comments as c');
+    expect(queryBuilder.join).toHaveBeenCalledWith('tickets as t', expect.any(Function));
+    expect(joinBuilder.on).toHaveBeenCalledWith('t.tenant', 'c.tenant');
+    expect(joinBuilder.andOn).toHaveBeenCalledWith('t.ticket_id', 'c.ticket_id');
+    expect(queryBuilder.where).toHaveBeenCalledWith(
+      'c.tenant',
+      '11111111-1111-4111-8111-111111111111',
+    );
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith('c.comment_id', 'comment-1');
+    expect(doc).toMatchObject({
+      objectType: 'ticket_comment',
+      objectId: 'comment-1',
+      parentType: 'ticket',
+      parentId: 'ticket-1',
+      title: 'Exchange outage',
+      subtitle: 'TIC-1023',
+      body: 'Internal exchange note',
+      acl: {
+        requiredPermission: 'ticket:read',
+        isInternalOnly: true,
+      },
     });
   });
 });
