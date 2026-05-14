@@ -713,6 +713,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Limit failures throw `SearchRateLimitError` with `status=429`, `code='SEARCH_RATE_LIMITED'`, and `retryAfterMs`.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F128 — Ticket comment hash highlight.**
+  - Main ticket comments now render with canonical `id="comment-{comment_id}"` DOM anchors to match search index URLs.
+  - `CommentItem` detects a matching `#comment-{id}` hash on mount, scrolls the comment into view, and applies `.search-highlight` plus a short visual ring/background for about two seconds.
+  - Validation: `git diff --check`; `npm -w @alga-psa/tickets run typecheck`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

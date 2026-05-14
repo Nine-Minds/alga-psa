@@ -146,7 +146,7 @@
   { "id": "F126", "description": "Emit telemetry counters: `search.query.count`, `search.query.empty`, `search.query.latency_ms`, `search.acl_drift`", "prdRefs": ["14.3"], "implemented": true },
   { "id": "F127", "description": "Add server-side rate limiting to `searchAppAction` and `searchAppTypeaheadAction` (per-user, e.g. 30/sec typeahead and 10/sec full)", "prdRefs": ["12"], "implemented": true },
 
-  { "id": "F128", "description": "Ticket detail page honors `#comment-{id}` hash: scrolls into view and applies a brief highlight class", "prdRefs": ["6.2", "Acceptance #5"], "implemented": false },
+  { "id": "F128", "description": "Ticket detail page honors `#comment-{id}` hash: scrolls into view and applies a brief highlight class", "prdRefs": ["6.2", "Acceptance #5"], "implemented": true },
   { "id": "F129", "description": "Invoice detail page honors `#item-{id}` and `#annotation-{id}` hashes (scroll + highlight)", "prdRefs": ["6.2"], "implemented": false },
   { "id": "F130", "description": "Project task page honors `#comment-{id}` hash (scroll + highlight)", "prdRefs": ["6.2"], "implemented": false },
 

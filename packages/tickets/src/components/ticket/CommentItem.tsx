@@ -127,6 +127,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const [metadataDebugOpen, setMetadataDebugOpen] = useState(false);
   const [isInternalToggle, setIsInternalToggle] = useState(conversation.is_internal ?? false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(conversation.is_resolution ?? false);
+  const [isSearchHighlighted, setIsSearchHighlighted] = useState(false);
   const [editedContent, setEditedContent] = useState<PartialBlock[]>(() =>
     parseCommentNoteContent(conversation.note || '', conversation.comment_id, 'initial')
   );
@@ -282,9 +283,36 @@ const CommentItem: React.FC<CommentItemProps> = ({
     }
   }, [isEditing, currentComment?.comment_id, conversation.comment_id, conversation.note, conversation.is_internal, conversation.is_resolution]);
 
+  useEffect(() => {
+    if (!conversation.comment_id || typeof window === 'undefined') {
+      return;
+    }
+
+    const expectedHash = `#comment-${conversation.comment_id}`;
+    if (window.location.hash !== expectedHash) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(commentId);
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setIsSearchHighlighted(true);
+    });
+    const timeout = window.setTimeout(() => setIsSearchHighlighted(false), 2000);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
+    };
+  }, [commentId, conversation.comment_id]);
 
   return (
-    <div {...withDataAutomationId({ id: commentId })} className="group/comment w-full max-w-full min-w-0 rounded-lg p-2 mb-2 shadow-sm border border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))] bg-white dark:bg-[rgb(var(--color-card))]">
+    <div
+      {...withDataAutomationId({ id: commentId })}
+      className={`group/comment w-full max-w-full min-w-0 rounded-lg p-2 mb-2 shadow-sm border border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))] bg-white dark:bg-[rgb(var(--color-card))] ${
+        isSearchHighlighted ? 'search-highlight ring-2 ring-yellow-400 bg-yellow-50' : ''
+      }`}
+    >
       <div className="flex items-start mb-1 min-w-0 max-w-full">
         <div className="mr-2">
           {/* Conditionally render UserAvatar or ContactAvatar */}
