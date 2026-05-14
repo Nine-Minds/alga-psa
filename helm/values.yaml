@@ -65,6 +65,9 @@ server:
   verify_email: true
   # Maximum body size for Next.js server actions (e.g., extension uploads)
   serverActionsBodyLimit: "200mb"
+  # App-wide search live indexing gate. Keep false during migration/backfill;
+  # set true after search:backfill completes so event subscribers write updates.
+  searchIndexLive: false
   pullPolicy: Always
   replicaCount: 2
   service:

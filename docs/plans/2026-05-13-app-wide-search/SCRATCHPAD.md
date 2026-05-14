@@ -691,6 +691,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Visible search UI text is resolved through `useTranslation('msp/core')`; the only remaining hardcoded strings in these components are non-UI route/status identifiers and telemetry-style log keys.
   - Validation: `rg "defaultValue:" server/src/components/search/SearchPalette.tsx server/src/app/msp/search/SearchPageClient.tsx` returns no matches; `git diff --check`; `npm -w server run typecheck`.
 
+- **F124 — SEARCH_INDEX_LIVE documentation/config.**
+  - Added `SEARCH_INDEX_LIVE=false` to `.env.example` with rollout guidance: keep false through migration/backfill, then flip true for live incremental indexing.
+  - Added `server.searchIndexLive` to `helm/values.yaml` and wired it into the main server deployment as the `SEARCH_INDEX_LIVE` environment variable.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
