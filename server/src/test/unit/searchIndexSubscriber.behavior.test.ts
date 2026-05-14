@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   createTenantKnex: vi.fn(),
   upsertSearchDoc: vi.fn(),
   deleteSearchDoc: vi.fn(),
+  scheduleSearchVisibleUserReindexJob: vi.fn(),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -16,7 +17,12 @@ vi.mock('../../lib/search/upsert', () => ({
   deleteSearchDoc: mocks.deleteSearchDoc,
 }));
 
+vi.mock('../../lib/jobs', () => ({
+  scheduleSearchVisibleUserReindexJob: mocks.scheduleSearchVisibleUserReindexJob,
+}));
+
 import { clientIndexer } from '../../lib/search/indexers/client';
+import { userIndexer } from '../../lib/search/indexers/user';
 import { ticketIndexer } from '../../lib/search/indexers/ticket';
 import { ticketCommentIndexer } from '../../lib/search/indexers/ticket_comment';
 import { invoiceIndexer } from '../../lib/search/indexers/invoice';
@@ -36,6 +42,7 @@ describe('search index subscriber event handling', () => {
     mocks.createTenantKnex.mockReset();
     mocks.upsertSearchDoc.mockReset();
     mocks.deleteSearchDoc.mockReset();
+    mocks.scheduleSearchVisibleUserReindexJob.mockReset();
     process.env.SEARCH_INDEX_LIVE = 'true';
   });
 
@@ -480,5 +487,38 @@ describe('search index subscriber event handling', () => {
     expect(documentIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'document-1');
     expect(mocks.upsertSearchDoc).toHaveBeenCalledWith(knex, doc);
     expect(mocks.deleteSearchDoc).not.toHaveBeenCalled();
+  });
+
+  it('T079 enqueues visible-user reindex after user role changes', async () => {
+    const knex = { client: 'knex' };
+    const userDoc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'user',
+      objectId: 'user-1',
+      title: 'Alex Technician',
+      url: '/msp/team/user-1',
+      acl: { requiredPermission: 'user:read' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    };
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+    mocks.scheduleSearchVisibleUserReindexJob.mockResolvedValue('job-1');
+    vi.spyOn(userIndexer, 'loadOne').mockResolvedValue(userDoc);
+
+    const event: Event = {
+      id: 'event-10',
+      eventType: 'USER_ROLES_UPDATED',
+      timestamp: '2026-05-13T12:00:00.000Z',
+      payload: {
+        tenant: 'tenant-1',
+        user_id: 'user-1',
+      },
+    } as Event;
+
+    await handleSearchIndexEventForTest(event);
+
+    expect(userIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'user-1');
+    expect(mocks.upsertSearchDoc).toHaveBeenCalledWith(knex, userDoc);
+    expect(mocks.scheduleSearchVisibleUserReindexJob).toHaveBeenCalledWith('tenant-1', 'user-1');
   });
 });
