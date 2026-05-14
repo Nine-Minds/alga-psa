@@ -103,7 +103,7 @@
   { "id": "T092", "featureIds": ["F085"], "description": "FTS results ordered by `ts_rank_cd` desc", "implemented": true },
   { "id": "T093", "featureIds": ["F086"], "description": "pg_trgm fallback returns results when FTS finds nothing but title is a similar string (`exhcange` → `Exchange`)", "implemented": true },
   { "id": "T094", "featureIds": ["F086"], "description": "pg_trgm similarity is included in the composite score when present", "implemented": true },
-  { "id": "T095", "featureIds": ["F087"], "description": "Query `TIC-1023` pins the matching ticket as result #1 via metadata identifier match", "implemented": false },
+  { "id": "T095", "featureIds": ["F087"], "description": "Query `TIC-1023` pins the matching ticket as result #1 via metadata identifier match", "implemented": true },
   { "id": "T096", "featureIds": ["F087"], "description": "Asset-tag style query (e.g., `LAP-0042`) pins the matching asset", "implemented": false },
   { "id": "T097", "featureIds": ["F088"], "description": "All else equal, newer rows rank higher than older rows by ~time-decay factor", "implemented": false },
   { "id": "T098", "featureIds": ["F088"], "description": "Time decay multiplier never drops below 0.05 (floor)", "implemented": false },
