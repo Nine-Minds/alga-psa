@@ -700,6 +700,8 @@ npm run search:backfill
 
 - **2026-05-13 — F039 service catalog indexer.** Added `serviceCatalogIndexer` and registered it in the CE indexer array. It indexes `service_catalog.service_name` as title, combines `description` with flattened `attributes` JSONB for the body, links to `/msp/billing/services/{service_id}`, and sets `requiredPermission='service_catalog:read'`. `sourceEvents` stays empty until the service-catalog event family is added in F057. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/service_catalog.ts server/src/lib/search/indexers/index.ts`.
 
+- **2026-05-13 — F040 service request submission indexer.** Added `serviceRequestSubmissionIndexer` and registered it. It indexes `request_name`, flattens `submitted_payload` via the secret-skipping JSONB flattener, links to `/msp/service-requests/{submission_id}`, sets `requiredPermission='service_request:read'`, and carries `client_id` into `clientScopeId`. `sourceEvents` remains empty until F058 adds the service-request event family. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/service_request_submission.ts server/src/lib/search/indexers/index.ts`.
+
 ---
 
 ## Implementation order suggestion (not prescriptive)
