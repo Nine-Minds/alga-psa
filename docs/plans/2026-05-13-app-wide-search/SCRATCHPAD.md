@@ -1484,6 +1484,8 @@ npm run search:backfill
 
 - **2026-05-13 — T183 process_large_lexemes SQL path.** Added upsert SQL capture coverage that search-vector computation calls `public.process_large_lexemes(?)` for title, subtitle, and body weight tiers A/B/C. Validation: `cd server && npx vitest run src/test/unit/searchUpsert.test.ts --coverage=false`.
 
+- **2026-05-13 — T184 backfill-to-live smoke.** Added subscriber/backfill smoke coverage that a seed tenant is backfilled first, then `SEARCH_INDEX_LIVE=true` allows a `TICKET_CREATED` event to land as an incremental search upsert. Validation: `cd server && npx vitest run src/test/unit/searchIndexSubscriber.behavior.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

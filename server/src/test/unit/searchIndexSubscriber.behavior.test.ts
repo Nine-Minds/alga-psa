@@ -34,6 +34,7 @@ import { projectTaskIndexer } from '../../lib/search/indexers/project_task';
 import { projectTaskCommentIndexer } from '../../lib/search/indexers/project_task_comment';
 import { documentIndexer } from '../../lib/search/indexers/document';
 import { handleSearchIndexEventForTest } from '../../lib/eventBus/subscribers/searchIndexSubscriber';
+import { runSearchBackfill } from '../../scripts/search-backfill';
 import type { SearchDoc } from '../../lib/search/types';
 
 describe('search index subscriber event handling', () => {
@@ -578,6 +579,54 @@ describe('search index subscriber event handling', () => {
     expect(mocks.deleteSearchDoc).toHaveBeenCalledWith(knex, 'tenant-1', 'ticket', 'ticket-1');
     expect(mocks.upsertSearchDoc).not.toHaveBeenCalled();
     expect(loadOne).not.toHaveBeenCalled();
+  });
+
+  it('T184 backfills a seed tenant then accepts live incremental updates', async () => {
+    const knex = { client: 'knex' };
+    const backfillDoc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'client',
+      objectId: 'client-backfill',
+      title: 'Backfilled client',
+      url: '/msp/clients/client-backfill',
+      acl: { requiredPermission: 'client:read' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    };
+    const ticketDoc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'ticket',
+      objectId: 'ticket-live',
+      title: 'Live indexed ticket',
+      url: '/msp/tickets/ticket-live',
+      acl: { requiredPermission: 'ticket:read' },
+      sourceUpdatedAt: new Date('2026-05-13T12:01:00.000Z'),
+    };
+
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    vi.spyOn(clientIndexer, 'loadBatch').mockImplementation(async (_knex, tenant, cursor) => (
+      cursor === null ? [{ ...backfillDoc, tenant }] : []
+    ));
+
+    await runSearchBackfill({ tenant: 'tenant-1', type: 'client' }, knex as never);
+    expect(mocks.upsertSearchDoc).toHaveBeenCalledWith(knex, backfillDoc);
+
+    mocks.upsertSearchDoc.mockClear();
+    process.env.SEARCH_INDEX_LIVE = 'true';
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+    vi.spyOn(ticketIndexer, 'loadOne').mockResolvedValue(ticketDoc);
+
+    await handleSearchIndexEventForTest({
+      id: 'event-13',
+      eventType: 'TICKET_CREATED',
+      timestamp: '2026-05-13T12:01:00.000Z',
+      payload: {
+        tenant: 'tenant-1',
+        ticket_id: 'ticket-live',
+      },
+    } as Event);
+
+    expect(ticketIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'ticket-live');
+    expect(mocks.upsertSearchDoc).toHaveBeenCalledWith(knex, ticketDoc);
   });
 
 });
