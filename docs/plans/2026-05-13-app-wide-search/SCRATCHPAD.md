@@ -1432,6 +1432,8 @@ npm run search:backfill
 
 - **2026-05-13 — T157 ticket comment hash anchors.** Added hash-anchor contract coverage that `CommentItem` detects `#comment-{comment_id}`, scrolls the corresponding DOM id into view, applies `.search-highlight`, and clears it after ~2s. Validation: `cd server && npx vitest run src/test/unit/searchHashAnchors.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T158 invoice hash anchors.** Added line-item and annotation hash-anchor support: invoice redirect preserves hashes, `LineItem` handles `#item-{item_id}` with scroll/highlight, and `InvoiceAnnotations` handles loaded `#annotation-{annotation_id}` rows similarly. Validation: `cd server && npx vitest run src/test/unit/searchHashAnchors.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

@@ -176,7 +176,7 @@
   { "id": "T156", "featureIds": ["F127"], "description": "Rate limit on full search returns a 429-equivalent error after 10 calls/sec from one user", "implemented": true },
 
   { "id": "T157", "featureIds": ["F128"], "description": "Navigating to `/msp/tickets/{id}#comment-{cid}` scrolls the comment into view and applies a `.search-highlight` class for ~2s", "implemented": true },
-  { "id": "T158", "featureIds": ["F129"], "description": "`/msp/invoices/{id}#item-{iid}` and `#annotation-{aid}` scroll and highlight correctly", "implemented": false },
+  { "id": "T158", "featureIds": ["F129"], "description": "`/msp/invoices/{id}#item-{iid}` and `#annotation-{aid}` scroll and highlight correctly", "implemented": true },
   { "id": "T159", "featureIds": ["F130"], "description": "`/msp/projects/{pid}/tasks/{tid}#comment-{cid}` scrolls and highlights correctly", "implemented": false },
 
   { "id": "T160", "featureIds": ["F100", "F022", "F025"], "description": "End-to-end: seed a tenant with clients + tickets; search 'acme' as the technician → ACME Corp is top result (Acceptance #1)", "implemented": false },
