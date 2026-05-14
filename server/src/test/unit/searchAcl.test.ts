@@ -50,4 +50,17 @@ describe('search ACL SQL predicate', () => {
     expect(fragment.sql).toContain('(is_internal_only = false OR ?::boolean = true)');
     expect(fragment.bindings[3]).toBe(false);
   });
+
+  it('T110 hides private rows unless the user is in visible_to_user_ids', () => {
+    const userId = '00000000-0000-0000-0000-000000000001';
+    const fragment = aclPredicateSql({
+      userId,
+      permissions: ['document:read'],
+    });
+
+    expect(fragment.sql).toContain(
+      '(is_private = false OR visible_to_user_ids && ARRAY[?]::uuid[])',
+    );
+    expect(fragment.bindings[4]).toBe(userId);
+  });
 });
