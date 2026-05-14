@@ -135,7 +135,7 @@
   { "id": "T120", "featureIds": ["F102"], "description": "Zod input rejects empty query, > 200 chars, types not in the union, limit > 100", "implemented": true },
   { "id": "T121", "featureIds": ["F103"], "description": "Result rows include a non-empty `url` for every entity type", "implemented": true },
 
-  { "id": "T122", "featureIds": ["F104", "F108"], "description": "SearchPalette renders at the top of the MSP sidebar", "implemented": false },
+  { "id": "T122", "featureIds": ["F104", "F108"], "description": "SearchPalette renders at the top of the MSP sidebar", "implemented": true },
   { "id": "T123", "featureIds": ["F105"], "description": "Cmd+K (mac) and Ctrl+K (Windows/Linux) open the SearchPalette and focus the input", "implemented": false },
   { "id": "T124", "featureIds": ["F106"], "description": "Typeahead shows up to 5 rows; each row is a native `<a>` with non-empty `href`", "implemented": false },
   { "id": "T125", "featureIds": ["F106"], "description": "Cmd/Ctrl+click on a typeahead row opens the result in a new tab without closing the palette", "implemented": false },
