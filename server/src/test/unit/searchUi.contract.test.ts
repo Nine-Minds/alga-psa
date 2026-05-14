@@ -94,4 +94,14 @@ describe('app-wide search UI contracts', () => {
     expect(clientSource).toContain('const [query, setQuery] = useState(initialQuery)');
     expect(clientSource).toContain("const activeType = initialType && initialType !== 'all' ? initialType : 'all'");
   });
+
+  it('T131 renders filter chip counts from SearchAppResult groups', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/app/msp/search/SearchPageClient.tsx'), 'utf8');
+
+    expect(source).toContain('initialResult.groups[type] ?? 0');
+    expect(source).toContain('id="app-search-filter-chip-all"');
+    expect(source).toContain('{initialResult.totalCount}');
+    expect(source).toContain('id={`app-search-filter-chip-${toDomIdPart(type)}`}');
+    expect(source).toContain('{count}');
+  });
 });

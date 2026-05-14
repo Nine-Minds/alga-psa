@@ -1378,6 +1378,8 @@ npm run search:backfill
 
 - **2026-05-13 — T130 deep-linked search state.** Added UI contract coverage that `/msp/search` reads `type`, `cursor`, and `sort` from `searchParams`, passes them as initial props, and `SearchPageClient` initializes local query/type state from those props for cold opens. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T131 filter count badges.** Added UI contract coverage that filter chips compute per-type badge counts from `initialResult.groups[type]`, use `initialResult.totalCount` for All, and expose stable chip IDs. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
