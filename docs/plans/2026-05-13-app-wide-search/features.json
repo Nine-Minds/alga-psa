@@ -26,7 +26,7 @@
 
   { "id": "F022", "description": "Implement `clientIndexer` in `server/src/lib/search/indexers/client.ts` (title=client_name, subtitle=email/phone, body=notes, acl: required_permission='client:read')", "prdRefs": ["7", "10"], "implemented": true },
   { "id": "F023", "description": "Implement `contactIndexer` (title=full_name, subtitle=email/phone/role, acl: required_permission='contact:read')", "prdRefs": ["7"], "implemented": true },
-  { "id": "F024", "description": "Implement `userIndexer` for team members (internal users only; title=full name; subtitle=username/email/title; acl: required_permission='user:read')", "prdRefs": ["7"], "implemented": false },
+  { "id": "F024", "description": "Implement `userIndexer` for team members (internal users only; title=full name; subtitle=username/email/title; acl: required_permission='user:read')", "prdRefs": ["7"], "implemented": true },
   { "id": "F025", "description": "Implement `ticketIndexer` (title=ticket.title, subtitle=denormalized client name + ticket_number, acl: required_permission='ticket:read', visible_to_roles from board scope, metadata.identifier=ticket_number)", "prdRefs": ["7", "13.3"], "implemented": false },
   { "id": "F026", "description": "Implement `ticketCommentIndexer` (parent_type='ticket', body=flattenMarkdown(note), acl inherits ticket + is_internal_only when `is_internal=true`, url with `#comment-{id}` anchor)", "prdRefs": ["7", "14"], "implemented": false },
   { "id": "F027", "description": "Implement `projectIndexer` (title=project_name, body=description, acl: required_permission='project:read', client_scope_id=client_id)", "prdRefs": ["7"], "implemented": false },
