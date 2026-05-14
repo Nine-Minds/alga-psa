@@ -435,6 +435,7 @@ async function handleSearchIndexEvent(event: Event): Promise<void> {
         objectType: indexer.objectType,
         objectId,
       });
+      await deleteSearchDoc(knex, tenant, indexer.objectType, objectId);
       continue;
     }
 

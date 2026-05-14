@@ -146,4 +146,26 @@ describe('search index subscriber event handling', () => {
     expect(mocks.upsertSearchDoc).toHaveBeenCalledWith(knex, doc);
     expect(mocks.deleteSearchDoc).not.toHaveBeenCalled();
   });
+
+  it('T074 deletes a stale index row when the source row disappears before loadOne resolves', async () => {
+    const knex = { client: 'knex' };
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+    vi.spyOn(clientIndexer, 'loadOne').mockResolvedValue(null);
+
+    const event: Event = {
+      id: 'event-5',
+      eventType: 'CLIENT_UPDATED',
+      timestamp: '2026-05-13T12:00:00.000Z',
+      payload: {
+        tenant: 'tenant-1',
+        client_id: 'client-1',
+      },
+    } as Event;
+
+    await handleSearchIndexEventForTest(event);
+
+    expect(clientIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'client-1');
+    expect(mocks.deleteSearchDoc).toHaveBeenCalledWith(knex, 'tenant-1', 'client', 'client-1');
+    expect(mocks.upsertSearchDoc).not.toHaveBeenCalled();
+  });
 });
