@@ -1464,6 +1464,8 @@ npm run search:backfill
 
 - **2026-05-13 — T173 reconciliation restores missing index row.** Added reconciliation coverage that a source doc absent from `app_search_index` is detected by the missing-row phase and upserted back into the index. Validation: `cd server && npx vitest run src/test/unit/searchReconcile.test.ts --coverage=false`.
 
+- **2026-05-13 — T174 generated tenant-isolation load guard.** Added query-layer generated-load coverage across 50 tenants that asserts every SQL query includes `s.tenant = ?::uuid`, every call binds the requested tenant, and every returned synthetic row belongs to that tenant. Validation: `cd server && npx vitest run src/test/unit/searchQuery.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

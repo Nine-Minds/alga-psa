@@ -456,4 +456,53 @@ describe('search query parsing', () => {
       '__SEARCH_MARK_STOP__&lt;em&gt;bad&lt;/em&gt;',
     );
   });
+
+  it('T174 keeps generated multi-tenant query load tenant-scoped with zero leaks', async () => {
+    const tenants = Array.from({ length: 50 }, (_, index) => (
+      `00000000-0000-4000-8000-${index.toString().padStart(12, '0')}`
+    ));
+    const leakedRows: string[] = [];
+    const knex = {
+      raw: vi.fn(async (sql: string, bindings: unknown[]) => {
+        expect(sql).toContain('s.tenant = ?::uuid');
+        const tenant = bindings[3] as string;
+        if (!tenants.includes(tenant)) {
+          leakedRows.push(`unknown:${tenant}`);
+        }
+        return {
+          rows: [{
+            object_type: 'client',
+            object_id: `${tenant}:client`,
+            parent_type: null,
+            parent_id: null,
+            title: `Client ${tenant}`,
+            subtitle: null,
+            url: `/msp/clients/${tenant}:client`,
+            score: 1,
+            source_updated_at: '2026-05-13T12:00:00.000Z',
+            metadata: { tenant },
+            snippet: null,
+          }],
+        };
+      }),
+    };
+
+    for (let index = 0; index < 500; index += 1) {
+      const tenant = tenants[index % tenants.length]!;
+      const [result] = await runSearchQuery({
+        knex: knex as never,
+        tenant,
+        query: `acme ${index}`,
+        allowedTypes: ['client'],
+        limit: 1,
+      });
+
+      if (!result?.id.startsWith(`${tenant}:`)) {
+        leakedRows.push(`${tenant}->${result?.id ?? 'missing'}`);
+      }
+    }
+
+    expect(knex.raw).toHaveBeenCalledTimes(500);
+    expect(leakedRows).toEqual([]);
+  });
 });
