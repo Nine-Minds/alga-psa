@@ -219,7 +219,7 @@
   { "id": "T191", "featureIds": ["F104", "F118"], "description": "Axe-core accessibility scan on SearchPalette reports zero serious/critical violations", "implemented": true },
   { "id": "T192", "featureIds": ["F109", "F118"], "description": "Axe-core scan on /msp/search reports zero serious/critical violations", "implemented": true },
 
-  { "id": "T193", "featureIds": ["F126"], "description": "search.query.latency_ms histogram has p95 < 500ms on a seeded medium tenant", "implemented": false },
+  { "id": "T193", "featureIds": ["F126"], "description": "search.query.latency_ms histogram has p95 < 500ms on a seeded medium tenant", "implemented": true },
   { "id": "T194", "featureIds": ["F099"], "description": "search.acl_drift counter is zero across the entire integration test suite (no SQL/record-level mismatch)", "implemented": false },
 
   { "id": "T195", "featureIds": ["F083"], "description": "Reconciliation job emits a per-run summary log: rows added, rows re-indexed, rows deleted per (tenant, type)", "implemented": false },

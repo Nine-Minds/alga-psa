@@ -466,6 +466,42 @@ describe('search actions', () => {
     )).rejects.toMatchObject({ code: 'invalid_cursor' });
   });
 
+  it('T193 keeps full-search action p95 latency below 500ms under mocked medium-tenant load', async () => {
+    const knex = { tenant: 'knex' };
+    const acl = {
+      userId: 'user-latency',
+      tenant: 'tenant-latency',
+      permissions: ['client:read'],
+      isInternal: true,
+      accessibleClientIds: ['client-1'],
+    };
+    const elapsedSamples: number[] = [];
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-latency' });
+    mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
+    mocks.runSearchQuery.mockResolvedValue([]);
+    mocks.verifyResultVisibility.mockResolvedValue([]);
+
+    for (let index = 0; index < 20; index += 1) {
+      const startedAt = performance.now();
+      await searchAppAction(
+        {
+          user_id: `user-latency-${index}`,
+          tenant: 'tenant-latency',
+          user_type: 'client',
+          clientId: 'client-1',
+        },
+        { tenant: 'tenant-latency' },
+        { query: `acme ${index}`, limit: 25 },
+      );
+      elapsedSamples.push(performance.now() - startedAt);
+    }
+
+    const sorted = [...elapsedSamples].sort((a, b) => a - b);
+    const p95 = sorted[Math.ceil(sorted.length * 0.95) - 1] ?? Infinity;
+    expect(p95).toBeLessThan(500);
+  });
+
   it('T118 returns at most five typeahead rows without snippets', async () => {
     const knex = { tenant: 'knex' };
     const acl = {

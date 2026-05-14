@@ -1502,6 +1502,8 @@ npm run search:backfill
 
 - **2026-05-13 — T192 results-page accessibility contract.** Added static accessibility coverage for `/msp/search`: named region, labeled filter/sort/loading/pagination regions, hidden decorative icons, native anchors, and no fake button roles. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T193 full-search latency guard.** Added a mocked medium-tenant full-search benchmark over 20 unique users to avoid rate-limit interference and assert action p95 remains <500ms while telemetry still records latency. Validation: `cd server && npx vitest run src/test/unit/searchActions.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
