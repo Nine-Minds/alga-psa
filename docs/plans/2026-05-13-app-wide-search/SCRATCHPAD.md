@@ -582,6 +582,12 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Both authenticated search actions now parse their returned payloads at the action boundary, keeping result URLs, ISO timestamps, score values, group counts, and optional cursors under the documented contract.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F104 — SearchPalette component.**
+  - Added `server/src/components/search/SearchPalette.tsx` as a client component using `cmdk` for the sidebar search input and suggestion list.
+  - The component debounces typeahead queries by 200 ms against `searchAppTypeaheadAction`, suppresses the popup before two trimmed characters, supports a collapsed icon button, and renders title-only suggestion rows.
+  - Native anchor behavior, the global shortcut, and sidebar insertion remain separate feature checkpoints (F105-F108).
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
