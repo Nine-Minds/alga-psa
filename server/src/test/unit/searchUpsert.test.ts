@@ -133,4 +133,24 @@ describe('search index upsert helpers', () => {
       body: 'new body',
     });
   });
+
+  it('T179 co-locates Citus upsert writes by tenant', async () => {
+    const knex = createRawKnex();
+    const doc = sampleDoc({
+      tenant: '22222222-2222-4222-8222-222222222222',
+      objectType: 'ticket',
+      objectId: 'ticket-1',
+      title: 'Tenant-local ticket',
+    });
+
+    await upsertSearchDoc(knex as never, doc);
+
+    const [sql, bindings] = knex.raw.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('INSERT INTO app_search_index');
+    expect(sql).toContain('VALUES (\n        ?::uuid,');
+    expect(sql).toContain('ON CONFLICT (tenant, object_type, object_id)');
+    expect(bindings[0]).toBe(doc.tenant);
+    expect(bindings[1]).toBe(doc.objectType);
+    expect(bindings[2]).toBe(doc.objectId);
+  });
 });

@@ -1474,6 +1474,8 @@ npm run search:backfill
 
 - **2026-05-13 — T178 Citus/GIN search-plan contract.** Added migration/query contract coverage that `app_search_index` is distributed by tenant outside a transaction, has GIN indexes for FTS and trigram predicates, and the query path includes the tenant predicate plus indexable FTS/trigram branches. Validation: `cd server && npx vitest run src/test/unit/searchMigration.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T179 Citus upsert locality.** Added upsert SQL coverage that tenant is the first UUID-bound insert value and part of the conflict target `(tenant, object_type, object_id)`, keeping single-doc writes shard-local under Citus. Validation: `cd server && npx vitest run src/test/unit/searchUpsert.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
