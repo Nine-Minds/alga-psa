@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { clientIndexer } from '../../lib/search/indexers/client';
 import { contactIndexer } from '../../lib/search/indexers/contact';
+import { projectIndexer } from '../../lib/search/indexers/project';
 import { ticketIndexer } from '../../lib/search/indexers/ticket';
 import { ticketCommentIndexer } from '../../lib/search/indexers/ticket_comment';
 import { userIndexer } from '../../lib/search/indexers/user';
@@ -256,5 +257,35 @@ describe('search entity indexers', () => {
     );
 
     expect(doc?.url).toBe('/msp/tickets/ticket-99#comment-comment-42');
+  });
+
+  it("T034 project indexer sets client_scope_id to the project's client_id", async () => {
+    const { knex, queryBuilder } = createFirstRowKnex({
+      project_id: 'project-1',
+      project_name: 'Exchange rollout',
+      description: 'Tenant migration project',
+      client_id: 'client-1',
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await projectIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'project-1',
+    );
+
+    expect(knex).toHaveBeenCalledWith('projects');
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith('project_id', 'project-1');
+    expect(doc).toMatchObject({
+      objectType: 'project',
+      objectId: 'project-1',
+      title: 'Exchange rollout',
+      body: 'Tenant migration project',
+      url: '/msp/projects/project-1',
+      acl: {
+        requiredPermission: 'project:read',
+        clientScopeId: 'client-1',
+      },
+    });
   });
 });
