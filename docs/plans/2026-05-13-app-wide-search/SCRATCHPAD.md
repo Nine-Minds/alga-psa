@@ -1382,6 +1382,8 @@ npm run search:backfill
 
 - **2026-05-13 — T132 grouped All results.** Added UI contract coverage that the All view builds grouped sections from `initialResult.results`, caps each group with `.slice(0, 10)`, and renders rows through the shared result-row renderer. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T133 single-type flat results.** Added UI contract coverage that the page passes `types: [activeType]` to `searchAppAction` for a selected type and that `SearchPageClient` renders `initialResult.results.map(renderResultRow)` as a flat list when `activeType !== 'all'`. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

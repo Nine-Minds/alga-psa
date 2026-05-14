@@ -113,4 +113,14 @@ describe('app-wide search UI contracts', () => {
     expect(source).toContain('groupedSections.map((section) =>');
     expect(source).toContain('{section.rows.map(renderResultRow)}');
   });
+
+  it('T133 requests and renders a flat list for a single type filter', () => {
+    const pageSource = readFileSync(resolve(process.cwd(), 'src/app/msp/search/page.tsx'), 'utf8');
+    const clientSource = readFileSync(resolve(process.cwd(), 'src/app/msp/search/SearchPageClient.tsx'), 'utf8');
+
+    expect(pageSource).toContain('const activeType = parseTypeFilter(type, registeredTypes)?.[0]');
+    expect(pageSource).toContain('types: activeType ? [activeType] : undefined');
+    expect(clientSource).toContain('{initialResult.results.map(renderResultRow)}');
+    expect(clientSource).toContain("activeType !== 'all'");
+  });
 });
