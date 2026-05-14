@@ -240,7 +240,20 @@
     "dueLabel": "Scadenza",
     "noDueDate": "Nessuna data di scadenza",
     "hideTags": "Nascondi tag",
-    "criticalPath": "Percorso critico"
+    "criticalPath": "Percorso critico",
+    "selectTaskAria": "Seleziona attività {{taskName}}",
+    "bulkMoveSuccess": "{{count}} attività spostata/e con successo!",
+    "bulkMovePartial": "{{moved}} attività spostata/e, {{failed}} non riuscite.",
+    "bulkDeleteSuccess": "{{count}} attività eliminata/e con successo!",
+    "bulkDeletePartial": "{{deleted}} attività eliminata/e, {{failed}} non riuscite.",
+    "bulkAssignSuccess": "{{count}} attività assegnata/e con successo!",
+    "bulkAssignPartial": "{{success}} attività assegnata/e, {{failed}} non riuscite.",
+    "bulkDeleteTitle": "Elimina attività",
+    "bulkDeleteMessage": "Sei sicuro di voler eliminare {{count}} attività selezionata/e? Questa azione non può essere annullata.",
+    "bulkTasksMovedSuccess": "{{count}} attività spostate",
+    "bulkTasksMovedToPhase": "{{count}} attività spostate in {{phaseName}}",
+    "moveTasksTitle": "Sposta attività",
+    "confirmMoveTasksMessage": "Sei sicuro di voler spostare {{count}} attività selezionate nella fase \"{{targetPhase}}\"?"
   },
   "taskForm": {
     "addTitle": "Aggiungi attività",
@@ -519,7 +532,10 @@
       "tags": "Tag",
       "createdAt": "Creato il",
       "updatedAt": "Aggiornato il"
-    }
+    },
+    "exportSelected": "Esporta {{count}} selezionata/e",
+    "printSelected": "Stampa {{count}} selezionata/e",
+    "selectedTasksNotice": "Esportazione di {{count}} attività selezionat{{plural}}."
   },
   "import": {
     "title": "Importa fasi e attività",
@@ -709,6 +725,18 @@
       "tasks": "Attività",
       "badgeCount": "{{count}} Attività",
       "badgeCount_other": "{{count}} Attività"
+    },
+    "bulkMoveTask": {
+      "title": "Sposta attività",
+      "message": "Sposta {{count}} attività selezionata/e in una nuova fase/stato:",
+      "confirm": "Sposta attività"
+    },
+    "bulkAssign": {
+      "title": "Assegna attività",
+      "message": "Assegna {{count}} attività selezionata/e a:",
+      "unassigned": "Non assegnato",
+      "assigning": "Assegnazione...",
+      "confirm": "Assegna attività"
     }
   },
   "filters": {
@@ -1411,7 +1439,15 @@
         "estimatedHours": "Ore stimate",
         "wbsCode": "Codice WBS",
         "description": "Descrizione"
-      }
+      },
+      "subtitleSelected": "{{count}} attività selezionate"
     }
+  },
+  "bulkActions": {
+    "selectedCount": "{{count}} selezionata/e",
+    "move": "Sposta",
+    "assign": "Assegna",
+    "delete": "Elimina",
+    "clear": "Cancella"
   }
 }

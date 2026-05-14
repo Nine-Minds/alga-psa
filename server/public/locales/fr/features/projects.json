@@ -240,7 +240,20 @@
     "dueLabel": "Échéance",
     "noDueDate": "Pas d'échéance",
     "hideTags": "Masquer les étiquettes",
-    "criticalPath": "Chemin critique"
+    "criticalPath": "Chemin critique",
+    "selectTaskAria": "Sélectionner la tâche {{taskName}}",
+    "bulkMoveSuccess": "{{count}} tâche(s) déplacée(s) avec succès !",
+    "bulkMovePartial": "{{moved}} tâche(s) déplacée(s), {{failed}} en échec.",
+    "bulkDeleteSuccess": "{{count}} tâche(s) supprimée(s) avec succès !",
+    "bulkDeletePartial": "{{deleted}} tâche(s) supprimée(s), {{failed}} en échec.",
+    "bulkAssignSuccess": "{{count}} tâche(s) affectée(s) avec succès !",
+    "bulkAssignPartial": "{{success}} tâche(s) affectée(s), {{failed}} en échec.",
+    "bulkDeleteTitle": "Supprimer les tâches",
+    "bulkDeleteMessage": "Voulez-vous vraiment supprimer {{count}} tâche(s) sélectionnée(s) ? Cette action est irréversible.",
+    "bulkTasksMovedSuccess": "{{count}} tâches déplacées",
+    "bulkTasksMovedToPhase": "{{count}} tâches déplacées vers {{phaseName}}",
+    "moveTasksTitle": "Déplacer les tâches",
+    "confirmMoveTasksMessage": "Voulez-vous vraiment déplacer {{count}} tâches sélectionnées vers la phase « {{targetPhase}} » ?"
   },
   "taskForm": {
     "addTitle": "Ajouter une tâche",
@@ -519,7 +532,10 @@
       "tags": "Étiquettes",
       "createdAt": "Créé le",
       "updatedAt": "Mis à jour le"
-    }
+    },
+    "exportSelected": "Exporter {{count}} sélectionnée(s)",
+    "printSelected": "Imprimer {{count}} sélectionnée(s)",
+    "selectedTasksNotice": "Export de {{count}} tâche{{plural}} sélectionnée(s)."
   },
   "import": {
     "title": "Importer des phases et des tâches",
@@ -709,6 +725,18 @@
       "tasks": "Tâches",
       "badgeCount": "{{count}} Tâche",
       "badgeCount_other": "{{count}} Tâches"
+    },
+    "bulkMoveTask": {
+      "title": "Déplacer les tâches",
+      "message": "Déplacer {{count}} tâche(s) sélectionnée(s) vers une nouvelle phase/un nouveau statut :",
+      "confirm": "Déplacer les tâches"
+    },
+    "bulkAssign": {
+      "title": "Affecter les tâches",
+      "message": "Affecter {{count}} tâche(s) sélectionnée(s) à :",
+      "unassigned": "Non affecté",
+      "assigning": "Affectation...",
+      "confirm": "Affecter les tâches"
     }
   },
   "filters": {
@@ -1411,7 +1439,15 @@
         "estimatedHours": "Heures estimées",
         "wbsCode": "Code WBS",
         "description": "Description"
-      }
+      },
+      "subtitleSelected": "{{count}} tâches sélectionnées"
     }
+  },
+  "bulkActions": {
+    "selectedCount": "{{count}} sélectionné(s)",
+    "move": "Déplacer",
+    "assign": "Affecter",
+    "delete": "Supprimer",
+    "clear": "Effacer"
   }
 }
