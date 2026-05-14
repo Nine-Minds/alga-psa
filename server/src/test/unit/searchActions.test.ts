@@ -30,7 +30,11 @@ vi.mock('../../lib/search/query', () => ({
   encodeSearchCursor: mocks.encodeSearchCursor,
 }));
 
-import { searchAppAction, searchAppTypeaheadAction } from '../../lib/actions/searchActions';
+import {
+  searchAppAction,
+  searchAppInputSchema,
+  searchAppTypeaheadAction,
+} from '../../lib/actions/searchActions';
 
 describe('search actions', () => {
   beforeEach(() => {
@@ -251,5 +255,12 @@ describe('search actions', () => {
     const elapsedMs = performance.now() - startedAt;
 
     expect(elapsedMs).toBeLessThan(100);
+  });
+
+  it('T120 rejects invalid search action input', () => {
+    expect(searchAppInputSchema.safeParse({ query: '' }).success).toBe(false);
+    expect(searchAppInputSchema.safeParse({ query: 'x'.repeat(201) }).success).toBe(false);
+    expect(searchAppInputSchema.safeParse({ query: 'acme', types: ['not_a_type'] }).success).toBe(false);
+    expect(searchAppInputSchema.safeParse({ query: 'acme', limit: 101 }).success).toBe(false);
   });
 });
