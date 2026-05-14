@@ -2,6 +2,7 @@ import type { EntityIndexer } from '../types';
 
 import { clientIndexer } from './client';
 import { contactIndexer } from './contact';
+import { projectPhaseIndexer } from './project_phase';
 import { projectIndexer } from './project';
 import { ticketCommentIndexer } from './ticket_comment';
 import { ticketIndexer } from './ticket';
@@ -14,4 +15,5 @@ export const ceIndexers: EntityIndexer[] = [
   ticketIndexer,
   ticketCommentIndexer,
   projectIndexer,
+  projectPhaseIndexer,
 ];
