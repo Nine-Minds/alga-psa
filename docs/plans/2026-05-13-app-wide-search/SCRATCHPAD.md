@@ -1412,6 +1412,8 @@ npm run search:backfill
 
 - **2026-05-13 — T147 English search locale keys.** Added `searchI18n.contract.test.ts` coverage that `server/public/locales/en/msp/core.json` contains the required `search.*` leaves and every `SEARCH_OBJECT_TYPES` filter/group label. Validation: `cd server && npx vitest run src/test/unit/searchI18n.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T148 search locale key completeness.** Ran the lang-pack pipeline (`node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`; zero errors, existing Polish extra-key warnings outside search) and added coverage that every locale's `search` namespace has the same leaf-key structure as English. Validation: `cd server && npx vitest run src/test/unit/searchI18n.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
