@@ -25,7 +25,7 @@
 
   { "id": "T022", "featureIds": ["F017", "F018"], "description": "Registry exposes exactly 27 indexers via `allIndexers()`; `getIndexer('client')` returns the client indexer", "implemented": true },
   { "id": "T023", "featureIds": ["F019"], "description": "`upsertSearchDoc` inserts a new row when none exists for (tenant, type, id)", "implemented": true },
-  { "id": "T024", "featureIds": ["F019"], "description": "`upsertSearchDoc` updates an existing row, refreshing `search_vector` and `indexed_at`", "implemented": false },
+  { "id": "T024", "featureIds": ["F019"], "description": "`upsertSearchDoc` updates an existing row, refreshing `search_vector` and `indexed_at`", "implemented": true },
   { "id": "T025", "featureIds": ["F020"], "description": "`deleteSearchDoc` removes the row and is a no-op when none exists", "implemented": false },
   { "id": "T026", "featureIds": ["F019"], "description": "Concurrent `upsertSearchDoc` calls for the same (tenant, type, id) end up with one row (last write wins)", "implemented": false },
 

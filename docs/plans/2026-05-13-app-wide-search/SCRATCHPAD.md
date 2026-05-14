@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T024 upsert conflict refresh.** Extended `searchUpsert.test.ts` to assert the `ON CONFLICT` branch refreshes title/body/source timestamp, assigns `search_vector = EXCLUDED.search_vector`, and sets `indexed_at = now()`. The test also checks updated title/body values flow into the SQL bindings. Validation: `npx vitest run src/test/unit/searchUpsert.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T023 upsert insert SQL path.** Added `server/src/test/unit/searchUpsert.test.ts` with a mocked Knex `raw` call to assert `upsertSearchDoc` emits a single `INSERT INTO app_search_index` statement, includes the primary-key conflict target, writes `search_vector`, and binds the expected tenant/type/id/title/body/url/metadata values for a new client search doc. Validation: `npx vitest run src/test/unit/searchUpsert.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T022 registry exposes CE indexers.** Added `server/src/test/unit/searchRegistry.test.ts` to import the real registry through the CE/EE alias path and assert `allIndexers()` / `registeredObjectTypes()` expose 27 unique CE search object types and that `getIndexer('client')` resolves the client indexer. Validation: `npx vitest run src/test/unit/searchRegistry.test.ts --coverage=false` from `server/` passed.

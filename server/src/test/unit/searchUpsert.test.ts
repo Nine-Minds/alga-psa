@@ -53,4 +53,27 @@ describe('search index upsert helpers', () => {
       JSON.stringify(doc.metadata),
     ]);
   });
+
+  it('T024 refreshes an existing app_search_index row on conflict', async () => {
+    const knex = createRawKnex();
+    const doc = sampleDoc({
+      title: 'ACME Corp Updated',
+      body: 'Updated searchable body',
+      sourceUpdatedAt: new Date('2026-05-14T09:15:00.000Z'),
+    });
+
+    await upsertSearchDoc(knex as never, doc);
+
+    const [sql, bindings] = knex.raw.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('DO UPDATE SET');
+    expect(sql).toContain('title = EXCLUDED.title');
+    expect(sql).toContain('body = EXCLUDED.body');
+    expect(sql).toContain('search_vector = EXCLUDED.search_vector');
+    expect(sql).toContain('source_updated_at = EXCLUDED.source_updated_at');
+    expect(sql).toContain('indexed_at = now()');
+    expect(sql).toContain("setweight(to_tsvector('english', public.process_large_lexemes(?)), 'A')");
+    expect(bindings).toContain('ACME Corp Updated');
+    expect(bindings).toContain('Updated searchable body');
+    expect(bindings.at(-1)).toEqual(doc.sourceUpdatedAt);
+  });
 });
