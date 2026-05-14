@@ -98,7 +98,7 @@
   { "id": "T088", "featureIds": ["F083"], "description": "Reconciliation job is registered with pg-boss at startup with a daily cron schedule", "implemented": true },
 
   { "id": "T089", "featureIds": ["F084"], "description": "parseQuery rejects queries > 200 chars with a typed error", "implemented": true },
-  { "id": "T090", "featureIds": ["F084"], "description": "parseQuery accepts and normalizes whitespace and casing", "implemented": false },
+  { "id": "T090", "featureIds": ["F084"], "description": "parseQuery accepts and normalizes whitespace and casing", "implemented": true },
   { "id": "T091", "featureIds": ["F085"], "description": "FTS branch returns matches via `search_vector @@ websearch_to_tsquery(...)`", "implemented": false },
   { "id": "T092", "featureIds": ["F085"], "description": "FTS results ordered by `ts_rank_cd` desc", "implemented": false },
   { "id": "T093", "featureIds": ["F086"], "description": "pg_trgm fallback returns results when FTS finds nothing but title is a similar string (`exhcange` → `Exchange`)", "implemented": false },

@@ -14,4 +14,20 @@ describe('search query parsing', () => {
       expect((error as SearchQueryError).code).toBe('query_too_long');
     }
   });
+
+  it('T090 accepts normalized whitespace and lowercases identifier-like queries', () => {
+    expect(parseQuery('  Acme   Corp  ')).toEqual({
+      raw: 'Acme Corp',
+      normalized: 'Acme Corp',
+      isIdentifierLike: false,
+      identifier: undefined,
+    });
+
+    expect(parseQuery('  TIC-1023  ')).toEqual({
+      raw: 'TIC-1023',
+      normalized: 'tic-1023',
+      isIdentifierLike: true,
+      identifier: 'tic-1023',
+    });
+  });
 });
