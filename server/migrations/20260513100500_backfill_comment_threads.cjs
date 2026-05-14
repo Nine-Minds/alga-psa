@@ -58,18 +58,20 @@ async function backfillTicketComments(knex) {
     ON CONFLICT (tenant, thread_id) DO NOTHING
   `);
 
-  // Defensive: only set thread_id where the thread row already exists. Closes
-  // a race window where a concurrent INSERT could create a comment with NULL
-  // thread_id between the INSERT above and this UPDATE — the next migration
-  // (recovery) or a re-run will pick up any stragglers.
+  // UPDATE ... FROM with a co-located join is Citus's most reliable cross-table
+  // modification pattern. Using a correlated EXISTS subquery inside UPDATE has
+  // inconsistent support across Citus versions; UPDATE ... FROM on the
+  // distribution column (tenant) is always supported when both tables are
+  // co-located, and naturally restricts the write to comments whose thread row
+  // already exists — a concurrent insert that beats us to creating a NULL
+  // thread_id row will be picked up by the recovery / enforce migrations.
   await knex.raw(`
     UPDATE comments c
-    SET thread_id = comment_id
-    WHERE thread_id IS NULL
-      AND EXISTS (
-        SELECT 1 FROM comment_threads ct
-        WHERE ct.tenant = c.tenant AND ct.thread_id = c.comment_id
-      )
+    SET thread_id = ct.thread_id
+    FROM comment_threads ct
+    WHERE c.tenant = ct.tenant
+      AND ct.thread_id = c.comment_id
+      AND c.thread_id IS NULL
   `);
 }
 
@@ -112,12 +114,11 @@ async function backfillProjectTaskComments(knex) {
 
   await knex.raw(`
     UPDATE project_task_comments c
-    SET thread_id = task_comment_id
-    WHERE thread_id IS NULL
-      AND EXISTS (
-        SELECT 1 FROM comment_threads ct
-        WHERE ct.tenant = c.tenant AND ct.thread_id = c.task_comment_id
-      )
+    SET thread_id = ct.thread_id
+    FROM comment_threads ct
+    WHERE c.tenant = ct.tenant
+      AND ct.thread_id = c.task_comment_id
+      AND c.thread_id IS NULL
   `);
 }
 

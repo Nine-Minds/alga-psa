@@ -63,12 +63,11 @@ async function recoverTicketComments(knex) {
 
   await knex.raw(`
     UPDATE comments c
-    SET thread_id = comment_id
-    WHERE thread_id IS NULL
-      AND EXISTS (
-        SELECT 1 FROM comment_threads ct
-        WHERE ct.tenant = c.tenant AND ct.thread_id = c.comment_id
-      )
+    SET thread_id = ct.thread_id
+    FROM comment_threads ct
+    WHERE c.tenant = ct.tenant
+      AND ct.thread_id = c.comment_id
+      AND c.thread_id IS NULL
   `);
 }
 
@@ -111,12 +110,11 @@ async function recoverProjectTaskComments(knex) {
 
   await knex.raw(`
     UPDATE project_task_comments c
-    SET thread_id = task_comment_id
-    WHERE thread_id IS NULL
-      AND EXISTS (
-        SELECT 1 FROM comment_threads ct
-        WHERE ct.tenant = c.tenant AND ct.thread_id = c.task_comment_id
-      )
+    SET thread_id = ct.thread_id
+    FROM comment_threads ct
+    WHERE c.tenant = ct.tenant
+      AND ct.thread_id = c.task_comment_id
+      AND c.thread_id IS NULL
   `);
 }
 
