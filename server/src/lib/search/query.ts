@@ -5,7 +5,7 @@ import type { SearchObjectType } from './types';
 const MAX_SEARCH_QUERY_CHARS = 200;
 const IDENTIFIER_QUERY_PATTERN = /^[A-Z]+-?\d+$/i;
 
-export type SearchQueryErrorCode = 'empty_query' | 'query_too_long';
+export type SearchQueryErrorCode = 'empty_query' | 'query_too_long' | 'invalid_cursor';
 
 export class SearchQueryError extends Error {
   constructor(
@@ -31,6 +31,7 @@ export interface SearchQueryOptions {
   allowedTypes: SearchObjectType[];
   limit?: number;
   offset?: number;
+  cursor?: string;
 }
 
 export interface SearchIndexHit {
@@ -57,6 +58,12 @@ interface SearchIndexHitRow {
   score: number | string;
   source_updated_at: Date | string;
   metadata: Record<string, unknown> | string | null;
+}
+
+interface SearchCursorPayload {
+  score: number;
+  updatedAt: string;
+  objectId: string;
 }
 
 export function parseQuery(raw: string): ParsedSearchQuery {
@@ -129,10 +136,52 @@ function toSearchHit(row: SearchIndexHitRow): SearchIndexHit {
   };
 }
 
+export function encodeSearchCursor(hit: Pick<SearchIndexHit, 'score' | 'updatedAt' | 'id'>): string {
+  const payload: SearchCursorPayload = {
+    score: hit.score,
+    updatedAt: hit.updatedAt.toISOString(),
+    objectId: hit.id,
+  };
+  return Buffer.from(JSON.stringify(payload), 'utf8').toString('base64url');
+}
+
+export function decodeSearchCursor(cursor: string | undefined): SearchCursorPayload | undefined {
+  if (!cursor) {
+    return undefined;
+  }
+
+  try {
+    const decoded = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
+    if (
+      !decoded
+      || typeof decoded !== 'object'
+      || typeof decoded.score !== 'number'
+      || typeof decoded.updatedAt !== 'string'
+      || typeof decoded.objectId !== 'string'
+    ) {
+      throw new Error('Invalid cursor payload');
+    }
+
+    const updatedAt = new Date(decoded.updatedAt);
+    if (!Number.isFinite(updatedAt.getTime())) {
+      throw new Error('Invalid cursor timestamp');
+    }
+
+    return {
+      score: decoded.score,
+      updatedAt: updatedAt.toISOString(),
+      objectId: decoded.objectId,
+    };
+  } catch (error) {
+    throw new SearchQueryError('invalid_cursor', 'Search cursor is invalid');
+  }
+}
+
 export async function runSearchQuery(options: SearchQueryOptions): Promise<SearchIndexHit[]> {
   const parsed = parseQuery(options.query);
   const limit = normalizeLimit(options.limit);
-  const offset = normalizeOffset(options.offset);
+  const cursor = decodeSearchCursor(options.cursor);
+  const offset = cursor ? 0 : normalizeOffset(options.offset);
 
   if (options.allowedTypes.length === 0) {
     return [];
@@ -145,53 +194,85 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
           websearch_to_tsquery('english', ?) AS tsq,
           ?::text AS raw,
           ?::text AS identifier
-      )
-      SELECT
-        s.object_type,
-        s.object_id,
-        s.parent_type,
-        s.parent_id,
-        s.title,
-        s.subtitle,
-        s.url,
-        s.source_updated_at,
-        s.metadata,
-        CASE
-          WHEN q.identifier IS NOT NULL
-            AND lower(coalesce(s.metadata->>'identifier', '')) = q.identifier
-          THEN 1000
-          ELSE (
-            (
-              ts_rank_cd(s.search_vector, q.tsq)
-              + GREATEST(
-                  similarity(s.title, q.raw),
-                  similarity(coalesce(s.subtitle, ''), q.raw)
-                ) * 0.4
-            )
-            * GREATEST(
-                exp(-EXTRACT(epoch FROM (now() - s.source_updated_at)) / (90 * 86400)),
-                0.05
+      ),
+      ranked AS (
+        SELECT
+          s.object_type,
+          s.object_id,
+          s.parent_type,
+          s.parent_id,
+          s.title,
+          s.subtitle,
+          s.url,
+          s.source_updated_at,
+          s.metadata,
+          CASE
+            WHEN q.identifier IS NOT NULL
+              AND lower(coalesce(s.metadata->>'identifier', '')) = q.identifier
+            THEN 1000
+            ELSE (
+              (
+                ts_rank_cd(s.search_vector, q.tsq)
+                + GREATEST(
+                    similarity(s.title, q.raw),
+                    similarity(coalesce(s.subtitle, ''), q.raw)
+                  ) * 0.4
               )
+              * GREATEST(
+                  exp(-EXTRACT(epoch FROM (now() - s.source_updated_at)) / (90 * 86400)),
+                  0.05
+                )
+            )
+          END AS score
+        FROM app_search_index s
+        CROSS JOIN q
+        WHERE s.tenant = ?::uuid
+          AND s.object_type = ANY(?::text[])
+          AND (
+            s.search_vector @@ q.tsq
+            OR s.title % q.raw
+            OR coalesce(s.subtitle, '') % q.raw
+            OR (
+              q.identifier IS NOT NULL
+              AND lower(coalesce(s.metadata->>'identifier', '')) = q.identifier
+            )
           )
-        END AS score
-      FROM app_search_index s
-      CROSS JOIN q
-      WHERE s.tenant = ?::uuid
-        AND s.object_type = ANY(?::text[])
-        AND (
-          s.search_vector @@ q.tsq
-          OR s.title % q.raw
-          OR coalesce(s.subtitle, '') % q.raw
-          OR (
-            q.identifier IS NOT NULL
-            AND lower(coalesce(s.metadata->>'identifier', '')) = q.identifier
-          )
+      )
+      SELECT *
+      FROM ranked
+      WHERE (
+        ?::double precision IS NULL
+        OR score < ?::double precision
+        OR (
+          score = ?::double precision
+          AND source_updated_at < ?::timestamptz
         )
-      ORDER BY score DESC, s.source_updated_at DESC, s.object_id ASC
+        OR (
+          score = ?::double precision
+          AND source_updated_at = ?::timestamptz
+          AND object_id > ?
+        )
+      )
+      ORDER BY score DESC, source_updated_at DESC, object_id ASC
       LIMIT ?
       OFFSET ?
     `,
-    [parsed.raw, parsed.raw, parsed.identifier ?? null, options.tenant, options.allowedTypes, limit, offset],
+    [
+      parsed.raw,
+      parsed.raw,
+      parsed.identifier ?? null,
+      options.tenant,
+      options.allowedTypes,
+      cursor?.score ?? null,
+      cursor?.score ?? null,
+      cursor?.score ?? null,
+      cursor?.updatedAt ?? null,
+      cursor?.score ?? null,
+      cursor?.updatedAt ?? null,
+      cursor?.objectId ?? null,
+      limit,
+      offset,
+    ],
   );
 
   return result.rows.map(toSearchHit);

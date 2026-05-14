@@ -499,6 +499,12 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Exact identifier matches keep the explicit high score so identifier lookup remains pinned above decayed relevance results.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F089 — Opaque search cursors.**
+  - Added `encodeSearchCursor()` / `decodeSearchCursor()` in `server/src/lib/search/query.ts`. The cursor is base64url JSON containing score, updated timestamp, and object ID.
+  - `runSearchQuery()` now accepts `cursor`; when present it applies keyset pagination against `(score DESC, source_updated_at DESC, object_id ASC)` and ignores offset.
+  - Malformed cursors throw `SearchQueryError('invalid_cursor')` instead of falling through to a 500-prone parse path.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
