@@ -707,6 +707,12 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - `search.acl_drift` was already emitted by `verifyResultVisibility()` in F099 via server log plus optional Sentry capture.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F127 — Per-user search rate limiting.**
+  - Added in-memory `rate-limiter-flexible` guards at the server-action boundary.
+  - Full search is limited to 10 requests/sec per `(tenant, user)`; typeahead is limited to 30 requests/sec per `(tenant, user)`.
+  - Limit failures throw `SearchRateLimitError` with `status=429`, `code='SEARCH_RATE_LIMITED'`, and `retryAfterMs`.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

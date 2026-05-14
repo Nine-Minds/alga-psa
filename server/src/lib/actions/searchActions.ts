@@ -4,6 +4,7 @@ import { withAuth } from '@alga-psa/auth';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { RateLimiterMemory } from 'rate-limiter-flexible';
 import { z } from 'zod';
 
 import { registeredObjectTypes } from '../search';
@@ -85,6 +86,18 @@ export interface SearchTypeaheadResult {
 }
 
 const SEARCH_OBJECT_TYPE_SET = new Set<string>(SEARCH_OBJECT_TYPES);
+const fullSearchLimiter = new RateLimiterMemory({ points: 10, duration: 1 });
+const typeaheadSearchLimiter = new RateLimiterMemory({ points: 30, duration: 1 });
+
+export class SearchRateLimitError extends Error {
+  public readonly code = 'SEARCH_RATE_LIMITED';
+  public readonly status = 429;
+
+  constructor(public readonly retryAfterMs?: number) {
+    super('Search rate limit exceeded');
+    this.name = 'SearchRateLimitError';
+  }
+}
 
 function emitSearchTelemetry(
   metric: 'search.query.count' | 'search.query.empty' | 'search.query.latency_ms',
@@ -94,6 +107,20 @@ function emitSearchTelemetry(
     metric,
     ...payload,
   });
+}
+
+async function enforceSearchRateLimit(
+  variant: 'full' | 'typeahead',
+  tenant: string,
+  userId: string,
+): Promise<void> {
+  const limiter = variant === 'full' ? fullSearchLimiter : typeaheadSearchLimiter;
+  try {
+    await limiter.consume(`${tenant}:${userId}`);
+  } catch (error) {
+    const maybeRateLimit = error as { msBeforeNext?: number };
+    throw new SearchRateLimitError(maybeRateLimit.msBeforeNext);
+  }
 }
 
 function normalizeLimit(limit: number | undefined): number {
@@ -157,6 +184,7 @@ export const searchAppAction = withAuth(async (
 ): Promise<SearchAppResult> => {
   const startedAt = Date.now();
   const parsedInput = searchAppInputSchema.parse(input);
+  await enforceSearchRateLimit('full', tenant, user.user_id);
   emitSearchTelemetry('search.query.count', {
     variant: 'full',
     tenant,
@@ -227,6 +255,7 @@ export const searchAppTypeaheadAction = withAuth(async (
     types: true,
     cursor: true,
   }).parse(input);
+  await enforceSearchRateLimit('typeahead', tenant, user.user_id);
   emitSearchTelemetry('search.query.count', {
     variant: 'typeahead',
     tenant,
