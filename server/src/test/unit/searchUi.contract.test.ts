@@ -13,4 +13,12 @@ describe('app-wide search UI contracts', () => {
     expect(searchIndex).toBeGreaterThan(0);
     expect(navIndex).toBeGreaterThan(searchIndex);
   });
+
+  it('T123 binds Cmd+K and Ctrl+K to focus the SearchPalette input', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/search/SearchPalette.tsx'), 'utf8');
+
+    expect(source).toContain("event.key.toLowerCase() !== 'k'");
+    expect(source).toContain('!event.metaKey && !event.ctrlKey');
+    expect(source).toContain('inputRef.current?.focus()');
+  });
 });
