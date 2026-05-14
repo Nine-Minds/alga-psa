@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T006 search_vector GIN planner contract.** Local Postgres/Citus is still unavailable, so the test uses a static planner contract rather than live `EXPLAIN`: `searchMigration.contract.test.ts` now asserts the migration creates `app_search_index_vector_gin ON app_search_index USING gin (search_vector)` and that `server/src/lib/search/query.ts` uses the indexed `s.search_vector @@ q.tsq` predicate. Validation: `npx vitest run src/test/unit/searchMigration.contract.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T005 no-Citus migration path.** Extended `searchMigration.contract.test.ts` with a mocked migration `up` execution where `pg_extension` reports Citus is absent. The test asserts the migration never checks `pg_dist_partition`, never calls `create_distributed_table`, and emits the documented skip warning instead of failing. Validation: `npx vitest run src/test/unit/searchMigration.contract.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T004 Citus distribution migration path.** Extended `searchMigration.contract.test.ts` with a mocked migration `up` execution where the `citus` extension is present. The test asserts the migration checks `pg_dist_partition` for `app_search_index` and calls `SELECT create_distributed_table('app_search_index', 'tenant')` only after confirming the table is not already distributed. Validation: `npx vitest run src/test/unit/searchMigration.contract.test.ts --coverage=false` from `server/` passed.

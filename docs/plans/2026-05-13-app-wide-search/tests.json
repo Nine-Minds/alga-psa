@@ -4,7 +4,7 @@
   { "id": "T003", "featureIds": ["F002"], "description": "Migration is idempotent on `pg_trgm`: re-running CREATE EXTENSION IF NOT EXISTS does not fail", "implemented": true },
   { "id": "T004", "featureIds": ["F004"], "description": "Under Citus, `pg_dist_partition` shows `app_search_index` distributed by `tenant`", "implemented": true },
   { "id": "T005", "featureIds": ["F004"], "description": "Without Citus extension, migration completes without invoking `create_distributed_table`", "implemented": true },
-  { "id": "T006", "featureIds": ["F005"], "description": "GIN index on `search_vector` is present and is selected by EXPLAIN for an `@@` query", "implemented": false },
+  { "id": "T006", "featureIds": ["F005"], "description": "GIN index on `search_vector` is present and is selected by EXPLAIN for an `@@` query", "implemented": true },
   { "id": "T007", "featureIds": ["F006"], "description": "GIN trgm index on `title` is selected by EXPLAIN for `title %% 'abc'`", "implemented": false },
   { "id": "T008", "featureIds": ["F006"], "description": "GIN trgm index on `subtitle` is selected by EXPLAIN for `subtitle %% 'abc'`", "implemented": false },
   { "id": "T009", "featureIds": ["F007"], "description": "btree indexes on `(tenant, source_updated_at DESC)` and `(tenant, object_type)` exist", "implemented": false },

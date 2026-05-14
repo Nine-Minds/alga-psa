@@ -10,6 +10,7 @@ const migrationPath = path.resolve(
   testDir,
   '../../../migrations/20260513120000_create_app_search_index.cjs',
 );
+const searchQueryPath = path.resolve(testDir, '../../../src/lib/search/query.ts');
 const migration = require(migrationPath) as {
   up: (knex: { raw: (sql: string) => Promise<{ rows?: Array<Record<string, unknown>> }> }) => Promise<void>;
 };
@@ -132,5 +133,15 @@ describe('app_search_index migration contract', () => {
     } finally {
       warnSpy.mockRestore();
     }
+  });
+
+  it('T006 creates a GIN index for the search_vector FTS operator used by search SQL', () => {
+    const migration = readSearchIndexMigration();
+    const searchQuery = readFileSync(searchQueryPath, 'utf8');
+
+    expect(migration).toMatch(
+      /CREATE INDEX app_search_index_vector_gin\s+ON app_search_index USING gin \(search_vector\)/,
+    );
+    expect(searchQuery).toContain('s.search_vector @@ q.tsq');
   });
 });
