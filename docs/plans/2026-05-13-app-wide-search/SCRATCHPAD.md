@@ -588,6 +588,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Native anchor behavior, the global shortcut, and sidebar insertion remain separate feature checkpoints (F105-F108).
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F105 — Cmd/Ctrl+K search shortcut.**
+  - Added a global keydown listener to `SearchPalette`.
+  - `Cmd+K` / `Ctrl+K` prevents the browser default, focuses the sidebar search input when expanded, and requests sidebar expansion before focusing when collapsed.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

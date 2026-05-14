@@ -22,10 +22,41 @@ export default function SearchPalette({
   const { t } = useTranslation('msp/core');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResultRow[]>([]);
+  const [focusAfterExpand, setFocusAfterExpand] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const inputRef = useRef<HTMLInputElement>(null);
   const requestIdRef = useRef(0);
   const trimmedQuery = query.trim();
   const isOpen = !collapsed && trimmedQuery.length >= 2;
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== 'k' || (!event.metaKey && !event.ctrlKey)) {
+        return;
+      }
+
+      event.preventDefault();
+      if (collapsed) {
+        setFocusAfterExpand(true);
+        onCollapsedClick?.();
+        return;
+      }
+
+      inputRef.current?.focus();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [collapsed, onCollapsedClick]);
+
+  useEffect(() => {
+    if (collapsed || !focusAfterExpand) {
+      return;
+    }
+
+    inputRef.current?.focus();
+    setFocusAfterExpand(false);
+  }, [collapsed, focusAfterExpand]);
 
   useEffect(() => {
     if (trimmedQuery.length < 2) {
@@ -74,6 +105,7 @@ export default function SearchPalette({
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
           <Command.Input
+            ref={inputRef}
             id="app-search-input"
             value={query}
             onValueChange={setQuery}
