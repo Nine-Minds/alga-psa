@@ -1460,6 +1460,8 @@ npm run search:backfill
 
 - **2026-05-13 — T171 live ticket-delete indexing.** Added subscriber acceptance coverage that a `TICKET_DELETED` event deletes the ticket index row immediately and does not call the ticket indexer's `loadOne`. Validation: `cd server && npx vitest run src/test/unit/searchIndexSubscriber.behavior.test.ts --coverage=false`.
 
+- **2026-05-13 — T172 all-entity backfill acceptance.** Added backfill coverage that `runSearchBackfill({ tenant })` iterates all 27 registered indexers and upserts one sampled searchable doc per object type. Validation: `cd server && npx vitest run src/test/unit/searchBackfill.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

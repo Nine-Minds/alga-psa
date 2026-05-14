@@ -11,6 +11,7 @@ vi.mock('../../lib/search/upsert', () => ({
 }));
 
 import { clientIndexer } from '../../lib/search/indexers/client';
+import { allIndexers } from '../../lib/search';
 import { runSearchBackfill, upsertBackfillBatches } from '../../scripts/search-backfill';
 import type { EntityIndexer, SearchDoc } from '../../lib/search/types';
 
@@ -188,5 +189,39 @@ describe('search backfill script', () => {
     ) as { scripts?: Record<string, string> };
 
     expect(packageJson.scripts?.['search:backfill']).toBe('tsx server/src/scripts/search-backfill.ts');
+  });
+
+  it('T172 backfills a sampled searchable row for every registered entity type', async () => {
+    const knex = vi.fn();
+    const indexers = allIndexers();
+    expect(indexers).toHaveLength(27);
+
+    for (const indexer of indexers) {
+      vi.spyOn(indexer, 'loadBatch').mockImplementation(
+        async (_knex, tenant, cursor) => (
+          cursor === null
+            ? [{
+              tenant,
+              objectType: indexer.objectType,
+              objectId: `${indexer.objectType}-sample`,
+              title: `${indexer.objectType} searchable sample`,
+              url: `/msp/search-sample/${indexer.objectType}`,
+              acl: { requiredPermission: 'client:read' },
+              sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+            }]
+            : []
+        ),
+      );
+    }
+
+    await runSearchBackfill({ tenant: 'tenant-1' }, knex as never);
+
+    const upsertedDocs = mocks.upsertSearchDoc.mock.calls.map((call) => call[1] as SearchDoc);
+    expect(upsertedDocs).toHaveLength(27);
+    expect(new Set(upsertedDocs.map((doc) => doc.objectType))).toEqual(
+      new Set(indexers.map((indexer) => indexer.objectType)),
+    );
+    expect(upsertedDocs.every((doc) => doc.tenant === 'tenant-1')).toBe(true);
+    expect(upsertedDocs.every((doc) => doc.title.includes('searchable sample'))).toBe(true);
   });
 });
