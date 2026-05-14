@@ -1494,6 +1494,8 @@ npm run search:backfill
 
 - **2026-05-13 — T188 malformed cursor typed error.** Added action-layer coverage that a malformed cursor error from the query layer is propagated with `code='invalid_cursor'` rather than being wrapped as a generic failure. Validation: `cd server && npx vitest run src/test/unit/searchActions.test.ts --coverage=false`.
 
+- **2026-05-13 — T189 ticket-comment renamed-parent subtitle.** Updated ticket-comment indexing to include the parent ticket title in the subtitle alongside the ticket number, and added coverage that a renamed parent title appears in both title and subtitle after reindex. Validation: `cd server && npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

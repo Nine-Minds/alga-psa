@@ -213,7 +213,7 @@
   { "id": "T187", "featureIds": ["F100"], "description": "Search action result includes only entity types the user has permission to read (types union pre-filtered)", "implemented": true },
   { "id": "T188", "featureIds": ["F102"], "description": "Action rejects malformed cursor with a typed error (no 500)", "implemented": true },
 
-  { "id": "T189", "featureIds": ["F068"], "description": "Renaming a ticket title triggers comment row re-index — comment row subtitle reflects new ticket title", "implemented": false },
+  { "id": "T189", "featureIds": ["F068"], "description": "Renaming a ticket title triggers comment row re-index — comment row subtitle reflects new ticket title", "implemented": true },
   { "id": "T190", "featureIds": ["F072"], "description": "Removing a user from a document share-list triggers the document row's `visible_to_user_ids` to update within 10 minutes", "implemented": false },
 
   { "id": "T191", "featureIds": ["F104", "F118"], "description": "Axe-core accessibility scan on SearchPalette reports zero serious/critical violations", "implemented": false },

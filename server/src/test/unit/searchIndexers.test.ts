@@ -254,7 +254,7 @@ describe('search entity indexers', () => {
       parentType: 'ticket',
       parentId: 'ticket-1',
       title: 'Exchange outage',
-      subtitle: 'TIC-1023',
+      subtitle: 'Exchange outage | TIC-1023',
       body: 'Internal exchange note',
       acl: {
         requiredPermission: 'ticket:read',
@@ -281,6 +281,30 @@ describe('search entity indexers', () => {
     );
 
     expect(doc?.url).toBe('/msp/tickets/ticket-99#comment-comment-42');
+  });
+
+  it('T189 ticket-comment subtitle reflects the renamed parent ticket title', async () => {
+    const { knex } = createFirstRowKnex({
+      comment_id: 'comment-renamed',
+      ticket_id: 'ticket-1',
+      note: 'Parent title changed',
+      is_internal: false,
+      ticket_title: 'Renamed ticket title',
+      ticket_number: 'TIC-1023',
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await ticketCommentIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'comment-renamed',
+    );
+
+    expect(doc).toMatchObject({
+      objectType: 'ticket_comment',
+      title: 'Renamed ticket title',
+      subtitle: 'Renamed ticket title | TIC-1023',
+    });
   });
 
   it("T034 project indexer sets client_scope_id to the project's client_id", async () => {

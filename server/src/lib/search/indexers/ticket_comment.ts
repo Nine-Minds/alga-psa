@@ -32,7 +32,7 @@ function toSearchDoc(tenant: string, row: TicketCommentSearchRow): SearchDoc {
     parentType: 'ticket',
     parentId: row.ticket_id,
     title: row.ticket_title ?? row.ticket_number ?? row.ticket_id,
-    subtitle: compactJoin([row.ticket_number]),
+    subtitle: compactJoin([row.ticket_title, row.ticket_number]),
     body: row.note ? flattenMarkdown(row.note) : undefined,
     url: `/msp/tickets/${row.ticket_id}#comment-${row.comment_id}`,
     acl: {
