@@ -1366,6 +1366,8 @@ npm run search:backfill
 
 ## Implementation order suggestion (not prescriptive)
 
+- **2026-05-13 — T125 typeahead native new-tab behavior.** Added UI contract coverage that result anchors do not install click handlers or call `preventDefault`, preserving Cmd/Ctrl-click and middle-click browser behavior. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

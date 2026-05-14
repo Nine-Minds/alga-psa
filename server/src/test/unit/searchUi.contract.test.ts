@@ -29,4 +29,15 @@ describe('app-wide search UI contracts', () => {
     expect(source).toContain('asChild');
     expect(source).toContain('href={result.url}');
   });
+
+  it('T125 preserves browser new-tab behavior for typeahead rows', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/search/SearchPalette.tsx'), 'utf8');
+    const resultAnchorBlock = source.slice(
+      source.indexOf('href={result.url}'),
+      source.indexOf('<span className="block truncate">{result.title}</span>'),
+    );
+
+    expect(resultAnchorBlock).not.toContain('onClick=');
+    expect(resultAnchorBlock).not.toContain('preventDefault');
+  });
 });
