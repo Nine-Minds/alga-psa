@@ -83,7 +83,7 @@
   { "id": "F074", "description": "Backfill iterates all tenants by default; supports `--tenant=<uuid>` flag", "prdRefs": ["11.3"], "implemented": true },
   { "id": "F075", "description": "Backfill iterates all registered indexers; supports `--type=<object_type>` flag for a single entity", "prdRefs": ["11.3"], "implemented": true },
   { "id": "F076", "description": "Backfill pages source rows in batches of 500 via `loadBatch(cursor, limit)`", "prdRefs": ["11.3"], "implemented": true },
-  { "id": "F077", "description": "Backfill is idempotent: re-runs produce identical row state in `app_search_index`", "prdRefs": ["11.3"], "implemented": false },
+  { "id": "F077", "description": "Backfill is idempotent: re-runs produce identical row state in `app_search_index`", "prdRefs": ["11.3"], "implemented": true },
   { "id": "F078", "description": "Wire `npm run search:backfill` script in root package.json", "prdRefs": ["11.3"], "implemented": false },
 
   { "id": "F079", "description": "Create pg-boss job `search:reconcile` in workflow-worker or scheduled jobs registry", "prdRefs": ["11.4"], "implemented": false },

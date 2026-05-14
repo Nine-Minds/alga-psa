@@ -434,8 +434,13 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
 - **F076 — Backfill paging.**
-  - Added a 500-row `loadBackfillBatches()` loop that calls each indexer's `loadBatch(knex, tenant, cursor, 500)` and advances the cursor from the last returned `SearchDoc.objectId`.
+  - Added a 500-row backfill loop that calls each indexer's `loadBatch(knex, tenant, cursor, 500)` and advances the cursor from the last returned `SearchDoc.objectId`.
   - The loop logs per-batch progress and stops on an empty or short page. Writes are intentionally deferred to F077.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
+- **F077 — Idempotent backfill upserts.**
+  - The backfill loop now calls `upsertSearchDoc(knex, doc)` for every loaded `SearchDoc`, using the existing `(tenant, object_type, object_id)` `ON CONFLICT` path.
+  - Re-running the CLI overwrites the same index rows with source-derived content/ACLs rather than creating duplicates.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
 ## Local DB availability

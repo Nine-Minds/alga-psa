@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import { allIndexers, getIndexer } from '../lib/search';
+import { upsertSearchDoc } from '../lib/search/upsert';
 import type { EntityIndexer } from '../lib/search/types';
 
 const require = createRequire(import.meta.url);
@@ -77,7 +78,7 @@ export function resolveBackfillIndexers(options: SearchBackfillOptions): EntityI
   return [indexer];
 }
 
-export async function loadBackfillBatches(
+export async function upsertBackfillBatches(
   knex: Knex,
   tenant: string,
   indexer: EntityIndexer,
@@ -92,9 +93,13 @@ export async function loadBackfillBatches(
     }
 
     total += docs.length;
+    for (const doc of docs) {
+      await upsertSearchDoc(knex, doc);
+    }
+
     cursor = docs[docs.length - 1]?.objectId ?? cursor;
     console.log(
-      `[tenant=${tenant}] [type=${indexer.objectType}] loaded batch size=${docs.length} total=${total}`,
+      `[tenant=${tenant}] [type=${indexer.objectType}] upserted batch size=${docs.length} total=${total}`,
     );
 
     if (docs.length < BACKFILL_BATCH_SIZE) {
@@ -119,8 +124,8 @@ export async function runSearchBackfill(
     console.log(`Search backfill selected ${indexers.length} indexer(s).`);
     for (const tenant of tenants) {
       for (const indexer of indexers) {
-        const total = await loadBackfillBatches(knex, tenant, indexer);
-        console.log(`[tenant=${tenant}] [type=${indexer.objectType}] loaded ${total} source row(s)`);
+        const total = await upsertBackfillBatches(knex, tenant, indexer);
+        console.log(`[tenant=${tenant}] [type=${indexer.objectType}] upserted ${total} search row(s)`);
       }
     }
   } finally {
