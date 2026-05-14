@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T017 JSONB payload secret filtering.** Extended `searchNormalize.test.ts` with a nested JSONB fixture containing ordinary string leaves plus `password`, `api_key`, `authorization`, and `secret*` keys. The test asserts `flattenJsonbPayload` concatenates only safe string leaves in traversal order and excludes secret-like values. Validation: `npx vitest run src/test/unit/searchNormalize.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T016 Markdown flattening.** Extended `searchNormalize.test.ts` with markdown containing a heading, bullet list, bold/italic markers, link syntax, fenced code, and blockquote. The test asserts `flattenMarkdown` strips formatting syntax while preserving readable content. Validation: `npx vitest run src/test/unit/searchNormalize.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T015 nested BlockNote list flattening.** Extended `searchNormalize.test.ts` with a four-level nested BlockNote list fixture using inline mark styles. The test asserts `flattenBlockNote` does not throw and returns all nested visible text in order. Validation: `npx vitest run src/test/unit/searchNormalize.test.ts --coverage=false` from `server/` passed.

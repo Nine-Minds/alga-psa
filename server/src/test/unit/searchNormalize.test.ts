@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { flattenBlockNote, flattenMarkdown } from '../../lib/search/normalize';
+import { flattenBlockNote, flattenJsonbPayload, flattenMarkdown } from '../../lib/search/normalize';
 
 describe('search normalization utilities', () => {
   it('T013 extracts visible text from a realistic BlockNote document payload', () => {
@@ -110,5 +110,27 @@ describe('search normalization utilities', () => {
     expect(flattenMarkdown(markdown)).toBe(
       'Incident Summary Exchange mailbox migration finished See runbook const ticket = "TIC-1023"; Follow-up required',
     );
+  });
+
+  it('T017 flattens JSONB string leaves while skipping secret-like keys', () => {
+    const payload = {
+      requester: {
+        name: 'Natallia',
+        password: 'do-not-index-password',
+      },
+      service: 'Managed firewall',
+      nested: [
+        { note: 'Needs static IP' },
+        { api_key: 'do-not-index-api-key' },
+        { authorization: 'Bearer do-not-index-token' },
+      ],
+      secretQuestion: 'do-not-index-secret',
+    };
+    const output = flattenJsonbPayload(payload);
+
+    expect(output).toBe('Natallia Managed firewall Needs static IP');
+    expect(output).not.toContain('do-not-index');
+    expect(output).not.toContain('password');
+    expect(output).not.toContain('api-key');
   });
 });
