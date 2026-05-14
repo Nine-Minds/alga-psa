@@ -505,4 +505,22 @@ describe('search query parsing', () => {
     expect(knex.raw).toHaveBeenCalledTimes(500);
     expect(leakedRows).toEqual([]);
   });
+
+  it('T180 always emits a tenant predicate and tenant binding in search SQL', async () => {
+    const knex = {
+      raw: vi.fn(async () => ({ rows: [] })),
+    };
+
+    await runSearchQuery({
+      knex: knex as never,
+      tenant: '00000000-0000-4000-8000-000000000123',
+      query: 'acme',
+      allowedTypes: ['client', 'ticket'],
+      limit: 25,
+    });
+
+    const [sql, bindings] = knex.raw.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('WHERE s.tenant = ?::uuid');
+    expect(bindings[3]).toBe('00000000-0000-4000-8000-000000000123');
+  });
 });

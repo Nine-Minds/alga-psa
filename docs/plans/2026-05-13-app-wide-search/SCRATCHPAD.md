@@ -1476,6 +1476,8 @@ npm run search:backfill
 
 - **2026-05-13 — T179 Citus upsert locality.** Added upsert SQL coverage that tenant is the first UUID-bound insert value and part of the conflict target `(tenant, object_type, object_id)`, keeping single-doc writes shard-local under Citus. Validation: `cd server && npx vitest run src/test/unit/searchUpsert.test.ts --coverage=false`.
 
+- **2026-05-13 — T180 mandatory tenant predicate.** Added query SQL capture coverage that every search emits `WHERE s.tenant = ?::uuid` and binds the authenticated tenant in the expected parameter slot. Validation: `cd server && npx vitest run src/test/unit/searchQuery.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

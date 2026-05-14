@@ -200,7 +200,7 @@
 
   { "id": "T178", "featureIds": ["F003", "F004"], "description": "Cross-shard query: searching across a tenant with 10M index rows uses GIN index (EXPLAIN ANALYZE shows no seq scan)", "implemented": true },
   { "id": "T179", "featureIds": ["F019"], "description": "upsertSearchDoc co-locates writes by tenant under Citus (no inter-shard write fanout for a single doc)", "implemented": true },
-  { "id": "T180", "featureIds": ["F100"], "description": "Search query SQL always includes `tenant = ?` predicate (verified by SQL log capture)", "implemented": false },
+  { "id": "T180", "featureIds": ["F100"], "description": "Search query SQL always includes `tenant = ?` predicate (verified by SQL log capture)", "implemented": true },
 
   { "id": "T181", "featureIds": ["F012", "F037"], "description": "Document indexer fixture: 10MB BlockNote JSON with embedded image data URI → indexed body ≤ 64KB and contains zero `data:image` substrings", "implemented": false },
   { "id": "T182", "featureIds": ["F014", "F040"], "description": "Service-request submission fixture with a 'password' key in submitted_payload → that value is NOT present in the indexed body", "implemented": false },
