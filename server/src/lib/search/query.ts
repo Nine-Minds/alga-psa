@@ -5,6 +5,7 @@ import type { SearchObjectType } from './types';
 
 const MAX_SEARCH_QUERY_CHARS = 200;
 const IDENTIFIER_QUERY_PATTERN = /^[A-Z]+-?\d+$/i;
+const IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
 const HEADLINE_START_SENTINEL = '__SEARCH_MARK_START__';
 const HEADLINE_STOP_SENTINEL = '__SEARCH_MARK_STOP__';
 
@@ -87,13 +88,14 @@ export function parseQuery(raw: string): ParsedSearchQuery {
     );
   }
 
-  const isIdentifierLike = IDENTIFIER_QUERY_PATTERN.test(trimmed);
-  const identifier = isIdentifierLike ? trimmed.toLowerCase() : undefined;
+  const exactIdentifierMatch = IDENTIFIER_QUERY_PATTERN.test(trimmed);
+  const identifierToken = trimmed.match(IDENTIFIER_TOKEN_PATTERN)?.[0];
+  const identifier = identifierToken ? identifierToken.toLowerCase() : undefined;
 
   return {
     raw: trimmed,
-    normalized: identifier ?? trimmed,
-    isIdentifierLike,
+    normalized: exactIdentifierMatch && identifier ? identifier : trimmed,
+    isIdentifierLike: Boolean(identifier),
     identifier,
   };
 }
