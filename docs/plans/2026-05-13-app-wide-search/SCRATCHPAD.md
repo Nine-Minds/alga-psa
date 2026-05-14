@@ -433,6 +433,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Unknown object types fail fast with a typed error before any backfill loop runs.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F076 — Backfill paging.**
+  - Added a 500-row `loadBackfillBatches()` loop that calls each indexer's `loadBatch(knex, tenant, cursor, 500)` and advances the cursor from the last returned `SearchDoc.objectId`.
+  - The loop logs per-batch progress and stops on an empty or short page. Writes are intentionally deferred to F077.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

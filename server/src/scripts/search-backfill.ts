@@ -11,6 +11,7 @@ import type { EntityIndexer } from '../lib/search/types';
 const require = createRequire(import.meta.url);
 const knexfilePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../knexfile.cjs');
 const knexConfig = require(knexfilePath);
+const BACKFILL_BATCH_SIZE = 500;
 
 interface TenantRecord {
   tenant: string;
@@ -76,6 +77,34 @@ export function resolveBackfillIndexers(options: SearchBackfillOptions): EntityI
   return [indexer];
 }
 
+export async function loadBackfillBatches(
+  knex: Knex,
+  tenant: string,
+  indexer: EntityIndexer,
+): Promise<number> {
+  let cursor: string | null = null;
+  let total = 0;
+
+  while (true) {
+    const docs = await indexer.loadBatch(knex, tenant, cursor, BACKFILL_BATCH_SIZE);
+    if (docs.length === 0) {
+      break;
+    }
+
+    total += docs.length;
+    cursor = docs[docs.length - 1]?.objectId ?? cursor;
+    console.log(
+      `[tenant=${tenant}] [type=${indexer.objectType}] loaded batch size=${docs.length} total=${total}`,
+    );
+
+    if (docs.length < BACKFILL_BATCH_SIZE) {
+      break;
+    }
+  }
+
+  return total;
+}
+
 export async function runSearchBackfill(
   options: SearchBackfillOptions,
   existingKnex?: Knex,
@@ -90,7 +119,8 @@ export async function runSearchBackfill(
     console.log(`Search backfill selected ${indexers.length} indexer(s).`);
     for (const tenant of tenants) {
       for (const indexer of indexers) {
-        console.log(`[tenant=${tenant}] [type=${indexer.objectType}] backfill selection ready`);
+        const total = await loadBackfillBatches(knex, tenant, indexer);
+        console.log(`[tenant=${tenant}] [type=${indexer.objectType}] loaded ${total} source row(s)`);
       }
     }
   } finally {
