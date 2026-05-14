@@ -168,7 +168,7 @@
   { "id": "T149", "featureIds": ["F123"], "description": "Sidebar and results page contain zero hardcoded English strings (verified by grep guard test)", "implemented": true },
   { "id": "T150", "featureIds": ["F121", "F122"], "description": "Pseudo locale (`xx`) renders accented characters for every search UI string (no untranslated leaks)", "implemented": true },
 
-  { "id": "T151", "featureIds": ["F124"], "description": "Env reference doc lists `SEARCH_INDEX_LIVE` with default and effect described", "implemented": false },
+  { "id": "T151", "featureIds": ["F124"], "description": "Env reference doc lists `SEARCH_INDEX_LIVE` with default and effect described", "implemented": true },
   { "id": "T152", "featureIds": ["F125"], "description": "Deploy runbook walks through migrate → deploy → backfill → flip env → enable UI", "implemented": false },
   { "id": "T153", "featureIds": ["F126"], "description": "Each search action call increments `search.query.count` and records `search.query.latency_ms`", "implemented": false },
   { "id": "T154", "featureIds": ["F126"], "description": "Queries returning zero results increment `search.query.empty`", "implemented": false },
