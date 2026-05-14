@@ -699,7 +699,7 @@
     "pageTitle": "Editar Ativo"
   },
   "associatedAssets": {
-    "title": "Associated Assets",
+    "title": "Ativos",
     "description": "Parent and child asset relationship management with linked asset actions",
     "loading": {
       "assets": "Loading assets..."

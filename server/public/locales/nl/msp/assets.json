@@ -699,7 +699,7 @@
     "pageTitle": "Item bewerken"
   },
   "associatedAssets": {
-    "title": "Bijbehorende activa",
+    "title": "Activa",
     "description": "Relatiebeheer van bovenliggende en onderliggende activa met gekoppelde activaacties",
     "loading": {
       "assets": "Activa laden..."
