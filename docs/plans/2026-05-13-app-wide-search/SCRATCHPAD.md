@@ -1500,6 +1500,8 @@ npm run search:backfill
 
 - **2026-05-13 — T191 SearchPalette accessibility contract.** No axe harness is installed, so added static accessibility coverage for the serious/critical surfaces: combobox ARIA state, listbox linkage, translated labels, decorative icon hiding, native anchors, and no forced focus removal. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T192 results-page accessibility contract.** Added static accessibility coverage for `/msp/search`: named region, labeled filter/sort/loading/pagination regions, hidden decorative icons, native anchors, and no fake button roles. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

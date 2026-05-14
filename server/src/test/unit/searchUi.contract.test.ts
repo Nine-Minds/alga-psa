@@ -337,4 +337,21 @@ describe('app-wide search UI contracts', () => {
     expect(source).toContain('href={seeAllUrl}');
     expect(source).not.toContain('tabIndex={-1}');
   });
+
+  it('T192 /msp/search has no obvious serious/critical axe violations by static contract', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/app/msp/search/SearchPageClient.tsx'), 'utf8');
+
+    expect(source).toContain('role="region"');
+    expect(source).toContain("aria-label={t('search.resultsRegionLabel')}");
+    expect(source).toContain('aria-hidden="true"');
+    expect(source).toContain('id="app-search-page-input"');
+    expect(source).toContain("aria-label={t('search.filtersLabel')}");
+    expect(source).toContain("aria-label={t('search.sortLabel')}");
+    expect(source).toContain("aria-label={t('search.loading')}");
+    expect(source).toContain("aria-label={t('search.paginationLabel')}");
+    expect(source).toContain('href={row.url}');
+    expect(source).toContain('href={buildFilterUrl(type)}');
+    expect(source).toContain('href={buildSortUrl(sort)}');
+    expect(source).not.toContain('role="button"');
+  });
 });

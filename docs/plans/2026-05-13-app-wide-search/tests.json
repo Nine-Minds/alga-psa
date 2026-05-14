@@ -217,7 +217,7 @@
   { "id": "T190", "featureIds": ["F072"], "description": "Removing a user from a document share-list triggers the document row's `visible_to_user_ids` to update within 10 minutes", "implemented": true },
 
   { "id": "T191", "featureIds": ["F104", "F118"], "description": "Axe-core accessibility scan on SearchPalette reports zero serious/critical violations", "implemented": true },
-  { "id": "T192", "featureIds": ["F109", "F118"], "description": "Axe-core scan on /msp/search reports zero serious/critical violations", "implemented": false },
+  { "id": "T192", "featureIds": ["F109", "F118"], "description": "Axe-core scan on /msp/search reports zero serious/critical violations", "implemented": true },
 
   { "id": "T193", "featureIds": ["F126"], "description": "search.query.latency_ms histogram has p95 < 500ms on a seeded medium tenant", "implemented": false },
   { "id": "T194", "featureIds": ["F099"], "description": "search.acl_drift counter is zero across the entire integration test suite (no SQL/record-level mismatch)", "implemented": false },
