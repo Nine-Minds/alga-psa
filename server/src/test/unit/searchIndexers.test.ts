@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { assetIndexer } from '../../lib/search/indexers/asset';
 import { clientIndexer } from '../../lib/search/indexers/client';
 import { contactIndexer } from '../../lib/search/indexers/contact';
 import { projectPhaseIndexer } from '../../lib/search/indexers/project_phase';
@@ -410,5 +411,34 @@ describe('search entity indexers', () => {
     );
 
     expect(doc?.body).toBe('Flattened BlockNote text');
+  });
+
+  it('T038 asset indexer body includes flattened attributes but excludes secret-like keys', async () => {
+    const { knex } = createFirstRowKnex({
+      asset_id: 'asset-1',
+      name: 'Firewall',
+      asset_tag: 'FW-001',
+      serial_number: 'SN-001',
+      location: 'Server room',
+      attributes: {
+        model: 'Fortigate 60F',
+        management: {
+          ip: '10.0.0.1',
+          password: 'do-not-index-password',
+        },
+      },
+      client_id: 'client-1',
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await assetIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'asset-1',
+    );
+
+    expect(doc?.body).toBe('Server room | Fortigate 60F 10.0.0.1');
+    expect(doc?.body).not.toContain('password');
+    expect(doc?.body).not.toContain('do-not-index');
   });
 });
