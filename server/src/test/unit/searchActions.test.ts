@@ -170,6 +170,42 @@ describe('search actions', () => {
     )).rejects.toBeInstanceOf(SearchRateLimitError);
   });
 
+  it('T156 rate limits full search after 10 calls per second for one user', async () => {
+    const knex = { tenant: 'knex' };
+    const acl = {
+      userId: 'user-full-rate-limit',
+      tenant: 'tenant-full-rate-limit',
+      permissions: ['client:read'],
+      isInternal: true,
+      accessibleClientIds: ['client-1'],
+    };
+    const user = {
+      user_id: 'user-full-rate-limit',
+      tenant: 'tenant-full-rate-limit',
+      user_type: 'client',
+      clientId: 'client-1',
+    };
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-full-rate-limit' });
+    mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
+    mocks.runSearchQuery.mockResolvedValue([]);
+    mocks.verifyResultVisibility.mockResolvedValue([]);
+
+    for (let index = 0; index < 10; index += 1) {
+      await expect(searchAppAction(
+        user,
+        { tenant: 'tenant-full-rate-limit' },
+        { query: `acme ${index}`, limit: 10 },
+      )).resolves.toMatchObject({ totalCount: 0 });
+    }
+
+    await expect(searchAppAction(
+      user,
+      { tenant: 'tenant-full-rate-limit' },
+      { query: 'acme overflow', limit: 10 },
+    )).rejects.toBeInstanceOf(SearchRateLimitError);
+  });
+
   it('T106 resolves the user permission set exactly once per full search action call', async () => {
     const knex = { tenant: 'knex' };
     const acl = {

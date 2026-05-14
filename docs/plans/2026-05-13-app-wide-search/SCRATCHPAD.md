@@ -1428,6 +1428,8 @@ npm run search:backfill
 
 - **2026-05-13 — T155 typeahead rate limit.** Added behavioral coverage using the real in-memory limiter: 30 typeahead calls for the same tenant/user resolve, and the 31st rejects with `SearchRateLimitError` (429-equivalent). Validation: `cd server && npx vitest run src/test/unit/searchActions.test.ts --coverage=false`.
 
+- **2026-05-13 — T156 full-search rate limit.** Added behavioral coverage using the real in-memory limiter: 10 full-search calls for the same tenant/user resolve, and the 11th rejects with `SearchRateLimitError` (429-equivalent). Validation: `cd server && npx vitest run src/test/unit/searchActions.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
