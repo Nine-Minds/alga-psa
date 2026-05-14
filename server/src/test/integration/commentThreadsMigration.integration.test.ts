@@ -2,8 +2,10 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
-const commentBackfillMigration = require('../../../migrations/20260513102000_backfill_comment_threads_for_comments.cjs');
-const taskCommentBackfillMigration = require('../../../migrations/20260513102500_backfill_comment_threads_for_project_task_comments.cjs');
+const backfillMigration = require('../../../migrations/20260513100500_backfill_comment_threads.cjs');
+// One consolidated backfill now handles both ticket and project-task comments.
+const commentBackfillMigration = backfillMigration;
+const taskCommentBackfillMigration = backfillMigration;
 
 describe('comment_threads migrations', () => {
   let knex: Knex;
