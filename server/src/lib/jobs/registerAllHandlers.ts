@@ -62,6 +62,11 @@ import {
   searchVisibleUserReindexHandler,
   SearchVisibleUserReindexJobData,
 } from './handlers/searchVisibleUserReindexHandler';
+import {
+  SEARCH_RECONCILE_JOB_NAME,
+  searchReconcileHandler,
+  SearchReconcileJobData,
+} from './handlers/searchReconcileHandler';
 
 /**
  * Options for registering handlers
@@ -235,6 +240,18 @@ export async function registerAllJobHandlers(
       },
       retry: { maxAttempts: 3 },
       timeoutMs: 300000,
+    },
+    registerOpts
+  );
+
+  JobHandlerRegistry.register<SearchReconcileJobData & BaseJobData>(
+    {
+      name: SEARCH_RECONCILE_JOB_NAME,
+      handler: async (_jobId, data) => {
+        await searchReconcileHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 600000,
     },
     registerOpts
   );
@@ -434,6 +451,7 @@ export function getAvailableJobHandlers(): string[] {
     'asset_import',
     // Usage & Reconciliation
     SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
+    SEARCH_RECONCILE_JOB_NAME,
     'reconcile-bucket-usage',
     'process-renewal-queue',
     // Cleanup

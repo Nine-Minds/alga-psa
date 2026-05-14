@@ -33,6 +33,11 @@ import {
   searchVisibleUserReindexHandler,
   SearchVisibleUserReindexJobData,
 } from './handlers/searchVisibleUserReindexHandler';
+import {
+  SEARCH_RECONCILE_JOB_NAME,
+  searchReconcileHandler,
+  SearchReconcileJobData,
+} from './handlers/searchReconcileHandler';
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
 import { StorageService } from '../../lib/storage/StorageService';
@@ -212,6 +217,13 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       }
     );
 
+    jobScheduler.registerJobHandler<SearchReconcileJobData>(
+      SEARCH_RECONCILE_JOB_NAME,
+      async (job: Job<SearchReconcileJobData>) => {
+        await searchReconcileHandler(job.data);
+      }
+    );
+
     // Note: Password reset token cleanup is handled automatically during token operations
     // No pg-boss job needed
 
@@ -237,7 +249,8 @@ export type {
   RenewalQueueProcessorJobData,
   SlaTimerJobData,
   WorkflowQuotaResumeScanJobData,
-  SearchVisibleUserReindexJobData
+  SearchVisibleUserReindexJobData,
+  SearchReconcileJobData
 };
 // Export job scheduling helper functions
 export const scheduleInvoiceGeneration = async (

@@ -448,6 +448,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - This matches the deployment runbook command and supports passthrough args such as `npm run search:backfill -- --tenant=<uuid> --type=client`.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F079 — Search reconciliation job registration.**
+  - Added `server/src/lib/jobs/handlers/searchReconcileHandler.ts` with job name `search:reconcile` and registered it in both `registerAllJobHandlers()` and the legacy scheduler initialization.
+  - The handler is a shell in this commit; F080-F082 add watermark re-indexing, missing-row inserts, and stale-index deletion.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
