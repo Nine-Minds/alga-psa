@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   createTenantKnex: vi.fn(),
   launchPublishedWorkflowRun: vi.fn(),
+  isEnterprise: true,
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -13,11 +14,18 @@ vi.mock('@alga-psa/workflows/lib/workflowRunLauncher', () => ({
   launchPublishedWorkflowRun: mocks.launchPublishedWorkflowRun,
 }));
 
+vi.mock('@alga-psa/core/features', () => ({
+  get isEnterprise() {
+    return mocks.isEnterprise;
+  },
+}));
+
 describe('inbound webhook workflow dispatcher', () => {
   const knex = { name: 'tenant-knex' };
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.isEnterprise = true;
     mocks.createTenantKnex.mockResolvedValue({ knex });
     mocks.launchPublishedWorkflowRun.mockResolvedValue({
       runId: 'workflow-run-1',
@@ -81,6 +89,7 @@ describe('inbound webhook workflow dispatcher', () => {
       },
       triggerFireKey: 'inbound-webhook:delivery-1',
       eventType: 'INBOUND_WEBHOOK_RECEIVED',
+      sourcePayloadSchemaRef: 'payload.InboundWebhookReceived.v1',
       execute: true,
       executionKey: 'inbound-webhook:delivery-1',
     });
@@ -224,5 +233,31 @@ describe('inbound webhook workflow dispatcher', () => {
         executionKey: 'inbound-webhook:delivery-3',
       }),
     );
+  });
+
+  it('rejects workflow handlers outside Enterprise edition', async () => {
+    mocks.isEnterprise = false;
+
+    const { dispatchInboundWebhookHandler } = await import('@/lib/inboundWebhooks/dispatcher');
+
+    await expect(
+      dispatchInboundWebhookHandler({
+        webhook: {
+          tenant: 'tenant-a',
+          slug: 'triage-alerts',
+          handler_type: 'workflow',
+          handler_config: {
+            type: 'workflow',
+            workflow_id: 'workflow-3',
+          },
+        },
+        deliveryId: 'delivery-3',
+        idempotencyKey: 'alert-99',
+        body: { alert: { id: 'alert-99' } },
+        headers: {},
+      }),
+    ).rejects.toThrow('Inbound webhook workflow handlers require Enterprise edition');
+    expect(mocks.createTenantKnex).not.toHaveBeenCalled();
+    expect(mocks.launchPublishedWorkflowRun).not.toHaveBeenCalled();
   });
 });

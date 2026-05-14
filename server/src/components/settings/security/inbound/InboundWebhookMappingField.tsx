@@ -1,10 +1,9 @@
 'use client';
 
-import { useMemo } from 'react';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { buildWebhookPayloadExpressionPathOptions } from '@shared/workflow/expression-authoring/adapters/webhookPayloadContextAdapter';
-import { ExpressionTextArea } from '../../../../../../ee/server/src/components/workflow-designer/mapping/ExpressionTextArea';
 
 export interface InboundWebhookMappingFieldProps {
   id: string;
@@ -38,23 +37,22 @@ export function InboundWebhookMappingField({
   disabled = false,
   onFocus,
 }: InboundWebhookMappingFieldProps) {
-  const { t } = useTranslation('msp/settings');
-  const fieldOptions = useMemo<SelectOption[]>(
-    () => buildInboundWebhookMappingFieldOptions(samplePayload),
-    [samplePayload],
-  );
+  const { t } = useTranslation('msp/profile');
+  const fieldOptions = buildInboundWebhookMappingFieldOptions(samplePayload);
 
   return (
-    <ExpressionTextArea
+    <TextArea
       id={id}
       value={value}
-      onChange={onChange}
-      fieldOptions={fieldOptions}
+      onChange={(event) => onChange(event.target.value)}
       rows={rows}
-      placeholder={placeholder ?? t('webhooks.inbound.mappingPlaceholder')}
-      className={className}
+      placeholder={placeholder ?? t('security.webhooks.inbound.handler.mappingPlaceholder')}
+      className={`font-mono text-sm ${className ?? ''}`}
       disabled={disabled}
       onFocus={onFocus}
+      autoComplete="off"
+      spellCheck={false}
+      data-field-option-count={fieldOptions.length}
     />
   );
 }

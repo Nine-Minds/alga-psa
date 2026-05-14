@@ -7,6 +7,9 @@ const deleteTenantSecret = vi.fn();
 const createInboundDelivery = vi.fn();
 const updateInboundDeliveryOutcome = vi.fn();
 const dispatchInboundWebhookHandler = vi.fn();
+const featureMocks = vi.hoisted(() => ({
+  isEnterprise: true,
+}));
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: unknown[]) => createTenantKnex(...args),
@@ -37,6 +40,12 @@ vi.mock('@/lib/inboundWebhooks/deliveryPersistence', () => ({
 
 vi.mock('@/lib/inboundWebhooks/dispatcher', () => ({
   dispatchInboundWebhookHandler: (...args: unknown[]) => dispatchInboundWebhookHandler(...args),
+}));
+
+vi.mock('@alga-psa/core/features', () => ({
+  get isEnterprise() {
+    return featureMocks.isEnterprise;
+  },
 }));
 
 interface InboundWebhookRowFixture {
@@ -520,6 +529,7 @@ function makeUpdateWebhookKnex(row: InboundWebhookRowFixture) {
 describe('inbound webhook server actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    featureMocks.isEnterprise = true;
     hasPermission.mockResolvedValue(true);
   });
 
@@ -542,6 +552,23 @@ describe('inbound webhook server actions', () => {
       inboundWebhookId: 'webhook-a',
       slug: 'tenant-a-hook',
     });
+  });
+
+  it('returns no workflow consumer options outside Enterprise edition', async () => {
+    featureMocks.isEnterprise = false;
+    const knex = {};
+    createTenantKnex.mockResolvedValue({ knex });
+
+    const { listInboundWorkflowOptions } = await import('@/lib/actions/inboundWebhookActions');
+    const result = await listInboundWorkflowOptions();
+
+    expect(hasPermission).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: 'user-1' }),
+      'inbound_webhook',
+      'read',
+      knex,
+    );
+    expect(result).toEqual([]);
   });
 
   it('T021: upsertInboundWebhook rejects duplicate slug in the same tenant', async () => {
@@ -580,6 +607,29 @@ describe('inbound webhook server actions', () => {
       tenant: 'tenant-a',
       slug: 'rmm-alerts',
     });
+  });
+
+  it('rejects workflow consumers outside Enterprise edition', async () => {
+    featureMocks.isEnterprise = false;
+    const knex = {};
+    createTenantKnex.mockResolvedValue({ knex });
+
+    const { upsertInboundWebhook } = await import('@/lib/actions/inboundWebhookActions');
+    await expect(upsertInboundWebhook(validUpsertInput({
+      handler_type: 'workflow',
+      handler_config: {
+        type: 'workflow',
+        workflow_id: '11111111-1111-4111-8111-111111111111',
+      },
+    }))).rejects.toThrow('Inbound webhook workflow handlers require Enterprise edition');
+
+    expect(hasPermission).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: 'user-1' }),
+      'inbound_webhook',
+      'create',
+      knex,
+    );
+    expect(setTenantSecret).not.toHaveBeenCalled();
   });
 
   it('T023: upsertInboundWebhook writes secrets to the vault and stores only vault metadata', async () => {

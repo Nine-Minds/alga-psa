@@ -222,7 +222,12 @@
           "inactive": "11111"
         },
         "messages": {
-          "loadFailed": "11111"
+          "loadFailed": "11111",
+          "nameRequired": "11111",
+          "slugRequired": "11111",
+          "actionRequired": "11111",
+          "workflowRequired": "11111",
+          "missingRequiredFields": "11111"
         },
         "dialog": {
           "createTitle": "11111",
@@ -314,7 +319,16 @@
           "workflow": "11111",
           "workflowPlaceholder": "11111",
           "workflowEmpty": "11111",
-          "envelopeTitle": "11111"
+          "envelopeTitle": "11111",
+          "fieldTypes": {
+            "string": "11111",
+            "int": "11111",
+            "number": "11111",
+            "boolean": "11111",
+            "enum": "11111",
+            "json": "11111",
+            "ref": "11111"
+          }
         },
         "sample": {
           "title": "11111",
@@ -331,6 +345,18 @@
           "help": "11111",
           "focusHelp": "11111",
           "empty": "11111"
+        },
+        "mapping": {
+          "modeStatic": "11111",
+          "modeExpression": "11111",
+          "unknownReference": "11111",
+          "loading": "11111",
+          "errors": {
+            "INVALID_INT": "11111",
+            "INVALID_NUMBER": "11111",
+            "INVALID_BOOLEAN": "11111",
+            "INVALID_JSON": "11111"
+          }
         },
         "deliveryLog": {
           "title": "11111",

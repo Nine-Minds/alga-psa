@@ -7,6 +7,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import Drawer from '@alga-psa/ui/components/Drawer';
@@ -28,6 +29,7 @@ import type { ColumnDefinition } from '@alga-psa/types';
 import { buildTenantPortalSlug } from '@alga-psa/validation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { isEnterprise } from '@alga-psa/core/features';
 import { buildWebhookPayloadExpressionPathOptions } from '@shared/workflow/expression-authoring/adapters/webhookPayloadContextAdapter';
 import {
   deleteWebhook,
@@ -65,6 +67,10 @@ import type {
   InboundWebhookDispatchStatus,
 } from '@/lib/inboundWebhooks/types';
 import { InboundWebhookMappingField } from './inbound/InboundWebhookMappingField';
+import { InboundWebhookMappingFieldRow } from './inbound/InboundWebhookMappingFieldRow';
+import { parseFieldMappingValue } from '@/lib/inboundWebhooks/fieldMappingMode';
+
+const inboundWebhookWorkflowHandlersEnabled = isEnterprise;
 
 // Entities live in a static registry; this turns the readonly field arrays
 // into mutable string[] for the UI render layer.
@@ -297,6 +303,19 @@ function getDeliveryBadgeClasses(status: string): string {
   return 'bg-gray-100 text-gray-800';
 }
 
+function getInboundDeliveryStatusBadgeVariant(status: InboundWebhookDispatchStatus): BadgeVariant {
+  if (status === 'dispatched') {
+    return 'success';
+  }
+  if (status === 'failed') {
+    return 'error';
+  }
+  if (status === 'pending') {
+    return 'warning';
+  }
+  return 'info';
+}
+
 export default function AdminWebhooksSetup() {
   const { t } = useTranslation('msp/profile');
   const { enabled: inboundWebhooksEnabled } = useFeatureFlag('inbound_webhooks_enabled', { defaultValue: false });
@@ -397,7 +416,10 @@ function buildInboundWebhookUpsertPayload(form: InboundWebhookIdentityFormState)
     : {
         type: 'direct_action',
         action: form.directActionName,
-        field_mapping: form.fieldMapping,
+        // Drop empty entries so optional fields don't trip the server's min(1) value check.
+        field_mapping: Object.fromEntries(
+          Object.entries(form.fieldMapping).filter(([, value]) => typeof value === 'string' && value.trim() !== ''),
+        ),
       };
 
   return {
@@ -418,6 +440,74 @@ function buildInboundWebhookUpsertPayload(form: InboundWebhookIdentityFormState)
     handler_config: handlerConfig,
     is_active: form.isActive,
   };
+}
+
+function validateInboundWebhookForm(
+  form: InboundWebhookIdentityFormState,
+  selectedAction: InboundActionDefinitionView | null,
+  t: ReturnType<typeof useTranslation>['t'],
+): string | null {
+  if (!form.name.trim()) {
+    return t('security.webhooks.inbound.messages.nameRequired');
+  }
+  if (!form.slug.trim()) {
+    return t('security.webhooks.inbound.messages.slugRequired');
+  }
+  if (form.handlerType === 'workflow') {
+    if (!form.workflowId.trim()) {
+      return t('security.webhooks.inbound.messages.workflowRequired');
+    }
+    return null;
+  }
+  if (form.handlerType === 'direct_action') {
+    if (!form.directActionName.trim()) {
+      return t('security.webhooks.inbound.messages.actionRequired');
+    }
+    if (selectedAction) {
+      const missingRequired = selectedAction.targetFields
+        .filter((field) => field.required)
+        .filter((field) => {
+          const raw = form.fieldMapping[field.name];
+          return !raw || (typeof raw === 'string' && raw.trim() === '');
+        });
+      if (missingRequired.length > 0) {
+        return t('security.webhooks.inbound.messages.missingRequiredFields', {
+          fields: missingRequired.map((field) => field.name).join(', '),
+        });
+      }
+    }
+  }
+  return null;
+}
+
+function formatInboundUpsertError(
+  error: unknown,
+  t: ReturnType<typeof useTranslation>['t'],
+): string {
+  if (error instanceof Error) {
+    const message = error.message;
+    // Server actions surface Zod validation as a JSON array string.
+    if (message.trim().startsWith('[')) {
+      try {
+        const issues = JSON.parse(message) as Array<{ path?: unknown[]; message?: string }>;
+        if (Array.isArray(issues) && issues.length > 0) {
+          return issues
+            .map((issue) => {
+              const path = Array.isArray(issue.path) && issue.path.length > 0
+                ? issue.path.join('.')
+                : '';
+              return path ? `${path}: ${issue.message}` : issue.message ?? '';
+            })
+            .filter(Boolean)
+            .join('\n');
+        }
+      } catch {
+        // fall through to raw message
+      }
+    }
+    return message;
+  }
+  return t('security.webhooks.messages.saveFailed');
 }
 
 function formatInboundHandlerLabel(
@@ -485,6 +575,7 @@ function InboundWebhooksListView() {
   const [viewWebhookId, setViewWebhookId] = useState<string | null>(null);
   const [replayConfirmDeliveryId, setReplayConfirmDeliveryId] = useState<string | null>(null);
   const [isReplayInFlight, setIsReplayInFlight] = useState(false);
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const neverLabel = t('security.webhooks.common.never');
 
   const loadInboundWebhooks = useCallback(async () => {
@@ -493,7 +584,7 @@ function InboundWebhooksListView() {
       const [configs, actionDefinitions, workflows] = await Promise.all([
         listInboundWebhooks(),
         listInboundWebhookActions(),
-        listInboundWorkflowOptions(),
+        inboundWebhookWorkflowHandlersEnabled ? listInboundWorkflowOptions() : Promise.resolve([]),
       ]);
       setWebhooks(configs);
       setInboundActions(actionDefinitions);
@@ -689,6 +780,7 @@ function InboundWebhooksListView() {
                   isActive: webhook.isActive,
                   autoDisabledAt: webhook.autoDisabledAt,
                 });
+                setSlugManuallyEdited(true);
                 setIdentityDialogOpen(true);
               }}
             >
@@ -706,6 +798,7 @@ function InboundWebhooksListView() {
   }, []);
 
   const handleNewInboundWebhook = useCallback(() => {
+    setSlugManuallyEdited(false);
     setIdentityForm({
       name: '',
       slug: '',
@@ -743,10 +836,17 @@ function InboundWebhooksListView() {
     { value: 'jsonata', label: t('security.webhooks.inbound.idempotency.types.jsonata') },
   ], [t]);
 
-  const handlerTypeOptions = useMemo(() => [
-    { value: 'direct_action', label: t('security.webhooks.inbound.handler.types.directAction') },
-    { value: 'workflow', label: t('security.webhooks.inbound.handler.types.workflow') },
-  ], [t]);
+  const handlerTypeOptions = useMemo(() => {
+    const options = [
+      { value: 'direct_action', label: t('security.webhooks.inbound.handler.types.directAction') },
+    ];
+
+    if (inboundWebhookWorkflowHandlersEnabled) {
+      options.push({ value: 'workflow', label: t('security.webhooks.inbound.handler.types.workflow') });
+    }
+
+    return options;
+  }, [t]);
 
   const inboundActionOptions = useMemo(() => inboundActions.map((action) => ({
     value: action.name,
@@ -764,6 +864,19 @@ function InboundWebhooksListView() {
     [identityForm.directActionName, inboundActions],
   );
 
+  const resolveStaticFieldValue = useCallback(
+    (fieldName: string): string | undefined => {
+      const field = selectedInboundAction?.targetFields.find((entry) => entry.name === fieldName);
+      const raw = identityForm.fieldMapping[fieldName];
+      if (!raw || !field) {
+        return undefined;
+      }
+      const parsed = parseFieldMappingValue(raw, field.type);
+      return parsed.mode === 'static' && parsed.staticValue ? parsed.staticValue : undefined;
+    },
+    [identityForm.fieldMapping, selectedInboundAction],
+  );
+
   const inboundDeliveryColumns = useMemo<ColumnDefinition<InboundWebhookDelivery>[]>(() => [
     {
       title: t('security.webhooks.inbound.deliveryLog.columns.received'),
@@ -774,9 +887,12 @@ function InboundWebhooksListView() {
       title: t('security.webhooks.inbound.deliveryLog.columns.status'),
       dataIndex: 'dispatchStatus',
       render: (value) => (
-        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+        <Badge
+          variant={getInboundDeliveryStatusBadgeVariant(value as InboundWebhookDispatchStatus)}
+          size="sm"
+        >
           {t(`security.webhooks.inbound.deliveryLog.status.${value as string}`, { defaultValue: value as string })}
-        </span>
+        </Badge>
       ),
     },
     {
@@ -950,6 +1066,12 @@ function InboundWebhooksListView() {
   }, [identityForm.inboundWebhookId, inboundDeliveryPageNumber, inboundDeliveryStatusFilter, loadInboundDialogDeliveries, t, testBodyText, testHeadersText]);
 
   const handleSaveInboundWebhook = useCallback(async () => {
+    // Pre-submit validation surfaces friendly errors instead of raw Zod issue arrays.
+    const validationError = validateInboundWebhookForm(identityForm, selectedInboundAction, t);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     try {
       const result = await upsertInboundWebhook(buildInboundWebhookUpsertPayload(identityForm));
       setIdentityForm((current) => ({
@@ -978,9 +1100,9 @@ function InboundWebhooksListView() {
       setError(null);
     } catch (saveError) {
       console.error('Failed to save inbound webhook:', saveError);
-      setError(saveError instanceof Error ? saveError.message : t('security.webhooks.messages.saveFailed'));
+      setError(formatInboundUpsertError(saveError, t));
     }
-  }, [identityForm, t]);
+  }, [identityForm, selectedInboundAction, t]);
 
   const handleRotateInboundSecret = useCallback(async () => {
     if (!identityForm.inboundWebhookId || identityForm.authType === 'ip_allowlist') {
@@ -1223,7 +1345,7 @@ function InboundWebhooksListView() {
                 setIdentityForm((current) => ({
                   ...current,
                   name: nextName,
-                  slug: current.slug ? current.slug : slugifyInboundWebhookName(nextName),
+                  slug: slugManuallyEdited ? current.slug : slugifyInboundWebhookName(nextName),
                 }));
               }}
             />
@@ -1234,6 +1356,7 @@ function InboundWebhooksListView() {
               required
               placeholder={t('security.webhooks.inbound.identity.slugPlaceholder')}
               onChange={(event) => {
+                setSlugManuallyEdited(true);
                 setIdentityForm((current) => ({
                   ...current,
                   slug: slugifyInboundWebhookName(event.target.value),
@@ -1451,6 +1574,9 @@ function InboundWebhooksListView() {
               value={identityForm.handlerType}
               onValueChange={(value) => {
                 const nextType = value as InboundWebhookConfig['handlerType'];
+                if (nextType === 'workflow' && !inboundWebhookWorkflowHandlersEnabled) {
+                  return;
+                }
                 setIdentityForm((current) => {
                   if (current.handlerType === nextType) {
                     return current;
@@ -1505,7 +1631,7 @@ function InboundWebhooksListView() {
                 </Button>
               </div>
             </div>
-            {identityForm.handlerType === 'direct_action' ? (
+            {identityForm.handlerType === 'direct_action' || !inboundWebhookWorkflowHandlersEnabled ? (
               <div className="rounded-md border border-gray-200 bg-gray-50 p-4">
                 <h4 className="text-sm font-medium text-gray-900">
                   {t('security.webhooks.inbound.handler.directActionTitle')}
@@ -1548,31 +1674,52 @@ function InboundWebhooksListView() {
                           {selectedInboundAction.description}
                         </p>
                       </div>
-                      {selectedInboundAction.targetFields.map((field) => (
-                        <div key={field.name} className="rounded-md border border-gray-200 bg-white p-3">
+                      {selectedInboundAction.targetFields.map((field) => {
+                        const isMissingRequired =
+                          field.required && !(identityForm.fieldMapping[field.name] ?? '').trim();
+                        return (
+                        <div
+                          key={field.name}
+                          className={`rounded-md border bg-white p-3 ${
+                            isMissingRequired ? 'border-red-300' : 'border-gray-200'
+                          }`}
+                        >
                           <div className="mb-2 flex flex-wrap items-center gap-2">
                             <label
                               htmlFor={`inbound-webhook-mapping-${field.name}`}
                               className="text-sm font-medium text-gray-900"
                             >
                               {field.name}
+                              {field.required ? (
+                                <span aria-hidden="true" className="ml-1 text-red-600">*</span>
+                              ) : null}
                             </label>
                             <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-                              {field.type}
+                              {t(`security.webhooks.inbound.handler.fieldTypes.${field.type}`, {
+                                defaultValue: field.type,
+                              })}
                             </span>
-                            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-xs ${
+                                field.required ? 'bg-red-50 text-red-700' : 'bg-gray-100 text-gray-600'
+                              }`}
+                            >
                               {field.required
                                 ? t('security.webhooks.inbound.handler.required')
                                 : t('security.webhooks.inbound.handler.optional')}
                             </span>
                           </div>
                           <p className="mb-2 text-xs text-gray-500">{field.description}</p>
-                          <InboundWebhookMappingField
-                            id={`inbound-webhook-mapping-${field.name}`}
+                          <InboundWebhookMappingFieldRow
+                            field={field}
                             value={identityForm.fieldMapping[field.name] ?? ''}
                             samplePayload={identityForm.samplePayload}
-                            placeholder={t('security.webhooks.inbound.handler.mappingPlaceholder')}
-                            onFocus={() => setFocusedMappingField(field.name)}
+                            onFocusExpression={(fieldName) => setFocusedMappingField(fieldName)}
+                            scope={{
+                              board_id: resolveStaticFieldValue('board_id'),
+                              client_id: resolveStaticFieldValue('client_id'),
+                              parent_category_id: resolveStaticFieldValue('category_id'),
+                            }}
                             onChange={(value) => {
                               setIdentityForm((current) => ({
                                 ...current,
@@ -1584,7 +1731,8 @@ function InboundWebhooksListView() {
                             }}
                           />
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                     <div className="rounded-md border border-gray-200 bg-white p-3">
                       <h5 className="text-sm font-medium text-gray-900">
@@ -1783,7 +1931,16 @@ function InboundWebhooksListView() {
               </div>
               <div>
                 <dt className="text-xs font-medium text-gray-500">{t('security.webhooks.inbound.deliveryDetail.status')}</dt>
-                <dd className="text-sm text-gray-900">{selectedInboundDelivery.dispatchStatus}</dd>
+                <dd className="mt-1">
+                  <Badge
+                    variant={getInboundDeliveryStatusBadgeVariant(selectedInboundDelivery.dispatchStatus)}
+                    size="sm"
+                  >
+                    {t(`security.webhooks.inbound.deliveryLog.status.${selectedInboundDelivery.dispatchStatus}`, {
+                      defaultValue: selectedInboundDelivery.dispatchStatus,
+                    })}
+                  </Badge>
+                </dd>
               </div>
               <div>
                 <dt className="text-xs font-medium text-gray-500">{t('security.webhooks.inbound.deliveryDetail.responseStatus')}</dt>

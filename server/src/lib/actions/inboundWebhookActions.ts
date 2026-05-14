@@ -25,6 +25,10 @@ import { bootstrapInboundWebhookActions } from '@/lib/inboundWebhooks/actions/bo
 import { listActions, type InboundActionTargetField } from '@/lib/inboundWebhooks/actions/registry';
 import { createInboundDelivery, updateInboundDeliveryOutcome } from '@/lib/inboundWebhooks/deliveryPersistence';
 import { dispatchInboundWebhookHandler, InboundWebhookActionError } from '@/lib/inboundWebhooks/dispatcher';
+import {
+  assertInboundWebhookWorkflowHandlersAvailable,
+  canUseInboundWebhookWorkflowHandlers,
+} from '@/lib/inboundWebhooks/editionGate';
 
 interface InboundWebhookRow {
   tenant: string;
@@ -445,6 +449,10 @@ export const listInboundWorkflowOptions = withAuth(async (user, { tenant }): Pro
   const { knex } = await createTenantKnex(tenant);
   await assertInboundWebhookPermission(user, 'read', knex);
 
+  if (!canUseInboundWebhookWorkflowHandlers()) {
+    return [];
+  }
+
   const publishedVersions = knex('workflow_definition_versions')
     .select('workflow_id')
     .max('version as published_version')
@@ -507,6 +515,9 @@ export const upsertInboundWebhook = withAuth(
     const { knex } = await createTenantKnex(tenant);
     const action = parsed.inbound_webhook_id ? 'update' : 'create';
     await assertInboundWebhookPermission(user, action, knex);
+    if (parsed.handler_type === 'workflow' || parsed.handler_config.type === 'workflow') {
+      assertInboundWebhookWorkflowHandlersAvailable();
+    }
 
     const existing = parsed.inbound_webhook_id
       ? await knex<InboundWebhookRow>('inbound_webhooks')

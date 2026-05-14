@@ -4,6 +4,7 @@ import {
   emailProviderDisconnectedEventPayloadSchema,
   inboundEmailReceivedEventPayloadSchema,
 } from './emailWorkflowSchemas';
+import { inboundWebhookReceivedEventPayloadSchema } from './inboundWebhookSchemas';
 import {
   appointmentRequestApprovedEventPayloadSchema,
   appointmentRequestCancelledEventPayloadSchema,
@@ -177,6 +178,7 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   'payload.InvoiceGenerated.v1': invoiceGeneratedEventPayloadSchema,
   'payload.InvoiceFinalized.v1': invoiceFinalizedEventPayloadSchema,
   'payload.InboundEmailReceived.v1': inboundEmailReceivedEventPayloadSchema,
+  'payload.InboundWebhookReceived.v1': inboundWebhookReceivedEventPayloadSchema,
   'payload.EmailProviderConnected.v1': emailProviderConnectedEventPayloadSchema,
   'payload.EmailProviderDisconnected.v1': emailProviderDisconnectedEventPayloadSchema,
 

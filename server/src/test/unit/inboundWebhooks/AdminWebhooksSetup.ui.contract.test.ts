@@ -137,10 +137,19 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain("value: 'direct_action'");
     expect(adminWebhooksSource).toContain("value: 'workflow'");
     expect(adminWebhooksSource).toContain("const nextType = value as InboundWebhookConfig['handlerType']");
+    expect(adminWebhooksSource).toContain('inboundWebhookWorkflowHandlersEnabled');
     expect(adminWebhooksSource).toContain('handlerType: nextType');
     expect(adminWebhooksSource).toContain("identityForm.handlerType === 'direct_action'");
     expect(adminWebhooksSource).toContain("t('security.webhooks.inbound.handler.directActionTitle')");
     expect(adminWebhooksSource).toContain("t('security.webhooks.inbound.handler.workflowTitle')");
+  });
+
+  it('gates workflow consumers to Enterprise edition using the shared feature flag', () => {
+    expect(adminWebhooksSource).toContain("import { isEnterprise } from '@alga-psa/core/features'");
+    expect(adminWebhooksSource).toContain('const inboundWebhookWorkflowHandlersEnabled = isEnterprise');
+    expect(adminWebhooksSource).toContain("nextType === 'workflow' && !inboundWebhookWorkflowHandlersEnabled");
+    expect(adminWebhooksSource).toContain('inboundWebhookWorkflowHandlersEnabled ? listInboundWorkflowOptions() : Promise.resolve([])');
+    expect(inboundWebhooksSource).not.toContain('ee/server');
   });
 
   it('T141: action dropdown lists registered inbound actions', () => {
@@ -157,10 +166,9 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
   it('T142: selected action renders target fields with expression mapping rows', () => {
     expect(adminWebhooksSource).toContain('const selectedInboundAction = useMemo');
     expect(adminWebhooksSource).toContain('inboundActions.find((action) => action.name === identityForm.directActionName)');
-    expect(adminWebhooksSource).toContain('selectedInboundAction.targetFields.map((field) => (');
+    expect(adminWebhooksSource).toContain('selectedInboundAction.targetFields.map((field) => {');
     expect(adminWebhooksSource).toContain('htmlFor={`inbound-webhook-mapping-${field.name}`}');
-    expect(adminWebhooksSource).toContain('id={`inbound-webhook-mapping-${field.name}`}');
-    expect(adminWebhooksSource).toContain('<InboundWebhookMappingField');
+    expect(adminWebhooksSource).toContain('<InboundWebhookMappingFieldRow');
     expect(adminWebhooksSource).toContain('samplePayload={identityForm.samplePayload}');
     expect(adminWebhooksSource).toContain('[field.name]: value');
   });
@@ -219,7 +227,7 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain('const handleInsertSamplePath = useCallback((path: string) => {');
     expect(adminWebhooksSource).toContain('if (!focusedMappingField) {');
     expect(adminWebhooksSource).toContain('[focusedMappingField]: path');
-    expect(adminWebhooksSource).toContain('onFocus={() => setFocusedMappingField(field.name)}');
+    expect(adminWebhooksSource).toContain('onFocusExpression={(fieldName) => setFocusedMappingField(fieldName)}');
     expect(adminWebhooksSource).toContain('disabled={!focusedMappingField}');
     expect(adminWebhooksSource).toContain('onClick={() => handleInsertSamplePath(option.path)}');
   });
@@ -253,6 +261,18 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
     expect(adminWebhooksSource).toContain('id="inbound-webhook-deliveries-table"');
     expect(adminWebhooksSource).toContain('pagination');
     expect(adminWebhooksSource).toContain('onPageChange={setInboundDeliveryPageNumber}');
+  });
+
+  it('renders inbound delivery dispatch statuses with badge variants', () => {
+    expect(adminWebhooksSource).toContain("import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge'");
+    expect(adminWebhooksSource).toContain('function getInboundDeliveryStatusBadgeVariant(status: InboundWebhookDispatchStatus): BadgeVariant');
+    expect(adminWebhooksSource).toContain("status === 'dispatched'");
+    expect(adminWebhooksSource).toContain("return 'success'");
+    expect(adminWebhooksSource).toContain("status === 'failed'");
+    expect(adminWebhooksSource).toContain("return 'error'");
+    expect(adminWebhooksSource).toContain('<Badge');
+    expect(adminWebhooksSource).toContain('variant={getInboundDeliveryStatusBadgeVariant(value as InboundWebhookDispatchStatus)}');
+    expect(adminWebhooksSource).toContain('variant={getInboundDeliveryStatusBadgeVariant(selectedInboundDelivery.dispatchStatus)}');
   });
 
   it('T161: delivery detail drawer shows request, response, latency, and errors', () => {
@@ -299,7 +319,6 @@ describe('AdminWebhooksSetup inbound UI contract', () => {
       expect(id).toMatch(/^inbound-[a-z0-9]+(?:-[a-z0-9]+)*$/);
     }
 
-    expect(inboundWebhooksSource).toContain('id={`inbound-webhook-mapping-${field.name}`}');
     expect(inboundWebhooksSource).toContain('id={`inbound-webhook-sample-path-${option.path.replace(/[^a-zA-Z0-9_-]+/g, \'-\')}`}');
     expect(inboundWebhooksSource).toContain('id={`inbound-webhook-delivery-view-${delivery.deliveryId}`}');
   });

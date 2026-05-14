@@ -1,8 +1,10 @@
+import { bootstrapInboundWebhookActions } from './actions/bootstrap';
 import { evaluateFieldMapping } from './actions/mappingEvaluator';
 import { getAction, type InboundActionDefinition, type InboundActionTargetField } from './actions/registry';
 import type { InboundWebhookConfigLookupRow } from './configLookup';
 import { filterInboundWebhookHeaders } from './headerFilter';
 import { buildWorkflowWebhookEnvelope } from './workflowEnvelope';
+import { assertInboundWebhookWorkflowHandlersAvailable } from './editionGate';
 import { launchPublishedWorkflowRun } from '@alga-psa/workflows/lib/workflowRunLauncher';
 import { createTenantKnex } from '@alga-psa/db';
 
@@ -59,11 +61,16 @@ export interface DispatchInboundWebhookHandlerInput {
 export async function dispatchInboundWebhookHandler(
   input: DispatchInboundWebhookHandlerInput,
 ): Promise<Record<string, unknown>> {
+  // Ensure all action packages are registered before lookup. Bootstrap is idempotent
+  // and caches a single resolved promise, so this is effectively free after first call.
+  await bootstrapInboundWebhookActions();
+
   if (input.webhook.handler_type === 'direct_action') {
     return dispatchDirectAction(input);
   }
 
   if (input.webhook.handler_type === 'workflow') {
+    assertInboundWebhookWorkflowHandlersAvailable();
     return dispatchWorkflow(input);
   }
 
@@ -150,6 +157,7 @@ async function dispatchWorkflow(input: DispatchInboundWebhookHandlerInput): Prom
     },
     triggerFireKey: `inbound-webhook:${input.deliveryId}`,
     eventType: 'INBOUND_WEBHOOK_RECEIVED',
+    sourcePayloadSchemaRef: 'payload.InboundWebhookReceived.v1',
     execute: true,
     executionKey: `inbound-webhook:${input.deliveryId}`,
   });

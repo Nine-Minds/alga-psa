@@ -99,7 +99,10 @@ export async function processInboundWebhookRequest(input: ProcessInboundWebhookR
         requestMethod: request.method,
         requestPath,
         requestHeaders: request.headers,
-        requestBody: rawBody,
+        // request_body is a jsonb column. The raw body wasn't valid JSON, so persist
+        // the original text wrapped as a JSON object so PG accepts it without
+        // discarding the diagnostic content.
+        requestBody: { raw: rawBody, error: 'invalid_json' },
         sourceIp,
         userAgent,
         authStatus: 'verified',

@@ -197,8 +197,8 @@
       },
       "inbound": {
         "title": "Webhook in entrata",
-        "description": "Accetta richieste autenticate da sistemi esterni e inoltrale ad azioni dirette o workflow.",
-        "placeholder": "Configura endpoint webhook in entrata che verificano le richieste, deduplicano le consegne e inoltrano ad azioni o workflow.",
+        "description": "Accetta richieste autenticate da sistemi esterni e inviale ad azioni dirette o workflow.",
+        "placeholder": "Configura endpoint webhook in entrata che verificano le richieste, deduplicano le consegne e inviano ad azioni o workflow.",
         "newWebhook": "Nuovo webhook",
         "list": {
           "title": "Webhook in entrata configurati",
@@ -222,7 +222,12 @@
           "inactive": "Inattivo"
         },
         "messages": {
-          "loadFailed": "Impossibile caricare i webhook in entrata."
+          "loadFailed": "Caricamento dei webhook in entrata non riuscito.",
+          "nameRequired": "Il nome è obbligatorio.",
+          "slugRequired": "Lo slug è obbligatorio.",
+          "actionRequired": "Seleziona un'azione prima di salvare.",
+          "workflowRequired": "Seleziona un workflow prima di salvare.",
+          "missingRequiredFields": "Mappa un valore per i campi obbligatori: {{fields}}"
         },
         "dialog": {
           "createTitle": "Crea webhook in entrata",
@@ -234,152 +239,173 @@
         },
         "identity": {
           "title": "Identità",
-          "help": "Assegna un nome al webhook e scegli lo slug sicuro per URL usato nel suo endpoint ricevente.",
+          "help": "Nomina il webhook e scegli lo slug URL-safe usato nel suo endpoint ricevitore.",
           "name": "Nome",
           "namePlaceholder": "Avvisi RMM critici",
           "slug": "Slug",
           "slugPlaceholder": "avvisi-rmm-critici",
           "description": "Descrizione",
-          "descriptionPlaceholder": "Note facoltative sul sistema sorgente e sul payload."
+          "descriptionPlaceholder": "Note opzionali sul sistema sorgente e sul payload."
         },
         "auth": {
           "title": "Autenticazione",
-          "help": "Scegli come le richieste in entrata dimostrano di poter usare questo endpoint.",
+          "help": "Scegli come le richieste in entrata dimostrano di essere autorizzate a usare questo endpoint.",
           "method": "Metodo di autenticazione",
           "types": {
             "hmacSha256": "HMAC-SHA256",
-            "bearer": "Token bearer",
-            "ipAllowlist": "Allowlist IP",
+            "bearer": "Token Bearer",
+            "ipAllowlist": "Lista IP consentite",
             "pathToken": "Segreto condiviso nel percorso"
           },
-          "signatureHeader": "Header firma",
+          "signatureHeader": "Header di firma",
           "signatureHeaderPlaceholder": "X-Alga-Signature",
-          "bearerToken": "Token bearer",
-          "bearerTokenPlaceholder": "Incolla un token o lascia vuoto per generarne uno",
+          "bearerToken": "Token Bearer",
+          "bearerTokenPlaceholder": "Incolla il token o lascia vuoto per generarne uno",
           "secretUnchangedPlaceholder": "Lascia vuoto per mantenere il segreto attuale",
           "ipCidrs": "IP / CIDR consentiti",
           "ipCidrsPlaceholder": "203.0.113.10\n198.51.100.0/24",
-          "queryParam": "Parametro query",
+          "queryParam": "Parametro di query",
           "queryParamPlaceholder": "token",
-          "pathToken": "Token percorso",
-          "pathTokenPlaceholder": "Incolla un token o lascia vuoto per generarne uno"
+          "pathToken": "Token di percorso",
+          "pathTokenPlaceholder": "Incolla il token o lascia vuoto per generarne uno"
         },
         "secret": {
-          "label": "Segreto webhook",
+          "label": "Segreto del webhook",
           "warning": "Questo valore viene mostrato solo ora. Salvalo nel sistema sorgente prima di chiudere questa finestra.",
           "copy": "Copia",
           "download": "Scarica come .txt",
           "close": "Chiudi"
         },
         "idempotency": {
-          "title": "Idempotency",
-          "help": "Use a stable key to detect duplicate deliveries inside the configured window.",
-          "source": "Key Source",
+          "title": "Idempotenza",
+          "help": "Usa una chiave stabile per rilevare consegne duplicate nella finestra configurata.",
+          "source": "Sorgente della chiave",
           "types": {
-            "header": "HTTP header",
-            "jsonata": "JSONata expression"
+            "header": "Header HTTP",
+            "jsonata": "Espressione JSONata"
           },
-          "headerName": "Header Name",
+          "headerName": "Nome dell'header",
           "headerNamePlaceholder": "X-Idempotency-Key",
-          "jsonataExpression": "JSONata Expression",
+          "jsonataExpression": "Espressione JSONata",
           "jsonataExpressionPlaceholder": "alert.id",
-          "windowSeconds": "Duplicate Window (seconds)"
+          "windowSeconds": "Finestra duplicati (secondi)"
         },
         "active": {
-          "title": "Active State",
-          "help": "Pause the endpoint without deleting its URL, mappings, or delivery history.",
-          "toggle": "Webhook is active",
-          "autoDisabled": "Auto-disabled at {{date}} after repeated failures.",
-          "updateFailed": "Failed to update inbound webhook state."
+          "title": "Stato attivo",
+          "help": "Metti in pausa l'endpoint senza eliminare URL, mappature o cronologia delle consegne.",
+          "toggle": "Webhook attivo",
+          "autoDisabled": "Disabilitato automaticamente il {{date}} dopo ripetuti errori.",
+          "updateFailed": "Aggiornamento dello stato del webhook in entrata non riuscito."
         },
         "handler": {
           "title": "Handler",
-          "help": "Choose what Alga should do after the request is verified and deduplicated.",
-          "type": "Handler Type",
+          "help": "Scegli cosa deve fare Alga dopo che la richiesta è stata verificata e deduplicata.",
+          "type": "Tipo di handler",
           "types": {
-            "directAction": "Direct action",
+            "directAction": "Azione diretta",
             "workflow": "Workflow"
           },
-          "directActionTitle": "Direct action",
-          "directActionHelp": "Select an inbound action and map payload fields to its target fields.",
-          "action": "Action",
-          "actionPlaceholder": "Select an action",
-          "actionEmpty": "No inbound actions are registered. Ensure the server has bootstrapped the action registry before saving.",
-          "targetFields": "Target fields",
-          "required": "Required",
-          "optional": "Optional",
-          "mappingPlaceholder": "alert.message",
+          "directActionTitle": "Azione diretta",
+          "directActionHelp": "Seleziona un'azione in entrata e mappa i campi del payload ai suoi campi di destinazione.",
+          "action": "Azione",
+          "actionPlaceholder": "Seleziona un'azione",
+          "actionEmpty": "Nessuna azione in entrata registrata. Assicurati che il server abbia inizializzato il registro delle azioni prima di salvare.",
+          "targetFields": "Campi di destinazione",
+          "required": "Obbligatorio",
+          "optional": "Opzionale",
+          "mappingPlaceholder": "Inserisci un'espressione JSONata, es. payload.field",
           "workflowTitle": "Workflow",
-          "workflowHelp": "Select a workflow to start with the normalized webhook envelope.",
+          "workflowHelp": "Seleziona un workflow da avviare con la busta normalizzata del webhook.",
           "workflow": "Workflow",
-          "workflowPlaceholder": "Select a workflow",
-          "workflowEmpty": "No workflows are visible in this tenant. Publish or unhide a workflow to use the workflow handler.",
-          "envelopeTitle": "Workflow input envelope"
+          "workflowPlaceholder": "Seleziona un workflow",
+          "workflowEmpty": "Nessun workflow visibile in questo tenant. Pubblica o rendi visibile un workflow per usare il handler workflow.",
+          "envelopeTitle": "Busta di input del workflow",
+          "fieldTypes": {
+            "string": "stringa",
+            "int": "intero",
+            "number": "numero",
+            "boolean": "booleano",
+            "enum": "enum",
+            "json": "json",
+            "ref": "riferimento"
+          }
         },
         "sample": {
-          "title": "Sample payload",
-          "help": "Capture the next verified request for mapping autocomplete.",
-          "createFirst": "Save the webhook before capturing a sample request.",
-          "captureButton": "Capture sample request",
-          "captureActive": "Capture window active until {{expiresAt}}.",
-          "sampleAvailable": "Sample payload captured.",
-          "noSample": "No sample captured yet.",
-          "captureFailed": "Failed to enable sample capture."
+          "title": "Payload di esempio",
+          "help": "Cattura la prossima richiesta verificata per l'autocompletamento della mappatura.",
+          "createFirst": "Salva il webhook prima di catturare una richiesta di esempio.",
+          "captureButton": "Cattura richiesta di esempio",
+          "captureActive": "Finestra di cattura attiva fino a {{expiresAt}}.",
+          "sampleAvailable": "Payload di esempio catturato.",
+          "noSample": "Nessun esempio ancora catturato.",
+          "captureFailed": "Abilitazione della cattura di esempio non riuscita."
         },
         "sampleTree": {
-          "title": "Sample paths",
-          "help": "Click a path to insert it into {{field}}.",
-          "focusHelp": "Focus a mapping field, then click a path to insert it.",
-          "empty": "Capture a sample payload to browse fields."
+          "title": "Percorsi di esempio",
+          "help": "Clicca su un percorso per inserirlo in {{field}}.",
+          "focusHelp": "Concentra un campo di mappatura, quindi clicca su un percorso per inserirlo.",
+          "empty": "Cattura un payload di esempio per esplorare i campi."
+        },
+        "mapping": {
+          "modeStatic": "Valore statico",
+          "modeExpression": "Mappa dal payload",
+          "unknownReference": "riferimento sconosciuto",
+          "loading": "Caricamento…",
+          "errors": {
+            "INVALID_INT": "Il valore \"{{value}}\" deve essere un intero.",
+            "INVALID_NUMBER": "Il valore \"{{value}}\" deve essere un numero.",
+            "INVALID_BOOLEAN": "Il valore deve essere \"true\" o \"false\".",
+            "INVALID_JSON": "Il valore deve essere JSON valido."
+          }
         },
         "deliveryLog": {
-          "title": "Delivery log",
-          "help": "Recent verified deliveries for this inbound webhook.",
-          "empty": "No deliveries recorded yet.",
-          "loadFailed": "Failed to load inbound webhook deliveries.",
-          "pageSummary": "Page {{page}} of {{total}}",
+          "title": "Log delle consegne",
+          "help": "Consegne verificate recenti per questo webhook in entrata.",
+          "empty": "Nessuna consegna registrata.",
+          "loadFailed": "Caricamento delle consegne non riuscito.",
+          "pageSummary": "Pagina {{page}} di {{total}}",
           "durationMs": "{{duration}} ms",
-          "allStatuses": "All Statuses",
+          "allStatuses": "Tutti gli stati",
           "columns": {
-            "received": "Received",
-            "status": "Status",
-            "response": "Response",
-            "duration": "Duration",
-            "actions": "Actions"
+            "received": "Ricevuto",
+            "status": "Stato",
+            "response": "Risposta",
+            "duration": "Durata",
+            "actions": "Azioni"
           },
-          "view": "View",
+          "view": "Visualizza",
           "status": {
-            "pending": "pending",
-            "dispatched": "dispatched",
-            "duplicate": "duplicate",
-            "failed": "failed"
+            "pending": "in attesa",
+            "dispatched": "consegnato",
+            "duplicate": "duplicato",
+            "failed": "fallito"
           }
         },
         "deliveryDetail": {
-          "title": "Delivery detail",
-          "close": "Close",
-          "replay": "Replay",
-          "replayConfirm": "Re-dispatch this delivery through the current webhook configuration? Any side effects (ticket creation, status changes, etc.) will run again.",
-          "replayFailed": "Failed to replay delivery.",
-          "received": "Received",
-          "status": "Status",
-          "responseStatus": "Response status",
-          "duration": "Duration",
+          "title": "Dettaglio consegna",
+          "close": "Chiudi",
+          "replay": "Riproduci",
+          "replayConfirm": "Inviare nuovamente questa consegna attraverso la configurazione attuale del webhook? Eventuali effetti collaterali (creazione ticket, cambio stato, ecc.) verranno eseguiti di nuovo.",
+          "replayFailed": "Riproduzione della consegna non riuscita.",
+          "received": "Ricevuto",
+          "status": "Stato",
+          "responseStatus": "Stato della risposta",
+          "duration": "Durata",
           "sections": {
-            "headers": "Request headers",
-            "requestBody": "Request body",
-            "responseBody": "Response body",
-            "handlerOutcome": "Handler outcome"
+            "headers": "Header della richiesta",
+            "requestBody": "Corpo della richiesta",
+            "responseBody": "Corpo della risposta",
+            "handlerOutcome": "Esito dell'handler"
           }
         },
         "test": {
-          "openButton": "Send test",
-          "title": "Send Test Request",
-          "body": "Request Body JSON",
-          "headers": "Headers",
-          "cancel": "Cancel",
-          "send": "Send Test",
-          "sendFailed": "Failed to send inbound webhook test."
+          "openButton": "Invia test",
+          "title": "Invia richiesta di test",
+          "body": "Corpo JSON della richiesta",
+          "headers": "Header",
+          "cancel": "Annulla",
+          "send": "Invia test",
+          "sendFailed": "Invio della richiesta di test del webhook non riuscito."
         }
       },
       "stats": {

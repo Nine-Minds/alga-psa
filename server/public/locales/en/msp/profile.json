@@ -222,7 +222,12 @@
           "inactive": "Inactive"
         },
         "messages": {
-          "loadFailed": "Failed to load inbound webhooks."
+          "loadFailed": "Failed to load inbound webhooks.",
+          "nameRequired": "Name is required.",
+          "slugRequired": "Slug is required.",
+          "actionRequired": "Select an action before saving.",
+          "workflowRequired": "Select a workflow before saving.",
+          "missingRequiredFields": "Map a value for required fields: {{fields}}"
         },
         "dialog": {
           "createTitle": "Create Inbound Webhook",
@@ -308,13 +313,22 @@
           "targetFields": "Target fields",
           "required": "Required",
           "optional": "Optional",
-          "mappingPlaceholder": "alert.message",
+          "mappingPlaceholder": "Type a JSONata expression, e.g. payload.field",
           "workflowTitle": "Workflow",
           "workflowHelp": "Select a workflow to start with the normalized webhook envelope.",
           "workflow": "Workflow",
           "workflowPlaceholder": "Select a workflow",
           "workflowEmpty": "No workflows are visible in this tenant. Publish or unhide a workflow to use the workflow handler.",
-          "envelopeTitle": "Workflow input envelope"
+          "envelopeTitle": "Workflow input envelope",
+          "fieldTypes": {
+            "string": "string",
+            "int": "integer",
+            "number": "number",
+            "boolean": "boolean",
+            "enum": "enum",
+            "json": "json",
+            "ref": "reference"
+          }
         },
         "sample": {
           "title": "Sample payload",
@@ -331,6 +345,18 @@
           "help": "Click a path to insert it into {{field}}.",
           "focusHelp": "Focus a mapping field, then click a path to insert it.",
           "empty": "Capture a sample payload to browse fields."
+        },
+        "mapping": {
+          "modeStatic": "Static value",
+          "modeExpression": "Map from payload",
+          "unknownReference": "unknown reference",
+          "loading": "Loading…",
+          "errors": {
+            "INVALID_INT": "Value \"{{value}}\" must be an integer.",
+            "INVALID_NUMBER": "Value \"{{value}}\" must be a number.",
+            "INVALID_BOOLEAN": "Value must be \"true\" or \"false\".",
+            "INVALID_JSON": "Value must be valid JSON."
+          }
         },
         "deliveryLog": {
           "title": "Delivery log",
