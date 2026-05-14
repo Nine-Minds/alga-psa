@@ -22,6 +22,7 @@ import type {
   InvoiceViewModel,
 } from '@alga-psa/types';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 type InvoiceChargeDetailPeriodRow = {
   item_id: string;
@@ -950,6 +951,20 @@ const Invoice = {
     const [savedAnnotation] = await knexOrTrx('invoice_annotations')
       .insert(annotation)
       .returning('*');
+
+    if (savedAnnotation?.tenant && savedAnnotation?.invoice_id && savedAnnotation?.annotation_id) {
+      await publishEvent({
+        eventType: 'INVOICE_ANNOTATION_CREATED',
+        payload: {
+          tenantId: savedAnnotation.tenant,
+          invoiceId: savedAnnotation.invoice_id,
+          annotationId: savedAnnotation.annotation_id,
+          userId: savedAnnotation.user_id ?? undefined,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    }
+
     return savedAnnotation;
   },
 

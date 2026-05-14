@@ -251,8 +251,17 @@ export const EVENT_TYPES = [
   'TIME_ENTRY_APPROVED',
 
   // Billing (existing + legacy)
+  'INVOICE_CREATED',
+  'INVOICE_UPDATED',
+  'INVOICE_DELETED',
   'INVOICE_GENERATED',
   'INVOICE_FINALIZED',
+  'INVOICE_ITEM_CREATED',
+  'INVOICE_ITEM_UPDATED',
+  'INVOICE_ITEM_DELETED',
+  'INVOICE_ANNOTATION_CREATED',
+  'INVOICE_ANNOTATION_UPDATED',
+  'INVOICE_ANNOTATION_DELETED',
 
   // Billing (domain expansion)
   'INVOICE_SENT',
@@ -548,6 +557,30 @@ export const InvoiceEventPayloadSchema = BasePayloadSchema.extend({
   clientId: z.string().uuid(),
   userId: z.string().uuid(),
   amount: z.number(),
+});
+
+export const InvoiceSearchEventPayloadSchema = BasePayloadSchema.extend({
+  invoiceId: z.string().uuid(),
+  clientId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
+  changes: z.record(z.unknown()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const InvoiceItemEventPayloadSchema = BasePayloadSchema.extend({
+  invoiceId: z.string().uuid(),
+  itemId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  changes: z.record(z.unknown()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const InvoiceAnnotationEventPayloadSchema = BasePayloadSchema.extend({
+  invoiceId: z.string().uuid(),
+  annotationId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  changes: z.record(z.unknown()).optional(),
+  timestamp: z.string().datetime().optional(),
 });
 
 export const AssetDeletedPayloadSchema = BasePayloadSchema.extend({
@@ -937,8 +970,17 @@ export const EventPayloadSchemas = {
   TIME_ENTRY_APPROVED: TimeEntryEventPayloadSchema,
 
   // Billing (existing + legacy)
+  INVOICE_CREATED: InvoiceSearchEventPayloadSchema,
+  INVOICE_UPDATED: InvoiceSearchEventPayloadSchema,
+  INVOICE_DELETED: InvoiceSearchEventPayloadSchema,
   INVOICE_GENERATED: InvoiceGeneratedPayloadSchema,
   INVOICE_FINALIZED: InvoiceFinalizedPayloadSchema,
+  INVOICE_ITEM_CREATED: InvoiceItemEventPayloadSchema,
+  INVOICE_ITEM_UPDATED: InvoiceItemEventPayloadSchema,
+  INVOICE_ITEM_DELETED: InvoiceItemEventPayloadSchema,
+  INVOICE_ANNOTATION_CREATED: InvoiceAnnotationEventPayloadSchema,
+  INVOICE_ANNOTATION_UPDATED: InvoiceAnnotationEventPayloadSchema,
+  INVOICE_ANNOTATION_DELETED: InvoiceAnnotationEventPayloadSchema,
 
   // Billing (domain expansion)
   INVOICE_SENT: invoiceSentEventPayloadSchema,

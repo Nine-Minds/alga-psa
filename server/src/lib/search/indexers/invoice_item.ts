@@ -54,7 +54,7 @@ function baseInvoiceItemQuery(knex: Knex, tenant: string) {
 
 export const invoiceItemIndexer: EntityIndexer = {
   objectType: 'invoice_item',
-  sourceEvents: [],
+  sourceEvents: ['INVOICE_ITEM_CREATED', 'INVOICE_ITEM_UPDATED', 'INVOICE_ITEM_DELETED'],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await baseInvoiceItemQuery(knex, tenant)

@@ -993,6 +993,10 @@ export const hardDeleteInvoice = withAuth(async (
     voidedByUserId: string;
     reason: string;
   }> = [];
+  let deletedInvoice = false;
+  let deletedClientId: string | undefined;
+  let deletedItemIds: string[] = [];
+  let deletedAnnotationIds: string[] = [];
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     const now = new Date().toISOString();
@@ -1008,6 +1012,7 @@ export const hardDeleteInvoice = withAuth(async (
         console.warn(`Invoice ${invoiceId} not found for deletion.`);
         return; // Exit if invoice doesn't exist
     }
+    deletedClientId = invoice.client_id ?? undefined;
 
     const hasLinkedRecurringServicePeriods = await hasLinkedRecurringServicePeriodsForInvoice(
       trx,
@@ -1203,6 +1208,13 @@ export const hardDeleteInvoice = withAuth(async (
     }
 
     // 8. Delete invoice items
+    deletedItemIds = await trx('invoice_charges')
+      .where({
+        invoice_id: invoiceId,
+        tenant
+      })
+      .pluck('item_id');
+
     await trx('invoice_charges')
       .where({
         invoice_id: invoiceId,
@@ -1211,6 +1223,13 @@ export const hardDeleteInvoice = withAuth(async (
       .delete();
 
     // 9. Delete invoice annotations (internal/external notes)
+    deletedAnnotationIds = await trx('invoice_annotations')
+      .where({
+        invoice_id: invoiceId,
+        tenant
+      })
+      .pluck('annotation_id');
+
     await trx('invoice_annotations')
       .where({
         invoice_id: invoiceId,
@@ -1233,6 +1252,7 @@ export const hardDeleteInvoice = withAuth(async (
         tenant
       })
       .delete();
+    deletedInvoice = true;
 
      // TODO: Recalculate client balance after all deletions/reversals
   });
@@ -1252,6 +1272,55 @@ export const hardDeleteInvoice = withAuth(async (
         actor: { actorType: 'USER', actorUserId: event.voidedByUserId },
       },
       idempotencyKey: `credit_note_voided:${event.creditNoteId}:${invoiceId}`,
+    });
+  }
+
+  if (deletedInvoice) {
+    const occurredAt = new Date().toISOString();
+    const ctx = {
+      tenantId: tenant,
+      occurredAt,
+      actor: { actorType: 'USER', actorUserId: user.user_id },
+    };
+
+    for (const itemId of deletedItemIds) {
+      await publishWorkflowEvent({
+        eventType: 'INVOICE_ITEM_DELETED',
+        payload: {
+          invoiceId,
+          itemId,
+          userId: user.user_id,
+          timestamp: occurredAt,
+        },
+        ctx,
+        idempotencyKey: `invoice_item_deleted:${itemId}:${occurredAt}`,
+      });
+    }
+
+    for (const annotationId of deletedAnnotationIds) {
+      await publishWorkflowEvent({
+        eventType: 'INVOICE_ANNOTATION_DELETED',
+        payload: {
+          invoiceId,
+          annotationId,
+          userId: user.user_id,
+          timestamp: occurredAt,
+        },
+        ctx,
+        idempotencyKey: `invoice_annotation_deleted:${annotationId}:${occurredAt}`,
+      });
+    }
+
+    await publishWorkflowEvent({
+      eventType: 'INVOICE_DELETED',
+      payload: {
+        invoiceId,
+        clientId: deletedClientId,
+        userId: user.user_id,
+        timestamp: occurredAt,
+      },
+      ctx,
+      idempotencyKey: `invoice_deleted:${invoiceId}:${occurredAt}`,
     });
   }
 });

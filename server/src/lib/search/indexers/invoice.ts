@@ -63,6 +63,9 @@ function baseInvoiceQuery(knex: Knex, tenant: string) {
 export const invoiceIndexer: EntityIndexer = {
   objectType: 'invoice',
   sourceEvents: [
+    'INVOICE_CREATED',
+    'INVOICE_UPDATED',
+    'INVOICE_DELETED',
     'INVOICE_GENERATED',
     'INVOICE_FINALIZED',
     'INVOICE_SENT',

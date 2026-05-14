@@ -54,7 +54,7 @@ function baseInvoiceAnnotationQuery(knex: Knex, tenant: string) {
 
 export const invoiceAnnotationIndexer: EntityIndexer = {
   objectType: 'invoice_annotation',
-  sourceEvents: [],
+  sourceEvents: ['INVOICE_ANNOTATION_CREATED', 'INVOICE_ANNOTATION_UPDATED', 'INVOICE_ANNOTATION_DELETED'],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await baseInvoiceAnnotationQuery(knex, tenant)
