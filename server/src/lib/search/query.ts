@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 
+import { aclPredicateSql, type SearchAclPrincipal } from './acl';
 import type { SearchObjectType } from './types';
 
 const MAX_SEARCH_QUERY_CHARS = 200;
@@ -35,6 +36,7 @@ export interface SearchQueryOptions {
   offset?: number;
   cursor?: string;
   includeSnippets?: boolean;
+  acl?: SearchAclPrincipal;
 }
 
 export interface SearchIndexHit {
@@ -240,6 +242,10 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
     return [];
   }
 
+  const aclPredicate = options.acl
+    ? aclPredicateSql(options.acl)
+    : { sql: 'TRUE', bindings: [] };
+
   const result = await options.knex.raw<{ rows: SearchIndexHitRow[] }>(
     `
       WITH q AS (
@@ -290,6 +296,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
         CROSS JOIN q
         WHERE s.tenant = ?::uuid
           AND s.object_type = ANY(?::text[])
+          AND ${aclPredicate.sql}
           AND (
             s.search_vector @@ q.tsq
             OR s.title % q.raw
@@ -326,6 +333,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
       includeSnippets,
       options.tenant,
       options.allowedTypes,
+      ...aclPredicate.bindings,
       cursor?.score ?? null,
       cursor?.score ?? null,
       cursor?.score ?? null,

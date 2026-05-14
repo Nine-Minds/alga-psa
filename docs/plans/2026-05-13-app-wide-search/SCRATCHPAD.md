@@ -561,6 +561,12 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - The repo currently has no direct Sentry package dependency, so the Sentry path is intentionally optional and dependency-free.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F100 — Full search server action.**
+  - Added `server/src/lib/actions/searchActions.ts` with `searchAppAction` wrapped in `withAuth`.
+  - The action resolves registered object types, loads a single ACL principal/permission set, runs `runSearchQuery()` with snippets and SQL ACL filtering, applies `verifyResultVisibility()`, and returns `SearchAppResult` rows plus grouped counts and next cursor.
+  - Current grouped counts are computed from the visible fetched page; a broader count query can be expanded when the results page work needs full pre-pagination counts.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
