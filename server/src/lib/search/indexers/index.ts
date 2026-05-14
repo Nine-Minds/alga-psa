@@ -9,6 +9,7 @@ import { documentIndexer } from './document';
 import { invoiceAnnotationIndexer } from './invoice_annotation';
 import { invoiceItemIndexer } from './invoice_item';
 import { invoiceIndexer } from './invoice';
+import { kbArticleIndexer } from './kb_article';
 import { projectPhaseIndexer } from './project_phase';
 import { projectTaskCommentIndexer } from './project_task_comment';
 import { projectTaskIndexer } from './project_task';
@@ -27,6 +28,7 @@ export const ceIndexers: EntityIndexer[] = [
   invoiceIndexer,
   invoiceItemIndexer,
   invoiceAnnotationIndexer,
+  kbArticleIndexer,
   userIndexer,
   ticketIndexer,
   ticketCommentIndexer,
