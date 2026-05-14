@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { parseQuery, runSearchQuery, SearchQueryError } from '../../lib/search/query';
+import {
+  decodeSearchCursor,
+  encodeSearchCursor,
+  parseQuery,
+  runSearchQuery,
+  SearchQueryError,
+} from '../../lib/search/query';
 
 describe('search query parsing', () => {
   it('T089 rejects queries longer than 200 characters with a typed error', () => {
@@ -229,5 +235,20 @@ describe('search query parsing', () => {
     const sql = knex.raw.mock.calls[0]?.[0] as string;
     expect(sql).toContain('GREATEST(');
     expect(sql).toContain('0.05');
+  });
+
+  it('T099 cursor encoding round-trips score, updatedAt, and object id', () => {
+    const updatedAt = new Date('2026-05-13T12:34:56.789Z');
+    const cursor = encodeSearchCursor({
+      score: 12.5,
+      updatedAt,
+      id: 'client-1',
+    });
+
+    expect(decodeSearchCursor(cursor)).toEqual({
+      score: 12.5,
+      updatedAt: updatedAt.toISOString(),
+      objectId: 'client-1',
+    });
   });
 });
