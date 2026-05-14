@@ -81,7 +81,7 @@ function baseInteractionQuery(knex: Knex, tenant: string) {
 
 export const interactionIndexer: EntityIndexer = {
   objectType: 'interaction',
-  sourceEvents: [],
+  sourceEvents: ['INTERACTION_CREATED', 'INTERACTION_UPDATED', 'INTERACTION_DELETED'],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await baseInteractionQuery(knex, tenant)

@@ -305,6 +305,9 @@ export const EVENT_TYPES = [
   'CONTACT_DELETED',
   'CONTACT_MERGED',
   'INTERACTION_LOGGED',
+  'INTERACTION_CREATED',
+  'INTERACTION_UPDATED',
+  'INTERACTION_DELETED',
   'NOTE_CREATED',
   'TAG_DEFINITION_CREATED',
   'TAG_DEFINITION_UPDATED',
@@ -661,6 +664,15 @@ export const WorkflowTaskEventPayloadSchema = BasePayloadSchema.extend({
   userId: z.string().uuid().optional(),
   status: z.string().optional(),
   assignedUserIds: z.array(z.string().uuid()).optional(),
+  changedFields: z.array(z.string()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const InteractionEventPayloadSchema = BasePayloadSchema.extend({
+  interactionId: z.string().uuid(),
+  clientId: z.string().uuid().optional(),
+  contactId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
   changedFields: z.array(z.string()).optional(),
   timestamp: z.string().datetime().optional(),
 });
@@ -1101,6 +1113,9 @@ export const EventPayloadSchemas = {
   CONTACT_DELETED: contactDeletedEventPayloadSchema,
   CONTACT_MERGED: contactMergedEventPayloadSchema,
   INTERACTION_LOGGED: interactionLoggedEventPayloadSchema,
+  INTERACTION_CREATED: InteractionEventPayloadSchema,
+  INTERACTION_UPDATED: InteractionEventPayloadSchema,
+  INTERACTION_DELETED: InteractionEventPayloadSchema,
   NOTE_CREATED: noteCreatedEventPayloadSchema,
   TAG_DEFINITION_CREATED: tagDefinitionCreatedEventPayloadSchema,
   TAG_DEFINITION_UPDATED: tagDefinitionUpdatedEventPayloadSchema,

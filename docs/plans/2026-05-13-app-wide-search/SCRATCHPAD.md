@@ -740,6 +740,8 @@ npm run search:backfill
 
 - **2026-05-13 — F059 workflow-task events.** Added `WORKFLOW_TASK_CREATED/UPDATED/DELETED/ASSIGNMENT_CHANGED` schemas and registered them on `workflowTaskIndexer.sourceEvents`. The CE/shared write points are `shared/workflow/persistence/workflowTaskModel.ts` and `shared/task-inbox/taskInboxService.ts`, so task create, inline task create, status updates, response updates, and completion now publish workflow-task search events from there. The assignment-change event name is registered for assignment mutators; current CE shared code does not expose a dedicated assignment update method beyond create-time assignees. Validation: `npm -w @alga-psa/event-schemas run typecheck`, `npm -w @alga-psa/shared run typecheck`, and `git diff --check`.
 
+- **2026-05-13 — F060 interaction events.** Added `INTERACTION_CREATED/UPDATED/DELETED` schemas, registered them on `interactionIndexer.sourceEvents`, and published them from `packages/clients/src/actions/interactionActions.ts`. The existing `INTERACTION_LOGGED` workflow event remains for workflow/domain consumers; the new CRUD-shaped events give search a simple upsert/delete contract. Validation: `npm -w @alga-psa/event-schemas run typecheck`, `npm -w @alga-psa/clients run typecheck`, and `git diff --check`.
+
 ---
 
 ## Implementation order suggestion (not prescriptive)

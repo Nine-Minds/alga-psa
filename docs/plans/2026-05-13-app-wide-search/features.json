@@ -63,7 +63,7 @@
   { "id": "F057", "description": "Add `SERVICE_CATALOG_*` event family and publishes", "prdRefs": ["11.2"], "implemented": true },
   { "id": "F058", "description": "Add `SERVICE_REQUEST_SUBMISSION_*` and `SERVICE_REQUEST_DEFINITION_*` events and publishes", "prdRefs": ["11.2"], "implemented": true },
   { "id": "F059", "description": "Audit `WORKFLOW_TASK_*` events; add missing CRUD + assignment-change events", "prdRefs": ["11.2", "11.5"], "implemented": true },
-  { "id": "F060", "description": "Add `INTERACTION_*` event family and publishes", "prdRefs": ["11.2"], "implemented": false },
+  { "id": "F060", "description": "Add `INTERACTION_*` event family and publishes", "prdRefs": ["11.2"], "implemented": true },
   { "id": "F061", "description": "Add `SCHEDULE_ENTRY_*` and `TIME_ENTRY_*` event families and publishes", "prdRefs": ["11.2"], "implemented": false },
   { "id": "F062", "description": "Add `BOARD_*`, `CATEGORY_*`, `TAG_*` event families and publishes", "prdRefs": ["11.2"], "implemented": false },
 
