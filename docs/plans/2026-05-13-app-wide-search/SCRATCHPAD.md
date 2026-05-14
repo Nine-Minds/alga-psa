@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T044 document body byte cap.** Extended `searchIndexers.test.ts` with a large BlockNote document fixture and asserted `documentIndexer.loadOne` truncates flattened body content to at most 65,536 UTF-8 bytes before indexing. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T043 active contract label.** Extended `searchIndexers.test.ts` to assert `contractIndexer.loadOne` maps an active contract to `subtitle='Contract'`, keeping quote labeling limited to draft contracts. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T042 draft contract quote label.** Extended `searchIndexers.test.ts` to assert `contractIndexer.loadOne` maps `status='draft'` to `subtitle='Quote'`, keeps contract body/identifier metadata, and requires `contract:read`. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.

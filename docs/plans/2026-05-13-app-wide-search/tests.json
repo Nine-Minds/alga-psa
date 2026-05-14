@@ -46,7 +46,7 @@
   { "id": "T041", "featureIds": ["F033", "F034"], "description": "Invoice-item and annotation indexers inherit invoice client_scope_id and required_permission", "implemented": true },
   { "id": "T042", "featureIds": ["F035"], "description": "Contract indexer with `contracts.status='draft'` sets subtitle to 'Quote'", "implemented": true },
   { "id": "T043", "featureIds": ["F035"], "description": "Contract indexer with `contracts.status='active'` sets subtitle to 'Contract'", "implemented": true },
-  { "id": "T044", "featureIds": ["F037"], "description": "Document indexer body length is ≤ 65536 bytes even when source content is multi-MB", "implemented": false },
+  { "id": "T044", "featureIds": ["F037"], "description": "Document indexer body length is ≤ 65536 bytes even when source content is multi-MB", "implemented": true },
   { "id": "T045", "featureIds": ["F037"], "description": "Document indexer sets `client_scope_id` from `documents.client_id` when non-null; leaves `is_private` and `visible_to_user_ids` at defaults (false / empty)", "implemented": false },
   { "id": "T046", "featureIds": ["F038"], "description": "KB article indexer pulls content via the FK join to documents", "implemented": false },
   { "id": "T047", "featureIds": ["F039"], "description": "Service catalog indexer includes flattened `attributes` jsonb string values in body", "implemented": false },

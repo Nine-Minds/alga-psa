@@ -4,6 +4,7 @@ import { assetIndexer } from '../../lib/search/indexers/asset';
 import { clientIndexer } from '../../lib/search/indexers/client';
 import { contactIndexer } from '../../lib/search/indexers/contact';
 import { contractIndexer } from '../../lib/search/indexers/contract';
+import { documentIndexer } from '../../lib/search/indexers/document';
 import { invoiceAnnotationIndexer } from '../../lib/search/indexers/invoice_annotation';
 import { invoiceItemIndexer } from '../../lib/search/indexers/invoice_item';
 import { invoiceIndexer } from '../../lib/search/indexers/invoice';
@@ -599,5 +600,30 @@ describe('search entity indexers', () => {
     );
 
     expect(doc?.subtitle).toBe('Contract');
+  });
+
+  it('T044 document indexer caps large BlockNote content at 65536 bytes', async () => {
+    const largeContent = JSON.stringify([
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'a'.repeat(70_000) }],
+      },
+    ]);
+    const { knex } = createFirstRowKnex({
+      document_id: 'document-1',
+      document_name: 'Large runbook',
+      content: largeContent,
+      client_id: null,
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await documentIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'document-1',
+    );
+
+    expect(Buffer.byteLength(doc?.body ?? '', 'utf8')).toBeLessThanOrEqual(65_536);
+    expect(doc?.body).toHaveLength(65_536);
   });
 });
