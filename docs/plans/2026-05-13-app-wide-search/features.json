@@ -5,7 +5,7 @@
   { "id": "F004", "description": "Migration calls `create_distributed_table('app_search_index', 'tenant')` only when the `citus` extension is present", "prdRefs": ["9.1", "15"], "implemented": true },
   { "id": "F005", "description": "Migration creates GIN index on `search_vector`", "prdRefs": ["9.1"], "implemented": true },
   { "id": "F006", "description": "Migration creates GIN trgm indexes on `title` and `subtitle` for fuzzy fallback", "prdRefs": ["9.1", "13.1"], "implemented": true },
-  { "id": "F007", "description": "Migration creates btree indexes on `(tenant, source_updated_at DESC)` and `(tenant, object_type)`", "prdRefs": ["9.1"], "implemented": false },
+  { "id": "F007", "description": "Migration creates btree indexes on `(tenant, source_updated_at DESC)` and `(tenant, object_type)`", "prdRefs": ["9.1"], "implemented": true },
   { "id": "F008", "description": "Migration provides a `down` step that drops the table", "prdRefs": ["9.1"], "implemented": false },
 
   { "id": "F009", "description": "Define `SearchObjectType` TS union covering all 27 entity types in `server/src/lib/search/types.ts`", "prdRefs": ["7", "9.2"], "implemented": false },
