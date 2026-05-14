@@ -63,6 +63,7 @@ export default async function MspSearchPage({ searchParams }: SearchPageProps) {
       types: parseTypeFilter(type),
       cursor,
       limit: 25,
+      sort,
     })
     : emptyResult;
 

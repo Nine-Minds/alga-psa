@@ -652,6 +652,12 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - This preserves browser-native new-tab and context-menu affordances on the full results page.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F117 — Relevance/recent sort toggle.**
+  - Added `sort?: 'relevance' | 'recent'` to the search action input and passed it from `/msp/search`.
+  - `runSearchQuery()` now switches its keyset predicate and `ORDER BY`: relevance uses score/recency/object_id, while recent uses `source_updated_at DESC, object_id ASC`.
+  - Added a results-page segmented anchor toggle that preserves `q` and `type` while resetting cursor state on sort changes.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

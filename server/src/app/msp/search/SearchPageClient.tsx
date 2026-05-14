@@ -114,6 +114,21 @@ export default function SearchPageClient({
     return params.toString() ? `${pathname}?${params.toString()}` : pathname;
   };
 
+  const buildSortUrl = (sort: 'relevance' | 'recent') => {
+    const params = new URLSearchParams();
+    if (initialQuery) {
+      params.set('q', initialQuery);
+    }
+    if (activeType !== 'all') {
+      params.set('type', activeType);
+    }
+    if (sort !== 'relevance') {
+      params.set('sort', sort);
+    }
+
+    return params.toString() ? `${pathname}?${params.toString()}` : pathname;
+  };
+
   const humanizeType = (type: string) => type
     .split('_')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -182,41 +197,62 @@ export default function SearchPageClient({
         </p>
       </header>
 
-      <nav className="flex flex-wrap gap-2" aria-label={t('search.filtersLabel', { defaultValue: 'Search filters' })}>
-        <a
-          id="app-search-filter-chip-all"
-          href={buildFilterUrl('all')}
-          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${
-            activeType === 'all'
-              ? 'border-purple-500 bg-purple-50 text-purple-800'
-              : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300'
-          }`}
-        >
-          <span>{t('search.filters.all', { defaultValue: 'All' })}</span>
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
-            {initialResult.totalCount}
-          </span>
-        </a>
-        {typeEntries.map(([type, count]) => (
+      <div className="flex flex-col gap-3">
+        <nav className="flex flex-wrap gap-2" aria-label={t('search.filtersLabel', { defaultValue: 'Search filters' })}>
           <a
-            key={type}
-            id={`app-search-filter-chip-${type}`}
-            href={buildFilterUrl(type)}
+            id="app-search-filter-chip-all"
+            href={buildFilterUrl('all')}
             className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${
-              activeType === type
+              activeType === 'all'
                 ? 'border-purple-500 bg-purple-50 text-purple-800'
                 : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300'
             }`}
           >
-            <span>
-              {t(`search.filters.${type}`, { defaultValue: humanizeType(type) })}
-            </span>
+            <span>{t('search.filters.all', { defaultValue: 'All' })}</span>
             <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
-              {count}
+              {initialResult.totalCount}
             </span>
           </a>
-        ))}
-      </nav>
+          {typeEntries.map(([type, count]) => (
+            <a
+              key={type}
+              id={`app-search-filter-chip-${type}`}
+              href={buildFilterUrl(type)}
+              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${
+                activeType === type
+                  ? 'border-purple-500 bg-purple-50 text-purple-800'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300'
+              }`}
+            >
+              <span>
+                {t(`search.filters.${type}`, { defaultValue: humanizeType(type) })}
+              </span>
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+                {count}
+              </span>
+            </a>
+          ))}
+        </nav>
+
+        <div className="inline-flex w-fit rounded-md border border-gray-300 bg-white p-1" aria-label={t('search.sortLabel', { defaultValue: 'Sort results' })}>
+          {(['relevance', 'recent'] as const).map((sort) => (
+            <a
+              key={sort}
+              id={`app-search-sort-${sort}`}
+              href={buildSortUrl(sort)}
+              className={`rounded px-3 py-1.5 text-sm ${
+                initialSort === sort
+                  ? 'bg-purple-600 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              {t(`search.sort.${sort}`, {
+                defaultValue: sort === 'relevance' ? 'Relevance' : 'Recent',
+              })}
+            </a>
+          ))}
+        </div>
+      </div>
 
       {isUpdatingQuery ? (
         <section className="space-y-2" aria-label={t('search.loading', { defaultValue: 'Searching...' })}>

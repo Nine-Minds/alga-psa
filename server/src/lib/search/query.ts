@@ -35,6 +35,7 @@ export interface SearchQueryOptions {
   limit?: number;
   offset?: number;
   cursor?: string;
+  sort?: 'relevance' | 'recent';
   includeSnippets?: boolean;
   acl?: SearchAclPrincipal;
 }
@@ -237,6 +238,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
   const cursor = decodeSearchCursor(options.cursor);
   const offset = cursor ? 0 : normalizeOffset(options.offset);
   const includeSnippets = options.includeSnippets ?? true;
+  const sort = options.sort ?? 'relevance';
 
   if (options.allowedTypes.length === 0) {
     return [];
@@ -245,6 +247,47 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
   const aclPredicate = options.acl
     ? aclPredicateSql(options.acl)
     : { sql: 'TRUE', bindings: [] };
+  const cursorPredicateSql = sort === 'recent'
+    ? `
+        ?::timestamptz IS NULL
+        OR source_updated_at < ?::timestamptz
+        OR (
+          source_updated_at = ?::timestamptz
+          AND object_id > ?
+        )
+      `
+    : `
+        ?::double precision IS NULL
+        OR score < ?::double precision
+        OR (
+          score = ?::double precision
+          AND source_updated_at < ?::timestamptz
+        )
+        OR (
+          score = ?::double precision
+          AND source_updated_at = ?::timestamptz
+          AND object_id > ?
+        )
+      `;
+  const cursorBindings = sort === 'recent'
+    ? [
+      cursor?.updatedAt ?? null,
+      cursor?.updatedAt ?? null,
+      cursor?.updatedAt ?? null,
+      cursor?.objectId ?? null,
+    ]
+    : [
+      cursor?.score ?? null,
+      cursor?.score ?? null,
+      cursor?.score ?? null,
+      cursor?.updatedAt ?? null,
+      cursor?.score ?? null,
+      cursor?.updatedAt ?? null,
+      cursor?.objectId ?? null,
+    ];
+  const orderBySql = sort === 'recent'
+    ? 'source_updated_at DESC, object_id ASC'
+    : 'score DESC, source_updated_at DESC, object_id ASC';
 
   const result = await options.knex.raw<{ rows: SearchIndexHitRow[] }>(
     `
@@ -309,20 +352,8 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
       )
       SELECT *
       FROM ranked
-      WHERE (
-        ?::double precision IS NULL
-        OR score < ?::double precision
-        OR (
-          score = ?::double precision
-          AND source_updated_at < ?::timestamptz
-        )
-        OR (
-          score = ?::double precision
-          AND source_updated_at = ?::timestamptz
-          AND object_id > ?
-        )
-      )
-      ORDER BY score DESC, source_updated_at DESC, object_id ASC
+      WHERE (${cursorPredicateSql})
+      ORDER BY ${orderBySql}
       LIMIT ?
       OFFSET ?
     `,
@@ -334,13 +365,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
       options.tenant,
       options.allowedTypes,
       ...aclPredicate.bindings,
-      cursor?.score ?? null,
-      cursor?.score ?? null,
-      cursor?.score ?? null,
-      cursor?.updatedAt ?? null,
-      cursor?.score ?? null,
-      cursor?.updatedAt ?? null,
-      cursor?.objectId ?? null,
+      ...cursorBindings,
       limit,
       offset,
     ],

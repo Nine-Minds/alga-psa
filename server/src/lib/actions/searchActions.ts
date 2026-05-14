@@ -24,6 +24,7 @@ export const searchAppInputSchema = z.object({
   types: z.array(searchObjectTypeSchema).optional(),
   limit: z.number().int().min(1).max(100).optional(),
   cursor: z.string().min(1).optional(),
+  sort: z.enum(['relevance', 'recent']).optional(),
 });
 
 export type SearchAppInput = z.infer<typeof searchAppInputSchema>;
@@ -157,6 +158,7 @@ export const searchAppAction = withAuth(async (
     allowedTypes,
     limit: limit + 1,
     cursor: parsedInput.cursor,
+    sort: parsedInput.sort,
     includeSnippets: true,
     acl,
   });
