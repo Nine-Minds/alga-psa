@@ -401,6 +401,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - On `INVOICE_UPDATED`, after the invoice document is upserted, the subscriber re-upserts invoice item and invoice annotation rows for the same `(tenant, invoice_id)`.
   - Rationale: item/annotation rows denormalize invoice number and invoice client ACL hints from their parent invoice.
 
+- **F070 — Project child cascade.**
+  - On `PROJECT_UPDATED`, after the project document is upserted, the subscriber pages through phases, tasks, and task comments for the project in 500-row batches and re-upserts each child document.
+  - Rationale: phase/task/comment rows denormalize parent project information and inherit project ACL hints, so project edits must refresh children.
+  - This is implemented inside the async event-bus handler rather than a separate pg-boss job for now; the work is paged and bounded per batch to avoid a single large read.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

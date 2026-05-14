@@ -41,6 +41,8 @@ const OBJECT_ID_FIELDS: Record<SearchObjectType, string[]> = {
   tag: ['tagId', 'tag_id'],
 };
 
+const CASCADE_BATCH_SIZE = 500;
+
 function buildIndexersByEvent(): Map<EventType, EntityIndexer[]> {
   const byEvent = new Map<EventType, EntityIndexer[]>();
 
@@ -158,6 +160,137 @@ async function reindexInvoiceChildren(knex: Knex, tenant: string, invoiceId: str
   }
 
   return { items, annotations };
+}
+
+async function reindexProjectChildren(knex: Knex, tenant: string, projectId: string): Promise<{
+  phases: number;
+  tasks: number;
+  taskComments: number;
+}> {
+  const phaseIndexer = getIndexer('project_phase');
+  const taskIndexer = getIndexer('project_task');
+  const taskCommentIndexer = getIndexer('project_task_comment');
+  let phases = 0;
+  let tasks = 0;
+  let taskComments = 0;
+
+  if (phaseIndexer) {
+    let cursor: string | undefined;
+    while (true) {
+      const query = knex<{ phase_id: string }>('project_phases')
+        .select('phase_id')
+        .where({ tenant, project_id: projectId })
+        .orderBy('phase_id', 'asc')
+        .limit(CASCADE_BATCH_SIZE);
+
+      if (cursor) {
+        query.andWhere('phase_id', '>', cursor);
+      }
+
+      const rows = await query;
+      if (rows.length === 0) {
+        break;
+      }
+
+      for (const row of rows) {
+        const doc = await phaseIndexer.loadOne(knex, tenant, row.phase_id);
+        if (doc) {
+          await upsertSearchDoc(knex, doc);
+        }
+      }
+
+      phases += rows.length;
+      cursor = rows[rows.length - 1]?.phase_id;
+      if (rows.length < CASCADE_BATCH_SIZE) {
+        break;
+      }
+    }
+  } else {
+    logger.warn('[SearchIndexSubscriber] Project phase indexer is not registered');
+  }
+
+  if (taskIndexer) {
+    let cursor: string | undefined;
+    while (true) {
+      const query = knex<{ task_id: string }>('project_tasks as pt')
+        .join('project_phases as pp', function() {
+          this.on('pp.tenant', 'pt.tenant').andOn('pp.phase_id', 'pt.phase_id');
+        })
+        .select('pt.task_id')
+        .where('pt.tenant', tenant)
+        .andWhere('pp.project_id', projectId)
+        .orderBy('pt.task_id', 'asc')
+        .limit(CASCADE_BATCH_SIZE);
+
+      if (cursor) {
+        query.andWhere('pt.task_id', '>', cursor);
+      }
+
+      const rows = await query;
+      if (rows.length === 0) {
+        break;
+      }
+
+      for (const row of rows) {
+        const doc = await taskIndexer.loadOne(knex, tenant, row.task_id);
+        if (doc) {
+          await upsertSearchDoc(knex, doc);
+        }
+      }
+
+      tasks += rows.length;
+      cursor = rows[rows.length - 1]?.task_id;
+      if (rows.length < CASCADE_BATCH_SIZE) {
+        break;
+      }
+    }
+  } else {
+    logger.warn('[SearchIndexSubscriber] Project task indexer is not registered');
+  }
+
+  if (taskCommentIndexer) {
+    let cursor: string | undefined;
+    while (true) {
+      const query = knex<{ task_comment_id: string }>('project_task_comments as ptc')
+        .join('project_tasks as pt', function() {
+          this.on('pt.tenant', 'ptc.tenant').andOn('pt.task_id', 'ptc.task_id');
+        })
+        .join('project_phases as pp', function() {
+          this.on('pp.tenant', 'pt.tenant').andOn('pp.phase_id', 'pt.phase_id');
+        })
+        .select('ptc.task_comment_id')
+        .where('ptc.tenant', tenant)
+        .andWhere('pp.project_id', projectId)
+        .orderBy('ptc.task_comment_id', 'asc')
+        .limit(CASCADE_BATCH_SIZE);
+
+      if (cursor) {
+        query.andWhere('ptc.task_comment_id', '>', cursor);
+      }
+
+      const rows = await query;
+      if (rows.length === 0) {
+        break;
+      }
+
+      for (const row of rows) {
+        const doc = await taskCommentIndexer.loadOne(knex, tenant, row.task_comment_id);
+        if (doc) {
+          await upsertSearchDoc(knex, doc);
+        }
+      }
+
+      taskComments += rows.length;
+      cursor = rows[rows.length - 1]?.task_comment_id;
+      if (rows.length < CASCADE_BATCH_SIZE) {
+        break;
+      }
+    }
+  } else {
+    logger.warn('[SearchIndexSubscriber] Project task comment indexer is not registered');
+  }
+
+  return { phases, tasks, taskComments };
 }
 
 export async function registerSearchIndexSubscriber(): Promise<void> {
@@ -299,6 +432,16 @@ async function handleSearchIndexEvent(event: Event): Promise<void> {
         eventType: event.eventType,
         eventId: event.id,
         invoiceId: objectId,
+        ...counts,
+      });
+    }
+
+    if (event.eventType === 'PROJECT_UPDATED' && indexer.objectType === 'project') {
+      const counts = await reindexProjectChildren(knex, tenant, objectId);
+      logger.debug('[SearchIndexSubscriber] Cascaded project child re-index', {
+        eventType: event.eventType,
+        eventId: event.id,
+        projectId: objectId,
         ...counts,
       });
     }
