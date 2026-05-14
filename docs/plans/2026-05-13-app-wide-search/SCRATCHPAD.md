@@ -288,6 +288,7 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
 - **2026-05-13 — F015 complete.** Added `truncateForIndex(text, maxBytes = 65_536)` using `Buffer.byteLength` and `for...of` code-point iteration so truncation respects UTF-8 byte limits without splitting characters. Validation: targeted `rg` on the function and byte-length loop.
 - **2026-05-13 — F016 complete.** Added `server/src/lib/search/sql.ts` with `buildTsvectorSql(title, subtitle, body)`. It returns a bound SQL fragment with title/subtitle/body weights A/B/C and runs all inputs through `public.process_large_lexemes()` before `to_tsvector('english', ...)`. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/sql.ts`.
 - **2026-05-13 — F017 complete.** `EntityIndexer` in `types.ts` defines `objectType`, `sourceEvents`, `loadOne`, and paged `loadBatch` methods. `sourceEvents` is typed as `readonly EventType[]` from `@alga-psa/event-schemas`; loaders accept an explicit `tenant`. Validation: targeted `rg` on the interface.
+- **2026-05-13 — F018 complete.** Added `server/src/lib/search/index.ts` registry with `getIndexer`, `allIndexers`, and `registeredObjectTypes`. Added empty CE `ceIndexers` export and a CE-side `@ee/lib/search/indexers` stub returning `eeIndexers = []` under `packages/ee/src`, matching the repo's current alias pattern. Note: the later F131 stub-registration cleanup should reconcile this with the plan's `ee/server/src/...` wording if needed. Validation: targeted `rg` on registry exports and imports.
 
 ---
 
