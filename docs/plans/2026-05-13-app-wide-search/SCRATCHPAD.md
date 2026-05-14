@@ -1478,6 +1478,8 @@ npm run search:backfill
 
 - **2026-05-13 — T180 mandatory tenant predicate.** Added query SQL capture coverage that every search emits `WHERE s.tenant = ?::uuid` and binds the authenticated tenant in the expected parameter slot. Validation: `cd server && npx vitest run src/test/unit/searchQuery.test.ts --coverage=false`.
 
+- **2026-05-13 — T181 large document data-URI fixture.** Added document-indexer coverage for a 10MB BlockNote payload with embedded image data URI: visible text remains, `data:image` is stripped, and indexed body stays ≤64KB. Validation: `cd server && npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

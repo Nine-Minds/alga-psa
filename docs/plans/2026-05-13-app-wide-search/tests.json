@@ -202,7 +202,7 @@
   { "id": "T179", "featureIds": ["F019"], "description": "upsertSearchDoc co-locates writes by tenant under Citus (no inter-shard write fanout for a single doc)", "implemented": true },
   { "id": "T180", "featureIds": ["F100"], "description": "Search query SQL always includes `tenant = ?` predicate (verified by SQL log capture)", "implemented": true },
 
-  { "id": "T181", "featureIds": ["F012", "F037"], "description": "Document indexer fixture: 10MB BlockNote JSON with embedded image data URI → indexed body ≤ 64KB and contains zero `data:image` substrings", "implemented": false },
+  { "id": "T181", "featureIds": ["F012", "F037"], "description": "Document indexer fixture: 10MB BlockNote JSON with embedded image data URI → indexed body ≤ 64KB and contains zero `data:image` substrings", "implemented": true },
   { "id": "T182", "featureIds": ["F014", "F040"], "description": "Service-request submission fixture with a 'password' key in submitted_payload → that value is NOT present in the indexed body", "implemented": false },
   { "id": "T183", "featureIds": ["F016"], "description": "`process_large_lexemes` is invoked in the SQL path that computes search_vector (verified via SQL log capture)", "implemented": false },
 

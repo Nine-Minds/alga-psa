@@ -665,6 +665,38 @@ describe('search entity indexers', () => {
     expect(doc?.acl).not.toHaveProperty('visibleToUserIds');
   });
 
+  it('T181 document indexer strips 10MB embedded image data and caps the body', async () => {
+    const largeImageDataUri = `data:image/png;base64,${'a'.repeat(10 * 1024 * 1024)}`;
+    const content = JSON.stringify([
+      {
+        type: 'paragraph',
+        content: [{ type: 'text', text: 'Visible runbook text' }],
+      },
+      {
+        type: 'image',
+        props: { url: largeImageDataUri },
+        content: [{ type: 'text', text: largeImageDataUri }],
+      },
+    ]);
+    const { knex } = createFirstRowKnex({
+      document_id: 'document-large-image',
+      document_name: 'Large image runbook',
+      content,
+      client_id: null,
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await documentIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'document-large-image',
+    );
+
+    expect(doc?.body).toContain('Visible runbook text');
+    expect(doc?.body).not.toContain('data:image');
+    expect(Buffer.byteLength(doc?.body ?? '', 'utf8')).toBeLessThanOrEqual(65_536);
+  });
+
   it('T046 KB article indexer pulls title and content through the document join', async () => {
     const { knex, queryBuilder, joinBuilder } = createFirstRowKnex({
       article_id: 'article-1',
