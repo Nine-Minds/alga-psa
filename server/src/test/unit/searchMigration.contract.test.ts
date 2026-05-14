@@ -166,4 +166,15 @@ describe('app_search_index migration contract', () => {
     expect(searchQuery).toContain("coalesce(s.subtitle, '') % q.raw");
     expect(searchQuery).toContain("similarity(coalesce(s.subtitle, ''), q.raw)");
   });
+
+  it('T009 creates tenant-scoped recent and object-type btree indexes', () => {
+    const migration = readSearchIndexMigration();
+
+    expect(migration).toMatch(
+      /CREATE INDEX app_search_index_recent\s+ON app_search_index \(tenant, source_updated_at DESC\)/,
+    );
+    expect(migration).toMatch(
+      /CREATE INDEX app_search_index_type\s+ON app_search_index \(tenant, object_type\)/,
+    );
+  });
 });

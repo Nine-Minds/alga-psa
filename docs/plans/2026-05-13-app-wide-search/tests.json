@@ -7,7 +7,7 @@
   { "id": "T006", "featureIds": ["F005"], "description": "GIN index on `search_vector` is present and is selected by EXPLAIN for an `@@` query", "implemented": true },
   { "id": "T007", "featureIds": ["F006"], "description": "GIN trgm index on `title` is selected by EXPLAIN for `title %% 'abc'`", "implemented": true },
   { "id": "T008", "featureIds": ["F006"], "description": "GIN trgm index on `subtitle` is selected by EXPLAIN for `subtitle %% 'abc'`", "implemented": true },
-  { "id": "T009", "featureIds": ["F007"], "description": "btree indexes on `(tenant, source_updated_at DESC)` and `(tenant, object_type)` exist", "implemented": false },
+  { "id": "T009", "featureIds": ["F007"], "description": "btree indexes on `(tenant, source_updated_at DESC)` and `(tenant, object_type)` exist", "implemented": true },
   { "id": "T010", "featureIds": ["F008"], "description": "Migration down drops the table; re-running up succeeds afterwards", "implemented": false },
 
   { "id": "T011", "featureIds": ["F009"], "description": "All 27 entity types compile-time exhaustive-check via a switch over `SearchObjectType`", "implemented": false },

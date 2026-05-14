@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T009 search index btree indexes.** Extended `searchMigration.contract.test.ts` to assert the migration creates `app_search_index_recent ON app_search_index (tenant, source_updated_at DESC)` and `app_search_index_type ON app_search_index (tenant, object_type)`. Validation: `npx vitest run src/test/unit/searchMigration.contract.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T008 subtitle trigram planner contract.** Extended `searchMigration.contract.test.ts` to assert the migration creates `app_search_index_subtitle_trgm ON app_search_index USING gin (subtitle gin_trgm_ops)` and that the query path uses both `coalesce(s.subtitle, '') % q.raw` and `similarity(coalesce(s.subtitle, ''), q.raw)`. Validation: `npx vitest run src/test/unit/searchMigration.contract.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T007 title trigram planner contract.** Extended `searchMigration.contract.test.ts` to assert the migration creates `app_search_index_title_trgm ON app_search_index USING gin (title gin_trgm_ops)` and that the query path uses both `s.title % q.raw` and `similarity(s.title, q.raw)` for fuzzy matching/ranking. Validation: `npx vitest run src/test/unit/searchMigration.contract.test.ts --coverage=false` from `server/` passed.
