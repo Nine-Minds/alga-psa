@@ -716,6 +716,8 @@ npm run search:backfill
 
 - **2026-05-13 — F047 category indexer.** Added `categoryIndexer` and registered it. Ticket categories are still read from the `categories` table in app code, with `board_id` backfilled during the board migration, so the indexer uses `categories.category_id` / `category_name`, links to `/msp/tickets?category={category_id}`, includes `board_id` metadata when present, and sets `requiredPermission='ticket:read'`. Event hooks remain empty until F062. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/category.ts server/src/lib/search/indexers/index.ts`.
 
+- **2026-05-13 — F048 tag indexer.** Added `tagIndexer` and registered it. The current tag system normalizes unique tag labels into `tag_definitions`; `tags` / `tag_mappings` are assignment rows, so indexing definitions avoids duplicate result rows for the same tag. The indexer uses `tag_id` / `tag_text`, links to `/msp/tickets?tags={tag_text}`, carries `tagged_type` and `board_id` metadata when present, and sets `requiredPermission='ticket:read'`. Event hooks remain empty until F062. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/tag.ts server/src/lib/search/indexers/index.ts`.
+
 ---
 
 ## Implementation order suggestion (not prescriptive)

@@ -21,6 +21,7 @@ import { scheduleEntryIndexer } from './schedule_entry';
 import { serviceCatalogIndexer } from './service_catalog';
 import { serviceRequestDefinitionIndexer } from './service_request_definition';
 import { serviceRequestSubmissionIndexer } from './service_request_submission';
+import { tagIndexer } from './tag';
 import { ticketCommentIndexer } from './ticket_comment';
 import { ticketIndexer } from './ticket';
 import { timeEntryIndexer } from './time_entry';
@@ -44,6 +45,7 @@ export const ceIndexers: EntityIndexer[] = [
   serviceCatalogIndexer,
   serviceRequestDefinitionIndexer,
   serviceRequestSubmissionIndexer,
+  tagIndexer,
   userIndexer,
   ticketIndexer,
   ticketCommentIndexer,

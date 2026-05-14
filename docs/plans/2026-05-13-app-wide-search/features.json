@@ -50,7 +50,7 @@
   { "id": "F045", "description": "Implement `timeEntryIndexer` (skip rows where `notes IS NULL OR notes = ''`; visible_to_user_ids from owner; acl: required_permission='time:read')", "prdRefs": ["7", "18-Q3"], "implemented": true },
   { "id": "F046", "description": "Implement `boardIndexer` (title=channel_name, acl: required_permission='ticket:read')", "prdRefs": ["7"], "implemented": true },
   { "id": "F047", "description": "Implement `categoryIndexer` (title=category_name, acl: required_permission='ticket:read')", "prdRefs": ["7"], "implemented": true },
-  { "id": "F048", "description": "Implement `tagIndexer` (title=tag_text, acl: required_permission='ticket:read')", "prdRefs": ["7"], "implemented": false },
+  { "id": "F048", "description": "Implement `tagIndexer` (title=tag_text, acl: required_permission='ticket:read')", "prdRefs": ["7"], "implemented": true },
 
   { "id": "F049", "description": "Add `CLIENT_CREATED`, `CLIENT_UPDATED`, `CLIENT_DELETED` to `server/src/lib/eventBus/events.ts` and publish from existing client actions", "prdRefs": ["11.2"], "implemented": false },
   { "id": "F050", "description": "Add `CONTACT_*` event family and publish from contact actions", "prdRefs": ["11.2"], "implemented": false },
