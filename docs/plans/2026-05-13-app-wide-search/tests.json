@@ -1,5 +1,5 @@
 [
-  { "id": "T001", "featureIds": ["F001", "F003"], "description": "Migration up creates `app_search_index` table with exactly the columns and types listed in PRD §9.1", "implemented": false },
+  { "id": "T001", "featureIds": ["F001", "F003"], "description": "Migration up creates `app_search_index` table with exactly the columns and types listed in PRD §9.1", "implemented": true },
   { "id": "T002", "featureIds": ["F003"], "description": "Primary key is `(tenant, object_type, object_id)` and `tenant` is NOT NULL", "implemented": false },
   { "id": "T003", "featureIds": ["F002"], "description": "Migration is idempotent on `pg_trgm`: re-running CREATE EXTENSION IF NOT EXISTS does not fail", "implemented": false },
   { "id": "T004", "featureIds": ["F004"], "description": "Under Citus, `pg_dist_partition` shows `app_search_index` distributed by `tenant`", "implemented": false },
