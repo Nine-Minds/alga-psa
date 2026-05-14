@@ -143,7 +143,8 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
       WITH q AS (
         SELECT
           websearch_to_tsquery('english', ?) AS tsq,
-          ?::text AS raw
+          ?::text AS raw,
+          ?::text AS identifier
       )
       SELECT
         s.object_type,
@@ -155,13 +156,18 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
         s.url,
         s.source_updated_at,
         s.metadata,
-        (
-          ts_rank_cd(s.search_vector, q.tsq)
-          + GREATEST(
-              similarity(s.title, q.raw),
-              similarity(coalesce(s.subtitle, ''), q.raw)
-            ) * 0.4
-        ) AS score
+        CASE
+          WHEN q.identifier IS NOT NULL
+            AND lower(coalesce(s.metadata->>'identifier', '')) = q.identifier
+          THEN 1000
+          ELSE (
+            ts_rank_cd(s.search_vector, q.tsq)
+            + GREATEST(
+                similarity(s.title, q.raw),
+                similarity(coalesce(s.subtitle, ''), q.raw)
+              ) * 0.4
+          )
+        END AS score
       FROM app_search_index s
       CROSS JOIN q
       WHERE s.tenant = ?::uuid
@@ -170,12 +176,16 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
           s.search_vector @@ q.tsq
           OR s.title % q.raw
           OR coalesce(s.subtitle, '') % q.raw
+          OR (
+            q.identifier IS NOT NULL
+            AND lower(coalesce(s.metadata->>'identifier', '')) = q.identifier
+          )
         )
       ORDER BY score DESC, s.source_updated_at DESC, s.object_id ASC
       LIMIT ?
       OFFSET ?
     `,
-    [parsed.raw, parsed.raw, options.tenant, options.allowedTypes, limit, offset],
+    [parsed.raw, parsed.raw, parsed.identifier ?? null, options.tenant, options.allowedTypes, limit, offset],
   );
 
   return result.rows.map(toSearchHit);

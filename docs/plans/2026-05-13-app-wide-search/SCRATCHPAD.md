@@ -489,6 +489,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - The returned score now combines `ts_rank_cd` with `GREATEST(similarity(title), similarity(subtitle)) * 0.4` so fuzzy-only hits can rank while still favoring FTS matches.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F087 — Identifier match pinning.**
+  - `parseQuery()` already detects identifier-style input and lowercases the key; `runSearchQuery()` now probes `lower(metadata->>'identifier')` for exact matches when that key is present.
+  - Exact identifier matches are included even if FTS/trigram do not match and receive score `1000`, pinning tickets/assets/invoices/contracts with matching identifiers above normal relevance results.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
