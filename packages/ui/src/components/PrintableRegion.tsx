@@ -20,4 +20,3 @@ export const PrintableRegion = React.forwardRef<HTMLDivElement, PrintableRegionP
     );
   }
 );
-

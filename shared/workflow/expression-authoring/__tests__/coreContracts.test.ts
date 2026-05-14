@@ -3,6 +3,8 @@ import { EXPRESSION_MODES, isExpressionMode } from '../modes';
 import {
   buildInvoiceExpressionContextRoots,
   buildInvoiceExpressionPathOptions,
+  buildWebhookPayloadExpressionContextRoots,
+  buildWebhookPayloadExpressionPathOptions,
   buildWorkflowExpressionContextRoots,
   buildWorkflowExpressionPathOptions,
 } from '../adapters';
@@ -229,6 +231,130 @@ describe('expression authoring contracts', () => {
       valueType: 'string',
       isLeaf: true,
     });
+  });
+
+  it('T120: builds webhook payload roots and path options from a captured sample', () => {
+    const samplePayload = {
+      alert: {
+        id: 'rmm-123',
+        message: 'Disk full',
+      },
+      device: {
+        hostname: 'server-01',
+      },
+    };
+
+    const roots = buildWebhookPayloadExpressionContextRoots(samplePayload);
+    const options = buildWebhookPayloadExpressionPathOptions(samplePayload, { includeRootPaths: false });
+    const optionByPath = new Map(options.map((option) => [option.path, option]));
+
+    expect(roots.map((root) => root.key)).toEqual(['alert', 'device']);
+    expect(roots).toEqual([
+      expect.objectContaining({
+        key: 'alert',
+        label: 'alert',
+        schema: expect.objectContaining({
+          type: 'object',
+        }),
+      }),
+      expect.objectContaining({
+        key: 'device',
+        label: 'device',
+        schema: expect.objectContaining({
+          type: 'object',
+        }),
+      }),
+    ]);
+
+    expect([...optionByPath.keys()]).toEqual([
+      'alert.id',
+      'alert.message',
+      'device.hostname',
+    ]);
+    expect(optionByPath.get('alert.id')).toMatchObject({
+      root: 'alert',
+      valueType: 'string',
+      isLeaf: true,
+      segments: ['alert', 'id'],
+    });
+  });
+
+  it('T121: infers nested webhook payload objects, arrays, and primitive value types', () => {
+    const samplePayload = {
+      alert: {
+        severity: 3,
+        confidence: 0.85,
+        acknowledged: false,
+        tags: ['disk', 'critical'],
+        events: [
+          {
+            code: 'disk.low',
+            metrics: {
+              free_gb: 12.5,
+            },
+          },
+        ],
+      },
+    };
+
+    const options = buildWebhookPayloadExpressionPathOptions(samplePayload, { includeRootPaths: false });
+    const optionByPath = new Map(options.map((option) => [option.path, option]));
+
+    expect(optionByPath.get('alert.severity')).toMatchObject({
+      valueType: 'integer',
+      isLeaf: true,
+    });
+    expect(optionByPath.get('alert.confidence')).toMatchObject({
+      valueType: 'number',
+      isLeaf: true,
+    });
+    expect(optionByPath.get('alert.acknowledged')).toMatchObject({
+      valueType: 'boolean',
+      isLeaf: true,
+    });
+    expect(optionByPath.get('alert.tags')).toMatchObject({
+      valueType: 'array',
+      isLeaf: false,
+    });
+    expect(optionByPath.get('alert.tags[]')).toMatchObject({
+      valueType: 'string',
+      segments: ['alert', 'tags', '[]'],
+    });
+    expect(optionByPath.get('alert.events[].metrics.free_gb')).toMatchObject({
+      valueType: 'number',
+      segments: ['alert', 'events', '[]', 'metrics', 'free_gb'],
+    });
+  });
+
+  it('T122: handles null, array, and empty webhook samples without crashing', () => {
+    const nullRoots = buildWebhookPayloadExpressionContextRoots(null);
+    const nullOptions = buildWebhookPayloadExpressionPathOptions(null);
+
+    expect(nullRoots).toEqual([
+      expect.objectContaining({
+        key: 'value',
+        label: 'Payload',
+        schema: { type: 'null' },
+      }),
+    ]);
+    expect(nullOptions).toEqual([
+      expect.objectContaining({
+        path: 'value',
+        valueType: 'null',
+        isLeaf: true,
+      }),
+    ]);
+
+    const arrayOptions = buildWebhookPayloadExpressionPathOptions([{ id: 'device-1' }], {
+      includeRootPaths: false,
+    });
+    expect(arrayOptions.map((option) => option.path)).toEqual([
+      'value[]',
+      'value[].id',
+    ]);
+
+    expect(buildWebhookPayloadExpressionContextRoots({})).toEqual([]);
+    expect(buildWebhookPayloadExpressionPathOptions({})).toEqual([]);
   });
 
   it('returns informational diagnostics for unresolved schema-aware paths', () => {

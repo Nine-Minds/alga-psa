@@ -60,7 +60,7 @@ export function TabsList({ children, className, ...props }: TabsListProps) {
   );
 }
 
-interface TabsTriggerProps {
+interface TabsTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   value: string;
   children: React.ReactNode;
   className?: string;
