@@ -5,6 +5,9 @@ import { createRequire } from 'module';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import { allIndexers, getIndexer } from '../lib/search';
+import type { EntityIndexer } from '../lib/search/types';
+
 const require = createRequire(import.meta.url);
 const knexfilePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../knexfile.cjs');
 const knexConfig = require(knexfilePath);
@@ -60,6 +63,19 @@ export async function resolveBackfillTenants(
   return rows.map((row) => row.tenant);
 }
 
+export function resolveBackfillIndexers(options: SearchBackfillOptions): EntityIndexer[] {
+  if (!options.type) {
+    return allIndexers();
+  }
+
+  const indexer = getIndexer(options.type);
+  if (!indexer) {
+    throw new Error(`Unknown search object_type "${options.type}"`);
+  }
+
+  return [indexer];
+}
+
 export async function runSearchBackfill(
   options: SearchBackfillOptions,
   existingKnex?: Knex,
@@ -69,9 +85,13 @@ export async function runSearchBackfill(
 
   try {
     const tenants = await resolveBackfillTenants(knex, options);
+    const indexers = resolveBackfillIndexers(options);
     console.log(`Search backfill selected ${tenants.length} tenant(s).`);
+    console.log(`Search backfill selected ${indexers.length} indexer(s).`);
     for (const tenant of tenants) {
-      console.log(`[tenant=${tenant}] backfill selection ready`);
+      for (const indexer of indexers) {
+        console.log(`[tenant=${tenant}] [type=${indexer.objectType}] backfill selection ready`);
+      }
     }
   } finally {
     if (ownsConnection) {

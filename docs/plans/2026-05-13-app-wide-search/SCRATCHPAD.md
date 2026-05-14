@@ -428,6 +428,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - `runSearchBackfill()` accepts an optional existing Knex instance for future tests and destroys only connections it creates itself.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F075 — Backfill indexer selection.**
+  - The CLI now resolves indexers through the search registry: default is `allIndexers()`, and `--type=<object_type>` / `--type <object_type>` narrows to one registered indexer.
+  - Unknown object types fail fast with a typed error before any backfill loop runs.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
