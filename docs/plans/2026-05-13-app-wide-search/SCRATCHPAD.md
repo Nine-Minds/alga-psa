@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T047 service catalog attributes.** Extended `searchIndexers.test.ts` to assert `serviceCatalogIndexer.loadOne` includes both service description and flattened JSONB attribute string values in the indexed body with `service_catalog:read` ACL. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T046 KB article document join.** Extended `searchIndexers.test.ts` to assert `kbArticleIndexer.loadOne` joins `kb_articles` to `documents`, uses document name/content for title/body, sets document parent metadata, and requires `kb:read`. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T045 document ACL defaults.** Extended `searchIndexers.test.ts` to assert `documentIndexer.loadOne` sets `acl.clientScopeId` from `documents.client_id` and intentionally leaves v1-unused private/share-list hints (`isPrivate`, `visibleToUserIds`) unset. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.

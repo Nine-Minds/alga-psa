@@ -13,6 +13,7 @@ import { projectPhaseIndexer } from '../../lib/search/indexers/project_phase';
 import { projectTaskCommentIndexer } from '../../lib/search/indexers/project_task_comment';
 import { projectTaskIndexer } from '../../lib/search/indexers/project_task';
 import { projectIndexer } from '../../lib/search/indexers/project';
+import { serviceCatalogIndexer } from '../../lib/search/indexers/service_catalog';
 import { ticketIndexer } from '../../lib/search/indexers/ticket';
 import { ticketCommentIndexer } from '../../lib/search/indexers/ticket_comment';
 import { userIndexer } from '../../lib/search/indexers/user';
@@ -682,6 +683,35 @@ describe('search entity indexers', () => {
       body: 'Restart transport service',
       url: '/msp/knowledge-base/article-1',
       acl: { requiredPermission: 'kb:read' },
+    });
+  });
+
+  it('T047 service catalog indexer includes flattened attributes in body', async () => {
+    const { knex } = createFirstRowKnex({
+      service_id: 'service-1',
+      service_name: 'Managed firewall',
+      description: 'Monthly firewall management',
+      attributes: {
+        vendor: 'Fortinet',
+        tier: 'Advanced',
+      },
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await serviceCatalogIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'service-1',
+    );
+
+    expect(knex).toHaveBeenCalledWith('service_catalog');
+    expect(doc).toMatchObject({
+      objectType: 'service_catalog',
+      objectId: 'service-1',
+      title: 'Managed firewall',
+      body: 'Monthly firewall management | Fortinet Advanced',
+      url: '/msp/billing/services/service-1',
+      acl: { requiredPermission: 'service_catalog:read' },
     });
   });
 });
