@@ -2,7 +2,7 @@
   { "id": "F001", "description": "Create migration file `server/migrations/20260513120000_create_app_search_index.cjs` (concrete timestamp; adjust only if a later date is needed at implementation time)", "prdRefs": ["9.1", "16"], "implemented": true },
   { "id": "F002", "description": "Migration enables the `pg_trgm` Postgres extension if not already present", "prdRefs": ["9.1", "13.1"], "implemented": true },
   { "id": "F003", "description": "Migration creates the `app_search_index` table with all columns defined in PRD §9.1 (tenant, object_type, object_id, parent_type, parent_id, title, subtitle, body, url, metadata, visible_to_user_ids, visible_to_roles, is_internal_only, is_private, client_scope_id, required_permission, search_vector, search_lang, source_updated_at, indexed_at, PK (tenant, object_type, object_id))", "prdRefs": ["9.1"], "implemented": true },
-  { "id": "F004", "description": "Migration calls `create_distributed_table('app_search_index', 'tenant')` only when the `citus` extension is present", "prdRefs": ["9.1", "15"], "implemented": false },
+  { "id": "F004", "description": "Migration calls `create_distributed_table('app_search_index', 'tenant')` only when the `citus` extension is present", "prdRefs": ["9.1", "15"], "implemented": true },
   { "id": "F005", "description": "Migration creates GIN index on `search_vector`", "prdRefs": ["9.1"], "implemented": false },
   { "id": "F006", "description": "Migration creates GIN trgm indexes on `title` and `subtitle` for fuzzy fallback", "prdRefs": ["9.1", "13.1"], "implemented": false },
   { "id": "F007", "description": "Migration creates btree indexes on `(tenant, source_updated_at DESC)` and `(tenant, object_type)`", "prdRefs": ["9.1"], "implemented": false },
