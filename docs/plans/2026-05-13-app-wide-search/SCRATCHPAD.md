@@ -1394,6 +1394,8 @@ npm run search:backfill
 
 - **2026-05-13 — T138 recent sort SQL.** Added query-layer coverage that `sort: 'recent'` orders by `source_updated_at DESC, object_id ASC` and does not include `score DESC` in the `ORDER BY` clause. Validation: `cd server && npx vitest run src/test/unit/searchQuery.test.ts --coverage=false`.
 
+- **2026-05-13 — T139 sidebar combobox ARIA.** Added UI contract coverage that the sidebar input declares combobox/list semantics, reflects `aria-expanded={isOpen}`, points to `app-search-typeahead-list`, and updates `aria-activedescendant` through component state. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

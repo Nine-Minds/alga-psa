@@ -168,4 +168,14 @@ describe('app-wide search UI contracts', () => {
     expect(renderRowBlock).not.toContain('onClick=');
     expect(renderRowBlock).not.toContain('preventDefault');
   });
+
+  it('T139 exposes ARIA combobox state on the sidebar search input', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/search/SearchPalette.tsx'), 'utf8');
+
+    expect(source).toContain('role="combobox"');
+    expect(source).toContain('aria-autocomplete="list"');
+    expect(source).toContain('aria-expanded={isOpen}');
+    expect(source).toContain('aria-controls="app-search-typeahead-list"');
+    expect(source).toContain('aria-activedescendant={activeDescendantId}');
+  });
 });
