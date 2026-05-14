@@ -319,4 +319,13 @@ describe('search query parsing', () => {
     expect(sanitized).not.toContain('<script>');
     expect(sanitized).not.toContain('<b>');
   });
+
+  it('T103 escapes the whole snippet when sentinels are malformed', () => {
+    expect(sanitizeHeadline('__SEARCH_MARK_START__<script>alert(1)</script>')).toBe(
+      '__SEARCH_MARK_START__&lt;script&gt;alert(1)&lt;/script&gt;',
+    );
+    expect(sanitizeHeadline('__SEARCH_MARK_STOP__<em>bad</em>')).toBe(
+      '__SEARCH_MARK_STOP__&lt;em&gt;bad&lt;/em&gt;',
+    );
+  });
 });
