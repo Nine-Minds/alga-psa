@@ -104,4 +104,13 @@ describe('app-wide search UI contracts', () => {
     expect(source).toContain('id={`app-search-filter-chip-${toDomIdPart(type)}`}');
     expect(source).toContain('{count}');
   });
+
+  it('T132 renders All results as grouped sections capped at ten rows per type', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/app/msp/search/SearchPageClient.tsx'), 'utf8');
+
+    expect(source).toContain('initialResult.results.filter((row) => row.type === type).slice(0, 10)');
+    expect(source).toContain("activeType === 'all' ? (");
+    expect(source).toContain('groupedSections.map((section) =>');
+    expect(source).toContain('{section.rows.map(renderResultRow)}');
+  });
 });
