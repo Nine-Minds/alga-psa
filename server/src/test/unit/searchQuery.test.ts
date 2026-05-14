@@ -131,6 +131,58 @@ describe('search query parsing', () => {
     });
   });
 
+  it('T169 ranks Exchange as the top result for the misspelled query exhcange', async () => {
+    const knex = {
+      raw: vi.fn(async (sql: string) => {
+        expect(sql).toContain('s.title % q.raw');
+        return {
+          rows: [
+            {
+              object_type: 'client',
+              object_id: 'client-exchange',
+              parent_type: null,
+              parent_id: null,
+              title: 'Exchange',
+              subtitle: null,
+              url: '/msp/clients/client-exchange',
+              score: 0.44,
+              source_updated_at: '2026-05-13T12:00:00.000Z',
+              metadata: {},
+              snippet: null,
+            },
+            {
+              object_type: 'client',
+              object_id: 'client-other',
+              parent_type: null,
+              parent_id: null,
+              title: 'Exhaust Support',
+              subtitle: null,
+              url: '/msp/clients/client-other',
+              score: 0.08,
+              source_updated_at: '2026-05-13T11:00:00.000Z',
+              metadata: {},
+              snippet: null,
+            },
+          ],
+        };
+      }),
+    };
+
+    const results = await runSearchQuery({
+      knex: knex as never,
+      tenant: '00000000-0000-0000-0000-000000000001',
+      query: 'exhcange',
+      allowedTypes: ['client'],
+    });
+
+    expect(results[0]).toMatchObject({
+      type: 'client',
+      id: 'client-exchange',
+      title: 'Exchange',
+    });
+    expect(results[0].score).toBeGreaterThan(results[1].score);
+  });
+
   it('T094 includes pg_trgm similarity in the composite score', async () => {
     const knex = {
       raw: vi.fn(async () => ({ rows: [] })),

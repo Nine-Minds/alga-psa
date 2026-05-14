@@ -1454,6 +1454,8 @@ npm run search:backfill
 
 - **2026-05-13 — T168 document client-scope denial.** Added ACL verifier coverage that a document whose `client_id` is outside `accessibleClientIds` is removed from visible search rows; v1 leaves per-user document sharing out of scope. Validation: `cd server && npx vitest run src/test/unit/searchAcl.test.ts --coverage=false`.
 
+- **2026-05-13 — T169 misspelled Exchange acceptance.** Added query-layer acceptance coverage that the pg_trgm fallback path returns `Exchange` as the first hit for misspelled `exhcange` and preserves the higher score over weaker fuzzy matches. Validation: `cd server && npx vitest run src/test/unit/searchQuery.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
