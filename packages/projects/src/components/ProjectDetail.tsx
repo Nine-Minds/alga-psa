@@ -1887,9 +1887,11 @@ export default function ProjectDetail({
     const sourcePhase = projectPhases.find(p => p.phase_id === task?.phase_id);
 
     if (task && sourcePhase && targetPhase.phase_id !== sourcePhase.phase_id) {
-      // Bulk drag: the dragged task is part of a multi-selection
+      // Bulk drag: the dragged task is part of a multi-selection. The selection is
+      // project-wide, so include selected tasks from every phase, not just the
+      // currently visible kanban board.
       if (selectedTaskIds.has(taskId) && selectedTaskIds.size > 1) {
-        const bulkTaskIds = projectTasks
+        const bulkTaskIds = allProjectTasks
           .filter(t => selectedTaskIds.has(t.task_id) && t.phase_id !== targetPhase.phase_id)
           .map(t => t.task_id);
         if (bulkTaskIds.length > 0) {
@@ -1924,7 +1926,9 @@ export default function ProjectDetail({
       const movedIds = new Set<string>();
 
       for (const id of bulkTaskIds) {
-        const task = projectTasks.find(t => t.task_id === id);
+        // Selected tasks may live in any phase, so look them up project-wide
+        const task = allProjectTasks.find(t => t.task_id === id)
+          || projectTasks.find(t => t.task_id === id);
         if (!task) {
           failed++;
           continue;
@@ -2620,16 +2624,22 @@ export default function ProjectDetail({
         continue;
       }
       try {
+        // A user assignment should become the primary assignee. The UI renders the
+        // team over the user, so any existing team assignment must be removed first.
+        if (task.assigned_team_id) {
+          await removeTeamFromProjectTask(taskId, { mode: 'remove_all' });
+        }
         const updatedTask = await updateTaskWithChecklist(taskId, {
           ...task,
           assigned_to: userId,
+          assigned_team_id: null,
           estimated_hours: Number(task.estimated_hours) || 0,
           actual_hours: Number(task.actual_hours) || 0,
           checklist_items: task.checklist_items,
         });
         if (updatedTask) {
           const checklistItems = await getTaskChecklistItems(taskId);
-          const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
+          const taskWithChecklist = { ...updatedTask, assigned_team_id: null, checklist_items: checklistItems };
           setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
           setAllProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
           success++;
@@ -3463,10 +3473,9 @@ export default function ProjectDetail({
             moveConfirmation.taskIds && moveConfirmation.taskIds.length > 1
               ? t(
                   'projectDetail.confirmMoveTasksMessage',
-                  'Are you sure you want to move {{count}} selected tasks from phase "{{sourcePhase}}" to "{{targetPhase}}"?',
+                  'Are you sure you want to move {{count}} selected tasks to phase "{{targetPhase}}"?',
                   {
                     count: moveConfirmation.taskIds.length,
-                    sourcePhase: moveConfirmation.sourcePhase.phase_name,
                     targetPhase: moveConfirmation.targetPhase.phase_name,
                   },
                 )
@@ -3619,6 +3628,9 @@ export default function ProjectDetail({
               setProjectTasks(prev => prev.filter(t => t.task_id !== taskToDelete.task_id));
               // Remove from allProjectTasks for filtered counts
               setAllProjectTasks(prev => prev.filter(t => t.task_id !== taskToDelete.task_id));
+              // Drop the deleted task from the multi-selection so bulk actions and
+              // selection-aware labels don't keep counting it
+              setTasksSelected([taskToDelete.task_id], false);
               toast.success(
                 t('projectDetail.taskDeletedSuccess', 'Task "{{taskName}}" deleted successfully!', {
                   taskName: taskToDelete.task_name,
