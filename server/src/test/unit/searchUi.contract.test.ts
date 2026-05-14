@@ -255,4 +255,13 @@ describe('app-wide search UI contracts', () => {
     expect(source).toContain('id={`app-search-filter-chip-${toDomIdPart(type)}`}');
     expect(source).toContain('typeEntries.map(([type, count]) =>');
   });
+
+  it('T161 sends sidebar Enter submissions to the shareable results URL', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/search/SearchPalette.tsx'), 'utf8');
+
+    expect(source).toContain('const seeAllUrl = `/msp/search?q=${encodeURIComponent(trimmedQuery)}`');
+    expect(source).toContain("if (event.key === 'Enter')");
+    expect(source).toContain('navigateToActiveOption()');
+    expect(source).toContain('window.location.assign(seeAllUrl)');
+  });
 });

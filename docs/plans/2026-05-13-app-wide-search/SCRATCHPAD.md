@@ -1438,6 +1438,8 @@ npm run search:backfill
 
 - **2026-05-13 — T160 ACME top result acceptance.** Added action-level acceptance coverage that a search returning ACME client and ACME ticket hits preserves the client as result #1 and reports grouped counts for both client and ticket. Validation: `cd server && npx vitest run src/test/unit/searchActions.test.ts --coverage=false`.
 
+- **2026-05-13 — T161 sidebar Enter acceptance.** Added UI acceptance coverage that sidebar Enter uses `navigateToActiveOption()` and the no-active-row path navigates to `seeAllUrl`, built as `/msp/search?q=${encodeURIComponent(trimmedQuery)}`. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
