@@ -283,6 +283,7 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
 - **2026-05-13 — F010 complete.** `SearchDoc` now models tenant/type/id, optional parent, title/subtitle/body/url, metadata, required ACL metadata, and `sourceUpdatedAt`. Validation: targeted `rg` on the interface fields.
 - **2026-05-13 — F011 complete.** `AclMetadata` covers `visibleToUserIds`, `visibleToRoles`, `isInternalOnly`, `isPrivate`, `clientScopeId`, and `requiredPermission` for indexer-produced ACL hints. Validation: targeted `rg` on the interface fields.
 - **2026-05-13 — F012 complete.** Added `flattenBlockNote(json)` in `server/src/lib/search/normalize.ts`. It parses JSON strings when needed, walks BlockNote `content`/`children`/`items`, collects visible text leaves, supports unexpected plain text fallback, and strips image data URIs. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/normalize.ts`.
+- **2026-05-13 — F013 complete.** Added `flattenMarkdown(md)` to strip headings, list markers, links/images, bold/italic/code markers, code fences, blockquotes, and HTML tags while preserving readable text. Validation: targeted `rg` on function and replacement rules.
 
 ---
 

@@ -13,7 +13,7 @@
   { "id": "F011", "description": "Define `AclMetadata` interface (visibleToUserIds, visibleToRoles, isInternalOnly, isPrivate, clientScopeId, requiredPermission)", "prdRefs": ["9.2", "14"], "implemented": true },
 
   { "id": "F012", "description": "Implement `flattenBlockNote(json)` in `server/src/lib/search/normalize.ts` that walks BlockNote nodes, concatenates text leaves, and drops image data URIs", "prdRefs": ["9.3"], "implemented": true },
-  { "id": "F013", "description": "Implement `flattenMarkdown(md)` that strips markdown tokens (headings, lists, links, bold/italic, code fences) leaving plain text", "prdRefs": ["9.3"], "implemented": false },
+  { "id": "F013", "description": "Implement `flattenMarkdown(md)` that strips markdown tokens (headings, lists, links, bold/italic, code fences) leaving plain text", "prdRefs": ["9.3"], "implemented": true },
   { "id": "F014", "description": "Implement `flattenJsonbPayload(obj)` that recursively concatenates string leaves, skipping keys matching `password|secret|token|api_key|authorization`", "prdRefs": ["9.3"], "implemented": false },
   { "id": "F015", "description": "Implement `truncateForIndex(text, maxBytes=65536)` that does UTF-8-safe byte truncation without splitting code points", "prdRefs": ["9.3"], "implemented": false },
   { "id": "F016", "description": "Implement `buildTsvectorSql(title, subtitle, body)` that emits Postgres SQL using `setweight(to_tsvector('english', process_large_lexemes($x)), 'A|B|C')` for the three weight tiers", "prdRefs": ["13.2"], "implemented": false },
