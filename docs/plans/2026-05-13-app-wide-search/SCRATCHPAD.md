@@ -641,6 +641,12 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Text edits and filter changes intentionally drop cursor state so refreshed searches start from the first page.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F115 — Loading and empty states.**
+  - Added skeleton rows while the results-page input value differs from the URL-backed query and the 200 ms router update is pending.
+  - Added an empty state for zero-result searches that echoes the query and suggests removing the type filter when one is active.
+  - Pagination is hidden while loading or empty so stale cursor controls do not appear.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

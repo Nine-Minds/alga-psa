@@ -30,6 +30,7 @@ export default function SearchPageClient({
   const pathname = usePathname();
   const [query, setQuery] = useState(initialQuery);
   const activeType = initialType && initialType !== 'all' ? initialType : 'all';
+  const isUpdatingQuery = query.trim() !== initialQuery;
 
   useEffect(() => {
     setQuery(initialQuery);
@@ -144,6 +145,8 @@ export default function SearchPageClient({
   const previousCursor = initialCursorStack[initialCursorStack.length - 1];
   const previousCursorStack = initialCursorStack.slice(0, -1);
   const nextCursorStack = [...initialCursorStack, initialCursor ?? null];
+  const showEmptyState = !isUpdatingQuery && initialQuery.length > 0 && initialResult.results.length === 0;
+  const skeletonRows = Array.from({ length: 5 }, (_, index) => index);
 
   return (
     <main
@@ -215,7 +218,39 @@ export default function SearchPageClient({
         ))}
       </nav>
 
-      {activeType === 'all' ? (
+      {isUpdatingQuery ? (
+        <section className="space-y-2" aria-label={t('search.loading', { defaultValue: 'Searching...' })}>
+          {skeletonRows.map((index) => (
+            <div key={index} className="animate-pulse rounded-md border border-gray-200 bg-white px-4 py-3">
+              <div className="h-4 w-2/3 rounded bg-gray-200" />
+              <div className="mt-2 h-3 w-1/3 rounded bg-gray-100" />
+            </div>
+          ))}
+        </section>
+      ) : showEmptyState ? (
+        <section className="rounded-md border border-dashed border-gray-300 bg-white px-6 py-8 text-center">
+          <h2 className="text-base font-semibold text-gray-900">
+            {t('search.noResults', {
+              query: initialQuery,
+              defaultValue: `No results for "${initialQuery}"`,
+            })}
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            {activeType === 'all'
+              ? t('search.emptyBroadenQuery', { defaultValue: 'Try a broader query.' })
+              : t('search.emptyRemoveFilter', { defaultValue: 'Try removing the type filter.' })}
+          </p>
+          {activeType !== 'all' ? (
+            <a
+              id="app-search-empty-clear-filter"
+              href={buildFilterUrl('all')}
+              className="mt-4 inline-flex rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:border-purple-300 hover:text-purple-700"
+            >
+              {t('search.filters.all', { defaultValue: 'All' })}
+            </a>
+          ) : null}
+        </section>
+      ) : activeType === 'all' ? (
         <section className="space-y-6">
           {groupedSections.map((section) => (
             <div key={section.type} className="space-y-2">
@@ -235,7 +270,7 @@ export default function SearchPageClient({
         </section>
       )}
 
-      {(initialCursor || initialResult.nextCursor) && (
+      {!isUpdatingQuery && !showEmptyState && (initialCursor || initialResult.nextCursor) && (
         <nav className="flex items-center justify-between border-t border-gray-200 pt-4" aria-label={t('search.paginationLabel', { defaultValue: 'Search pagination' })}>
           {initialCursor ? (
             <a
