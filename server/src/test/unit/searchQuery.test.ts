@@ -5,6 +5,7 @@ import {
   encodeSearchCursor,
   parseQuery,
   runSearchQuery,
+  sanitizeHeadline,
   SearchQueryError,
 } from '../../lib/search/query';
 
@@ -305,5 +306,17 @@ describe('search query parsing', () => {
     expect(sql).toContain('ts_headline(');
     expect(sql).toContain('StartSel=__SEARCH_MARK_START__');
     expect(sql).toContain('StopSel=__SEARCH_MARK_STOP__');
+  });
+
+  it('T102 rebuilds snippets with only mark tags and escapes source HTML', () => {
+    const sanitized = sanitizeHeadline(
+      '<script>alert(1)</script> __SEARCH_MARK_START__ACME__SEARCH_MARK_STOP__ <b>bold</b>',
+    );
+
+    expect(sanitized).toBe(
+      '&lt;script&gt;alert(1)&lt;/script&gt; <mark>ACME</mark> &lt;b&gt;bold&lt;/b&gt;',
+    );
+    expect(sanitized).not.toContain('<script>');
+    expect(sanitized).not.toContain('<b>');
   });
 });

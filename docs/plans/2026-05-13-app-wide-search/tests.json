@@ -111,7 +111,7 @@
   { "id": "T100", "featureIds": ["F089"], "description": "Pagination is stable across two pages: row appearing on page 1 does not reappear on page 2", "implemented": true },
 
   { "id": "T101", "featureIds": ["F090"], "description": "ts_headline output contains the configured sentinel tokens around matched terms in the body", "implemented": true },
-  { "id": "T102", "featureIds": ["F091"], "description": "Sanitizer rebuild produces output containing ONLY `<mark>` tags around match segments; given source body with literal `<script>` text, output contains escaped `&lt;script&gt;`, no executable HTML", "implemented": false },
+  { "id": "T102", "featureIds": ["F091"], "description": "Sanitizer rebuild produces output containing ONLY `<mark>` tags around match segments; given source body with literal `<script>` text, output contains escaped `&lt;script&gt;`, no executable HTML", "implemented": true },
   { "id": "T103", "featureIds": ["F091"], "description": "Sanitizer is robust to unpaired sentinels (malformed ts_headline output) — falls back to fully escaped output instead of throwing", "implemented": false },
   { "id": "T104", "featureIds": ["F092"], "description": "Typeahead action SQL does NOT include ts_headline (verified via captured query string or telemetry)", "implemented": false },
 
