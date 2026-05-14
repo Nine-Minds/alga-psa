@@ -76,4 +76,65 @@ describe('search actions', () => {
     expect(mocks.runSearchQuery).toHaveBeenCalledWith(expect.objectContaining({ acl }));
     expect(mocks.verifyResultVisibility).toHaveBeenCalledWith(knex, acl, hits);
   });
+
+  it('T115 returns grouped counts per object type', async () => {
+    const knex = { tenant: 'knex' };
+    const acl = {
+      userId: 'user-2',
+      tenant: 'tenant-1',
+      permissions: ['client:read', 'ticket:read'],
+      isInternal: true,
+      accessibleClientIds: ['client-1'],
+    };
+    const hits = [
+      {
+        type: 'client',
+        id: 'client-1',
+        title: 'ACME Corp',
+        url: '/msp/clients/client-1',
+        score: 1,
+        updatedAt: new Date('2026-05-13T12:00:00.000Z'),
+        metadata: {},
+      },
+      {
+        type: 'ticket',
+        id: 'ticket-1',
+        title: 'Cannot access VPN',
+        url: '/msp/tickets/ticket-1',
+        score: 0.9,
+        updatedAt: new Date('2026-05-13T12:00:00.000Z'),
+        metadata: {},
+      },
+      {
+        type: 'ticket',
+        id: 'ticket-2',
+        title: 'Printer offline',
+        url: '/msp/tickets/ticket-2',
+        score: 0.8,
+        updatedAt: new Date('2026-05-13T12:00:00.000Z'),
+        metadata: {},
+      },
+    ];
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+    mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
+    mocks.runSearchQuery.mockResolvedValue(hits);
+    mocks.verifyResultVisibility.mockResolvedValue(hits);
+
+    const result = await searchAppAction(
+      {
+        user_id: 'user-2',
+        tenant: 'tenant-1',
+        user_type: 'client',
+        clientId: 'client-1',
+      },
+      { tenant: 'tenant-1' },
+      { query: 'acme', limit: 10 },
+    );
+
+    expect(result.totalCount).toBe(3);
+    expect(result.groups.client).toBe(1);
+    expect(result.groups.ticket).toBe(2);
+    expect(result.groups.document).toBe(0);
+  });
 });

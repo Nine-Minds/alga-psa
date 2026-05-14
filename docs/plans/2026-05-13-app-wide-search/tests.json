@@ -127,7 +127,7 @@
   { "id": "T113", "featureIds": ["F099"], "description": "`search.acl_drift` telemetry counter increments when a discrepancy occurs", "implemented": true },
   { "id": "T114", "featureIds": ["F097"], "description": "verifyResultVisibility is a no-op when SQL filter and record-level checks agree (zero drift)", "implemented": true },
 
-  { "id": "T115", "featureIds": ["F100"], "description": "searchAppAction returns SearchAppResult with grouped counts per object_type", "implemented": false },
+  { "id": "T115", "featureIds": ["F100"], "description": "searchAppAction returns SearchAppResult with grouped counts per object_type", "implemented": true },
   { "id": "T116", "featureIds": ["F100"], "description": "searchAppAction throws when called unauthenticated (via withAuth)", "implemented": false },
   { "id": "T117", "featureIds": ["F100"], "description": "searchAppAction enforces tenant isolation: a row from tenant B is never returned to a user in tenant A across 10k seeded queries", "implemented": false },
   { "id": "T118", "featureIds": ["F101"], "description": "searchAppTypeaheadAction returns ≤5 results, title-only, no snippet field", "implemented": false },
