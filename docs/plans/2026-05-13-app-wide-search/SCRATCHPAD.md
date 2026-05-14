@@ -494,6 +494,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Exact identifier matches are included even if FTS/trigram do not match and receive score `1000`, pinning tickets/assets/invoices/contracts with matching identifiers above normal relevance results.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F088 — Time-decayed relevance.**
+  - Non-identifier search scores now multiply the FTS/trigram composite by `GREATEST(exp(-age_seconds / (90 * 86400)), 0.05)`.
+  - Exact identifier matches keep the explicit high score so identifier lookup remains pinned above decayed relevance results.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

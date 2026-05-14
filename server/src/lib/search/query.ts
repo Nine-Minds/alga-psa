@@ -161,11 +161,17 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
             AND lower(coalesce(s.metadata->>'identifier', '')) = q.identifier
           THEN 1000
           ELSE (
-            ts_rank_cd(s.search_vector, q.tsq)
-            + GREATEST(
-                similarity(s.title, q.raw),
-                similarity(coalesce(s.subtitle, ''), q.raw)
-              ) * 0.4
+            (
+              ts_rank_cd(s.search_vector, q.tsq)
+              + GREATEST(
+                  similarity(s.title, q.raw),
+                  similarity(coalesce(s.subtitle, ''), q.raw)
+                ) * 0.4
+            )
+            * GREATEST(
+                exp(-EXTRACT(epoch FROM (now() - s.source_updated_at)) / (90 * 86400)),
+                0.05
+              )
           )
         END AS score
       FROM app_search_index s

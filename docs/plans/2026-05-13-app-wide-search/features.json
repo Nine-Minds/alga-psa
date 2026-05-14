@@ -96,7 +96,7 @@
   { "id": "F085", "description": "Build SQL query using `websearch_to_tsquery('english', $1)` and `ts_rank_cd(search_vector, tsq)` for FTS branch", "prdRefs": ["13.1"], "implemented": true },
   { "id": "F086", "description": "Add `pg_trgm` fallback branch using `similarity(title|subtitle, raw)` and `%` operator", "prdRefs": ["13.1"], "implemented": true },
   { "id": "F087", "description": "Detect identifier patterns (`^[A-Z]+-?\\d+$`, ticket-number-style, asset-tag-style) and pin exact `metadata->>'identifier'` matches at the top", "prdRefs": ["13.3"], "implemented": true },
-  { "id": "F088", "description": "Apply time-decay multiplier `exp(-age_days/90)` with floor 0.05 in the ORDER BY composite score", "prdRefs": ["13.4"], "implemented": false },
+  { "id": "F088", "description": "Apply time-decay multiplier `exp(-age_days/90)` with floor 0.05 in the ORDER BY composite score", "prdRefs": ["13.4"], "implemented": true },
   { "id": "F089", "description": "Implement opaque cursor encoding/decoding for stable pagination (encodes rank + object_id tiebreaker)", "prdRefs": ["12"], "implemented": false },
 
   { "id": "F090", "description": "Build snippet generation via `ts_headline('english', body, tsq, 'MaxFragments=2,StartSel=<mark>,StopSel=</mark>')`", "prdRefs": ["13.1"], "implemented": false },
