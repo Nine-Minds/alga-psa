@@ -144,4 +144,14 @@ describe('app-wide search UI contracts', () => {
     expect(source).toContain("t('search.emptyRemoveFilter')");
     expect(source).toContain('id="app-search-empty-clear-filter"');
   });
+
+  it('T136 renders skeleton rows while a results-page query update is pending', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/app/msp/search/SearchPageClient.tsx'), 'utf8');
+
+    expect(source).toContain('const isUpdatingQuery = query.trim() !== initialQuery');
+    expect(source).toContain('const skeletonRows = Array.from({ length: 5 }');
+    expect(source).toContain('isUpdatingQuery ? (');
+    expect(source).toContain('animate-pulse');
+    expect(source).toContain("aria-label={t('search.loading')}");
+  });
 });

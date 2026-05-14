@@ -1388,6 +1388,8 @@ npm run search:backfill
 
 - **2026-05-13 — T135 empty search state.** Added UI contract coverage that the results page only shows empty state after a non-empty settled query with zero results, echoes `initialQuery` through `search.noResults`, and offers the clear-filter anchor for filtered empty results. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T136 loading skeleton.** Added UI contract coverage that results page detects `query.trim() !== initialQuery`, renders five `animate-pulse` skeleton rows with a translated loading label, and removes that branch once URL-backed results catch up. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
