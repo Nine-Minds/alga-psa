@@ -32,6 +32,7 @@ export interface SearchQueryOptions {
   limit?: number;
   offset?: number;
   cursor?: string;
+  includeSnippets?: boolean;
 }
 
 export interface SearchIndexHit {
@@ -45,6 +46,7 @@ export interface SearchIndexHit {
   score: number;
   updatedAt: Date;
   metadata: Record<string, unknown>;
+  snippet?: string;
 }
 
 interface SearchIndexHitRow {
@@ -58,6 +60,7 @@ interface SearchIndexHitRow {
   score: number | string;
   source_updated_at: Date | string;
   metadata: Record<string, unknown> | string | null;
+  snippet: string | null;
 }
 
 interface SearchCursorPayload {
@@ -133,6 +136,7 @@ function toSearchHit(row: SearchIndexHitRow): SearchIndexHit {
     score: Number(row.score) || 0,
     updatedAt: new Date(row.source_updated_at),
     metadata: parseMetadata(row.metadata),
+    snippet: row.snippet ?? undefined,
   };
 }
 
@@ -182,6 +186,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
   const limit = normalizeLimit(options.limit);
   const cursor = decodeSearchCursor(options.cursor);
   const offset = cursor ? 0 : normalizeOffset(options.offset);
+  const includeSnippets = options.includeSnippets ?? true;
 
   if (options.allowedTypes.length === 0) {
     return [];
@@ -206,6 +211,15 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
           s.url,
           s.source_updated_at,
           s.metadata,
+          CASE
+            WHEN ?::boolean THEN ts_headline(
+              'english',
+              coalesce(s.body, ''),
+              q.tsq,
+              'MaxFragments=2,StartSel=<mark>,StopSel=</mark>'
+            )
+            ELSE NULL
+          END AS snippet,
           CASE
             WHEN q.identifier IS NOT NULL
               AND lower(coalesce(s.metadata->>'identifier', '')) = q.identifier
@@ -261,6 +275,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
       parsed.raw,
       parsed.raw,
       parsed.identifier ?? null,
+      includeSnippets,
       options.tenant,
       options.allowedTypes,
       cursor?.score ?? null,

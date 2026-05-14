@@ -505,6 +505,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Malformed cursors throw `SearchQueryError('invalid_cursor')` instead of falling through to a 500-prone parse path.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F090 — Snippet generation.**
+  - `runSearchQuery()` now returns optional `snippet` text and includes `ts_headline('english', coalesce(body, ''), tsq, 'MaxFragments=2,StartSel=<mark>,StopSel=</mark>')` when snippets are enabled.
+  - Added `includeSnippets` query option, defaulting to true; F092 uses it to skip snippets for typeahead.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
