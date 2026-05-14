@@ -1120,6 +1120,8 @@ npm run search:backfill
 
 - **2026-05-13 — T091 FTS branch SQL.** Added query-builder coverage that `runSearchQuery` emits `websearch_to_tsquery('english', ?)` and filters with `s.search_vector @@ q.tsq` in the match branch. Validation: `npx vitest run src/test/unit/searchQuery.test.ts --coverage=false` from `server/` passed.
 
+- **2026-05-13 — T092 FTS ranking order.** Added query-builder coverage that relevance scoring includes `ts_rank_cd(s.search_vector, q.tsq)` and the default relevance sort orders by `score DESC, source_updated_at DESC, object_id ASC`. Validation: `npx vitest run src/test/unit/searchQuery.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T060 project-family event contract.** Extended `searchEventPublishing.contract.test.ts` to assert project actions emit project create/update/delete and phase create/update/delete events, task actions emit task create/update/delete events, and task-comment actions emit task-comment create/update/delete events. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T059 user CRUD/role event contract.** Extended `searchEventPublishing.contract.test.ts` to assert `packages/users/src/actions/user-actions/userActions.ts` emits `USER_CREATED`, `USER_UPDATED`, `USER_DELETED`, and `USER_ROLES_UPDATED` with tenant context and stable idempotency keys, covering user role-change ACL reindex triggers. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.

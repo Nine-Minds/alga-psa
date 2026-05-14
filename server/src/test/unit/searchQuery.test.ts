@@ -47,4 +47,22 @@ describe('search query parsing', () => {
     expect(sql).toContain("websearch_to_tsquery('english', ?)");
     expect(sql).toContain('s.search_vector @@ q.tsq');
   });
+
+  it('T092 orders relevance results by the score containing ts_rank_cd descending', async () => {
+    const knex = {
+      raw: vi.fn(async () => ({ rows: [] })),
+    };
+
+    await runSearchQuery({
+      knex: knex as never,
+      tenant: '00000000-0000-0000-0000-000000000001',
+      query: 'acme',
+      allowedTypes: ['client'],
+      sort: 'relevance',
+    });
+
+    const sql = knex.raw.mock.calls[0]?.[0] as string;
+    expect(sql).toContain('ts_rank_cd(s.search_vector, q.tsq)');
+    expect(sql).toContain('ORDER BY score DESC, source_updated_at DESC, object_id ASC');
+  });
 });
