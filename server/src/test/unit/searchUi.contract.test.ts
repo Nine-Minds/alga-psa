@@ -264,4 +264,19 @@ describe('app-wide search UI contracts', () => {
     expect(source).toContain('navigateToActiveOption()');
     expect(source).toContain('window.location.assign(seeAllUrl)');
   });
+
+  it('T162 keeps results-page rows native so new tabs preserve original URL state', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/app/msp/search/SearchPageClient.tsx'), 'utf8');
+    const renderRowBlock = source.slice(
+      source.indexOf('const renderResultRow ='),
+      source.indexOf('const groupedSections ='),
+    );
+
+    expect(renderRowBlock).toContain('href={row.url}');
+    expect(renderRowBlock).not.toContain('router.push');
+    expect(renderRowBlock).not.toContain('onClick=');
+    expect(source).toContain('const stableUrlState = useMemo(() => ({');
+    expect(source).toContain('initialCursor');
+    expect(source).toContain('initialSort');
+  });
 });

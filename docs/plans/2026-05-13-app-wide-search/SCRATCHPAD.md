@@ -1440,6 +1440,8 @@ npm run search:backfill
 
 - **2026-05-13 — T161 sidebar Enter acceptance.** Added UI acceptance coverage that sidebar Enter uses `navigateToActiveOption()` and the no-active-row path navigates to `seeAllUrl`, built as `/msp/search?q=${encodeURIComponent(trimmedQuery)}`. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T162 result new-tab acceptance.** Added UI acceptance coverage that results-page rows are plain `<a href={row.url}>` anchors with no click interception, while page state remains URL-backed through initial cursor/sort/query props. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
