@@ -107,4 +107,48 @@ describe('search ACL SQL predicate', () => {
     expect(query.andWhere).toHaveBeenCalledWith('tenant', 'tenant-1');
     expect(visible).toEqual([]);
   });
+
+  it('T113 emits search.acl_drift telemetry when record-level visibility rejects a row', async () => {
+    const captureMessage = vi.fn();
+    const previousSentry = (globalThis as { Sentry?: unknown }).Sentry;
+    (globalThis as { Sentry?: unknown }).Sentry = { captureMessage };
+    const query = {
+      select: vi.fn(() => query),
+      where: vi.fn(() => query),
+      first: vi.fn(() => query),
+      andWhere: vi.fn(() => query),
+      then: (
+        resolve: (row: undefined) => unknown,
+        reject: (reason?: unknown) => unknown,
+      ) => Promise.resolve(undefined).then(resolve, reject),
+    };
+    const knex = vi.fn(() => query);
+
+    try {
+      await verifyResultVisibility(
+        knex as never,
+        {
+          userId: '00000000-0000-0000-0000-000000000001',
+          tenant: 'tenant-1',
+          permissions: ['ticket:read'],
+          isInternal: true,
+        },
+        [{ type: 'ticket', id: 'ticket-missing' }],
+      );
+
+      expect(captureMessage).toHaveBeenCalledWith(
+        'search.acl_drift',
+        expect.objectContaining({
+          level: 'warning',
+          extra: expect.objectContaining({
+            metric: 'search.acl_drift',
+            objectType: 'ticket',
+            objectId: 'ticket-missing',
+          }),
+        }),
+      );
+    } finally {
+      (globalThis as { Sentry?: unknown }).Sentry = previousSentry;
+    }
+  });
 });
