@@ -366,4 +366,20 @@ describe('app-wide search UI contracts', () => {
     expect(clientSource).toContain('typeEntries.map(([type, count]) =>');
     expect(clientSource).toContain('id={`app-search-filter-chip-${toDomIdPart(type)}`}');
   });
+
+  it('T204 falls back to humanized object type labels when i18n keys are missing', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/app/msp/search/SearchPageClient.tsx'), 'utf8');
+
+    expect(source).toContain('function humanizeObjectType(value: string): string');
+    expect(source).toContain("value.replace(/_/g, ' ').trim()");
+    expect(source).toContain("t(`search.filters.${type}`, { defaultValue: humanizeObjectType(type) })");
+    expect(source).toContain("t(`search.groups.${type}`, { defaultValue: humanizeObjectType(type) })");
+
+    const humanize = (value: string) => {
+      const normalized = value.replace(/_/g, ' ').trim();
+      return normalized ? normalized.charAt(0).toUpperCase() + normalized.slice(1) : value;
+    };
+
+    expect(humanize('service_request_submission')).toBe('Service request submission');
+  });
 });

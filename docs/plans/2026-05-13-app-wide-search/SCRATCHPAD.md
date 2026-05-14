@@ -1524,6 +1524,8 @@ npm run search:backfill
 
 - **2026-05-13 — T203 registry-driven filter chips.** Added UI contract coverage that the search page receives `registeredObjectTypes()`, builds `typeEntries` from `registeredTypes`, renders the `All` chip separately, and maps one chip per registered type. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T204 missing-label fallback.** Added UI contract coverage that search filter and group labels pass `defaultValue: humanizeObjectType(type)` through i18n, with `service_request_submission` falling back to `Service request submission` when a locale key is absent. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
