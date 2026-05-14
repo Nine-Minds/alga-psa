@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T041 invoice child ACL inheritance.** Extended `searchIndexers.test.ts` to assert `invoiceItemIndexer` and `invoiceAnnotationIndexer` join their parent invoice, use invoice number as title, emit item/annotation hash URLs, and inherit `invoice:read` plus `clientScopeId` from the invoice. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T040 invoice client subtitle and identifier.** Extended `searchIndexers.test.ts` to assert `invoiceIndexer.loadOne` joins clients by tenant/client id, builds subtitle from client name/status/total, sets `metadata.identifier` to the invoice number, and scopes ACL by invoice client. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T039 asset identifier metadata.** Extended `searchIndexers.test.ts` to assert `assetIndexer.loadOne` copies `asset_tag` into `metadata.identifier`, enabling exact identifier ranking for asset-tag searches such as `LAP-0042`. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.

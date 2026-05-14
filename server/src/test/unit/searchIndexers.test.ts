@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { assetIndexer } from '../../lib/search/indexers/asset';
 import { clientIndexer } from '../../lib/search/indexers/client';
 import { contactIndexer } from '../../lib/search/indexers/contact';
+import { invoiceAnnotationIndexer } from '../../lib/search/indexers/invoice_annotation';
+import { invoiceItemIndexer } from '../../lib/search/indexers/invoice_item';
 import { invoiceIndexer } from '../../lib/search/indexers/invoice';
 import { projectPhaseIndexer } from '../../lib/search/indexers/project_phase';
 import { projectTaskCommentIndexer } from '../../lib/search/indexers/project_task_comment';
@@ -492,6 +494,62 @@ describe('search entity indexers', () => {
       subtitle: 'ACME Corp | sent | 1250.00',
       url: '/msp/invoices/invoice-1',
       metadata: { identifier: 'INV-1001' },
+      acl: {
+        requiredPermission: 'invoice:read',
+        clientScopeId: 'client-1',
+      },
+    });
+  });
+
+  it('T041 invoice item and annotation indexers inherit invoice ACL fields', async () => {
+    const itemKnex = createFirstRowKnex({
+      item_id: 'item-1',
+      invoice_id: 'invoice-1',
+      description: 'Managed service line',
+      invoice_number: 'INV-1001',
+      client_id: 'client-1',
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+    const annotationKnex = createFirstRowKnex({
+      annotation_id: 'annotation-1',
+      invoice_id: 'invoice-1',
+      content: 'Billing note',
+      is_internal: false,
+      invoice_number: 'INV-1001',
+      client_id: 'client-1',
+      created_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const itemDoc = await invoiceItemIndexer.loadOne(
+      itemKnex.knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'item-1',
+    );
+    const annotationDoc = await invoiceAnnotationIndexer.loadOne(
+      annotationKnex.knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'annotation-1',
+    );
+
+    expect(itemKnex.knex).toHaveBeenCalledWith('invoice_items as ii');
+    expect(annotationKnex.knex).toHaveBeenCalledWith('invoice_annotations as ia');
+    expect(itemDoc).toMatchObject({
+      objectType: 'invoice_item',
+      parentType: 'invoice',
+      parentId: 'invoice-1',
+      title: 'INV-1001',
+      url: '/msp/invoices/invoice-1#item-item-1',
+      acl: {
+        requiredPermission: 'invoice:read',
+        clientScopeId: 'client-1',
+      },
+    });
+    expect(annotationDoc).toMatchObject({
+      objectType: 'invoice_annotation',
+      parentType: 'invoice',
+      parentId: 'invoice-1',
+      title: 'INV-1001',
+      url: '/msp/invoices/invoice-1#annotation-annotation-1',
       acl: {
         requiredPermission: 'invoice:read',
         clientScopeId: 'client-1',
