@@ -647,6 +647,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Pagination is hidden while loading or empty so stale cursor controls do not appear.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F116 — Native-anchor result rows.**
+  - The shared `renderResultRow()` helper in `SearchPageClient` renders every row as `<a href={row.url}>` in both grouped and flat result modes.
+  - This preserves browser-native new-tab and context-menu affordances on the full results page.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
