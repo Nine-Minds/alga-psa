@@ -704,6 +704,8 @@ npm run search:backfill
 
 - **2026-05-13 — F041 service request definition indexer.** Added `serviceRequestDefinitionIndexer` and registered it. It indexes `service_request_definitions.name` and `description`, links to `/msp/service-requests/definitions/{definition_id}`, and sets the admin-only ACL hint with `requiredPermission='admin'`. Event hooks remain empty until F058. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/service_request_definition.ts server/src/lib/search/indexers/index.ts`.
 
+- **2026-05-13 — F042 workflow task indexer.** Added `workflowTaskIndexer` with explicit `tenant` predicates on both `loadOne` and `loadBatch`, even though `workflow_tasks.task_id` is the only PK in the current schema. It indexes `title` and `description`, links to `/msp/workflow-tasks/{task_id}`, sets `requiredPermission='workflow_task:read'`, and parses `assigned_users` JSONB into de-duplicated `visibleToUserIds` from string arrays or object arrays (`user_id`, `userId`, `id`). Event hooks remain empty until F059. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/workflow_task.ts server/src/lib/search/indexers/index.ts`.
+
 ---
 
 ## Implementation order suggestion (not prescriptive)
