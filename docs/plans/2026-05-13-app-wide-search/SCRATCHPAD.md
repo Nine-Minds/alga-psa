@@ -374,6 +374,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Registered the subscriber in `server/src/lib/eventBus/subscribers/index.ts` so normal event-bus initialization invokes it.
   - Deliberately kept event handling out of this commit; F064-F067 own event resolution, writes/deletes, and the `SEARCH_INDEX_LIVE` gate.
 
+- **F064 — Registry-driven subscriber resolution.**
+  - `searchIndexSubscriber` now builds an event-type map from `allIndexers()` and subscribes to the union of every registered indexer's `sourceEvents`.
+  - Added `resolveSearchIndexersForEvent(eventType)` so the event handler resolves each event to one or more indexers by registry metadata rather than a hard-coded switch.
+  - Handler currently logs the resolved object types only; F065/F066 add upsert/delete behavior.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
