@@ -1,6 +1,19 @@
 #!/usr/bin/env tsx
 
-interface SearchBackfillOptions {
+import knexFactory, { type Knex } from 'knex';
+import { createRequire } from 'module';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const require = createRequire(import.meta.url);
+const knexfilePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../knexfile.cjs');
+const knexConfig = require(knexfilePath);
+
+interface TenantRecord {
+  tenant: string;
+}
+
+export interface SearchBackfillOptions {
   tenant?: string;
   type?: string;
 }
@@ -27,8 +40,44 @@ export function parseSearchBackfillArgs(argv: string[]): SearchBackfillOptions {
   };
 }
 
-export async function runSearchBackfill(options: SearchBackfillOptions): Promise<void> {
-  console.log('Search backfill is not configured yet', options);
+function createBackfillKnex(): Knex {
+  const environment = process.env.NODE_ENV || 'development';
+  return knexFactory(knexConfig[environment]);
+}
+
+export async function resolveBackfillTenants(
+  knex: Knex,
+  options: SearchBackfillOptions,
+): Promise<string[]> {
+  if (options.tenant) {
+    return [options.tenant];
+  }
+
+  const rows = await knex<TenantRecord>('tenants')
+    .select('tenant')
+    .orderBy('tenant', 'asc');
+
+  return rows.map((row) => row.tenant);
+}
+
+export async function runSearchBackfill(
+  options: SearchBackfillOptions,
+  existingKnex?: Knex,
+): Promise<void> {
+  const knex = existingKnex ?? createBackfillKnex();
+  const ownsConnection = !existingKnex;
+
+  try {
+    const tenants = await resolveBackfillTenants(knex, options);
+    console.log(`Search backfill selected ${tenants.length} tenant(s).`);
+    for (const tenant of tenants) {
+      console.log(`[tenant=${tenant}] backfill selection ready`);
+    }
+  } finally {
+    if (ownsConnection) {
+      await knex.destroy();
+    }
+  }
 }
 
 async function main(): Promise<void> {

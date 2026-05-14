@@ -423,6 +423,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - The file is intentionally a scaffold in this commit; F074-F077 fill tenant discovery, indexer selection, paging, and idempotent upsert behavior in separate commits.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F074 — Backfill tenant selection.**
+  - `search-backfill.ts` now opens the server Knex config, discovers all tenants from the `tenants` catalog by default, and accepts `--tenant=<uuid>` / `--tenant <uuid>` to run a single tenant.
+  - `runSearchBackfill()` accepts an optional existing Knex instance for future tests and destroys only connections it creates itself.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
