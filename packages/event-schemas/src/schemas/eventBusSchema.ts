@@ -278,8 +278,12 @@ export const EVENT_TYPES = [
   'CREDIT_NOTE_VOIDED',
   'CONTRACT_CREATED',
   'CONTRACT_UPDATED',
+  'CONTRACT_DELETED',
   'CONTRACT_STATUS_CHANGED',
   'CONTRACT_RENEWAL_UPCOMING',
+  'CLIENT_CONTRACT_CREATED',
+  'CLIENT_CONTRACT_UPDATED',
+  'CLIENT_CONTRACT_DELETED',
   'RECURRING_BILLING_RUN_STARTED',
   'RECURRING_BILLING_RUN_COMPLETED',
   'RECURRING_BILLING_RUN_FAILED',
@@ -583,6 +587,24 @@ export const InvoiceAnnotationEventPayloadSchema = BasePayloadSchema.extend({
   timestamp: z.string().datetime().optional(),
 });
 
+export const ContractSearchEventPayloadSchema = BasePayloadSchema.extend({
+  contractId: z.string().uuid(),
+  clientId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
+  status: z.string().optional(),
+  changes: z.record(z.unknown()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const ClientContractEventPayloadSchema = BasePayloadSchema.extend({
+  clientContractId: z.string().uuid(),
+  contractId: z.string().uuid(),
+  clientId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  changes: z.record(z.unknown()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
 export const AssetDeletedPayloadSchema = BasePayloadSchema.extend({
   assetId: z.string().uuid(),
   userId: z.string().uuid().optional(),
@@ -869,6 +891,9 @@ const ProjectTaskAssignedPayloadSchema = z.union([
 ]);
 const InvoiceGeneratedPayloadSchema = z.union([InvoiceEventPayloadSchema, invoiceGeneratedEventPayloadSchema]);
 const InvoiceFinalizedPayloadSchema = z.union([InvoiceEventPayloadSchema, invoiceFinalizedEventPayloadSchema]);
+const ContractCreatedPayloadSchema = z.union([contractCreatedEventPayloadSchema, ContractSearchEventPayloadSchema]);
+const ContractUpdatedPayloadSchema = z.union([contractUpdatedEventPayloadSchema, ContractSearchEventPayloadSchema]);
+const ContractStatusChangedPayloadSchema = z.union([contractStatusChangedEventPayloadSchema, ContractSearchEventPayloadSchema]);
 const InboundEmailReceivedPayloadSchema = z.union([
   InboundEmailEventPayloadSchema,
   inboundEmailReceivedEventPayloadSchema,
@@ -995,10 +1020,14 @@ export const EventPayloadSchemas = {
   CREDIT_NOTE_CREATED: creditNoteCreatedEventPayloadSchema,
   CREDIT_NOTE_APPLIED: creditNoteAppliedEventPayloadSchema,
   CREDIT_NOTE_VOIDED: creditNoteVoidedEventPayloadSchema,
-  CONTRACT_CREATED: contractCreatedEventPayloadSchema,
-  CONTRACT_UPDATED: contractUpdatedEventPayloadSchema,
-  CONTRACT_STATUS_CHANGED: contractStatusChangedEventPayloadSchema,
+  CONTRACT_CREATED: ContractCreatedPayloadSchema,
+  CONTRACT_UPDATED: ContractUpdatedPayloadSchema,
+  CONTRACT_DELETED: ContractSearchEventPayloadSchema,
+  CONTRACT_STATUS_CHANGED: ContractStatusChangedPayloadSchema,
   CONTRACT_RENEWAL_UPCOMING: contractRenewalUpcomingEventPayloadSchema,
+  CLIENT_CONTRACT_CREATED: ClientContractEventPayloadSchema,
+  CLIENT_CONTRACT_UPDATED: ClientContractEventPayloadSchema,
+  CLIENT_CONTRACT_DELETED: ClientContractEventPayloadSchema,
   RECURRING_BILLING_RUN_STARTED: recurringBillingRunStartedEventPayloadSchema,
   RECURRING_BILLING_RUN_COMPLETED: recurringBillingRunCompletedEventPayloadSchema,
   RECURRING_BILLING_RUN_FAILED: recurringBillingRunFailedEventPayloadSchema,

@@ -79,7 +79,7 @@ function baseClientContractQuery(knex: Knex, tenant: string) {
 
 export const clientContractIndexer: EntityIndexer = {
   objectType: 'client_contract',
-  sourceEvents: [],
+  sourceEvents: ['CLIENT_CONTRACT_CREATED', 'CLIENT_CONTRACT_UPDATED', 'CLIENT_CONTRACT_DELETED'],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await baseClientContractQuery(knex, tenant)

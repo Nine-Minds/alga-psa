@@ -15,6 +15,7 @@ import {
 } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
@@ -34,6 +35,12 @@ import {
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
 
 const isBypassEnabled = (): boolean => process.env.E2E_AUTH_BYPASS === 'true';
+
+function maybeUserActor(user: any) {
+  const userId = user?.user_id;
+  if (typeof userId !== 'string' || userId.length === 0) return undefined;
+  return { actorType: 'USER' as const, actorUserId: userId };
+}
 
 const assertBillingPermission = async (
   user: unknown,
@@ -323,7 +330,24 @@ export const createContract = withAuth(async (
       is_system_managed_default: _ignoredSystemManagedMarker,
       ...safeContractData
     } = contractData as any;
-    return await Contract.create(knex, tenant, safeContractData);
+    const created = await Contract.create(knex, tenant, safeContractData);
+    const occurredAt = created.created_at ?? new Date().toISOString();
+    await publishWorkflowEvent({
+      eventType: 'CONTRACT_CREATED',
+      payload: {
+        contractId: created.contract_id,
+        userId: user.user_id,
+        status: created.status,
+        timestamp: occurredAt,
+      },
+      ctx: {
+        tenantId: tenant,
+        occurredAt,
+        actor: maybeUserActor(user),
+      },
+      idempotencyKey: `contract_created:${created.contract_id}:${occurredAt}`,
+    });
+    return created;
   } catch (error) {
     console.error('Error creating contract:', error);
     if (error instanceof Error) {
@@ -422,6 +446,23 @@ export const updateContract = withAuth(async (
       ...safeUpdateData
     } = updateData as any;
     const updated = await Contract.update(knex, tenant, contractId, safeUpdateData);
+    const occurredAt = updated.updated_at ?? new Date().toISOString();
+    await publishWorkflowEvent({
+      eventType: 'CONTRACT_UPDATED',
+      payload: {
+        contractId,
+        userId: user.user_id,
+        status: updated.status,
+        changes: safeUpdateData,
+        timestamp: occurredAt,
+      },
+      ctx: {
+        tenantId: tenant,
+        occurredAt,
+        actor: maybeUserActor(user),
+      },
+      idempotencyKey: `contract_updated:${contractId}:${occurredAt}`,
+    });
 
     // After updating, check if an expired contract should be reactivated based on end dates
     if (currentContract.status === 'expired') {
@@ -471,6 +512,21 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
     }
 
     await Contract.delete(knex, tenant, contractId);
+    const occurredAt = new Date().toISOString();
+    await publishWorkflowEvent({
+      eventType: 'CONTRACT_DELETED',
+      payload: {
+        contractId,
+        userId: user.user_id,
+        timestamp: occurredAt,
+      },
+      ctx: {
+        tenantId: tenant,
+        occurredAt,
+        actor: maybeUserActor(user),
+      },
+      idempotencyKey: `contract_deleted:${contractId}:${occurredAt}`,
+    });
   } catch (error) {
     console.error('Error deleting contract:', error);
     if (error instanceof Error) {
