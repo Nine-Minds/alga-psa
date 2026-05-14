@@ -369,6 +369,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Note: the category indexer remains scoped to the `categories` table per the existing F047 implementation and PRD source-table choice; `ticket_categories` API mutations are not wired to avoid emitting event IDs the current indexer cannot load.
   - Validation: `npm -w @alga-psa/event-schemas run typecheck`, `npm -w @alga-psa/tags run typecheck`, `npm -w @alga-psa/reference-data run typecheck`, `git diff --check`.
 
+- **F063 — Search index subscriber shell.**
+  - Added `server/src/lib/eventBus/subscribers/searchIndexSubscriber.ts` with register/unregister lifecycle hooks and idempotent registration state.
+  - Registered the subscriber in `server/src/lib/eventBus/subscribers/index.ts` so normal event-bus initialization invokes it.
+  - Deliberately kept event handling out of this commit; F064-F067 own event resolution, writes/deletes, and the `SEARCH_INDEX_LIVE` gate.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
