@@ -16,7 +16,7 @@
   { "id": "F013", "description": "Implement `flattenMarkdown(md)` that strips markdown tokens (headings, lists, links, bold/italic, code fences) leaving plain text", "prdRefs": ["9.3"], "implemented": true },
   { "id": "F014", "description": "Implement `flattenJsonbPayload(obj)` that recursively concatenates string leaves, skipping keys matching `password|secret|token|api_key|authorization`", "prdRefs": ["9.3"], "implemented": true },
   { "id": "F015", "description": "Implement `truncateForIndex(text, maxBytes=65536)` that does UTF-8-safe byte truncation without splitting code points", "prdRefs": ["9.3"], "implemented": true },
-  { "id": "F016", "description": "Implement `buildTsvectorSql(title, subtitle, body)` that emits Postgres SQL using `setweight(to_tsvector('english', process_large_lexemes($x)), 'A|B|C')` for the three weight tiers", "prdRefs": ["13.2"], "implemented": false },
+  { "id": "F016", "description": "Implement `buildTsvectorSql(title, subtitle, body)` that emits Postgres SQL using `setweight(to_tsvector('english', process_large_lexemes($x)), 'A|B|C')` for the three weight tiers", "prdRefs": ["13.2"], "implemented": true },
 
   { "id": "F017", "description": "Define `EntityIndexer` interface with `objectType`, `sourceEvents`, `loadOne`, `loadBatch` in `server/src/lib/search/types.ts`", "prdRefs": ["10"], "implemented": false },
   { "id": "F018", "description": "Build registry in `server/src/lib/search/index.ts` exporting `allIndexers()`, `getIndexer(objectType)`, and `registeredObjectTypes()`. Imports both `ceIndexers` (from `./indexers`) and `eeIndexers` (from `ee/server/src/lib/search/indexers` — stubbed to `[]` in CE builds) and merges them. See PRD §19.", "prdRefs": ["10", "19.1"], "implemented": false },
