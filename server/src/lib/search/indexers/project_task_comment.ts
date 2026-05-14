@@ -78,7 +78,13 @@ function baseProjectTaskCommentQuery(knex: Knex, tenant: string) {
 
 export const projectTaskCommentIndexer: EntityIndexer = {
   objectType: 'project_task_comment',
-  sourceEvents: ['TASK_COMMENT_ADDED', 'TASK_COMMENT_UPDATED'],
+  sourceEvents: [
+    'TASK_COMMENT_ADDED',
+    'TASK_COMMENT_UPDATED',
+    'PROJECT_TASK_COMMENT_CREATED',
+    'PROJECT_TASK_COMMENT_UPDATED',
+    'PROJECT_TASK_COMMENT_DELETED',
+  ],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await baseProjectTaskCommentQuery(knex, tenant)

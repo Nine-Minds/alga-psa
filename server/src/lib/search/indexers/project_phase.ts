@@ -57,7 +57,7 @@ function baseProjectPhaseQuery(knex: Knex, tenant: string) {
 
 export const projectPhaseIndexer: EntityIndexer = {
   objectType: 'project_phase',
-  sourceEvents: [],
+  sourceEvents: ['PROJECT_PHASE_CREATED', 'PROJECT_PHASE_UPDATED', 'PROJECT_PHASE_DELETED'],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await baseProjectPhaseQuery(knex, tenant)

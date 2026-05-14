@@ -220,11 +220,20 @@ export const EVENT_TYPES = [
   'PROJECT_CREATED',
   'PROJECT_UPDATED',
   'PROJECT_CLOSED',
+  'PROJECT_DELETED',
   'PROJECT_ASSIGNED',
+  'PROJECT_PHASE_CREATED',
+  'PROJECT_PHASE_UPDATED',
+  'PROJECT_PHASE_DELETED',
+  'PROJECT_TASK_UPDATED',
+  'PROJECT_TASK_DELETED',
   'PROJECT_TASK_ASSIGNED',
   'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
   'TASK_COMMENT_ADDED',
   'TASK_COMMENT_UPDATED',
+  'PROJECT_TASK_COMMENT_CREATED',
+  'PROJECT_TASK_COMMENT_UPDATED',
+  'PROJECT_TASK_COMMENT_DELETED',
 
   // Projects (domain expansion)
   'PROJECT_STATUS_CHANGED',
@@ -441,6 +450,14 @@ export const ProjectClosedPayloadSchema = ProjectEventPayloadSchema.extend({
   }),
 });
 
+export const ProjectPhaseEventPayloadSchema = BasePayloadSchema.extend({
+  projectId: z.string().uuid(),
+  phaseId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  timestamp: z.string().datetime().optional(),
+  changes: z.record(z.unknown()).optional(),
+});
+
 // Project task event payload schema
 export const ProjectTaskEventPayloadSchema = BasePayloadSchema.extend({
   projectId: z.string().uuid(),
@@ -459,6 +476,14 @@ export const ProjectTaskAdditionalAgentPayloadSchema = BasePayloadSchema.extend(
   primaryAgentId: z.string().uuid(),      // Existing primary agent
   additionalAgentId: z.string().uuid(),   // New additional agent
   assignedByUserId: z.string().uuid(),    // Who performed the action
+});
+
+export const ProjectTaskSearchEventPayloadSchema = BasePayloadSchema.extend({
+  projectId: z.string().uuid(),
+  taskId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  timestamp: z.string().datetime().optional(),
+  changes: z.record(z.unknown()).optional(),
 });
 
 // Task comment event payload schemas
@@ -481,6 +506,15 @@ export const TaskCommentUpdatedPayloadSchema = BasePayloadSchema.extend({
   oldCommentContent: z.string(), // Old BlockNote JSON
   newCommentContent: z.string(), // New BlockNote JSON
   isUpdate: z.boolean().optional(), // Always true for UPDATED
+});
+
+export const TaskCommentDeletedPayloadSchema = BasePayloadSchema.extend({
+  taskId: z.string().uuid(),
+  projectId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  taskCommentId: z.string().uuid(),
+  taskName: z.string().optional(),
+  timestamp: z.string().datetime().optional(),
 });
 
 // Ticket comment update event payload schema
@@ -865,11 +899,20 @@ export const EventPayloadSchemas = {
   PROJECT_CREATED: ProjectCreatedPayloadSchema,
   PROJECT_UPDATED: ProjectUpdatedPayloadSchema,
   PROJECT_CLOSED: ProjectClosedPayloadSchema,
+  PROJECT_DELETED: ProjectEventPayloadSchema,
   PROJECT_ASSIGNED: ProjectEventPayloadSchema,
+  PROJECT_PHASE_CREATED: ProjectPhaseEventPayloadSchema,
+  PROJECT_PHASE_UPDATED: ProjectPhaseEventPayloadSchema,
+  PROJECT_PHASE_DELETED: ProjectPhaseEventPayloadSchema,
+  PROJECT_TASK_UPDATED: ProjectTaskSearchEventPayloadSchema,
+  PROJECT_TASK_DELETED: ProjectTaskSearchEventPayloadSchema,
   PROJECT_TASK_ASSIGNED: ProjectTaskAssignedPayloadSchema,
   PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED: ProjectTaskAdditionalAgentPayloadSchema,
   TASK_COMMENT_ADDED: TaskCommentAddedPayloadSchema,
   TASK_COMMENT_UPDATED: TaskCommentUpdatedPayloadSchema,
+  PROJECT_TASK_COMMENT_CREATED: TaskCommentAddedPayloadSchema,
+  PROJECT_TASK_COMMENT_UPDATED: TaskCommentUpdatedPayloadSchema,
+  PROJECT_TASK_COMMENT_DELETED: TaskCommentDeletedPayloadSchema,
 
   // Projects (domain expansion)
   PROJECT_STATUS_CHANGED: projectStatusChangedEventPayloadSchema,

@@ -724,6 +724,8 @@ npm run search:backfill
 
 - **2026-05-13 — F051 user lifecycle events.** No app-wide `USER_*` CRUD events existed in `packages/event-schemas`. Added `USER_CREATED`, `USER_UPDATED`, `USER_DELETED`, and `USER_ROLES_UPDATED` with tenant-scoped payloads. Published them from `packages/users/src/actions/user-actions/userActions.ts` after successful add/update/delete/role-update flows, and registered those events on `userIndexer.sourceEvents` so internal team-member rows can refresh/delete when the search subscriber lands. Validation: `npm -w @alga-psa/event-schemas run typecheck`, `npm -w @alga-psa/users run typecheck`, and `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/user.ts`.
 
+- **2026-05-13 — F052 project-family events.** Existing project/task workflow events covered create/status/assignment but not every indexed row lifecycle. Added `PROJECT_DELETED`, `PROJECT_PHASE_CREATED/UPDATED/DELETED`, `PROJECT_TASK_UPDATED/DELETED`, and `PROJECT_TASK_COMMENT_CREATED/UPDATED/DELETED` schemas. Published the missing events from project phase mutations, project hard-delete, task update/delete/move, and task-comment create/update/delete while preserving existing `PROJECT_*`, `PROJECT_TASK_*`, and legacy `TASK_COMMENT_*` events. Updated source events for the project, phase, task, and task-comment indexers. Validation: `npm -w @alga-psa/event-schemas run typecheck`, `npm -w @alga-psa/projects run typecheck`, and `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/project.ts server/src/lib/search/indexers/project_phase.ts server/src/lib/search/indexers/project_task.ts server/src/lib/search/indexers/project_task_comment.ts`.
+
 ---
 
 ## Implementation order suggestion (not prescriptive)

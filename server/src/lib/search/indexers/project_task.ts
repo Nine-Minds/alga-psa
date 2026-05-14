@@ -62,7 +62,14 @@ function baseProjectTaskQuery(knex: Knex, tenant: string) {
 
 export const projectTaskIndexer: EntityIndexer = {
   objectType: 'project_task',
-  sourceEvents: ['PROJECT_TASK_CREATED', 'PROJECT_TASK_ASSIGNED', 'PROJECT_TASK_COMPLETED', 'PROJECT_TASK_STATUS_CHANGED'],
+  sourceEvents: [
+    'PROJECT_TASK_CREATED',
+    'PROJECT_TASK_UPDATED',
+    'PROJECT_TASK_DELETED',
+    'PROJECT_TASK_ASSIGNED',
+    'PROJECT_TASK_COMPLETED',
+    'PROJECT_TASK_STATUS_CHANGED',
+  ],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await baseProjectTaskQuery(knex, tenant)
