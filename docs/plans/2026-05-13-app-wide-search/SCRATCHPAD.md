@@ -521,6 +521,12 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - The future typeahead server action can use this path without emitting `ts_headline` in its SQL.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F093 — ACL SQL predicate helper.**
+  - Added `aclPredicateSql(user)` in `server/src/lib/search/acl.ts`.
+  - The helper returns a parameterized SQL fragment covering `required_permission`, `visible_to_user_ids`, `visible_to_roles`, `is_internal_only`, `is_private`, and `client_scope_id`.
+  - `is_private` is treated as share-list-only via `visible_to_user_ids`; CE v1 document rows do not set it, but the predicate is wired for future private rows.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
