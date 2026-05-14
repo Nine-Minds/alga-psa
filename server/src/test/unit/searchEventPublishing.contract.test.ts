@@ -74,4 +74,37 @@ describe('search index source event publishing contracts', () => {
     expect(source).toContain('idempotencyKey: `user_deleted:${userId}:${occurredAt}`');
     expect(source).toContain('idempotencyKey: `user_roles_updated:${userId}:${occurredAt}`');
   });
+
+  it('T060 project CRUD and child entity CRUD emit project-family events', () => {
+    const projectSource = readRepoFile('packages/projects/src/actions/projectActions.ts');
+    const taskSource = readRepoFile('packages/projects/src/actions/projectTaskActions.ts');
+    const commentSource = readRepoFile('packages/projects/src/actions/projectTaskCommentActions.ts');
+
+    for (const eventType of [
+      'PROJECT_CREATED',
+      'PROJECT_UPDATED',
+      'PROJECT_DELETED',
+      'PROJECT_PHASE_CREATED',
+      'PROJECT_PHASE_UPDATED',
+      'PROJECT_PHASE_DELETED',
+    ]) {
+      expect(projectSource).toContain(`eventType: '${eventType}'`);
+    }
+
+    for (const eventType of [
+      'PROJECT_TASK_CREATED',
+      'PROJECT_TASK_UPDATED',
+      'PROJECT_TASK_DELETED',
+    ]) {
+      expect(taskSource).toContain(`eventType: '${eventType}'`);
+    }
+
+    for (const eventType of [
+      'PROJECT_TASK_COMMENT_CREATED',
+      'PROJECT_TASK_COMMENT_UPDATED',
+      'PROJECT_TASK_COMMENT_DELETED',
+    ]) {
+      expect(commentSource).toContain(`eventType: '${eventType}'`);
+    }
+  });
 });
