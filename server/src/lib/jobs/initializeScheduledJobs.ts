@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob } from './index';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from 'server/src/lib/db/db';
 
@@ -90,8 +90,25 @@ export async function initializeScheduledJobs(): Promise<void> {
            returnedJobId: reconcileJobId
          });
        }
-     } catch (error) {
+      } catch (error) {
        logger.error(`Failed to schedule bucket usage reconciliation job for tenant ${tenantId}`, error);
+      }
+
+      // Schedule daily job to reconcile the app-wide search index (runs at 6:00 AM)
+      try {
+        const cron = '0 6 * * *';
+        const searchReconcileJobId = await scheduleSearchReconcileJob(tenantId, cron);
+        if (searchReconcileJobId) {
+          logger.info(`Scheduled search index reconciliation job for tenant ${tenantId} with job ID ${searchReconcileJobId}`);
+        } else {
+          logger.info('Search index reconciliation job already scheduled (singleton active)', {
+            tenantId,
+            cron,
+            returnedJobId: searchReconcileJobId
+          });
+        }
+      } catch (error) {
+        logger.error(`Failed to schedule search index reconciliation job for tenant ${tenantId}`, error);
       }
 
       // Schedule Microsoft calendar webhook renewal (every 30 minutes)

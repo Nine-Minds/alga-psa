@@ -468,6 +468,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - This covers backfill gaps and direct SQL deletes of index rows even when the source row's `sourceUpdatedAt` is older than the current indexed watermark.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F083 — Daily search reconciliation schedule.**
+  - Added `scheduleSearchReconcileJob(tenantId, cron='0 6 * * *')` and scheduled it once per tenant from `initializeScheduledJobs()`.
+  - The deploy runbook below now calls out that `search:reconcile` runs daily at 6:00 AM per tenant after scheduled jobs initialize.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
@@ -805,8 +810,8 @@ npm run search:backfill
 #    SEARCH_INDEX_LIVE=true
 #    Roll workers + server
 
-# 5. Reconciliation job runs daily from launch; first run catches anything
-#    missed between (3) and (4).
+# 5. Reconciliation job (`search:reconcile`) runs daily at 6:00 AM per tenant
+#    from launch; first run catches anything missed between (3) and (4).
 
 # 6. Enable the sidebar UI by merging the feature branch to main.
 ```

@@ -547,3 +547,15 @@ export const scheduleWorkflowQuotaResumeScanJob = async (
     { tenantId: 'system', batchSize }
   );
 };
+
+export const scheduleSearchReconcileJob = async (
+  tenantId: string,
+  cronExpression: string = '0 6 * * *'
+): Promise<string | null> => {
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<SearchReconcileJobData>(
+    SEARCH_RECONCILE_JOB_NAME,
+    cronExpression,
+    { tenantId }
+  );
+};
