@@ -1496,6 +1496,8 @@ npm run search:backfill
 
 - **2026-05-13 — T189 ticket-comment renamed-parent subtitle.** Updated ticket-comment indexing to include the parent ticket title in the subtitle alongside the ticket number, and added coverage that a renamed parent title appears in both title and subtitle after reindex. Validation: `cd server && npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false`.
 
+- **2026-05-13 — T190 visible-user document ACL refresh.** Added visible-user reindex job coverage for a document row currently containing a user in `visible_to_user_ids`: the job finds it via `?::uuid = ANY(visible_to_user_ids)`, reloads the document indexer, and upserts the refreshed ACL row. CE v1 still has no internal document share-list source table; this validates the async refresh path for future/private rows. Validation: `cd server && npx vitest run src/test/unit/searchVisibleUserReindex.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
