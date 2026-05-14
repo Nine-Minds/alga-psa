@@ -630,6 +630,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Group headings use `search.groups.{objectType}` with a humanized fallback and show the corresponding group count from the server action result.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F113 — Single-type flat results.**
+  - The search route passes a valid `type` query parameter through to `searchAppAction`, so single-type URLs fetch only that entity type.
+  - `SearchPageClient` renders the non-`All` branch as a flat list of result anchors instead of grouped sections.
+  - Validation: covered by the F112 typecheck run; no code change required beyond recording the checkpoint.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
