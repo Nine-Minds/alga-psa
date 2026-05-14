@@ -23,12 +23,19 @@ export default function SearchPalette({
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResultRow[]>([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const [focusAfterExpand, setFocusAfterExpand] = useState(false);
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
   const requestIdRef = useRef(0);
   const trimmedQuery = query.trim();
   const isOpen = !collapsed && trimmedQuery.length >= 2;
+  const visibleResults = results.slice(0, 5);
+  const activeDescendantId = activeIndex >= 0
+    ? activeIndex < visibleResults.length
+      ? `app-search-option-${visibleResults[activeIndex].type}-${visibleResults[activeIndex].id}`
+      : 'app-search-option-see-all-results'
+    : undefined;
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -63,6 +70,7 @@ export default function SearchPalette({
     if (trimmedQuery.length < 2) {
       setResults([]);
       setTotalCount(0);
+      setActiveIndex(-1);
       return;
     }
 
@@ -75,12 +83,14 @@ export default function SearchPalette({
           if (requestIdRef.current === requestId) {
             setResults(response.results);
             setTotalCount(response.totalCount);
+            setActiveIndex(-1);
           }
         } catch (error) {
           console.error('Failed to load app search suggestions', error);
           if (requestIdRef.current === requestId) {
             setResults([]);
             setTotalCount(0);
+            setActiveIndex(-1);
           }
         }
       });
@@ -111,6 +121,11 @@ export default function SearchPalette({
           <Command.Input
             ref={inputRef}
             id="app-search-input"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={isOpen}
+            aria-controls="app-search-typeahead-list"
+            aria-activedescendant={activeDescendantId}
             value={query}
             onValueChange={setQuery}
             placeholder={t('search.placeholder', { defaultValue: 'Search' })}
@@ -118,20 +133,24 @@ export default function SearchPalette({
           />
         </div>
         {isOpen && (
-          <Command.List className="absolute left-0 right-0 top-11 z-50 max-h-72 overflow-y-auto rounded-md border border-gray-700 bg-subMenu-bg p-1 text-sm text-subMenu-text shadow-xl">
+          <Command.List
+            id="app-search-typeahead-list"
+            className="absolute left-0 right-0 top-11 z-50 max-h-72 overflow-y-auto rounded-md border border-gray-700 bg-subMenu-bg p-1 text-sm text-subMenu-text shadow-xl"
+          >
             {isPending && (
               <Command.Loading className="px-3 py-2 text-gray-400">
                 {t('search.loading', { defaultValue: 'Searching...' })}
               </Command.Loading>
             )}
-            {isPending ? null : results.slice(0, 5).map((result) => (
+            {isPending ? null : visibleResults.map((result) => (
               <Command.Item
                 key={`${result.type}-${result.id}`}
                 value={`${result.type}-${result.id}`}
                 asChild
               >
                 <a
-                  id={`app-search-result-row-${result.type}-${result.id}`}
+                  id={`app-search-option-${result.type}-${result.id}`}
+                  data-result-row-id={`app-search-result-row-${result.type}-${result.id}`}
                   href={result.url}
                   className="block cursor-pointer rounded px-3 py-2 aria-selected:bg-white/10"
                 >
@@ -142,7 +161,7 @@ export default function SearchPalette({
             {!isPending && (
               <Command.Item value="see-all-results" asChild>
                 <a
-                  id="app-search-see-all-results"
+                  id="app-search-option-see-all-results"
                   href={`/msp/search?q=${encodeURIComponent(trimmedQuery)}`}
                   className="mt-1 block cursor-pointer rounded border-t border-gray-700 px-3 py-2 text-purple-300 aria-selected:bg-white/10"
                 >

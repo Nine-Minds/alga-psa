@@ -133,7 +133,7 @@
   { "id": "F116", "description": "Every result row on the page is a native `<a>` element with canonical `href` for new-tab support", "prdRefs": ["6.2"], "implemented": true },
   { "id": "F117", "description": "Add `sort` query param toggle: `relevance` (default) | `recent` (orders by source_updated_at DESC only)", "prdRefs": ["6.2"], "implemented": true },
 
-  { "id": "F118", "description": "ARIA combobox semantics on sidebar input (role, aria-expanded, aria-controls, aria-activedescendant); ARIA region role on results page", "prdRefs": ["6.3"], "implemented": false },
+  { "id": "F118", "description": "ARIA combobox semantics on sidebar input (role, aria-expanded, aria-controls, aria-activedescendant); ARIA region role on results page", "prdRefs": ["6.3"], "implemented": true },
   { "id": "F119", "description": "Keyboard navigation: ↑/↓ to move, Enter to open or submit, Esc to close typeahead, Tab to advance focus normally; works identically on sidebar and results page", "prdRefs": ["6.3"], "implemented": false },
   { "id": "F120", "description": "Stable kebab-case `id`s on every interactive element (e.g., `app-search-input`, `app-search-result-row-{type}-{id}`, `app-search-filter-chip-{type}`)", "prdRefs": ["6.3"], "implemented": false },
 
