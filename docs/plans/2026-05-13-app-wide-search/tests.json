@@ -108,7 +108,7 @@
   { "id": "T097", "featureIds": ["F088"], "description": "All else equal, newer rows rank higher than older rows by ~time-decay factor", "implemented": true },
   { "id": "T098", "featureIds": ["F088"], "description": "Time decay multiplier never drops below 0.05 (floor)", "implemented": true },
   { "id": "T099", "featureIds": ["F089"], "description": "Cursor encoding round-trip is stable; decoded cursor reproduces page boundary correctly", "implemented": true },
-  { "id": "T100", "featureIds": ["F089"], "description": "Pagination is stable across two pages: row appearing on page 1 does not reappear on page 2", "implemented": false },
+  { "id": "T100", "featureIds": ["F089"], "description": "Pagination is stable across two pages: row appearing on page 1 does not reappear on page 2", "implemented": true },
 
   { "id": "T101", "featureIds": ["F090"], "description": "ts_headline output contains the configured sentinel tokens around matched terms in the body", "implemented": false },
   { "id": "T102", "featureIds": ["F091"], "description": "Sanitizer rebuild produces output containing ONLY `<mark>` tags around match segments; given source body with literal `<script>` text, output contains escaped `&lt;script&gt;`, no executable HTML", "implemented": false },

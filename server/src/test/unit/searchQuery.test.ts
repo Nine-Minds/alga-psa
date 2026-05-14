@@ -251,4 +251,40 @@ describe('search query parsing', () => {
       objectId: 'client-1',
     });
   });
+
+  it('T100 uses strict cursor predicates so page two does not repeat page one rows', async () => {
+    const knex = {
+      raw: vi.fn(async () => ({ rows: [] })),
+    };
+    const updatedAt = new Date('2026-05-13T12:34:56.789Z');
+    const cursor = encodeSearchCursor({
+      score: 3.14,
+      updatedAt,
+      id: 'client-1',
+    });
+
+    await runSearchQuery({
+      knex: knex as never,
+      tenant: '00000000-0000-0000-0000-000000000001',
+      query: 'acme',
+      allowedTypes: ['client'],
+      cursor,
+      offset: 100,
+    });
+
+    const [sql, bindings] = knex.raw.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain('score < ?::double precision');
+    expect(sql).toContain('source_updated_at < ?::timestamptz');
+    expect(sql).toContain('object_id > ?');
+    expect(bindings.slice(6, 13)).toEqual([
+      3.14,
+      3.14,
+      3.14,
+      updatedAt.toISOString(),
+      3.14,
+      updatedAt.toISOString(),
+      'client-1',
+    ]);
+    expect(bindings.at(-1)).toBe(0);
+  });
 });
