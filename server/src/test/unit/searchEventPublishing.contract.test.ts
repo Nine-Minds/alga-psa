@@ -115,4 +115,26 @@ describe('search index source event publishing contracts', () => {
       expect(source).toContain(`eventType: '${eventType}'`);
     }
   });
+
+  it('T062 invoice CRUD, item CRUD, and annotation CRUD emit invoice-family events', () => {
+    const serviceSource = readRepoFile('server/src/lib/api/services/InvoiceService.ts');
+    const modelSource = readRepoFile('packages/billing/src/models/invoice.ts');
+    const modificationSource = readRepoFile('packages/billing/src/actions/invoiceModification.ts');
+
+    for (const eventType of ['INVOICE_CREATED', 'INVOICE_UPDATED', 'INVOICE_DELETED']) {
+      expect(serviceSource + modificationSource).toContain(`eventType: '${eventType}'`);
+    }
+
+    for (const eventType of ['INVOICE_ITEM_CREATED', 'INVOICE_ITEM_UPDATED', 'INVOICE_ITEM_DELETED']) {
+      expect(serviceSource + modelSource + modificationSource).toContain(`eventType: '${eventType}'`);
+    }
+
+    for (const eventType of [
+      'INVOICE_ANNOTATION_CREATED',
+      'INVOICE_ANNOTATION_UPDATED',
+      'INVOICE_ANNOTATION_DELETED',
+    ]) {
+      expect(modelSource + modificationSource).toContain(`eventType: '${eventType}'`);
+    }
+  });
 });

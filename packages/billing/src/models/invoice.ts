@@ -693,6 +693,17 @@ const Invoice = {
         throw new Error(`Invoice item ${itemId} not found in tenant ${tenant}`);
       }
 
+      await publishEvent({
+        eventType: 'INVOICE_ITEM_UPDATED',
+        payload: {
+          tenantId: tenant,
+          invoiceId: updatedItem.invoice_id,
+          itemId: updatedItem.item_id,
+          changes: updateData as Record<string, unknown>,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
       return updatedItem;
     } catch (error) {
       console.error(`Error updating invoice item ${itemId} in tenant ${tenant}:`, error);
@@ -966,6 +977,46 @@ const Invoice = {
     }
 
     return savedAnnotation;
+  },
+
+  /**
+   * Update an invoice annotation.
+   */
+  updateAnnotation: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    annotationId: string,
+    updateData: Partial<Pick<IInvoiceAnnotation, 'content' | 'is_internal'>>
+  ): Promise<IInvoiceAnnotation> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for updating invoice annotation');
+    }
+
+    const [updatedAnnotation] = await knexOrTrx('invoice_annotations')
+      .where({
+        annotation_id: annotationId,
+        tenant,
+      })
+      .update(updateData)
+      .returning('*');
+
+    if (!updatedAnnotation) {
+      throw new Error(`Invoice annotation ${annotationId} not found in tenant ${tenant}`);
+    }
+
+    await publishEvent({
+      eventType: 'INVOICE_ANNOTATION_UPDATED',
+      payload: {
+        tenantId: tenant,
+        invoiceId: updatedAnnotation.invoice_id,
+        annotationId: updatedAnnotation.annotation_id,
+        userId: updatedAnnotation.user_id ?? undefined,
+        changes: updateData as Record<string, unknown>,
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    return updatedAnnotation;
   },
 
   /**
