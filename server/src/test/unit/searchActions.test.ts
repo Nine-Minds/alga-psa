@@ -221,4 +221,35 @@ describe('search actions', () => {
     expect(result.results.every((row) => row.snippet === undefined)).toBe(true);
     expect(mocks.runSearchTypeaheadQuery).toHaveBeenCalledWith(expect.objectContaining({ acl }));
   });
+
+  it('T119 keeps mocked typeahead action overhead below 100ms', async () => {
+    const knex = { tenant: 'knex' };
+    const acl = {
+      userId: 'user-5',
+      tenant: 'tenant-1',
+      permissions: ['client:read'],
+      isInternal: true,
+      accessibleClientIds: ['client-1'],
+    };
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+    mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
+    mocks.runSearchTypeaheadQuery.mockResolvedValue([]);
+    mocks.verifyResultVisibility.mockResolvedValue([]);
+
+    const startedAt = performance.now();
+    await searchAppTypeaheadAction(
+      {
+        user_id: 'user-5',
+        tenant: 'tenant-1',
+        user_type: 'client',
+        clientId: 'client-1',
+      },
+      { tenant: 'tenant-1' },
+      { query: 'acme' },
+    );
+    const elapsedMs = performance.now() - startedAt;
+
+    expect(elapsedMs).toBeLessThan(100);
+  });
 });
