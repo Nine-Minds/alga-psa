@@ -1390,6 +1390,8 @@ npm run search:backfill
 
 - **2026-05-13 — T136 loading skeleton.** Added UI contract coverage that results page detects `query.trim() !== initialQuery`, renders five `animate-pulse` skeleton rows with a translated loading label, and removes that branch once URL-backed results catch up. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T137 native result anchors.** Added UI contract coverage that `renderResultRow` returns an `<a href={row.url}>` with stable row IDs and no click handler or `preventDefault`, preserving browser Cmd/Ctrl-click behavior. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

@@ -154,4 +154,18 @@ describe('app-wide search UI contracts', () => {
     expect(source).toContain('animate-pulse');
     expect(source).toContain("aria-label={t('search.loading')}");
   });
+
+  it('T137 renders every results-page row as a native anchor with no click interception', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/app/msp/search/SearchPageClient.tsx'), 'utf8');
+    const renderRowBlock = source.slice(
+      source.indexOf('const renderResultRow ='),
+      source.indexOf('const groupedSections ='),
+    );
+
+    expect(renderRowBlock).toContain('<a');
+    expect(renderRowBlock).toContain('href={row.url}');
+    expect(renderRowBlock).toContain('id={`app-search-result-row-${toDomIdPart(row.type)}-${toDomIdPart(row.id)}`}');
+    expect(renderRowBlock).not.toContain('onClick=');
+    expect(renderRowBlock).not.toContain('preventDefault');
+  });
 });
