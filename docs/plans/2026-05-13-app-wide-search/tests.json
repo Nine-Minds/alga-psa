@@ -130,7 +130,7 @@
   { "id": "T115", "featureIds": ["F100"], "description": "searchAppAction returns SearchAppResult with grouped counts per object_type", "implemented": true },
   { "id": "T116", "featureIds": ["F100"], "description": "searchAppAction throws when called unauthenticated (via withAuth)", "implemented": true },
   { "id": "T117", "featureIds": ["F100"], "description": "searchAppAction enforces tenant isolation: a row from tenant B is never returned to a user in tenant A across 10k seeded queries", "implemented": true },
-  { "id": "T118", "featureIds": ["F101"], "description": "searchAppTypeaheadAction returns ≤5 results, title-only, no snippet field", "implemented": false },
+  { "id": "T118", "featureIds": ["F101"], "description": "searchAppTypeaheadAction returns ≤5 results, title-only, no snippet field", "implemented": true },
   { "id": "T119", "featureIds": ["F101"], "description": "searchAppTypeaheadAction p50 latency < 100ms against a seeded medium tenant", "implemented": false },
   { "id": "T120", "featureIds": ["F102"], "description": "Zod input rejects empty query, > 200 chars, types not in the union, limit > 100", "implemented": false },
   { "id": "T121", "featureIds": ["F103"], "description": "Result rows include a non-empty `url` for every entity type", "implemented": false },

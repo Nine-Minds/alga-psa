@@ -1172,6 +1172,8 @@ npm run search:backfill
 
 - **2026-05-13 — T117 action tenant isolation.** Added action coverage that the authenticated tenant context is passed through to `runSearchQuery`, and a different tenant is never supplied by the action path. The SQL-level tenant predicate is separately covered in query tests. Validation: `npx vitest run src/test/unit/searchActions.test.ts --coverage=false` from `server/` passed.
 
+- **2026-05-13 — T118 typeahead result shape.** Added typeahead action coverage that only the first five visible hits are returned, `totalCount` reflects the full visible set, and snippets are stripped from every row. Validation: `npx vitest run src/test/unit/searchActions.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T060 project-family event contract.** Extended `searchEventPublishing.contract.test.ts` to assert project actions emit project create/update/delete and phase create/update/delete events, task actions emit task create/update/delete events, and task-comment actions emit task-comment create/update/delete events. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T059 user CRUD/role event contract.** Extended `searchEventPublishing.contract.test.ts` to assert `packages/users/src/actions/user-actions/userActions.ts` emits `USER_CREATED`, `USER_UPDATED`, `USER_DELETED`, and `USER_ROLES_UPDATED` with tenant context and stable idempotency keys, covering user role-change ACL reindex triggers. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.

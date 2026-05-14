@@ -30,7 +30,7 @@ vi.mock('../../lib/search/query', () => ({
   encodeSearchCursor: mocks.encodeSearchCursor,
 }));
 
-import { searchAppAction } from '../../lib/actions/searchActions';
+import { searchAppAction, searchAppTypeaheadAction } from '../../lib/actions/searchActions';
 
 describe('search actions', () => {
   beforeEach(() => {
@@ -178,5 +178,47 @@ describe('search actions', () => {
     expect(mocks.runSearchQuery).not.toHaveBeenCalledWith(expect.objectContaining({
       tenant: 'tenant-b',
     }));
+  });
+
+  it('T118 returns at most five typeahead rows without snippets', async () => {
+    const knex = { tenant: 'knex' };
+    const acl = {
+      userId: 'user-4',
+      tenant: 'tenant-1',
+      permissions: ['client:read'],
+      isInternal: true,
+      accessibleClientIds: ['client-1'],
+    };
+    const hits = Array.from({ length: 6 }, (_, index) => ({
+      type: 'client',
+      id: `client-${index}`,
+      title: `Client ${index}`,
+      url: `/msp/clients/client-${index}`,
+      score: 1 - index / 10,
+      updatedAt: new Date('2026-05-13T12:00:00.000Z'),
+      metadata: {},
+      snippet: '<mark>Client</mark>',
+    }));
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+    mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
+    mocks.runSearchTypeaheadQuery.mockResolvedValue(hits);
+    mocks.verifyResultVisibility.mockResolvedValue(hits);
+
+    const result = await searchAppTypeaheadAction(
+      {
+        user_id: 'user-4',
+        tenant: 'tenant-1',
+        user_type: 'client',
+        clientId: 'client-1',
+      },
+      { tenant: 'tenant-1' },
+      { query: 'acme' },
+    );
+
+    expect(result.results).toHaveLength(5);
+    expect(result.totalCount).toBe(6);
+    expect(result.results.every((row) => row.snippet === undefined)).toBe(true);
+    expect(mocks.runSearchTypeaheadQuery).toHaveBeenCalledWith(expect.objectContaining({ acl }));
   });
 });
