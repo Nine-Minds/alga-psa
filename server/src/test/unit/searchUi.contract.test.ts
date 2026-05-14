@@ -21,4 +21,12 @@ describe('app-wide search UI contracts', () => {
     expect(source).toContain('!event.metaKey && !event.ctrlKey');
     expect(source).toContain('inputRef.current?.focus()');
   });
+
+  it('T124 renders up to five typeahead results as native anchors', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/search/SearchPalette.tsx'), 'utf8');
+
+    expect(source).toContain('const visibleResults = results.slice(0, 5)');
+    expect(source).toContain('asChild');
+    expect(source).toContain('href={result.url}');
+  });
 });
