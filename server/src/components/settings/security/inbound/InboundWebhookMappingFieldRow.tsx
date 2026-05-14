@@ -14,7 +14,7 @@ import { InboundWebhookMappingField } from './InboundWebhookMappingField';
 import type {
   InboundActionTargetField,
   InboundActionTargetFieldType,
-} from '@/lib/inboundWebhooks/actions/registry';
+} from '@alga-psa/shared/inboundWebhooks/actions/registry';
 import {
   parseFieldMappingValue,
   serializeFieldMappingValue,

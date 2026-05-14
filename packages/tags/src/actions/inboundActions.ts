@@ -3,8 +3,8 @@ import type { TaggedEntityType } from '@alga-psa/types';
 
 import TagDefinition from '../models/tagDefinition';
 
-import { registerAction, type InboundActionDefinition } from '@/lib/inboundWebhooks/actions/registry';
-import { lookupAlgaEntityByExternalId } from '@/lib/inboundWebhooks/externalEntityMappings';
+import { registerAction, type InboundActionDefinition } from '@alga-psa/shared/inboundWebhooks/actions/registry';
+import { lookupAlgaEntityByExternalId } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
 
 type SupportedInboundTagEntityType = Extract<TaggedEntityType, 'client' | 'contact' | 'ticket' | 'project' | 'project_task'>;
 

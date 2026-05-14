@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@/lib/inboundWebhooks/externalEntityMappings';
+import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
 
 function createLookupKnex(mapping: Record<string, unknown> | null) {
   const calls = {

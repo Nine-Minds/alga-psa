@@ -10,8 +10,8 @@ import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/sha
 
 import { createDefaultTaxSettingsAsync } from '../lib/billingHelpers';
 
-import { registerAction, type InboundActionDefinition } from '@/lib/inboundWebhooks/actions/registry';
-import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@/lib/inboundWebhooks/externalEntityMappings';
+import { registerAction, type InboundActionDefinition } from '@alga-psa/shared/inboundWebhooks/actions/registry';
+import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
 
 interface UpsertClientByExternalIdMappedValues extends Record<string, unknown> {
   external_id: string;

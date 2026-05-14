@@ -4,8 +4,8 @@ import type { IProjectTask } from '@alga-psa/types';
 import ProjectModel from '../models/project';
 import ProjectTaskModel from '../models/projectTask';
 
-import { registerAction, type InboundActionDefinition } from '@/lib/inboundWebhooks/actions/registry';
-import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@/lib/inboundWebhooks/externalEntityMappings';
+import { registerAction, type InboundActionDefinition } from '@alga-psa/shared/inboundWebhooks/actions/registry';
+import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
 
 interface CreateProjectTaskMappedValues extends Record<string, unknown> {
   project_id?: string;

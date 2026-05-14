@@ -6,8 +6,8 @@ import {
   type UpdateTicketInput,
 } from '@alga-psa/shared/models/ticketModel';
 
-import { registerAction, type InboundActionDefinition } from '@/lib/inboundWebhooks/actions/registry';
-import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@/lib/inboundWebhooks/externalEntityMappings';
+import { registerAction, type InboundActionDefinition } from '@alga-psa/shared/inboundWebhooks/actions/registry';
+import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
 
 interface CreateTicketMappedValues extends Record<string, unknown> {
   title: string;

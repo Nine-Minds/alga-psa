@@ -22,7 +22,7 @@ import {
   type InboundWebhookUpsertInput,
 } from '@/lib/inboundWebhooks/schemas';
 import { bootstrapInboundWebhookActions } from '@/lib/inboundWebhooks/actions/bootstrap';
-import { listActions, type InboundActionTargetField } from '@/lib/inboundWebhooks/actions/registry';
+import { listActions, type InboundActionTargetField } from '@alga-psa/shared/inboundWebhooks/actions/registry';
 import { createInboundDelivery, updateInboundDeliveryOutcome } from '@/lib/inboundWebhooks/deliveryPersistence';
 import { dispatchInboundWebhookHandler, InboundWebhookActionError } from '@/lib/inboundWebhooks/dispatcher';
 import {

@@ -1,10 +1,10 @@
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import { ingestNormalizedRmmDeviceSnapshot } from '@alga-psa/integrations/lib/rmm/sharedAssetIngestionService';
-import type { NormalizedRmmExternalDeviceSnapshot } from '@alga-psa/integrations/lib/rmm/contracts';
+import { ingestNormalizedRmmDeviceSnapshot } from '@alga-psa/shared/rmm/sharedAssetIngestionService';
+import type { NormalizedRmmExternalDeviceSnapshot } from '@alga-psa/shared/rmm/contracts';
 import type { RmmProvider } from '@alga-psa/types';
 
-import { registerAction, type InboundActionDefinition } from '@/lib/inboundWebhooks/actions/registry';
-import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@/lib/inboundWebhooks/externalEntityMappings';
+import { registerAction, type InboundActionDefinition } from '@alga-psa/shared/inboundWebhooks/actions/registry';
+import { lookupAlgaEntityByExternalId, writeEntityMapping } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
 
 const KNOWN_RMM_PROVIDERS = new Set<RmmProvider>([
   'ninjaone',

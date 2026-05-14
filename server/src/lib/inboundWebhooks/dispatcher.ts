@@ -1,6 +1,10 @@
 import { bootstrapInboundWebhookActions } from './actions/bootstrap';
 import { evaluateFieldMapping } from './actions/mappingEvaluator';
-import { getAction, type InboundActionDefinition, type InboundActionTargetField } from './actions/registry';
+import {
+  getAction,
+  type InboundActionDefinition,
+  type InboundActionTargetField,
+} from '@alga-psa/shared/inboundWebhooks/actions/registry';
 import type { InboundWebhookConfigLookupRow } from './configLookup';
 import { filterInboundWebhookHeaders } from './headerFilter';
 import { buildWorkflowWebhookEnvelope } from './workflowEnvelope';

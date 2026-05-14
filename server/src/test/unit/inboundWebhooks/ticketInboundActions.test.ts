@@ -23,7 +23,7 @@ vi.mock('@alga-psa/shared/models/ticketModel', () => ({
   },
 }));
 
-vi.mock('@/lib/inboundWebhooks/externalEntityMappings', () => ({
+vi.mock('@alga-psa/shared/inboundWebhooks/externalEntityMappings', () => ({
   lookupAlgaEntityByExternalId: mocks.lookupAlgaEntityByExternalId,
   writeEntityMapping: mocks.writeEntityMapping,
 }));
@@ -31,7 +31,7 @@ vi.mock('@/lib/inboundWebhooks/externalEntityMappings', () => ({
 async function loadTicketInboundActions() {
   vi.resetModules();
   await import('@alga-psa/tickets/actions/inboundActions');
-  return import('@/lib/inboundWebhooks/actions/registry');
+  return import('@alga-psa/shared/inboundWebhooks/actions/registry');
 }
 
 describe('ticket inbound webhook actions', () => {

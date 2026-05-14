@@ -14,7 +14,7 @@ vi.mock('@alga-psa/db', () => ({
   withTransaction: mocks.withTransaction,
 }));
 
-vi.mock('@/lib/inboundWebhooks/externalEntityMappings', () => ({
+vi.mock('@alga-psa/shared/inboundWebhooks/externalEntityMappings', () => ({
   lookupAlgaEntityByExternalId: mocks.lookupAlgaEntityByExternalId,
   writeEntityMapping: mocks.writeEntityMapping,
 }));
@@ -29,7 +29,7 @@ vi.mock('@alga-psa/projects/models/projectTask', () => ({
 async function loadProjectInboundActions() {
   vi.resetModules();
   await import('@alga-psa/projects/actions/inboundActions');
-  return import('@/lib/inboundWebhooks/actions/registry');
+  return import('@alga-psa/shared/inboundWebhooks/actions/registry');
 }
 
 function createQuery(firstValue: unknown) {

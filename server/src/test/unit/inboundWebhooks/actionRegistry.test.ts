@@ -7,7 +7,7 @@ import {
   listActions,
   registerAction,
   type InboundActionDefinition,
-} from '@/lib/inboundWebhooks/actions/registry';
+} from '@alga-psa/shared/inboundWebhooks/actions/registry';
 
 function action(name: string, entityType: string): InboundActionDefinition {
   return {

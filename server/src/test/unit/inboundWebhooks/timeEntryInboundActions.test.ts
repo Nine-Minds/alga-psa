@@ -10,27 +10,24 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
+  computeWorkDateFields: mocks.computeWorkDateFields,
   createTenantKnex: mocks.createTenantKnex,
+  resolveUserTimeZone: mocks.resolveUserTimeZone,
   withTransaction: mocks.withTransaction,
 }));
 
-vi.mock('server/src/lib/eventBus/publishers', () => ({
+vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: mocks.publishEvent,
 }));
 
-vi.mock('server/src/lib/utils/workDate', () => ({
-  computeWorkDateFields: mocks.computeWorkDateFields,
-  resolveUserTimeZone: mocks.resolveUserTimeZone,
-}));
-
-vi.mock('@/lib/inboundWebhooks/externalEntityMappings', () => ({
+vi.mock('@alga-psa/shared/inboundWebhooks/externalEntityMappings', () => ({
   writeEntityMapping: mocks.writeEntityMapping,
 }));
 
 async function loadTimeEntryInboundActions() {
   vi.resetModules();
   await import('@alga-psa/scheduling/actions/inboundActions');
-  return import('@/lib/inboundWebhooks/actions/registry');
+  return import('@alga-psa/shared/inboundWebhooks/actions/registry');
 }
 
 function createQuery(firstValue: unknown, returningValue: unknown[] = []) {

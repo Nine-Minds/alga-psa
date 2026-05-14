@@ -13,19 +13,19 @@ vi.mock('@alga-psa/db', () => ({
   withTransaction: mocks.withTransaction,
 }));
 
-vi.mock('@/lib/inboundWebhooks/externalEntityMappings', () => ({
+vi.mock('@alga-psa/shared/inboundWebhooks/externalEntityMappings', () => ({
   lookupAlgaEntityByExternalId: mocks.lookupAlgaEntityByExternalId,
   writeEntityMapping: mocks.writeEntityMapping,
 }));
 
-vi.mock('@alga-psa/integrations/lib/rmm/sharedAssetIngestionService', () => ({
+vi.mock('@alga-psa/shared/rmm/sharedAssetIngestionService', () => ({
   ingestNormalizedRmmDeviceSnapshot: mocks.ingestNormalizedRmmDeviceSnapshot,
 }));
 
 async function loadAssetInboundActions() {
   vi.resetModules();
   await import('@alga-psa/assets/actions/inboundActions');
-  return import('@/lib/inboundWebhooks/actions/registry');
+  return import('@alga-psa/shared/inboundWebhooks/actions/registry');
 }
 
 describe('asset inbound webhook actions', () => {

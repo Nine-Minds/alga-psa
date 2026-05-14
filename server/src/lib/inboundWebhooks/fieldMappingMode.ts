@@ -1,4 +1,4 @@
-import type { InboundActionTargetFieldType } from './actions/registry';
+import type { InboundActionTargetFieldType } from '@alga-psa/shared/inboundWebhooks/actions/registry';
 
 export type FieldMappingMode = 'static' | 'expression';
 

@@ -1,8 +1,8 @@
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import type { InvoiceStatus } from 'server/src/interfaces/invoice.interfaces';
+import type { InvoiceStatus } from '@alga-psa/types';
 
-import { registerAction, type InboundActionDefinition } from '@/lib/inboundWebhooks/actions/registry';
-import { lookupAlgaEntityByExternalId } from '@/lib/inboundWebhooks/externalEntityMappings';
+import { registerAction, type InboundActionDefinition } from '@alga-psa/shared/inboundWebhooks/actions/registry';
+import { lookupAlgaEntityByExternalId } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
 
 interface MarkInvoicePaidByExternalIdMappedValues extends Record<string, unknown> {
   external_id: string;
