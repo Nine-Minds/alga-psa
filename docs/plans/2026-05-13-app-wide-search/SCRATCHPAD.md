@@ -1088,6 +1088,8 @@ npm run search:backfill
 
 - **2026-05-13 — T075 ticket-comment cascade.** Added subscriber behavior coverage for `TICKET_UPDATED`: after the ticket doc upsert, the subscriber queries the ticket's comment ids and re-loads/upserts each `ticket_comment` doc so parent-title denormalization stays fresh. Validation: `npx vitest run src/test/unit/searchIndexSubscriber.behavior.test.ts --coverage=false` from `server/` passed.
 
+- **2026-05-13 — T076 invoice child cascade.** Added subscriber behavior coverage for `INVOICE_UPDATED`: after the invoice doc upsert, the subscriber queries invoice item ids and annotation ids, then re-loads/upserts both child entity types with inherited invoice ACL context. Validation: `npx vitest run src/test/unit/searchIndexSubscriber.behavior.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T060 project-family event contract.** Extended `searchEventPublishing.contract.test.ts` to assert project actions emit project create/update/delete and phase create/update/delete events, task actions emit task create/update/delete events, and task-comment actions emit task-comment create/update/delete events. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T059 user CRUD/role event contract.** Extended `searchEventPublishing.contract.test.ts` to assert `packages/users/src/actions/user-actions/userActions.ts` emits `USER_CREATED`, `USER_UPDATED`, `USER_DELETED`, and `USER_ROLES_UPDATED` with tenant context and stable idempotency keys, covering user role-change ACL reindex triggers. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.

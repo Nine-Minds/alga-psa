@@ -19,6 +19,9 @@ vi.mock('../../lib/search/upsert', () => ({
 import { clientIndexer } from '../../lib/search/indexers/client';
 import { ticketIndexer } from '../../lib/search/indexers/ticket';
 import { ticketCommentIndexer } from '../../lib/search/indexers/ticket_comment';
+import { invoiceIndexer } from '../../lib/search/indexers/invoice';
+import { invoiceItemIndexer } from '../../lib/search/indexers/invoice_item';
+import { invoiceAnnotationIndexer } from '../../lib/search/indexers/invoice_annotation';
 import { handleSearchIndexEventForTest } from '../../lib/eventBus/subscribers/searchIndexSubscriber';
 import type { SearchDoc } from '../../lib/search/types';
 
@@ -238,5 +241,92 @@ describe('search index subscriber event handling', () => {
     expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(1, knex, ticketDoc);
     expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(2, knex, commentDoc1);
     expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(3, knex, commentDoc2);
+  });
+
+  it('T076 cascades INVOICE_UPDATED to invoice items and annotations', async () => {
+    const invoiceDoc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'invoice',
+      objectId: 'invoice-1',
+      title: 'INV-1001',
+      url: '/msp/invoices/invoice-1',
+      metadata: { identifier: 'INV-1001' },
+      acl: { requiredPermission: 'invoice:read', clientScopeId: 'client-1' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    };
+    const itemDoc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'invoice_item',
+      objectId: 'item-1',
+      parentType: 'invoice',
+      parentId: 'invoice-1',
+      title: 'INV-1001',
+      url: '/msp/invoices/invoice-1#item-item-1',
+      acl: { requiredPermission: 'invoice:read', clientScopeId: 'client-1' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    };
+    const annotationDoc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'invoice_annotation',
+      objectId: 'annotation-1',
+      parentType: 'invoice',
+      parentId: 'invoice-1',
+      title: 'INV-1001',
+      url: '/msp/invoices/invoice-1#annotation-annotation-1',
+      acl: { requiredPermission: 'invoice:read', clientScopeId: 'client-1' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    };
+    const itemRows = [{ item_id: 'item-1' }];
+    const annotationRows = [{ annotation_id: 'annotation-1' }];
+    const makeQuery = <T extends object>(rows: T[]) => {
+      const query = {
+        select: vi.fn(() => query),
+        where: vi.fn(() => query),
+        andWhere: vi.fn(() => query),
+        orderBy: vi.fn(() => query),
+        then: (resolve: (rows: T[]) => unknown, reject: (reason?: unknown) => unknown) =>
+          Promise.resolve(rows).then(resolve, reject),
+      };
+      return query;
+    };
+    const itemQuery = makeQuery(itemRows);
+    const annotationQuery = makeQuery(annotationRows);
+    const knex = vi.fn((table: string) => {
+      if (table === 'invoice_items') {
+        return itemQuery;
+      }
+      if (table === 'invoice_annotations') {
+        return annotationQuery;
+      }
+      throw new Error(`Unexpected table ${table}`);
+    });
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+    vi.spyOn(invoiceIndexer, 'loadOne').mockResolvedValue(invoiceDoc);
+    vi.spyOn(invoiceItemIndexer, 'loadOne').mockResolvedValue(itemDoc);
+    vi.spyOn(invoiceAnnotationIndexer, 'loadOne').mockResolvedValue(annotationDoc);
+
+    const event: Event = {
+      id: 'event-7',
+      eventType: 'INVOICE_UPDATED',
+      timestamp: '2026-05-13T12:00:00.000Z',
+      payload: {
+        tenant: 'tenant-1',
+        invoice_id: 'invoice-1',
+      },
+    } as Event;
+
+    await handleSearchIndexEventForTest(event);
+
+    expect(invoiceIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'invoice-1');
+    expect(itemQuery.where).toHaveBeenCalledWith('tenant', 'tenant-1');
+    expect(itemQuery.andWhere).toHaveBeenCalledWith('invoice_id', 'invoice-1');
+    expect(annotationQuery.where).toHaveBeenCalledWith('tenant', 'tenant-1');
+    expect(annotationQuery.andWhere).toHaveBeenCalledWith('invoice_id', 'invoice-1');
+    expect(invoiceItemIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'item-1');
+    expect(invoiceAnnotationIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'annotation-1');
+    expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(1, knex, invoiceDoc);
+    expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(2, knex, itemDoc);
+    expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(3, knex, annotationDoc);
   });
 });

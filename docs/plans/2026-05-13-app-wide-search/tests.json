@@ -81,7 +81,7 @@
   { "id": "T074", "featureIds": ["F065"], "description": "Subscriber handles a missing source row (race: row deleted before loadOne resolves) by deleting the index row instead of erroring", "implemented": true },
 
   { "id": "T075", "featureIds": ["F068"], "description": "TICKET_UPDATED triggers a cascade re-index of all of the ticket's comments (their denormalized parent title updates)", "implemented": true },
-  { "id": "T076", "featureIds": ["F069"], "description": "INVOICE_UPDATED triggers cascade re-index of items and annotations", "implemented": false },
+  { "id": "T076", "featureIds": ["F069"], "description": "INVOICE_UPDATED triggers cascade re-index of items and annotations", "implemented": true },
   { "id": "T077", "featureIds": ["F070"], "description": "PROJECT_UPDATED triggers a paged async re-index covering all phases/tasks/task-comments", "implemented": false },
   { "id": "T078", "featureIds": ["F071"], "description": "Inserting a `document_associations` row tying a document to a different client triggers re-index of the document row with updated `client_scope_id`", "implemented": false },
   { "id": "T079", "featureIds": ["F072"], "description": "User role change kicks off background re-index of rows where the user appears in `visible_to_user_ids`", "implemented": false },
