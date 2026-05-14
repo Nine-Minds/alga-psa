@@ -107,4 +107,12 @@ describe('search index source event publishing contracts', () => {
       expect(commentSource).toContain(`eventType: '${eventType}'`);
     }
   });
+
+  it('T061 asset CRUD emits ASSET_* events', () => {
+    const source = readRepoFile('packages/assets/src/actions/assetActions.ts');
+
+    for (const eventType of ['ASSET_CREATED', 'ASSET_UPDATED', 'ASSET_DELETED']) {
+      expect(source).toContain(`eventType: '${eventType}'`);
+    }
+  });
 });

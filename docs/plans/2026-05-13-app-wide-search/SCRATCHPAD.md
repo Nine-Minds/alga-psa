@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T061 asset CRUD event contract.** Extended `searchEventPublishing.contract.test.ts` to assert asset actions emit `ASSET_CREATED`, `ASSET_UPDATED`, and `ASSET_DELETED`, covering search index incremental refresh for asset rows. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T060 project-family event contract.** Extended `searchEventPublishing.contract.test.ts` to assert project actions emit project create/update/delete and phase create/update/delete events, task actions emit task create/update/delete events, and task-comment actions emit task-comment create/update/delete events. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T059 user CRUD/role event contract.** Extended `searchEventPublishing.contract.test.ts` to assert `packages/users/src/actions/user-actions/userActions.ts` emits `USER_CREATED`, `USER_UPDATED`, `USER_DELETED`, and `USER_ROLES_UPDATED` with tenant context and stable idempotency keys, covering user role-change ACL reindex triggers. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.

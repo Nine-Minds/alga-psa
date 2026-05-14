@@ -64,7 +64,7 @@
   { "id": "T058", "featureIds": ["F050"], "description": "Contact CRUD emits CONTACT_* events", "implemented": true },
   { "id": "T059", "featureIds": ["F051"], "description": "User CRUD and role-change emit corresponding events", "implemented": true },
   { "id": "T060", "featureIds": ["F052"], "description": "Project CRUD and child entity CRUD emit project-family events", "implemented": true },
-  { "id": "T061", "featureIds": ["F053"], "description": "Asset CRUD emits ASSET_* events", "implemented": false },
+  { "id": "T061", "featureIds": ["F053"], "description": "Asset CRUD emits ASSET_* events", "implemented": true },
   { "id": "T062", "featureIds": ["F054"], "description": "Invoice CRUD (header, items, annotations) emits invoice-family events", "implemented": false },
   { "id": "T063", "featureIds": ["F055"], "description": "Contract / client-contract CRUD emits contract-family events", "implemented": false },
   { "id": "T064", "featureIds": ["F056"], "description": "Document content-change AND share-list-change both emit DOCUMENT_UPDATED", "implemented": false },
