@@ -281,6 +281,7 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
 - **2026-05-13 — F008 complete.** Migration down step uses `knex.schema.dropTableIfExists('app_search_index')`. Validation: targeted `rg` on `exports.down` and the drop call.
 - **2026-05-13 — F009 complete.** Added `server/src/lib/search/types.ts` with `SEARCH_OBJECT_TYPES` covering the 27 CE v1 entity types and deriving `SearchObjectType` from that tuple. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/types.ts`.
 - **2026-05-13 — F010 complete.** `SearchDoc` now models tenant/type/id, optional parent, title/subtitle/body/url, metadata, required ACL metadata, and `sourceUpdatedAt`. Validation: targeted `rg` on the interface fields.
+- **2026-05-13 — F011 complete.** `AclMetadata` covers `visibleToUserIds`, `visibleToRoles`, `isInternalOnly`, `isPrivate`, `clientScopeId`, and `requiredPermission` for indexer-produced ACL hints. Validation: targeted `rg` on the interface fields.
 
 ---
 

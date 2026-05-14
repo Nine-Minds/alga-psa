@@ -10,7 +10,7 @@
 
   { "id": "F009", "description": "Define `SearchObjectType` TS union covering all 27 entity types in `server/src/lib/search/types.ts`", "prdRefs": ["7", "9.2"], "implemented": true },
   { "id": "F010", "description": "Define `SearchDoc` interface with title, subtitle, body, url, metadata, acl, sourceUpdatedAt in `server/src/lib/search/types.ts`", "prdRefs": ["9.2"], "implemented": true },
-  { "id": "F011", "description": "Define `AclMetadata` interface (visibleToUserIds, visibleToRoles, isInternalOnly, isPrivate, clientScopeId, requiredPermission)", "prdRefs": ["9.2", "14"], "implemented": false },
+  { "id": "F011", "description": "Define `AclMetadata` interface (visibleToUserIds, visibleToRoles, isInternalOnly, isPrivate, clientScopeId, requiredPermission)", "prdRefs": ["9.2", "14"], "implemented": true },
 
   { "id": "F012", "description": "Implement `flattenBlockNote(json)` in `server/src/lib/search/normalize.ts` that walks BlockNote nodes, concatenates text leaves, and drops image data URIs", "prdRefs": ["9.3"], "implemented": false },
   { "id": "F013", "description": "Implement `flattenMarkdown(md)` that strips markdown tokens (headings, lists, links, bold/italic, code fences) leaving plain text", "prdRefs": ["9.3"], "implemented": false },
