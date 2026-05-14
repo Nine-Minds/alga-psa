@@ -163,11 +163,6 @@ export default function SearchPageClient({
     }
   };
 
-  const humanizeType = (type: string) => type
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-
   const typeEntries = Object.entries(initialResult.groups) as Array<[SearchObjectType, number]>;
 
   const renderResultRow = (row: SearchAppResult['results'][number]) => (
@@ -201,14 +196,14 @@ export default function SearchPageClient({
     <main
       id="app-search-page"
       role="region"
-      aria-label={t('search.resultsRegionLabel', { defaultValue: 'Search results' })}
+      aria-label={t('search.resultsRegionLabel')}
       className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-6"
       data-search-sort={initialSort}
       data-search-cursor={initialCursor}
     >
       <header>
         <h1 className="text-2xl font-semibold text-gray-900">
-          {t('search.pageTitle', { defaultValue: 'Search' })}
+          {t('search.pageTitle')}
         </h1>
         <div className="relative mt-4 max-w-2xl">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" aria-hidden="true" />
@@ -217,7 +212,7 @@ export default function SearchPageClient({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleSearchInputKeyDown}
-            placeholder={t('search.placeholder', { defaultValue: 'Search' })}
+            placeholder={t('search.placeholder')}
             className="h-11 w-full rounded-md border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
           />
         </div>
@@ -226,14 +221,13 @@ export default function SearchPageClient({
             ? t('search.resultSummary', {
               count: initialResult.totalCount,
               query: initialQuery,
-              defaultValue: `${initialResult.totalCount} results for "${initialQuery}"`,
             })
-            : t('search.helperText', { defaultValue: 'Search across the workspace.' })}
+            : t('search.helperText')}
         </p>
       </header>
 
       <div className="flex flex-col gap-3">
-        <nav className="flex flex-wrap gap-2" aria-label={t('search.filtersLabel', { defaultValue: 'Search filters' })}>
+        <nav className="flex flex-wrap gap-2" aria-label={t('search.filtersLabel')}>
           <a
             id="app-search-filter-chip-all"
             href={buildFilterUrl('all')}
@@ -243,7 +237,7 @@ export default function SearchPageClient({
                 : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300'
             }`}
           >
-            <span>{t('search.filters.all', { defaultValue: 'All' })}</span>
+            <span>{t('search.filters.all')}</span>
             <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
               {initialResult.totalCount}
             </span>
@@ -260,7 +254,7 @@ export default function SearchPageClient({
               }`}
             >
               <span>
-                {t(`search.filters.${type}`, { defaultValue: humanizeType(type) })}
+                {t(`search.filters.${type}`)}
               </span>
               <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
                 {count}
@@ -269,7 +263,7 @@ export default function SearchPageClient({
           ))}
         </nav>
 
-        <div className="inline-flex w-fit rounded-md border border-gray-300 bg-white p-1" aria-label={t('search.sortLabel', { defaultValue: 'Sort results' })}>
+        <div className="inline-flex w-fit rounded-md border border-gray-300 bg-white p-1" aria-label={t('search.sortLabel')}>
           {(['relevance', 'recent'] as const).map((sort) => (
             <a
               key={sort}
@@ -281,16 +275,14 @@ export default function SearchPageClient({
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
-              {t(`search.sort.${sort}`, {
-                defaultValue: sort === 'relevance' ? 'Relevance' : 'Recent',
-              })}
+              {t(`search.sort.${sort}`)}
             </a>
           ))}
         </div>
       </div>
 
       {isUpdatingQuery ? (
-        <section className="space-y-2" aria-label={t('search.loading', { defaultValue: 'Searching...' })}>
+        <section className="space-y-2" aria-label={t('search.loading')}>
           {skeletonRows.map((index) => (
             <div key={index} className="animate-pulse rounded-md border border-gray-200 bg-white px-4 py-3">
               <div className="h-4 w-2/3 rounded bg-gray-200" />
@@ -303,13 +295,12 @@ export default function SearchPageClient({
           <h2 className="text-base font-semibold text-gray-900">
             {t('search.noResults', {
               query: initialQuery,
-              defaultValue: `No results for "${initialQuery}"`,
             })}
           </h2>
           <p className="mt-2 text-sm text-gray-600">
             {activeType === 'all'
-              ? t('search.emptyBroadenQuery', { defaultValue: 'Try a broader query.' })
-              : t('search.emptyRemoveFilter', { defaultValue: 'Try removing the type filter.' })}
+              ? t('search.emptyBroadenQuery')
+              : t('search.emptyRemoveFilter')}
           </p>
           {activeType !== 'all' ? (
             <a
@@ -317,7 +308,7 @@ export default function SearchPageClient({
               href={buildFilterUrl('all')}
               className="mt-4 inline-flex rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:border-purple-300 hover:text-purple-700"
             >
-              {t('search.filters.all', { defaultValue: 'All' })}
+              {t('search.filters.all')}
             </a>
           ) : null}
         </section>
@@ -326,7 +317,7 @@ export default function SearchPageClient({
           {groupedSections.map((section) => (
             <div key={section.type} className="space-y-2">
               <h2 className="text-sm font-semibold text-gray-700">
-                {t(`search.groups.${section.type}`, { defaultValue: humanizeType(section.type) })}
+                {t(`search.groups.${section.type}`)}
                 <span className="ml-2 text-xs font-normal text-gray-500">{section.count}</span>
               </h2>
               <div className="space-y-2">
@@ -342,14 +333,14 @@ export default function SearchPageClient({
       )}
 
       {!isUpdatingQuery && !showEmptyState && (initialCursor || initialResult.nextCursor) && (
-        <nav className="flex items-center justify-between border-t border-gray-200 pt-4" aria-label={t('search.paginationLabel', { defaultValue: 'Search pagination' })}>
+        <nav className="flex items-center justify-between border-t border-gray-200 pt-4" aria-label={t('search.paginationLabel')}>
           {initialCursor ? (
             <a
               id="app-search-pagination-prev"
               href={buildPageUrl(previousCursor, previousCursorStack)}
               className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:border-purple-300 hover:text-purple-700"
             >
-              {t('search.pagination.previous', { defaultValue: 'Previous' })}
+              {t('search.pagination.previous')}
             </a>
           ) : (
             <span />
@@ -360,7 +351,7 @@ export default function SearchPageClient({
               href={buildPageUrl(initialResult.nextCursor, nextCursorStack)}
               className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:border-purple-300 hover:text-purple-700"
             >
-              {t('search.pagination.next', { defaultValue: 'Next' })}
+              {t('search.pagination.next')}
             </a>
           ) : (
             <span />

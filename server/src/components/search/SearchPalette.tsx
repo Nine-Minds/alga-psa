@@ -93,7 +93,7 @@ export default function SearchPalette({
             setActiveIndex(-1);
           }
         } catch (error) {
-          console.error('Failed to load app search suggestions', error);
+          console.error('search.typeahead_failed', error);
           if (requestIdRef.current === requestId) {
             setResults([]);
             setTotalCount(0);
@@ -171,7 +171,7 @@ export default function SearchPalette({
         type="button"
         onClick={onCollapsedClick}
         className="mx-3 my-3 flex h-10 w-10 items-center justify-center rounded-md border border-gray-500/70 bg-white/10 text-gray-300 hover:bg-white/15"
-        aria-label={t('search.placeholder', { defaultValue: 'Search' })}
+        aria-label={t('search.placeholder')}
       >
         <Search className="h-5 w-5" aria-hidden="true" />
       </button>
@@ -194,7 +194,7 @@ export default function SearchPalette({
             value={query}
             onValueChange={handleQueryChange}
             onKeyDown={handleInputKeyDown}
-            placeholder={t('search.placeholder', { defaultValue: 'Search' })}
+            placeholder={t('search.placeholder')}
             className="h-10 w-full rounded-md border border-gray-500/70 bg-white/10 py-2 pl-8 pr-3 text-sm text-sidebar-text outline-none placeholder:text-gray-400 focus:border-purple-400 focus:ring-2 focus:ring-purple-500/30"
           />
         </div>
@@ -205,7 +205,7 @@ export default function SearchPalette({
           >
             {isPending && (
               <Command.Loading className="px-3 py-2 text-gray-400">
-                {t('search.loading', { defaultValue: 'Searching...' })}
+                {t('search.loading')}
               </Command.Loading>
             )}
             {isPending ? null : visibleResults.map((result, index) => (
@@ -237,7 +237,6 @@ export default function SearchPalette({
                 >
                   {t('search.seeAllResults', {
                     count: totalCount,
-                    defaultValue: `See all ${totalCount} results`,
                   })}
                 </a>
               </Command.Item>

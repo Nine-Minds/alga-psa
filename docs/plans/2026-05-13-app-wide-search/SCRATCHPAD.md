@@ -686,6 +686,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Final validation passed with 0 errors and 8 pre-existing Polish plural-form warnings unrelated to search.
   - Validation: `git diff --check`; `node scripts/validate-translations.cjs`; `npm -w server run typecheck`.
 
+- **F123 — Search UI translation wiring.**
+  - Removed English `defaultValue` fallbacks from `SearchPalette` and `SearchPageClient` now that `search.*` locale keys exist.
+  - Visible search UI text is resolved through `useTranslation('msp/core')`; the only remaining hardcoded strings in these components are non-UI route/status identifiers and telemetry-style log keys.
+  - Validation: `rg "defaultValue:" server/src/components/search/SearchPalette.tsx server/src/app/msp/search/SearchPageClient.tsx` returns no matches; `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
