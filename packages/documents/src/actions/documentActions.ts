@@ -2188,6 +2188,13 @@ export const createDocumentAssociations = withAuth(async (
         } catch (eventError) {
           console.error('[createDocumentAssociations] Failed to publish DOCUMENT_ASSOCIATED workflow event:', eventError);
         }
+        await publishDocumentUpdatedSearchEvent(
+          tenant,
+          association.document_id,
+          user.user_id,
+          ['document_associations'],
+          'createDocumentAssociations',
+        );
       })
     );
 
@@ -2271,6 +2278,13 @@ export const removeDocumentAssociations = withAuth(async (
           } catch (eventError) {
             console.error('[removeDocumentAssociations] Failed to publish DOCUMENT_DETACHED workflow event:', eventError);
           }
+          await publishDocumentUpdatedSearchEvent(
+            tenant,
+            row.document_id,
+            user.user_id,
+            ['document_associations'],
+            'removeDocumentAssociations',
+          );
         })
       );
     }

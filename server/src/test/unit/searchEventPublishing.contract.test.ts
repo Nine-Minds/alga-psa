@@ -154,4 +154,23 @@ describe('search index source event publishing contracts', () => {
       expect(contractSource + clientContractSource).toContain(`eventType: '${eventType}'`);
     }
   });
+
+  it('T064 document content and share-list changes emit DOCUMENT_UPDATED', () => {
+    const documentSource = readRepoFile('packages/documents/src/actions/documentActions.ts');
+    const contentSource = readRepoFile('packages/documents/src/actions/documentBlockContentActions.ts');
+    const shareLinkSource = readRepoFile('packages/documents/src/actions/shareLinkActions.ts');
+
+    expect(contentSource).toContain('export const updateBlockContent = withAuth(async');
+    expect(contentSource).toContain("eventType: 'DOCUMENT_UPDATED'");
+
+    expect(documentSource).toContain('createDocumentAssociations = withAuth(async');
+    expect(documentSource).toContain('removeDocumentAssociations = withAuth(async');
+    expect(documentSource).toContain("['document_associations']");
+    expect(documentSource).toContain("eventType: 'DOCUMENT_UPDATED'");
+
+    expect(shareLinkSource).toContain('createShareLink = withAuth(');
+    expect(shareLinkSource).toContain('revokeShareLink = withAuth(');
+    expect(shareLinkSource).toContain("['document_share_links']");
+    expect(shareLinkSource).toContain("eventType: 'DOCUMENT_UPDATED'");
+  });
 });
