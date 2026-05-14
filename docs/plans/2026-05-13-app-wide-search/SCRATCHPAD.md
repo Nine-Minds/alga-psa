@@ -533,6 +533,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - It also returns role names and `isInternal` for the rest of the ACL predicate.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F095 — Per-user visibility overlap predicate.**
+  - Covered by the F093 ACL predicate: rows with non-empty `visible_to_user_ids` require `visible_to_user_ids && ARRAY[user_id]::uuid[]`.
+  - Empty `visible_to_user_ids` remains unrestricted by user ID and is controlled by the other ACL columns.
+  - Validation: `git diff --check`; `npm -w server run typecheck` from F094 still covers the helper.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
