@@ -481,3 +481,7 @@ async function handleSearchIndexEvent(event: Event): Promise<void> {
     }
   }
 }
+
+export async function handleSearchIndexEventForTest(event: Event): Promise<void> {
+  await handleSearchIndexEvent(event);
+}
