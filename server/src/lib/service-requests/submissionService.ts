@@ -336,3 +336,55 @@ export async function submitPortalServiceRequest(
     };
   }
 }
+
+export async function deleteServiceRequestSubmission(input: {
+  knex: Knex;
+  tenant: string;
+  submissionId: string;
+  deletedBy?: string;
+}): Promise<boolean> {
+  const { knex, tenant, submissionId, deletedBy } = input;
+
+  const existing = await knex('service_request_submissions')
+    .where({ tenant, submission_id: submissionId })
+    .select('definition_id', 'client_id', 'requester_user_id', 'execution_status')
+    .first<{
+      definition_id: string;
+      client_id: string | null;
+      requester_user_id: string;
+      execution_status: string;
+    }>();
+
+  if (!existing) {
+    return false;
+  }
+
+  let deleted = 0;
+  await knex.transaction(async (trx) => {
+    await trx('service_request_submission_attachments')
+      .where({ tenant, submission_id: submissionId })
+      .delete();
+
+    const deletedRows = await trx('service_request_submissions')
+      .where({ tenant, submission_id: submissionId })
+      .delete();
+
+    deleted = Number(deletedRows ?? 0);
+  });
+
+  if (deleted > 0) {
+    await publishServiceRequestSubmissionSearchEvent(
+      'SERVICE_REQUEST_SUBMISSION_DELETED',
+      tenant,
+      submissionId,
+      {
+        definitionId: existing.definition_id,
+        clientId: existing.client_id,
+        requesterUserId: deletedBy ?? existing.requester_user_id,
+        executionStatus: existing.execution_status,
+      },
+    );
+  }
+
+  return deleted > 0;
+}

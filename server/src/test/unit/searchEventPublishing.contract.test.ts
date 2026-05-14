@@ -189,4 +189,26 @@ describe('search index source event publishing contracts', () => {
 
     expect(apiServiceSource + actionSource).toContain('publishServiceCatalogSearchEvent');
   });
+
+  it('T066 service-request submissions and definitions emit CRUD search events', () => {
+    const definitionSource = readRepoFile('server/src/lib/service-requests/definitionManagement.ts');
+    const submissionSource = readRepoFile('server/src/lib/service-requests/submissionService.ts');
+    const eventSource = readRepoFile('server/src/lib/service-requests/searchEvents.ts');
+
+    for (const eventType of [
+      'SERVICE_REQUEST_DEFINITION_CREATED',
+      'SERVICE_REQUEST_DEFINITION_UPDATED',
+      'SERVICE_REQUEST_DEFINITION_DELETED',
+    ]) {
+      expect(definitionSource + eventSource).toContain(`'${eventType}'`);
+    }
+
+    for (const eventType of [
+      'SERVICE_REQUEST_SUBMISSION_CREATED',
+      'SERVICE_REQUEST_SUBMISSION_UPDATED',
+      'SERVICE_REQUEST_SUBMISSION_DELETED',
+    ]) {
+      expect(submissionSource + eventSource).toContain(`'${eventType}'`);
+    }
+  });
 });

@@ -525,3 +525,37 @@ export async function unarchiveServiceRequestDefinitionFromManagement(
     },
   );
 }
+
+export async function deleteServiceRequestDefinitionFromManagement(
+  knex: Knex,
+  tenant: string,
+  definitionId: string,
+  deletedBy?: string | null
+): Promise<boolean> {
+  const existing = await knex('service_request_definitions')
+    .where({ tenant, definition_id: definitionId })
+    .select('lifecycle_state')
+    .first<{ lifecycle_state: string }>();
+
+  if (!existing) {
+    return false;
+  }
+
+  const deleted = await knex('service_request_definitions')
+    .where({ tenant, definition_id: definitionId })
+    .delete();
+
+  if (deleted > 0) {
+    await publishServiceRequestDefinitionSearchEvent(
+      'SERVICE_REQUEST_DEFINITION_DELETED',
+      tenant,
+      definitionId,
+      {
+        userId: deletedBy,
+        lifecycleState: existing.lifecycle_state,
+      },
+    );
+  }
+
+  return deleted > 0;
+}

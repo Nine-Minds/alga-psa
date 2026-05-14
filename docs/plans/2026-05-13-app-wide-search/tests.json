@@ -69,7 +69,7 @@
   { "id": "T063", "featureIds": ["F055"], "description": "Contract / client-contract CRUD emits contract-family events", "implemented": true },
   { "id": "T064", "featureIds": ["F056"], "description": "Document content-change AND share-list-change both emit DOCUMENT_UPDATED", "implemented": true },
   { "id": "T065", "featureIds": ["F057"], "description": "Service catalog CRUD emits SERVICE_CATALOG_* events", "implemented": true },
-  { "id": "T066", "featureIds": ["F058"], "description": "Service-request submission / definition CRUD emits corresponding events", "implemented": false },
+  { "id": "T066", "featureIds": ["F058"], "description": "Service-request submission / definition CRUD emits corresponding events", "implemented": true },
   { "id": "T067", "featureIds": ["F059"], "description": "Workflow task CRUD + assignment-change emit corresponding events", "implemented": false },
   { "id": "T068", "featureIds": ["F060", "F061", "F062"], "description": "Interaction, schedule, time-entry, board/category/tag CRUD emit corresponding events", "implemented": false },
 
