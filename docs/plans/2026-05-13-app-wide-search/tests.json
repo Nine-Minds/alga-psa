@@ -61,7 +61,7 @@
   { "id": "T055", "featureIds": ["F049"], "description": "Creating a client publishes `CLIENT_CREATED` event with tenant + client_id", "implemented": true },
   { "id": "T056", "featureIds": ["F049"], "description": "Updating a client publishes `CLIENT_UPDATED`", "implemented": true },
   { "id": "T057", "featureIds": ["F049"], "description": "Deleting a client publishes `CLIENT_DELETED`", "implemented": true },
-  { "id": "T058", "featureIds": ["F050"], "description": "Contact CRUD emits CONTACT_* events", "implemented": false },
+  { "id": "T058", "featureIds": ["F050"], "description": "Contact CRUD emits CONTACT_* events", "implemented": true },
   { "id": "T059", "featureIds": ["F051"], "description": "User CRUD and role-change emit corresponding events", "implemented": false },
   { "id": "T060", "featureIds": ["F052"], "description": "Project CRUD and child entity CRUD emit project-family events", "implemented": false },
   { "id": "T061", "featureIds": ["F053"], "description": "Asset CRUD emits ASSET_* events", "implemented": false },

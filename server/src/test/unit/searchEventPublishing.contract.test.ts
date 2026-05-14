@@ -43,4 +43,21 @@ describe('search index source event publishing contracts', () => {
     expect(source).toContain('tenantId: tenant');
     expect(source).toContain('idempotencyKey: `client_deleted:${clientId}:${occurredAt}`');
   });
+
+  it('T058 contact CRUD emits CONTACT_* events with tenant context', () => {
+    const source = readRepoFile('server/src/lib/api/services/ContactService.ts');
+
+    expect(source).toContain("eventType: 'CONTACT_CREATED'");
+    expect(source).toContain('payload: buildContactCreatedPayload({');
+    expect(source).toContain('contactId: contact.contact_name_id');
+    expect(source).toContain('ctx: { tenantId: context.tenant, occurredAt, actor }');
+
+    expect(source).toContain("eventType: 'CONTACT_UPDATED'");
+    expect(source).toContain('payload: updatedPayload');
+    expect(source).toContain('idempotencyKey: `contact_updated:${id}:${occurredAt}`');
+
+    expect(source).toContain("eventType: 'CONTACT_DELETED'");
+    expect(source).toContain('contactId: id');
+    expect(source).toContain('idempotencyKey: `contact_deleted:${id}:${occurredAt}`');
+  });
 });
