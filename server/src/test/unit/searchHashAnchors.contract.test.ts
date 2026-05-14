@@ -38,4 +38,19 @@ describe('app-wide search hash-anchor contracts', () => {
     expect(annotationSource).toContain("target?.scrollIntoView({ behavior: 'smooth', block: 'center' })");
     expect(annotationSource).toContain('search-highlight rounded ring-2 ring-yellow-400 bg-yellow-50');
   });
+
+  it('T159 project task comments preserve #comment anchors and highlight the target comment', () => {
+    const redirectSource = readRepoFile('server/src/app/msp/projects/[id]/tasks/[taskId]/ProjectTaskSearchRedirectClient.tsx');
+    const projectPageSource = readRepoFile('packages/projects/src/components/ProjectPage.tsx');
+    const taskCommentSource = readRepoFile('packages/projects/src/components/TaskComment.tsx');
+
+    expect(redirectSource).toContain('const hash = window.location.hash ||');
+    expect(redirectSource).toContain('${hash}');
+    expect(projectPageSource).toContain("window.location.hash.startsWith('#comment-')");
+    expect(projectPageSource).toContain("const hash = shouldPreserveCommentHash ? window.location.hash : ''");
+    expect(taskCommentSource).toContain('`comment-${comment.taskCommentId}`');
+    expect(taskCommentSource).toContain('window.location.hash !== `#${searchAnchorId}`');
+    expect(taskCommentSource).toContain("document.getElementById(searchAnchorId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })");
+    expect(taskCommentSource).toContain('search-highlight border-yellow-400 bg-yellow-50');
+  });
 });
