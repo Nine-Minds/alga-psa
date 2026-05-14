@@ -14,6 +14,7 @@ import { projectTaskCommentIndexer } from '../../lib/search/indexers/project_tas
 import { projectTaskIndexer } from '../../lib/search/indexers/project_task';
 import { projectIndexer } from '../../lib/search/indexers/project';
 import { serviceCatalogIndexer } from '../../lib/search/indexers/service_catalog';
+import { serviceRequestSubmissionIndexer } from '../../lib/search/indexers/service_request_submission';
 import { ticketIndexer } from '../../lib/search/indexers/ticket';
 import { ticketCommentIndexer } from '../../lib/search/indexers/ticket_comment';
 import { userIndexer } from '../../lib/search/indexers/user';
@@ -713,5 +714,38 @@ describe('search entity indexers', () => {
       url: '/msp/billing/services/service-1',
       acl: { requiredPermission: 'service_catalog:read' },
     });
+  });
+
+  it('T048 service-request-submission indexer flattens payload and excludes secrets', async () => {
+    const { knex } = createFirstRowKnex({
+      submission_id: 'submission-1',
+      client_id: 'client-1',
+      request_name: 'New firewall request',
+      submitted_payload: {
+        summary: 'Need managed firewall',
+        contact: { name: 'Ada Lovelace' },
+        password: 'do-not-index-password',
+      },
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await serviceRequestSubmissionIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'submission-1',
+    );
+
+    expect(doc).toMatchObject({
+      objectType: 'service_request_submission',
+      objectId: 'submission-1',
+      title: 'New firewall request',
+      body: 'Need managed firewall Ada Lovelace',
+      url: '/msp/service-requests/submission-1',
+      acl: {
+        requiredPermission: 'service_request:read',
+        clientScopeId: 'client-1',
+      },
+    });
+    expect(doc?.body).not.toContain('do-not-index');
   });
 });

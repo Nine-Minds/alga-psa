@@ -50,7 +50,7 @@
   { "id": "T045", "featureIds": ["F037"], "description": "Document indexer sets `client_scope_id` from `documents.client_id` when non-null; leaves `is_private` and `visible_to_user_ids` at defaults (false / empty)", "implemented": true },
   { "id": "T046", "featureIds": ["F038"], "description": "KB article indexer pulls content via the FK join to documents", "implemented": true },
   { "id": "T047", "featureIds": ["F039"], "description": "Service catalog indexer includes flattened `attributes` jsonb string values in body", "implemented": true },
-  { "id": "T048", "featureIds": ["F040"], "description": "Service-request-submission indexer flattens submitted_payload string fields but excludes secret-like keys", "implemented": false },
+  { "id": "T048", "featureIds": ["F040"], "description": "Service-request-submission indexer flattens submitted_payload string fields but excludes secret-like keys", "implemented": true },
   { "id": "T049", "featureIds": ["F041"], "description": "Service-request-definition indexer requires admin permission via required_permission column", "implemented": false },
   { "id": "T050", "featureIds": ["F042"], "description": "Workflow-task indexer populates visible_to_user_ids with all assignee user_ids", "implemented": false },
   { "id": "T051", "featureIds": ["F044"], "description": "Schedule-entry indexer populates visible_to_user_ids with the owner", "implemented": false },

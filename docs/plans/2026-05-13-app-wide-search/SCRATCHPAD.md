@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T048 service request submission payload filtering.** Extended `searchIndexers.test.ts` to assert `serviceRequestSubmissionIndexer.loadOne` flattens safe submitted payload strings into the body, excludes secret-like payload keys/values, and sets `service_request:read` plus optional client scope. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T047 service catalog attributes.** Extended `searchIndexers.test.ts` to assert `serviceCatalogIndexer.loadOne` includes both service description and flattened JSONB attribute string values in the indexed body with `service_catalog:read` ACL. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T046 KB article document join.** Extended `searchIndexers.test.ts` to assert `kbArticleIndexer.loadOne` joins `kb_articles` to `documents`, uses document name/content for title/body, sets document parent metadata, and requires `kb:read`. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
