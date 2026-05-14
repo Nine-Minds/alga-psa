@@ -1520,6 +1520,8 @@ npm run search:backfill
 
 - **2026-05-13 — T201 dynamic registry extension.** Changed search registry accessors to rebuild from `ceIndexers + eeIndexers` on each call, then added coverage that a synthetic indexer pushed into `ceIndexers` appears in `allIndexers()`, `registeredObjectTypes()`, and `getIndexer('synthetic')`. Validation: `cd server && npx vitest run src/test/unit/searchRegistry.test.ts --coverage=false`.
 
+- **2026-05-13 — T202 EE orphan query safety.** Added action coverage that CE query type lists are derived from registered object types and do not include an unregistered `ee_chat_history` orphan type. Validation: `cd server && npx vitest run src/test/unit/searchActions.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

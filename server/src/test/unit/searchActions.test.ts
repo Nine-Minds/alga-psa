@@ -502,6 +502,43 @@ describe('search actions', () => {
     expect(p95).toBeLessThan(500);
   });
 
+  it('T202 excludes unregistered EE orphan object types from search queries', async () => {
+    const knex = { tenant: 'knex' };
+    const acl = {
+      userId: 'user-orphan-ee',
+      tenant: 'tenant-orphan-ee',
+      permissions: [
+        'client:read',
+        'ticket:read',
+        'document:read',
+        'contract:read',
+        'workflow_task:read',
+        'admin',
+      ],
+      isInternal: true,
+      accessibleClientIds: ['client-1'],
+    };
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-orphan-ee' });
+    mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
+    mocks.runSearchQuery.mockResolvedValue([]);
+    mocks.verifyResultVisibility.mockResolvedValue([]);
+
+    await searchAppAction(
+      {
+        user_id: 'user-orphan-ee',
+        tenant: 'tenant-orphan-ee',
+        user_type: 'client',
+        clientId: 'client-1',
+      },
+      { tenant: 'tenant-orphan-ee' },
+      { query: 'chat history', limit: 25 },
+    );
+
+    const call = mocks.runSearchQuery.mock.calls[0]?.[0] as { allowedTypes: string[] };
+    expect(call.allowedTypes).not.toContain('ee_chat_history');
+  });
+
   it('T118 returns at most five typeahead rows without snippets', async () => {
     const knex = { tenant: 'knex' };
     const acl = {
