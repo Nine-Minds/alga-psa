@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T030 user indexer internal-only filter.** Extended `searchIndexers.test.ts` to assert `userIndexer.loadOne` adds the `user_type = 'internal'` predicate alongside the user id filter and returns `null` when that filtered query finds no row, preventing client-portal users from being indexed as team members. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T029 contact subtitle composition.** Extended `searchIndexers.test.ts` to exercise `contactIndexer.loadOne` and assert it queries `contacts`, filters by `contact_name_id`, and builds the subtitle from email, phone number, and role while preserving the contact URL and `contact:read` ACL. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T028 client batch backfill mapping.** Extended `searchIndexers.test.ts` with a thenable mocked `clients` query to exercise `clientIndexer.loadBatch` as the backfill CLI uses it. The test asserts tenant scoping, stable `client_id` ordering, batch limit, and one returned `SearchDoc` per seeded client row with `client:read` ACL. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.

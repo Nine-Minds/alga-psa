@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { clientIndexer } from '../../lib/search/indexers/client';
 import { contactIndexer } from '../../lib/search/indexers/contact';
+import { userIndexer } from '../../lib/search/indexers/user';
 
 function createFirstRowKnex(row: unknown) {
   const queryBuilder = {
@@ -130,5 +131,20 @@ describe('search entity indexers', () => {
       url: '/msp/contacts/contact-1',
       acl: { requiredPermission: 'contact:read' },
     });
+  });
+
+  it("T030 user indexer excludes users with user_type='client'", async () => {
+    const { knex, queryBuilder } = createFirstRowKnex(undefined);
+
+    const doc = await userIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'user-1',
+    );
+
+    expect(knex).toHaveBeenCalledWith('users');
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith('user_id', 'user-1');
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith('user_type', 'internal');
+    expect(doc).toBeNull();
   });
 });
