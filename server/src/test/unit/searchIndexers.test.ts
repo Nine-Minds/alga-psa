@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { assetIndexer } from '../../lib/search/indexers/asset';
 import { clientIndexer } from '../../lib/search/indexers/client';
 import { contactIndexer } from '../../lib/search/indexers/contact';
+import { contractIndexer } from '../../lib/search/indexers/contract';
 import { invoiceAnnotationIndexer } from '../../lib/search/indexers/invoice_annotation';
 import { invoiceItemIndexer } from '../../lib/search/indexers/invoice_item';
 import { invoiceIndexer } from '../../lib/search/indexers/invoice';
@@ -554,6 +555,31 @@ describe('search entity indexers', () => {
         requiredPermission: 'invoice:read',
         clientScopeId: 'client-1',
       },
+    });
+  });
+
+  it("T042 contract indexer labels draft contracts as 'Quote'", async () => {
+    const { knex } = createFirstRowKnex({
+      contract_id: 'contract-1',
+      contract_name: 'ACME renewal quote',
+      contract_description: 'Draft renewal terms',
+      status: 'draft',
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await contractIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'contract-1',
+    );
+
+    expect(doc).toMatchObject({
+      objectType: 'contract',
+      title: 'ACME renewal quote',
+      subtitle: 'Quote',
+      body: 'Draft renewal terms',
+      metadata: { identifier: 'ACME renewal quote' },
+      acl: { requiredPermission: 'contract:read' },
     });
   });
 });

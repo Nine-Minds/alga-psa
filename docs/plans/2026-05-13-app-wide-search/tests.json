@@ -44,7 +44,7 @@
   { "id": "T039", "featureIds": ["F031"], "description": "Asset indexer metadata.identifier equals asset_tag", "implemented": true },
   { "id": "T040", "featureIds": ["F032"], "description": "Invoice indexer denormalizes client_name in subtitle and metadata.identifier equals invoice_number", "implemented": true },
   { "id": "T041", "featureIds": ["F033", "F034"], "description": "Invoice-item and annotation indexers inherit invoice client_scope_id and required_permission", "implemented": true },
-  { "id": "T042", "featureIds": ["F035"], "description": "Contract indexer with `contracts.status='draft'` sets subtitle to 'Quote'", "implemented": false },
+  { "id": "T042", "featureIds": ["F035"], "description": "Contract indexer with `contracts.status='draft'` sets subtitle to 'Quote'", "implemented": true },
   { "id": "T043", "featureIds": ["F035"], "description": "Contract indexer with `contracts.status='active'` sets subtitle to 'Contract'", "implemented": false },
   { "id": "T044", "featureIds": ["F037"], "description": "Document indexer body length is ≤ 65536 bytes even when source content is multi-MB", "implemented": false },
   { "id": "T045", "featureIds": ["F037"], "description": "Document indexer sets `client_scope_id` from `documents.client_id` when non-null; leaves `is_private` and `visible_to_user_ids` at defaults (false / empty)", "implemented": false },
