@@ -1,3 +1,4 @@
+import logger from '@alga-psa/core/logger';
 import User from '@alga-psa/db/models/user';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
@@ -51,6 +52,29 @@ export type SearchVisibilityVerifier<TRow extends SearchVisibilityRow = SearchVi
 ) => Promise<boolean>;
 
 const visibilityVerifiers = new Map<SearchObjectType, SearchVisibilityVerifier>();
+
+function emitAclDrift(row: SearchVisibilityRow, user: SearchAclPrincipal): void {
+  const payload = {
+    metric: 'search.acl_drift',
+    objectType: row.type,
+    objectId: row.id,
+    userId: user.userId,
+    tenant: user.tenant,
+  };
+
+  logger.warn('[SearchACL] search.acl_drift', payload);
+
+  const sentry = (globalThis as {
+    Sentry?: {
+      captureMessage?: (message: string, context?: Record<string, unknown>) => void;
+    };
+  }).Sentry;
+
+  sentry?.captureMessage?.('search.acl_drift', {
+    level: 'warning',
+    extra: payload,
+  });
+}
 
 export function composeAclHints(opts: AclMetadata = {}): ComposedAclHints {
   return {
@@ -142,6 +166,8 @@ export async function verifyResultVisibility<TRow extends SearchVisibilityRow>(
 
     if (await verifier(knex, user, row)) {
       visibleRows.push(row);
+    } else {
+      emitAclDrift(row, user);
     }
   }
 

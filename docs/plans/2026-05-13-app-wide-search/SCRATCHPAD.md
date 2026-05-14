@@ -555,6 +555,12 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Project, phase, task, and task-comment verifiers check source existence plus parent project client scope; document verifier checks source existence plus `documents.client_id` scope; workflow-task verifier checks source existence plus `assigned_users` membership.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F099 — ACL drift telemetry.**
+  - `verifyResultVisibility()` now emits `search.acl_drift` when a row passed SQL ACL filtering but failed the record-level verifier.
+  - Telemetry is a server warning log with metric/object/user/tenant fields, plus an optional global `Sentry.captureMessage()` call when a Sentry client is present in the runtime.
+  - The repo currently has no direct Sentry package dependency, so the Sentry path is intentionally optional and dependency-free.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
