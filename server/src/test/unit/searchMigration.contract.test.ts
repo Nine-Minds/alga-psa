@@ -1,13 +1,18 @@
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
 const migrationPath = path.resolve(
   testDir,
   '../../../migrations/20260513120000_create_app_search_index.cjs',
 );
+const migration = require(migrationPath) as {
+  up: (knex: { raw: (sql: string) => Promise<{ rows?: Array<Record<string, unknown>> }> }) => Promise<void>;
+};
 
 function readSearchIndexMigration(): string {
   return readFileSync(migrationPath, 'utf8');
@@ -36,6 +41,28 @@ function appSearchIndexColumnDefinitions(): Record<string, string> {
         return [columnName, line];
       }),
   );
+}
+
+async function runMigrationUpWithMockedCitusState(options: {
+  citusEnabled: boolean;
+  alreadyDistributed?: boolean;
+}): Promise<string[]> {
+  const rawCalls: string[] = [];
+  const knex = {
+    raw: vi.fn(async (sql: string) => {
+      rawCalls.push(sql);
+      if (sql.includes('FROM pg_extension')) {
+        return { rows: [{ enabled: options.citusEnabled }] };
+      }
+      if (sql.includes('FROM pg_dist_partition')) {
+        return { rows: [{ is_distributed: options.alreadyDistributed ?? false }] };
+      }
+      return { rows: [] };
+    }),
+  };
+
+  await migration.up(knex);
+  return rawCalls;
 }
 
 describe('app_search_index migration contract', () => {
@@ -81,5 +108,13 @@ describe('app_search_index migration contract', () => {
 
     expect(migration).toContain("CREATE EXTENSION IF NOT EXISTS pg_trgm");
     expect(migration).not.toContain("CREATE EXTENSION pg_trgm");
+  });
+
+  it('T004 distributes app_search_index by tenant when Citus is installed', async () => {
+    const rawCalls = await runMigrationUpWithMockedCitusState({ citusEnabled: true });
+    const pgDistPartitionCheck = rawCalls.find((sql) => sql.includes('FROM pg_dist_partition'));
+
+    expect(pgDistPartitionCheck).toContain("logicalrelid = 'app_search_index'::regclass");
+    expect(rawCalls).toContain("SELECT create_distributed_table('app_search_index', 'tenant')");
   });
 });
