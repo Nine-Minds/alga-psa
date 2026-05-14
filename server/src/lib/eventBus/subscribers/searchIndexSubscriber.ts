@@ -4,7 +4,7 @@ import { createTenantKnex } from '@alga-psa/db';
 
 import { getEventBus } from '../index';
 import { allIndexers } from '../../search';
-import { upsertSearchDoc } from '../../search/upsert';
+import { deleteSearchDoc, upsertSearchDoc } from '../../search/upsert';
 import type { EntityIndexer, SearchObjectType } from '../../search/types';
 
 let isRegistered = false;
@@ -137,14 +137,6 @@ async function handleSearchIndexEvent(event: Event): Promise<void> {
     objectTypes: indexers.map((indexer) => indexer.objectType),
   });
 
-  if (isDeleteEvent(event.eventType)) {
-    logger.debug('[SearchIndexSubscriber] Skipping delete event until delete handling runs', {
-      eventType: event.eventType,
-      eventId: event.id,
-    });
-    return;
-  }
-
   const tenant = extractTenant(event);
   if (!tenant) {
     logger.warn('[SearchIndexSubscriber] Event payload missing tenant', {
@@ -155,6 +147,29 @@ async function handleSearchIndexEvent(event: Event): Promise<void> {
   }
 
   const { knex } = await createTenantKnex(tenant);
+
+  if (isDeleteEvent(event.eventType)) {
+    for (const indexer of indexers) {
+      const objectId = extractObjectId(event, indexer.objectType);
+      if (!objectId) {
+        logger.warn('[SearchIndexSubscriber] Delete event payload missing source object id', {
+          eventType: event.eventType,
+          eventId: event.id,
+          objectType: indexer.objectType,
+        });
+        continue;
+      }
+
+      await deleteSearchDoc(knex, tenant, indexer.objectType, objectId);
+      logger.debug('[SearchIndexSubscriber] Deleted search index row', {
+        eventType: event.eventType,
+        eventId: event.id,
+        objectType: indexer.objectType,
+        objectId,
+      });
+    }
+    return;
+  }
 
   for (const indexer of indexers) {
     const objectId = extractObjectId(event, indexer.objectType);

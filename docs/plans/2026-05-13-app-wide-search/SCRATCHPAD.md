@@ -384,6 +384,10 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - ID extraction is centralized in `OBJECT_ID_FIELDS` in `searchIndexSubscriber.ts`; this absorbs the mixed camelCase/snake_case payload names used across the current event publishers.
   - Delete events are detected and explicitly skipped for now; F066 wires `deleteSearchDoc`.
 
+- **F066 — Subscriber delete path.**
+  - Delete-style events (`*_DELETED` plus `TAG_DEFINITION_DELETED`) now call `deleteSearchDoc(knex, tenant, objectType, objectId)` for each resolved indexer.
+  - Missing IDs on delete events are logged and skipped, matching the non-delete path's defensive behavior.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
