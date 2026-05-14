@@ -284,6 +284,7 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
 - **2026-05-13 — F011 complete.** `AclMetadata` covers `visibleToUserIds`, `visibleToRoles`, `isInternalOnly`, `isPrivate`, `clientScopeId`, and `requiredPermission` for indexer-produced ACL hints. Validation: targeted `rg` on the interface fields.
 - **2026-05-13 — F012 complete.** Added `flattenBlockNote(json)` in `server/src/lib/search/normalize.ts`. It parses JSON strings when needed, walks BlockNote `content`/`children`/`items`, collects visible text leaves, supports unexpected plain text fallback, and strips image data URIs. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/normalize.ts`.
 - **2026-05-13 — F013 complete.** Added `flattenMarkdown(md)` to strip headings, list markers, links/images, bold/italic/code markers, code fences, blockquotes, and HTML tags while preserving readable text. Validation: targeted `rg` on function and replacement rules.
+- **2026-05-13 — F014 complete.** Added `flattenJsonbPayload(obj)` to recursively concatenate string leaves from objects/arrays, skip secret-like keys (`password|secret|token|api_key|authorization`), strip image data URIs, and ignore scalar top-level input. Validation: targeted `rg` on function, secret regex, and object traversal.
 
 ---
 
