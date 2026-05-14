@@ -443,6 +443,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Re-running the CLI overwrites the same index rows with source-derived content/ACLs rather than creating duplicates.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F078 — Root backfill npm script.**
+  - Added root `package.json` script `search:backfill` -> `tsx server/src/scripts/search-backfill.ts`.
+  - This matches the deployment runbook command and supports passthrough args such as `npm run search:backfill -- --tenant=<uuid> --type=client`.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

@@ -44,6 +44,7 @@
     "dev:workflow-worker": "cd services/workflow-worker && npm run dev",
     "create-tenant": "cd server && npm run create-tenant --",
     "rollback-tenant": "cd server && npm run rollback-tenant",
+    "search:backfill": "tsx server/src/scripts/search-backfill.ts",
     "lint": "eslint \"{server,ee/server,ee/packages,shared,services,packages}/**/*.{js,mjs,cjs,ts,jsx,tsx}\"",
     "guard:temporal-packaging-contract": "node scripts/check-temporal-worker-packaging-contract.mjs",
     "guard:temporal-dist-smoke": "node scripts/temporal-worker-dist-import-smoke.mjs",
