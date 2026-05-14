@@ -35,7 +35,7 @@
   { "id": "T030", "featureIds": ["F024"], "description": "User indexer excludes users with `user_type='client'`", "implemented": true },
   { "id": "T031", "featureIds": ["F025"], "description": "Ticket indexer denormalizes client_name into subtitle and exposes ticket_number in metadata.identifier", "implemented": true },
   { "id": "T032", "featureIds": ["F026"], "description": "Ticket-comment indexer sets is_internal_only=true when source `comments.is_internal` is true", "implemented": true },
-  { "id": "T033", "featureIds": ["F026"], "description": "Ticket-comment indexer url ends with `#comment-{comment_id}`", "implemented": false },
+  { "id": "T033", "featureIds": ["F026"], "description": "Ticket-comment indexer url ends with `#comment-{comment_id}`", "implemented": true },
   { "id": "T034", "featureIds": ["F027"], "description": "Project indexer sets `client_scope_id` to the project's client_id", "implemented": false },
   { "id": "T035", "featureIds": ["F028", "F029"], "description": "Project phase/task indexers inherit ACL fields from their parent project", "implemented": false },
   { "id": "T036", "featureIds": ["F030"], "description": "Project-task-comment indexer prefers markdown_content over BlockNote content when both are present", "implemented": false },

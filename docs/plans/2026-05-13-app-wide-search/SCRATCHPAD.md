@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T033 ticket-comment anchor URL.** Extended `searchIndexers.test.ts` with a public ticket-comment fixture and asserted `ticketCommentIndexer.loadOne` emits `/msp/tickets/{ticket_id}#comment-{comment_id}`, preserving the hash anchor used by search results. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T032 ticket-comment internal ACL.** Extended `searchIndexers.test.ts` with a mocked comment/ticket join to assert `ticketCommentIndexer.loadOne` scopes by comment tenant/id, inherits ticket context, flattens markdown comment body, and maps `comments.is_internal=true` to `acl.isInternalOnly=true` with `ticket:read`. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T031 ticket indexer subtitle and identifier.** Extended `searchIndexers.test.ts` with a mocked ticket/client join to assert `ticketIndexer.loadOne` joins clients by tenant/client id, filters by tenant and ticket id, denormalizes `client_name` + `ticket_number` into the subtitle, and exposes `ticket_number` as `metadata.identifier`. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.

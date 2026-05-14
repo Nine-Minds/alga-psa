@@ -237,4 +237,24 @@ describe('search entity indexers', () => {
       },
     });
   });
+
+  it('T033 ticket-comment indexer links to the comment hash anchor', async () => {
+    const { knex } = createFirstRowKnex({
+      comment_id: 'comment-42',
+      ticket_id: 'ticket-99',
+      note: 'Public comment',
+      is_internal: false,
+      ticket_title: 'Printer issue',
+      ticket_number: 'TIC-2042',
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await ticketCommentIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'comment-42',
+    );
+
+    expect(doc?.url).toBe('/msp/tickets/ticket-99#comment-comment-42');
+  });
 });
