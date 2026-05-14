@@ -1923,19 +1923,15 @@ export default function ProjectDetail({
       const { taskIds: bulkTaskIds, targetPhase } = moveConfirmation;
       let success = 0;
       let failed = 0;
-      const movedIds = new Set<string>();
+      const movedById = new Map<string, IProjectTask>();
 
       for (const id of bulkTaskIds) {
-        // Selected tasks may live in any phase, so look them up project-wide
-        const task = allProjectTasks.find(t => t.task_id === id)
-          || projectTasks.find(t => t.task_id === id);
-        if (!task) {
-          failed++;
-          continue;
-        }
         try {
-          await moveTaskToPhase(id, targetPhase.phase_id, task.project_status_mapping_id);
-          movedIds.add(id);
+          // Omit the status mapping so moveTaskToPhase performs phase-aware
+          // status remapping — passing the source status can land a task on a
+          // mapping that isn't valid for the target phase's status set.
+          const movedTask = await moveTaskToPhase(id, targetPhase.phase_id);
+          movedById.set(id, movedTask);
           success++;
         } catch (error) {
           console.error(`Failed to move task ${id}:`, error);
@@ -1943,11 +1939,20 @@ export default function ProjectDetail({
         }
       }
 
-      // Moved tasks leave the current kanban board
-      setProjectTasks(prev => prev.filter(t => !movedIds.has(t.task_id)));
-      setAllProjectTasks(prev => prev.map(t =>
-        movedIds.has(t.task_id) ? { ...t, phase_id: targetPhase.phase_id } : t
-      ));
+      // Moved tasks leave the current kanban board; apply the server-resolved
+      // phase + status mapping so the list view groups them correctly
+      setProjectTasks(prev => prev.filter(t => !movedById.has(t.task_id)));
+      setAllProjectTasks(prev => prev.map(t => {
+        const moved = movedById.get(t.task_id);
+        return moved
+          ? {
+              ...t,
+              phase_id: moved.phase_id,
+              project_status_mapping_id: moved.project_status_mapping_id,
+              order_key: moved.order_key,
+            }
+          : t;
+      }));
 
       if (failed === 0) {
         toast.success(
@@ -1969,29 +1974,38 @@ export default function ProjectDetail({
     }
 
     try {
-      // Get the current task to preserve its status
       const task = projectTasks.find(t => t.task_id === moveConfirmation.taskId);
       if (!task) {
         throw new Error('Task not found');
       }
 
+      // Omit the status mapping so moveTaskToPhase performs phase-aware status
+      // remapping — passing the source status can land the task on a mapping
+      // that isn't valid for the target phase's status set.
       const updatedTask = await moveTaskToPhase(
         moveConfirmation.taskId,
         moveConfirmation.targetPhase.phase_id,
-        task.project_status_mapping_id  // Pass the current status mapping ID
       );
-      
+
       const checklistItems = await getTaskChecklistItems(moveConfirmation.taskId);
       const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
-      
+
       setProjectTasks(prevTasks =>
         prevTasks.map((task): IProjectTask =>
           task.task_id === updatedTask.task_id ? taskWithChecklist : task
         )
       );
-      // Update allProjectTasks for filtered counts
+      // Apply the server-resolved phase + status mapping so the list view
+      // groups the moved task correctly
       setAllProjectTasks(prev => prev.map(t =>
-        t.task_id === updatedTask.task_id ? { ...t, phase_id: moveConfirmation.targetPhase.phase_id } : t
+        t.task_id === updatedTask.task_id
+          ? {
+              ...t,
+              phase_id: updatedTask.phase_id,
+              project_status_mapping_id: updatedTask.project_status_mapping_id,
+              order_key: updatedTask.order_key,
+            }
+          : t
       ));
 
       toast.success(
