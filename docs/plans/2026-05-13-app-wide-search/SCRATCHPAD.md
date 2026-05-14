@@ -1400,6 +1400,8 @@ npm run search:backfill
 
 - **2026-05-13 — T141 sidebar Escape close.** Added UI contract coverage that Escape prevents default, clears typeahead state, marks the list dismissed, resets active option state, and does not blur the combobox input. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T142 sidebar Enter submits to results.** Added UI contract coverage that Enter prevents default, calls `navigateToActiveOption`, and the no-active-row path navigates to `seeAllUrl` (`/msp/search?q=...`). Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

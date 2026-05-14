@@ -203,4 +203,20 @@ describe('app-wide search UI contracts', () => {
     expect(escapeBlock).toContain('setIsDismissed(true)');
     expect(escapeBlock).not.toContain('blur()');
   });
+
+  it('T142 navigates to the full search page when Enter is pressed with no active sidebar row', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/search/SearchPalette.tsx'), 'utf8');
+    const navigateBlock = source.slice(
+      source.indexOf('const navigateToActiveOption = () =>'),
+      source.indexOf('const handleInputKeyDown ='),
+    );
+    const enterBlock = source.slice(
+      source.indexOf("if (event.key === 'Enter')"),
+      source.indexOf('const handleQueryChange ='),
+    );
+
+    expect(navigateBlock).toContain('window.location.assign(seeAllUrl)');
+    expect(enterBlock).toContain('event.preventDefault()');
+    expect(enterBlock).toContain('navigateToActiveOption()');
+  });
 });
