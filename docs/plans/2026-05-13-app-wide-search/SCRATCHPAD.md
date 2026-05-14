@@ -620,6 +620,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - The server page still fetches initial data so cold `/msp/search?...` URLs render with results in SSR output.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F111 — Results filter chips.**
+  - Added anchor-based filter chips to `SearchPageClient`: `All` plus one chip for every object type present in the returned `groups` record.
+  - Each chip shows a count badge and builds a shareable `/msp/search` URL preserving `q` and non-default `sort` while setting or clearing `type`.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

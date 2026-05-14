@@ -6,6 +6,7 @@ import { Search } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 import type { SearchAppResult } from '@/lib/actions/searchActions';
+import type { SearchObjectType } from '@/lib/search/types';
 
 interface SearchPageClientProps {
   initialQuery: string;
@@ -26,6 +27,7 @@ export default function SearchPageClient({
   const router = useRouter();
   const pathname = usePathname();
   const [query, setQuery] = useState(initialQuery);
+  const activeType = initialType && initialType !== 'all' ? initialType : 'all';
 
   useEffect(() => {
     setQuery(initialQuery);
@@ -65,6 +67,28 @@ export default function SearchPageClient({
     return () => window.clearTimeout(timer);
   }, [pathname, query, router, stableUrlState]);
 
+  const buildFilterUrl = (type: string) => {
+    const params = new URLSearchParams();
+    if (initialQuery) {
+      params.set('q', initialQuery);
+    }
+    if (type !== 'all') {
+      params.set('type', type);
+    }
+    if (initialSort !== 'relevance') {
+      params.set('sort', initialSort);
+    }
+
+    return params.toString() ? `${pathname}?${params.toString()}` : pathname;
+  };
+
+  const humanizeType = (type: string) => type
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+
+  const typeEntries = Object.entries(initialResult.groups) as Array<[SearchObjectType, number]>;
+
   return (
     <main
       id="app-search-page"
@@ -98,6 +122,42 @@ export default function SearchPageClient({
             : t('search.helperText', { defaultValue: 'Search across the workspace.' })}
         </p>
       </header>
+
+      <nav className="flex flex-wrap gap-2" aria-label={t('search.filtersLabel', { defaultValue: 'Search filters' })}>
+        <a
+          id="app-search-filter-chip-all"
+          href={buildFilterUrl('all')}
+          className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${
+            activeType === 'all'
+              ? 'border-purple-500 bg-purple-50 text-purple-800'
+              : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300'
+          }`}
+        >
+          <span>{t('search.filters.all', { defaultValue: 'All' })}</span>
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+            {initialResult.totalCount}
+          </span>
+        </a>
+        {typeEntries.map(([type, count]) => (
+          <a
+            key={type}
+            id={`app-search-filter-chip-${type}`}
+            href={buildFilterUrl(type)}
+            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${
+              activeType === type
+                ? 'border-purple-500 bg-purple-50 text-purple-800'
+                : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300'
+            }`}
+          >
+            <span>
+              {t(`search.filters.${type}`, { defaultValue: humanizeType(type) })}
+            </span>
+            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+              {count}
+            </span>
+          </a>
+        ))}
+      </nav>
 
       <section className="space-y-2">
         {initialResult.results.map((row) => (
