@@ -340,3 +340,13 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
 
   return result.rows.map(toSearchHit);
 }
+
+export async function runSearchTypeaheadQuery(
+  options: Omit<SearchQueryOptions, 'limit' | 'includeSnippets'>,
+): Promise<SearchIndexHit[]> {
+  return runSearchQuery({
+    ...options,
+    limit: 5,
+    includeSnippets: false,
+  });
+}

@@ -516,6 +516,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Malformed/unpaired sentinel output falls back to fully escaped text, preventing arbitrary HTML from surviving snippet generation.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F092 — Typeahead skips snippets.**
+  - Added `runSearchTypeaheadQuery()` wrapper around `runSearchQuery()` that forces `limit=5` and `includeSnippets=false`.
+  - The future typeahead server action can use this path without emitting `ts_headline` in its SQL.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

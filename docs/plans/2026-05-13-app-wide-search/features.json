@@ -101,7 +101,7 @@
 
   { "id": "F090", "description": "Build snippet generation via `ts_headline('english', body, tsq, 'MaxFragments=2,StartSel=<mark>,StopSel=</mark>')`", "prdRefs": ["13.1"], "implemented": true },
   { "id": "F091", "description": "Sanitize ts_headline output server-side via controlled-sentinel rebuild: emit ts_headline with unique sentinel tokens (not `<mark>`); split on sentinels, HTML-escape each segment, re-wrap match segments in `<mark>` — guarantees no other HTML can survive", "prdRefs": ["6.3", "18-Q1"], "implemented": true },
-  { "id": "F092", "description": "Skip snippet generation in the typeahead variant for sub-100ms p50", "prdRefs": ["12"], "implemented": false },
+  { "id": "F092", "description": "Skip snippet generation in the typeahead variant for sub-100ms p50", "prdRefs": ["12"], "implemented": true },
 
   { "id": "F093", "description": "Implement `aclPredicateSql(user)` that returns a parameterized SQL fragment combining required_permission, visible_to_user_ids, visible_to_roles, is_internal_only, is_private, client_scope_id checks", "prdRefs": ["14.1"], "implemented": false },
   { "id": "F094", "description": "Resolve the user's set of granted permissions once at request time and pass as an array parameter to `required_permission = ANY($perms)` style check", "prdRefs": ["14.1"], "implemented": false },
