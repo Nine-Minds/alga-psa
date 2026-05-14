@@ -1430,6 +1430,8 @@ npm run search:backfill
 
 - **2026-05-13 — T156 full-search rate limit.** Added behavioral coverage using the real in-memory limiter: 10 full-search calls for the same tenant/user resolve, and the 11th rejects with `SearchRateLimitError` (429-equivalent). Validation: `cd server && npx vitest run src/test/unit/searchActions.test.ts --coverage=false`.
 
+- **2026-05-13 — T157 ticket comment hash anchors.** Added hash-anchor contract coverage that `CommentItem` detects `#comment-{comment_id}`, scrolls the corresponding DOM id into view, applies `.search-highlight`, and clears it after ~2s. Validation: `cd server && npx vitest run src/test/unit/searchHashAnchors.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
