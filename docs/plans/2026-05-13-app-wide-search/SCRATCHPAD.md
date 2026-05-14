@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T057 client delete event contract.** Extended `searchEventPublishing.contract.test.ts` to assert the client deletion path emits `CLIENT_DELETED` with `clientId`, deleting user, deletion timestamp, tenant context, and a stable delete idempotency key. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T056 client update event contract.** Extended `searchEventPublishing.contract.test.ts` to assert the client update action builds a `CLIENT_UPDATED` payload with `clientId`, publishes it with `tenantId: tenant` context, and uses a stable client-updated idempotency key. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T055 client create event contract.** Added `server/src/test/unit/searchEventPublishing.contract.test.ts` to assert the client creation action emits `CLIENT_CREATED` through `publishWorkflowEvent`, includes `createdClient.client_id` in the payload builder, carries `tenantId: tenant` in context, and uses a stable client-created idempotency key. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.

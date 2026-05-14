@@ -31,4 +31,16 @@ describe('search index source event publishing contracts', () => {
     expect(source).toContain('ctx: { tenantId: tenant, occurredAt, actor }');
     expect(source).toContain('idempotencyKey: `client_updated:${clientId}:${occurredAt}`');
   });
+
+  it('T057 client deletion publishes CLIENT_DELETED with tenant and client id', () => {
+    const source = readRepoFile('packages/clients/src/actions/clientActions.ts');
+
+    expect(source).toContain("eventType: 'CLIENT_DELETED'");
+    expect(source).toContain('payload: {');
+    expect(source).toContain('clientId,');
+    expect(source).toContain('deletedByUserId: user.user_id');
+    expect(source).toContain('deletedAt: occurredAt');
+    expect(source).toContain('tenantId: tenant');
+    expect(source).toContain('idempotencyKey: `client_deleted:${clientId}:${occurredAt}`');
+  });
 });
