@@ -603,6 +603,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - The row uses the typeahead action's `totalCount` value and remains a native anchor, so users can open the full results page in a new tab.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F108 — Sidebar launcher insertion.**
+  - Replaced the old commented-out sidebar search placeholder in `Sidebar.tsx` with the new `SearchPalette`.
+  - The collapsed sidebar renders an icon button that expands the sidebar; the expanded sidebar renders the full typeahead input above the nav.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

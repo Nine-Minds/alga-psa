@@ -121,7 +121,7 @@
   { "id": "F105", "description": "Bind `Cmd/Ctrl+K` global shortcut to open the sidebar input", "prdRefs": ["6.1"], "implemented": true },
   { "id": "F106", "description": "Typeahead renders up to 5 title-only suggestions as native `<a href>` anchors so Cmd/Ctrl+click opens in new tab", "prdRefs": ["6.1"], "implemented": true },
   { "id": "F107", "description": "Typeahead's last row is `→ See all N results` linking to `/msp/search?q=...`", "prdRefs": ["6.1"], "implemented": true },
-  { "id": "F108", "description": "Insert the SearchPalette launcher into `Sidebar.tsx` at the top, above the main nav", "prdRefs": ["6.1"], "implemented": false },
+  { "id": "F108", "description": "Insert the SearchPalette launcher into `Sidebar.tsx` at the top, above the main nav", "prdRefs": ["6.1"], "implemented": true },
 
   { "id": "F109", "description": "Create `server/src/app/msp/search/page.tsx` (server component) that reads `q`, `type`, `cursor`, `sort` from search params and calls `searchAppAction`", "prdRefs": ["6.2"], "implemented": false },
   { "id": "F110", "description": "Create `SearchPageClient.tsx` that manages URL state via Next.js router (debounced 200ms on input change)", "prdRefs": ["6.2"], "implemented": false },
