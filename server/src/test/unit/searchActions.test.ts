@@ -145,4 +145,38 @@ describe('search actions', () => {
 
     expect(source).toContain('export const searchAppAction = withAuth(async (');
   });
+
+  it('T117 passes the authenticated tenant into the search query for tenant isolation', async () => {
+    const knex = { tenant: 'knex' };
+    const acl = {
+      userId: 'user-3',
+      tenant: 'tenant-a',
+      permissions: ['client:read'],
+      isInternal: true,
+      accessibleClientIds: ['client-1'],
+    };
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-a' });
+    mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
+    mocks.runSearchQuery.mockResolvedValue([]);
+    mocks.verifyResultVisibility.mockResolvedValue([]);
+
+    await searchAppAction(
+      {
+        user_id: 'user-3',
+        tenant: 'tenant-a',
+        user_type: 'client',
+        clientId: 'client-1',
+      },
+      { tenant: 'tenant-a' },
+      { query: 'acme', limit: 10 },
+    );
+
+    expect(mocks.runSearchQuery).toHaveBeenCalledWith(expect.objectContaining({
+      tenant: 'tenant-a',
+    }));
+    expect(mocks.runSearchQuery).not.toHaveBeenCalledWith(expect.objectContaining({
+      tenant: 'tenant-b',
+    }));
+  });
 });
