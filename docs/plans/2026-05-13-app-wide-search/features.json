@@ -77,7 +77,7 @@
   { "id": "F069", "description": "On INVOICE_UPDATED, cascade re-index of its items and annotations", "prdRefs": ["11.1"], "implemented": true },
   { "id": "F070", "description": "On PROJECT_UPDATED, cascade re-index of phases, tasks, task-comments (paged async job)", "prdRefs": ["11.1"], "implemented": true },
   { "id": "F071", "description": "On `document_associations` insert/delete affecting a document, re-index the document row (its `client_scope_id` may have changed if the primary association was the source)", "prdRefs": ["11.5"], "implemented": true },
-  { "id": "F072", "description": "On user role change, enqueue background job that re-indexes rows where the user is in `visible_to_user_ids`", "prdRefs": ["11.5"], "implemented": false },
+  { "id": "F072", "description": "On user role change, enqueue background job that re-indexes rows where the user is in `visible_to_user_ids`", "prdRefs": ["11.5"], "implemented": true },
 
   { "id": "F073", "description": "Create CLI script `server/src/scripts/search-backfill.ts`", "prdRefs": ["11.3"], "implemented": false },
   { "id": "F074", "description": "Backfill iterates all tenants by default; supports `--tenant=<uuid>` flag", "prdRefs": ["11.3"], "implemented": false },

@@ -410,6 +410,14 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Already covered by the F056 event publishes plus F065 subscriber upsert path: `DOCUMENT_ASSOCIATED` and `DOCUMENT_DETACHED` carry `documentId`, and `documentIndexer.sourceEvents` includes both events.
   - When those events arrive with `SEARCH_INDEX_LIVE=true`, the subscriber resolves the `document` indexer and reloads/upserts the document row.
 
+- **F072 — User role-change ACL refresh job.**
+  - Added `server/src/lib/jobs/handlers/searchVisibleUserReindexHandler.ts` with job name `search-visible-user-reindex`.
+  - The job pages through `app_search_index` rows for a tenant where `visible_to_user_ids` contains the changed user, re-runs the registered indexer for each row, upserts refreshed ACL/content, and deletes stale index rows when the source row no longer loads.
+  - Registered the job in both `registerAllJobHandlers()` and the legacy `initializeScheduler()` path, and exposed `scheduleSearchVisibleUserReindexJob()`.
+  - `searchIndexSubscriber` now enqueues this job after processing `USER_ROLES_UPDATED`, gated behind `SEARCH_INDEX_LIVE` with the rest of live indexing. Enqueue failures are logged but do not fail the original search-index event handling.
+  - Tightened several cascade queries from object-style `.where({ ... })` to chained column predicates because the server typecheck reached those earlier subscriber lines and rejected the overload.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

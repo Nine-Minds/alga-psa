@@ -103,7 +103,8 @@ async function reindexTicketComments(knex: Knex, tenant: string, ticketId: strin
 
   const rows = await knex<{ comment_id: string }>('comments')
     .select('comment_id')
-    .where({ tenant, ticket_id: ticketId })
+    .where('tenant', tenant)
+    .andWhere('ticket_id', ticketId)
     .orderBy('comment_id', 'asc');
 
   for (const row of rows) {
@@ -128,7 +129,8 @@ async function reindexInvoiceChildren(knex: Knex, tenant: string, invoiceId: str
   if (itemIndexer) {
     const rows = await knex<{ item_id: string }>('invoice_items')
       .select('item_id')
-      .where({ tenant, invoice_id: invoiceId })
+      .where('tenant', tenant)
+      .andWhere('invoice_id', invoiceId)
       .orderBy('item_id', 'asc');
 
     for (const row of rows) {
@@ -145,7 +147,8 @@ async function reindexInvoiceChildren(knex: Knex, tenant: string, invoiceId: str
   if (annotationIndexer) {
     const rows = await knex<{ annotation_id: string }>('invoice_annotations')
       .select('annotation_id')
-      .where({ tenant, invoice_id: invoiceId })
+      .where('tenant', tenant)
+      .andWhere('invoice_id', invoiceId)
       .orderBy('annotation_id', 'asc');
 
     for (const row of rows) {
@@ -179,7 +182,8 @@ async function reindexProjectChildren(knex: Knex, tenant: string, projectId: str
     while (true) {
       const query = knex<{ phase_id: string }>('project_phases')
         .select('phase_id')
-        .where({ tenant, project_id: projectId })
+        .where('tenant', tenant)
+        .andWhere('project_id', projectId)
         .orderBy('phase_id', 'asc')
         .limit(CASCADE_BATCH_SIZE);
 
@@ -291,6 +295,28 @@ async function reindexProjectChildren(knex: Knex, tenant: string, projectId: str
   }
 
   return { phases, tasks, taskComments };
+}
+
+async function enqueueVisibleUserReindex(tenant: string, userId: string, event: Event): Promise<void> {
+  try {
+    const { scheduleSearchVisibleUserReindexJob } = await import('../../jobs');
+    const jobId = await scheduleSearchVisibleUserReindexJob(tenant, userId);
+    logger.debug('[SearchIndexSubscriber] Enqueued visible-user search re-index', {
+      eventType: event.eventType,
+      eventId: event.id,
+      tenant,
+      userId,
+      jobId,
+    });
+  } catch (error) {
+    logger.error('[SearchIndexSubscriber] Failed to enqueue visible-user search re-index', {
+      eventType: event.eventType,
+      eventId: event.id,
+      tenant,
+      userId,
+      error,
+    });
+  }
 }
 
 export async function registerSearchIndexSubscriber(): Promise<void> {
@@ -444,6 +470,10 @@ async function handleSearchIndexEvent(event: Event): Promise<void> {
         projectId: objectId,
         ...counts,
       });
+    }
+
+    if (event.eventType === 'USER_ROLES_UPDATED' && indexer.objectType === 'user') {
+      await enqueueVisibleUserReindex(tenant, objectId, event);
     }
   }
 }
