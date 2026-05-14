@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T054 board/category/tag ACL.** Extended `searchIndexers.test.ts` to assert board, category, and tag indexers produce result rows with titles and `acl.requiredPermission='ticket:read'`, matching the PRD rule that structural ticket metadata is searchable as normal rows. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T053 time entry non-empty notes indexing.** Extended `searchIndexers.test.ts` to assert `timeEntryIndexer.loadOne` produces a `time_entry` SearchDoc for a one-character note, links to the parent ticket, and scopes visibility to the time-entry owner. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T052 time entry empty-notes skip.** Extended `searchIndexers.test.ts` to assert `timeEntryIndexer.loadOne` adds `whereNotNull('te.notes')` and `te.notes <> ''` filters and returns `null` when no row survives those filters, enforcing the PRD skip rule for empty notes. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.

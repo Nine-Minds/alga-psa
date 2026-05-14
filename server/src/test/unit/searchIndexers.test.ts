@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { assetIndexer } from '../../lib/search/indexers/asset';
+import { boardIndexer } from '../../lib/search/indexers/board';
+import { categoryIndexer } from '../../lib/search/indexers/category';
 import { clientIndexer } from '../../lib/search/indexers/client';
 import { contactIndexer } from '../../lib/search/indexers/contact';
 import { contractIndexer } from '../../lib/search/indexers/contract';
@@ -17,6 +19,7 @@ import { scheduleEntryIndexer } from '../../lib/search/indexers/schedule_entry';
 import { serviceCatalogIndexer } from '../../lib/search/indexers/service_catalog';
 import { serviceRequestDefinitionIndexer } from '../../lib/search/indexers/service_request_definition';
 import { serviceRequestSubmissionIndexer } from '../../lib/search/indexers/service_request_submission';
+import { tagIndexer } from '../../lib/search/indexers/tag';
 import { ticketIndexer } from '../../lib/search/indexers/ticket';
 import { ticketCommentIndexer } from '../../lib/search/indexers/ticket_comment';
 import { timeEntryIndexer } from '../../lib/search/indexers/time_entry';
@@ -903,6 +906,46 @@ describe('search entity indexers', () => {
         requiredPermission: 'time:read',
         visibleToUserIds: ['11111111-1111-4111-8111-111111111111'],
       },
+    });
+  });
+
+  it("T054 board, category, and tag indexers only require 'ticket:read'", async () => {
+    const boardKnex = createFirstRowKnex({
+      board_id: 'board-1',
+      board_name: 'Service Desk',
+    });
+    const categoryKnex = createFirstRowKnex({
+      category_id: 'category-1',
+      category_name: 'Networking',
+      board_id: 'board-1',
+      created_at: '2026-05-13T10:00:00.000Z',
+    });
+    const tagKnex = createFirstRowKnex({
+      tag_id: 'tag-1',
+      tag_text: 'urgent',
+      tagged_type: 'ticket',
+      board_id: 'board-1',
+      created_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const boardDoc = await boardIndexer.loadOne(boardKnex.knex as never, 'tenant-1', 'board-1');
+    const categoryDoc = await categoryIndexer.loadOne(categoryKnex.knex as never, 'tenant-1', 'category-1');
+    const tagDoc = await tagIndexer.loadOne(tagKnex.knex as never, 'tenant-1', 'tag-1');
+
+    expect(boardDoc).toMatchObject({
+      objectType: 'board',
+      title: 'Service Desk',
+      acl: { requiredPermission: 'ticket:read' },
+    });
+    expect(categoryDoc).toMatchObject({
+      objectType: 'category',
+      title: 'Networking',
+      acl: { requiredPermission: 'ticket:read' },
+    });
+    expect(tagDoc).toMatchObject({
+      objectType: 'tag',
+      title: 'urgent',
+      acl: { requiredPermission: 'ticket:read' },
     });
   });
 });
