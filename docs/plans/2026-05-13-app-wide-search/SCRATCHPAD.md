@@ -708,6 +708,8 @@ npm run search:backfill
 
 - **2026-05-13 — F043 interaction indexer.** Added `interactionIndexer` and registered it. It flattens/truncates BlockNote `interactions.notes`, builds subtitles from `interaction_types.type_name` plus any available client/contact/ticket labels, links to `/msp/interactions/{interaction_id}`, and sets `requiredPermission='interaction:read'`. Current schema allows a nullable title because it was renamed from legacy `description`, so the indexer falls back to `Untitled interaction` only when the stored title is blank. Event hooks remain empty until F060. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/interaction.ts server/src/lib/search/indexers/index.ts`.
 
+- **2026-05-13 — F044 schedule entry indexer.** Added `scheduleEntryIndexer` and registered it. Current migrations removed `schedule_entries.user_id` and use `schedule_entry_assignees`, so the indexer aggregates assignee `user_id`s from that pivot table into `visibleToUserIds` instead of reading a non-existent owner column. It indexes `title`/`notes`, links to `/msp/schedule/{entry_id}`, and sets `requiredPermission='schedule:read'`. Event hooks remain empty until F061. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/schedule_entry.ts server/src/lib/search/indexers/index.ts`.
+
 ---
 
 ## Implementation order suggestion (not prescriptive)
