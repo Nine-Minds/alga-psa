@@ -71,7 +71,7 @@
   { "id": "F064", "description": "Subscriber resolves event → object_type → indexer via registry", "prdRefs": ["11.1"], "implemented": true },
   { "id": "F065", "description": "Subscriber handles CREATED/UPDATED by calling `indexer.loadOne` and `upsertSearchDoc`", "prdRefs": ["11.1"], "implemented": true },
   { "id": "F066", "description": "Subscriber handles DELETED by calling `deleteSearchDoc`", "prdRefs": ["11.1"], "implemented": true },
-  { "id": "F067", "description": "Subscriber is gated by env var `SEARCH_INDEX_LIVE` (default `false`); when false, events are acknowledged but no DB writes occur", "prdRefs": ["11.1", "16"], "implemented": false },
+  { "id": "F067", "description": "Subscriber is gated by env var `SEARCH_INDEX_LIVE` (default `false`); when false, events are acknowledged but no DB writes occur", "prdRefs": ["11.1", "16"], "implemented": true },
 
   { "id": "F068", "description": "On TICKET_UPDATED, cascade a re-index of all the ticket's comments (denormalized parent title)", "prdRefs": ["11.1"], "implemented": false },
   { "id": "F069", "description": "On INVOICE_UPDATED, cascade re-index of its items and annotations", "prdRefs": ["11.1"], "implemented": false },

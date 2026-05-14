@@ -388,6 +388,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Delete-style events (`*_DELETED` plus `TAG_DEFINITION_DELETED`) now call `deleteSearchDoc(knex, tenant, objectType, objectId)` for each resolved indexer.
   - Missing IDs on delete events are logged and skipped, matching the non-delete path's defensive behavior.
 
+- **F067 — Live-indexing gate.**
+  - Added `isSearchIndexLiveEnabled()` to `searchIndexSubscriber.ts`; it returns true only when `SEARCH_INDEX_LIVE === 'true'`, so the default/unset behavior is disabled.
+  - The event handler resolves and acknowledges events but returns before opening a DB connection or writing rows when live indexing is disabled.
+  - The env var is read at event-handling time, so future events see a changed value without code changes; process env propagation still depends on the deployment/runtime.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

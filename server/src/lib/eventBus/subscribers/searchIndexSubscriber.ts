@@ -87,6 +87,10 @@ function isDeleteEvent(eventType: EventType): boolean {
   return eventType.endsWith('_DELETED') || eventType === 'TAG_DEFINITION_DELETED';
 }
 
+export function isSearchIndexLiveEnabled(): boolean {
+  return process.env.SEARCH_INDEX_LIVE === 'true';
+}
+
 export async function registerSearchIndexSubscriber(): Promise<void> {
   if (isRegistered) {
     return;
@@ -136,6 +140,15 @@ async function handleSearchIndexEvent(event: Event): Promise<void> {
     eventId: event.id,
     objectTypes: indexers.map((indexer) => indexer.objectType),
   });
+
+  if (!isSearchIndexLiveEnabled()) {
+    logger.debug('[SearchIndexSubscriber] Live indexing disabled; acknowledging event without DB writes', {
+      eventType: event.eventType,
+      eventId: event.id,
+      searchIndexLive: process.env.SEARCH_INDEX_LIVE ?? 'false',
+    });
+    return;
+  }
 
   const tenant = extractTenant(event);
   if (!tenant) {
