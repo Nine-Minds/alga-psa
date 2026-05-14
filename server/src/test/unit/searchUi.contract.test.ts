@@ -321,4 +321,20 @@ describe('app-wide search UI contracts', () => {
     expect(clientSource).toContain('initialCursorStack');
     expect(clientSource).toContain('initialSort');
   });
+
+  it('T191 SearchPalette has no obvious serious/critical axe violations by static contract', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/search/SearchPalette.tsx'), 'utf8');
+
+    expect(source).toContain('aria-label={t(\'search.placeholder\')}');
+    expect(source).toContain('aria-hidden="true"');
+    expect(source).toContain('role="combobox"');
+    expect(source).toContain('aria-autocomplete="list"');
+    expect(source).toContain('aria-expanded={isOpen}');
+    expect(source).toContain('aria-controls="app-search-typeahead-list"');
+    expect(source).toContain('aria-activedescendant={activeDescendantId}');
+    expect(source).toContain('id="app-search-typeahead-list"');
+    expect(source).toContain('href={result.url}');
+    expect(source).toContain('href={seeAllUrl}');
+    expect(source).not.toContain('tabIndex={-1}');
+  });
 });

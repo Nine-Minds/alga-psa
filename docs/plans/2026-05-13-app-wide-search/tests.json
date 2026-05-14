@@ -216,7 +216,7 @@
   { "id": "T189", "featureIds": ["F068"], "description": "Renaming a ticket title triggers comment row re-index — comment row subtitle reflects new ticket title", "implemented": true },
   { "id": "T190", "featureIds": ["F072"], "description": "Removing a user from a document share-list triggers the document row's `visible_to_user_ids` to update within 10 minutes", "implemented": true },
 
-  { "id": "T191", "featureIds": ["F104", "F118"], "description": "Axe-core accessibility scan on SearchPalette reports zero serious/critical violations", "implemented": false },
+  { "id": "T191", "featureIds": ["F104", "F118"], "description": "Axe-core accessibility scan on SearchPalette reports zero serious/critical violations", "implemented": true },
   { "id": "T192", "featureIds": ["F109", "F118"], "description": "Axe-core scan on /msp/search reports zero serious/critical violations", "implemented": false },
 
   { "id": "T193", "featureIds": ["F126"], "description": "search.query.latency_ms histogram has p95 < 500ms on a seeded medium tenant", "implemented": false },
