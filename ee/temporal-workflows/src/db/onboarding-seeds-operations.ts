@@ -29,10 +29,9 @@ export async function runOnboardingSeeds(
     
     // Run all seeds in a single transaction to ensure consistency
     await knex.transaction(async (trx: Knex.Transaction) => {
-      // Set tenant ID using PostgreSQL session variable for the entire transaction
-      // This is useful for any queries that might use current_setting('app.current_tenant')
-      // Note: SET LOCAL doesn't support parameterized queries, but this is safe since tenantId is a UUID
-      await trx.raw(`SET LOCAL app.current_tenant = '${tenantId}'`);
+      // Set tenant ID using PostgreSQL session variable for the entire transaction.
+      // set_config(..., true) is transaction-local and safely accepts bind parameters.
+      await trx.raw(`SELECT set_config('app.current_tenant', ?, true)`, [tenantId]);
       
       // Get the onboarding seeds directory
       const currentFileUrl = import.meta.url;
