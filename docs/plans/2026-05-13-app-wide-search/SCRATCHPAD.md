@@ -287,6 +287,7 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
 - **2026-05-13 — F014 complete.** Added `flattenJsonbPayload(obj)` to recursively concatenate string leaves from objects/arrays, skip secret-like keys (`password|secret|token|api_key|authorization`), strip image data URIs, and ignore scalar top-level input. Validation: targeted `rg` on function, secret regex, and object traversal.
 - **2026-05-13 — F015 complete.** Added `truncateForIndex(text, maxBytes = 65_536)` using `Buffer.byteLength` and `for...of` code-point iteration so truncation respects UTF-8 byte limits without splitting characters. Validation: targeted `rg` on the function and byte-length loop.
 - **2026-05-13 — F016 complete.** Added `server/src/lib/search/sql.ts` with `buildTsvectorSql(title, subtitle, body)`. It returns a bound SQL fragment with title/subtitle/body weights A/B/C and runs all inputs through `public.process_large_lexemes()` before `to_tsvector('english', ...)`. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/sql.ts`.
+- **2026-05-13 — F017 complete.** `EntityIndexer` in `types.ts` defines `objectType`, `sourceEvents`, `loadOne`, and paged `loadBatch` methods. `sourceEvents` is typed as `readonly EventType[]` from `@alga-psa/event-schemas`; loaders accept an explicit `tenant`. Validation: targeted `rg` on the interface.
 
 ---
 
