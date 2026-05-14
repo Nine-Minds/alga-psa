@@ -247,4 +247,12 @@ describe('app-wide search UI contracts', () => {
     expect(pageSource).toContain('function toDomIdPart(value: string): string');
     expect(pageSource).toContain('id={`app-search-result-row-${toDomIdPart(row.type)}-${toDomIdPart(row.id)}`}');
   });
+
+  it('T146 uses stable ids for every search filter chip', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/app/msp/search/SearchPageClient.tsx'), 'utf8');
+
+    expect(source).toContain('id="app-search-filter-chip-all"');
+    expect(source).toContain('id={`app-search-filter-chip-${toDomIdPart(type)}`}');
+    expect(source).toContain('typeEntries.map(([type, count]) =>');
+  });
 });
