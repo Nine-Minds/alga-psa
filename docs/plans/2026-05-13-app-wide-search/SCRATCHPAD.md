@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T059 user CRUD/role event contract.** Extended `searchEventPublishing.contract.test.ts` to assert `packages/users/src/actions/user-actions/userActions.ts` emits `USER_CREATED`, `USER_UPDATED`, `USER_DELETED`, and `USER_ROLES_UPDATED` with tenant context and stable idempotency keys, covering user role-change ACL reindex triggers. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T058 contact CRUD event contract.** Added a `ContactService.delete` override so API contact deletion now loads the contact, deletes it tenant-scoped, then publishes `CONTACT_DELETED` with contact id, optional client id, deleting user, tenant context, and an idempotency key. Extended `searchEventPublishing.contract.test.ts` to assert CONTACT_CREATED/UPDATED/DELETED publish contracts in `ContactService`. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed; `npm -w server run typecheck` passed.
 
 - **2026-05-13 — T057 client delete event contract.** Extended `searchEventPublishing.contract.test.ts` to assert the client deletion path emits `CLIENT_DELETED` with `clientId`, deleting user, deletion timestamp, tenant context, and a stable delete idempotency key. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.

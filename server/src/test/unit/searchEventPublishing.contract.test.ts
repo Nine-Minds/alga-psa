@@ -60,4 +60,18 @@ describe('search index source event publishing contracts', () => {
     expect(source).toContain('contactId: id');
     expect(source).toContain('idempotencyKey: `contact_deleted:${id}:${occurredAt}`');
   });
+
+  it('T059 user CRUD and role changes emit USER_* events', () => {
+    const source = readRepoFile('packages/users/src/actions/user-actions/userActions.ts');
+
+    expect(source).toContain("eventType: 'USER_CREATED'");
+    expect(source).toContain("eventType: 'USER_UPDATED'");
+    expect(source).toContain("eventType: 'USER_DELETED'");
+    expect(source).toContain("eventType: 'USER_ROLES_UPDATED'");
+    expect(source).toContain('tenantId: tenant');
+    expect(source).toContain('idempotencyKey: `user_created:${result.user.user_id}:${occurredAt}`');
+    expect(source).toContain('idempotencyKey: `user_updated:${userId}:${occurredAt}`');
+    expect(source).toContain('idempotencyKey: `user_deleted:${userId}:${occurredAt}`');
+    expect(source).toContain('idempotencyKey: `user_roles_updated:${userId}:${occurredAt}`');
+  });
 });
