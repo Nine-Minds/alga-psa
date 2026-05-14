@@ -73,7 +73,7 @@
   { "id": "T067", "featureIds": ["F059"], "description": "Workflow task CRUD + assignment-change emit corresponding events", "implemented": true },
   { "id": "T068", "featureIds": ["F060", "F061", "F062"], "description": "Interaction, schedule, time-entry, board/category/tag CRUD emit corresponding events", "implemented": true },
 
-  { "id": "T069", "featureIds": ["F063", "F064"], "description": "Subscriber starts subscribed to every `sourceEvents` set returned by registered indexers (union of events)", "implemented": false },
+  { "id": "T069", "featureIds": ["F063", "F064"], "description": "Subscriber starts subscribed to every `sourceEvents` set returned by registered indexers (union of events)", "implemented": true },
   { "id": "T070", "featureIds": ["F065"], "description": "A `CLIENT_CREATED` event causes an upsert into `app_search_index` with object_type='client'", "implemented": false },
   { "id": "T071", "featureIds": ["F066"], "description": "A `CLIENT_DELETED` event causes the index row to be deleted", "implemented": false },
   { "id": "T072", "featureIds": ["F067"], "description": "With `SEARCH_INDEX_LIVE=false`, events are received but `app_search_index` is not written to", "implemented": false },

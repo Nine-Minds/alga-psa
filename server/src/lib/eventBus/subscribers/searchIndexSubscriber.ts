@@ -61,6 +61,10 @@ export function resolveSearchIndexersForEvent(eventType: EventType): EntityIndex
   return buildIndexersByEvent().get(eventType) ?? [];
 }
 
+export function getSearchIndexSubscriberEventTypes(): EventType[] {
+  return [...buildIndexersByEvent().keys()];
+}
+
 function payloadRecord(event: Event): Record<string, unknown> {
   return event.payload && typeof event.payload === 'object'
     ? event.payload as Record<string, unknown>
