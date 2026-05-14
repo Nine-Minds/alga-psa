@@ -315,8 +315,15 @@ export const EVENT_TYPES = [
   'NOTE_CREATED',
   'TAG_DEFINITION_CREATED',
   'TAG_DEFINITION_UPDATED',
+  'TAG_DEFINITION_DELETED',
   'TAG_APPLIED',
   'TAG_REMOVED',
+  'BOARD_CREATED',
+  'BOARD_UPDATED',
+  'BOARD_DELETED',
+  'CATEGORY_CREATED',
+  'CATEGORY_UPDATED',
+  'CATEGORY_DELETED',
 
   // Users
   'USER_CREATED',
@@ -782,6 +789,27 @@ export const ScheduleEntryEventPayloadSchema = BasePayloadSchema.extend({
   changes: z.record(z.unknown()).optional(),
 });
 
+export const BoardEventPayloadSchema = BasePayloadSchema.extend({
+  boardId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  changes: z.record(z.unknown()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const CategoryEventPayloadSchema = BasePayloadSchema.extend({
+  categoryId: z.string().uuid(),
+  boardId: z.string().uuid().nullable().optional(),
+  userId: z.string().uuid().optional(),
+  changes: z.record(z.unknown()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const TagDefinitionDeletedPayloadSchema = BasePayloadSchema.extend({
+  tagId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
 // Calendar sync event payload schema
 export const CalendarSyncEventPayloadSchema = BasePayloadSchema.extend({
   calendarProviderId: z.string().uuid(),
@@ -1132,8 +1160,15 @@ export const EventPayloadSchemas = {
   NOTE_CREATED: noteCreatedEventPayloadSchema,
   TAG_DEFINITION_CREATED: tagDefinitionCreatedEventPayloadSchema,
   TAG_DEFINITION_UPDATED: tagDefinitionUpdatedEventPayloadSchema,
+  TAG_DEFINITION_DELETED: TagDefinitionDeletedPayloadSchema,
   TAG_APPLIED: tagAppliedEventPayloadSchema,
   TAG_REMOVED: tagRemovedEventPayloadSchema,
+  BOARD_CREATED: BoardEventPayloadSchema,
+  BOARD_UPDATED: BoardEventPayloadSchema,
+  BOARD_DELETED: BoardEventPayloadSchema,
+  CATEGORY_CREATED: CategoryEventPayloadSchema,
+  CATEGORY_UPDATED: CategoryEventPayloadSchema,
+  CATEGORY_DELETED: CategoryEventPayloadSchema,
 
   // Users
   USER_CREATED: UserEventPayloadSchema,
@@ -1295,6 +1330,7 @@ export type TimeEntryCreatedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_CREAT
 export type TimeEntryUpdatedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_UPDATED>;
 export type TimeEntryDeletedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_DELETED>;
 export type TimeEntryChangesRequestedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_CHANGES_REQUESTED>;
+export type TagDefinitionDeletedEvent = z.infer<typeof EventSchemas.TAG_DEFINITION_DELETED>;
 export type InvoiceGeneratedEvent = z.infer<typeof EventSchemas.INVOICE_GENERATED>;
 export type InvoiceFinalizedEvent = z.infer<typeof EventSchemas.INVOICE_FINALIZED>;
 export type CustomEvent = z.infer<typeof EventSchemas.CUSTOM_EVENT>;
@@ -1304,6 +1340,12 @@ export type AccountingExportFailedEvent = z.infer<typeof EventSchemas.ACCOUNTING
 export type ScheduleEntryCreatedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_CREATED>;
 export type ScheduleEntryUpdatedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_UPDATED>;
 export type ScheduleEntryDeletedEvent = z.infer<typeof EventSchemas.SCHEDULE_ENTRY_DELETED>;
+export type BoardCreatedEvent = z.infer<typeof EventSchemas.BOARD_CREATED>;
+export type BoardUpdatedEvent = z.infer<typeof EventSchemas.BOARD_UPDATED>;
+export type BoardDeletedEvent = z.infer<typeof EventSchemas.BOARD_DELETED>;
+export type CategoryCreatedEvent = z.infer<typeof EventSchemas.CATEGORY_CREATED>;
+export type CategoryUpdatedEvent = z.infer<typeof EventSchemas.CATEGORY_UPDATED>;
+export type CategoryDeletedEvent = z.infer<typeof EventSchemas.CATEGORY_DELETED>;
 export type CalendarSyncStartedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC_STARTED>;
 export type CalendarSyncCompletedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC_COMPLETED>;
 export type CalendarSyncFailedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC_FAILED>;

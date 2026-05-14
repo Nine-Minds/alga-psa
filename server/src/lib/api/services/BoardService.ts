@@ -5,6 +5,7 @@
 
 import { IBoard } from '@alga-psa/types';
 import { BaseService, ServiceContext, ListResult, ListOptions } from '@alga-psa/db';
+import { publishEvent } from 'server/src/lib/eventBus/publishers';
 
 export class BoardService extends BaseService<IBoard> {
   constructor() {
@@ -15,6 +16,57 @@ export class BoardService extends BaseService<IBoard> {
       searchableFields: ['board_name', 'description'],
       defaultSort: 'display_order',
       defaultOrder: 'asc'
+    });
+  }
+
+  async create(data: Partial<IBoard>, context: ServiceContext): Promise<IBoard> {
+    const board = await super.create(data, context);
+    if (!board.board_id) {
+      throw new Error('Created board is missing board_id');
+    }
+
+    await publishEvent({
+      eventType: 'BOARD_CREATED',
+      payload: {
+        tenantId: context.tenant,
+        boardId: board.board_id,
+        userId: context.userId,
+        changes: { after: board },
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    return board;
+  }
+
+  async update(id: string, data: Partial<IBoard>, context: ServiceContext): Promise<IBoard> {
+    const board = await super.update(id, data, context);
+
+    await publishEvent({
+      eventType: 'BOARD_UPDATED',
+      payload: {
+        tenantId: context.tenant,
+        boardId: id,
+        userId: context.userId,
+        changes: { after: board },
+        timestamp: new Date().toISOString(),
+      },
+    });
+
+    return board;
+  }
+
+  async delete(id: string, context: ServiceContext): Promise<void> {
+    await super.delete(id, context);
+
+    await publishEvent({
+      eventType: 'BOARD_DELETED',
+      payload: {
+        tenantId: context.tenant,
+        boardId: id,
+        userId: context.userId,
+        timestamp: new Date().toISOString(),
+      },
     });
   }
 

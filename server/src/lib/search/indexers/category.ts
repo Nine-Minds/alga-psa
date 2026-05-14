@@ -26,7 +26,11 @@ function toSearchDoc(tenant: string, row: CategorySearchRow): SearchDoc {
 
 export const categoryIndexer: EntityIndexer = {
   objectType: 'category',
-  sourceEvents: [],
+  sourceEvents: [
+    'CATEGORY_CREATED',
+    'CATEGORY_UPDATED',
+    'CATEGORY_DELETED',
+  ],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await knex<CategorySearchRow>('categories')

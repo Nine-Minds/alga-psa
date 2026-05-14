@@ -35,7 +35,11 @@ function toSearchDoc(tenant: string, row: TagSearchRow): SearchDoc {
 
 export const tagIndexer: EntityIndexer = {
   objectType: 'tag',
-  sourceEvents: [],
+  sourceEvents: [
+    'TAG_DEFINITION_CREATED',
+    'TAG_DEFINITION_UPDATED',
+    'TAG_DEFINITION_DELETED',
+  ],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await knex<TagSearchRow>('tag_definitions')

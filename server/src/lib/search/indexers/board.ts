@@ -23,7 +23,11 @@ function toSearchDoc(tenant: string, row: BoardSearchRow): SearchDoc {
 
 export const boardIndexer: EntityIndexer = {
   objectType: 'board',
-  sourceEvents: [],
+  sourceEvents: [
+    'BOARD_CREATED',
+    'BOARD_UPDATED',
+    'BOARD_DELETED',
+  ],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await knex<BoardSearchRow>('boards')

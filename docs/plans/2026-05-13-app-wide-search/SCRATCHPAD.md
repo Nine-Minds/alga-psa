@@ -361,6 +361,14 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Added time-entry publishes to `packages/scheduling/src/actions/timeEntryCrudActions.ts` for create/update/delete and approval status transitions. Event publish failures are logged and do not block the user-facing action, matching the action-layer pattern used elsewhere.
   - Validation: `npm -w @alga-psa/event-schemas run typecheck`, `npm -w @alga-psa/scheduling run typecheck`, `git diff --check`.
 
+- **F062 — Board/category/tag search events.**
+  - Added `BOARD_CREATED/UPDATED/DELETED`, `CATEGORY_CREATED/UPDATED/DELETED`, and `TAG_DEFINITION_DELETED` to `packages/event-schemas/src/schemas/eventBusSchema.ts`. Existing `TAG_DEFINITION_CREATED/UPDATED` workflow events are reused for tag index upserts.
+  - Wired `boardIndexer`, `categoryIndexer`, and `tagIndexer` `sourceEvents` to the relevant event families.
+  - Added board event publishes to `server/src/lib/api/services/BoardService.ts`; added board/category import/delete publishes to `packages/reference-data/src/actions/referenceDataActions.ts`.
+  - Added tag-definition update/delete publishes to both the package actions (`packages/tags/src/actions/tagActions.ts`) and REST API service (`server/src/lib/api/services/TagService.ts`) so tag definition changes re-index the `tag_definitions` row.
+  - Note: the category indexer remains scoped to the `categories` table per the existing F047 implementation and PRD source-table choice; `ticket_categories` API mutations are not wired to avoid emitting event IDs the current indexer cannot load.
+  - Validation: `npm -w @alga-psa/event-schemas run typecheck`, `npm -w @alga-psa/tags run typecheck`, `npm -w @alga-psa/reference-data run typecheck`, `git diff --check`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

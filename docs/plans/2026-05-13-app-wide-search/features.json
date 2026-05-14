@@ -65,7 +65,7 @@
   { "id": "F059", "description": "Audit `WORKFLOW_TASK_*` events; add missing CRUD + assignment-change events", "prdRefs": ["11.2", "11.5"], "implemented": true },
   { "id": "F060", "description": "Add `INTERACTION_*` event family and publishes", "prdRefs": ["11.2"], "implemented": true },
   { "id": "F061", "description": "Add `SCHEDULE_ENTRY_*` and `TIME_ENTRY_*` event families and publishes", "prdRefs": ["11.2"], "implemented": true },
-  { "id": "F062", "description": "Add `BOARD_*`, `CATEGORY_*`, `TAG_*` event families and publishes", "prdRefs": ["11.2"], "implemented": false },
+  { "id": "F062", "description": "Add `BOARD_*`, `CATEGORY_*`, `TAG_*` event families and publishes", "prdRefs": ["11.2"], "implemented": true },
 
   { "id": "F063", "description": "Create `server/src/lib/eventBus/subscribers/searchIndexSubscriber.ts` and register it during eventBus initialization", "prdRefs": ["11.1"], "implemented": false },
   { "id": "F064", "description": "Subscriber resolves event → object_type → indexer via registry", "prdRefs": ["11.1"], "implemented": false },
