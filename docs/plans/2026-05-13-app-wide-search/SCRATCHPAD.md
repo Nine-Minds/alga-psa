@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T043 active contract label.** Extended `searchIndexers.test.ts` to assert `contractIndexer.loadOne` maps an active contract to `subtitle='Contract'`, keeping quote labeling limited to draft contracts. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T042 draft contract quote label.** Extended `searchIndexers.test.ts` to assert `contractIndexer.loadOne` maps `status='draft'` to `subtitle='Quote'`, keeps contract body/identifier metadata, and requires `contract:read`. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T041 invoice child ACL inheritance.** Extended `searchIndexers.test.ts` to assert `invoiceItemIndexer` and `invoiceAnnotationIndexer` join their parent invoice, use invoice number as title, emit item/annotation hash URLs, and inherit `invoice:read` plus `clientScopeId` from the invoice. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.

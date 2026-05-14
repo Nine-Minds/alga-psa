@@ -582,4 +582,22 @@ describe('search entity indexers', () => {
       acl: { requiredPermission: 'contract:read' },
     });
   });
+
+  it("T043 contract indexer labels active contracts as 'Contract'", async () => {
+    const { knex } = createFirstRowKnex({
+      contract_id: 'contract-2',
+      contract_name: 'ACME managed services',
+      contract_description: 'Active managed services agreement',
+      status: 'active',
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await contractIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'contract-2',
+    );
+
+    expect(doc?.subtitle).toBe('Contract');
+  });
 });
