@@ -92,7 +92,7 @@
   { "id": "F082", "description": "Reconciliation inserts source rows that are missing from the index (covers backfill gaps)", "prdRefs": ["11.4"], "implemented": true },
   { "id": "F083", "description": "Schedule reconciliation to run daily; document the schedule in deploy runbook", "prdRefs": ["11.4", "16"], "implemented": true },
 
-  { "id": "F084", "description": "Implement `parseQuery(raw)` that trims, lowercases identifier patterns, validates length ≤ 200 chars", "prdRefs": ["12", "13", "18-Q2"], "implemented": false },
+  { "id": "F084", "description": "Implement `parseQuery(raw)` that trims, lowercases identifier patterns, validates length ≤ 200 chars", "prdRefs": ["12", "13", "18-Q2"], "implemented": true },
   { "id": "F085", "description": "Build SQL query using `websearch_to_tsquery('english', $1)` and `ts_rank_cd(search_vector, tsq)` for FTS branch", "prdRefs": ["13.1"], "implemented": false },
   { "id": "F086", "description": "Add `pg_trgm` fallback branch using `similarity(title|subtitle, raw)` and `%` operator", "prdRefs": ["13.1"], "implemented": false },
   { "id": "F087", "description": "Detect identifier patterns (`^[A-Z]+-?\\d+$`, ticket-number-style, asset-tag-style) and pin exact `metadata->>'identifier'` matches at the top", "prdRefs": ["13.3"], "implemented": false },

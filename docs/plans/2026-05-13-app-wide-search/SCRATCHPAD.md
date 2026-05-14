@@ -473,6 +473,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - The deploy runbook below now calls out that `search:reconcile` runs daily at 6:00 AM per tenant after scheduled jobs initialize.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F084 — Query parsing.**
+  - Added `server/src/lib/search/query.ts` with `parseQuery(raw)`.
+  - The parser collapses whitespace, trims, rejects empty input, enforces the 200-character cap, detects `^[A-Z]+-?\d+$` identifier-style queries case-insensitively, and lowercases identifier keys for later metadata matching.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
