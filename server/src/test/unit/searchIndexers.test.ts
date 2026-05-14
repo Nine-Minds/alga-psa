@@ -948,6 +948,31 @@ describe('search entity indexers', () => {
     });
   });
 
+  it('T198 workflow-task indexer filters by tenant even though task_id is the only PK', async () => {
+    const { knex, queryBuilder } = createFirstRowKnex({
+      task_id: 'workflow-task-pk',
+      title: 'Tenant-scoped approval',
+      description: 'Single-column PK source row',
+      assigned_users: [],
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await workflowTaskIndexer.loadOne(
+      knex as never,
+      'tenant-1',
+      'workflow-task-pk',
+    );
+
+    expect(knex).toHaveBeenCalledWith('workflow_tasks');
+    expect(queryBuilder.where).toHaveBeenCalledWith('tenant', 'tenant-1');
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith('task_id', 'workflow-task-pk');
+    expect(doc).toMatchObject({
+      objectType: 'workflow_task',
+      objectId: 'workflow-task-pk',
+      title: 'Tenant-scoped approval',
+    });
+  });
+
   it('T051 schedule-entry indexer populates visible_to_user_ids with assignees', async () => {
     const { knex, queryBuilder } = createFirstRowKnex({
       entry_id: 'entry-1',

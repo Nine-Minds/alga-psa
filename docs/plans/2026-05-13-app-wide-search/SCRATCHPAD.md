@@ -1512,6 +1512,8 @@ npm run search:backfill
 
 - **2026-05-13 — T197 interaction BlockNote notes flattening.** Added interaction indexer coverage for BlockNote JSON notes: text leaves such as `Added Sciton Tribrid Laser` are indexed, JSON syntax is absent, subtitle includes type/client/contact/ticket context, and `interaction:read` is required. Validation: `cd server && npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false`.
 
+- **2026-05-13 — T198 workflow-task tenant filter with single-column PK.** Added workflow-task indexer coverage that `loadOne` queries `workflow_tasks` with `where('tenant', tenant)` plus `andWhere('task_id', id)`, despite `task_id` being the only PK column. Validation: `cd server && npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
