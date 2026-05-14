@@ -187,7 +187,7 @@
   { "id": "T165", "featureIds": ["F026", "F109"], "description": "End-to-end: an internal user sees an internal-comment hit in results (Acceptance #6)", "implemented": true },
   { "id": "T166", "featureIds": ["F026", "F096"], "description": "End-to-end: a non-internal user DOES NOT see the same internal-comment hit (Acceptance #7)", "implemented": true },
   { "id": "T167", "featureIds": ["F027", "F093"], "description": "End-to-end: user A searches for project they don't have permission for; project does NOT appear (Acceptance #8)", "implemented": true },
-  { "id": "T168", "featureIds": ["F037", "F096"], "description": "End-to-end: client-scoped user A searches for a document whose `documents.client_id = X` where A has no access to X; document does NOT appear (Acceptance #9)", "implemented": false },
+  { "id": "T168", "featureIds": ["F037", "F096"], "description": "End-to-end: client-scoped user A searches for a document whose `documents.client_id = X` where A has no access to X; document does NOT appear (Acceptance #9)", "implemented": true },
   { "id": "T169", "featureIds": ["F086"], "description": "End-to-end: 'exhcange' returns 'Exchange' as a top result via pg_trgm (Acceptance #10)", "implemented": false },
   { "id": "T170", "featureIds": ["F063", "F065"], "description": "End-to-end: creating a ticket through the UI causes it to appear in search within 5 seconds (Acceptance #11)", "implemented": false },
   { "id": "T171", "featureIds": ["F066"], "description": "End-to-end: deleting a ticket causes it to disappear from search within 5 seconds (Acceptance #12)", "implemented": false },

@@ -1452,6 +1452,8 @@ npm run search:backfill
 
 - **2026-05-13 — T167 project client-scope denial.** Added ACL verifier coverage that a project whose `client_id` is outside `accessibleClientIds` is removed from visible search rows. Validation: `cd server && npx vitest run src/test/unit/searchAcl.test.ts --coverage=false`.
 
+- **2026-05-13 — T168 document client-scope denial.** Added ACL verifier coverage that a document whose `client_id` is outside `accessibleClientIds` is removed from visible search rows; v1 leaves per-user document sharing out of scope. Validation: `cd server && npx vitest run src/test/unit/searchAcl.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

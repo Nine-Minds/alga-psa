@@ -288,4 +288,36 @@ describe('search ACL SQL predicate', () => {
     expect(projectQuery.where).toHaveBeenCalledWith('project_id', 'project-1');
     expect(projectQuery.andWhere).toHaveBeenCalledWith('tenant', 'tenant-1');
   });
+
+  it('T168 drops document hits outside the user accessible client scope', async () => {
+    const documentQuery = {
+      select: vi.fn(() => documentQuery),
+      where: vi.fn(() => documentQuery),
+      first: vi.fn(() => documentQuery),
+      andWhere: vi.fn(() => documentQuery),
+      then: (
+        resolve: (value: { client_id: string }) => unknown,
+        reject: (reason?: unknown) => unknown,
+      ) => Promise.resolve({ client_id: 'client-x' }).then(resolve, reject),
+    };
+    const knex = vi.fn((table: string) => {
+      expect(table).toBe('documents');
+      return documentQuery;
+    });
+
+    await expect(verifyResultVisibility(
+      knex as never,
+      {
+        userId: '00000000-0000-0000-0000-000000000001',
+        tenant: 'tenant-1',
+        permissions: ['document:read'],
+        isInternal: true,
+        accessibleClientIds: ['client-a'],
+      },
+      [{ type: 'document' as const, id: 'document-1' }],
+    )).resolves.toEqual([]);
+
+    expect(documentQuery.where).toHaveBeenCalledWith('document_id', 'document-1');
+    expect(documentQuery.andWhere).toHaveBeenCalledWith('tenant', 'tenant-1');
+  });
 });
