@@ -300,4 +300,25 @@ describe('app-wide search UI contracts', () => {
     expect(pageSource).toContain('href={buildPageUrl(initialResult.nextCursor, nextCursorStack)}');
     expect(pageSource).toContain('id="app-search-empty-clear-filter"');
   });
+
+  it('T177 cold-opening a deep-linked search URL restores query, type, cursor, and sort', () => {
+    const pageSource = readFileSync(resolve(process.cwd(), 'src/app/msp/search/page.tsx'), 'utf8');
+    const clientSource = readFileSync(resolve(process.cwd(), 'src/app/msp/search/SearchPageClient.tsx'), 'utf8');
+
+    expect(pageSource).toContain('const query = firstParam(params.q)?.trim() ?? \'\'');
+    expect(pageSource).toContain('const type = firstParam(params.type)');
+    expect(pageSource).toContain('const cursor = firstParam(params.cursor)');
+    expect(pageSource).toContain("const sort = firstParam(params.sort) === 'recent' ? 'recent' : 'relevance'");
+    expect(pageSource).toContain('types: activeType ? [activeType] : undefined');
+    expect(pageSource).toContain('cursor,');
+    expect(pageSource).toContain('sort');
+    expect(pageSource).toContain('initialQuery={query}');
+    expect(pageSource).toContain('initialCursor={cursor}');
+    expect(pageSource).toContain('initialSort={sort}');
+
+    expect(clientSource).toContain('const [query, setQuery] = useState(initialQuery)');
+    expect(clientSource).toContain("const activeType = initialType && initialType !== 'all' ? initialType : 'all'");
+    expect(clientSource).toContain('initialCursorStack');
+    expect(clientSource).toContain('initialSort');
+  });
 });

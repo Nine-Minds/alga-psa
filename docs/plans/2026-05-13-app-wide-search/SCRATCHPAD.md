@@ -1470,6 +1470,8 @@ npm run search:backfill
 
 - **2026-05-13 — T176 keyboard-only search flow.** Added UI contract coverage for the full keyboard path: shortcut focus, arrow navigation, Enter/Escape behavior, results-page input URL updates, filter chips, pagination links, and clear-filter control. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T177 cold deep-link restore.** Added UI contract coverage that `/msp/search` reads `q`, `type`, `cursor`, and `sort` from the URL, passes them to `searchAppAction`, and hydrates `SearchPageClient` with the same state. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
