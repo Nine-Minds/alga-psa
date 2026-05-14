@@ -717,7 +717,7 @@ export default function TaskListView({
   const visibleColumnCount = COLUMN_CONFIG.filter(c => isColumnVisible(c.key ?? '')).length;
 
   const printRows = useMemo(() => {
-    return phaseGroups.flatMap((phaseGroup) =>
+    const rows = phaseGroups.flatMap((phaseGroup) =>
       phaseGroup.statusGroups.flatMap((statusGroup) =>
         statusGroup.tasks.map((task) => ({
           task,
@@ -726,7 +726,12 @@ export default function TaskListView({
         }))
       )
     );
-  }, [phaseGroups]);
+    // When tasks are selected, scope the print to just those
+    if (selectedTaskIds.size > 0) {
+      return rows.filter((row) => selectedTaskIds.has(row.task.task_id));
+    }
+    return rows;
+  }, [phaseGroups, selectedTaskIds]);
 
   const printColumns = useMemo<PrintColumnOption<typeof printRows[number]>[]>(() => [
     {
@@ -852,9 +857,15 @@ export default function TaskListView({
       <div className="app-print-root app-print-only">
         <PrintableTable
           title={t('projectPrint.tasks.title', 'Project Tasks')}
-          subtitle={t('projectPrint.tasks.subtitle', '{{count}} tasks', {
-            count: printRows.length,
-          })}
+          subtitle={
+            selectedTaskIds.size > 0
+              ? t('projectPrint.tasks.subtitleSelected', '{{count}} selected tasks', {
+                  count: printRows.length,
+                })
+              : t('projectPrint.tasks.subtitle', '{{count}} tasks', {
+                  count: printRows.length,
+                })
+          }
           rows={printRows}
           columns={selectedTaskPrintColumns}
           getRowKey={({ task }) => task.task_id}
