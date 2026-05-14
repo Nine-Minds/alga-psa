@@ -629,4 +629,53 @@ describe('search index subscriber event handling', () => {
     expect(mocks.upsertSearchDoc).toHaveBeenCalledWith(knex, ticketDoc);
   });
 
+  it('T185 handles 100 ticket updates without indexing lag buildup', async () => {
+    const commentQuery = {
+      select: vi.fn(() => commentQuery),
+      where: vi.fn(() => commentQuery),
+      andWhere: vi.fn(() => commentQuery),
+      orderBy: vi.fn(() => commentQuery),
+      then: (
+        resolve: (rows: Array<{ comment_id: string }>) => unknown,
+        reject: (reason?: unknown) => unknown,
+      ) => Promise.resolve([]).then(resolve, reject),
+    };
+    const knex = vi.fn((table: string) => {
+      if (table === 'comments') {
+        return commentQuery;
+      }
+      throw new Error(`Unexpected table ${table}`);
+    });
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+    vi.spyOn(ticketIndexer, 'loadOne').mockImplementation(async (_knex, tenant, ticketId) => ({
+      tenant,
+      objectType: 'ticket',
+      objectId: ticketId,
+      title: `Updated ${ticketId}`,
+      url: `/msp/tickets/${ticketId}`,
+      acl: { requiredPermission: 'ticket:read' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    }));
+
+    const startedAt = performance.now();
+    for (let index = 0; index < 100; index += 1) {
+      await handleSearchIndexEventForTest({
+        id: `event-stress-${index}`,
+        eventType: 'TICKET_UPDATED',
+        timestamp: '2026-05-13T12:00:00.000Z',
+        payload: {
+          tenant: 'tenant-1',
+          ticket_id: `ticket-${index}`,
+        },
+      } as Event);
+    }
+    const elapsedMs = performance.now() - startedAt;
+
+    expect(ticketIndexer.loadOne).toHaveBeenCalledTimes(100);
+    expect(mocks.upsertSearchDoc).toHaveBeenCalledTimes(100);
+    expect(commentQuery.andWhere).toHaveBeenCalledTimes(100);
+    expect(elapsedMs).toBeLessThan(30_000);
+  });
+
 });

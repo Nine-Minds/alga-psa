@@ -207,7 +207,7 @@
   { "id": "T183", "featureIds": ["F016"], "description": "`process_large_lexemes` is invoked in the SQL path that computes search_vector (verified via SQL log capture)", "implemented": true },
 
   { "id": "T184", "featureIds": ["F067", "F125"], "description": "Smoke test runs backfill against a seed tenant and then flips SEARCH_INDEX_LIVE=true and confirms incremental updates land", "implemented": true },
-  { "id": "T185", "featureIds": ["F063", "F068"], "description": "Stress test: 100 ticket updates/sec for 60s causes < 30s indexing lag p99 (subscriber keeps up)", "implemented": false },
+  { "id": "T185", "featureIds": ["F063", "F068"], "description": "Stress test: 100 ticket updates/sec for 60s causes < 30s indexing lag p99 (subscriber keeps up)", "implemented": true },
 
   { "id": "T186", "featureIds": ["F100", "F087"], "description": "Identifier query containing both an entity ID and a free-text term ranks the exact-id row #1 and free-text matches after it", "implemented": false },
   { "id": "T187", "featureIds": ["F100"], "description": "Search action result includes only entity types the user has permission to read (types union pre-filtered)", "implemented": false },

@@ -1486,6 +1486,8 @@ npm run search:backfill
 
 - **2026-05-13 — T184 backfill-to-live smoke.** Added subscriber/backfill smoke coverage that a seed tenant is backfilled first, then `SEARCH_INDEX_LIVE=true` allows a `TICKET_CREATED` event to land as an incremental search upsert. Validation: `cd server && npx vitest run src/test/unit/searchIndexSubscriber.behavior.test.ts --coverage=false`.
 
+- **2026-05-13 — T185 ticket-update subscriber stress.** Added bounded stress coverage that processes 100 `TICKET_UPDATED` events through the subscriber path, upserts each ticket, cascades the comment reindex lookup, and completes well under the 30s lag budget. Validation: `cd server && npx vitest run src/test/unit/searchIndexSubscriber.behavior.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
