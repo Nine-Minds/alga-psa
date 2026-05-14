@@ -670,6 +670,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Results-page input handles Enter for immediate URL submission and Escape to restore the URL-backed query and blur.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F120 — Stable search DOM IDs.**
+  - Added `toDomIdPart()` helpers in the search UI components so dynamic type and record IDs are normalized to lowercase kebab-case-safe fragments.
+  - Sidebar options, full-page result rows, filter chips, sort controls, pagination links, and empty-state controls now have stable IDs with sanitized dynamic portions.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

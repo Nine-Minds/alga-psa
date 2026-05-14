@@ -135,7 +135,7 @@
 
   { "id": "F118", "description": "ARIA combobox semantics on sidebar input (role, aria-expanded, aria-controls, aria-activedescendant); ARIA region role on results page", "prdRefs": ["6.3"], "implemented": true },
   { "id": "F119", "description": "Keyboard navigation: ↑/↓ to move, Enter to open or submit, Esc to close typeahead, Tab to advance focus normally; works identically on sidebar and results page", "prdRefs": ["6.3"], "implemented": true },
-  { "id": "F120", "description": "Stable kebab-case `id`s on every interactive element (e.g., `app-search-input`, `app-search-result-row-{type}-{id}`, `app-search-filter-chip-{type}`)", "prdRefs": ["6.3"], "implemented": false },
+  { "id": "F120", "description": "Stable kebab-case `id`s on every interactive element (e.g., `app-search-input`, `app-search-result-row-{type}-{id}`, `app-search-filter-chip-{type}`)", "prdRefs": ["6.3"], "implemented": true },
 
   { "id": "F121", "description": "Add `search.*` keys to `server/public/locales/en/msp/core.json` (placeholders, helper text, group labels, empty state, error states)", "prdRefs": ["6.3"], "implemented": false },
   { "id": "F122", "description": "Run lang-pack pipeline (`generate-pseudo-locales.cjs` + `validate-translations.cjs`) to propagate keys to all locales", "prdRefs": ["6.3"], "implemented": false },

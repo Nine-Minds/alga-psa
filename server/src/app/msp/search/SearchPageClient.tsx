@@ -8,6 +8,10 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { SearchAppResult } from '@/lib/actions/searchActions';
 import type { SearchObjectType } from '@/lib/search/types';
 
+function toDomIdPart(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
 interface SearchPageClientProps {
   initialQuery: string;
   initialType?: string;
@@ -169,7 +173,7 @@ export default function SearchPageClient({
   const renderResultRow = (row: SearchAppResult['results'][number]) => (
     <a
       key={`${row.type}-${row.id}`}
-      id={`app-search-result-row-${row.type}-${row.id}`}
+      id={`app-search-result-row-${toDomIdPart(row.type)}-${toDomIdPart(row.id)}`}
       href={row.url}
       className="block rounded-md border border-gray-200 bg-white px-4 py-3 text-gray-900 hover:border-purple-300 hover:bg-purple-50"
     >
@@ -247,7 +251,7 @@ export default function SearchPageClient({
           {typeEntries.map(([type, count]) => (
             <a
               key={type}
-              id={`app-search-filter-chip-${type}`}
+              id={`app-search-filter-chip-${toDomIdPart(type)}`}
               href={buildFilterUrl(type)}
               className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${
                 activeType === type

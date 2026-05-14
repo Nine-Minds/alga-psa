@@ -10,6 +10,10 @@ import {
   type SearchResultRow,
 } from '@/lib/actions/searchActions';
 
+function toDomIdPart(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
 interface SearchPaletteProps {
   collapsed?: boolean;
   onCollapsedClick?: () => void;
@@ -36,7 +40,7 @@ export default function SearchPalette({
   const seeAllUrl = `/msp/search?q=${encodeURIComponent(trimmedQuery)}`;
   const activeDescendantId = activeIndex >= 0
     ? activeIndex < visibleResults.length
-      ? `app-search-option-${visibleResults[activeIndex].type}-${visibleResults[activeIndex].id}`
+      ? `app-search-option-${toDomIdPart(visibleResults[activeIndex].type)}-${toDomIdPart(visibleResults[activeIndex].id)}`
       : 'app-search-option-see-all-results'
     : undefined;
 
@@ -211,8 +215,8 @@ export default function SearchPalette({
                 asChild
               >
                 <a
-                  id={`app-search-option-${result.type}-${result.id}`}
-                  data-result-row-id={`app-search-result-row-${result.type}-${result.id}`}
+                  id={`app-search-option-${toDomIdPart(result.type)}-${toDomIdPart(result.id)}`}
+                  data-result-row-id={`app-search-result-row-${toDomIdPart(result.type)}-${toDomIdPart(result.id)}`}
                   href={result.url}
                   className={`block cursor-pointer rounded px-3 py-2 aria-selected:bg-white/10 ${
                     activeIndex === index ? 'bg-white/10' : ''
