@@ -1426,6 +1426,8 @@ npm run search:backfill
 
 - **2026-05-13 — T154 empty search telemetry.** Added search-action coverage that a full search with zero visible results emits `search.query.empty` with full-search variant, tenant, and user id. Validation: `cd server && npx vitest run src/test/unit/searchActions.test.ts --coverage=false`.
 
+- **2026-05-13 — T155 typeahead rate limit.** Added behavioral coverage using the real in-memory limiter: 30 typeahead calls for the same tenant/user resolve, and the 31st rejects with `SearchRateLimitError` (429-equivalent). Validation: `cd server && npx vitest run src/test/unit/searchActions.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

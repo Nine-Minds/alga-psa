@@ -42,6 +42,7 @@ import {
   searchAppInputSchema,
   searchAppResultSchema,
   searchAppTypeaheadAction,
+  SearchRateLimitError,
 } from '../../lib/actions/searchActions';
 
 describe('search actions', () => {
@@ -131,6 +132,42 @@ describe('search actions', () => {
       tenant: 'tenant-1',
       userId: 'user-telemetry-empty',
     }));
+  });
+
+  it('T155 rate limits typeahead after 30 calls per second for one user', async () => {
+    const knex = { tenant: 'knex' };
+    const acl = {
+      userId: 'user-typeahead-rate-limit',
+      tenant: 'tenant-rate-limit',
+      permissions: ['client:read'],
+      isInternal: true,
+      accessibleClientIds: ['client-1'],
+    };
+    const user = {
+      user_id: 'user-typeahead-rate-limit',
+      tenant: 'tenant-rate-limit',
+      user_type: 'client',
+      clientId: 'client-1',
+    };
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-rate-limit' });
+    mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
+    mocks.runSearchTypeaheadQuery.mockResolvedValue([]);
+    mocks.verifyResultVisibility.mockResolvedValue([]);
+
+    for (let index = 0; index < 30; index += 1) {
+      await expect(searchAppTypeaheadAction(
+        user,
+        { tenant: 'tenant-rate-limit' },
+        { query: `acme ${index}` },
+      )).resolves.toMatchObject({ totalCount: 0 });
+    }
+
+    await expect(searchAppTypeaheadAction(
+      user,
+      { tenant: 'tenant-rate-limit' },
+      { query: 'acme overflow' },
+    )).rejects.toBeInstanceOf(SearchRateLimitError);
   });
 
   it('T106 resolves the user permission set exactly once per full search action call', async () => {
