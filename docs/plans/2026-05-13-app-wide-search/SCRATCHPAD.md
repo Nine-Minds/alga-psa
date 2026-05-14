@@ -275,6 +275,7 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
 - **2026-05-13 — F002 complete.** Migration enables fuzzy matching support with `CREATE EXTENSION IF NOT EXISTS pg_trgm`. Validation: `rg "CREATE EXTENSION IF NOT EXISTS pg_trgm" server/migrations/20260513120000_create_app_search_index.cjs`.
 - **2026-05-13 — F003 complete.** Migration creates `app_search_index` with PRD §9.1 columns, UUID/text ACL hint arrays, `tsvector` search column, timestamps, and primary key `(tenant, object_type, object_id)`. Validation: `node --check ...` plus targeted `rg` for table, PK, ACL, and search-vector columns.
 - **2026-05-13 — F004 complete.** Migration checks `pg_extension` for `citus`, checks `pg_dist_partition` for pre-existing distribution, and only then calls `create_distributed_table('app_search_index', 'tenant')`. It exports `transaction: false` because Citus distribution cannot run in a transaction block.
+- **2026-05-13 — F005 complete.** Migration creates `app_search_index_vector_gin` using `gin (search_vector)` for FTS matching. Validation: targeted `rg` on the migration.
 
 ---
 
