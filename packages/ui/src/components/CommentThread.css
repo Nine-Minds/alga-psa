@@ -1,9 +1,9 @@
-:global(.hybrid-thread-node) {
+.hybrid-thread-node {
   min-width: 0;
   max-width: 100%;
 }
 
-:global(.comment-thread-bar) {
+.comment-thread-bar {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
@@ -14,7 +14,7 @@
   line-height: 1.25rem;
 }
 
-:global(.comment-thread-bar-pill) {
+.comment-thread-bar-pill {
   display: inline-flex;
   align-items: center;
   gap: 0.3125rem;
@@ -28,41 +28,41 @@
   white-space: nowrap;
 }
 
-:global(.comment-thread-bar-count) {
+.comment-thread-bar-count {
   color: #4b5563;
   background: #f3f4f6;
   border-color: #e5e7eb;
 }
 
-:global(.comment-thread-bar-pill-button) {
+.comment-thread-bar-pill-button {
   cursor: pointer;
   transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
-:global(.comment-thread-bar-pill-button:hover),
-:global(.comment-thread-bar-pill-button:focus-visible) {
+.comment-thread-bar-pill-button:hover,
+.comment-thread-bar-pill-button:focus-visible {
   background: #eef2ff;
   border-color: #c7d2fe;
   color: #3730a3;
   outline: none;
 }
 
-:global(.comment-thread-bar-subthread) :global(.comment-thread-bar-pill) {
+.comment-thread-bar-subthread .comment-thread-bar-pill {
   border-style: dashed;
   background: #ffffff;
 }
 
-:global(.comment-thread-bar-subthread) :global(.comment-thread-bar-count) {
+.comment-thread-bar-subthread .comment-thread-bar-count {
   background: #ffffff;
 }
 
-:global(.thread-children) {
+.thread-children {
   position: relative;
   margin-left: 1.5rem;
   padding-left: 1rem;
 }
 
-:global(.thread-children::before) {
+.thread-children::before {
   content: '';
   position: absolute;
   left: 0;
@@ -72,33 +72,33 @@
   background: #e5e7eb;
 }
 
-:global(.thread-children.depth-1),
-:global(.thread-children.depth-2),
-:global(.thread-children.depth-3),
-:global(.thread-children.depth-4) {
+.thread-children.depth-1,
+.thread-children.depth-2,
+.thread-children.depth-3,
+.thread-children.depth-4 {
   margin-left: 1rem;
 }
 
-:global(.thread-children-subthread::before) {
+.thread-children-subthread::before {
   background-image: linear-gradient(to bottom, #e5e7eb 50%, transparent 50%);
   background-size: 2px 8px;
   background-color: transparent;
 }
 
-:global(.inline-reply-composer) {
+.inline-reply-composer {
   margin: 0.5rem 0 0.75rem 1.5rem;
 }
 
-:global(.comment-thread-drawer .thread-children) {
+.comment-thread-drawer .thread-children {
   margin-left: 1rem;
 }
 
-:global(.c-actions) {
+.c-actions {
   opacity: 0;
   transition: opacity 120ms ease;
 }
 
-:global(.group\/comment:hover .c-actions),
-:global(.group\/comment:focus-within .c-actions) {
+.group\/comment:hover .c-actions,
+.group\/comment:focus-within .c-actions {
   opacity: 1;
 }

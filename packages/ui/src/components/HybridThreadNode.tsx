@@ -4,7 +4,7 @@ import React from 'react';
 import { ChevronDown, ChevronUp, ExternalLink, MessageCircle } from 'lucide-react';
 import { useTranslation } from '../lib/i18n/client';
 import type { CommentThreadGroup } from './CommentThreadList';
-import './CommentThread.module.css';
+import './CommentThread.css';
 
 export interface HybridThreadNodeRenderContext {
   depth: number;

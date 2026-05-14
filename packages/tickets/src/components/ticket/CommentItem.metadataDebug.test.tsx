@@ -105,13 +105,13 @@ describe('CommentItem metadata debug control', () => {
     expect(onReply).toHaveBeenCalledWith(expect.objectContaining({ comment_id: 'comment-1' }));
 
     const css = fs.readFileSync(
-      path.resolve(__dirname, '../../../../ui/src/components/CommentThread.module.css'),
+      path.resolve(__dirname, '../../../../ui/src/components/CommentThread.css'),
       'utf8'
     );
-    expect(css).toContain(':global(.c-actions)');
+    expect(css).toContain('.c-actions');
     expect(css).toContain('opacity: 0;');
-    expect(css).toContain(':global(.group\\/comment:hover .c-actions)');
-    expect(css).toContain(':global(.group\\/comment:focus-within .c-actions)');
+    expect(css).toContain('.group\\/comment:hover .c-actions');
+    expect(css).toContain('.group\\/comment:focus-within .c-actions');
     expect(css).toContain('opacity: 1;');
   });
 
