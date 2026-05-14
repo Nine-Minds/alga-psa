@@ -60,7 +60,7 @@
   { "id": "F054", "description": "Add `INVOICE_*`, `INVOICE_ITEM_*`, `INVOICE_ANNOTATION_*` events and publishes", "prdRefs": ["11.2"], "implemented": true },
   { "id": "F055", "description": "Add `CONTRACT_*` and `CLIENT_CONTRACT_*` event families and publishes", "prdRefs": ["11.2"], "implemented": true },
   { "id": "F056", "description": "Add `DOCUMENT_*` and `KB_ARTICLE_*` events; publish on content change AND on `document_associations` insert/delete (changes client_scope_id derived from associations)", "prdRefs": ["11.2", "11.5"], "implemented": true },
-  { "id": "F057", "description": "Add `SERVICE_CATALOG_*` event family and publishes", "prdRefs": ["11.2"], "implemented": false },
+  { "id": "F057", "description": "Add `SERVICE_CATALOG_*` event family and publishes", "prdRefs": ["11.2"], "implemented": true },
   { "id": "F058", "description": "Add `SERVICE_REQUEST_SUBMISSION_*` and `SERVICE_REQUEST_DEFINITION_*` events and publishes", "prdRefs": ["11.2"], "implemented": false },
   { "id": "F059", "description": "Audit `WORKFLOW_TASK_*` events; add missing CRUD + assignment-change events", "prdRefs": ["11.2", "11.5"], "implemented": false },
   { "id": "F060", "description": "Add `INTERACTION_*` event family and publishes", "prdRefs": ["11.2"], "implemented": false },

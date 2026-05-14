@@ -734,6 +734,8 @@ npm run search:backfill
 
 - **2026-05-13 — F056 document/KB events.** Added `DOCUMENT_UPDATED` plus `KB_ARTICLE_CREATED/UPDATED/DELETED` schemas. `documentIndexer.sourceEvents` now covers uploaded/updated/deleted/generated/associated/detached events, and `kbArticleIndexer.sourceEvents` covers the KB article CRUD family. Published `DOCUMENT_UPDATED` from document metadata, upload, and BlockNote content create/update/delete paths, and `DOCUMENT_DELETED` from hard-delete. Existing post-commit `DOCUMENT_ASSOCIATED` / `DOCUMENT_DETACHED` workflow publishes remain the association insert/delete signal for search re-indexing. Published KB article create/update/delete events from the KB actions. Validation: `npm -w @alga-psa/event-schemas run typecheck` and `npm -w @alga-psa/documents run typecheck`.
 
+- **2026-05-13 — F057 service catalog events.** Added `SERVICE_CATALOG_CREATED/UPDATED/DELETED` schemas and registered them on `serviceCatalogIndexer.sourceEvents`. Published the events from both `ServiceCatalogService` and `ProductCatalogService`, because services and products share the same `service_catalog` table and the v1 indexer indexes every catalog row. Validation: `npm -w @alga-psa/event-schemas run typecheck` passes. A raw single-file `npx tsc` against the server service files is still blocked by existing workspace module-resolution/alias settings (`@/interfaces/*`, `@alga-psa/core/*`, `@alga-psa/event-bus/publishers`) rather than by the changed lines.
+
 ---
 
 ## Implementation order suggestion (not prescriptive)

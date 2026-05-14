@@ -39,7 +39,7 @@ function toSearchDoc(tenant: string, row: ServiceCatalogSearchRow): SearchDoc {
 
 export const serviceCatalogIndexer: EntityIndexer = {
   objectType: 'service_catalog',
-  sourceEvents: [],
+  sourceEvents: ['SERVICE_CATALOG_CREATED', 'SERVICE_CATALOG_UPDATED', 'SERVICE_CATALOG_DELETED'],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await knex<ServiceCatalogSearchRow>('service_catalog')

@@ -330,6 +330,9 @@ export const EVENT_TYPES = [
   'KB_ARTICLE_CREATED',
   'KB_ARTICLE_UPDATED',
   'KB_ARTICLE_DELETED',
+  'SERVICE_CATALOG_CREATED',
+  'SERVICE_CATALOG_UPDATED',
+  'SERVICE_CATALOG_DELETED',
 
   // Email providers + inbound email (already present)
   'INBOUND_EMAIL_RECEIVED',
@@ -614,6 +617,14 @@ export const ClientContractEventPayloadSchema = BasePayloadSchema.extend({
 export const AssetDeletedPayloadSchema = BasePayloadSchema.extend({
   assetId: z.string().uuid(),
   userId: z.string().uuid().optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const ServiceCatalogEventPayloadSchema = BasePayloadSchema.extend({
+  serviceId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  itemKind: z.enum(['service', 'product']).optional(),
+  changedFields: z.array(z.string()).optional(),
   timestamp: z.string().datetime().optional(),
 });
 
@@ -1078,6 +1089,9 @@ export const EventPayloadSchemas = {
   KB_ARTICLE_CREATED: kbArticleEventPayloadSchema,
   KB_ARTICLE_UPDATED: kbArticleEventPayloadSchema,
   KB_ARTICLE_DELETED: kbArticleEventPayloadSchema,
+  SERVICE_CATALOG_CREATED: ServiceCatalogEventPayloadSchema,
+  SERVICE_CATALOG_UPDATED: ServiceCatalogEventPayloadSchema,
+  SERVICE_CATALOG_DELETED: ServiceCatalogEventPayloadSchema,
 
   // Email providers + inbound email (already present)
   INBOUND_EMAIL_RECEIVED: InboundEmailReceivedPayloadSchema,
