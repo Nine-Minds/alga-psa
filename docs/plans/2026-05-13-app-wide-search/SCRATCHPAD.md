@@ -510,6 +510,12 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Added `includeSnippets` query option, defaulting to true; F092 uses it to skip snippets for typeahead.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F091 — Snippet sanitization.**
+  - `ts_headline` now emits controlled sentinel strings instead of literal HTML tags.
+  - Added `sanitizeHeadline()` to HTML-escape every text segment and re-wrap only sentinel-delimited matches in `<mark>`.
+  - Malformed/unpaired sentinel output falls back to fully escaped text, preventing arbitrary HTML from surviving snippet generation.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

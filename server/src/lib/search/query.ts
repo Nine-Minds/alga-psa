@@ -4,6 +4,8 @@ import type { SearchObjectType } from './types';
 
 const MAX_SEARCH_QUERY_CHARS = 200;
 const IDENTIFIER_QUERY_PATTERN = /^[A-Z]+-?\d+$/i;
+const HEADLINE_START_SENTINEL = '__SEARCH_MARK_START__';
+const HEADLINE_STOP_SENTINEL = '__SEARCH_MARK_STOP__';
 
 export type SearchQueryErrorCode = 'empty_query' | 'query_too_long' | 'invalid_cursor';
 
@@ -124,6 +126,52 @@ function parseMetadata(value: SearchIndexHitRow['metadata']): Record<string, unk
   return value;
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+export function sanitizeHeadline(raw: string): string {
+  let cursor = 0;
+  let sanitized = '';
+
+  while (cursor < raw.length) {
+    const nextStart = raw.indexOf(HEADLINE_START_SENTINEL, cursor);
+    const nextStop = raw.indexOf(HEADLINE_STOP_SENTINEL, cursor);
+
+    if (nextStop >= 0 && (nextStart < 0 || nextStop < nextStart)) {
+      return escapeHtml(raw);
+    }
+
+    if (nextStart < 0) {
+      sanitized += escapeHtml(raw.slice(cursor));
+      break;
+    }
+
+    sanitized += escapeHtml(raw.slice(cursor, nextStart));
+
+    const markedStart = nextStart + HEADLINE_START_SENTINEL.length;
+    const markedStop = raw.indexOf(HEADLINE_STOP_SENTINEL, markedStart);
+    if (markedStop < 0) {
+      return escapeHtml(raw);
+    }
+
+    const markedText = raw.slice(markedStart, markedStop);
+    if (markedText.includes(HEADLINE_START_SENTINEL)) {
+      return escapeHtml(raw);
+    }
+
+    sanitized += `<mark>${escapeHtml(markedText)}</mark>`;
+    cursor = markedStop + HEADLINE_STOP_SENTINEL.length;
+  }
+
+  return sanitized;
+}
+
 function toSearchHit(row: SearchIndexHitRow): SearchIndexHit {
   return {
     type: row.object_type,
@@ -136,7 +184,7 @@ function toSearchHit(row: SearchIndexHitRow): SearchIndexHit {
     score: Number(row.score) || 0,
     updatedAt: new Date(row.source_updated_at),
     metadata: parseMetadata(row.metadata),
-    snippet: row.snippet ?? undefined,
+    snippet: row.snippet ? sanitizeHeadline(row.snippet) : undefined,
   };
 }
 
@@ -216,7 +264,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
               'english',
               coalesce(s.body, ''),
               q.tsq,
-              'MaxFragments=2,StartSel=<mark>,StopSel=</mark>'
+              'MaxFragments=2,StartSel=${HEADLINE_START_SENTINEL},StopSel=${HEADLINE_STOP_SENTINEL}'
             )
             ELSE NULL
           END AS snippet,
