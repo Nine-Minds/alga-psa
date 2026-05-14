@@ -141,7 +141,9 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
   const result = await options.knex.raw<{ rows: SearchIndexHitRow[] }>(
     `
       WITH q AS (
-        SELECT websearch_to_tsquery('english', ?) AS tsq
+        SELECT
+          websearch_to_tsquery('english', ?) AS tsq,
+          ?::text AS raw
       )
       SELECT
         s.object_type,
@@ -153,17 +155,27 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
         s.url,
         s.source_updated_at,
         s.metadata,
-        ts_rank_cd(s.search_vector, q.tsq) AS score
+        (
+          ts_rank_cd(s.search_vector, q.tsq)
+          + GREATEST(
+              similarity(s.title, q.raw),
+              similarity(coalesce(s.subtitle, ''), q.raw)
+            ) * 0.4
+        ) AS score
       FROM app_search_index s
       CROSS JOIN q
       WHERE s.tenant = ?::uuid
         AND s.object_type = ANY(?::text[])
-        AND s.search_vector @@ q.tsq
+        AND (
+          s.search_vector @@ q.tsq
+          OR s.title % q.raw
+          OR coalesce(s.subtitle, '') % q.raw
+        )
       ORDER BY score DESC, s.source_updated_at DESC, s.object_id ASC
       LIMIT ?
       OFFSET ?
     `,
-    [parsed.raw, options.tenant, options.allowedTypes, limit, offset],
+    [parsed.raw, parsed.raw, options.tenant, options.allowedTypes, limit, offset],
   );
 
   return result.rows.map(toSearchHit);

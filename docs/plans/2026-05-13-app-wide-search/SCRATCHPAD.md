@@ -484,6 +484,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Results are ordered by FTS rank, recency, and object ID. ACL, trigram fallback, identifier pinning, snippets, and cursor pagination are intentionally left to F086-F093/F089-F092.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F086 — pg_trgm fallback.**
+  - `runSearchQuery()` now includes `s.title % q.raw` and `coalesce(s.subtitle, '') % q.raw` fallback predicates in addition to FTS.
+  - The returned score now combines `ts_rank_cd` with `GREATEST(similarity(title), similarity(subtitle)) * 0.4` so fuzzy-only hits can rank while still favoring FTS matches.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

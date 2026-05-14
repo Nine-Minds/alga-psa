@@ -94,7 +94,7 @@
 
   { "id": "F084", "description": "Implement `parseQuery(raw)` that trims, lowercases identifier patterns, validates length ≤ 200 chars", "prdRefs": ["12", "13", "18-Q2"], "implemented": true },
   { "id": "F085", "description": "Build SQL query using `websearch_to_tsquery('english', $1)` and `ts_rank_cd(search_vector, tsq)` for FTS branch", "prdRefs": ["13.1"], "implemented": true },
-  { "id": "F086", "description": "Add `pg_trgm` fallback branch using `similarity(title|subtitle, raw)` and `%` operator", "prdRefs": ["13.1"], "implemented": false },
+  { "id": "F086", "description": "Add `pg_trgm` fallback branch using `similarity(title|subtitle, raw)` and `%` operator", "prdRefs": ["13.1"], "implemented": true },
   { "id": "F087", "description": "Detect identifier patterns (`^[A-Z]+-?\\d+$`, ticket-number-style, asset-tag-style) and pin exact `metadata->>'identifier'` matches at the top", "prdRefs": ["13.3"], "implemented": false },
   { "id": "F088", "description": "Apply time-decay multiplier `exp(-age_days/90)` with floor 0.05 in the ORDER BY composite score", "prdRefs": ["13.4"], "implemented": false },
   { "id": "F089", "description": "Implement opaque cursor encoding/decoding for stable pagination (encodes rank + object_id tiebreaker)", "prdRefs": ["12"], "implemented": false },
