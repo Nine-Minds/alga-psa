@@ -213,4 +213,21 @@ describe('search query parsing', () => {
     expect(sql).toContain('exp(-EXTRACT(epoch FROM (now() - s.source_updated_at)) / (90 * 86400))');
     expect(sql).toContain('ORDER BY score DESC, source_updated_at DESC, object_id ASC');
   });
+
+  it('T098 floors the time decay multiplier at 0.05', async () => {
+    const knex = {
+      raw: vi.fn(async () => ({ rows: [] })),
+    };
+
+    await runSearchQuery({
+      knex: knex as never,
+      tenant: '00000000-0000-0000-0000-000000000001',
+      query: 'acme',
+      allowedTypes: ['client'],
+    });
+
+    const sql = knex.raw.mock.calls[0]?.[0] as string;
+    expect(sql).toContain('GREATEST(');
+    expect(sql).toContain('0.05');
+  });
 });
