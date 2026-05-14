@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { aclPredicateSql } from '../../lib/search/acl';
+import { aclPredicateSql, verifyResultVisibility } from '../../lib/search/acl';
 
 describe('search ACL SQL predicate', () => {
   it('T105 filters required_permission through the user permission set', () => {
@@ -74,5 +74,37 @@ describe('search ACL SQL predicate', () => {
 
     expect(fragment.sql).toContain('(client_scope_id IS NULL OR client_scope_id = ANY(?::uuid[]))');
     expect(fragment.bindings[5]).toEqual(accessibleClientIds);
+  });
+
+  it('T112 drops rows rejected by the record-level verifier', async () => {
+    const query = {
+      select: vi.fn(() => query),
+      where: vi.fn(() => query),
+      first: vi.fn(() => query),
+      andWhere: vi.fn(() => query),
+      then: (
+        resolve: (row: undefined) => unknown,
+        reject: (reason?: unknown) => unknown,
+      ) => Promise.resolve(undefined).then(resolve, reject),
+    };
+    const knex = vi.fn((table: string) => {
+      expect(table).toBe('tickets');
+      return query;
+    });
+
+    const visible = await verifyResultVisibility(
+      knex as never,
+      {
+        userId: '00000000-0000-0000-0000-000000000001',
+        tenant: 'tenant-1',
+        permissions: ['ticket:read'],
+        isInternal: true,
+      },
+      [{ type: 'ticket', id: 'ticket-missing' }],
+    );
+
+    expect(query.where).toHaveBeenCalledWith('ticket_id', 'ticket-missing');
+    expect(query.andWhere).toHaveBeenCalledWith('tenant', 'tenant-1');
+    expect(visible).toEqual([]);
   });
 });
