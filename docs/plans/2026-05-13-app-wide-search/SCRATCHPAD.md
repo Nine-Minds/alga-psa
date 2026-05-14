@@ -458,6 +458,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - The implementation intentionally uses the indexer contract instead of per-table SQL so every entity keeps its own source joins, normalization, URL, and ACL logic.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F081 — Reconcile stale index deletes.**
+  - Reconciliation now scans existing `app_search_index` rows for each registered `(tenant, object_type)`, calls `indexer.loadOne()` for each `object_id`, and deletes the index row when the source no longer loads.
+  - This also removes rows for sources that still exist but no longer qualify for indexing (for example, a time entry whose notes became empty).
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

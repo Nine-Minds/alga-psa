@@ -3,7 +3,7 @@ import { createTenantKnex, getConnection } from '@alga-psa/db';
 import type { Knex } from 'knex';
 
 import { allIndexers, getIndexer } from '../../search';
-import { upsertSearchDoc } from '../../search/upsert';
+import { deleteSearchDoc, upsertSearchDoc } from '../../search/upsert';
 import type { EntityIndexer } from '../../search/types';
 
 export const SEARCH_RECONCILE_JOB_NAME = 'search:reconcile';
@@ -20,6 +20,10 @@ interface TenantRecord {
 
 interface WatermarkRow {
   max_source_updated_at: Date | string | null;
+}
+
+interface IndexedObjectRow {
+  object_id: string;
 }
 
 async function resolveReconcileTenants(data: SearchReconcileJobData): Promise<string[]> {
@@ -110,6 +114,50 @@ export async function reindexRowsAfterWatermark(
   return { scanned, reindexed };
 }
 
+export async function deleteRowsMissingFromSource(
+  knex: Knex,
+  tenant: string,
+  indexer: EntityIndexer,
+): Promise<{ checked: number; deleted: number }> {
+  let cursor: string | null = null;
+  let checked = 0;
+  let deleted = 0;
+
+  while (true) {
+    const query = knex<IndexedObjectRow>('app_search_index')
+      .select('object_id')
+      .where('tenant', tenant)
+      .andWhere('object_type', indexer.objectType)
+      .orderBy('object_id', 'asc')
+      .limit(RECONCILE_BATCH_SIZE);
+
+    if (cursor) {
+      query.andWhere('object_id', '>', cursor);
+    }
+
+    const rows = await query;
+    if (rows.length === 0) {
+      break;
+    }
+
+    for (const row of rows) {
+      checked += 1;
+      const doc = await indexer.loadOne(knex, tenant, row.object_id);
+      if (!doc) {
+        await deleteSearchDoc(knex, tenant, indexer.objectType, row.object_id);
+        deleted += 1;
+      }
+    }
+
+    cursor = rows[rows.length - 1]?.object_id ?? cursor;
+    if (rows.length < RECONCILE_BATCH_SIZE) {
+      break;
+    }
+  }
+
+  return { checked, deleted };
+}
+
 export async function searchReconcileHandler(data: SearchReconcileJobData): Promise<void> {
   const tenants = await resolveReconcileTenants(data);
   const indexers = resolveReconcileIndexers(data);
@@ -117,11 +165,14 @@ export async function searchReconcileHandler(data: SearchReconcileJobData): Prom
   for (const tenant of tenants) {
     const { knex } = await createTenantKnex(tenant);
     for (const indexer of indexers) {
-      const counts = await reindexRowsAfterWatermark(knex, tenant, indexer);
+      const updatedCounts = await reindexRowsAfterWatermark(knex, tenant, indexer);
+      const staleCounts = await deleteRowsMissingFromSource(knex, tenant, indexer);
       logger.info('[SearchReconcileJob] Re-indexed rows after watermark', {
         tenant,
         objectType: indexer.objectType,
-        ...counts,
+        ...updatedCounts,
+        staleChecked: staleCounts.checked,
+        staleDeleted: staleCounts.deleted,
       });
     }
   }
