@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T055 client create event contract.** Added `server/src/test/unit/searchEventPublishing.contract.test.ts` to assert the client creation action emits `CLIENT_CREATED` through `publishWorkflowEvent`, includes `createdClient.client_id` in the payload builder, carries `tenantId: tenant` in context, and uses a stable client-created idempotency key. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T054 board/category/tag ACL.** Extended `searchIndexers.test.ts` to assert board, category, and tag indexers produce result rows with titles and `acl.requiredPermission='ticket:read'`, matching the PRD rule that structural ticket metadata is searchable as normal rows. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T053 time entry non-empty notes indexing.** Extended `searchIndexers.test.ts` to assert `timeEntryIndexer.loadOne` produces a `time_entry` SearchDoc for a one-character note, links to the parent ticket, and scopes visibility to the time-entry owner. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.

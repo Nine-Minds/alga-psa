@@ -58,7 +58,7 @@
   { "id": "T053", "featureIds": ["F045"], "description": "Time-entry indexer produces a row when notes is any non-empty string (even a single character)", "implemented": true },
   { "id": "T054", "featureIds": ["F046", "F047", "F048"], "description": "Board, Category, Tag indexers produce rows with only required_permission='ticket:read'", "implemented": true },
 
-  { "id": "T055", "featureIds": ["F049"], "description": "Creating a client publishes `CLIENT_CREATED` event with tenant + client_id", "implemented": false },
+  { "id": "T055", "featureIds": ["F049"], "description": "Creating a client publishes `CLIENT_CREATED` event with tenant + client_id", "implemented": true },
   { "id": "T056", "featureIds": ["F049"], "description": "Updating a client publishes `CLIENT_UPDATED`", "implemented": false },
   { "id": "T057", "featureIds": ["F049"], "description": "Deleting a client publishes `CLIENT_DELETED`", "implemented": false },
   { "id": "T058", "featureIds": ["F050"], "description": "Contact CRUD emits CONTACT_* events", "implemented": false },
