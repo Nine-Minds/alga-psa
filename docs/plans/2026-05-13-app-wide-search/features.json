@@ -6,7 +6,7 @@
   { "id": "F005", "description": "Migration creates GIN index on `search_vector`", "prdRefs": ["9.1"], "implemented": true },
   { "id": "F006", "description": "Migration creates GIN trgm indexes on `title` and `subtitle` for fuzzy fallback", "prdRefs": ["9.1", "13.1"], "implemented": true },
   { "id": "F007", "description": "Migration creates btree indexes on `(tenant, source_updated_at DESC)` and `(tenant, object_type)`", "prdRefs": ["9.1"], "implemented": true },
-  { "id": "F008", "description": "Migration provides a `down` step that drops the table", "prdRefs": ["9.1"], "implemented": false },
+  { "id": "F008", "description": "Migration provides a `down` step that drops the table", "prdRefs": ["9.1"], "implemented": true },
 
   { "id": "F009", "description": "Define `SearchObjectType` TS union covering all 27 entity types in `server/src/lib/search/types.ts`", "prdRefs": ["7", "9.2"], "implemented": false },
   { "id": "F010", "description": "Define `SearchDoc` interface with title, subtitle, body, url, metadata, acl, sourceUpdatedAt in `server/src/lib/search/types.ts`", "prdRefs": ["9.2"], "implemented": false },
