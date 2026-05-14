@@ -696,6 +696,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Added `server.searchIndexLive` to `helm/values.yaml` and wired it into the main server deployment as the `SEARCH_INDEX_LIVE` environment variable.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F125 — Deploy runbook.**
+  - Added `docs/deployment/app-wide-search-runbook.md`.
+  - The runbook covers migrate, deploy with `SEARCH_INDEX_LIVE=false`, run `npm run search:backfill`, flip live indexing on, roll server/workers, sample index health, and confirm `search:reconcile`.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

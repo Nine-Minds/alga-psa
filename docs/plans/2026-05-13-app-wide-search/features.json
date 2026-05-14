@@ -142,7 +142,7 @@
   { "id": "F123", "description": "Wire `useTranslation('msp/core')` in `SearchPalette` and `SearchPageClient`; no hardcoded strings", "prdRefs": ["6.3"], "implemented": true },
 
   { "id": "F124", "description": "Document `SEARCH_INDEX_LIVE` env var in env reference doc and helm/values charts", "prdRefs": ["11.1", "16"], "implemented": true },
-  { "id": "F125", "description": "Document deploy runbook: migrate → deploy w/ `SEARCH_INDEX_LIVE=false` → backfill → flip env → enable UI", "prdRefs": ["16"], "implemented": false },
+  { "id": "F125", "description": "Document deploy runbook: migrate → deploy w/ `SEARCH_INDEX_LIVE=false` → backfill → flip env → enable UI", "prdRefs": ["16"], "implemented": true },
   { "id": "F126", "description": "Emit telemetry counters: `search.query.count`, `search.query.empty`, `search.query.latency_ms`, `search.acl_drift`", "prdRefs": ["14.3"], "implemented": false },
   { "id": "F127", "description": "Add server-side rate limiting to `searchAppAction` and `searchAppTypeaheadAction` (per-user, e.g. 30/sec typeahead and 10/sec full)", "prdRefs": ["12"], "implemented": false },
 
