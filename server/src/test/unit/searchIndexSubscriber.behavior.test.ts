@@ -26,6 +26,7 @@ import { projectIndexer } from '../../lib/search/indexers/project';
 import { projectPhaseIndexer } from '../../lib/search/indexers/project_phase';
 import { projectTaskIndexer } from '../../lib/search/indexers/project_task';
 import { projectTaskCommentIndexer } from '../../lib/search/indexers/project_task_comment';
+import { documentIndexer } from '../../lib/search/indexers/document';
 import { handleSearchIndexEventForTest } from '../../lib/eventBus/subscribers/searchIndexSubscriber';
 import type { SearchDoc } from '../../lib/search/types';
 
@@ -445,5 +446,39 @@ describe('search index subscriber event handling', () => {
     expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(2, knex, phaseDoc);
     expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(3, knex, taskDoc);
     expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(4, knex, taskCommentDoc);
+  });
+
+  it('T078 re-indexes documents after association changes update client scope', async () => {
+    const knex = { client: 'knex' };
+    const doc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'document',
+      objectId: 'document-1',
+      title: 'Client onboarding notes',
+      url: '/msp/documents/document-1',
+      acl: { requiredPermission: 'document:read', clientScopeId: 'client-2' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    };
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+    vi.spyOn(documentIndexer, 'loadOne').mockResolvedValue(doc);
+
+    const event: Event = {
+      id: 'event-9',
+      eventType: 'DOCUMENT_ASSOCIATED',
+      timestamp: '2026-05-13T12:00:00.000Z',
+      payload: {
+        tenant: 'tenant-1',
+        document_id: 'document-1',
+        entity_type: 'client',
+        entity_id: 'client-2',
+      },
+    } as Event;
+
+    await handleSearchIndexEventForTest(event);
+
+    expect(documentIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'document-1');
+    expect(mocks.upsertSearchDoc).toHaveBeenCalledWith(knex, doc);
+    expect(mocks.deleteSearchDoc).not.toHaveBeenCalled();
   });
 });
