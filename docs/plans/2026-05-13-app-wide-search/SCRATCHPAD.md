@@ -1178,6 +1178,8 @@ npm run search:backfill
 
 - **2026-05-13 — T120 action input validation.** Added schema coverage that rejects empty queries, queries over 200 chars, unknown object types, and `limit > 100`. Validation: `npx vitest run src/test/unit/searchActions.test.ts --coverage=false` from `server/` passed.
 
+- **2026-05-13 — T121 result URL output schema.** Added output-schema coverage that result rows with an empty URL are rejected, enforcing non-empty canonical links at the action boundary. Validation: `npx vitest run src/test/unit/searchActions.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T060 project-family event contract.** Extended `searchEventPublishing.contract.test.ts` to assert project actions emit project create/update/delete and phase create/update/delete events, task actions emit task create/update/delete events, and task-comment actions emit task-comment create/update/delete events. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T059 user CRUD/role event contract.** Extended `searchEventPublishing.contract.test.ts` to assert `packages/users/src/actions/user-actions/userActions.ts` emits `USER_CREATED`, `USER_UPDATED`, `USER_DELETED`, and `USER_ROLES_UPDATED` with tenant context and stable idempotency keys, covering user role-change ACL reindex triggers. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.

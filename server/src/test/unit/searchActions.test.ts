@@ -33,6 +33,7 @@ vi.mock('../../lib/search/query', () => ({
 import {
   searchAppAction,
   searchAppInputSchema,
+  searchAppResultSchema,
   searchAppTypeaheadAction,
 } from '../../lib/actions/searchActions';
 
@@ -262,5 +263,31 @@ describe('search actions', () => {
     expect(searchAppInputSchema.safeParse({ query: 'x'.repeat(201) }).success).toBe(false);
     expect(searchAppInputSchema.safeParse({ query: 'acme', types: ['not_a_type'] }).success).toBe(false);
     expect(searchAppInputSchema.safeParse({ query: 'acme', limit: 101 }).success).toBe(false);
+  });
+
+  it('T121 requires a non-empty url on every result row', () => {
+    const groups = Object.fromEntries(
+      [
+        'client', 'contact', 'user', 'ticket', 'ticket_comment', 'project', 'project_phase',
+        'project_task', 'project_task_comment', 'asset', 'invoice', 'invoice_item',
+        'invoice_annotation', 'contract', 'client_contract', 'document', 'kb_article',
+        'service_catalog', 'service_request_submission', 'service_request_definition',
+        'workflow_task', 'interaction', 'schedule_entry', 'time_entry', 'board', 'category',
+        'tag',
+      ].map((type) => [type, 0]),
+    );
+
+    expect(searchAppResultSchema.safeParse({
+      results: [{
+        type: 'client',
+        id: 'client-1',
+        title: 'ACME Corp',
+        url: '',
+        score: 1,
+        updatedAt: '2026-05-13T12:00:00.000Z',
+      }],
+      groups,
+      totalCount: 1,
+    }).success).toBe(false);
   });
 });

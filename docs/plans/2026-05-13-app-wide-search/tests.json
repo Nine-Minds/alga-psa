@@ -133,7 +133,7 @@
   { "id": "T118", "featureIds": ["F101"], "description": "searchAppTypeaheadAction returns ≤5 results, title-only, no snippet field", "implemented": true },
   { "id": "T119", "featureIds": ["F101"], "description": "searchAppTypeaheadAction p50 latency < 100ms against a seeded medium tenant", "implemented": true },
   { "id": "T120", "featureIds": ["F102"], "description": "Zod input rejects empty query, > 200 chars, types not in the union, limit > 100", "implemented": true },
-  { "id": "T121", "featureIds": ["F103"], "description": "Result rows include a non-empty `url` for every entity type", "implemented": false },
+  { "id": "T121", "featureIds": ["F103"], "description": "Result rows include a non-empty `url` for every entity type", "implemented": true },
 
   { "id": "T122", "featureIds": ["F104", "F108"], "description": "SearchPalette renders at the top of the MSP sidebar", "implemented": false },
   { "id": "T123", "featureIds": ["F105"], "description": "Cmd+K (mac) and Ctrl+K (Windows/Linux) open the SearchPalette and focus the input", "implemented": false },
