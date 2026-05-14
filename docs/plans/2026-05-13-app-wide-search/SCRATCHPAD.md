@@ -675,6 +675,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Sidebar options, full-page result rows, filter chips, sort controls, pagination links, and empty-state controls now have stable IDs with sanitized dynamic portions.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F121 — English search locale keys.**
+  - Added the `search.*` namespace to `server/public/locales/en/msp/core.json`.
+  - Covered placeholders, loading/help/error text, result summaries, empty states, filters/groups for all 27 object types, sort labels, pagination labels, and the typeahead see-all row.
+  - Validation: `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/core.json','utf8'))"`; `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
