@@ -379,6 +379,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Added `resolveSearchIndexersForEvent(eventType)` so the event handler resolves each event to one or more indexers by registry metadata rather than a hard-coded switch.
   - Handler currently logs the resolved object types only; F065/F066 add upsert/delete behavior.
 
+- **F065 — Subscriber upsert path.**
+  - Non-delete events now extract `tenantId` plus an object-type-specific source ID from the event payload, call `indexer.loadOne(knex, tenant, id)`, and pass the resulting `SearchDoc` to `upsertSearchDoc`.
+  - ID extraction is centralized in `OBJECT_ID_FIELDS` in `searchIndexSubscriber.ts`; this absorbs the mixed camelCase/snake_case payload names used across the current event publishers.
+  - Delete events are detected and explicitly skipped for now; F066 wires `deleteSearchDoc`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

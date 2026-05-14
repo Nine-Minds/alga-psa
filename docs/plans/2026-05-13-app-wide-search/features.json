@@ -69,7 +69,7 @@
 
   { "id": "F063", "description": "Create `server/src/lib/eventBus/subscribers/searchIndexSubscriber.ts` and register it during eventBus initialization", "prdRefs": ["11.1"], "implemented": true },
   { "id": "F064", "description": "Subscriber resolves event → object_type → indexer via registry", "prdRefs": ["11.1"], "implemented": true },
-  { "id": "F065", "description": "Subscriber handles CREATED/UPDATED by calling `indexer.loadOne` and `upsertSearchDoc`", "prdRefs": ["11.1"], "implemented": false },
+  { "id": "F065", "description": "Subscriber handles CREATED/UPDATED by calling `indexer.loadOne` and `upsertSearchDoc`", "prdRefs": ["11.1"], "implemented": true },
   { "id": "F066", "description": "Subscriber handles DELETED by calling `deleteSearchDoc`", "prdRefs": ["11.1"], "implemented": false },
   { "id": "F067", "description": "Subscriber is gated by env var `SEARCH_INDEX_LIVE` (default `false`); when false, events are acknowledged but no DB writes occur", "prdRefs": ["11.1", "16"], "implemented": false },
 
