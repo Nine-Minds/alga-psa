@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { assetIndexer } from '../../lib/search/indexers/asset';
 import { clientIndexer } from '../../lib/search/indexers/client';
 import { contactIndexer } from '../../lib/search/indexers/contact';
+import { invoiceIndexer } from '../../lib/search/indexers/invoice';
 import { projectPhaseIndexer } from '../../lib/search/indexers/project_phase';
 import { projectTaskCommentIndexer } from '../../lib/search/indexers/project_task_comment';
 import { projectTaskIndexer } from '../../lib/search/indexers/project_task';
@@ -461,5 +462,40 @@ describe('search entity indexers', () => {
     );
 
     expect(doc?.metadata).toEqual({ identifier: 'LAP-0042' });
+  });
+
+  it('T040 invoice indexer denormalizes client name and invoice identifier', async () => {
+    const { knex, queryBuilder, joinBuilder } = createFirstRowKnex({
+      invoice_id: 'invoice-1',
+      invoice_number: 'INV-1001',
+      client_id: 'client-1',
+      client_name: 'ACME Corp',
+      total_amount: '1250.00',
+      status: 'sent',
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await invoiceIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'invoice-1',
+    );
+
+    expect(knex).toHaveBeenCalledWith('invoices as i');
+    expect(queryBuilder.leftJoin).toHaveBeenCalledWith('clients as c', expect.any(Function));
+    expect(joinBuilder.on).toHaveBeenCalledWith('c.tenant', 'i.tenant');
+    expect(joinBuilder.andOn).toHaveBeenCalledWith('c.client_id', 'i.client_id');
+    expect(doc).toMatchObject({
+      objectType: 'invoice',
+      objectId: 'invoice-1',
+      title: 'INV-1001',
+      subtitle: 'ACME Corp | sent | 1250.00',
+      url: '/msp/invoices/invoice-1',
+      metadata: { identifier: 'INV-1001' },
+      acl: {
+        requiredPermission: 'invoice:read',
+        clientScopeId: 'client-1',
+      },
+    });
   });
 });

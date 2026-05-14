@@ -42,7 +42,7 @@
   { "id": "T037", "featureIds": ["F030"], "description": "Project-task-comment indexer falls back to `flattenBlockNote(note)` when markdown_content is null", "implemented": true },
   { "id": "T038", "featureIds": ["F031"], "description": "Asset indexer's body contains flattened jsonb attribute string values but never key names like `password`", "implemented": true },
   { "id": "T039", "featureIds": ["F031"], "description": "Asset indexer metadata.identifier equals asset_tag", "implemented": true },
-  { "id": "T040", "featureIds": ["F032"], "description": "Invoice indexer denormalizes client_name in subtitle and metadata.identifier equals invoice_number", "implemented": false },
+  { "id": "T040", "featureIds": ["F032"], "description": "Invoice indexer denormalizes client_name in subtitle and metadata.identifier equals invoice_number", "implemented": true },
   { "id": "T041", "featureIds": ["F033", "F034"], "description": "Invoice-item and annotation indexers inherit invoice client_scope_id and required_permission", "implemented": false },
   { "id": "T042", "featureIds": ["F035"], "description": "Contract indexer with `contracts.status='draft'` sets subtitle to 'Quote'", "implemented": false },
   { "id": "T043", "featureIds": ["F035"], "description": "Contract indexer with `contracts.status='active'` sets subtitle to 'Contract'", "implemented": false },
