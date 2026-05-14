@@ -1360,6 +1360,11 @@
     "addItem": "55555",
     "fill": "55555",
     "clearValues": "55555",
+    "askAi": {
+      "ariaLabel": "55555",
+      "title": "55555",
+      "shortcutHint": "55555"
+    },
     "applySuggestions": "55555 {{count}} 55555",
     "applySuggestionTitle": "55555 {{sourcePath}} 55555",
     "fuzzySuffix": "55555",
@@ -1403,11 +1408,6 @@
       "openEditor": "55555",
       "apply": "55555",
       "cancel": "55555"
-    },
-    "askAi": {
-      "ariaLabel": "11111",
-      "title": "11111",
-      "shortcutHint": "11111"
     }
   },
   "schemaReference": {

@@ -1134,7 +1134,7 @@
     "noOneElseEditing": "11111",
     "conflict": {
       "changedField": "11111 {{author}} 11111 {{time}} 11111",
-      "remoteValue": "11111:",
+      "remoteValue": "11111",
       "keepYours": "11111",
       "takeTheirs": "11111"
     }
@@ -1144,7 +1144,7 @@
   },
   "deleteEntity": {
     "checkingDependenciesTitle": "11111",
-    "deleteTitle": "11111 {{entityName}}",
+    "deleteTitle": "11111 {{entityName}} 11111",
     "cannotDeleteTitle": "11111",
     "deleting": "11111",
     "checkingDependenciesMessage": "11111",

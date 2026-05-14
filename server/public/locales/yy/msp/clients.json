@@ -142,7 +142,7 @@
       "selectedTitle": "55555",
       "subtitle": "55555 {{count}} 55555",
       "noClients": "55555",
-      "emptyValue": "-",
+      "emptyValue": "55555",
       "columns": {
         "name": "55555",
         "type": "55555",
@@ -155,8 +155,7 @@
         "description": "55555"
       }
     },
-    "shareTooltip": "55555"
-    ,
+    "shareTooltip": "55555",
     "defaultClientDeleteError": "55555",
     "clientNotFound": "55555",
     "deletePermissionDenied": "55555"
@@ -248,8 +247,7 @@
       "accountManager": "55555",
       "url": "55555",
       "status": "55555"
-    }
-    ,
+    },
     "deactivateClientDescription": "55555",
     "deactivateClientOnlyDescription": "55555"
   },

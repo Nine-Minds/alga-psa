@@ -680,6 +680,12 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Covered placeholders, loading/help/error text, result summaries, empty states, filters/groups for all 27 object types, sort labels, pagination labels, and the typeahead see-all row.
   - Validation: `node -e "JSON.parse(require('fs').readFileSync('server/public/locales/en/msp/core.json','utf8'))"`; `git diff --check`; `npm -w server run typecheck`.
 
+- **F122 — Lang-pack propagation and validation.**
+  - Ran `node scripts/generate-pseudo-locales.cjs`, which regenerated 86 pseudo-locale files from 43 English sources.
+  - Ran `node scripts/validate-translations.cjs`; the first pass exposed missing real-locale `search.*` keys, so copied the English `search` namespace into `de/es/fr/it/nl/pl/pt` `msp/core.json` files and reran validation.
+  - Final validation passed with 0 errors and 8 pre-existing Polish plural-form warnings unrelated to search.
+  - Validation: `git diff --check`; `node scripts/validate-translations.cjs`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
