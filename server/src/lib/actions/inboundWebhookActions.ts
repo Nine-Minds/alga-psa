@@ -601,6 +601,13 @@ export const deleteInboundWebhook = withAuth(
       throw new Error('Inbound webhook not found');
     }
 
+    // Citus does not allow ON DELETE SET NULL when the distribution column is
+    // part of the foreign key, so null out the link on delivery rows here
+    // before the parent row is removed.
+    await knex<InboundWebhookDeliveryRow>('inbound_webhook_deliveries')
+      .where({ tenant, inbound_webhook_id: inboundWebhookId })
+      .update({ inbound_webhook_id: null });
+
     await knex<InboundWebhookRow>('inbound_webhooks')
       .where({ tenant, inbound_webhook_id: inboundWebhookId })
       .delete();
