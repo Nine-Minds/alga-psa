@@ -91,6 +91,14 @@ export const clientArchivedEventPayloadSchema = BaseDomainEventPayloadSchema.ext
 
 export type ClientArchivedEventPayload = z.infer<typeof clientArchivedEventPayloadSchema>;
 
+export const clientDeletedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  clientId: clientIdSchema,
+  deletedByUserId: userIdSchema.optional(),
+  deletedAt: z.string().datetime().optional(),
+}).describe('Payload for CLIENT_DELETED');
+
+export type ClientDeletedEventPayload = z.infer<typeof clientDeletedEventPayloadSchema>;
+
 export const contactCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   contactId: contactIdSchema,
   clientId: clientIdSchema.optional(),

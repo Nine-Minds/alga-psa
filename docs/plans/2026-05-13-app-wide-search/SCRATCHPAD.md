@@ -718,6 +718,8 @@ npm run search:backfill
 
 - **2026-05-13 — F048 tag indexer.** Added `tagIndexer` and registered it. The current tag system normalizes unique tag labels into `tag_definitions`; `tags` / `tag_mappings` are assignment rows, so indexing definitions avoids duplicate result rows for the same tag. The indexer uses `tag_id` / `tag_text`, links to `/msp/tickets?tags={tag_text}`, carries `tagged_type` and `board_id` metadata when present, and sets `requiredPermission='ticket:read'`. Event hooks remain empty until F062. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/tag.ts server/src/lib/search/indexers/index.ts`.
 
+- **2026-05-13 — F049 client CRUD events.** `CLIENT_CREATED` and `CLIENT_UPDATED` already existed in `packages/event-schemas` and were already published from both the server `ClientService` and package client actions. Added missing `CLIENT_DELETED` event type + payload schema, published it after successful hard-delete in both delete paths, and added `CLIENT_DELETED` to `clientIndexer.sourceEvents` so the future search subscriber can remove the row. Validation: `npm -w @alga-psa/event-schemas run typecheck` and `npm -w @alga-psa/clients run typecheck` pass. `npm -w server run typecheck` is currently blocked before project files by generated `.next/dev/types/routes.d.ts` syntax errors (lines 755+); no search/client-service-specific errors were reachable from that run.
+
 ---
 
 ## Implementation order suggestion (not prescriptive)

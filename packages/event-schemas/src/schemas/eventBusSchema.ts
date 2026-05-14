@@ -59,6 +59,7 @@ import {
 import {
   clientArchivedEventPayloadSchema,
   clientCreatedEventPayloadSchema,
+  clientDeletedEventPayloadSchema,
   clientMergedEventPayloadSchema,
   clientOwnerAssignedEventPayloadSchema,
   clientStatusChangedEventPayloadSchema,
@@ -271,6 +272,7 @@ export const EVENT_TYPES = [
   'CLIENT_OWNER_ASSIGNED',
   'CLIENT_MERGED',
   'CLIENT_ARCHIVED',
+  'CLIENT_DELETED',
   'CONTACT_CREATED',
   'CONTACT_UPDATED',
   'CONTACT_PRIMARY_SET',
@@ -896,6 +898,7 @@ export const EventPayloadSchemas = {
   CLIENT_OWNER_ASSIGNED: clientOwnerAssignedEventPayloadSchema,
   CLIENT_MERGED: clientMergedEventPayloadSchema,
   CLIENT_ARCHIVED: clientArchivedEventPayloadSchema,
+  CLIENT_DELETED: clientDeletedEventPayloadSchema,
   CONTACT_CREATED: contactCreatedEventPayloadSchema,
   CONTACT_UPDATED: contactUpdatedEventPayloadSchema,
   CONTACT_PRIMARY_SET: contactPrimarySetEventPayloadSchema,
