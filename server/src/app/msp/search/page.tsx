@@ -5,6 +5,7 @@ import {
   type SearchAppResult,
 } from '@/lib/actions/searchActions';
 import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '@/lib/search/types';
+import SearchPageClient from './SearchPageClient';
 
 export const metadata: Metadata = {
   title: 'Search',
@@ -57,33 +58,12 @@ export default async function MspSearchPage({ searchParams }: SearchPageProps) {
     : emptyResult;
 
   return (
-    <main
-      id="app-search-page"
-      className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-6 py-6"
-      data-search-sort={sort}
-    >
-      <header>
-        <h1 className="text-2xl font-semibold text-gray-900">Search</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          {query ? `${result.totalCount} results for "${query}"` : 'Search across the workspace.'}
-        </p>
-      </header>
-
-      <section className="space-y-2">
-        {result.results.map((row) => (
-          <a
-            key={`${row.type}-${row.id}`}
-            id={`app-search-result-row-${row.type}-${row.id}`}
-            href={row.url}
-            className="block rounded-md border border-gray-200 bg-white px-4 py-3 text-gray-900 hover:border-purple-300 hover:bg-purple-50"
-          >
-            <span className="block text-sm font-medium">{row.title}</span>
-            {row.subtitle ? (
-              <span className="mt-1 block text-xs text-gray-600">{row.subtitle}</span>
-            ) : null}
-          </a>
-        ))}
-      </section>
-    </main>
+    <SearchPageClient
+      initialQuery={query}
+      initialType={type}
+      initialCursor={cursor}
+      initialSort={sort}
+      initialResult={result}
+    />
   );
 }

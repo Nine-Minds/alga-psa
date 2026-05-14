@@ -614,6 +614,12 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - The `sort` param is read and reflected in page data for URL-state continuity; query-layer sort behavior is still the F117 checkpoint.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F110 — Search page URL-state client shell.**
+  - Added `server/src/app/msp/search/SearchPageClient.tsx` and moved the route's rendered shell into it.
+  - The results-page input is controlled from the URL's `q` value and debounces `router.replace()` for 200 ms on edits, preserving `type` and non-default `sort` while resetting cursor on new text input.
+  - The server page still fetches initial data so cold `/msp/search?...` URLs render with results in SSR output.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
