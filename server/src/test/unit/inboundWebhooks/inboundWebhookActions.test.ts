@@ -477,19 +477,27 @@ function makeDeleteKnex(row: InboundWebhookRowFixture) {
     delete: vi.fn(async () => 1),
   };
 
+  const deliveriesUpdateBuilder: any = {
+    where: vi.fn(() => deliveriesUpdateBuilder),
+    update: vi.fn(async () => 0),
+  };
+
   const knex = vi.fn((table: string) => {
     if (table === 'inbound_webhook_deliveries') {
-      throw new Error('deleteInboundWebhook should retain delivery rows');
+      return deliveriesUpdateBuilder;
     }
 
     if (table !== 'inbound_webhooks') {
       throw new Error(`Unexpected table ${table}`);
     }
 
-    return knex.mock.calls.length === 1 ? getBuilder : deleteBuilder;
+    const inboundWebhooksCallCount = knex.mock.calls.filter(
+      (call: unknown[]) => call[0] === 'inbound_webhooks',
+    ).length;
+    return inboundWebhooksCallCount === 1 ? getBuilder : deleteBuilder;
   });
 
-  return { knex, getBuilder, deleteBuilder };
+  return { knex, getBuilder, deleteBuilder, deliveriesUpdateBuilder };
 }
 
 function makeUpdateWebhookKnex(row: InboundWebhookRowFixture) {
@@ -724,7 +732,7 @@ describe('inbound webhook server actions', () => {
   });
 
   it('T026: deleteInboundWebhook retains deliveries and removes only the config plus auth secret', async () => {
-    const { knex, getBuilder, deleteBuilder } = makeDeleteKnex(
+    const { knex, getBuilder, deleteBuilder, deliveriesUpdateBuilder } = makeDeleteKnex(
       inboundWebhookRow({
         auth_config: {
           type: 'bearer',
@@ -741,7 +749,8 @@ describe('inbound webhook server actions', () => {
     expect(getBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', inbound_webhook_id: 'webhook-1' });
     expect(deleteBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', inbound_webhook_id: 'webhook-1' });
     expect(deleteBuilder.delete).toHaveBeenCalledTimes(1);
-    expect(knex).not.toHaveBeenCalledWith('inbound_webhook_deliveries');
+    expect(deliveriesUpdateBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', inbound_webhook_id: 'webhook-1' });
+    expect(deliveriesUpdateBuilder.update).toHaveBeenCalledWith({ inbound_webhook_id: null });
     expect(deleteTenantSecret).toHaveBeenCalledWith(
       'tenant-a',
       'inbound_webhook_webhook-1_bearer_token',

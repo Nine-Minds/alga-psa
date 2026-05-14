@@ -10,11 +10,14 @@ exports.up = async function up(knex) {
       table.uuid('tenant').notNullable().references('tenant').inTable('tenants').onDelete('CASCADE');
       table.uuid('delivery_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
       table.uuid('inbound_webhook_id');
+      // NOTE: Citus does not allow ON DELETE SET NULL/SET DEFAULT when the
+      // distribution column (tenant) is part of the foreign key. Deletion of
+      // an inbound_webhook nulls out inbound_webhook_id on related deliveries
+      // at the application layer (see deleteInboundWebhook action).
       table
         .foreign(['tenant', 'inbound_webhook_id'])
         .references(['tenant', 'inbound_webhook_id'])
-        .inTable('inbound_webhooks')
-        .onDelete('SET NULL');
+        .inTable('inbound_webhooks');
       table.text('idempotency_key');
       table.timestamp('received_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
       table.text('request_method').notNullable();
@@ -43,11 +46,14 @@ exports.up = async function up(knex) {
       table.timestamp('updated_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
 
       table.primary(['tenant', 'delivery_id']);
+      // NOTE: Citus does not allow ON DELETE SET NULL/SET DEFAULT when the
+      // distribution column (tenant) is part of the foreign key. There is no
+      // application path that deletes individual delivery rows today; any
+      // future delete path must null out replayed_from on dependent rows first.
       table
         .foreign(['tenant', 'replayed_from'])
         .references(['tenant', 'delivery_id'])
-        .inTable('inbound_webhook_deliveries')
-        .onDelete('SET NULL');
+        .inTable('inbound_webhook_deliveries');
     });
   }
 
