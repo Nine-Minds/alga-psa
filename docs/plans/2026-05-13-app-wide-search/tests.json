@@ -88,7 +88,7 @@
 
   { "id": "T080", "featureIds": ["F073", "F074", "F075"], "description": "`npm run search:backfill -- --tenant=<uuid> --type=client` indexes all clients for that tenant", "implemented": true },
   { "id": "T081", "featureIds": ["F076"], "description": "Backfill processes a 10k-row table in batches of 500 without OOM", "implemented": true },
-  { "id": "T082", "featureIds": ["F077"], "description": "Running backfill twice produces identical row content (idempotent)", "implemented": false },
+  { "id": "T082", "featureIds": ["F077"], "description": "Running backfill twice produces identical row content (idempotent)", "implemented": true },
   { "id": "T083", "featureIds": ["F074"], "description": "Backfill without --tenant flag iterates all tenants discovered via tenant catalog", "implemented": false },
   { "id": "T084", "featureIds": ["F078"], "description": "`npm run search:backfill` is wired in root package.json", "implemented": false },
 

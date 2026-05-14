@@ -91,4 +91,50 @@ describe('search backfill script', () => {
     expect(loadBatch.mock.calls[20]?.[2]).toBe('client-09999');
     expect(mocks.upsertSearchDoc).toHaveBeenCalledTimes(10_000);
   });
+
+  it('T082 running backfill twice produces identical row content', async () => {
+    const knex = vi.fn();
+    const docs: SearchDoc[] = [
+      {
+        tenant: 'tenant-1',
+        objectType: 'client',
+        objectId: 'client-1',
+        title: 'ACME Corp',
+        subtitle: 'ops@acme.test',
+        url: '/msp/clients/client-1',
+        acl: { requiredPermission: 'client:read' },
+        sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+      },
+      {
+        tenant: 'tenant-1',
+        objectType: 'client',
+        objectId: 'client-2',
+        title: 'Exchange Systems',
+        url: '/msp/clients/client-2',
+        acl: { requiredPermission: 'client:read' },
+        sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+      },
+    ];
+    const loadBatch = vi.fn(async (_knex, _tenant, cursor: string | null) => (
+      cursor === null ? docs : []
+    ));
+    const indexer: EntityIndexer = {
+      objectType: 'client',
+      sourceEvents: [],
+      loadOne: vi.fn(),
+      loadBatch,
+    };
+    const rows = new Map<string, SearchDoc>();
+    mocks.upsertSearchDoc.mockImplementation(async (_knex, doc: SearchDoc) => {
+      rows.set(`${doc.tenant}:${doc.objectType}:${doc.objectId}`, doc);
+    });
+
+    await upsertBackfillBatches(knex as never, 'tenant-1', indexer);
+    const firstRunRows = Array.from(rows.entries());
+    await upsertBackfillBatches(knex as never, 'tenant-1', indexer);
+
+    expect(loadBatch).toHaveBeenCalledTimes(2);
+    expect(mocks.upsertSearchDoc).toHaveBeenCalledTimes(4);
+    expect(Array.from(rows.entries())).toEqual(firstRunRows);
+  });
 });
