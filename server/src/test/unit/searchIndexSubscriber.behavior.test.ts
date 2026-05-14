@@ -22,6 +22,10 @@ import { ticketCommentIndexer } from '../../lib/search/indexers/ticket_comment';
 import { invoiceIndexer } from '../../lib/search/indexers/invoice';
 import { invoiceItemIndexer } from '../../lib/search/indexers/invoice_item';
 import { invoiceAnnotationIndexer } from '../../lib/search/indexers/invoice_annotation';
+import { projectIndexer } from '../../lib/search/indexers/project';
+import { projectPhaseIndexer } from '../../lib/search/indexers/project_phase';
+import { projectTaskIndexer } from '../../lib/search/indexers/project_task';
+import { projectTaskCommentIndexer } from '../../lib/search/indexers/project_task_comment';
 import { handleSearchIndexEventForTest } from '../../lib/eventBus/subscribers/searchIndexSubscriber';
 import type { SearchDoc } from '../../lib/search/types';
 
@@ -328,5 +332,118 @@ describe('search index subscriber event handling', () => {
     expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(1, knex, invoiceDoc);
     expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(2, knex, itemDoc);
     expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(3, knex, annotationDoc);
+  });
+
+  it('T077 cascades PROJECT_UPDATED to phases, tasks, and task comments', async () => {
+    const projectDoc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'project',
+      objectId: 'project-1',
+      title: 'Migration project',
+      url: '/msp/projects/project-1',
+      acl: { requiredPermission: 'project:read', clientScopeId: 'client-1' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    };
+    const phaseDoc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'project_phase',
+      objectId: 'phase-1',
+      parentType: 'project',
+      parentId: 'project-1',
+      title: 'Discovery',
+      url: '/msp/projects/project-1/phases/phase-1',
+      acl: { requiredPermission: 'project:read', clientScopeId: 'client-1' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    };
+    const taskDoc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'project_task',
+      objectId: 'task-1',
+      parentType: 'project',
+      parentId: 'project-1',
+      title: 'Inventory',
+      url: '/msp/projects/project-1/tasks/task-1',
+      acl: { requiredPermission: 'project:read', clientScopeId: 'client-1' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    };
+    const taskCommentDoc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'project_task_comment',
+      objectId: 'task-comment-1',
+      parentType: 'project_task',
+      parentId: 'task-1',
+      title: 'Inventory',
+      url: '/msp/projects/project-1/tasks/task-1#comment-task-comment-1',
+      acl: { requiredPermission: 'project:read', clientScopeId: 'client-1' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    };
+    const makeQuery = <T extends object>(rows: T[]) => {
+      const joinContext = {
+        on: vi.fn(() => joinContext),
+        andOn: vi.fn(() => joinContext),
+      };
+      const query = {
+        join: vi.fn((_table: string, callback: (this: typeof joinContext) => void) => {
+          callback.call(joinContext);
+          return query;
+        }),
+        select: vi.fn(() => query),
+        where: vi.fn(() => query),
+        andWhere: vi.fn(() => query),
+        orderBy: vi.fn(() => query),
+        limit: vi.fn(() => query),
+        then: (resolve: (rows: T[]) => unknown, reject: (reason?: unknown) => unknown) =>
+          Promise.resolve(rows).then(resolve, reject),
+      };
+      return query;
+    };
+    const phaseQuery = makeQuery([{ phase_id: 'phase-1' }]);
+    const taskQuery = makeQuery([{ task_id: 'task-1' }]);
+    const taskCommentQuery = makeQuery([{ task_comment_id: 'task-comment-1' }]);
+    const knex = vi.fn((table: string) => {
+      if (table === 'project_phases') {
+        return phaseQuery;
+      }
+      if (table === 'project_tasks as pt') {
+        return taskQuery;
+      }
+      if (table === 'project_task_comments as ptc') {
+        return taskCommentQuery;
+      }
+      throw new Error(`Unexpected table ${table}`);
+    });
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+    vi.spyOn(projectIndexer, 'loadOne').mockResolvedValue(projectDoc);
+    vi.spyOn(projectPhaseIndexer, 'loadOne').mockResolvedValue(phaseDoc);
+    vi.spyOn(projectTaskIndexer, 'loadOne').mockResolvedValue(taskDoc);
+    vi.spyOn(projectTaskCommentIndexer, 'loadOne').mockResolvedValue(taskCommentDoc);
+
+    const event: Event = {
+      id: 'event-8',
+      eventType: 'PROJECT_UPDATED',
+      timestamp: '2026-05-13T12:00:00.000Z',
+      payload: {
+        tenant: 'tenant-1',
+        project_id: 'project-1',
+      },
+    } as Event;
+
+    await handleSearchIndexEventForTest(event);
+
+    expect(projectIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'project-1');
+    expect(phaseQuery.where).toHaveBeenCalledWith('tenant', 'tenant-1');
+    expect(phaseQuery.andWhere).toHaveBeenCalledWith('project_id', 'project-1');
+    expect(taskQuery.where).toHaveBeenCalledWith('pt.tenant', 'tenant-1');
+    expect(taskQuery.andWhere).toHaveBeenCalledWith('pp.project_id', 'project-1');
+    expect(taskCommentQuery.where).toHaveBeenCalledWith('ptc.tenant', 'tenant-1');
+    expect(taskCommentQuery.andWhere).toHaveBeenCalledWith('pp.project_id', 'project-1');
+    expect(projectPhaseIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'phase-1');
+    expect(projectTaskIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'task-1');
+    expect(projectTaskCommentIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'task-comment-1');
+    expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(1, knex, projectDoc);
+    expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(2, knex, phaseDoc);
+    expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(3, knex, taskDoc);
+    expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(4, knex, taskCommentDoc);
   });
 });
