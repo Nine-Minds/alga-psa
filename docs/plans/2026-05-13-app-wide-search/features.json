@@ -148,7 +148,7 @@
 
   { "id": "F128", "description": "Ticket detail page honors `#comment-{id}` hash: scrolls into view and applies a brief highlight class", "prdRefs": ["6.2", "Acceptance #5"], "implemented": true },
   { "id": "F129", "description": "Invoice detail page honors `#item-{id}` and `#annotation-{id}` hashes (scroll + highlight)", "prdRefs": ["6.2"], "implemented": true },
-  { "id": "F130", "description": "Project task page honors `#comment-{id}` hash (scroll + highlight)", "prdRefs": ["6.2"], "implemented": false },
+  { "id": "F130", "description": "Project task page honors `#comment-{id}` hash (scroll + highlight)", "prdRefs": ["6.2"], "implemented": true },
 
   { "id": "F131", "description": "Create CE stub at `ee/server/src/lib/search/indexers/index.ts` exporting `export const eeIndexers: EntityIndexer[] = []`. Register the stub via the existing CE/EE stub-generator config (whichever mechanism the repo uses — see ce-ee-stub-fixer skill) so CE builds resolve the import to the empty array and EE builds resolve to the real module.", "prdRefs": ["19.1"], "implemented": false },
   { "id": "F132", "description": "Restrict search queries to `object_type = ANY(registeredObjectTypes())` so orphan rows from a previous EE deploy never surface in CE builds (orphan-safety).", "prdRefs": ["19.5"], "implemented": false },
