@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { flattenBlockNote, flattenJsonbPayload, flattenMarkdown } from '../../lib/search/normalize';
+import { flattenBlockNote, flattenJsonbPayload, flattenMarkdown, truncateForIndex } from '../../lib/search/normalize';
 
 describe('search normalization utilities', () => {
   it('T013 extracts visible text from a realistic BlockNote document payload', () => {
@@ -140,5 +140,14 @@ describe('search normalization utilities', () => {
     expect(flattenJsonbPayload('plain scalar')).toBe('');
     expect(flattenJsonbPayload(42)).toBe('');
     expect(flattenJsonbPayload(true)).toBe('');
+  });
+
+  it('T019 truncates UTF-8 text by byte length without splitting a code point', () => {
+    const input = 'abc😀def';
+    const output = truncateForIndex(input, 6);
+
+    expect(output).toBe('abc');
+    expect(Buffer.byteLength(output, 'utf8')).toBeLessThanOrEqual(6);
+    expect(output).not.toContain('\uFFFD');
   });
 });

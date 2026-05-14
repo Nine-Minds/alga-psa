@@ -19,7 +19,7 @@
   { "id": "T016", "featureIds": ["F013"], "description": "`flattenMarkdown` strips headings, lists, link syntax, bold/italic markers, code fences, leaves plain text", "implemented": true },
   { "id": "T017", "featureIds": ["F014"], "description": "`flattenJsonbPayload` concatenates string leaves and skips keys matching the secret regex (`password|secret|token|api_key|authorization`)", "implemented": true },
   { "id": "T018", "featureIds": ["F014"], "description": "`flattenJsonbPayload` returns an empty string for non-object/non-array inputs", "implemented": true },
-  { "id": "T019", "featureIds": ["F015"], "description": "`truncateForIndex` enforces ≤ max bytes on a UTF-8 multibyte string without splitting a code point", "implemented": false },
+  { "id": "T019", "featureIds": ["F015"], "description": "`truncateForIndex` enforces ≤ max bytes on a UTF-8 multibyte string without splitting a code point", "implemented": true },
   { "id": "T020", "featureIds": ["F015"], "description": "`truncateForIndex` is a no-op when input is already under the limit", "implemented": false },
   { "id": "T021", "featureIds": ["F016"], "description": "`buildTsvectorSql` produces SQL containing `process_large_lexemes(`, weight 'A' for title, 'B' for subtitle, 'C' for body", "implemented": false },
 

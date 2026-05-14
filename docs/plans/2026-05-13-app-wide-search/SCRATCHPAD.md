@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T019 UTF-8 truncation byte cap.** Extended `searchNormalize.test.ts` with a multibyte emoji string and a byte limit that would split the emoji if truncation were byte-slice based. The test asserts `truncateForIndex` stays within the byte cap, returns only complete code points, and emits no replacement character. Validation: `npx vitest run src/test/unit/searchNormalize.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T018 JSONB payload scalar boundary.** Extended `searchNormalize.test.ts` to assert `flattenJsonbPayload` returns an empty string for nullish and scalar values (`null`, `undefined`, string, number, boolean), preserving the contract that only object/array JSONB containers contribute text. Validation: `npx vitest run src/test/unit/searchNormalize.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T017 JSONB payload secret filtering.** Extended `searchNormalize.test.ts` with a nested JSONB fixture containing ordinary string leaves plus `password`, `api_key`, `authorization`, and `secret*` keys. The test asserts `flattenJsonbPayload` concatenates only safe string leaves in traversal order and excludes secret-like values. Validation: `npx vitest run src/test/unit/searchNormalize.test.ts --coverage=false` from `server/` passed.
