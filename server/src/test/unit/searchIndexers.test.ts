@@ -19,6 +19,7 @@ import { serviceRequestDefinitionIndexer } from '../../lib/search/indexers/servi
 import { serviceRequestSubmissionIndexer } from '../../lib/search/indexers/service_request_submission';
 import { ticketIndexer } from '../../lib/search/indexers/ticket';
 import { ticketCommentIndexer } from '../../lib/search/indexers/ticket_comment';
+import { timeEntryIndexer } from '../../lib/search/indexers/time_entry';
 import { userIndexer } from '../../lib/search/indexers/user';
 import { workflowTaskIndexer } from '../../lib/search/indexers/workflow_task';
 
@@ -38,6 +39,7 @@ function createFirstRowKnex(row: unknown) {
     }),
     select: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
+    whereNotNull: vi.fn().mockReturnThis(),
     andWhere: vi.fn().mockReturnThis(),
     groupBy: vi.fn().mockReturnThis(),
     first: vi.fn().mockResolvedValue(row),
@@ -850,5 +852,21 @@ describe('search entity indexers', () => {
         ],
       },
     });
+  });
+
+  it('T052 time-entry indexer skips rows with null or empty notes', async () => {
+    const { knex, queryBuilder } = createFirstRowKnex(undefined);
+
+    const doc = await timeEntryIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'time-entry-1',
+    );
+
+    expect(knex).toHaveBeenCalledWith('time_entries as te');
+    expect(queryBuilder.whereNotNull).toHaveBeenCalledWith('te.notes');
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith('te.notes', '<>', '');
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith('te.entry_id', 'time-entry-1');
+    expect(doc).toBeNull();
   });
 });
