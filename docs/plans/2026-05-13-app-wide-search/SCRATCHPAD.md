@@ -1506,6 +1506,8 @@ npm run search:backfill
 
 - **2026-05-13 — T194 zero ACL drift happy path.** Added broader verifier coverage that ticket and document rows whose SQL-level ACL agrees with record-level checks are returned without emitting `search.acl_drift` telemetry. Validation: `cd server && npx vitest run src/test/unit/searchAcl.test.ts --coverage=false`.
 
+- **2026-05-13 — T195 reconciliation summary log.** Added reconciliation contract coverage that the handler logs per-tenant/per-object-type summary fields for reindexed, stale-deleted, and missing-inserted rows. Validation: `cd server && npx vitest run src/test/unit/searchReconcile.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

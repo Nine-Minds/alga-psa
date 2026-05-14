@@ -222,7 +222,7 @@
   { "id": "T193", "featureIds": ["F126"], "description": "search.query.latency_ms histogram has p95 < 500ms on a seeded medium tenant", "implemented": true },
   { "id": "T194", "featureIds": ["F099"], "description": "search.acl_drift counter is zero across the entire integration test suite (no SQL/record-level mismatch)", "implemented": true },
 
-  { "id": "T195", "featureIds": ["F083"], "description": "Reconciliation job emits a per-run summary log: rows added, rows re-indexed, rows deleted per (tenant, type)", "implemented": false },
+  { "id": "T195", "featureIds": ["F083"], "description": "Reconciliation job emits a per-run summary log: rows added, rows re-indexed, rows deleted per (tenant, type)", "implemented": true },
 
   { "id": "T196", "featureIds": ["F036"], "description": "Client-contract indexer joins `clients` and `contracts`; produces title `{client_name} – {contract_name}` and sets `client_scope_id = client_id`", "implemented": false },
   { "id": "T197", "featureIds": ["F043"], "description": "Interaction indexer on a row with BlockNote JSON in `notes` produces a body containing the flattened text from text leaves (e.g., 'Added Sciton Tribrid Laser') and contains no JSON syntax characters", "implemented": false },

@@ -238,4 +238,18 @@ describe('search reconciliation', () => {
     expect(result).toEqual({ scanned: 1, inserted: 1 });
     expect(mocks.upsertSearchDoc).toHaveBeenCalledWith(knex, sourceDoc);
   });
+
+  it('T195 emits per-run reconciliation summary counts', () => {
+    const reconcileHandler = readFileSync(
+      resolve(process.cwd(), 'src/lib/jobs/handlers/searchReconcileHandler.ts'),
+      'utf8',
+    );
+
+    expect(reconcileHandler).toContain("logger.info('[SearchReconcileJob] Re-indexed rows after watermark'");
+    expect(reconcileHandler).toContain('tenant,');
+    expect(reconcileHandler).toContain('objectType: indexer.objectType');
+    expect(reconcileHandler).toContain('...updatedCounts');
+    expect(reconcileHandler).toContain('staleDeleted: staleCounts.deleted');
+    expect(reconcileHandler).toContain('missingInserted: missingCounts.inserted');
+  });
 });
