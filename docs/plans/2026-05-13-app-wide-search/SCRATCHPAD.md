@@ -714,6 +714,8 @@ npm run search:backfill
 
 - **2026-05-13 — F046 board indexer.** Added `boardIndexer` and registered it. Current migrations create `boards.board_id` / `boards.board_name` (the scratchpad's `channel_id` / `channel_name` note reflects an older rename state), so the indexer uses the current columns, links to `/msp/tickets?board={board_id}`, and sets `requiredPermission='ticket:read'`. Event hooks remain empty until F062. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/board.ts server/src/lib/search/indexers/index.ts`.
 
+- **2026-05-13 — F047 category indexer.** Added `categoryIndexer` and registered it. Ticket categories are still read from the `categories` table in app code, with `board_id` backfilled during the board migration, so the indexer uses `categories.category_id` / `category_name`, links to `/msp/tickets?category={category_id}`, includes `board_id` metadata when present, and sets `requiredPermission='ticket:read'`. Event hooks remain empty until F062. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/category.ts server/src/lib/search/indexers/index.ts`.
+
 ---
 
 ## Implementation order suggestion (not prescriptive)
