@@ -12,6 +12,7 @@ import {
 import {
   encodeSearchCursor,
   runSearchQuery,
+  runSearchTypeaheadQuery,
 } from '../search/query';
 import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '../search/types';
 
@@ -39,6 +40,11 @@ export interface SearchAppResult {
   groups: Record<SearchObjectType, number>;
   totalCount: number;
   nextCursor?: string;
+}
+
+export interface SearchTypeaheadResult {
+  results: SearchResultRow[];
+  totalCount: number;
 }
 
 const SEARCH_OBJECT_TYPE_SET = new Set<string>(SEARCH_OBJECT_TYPES);
@@ -132,5 +138,34 @@ export const searchAppAction = withAuth(async (
     groups,
     totalCount: visibleHits.length,
     nextCursor: visibleHits.length > limit && lastHit ? encodeSearchCursor(lastHit) : undefined,
+  };
+});
+
+export const searchAppTypeaheadAction = withAuth(async (
+  user,
+  { tenant },
+  input: Pick<SearchAppInput, 'query' | 'types' | 'cursor'>,
+): Promise<SearchTypeaheadResult> => {
+  const { knex } = await createTenantKnex();
+  const allowedTypes = resolveAllowedTypes(input.types);
+  const accessibleClientIds = await resolveAccessibleClientIds(knex, tenant, user);
+  const acl = await resolveSearchAclPrincipal(knex, user, accessibleClientIds);
+
+  const hits = await runSearchTypeaheadQuery({
+    knex,
+    tenant,
+    query: input.query,
+    allowedTypes,
+    cursor: input.cursor,
+    acl,
+  });
+
+  const visibleHits = await verifyResultVisibility(knex, acl, hits);
+  return {
+    results: visibleHits.slice(0, 5).map((hit) => ({
+      ...toSearchResultRow(hit),
+      snippet: undefined,
+    })),
+    totalCount: visibleHits.length,
   };
 });

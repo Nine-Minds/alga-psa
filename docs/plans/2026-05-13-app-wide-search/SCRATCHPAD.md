@@ -567,6 +567,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Current grouped counts are computed from the visible fetched page; a broader count query can be expanded when the results page work needs full pre-pagination counts.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F101 — Typeahead search server action.**
+  - Added `searchAppTypeaheadAction` in `searchActions.ts`.
+  - It uses the same registered-type and ACL resolution path as full search, but calls `runSearchTypeaheadQuery()` and returns at most five rows with `snippet` stripped.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
