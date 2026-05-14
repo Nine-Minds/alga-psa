@@ -86,7 +86,7 @@
   { "id": "T078", "featureIds": ["F071"], "description": "Inserting a `document_associations` row tying a document to a different client triggers re-index of the document row with updated `client_scope_id`", "implemented": true },
   { "id": "T079", "featureIds": ["F072"], "description": "User role change kicks off background re-index of rows where the user appears in `visible_to_user_ids`", "implemented": true },
 
-  { "id": "T080", "featureIds": ["F073", "F074", "F075"], "description": "`npm run search:backfill -- --tenant=<uuid> --type=client` indexes all clients for that tenant", "implemented": false },
+  { "id": "T080", "featureIds": ["F073", "F074", "F075"], "description": "`npm run search:backfill -- --tenant=<uuid> --type=client` indexes all clients for that tenant", "implemented": true },
   { "id": "T081", "featureIds": ["F076"], "description": "Backfill processes a 10k-row table in batches of 500 without OOM", "implemented": false },
   { "id": "T082", "featureIds": ["F077"], "description": "Running backfill twice produces identical row content (idempotent)", "implemented": false },
   { "id": "T083", "featureIds": ["F074"], "description": "Backfill without --tenant flag iterates all tenants discovered via tenant catalog", "implemented": false },
