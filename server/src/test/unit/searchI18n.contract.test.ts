@@ -30,6 +30,16 @@ function collectLeafPaths(value: unknown, prefix = ''): string[] {
   );
 }
 
+function collectLeafValues(value: unknown, prefix = ''): Array<[string, string]> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return typeof value === 'string' && prefix ? [[prefix, value]] : [];
+  }
+
+  return Object.entries(value as Record<string, unknown>).flatMap(([key, child]) =>
+    collectLeafValues(child, prefix ? `${prefix}.${key}` : key),
+  );
+}
+
 describe('app-wide search i18n contracts', () => {
   it('T147 defines the required English msp/core search keys', () => {
     const core = readCoreLocale('en');
@@ -112,5 +122,17 @@ describe('app-wide search i18n contracts', () => {
     expect(sources).toContain("t('search.seeAllResults'");
     expect(sources).toContain("t('search.noResults'");
     expect(sources).toContain("t(`search.sort.${sort}`)");
+  });
+
+  it('T150 renders pseudo-locale search strings with pseudo fill and no English leaks', () => {
+    const englishSearch = getPath(readCoreLocale('en'), 'search');
+    const pseudoSearch = getPath(readCoreLocale('xx'), 'search');
+    const englishValues = new Map(collectLeafValues(englishSearch));
+    const pseudoValues = collectLeafValues(pseudoSearch);
+
+    for (const [key, pseudoValue] of pseudoValues) {
+      expect(pseudoValue, key).not.toBe(englishValues.get(key));
+      expect(pseudoValue, key).toContain('11111');
+    }
   });
 });
