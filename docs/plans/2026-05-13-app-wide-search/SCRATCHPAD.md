@@ -1420,6 +1420,8 @@ npm run search:backfill
 
 - **2026-05-13 — T151 search live-index env docs.** Added deploy contract coverage that `.env.example` documents `SEARCH_INDEX_LIVE=false` and Helm exposes `server.searchIndexLive: false` wired into the `SEARCH_INDEX_LIVE` container env var. Validation: `cd server && npx vitest run src/test/unit/searchDeploy.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T152 search deploy runbook sequence.** Added deploy contract coverage that `docs/deployment/app-wide-search-runbook.md` orders rollout as migrate → deploy with `SEARCH_INDEX_LIVE=false` → `npm run search:backfill` → flip `SEARCH_INDEX_LIVE=true`/roll server-workers → verify `search:reconcile`. Validation: `cd server && npx vitest run src/test/unit/searchDeploy.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
