@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { upsertSearchDoc } from '../../lib/search/upsert';
+import { deleteSearchDoc, upsertSearchDoc } from '../../lib/search/upsert';
 import type { SearchDoc } from '../../lib/search/types';
 
 const sampleDoc = (overrides: Partial<SearchDoc> = {}): SearchDoc => ({
@@ -23,6 +23,15 @@ function createRawKnex() {
   return {
     raw: vi.fn().mockResolvedValue({ rows: [] }),
   };
+}
+
+function createDeleteKnex(deletedRows = 0) {
+  const queryBuilder = {
+    where: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockResolvedValue(deletedRows),
+  };
+  const knex = vi.fn().mockReturnValue(queryBuilder);
+  return { knex, queryBuilder };
 }
 
 describe('search index upsert helpers', () => {
@@ -75,5 +84,26 @@ describe('search index upsert helpers', () => {
     expect(bindings).toContain('ACME Corp Updated');
     expect(bindings).toContain('Updated searchable body');
     expect(bindings.at(-1)).toEqual(doc.sourceUpdatedAt);
+  });
+
+  it('T025 deletes a search row by tenant/type/id and tolerates no matching row', async () => {
+    const { knex, queryBuilder } = createDeleteKnex(0);
+
+    await expect(
+      deleteSearchDoc(
+        knex as never,
+        '11111111-1111-4111-8111-111111111111',
+        'client',
+        'client-1',
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(knex).toHaveBeenCalledWith('app_search_index');
+    expect(queryBuilder.where).toHaveBeenCalledWith({
+      tenant: '11111111-1111-4111-8111-111111111111',
+      object_type: 'client',
+      object_id: 'client-1',
+    });
+    expect(queryBuilder.delete).toHaveBeenCalledTimes(1);
   });
 });
