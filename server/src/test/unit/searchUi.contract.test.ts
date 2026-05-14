@@ -354,4 +354,16 @@ describe('app-wide search UI contracts', () => {
     expect(source).toContain('href={buildSortUrl(sort)}');
     expect(source).not.toContain('role="button"');
   });
+
+  it('T203 renders filter chips from registeredObjectTypes plus All', () => {
+    const pageSource = readFileSync(resolve(process.cwd(), 'src/app/msp/search/page.tsx'), 'utf8');
+    const clientSource = readFileSync(resolve(process.cwd(), 'src/app/msp/search/SearchPageClient.tsx'), 'utf8');
+
+    expect(pageSource).toContain('const registeredTypes = registeredObjectTypes()');
+    expect(pageSource).toContain('registeredTypes={registeredTypes}');
+    expect(clientSource).toContain('const typeEntries = registeredTypes.map((type) => [');
+    expect(clientSource).toContain('id="app-search-filter-chip-all"');
+    expect(clientSource).toContain('typeEntries.map(([type, count]) =>');
+    expect(clientSource).toContain('id={`app-search-filter-chip-${toDomIdPart(type)}`}');
+  });
 });

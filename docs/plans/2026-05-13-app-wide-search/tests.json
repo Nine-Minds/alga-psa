@@ -232,7 +232,7 @@
   { "id": "T200", "featureIds": ["F018", "F131"], "description": "CE build: `eeIndexers` resolves to `[]` and `allIndexers().length === ceIndexers.length` (== 27 at v1)", "implemented": true },
   { "id": "T201", "featureIds": ["F018"], "description": "Adding a synthetic indexer via direct `ceIndexers` array, `allIndexers()` includes it; `getIndexer('synthetic')` returns it", "implemented": true },
   { "id": "T202", "featureIds": ["F132"], "description": "Inserting a synthetic row with `object_type='ee_chat_history'` directly via SQL and querying as a CE build (no indexer registered for that type) → row is NOT returned (filtered by `registeredObjectTypes()`)", "implemented": true },
-  { "id": "T203", "featureIds": ["F133"], "description": "Results page filter chips render exactly one chip per type in `registeredObjectTypes()` plus an `All` chip; no hard-coded chip list survives a registry change", "implemented": false },
+  { "id": "T203", "featureIds": ["F133"], "description": "Results page filter chips render exactly one chip per type in `registeredObjectTypes()` plus an `All` chip; no hard-coded chip list survives a registry change", "implemented": true },
   { "id": "T204", "featureIds": ["F133"], "description": "When a registered object_type has no i18n key for its label, the chip falls back to a humanized form of the object_type (e.g., `service_request_submission` → `Service request submission`)", "implemented": false },
   { "id": "T205", "featureIds": ["F134"], "description": "Reconciliation: inserting a synthetic `app_search_index` row with `object_type='ee_chat_history'` does NOT cause the CE reconciliation job to error or attempt to load a source row for that type; the row remains untouched", "implemented": false }
 ]

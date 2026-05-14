@@ -1522,6 +1522,8 @@ npm run search:backfill
 
 - **2026-05-13 — T202 EE orphan query safety.** Added action coverage that CE query type lists are derived from registered object types and do not include an unregistered `ee_chat_history` orphan type. Validation: `cd server && npx vitest run src/test/unit/searchActions.test.ts --coverage=false`.
 
+- **2026-05-13 — T203 registry-driven filter chips.** Added UI contract coverage that the search page receives `registeredObjectTypes()`, builds `typeEntries` from `registeredTypes`, renders the `All` chip separately, and maps one chip per registered type. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
