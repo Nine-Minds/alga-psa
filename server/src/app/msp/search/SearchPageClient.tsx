@@ -12,6 +12,7 @@ interface SearchPageClientProps {
   initialQuery: string;
   initialType?: string;
   initialCursor?: string;
+  initialCursorStack: Array<string | null>;
   initialSort: 'relevance' | 'recent';
   initialResult: SearchAppResult;
 }
@@ -20,6 +21,7 @@ export default function SearchPageClient({
   initialQuery,
   initialType,
   initialCursor,
+  initialCursorStack,
   initialSort,
   initialResult,
 }: SearchPageClientProps): React.JSX.Element {
@@ -82,6 +84,35 @@ export default function SearchPageClient({
     return params.toString() ? `${pathname}?${params.toString()}` : pathname;
   };
 
+  const appendCursorState = (
+    params: URLSearchParams,
+    cursor: string | null | undefined,
+    cursorStack: Array<string | null>,
+  ) => {
+    if (cursor) {
+      params.set('cursor', cursor);
+    }
+    if (cursorStack.length > 0) {
+      params.set('cursorStack', cursorStack.map((value) => value ?? '').join('.'));
+    }
+  };
+
+  const buildPageUrl = (cursor: string | null | undefined, cursorStack: Array<string | null>) => {
+    const params = new URLSearchParams();
+    if (initialQuery) {
+      params.set('q', initialQuery);
+    }
+    if (activeType !== 'all') {
+      params.set('type', activeType);
+    }
+    if (initialSort !== 'relevance') {
+      params.set('sort', initialSort);
+    }
+    appendCursorState(params, cursor, cursorStack);
+
+    return params.toString() ? `${pathname}?${params.toString()}` : pathname;
+  };
+
   const humanizeType = (type: string) => type
     .split('_')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -110,6 +141,9 @@ export default function SearchPageClient({
       rows: initialResult.results.filter((row) => row.type === type).slice(0, 10),
     }))
     .filter((section) => section.rows.length > 0);
+  const previousCursor = initialCursorStack[initialCursorStack.length - 1];
+  const previousCursorStack = initialCursorStack.slice(0, -1);
+  const nextCursorStack = [...initialCursorStack, initialCursor ?? null];
 
   return (
     <main
@@ -199,6 +233,33 @@ export default function SearchPageClient({
         <section className="space-y-2">
           {initialResult.results.map(renderResultRow)}
         </section>
+      )}
+
+      {(initialCursor || initialResult.nextCursor) && (
+        <nav className="flex items-center justify-between border-t border-gray-200 pt-4" aria-label={t('search.paginationLabel', { defaultValue: 'Search pagination' })}>
+          {initialCursor ? (
+            <a
+              id="app-search-pagination-prev"
+              href={buildPageUrl(previousCursor, previousCursorStack)}
+              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:border-purple-300 hover:text-purple-700"
+            >
+              {t('search.pagination.previous', { defaultValue: 'Previous' })}
+            </a>
+          ) : (
+            <span />
+          )}
+          {initialResult.nextCursor ? (
+            <a
+              id="app-search-pagination-next"
+              href={buildPageUrl(initialResult.nextCursor, nextCursorStack)}
+              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:border-purple-300 hover:text-purple-700"
+            >
+              {t('search.pagination.next', { defaultValue: 'Next' })}
+            </a>
+          ) : (
+            <span />
+          )}
+        </nav>
       )}
     </main>
   );

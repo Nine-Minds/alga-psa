@@ -635,6 +635,12 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - `SearchPageClient` renders the non-`All` branch as a flat list of result anchors instead of grouped sections.
   - Validation: covered by the F112 typecheck run; no code change required beyond recording the checkpoint.
 
+- **F114 — Cursor pagination controls.**
+  - Added previous/next pagination links to `SearchPageClient` using the query layer's opaque `nextCursor`.
+  - The page now accepts a lightweight `cursorStack` URL parameter so a previous link can reconstruct the prior cursor boundary while keeping the canonical `cursor` parameter as the active page boundary.
+  - Text edits and filter changes intentionally drop cursor state so refreshed searches start from the first page.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

@@ -34,6 +34,14 @@ function parseTypeFilter(value: string | undefined): SearchObjectType[] | undefi
     : undefined;
 }
 
+function parseCursorStack(value: string | undefined): Array<string | null> {
+  if (!value) {
+    return [];
+  }
+
+  return value.split('.').map((entry) => (entry.length > 0 ? entry : null));
+}
+
 const emptyResult: SearchAppResult = {
   results: [],
   groups: Object.fromEntries(
@@ -47,6 +55,7 @@ export default async function MspSearchPage({ searchParams }: SearchPageProps) {
   const query = firstParam(params.q)?.trim() ?? '';
   const type = firstParam(params.type);
   const cursor = firstParam(params.cursor);
+  const cursorStack = parseCursorStack(firstParam(params.cursorStack));
   const sort = firstParam(params.sort) === 'recent' ? 'recent' : 'relevance';
   const result = query.length > 0
     ? await searchAppAction({
@@ -62,6 +71,7 @@ export default async function MspSearchPage({ searchParams }: SearchPageProps) {
       initialQuery={query}
       initialType={type}
       initialCursor={cursor}
+      initialCursorStack={cursorStack}
       initialSort={sort}
       initialResult={result}
     />
