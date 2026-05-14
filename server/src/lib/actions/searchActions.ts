@@ -28,6 +28,36 @@ export const searchAppInputSchema = z.object({
 
 export type SearchAppInput = z.infer<typeof searchAppInputSchema>;
 
+const searchResultRowSchema = z.object({
+  type: searchObjectTypeSchema,
+  id: z.string().min(1),
+  parentId: z.string().min(1).optional(),
+  title: z.string().min(1),
+  subtitle: z.string().optional(),
+  snippet: z.string().optional(),
+  url: z.string().min(1),
+  score: z.number(),
+  updatedAt: z.string().datetime(),
+});
+
+const searchGroupsSchema = z.object(
+  Object.fromEntries(
+    SEARCH_OBJECT_TYPES.map((type) => [type, z.number().int().min(0)]),
+  ),
+);
+
+export const searchAppResultSchema = z.object({
+  results: z.array(searchResultRowSchema),
+  groups: searchGroupsSchema,
+  totalCount: z.number().int().min(0),
+  nextCursor: z.string().min(1).optional(),
+});
+
+export const searchTypeaheadResultSchema = z.object({
+  results: z.array(searchResultRowSchema),
+  totalCount: z.number().int().min(0),
+});
+
 export interface SearchResultRow {
   type: SearchObjectType;
   id: string;
@@ -139,12 +169,14 @@ export const searchAppAction = withAuth(async (
   }
 
   const lastHit = pageHits[pageHits.length - 1];
-  return {
+  const result: SearchAppResult = {
     results: pageHits.map(toSearchResultRow),
     groups,
     totalCount: visibleHits.length,
     nextCursor: visibleHits.length > limit && lastHit ? encodeSearchCursor(lastHit) : undefined,
   };
+
+  return searchAppResultSchema.parse(result) as SearchAppResult;
 });
 
 export const searchAppTypeaheadAction = withAuth(async (
@@ -172,11 +204,13 @@ export const searchAppTypeaheadAction = withAuth(async (
   });
 
   const visibleHits = await verifyResultVisibility(knex, acl, hits);
-  return {
+  const result: SearchTypeaheadResult = {
     results: visibleHits.slice(0, 5).map((hit) => ({
       ...toSearchResultRow(hit),
       snippet: undefined,
     })),
     totalCount: visibleHits.length,
   };
+
+  return searchTypeaheadResultSchema.parse(result);
 });

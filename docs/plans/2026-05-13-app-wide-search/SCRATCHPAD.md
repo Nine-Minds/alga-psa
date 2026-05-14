@@ -577,6 +577,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Both full search and typeahead actions parse input at the action boundary before touching the database.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F103 — Search action output schemas.**
+  - Added Zod schemas for `SearchResultRow`, `SearchAppResult`, and the typeahead result in `server/src/lib/actions/searchActions.ts`.
+  - Both authenticated search actions now parse their returned payloads at the action boundary, keeping result URLs, ISO timestamps, score values, group counts, and optional cursors under the documented contract.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
