@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { parseQuery, SearchQueryError } from '../../lib/search/query';
+import { parseQuery, runSearchQuery, SearchQueryError } from '../../lib/search/query';
 
 describe('search query parsing', () => {
   it('T089 rejects queries longer than 200 characters with a typed error', () => {
@@ -29,5 +29,22 @@ describe('search query parsing', () => {
       isIdentifierLike: true,
       identifier: 'tic-1023',
     });
+  });
+
+  it('T091 builds the FTS branch with websearch_to_tsquery and search_vector match', async () => {
+    const knex = {
+      raw: vi.fn(async () => ({ rows: [] })),
+    };
+
+    await runSearchQuery({
+      knex: knex as never,
+      tenant: '00000000-0000-0000-0000-000000000001',
+      query: 'acme',
+      allowedTypes: ['client'],
+    });
+
+    const sql = knex.raw.mock.calls[0]?.[0] as string;
+    expect(sql).toContain("websearch_to_tsquery('english', ?)");
+    expect(sql).toContain('s.search_vector @@ q.tsq');
   });
 });

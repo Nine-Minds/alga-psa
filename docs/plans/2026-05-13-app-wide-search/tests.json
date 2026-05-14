@@ -99,7 +99,7 @@
 
   { "id": "T089", "featureIds": ["F084"], "description": "parseQuery rejects queries > 200 chars with a typed error", "implemented": true },
   { "id": "T090", "featureIds": ["F084"], "description": "parseQuery accepts and normalizes whitespace and casing", "implemented": true },
-  { "id": "T091", "featureIds": ["F085"], "description": "FTS branch returns matches via `search_vector @@ websearch_to_tsquery(...)`", "implemented": false },
+  { "id": "T091", "featureIds": ["F085"], "description": "FTS branch returns matches via `search_vector @@ websearch_to_tsquery(...)`", "implemented": true },
   { "id": "T092", "featureIds": ["F085"], "description": "FTS results ordered by `ts_rank_cd` desc", "implemented": false },
   { "id": "T093", "featureIds": ["F086"], "description": "pg_trgm fallback returns results when FTS finds nothing but title is a similar string (`exhcange` → `Exchange`)", "implemented": false },
   { "id": "T094", "featureIds": ["F086"], "description": "pg_trgm similarity is included in the composite score when present", "implemented": false },
