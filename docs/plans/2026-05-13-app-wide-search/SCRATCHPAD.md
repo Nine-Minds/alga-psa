@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — F134 reconciliation skips unregistered types.** Normal reconciliation already iterates `allIndexers()`, so orphaned rows with unregistered object types are never selected for source loading. Tightened the targeted `type` path as well: `resolveReconcileIndexers` now logs and returns an empty list when `getIndexer(type)` is missing instead of throwing. This lets synthetic/old EE object types remain untouched in CE builds. Validation: `git diff --check`; `npm -w server run typecheck`.
+
 - **2026-05-13 — F133 registry-driven search filters/groups.** `/msp/search` now reads `registeredObjectTypes()` on the server page and passes the filtered registered CE/EE object types into `SearchPageClient`. The client renders exactly those registered types for filter chips and grouped result sections, while retaining i18n keys (`search.filters.*` / `search.groups.*`) and falling back to a humanized `object_type` when an EE type lacks CE locale entries. Invalid or unregistered `type=` params are ignored before calling `searchAppAction`. Validation: `git diff --check`; `npm -w server run typecheck`.
 
 - **2026-05-13 — F132 registered-type orphan safety.** No code change was needed: `searchAppAction` and `searchAppTypeaheadAction` call `resolveAllowedTypes`, which intersects any requested types with `registeredObjectTypes()`, and `runSearchQuery` always applies `s.object_type = ANY(?::text[])` in SQL. That means CE builds cannot return stale EE-only rows such as `ee_chat_history` because there is no registered indexer for that type. Validation: inspected `server/src/lib/actions/searchActions.ts` and `server/src/lib/search/query.ts`; `npm -w server run typecheck` was already clean after F131.

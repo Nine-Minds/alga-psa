@@ -46,7 +46,10 @@ function resolveReconcileIndexers(data: SearchReconcileJobData): EntityIndexer[]
 
   const indexer = getIndexer(data.type);
   if (!indexer) {
-    throw new Error(`Unknown search object_type "${data.type}"`);
+    logger.info('[SearchReconcileJob] Skipping unregistered search object_type', {
+      objectType: data.type,
+    });
+    return [];
   }
 
   return [indexer];
