@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -136,5 +138,11 @@ describe('search actions', () => {
     expect(result.groups.client).toBe(1);
     expect(result.groups.ticket).toBe(2);
     expect(result.groups.document).toBe(0);
+  });
+
+  it('T116 exports searchAppAction through withAuth', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/lib/actions/searchActions.ts'), 'utf8');
+
+    expect(source).toContain('export const searchAppAction = withAuth(async (');
   });
 });
