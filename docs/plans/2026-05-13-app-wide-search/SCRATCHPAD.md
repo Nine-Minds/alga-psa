@@ -273,6 +273,7 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
 
 - **2026-05-13 — F001 complete.** Added migration file `server/migrations/20260513120000_create_app_search_index.cjs`. The file already includes the planned table/index/down-migration body because those pieces are inseparable from a useful migration skeleton. Validation: `node --check server/migrations/20260513120000_create_app_search_index.cjs`.
 - **2026-05-13 — F002 complete.** Migration enables fuzzy matching support with `CREATE EXTENSION IF NOT EXISTS pg_trgm`. Validation: `rg "CREATE EXTENSION IF NOT EXISTS pg_trgm" server/migrations/20260513120000_create_app_search_index.cjs`.
+- **2026-05-13 — F003 complete.** Migration creates `app_search_index` with PRD §9.1 columns, UUID/text ACL hint arrays, `tsvector` search column, timestamps, and primary key `(tenant, object_type, object_id)`. Validation: `node --check ...` plus targeted `rg` for table, PK, ACL, and search-vector columns.
 
 ---
 
