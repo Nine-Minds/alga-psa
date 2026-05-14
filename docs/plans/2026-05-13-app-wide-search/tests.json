@@ -101,7 +101,7 @@
   { "id": "T090", "featureIds": ["F084"], "description": "parseQuery accepts and normalizes whitespace and casing", "implemented": true },
   { "id": "T091", "featureIds": ["F085"], "description": "FTS branch returns matches via `search_vector @@ websearch_to_tsquery(...)`", "implemented": true },
   { "id": "T092", "featureIds": ["F085"], "description": "FTS results ordered by `ts_rank_cd` desc", "implemented": true },
-  { "id": "T093", "featureIds": ["F086"], "description": "pg_trgm fallback returns results when FTS finds nothing but title is a similar string (`exhcange` → `Exchange`)", "implemented": false },
+  { "id": "T093", "featureIds": ["F086"], "description": "pg_trgm fallback returns results when FTS finds nothing but title is a similar string (`exhcange` → `Exchange`)", "implemented": true },
   { "id": "T094", "featureIds": ["F086"], "description": "pg_trgm similarity is included in the composite score when present", "implemented": false },
   { "id": "T095", "featureIds": ["F087"], "description": "Query `TIC-1023` pins the matching ticket as result #1 via metadata identifier match", "implemented": false },
   { "id": "T096", "featureIds": ["F087"], "description": "Asset-tag style query (e.g., `LAP-0042`) pins the matching asset", "implemented": false },
