@@ -1402,6 +1402,8 @@ npm run search:backfill
 
 - **2026-05-13 — T142 sidebar Enter submits to results.** Added UI contract coverage that Enter prevents default, calls `navigateToActiveOption`, and the no-active-row path navigates to `seeAllUrl` (`/msp/search?q=...`). Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T143 sidebar Enter opens active row.** Added UI contract coverage that the active suggestion path in `navigateToActiveOption` calls `window.location.assign(visibleResults[activeIndex].url)` before falling back to the full-results URL. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

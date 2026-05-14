@@ -219,4 +219,16 @@ describe('app-wide search UI contracts', () => {
     expect(enterBlock).toContain('event.preventDefault()');
     expect(enterBlock).toContain('navigateToActiveOption()');
   });
+
+  it('T143 navigates to the active row URL when Enter is pressed on a sidebar suggestion', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/search/SearchPalette.tsx'), 'utf8');
+    const navigateBlock = source.slice(
+      source.indexOf('const navigateToActiveOption = () =>'),
+      source.indexOf('const handleInputKeyDown ='),
+    );
+
+    expect(navigateBlock).toContain('activeIndex >= 0 && activeIndex < visibleResults.length');
+    expect(navigateBlock).toContain('window.location.assign(visibleResults[activeIndex].url)');
+    expect(navigateBlock).toContain('return;');
+  });
 });
