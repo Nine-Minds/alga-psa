@@ -397,6 +397,10 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - On `TICKET_UPDATED`, after the ticket document is upserted, the subscriber selects all comment IDs for the same `(tenant, ticket_id)` and re-upserts each `ticket_comment` document.
   - Rationale: ticket-comment search rows denormalize the parent ticket title, so ticket title edits must refresh existing comment rows even when comment bodies did not change.
 
+- **F069 — Invoice child cascade.**
+  - On `INVOICE_UPDATED`, after the invoice document is upserted, the subscriber re-upserts invoice item and invoice annotation rows for the same `(tenant, invoice_id)`.
+  - Rationale: item/annotation rows denormalize invoice number and invoice client ACL hints from their parent invoice.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

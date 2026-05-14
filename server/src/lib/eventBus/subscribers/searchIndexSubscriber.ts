@@ -114,6 +114,52 @@ async function reindexTicketComments(knex: Knex, tenant: string, ticketId: strin
   return rows.length;
 }
 
+async function reindexInvoiceChildren(knex: Knex, tenant: string, invoiceId: string): Promise<{
+  items: number;
+  annotations: number;
+}> {
+  const itemIndexer = getIndexer('invoice_item');
+  const annotationIndexer = getIndexer('invoice_annotation');
+  let items = 0;
+  let annotations = 0;
+
+  if (itemIndexer) {
+    const rows = await knex<{ item_id: string }>('invoice_items')
+      .select('item_id')
+      .where({ tenant, invoice_id: invoiceId })
+      .orderBy('item_id', 'asc');
+
+    for (const row of rows) {
+      const doc = await itemIndexer.loadOne(knex, tenant, row.item_id);
+      if (doc) {
+        await upsertSearchDoc(knex, doc);
+      }
+    }
+    items = rows.length;
+  } else {
+    logger.warn('[SearchIndexSubscriber] Invoice item indexer is not registered');
+  }
+
+  if (annotationIndexer) {
+    const rows = await knex<{ annotation_id: string }>('invoice_annotations')
+      .select('annotation_id')
+      .where({ tenant, invoice_id: invoiceId })
+      .orderBy('annotation_id', 'asc');
+
+    for (const row of rows) {
+      const doc = await annotationIndexer.loadOne(knex, tenant, row.annotation_id);
+      if (doc) {
+        await upsertSearchDoc(knex, doc);
+      }
+    }
+    annotations = rows.length;
+  } else {
+    logger.warn('[SearchIndexSubscriber] Invoice annotation indexer is not registered');
+  }
+
+  return { items, annotations };
+}
+
 export async function registerSearchIndexSubscriber(): Promise<void> {
   if (isRegistered) {
     return;
@@ -244,6 +290,16 @@ async function handleSearchIndexEvent(event: Event): Promise<void> {
         eventId: event.id,
         ticketId: objectId,
         count,
+      });
+    }
+
+    if (event.eventType === 'INVOICE_UPDATED' && indexer.objectType === 'invoice') {
+      const counts = await reindexInvoiceChildren(knex, tenant, objectId);
+      logger.debug('[SearchIndexSubscriber] Cascaded invoice child re-index', {
+        eventType: event.eventType,
+        eventId: event.id,
+        invoiceId: objectId,
+        ...counts,
       });
     }
   }
