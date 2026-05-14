@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { clientIndexer } from '../../lib/search/indexers/client';
 import { contactIndexer } from '../../lib/search/indexers/contact';
 import { projectPhaseIndexer } from '../../lib/search/indexers/project_phase';
+import { projectTaskCommentIndexer } from '../../lib/search/indexers/project_task_comment';
 import { projectTaskIndexer } from '../../lib/search/indexers/project_task';
 import { projectIndexer } from '../../lib/search/indexers/project';
 import { ticketIndexer } from '../../lib/search/indexers/ticket';
@@ -340,6 +341,43 @@ describe('search entity indexers', () => {
       parentType: 'project',
       parentId: 'project-1',
       subtitle: 'Exchange rollout',
+      acl: {
+        requiredPermission: 'project:read',
+        clientScopeId: 'client-1',
+      },
+    });
+  });
+
+  it('T036 project-task-comment indexer prefers markdown_content over BlockNote note', async () => {
+    const { knex } = createFirstRowKnex({
+      task_comment_id: 'task-comment-1',
+      task_id: 'task-1',
+      note: JSON.stringify([
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'BlockNote fallback text' }],
+        },
+      ]),
+      markdown_content: 'Markdown content wins',
+      task_name: 'Inventory mailboxes',
+      project_id: 'project-1',
+      project_name: 'Exchange rollout',
+      client_id: 'client-1',
+      edited_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await projectTaskCommentIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'task-comment-1',
+    );
+
+    expect(doc).toMatchObject({
+      objectType: 'project_task_comment',
+      objectId: 'task-comment-1',
+      parentType: 'project_task',
+      parentId: 'task-1',
+      body: 'Markdown content wins',
       acl: {
         requiredPermission: 'project:read',
         clientScopeId: 'client-1',
