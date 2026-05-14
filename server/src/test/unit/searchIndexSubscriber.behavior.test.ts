@@ -87,4 +87,26 @@ describe('search index subscriber event handling', () => {
     expect(mocks.upsertSearchDoc).not.toHaveBeenCalled();
     expect(loadOne).not.toHaveBeenCalled();
   });
+
+  it('T072 acknowledges events without DB writes when SEARCH_INDEX_LIVE=false', async () => {
+    process.env.SEARCH_INDEX_LIVE = 'false';
+    const loadOne = vi.spyOn(clientIndexer, 'loadOne');
+
+    const event: Event = {
+      id: 'event-3',
+      eventType: 'CLIENT_CREATED',
+      timestamp: '2026-05-13T12:00:00.000Z',
+      payload: {
+        tenant: 'tenant-1',
+        client_id: 'client-1',
+      },
+    } as Event;
+
+    await handleSearchIndexEventForTest(event);
+
+    expect(mocks.createTenantKnex).not.toHaveBeenCalled();
+    expect(mocks.upsertSearchDoc).not.toHaveBeenCalled();
+    expect(mocks.deleteSearchDoc).not.toHaveBeenCalled();
+    expect(loadOne).not.toHaveBeenCalled();
+  });
 });

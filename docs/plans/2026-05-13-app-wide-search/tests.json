@@ -76,7 +76,7 @@
   { "id": "T069", "featureIds": ["F063", "F064"], "description": "Subscriber starts subscribed to every `sourceEvents` set returned by registered indexers (union of events)", "implemented": true },
   { "id": "T070", "featureIds": ["F065"], "description": "A `CLIENT_CREATED` event causes an upsert into `app_search_index` with object_type='client'", "implemented": true },
   { "id": "T071", "featureIds": ["F066"], "description": "A `CLIENT_DELETED` event causes the index row to be deleted", "implemented": true },
-  { "id": "T072", "featureIds": ["F067"], "description": "With `SEARCH_INDEX_LIVE=false`, events are received but `app_search_index` is not written to", "implemented": false },
+  { "id": "T072", "featureIds": ["F067"], "description": "With `SEARCH_INDEX_LIVE=false`, events are received but `app_search_index` is not written to", "implemented": true },
   { "id": "T073", "featureIds": ["F067"], "description": "Flipping `SEARCH_INDEX_LIVE=true` without restart picks up live writes (or is documented to require a restart)", "implemented": false },
   { "id": "T074", "featureIds": ["F065"], "description": "Subscriber handles a missing source row (race: row deleted before loadOne resolves) by deleting the index row instead of erroring", "implemented": false },
 
