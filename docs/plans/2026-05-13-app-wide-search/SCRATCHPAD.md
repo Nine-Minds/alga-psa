@@ -453,6 +453,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - The handler is a shell in this commit; F080-F082 add watermark re-indexing, missing-row inserts, and stale-index deletion.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F080 — Reconcile rows updated after index watermark.**
+  - `searchReconcileHandler` now resolves tenants and indexers, computes `max(source_updated_at)` from `app_search_index` per `(tenant, object_type)`, scans source rows through `indexer.loadBatch()`, and upserts any `SearchDoc` whose `sourceUpdatedAt` is newer than the watermark.
+  - The implementation intentionally uses the indexer contract instead of per-table SQL so every entity keeps its own source joins, normalization, URL, and ACL logic.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
