@@ -29,7 +29,7 @@
   { "id": "T025", "featureIds": ["F020"], "description": "`deleteSearchDoc` removes the row and is a no-op when none exists", "implemented": true },
   { "id": "T026", "featureIds": ["F019"], "description": "Concurrent `upsertSearchDoc` calls for the same (tenant, type, id) end up with one row (last write wins)", "implemented": true },
 
-  { "id": "T027", "featureIds": ["F022"], "description": "Client indexer loadOne returns a SearchDoc with title=client_name and required_permission='client:read'", "implemented": false },
+  { "id": "T027", "featureIds": ["F022"], "description": "Client indexer loadOne returns a SearchDoc with title=client_name and required_permission='client:read'", "implemented": true },
   { "id": "T028", "featureIds": ["F022"], "description": "Backfilling client indexer for a seeded tenant produces an index row for every client in that tenant", "implemented": false },
   { "id": "T029", "featureIds": ["F023"], "description": "Contact indexer subtitle includes email and phone", "implemented": false },
   { "id": "T030", "featureIds": ["F024"], "description": "User indexer excludes users with `user_type='client'`", "implemented": false },
