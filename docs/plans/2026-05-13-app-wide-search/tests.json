@@ -198,7 +198,7 @@
   { "id": "T176", "featureIds": ["F118", "F119"], "description": "Keyboard-only flow can: open palette, type, navigate, choose, open results page, paginate, filter, exit — without using mouse (Acceptance #17)", "implemented": true },
   { "id": "T177", "featureIds": ["F110"], "description": "Deep-linked URL `/msp/search?q=...&type=...&cursor=...&sort=...` reproduces the same results when opened cold (Acceptance #18)", "implemented": true },
 
-  { "id": "T178", "featureIds": ["F003", "F004"], "description": "Cross-shard query: searching across a tenant with 10M index rows uses GIN index (EXPLAIN ANALYZE shows no seq scan)", "implemented": false },
+  { "id": "T178", "featureIds": ["F003", "F004"], "description": "Cross-shard query: searching across a tenant with 10M index rows uses GIN index (EXPLAIN ANALYZE shows no seq scan)", "implemented": true },
   { "id": "T179", "featureIds": ["F019"], "description": "upsertSearchDoc co-locates writes by tenant under Citus (no inter-shard write fanout for a single doc)", "implemented": false },
   { "id": "T180", "featureIds": ["F100"], "description": "Search query SQL always includes `tenant = ?` predicate (verified by SQL log capture)", "implemented": false },
 

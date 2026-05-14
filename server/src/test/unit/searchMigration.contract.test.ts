@@ -190,4 +190,19 @@ describe('app_search_index migration contract', () => {
     expect(dropTableIfExists).toHaveBeenCalledWith('app_search_index');
     expect(rawCalls.some((sql) => sql.includes('CREATE TABLE app_search_index'))).toBe(true);
   });
+
+  it('T178 keeps cross-shard search co-located and GIN-indexable', () => {
+    const migration = readSearchIndexMigration();
+    const searchQuery = readFileSync(searchQueryPath, 'utf8');
+
+    expect(migration).toContain("SELECT create_distributed_table('app_search_index', 'tenant')");
+    expect(migration).toContain('exports.config = { transaction: false }');
+    expect(migration).toMatch(/ON app_search_index USING gin \(search_vector\)/);
+    expect(migration).toMatch(/ON app_search_index USING gin \(title gin_trgm_ops\)/);
+    expect(migration).toMatch(/ON app_search_index USING gin \(subtitle gin_trgm_ops\)/);
+    expect(searchQuery).toContain('WHERE s.tenant = ?::uuid');
+    expect(searchQuery).toContain('s.search_vector @@ q.tsq');
+    expect(searchQuery).toContain('s.title % q.raw');
+    expect(searchQuery).toContain("coalesce(s.subtitle, '') % q.raw");
+  });
 });
