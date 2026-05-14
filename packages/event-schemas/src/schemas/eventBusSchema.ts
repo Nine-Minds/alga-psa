@@ -333,6 +333,12 @@ export const EVENT_TYPES = [
   'SERVICE_CATALOG_CREATED',
   'SERVICE_CATALOG_UPDATED',
   'SERVICE_CATALOG_DELETED',
+  'SERVICE_REQUEST_SUBMISSION_CREATED',
+  'SERVICE_REQUEST_SUBMISSION_UPDATED',
+  'SERVICE_REQUEST_SUBMISSION_DELETED',
+  'SERVICE_REQUEST_DEFINITION_CREATED',
+  'SERVICE_REQUEST_DEFINITION_UPDATED',
+  'SERVICE_REQUEST_DEFINITION_DELETED',
 
   // Email providers + inbound email (already present)
   'INBOUND_EMAIL_RECEIVED',
@@ -624,6 +630,24 @@ export const ServiceCatalogEventPayloadSchema = BasePayloadSchema.extend({
   serviceId: z.string().uuid(),
   userId: z.string().uuid().optional(),
   itemKind: z.enum(['service', 'product']).optional(),
+  changedFields: z.array(z.string()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const ServiceRequestSubmissionEventPayloadSchema = BasePayloadSchema.extend({
+  submissionId: z.string().uuid(),
+  definitionId: z.string().uuid().optional(),
+  clientId: z.string().uuid().optional(),
+  requesterUserId: z.string().uuid().optional(),
+  executionStatus: z.string().optional(),
+  changedFields: z.array(z.string()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
+export const ServiceRequestDefinitionEventPayloadSchema = BasePayloadSchema.extend({
+  definitionId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  lifecycleState: z.string().optional(),
   changedFields: z.array(z.string()).optional(),
   timestamp: z.string().datetime().optional(),
 });
@@ -1092,6 +1116,12 @@ export const EventPayloadSchemas = {
   SERVICE_CATALOG_CREATED: ServiceCatalogEventPayloadSchema,
   SERVICE_CATALOG_UPDATED: ServiceCatalogEventPayloadSchema,
   SERVICE_CATALOG_DELETED: ServiceCatalogEventPayloadSchema,
+  SERVICE_REQUEST_SUBMISSION_CREATED: ServiceRequestSubmissionEventPayloadSchema,
+  SERVICE_REQUEST_SUBMISSION_UPDATED: ServiceRequestSubmissionEventPayloadSchema,
+  SERVICE_REQUEST_SUBMISSION_DELETED: ServiceRequestSubmissionEventPayloadSchema,
+  SERVICE_REQUEST_DEFINITION_CREATED: ServiceRequestDefinitionEventPayloadSchema,
+  SERVICE_REQUEST_DEFINITION_UPDATED: ServiceRequestDefinitionEventPayloadSchema,
+  SERVICE_REQUEST_DEFINITION_DELETED: ServiceRequestDefinitionEventPayloadSchema,
 
   // Email providers + inbound email (already present)
   INBOUND_EMAIL_RECEIVED: InboundEmailReceivedPayloadSchema,

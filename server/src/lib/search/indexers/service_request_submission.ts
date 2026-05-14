@@ -35,7 +35,11 @@ function toSearchDoc(tenant: string, row: ServiceRequestSubmissionSearchRow): Se
 
 export const serviceRequestSubmissionIndexer: EntityIndexer = {
   objectType: 'service_request_submission',
-  sourceEvents: [],
+  sourceEvents: [
+    'SERVICE_REQUEST_SUBMISSION_CREATED',
+    'SERVICE_REQUEST_SUBMISSION_UPDATED',
+    'SERVICE_REQUEST_SUBMISSION_DELETED',
+  ],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await knex<ServiceRequestSubmissionSearchRow>('service_request_submissions')

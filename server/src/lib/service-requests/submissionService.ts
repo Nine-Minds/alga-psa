@@ -4,6 +4,7 @@ import {
   getServiceRequestExecutionProvider,
   getServiceRequestFormBehaviorProvider,
 } from './providers/registry';
+import { publishServiceRequestSubmissionSearchEvent } from './searchEvents';
 
 export interface ServiceRequestSubmissionAttachmentInput {
   fieldKey: string;
@@ -191,6 +192,19 @@ export async function submitPortalServiceRequest(
     return submissionId;
   });
 
+  await publishServiceRequestSubmissionSearchEvent(
+    'SERVICE_REQUEST_SUBMISSION_CREATED',
+    tenant,
+    submissionId,
+    {
+      definitionId: definitionDetail.definitionId,
+      clientId,
+      requesterUserId,
+      executionStatus: 'pending',
+      changedFields: ['request_name', 'submitted_payload', 'execution_status'],
+    },
+  );
+
   const executionProvider = getServiceRequestExecutionProvider(definitionDetail.executionProvider);
   if (!executionProvider) {
     const errorSummary = `Execution provider "${definitionDetail.executionProvider}" is not registered.`;
@@ -201,6 +215,18 @@ export async function submitPortalServiceRequest(
         execution_error_summary: errorSummary,
         updated_at: knex.fn.now(),
       });
+    await publishServiceRequestSubmissionSearchEvent(
+      'SERVICE_REQUEST_SUBMISSION_UPDATED',
+      tenant,
+      submissionId,
+      {
+        definitionId: definitionDetail.definitionId,
+        clientId,
+        requesterUserId,
+        executionStatus: 'failed',
+        changedFields: ['execution_status', 'execution_error_summary'],
+      },
+    );
     return {
       submissionId,
       executionStatus: 'failed',
@@ -232,6 +258,24 @@ export async function submitPortalServiceRequest(
           updated_at: knex.fn.now(),
         });
 
+      await publishServiceRequestSubmissionSearchEvent(
+        'SERVICE_REQUEST_SUBMISSION_UPDATED',
+        tenant,
+        submissionId,
+        {
+          definitionId: definitionDetail.definitionId,
+          clientId,
+          requesterUserId,
+          executionStatus: 'succeeded',
+          changedFields: [
+            'execution_status',
+            'created_ticket_id',
+            'workflow_execution_id',
+            'execution_error_summary',
+          ],
+        },
+      );
+
       return {
         submissionId,
         executionStatus: 'succeeded',
@@ -247,6 +291,18 @@ export async function submitPortalServiceRequest(
         execution_error_summary: executionResult.errorSummary ?? 'Execution failed.',
         updated_at: knex.fn.now(),
       });
+    await publishServiceRequestSubmissionSearchEvent(
+      'SERVICE_REQUEST_SUBMISSION_UPDATED',
+      tenant,
+      submissionId,
+      {
+        definitionId: definitionDetail.definitionId,
+        clientId,
+        requesterUserId,
+        executionStatus: 'failed',
+        changedFields: ['execution_status', 'execution_error_summary'],
+      },
+    );
     return {
       submissionId,
       executionStatus: 'failed',
@@ -262,6 +318,18 @@ export async function submitPortalServiceRequest(
         execution_error_summary: errorSummary,
         updated_at: knex.fn.now(),
       });
+    await publishServiceRequestSubmissionSearchEvent(
+      'SERVICE_REQUEST_SUBMISSION_UPDATED',
+      tenant,
+      submissionId,
+      {
+        definitionId: definitionDetail.definitionId,
+        clientId,
+        requesterUserId,
+        executionStatus: 'failed',
+        changedFields: ['execution_status', 'execution_error_summary'],
+      },
+    );
     return {
       submissionId,
       executionStatus: 'failed',

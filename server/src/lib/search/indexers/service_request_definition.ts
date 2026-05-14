@@ -32,7 +32,11 @@ function toSearchDoc(tenant: string, row: ServiceRequestDefinitionSearchRow): Se
 
 export const serviceRequestDefinitionIndexer: EntityIndexer = {
   objectType: 'service_request_definition',
-  sourceEvents: [],
+  sourceEvents: [
+    'SERVICE_REQUEST_DEFINITION_CREATED',
+    'SERVICE_REQUEST_DEFINITION_UPDATED',
+    'SERVICE_REQUEST_DEFINITION_DELETED',
+  ],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await knex<ServiceRequestDefinitionSearchRow>('service_request_definitions')

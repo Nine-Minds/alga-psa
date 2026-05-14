@@ -736,6 +736,8 @@ npm run search:backfill
 
 - **2026-05-13 — F057 service catalog events.** Added `SERVICE_CATALOG_CREATED/UPDATED/DELETED` schemas and registered them on `serviceCatalogIndexer.sourceEvents`. Published the events from both `ServiceCatalogService` and `ProductCatalogService`, because services and products share the same `service_catalog` table and the v1 indexer indexes every catalog row. Validation: `npm -w @alga-psa/event-schemas run typecheck` passes. A raw single-file `npx tsc` against the server service files is still blocked by existing workspace module-resolution/alias settings (`@/interfaces/*`, `@alga-psa/core/*`, `@alga-psa/event-bus/publishers`) rather than by the changed lines.
 
+- **2026-05-13 — F058 service-request events.** Added `SERVICE_REQUEST_SUBMISSION_CREATED/UPDATED/DELETED` and `SERVICE_REQUEST_DEFINITION_CREATED/UPDATED/DELETED` schemas, registered them on the submission/definition indexers, and added `server/src/lib/service-requests/searchEvents.ts` as the shared publish helper. Submission create and execution-status transitions now publish events; definition creation, duplication/template creation, draft saves, publish, archive, and unarchive publish definition events. There is no current hard-delete path for service-request definitions/submissions, so the `*_DELETED` event types are reserved for the future subscriber delete branch. Validation: `npm -w @alga-psa/event-schemas run typecheck`; `git diff --check`.
+
 ---
 
 ## Implementation order suggestion (not prescriptive)
