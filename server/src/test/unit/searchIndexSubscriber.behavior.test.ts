@@ -17,6 +17,8 @@ vi.mock('../../lib/search/upsert', () => ({
 }));
 
 import { clientIndexer } from '../../lib/search/indexers/client';
+import { ticketIndexer } from '../../lib/search/indexers/ticket';
+import { ticketCommentIndexer } from '../../lib/search/indexers/ticket_comment';
 import { handleSearchIndexEventForTest } from '../../lib/eventBus/subscribers/searchIndexSubscriber';
 import type { SearchDoc } from '../../lib/search/types';
 
@@ -167,5 +169,74 @@ describe('search index subscriber event handling', () => {
     expect(clientIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'client-1');
     expect(mocks.deleteSearchDoc).toHaveBeenCalledWith(knex, 'tenant-1', 'client', 'client-1');
     expect(mocks.upsertSearchDoc).not.toHaveBeenCalled();
+  });
+
+  it('T075 cascades TICKET_UPDATED to all ticket comments', async () => {
+    const ticketDoc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'ticket',
+      objectId: 'ticket-1',
+      title: 'Renamed ticket',
+      url: '/msp/tickets/ticket-1',
+      metadata: { identifier: 'TIC-1023' },
+      acl: { requiredPermission: 'ticket:read' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    };
+    const commentDoc1: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'ticket_comment',
+      objectId: 'comment-1',
+      parentType: 'ticket',
+      parentId: 'ticket-1',
+      title: 'Renamed ticket',
+      url: '/msp/tickets/ticket-1#comment-comment-1',
+      acl: { requiredPermission: 'ticket:read' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    };
+    const commentDoc2: SearchDoc = {
+      ...commentDoc1,
+      objectId: 'comment-2',
+      url: '/msp/tickets/ticket-1#comment-comment-2',
+    };
+    const commentRows = [{ comment_id: 'comment-1' }, { comment_id: 'comment-2' }];
+    const commentQuery = {
+      select: vi.fn(() => commentQuery),
+      where: vi.fn(() => commentQuery),
+      andWhere: vi.fn(() => commentQuery),
+      orderBy: vi.fn(() => commentQuery),
+      then: (resolve: (rows: typeof commentRows) => unknown, reject: (reason?: unknown) => unknown) =>
+        Promise.resolve(commentRows).then(resolve, reject),
+    };
+    const knex = vi.fn((table: string) => {
+      expect(table).toBe('comments');
+      return commentQuery;
+    });
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+    vi.spyOn(ticketIndexer, 'loadOne').mockResolvedValue(ticketDoc);
+    vi.spyOn(ticketCommentIndexer, 'loadOne')
+      .mockResolvedValueOnce(commentDoc1)
+      .mockResolvedValueOnce(commentDoc2);
+
+    const event: Event = {
+      id: 'event-6',
+      eventType: 'TICKET_UPDATED',
+      timestamp: '2026-05-13T12:00:00.000Z',
+      payload: {
+        tenant: 'tenant-1',
+        ticket_id: 'ticket-1',
+      },
+    } as Event;
+
+    await handleSearchIndexEventForTest(event);
+
+    expect(ticketIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'ticket-1');
+    expect(commentQuery.where).toHaveBeenCalledWith('tenant', 'tenant-1');
+    expect(commentQuery.andWhere).toHaveBeenCalledWith('ticket_id', 'ticket-1');
+    expect(ticketCommentIndexer.loadOne).toHaveBeenNthCalledWith(1, knex, 'tenant-1', 'comment-1');
+    expect(ticketCommentIndexer.loadOne).toHaveBeenNthCalledWith(2, knex, 'tenant-1', 'comment-2');
+    expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(1, knex, ticketDoc);
+    expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(2, knex, commentDoc1);
+    expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(3, knex, commentDoc2);
   });
 });
