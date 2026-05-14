@@ -125,7 +125,7 @@
 
   { "id": "T112", "featureIds": ["F097", "F098"], "description": "verifyResultVisibility drops rows that the SQL filter let through but the record-level helper rejects", "implemented": true },
   { "id": "T113", "featureIds": ["F099"], "description": "`search.acl_drift` telemetry counter increments when a discrepancy occurs", "implemented": true },
-  { "id": "T114", "featureIds": ["F097"], "description": "verifyResultVisibility is a no-op when SQL filter and record-level checks agree (zero drift)", "implemented": false },
+  { "id": "T114", "featureIds": ["F097"], "description": "verifyResultVisibility is a no-op when SQL filter and record-level checks agree (zero drift)", "implemented": true },
 
   { "id": "T115", "featureIds": ["F100"], "description": "searchAppAction returns SearchAppResult with grouped counts per object_type", "implemented": false },
   { "id": "T116", "featureIds": ["F100"], "description": "searchAppAction throws when called unauthenticated (via withAuth)", "implemented": false },

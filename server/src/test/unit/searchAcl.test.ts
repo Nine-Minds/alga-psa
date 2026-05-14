@@ -151,4 +151,40 @@ describe('search ACL SQL predicate', () => {
       (globalThis as { Sentry?: unknown }).Sentry = previousSentry;
     }
   });
+
+  it('T114 keeps rows and emits no drift when record-level visibility agrees', async () => {
+    const captureMessage = vi.fn();
+    const previousSentry = (globalThis as { Sentry?: unknown }).Sentry;
+    (globalThis as { Sentry?: unknown }).Sentry = { captureMessage };
+    const ticketRow = { ticket_id: 'ticket-1' };
+    const query = {
+      select: vi.fn(() => query),
+      where: vi.fn(() => query),
+      first: vi.fn(() => query),
+      andWhere: vi.fn(() => query),
+      then: (
+        resolve: (row: typeof ticketRow) => unknown,
+        reject: (reason?: unknown) => unknown,
+      ) => Promise.resolve(ticketRow).then(resolve, reject),
+    };
+    const knex = vi.fn(() => query);
+    const rows = [{ type: 'ticket' as const, id: 'ticket-1' }];
+
+    try {
+      await expect(verifyResultVisibility(
+        knex as never,
+        {
+          userId: '00000000-0000-0000-0000-000000000001',
+          tenant: 'tenant-1',
+          permissions: ['ticket:read'],
+          isInternal: true,
+        },
+        rows,
+      )).resolves.toEqual(rows);
+
+      expect(captureMessage).not.toHaveBeenCalled();
+    } finally {
+      (globalThis as { Sentry?: unknown }).Sentry = previousSentry;
+    }
+  });
 });
