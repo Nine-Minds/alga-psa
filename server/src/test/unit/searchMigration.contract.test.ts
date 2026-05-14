@@ -9,15 +9,21 @@ const migrationPath = path.resolve(
   '../../../migrations/20260513120000_create_app_search_index.cjs',
 );
 
-function appSearchIndexColumnDefinitions(): Record<string, string> {
+function appSearchIndexCreateTableBody(): string {
   const migration = readFileSync(migrationPath, 'utf8');
   const tableMatch = migration.match(/CREATE TABLE app_search_index \(([\s\S]*?)\n\s*\)\s*`/);
   if (!tableMatch) {
     throw new Error('Could not find app_search_index CREATE TABLE statement');
   }
 
+  return tableMatch[1];
+}
+
+function appSearchIndexColumnDefinitions(): Record<string, string> {
+  const tableBody = appSearchIndexCreateTableBody();
+
   return Object.fromEntries(
-    tableMatch[1]
+    tableBody
       .split('\n')
       .map((line) => line.trim().replace(/,$/, '').replace(/\s+/g, ' '))
       .filter((line) => line.length > 0 && !line.startsWith('PRIMARY KEY'))
@@ -56,5 +62,13 @@ describe('app_search_index migration contract', () => {
 
     expect(Object.keys(columns)).toEqual(Object.keys(expectedColumns));
     expect(columns).toEqual(expectedColumns);
+  });
+
+  it('T002 keeps tenant non-null and uses the tenant/type/id composite primary key', () => {
+    const tableBody = appSearchIndexCreateTableBody().replace(/\s+/g, ' ');
+    const columns = appSearchIndexColumnDefinitions();
+
+    expect(columns.tenant).toBe('tenant uuid NOT NULL');
+    expect(tableBody).toContain('PRIMARY KEY (tenant, object_type, object_id)');
   });
 });

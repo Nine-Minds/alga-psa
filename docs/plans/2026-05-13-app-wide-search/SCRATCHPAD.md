@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T002 search index primary key contract.** Extended `searchMigration.contract.test.ts` to assert `tenant uuid NOT NULL` explicitly and the `PRIMARY KEY (tenant, object_type, object_id)` clause in the migration's `CREATE TABLE` body. Validation: `npx vitest run src/test/unit/searchMigration.contract.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T001 migration table column contract.** Added `server/src/test/unit/searchMigration.contract.test.ts`, which parses `server/migrations/20260513120000_create_app_search_index.cjs` and asserts the exact `app_search_index` column names and SQL definitions from PRD §9.1. Validation: `npx vitest run src/test/unit/searchMigration.contract.test.ts --coverage=false` from `server/` passed. Note: an initial `npm -w server run test:unit -- searchMigration.contract.test.ts` invocation expanded to the whole unit suite because of the package script and was killed after unrelated existing failures; it was not used as the gate.
 
 - **2026-05-13 — F134 reconciliation skips unregistered types.** Normal reconciliation already iterates `allIndexers()`, so orphaned rows with unregistered object types are never selected for source loading. Tightened the targeted `type` path as well: `resolveReconcileIndexers` now logs and returns an empty list when `getIndexer(type)` is missing instead of throwing. This lets synthetic/old EE object types remain untouched in CE builds. Validation: `git diff --check`; `npm -w server run typecheck`.
