@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T012 SearchDoc/AclMetadata compile-time ACL contract.** Extended `searchTypes.exhaustive.test.ts` to build a `SearchDoc` with every `AclMetadata` denormalized hint (`visibleToUserIds`, `visibleToRoles`, `isInternalOnly`, `isPrivate`, `clientScopeId`, `requiredPermission`) and to use `@ts-expect-error` for a `SearchDoc` missing `acl`, so `npm -w server run typecheck` fails if ACL metadata ever becomes optional. Validation: `npx vitest run src/test/unit/searchTypes.exhaustive.test.ts --coverage=false` from `server/` passed; `npm -w server run typecheck` passed.
+
 - **2026-05-13 — T011 SearchObjectType exhaustive switch.** Added `server/src/test/unit/searchTypes.exhaustive.test.ts` with a `SearchObjectType` switch that covers all 27 current object types and assigns the default arm to `never`, so adding a new type forces the switch to be updated at compile time. Validation: `npx vitest run src/test/unit/searchTypes.exhaustive.test.ts --coverage=false` from `server/` passed; `npm -w server run typecheck` passed.
 
 - **2026-05-13 — T010 migration down/up cycle.** Extended `searchMigration.contract.test.ts` to execute `down` against a mocked `knex.schema.dropTableIfExists` and then execute the mocked non-Citus `up` path again, asserting the table drop targets `app_search_index` and the create-table path still runs. Validation: `npx vitest run src/test/unit/searchMigration.contract.test.ts --coverage=false` from `server/` passed.

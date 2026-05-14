@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '../../lib/search/types';
+import {
+  SEARCH_OBJECT_TYPES,
+  type AclMetadata,
+  type SearchDoc,
+  type SearchObjectType,
+} from '../../lib/search/types';
 
 function exhaustiveSearchTypeLabel(type: SearchObjectType): string {
   switch (type) {
@@ -46,5 +51,38 @@ describe('SearchObjectType exhaustiveness', () => {
     expect(SEARCH_OBJECT_TYPES).toHaveLength(27);
     expect(new Set(SEARCH_OBJECT_TYPES)).toHaveProperty('size', 27);
     expect(labels).toEqual([...SEARCH_OBJECT_TYPES]);
+  });
+
+  it('T012 requires SearchDoc ACL metadata and exposes every denormalized ACL hint', () => {
+    const acl = {
+      visibleToUserIds: ['user-1'],
+      visibleToRoles: ['technician'],
+      isInternalOnly: true,
+      isPrivate: true,
+      clientScopeId: 'client-1',
+      requiredPermission: 'ticket:read',
+    } satisfies AclMetadata;
+    const doc = {
+      tenant: 'tenant-1',
+      objectType: 'ticket',
+      objectId: 'ticket-1',
+      title: 'Ticket',
+      url: '/msp/tickets/ticket-1',
+      acl,
+      sourceUpdatedAt: new Date('2026-05-13T00:00:00.000Z'),
+    } satisfies SearchDoc;
+
+    // @ts-expect-error SearchDoc rows must always carry explicit ACL metadata.
+    const missingAclDoc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'ticket',
+      objectId: 'ticket-1',
+      title: 'Ticket',
+      url: '/msp/tickets/ticket-1',
+      sourceUpdatedAt: new Date('2026-05-13T00:00:00.000Z'),
+    };
+
+    expect(doc.acl).toEqual(acl);
+    expect(missingAclDoc).toBeDefined();
   });
 });

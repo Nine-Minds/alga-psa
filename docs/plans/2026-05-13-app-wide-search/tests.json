@@ -11,7 +11,7 @@
   { "id": "T010", "featureIds": ["F008"], "description": "Migration down drops the table; re-running up succeeds afterwards", "implemented": true },
 
   { "id": "T011", "featureIds": ["F009"], "description": "All 27 entity types compile-time exhaustive-check via a switch over `SearchObjectType`", "implemented": true },
-  { "id": "T012", "featureIds": ["F010", "F011"], "description": "SearchDoc / AclMetadata interfaces require ACL fields when the entity has non-trivial ACL (compile-time)", "implemented": false },
+  { "id": "T012", "featureIds": ["F010", "F011"], "description": "SearchDoc / AclMetadata interfaces require ACL fields when the entity has non-trivial ACL (compile-time)", "implemented": true },
 
   { "id": "T013", "featureIds": ["F012"], "description": "`flattenBlockNote` extracts visible text from a real document's BlockNote JSON fixture", "implemented": false },
   { "id": "T014", "featureIds": ["F012"], "description": "`flattenBlockNote` drops image data URI payloads (no `data:image/...` substring in output)", "implemented": false },
