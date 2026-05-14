@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -169,5 +171,29 @@ describe('search reconciliation', () => {
     expect(result).toEqual({ scanned: 2, inserted: 1 });
     expect(mocks.upsertSearchDoc).toHaveBeenCalledTimes(1);
     expect(mocks.upsertSearchDoc).toHaveBeenCalledWith(knex, missingDoc);
+  });
+
+  it('T088 registers and schedules the search reconciliation job daily', () => {
+    const registerAllHandlers = readFileSync(
+      resolve(process.cwd(), 'src/lib/jobs/registerAllHandlers.ts'),
+      'utf8',
+    );
+    const initializeScheduledJobs = readFileSync(
+      resolve(process.cwd(), 'src/lib/jobs/initializeScheduledJobs.ts'),
+      'utf8',
+    );
+    const jobsIndex = readFileSync(resolve(process.cwd(), 'src/lib/jobs/index.ts'), 'utf8');
+    const reconcileHandler = readFileSync(
+      resolve(process.cwd(), 'src/lib/jobs/handlers/searchReconcileHandler.ts'),
+      'utf8',
+    );
+
+    expect(registerAllHandlers).toContain('JobHandlerRegistry.register<SearchReconcileJobData');
+    expect(registerAllHandlers).toContain('name: SEARCH_RECONCILE_JOB_NAME');
+    expect(registerAllHandlers).toContain('await searchReconcileHandler(data)');
+    expect(initializeScheduledJobs).toContain("const cron = '0 6 * * *';");
+    expect(initializeScheduledJobs).toContain('scheduleSearchReconcileJob(tenantId, cron)');
+    expect(reconcileHandler).toContain("SEARCH_RECONCILE_JOB_NAME = 'search:reconcile'");
+    expect(jobsIndex).toContain('scheduleRecurringJob<SearchReconcileJobData>');
   });
 });

@@ -1112,6 +1112,8 @@ npm run search:backfill
 
 - **2026-05-13 — T087 reconciliation missing insert.** Added unit coverage for `insertRowsMissingFromIndex`: source docs are compared against existing `app_search_index.object_id` rows, and only source docs absent from the index are upserted. Validation: `npx vitest run src/test/unit/searchReconcile.test.ts --coverage=false` from `server/` passed.
 
+- **2026-05-13 — T088 reconciliation job registration/schedule.** Added a static contract that the search reconcile handler is registered in `registerAllHandlers`, `scheduleSearchReconcileJob` uses `scheduleRecurringJob<SearchReconcileJobData>`, and scheduled-job startup calls it daily at `0 6 * * *`. Validation: `npx vitest run src/test/unit/searchReconcile.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T060 project-family event contract.** Extended `searchEventPublishing.contract.test.ts` to assert project actions emit project create/update/delete and phase create/update/delete events, task actions emit task create/update/delete events, and task-comment actions emit task-comment create/update/delete events. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T059 user CRUD/role event contract.** Extended `searchEventPublishing.contract.test.ts` to assert `packages/users/src/actions/user-actions/userActions.ts` emits `USER_CREATED`, `USER_UPDATED`, `USER_DELETED`, and `USER_ROLES_UPDATED` with tenant context and stable idempotency keys, covering user role-change ACL reindex triggers. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
