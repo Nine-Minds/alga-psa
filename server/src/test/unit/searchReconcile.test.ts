@@ -196,4 +196,46 @@ describe('search reconciliation', () => {
     expect(reconcileHandler).toContain("SEARCH_RECONCILE_JOB_NAME = 'search:reconcile'");
     expect(jobsIndex).toContain('scheduleRecurringJob<SearchReconcileJobData>');
   });
+
+  it('T173 restores a manually deleted index row during reconciliation', async () => {
+    const sourceDoc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'client',
+      objectId: 'client-deleted-from-index',
+      title: 'Restored client',
+      url: '/msp/clients/client-deleted-from-index',
+      acl: { requiredPermission: 'client:read' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    };
+    const query = {
+      select: vi.fn(() => query),
+      where: vi.fn(() => query),
+      andWhere: vi.fn(() => query),
+      whereIn: vi.fn(() => query),
+      then: (
+        resolve: (rows: Array<{ object_id: string }>) => unknown,
+        reject: (reason?: unknown) => unknown,
+      ) => Promise.resolve([]).then(resolve, reject),
+    };
+    const knex = vi.fn((table: string) => {
+      expect(table).toBe('app_search_index');
+      return query;
+    });
+    const indexer: EntityIndexer = {
+      objectType: 'client',
+      sourceEvents: [],
+      loadOne: vi.fn(),
+      loadBatch: vi.fn(async (_knex, _tenant, cursor) => (
+        cursor === null ? [sourceDoc] : []
+      )),
+    };
+
+    const result = await insertRowsMissingFromIndex(knex as never, 'tenant-1', indexer);
+
+    expect(query.where).toHaveBeenCalledWith('tenant', 'tenant-1');
+    expect(query.andWhere).toHaveBeenCalledWith('object_type', 'client');
+    expect(query.whereIn).toHaveBeenCalledWith('object_id', ['client-deleted-from-index']);
+    expect(result).toEqual({ scanned: 1, inserted: 1 });
+    expect(mocks.upsertSearchDoc).toHaveBeenCalledWith(knex, sourceDoc);
+  });
 });
