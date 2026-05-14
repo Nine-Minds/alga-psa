@@ -1,11 +1,12 @@
 import type { Knex } from 'knex';
 
+import { composeAclHints } from './acl';
 import { buildTsvectorSql } from './sql';
 import type { SearchDoc, SearchObjectType } from './types';
 
 export async function upsertSearchDoc(knex: Knex, doc: SearchDoc): Promise<void> {
   const vector = buildTsvectorSql(doc.title, doc.subtitle, doc.body);
-  const acl = doc.acl;
+  const acl = composeAclHints(doc.acl);
 
   await knex.raw(
     `
@@ -84,10 +85,10 @@ export async function upsertSearchDoc(knex: Knex, doc: SearchDoc): Promise<void>
       doc.body ?? null,
       doc.url,
       JSON.stringify(doc.metadata ?? {}),
-      acl.visibleToUserIds ?? [],
-      acl.visibleToRoles ?? [],
-      acl.isInternalOnly ?? false,
-      acl.isPrivate ?? false,
+      acl.visibleToUserIds,
+      acl.visibleToRoles,
+      acl.isInternalOnly,
+      acl.isPrivate,
       acl.clientScopeId ?? null,
       acl.requiredPermission ?? null,
       ...vector.bindings,
