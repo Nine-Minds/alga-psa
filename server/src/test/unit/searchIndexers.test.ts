@@ -2,17 +2,26 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { clientIndexer } from '../../lib/search/indexers/client';
 import { contactIndexer } from '../../lib/search/indexers/contact';
+import { ticketIndexer } from '../../lib/search/indexers/ticket';
 import { userIndexer } from '../../lib/search/indexers/user';
 
 function createFirstRowKnex(row: unknown) {
+  const joinBuilder = {
+    on: vi.fn().mockReturnThis(),
+    andOn: vi.fn().mockReturnThis(),
+  };
   const queryBuilder = {
+    leftJoin: vi.fn((_table: string, joinCallback: (this: typeof joinBuilder) => void) => {
+      joinCallback.call(joinBuilder);
+      return queryBuilder;
+    }),
     select: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     andWhere: vi.fn().mockReturnThis(),
     first: vi.fn().mockResolvedValue(row),
   };
   const knex = vi.fn().mockReturnValue(queryBuilder);
-  return { knex, queryBuilder };
+  return { knex, queryBuilder, joinBuilder };
 }
 
 function createBatchKnex(rows: unknown[]) {
@@ -146,5 +155,40 @@ describe('search entity indexers', () => {
     expect(queryBuilder.andWhere).toHaveBeenCalledWith('user_id', 'user-1');
     expect(queryBuilder.andWhere).toHaveBeenCalledWith('user_type', 'internal');
     expect(doc).toBeNull();
+  });
+
+  it('T031 ticket indexer denormalizes client name and ticket number', async () => {
+    const { knex, queryBuilder, joinBuilder } = createFirstRowKnex({
+      ticket_id: 'ticket-1',
+      ticket_number: 'TIC-1023',
+      title: 'Exchange outage',
+      client_name: 'ACME Corp',
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await ticketIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'ticket-1',
+    );
+
+    expect(knex).toHaveBeenCalledWith('tickets as t');
+    expect(queryBuilder.leftJoin).toHaveBeenCalledWith('clients as c', expect.any(Function));
+    expect(joinBuilder.on).toHaveBeenCalledWith('c.tenant', 't.tenant');
+    expect(joinBuilder.andOn).toHaveBeenCalledWith('c.client_id', 't.client_id');
+    expect(queryBuilder.where).toHaveBeenCalledWith(
+      't.tenant',
+      '11111111-1111-4111-8111-111111111111',
+    );
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith('t.ticket_id', 'ticket-1');
+    expect(doc).toMatchObject({
+      objectType: 'ticket',
+      objectId: 'ticket-1',
+      title: 'Exchange outage',
+      subtitle: 'ACME Corp | TIC-1023',
+      url: '/msp/tickets/ticket-1',
+      metadata: { identifier: 'TIC-1023' },
+      acl: { requiredPermission: 'ticket:read' },
+    });
   });
 });

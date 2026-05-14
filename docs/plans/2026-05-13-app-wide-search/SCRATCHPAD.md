@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T031 ticket indexer subtitle and identifier.** Extended `searchIndexers.test.ts` with a mocked ticket/client join to assert `ticketIndexer.loadOne` joins clients by tenant/client id, filters by tenant and ticket id, denormalizes `client_name` + `ticket_number` into the subtitle, and exposes `ticket_number` as `metadata.identifier`. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T030 user indexer internal-only filter.** Extended `searchIndexers.test.ts` to assert `userIndexer.loadOne` adds the `user_type = 'internal'` predicate alongside the user id filter and returns `null` when that filtered query finds no row, preventing client-portal users from being indexed as team members. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T029 contact subtitle composition.** Extended `searchIndexers.test.ts` to exercise `contactIndexer.loadOne` and assert it queries `contacts`, filters by `contact_name_id`, and builds the subtitle from email, phone number, and role while preserving the contact URL and `contact:read` ACL. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.

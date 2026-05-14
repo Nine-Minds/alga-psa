@@ -33,7 +33,7 @@
   { "id": "T028", "featureIds": ["F022"], "description": "Backfilling client indexer for a seeded tenant produces an index row for every client in that tenant", "implemented": true },
   { "id": "T029", "featureIds": ["F023"], "description": "Contact indexer subtitle includes email and phone", "implemented": true },
   { "id": "T030", "featureIds": ["F024"], "description": "User indexer excludes users with `user_type='client'`", "implemented": true },
-  { "id": "T031", "featureIds": ["F025"], "description": "Ticket indexer denormalizes client_name into subtitle and exposes ticket_number in metadata.identifier", "implemented": false },
+  { "id": "T031", "featureIds": ["F025"], "description": "Ticket indexer denormalizes client_name into subtitle and exposes ticket_number in metadata.identifier", "implemented": true },
   { "id": "T032", "featureIds": ["F026"], "description": "Ticket-comment indexer sets is_internal_only=true when source `comments.is_internal` is true", "implemented": false },
   { "id": "T033", "featureIds": ["F026"], "description": "Ticket-comment indexer url ends with `#comment-{comment_id}`", "implemented": false },
   { "id": "T034", "featureIds": ["F027"], "description": "Project indexer sets `client_scope_id` to the project's client_id", "implemented": false },
