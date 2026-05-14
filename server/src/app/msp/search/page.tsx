@@ -4,6 +4,7 @@ import {
   searchAppAction,
   type SearchAppResult,
 } from '@/lib/actions/searchActions';
+import { registeredObjectTypes } from '@/lib/search';
 import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '@/lib/search/types';
 import SearchPageClient from './SearchPageClient';
 
@@ -24,12 +25,15 @@ function firstParam(value: string | string[] | undefined): string | undefined {
   return value;
 }
 
-function parseTypeFilter(value: string | undefined): SearchObjectType[] | undefined {
+function parseTypeFilter(
+  value: string | undefined,
+  registeredTypes: SearchObjectType[],
+): SearchObjectType[] | undefined {
   if (!value || value === 'all') {
     return undefined;
   }
 
-  return (SEARCH_OBJECT_TYPES as readonly string[]).includes(value)
+  return registeredTypes.includes(value as SearchObjectType)
     ? [value as SearchObjectType]
     : undefined;
 }
@@ -57,10 +61,15 @@ export default async function MspSearchPage({ searchParams }: SearchPageProps) {
   const cursor = firstParam(params.cursor);
   const cursorStack = parseCursorStack(firstParam(params.cursorStack));
   const sort = firstParam(params.sort) === 'recent' ? 'recent' : 'relevance';
+  const registeredTypes = registeredObjectTypes()
+    .filter((objectType): objectType is SearchObjectType =>
+      (SEARCH_OBJECT_TYPES as readonly string[]).includes(objectType),
+    );
+  const activeType = parseTypeFilter(type, registeredTypes)?.[0];
   const result = query.length > 0
     ? await searchAppAction({
       query,
-      types: parseTypeFilter(type),
+      types: activeType ? [activeType] : undefined,
       cursor,
       limit: 25,
       sort,
@@ -70,11 +79,12 @@ export default async function MspSearchPage({ searchParams }: SearchPageProps) {
   return (
     <SearchPageClient
       initialQuery={query}
-      initialType={type}
+      initialType={activeType ?? (type === 'all' ? 'all' : undefined)}
       initialCursor={cursor}
       initialCursorStack={cursorStack}
       initialSort={sort}
       initialResult={result}
+      registeredTypes={registeredTypes}
     />
   );
 }

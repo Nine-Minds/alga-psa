@@ -152,6 +152,6 @@
 
   { "id": "F131", "description": "Create CE stub at `ee/server/src/lib/search/indexers/index.ts` exporting `export const eeIndexers: EntityIndexer[] = []`. Register the stub via the existing CE/EE stub-generator config (whichever mechanism the repo uses — see ce-ee-stub-fixer skill) so CE builds resolve the import to the empty array and EE builds resolve to the real module.", "prdRefs": ["19.1"], "implemented": true },
   { "id": "F132", "description": "Restrict search queries to `object_type = ANY(registeredObjectTypes())` so orphan rows from a previous EE deploy never surface in CE builds (orphan-safety).", "prdRefs": ["19.5"], "implemented": true },
-  { "id": "F133", "description": "Make filter chips and group headers on `/msp/search` iterate over `registeredObjectTypes()` rather than a hard-coded list, with i18n fallback to a humanized object_type when the locale key is missing.", "prdRefs": ["19.4"], "implemented": false },
+  { "id": "F133", "description": "Make filter chips and group headers on `/msp/search` iterate over `registeredObjectTypes()` rather than a hard-coded list, with i18n fallback to a humanized object_type when the locale key is missing.", "prdRefs": ["19.4"], "implemented": true },
   { "id": "F134", "description": "Reconciliation job skips any `object_type` for which no indexer is currently registered (does not error, does not attempt to load source rows).", "prdRefs": ["19.5"], "implemented": false }
 ]

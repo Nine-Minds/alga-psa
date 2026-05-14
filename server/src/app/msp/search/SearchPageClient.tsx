@@ -12,6 +12,11 @@ function toDomIdPart(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
+function humanizeObjectType(value: string): string {
+  const normalized = value.replace(/_/g, ' ').trim();
+  return normalized ? normalized.charAt(0).toUpperCase() + normalized.slice(1) : value;
+}
+
 interface SearchPageClientProps {
   initialQuery: string;
   initialType?: string;
@@ -19,6 +24,7 @@ interface SearchPageClientProps {
   initialCursorStack: Array<string | null>;
   initialSort: 'relevance' | 'recent';
   initialResult: SearchAppResult;
+  registeredTypes: SearchObjectType[];
 }
 
 export default function SearchPageClient({
@@ -28,6 +34,7 @@ export default function SearchPageClient({
   initialCursorStack,
   initialSort,
   initialResult,
+  registeredTypes,
 }: SearchPageClientProps): React.JSX.Element {
   const { t } = useTranslation('msp/core');
   const router = useRouter();
@@ -163,7 +170,16 @@ export default function SearchPageClient({
     }
   };
 
-  const typeEntries = Object.entries(initialResult.groups) as Array<[SearchObjectType, number]>;
+  const typeEntries = registeredTypes.map((type) => [
+    type,
+    initialResult.groups[type] ?? 0,
+  ] as const);
+
+  const filterLabel = (type: SearchObjectType) =>
+    t(`search.filters.${type}`, { defaultValue: humanizeObjectType(type) });
+
+  const groupLabel = (type: SearchObjectType) =>
+    t(`search.groups.${type}`, { defaultValue: humanizeObjectType(type) });
 
   const renderResultRow = (row: SearchAppResult['results'][number]) => (
     <a
@@ -254,7 +270,7 @@ export default function SearchPageClient({
               }`}
             >
               <span>
-                {t(`search.filters.${type}`)}
+                {filterLabel(type)}
               </span>
               <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
                 {count}
@@ -317,7 +333,7 @@ export default function SearchPageClient({
           {groupedSections.map((section) => (
             <div key={section.type} className="space-y-2">
               <h2 className="text-sm font-semibold text-gray-700">
-                {t(`search.groups.${section.type}`)}
+                {groupLabel(section.type)}
                 <span className="ml-2 text-xs font-normal text-gray-500">{section.count}</span>
               </h2>
               <div className="space-y-2">
