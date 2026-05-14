@@ -527,6 +527,12 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - `is_private` is treated as share-list-only via `visible_to_user_ids`; CE v1 document rows do not set it, but the predicate is wired for future private rows.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F094 — Single permission-set resolution.**
+  - Added `resolveSearchAclPrincipal(knex, user, accessibleClientIds)` in `server/src/lib/search/acl.ts`.
+  - It calls `User.getUserRolesWithPermissions()` once, filters role/permission applicability by MSP vs client user type, and returns unique `resource:action` strings for the SQL `required_permission = ANY(?::text[])` predicate.
+  - It also returns role names and `isInternal` for the rest of the ACL predicate.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
