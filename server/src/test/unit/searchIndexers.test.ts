@@ -384,4 +384,31 @@ describe('search entity indexers', () => {
       },
     });
   });
+
+  it('T037 project-task-comment indexer falls back to flattened BlockNote note', async () => {
+    const { knex } = createFirstRowKnex({
+      task_comment_id: 'task-comment-2',
+      task_id: 'task-1',
+      note: JSON.stringify([
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Flattened BlockNote text' }],
+        },
+      ]),
+      markdown_content: null,
+      task_name: 'Inventory mailboxes',
+      project_id: 'project-1',
+      project_name: 'Exchange rollout',
+      client_id: 'client-1',
+      edited_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await projectTaskCommentIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'task-comment-2',
+    );
+
+    expect(doc?.body).toBe('Flattened BlockNote text');
+  });
 });

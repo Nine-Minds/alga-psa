@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T037 project-task-comment BlockNote fallback.** Extended `searchIndexers.test.ts` to assert `projectTaskCommentIndexer.loadOne` flattens BlockNote JSON from `note` when `markdown_content` is null, preserving searchable visible comment text. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T036 project-task-comment markdown precedence.** Extended `searchIndexers.test.ts` to assert `projectTaskCommentIndexer.loadOne` uses `markdown_content` as the indexed body when both markdown and BlockNote `note` content are present, while still inheriting project ACL fields. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T035 project phase/task inherited ACL.** Extended `searchIndexers.test.ts` to exercise `projectPhaseIndexer.loadOne` and `projectTaskIndexer.loadOne` with parent project rows, asserting both emit `project:read`, inherit `clientScopeId` from the joined project, set project parent metadata, and use the project name as subtitle. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.

@@ -39,7 +39,7 @@
   { "id": "T034", "featureIds": ["F027"], "description": "Project indexer sets `client_scope_id` to the project's client_id", "implemented": true },
   { "id": "T035", "featureIds": ["F028", "F029"], "description": "Project phase/task indexers inherit ACL fields from their parent project", "implemented": true },
   { "id": "T036", "featureIds": ["F030"], "description": "Project-task-comment indexer prefers markdown_content over BlockNote content when both are present", "implemented": true },
-  { "id": "T037", "featureIds": ["F030"], "description": "Project-task-comment indexer falls back to `flattenBlockNote(note)` when markdown_content is null", "implemented": false },
+  { "id": "T037", "featureIds": ["F030"], "description": "Project-task-comment indexer falls back to `flattenBlockNote(note)` when markdown_content is null", "implemented": true },
   { "id": "T038", "featureIds": ["F031"], "description": "Asset indexer's body contains flattened jsonb attribute string values but never key names like `password`", "implemented": false },
   { "id": "T039", "featureIds": ["F031"], "description": "Asset indexer metadata.identifier equals asset_tag", "implemented": false },
   { "id": "T040", "featureIds": ["F032"], "description": "Invoice indexer denormalizes client_name in subtitle and metadata.identifier equals invoice_number", "implemented": false },
