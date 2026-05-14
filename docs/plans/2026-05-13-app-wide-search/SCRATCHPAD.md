@@ -1406,6 +1406,8 @@ npm run search:backfill
 
 - **2026-05-13 — T144 stable sidebar input id.** Added UI contract coverage that `SearchPalette` keeps the sidebar combobox input ID stable as `app-search-input` for UI reflection and accessibility tests. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T145 stable result row ids.** Added UI contract coverage that both sidebar suggestion metadata and results-page anchors use the shared kebab-case `toDomIdPart` helper and the `app-search-result-row-{type}-{id}` ID pattern. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

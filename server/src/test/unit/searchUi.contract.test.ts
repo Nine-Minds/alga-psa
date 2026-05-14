@@ -237,4 +237,14 @@ describe('app-wide search UI contracts', () => {
 
     expect(source).toContain('id="app-search-input"');
   });
+
+  it('T145 uses stable kebab-case ids for search result rows', () => {
+    const paletteSource = readFileSync(resolve(process.cwd(), 'src/components/search/SearchPalette.tsx'), 'utf8');
+    const pageSource = readFileSync(resolve(process.cwd(), 'src/app/msp/search/SearchPageClient.tsx'), 'utf8');
+
+    expect(paletteSource).toContain('function toDomIdPart(value: string): string');
+    expect(paletteSource).toContain('data-result-row-id={`app-search-result-row-${toDomIdPart(result.type)}-${toDomIdPart(result.id)}`}');
+    expect(pageSource).toContain('function toDomIdPart(value: string): string');
+    expect(pageSource).toContain('id={`app-search-result-row-${toDomIdPart(row.type)}-${toDomIdPart(row.id)}`}');
+  });
 });
