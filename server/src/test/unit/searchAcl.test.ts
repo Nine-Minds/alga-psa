@@ -63,4 +63,16 @@ describe('search ACL SQL predicate', () => {
     );
     expect(fragment.bindings[4]).toBe(userId);
   });
+
+  it('T111 filters client_scope_id through accessible clients', () => {
+    const accessibleClientIds = ['10000000-0000-0000-0000-000000000001'];
+    const fragment = aclPredicateSql({
+      userId: '00000000-0000-0000-0000-000000000001',
+      permissions: ['document:read'],
+      accessibleClientIds,
+    });
+
+    expect(fragment.sql).toContain('(client_scope_id IS NULL OR client_scope_id = ANY(?::uuid[]))');
+    expect(fragment.bindings[5]).toEqual(accessibleClientIds);
+  });
 });

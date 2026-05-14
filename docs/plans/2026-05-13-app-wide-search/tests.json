@@ -121,7 +121,7 @@
   { "id": "T108", "featureIds": ["F095"], "description": "Row with empty `visible_to_user_ids` is visible to all users with the required permission", "implemented": true },
   { "id": "T109", "featureIds": ["F096"], "description": "`is_internal_only=true` row hidden from a client-type user", "implemented": true },
   { "id": "T110", "featureIds": ["F096"], "description": "Synthetic row with `is_private=true` and non-empty `visible_to_user_ids` is hidden from users not in the array (validates the column is wired, even though no v1 entity sets it)", "implemented": true },
-  { "id": "T111", "featureIds": ["F096"], "description": "`client_scope_id` filters out rows for clients the user has no access to", "implemented": false },
+  { "id": "T111", "featureIds": ["F096"], "description": "`client_scope_id` filters out rows for clients the user has no access to", "implemented": true },
 
   { "id": "T112", "featureIds": ["F097", "F098"], "description": "verifyResultVisibility drops rows that the SQL filter let through but the record-level helper rejects", "implemented": false },
   { "id": "T113", "featureIds": ["F099"], "description": "`search.acl_drift` telemetry counter increments when a discrepancy occurs", "implemented": false },
