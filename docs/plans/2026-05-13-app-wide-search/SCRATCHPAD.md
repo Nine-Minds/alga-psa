@@ -712,6 +712,8 @@ npm run search:backfill
 
 - **2026-05-13 — F045 time entry indexer.** Added `timeEntryIndexer` and registered it. It enforces the PRD rule in SQL (`notes IS NOT NULL AND notes <> ''`), indexes note text only for rows with content, carries `time_entries.user_id` into `visibleToUserIds`, and sets `requiredPermission='time:read'`. URLs point at the parent ticket, project task, or interaction when enough work-item data exists, with `/msp/time-entries/{entry_id}` as a fallback. Event hooks remain empty until F061. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/time_entry.ts server/src/lib/search/indexers/index.ts`.
 
+- **2026-05-13 — F046 board indexer.** Added `boardIndexer` and registered it. Current migrations create `boards.board_id` / `boards.board_name` (the scratchpad's `channel_id` / `channel_name` note reflects an older rename state), so the indexer uses the current columns, links to `/msp/tickets?board={board_id}`, and sets `requiredPermission='ticket:read'`. Event hooks remain empty until F062. Validation: `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/board.ts server/src/lib/search/indexers/index.ts`.
+
 ---
 
 ## Implementation order suggestion (not prescriptive)

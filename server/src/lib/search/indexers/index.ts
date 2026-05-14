@@ -1,6 +1,7 @@
 import type { EntityIndexer } from '../types';
 
 import { assetIndexer } from './asset';
+import { boardIndexer } from './board';
 import { clientContractIndexer } from './client_contract';
 import { clientIndexer } from './client';
 import { contactIndexer } from './contact';
@@ -27,6 +28,7 @@ import { workflowTaskIndexer } from './workflow_task';
 
 export const ceIndexers: EntityIndexer[] = [
   assetIndexer,
+  boardIndexer,
   clientContractIndexer,
   clientIndexer,
   contactIndexer,
