@@ -50,4 +50,13 @@ describe('app-wide search UI contracts', () => {
     expect(source).toContain("t('search.seeAllResults'");
     expect(source).toContain('count: totalCount');
   });
+
+  it('T127 keeps typeahead closed until the query has at least two characters', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/components/search/SearchPalette.tsx'), 'utf8');
+
+    expect(source).toContain('const isOpen = !collapsed && trimmedQuery.length >= 2 && !isDismissed');
+    expect(source).toContain('if (trimmedQuery.length < 2)');
+    expect(source).toContain('setResults([])');
+    expect(source).toContain('setTotalCount(0)');
+  });
 });
