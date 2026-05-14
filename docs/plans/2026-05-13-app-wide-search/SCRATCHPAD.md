@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T008 subtitle trigram planner contract.** Extended `searchMigration.contract.test.ts` to assert the migration creates `app_search_index_subtitle_trgm ON app_search_index USING gin (subtitle gin_trgm_ops)` and that the query path uses both `coalesce(s.subtitle, '') % q.raw` and `similarity(coalesce(s.subtitle, ''), q.raw)`. Validation: `npx vitest run src/test/unit/searchMigration.contract.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T007 title trigram planner contract.** Extended `searchMigration.contract.test.ts` to assert the migration creates `app_search_index_title_trgm ON app_search_index USING gin (title gin_trgm_ops)` and that the query path uses both `s.title % q.raw` and `similarity(s.title, q.raw)` for fuzzy matching/ranking. Validation: `npx vitest run src/test/unit/searchMigration.contract.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T006 search_vector GIN planner contract.** Local Postgres/Citus is still unavailable, so the test uses a static planner contract rather than live `EXPLAIN`: `searchMigration.contract.test.ts` now asserts the migration creates `app_search_index_vector_gin ON app_search_index USING gin (search_vector)` and that `server/src/lib/search/query.ts` uses the indexed `s.search_vector @@ q.tsq` predicate. Validation: `npx vitest run src/test/unit/searchMigration.contract.test.ts --coverage=false` from `server/` passed.

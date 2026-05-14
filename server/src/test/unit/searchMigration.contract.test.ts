@@ -155,4 +155,15 @@ describe('app_search_index migration contract', () => {
     expect(searchQuery).toContain('s.title % q.raw');
     expect(searchQuery).toContain('similarity(s.title, q.raw)');
   });
+
+  it('T008 creates a subtitle trigram GIN index for the subtitle fuzzy predicate used by search SQL', () => {
+    const migration = readSearchIndexMigration();
+    const searchQuery = readFileSync(searchQueryPath, 'utf8');
+
+    expect(migration).toMatch(
+      /CREATE INDEX app_search_index_subtitle_trgm\s+ON app_search_index USING gin \(subtitle gin_trgm_ops\)/,
+    );
+    expect(searchQuery).toContain("coalesce(s.subtitle, '') % q.raw");
+    expect(searchQuery).toContain("similarity(coalesce(s.subtitle, ''), q.raw)");
+  });
 });
