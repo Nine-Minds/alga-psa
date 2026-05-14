@@ -26,6 +26,7 @@ export interface ComposedAclHints {
 
 export interface SearchAclPrincipal {
   userId: string;
+  tenant?: string;
   permissions: string[];
   roles?: string[];
   isInternal?: boolean;
@@ -87,7 +88,7 @@ export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
 
 export async function resolveSearchAclPrincipal(
   knex: Knex,
-  user: Pick<IUserWithRoles, 'user_id' | 'user_type'>,
+  user: Pick<IUserWithRoles, 'user_id' | 'user_type' | 'tenant'>,
   accessibleClientIds: string[] = [],
 ): Promise<SearchAclPrincipal> {
   const rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
@@ -110,6 +111,7 @@ export async function resolveSearchAclPrincipal(
 
   return {
     userId: user.user_id,
+    tenant: user.tenant,
     permissions: [...permissions],
     roles: [...roles],
     isInternal: !isClientPortal,
@@ -145,3 +147,160 @@ export async function verifyResultVisibility<TRow extends SearchVisibilityRow>(
 
   return visibleRows;
 }
+
+function hasClientAccess(user: SearchAclPrincipal, clientId: string | null | undefined): boolean {
+  if (!clientId) {
+    return true;
+  }
+  if (!user.accessibleClientIds || user.accessibleClientIds.length === 0) {
+    return true;
+  }
+  return user.accessibleClientIds.includes(clientId);
+}
+
+function parseAssignedUsers(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map((entry) => {
+      if (typeof entry === 'string') return entry;
+      if (entry && typeof entry === 'object') {
+        const record = entry as Record<string, unknown>;
+        const id = record.user_id ?? record.userId ?? record.id;
+        return typeof id === 'string' ? id : undefined;
+      }
+      return undefined;
+    })
+    .filter((entry): entry is string => Boolean(entry));
+}
+
+async function ticketExists(knex: Knex, user: SearchAclPrincipal, ticketId: string): Promise<boolean> {
+  const query = knex<{ ticket_id: string }>('tickets')
+    .select('ticket_id')
+    .where('ticket_id', ticketId)
+    .first();
+  if (user.tenant) {
+    query.andWhere('tenant', user.tenant);
+  }
+  const row = await query;
+  return Boolean(row);
+}
+
+async function projectClientIdForProject(
+  knex: Knex,
+  user: SearchAclPrincipal,
+  projectId: string,
+): Promise<string | null | undefined> {
+  const query = knex<{ client_id: string | null }>('projects')
+    .select('client_id')
+    .where('project_id', projectId)
+    .first();
+  if (user.tenant) {
+    query.andWhere('tenant', user.tenant);
+  }
+  const row = await query;
+  return row?.client_id;
+}
+
+registerSearchVisibilityVerifier('ticket', async (knex, user, row) => {
+  return ticketExists(knex, user, row.id);
+});
+
+registerSearchVisibilityVerifier('ticket_comment', async (knex, user, row) => {
+  const query = knex<{ ticket_id: string; is_internal: boolean | null }>('comments')
+    .select('ticket_id', 'is_internal')
+    .where('comment_id', row.id)
+    .first();
+  if (user.tenant) {
+    query.andWhere('tenant', user.tenant);
+  }
+  const comment = await query;
+  if (!comment) return false;
+  if (comment.is_internal && !user.isInternal) return false;
+  return ticketExists(knex, user, comment.ticket_id);
+});
+
+registerSearchVisibilityVerifier('project', async (knex, user, row) => {
+  const clientId = await projectClientIdForProject(knex, user, row.id);
+  return clientId !== undefined && hasClientAccess(user, clientId);
+});
+
+registerSearchVisibilityVerifier('project_phase', async (knex, user, row) => {
+  const query = knex<{ project_id: string }>('project_phases')
+    .select('project_id')
+    .where('phase_id', row.id)
+    .first();
+  if (user.tenant) {
+    query.andWhere('tenant', user.tenant);
+  }
+  const phase = await query;
+  if (!phase) return false;
+  const clientId = await projectClientIdForProject(knex, user, phase.project_id);
+  return clientId !== undefined && hasClientAccess(user, clientId);
+});
+
+registerSearchVisibilityVerifier('project_task', async (knex, user, row) => {
+  const query = knex<{ project_id: string }>('project_tasks as pt')
+    .join('project_phases as pp', function() {
+      this.on('pp.phase_id', 'pt.phase_id').andOn('pp.tenant', 'pt.tenant');
+    })
+    .select('pp.project_id')
+    .where('pt.task_id', row.id)
+    .first();
+  if (user.tenant) {
+    query.andWhere('pt.tenant', user.tenant);
+  }
+  const task = await query;
+  if (!task) return false;
+  const clientId = await projectClientIdForProject(knex, user, task.project_id);
+  return clientId !== undefined && hasClientAccess(user, clientId);
+});
+
+registerSearchVisibilityVerifier('project_task_comment', async (knex, user, row) => {
+  const query = knex<{ project_id: string }>('project_task_comments as ptc')
+    .join('project_tasks as pt', function() {
+      this.on('pt.task_id', 'ptc.task_id').andOn('pt.tenant', 'ptc.tenant');
+    })
+    .join('project_phases as pp', function() {
+      this.on('pp.phase_id', 'pt.phase_id').andOn('pp.tenant', 'pt.tenant');
+    })
+    .select('pp.project_id')
+    .where('ptc.task_comment_id', row.id)
+    .first();
+  if (user.tenant) {
+    query.andWhere('ptc.tenant', user.tenant);
+  }
+  const comment = await query;
+  if (!comment) return false;
+  const clientId = await projectClientIdForProject(knex, user, comment.project_id);
+  return clientId !== undefined && hasClientAccess(user, clientId);
+});
+
+registerSearchVisibilityVerifier('document', async (knex, user, row) => {
+  const query = knex<{ client_id: string | null }>('documents')
+    .select('client_id')
+    .where('document_id', row.id)
+    .first();
+  if (user.tenant) {
+    query.andWhere('tenant', user.tenant);
+  }
+  const document = await query;
+  return Boolean(document) && hasClientAccess(user, document?.client_id);
+});
+
+registerSearchVisibilityVerifier('workflow_task', async (knex, user, row) => {
+  const query = knex<{ assigned_users: unknown }>('workflow_tasks')
+    .select('assigned_users')
+    .where('task_id', row.id)
+    .first();
+  if (user.tenant) {
+    query.andWhere('tenant', user.tenant);
+  }
+  const task = await query;
+  if (!task) return false;
+
+  const assignedUsers = parseAssignedUsers(task.assigned_users);
+  return assignedUsers.length === 0 || assignedUsers.includes(user.userId);
+});

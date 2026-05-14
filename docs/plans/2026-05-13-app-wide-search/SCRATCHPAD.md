@@ -549,6 +549,12 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - F098 wires concrete entity verifiers; F099 adds drift telemetry for dropped rows.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F098 — Concrete record-level visibility verifiers.**
+  - No existing `assertTicketReadable` / `assertProjectReadable` helpers were found by recon; implemented equivalent source-table verifiers in `acl.ts`.
+  - Ticket verifier checks source existence; ticket-comment verifier checks source existence, parent ticket existence, and internal-comment visibility.
+  - Project, phase, task, and task-comment verifiers check source existence plus parent project client scope; document verifier checks source existence plus `documents.client_id` scope; workflow-task verifier checks source existence plus `assigned_users` membership.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
