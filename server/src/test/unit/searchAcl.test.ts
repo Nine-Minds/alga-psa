@@ -187,4 +187,42 @@ describe('search ACL SQL predicate', () => {
       (globalThis as { Sentry?: unknown }).Sentry = previousSentry;
     }
   });
+
+  it('T165 keeps internal ticket-comment hits visible for internal users', async () => {
+    const makeQuery = <TRow,>(row: TRow) => {
+      const query = {
+        select: vi.fn(() => query),
+        where: vi.fn(() => query),
+        first: vi.fn(() => query),
+        andWhere: vi.fn(() => query),
+        then: (
+          resolve: (value: TRow) => unknown,
+          reject: (reason?: unknown) => unknown,
+        ) => Promise.resolve(row).then(resolve, reject),
+      };
+      return query;
+    };
+    const commentQuery = makeQuery({ ticket_id: 'ticket-1', is_internal: true });
+    const ticketQuery = makeQuery({ ticket_id: 'ticket-1' });
+    const knex = vi.fn((table: string) => {
+      if (table === 'comments') return commentQuery;
+      if (table === 'tickets') return ticketQuery;
+      throw new Error(`Unexpected table ${table}`);
+    });
+    const rows = [{ type: 'ticket_comment' as const, id: 'comment-1' }];
+
+    await expect(verifyResultVisibility(
+      knex as never,
+      {
+        userId: '00000000-0000-0000-0000-000000000001',
+        tenant: 'tenant-1',
+        permissions: ['ticket:read'],
+        isInternal: true,
+      },
+      rows,
+    )).resolves.toEqual(rows);
+
+    expect(commentQuery.where).toHaveBeenCalledWith('comment_id', 'comment-1');
+    expect(ticketQuery.where).toHaveBeenCalledWith('ticket_id', 'ticket-1');
+  });
 });

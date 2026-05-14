@@ -1446,6 +1446,8 @@ npm run search:backfill
 
 - **2026-05-13 — T164 ticket-comment search-to-highlight acceptance.** Added contract coverage that `ticketCommentIndexer` emits `/msp/tickets/{ticket_id}#comment-{comment_id}` URLs with markdown-flattened body content and the ticket `CommentItem` honors the same hash by scrolling/highlighting. Validation: `cd server && npx vitest run src/test/unit/searchHashAnchors.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T165 internal-comment positive visibility.** Added ACL verifier coverage that an internal user keeps an internal ticket-comment search row when the comment exists and its parent ticket is readable. Validation: `cd server && npx vitest run src/test/unit/searchAcl.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

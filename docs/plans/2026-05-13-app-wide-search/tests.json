@@ -184,7 +184,7 @@
   { "id": "T162", "featureIds": ["F116"], "description": "End-to-end: Cmd/Ctrl+click on a result opens in a new tab and original tab keeps its state (Acceptance #3)", "implemented": true },
   { "id": "T163", "featureIds": ["F087"], "description": "End-to-end: 'TIC-1023' and 'tic-10' both find the right ticket (Acceptance #4)", "implemented": true },
   { "id": "T164", "featureIds": ["F026", "F128"], "description": "End-to-end: searching a phrase that appears only in one ticket comment lands on the ticket page with the comment scrolled+highlighted (Acceptance #5)", "implemented": true },
-  { "id": "T165", "featureIds": ["F026", "F109"], "description": "End-to-end: an internal user sees an internal-comment hit in results (Acceptance #6)", "implemented": false },
+  { "id": "T165", "featureIds": ["F026", "F109"], "description": "End-to-end: an internal user sees an internal-comment hit in results (Acceptance #6)", "implemented": true },
   { "id": "T166", "featureIds": ["F026", "F096"], "description": "End-to-end: a non-internal user DOES NOT see the same internal-comment hit (Acceptance #7)", "implemented": false },
   { "id": "T167", "featureIds": ["F027", "F093"], "description": "End-to-end: user A searches for project they don't have permission for; project does NOT appear (Acceptance #8)", "implemented": false },
   { "id": "T168", "featureIds": ["F037", "F096"], "description": "End-to-end: client-scoped user A searches for a document whose `documents.client_id = X` where A has no access to X; document does NOT appear (Acceptance #9)", "implemented": false },
