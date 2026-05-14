@@ -1514,6 +1514,8 @@ npm run search:backfill
 
 - **2026-05-13 — T198 workflow-task tenant filter with single-column PK.** Added workflow-task indexer coverage that `loadOne` queries `workflow_tasks` with `where('tenant', tenant)` plus `andWhere('task_id', id)`, despite `task_id` being the only PK column. Validation: `cd server && npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false`.
 
+- **2026-05-13 — T199 workflow-task assigned_users JSONB parsing.** Added workflow-task indexer coverage that JSON-string `assigned_users` entries (`user_id` and `id`) are parsed into deduped `acl.visibleToUserIds`, which upsert writes into `visible_to_user_ids`. Validation: `cd server && npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

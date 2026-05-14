@@ -973,6 +973,30 @@ describe('search entity indexers', () => {
     });
   });
 
+  it('T199 workflow-task indexer parses assigned_users JSONB into visible_to_user_ids', async () => {
+    const { knex } = createFirstRowKnex({
+      task_id: 'workflow-task-jsonb',
+      title: 'JSONB assignee task',
+      description: 'Parse assigned users',
+      assigned_users: JSON.stringify([
+        { user_id: '11111111-1111-4111-8111-111111111111' },
+        { id: '22222222-2222-4222-8222-222222222222' },
+      ]),
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await workflowTaskIndexer.loadOne(
+      knex as never,
+      'tenant-1',
+      'workflow-task-jsonb',
+    );
+
+    expect(doc?.acl.visibleToUserIds).toEqual([
+      '11111111-1111-4111-8111-111111111111',
+      '22222222-2222-4222-8222-222222222222',
+    ]);
+  });
+
   it('T051 schedule-entry indexer populates visible_to_user_ids with assignees', async () => {
     const { knex, queryBuilder } = createFirstRowKnex({
       entry_id: 'entry-1',
