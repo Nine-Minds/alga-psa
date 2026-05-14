@@ -165,7 +165,7 @@
 
   { "id": "T147", "featureIds": ["F121"], "description": "`server/public/locales/en/msp/core.json` includes all required `search.*` keys (placeholder, helper, group labels, empty state, error, see-all-results)", "implemented": true },
   { "id": "T148", "featureIds": ["F122"], "description": "Lang-pack validation script reports zero missing keys across all locales for the `search` namespace", "implemented": true },
-  { "id": "T149", "featureIds": ["F123"], "description": "Sidebar and results page contain zero hardcoded English strings (verified by grep guard test)", "implemented": false },
+  { "id": "T149", "featureIds": ["F123"], "description": "Sidebar and results page contain zero hardcoded English strings (verified by grep guard test)", "implemented": true },
   { "id": "T150", "featureIds": ["F121", "F122"], "description": "Pseudo locale (`xx`) renders accented characters for every search UI string (no untranslated leaks)", "implemented": false },
 
   { "id": "T151", "featureIds": ["F124"], "description": "Env reference doc lists `SEARCH_INDEX_LIVE` with default and effect described", "implemented": false },

@@ -1414,6 +1414,8 @@ npm run search:backfill
 
 - **2026-05-13 — T148 search locale key completeness.** Ran the lang-pack pipeline (`node scripts/generate-pseudo-locales.cjs && node scripts/validate-translations.cjs`; zero errors, existing Polish extra-key warnings outside search) and added coverage that every locale's `search` namespace has the same leaf-key structure as English. Validation: `cd server && npx vitest run src/test/unit/searchI18n.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T149 no hardcoded search UI copy.** Removed the literal `/msp/search` metadata title and added a grep-style i18n guard ensuring sidebar/results-page visible search phrases are absent from source while key UI paths use `t('search.*')`. Validation: `cd server && npx vitest run src/test/unit/searchI18n.contract.test.ts src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

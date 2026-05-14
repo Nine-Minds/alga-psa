@@ -82,4 +82,35 @@ describe('app-wide search i18n contracts', () => {
       expect(collectLeafPaths(search), locale).toEqual(expectedSearchKeys);
     }
   });
+
+  it('T149 keeps sidebar and results-page visible search copy behind i18n keys', () => {
+    const sources = [
+      readFileSync(resolve(process.cwd(), 'src/components/search/SearchPalette.tsx'), 'utf8'),
+      readFileSync(resolve(process.cwd(), 'src/app/msp/search/page.tsx'), 'utf8'),
+      readFileSync(resolve(process.cwd(), 'src/app/msp/search/SearchPageClient.tsx'), 'utf8'),
+    ].join('\n');
+    const hardcodedVisiblePhrases = [
+      'Search clients',
+      'Search across the workspace',
+      'See all',
+      'No results',
+      'Try a broader query',
+      'Try removing',
+      'Search failed',
+      'Relevance',
+      'Recent',
+      'Previous',
+      'Next',
+      "title: 'Search'",
+    ];
+
+    for (const phrase of hardcodedVisiblePhrases) {
+      expect(sources, phrase).not.toContain(phrase);
+    }
+
+    expect(sources).toContain("t('search.placeholder')");
+    expect(sources).toContain("t('search.seeAllResults'");
+    expect(sources).toContain("t('search.noResults'");
+    expect(sources).toContain("t(`search.sort.${sort}`)");
+  });
 });

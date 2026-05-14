@@ -1,5 +1,3 @@
-import type { Metadata } from 'next';
-
 import {
   searchAppAction,
   type SearchAppResult,
@@ -7,10 +5,6 @@ import {
 import { registeredObjectTypes } from '@/lib/search';
 import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '@/lib/search/types';
 import SearchPageClient from './SearchPageClient';
-
-export const metadata: Metadata = {
-  title: 'Search',
-};
 
 export const dynamic = 'force-dynamic';
 
