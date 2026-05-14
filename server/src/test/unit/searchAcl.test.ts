@@ -320,4 +320,52 @@ describe('search ACL SQL predicate', () => {
     expect(documentQuery.where).toHaveBeenCalledWith('document_id', 'document-1');
     expect(documentQuery.andWhere).toHaveBeenCalledWith('tenant', 'tenant-1');
   });
+
+  it('T194 emits zero acl_drift for rows whose SQL and record-level ACL agree', async () => {
+    const captureMessage = vi.fn();
+    const previousSentry = (globalThis as { Sentry?: unknown }).Sentry;
+    (globalThis as { Sentry?: unknown }).Sentry = { captureMessage };
+    const makeQuery = <TRow,>(row: TRow) => {
+      const query = {
+        select: vi.fn(() => query),
+        where: vi.fn(() => query),
+        first: vi.fn(() => query),
+        andWhere: vi.fn(() => query),
+        then: (
+          resolve: (value: TRow) => unknown,
+          reject: (reason?: unknown) => unknown,
+        ) => Promise.resolve(row).then(resolve, reject),
+      };
+      return query;
+    };
+    const ticketQuery = makeQuery({ ticket_id: 'ticket-1' });
+    const documentQuery = makeQuery({ client_id: 'client-1' });
+    const knex = vi.fn((table: string) => {
+      if (table === 'tickets') return ticketQuery;
+      if (table === 'documents') return documentQuery;
+      throw new Error(`Unexpected table ${table}`);
+    });
+    const rows = [
+      { type: 'ticket' as const, id: 'ticket-1' },
+      { type: 'document' as const, id: 'document-1' },
+    ];
+
+    try {
+      await expect(verifyResultVisibility(
+        knex as never,
+        {
+          userId: '00000000-0000-0000-0000-000000000001',
+          tenant: 'tenant-1',
+          permissions: ['ticket:read', 'document:read'],
+          isInternal: true,
+          accessibleClientIds: ['client-1'],
+        },
+        rows,
+      )).resolves.toEqual(rows);
+
+      expect(captureMessage).not.toHaveBeenCalled();
+    } finally {
+      (globalThis as { Sentry?: unknown }).Sentry = previousSentry;
+    }
+  });
 });
