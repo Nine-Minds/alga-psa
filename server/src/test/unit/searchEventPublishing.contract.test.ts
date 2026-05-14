@@ -137,4 +137,21 @@ describe('search index source event publishing contracts', () => {
       expect(modelSource + modificationSource).toContain(`eventType: '${eventType}'`);
     }
   });
+
+  it('T063 contract and client-contract CRUD emit contract-family events', () => {
+    const contractSource = readRepoFile('packages/billing/src/actions/contractActions.ts');
+    const clientContractSource = readRepoFile('packages/clients/src/actions/clientContractActions.ts');
+
+    for (const eventType of ['CONTRACT_CREATED', 'CONTRACT_UPDATED', 'CONTRACT_DELETED']) {
+      expect(contractSource + clientContractSource).toContain(`eventType: '${eventType}'`);
+    }
+
+    for (const eventType of [
+      'CLIENT_CONTRACT_CREATED',
+      'CLIENT_CONTRACT_UPDATED',
+      'CLIENT_CONTRACT_DELETED',
+    ]) {
+      expect(contractSource + clientContractSource).toContain(`eventType: '${eventType}'`);
+    }
+  });
 });

@@ -511,8 +511,32 @@ export const deleteContract = withAuth(async (user, { tenant }, contractId: stri
       throw new Error('System-managed default contracts cannot be deleted manually');
     }
 
+    const clientContracts = await knex('client_contracts')
+      .where({ tenant, contract_id: contractId })
+      .select('client_contract_id', 'client_id');
+
     await Contract.delete(knex, tenant, contractId);
     const occurredAt = new Date().toISOString();
+
+    for (const clientContract of clientContracts) {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_CONTRACT_DELETED',
+        payload: {
+          clientContractId: clientContract.client_contract_id,
+          contractId,
+          clientId: clientContract.client_id,
+          userId: user.user_id,
+          timestamp: occurredAt,
+        },
+        ctx: {
+          tenantId: tenant,
+          occurredAt,
+          actor: maybeUserActor(user),
+        },
+        idempotencyKey: `client_contract_deleted:${clientContract.client_contract_id}:${occurredAt}`,
+      });
+    }
+
     await publishWorkflowEvent({
       eventType: 'CONTRACT_DELETED',
       payload: {
