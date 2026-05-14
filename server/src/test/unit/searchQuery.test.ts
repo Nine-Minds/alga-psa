@@ -287,4 +287,23 @@ describe('search query parsing', () => {
     ]);
     expect(bindings.at(-1)).toBe(0);
   });
+
+  it('T101 configures ts_headline with controlled sentinel tokens', async () => {
+    const knex = {
+      raw: vi.fn(async () => ({ rows: [] })),
+    };
+
+    await runSearchQuery({
+      knex: knex as never,
+      tenant: '00000000-0000-0000-0000-000000000001',
+      query: 'acme',
+      allowedTypes: ['client'],
+      includeSnippets: true,
+    });
+
+    const sql = knex.raw.mock.calls[0]?.[0] as string;
+    expect(sql).toContain('ts_headline(');
+    expect(sql).toContain('StartSel=__SEARCH_MARK_START__');
+    expect(sql).toContain('StopSel=__SEARCH_MARK_STOP__');
+  });
 });
