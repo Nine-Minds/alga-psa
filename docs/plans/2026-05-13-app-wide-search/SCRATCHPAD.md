@@ -1384,6 +1384,8 @@ npm run search:backfill
 
 - **2026-05-13 — T133 single-type flat results.** Added UI contract coverage that the page passes `types: [activeType]` to `searchAppAction` for a selected type and that `SearchPageClient` renders `initialResult.results.map(renderResultRow)` as a flat list when `activeType !== 'all'`. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T134 cursor pagination links.** Added UI contract coverage that the results page derives previous and next cursor stacks separately, linking previous to the prior boundary and next to `initialResult.nextCursor` with the current boundary appended. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

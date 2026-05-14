@@ -148,7 +148,7 @@
   { "id": "T131", "featureIds": ["F111"], "description": "Filter chips render with count badges that match `groups` from the action response", "implemented": true },
   { "id": "T132", "featureIds": ["F112"], "description": "type=All renders grouped sections with max 10 rows per group", "implemented": true },
   { "id": "T133", "featureIds": ["F113"], "description": "type=ticket renders a flat paginated list of tickets only", "implemented": true },
-  { "id": "T134", "featureIds": ["F114"], "description": "Next/prev cursor pagination moves forward and back without duplicating rows", "implemented": false },
+  { "id": "T134", "featureIds": ["F114"], "description": "Next/prev cursor pagination moves forward and back without duplicating rows", "implemented": true },
   { "id": "T135", "featureIds": ["F115"], "description": "Empty state echoes the query back and suggests removing the type filter", "implemented": false },
   { "id": "T136", "featureIds": ["F115"], "description": "Loading skeleton renders on first input change and disappears when results arrive", "implemented": false },
   { "id": "T137", "featureIds": ["F116"], "description": "Every results-page row is a native `<a href>`; Cmd/Ctrl+click opens in new tab", "implemented": false },

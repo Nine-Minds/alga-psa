@@ -123,4 +123,14 @@ describe('app-wide search UI contracts', () => {
     expect(clientSource).toContain('{initialResult.results.map(renderResultRow)}');
     expect(clientSource).toContain("activeType !== 'all'");
   });
+
+  it('T134 wires next and previous cursor pagination without reusing the current page boundary', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/app/msp/search/SearchPageClient.tsx'), 'utf8');
+
+    expect(source).toContain('const previousCursor = initialCursorStack[initialCursorStack.length - 1]');
+    expect(source).toContain('const previousCursorStack = initialCursorStack.slice(0, -1)');
+    expect(source).toContain('const nextCursorStack = [...initialCursorStack, initialCursor ?? null]');
+    expect(source).toContain('href={buildPageUrl(previousCursor, previousCursorStack)}');
+    expect(source).toContain('href={buildPageUrl(initialResult.nextCursor, nextCursorStack)}');
+  });
 });
