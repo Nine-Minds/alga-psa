@@ -1466,6 +1466,8 @@ npm run search:backfill
 
 - **2026-05-13 — T174 generated tenant-isolation load guard.** Added query-layer generated-load coverage across 50 tenants that asserts every SQL query includes `s.tenant = ?::uuid`, every call binds the requested tenant, and every returned synthetic row belongs to that tenant. Validation: `cd server && npx vitest run src/test/unit/searchQuery.test.ts --coverage=false`.
 
+- **2026-05-13 — T175 pseudo-locale search coverage.** Added i18n contract coverage that the `xx` pseudo locale has every English `search.*` leaf key, includes pseudo fill for each rendered search string, and has no raw English literal text outside interpolation placeholders. Validation: `cd server && npx vitest run src/test/unit/searchI18n.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

@@ -135,4 +135,19 @@ describe('app-wide search i18n contracts', () => {
       expect(pseudoValue, key).toContain('11111');
     }
   });
+
+  it('T175 pseudo locale covers every rendered search UI string', () => {
+    const englishSearch = getPath(readCoreLocale('en'), 'search');
+    const pseudoSearch = getPath(readCoreLocale('xx'), 'search');
+    const englishKeys = collectLeafPaths(englishSearch);
+    const pseudoValues = collectLeafValues(pseudoSearch);
+
+    expect(pseudoValues.map(([key]) => key)).toEqual(englishKeys);
+    expect(pseudoValues.length).toBeGreaterThan(60);
+
+    for (const [key, value] of pseudoValues) {
+      expect(value, key).toContain('11111');
+      expect(value.replace(/\{\{[^}]+\}\}/g, ''), key).not.toMatch(/[A-Za-z]{3,}/);
+    }
+  });
 });
