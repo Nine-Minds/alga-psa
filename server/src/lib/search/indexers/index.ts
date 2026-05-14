@@ -14,6 +14,7 @@ import { projectPhaseIndexer } from './project_phase';
 import { projectTaskCommentIndexer } from './project_task_comment';
 import { projectTaskIndexer } from './project_task';
 import { projectIndexer } from './project';
+import { serviceCatalogIndexer } from './service_catalog';
 import { ticketCommentIndexer } from './ticket_comment';
 import { ticketIndexer } from './ticket';
 import { userIndexer } from './user';
@@ -29,6 +30,7 @@ export const ceIndexers: EntityIndexer[] = [
   invoiceItemIndexer,
   invoiceAnnotationIndexer,
   kbArticleIndexer,
+  serviceCatalogIndexer,
   userIndexer,
   ticketIndexer,
   ticketCommentIndexer,
