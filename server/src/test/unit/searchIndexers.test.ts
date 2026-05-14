@@ -13,6 +13,7 @@ import { projectPhaseIndexer } from '../../lib/search/indexers/project_phase';
 import { projectTaskCommentIndexer } from '../../lib/search/indexers/project_task_comment';
 import { projectTaskIndexer } from '../../lib/search/indexers/project_task';
 import { projectIndexer } from '../../lib/search/indexers/project';
+import { scheduleEntryIndexer } from '../../lib/search/indexers/schedule_entry';
 import { serviceCatalogIndexer } from '../../lib/search/indexers/service_catalog';
 import { serviceRequestDefinitionIndexer } from '../../lib/search/indexers/service_request_definition';
 import { serviceRequestSubmissionIndexer } from '../../lib/search/indexers/service_request_submission';
@@ -38,9 +39,13 @@ function createFirstRowKnex(row: unknown) {
     select: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     andWhere: vi.fn().mockReturnThis(),
+    groupBy: vi.fn().mockReturnThis(),
     first: vi.fn().mockResolvedValue(row),
   };
   const knex = vi.fn().mockReturnValue(queryBuilder);
+  Object.assign(knex, {
+    raw: vi.fn((sql: string) => ({ sql })),
+  });
   return { knex, queryBuilder, joinBuilder };
 }
 
@@ -802,6 +807,43 @@ describe('search entity indexers', () => {
       url: '/msp/workflow-tasks/workflow-task-1',
       acl: {
         requiredPermission: 'workflow_task:read',
+        visibleToUserIds: [
+          '11111111-1111-4111-8111-111111111111',
+          '22222222-2222-4222-8222-222222222222',
+        ],
+      },
+    });
+  });
+
+  it('T051 schedule-entry indexer populates visible_to_user_ids with assignees', async () => {
+    const { knex, queryBuilder } = createFirstRowKnex({
+      entry_id: 'entry-1',
+      title: 'Dispatch visit',
+      notes: 'Bring replacement switch',
+      assigned_user_ids: [
+        '11111111-1111-4111-8111-111111111111',
+        '22222222-2222-4222-8222-222222222222',
+      ],
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await scheduleEntryIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'entry-1',
+    );
+
+    expect(knex).toHaveBeenCalledWith('schedule_entries as se');
+    expect(queryBuilder.leftJoin).toHaveBeenCalledWith('schedule_entry_assignees as sea', expect.any(Function));
+    expect(queryBuilder.groupBy).toHaveBeenCalled();
+    expect(doc).toMatchObject({
+      objectType: 'schedule_entry',
+      objectId: 'entry-1',
+      title: 'Dispatch visit',
+      body: 'Bring replacement switch',
+      url: '/msp/schedule/entry-1',
+      acl: {
+        requiredPermission: 'schedule:read',
         visibleToUserIds: [
           '11111111-1111-4111-8111-111111111111',
           '22222222-2222-4222-8222-222222222222',

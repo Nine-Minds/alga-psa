@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T051 schedule entry assignee ACL.** Extended `searchIndexers.test.ts` to assert `scheduleEntryIndexer.loadOne` aggregates schedule assignees, maps them into `acl.visibleToUserIds`, and preserves `schedule:read`, body notes, and schedule URL. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T050 workflow task assignee ACL.** Extended `searchIndexers.test.ts` to assert `workflowTaskIndexer.loadOne` parses `assigned_users` JSONB entries (`user_id`, `userId`, and string forms), deduplicates them, and writes the resulting IDs into `acl.visibleToUserIds` with `workflow_task:read`. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T049 service request definition admin ACL.** Extended `searchIndexers.test.ts` to assert `serviceRequestDefinitionIndexer.loadOne` maps definition title/body/url and sets `acl.requiredPermission='admin'`, matching the PRD's admin-only visibility rule. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.

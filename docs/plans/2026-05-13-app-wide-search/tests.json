@@ -53,7 +53,7 @@
   { "id": "T048", "featureIds": ["F040"], "description": "Service-request-submission indexer flattens submitted_payload string fields but excludes secret-like keys", "implemented": true },
   { "id": "T049", "featureIds": ["F041"], "description": "Service-request-definition indexer requires admin permission via required_permission column", "implemented": true },
   { "id": "T050", "featureIds": ["F042"], "description": "Workflow-task indexer populates visible_to_user_ids with all assignee user_ids", "implemented": true },
-  { "id": "T051", "featureIds": ["F044"], "description": "Schedule-entry indexer populates visible_to_user_ids with the owner", "implemented": false },
+  { "id": "T051", "featureIds": ["F044"], "description": "Schedule-entry indexer populates visible_to_user_ids with the owner", "implemented": true },
   { "id": "T052", "featureIds": ["F045"], "description": "Time-entry indexer SKIPS rows where notes is NULL or empty string (no index row produced)", "implemented": false },
   { "id": "T053", "featureIds": ["F045"], "description": "Time-entry indexer produces a row when notes is any non-empty string (even a single character)", "implemented": false },
   { "id": "T054", "featureIds": ["F046", "F047", "F048"], "description": "Board, Category, Tag indexers produce rows with only required_permission='ticket:read'", "implemented": false },
