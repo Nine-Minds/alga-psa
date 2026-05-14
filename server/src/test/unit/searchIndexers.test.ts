@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { assetIndexer } from '../../lib/search/indexers/asset';
 import { boardIndexer } from '../../lib/search/indexers/board';
 import { categoryIndexer } from '../../lib/search/indexers/category';
+import { clientContractIndexer } from '../../lib/search/indexers/client_contract';
 import { clientIndexer } from '../../lib/search/indexers/client';
 import { contactIndexer } from '../../lib/search/indexers/contact';
 import { contractIndexer } from '../../lib/search/indexers/contract';
@@ -639,6 +640,47 @@ describe('search entity indexers', () => {
     );
 
     expect(doc?.subtitle).toBe('Contract');
+  });
+
+  it('T196 client-contract indexer joins client and contract for title and client scope', async () => {
+    const { knex, queryBuilder, joinBuilder } = createFirstRowKnex({
+      client_contract_id: 'client-contract-1',
+      client_id: 'client-1',
+      contract_id: 'contract-1',
+      client_name: 'ACME Corp',
+      contract_name: 'Managed services',
+      start_date: '2026-05-01T00:00:00.000Z',
+      end_date: '2027-05-01T00:00:00.000Z',
+      is_active: true,
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await clientContractIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'client-contract-1',
+    );
+
+    expect(knex).toHaveBeenCalledWith('client_contracts as cc');
+    expect(queryBuilder.join).toHaveBeenCalledWith('clients as cl', expect.any(Function));
+    expect(queryBuilder.join).toHaveBeenCalledWith('contracts as c', expect.any(Function));
+    expect(joinBuilder.on).toHaveBeenCalledWith('cl.tenant', 'cc.tenant');
+    expect(joinBuilder.andOn).toHaveBeenCalledWith('cl.client_id', 'cc.client_id');
+    expect(joinBuilder.on).toHaveBeenCalledWith('c.tenant', 'cc.tenant');
+    expect(joinBuilder.andOn).toHaveBeenCalledWith('c.contract_id', 'cc.contract_id');
+    expect(doc).toMatchObject({
+      objectType: 'client_contract',
+      objectId: 'client-contract-1',
+      parentType: 'contract',
+      parentId: 'contract-1',
+      title: 'ACME Corp – Managed services',
+      body: '2026-05-01 | 2027-05-01 | active',
+      url: '/msp/clients/client-1/contracts/client-contract-1',
+      acl: {
+        requiredPermission: 'contract:read',
+        clientScopeId: 'client-1',
+      },
+    });
   });
 
   it('T044 document indexer caps large BlockNote content at 65536 bytes', async () => {

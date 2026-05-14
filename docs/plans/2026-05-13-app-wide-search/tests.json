@@ -224,7 +224,7 @@
 
   { "id": "T195", "featureIds": ["F083"], "description": "Reconciliation job emits a per-run summary log: rows added, rows re-indexed, rows deleted per (tenant, type)", "implemented": true },
 
-  { "id": "T196", "featureIds": ["F036"], "description": "Client-contract indexer joins `clients` and `contracts`; produces title `{client_name} – {contract_name}` and sets `client_scope_id = client_id`", "implemented": false },
+  { "id": "T196", "featureIds": ["F036"], "description": "Client-contract indexer joins `clients` and `contracts`; produces title `{client_name} – {contract_name}` and sets `client_scope_id = client_id`", "implemented": true },
   { "id": "T197", "featureIds": ["F043"], "description": "Interaction indexer on a row with BlockNote JSON in `notes` produces a body containing the flattened text from text leaves (e.g., 'Added Sciton Tribrid Laser') and contains no JSON syntax characters", "implemented": false },
   { "id": "T198", "featureIds": ["F042"], "description": "Workflow-task indexer correctly upserts and reads rows when `workflow_tasks.task_id` is the only PK column; queries always include `tenant` in WHERE clause", "implemented": false },
   { "id": "T199", "featureIds": ["F042"], "description": "Workflow-task indexer parses `assigned_users` JSONB into a uuid[] and writes it into `visible_to_user_ids`", "implemented": false },

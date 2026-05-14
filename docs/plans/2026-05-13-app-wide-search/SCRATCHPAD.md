@@ -1508,6 +1508,8 @@ npm run search:backfill
 
 - **2026-05-13 — T195 reconciliation summary log.** Added reconciliation contract coverage that the handler logs per-tenant/per-object-type summary fields for reindexed, stale-deleted, and missing-inserted rows. Validation: `cd server && npx vitest run src/test/unit/searchReconcile.test.ts --coverage=false`.
 
+- **2026-05-13 — T196 client-contract joined indexing.** Added client-contract indexer coverage for joins to `clients` and `contracts`, derived `{client_name} – {contract_name}` title, dates/status body, canonical client contract URL, and `clientScopeId = client_id`. Validation: `cd server && npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
