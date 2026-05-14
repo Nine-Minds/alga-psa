@@ -39,4 +39,15 @@ describe('search ACL SQL predicate', () => {
     expect(fragment.sql).toContain('cardinality(visible_to_user_ids) = 0 OR');
     expect(fragment.bindings[0]).toEqual(['client:read']);
   });
+
+  it('T109 hides internal-only rows from client-type users', () => {
+    const fragment = aclPredicateSql({
+      userId: '00000000-0000-0000-0000-000000000001',
+      permissions: ['ticket:read'],
+      isInternal: false,
+    });
+
+    expect(fragment.sql).toContain('(is_internal_only = false OR ?::boolean = true)');
+    expect(fragment.bindings[3]).toBe(false);
+  });
 });

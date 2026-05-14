@@ -1154,6 +1154,8 @@ npm run search:backfill
 
 - **2026-05-13 — T108 visible-user unrestricted branch.** Added ACL SQL coverage that empty `visible_to_user_ids` rows pass through the `cardinality(visible_to_user_ids) = 0 OR ...` branch for users who have the required permission. Validation: `npx vitest run src/test/unit/searchAcl.test.ts --coverage=false` from `server/` passed.
 
+- **2026-05-13 — T109 internal-only ACL gate.** Added ACL SQL coverage that internal-only rows require `isInternal=true`; client-type/non-internal users bind `false` and therefore cannot pass `is_internal_only=true` rows. Validation: `npx vitest run src/test/unit/searchAcl.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T060 project-family event contract.** Extended `searchEventPublishing.contract.test.ts` to assert project actions emit project create/update/delete and phase create/update/delete events, task actions emit task create/update/delete events, and task-comment actions emit task-comment create/update/delete events. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T059 user CRUD/role event contract.** Extended `searchEventPublishing.contract.test.ts` to assert `packages/users/src/actions/user-actions/userActions.ts` emits `USER_CREATED`, `USER_UPDATED`, `USER_DELETED`, and `USER_ROLES_UPDATED` with tenant context and stable idempotency keys, covering user role-change ACL reindex triggers. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
