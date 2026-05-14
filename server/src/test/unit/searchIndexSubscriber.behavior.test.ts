@@ -109,4 +109,41 @@ describe('search index subscriber event handling', () => {
     expect(mocks.deleteSearchDoc).not.toHaveBeenCalled();
     expect(loadOne).not.toHaveBeenCalled();
   });
+
+  it('T073 picks up SEARCH_INDEX_LIVE=true without restart', async () => {
+    const knex = { client: 'knex' };
+    const doc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'client',
+      objectId: 'client-1',
+      title: 'ACME Corp',
+      url: '/msp/clients/client-1',
+      metadata: {},
+      acl: { requiredPermission: 'client:read' },
+      sourceUpdatedAt: new Date('2026-05-13T12:00:00.000Z'),
+    };
+    const event: Event = {
+      id: 'event-4',
+      eventType: 'CLIENT_CREATED',
+      timestamp: '2026-05-13T12:00:00.000Z',
+      payload: {
+        tenant: 'tenant-1',
+        client_id: 'client-1',
+      },
+    } as Event;
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+    vi.spyOn(clientIndexer, 'loadOne').mockResolvedValue(doc);
+
+    process.env.SEARCH_INDEX_LIVE = 'false';
+    await handleSearchIndexEventForTest(event);
+
+    process.env.SEARCH_INDEX_LIVE = 'true';
+    await handleSearchIndexEventForTest(event);
+
+    expect(mocks.createTenantKnex).toHaveBeenCalledTimes(1);
+    expect(clientIndexer.loadOne).toHaveBeenCalledTimes(1);
+    expect(mocks.upsertSearchDoc).toHaveBeenCalledWith(knex, doc);
+    expect(mocks.deleteSearchDoc).not.toHaveBeenCalled();
+  });
 });

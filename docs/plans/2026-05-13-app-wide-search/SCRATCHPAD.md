@@ -1082,6 +1082,8 @@ npm run search:backfill
 
 - **2026-05-13 — T072 live-index disabled behavior.** Added coverage that with `SEARCH_INDEX_LIVE=false`, the subscriber resolves and acknowledges the event but does not create a tenant knex, load the source row, upsert, or delete index rows. Validation: `npx vitest run src/test/unit/searchIndexSubscriber.behavior.test.ts --coverage=false` from `server/` passed.
 
+- **2026-05-13 — T073 live-index env flip behavior.** Confirmed the subscriber reads `SEARCH_INDEX_LIVE` per event rather than caching it at registration: a first `CLIENT_CREATED` while false performs no DB writes, then flipping the env var to true in the same process lets the next event upsert normally. Validation: `npx vitest run src/test/unit/searchIndexSubscriber.behavior.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T060 project-family event contract.** Extended `searchEventPublishing.contract.test.ts` to assert project actions emit project create/update/delete and phase create/update/delete events, task actions emit task create/update/delete events, and task-comment actions emit task-comment create/update/delete events. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T059 user CRUD/role event contract.** Extended `searchEventPublishing.contract.test.ts` to assert `packages/users/src/actions/user-actions/userActions.ts` emits `USER_CREATED`, `USER_UPDATED`, `USER_DELETED`, and `USER_ROLES_UPDATED` with tenant context and stable idempotency keys, covering user role-change ACL reindex triggers. Validation: `npx vitest run src/test/unit/searchEventPublishing.contract.test.ts --coverage=false` from `server/` passed.
