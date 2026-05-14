@@ -48,7 +48,7 @@ function toSearchDoc(tenant: string, row: AssetSearchRow): SearchDoc {
 
 export const assetIndexer: EntityIndexer = {
   objectType: 'asset',
-  sourceEvents: ['ASSET_CREATED', 'ASSET_UPDATED', 'ASSET_ASSIGNED', 'ASSET_UNASSIGNED'],
+  sourceEvents: ['ASSET_CREATED', 'ASSET_UPDATED', 'ASSET_DELETED', 'ASSET_ASSIGNED', 'ASSET_UNASSIGNED'],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await knex<AssetSearchRow>('assets')

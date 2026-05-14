@@ -369,6 +369,7 @@ export const EVENT_TYPES = [
   // Assets + media (domain expansion)
   'ASSET_CREATED',
   'ASSET_UPDATED',
+  'ASSET_DELETED',
   'ASSET_ASSIGNED',
   'ASSET_UNASSIGNED',
   'ASSET_WARRANTY_EXPIRING',
@@ -547,6 +548,12 @@ export const InvoiceEventPayloadSchema = BasePayloadSchema.extend({
   clientId: z.string().uuid(),
   userId: z.string().uuid(),
   amount: z.number(),
+});
+
+export const AssetDeletedPayloadSchema = BasePayloadSchema.extend({
+  assetId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  timestamp: z.string().datetime().optional(),
 });
 
 // Client event payload schema
@@ -1049,6 +1056,7 @@ export const EventPayloadSchemas = {
   // Assets + media (domain expansion)
   ASSET_CREATED: assetCreatedEventPayloadSchema,
   ASSET_UPDATED: assetUpdatedEventPayloadSchema,
+  ASSET_DELETED: AssetDeletedPayloadSchema,
   ASSET_ASSIGNED: assetAssignedEventPayloadSchema,
   ASSET_UNASSIGNED: assetUnassignedEventPayloadSchema,
   ASSET_WARRANTY_EXPIRING: assetWarrantyExpiringEventPayloadSchema,

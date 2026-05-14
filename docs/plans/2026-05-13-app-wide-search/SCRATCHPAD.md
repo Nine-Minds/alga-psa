@@ -726,6 +726,8 @@ npm run search:backfill
 
 - **2026-05-13 — F052 project-family events.** Existing project/task workflow events covered create/status/assignment but not every indexed row lifecycle. Added `PROJECT_DELETED`, `PROJECT_PHASE_CREATED/UPDATED/DELETED`, `PROJECT_TASK_UPDATED/DELETED`, and `PROJECT_TASK_COMMENT_CREATED/UPDATED/DELETED` schemas. Published the missing events from project phase mutations, project hard-delete, task update/delete/move, and task-comment create/update/delete while preserving existing `PROJECT_*`, `PROJECT_TASK_*`, and legacy `TASK_COMMENT_*` events. Updated source events for the project, phase, task, and task-comment indexers. Validation: `npm -w @alga-psa/event-schemas run typecheck`, `npm -w @alga-psa/projects run typecheck`, and `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/project.ts server/src/lib/search/indexers/project_phase.ts server/src/lib/search/indexers/project_task.ts server/src/lib/search/indexers/project_task_comment.ts`.
 
+- **2026-05-13 — F053 asset events.** `ASSET_CREATED`, `ASSET_UPDATED`, assignment, unassignment, and warranty events already existed and were published from the package action paths; the API service already attempted `ASSET_DELETED` but the schema did not define it. Added `ASSET_DELETED` to the event schema, published it from `packages/assets/src/actions/assetActions.ts` after successful hard-delete, and added it to `assetIndexer.sourceEvents` so deleted assets can be removed from the search index. Validation: `npm -w @alga-psa/event-schemas run typecheck`, `npm -w @alga-psa/assets run typecheck`, and `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/asset.ts`.
+
 ---
 
 ## Implementation order suggestion (not prescriptive)
