@@ -557,4 +557,27 @@ describe('search index subscriber event handling', () => {
     expect(mocks.deleteSearchDoc).not.toHaveBeenCalled();
   });
 
+  it('T171 deletes a ticket search document for TICKET_DELETED immediately', async () => {
+    const knex = { client: 'knex' };
+    const loadOne = vi.spyOn(ticketIndexer, 'loadOne');
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+
+    const event: Event = {
+      id: 'event-12',
+      eventType: 'TICKET_DELETED',
+      timestamp: '2026-05-13T12:00:00.000Z',
+      payload: {
+        tenant: 'tenant-1',
+        ticket_id: 'ticket-1',
+      },
+    } as Event;
+
+    await handleSearchIndexEventForTest(event);
+
+    expect(mocks.createTenantKnex).toHaveBeenCalledWith('tenant-1');
+    expect(mocks.deleteSearchDoc).toHaveBeenCalledWith(knex, 'tenant-1', 'ticket', 'ticket-1');
+    expect(mocks.upsertSearchDoc).not.toHaveBeenCalled();
+    expect(loadOne).not.toHaveBeenCalled();
+  });
+
 });

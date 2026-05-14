@@ -1458,6 +1458,8 @@ npm run search:backfill
 
 - **2026-05-13 — T170 live ticket-create indexing.** Added subscriber acceptance coverage that a `TICKET_CREATED` event resolves the ticket indexer, loads the ticket document, and calls `upsertSearchDoc` during the event handler path. Validation: `cd server && npx vitest run src/test/unit/searchIndexSubscriber.behavior.test.ts --coverage=false`.
 
+- **2026-05-13 — T171 live ticket-delete indexing.** Added subscriber acceptance coverage that a `TICKET_DELETED` event deletes the ticket index row immediately and does not call the ticket indexer's `loadOne`. Validation: `cd server && npx vitest run src/test/unit/searchIndexSubscriber.behavior.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

@@ -190,7 +190,7 @@
   { "id": "T168", "featureIds": ["F037", "F096"], "description": "End-to-end: client-scoped user A searches for a document whose `documents.client_id = X` where A has no access to X; document does NOT appear (Acceptance #9)", "implemented": true },
   { "id": "T169", "featureIds": ["F086"], "description": "End-to-end: 'exhcange' returns 'Exchange' as a top result via pg_trgm (Acceptance #10)", "implemented": true },
   { "id": "T170", "featureIds": ["F063", "F065"], "description": "End-to-end: creating a ticket through the UI causes it to appear in search within 5 seconds (Acceptance #11)", "implemented": true },
-  { "id": "T171", "featureIds": ["F066"], "description": "End-to-end: deleting a ticket causes it to disappear from search within 5 seconds (Acceptance #12)", "implemented": false },
+  { "id": "T171", "featureIds": ["F066"], "description": "End-to-end: deleting a ticket causes it to disappear from search within 5 seconds (Acceptance #12)", "implemented": true },
   { "id": "T172", "featureIds": ["F073", "F074", "F075"], "description": "End-to-end: fresh DB + backfill across all 27 entity types — a sampled record from each type is findable in search (Acceptance #13)", "implemented": false },
   { "id": "T173", "featureIds": ["F079", "F082"], "description": "End-to-end: manually DELETE a single index row then run reconciliation → the row is restored (Acceptance #14)", "implemented": false },
   { "id": "T174", "featureIds": ["F100"], "description": "Load test: 1M random-tenant queries across a 50-tenant seed; zero cross-tenant leaks (Acceptance #15)", "implemented": false },
