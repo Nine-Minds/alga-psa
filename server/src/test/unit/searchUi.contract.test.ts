@@ -79,4 +79,19 @@ describe('app-wide search UI contracts', () => {
     expect(source).toContain('router.replace(nextUrl, { scroll: false })');
     expect(source).toContain('return () => window.clearTimeout(timer)');
   });
+
+  it('T130 restores deep-linked search page URL state on cold render', () => {
+    const pageSource = readFileSync(resolve(process.cwd(), 'src/app/msp/search/page.tsx'), 'utf8');
+    const clientSource = readFileSync(resolve(process.cwd(), 'src/app/msp/search/SearchPageClient.tsx'), 'utf8');
+
+    expect(pageSource).toContain('const type = firstParam(params.type)');
+    expect(pageSource).toContain('const cursor = firstParam(params.cursor)');
+    expect(pageSource).toContain("const sort = firstParam(params.sort) === 'recent' ? 'recent' : 'relevance'");
+    expect(pageSource).toContain('initialQuery={query}');
+    expect(pageSource).toContain('initialType={activeType ?? (type === \'all\' ? \'all\' : undefined)}');
+    expect(pageSource).toContain('initialCursor={cursor}');
+    expect(pageSource).toContain('initialSort={sort}');
+    expect(clientSource).toContain('const [query, setQuery] = useState(initialQuery)');
+    expect(clientSource).toContain("const activeType = initialType && initialType !== 'all' ? initialType : 'all'");
+  });
 });
