@@ -211,4 +211,21 @@ describe('search index source event publishing contracts', () => {
       expect(submissionSource + eventSource).toContain(`'${eventType}'`);
     }
   });
+
+  it('T067 workflow task CRUD and assignment changes emit workflow task events', () => {
+    const source = readRepoFile('shared/workflow/persistence/workflowTaskModel.ts');
+
+    for (const eventType of [
+      'WORKFLOW_TASK_CREATED',
+      'WORKFLOW_TASK_UPDATED',
+      'WORKFLOW_TASK_DELETED',
+      'WORKFLOW_TASK_ASSIGNMENT_CHANGED',
+    ]) {
+      expect(source).toContain(`'${eventType}'`);
+    }
+
+    expect(source).toContain('updateTaskAssignment: async');
+    expect(source).toContain('deleteTask: async');
+    expect(source).toContain("changedFields: ['assigned_users']");
+  });
 });

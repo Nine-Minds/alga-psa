@@ -70,7 +70,7 @@
   { "id": "T064", "featureIds": ["F056"], "description": "Document content-change AND share-list-change both emit DOCUMENT_UPDATED", "implemented": true },
   { "id": "T065", "featureIds": ["F057"], "description": "Service catalog CRUD emits SERVICE_CATALOG_* events", "implemented": true },
   { "id": "T066", "featureIds": ["F058"], "description": "Service-request submission / definition CRUD emits corresponding events", "implemented": true },
-  { "id": "T067", "featureIds": ["F059"], "description": "Workflow task CRUD + assignment-change emit corresponding events", "implemented": false },
+  { "id": "T067", "featureIds": ["F059"], "description": "Workflow task CRUD + assignment-change emit corresponding events", "implemented": true },
   { "id": "T068", "featureIds": ["F060", "F061", "F062"], "description": "Interaction, schedule, time-entry, board/category/tag CRUD emit corresponding events", "implemented": false },
 
   { "id": "T069", "featureIds": ["F063", "F064"], "description": "Subscriber starts subscribed to every `sourceEvents` set returned by registered indexers (union of events)", "implemented": false },

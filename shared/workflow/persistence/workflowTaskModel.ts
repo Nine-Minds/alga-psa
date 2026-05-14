@@ -357,6 +357,97 @@ const WorkflowTaskModel = {
       throw error;
     }
   },
+
+  /**
+   * Replace task assignees.
+   */
+  updateTaskAssignment: async (
+    knex: Knex,
+    tenant: string,
+    taskId: string,
+    assignedUserIds: string[],
+    userId?: string
+  ): Promise<boolean> => {
+    try {
+      const result = await knex('workflow_tasks')
+        .where({
+          task_id: taskId,
+          tenant
+        })
+        .update({
+          assigned_users: JSON.stringify(assignedUserIds),
+          updated_at: new Date().toISOString()
+        });
+
+      if (result > 0) {
+        await publishWorkflowTaskSearchEvent('WORKFLOW_TASK_ASSIGNMENT_CHANGED', tenant, taskId, {
+          userId,
+          assignedUserIds,
+          changedFields: ['assigned_users'],
+        });
+      }
+
+      return result > 0;
+    } catch (error) {
+      console.error(`Error updating workflow task ${taskId} assignment:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete a task.
+   */
+  deleteTask: async (
+    knex: Knex,
+    tenant: string,
+    taskId: string,
+    userId?: string
+  ): Promise<boolean> => {
+    try {
+      const task = await knex<IWorkflowTask>('workflow_tasks')
+        .where({
+          task_id: taskId,
+          tenant
+        })
+        .first();
+
+      if (!task) {
+        return false;
+      }
+
+      let deleted = 0;
+      await knex.transaction(async (trx) => {
+        await trx('workflow_task_history')
+          .where({
+            task_id: taskId,
+            tenant
+          })
+          .delete();
+
+        const deletedRows = await trx('workflow_tasks')
+          .where({
+            task_id: taskId,
+            tenant
+          })
+          .delete();
+
+        deleted = Number(deletedRows ?? 0);
+      });
+
+      if (deleted > 0) {
+        await publishWorkflowTaskSearchEvent('WORKFLOW_TASK_DELETED', tenant, taskId, {
+          userId,
+          status: task.status,
+          assignedUserIds: task.assigned_users,
+        });
+      }
+
+      return deleted > 0;
+    } catch (error) {
+      console.error(`Error deleting workflow task ${taskId}:`, error);
+      throw error;
+    }
+  },
   
   /**
    * Complete a task with response data
