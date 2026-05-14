@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T022 registry exposes CE indexers.** Added `server/src/test/unit/searchRegistry.test.ts` to import the real registry through the CE/EE alias path and assert `allIndexers()` / `registeredObjectTypes()` expose 27 unique CE search object types and that `getIndexer('client')` resolves the client indexer. Validation: `npx vitest run src/test/unit/searchRegistry.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T021 weighted tsvector SQL helper.** Added `server/src/test/unit/searchSql.test.ts` to assert `buildTsvectorSql` emits `public.process_large_lexemes(?)` for title/subtitle/body with weights A/B/C, composes the weighted vectors with `||`, and returns the expected bindings. Validation: `npx vitest run src/test/unit/searchSql.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T020 truncation no-op boundary.** Extended `searchNormalize.test.ts` to assert `truncateForIndex` returns the exact original string, including multibyte content, when the UTF-8 byte length is already under the configured limit. Validation: `npx vitest run src/test/unit/searchNormalize.test.ts --coverage=false` from `server/` passed.
