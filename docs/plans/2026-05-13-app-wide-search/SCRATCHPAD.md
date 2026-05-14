@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T029 contact subtitle composition.** Extended `searchIndexers.test.ts` to exercise `contactIndexer.loadOne` and assert it queries `contacts`, filters by `contact_name_id`, and builds the subtitle from email, phone number, and role while preserving the contact URL and `contact:read` ACL. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T028 client batch backfill mapping.** Extended `searchIndexers.test.ts` with a thenable mocked `clients` query to exercise `clientIndexer.loadBatch` as the backfill CLI uses it. The test asserts tenant scoping, stable `client_id` ordering, batch limit, and one returned `SearchDoc` per seeded client row with `client:read` ACL. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T027 client indexer loadOne mapping.** Added `server/src/test/unit/searchIndexers.test.ts` with a mocked `clients` query chain to assert `clientIndexer.loadOne` filters by tenant and client id, maps `client_name` to title, email/phone to subtitle, notes to body, canonical client URL, and `requiredPermission='client:read'`. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.

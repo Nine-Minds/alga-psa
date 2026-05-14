@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { clientIndexer } from '../../lib/search/indexers/client';
+import { contactIndexer } from '../../lib/search/indexers/contact';
 
 function createFirstRowKnex(row: unknown) {
   const queryBuilder = {
@@ -101,5 +102,33 @@ describe('search entity indexers', () => {
     expect(docs.map((doc) => doc.objectId)).toEqual(['client-1', 'client-2']);
     expect(docs.every((doc) => doc.objectType === 'client')).toBe(true);
     expect(docs.every((doc) => doc.acl.requiredPermission === 'client:read')).toBe(true);
+  });
+
+  it('T029 contact subtitle includes email, phone, and role', async () => {
+    const { knex, queryBuilder } = createFirstRowKnex({
+      contact_name_id: 'contact-1',
+      full_name: 'Ada Lovelace',
+      email: 'ada@example.com',
+      phone_number: '555-0110',
+      role: 'Primary Contact',
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await contactIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'contact-1',
+    );
+
+    expect(knex).toHaveBeenCalledWith('contacts');
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith('contact_name_id', 'contact-1');
+    expect(doc).toMatchObject({
+      objectType: 'contact',
+      objectId: 'contact-1',
+      title: 'Ada Lovelace',
+      subtitle: 'ada@example.com | 555-0110 | Primary Contact',
+      url: '/msp/contacts/contact-1',
+      acl: { requiredPermission: 'contact:read' },
+    });
   });
 });
