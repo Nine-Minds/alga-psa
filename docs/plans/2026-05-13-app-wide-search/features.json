@@ -89,7 +89,7 @@
   { "id": "F079", "description": "Create pg-boss job `search:reconcile` in workflow-worker or scheduled jobs registry", "prdRefs": ["11.4"], "implemented": true },
   { "id": "F080", "description": "Reconciliation queries source rows where `updated_at > max(source_updated_at) per (tenant, object_type)` and re-indexes them", "prdRefs": ["11.4"], "implemented": true },
   { "id": "F081", "description": "Reconciliation deletes `app_search_index` rows whose source row no longer exists", "prdRefs": ["11.4"], "implemented": true },
-  { "id": "F082", "description": "Reconciliation inserts source rows that are missing from the index (covers backfill gaps)", "prdRefs": ["11.4"], "implemented": false },
+  { "id": "F082", "description": "Reconciliation inserts source rows that are missing from the index (covers backfill gaps)", "prdRefs": ["11.4"], "implemented": true },
   { "id": "F083", "description": "Schedule reconciliation to run daily; document the schedule in deploy runbook", "prdRefs": ["11.4", "16"], "implemented": false },
 
   { "id": "F084", "description": "Implement `parseQuery(raw)` that trims, lowercases identifier patterns, validates length ≤ 200 chars", "prdRefs": ["12", "13", "18-Q2"], "implemented": false },

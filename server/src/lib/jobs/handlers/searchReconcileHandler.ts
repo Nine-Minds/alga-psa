@@ -158,6 +158,46 @@ export async function deleteRowsMissingFromSource(
   return { checked, deleted };
 }
 
+export async function insertRowsMissingFromIndex(
+  knex: Knex,
+  tenant: string,
+  indexer: EntityIndexer,
+): Promise<{ scanned: number; inserted: number }> {
+  let cursor: string | null = null;
+  let scanned = 0;
+  let inserted = 0;
+
+  while (true) {
+    const docs = await indexer.loadBatch(knex, tenant, cursor, RECONCILE_BATCH_SIZE);
+    if (docs.length === 0) {
+      break;
+    }
+
+    const objectIds = docs.map((doc) => doc.objectId);
+    const existingRows = await knex<IndexedObjectRow>('app_search_index')
+      .select('object_id')
+      .where('tenant', tenant)
+      .andWhere('object_type', indexer.objectType)
+      .whereIn('object_id', objectIds);
+    const existingIds = new Set(existingRows.map((row) => row.object_id));
+
+    for (const doc of docs) {
+      scanned += 1;
+      if (!existingIds.has(doc.objectId)) {
+        await upsertSearchDoc(knex, doc);
+        inserted += 1;
+      }
+    }
+
+    cursor = docs[docs.length - 1]?.objectId ?? cursor;
+    if (docs.length < RECONCILE_BATCH_SIZE) {
+      break;
+    }
+  }
+
+  return { scanned, inserted };
+}
+
 export async function searchReconcileHandler(data: SearchReconcileJobData): Promise<void> {
   const tenants = await resolveReconcileTenants(data);
   const indexers = resolveReconcileIndexers(data);
@@ -167,12 +207,15 @@ export async function searchReconcileHandler(data: SearchReconcileJobData): Prom
     for (const indexer of indexers) {
       const updatedCounts = await reindexRowsAfterWatermark(knex, tenant, indexer);
       const staleCounts = await deleteRowsMissingFromSource(knex, tenant, indexer);
+      const missingCounts = await insertRowsMissingFromIndex(knex, tenant, indexer);
       logger.info('[SearchReconcileJob] Re-indexed rows after watermark', {
         tenant,
         objectType: indexer.objectType,
         ...updatedCounts,
         staleChecked: staleCounts.checked,
         staleDeleted: staleCounts.deleted,
+        missingScanned: missingCounts.scanned,
+        missingInserted: missingCounts.inserted,
       });
     }
   }

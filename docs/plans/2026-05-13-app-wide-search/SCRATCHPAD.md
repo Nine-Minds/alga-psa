@@ -463,6 +463,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - This also removes rows for sources that still exist but no longer qualify for indexing (for example, a time entry whose notes became empty).
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F082 — Reconcile missing index inserts.**
+  - Reconciliation now scans source docs in 500-row batches, loads existing `app_search_index.object_id`s for the same batch, and upserts any source doc missing from the index.
+  - This covers backfill gaps and direct SQL deletes of index rows even when the source row's `sourceUpdatedAt` is older than the current indexed watermark.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
