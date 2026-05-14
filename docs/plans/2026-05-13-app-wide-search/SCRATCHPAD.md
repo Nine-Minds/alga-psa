@@ -1492,6 +1492,8 @@ npm run search:backfill
 
 - **2026-05-13 — T187 permission-prefiltered type union.** Added action-layer permission-to-object-type filtering before query execution, so a user with only `client:read` cannot query ticket/document types even when requested. Validation: `cd server && npx vitest run src/test/unit/searchActions.test.ts --coverage=false`.
 
+- **2026-05-13 — T188 malformed cursor typed error.** Added action-layer coverage that a malformed cursor error from the query layer is propagated with `code='invalid_cursor'` rather than being wrapped as a generic failure. Validation: `cd server && npx vitest run src/test/unit/searchActions.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

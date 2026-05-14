@@ -437,6 +437,35 @@ describe('search actions', () => {
     }));
   });
 
+  it('T188 propagates malformed cursor as a typed action error', async () => {
+    const knex = { tenant: 'knex' };
+    const acl = {
+      userId: 'user-bad-cursor',
+      tenant: 'tenant-bad-cursor',
+      permissions: ['client:read'],
+      isInternal: true,
+      accessibleClientIds: ['client-1'],
+    };
+    const cursorError = Object.assign(new Error('Search cursor is invalid'), {
+      code: 'invalid_cursor',
+    });
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-bad-cursor' });
+    mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
+    mocks.runSearchQuery.mockRejectedValue(cursorError);
+
+    await expect(searchAppAction(
+      {
+        user_id: 'user-bad-cursor',
+        tenant: 'tenant-bad-cursor',
+        user_type: 'client',
+        clientId: 'client-1',
+      },
+      { tenant: 'tenant-bad-cursor' },
+      { query: 'acme', cursor: 'not-a-valid-cursor' },
+    )).rejects.toMatchObject({ code: 'invalid_cursor' });
+  });
+
   it('T118 returns at most five typeahead rows without snippets', async () => {
     const knex = { tenant: 'knex' };
     const acl = {
