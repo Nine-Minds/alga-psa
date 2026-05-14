@@ -153,4 +153,19 @@ describe('search index upsert helpers', () => {
     expect(bindings[1]).toBe(doc.objectType);
     expect(bindings[2]).toBe(doc.objectId);
   });
+
+  it('T183 invokes process_large_lexemes when computing search_vector', async () => {
+    const knex = createRawKnex();
+
+    await upsertSearchDoc(knex as never, sampleDoc({
+      title: 'Vector title',
+      subtitle: 'Vector subtitle',
+      body: 'Vector body',
+    }));
+
+    const [sql] = knex.raw.mock.calls[0] as [string, unknown[]];
+    expect(sql).toContain("setweight(to_tsvector('english', public.process_large_lexemes(?)), 'A')");
+    expect(sql).toContain("setweight(to_tsvector('english', public.process_large_lexemes(?)), 'B')");
+    expect(sql).toContain("setweight(to_tsvector('english', public.process_large_lexemes(?)), 'C')");
+  });
 });

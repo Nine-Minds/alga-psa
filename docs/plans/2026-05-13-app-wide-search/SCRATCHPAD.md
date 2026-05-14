@@ -1482,6 +1482,8 @@ npm run search:backfill
 
 - **2026-05-13 — T182 service-request secret payload fixture.** Added service-request-submission indexer coverage that visible payload strings are indexed while `password`, `api_key`, and `authorization` values are excluded from the body. Validation: `cd server && npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false`.
 
+- **2026-05-13 — T183 process_large_lexemes SQL path.** Added upsert SQL capture coverage that search-vector computation calls `public.process_large_lexemes(?)` for title, subtitle, and body weight tiers A/B/C. Validation: `cd server && npx vitest run src/test/unit/searchUpsert.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
