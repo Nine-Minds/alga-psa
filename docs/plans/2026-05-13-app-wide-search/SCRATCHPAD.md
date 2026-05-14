@@ -608,6 +608,12 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - The collapsed sidebar renders an icon button that expands the sidebar; the expanded sidebar renders the full typeahead input above the nav.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F109 — Search results route.**
+  - Added `server/src/app/msp/search/page.tsx` as a dynamic server component.
+  - It reads `q`, `type`, `cursor`, and `sort` from `searchParams`, calls `searchAppAction()` for non-empty queries, and renders initial SSR result anchors.
+  - The `sort` param is read and reflected in page data for URL-state continuity; query-layer sort behavior is still the F117 checkpoint.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:
