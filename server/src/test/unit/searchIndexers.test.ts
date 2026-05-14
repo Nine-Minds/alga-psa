@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { clientIndexer } from '../../lib/search/indexers/client';
 import { contactIndexer } from '../../lib/search/indexers/contact';
+import { projectPhaseIndexer } from '../../lib/search/indexers/project_phase';
+import { projectTaskIndexer } from '../../lib/search/indexers/project_task';
 import { projectIndexer } from '../../lib/search/indexers/project';
 import { ticketIndexer } from '../../lib/search/indexers/ticket';
 import { ticketCommentIndexer } from '../../lib/search/indexers/ticket_comment';
@@ -282,6 +284,62 @@ describe('search entity indexers', () => {
       title: 'Exchange rollout',
       body: 'Tenant migration project',
       url: '/msp/projects/project-1',
+      acl: {
+        requiredPermission: 'project:read',
+        clientScopeId: 'client-1',
+      },
+    });
+  });
+
+  it('T035 project phase and task indexers inherit parent project ACL fields', async () => {
+    const phaseKnex = createFirstRowKnex({
+      phase_id: 'phase-1',
+      project_id: 'project-1',
+      phase_name: 'Discovery',
+      description: 'Initial discovery',
+      project_name: 'Exchange rollout',
+      client_id: 'client-1',
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+    const taskKnex = createFirstRowKnex({
+      task_id: 'task-1',
+      phase_id: 'phase-1',
+      project_id: 'project-1',
+      task_name: 'Inventory mailboxes',
+      description: 'Collect mailbox list',
+      project_name: 'Exchange rollout',
+      client_id: 'client-1',
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const phaseDoc = await projectPhaseIndexer.loadOne(
+      phaseKnex.knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'phase-1',
+    );
+    const taskDoc = await projectTaskIndexer.loadOne(
+      taskKnex.knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'task-1',
+    );
+
+    expect(phaseKnex.knex).toHaveBeenCalledWith('project_phases as ph');
+    expect(taskKnex.knex).toHaveBeenCalledWith('project_tasks as pt');
+    expect(phaseDoc).toMatchObject({
+      objectType: 'project_phase',
+      parentType: 'project',
+      parentId: 'project-1',
+      subtitle: 'Exchange rollout',
+      acl: {
+        requiredPermission: 'project:read',
+        clientScopeId: 'client-1',
+      },
+    });
+    expect(taskDoc).toMatchObject({
+      objectType: 'project_task',
+      parentType: 'project',
+      parentId: 'project-1',
+      subtitle: 'Exchange rollout',
       acl: {
         requiredPermission: 'project:read',
         clientScopeId: 'client-1',

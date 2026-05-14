@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T035 project phase/task inherited ACL.** Extended `searchIndexers.test.ts` to exercise `projectPhaseIndexer.loadOne` and `projectTaskIndexer.loadOne` with parent project rows, asserting both emit `project:read`, inherit `clientScopeId` from the joined project, set project parent metadata, and use the project name as subtitle. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T034 project client-scope ACL.** Extended `searchIndexers.test.ts` to assert `projectIndexer.loadOne` maps project title/body/url and sets `acl.clientScopeId` from `projects.client_id` with `requiredPermission='project:read'`. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T033 ticket-comment anchor URL.** Extended `searchIndexers.test.ts` with a public ticket-comment fixture and asserted `ticketCommentIndexer.loadOne` emits `/msp/tickets/{ticket_id}#comment-{comment_id}`, preserving the hash anchor used by search results. Validation: `npx vitest run src/test/unit/searchIndexers.test.ts --coverage=false` from `server/` passed.
