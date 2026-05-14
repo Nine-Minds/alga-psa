@@ -14,6 +14,7 @@ import { projectTaskCommentIndexer } from '../../lib/search/indexers/project_tas
 import { projectTaskIndexer } from '../../lib/search/indexers/project_task';
 import { projectIndexer } from '../../lib/search/indexers/project';
 import { serviceCatalogIndexer } from '../../lib/search/indexers/service_catalog';
+import { serviceRequestDefinitionIndexer } from '../../lib/search/indexers/service_request_definition';
 import { serviceRequestSubmissionIndexer } from '../../lib/search/indexers/service_request_submission';
 import { ticketIndexer } from '../../lib/search/indexers/ticket';
 import { ticketCommentIndexer } from '../../lib/search/indexers/ticket_comment';
@@ -747,5 +748,29 @@ describe('search entity indexers', () => {
       },
     });
     expect(doc?.body).not.toContain('do-not-index');
+  });
+
+  it('T049 service-request-definition indexer requires admin permission', async () => {
+    const { knex } = createFirstRowKnex({
+      definition_id: 'definition-1',
+      name: 'Firewall onboarding',
+      description: 'Admin-managed definition',
+      updated_at: '2026-05-13T10:00:00.000Z',
+    });
+
+    const doc = await serviceRequestDefinitionIndexer.loadOne(
+      knex as never,
+      '11111111-1111-4111-8111-111111111111',
+      'definition-1',
+    );
+
+    expect(doc).toMatchObject({
+      objectType: 'service_request_definition',
+      objectId: 'definition-1',
+      title: 'Firewall onboarding',
+      body: 'Admin-managed definition',
+      url: '/msp/service-requests/definitions/definition-1',
+      acl: { requiredPermission: 'admin' },
+    });
   });
 });
