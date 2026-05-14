@@ -722,6 +722,8 @@ npm run search:backfill
 
 - **2026-05-13 — F050 contact CRUD events.** `CONTACT_CREATED`, `CONTACT_UPDATED`, and `CONTACT_ARCHIVED` already existed in `packages/event-schemas` and were already published from the server/package contact create-update paths. Added missing `CONTACT_DELETED` event type + payload schema, publish after successful hard-delete in the package `deleteContact` action, and added `CONTACT_DELETED` to `contactIndexer.sourceEvents`. Validation: `npm -w @alga-psa/event-schemas run typecheck`, `npm -w @alga-psa/clients run typecheck`, and `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/contact.ts`.
 
+- **2026-05-13 — F051 user lifecycle events.** No app-wide `USER_*` CRUD events existed in `packages/event-schemas`. Added `USER_CREATED`, `USER_UPDATED`, `USER_DELETED`, and `USER_ROLES_UPDATED` with tenant-scoped payloads. Published them from `packages/users/src/actions/user-actions/userActions.ts` after successful add/update/delete/role-update flows, and registered those events on `userIndexer.sourceEvents` so internal team-member rows can refresh/delete when the search subscriber lands. Validation: `npm -w @alga-psa/event-schemas run typecheck`, `npm -w @alga-psa/users run typecheck`, and `npx tsc --noEmit --pretty false --skipLibCheck server/src/lib/search/indexers/user.ts`.
+
 ---
 
 ## Implementation order suggestion (not prescriptive)

@@ -54,7 +54,7 @@
 
   { "id": "F049", "description": "Add `CLIENT_CREATED`, `CLIENT_UPDATED`, `CLIENT_DELETED` to `server/src/lib/eventBus/events.ts` and publish from existing client actions", "prdRefs": ["11.2"], "implemented": true },
   { "id": "F050", "description": "Add `CONTACT_*` event family and publish from contact actions", "prdRefs": ["11.2"], "implemented": true },
-  { "id": "F051", "description": "Audit existing `USER_*` events; add missing CRUD events; publish from user provisioning + role-change actions", "prdRefs": ["11.2", "11.5"], "implemented": false },
+  { "id": "F051", "description": "Audit existing `USER_*` events; add missing CRUD events; publish from user provisioning + role-change actions", "prdRefs": ["11.2", "11.5"], "implemented": true },
   { "id": "F052", "description": "Add `PROJECT_*`, `PROJECT_PHASE_*`, `PROJECT_TASK_*`, `PROJECT_TASK_COMMENT_*` event families and publishes", "prdRefs": ["11.2"], "implemented": false },
   { "id": "F053", "description": "Add `ASSET_*` event family and publishes", "prdRefs": ["11.2"], "implemented": false },
   { "id": "F054", "description": "Add `INVOICE_*`, `INVOICE_ITEM_*`, `INVOICE_ANNOTATION_*` events and publishes", "prdRefs": ["11.2"], "implemented": false },

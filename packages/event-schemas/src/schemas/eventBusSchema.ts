@@ -287,6 +287,12 @@ export const EVENT_TYPES = [
   'TAG_APPLIED',
   'TAG_REMOVED',
 
+  // Users
+  'USER_CREATED',
+  'USER_UPDATED',
+  'USER_DELETED',
+  'USER_ROLES_UPDATED',
+
   // Documents (domain expansion)
   'DOCUMENT_UPLOADED',
   'DOCUMENT_DELETED',
@@ -514,6 +520,18 @@ export const ClientEventPayloadSchema = BasePayloadSchema.extend({
   clientId: z.string().uuid(),
   userId: z.string().uuid().optional(), // User might not always be available for system-triggered events
   changes: z.record(z.unknown()).optional(), // Details of what changed
+});
+
+export const UserEventPayloadSchema = BasePayloadSchema.extend({
+  userId: z.string().uuid(),
+  userType: z.enum(['internal', 'client']).optional(),
+  email: z.string().email().optional(),
+  changedFields: z.array(z.string()).optional(),
+  roleIds: z.array(z.string().uuid()).optional(),
+  actorUserId: z.string().uuid().optional(),
+  createdAt: z.string().datetime().optional(),
+  updatedAt: z.string().datetime().optional(),
+  deletedAt: z.string().datetime().optional(),
 });
 
 // Custom event payload schema for test events
@@ -913,6 +931,12 @@ export const EventPayloadSchemas = {
   TAG_DEFINITION_UPDATED: tagDefinitionUpdatedEventPayloadSchema,
   TAG_APPLIED: tagAppliedEventPayloadSchema,
   TAG_REMOVED: tagRemovedEventPayloadSchema,
+
+  // Users
+  USER_CREATED: UserEventPayloadSchema,
+  USER_UPDATED: UserEventPayloadSchema,
+  USER_DELETED: UserEventPayloadSchema,
+  USER_ROLES_UPDATED: UserEventPayloadSchema,
 
   // Documents (domain expansion)
   DOCUMENT_UPLOADED: documentUploadedEventPayloadSchema,
