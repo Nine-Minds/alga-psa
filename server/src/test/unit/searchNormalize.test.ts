@@ -150,4 +150,10 @@ describe('search normalization utilities', () => {
     expect(Buffer.byteLength(output, 'utf8')).toBeLessThanOrEqual(6);
     expect(output).not.toContain('\uFFFD');
   });
+
+  it('T020 leaves text unchanged when it is under the byte limit', () => {
+    const input = 'ACME Exchange notes 😀';
+
+    expect(truncateForIndex(input, 65_536)).toBe(input);
+  });
 });
