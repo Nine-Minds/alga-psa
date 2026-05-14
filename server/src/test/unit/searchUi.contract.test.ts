@@ -279,4 +279,25 @@ describe('app-wide search UI contracts', () => {
     expect(source).toContain('initialCursor');
     expect(source).toContain('initialSort');
   });
+
+  it('T176 supports the complete keyboard-only search flow', () => {
+    const paletteSource = readFileSync(resolve(process.cwd(), 'src/components/search/SearchPalette.tsx'), 'utf8');
+    const pageSource = readFileSync(resolve(process.cwd(), 'src/app/msp/search/SearchPageClient.tsx'), 'utf8');
+
+    expect(paletteSource).toContain('inputRef.current?.focus()');
+    expect(paletteSource).toContain("if (event.key === 'ArrowDown')");
+    expect(paletteSource).toContain("if (event.key === 'ArrowUp')");
+    expect(paletteSource).toContain("if (event.key === 'Enter')");
+    expect(paletteSource).toContain("if (event.key === 'Escape')");
+    expect(paletteSource).toContain('window.location.assign(seeAllUrl)');
+    expect(paletteSource).toContain('window.location.assign(visibleResults[activeIndex].url)');
+
+    expect(pageSource).toContain('id="app-search-page-input"');
+    expect(pageSource).toContain('router.replace(nextUrl, { scroll: false })');
+    expect(pageSource).toContain('href={buildFilterUrl(\'all\')}');
+    expect(pageSource).toContain('href={buildFilterUrl(type)}');
+    expect(pageSource).toContain('href={buildPageUrl(previousCursor, previousCursorStack)}');
+    expect(pageSource).toContain('href={buildPageUrl(initialResult.nextCursor, nextCursorStack)}');
+    expect(pageSource).toContain('id="app-search-empty-clear-filter"');
+  });
 });

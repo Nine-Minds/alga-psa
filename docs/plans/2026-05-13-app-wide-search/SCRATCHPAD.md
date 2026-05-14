@@ -1468,6 +1468,8 @@ npm run search:backfill
 
 - **2026-05-13 — T175 pseudo-locale search coverage.** Added i18n contract coverage that the `xx` pseudo locale has every English `search.*` leaf key, includes pseudo fill for each rendered search string, and has no raw English literal text outside interpolation placeholders. Validation: `cd server && npx vitest run src/test/unit/searchI18n.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T176 keyboard-only search flow.** Added UI contract coverage for the full keyboard path: shortcut focus, arrow navigation, Enter/Escape behavior, results-page input URL updates, filter chips, pagination links, and clear-filter control. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).

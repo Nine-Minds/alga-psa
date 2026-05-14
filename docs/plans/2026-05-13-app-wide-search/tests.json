@@ -195,7 +195,7 @@
   { "id": "T173", "featureIds": ["F079", "F082"], "description": "End-to-end: manually DELETE a single index row then run reconciliation → the row is restored (Acceptance #14)", "implemented": true },
   { "id": "T174", "featureIds": ["F100"], "description": "Load test: 1M random-tenant queries across a 50-tenant seed; zero cross-tenant leaks (Acceptance #15)", "implemented": true },
   { "id": "T175", "featureIds": ["F122"], "description": "Pseudo locale renders all search UI strings (Acceptance #16)", "implemented": true },
-  { "id": "T176", "featureIds": ["F118", "F119"], "description": "Keyboard-only flow can: open palette, type, navigate, choose, open results page, paginate, filter, exit — without using mouse (Acceptance #17)", "implemented": false },
+  { "id": "T176", "featureIds": ["F118", "F119"], "description": "Keyboard-only flow can: open palette, type, navigate, choose, open results page, paginate, filter, exit — without using mouse (Acceptance #17)", "implemented": true },
   { "id": "T177", "featureIds": ["F110"], "description": "Deep-linked URL `/msp/search?q=...&type=...&cursor=...&sort=...` reproduces the same results when opened cold (Acceptance #18)", "implemented": false },
 
   { "id": "T178", "featureIds": ["F003", "F004"], "description": "Cross-shard query: searching across a tenant with 10M index rows uses GIN index (EXPLAIN ANALYZE shows no seq scan)", "implemented": false },
