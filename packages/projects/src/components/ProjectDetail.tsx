@@ -34,6 +34,10 @@ import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHand
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import DuplicateTaskDialog, { DuplicateOptions } from './DuplicateTaskDialog';
 import MoveTaskDialog from './MoveTaskDialog';
+import BulkMoveTaskDialog from './BulkMoveTaskDialog';
+import BulkAssignDialog from './BulkAssignDialog';
+import BulkTaskActionBar from './BulkTaskActionBar';
+import { useTaskSelection } from './TaskSelectionContext';
 import ProjectPhases from './ProjectPhases';
 import PhaseTaskImportDialog from './PhaseTaskImportDialog';
 import KanbanBoard from './KanbanBoard';
@@ -222,6 +226,8 @@ export default function ProjectDetail({
   const [moveConfirmation, setMoveConfirmation] = useState<{
     taskId: string;
     taskName: string;
+    /** When present, this is a bulk move of all these task IDs (taskId is the grabbed one). */
+    taskIds?: string[];
     sourcePhase: IProjectPhase;
     targetPhase: IProjectPhase;
   } | null>(null);
@@ -242,6 +248,13 @@ export default function ProjectDetail({
   // State for the Move Task Dialog
   const [isMoveTaskDialogOpen, setIsMoveTaskDialogOpen] = useState(false);
   const [taskToMove, setTaskToMove] = useState<IProjectTask | null>(null);
+
+  // Bulk task selection / actions
+  const { selectedTaskIds, clearSelection } = useTaskSelection();
+  const [isBulkMoveOpen, setIsBulkMoveOpen] = useState(false);
+  const [isBulkAssignOpen, setIsBulkAssignOpen] = useState(false);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
   const [taskToDuplicate, setTaskToDuplicate] = useState<IProjectTask | null>(null);
   const [animatingTasks, setAnimatingTasks] = useState<Set<string>>(new Set());
@@ -975,6 +988,54 @@ export default function ProjectDetail({
     beforeTaskId: string | null,
     afterTaskId: string | null
   ) => {
+    // Bulk move: when the dragged task is part of a multi-selection, move them all
+    if (selectedTaskIds.has(taskId) && selectedTaskIds.size > 1) {
+      const tasksToMove = allProjectTasks.filter(t => selectedTaskIds.has(t.task_id));
+      if (tasksToMove.length === 0) return;
+
+      let success = 0;
+      let failed = 0;
+      for (const task of tasksToMove) {
+        try {
+          if (task.phase_id !== newPhaseId) {
+            await moveTaskToPhase(task.task_id, newPhaseId, newStatusMappingId);
+          } else {
+            await updateTaskStatus(task.task_id, newStatusMappingId, null, null);
+          }
+          success++;
+        } catch (error) {
+          console.error(`Failed to move task ${task.task_id}:`, error);
+          failed++;
+        }
+      }
+
+      setAllProjectTasks(prev => prev.map(t =>
+        selectedTaskIds.has(t.task_id)
+          ? { ...t, phase_id: newPhaseId, project_status_mapping_id: newStatusMappingId }
+          : t
+      ));
+      setProjectTasks(prev => prev.flatMap(t => {
+        if (!selectedTaskIds.has(t.task_id)) return [t];
+        // Drop from the current kanban view if moved out of the selected phase
+        if (selectedPhase && newPhaseId !== selectedPhase.phase_id) return [];
+        return [{ ...t, project_status_mapping_id: newStatusMappingId }];
+      }));
+
+      if (failed === 0) {
+        toast.success(
+          t('projectDetail.bulkTasksMovedSuccess', '{{count}} tasks moved', { count: success }),
+        );
+      } else {
+        toast.error(
+          t('projectDetail.bulkMovePartial', 'Moved {{moved}} task(s), {{failed}} failed.', {
+            moved: success,
+            failed,
+          }),
+        );
+      }
+      return;
+    }
+
     try {
       const task = allProjectTasks.find(t => t.task_id === taskId);
       if (!task) {
@@ -1005,7 +1066,7 @@ export default function ProjectDetail({
     } catch (error) {
       handleError(error, 'Failed to move task');
     }
-  }, [allProjectTasks, t]);
+  }, [allProjectTasks, selectedTaskIds, selectedPhase, t]);
   
   // Handle tag changes
   const handleProjectTagsChange = (tags: ITag[]) => {
@@ -1352,7 +1413,16 @@ export default function ProjectDetail({
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     e.dataTransfer.setData('text/plain', taskId);
-    if (e.target instanceof HTMLElement) {
+    const isBulkDrag = selectedTaskIds.has(taskId) && selectedTaskIds.size > 1;
+    if (isBulkDrag) {
+      // Dim every selected card so it's clear they all move together
+      document.querySelectorAll('[data-task-id]').forEach((el) => {
+        const id = el.getAttribute('data-task-id');
+        if (id && selectedTaskIds.has(id)) {
+          el.classList.add('opacity-50');
+        }
+      });
+    } else if (e.target instanceof HTMLElement) {
       e.target.classList.add('opacity-50');
     }
     document.body.classList.add('dragging-task');
@@ -1362,6 +1432,9 @@ export default function ProjectDetail({
     if (e.target instanceof HTMLElement) {
       e.target.classList.remove('opacity-50');
     }
+    document.querySelectorAll('[data-task-id]').forEach((el) => {
+      el.classList.remove('opacity-50');
+    });
     document.body.classList.remove('dragging-task');
     setPhaseDropTarget(null);
     setTaskDraggingOverPhaseId(null); // Clear task dragging over phase
@@ -1374,10 +1447,131 @@ export default function ProjectDetail({
     }
   };
 
+  // Move every selected task into the target status of the current kanban phase.
+  // Selected tasks already in this phase are repositioned at the drop point;
+  // selected tasks from other phases are moved into this phase + target status.
+  const handleBulkKanbanDrop = async (
+    targetStatusId: string,
+    beforeTaskId: string | null,
+    afterTaskId: string | null,
+  ) => {
+    const currentPhaseId = selectedPhase?.phase_id;
+    if (!currentPhaseId) return;
+
+    // Selected tasks across every phase (not just the current board)
+    const allSelected = allProjectTasks.filter(t => selectedTaskIds.has(t.task_id));
+    if (allSelected.length === 0) return;
+
+    const samePhaseTasks = allSelected
+      .filter(t => t.phase_id === currentPhaseId)
+      .sort((a, b) => {
+        const ka = a.order_key || '';
+        const kb = b.order_key || '';
+        return ka < kb ? -1 : ka > kb ? 1 : 0;
+      });
+    const otherPhaseTasks = allSelected.filter(t => t.phase_id !== currentPhaseId);
+
+    try {
+      const statusUpdatedById = new Map<string, IProjectTask>();
+      let movedInCount = 0;
+      let failed = 0;
+
+      // Reposition same-phase tasks at the drop location, grouped consecutively
+      let prevBefore = beforeTaskId;
+      for (const task of samePhaseTasks) {
+        try {
+          const updatedTask = await updateTaskStatus(task.task_id, targetStatusId, prevBefore, afterTaskId);
+          statusUpdatedById.set(task.task_id, updatedTask);
+          prevBefore = task.task_id;
+        } catch (error) {
+          console.error(`Failed to move task ${task.task_id}:`, error);
+          failed++;
+        }
+      }
+
+      // Move cross-phase tasks into the current phase at the target status
+      for (const task of otherPhaseTasks) {
+        try {
+          await moveTaskToPhase(task.task_id, currentPhaseId, targetStatusId);
+          movedInCount++;
+        } catch (error) {
+          console.error(`Failed to move task ${task.task_id}:`, error);
+          failed++;
+        }
+      }
+
+      if (otherPhaseTasks.length > 0) {
+        // Cross-phase tasks now belong to this phase. Update the project-wide list
+        // optimistically, then reload the board so they appear with correct
+        // ordering, ticket links, resources, etc.
+        setAllProjectTasks(prev => prev.map(t => {
+          const u = statusUpdatedById.get(t.task_id);
+          if (u) {
+            return { ...t, project_status_mapping_id: u.project_status_mapping_id, order_key: u.order_key };
+          }
+          if (selectedTaskIds.has(t.task_id) && t.phase_id !== currentPhaseId) {
+            return { ...t, phase_id: currentPhaseId, project_status_mapping_id: targetStatusId };
+          }
+          return t;
+        }));
+        setStatusVersion(v => v + 1);
+      } else {
+        // Pure same-phase status change — update in place to avoid a reload flicker
+        const applyUpdate = (t: IProjectTask): IProjectTask => {
+          const u = statusUpdatedById.get(t.task_id);
+          return u
+            ? { ...t, project_status_mapping_id: u.project_status_mapping_id, order_key: u.order_key }
+            : t;
+        };
+        setProjectTasks(prev => prev.map(applyUpdate));
+        setAllProjectTasks(prev => prev.map(applyUpdate));
+
+        setAnimatingTasks(prev => {
+          const next = new Set(prev);
+          statusUpdatedById.forEach((_, id) => next.add(id));
+          return next;
+        });
+        setTimeout(() => {
+          setAnimatingTasks(prev => {
+            const next = new Set(prev);
+            statusUpdatedById.forEach((_, id) => next.delete(id));
+            return next;
+          });
+        }, 500);
+      }
+
+      const total = statusUpdatedById.size + movedInCount;
+      if (failed === 0) {
+        toast.success(
+          t('projectDetail.bulkTasksMovedSuccess', '{{count}} tasks moved', { count: total }),
+        );
+      } else {
+        toast.error(
+          t('projectDetail.bulkMovePartial', 'Moved {{moved}} task(s), {{failed}} failed.', {
+            moved: total,
+            failed,
+          }),
+        );
+      }
+    } catch (error) {
+      handleError(error, 'Failed to move tasks');
+    }
+  };
+
   const handleDrop = async (e: React.DragEvent, targetStatusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => {
     e.preventDefault();
+
+    // Bulk drag: when the dragged task is part of a multi-selection, move them all
+    if (selectedTaskIds.has(draggedTaskId) && selectedTaskIds.size > 1) {
+      // Don't anchor positioning to tasks that are themselves being moved
+      const safeBefore = beforeTaskId && selectedTaskIds.has(beforeTaskId) ? null : beforeTaskId;
+      const safeAfter = afterTaskId && selectedTaskIds.has(afterTaskId) ? null : afterTaskId;
+      await handleBulkKanbanDrop(targetStatusId, safeBefore, safeAfter);
+      return;
+    }
+
     const task = projectTasks.find(t => t.task_id === draggedTaskId);
-    
+
     if (!task) {
       console.error('Task not found');
       return;
@@ -1690,8 +1884,25 @@ export default function ProjectDetail({
     const taskId = plainData;
     const task = projectTasks.find(t => t.task_id === taskId);
     const sourcePhase = projectPhases.find(p => p.phase_id === task?.phase_id);
-    
+
     if (task && sourcePhase && targetPhase.phase_id !== sourcePhase.phase_id) {
+      // Bulk drag: the dragged task is part of a multi-selection
+      if (selectedTaskIds.has(taskId) && selectedTaskIds.size > 1) {
+        const bulkTaskIds = projectTasks
+          .filter(t => selectedTaskIds.has(t.task_id) && t.phase_id !== targetPhase.phase_id)
+          .map(t => t.task_id);
+        if (bulkTaskIds.length > 0) {
+          setMoveConfirmation({
+            taskId,
+            taskName: task.task_name,
+            taskIds: bulkTaskIds,
+            sourcePhase,
+            targetPhase,
+          });
+        }
+        return;
+      }
+
       setMoveConfirmation({
         taskId,
         taskName: task.task_name,
@@ -1703,7 +1914,55 @@ export default function ProjectDetail({
 
   const handleMoveConfirm = async () => {
     if (!moveConfirmation) return;
-    
+
+    // Bulk move: move every selected task to the target phase
+    if (moveConfirmation.taskIds && moveConfirmation.taskIds.length > 0) {
+      const { taskIds: bulkTaskIds, targetPhase } = moveConfirmation;
+      let success = 0;
+      let failed = 0;
+      const movedIds = new Set<string>();
+
+      for (const id of bulkTaskIds) {
+        const task = projectTasks.find(t => t.task_id === id);
+        if (!task) {
+          failed++;
+          continue;
+        }
+        try {
+          await moveTaskToPhase(id, targetPhase.phase_id, task.project_status_mapping_id);
+          movedIds.add(id);
+          success++;
+        } catch (error) {
+          console.error(`Failed to move task ${id}:`, error);
+          failed++;
+        }
+      }
+
+      // Moved tasks leave the current kanban board
+      setProjectTasks(prev => prev.filter(t => !movedIds.has(t.task_id)));
+      setAllProjectTasks(prev => prev.map(t =>
+        movedIds.has(t.task_id) ? { ...t, phase_id: targetPhase.phase_id } : t
+      ));
+
+      if (failed === 0) {
+        toast.success(
+          t('projectDetail.bulkTasksMovedToPhase', '{{count}} tasks moved to {{phaseName}}', {
+            count: success,
+            phaseName: targetPhase.phase_name,
+          }),
+        );
+      } else {
+        toast.error(
+          t('projectDetail.bulkMovePartial', 'Moved {{moved}} task(s), {{failed}} failed.', {
+            moved: success,
+            failed,
+          }),
+        );
+      }
+      setMoveConfirmation(null);
+      return;
+    }
+
     try {
       // Get the current task to preserve its status
       const task = projectTasks.find(t => t.task_id === moveConfirmation.taskId);
@@ -2245,6 +2504,158 @@ export default function ProjectDetail({
       setIsMoveTaskDialogOpen(false);
       setTaskToMove(null);
     }
+  };
+
+  // Handler for bulk move confirmation
+  const handleBulkMoveConfirm = async (targetPhaseId: string, targetStatusId: string | undefined) => {
+    const ids = Array.from(selectedTaskIds);
+    if (ids.length === 0) return;
+
+    const moved: IProjectTask[] = [];
+    const failed: string[] = [];
+
+    for (const taskId of ids) {
+      try {
+        const movedTask = await moveTaskToPhase(taskId, targetPhaseId, targetStatusId);
+        if (movedTask) {
+          moved.push(movedTask);
+        } else {
+          failed.push(taskId);
+        }
+      } catch (error) {
+        console.error(`Failed to move task ${taskId}:`, error);
+        failed.push(taskId);
+      }
+    }
+
+    if (moved.length > 0) {
+      const movedMap = new Map(moved.map(m => [m.task_id, m]));
+      setProjectTasks(prev => prev.flatMap(t => {
+        const m = movedMap.get(t.task_id);
+        if (!m) return [t];
+        // Drop from the current kanban view when moved out of the selected phase
+        if (selectedPhase && m.phase_id !== selectedPhase.phase_id) return [];
+        return [{ ...t, ...m }];
+      }));
+      setAllProjectTasks(prev => prev.map(t => {
+        const m = movedMap.get(t.task_id);
+        return m
+          ? { ...t, phase_id: m.phase_id, project_status_mapping_id: m.project_status_mapping_id }
+          : t;
+      }));
+    }
+
+    if (failed.length === 0) {
+      toast.success(
+        t('projectDetail.bulkMoveSuccess', '{{count}} task(s) moved successfully!', { count: moved.length }),
+      );
+    } else {
+      toast.error(
+        t('projectDetail.bulkMovePartial', 'Moved {{moved}} task(s), {{failed}} failed.', {
+          moved: moved.length,
+          failed: failed.length,
+        }),
+      );
+    }
+
+    clearSelection();
+    setIsBulkMoveOpen(false);
+  };
+
+  // Handler for bulk delete confirmation
+  const handleBulkDeleteConfirm = async () => {
+    const ids = Array.from(selectedTaskIds);
+    if (ids.length === 0) return;
+
+    const deleted: string[] = [];
+    const failed: string[] = [];
+
+    for (const taskId of ids) {
+      try {
+        await deleteTaskAction(taskId);
+        deleted.push(taskId);
+      } catch (error) {
+        console.error(`Failed to delete task ${taskId}:`, error);
+        failed.push(taskId);
+      }
+    }
+
+    if (deleted.length > 0) {
+      const deletedSet = new Set(deleted);
+      setProjectTasks(prev => prev.filter(t => !deletedSet.has(t.task_id)));
+      setAllProjectTasks(prev => prev.filter(t => !deletedSet.has(t.task_id)));
+    }
+
+    if (failed.length === 0) {
+      toast.success(
+        t('projectDetail.bulkDeleteSuccess', '{{count}} task(s) deleted successfully!', { count: deleted.length }),
+      );
+    } else {
+      toast.error(
+        t('projectDetail.bulkDeletePartial', 'Deleted {{deleted}} task(s), {{failed}} failed.', {
+          deleted: deleted.length,
+          failed: failed.length,
+        }),
+      );
+    }
+
+    clearSelection();
+    setIsBulkDeleteOpen(false);
+  };
+
+  // Handler for bulk assign confirmation
+  const handleBulkAssignConfirm = async (userId: string | null) => {
+    const ids = Array.from(selectedTaskIds);
+    if (ids.length === 0) return;
+
+    let success = 0;
+    let failed = 0;
+
+    for (const taskId of ids) {
+      const task = projectTasks.find(t => t.task_id === taskId)
+        || allProjectTasks.find(t => t.task_id === taskId);
+      if (!task) {
+        failed++;
+        continue;
+      }
+      try {
+        const updatedTask = await updateTaskWithChecklist(taskId, {
+          ...task,
+          assigned_to: userId,
+          estimated_hours: Number(task.estimated_hours) || 0,
+          actual_hours: Number(task.actual_hours) || 0,
+          checklist_items: task.checklist_items,
+        });
+        if (updatedTask) {
+          const checklistItems = await getTaskChecklistItems(taskId);
+          const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
+          setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
+          setAllProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
+          success++;
+        } else {
+          failed++;
+        }
+      } catch (error) {
+        console.error(`Failed to assign task ${taskId}:`, error);
+        failed++;
+      }
+    }
+
+    if (failed === 0) {
+      toast.success(
+        t('projectDetail.bulkAssignSuccess', '{{count}} task(s) assigned successfully!', { count: success }),
+      );
+    } else {
+      toast.error(
+        t('projectDetail.bulkAssignPartial', 'Assigned {{success}} task(s), {{failed}} failed.', {
+          success,
+          failed,
+        }),
+      );
+    }
+
+    clearSelection();
+    setIsBulkAssignOpen(false);
   };
 
   // Render the sticky header with title, view switcher, search, and filters
@@ -3025,16 +3436,32 @@ export default function ProjectDetail({
           isOpen={true}
           onClose={() => setMoveConfirmation(null)}
           onConfirm={handleMoveConfirm}
-          title={t('dialogs.moveTask.title', 'Move Task')}
-          message={t(
-            'projectDetail.confirmMoveTaskMessage',
-            'Are you sure you want to move task "{{taskName}}" from phase "{{sourcePhase}}" to "{{targetPhase}}"?',
-            {
-              taskName: moveConfirmation.taskName,
-              sourcePhase: moveConfirmation.sourcePhase.phase_name,
-              targetPhase: moveConfirmation.targetPhase.phase_name,
-            },
-          )}
+          title={
+            moveConfirmation.taskIds && moveConfirmation.taskIds.length > 1
+              ? t('projectDetail.moveTasksTitle', 'Move Tasks')
+              : t('dialogs.moveTask.title', 'Move Task')
+          }
+          message={
+            moveConfirmation.taskIds && moveConfirmation.taskIds.length > 1
+              ? t(
+                  'projectDetail.confirmMoveTasksMessage',
+                  'Are you sure you want to move {{count}} selected tasks from phase "{{sourcePhase}}" to "{{targetPhase}}"?',
+                  {
+                    count: moveConfirmation.taskIds.length,
+                    sourcePhase: moveConfirmation.sourcePhase.phase_name,
+                    targetPhase: moveConfirmation.targetPhase.phase_name,
+                  },
+                )
+              : t(
+                  'projectDetail.confirmMoveTaskMessage',
+                  'Are you sure you want to move task "{{taskName}}" from phase "{{sourcePhase}}" to "{{targetPhase}}"?',
+                  {
+                    taskName: moveConfirmation.taskName,
+                    sourcePhase: moveConfirmation.sourcePhase.phase_name,
+                    targetPhase: moveConfirmation.targetPhase.phase_name,
+                  },
+                )
+          }
           confirmLabel={t('common:actions.confirm', 'Confirm')}
           cancelLabel={t('common:actions.cancel', 'Cancel')}
         />
@@ -3113,6 +3540,52 @@ export default function ProjectDetail({
           currentProjectId={project.project_id}
           projectTreeData={projectTreeData}
           onConfirm={handleDialogMoveConfirm}
+        />
+      )}
+
+      {/* Bulk task action bar */}
+      <BulkTaskActionBar
+        onMove={() => setIsBulkMoveOpen(true)}
+        onAssign={() => setIsBulkAssignOpen(true)}
+        onDelete={() => setIsBulkDeleteOpen(true)}
+      />
+
+      {/* Bulk Move Task Dialog */}
+      {isBulkMoveOpen && (
+        <BulkMoveTaskDialog
+          isOpen={isBulkMoveOpen}
+          onClose={() => setIsBulkMoveOpen(false)}
+          taskCount={selectedTaskIds.size}
+          projectTreeData={projectTreeData}
+          onConfirm={handleBulkMoveConfirm}
+        />
+      )}
+
+      {/* Bulk Assign Dialog */}
+      {isBulkAssignOpen && (
+        <BulkAssignDialog
+          isOpen={isBulkAssignOpen}
+          onClose={() => setIsBulkAssignOpen(false)}
+          taskCount={selectedTaskIds.size}
+          users={users}
+          onConfirm={handleBulkAssignConfirm}
+        />
+      )}
+
+      {/* Bulk Delete Confirmation Dialog */}
+      {isBulkDeleteOpen && (
+        <ConfirmationDialog
+          isOpen={isBulkDeleteOpen}
+          onClose={() => setIsBulkDeleteOpen(false)}
+          onConfirm={handleBulkDeleteConfirm}
+          title={t('projectDetail.bulkDeleteTitle', 'Delete Tasks')}
+          message={t(
+            'projectDetail.bulkDeleteMessage',
+            'Are you sure you want to delete {{count}} selected task(s)? This action cannot be undone.',
+            { count: selectedTaskIds.size },
+          )}
+          confirmLabel={t('common:actions.delete', 'Delete')}
+          cancelLabel={t('common:actions.cancel', 'Cancel')}
         />
       )}
 

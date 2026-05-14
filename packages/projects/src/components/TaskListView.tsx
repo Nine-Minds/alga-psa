@@ -28,6 +28,8 @@ import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { highlightSearchMatch } from '../lib/searchUtils';
 import { useTranslation } from 'react-i18next';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { useTaskSelection } from './TaskSelectionContext';
 
 // Auto-scroll configuration for drag operations
 const SCROLL_THRESHOLD = 80; // Pixels from edge to start scrolling
@@ -137,6 +139,7 @@ export default function TaskListView({
   searchCaseSensitive = false
 }: TaskListViewProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const { isSelected, toggleTask, setTasksSelected, selectedTaskIds } = useTaskSelection();
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
   const [expandedTitles, setExpandedTitles] = useState<Set<string>>(new Set());
@@ -510,10 +513,19 @@ export default function TaskListView({
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', task.task_id);
     // Add a visual cue that we're dragging
-    if (e.currentTarget) {
+    const isBulkDrag = selectedTaskIds.has(task.task_id) && selectedTaskIds.size > 1;
+    if (isBulkDrag) {
+      // Dim every selected row so it's clear they all move together
+      document.querySelectorAll('[data-task-row-id]').forEach((el) => {
+        const id = el.getAttribute('data-task-row-id');
+        if (id && selectedTaskIds.has(id)) {
+          (el as HTMLElement).style.opacity = '0.5';
+        }
+      });
+    } else if (e.currentTarget) {
       e.currentTarget.style.opacity = '0.5';
     }
-  }, []);
+  }, [selectedTaskIds]);
 
   const handleDragEnd = useCallback((e: React.DragEvent<HTMLTableRowElement>) => {
     setDraggedTask(null);
@@ -523,6 +535,9 @@ export default function TaskListView({
     if (e.currentTarget) {
       e.currentTarget.style.opacity = '1';
     }
+    document.querySelectorAll('[data-task-row-id]').forEach((el) => {
+      (el as HTMLElement).style.opacity = '1';
+    });
     // Clear scroll interval
     scrollSpeedRef.current = 0;
     if (scrollIntervalRef.current) {
@@ -873,7 +888,7 @@ export default function TaskListView({
       {/* Column headers - sticky */}
       <div className="bg-white border-b border-gray-200 flex-shrink-0">
         <table className="w-full table-fixed">
-          <colgroup><col style={{ width: '40px' }} /><col />{isColumnVisible('deps') && <col style={{ width: '5%' }} />}{isColumnVisible('checklist') && <col style={{ width: '6%' }} />}{isColumnVisible('tags') && <col style={{ width: '10%' }} />}{isColumnVisible('assignee') && <col style={{ width: '17%' }} />}{isColumnVisible('est_hours') && <col style={{ width: '6%' }} />}{isColumnVisible('actual_hours') && <col style={{ width: '7%' }} />}{isColumnVisible('due_date') && <col style={{ width: '9%' }} />}{isColumnVisible('attachments') && <col style={{ width: '6%' }} />}<col style={{ width: '8%' }} /></colgroup>
+          <colgroup><col style={{ width: '64px' }} /><col />{isColumnVisible('deps') && <col style={{ width: '5%' }} />}{isColumnVisible('checklist') && <col style={{ width: '6%' }} />}{isColumnVisible('tags') && <col style={{ width: '10%' }} />}{isColumnVisible('assignee') && <col style={{ width: '17%' }} />}{isColumnVisible('est_hours') && <col style={{ width: '6%' }} />}{isColumnVisible('actual_hours') && <col style={{ width: '7%' }} />}{isColumnVisible('due_date') && <col style={{ width: '9%' }} />}{isColumnVisible('attachments') && <col style={{ width: '6%' }} />}<col style={{ width: '8%' }} /></colgroup>
           <thead>
             <tr>
               <th className="w-10 px-3 py-3" />
@@ -958,7 +973,7 @@ export default function TaskListView({
           return (
             <div key={phaseGroup.phase.phase_id}>
               <table className="w-full table-fixed">
-                <colgroup><col style={{ width: '40px' }} /><col />{isColumnVisible('deps') && <col style={{ width: '5%' }} />}{isColumnVisible('checklist') && <col style={{ width: '6%' }} />}{isColumnVisible('tags') && <col style={{ width: '10%' }} />}{isColumnVisible('assignee') && <col style={{ width: '17%' }} />}{isColumnVisible('est_hours') && <col style={{ width: '6%' }} />}{isColumnVisible('actual_hours') && <col style={{ width: '7%' }} />}{isColumnVisible('due_date') && <col style={{ width: '9%' }} />}{isColumnVisible('attachments') && <col style={{ width: '6%' }} />}<col style={{ width: '8%' }} /></colgroup>
+                <colgroup><col style={{ width: '64px' }} /><col />{isColumnVisible('deps') && <col style={{ width: '5%' }} />}{isColumnVisible('checklist') && <col style={{ width: '6%' }} />}{isColumnVisible('tags') && <col style={{ width: '10%' }} />}{isColumnVisible('assignee') && <col style={{ width: '17%' }} />}{isColumnVisible('est_hours') && <col style={{ width: '6%' }} />}{isColumnVisible('actual_hours') && <col style={{ width: '7%' }} />}{isColumnVisible('due_date') && <col style={{ width: '9%' }} />}{isColumnVisible('attachments') && <col style={{ width: '6%' }} />}<col style={{ width: '8%' }} /></colgroup>
 
                 {/* Phase header row */}
                 <thead>
@@ -1058,6 +1073,9 @@ export default function TaskListView({
                     {phaseGroup.statusGroups.map(statusGroup => {
                       const statusKey = `${phaseGroup.phase.phase_id}:${statusGroup.status.project_status_mapping_id}`;
                       const isStatusExpanded = expandedStatuses.has(statusKey);
+                      const statusTaskIds = statusGroup.tasks.map(t => t.task_id);
+                      const allStatusSelected = statusTaskIds.length > 0 && statusTaskIds.every(id => isSelected(id));
+                      const someStatusSelected = statusTaskIds.some(id => isSelected(id));
                       const isDropTarget = draggedTask &&
                         dragOverStatus === statusGroup.status.project_status_mapping_id &&
                         dragOverPhase === phaseGroup.phase.phase_id;
@@ -1087,6 +1105,19 @@ export default function TaskListView({
                                   <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
                                 ) : (
                                   <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
+                                )}
+                                {statusTaskIds.length > 0 && (
+                                  <div onClick={(e) => e.stopPropagation()}>
+                                    <Checkbox
+                                      id={`select-status-${statusKey}`}
+                                      checked={allStatusSelected}
+                                      indeterminate={someStatusSelected && !allStatusSelected}
+                                      onChange={() => setTasksSelected(statusTaskIds, !allStatusSelected)}
+                                      size="sm"
+                                      containerClassName="mb-0"
+                                      skipRegistration
+                                    />
+                                  </div>
                                 )}
                                 <span
                                   className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
@@ -1131,6 +1162,7 @@ export default function TaskListView({
                                   </tr>
                                 )}
                                 <tr
+                                data-task-row-id={task.task_id}
                                 className={`${taskIndex % 2 === 0 ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-100))]' : 'bg-white dark:bg-[rgb(var(--color-card))]'} hover:bg-primary/10 group transition-colors ${
                                   isDragging ? 'opacity-50' : ''
                                 } ${showDropIndicator ? 'bg-primary-50' : ''}`}
@@ -1141,11 +1173,23 @@ export default function TaskListView({
                                 onDragLeave={handleDragLeave}
                                 onDrop={(e) => handleDrop(e, statusGroup.status.project_status_mapping_id, phaseGroup.phase.phase_id, statusGroup.tasks, taskIndex)}
                               >
-                                {/* Drag handle and indent spacer */}
-                                <td className="py-3 px-3 w-10">
-                                  {onTaskMove && (
-                                    <GripVertical className="h-4 w-4 text-gray-400 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity" />
-                                  )}
+                                {/* Selection checkbox and drag handle */}
+                                <td className="py-3 px-3">
+                                  <div className="flex items-center gap-1">
+                                    <div onClick={(e) => e.stopPropagation()}>
+                                      <Checkbox
+                                        id={`select-task-${task.task_id}`}
+                                        checked={isSelected(task.task_id)}
+                                        onChange={() => toggleTask(task.task_id)}
+                                        size="sm"
+                                        containerClassName="mb-0"
+                                        skipRegistration
+                                      />
+                                    </div>
+                                    {onTaskMove && (
+                                      <GripVertical className="h-4 w-4 text-gray-400 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    )}
+                                  </div>
                                 </td>
 
                                 {/* Task Name */}

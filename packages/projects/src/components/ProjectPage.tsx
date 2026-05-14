@@ -4,6 +4,7 @@ import { getProjectMetadata, updateProject } from '../actions/projectActions';
 import ProjectInfo from './ProjectInfo';
 import ProjectDetail from './ProjectDetail';
 import { TaskShareActionsProvider } from './TaskShareActionsContext';
+import { TaskSelectionProvider } from './TaskSelectionContext';
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
 import type { IClient, IProject, IProjectPhase, IProjectTask, IProjectTicketLinkWithDetails, ITag, IUserWithRoles, ProjectStatus } from '@alga-psa/types';
@@ -147,6 +148,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
   return (
     <TaskShareActionsProvider>
+    <TaskSelectionProvider>
     <div>
       <ProjectInfo
         project={projectMetadata.project}
@@ -174,6 +176,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         onUrlUpdate={handleUrlUpdate}
       />
     </div>
+    </TaskSelectionProvider>
     </TaskShareActionsProvider>
   );
 }

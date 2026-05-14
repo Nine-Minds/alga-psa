@@ -28,6 +28,7 @@ import styles from './ProjectDetail.module.css';
 import { highlightSearchMatch } from '../lib/searchUtils';
 import { calculateZoomScales } from './KanbanZoomControl';
 import { useTranslation } from 'react-i18next';
+import { useTaskSelection } from './TaskSelectionContext';
 
 interface TaskCardProps {
   task: IProjectTask;
@@ -106,6 +107,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   teamAvatarUrls = {},
 }) => {
   const { t } = useTranslation(['features/projects', 'common']);
+  const { isSelected, toggleTask, selectedTaskIds } = useTaskSelection();
+  const selected = isSelected(task.task_id);
   // Use data from props — parent (StatusColumn) always provides arrays from batch-loaded data
   const [taskTickets, setTaskTickets] = useState<IProjectTicketLinkWithDetails[]>(
     task.ticket_links ?? ticketLinks ?? []
@@ -217,6 +220,29 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       dragImage.style.height = `${rect.height}px`;
       dragImage.style.transform = 'translateY(-1000px)';
       dragImage.classList.add('drag-image');
+
+      // When dragging as part of a multi-selection, show a count badge on the drag image
+      if (selected && selectedTaskIds.size > 1) {
+        const badge = document.createElement('div');
+        badge.textContent = String(selectedTaskIds.size);
+        badge.style.position = 'absolute';
+        badge.style.top = '-10px';
+        badge.style.right = '-10px';
+        badge.style.minWidth = '24px';
+        badge.style.height = '24px';
+        badge.style.padding = '0 6px';
+        badge.style.borderRadius = '9999px';
+        badge.style.background = 'rgb(var(--color-primary-500))';
+        badge.style.color = '#fff';
+        badge.style.fontSize = '12px';
+        badge.style.fontWeight = '600';
+        badge.style.display = 'flex';
+        badge.style.alignItems = 'center';
+        badge.style.justifyContent = 'center';
+        badge.style.boxShadow = '0 1px 3px rgba(0,0,0,0.3)';
+        dragImage.appendChild(badge);
+      }
+
       document.body.appendChild(dragImage);
       e.dataTransfer.setDragImage(dragImage, rect.width / 2, rect.height / 2);
       setTimeout(() => document.body.removeChild(dragImage), 0);
@@ -269,7 +295,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         console.log('Using cached project tree data when selecting task for editing');
         onTaskSelected(task);
       }}
-      className={`${styles.taskCard} relative bg-white ${zoomScales.cardPadding} rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-all duration-200 border border-gray-200 flex flex-col ${zoomScales.cardGap} ${
+      className={`${styles.taskCard} relative bg-white ${zoomScales.cardPadding} rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-all duration-200 border flex flex-col ${zoomScales.cardGap} ${
+        selected ? 'border-primary-500 ring-2 ring-primary-500' : 'border-gray-200'
+      } ${
         isDragging ? styles.dragging : ''
       } ${isAnimating ? styles.entering : ''}`}
       aria-grabbed={isDragging}
@@ -277,6 +305,21 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         taskName: task.task_name,
       })}
     >
+      {/* Selection checkbox */}
+      <div
+        className={`absolute ${zoomLevel <= 15 ? 'top-1 right-6' : 'top-1.5 right-8'} z-10 flex items-center`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={() => toggleTask(task.task_id)}
+          aria-label={t('projectDetail.selectTaskAria', 'Select task {{taskName}}', { taskName: task.task_name })}
+          className={`alga-checkbox ${zoomLevel <= 15 ? 'h-3 w-3' : 'h-4 w-4'} rounded cursor-pointer`}
+          style={{ accentColor: 'rgb(var(--color-primary-500))' }}
+        />
+      </div>
+
       {/* Task type indicator */}
       <div className={`absolute ${zoomLevel <= 15 ? 'top-1 left-1' : 'top-2 left-2'}`} title={taskType?.type_name || t('task', 'Task')}>
         <Icon
