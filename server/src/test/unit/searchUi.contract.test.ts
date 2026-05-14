@@ -133,4 +133,15 @@ describe('app-wide search UI contracts', () => {
     expect(source).toContain('href={buildPageUrl(previousCursor, previousCursorStack)}');
     expect(source).toContain('href={buildPageUrl(initialResult.nextCursor, nextCursorStack)}');
   });
+
+  it('T135 renders an empty state that echoes the query and can clear a type filter', () => {
+    const source = readFileSync(resolve(process.cwd(), 'src/app/msp/search/SearchPageClient.tsx'), 'utf8');
+
+    expect(source).toContain('const showEmptyState = !isUpdatingQuery && initialQuery.length > 0 && initialResult.results.length === 0');
+    expect(source).toContain("t('search.noResults'");
+    expect(source).toContain('query: initialQuery');
+    expect(source).toContain("activeType === 'all'");
+    expect(source).toContain("t('search.emptyRemoveFilter')");
+    expect(source).toContain('id="app-search-empty-clear-filter"');
+  });
 });

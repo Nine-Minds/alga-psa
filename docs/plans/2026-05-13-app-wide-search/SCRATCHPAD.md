@@ -1386,6 +1386,8 @@ npm run search:backfill
 
 - **2026-05-13 — T134 cursor pagination links.** Added UI contract coverage that the results page derives previous and next cursor stacks separately, linking previous to the prior boundary and next to `initialResult.nextCursor` with the current boundary appended. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
 
+- **2026-05-13 — T135 empty search state.** Added UI contract coverage that the results page only shows empty state after a non-empty settled query with zero results, echoes `initialQuery` through `search.noResults`, and offers the clear-filter anchor for filtered empty results. Validation: `cd server && npx vitest run src/test/unit/searchUi.contract.test.ts --coverage=false`.
+
 Roughly:
 
 1. Migration + indexes (F001–F008).
