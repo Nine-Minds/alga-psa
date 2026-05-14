@@ -34,4 +34,27 @@ describe('search normalization utilities', () => {
       'ACME onboarding notes Confirmed Exchange migration window Added Sciton Tribrid Laser Serial SN-123',
     );
   });
+
+  it('T014 drops embedded image data URI payloads from BlockNote text', () => {
+    const output = flattenBlockNote([
+      {
+        id: 'image-block',
+        type: 'paragraph',
+        content: [
+          { type: 'text', text: 'Before image', styles: {} },
+          {
+            type: 'text',
+            text: ' data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAUA ',
+            styles: {},
+          },
+          { type: 'text', text: 'after image', styles: {} },
+        ],
+        children: [],
+      },
+    ]);
+
+    expect(output).toBe('Before image after image');
+    expect(output).not.toContain('data:image');
+    expect(output).not.toContain('iVBORw0KGgo');
+  });
 });

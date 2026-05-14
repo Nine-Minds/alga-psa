@@ -1065,6 +1065,8 @@ npm run search:backfill
 
 ## Implementation log
 
+- **2026-05-13 — T014 BlockNote image data stripping.** Extended `searchNormalize.test.ts` with a BlockNote text payload containing a `data:image/png;base64,...` string between visible text leaves. The test asserts the data URI and base64 fragment are absent from `flattenBlockNote` output while surrounding visible text remains. Validation: `npx vitest run src/test/unit/searchNormalize.test.ts --coverage=false` from `server/` passed.
+
 - **2026-05-13 — T013 BlockNote visible-text flattening.** Added `server/src/test/unit/searchNormalize.test.ts` with a realistic BlockNote fixture containing headings, nested bullet-list content, inline marks, and multiple text leaves. The test asserts `flattenBlockNote` emits the visible text in document order without JSON/formatting noise. Validation: `npx vitest run src/test/unit/searchNormalize.test.ts --coverage=false` from `server/` passed.
 
 - **2026-05-13 — T012 SearchDoc/AclMetadata compile-time ACL contract.** Extended `searchTypes.exhaustive.test.ts` to build a `SearchDoc` with every `AclMetadata` denormalized hint (`visibleToUserIds`, `visibleToRoles`, `isInternalOnly`, `isPrivate`, `clientScopeId`, `requiredPermission`) and to use `@ts-expect-error` for a `SearchDoc` missing `acl`, so `npm -w server run typecheck` fails if ACL metadata ever becomes optional. Validation: `npx vitest run src/test/unit/searchTypes.exhaustive.test.ts --coverage=false` from `server/` passed; `npm -w server run typecheck` passed.
