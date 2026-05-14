@@ -126,7 +126,7 @@
   { "id": "F109", "description": "Create `server/src/app/msp/search/page.tsx` (server component) that reads `q`, `type`, `cursor`, `sort` from search params and calls `searchAppAction`", "prdRefs": ["6.2"], "implemented": true },
   { "id": "F110", "description": "Create `SearchPageClient.tsx` that manages URL state via Next.js router (debounced 200ms on input change)", "prdRefs": ["6.2"], "implemented": true },
   { "id": "F111", "description": "Render filter chips on the results page: `All` plus one chip per entity type with count badge from `groups`", "prdRefs": ["6.2"], "implemented": true },
-  { "id": "F112", "description": "Render grouped result lists (by entity type, max 10 per group) when `type=All`", "prdRefs": ["6.2"], "implemented": false },
+  { "id": "F112", "description": "Render grouped result lists (by entity type, max 10 per group) when `type=All`", "prdRefs": ["6.2"], "implemented": true },
   { "id": "F113", "description": "Render flat paginated list when a single `type` filter is selected", "prdRefs": ["6.2"], "implemented": false },
   { "id": "F114", "description": "Implement cursor-based prev/next pagination on the results page", "prdRefs": ["6.2"], "implemented": false },
   { "id": "F115", "description": "Implement loading skeleton AND a clear empty state that echoes the query", "prdRefs": ["6.2"], "implemented": false },

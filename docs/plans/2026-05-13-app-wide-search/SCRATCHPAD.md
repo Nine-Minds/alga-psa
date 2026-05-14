@@ -625,6 +625,11 @@ psql -c "DELETE FROM app_search_index WHERE tenant = '<uuid>'" && \
   - Each chip shows a count badge and builds a shareable `/msp/search` URL preserving `q` and non-default `sort` while setting or clearing `type`.
   - Validation: `git diff --check`; `npm -w server run typecheck`.
 
+- **F112 — Grouped all-types results.**
+  - When the active type filter is `All`, `SearchPageClient` now groups visible results by entity type and caps each rendered group at 10 rows.
+  - Group headings use `search.groups.{objectType}` with a humanized fallback and show the corresponding group count from the server action result.
+  - Validation: `git diff --check`; `npm -w server run typecheck`.
+
 ## Local DB availability
 
 The MCP `my-private-server` query tool resolves to `alga-psa-postgres-1` inside a docker network, but the local stack is stopped (`alga-test-postgres` exited 8w ago, no `alga-psa-postgres-1` container running). To use it during implementation:

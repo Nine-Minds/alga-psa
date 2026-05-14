@@ -89,6 +89,28 @@ export default function SearchPageClient({
 
   const typeEntries = Object.entries(initialResult.groups) as Array<[SearchObjectType, number]>;
 
+  const renderResultRow = (row: SearchAppResult['results'][number]) => (
+    <a
+      key={`${row.type}-${row.id}`}
+      id={`app-search-result-row-${row.type}-${row.id}`}
+      href={row.url}
+      className="block rounded-md border border-gray-200 bg-white px-4 py-3 text-gray-900 hover:border-purple-300 hover:bg-purple-50"
+    >
+      <span className="block text-sm font-medium">{row.title}</span>
+      {row.subtitle ? (
+        <span className="mt-1 block text-xs text-gray-600">{row.subtitle}</span>
+      ) : null}
+    </a>
+  );
+
+  const groupedSections = typeEntries
+    .map(([type, count]) => ({
+      type,
+      count,
+      rows: initialResult.results.filter((row) => row.type === type).slice(0, 10),
+    }))
+    .filter((section) => section.rows.length > 0);
+
   return (
     <main
       id="app-search-page"
@@ -159,21 +181,25 @@ export default function SearchPageClient({
         ))}
       </nav>
 
-      <section className="space-y-2">
-        {initialResult.results.map((row) => (
-          <a
-            key={`${row.type}-${row.id}`}
-            id={`app-search-result-row-${row.type}-${row.id}`}
-            href={row.url}
-            className="block rounded-md border border-gray-200 bg-white px-4 py-3 text-gray-900 hover:border-purple-300 hover:bg-purple-50"
-          >
-            <span className="block text-sm font-medium">{row.title}</span>
-            {row.subtitle ? (
-              <span className="mt-1 block text-xs text-gray-600">{row.subtitle}</span>
-            ) : null}
-          </a>
-        ))}
-      </section>
+      {activeType === 'all' ? (
+        <section className="space-y-6">
+          {groupedSections.map((section) => (
+            <div key={section.type} className="space-y-2">
+              <h2 className="text-sm font-semibold text-gray-700">
+                {t(`search.groups.${section.type}`, { defaultValue: humanizeType(section.type) })}
+                <span className="ml-2 text-xs font-normal text-gray-500">{section.count}</span>
+              </h2>
+              <div className="space-y-2">
+                {section.rows.map(renderResultRow)}
+              </div>
+            </div>
+          ))}
+        </section>
+      ) : (
+        <section className="space-y-2">
+          {initialResult.results.map(renderResultRow)}
+        </section>
+      )}
     </main>
   );
 }
