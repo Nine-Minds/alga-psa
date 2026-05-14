@@ -90,6 +90,12 @@ exports.seed = async function(knex) {
         { resource: 'project', action: 'read', msp: true, client: false, description: 'View projects' },
         { resource: 'project', action: 'update', msp: true, client: false, description: 'Update projects' },
         { resource: 'project', action: 'delete', msp: true, client: false, description: 'Delete projects' },
+
+        // Report permissions
+        { resource: 'reports', action: 'create', msp: true, client: false, description: 'Create reports' },
+        { resource: 'reports', action: 'read', msp: true, client: false, description: 'View reports' },
+        { resource: 'reports', action: 'update', msp: true, client: false, description: 'Update reports' },
+        { resource: 'reports', action: 'delete', msp: true, client: false, description: 'Delete reports' },
         
         // Project task permissions
         { resource: 'project_task', action: 'create', msp: true, client: false, description: 'Create project tasks' },

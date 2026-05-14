@@ -27,6 +27,7 @@
     "close": "Close"
   },
   "runList": {
+    "shareTooltip": "Imprimir e exportar",
     "quickRanges": {
       "last24h": "Last 24h",
       "last7d": "Last 7d"
@@ -111,6 +112,25 @@
       "bulkCancelSuccessCount": "Canceled {{count}} run(s).",
       "bulkSkippedIneligibleCount": "Skipped {{count}} ineligible run(s).",
       "bulkActionFailed": "Bulk action failed"
+    },
+    "print": {
+      "title": "Execuções de workflow",
+      "selectedTitle": "Execuções de workflow selecionadas",
+      "subtitle": "{{count}} execuções",
+      "noRuns": "Nenhuma execução de workflow para imprimir",
+      "columns": {
+        "run": "Execução",
+        "workflow": "Workflow",
+        "version": "Versão",
+        "status": "Status",
+        "started": "Iniciado",
+        "updated": "Atualizado",
+        "duration": "Duração"
+      },
+      "optionsDialog": {
+        "title": "Opções de impressão",
+        "description": "Escolha quais colunas incluir ao imprimir as execuções de workflow."
+      }
     }
   },
   "runDetails": {

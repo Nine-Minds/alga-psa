@@ -1268,7 +1268,8 @@
     "templateCreatedSuccess": "Modèle créé avec succès",
     "notAvailable": "N/D",
     "saveAsTemplate": "Enregistrer comme modèle",
-    "materials": "Matériaux"
+    "materials": "Matériaux",
+    "shareTooltip": "Imprimer, importer et exporter"
   },
   "projectPhases": {
     "addTask": "Ajouter une tâche",
@@ -1382,5 +1383,35 @@
     "unknownTask": "Tâche inconnue",
     "blocks": "Bloque"
   },
-  "columnsHidden": "colonne(s) masquée(s) par manque de place. Redimensionner le navigateur pour en voir plus."
+  "columnsHidden": "colonne(s) masquée(s) par manque de place. Redimensionner le navigateur pour en voir plus.",
+  "projectPrint": {
+    "tasks": {
+      "title": "Tâches du projet",
+      "subtitle": "{{count}} tâches",
+      "noTasks": "Aucune tâche de projet à imprimer",
+      "emptyValue": "-",
+      "hoursValue": "{{actual}} / {{estimated}}",
+      "columns": {
+        "task": "Tâche",
+        "phase": "Phase",
+        "status": "Statut",
+        "assignee": "Assigné à",
+        "dueDate": "Échéance",
+        "hours": "Heures"
+      },
+      "optionsDialog": {
+        "title": "Options d'impression",
+        "description": "Choisissez les colonnes à inclure lors de l'impression des tâches."
+      },
+      "fields": {
+        "phase": "Phase",
+        "status": "Statut",
+        "assignee": "Assigné à",
+        "dueDate": "Date d'échéance",
+        "estimatedHours": "Heures estimées",
+        "wbsCode": "Code WBS",
+        "description": "Description"
+      }
+    }
+  }
 }

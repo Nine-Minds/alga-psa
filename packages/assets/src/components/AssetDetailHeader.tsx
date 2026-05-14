@@ -16,6 +16,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
+import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { StatusBadge } from './shared/StatusBadge';
@@ -169,7 +170,11 @@ export const AssetDetailHeader: React.FC<AssetDetailHeaderProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3" data-print-hide>
+          <PrintButton
+            id="asset-detail-print-button"
+            variant="outline"
+          />
           {asset.rmm_provider && (
             <RemoteAccessButton
               asset={asset}

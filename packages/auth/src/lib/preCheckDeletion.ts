@@ -17,12 +17,12 @@ function buildPermissionDenied(message: string): DeletionValidationResult {
 }
 
 function permissionEntityFor(entityType: string): string {
-  if (entityType === 'client') return 'company';
   if (entityType === 'schedule_entry') return 'user_schedule';
   if (entityType === 'survey_template') return 'settings';
   if (entityType === 'status') return 'settings';
   if (entityType === 'role') return 'security_settings';
   if (entityType === 'invoice_template') return 'invoice';
+  if (entityType === 'tax_rate') return 'billing';
   return entityType;
 }
 

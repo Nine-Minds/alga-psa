@@ -1268,7 +1268,8 @@
     "templateCreatedSuccess": "Vorlage erfolgreich erstellt",
     "notAvailable": "K. A.",
     "saveAsTemplate": "Als Vorlage speichern",
-    "materials": "Materialien"
+    "materials": "Materialien",
+    "shareTooltip": "Drucken, importieren und exportieren"
   },
   "projectPhases": {
     "addTask": "Aufgabe hinzufügen",
@@ -1382,5 +1383,35 @@
     "unknownTask": "Unbekannte Aufgabe",
     "blocks": "Blockiert"
   },
-  "columnsHidden": "Spalte(n) aufgrund begrenzten Platzes ausgeblendet. Browser vergrößern, um mehr zu sehen."
+  "columnsHidden": "Spalte(n) aufgrund begrenzten Platzes ausgeblendet. Browser vergrößern, um mehr zu sehen.",
+  "projectPrint": {
+    "tasks": {
+      "title": "Projektaufgaben",
+      "subtitle": "{{count}} Aufgaben",
+      "noTasks": "Keine Projektaufgaben zum Drucken",
+      "emptyValue": "-",
+      "hoursValue": "{{actual}} / {{estimated}}",
+      "columns": {
+        "task": "Aufgabe",
+        "phase": "Phase",
+        "status": "Status",
+        "assignee": "Zugewiesen an",
+        "dueDate": "Fälligkeitsdatum",
+        "hours": "Stunden"
+      },
+      "optionsDialog": {
+        "title": "Druckoptionen",
+        "description": "Wählen Sie die beim Drucken von Projektaufgaben enthaltenen Spalten."
+      },
+      "fields": {
+        "phase": "Phase",
+        "status": "Status",
+        "assignee": "Zugewiesen an",
+        "dueDate": "Fälligkeitsdatum",
+        "estimatedHours": "Geschätzte Stunden",
+        "wbsCode": "PSP-Code",
+        "description": "Beschreibung"
+      }
+    }
+  }
 }

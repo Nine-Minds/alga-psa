@@ -101,8 +101,12 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
     router.push(`/msp/billing?${params.toString()}`);
   };
 
-  // Get current tab from URL or default to overview
-  const requestedTab = searchParams?.get('tab') as BillingTabValue | null;
+  // Get current tab from URL or default to overview.
+  // Preserve compatibility with old consolidated contracts URLs so they do not fall through to Quotes.
+  const requestedTabParam = searchParams?.get('tab');
+  const requestedTab = requestedTabParam === 'contracts'
+    ? (searchParams?.get('subtab') === 'templates' ? 'contract-templates' : 'client-contracts')
+    : (requestedTabParam as BillingTabValue | null);
   const availableValues = tabDefinitions.map((tab) => tab.value);
   const currentTab = availableValues.includes(requestedTab as BillingTabValue)
     ? (requestedTab as BillingTabValue)

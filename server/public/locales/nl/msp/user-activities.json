@@ -54,6 +54,12 @@
       "notification": "Melding",
       "unknown": "Onbekend",
       "activity": "Activiteit"
+    },
+    "print": {
+      "optionsDialog": {
+        "title": "Afdrukopties",
+        "description": "Kies welke kolommen worden opgenomen bij het afdrukken van activiteiten."
+      }
     }
   },
   "card": {

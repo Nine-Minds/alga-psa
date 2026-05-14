@@ -18,7 +18,7 @@ import { TagManager } from '@alga-psa/tags/components';
 import { useTags } from '@alga-psa/tags/context';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { Button } from '@alga-psa/ui/components/Button';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import TaskQuickAdd from './TaskQuickAdd';
@@ -361,6 +361,7 @@ export default function ProjectDetail({
   const [selectedTaskTypeFilter, setSelectedTaskTypeFilter] = useState<string>('all');
   const [selectedTaskTags, setSelectedTaskTags] = useState<string[]>([]);
   const [selectedAgentFilter, setSelectedAgentFilter] = useState<string[]>([]);
+  const [selectedTeamFilter, setSelectedTeamFilter] = useState<string[]>([]);
   const [includeUnassignedAgents, setIncludeUnassignedAgents] = useState<boolean>(false);
   const [primaryAgentOnly, setPrimaryAgentOnly] = useState<boolean>(false);
 
@@ -422,8 +423,8 @@ export default function ProjectDetail({
       });
     }
 
-    // Apply agent filter
-    if (selectedAgentFilter.length > 0 || includeUnassignedAgents) {
+    // Apply agent / team filter
+    if (selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents) {
       tasks = tasks.filter(task => {
         // Check if task is unassigned (no primary assignee)
         const isUnassigned = !task.assigned_to;
@@ -453,12 +454,17 @@ export default function ProjectDetail({
           }
         }
 
+        // If specific teams are selected, match by the task's assigned team
+        if (selectedTeamFilter.length > 0 && task.assigned_team_id && selectedTeamFilter.includes(task.assigned_team_id)) {
+          return true;
+        }
+
         return false;
       });
     }
 
     return tasks;
-  }, [projectTasks, selectedPhase, matchesSearch, searchQuery, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, phaseTaskResources]);
+  }, [projectTasks, selectedPhase, matchesSearch, searchQuery, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, taskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly, phaseTaskResources]);
 
   const phaseStatusLookup = useMemo(
     () => new Map(projectStatuses.map((status) => [status.project_status_mapping_id, status])),
@@ -520,8 +526,8 @@ export default function ProjectDetail({
       });
     }
 
-    // Apply agent filter
-    if (selectedAgentFilter.length > 0 || includeUnassignedAgents) {
+    // Apply agent / team filter
+    if (selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents) {
       filtered = filtered.filter(task => {
         const isUnassigned = !task.assigned_to;
 
@@ -545,12 +551,16 @@ export default function ProjectDetail({
           }
         }
 
+        if (selectedTeamFilter.length > 0 && task.assigned_team_id && selectedTeamFilter.includes(task.assigned_team_id)) {
+          return true;
+        }
+
         return false;
       });
     }
 
     return filtered;
-  }, [allProjectTasks, matchesSearch, searchQuery, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, allProjectTaskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, allProjectTaskResources]);
+  }, [allProjectTasks, matchesSearch, searchQuery, selectedPriorityFilter, selectedTaskTypeFilter, selectedTaskTags, allProjectTaskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly, allProjectTaskResources]);
 
   // Calculate filtered phase task counts (like list view's phaseGroups)
   // Falls back to server-fetched counts while allProjectTasks is loading
@@ -2339,12 +2349,16 @@ export default function ProjectDetail({
             {/* Agent Filter */}
             <div className="flex items-center gap-2">
               <div className="[&_button]:bg-background [&_button]:dark:bg-[rgb(var(--color-card))] [&_button>span]:!text-gray-700 [&_button>span]:dark:!text-gray-300">
-                <MultiUserPicker
+                <MultiUserAndTeamPicker
                   id="task-agent-filter-list"
                   values={selectedAgentFilter}
                   onValuesChange={handleAgentFilterChange}
                   users={users}
+                  teams={teams}
+                  teamValues={selectedTeamFilter}
+                  onTeamValuesChange={setSelectedTeamFilter}
                   getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                  getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
                   filterMode={true}
                   includeUnassigned={includeUnassignedAgents}
                   onUnassignedChange={setIncludeUnassignedAgents}
@@ -2418,13 +2432,14 @@ export default function ProjectDetail({
                 setSearchCaseSensitive(false);
                 setSelectedTaskTags([]);
                 setSelectedAgentFilter([]);
+                setSelectedTeamFilter([]);
                 setIncludeUnassignedAgents(false);
                 setPrimaryAgentOnly(false);
                 setSelectedPriorityFilter('all');
                 setSelectedTaskTypeFilter('all');
               }}
-              className={`shrink-0 flex items-center gap-1 ${(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all') ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
-              disabled={!(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all')}
+              className={`shrink-0 flex items-center gap-1 ${(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all') ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+              disabled={!(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all')}
             >
               <XCircle className="h-4 w-4" />
               {t('common:actions.reset', 'Reset')}
@@ -2562,12 +2577,16 @@ export default function ProjectDetail({
             {/* Agent Filter */}
             <div className="flex items-center gap-2">
               <div className="[&_button]:bg-background [&_button]:dark:bg-[rgb(var(--color-card))] [&_button>span]:!text-gray-700 [&_button>span]:dark:!text-gray-300">
-                <MultiUserPicker
+                <MultiUserAndTeamPicker
                   id="task-agent-filter-kanban"
                   values={selectedAgentFilter}
                   onValuesChange={handleAgentFilterChange}
                   users={users}
+                  teams={teams}
+                  teamValues={selectedTeamFilter}
+                  onTeamValuesChange={setSelectedTeamFilter}
                   getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                  getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
                   filterMode={true}
                   includeUnassigned={includeUnassignedAgents}
                   onUnassignedChange={setIncludeUnassignedAgents}
@@ -2641,13 +2660,14 @@ export default function ProjectDetail({
                 setSearchCaseSensitive(false);
                 setSelectedTaskTags([]);
                 setSelectedAgentFilter([]);
+                setSelectedTeamFilter([]);
                 setIncludeUnassignedAgents(false);
                 setPrimaryAgentOnly(false);
                 setSelectedPriorityFilter('all');
                 setSelectedTaskTypeFilter('all');
               }}
-              className={`shrink-0 flex items-center gap-1 ${(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all') ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
-              disabled={!(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all')}
+              className={`shrink-0 flex items-center gap-1 ${(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all') ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+              disabled={!(searchQuery || searchWholeWord || searchCaseSensitive || selectedTaskTags.length > 0 || selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents || primaryAgentOnly || selectedPriorityFilter !== 'all' || selectedTaskTypeFilter !== 'all')}
             >
               <XCircle className="h-4 w-4" />
               {t('common:actions.reset', 'Reset')}
@@ -2730,6 +2750,7 @@ export default function ProjectDetail({
           selectedPriorityFilter={selectedPriorityFilter}
           selectedTaskTags={selectedTaskTags}
           selectedAgentFilter={selectedAgentFilter}
+          selectedTeamFilter={selectedTeamFilter}
           includeUnassignedAgents={includeUnassignedAgents}
           primaryAgentOnly={primaryAgentOnly}
           searchQuery={searchQuery}

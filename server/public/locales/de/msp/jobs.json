@@ -34,7 +34,24 @@
       "minutesSeconds": "{{minutes}} Min. {{seconds}} s",
       "hoursMinutes": "{{hours}} Std. {{minutes}} Min."
     },
-    "externalId": "ID: {{id}}…"
+    "externalId": "ID: {{id}}…",
+    "print": {
+      "title": "Aktuelle Jobs",
+      "subtitle": "{{count}} Jobs",
+      "noJobs": "Keine Jobs zum Drucken",
+      "columns": {
+        "jobName": "Jobname",
+        "runner": "Runner",
+        "status": "Status",
+        "duration": "Dauer",
+        "started": "Gestartet",
+        "completed": "Abgeschlossen"
+      },
+      "optionsDialog": {
+        "title": "Druckoptionen",
+        "description": "Wählen Sie die beim Drucken von Jobs enthaltenen Spalten."
+      }
+    }
   },
   "metrics": {
     "labels": {

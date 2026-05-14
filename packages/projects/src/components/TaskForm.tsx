@@ -101,6 +101,9 @@ interface TaskFormProps {
   projectTreeData?: any[]; // Add projectTreeData prop
   prefillData?: TaskFormPrefillData;
   onCommentCountChange?: (taskId: string, count: number) => void;
+  printButton?: React.ReactNode;
+  printableHeader?: React.ReactNode;
+  printTitle?: string;
 }
 
 export default function TaskForm({
@@ -117,7 +120,10 @@ export default function TaskForm({
   inDrawer = false,
   projectTreeData = [],
   prefillData,
-  onCommentCountChange
+  onCommentCountChange,
+  printButton,
+  printableHeader,
+  printTitle,
 }: TaskFormProps): React.JSX.Element {
   const { t } = useTranslation(['features/projects', 'common']);
   const { createDocumentAssociations, deleteDocument, removeDocumentAssociations } = useDocumentsCrossFeature();
@@ -1506,7 +1512,14 @@ export default function TaskForm({
             </AlertDescription>
           </Alert>
         )}
-        <div className="space-y-4 flex-1 overflow-y-auto">
+        <div
+          className="space-y-4 flex-1 overflow-y-auto"
+          data-print-region
+          data-print-title={printTitle}
+        >
+          {printableHeader && (
+            <div className="app-print-section">{printableHeader}</div>
+          )}
           {/* Full width Title with Status dropdown */}
           <div>
             <div className="flex items-center justify-between mb-1">
@@ -1525,13 +1538,20 @@ export default function TaskForm({
                   </Button>
                 )}
               </div>
-              <TaskStatusSelect
-                id="task-status-select"
-                value={selectedStatusId}
-                statuses={projectStatuses}
-                onValueChange={setSelectedStatusId}
-                disabled={isSubmitting}
-              />
+              <div className="flex items-center gap-2">
+                {printButton && (
+                  <span data-print-hide className="flex items-center">
+                    {printButton}
+                  </span>
+                )}
+                <TaskStatusSelect
+                  id="task-status-select"
+                  value={selectedStatusId}
+                  statuses={projectStatuses}
+                  onValueChange={setSelectedStatusId}
+                  disabled={isSubmitting}
+                />
+              </div>
             </div>
             <TextArea
               value={taskName}

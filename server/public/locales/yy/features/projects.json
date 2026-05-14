@@ -1268,7 +1268,8 @@
     "saveAsTemplate": "55555",
     "materials": "55555",
     "hoursUsageDescription": "55555",
-    "templateCreatedSuccess": "55555"
+    "templateCreatedSuccess": "55555",
+    "shareTooltip": "55555"
   },
   "comments": {
     "title": "55555",
@@ -1382,5 +1383,35 @@
     "unknownTask": "55555",
     "blocks": "55555"
   },
-  "columnsHidden": "55555"
+  "columnsHidden": "55555",
+  "projectPrint": {
+    "tasks": {
+      "title": "55555",
+      "subtitle": "55555 {{count}} 55555",
+      "noTasks": "55555",
+      "emptyValue": "-",
+      "hoursValue": "55555 {{actual}} / {{estimated}} 55555",
+      "columns": {
+        "task": "55555",
+        "phase": "55555",
+        "status": "55555",
+        "assignee": "55555",
+        "dueDate": "55555",
+        "hours": "55555"
+      },
+      "optionsDialog": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "fields": {
+        "phase": "55555",
+        "status": "55555",
+        "assignee": "55555",
+        "dueDate": "55555",
+        "estimatedHours": "55555",
+        "wbsCode": "55555",
+        "description": "55555"
+      }
+    }
+  }
 }

@@ -12,6 +12,7 @@ import {
 describe('product surface registry', () => {
   it('T003: classifies representative AlgaDesk MSP routes as allowed, upgrade-boundary, and not-found', () => {
     expect(resolveProductRouteBehavior('algadesk', '/msp/tickets')).toBe('allowed');
+    expect(resolveProductRouteBehavior('algadesk', '/msp/reports')).toBe('allowed');
     expect(resolveProductRouteBehavior('algadesk', '/msp/billing')).toBe('upgrade_boundary');
     expect(resolveProductRouteBehavior('algadesk', '/msp/test/ui-kit')).toBe('not_found');
   });
@@ -62,6 +63,7 @@ describe('product surface registry', () => {
       {
         items: [
           { href: '/msp/tickets' },
+          { href: '/msp/reports' },
           { href: '/msp/billing' },
           {
             subItems: [{ href: '/msp/knowledge-base' }, { href: '/msp/projects' }],
@@ -70,9 +72,10 @@ describe('product surface registry', () => {
       },
     ]);
 
-    expect(filteredMenu[0].items).toHaveLength(2);
+    expect(filteredMenu[0].items).toHaveLength(3);
     expect(filteredMenu[0].items[0]).toMatchObject({ href: '/msp/tickets' });
-    expect(filteredMenu[0].items[1]).toMatchObject({
+    expect(filteredMenu[0].items[1]).toMatchObject({ href: '/msp/reports' });
+    expect(filteredMenu[0].items[2]).toMatchObject({
       subItems: [{ href: '/msp/knowledge-base' }],
     });
 

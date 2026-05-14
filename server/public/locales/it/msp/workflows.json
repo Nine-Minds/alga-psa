@@ -27,6 +27,7 @@
     "close": "Chiudi"
   },
   "runList": {
+    "shareTooltip": "Stampa ed esporta",
     "quickRanges": {
       "last24h": "Ultime 24h",
       "last7d": "Ultimi 7 giorni"
@@ -111,6 +112,25 @@
       "bulkCancelSuccessCount": "Annullata/e {{count}} esecuzione/i.",
       "bulkSkippedIneligibleCount": "Saltata/e {{count}} esecuzione/i non idonea/e.",
       "bulkActionFailed": "Azione multipla non riuscita"
+    },
+    "print": {
+      "title": "Esecuzioni workflow",
+      "selectedTitle": "Esecuzioni workflow selezionate",
+      "subtitle": "{{count}} esecuzioni",
+      "noRuns": "Nessuna esecuzione workflow da stampare",
+      "columns": {
+        "run": "Esecuzione",
+        "workflow": "Workflow",
+        "version": "Versione",
+        "status": "Stato",
+        "started": "Avviato",
+        "updated": "Aggiornato",
+        "duration": "Durata"
+      },
+      "optionsDialog": {
+        "title": "Opzioni di stampa",
+        "description": "Scegli quali colonne includere durante la stampa delle esecuzioni del workflow."
+      }
     }
   },
   "runDetails": {

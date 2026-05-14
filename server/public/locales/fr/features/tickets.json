@@ -334,6 +334,7 @@
   "dashboard": {
     "title": "Tableau de bord des tickets",
     "addTicket": "Ajouter un ticket",
+    "shareTooltip": "Imprimer, importer et exporter",
     "exportCsv": "Exportation CSV",
     "bundledToggle": "Groupés",
     "exportSelectedTooltip_one": "Exportation de {{count}} tickets sélectionnés vers CSV",
@@ -393,7 +394,40 @@
       "decrease": "Réduire l’espacement des listes de tickets",
       "increase": "Augmenter l'espacement des listes de tickets",
       "reset": "Réinitialiser l'espacement de la liste de tickets"
-    }
+    },
+    "print": {
+      "action": "Imprimer",
+      "selectedAction_one": "Imprimer la sélection ({{count}})",
+      "selectedAction_other": "Imprimer la sélection ({{count}})",
+      "title": "Tickets",
+      "selectedTitle_one": "Tickets sélectionnés ({{count}})",
+      "selectedTitle_other": "Tickets sélectionnés ({{count}})",
+      "subtitle_one": "{{count}} ticket",
+      "subtitle_other": "{{count}} tickets",
+      "noTickets": "Aucun ticket à imprimer",
+      "columns": {
+        "ticket": "Ticket",
+        "title": "Titre",
+        "client": "Client",
+        "status": "Statut",
+        "priority": "Priorité",
+        "assigned": "Assigné",
+        "dueDate": "Date d'échéance"
+      },
+      "emptyValue": "—",
+      "noDueDate": "Aucune date d'échéance",
+      "values": {
+        "hasSla": "SLA"
+      },
+      "optionsDialog": {
+        "title": "Options d'impression",
+        "selectedTitle": "Options d'impression ({{count}} sélectionnés)",
+        "description": "Choisissez les colonnes à inclure lors de l'impression des tickets."
+      }
+    },
+    "exportSelectedAction": "Exporter la sélection ({{count}})",
+    "exportAction": "Exporter CSV",
+    "importAction": "Importer CSV"
   },
   "bulk": {
     "moveToBoard": "Déplacer à bord",

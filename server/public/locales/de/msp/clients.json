@@ -132,7 +132,34 @@
     },
     "deleteSelectedPrompt": "Sind Sie sicher, dass Sie {{count}} ausgewählte {{clientsLabel}} löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
     "singleInactiveWithContactsSuccess_one": "{{name}} und {{count}} Kontakt wurden erfolgreich deaktiviert.",
-    "singleInactiveWithContactsSuccess_other": "{{name}} und {{count}} Kontakte wurden erfolgreich deaktiviert."
+    "singleInactiveWithContactsSuccess_other": "{{name}} und {{count}} Kontakte wurden erfolgreich deaktiviert.",
+    "clientTypes": {
+      "company": "Unternehmen",
+      "individual": "Einzelperson"
+    },
+    "print": {
+      "title": "Kunden",
+      "selectedTitle": "Ausgewählte Kunden",
+      "subtitle": "{{count}} Kunden",
+      "noClients": "Keine Kunden zum Drucken",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Kunde",
+        "type": "Typ",
+        "phone": "Telefon",
+        "address": "Adresse",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Druckoptionen",
+        "description": "Wählen Sie die beim Drucken von Kunden enthaltenen Spalten."
+      }
+    },
+    "shareTooltip": "Drucken, importieren und exportieren"
+    ,
+    "defaultClientDeleteError": "Der Standardkunde kann nicht gelöscht werden. Legen Sie zuerst in den allgemeinen Einstellungen einen anderen Kunden als Standard fest.",
+    "clientNotFound": "Kunde nicht gefunden.",
+    "deletePermissionDenied": "Berechtigung verweigert: Kunden können nicht gelöscht werden."
   },
   "clientDetails": {
     "title": "Kundendaten",
@@ -216,7 +243,15 @@
     "inboundDomainAdded": "Eingehende E-Mail-Domäne hinzugefügt",
     "inboundDomainAddFailed": "Domäne konnte nicht hinzugefügt werden",
     "inboundDomainRemoved": "Eingehende E-Mail-Domäne entfernt",
-    "inboundDomainRemoveFailed": "Domäne konnte nicht entfernt werden"
+    "inboundDomainRemoveFailed": "Domäne konnte nicht entfernt werden",
+    "fields": {
+      "accountManager": "Kundenbetreuer",
+      "url": "URL",
+      "status": "Status"
+    }
+    ,
+    "deactivateClientDescription": "Deaktiviert den Datensatz, ohne seine Daten zu löschen.",
+    "deactivateClientOnlyDescription": "Deaktiviert den Kunden, lässt seine Kontakte aber aktiv."
   },
   "quickAddClient": {
     "title": "Neuen Kunden hinzufügen",

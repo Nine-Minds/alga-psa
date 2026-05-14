@@ -1,11 +1,15 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails } from '@alga-psa/types';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { getProjectTaskStatuses } from '../actions/projectActions';
 import TaskFormSkeleton from '@alga-psa/ui/components/skeletons/TaskFormSkeleton';
+import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { PrintableDetailHeader, type PrintableDetailField } from '@alga-psa/ui/components/PrintableDetailHeader';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { extractTaskDescriptionText } from '../lib/taskRichText';
 
 // Dynamic import for TaskForm
 const TaskForm = dynamic(() => import('./TaskForm'), {
@@ -38,6 +42,7 @@ export default function TaskEdit({
   projectTreeData = [],
   onCommentCountChange
 }: TaskEditProps): React.JSX.Element {
+  const { t } = useTranslation('projects');
   const [selectedPhaseStatuses, setSelectedPhaseStatuses] = useState<ProjectStatus[]>(initialStatuses || []);
 
   // If caller didn't provide statuses (e.g., opened from user activities drawer),
@@ -72,25 +77,65 @@ export default function TaskEdit({
     }
   };
 
+  const assignedToName = useMemo(() => {
+    if (!task.assigned_to) return undefined;
+    const user = users.find((u) => u.user_id === task.assigned_to);
+    if (!user) return undefined;
+    return [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email;
+  }, [task.assigned_to, users]);
+
+  const status = useMemo(() => {
+    return selectedPhaseStatuses.find((s) => s.project_status_mapping_id === task.project_status_mapping_id);
+  }, [selectedPhaseStatuses, task.project_status_mapping_id]);
+
+  const descriptionText = useMemo(() => {
+    return extractTaskDescriptionText(task.description_rich_text ?? task.description);
+  }, [task.description, task.description_rich_text]);
+
+  const printableHeader = (
+    <PrintableDetailHeader
+      title={task.task_name}
+      subtitle={[phase?.phase_name, status?.custom_name || status?.name].filter(Boolean).join(' — ')}
+      fields={[
+        { label: t('projectPrint.tasks.fields.phase', { defaultValue: 'Phase' }), value: phase?.phase_name },
+        { label: t('projectPrint.tasks.fields.status', { defaultValue: 'Status' }), value: status?.custom_name || status?.name },
+        { label: t('projectPrint.tasks.fields.assignee', { defaultValue: 'Assignee' }), value: assignedToName },
+        { label: t('projectPrint.tasks.fields.dueDate', { defaultValue: 'Due Date' }), value: task.due_date ? new Date(task.due_date).toLocaleDateString() : undefined },
+        { label: t('projectPrint.tasks.fields.estimatedHours', { defaultValue: 'Estimated Hours' }), value: task.estimated_hours ? `${task.estimated_hours}h` : undefined },
+        { label: t('projectPrint.tasks.fields.wbsCode', { defaultValue: 'WBS Code' }), value: task.wbs_code },
+        { label: t('projectPrint.tasks.fields.description', { defaultValue: 'Description' }), value: descriptionText },
+      ] satisfies PrintableDetailField[]}
+    />
+  );
+
+  const printButton = (
+    <PrintButton
+      id={`project-task-${task.task_id}-print-button`}
+      variant="outline"
+      size="sm"
+    />
+  );
+
   return (
-    <div className="h-full">
-      <Suspense fallback={<TaskFormSkeleton isEdit={true} />}>
-        <TaskForm
-          task={task}
-          phase={phase}
-          phases={phases}
-          onClose={onClose}
-          onSubmit={onTaskUpdated}
-          projectStatuses={selectedPhaseStatuses}
-          defaultStatus={selectedPhaseStatuses.find(s => s.project_status_mapping_id === task.project_status_mapping_id)}
-          users={users}
-          mode="edit"
-          onPhaseChange={handlePhaseChange}
-          inDrawer={inDrawer}
-          projectTreeData={projectTreeData}
-          onCommentCountChange={onCommentCountChange}
-        />
-      </Suspense>
-    </div>
+    <Suspense fallback={<TaskFormSkeleton isEdit={true} />}>
+      <TaskForm
+        task={task}
+        phase={phase}
+        phases={phases}
+        onClose={onClose}
+        onSubmit={onTaskUpdated}
+        projectStatuses={selectedPhaseStatuses}
+        defaultStatus={selectedPhaseStatuses.find(s => s.project_status_mapping_id === task.project_status_mapping_id)}
+        users={users}
+        mode="edit"
+        onPhaseChange={handlePhaseChange}
+        inDrawer={inDrawer}
+        projectTreeData={projectTreeData}
+        onCommentCountChange={onCommentCountChange}
+        printButton={printButton}
+        printableHeader={printableHeader}
+        printTitle={task.task_name}
+      />
+    </Suspense>
   );
 }

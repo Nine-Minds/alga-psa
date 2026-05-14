@@ -27,6 +27,7 @@
     "close": "Close"
   },
   "runList": {
+    "shareTooltip": "Print and export",
     "quickRanges": {
       "last24h": "Last 24h",
       "last7d": "Last 7d"
@@ -111,6 +112,25 @@
       "bulkCancelSuccessCount": "Canceled {{count}} run(s).",
       "bulkSkippedIneligibleCount": "Skipped {{count}} ineligible run(s).",
       "bulkActionFailed": "Bulk action failed"
+    },
+    "print": {
+      "title": "Workflow Runs",
+      "selectedTitle": "Selected Workflow Runs",
+      "subtitle": "{{count}} runs",
+      "noRuns": "No workflow runs to print",
+      "columns": {
+        "run": "Run",
+        "workflow": "Workflow",
+        "version": "Version",
+        "status": "Status",
+        "started": "Started",
+        "updated": "Updated",
+        "duration": "Duration"
+      },
+      "optionsDialog": {
+        "title": "Print options",
+        "description": "Choose which columns to include when printing workflow runs."
+      }
     }
   },
   "runDetails": {

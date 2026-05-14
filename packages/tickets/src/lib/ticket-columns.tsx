@@ -127,7 +127,25 @@ interface CreateTicketColumnsOptions {
   isBundleExpanded?: (masterTicketId: string) => boolean;
   onToggleBundleExpanded?: (masterTicketId: string) => void;
   t?: (key: string, fallback: string) => string;
+  showAllAvailableColumns?: boolean;
 }
+
+const ALL_TICKET_LIST_COLUMN_VISIBILITY: Record<TicketListColumnKey, boolean> = {
+  ticket_number: true,
+  title: true,
+  status: true,
+  priority: true,
+  sla: true,
+  board: true,
+  category: true,
+  client: true,
+  assigned_to: true,
+  due_date: true,
+  created: true,
+  created_by: true,
+  tags: true,
+  actions: true,
+};
 
 export function createTicketColumns(options: CreateTicketColumnsOptions): ColumnDefinition<ITicketListItem>[] {
   const {
@@ -147,11 +165,12 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     isBundleExpanded,
     onToggleBundleExpanded,
     t: _t,
+    showAllAvailableColumns = false,
   } = options;
 
   const t = _t ?? ((_key: string, fallback: string) => fallback);
 
-  const columnVisibility = displaySettings?.list?.columnVisibility || {
+  const columnVisibility = showAllAvailableColumns ? ALL_TICKET_LIST_COLUMN_VISIBILITY : (displaySettings?.list?.columnVisibility || {
     ticket_number: true,
     title: true,
     status: true,
@@ -166,7 +185,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     created_by: true,
     tags: true,
     actions: true,
-  };
+  });
 
   const tagsInlineUnderTitle = displaySettings?.list?.tagsInlineUnderTitle || false;
   const dateTimeFormat = displaySettings?.dateTimeFormat || 'MMM d, yyyy h:mm a';

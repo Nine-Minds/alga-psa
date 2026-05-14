@@ -67,6 +67,22 @@ async function loadSharp() {
   }
 }
 
+const VALID_DOCUMENT_SORT_FIELDS = new Set(['document_name', 'updated_at', 'file_size', 'created_by_full_name']);
+
+type SafeDocumentSortField = NonNullable<DocumentFilters['sortBy']>;
+type SafeSortOrder = 'asc' | 'desc';
+
+function normalizeDocumentSortOrder(sortOrder: unknown): SafeSortOrder {
+  const normalizedOrder = typeof sortOrder === 'string' ? sortOrder.toLowerCase() : undefined;
+  return normalizedOrder === 'asc' || normalizedOrder === 'desc' ? normalizedOrder : 'desc';
+}
+
+function normalizeDocumentSortBy(sortBy: unknown): SafeDocumentSortField | undefined {
+  return typeof sortBy === 'string' && VALID_DOCUMENT_SORT_FIELDS.has(sortBy)
+    ? sortBy as SafeDocumentSortField
+    : undefined;
+}
+
 async function ensureEntityFoldersInitializedInternal(
   knex: Knex,
   tenant: string,
@@ -1856,12 +1872,15 @@ export const getDocumentsByEntity = withAuth(async (
           query = query.where('documents.updated_at', '<', endDate.toISOString().split('T')[0]);
         }
 
-        if (filters?.sortBy === 'created_by_full_name') {
-          query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${filters.sortOrder || 'desc'}`);
-        } else if (filters?.sortBy === 'document_name') {
-          query = query.orderBy('document_name_sort_key', filters.sortOrder || 'desc').orderBy('documents.document_name', filters.sortOrder || 'desc');
-        } else if (filters?.sortBy) {
-          query = query.orderBy(`documents.${filters.sortBy}`, filters.sortOrder || 'desc');
+        const sortOrder = normalizeDocumentSortOrder(filters?.sortOrder);
+        const sortBy = normalizeDocumentSortBy(filters?.sortBy);
+
+        if (sortBy === 'created_by_full_name') {
+          query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
+        } else if (sortBy === 'document_name') {
+          query = query.orderBy('document_name_sort_key', sortOrder).orderBy('documents.document_name', sortOrder);
+        } else if (sortBy) {
+          query = query.orderBy(`documents.${sortBy}`, sortOrder);
         } else {
           query = query.orderBy('documents.updated_at', 'desc');
         }
@@ -2030,12 +2049,15 @@ export const getAllDocuments = withAuth(async (
           }
         }
 
-        if (filters?.sortBy === 'created_by_full_name') {
-          query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${filters.sortOrder || 'desc'}`);
-        } else if (filters?.sortBy === 'document_name') {
-          query = query.orderBy('document_name_sort_key', filters.sortOrder || 'desc').orderBy('documents.document_name', filters.sortOrder || 'desc');
-        } else if (filters?.sortBy) {
-          query = query.orderBy(`documents.${filters.sortBy}`, filters.sortOrder || 'desc');
+        const sortOrder = normalizeDocumentSortOrder(filters?.sortOrder);
+        const sortBy = normalizeDocumentSortBy(filters?.sortBy);
+
+        if (sortBy === 'created_by_full_name') {
+          query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
+        } else if (sortBy === 'document_name') {
+          query = query.orderBy('document_name_sort_key', sortOrder).orderBy('documents.document_name', sortOrder);
+        } else if (sortBy) {
+          query = query.orderBy(`documents.${sortBy}`, sortOrder);
         } else {
           query = query.orderBy('documents.updated_at', 'desc');
         }
@@ -3086,12 +3108,15 @@ export const getDocumentsByFolder = withAuth(async (
         )
         .distinct('d.document_id');
 
-      if (filters?.sortBy === 'created_by_full_name') {
-        query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${filters.sortOrder || 'desc'}`);
-      } else if (filters?.sortBy === 'document_name') {
-        query = query.orderByRaw(`numeric_prefix ${filters.sortOrder || 'desc'}, d.document_name ${filters.sortOrder || 'desc'}`);
-      } else if (filters?.sortBy) {
-        query = query.orderBy(`d.${filters.sortBy}`, filters.sortOrder || 'desc');
+      const sortOrder = normalizeDocumentSortOrder(filters?.sortOrder);
+      const sortBy = normalizeDocumentSortBy(filters?.sortBy);
+
+      if (sortBy === 'created_by_full_name') {
+        query = query.orderByRaw(`CONCAT(users.first_name, ' ', users.last_name) ${sortOrder}`);
+      } else if (sortBy === 'document_name') {
+        query = query.orderByRaw(`numeric_prefix ${sortOrder}, d.document_name ${sortOrder}`);
+      } else if (sortBy) {
+        query = query.orderBy(`d.${sortBy}`, sortOrder);
       } else {
         query = query.orderByRaw('numeric_prefix ASC, d.document_name ASC');
       }

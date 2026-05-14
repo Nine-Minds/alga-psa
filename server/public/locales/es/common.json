@@ -40,7 +40,14 @@
     "duplicate": "Duplicar",
     "openMenu": "Abrir menú",
     "confirmDeletion": "Confirmar eliminación",
-    "saving": "Guardando..."
+    "saving": "Guardando...",
+    "print": "Imprimir",
+    "printSelected_one": "Imprimir seleccionado ({{count}})",
+    "printSelected_other": "Imprimir seleccionados ({{count}})",
+    "printOptions": "Opciones de impresión",
+    "resetPrintOptions": "Restablecer opciones de impresión",
+    "share": "Compartir",
+    "done": "Listo"
   },
   "status": {
     "loading": "Cargando...",
@@ -1130,6 +1137,30 @@
       "remoteValue": "Valor remoto:",
       "keepYours": "Conservar el tuyo",
       "takeTheirs": "Usar el remoto"
+    }
+  },
+  "labels": {
+    "printColumns": "Columnas de impresión"
+  },
+  "deleteEntity": {
+    "checkingDependenciesTitle": "Comprobando dependencias",
+    "deleteTitle": "Eliminar {{entityName}}",
+    "cannotDeleteTitle": "No se puede eliminar",
+    "deleting": "Eliminando...",
+    "checkingDependenciesMessage": "Comprobando dependencias...",
+    "fallbackBlockMessage": "Elimine o reasigne estos elementos antes de eliminar.",
+    "confirmationMessage": "¿Está seguro de que desea eliminar \"{{entityName}}\"? Esta acción no se puede deshacer.",
+    "alternatives": {
+      "deactivate": {
+        "label": "Marcar como inactivo",
+        "description": "Desactiva el registro sin eliminar sus datos.",
+        "warning": "Los registros inactivos ya no se podrán seleccionar en nuevos flujos de trabajo."
+      },
+      "archive": {
+        "label": "Archivar",
+        "description": "Mueve el registro fuera del uso activo y conserva el historial.",
+        "warning": "Los registros archivados se ocultan en las vistas predeterminadas."
+      }
     }
   }
 }
