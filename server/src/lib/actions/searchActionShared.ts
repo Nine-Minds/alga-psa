@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '../search/types';
+import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '@alga-psa/types';
 
 const searchObjectTypeSchema = z.enum(SEARCH_OBJECT_TYPES);
 

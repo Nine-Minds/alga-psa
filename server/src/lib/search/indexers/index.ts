@@ -1,4 +1,4 @@
-import type { EntityIndexer } from '../types';
+import type { EntityIndexer } from '@alga-psa/types';
 
 import { assetIndexer } from './asset';
 import { boardIndexer } from './board';

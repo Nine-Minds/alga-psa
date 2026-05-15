@@ -13,7 +13,7 @@ vi.mock('../../lib/search/upsert', () => ({
 import { clientIndexer } from '../../lib/search/indexers/client';
 import { allIndexers } from '../../lib/search';
 import { runSearchBackfill, upsertBackfillBatches } from '../../scripts/search-backfill';
-import type { EntityIndexer, SearchDoc } from '../../lib/search/types';
+import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 describe('search backfill script', () => {
   beforeEach(() => {

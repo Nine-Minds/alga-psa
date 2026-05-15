@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 
 import { ceIndexers } from '../lib/search/indexers';
 import { upsertSearchDoc } from '../lib/search/upsert';
-import type { EntityIndexer } from '../lib/search/types';
+import type { EntityIndexer } from '@alga-psa/types';
 
 async function loadAllIndexers(): Promise<EntityIndexer[]> {
   let ee: EntityIndexer[] = [];

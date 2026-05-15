@@ -3,7 +3,7 @@ import User from '@alga-psa/db/models/user';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
-import type { AclMetadata, SearchObjectType } from './types';
+import type { AclMetadata, SearchObjectType } from '@alga-psa/types';
 
 const RESOURCE_CANONICAL_MAP: Record<string, string> = {
   timeentry: 'time_entry',

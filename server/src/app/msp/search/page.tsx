@@ -3,7 +3,7 @@ import {
   type SearchAppResult,
 } from '@/lib/actions/searchActions';
 import { registeredObjectTypes } from '@/lib/search';
-import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '@/lib/search/types';
+import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '@alga-psa/types';
 import SearchPageClient from './SearchPageClient';
 
 export const dynamic = 'force-dynamic';

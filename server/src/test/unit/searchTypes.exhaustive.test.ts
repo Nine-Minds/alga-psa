@@ -5,7 +5,7 @@ import {
   type AclMetadata,
   type SearchDoc,
   type SearchObjectType,
-} from '../../lib/search/types';
+} from '@alga-psa/types';
 
 function exhaustiveSearchTypeLabel(type: SearchObjectType): string {
   switch (type) {

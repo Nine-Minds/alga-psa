@@ -19,7 +19,7 @@ import {
   runSearchQuery,
   runSearchTypeaheadQuery,
 } from '../search/query';
-import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '../search/types';
+import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '@alga-psa/types';
 import {
   SearchRateLimitError,
   searchAppInputSchema,

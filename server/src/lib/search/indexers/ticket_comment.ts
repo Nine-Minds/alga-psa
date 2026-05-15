@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 
 import { flattenBlockNote, flattenMarkdown } from '../normalize';
-import type { EntityIndexer, SearchDoc } from '../types';
+import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 interface TicketCommentSearchRow {
   comment_id: string;

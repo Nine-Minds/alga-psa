@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 
 import { aclPredicateSql, type SearchAclPrincipal } from './acl';
-import type { SearchObjectType } from './types';
+import type { SearchObjectType } from '@alga-psa/types';
 
 const MAX_SEARCH_QUERY_CHARS = 200;
 const IDENTIFIER_QUERY_PATTERN = /^[A-Z]+-?\d+$/i;

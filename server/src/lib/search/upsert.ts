@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 
 import { composeAclHints } from './acl';
 import { buildTsvectorSql } from './sql';
-import type { SearchDoc, SearchObjectType } from './types';
+import type { SearchDoc, SearchObjectType } from '@alga-psa/types';
 
 export async function upsertSearchDoc(knex: Knex, doc: SearchDoc): Promise<void> {
   const vector = buildTsvectorSql(doc.title, doc.subtitle, doc.body);

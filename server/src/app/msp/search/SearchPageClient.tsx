@@ -9,7 +9,7 @@ import ViewSwitcher, { type ViewSwitcherOption } from '@alga-psa/ui/components/V
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 import type { SearchAppResult } from '@/lib/actions/searchActions';
-import type { SearchObjectType } from '@/lib/search/types';
+import type { SearchObjectType } from '@alga-psa/types';
 
 function toDomIdPart(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');

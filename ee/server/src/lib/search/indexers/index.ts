@@ -1,3 +1,3 @@
-import type { EntityIndexer } from '../../../../../../server/src/lib/search/types';
+import type { EntityIndexer } from '@alga-psa/types';
 
 export const eeIndexers: EntityIndexer[] = [];

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { eeIndexers } from '@ee/lib/search/indexers';
 import { allIndexers, getIndexer, registeredObjectTypes } from '../../lib/search';
 import { ceIndexers } from '../../lib/search/indexers';
-import type { EntityIndexer } from '../../lib/search/types';
+import type { EntityIndexer } from '@alga-psa/types';
 
 describe('search indexer registry', () => {
   it('T022 exposes the CE indexer set and resolves the client indexer', () => {

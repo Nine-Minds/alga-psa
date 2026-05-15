@@ -1,7 +1,7 @@
 import { eeIndexers } from '@ee/lib/search/indexers';
 
 import { ceIndexers } from './indexers';
-import type { EntityIndexer } from './types';
+import type { EntityIndexer } from '@alga-psa/types';
 
 function buildRegistry(): Map<string, EntityIndexer> {
   return new Map<string, EntityIndexer>(

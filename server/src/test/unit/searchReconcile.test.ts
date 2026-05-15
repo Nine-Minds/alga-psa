@@ -17,7 +17,7 @@ import {
   insertRowsMissingFromIndex,
   reindexRowsAfterWatermark,
 } from '../../lib/jobs/handlers/searchReconcileHandler';
-import type { EntityIndexer, SearchDoc } from '../../lib/search/types';
+import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 describe('search reconciliation', () => {
   beforeEach(() => {

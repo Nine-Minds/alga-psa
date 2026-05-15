@@ -17,7 +17,7 @@ vi.mock('../../lib/search/upsert', () => ({
 
 import { searchVisibleUserReindexHandler } from '../../lib/jobs/handlers/searchVisibleUserReindexHandler';
 import { documentIndexer } from '../../lib/search/indexers/document';
-import type { SearchDoc } from '../../lib/search/types';
+import type { SearchDoc } from '@alga-psa/types';
 
 describe('search visible-user reindex job', () => {
   beforeEach(() => {

@@ -8,8 +8,8 @@
   { "id": "F007", "description": "Migration creates btree indexes on `(tenant, source_updated_at DESC)` and `(tenant, object_type)`", "prdRefs": ["9.1"], "implemented": true },
   { "id": "F008", "description": "Migration provides a `down` step that drops the table", "prdRefs": ["9.1"], "implemented": true },
 
-  { "id": "F009", "description": "Define `SearchObjectType` TS union covering all 27 entity types in `server/src/lib/search/types.ts`", "prdRefs": ["7", "9.2"], "implemented": true },
-  { "id": "F010", "description": "Define `SearchDoc` interface with title, subtitle, body, url, metadata, acl, sourceUpdatedAt in `server/src/lib/search/types.ts`", "prdRefs": ["9.2"], "implemented": true },
+  { "id": "F009", "description": "Define `SearchObjectType` TS union covering all 27 entity types in `packages/types/src/search.ts`", "prdRefs": ["7", "9.2"], "implemented": true },
+  { "id": "F010", "description": "Define `SearchDoc` interface with title, subtitle, body, url, metadata, acl, sourceUpdatedAt in `packages/types/src/search.ts`", "prdRefs": ["9.2"], "implemented": true },
   { "id": "F011", "description": "Define `AclMetadata` interface (visibleToUserIds, visibleToRoles, isInternalOnly, isPrivate, clientScopeId, requiredPermission)", "prdRefs": ["9.2", "14"], "implemented": true },
 
   { "id": "F012", "description": "Implement `flattenBlockNote(json)` in `server/src/lib/search/normalize.ts` that walks BlockNote nodes, concatenates text leaves, and drops image data URIs", "prdRefs": ["9.3"], "implemented": true },
@@ -18,7 +18,7 @@
   { "id": "F015", "description": "Implement `truncateForIndex(text, maxBytes=65536)` that does UTF-8-safe byte truncation without splitting code points", "prdRefs": ["9.3"], "implemented": true },
   { "id": "F016", "description": "Implement `buildTsvectorSql(title, subtitle, body)` that emits Postgres SQL using `setweight(to_tsvector('english', process_large_lexemes($x)), 'A|B|C')` for the three weight tiers", "prdRefs": ["13.2"], "implemented": true },
 
-  { "id": "F017", "description": "Define `EntityIndexer` interface with `objectType`, `sourceEvents`, `loadOne`, `loadBatch` in `server/src/lib/search/types.ts`", "prdRefs": ["10"], "implemented": true },
+  { "id": "F017", "description": "Define `EntityIndexer` interface with `objectType`, `sourceEvents`, `loadOne`, `loadBatch` in `packages/types/src/search.ts`", "prdRefs": ["10"], "implemented": true },
   { "id": "F018", "description": "Build registry in `server/src/lib/search/index.ts` exporting `allIndexers()`, `getIndexer(objectType)`, and `registeredObjectTypes()`. Imports both `ceIndexers` (from `./indexers`) and `eeIndexers` (from `ee/server/src/lib/search/indexers` — stubbed to `[]` in CE builds) and merges them. See PRD §19.", "prdRefs": ["10", "19.1"], "implemented": true },
   { "id": "F019", "description": "Implement `upsertSearchDoc(knex, doc)` in `server/src/lib/search/upsert.ts` that inserts/updates a row and computes `search_vector` server-side", "prdRefs": ["9", "11.1"], "implemented": true },
   { "id": "F020", "description": "Implement `deleteSearchDoc(knex, tenant, objectType, objectId)`", "prdRefs": ["11.1"], "implemented": true },

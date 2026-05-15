@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { SEARCH_OBJECT_TYPES } from '../../lib/search/types';
+import { SEARCH_OBJECT_TYPES } from '@alga-psa/types';
 
 function readCoreLocale(locale: string): Record<string, unknown> {
   return JSON.parse(

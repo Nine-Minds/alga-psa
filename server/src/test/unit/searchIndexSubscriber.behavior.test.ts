@@ -36,7 +36,7 @@ import { documentIndexer } from '../../lib/search/indexers/document';
 import { statusIndexer } from '../../lib/search/indexers/status';
 import { handleSearchIndexEventForTest } from '../../lib/eventBus/subscribers/searchIndexSubscriber';
 import { runSearchBackfill } from '../../scripts/search-backfill';
-import type { SearchDoc } from '../../lib/search/types';
+import type { SearchDoc } from '@alga-psa/types';
 
 describe('search index subscriber event handling', () => {
   beforeEach(() => {

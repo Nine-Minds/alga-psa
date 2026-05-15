@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 
-import type { EntityIndexer, SearchDoc } from '../types';
+import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 
 interface TimeEntrySearchRow {
   entry_id: string;

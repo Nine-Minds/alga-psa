@@ -4,7 +4,7 @@ import type { Knex } from 'knex';
 
 import { allIndexers, getIndexer } from '../../search';
 import { deleteSearchDoc, upsertSearchDoc } from '../../search/upsert';
-import type { EntityIndexer } from '../../search/types';
+import type { EntityIndexer } from '@alga-psa/types';
 
 export const SEARCH_RECONCILE_JOB_NAME = 'search:reconcile';
 const RECONCILE_BATCH_SIZE = 500;

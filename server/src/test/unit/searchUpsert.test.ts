@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { deleteSearchDoc, upsertSearchDoc } from '../../lib/search/upsert';
-import type { SearchDoc } from '../../lib/search/types';
+import type { SearchDoc } from '@alga-psa/types';
 
 const sampleDoc = (overrides: Partial<SearchDoc> = {}): SearchDoc => ({
   tenant: '11111111-1111-4111-8111-111111111111',

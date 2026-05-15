@@ -6,7 +6,7 @@ import type { Knex } from 'knex';
 import { getEventBus } from '../index';
 import { allIndexers, getIndexer } from '../../search';
 import { deleteSearchDoc, upsertSearchDoc } from '../../search/upsert';
-import type { EntityIndexer, SearchObjectType } from '../../search/types';
+import type { EntityIndexer, SearchObjectType } from '@alga-psa/types';
 
 let isRegistered = false;
 let subscribedEventTypes: EventType[] = [];
