@@ -24,8 +24,8 @@ describe('InlineReplyComposer', () => {
       />
     );
 
-    expect(screen.getByText('Mark as Internal')).toBeInTheDocument();
-    expect(screen.queryByText('Mark as Resolution')).not.toBeInTheDocument();
+    expect(screen.getByText('Mark as Internal')).toBeTruthy();
+    expect(screen.queryByText('Mark as Resolution')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Reply' }));
 

@@ -59,17 +59,17 @@ describe('HybridThreadNode', () => {
       />
     );
 
-    expect(screen.getByTestId('comment-root')).toHaveAttribute('data-subthread', 'false');
-    expect(screen.getByTestId('comment-root')).toHaveAttribute('data-depth', '0');
-    expect(screen.getByTestId('comment-root')).toHaveAttribute('data-has-children', 'true');
+    expect(screen.getByTestId('comment-root').getAttribute('data-subthread')).toBe('false');
+    expect(screen.getByTestId('comment-root').getAttribute('data-depth')).toBe('0');
+    expect(screen.getByTestId('comment-root').getAttribute('data-has-children')).toBe('true');
 
-    expect(screen.getByTestId('comment-reply')).toHaveAttribute('data-subthread', 'true');
-    expect(screen.getByTestId('comment-reply')).toHaveAttribute('data-depth', '1');
-    expect(screen.getByTestId('comment-reply')).toHaveAttribute('data-has-children', 'true');
+    expect(screen.getByTestId('comment-reply').getAttribute('data-subthread')).toBe('true');
+    expect(screen.getByTestId('comment-reply').getAttribute('data-depth')).toBe('1');
+    expect(screen.getByTestId('comment-reply').getAttribute('data-has-children')).toBe('true');
 
-    expect(screen.getByTestId('comment-subreply')).toHaveAttribute('data-subthread', 'true');
-    expect(screen.getByTestId('comment-subreply')).toHaveAttribute('data-depth', '2');
-    expect(screen.getByTestId('comment-subreply')).toHaveAttribute('data-has-children', 'false');
+    expect(screen.getByTestId('comment-subreply').getAttribute('data-subthread')).toBe('true');
+    expect(screen.getByTestId('comment-subreply').getAttribute('data-depth')).toBe('2');
+    expect(screen.getByTestId('comment-subreply').getAttribute('data-has-children')).toBe('false');
   });
 
   it('T047: collapsing a thread hides children and switches the bar to Expand and Show in drawer', () => {
@@ -85,13 +85,13 @@ describe('HybridThreadNode', () => {
       />
     );
 
-    expect(screen.getByTestId('comment-reply')).toBeInTheDocument();
+    expect(screen.getByTestId('comment-reply')).toBeTruthy();
 
     fireEvent.click(screen.getAllByRole('button', { name: 'Collapse' })[0]);
 
-    expect(screen.queryByTestId('comment-reply')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Expand' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Show in drawer' })).toBeInTheDocument();
+    expect(screen.queryByTestId('comment-reply')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Expand' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Show in drawer' })).toBeTruthy();
   });
 
   it('T048: clicking Show in drawer opens the drawer with the selected root and replies', () => {
@@ -127,9 +127,9 @@ describe('HybridThreadNode', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Show in drawer' }));
 
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByTestId('drawer-comment-root')).toBeInTheDocument();
-    expect(within(dialog).getByTestId('drawer-comment-reply')).toBeInTheDocument();
-    expect(within(dialog).getByTestId('drawer-comment-subreply')).toBeInTheDocument();
+    expect(within(dialog).getByTestId('drawer-comment-root')).toBeTruthy();
+    expect(within(dialog).getByTestId('drawer-comment-reply')).toBeTruthy();
+    expect(within(dialog).getByTestId('drawer-comment-subreply')).toBeTruthy();
   });
 
   it('T050: drawer composer submits with the parent id, closes, and refreshes inline replies', () => {
@@ -194,8 +194,8 @@ describe('HybridThreadNode', () => {
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
       parentCommentId: 'root',
     }));
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    expect(screen.getByTestId('inline-comment-drawer-reply')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByTestId('inline-comment-drawer-reply')).toBeTruthy();
   });
 
   it('T051: caps visual indentation at depth 4 while rendering deeper data', () => {
@@ -232,8 +232,8 @@ describe('HybridThreadNode', () => {
       />
     );
 
-    expect(screen.getByTestId('comment-depth-5')).toHaveAttribute('data-depth', '5');
-    expect(screen.getByTestId('comment-depth-5')).toHaveAttribute('data-visual-depth', '4');
+    expect(screen.getByTestId('comment-depth-5').getAttribute('data-depth')).toBe('5');
+    expect(screen.getByTestId('comment-depth-5').getAttribute('data-visual-depth')).toBe('4');
     expect(container.querySelectorAll('.thread-children.depth-4').length).toBeGreaterThanOrEqual(2);
   });
 
@@ -251,10 +251,10 @@ describe('HybridThreadNode', () => {
 
     const bars = container.querySelectorAll('.comment-thread-bar');
     expect(bars).toHaveLength(2);
-    expect(bars[0]).toHaveClass('depth-0');
-    expect(bars[0]).not.toHaveClass('comment-thread-bar-subthread');
-    expect(bars[1]).toHaveClass('depth-1');
-    expect(bars[1]).toHaveClass('comment-thread-bar-subthread');
+    expect(bars[0].classList.contains('depth-0')).toBe(true);
+    expect(bars[0].classList.contains('comment-thread-bar-subthread')).toBe(false);
+    expect(bars[1].classList.contains('depth-1')).toBe(true);
+    expect(bars[1].classList.contains('comment-thread-bar-subthread')).toBe(true);
 
     const css = readFileSync(resolve(process.cwd(), '../packages/ui/src/components/CommentThread.css'), 'utf8');
     expect(css).toContain('background: rgb(var(--color-border-50));');
