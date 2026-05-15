@@ -144,6 +144,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Custom reports
   'custom_reports',
 
+  // Inbound webhooks
+  'inbound_webhook_deliveries', 'inbound_webhooks',
+
   // External entity mappings references assets and import_sources with NO ACTION,
   // so it must be deleted before both.
   'external_entity_mappings',

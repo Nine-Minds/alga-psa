@@ -160,6 +160,7 @@ export interface UpdateTicketInput {
   location_id?: string | null;
   contact_name_id?: string | null;
   status_id?: string;
+  board_id?: string;
   category_id?: string | null;
   subcategory_id?: string | null;
   updated_by?: string;

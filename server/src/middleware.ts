@@ -94,6 +94,7 @@ const apiKeySkipPaths = [
   '/api/webhooks/stripe',
   '/api/webhooks/ninjaone',
   '/api/webhooks/tacticalrmm',
+  '/api/inbound/',  // User-configurable inbound webhook receiver; auth per webhook config (HMAC / bearer / IP / path token)
   '/api/files/',   // File download routes use session auth
   '/api/share/',  // Public share link routes handle their own auth
   '/api/ext/',  // Extension API routes handle their own auth
