@@ -311,7 +311,7 @@ export const searchAppTypeaheadAction = withAuth(async (
       });
     }
 
-    return searchTypeaheadResultSchema.parse(result);
+    return searchTypeaheadResultSchema.parse(result) as SearchTypeaheadResult;
   } finally {
     emitSearchTelemetry('search.query.latency_ms', {
       variant: 'typeahead',

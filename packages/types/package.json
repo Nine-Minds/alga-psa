@@ -17,7 +17,6 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "@alga-psa/event-schemas": "*",
     "@js-temporal/polyfill": "^0.4.4",
     "knex": "^3.1.0"
   },

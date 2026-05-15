@@ -48,7 +48,7 @@ function buildIndexersByEvent(): Map<EventType, EntityIndexer[]> {
   const byEvent = new Map<EventType, EntityIndexer[]>();
 
   for (const indexer of allIndexers()) {
-    for (const eventType of indexer.sourceEvents) {
+    for (const eventType of indexer.sourceEvents as readonly EventType[]) {
       const existing = byEvent.get(eventType) ?? [];
       existing.push(indexer);
       byEvent.set(eventType, existing);

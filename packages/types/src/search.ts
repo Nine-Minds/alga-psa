@@ -1,4 +1,3 @@
-import type { EventType } from '@alga-psa/event-schemas';
 import type { Knex } from 'knex';
 
 export const SEARCH_OBJECT_TYPES = [
@@ -60,7 +59,7 @@ export interface SearchDoc {
 
 export interface EntityIndexer {
   objectType: SearchObjectType;
-  sourceEvents: readonly EventType[];
+  sourceEvents: readonly string[];
   loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null>;
   loadBatch(
     knex: Knex,
