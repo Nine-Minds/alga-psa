@@ -137,9 +137,15 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       params.set('taskId', taskId);
     }
     const queryString = params.toString();
-    const newUrl = queryString ? `${pathname}?${queryString}` : pathname;
+    const shouldPreserveCommentHash =
+      taskId &&
+      taskId === taskIdFromUrl &&
+      typeof window !== 'undefined' &&
+      window.location.hash.startsWith('#comment-');
+    const hash = shouldPreserveCommentHash ? window.location.hash : '';
+    const newUrl = `${queryString ? `${pathname}?${queryString}` : pathname}${hash}`;
     window.history.replaceState(null, '', newUrl);
-  }, [pathname]);
+  }, [pathname, taskIdFromUrl]);
 
   if (!projectMetadata) {
     return <div>{t('projectDetail.loading')}</div>;

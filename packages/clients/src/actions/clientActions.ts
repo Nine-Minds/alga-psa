@@ -1073,6 +1073,23 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
     }, {});
 
     const tailored = tailorClientDeleteAlternatives(result, client.is_inactive);
+    if (result.deleted) {
+      const occurredAt = new Date().toISOString();
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_DELETED',
+        payload: {
+          clientId,
+          deletedByUserId: user.user_id,
+          deletedAt: occurredAt,
+        },
+        ctx: {
+          tenantId: tenant,
+          occurredAt,
+          actor: maybeUserActor(user),
+        },
+        idempotencyKey: `client_deleted:${clientId}:${occurredAt}`,
+      });
+    }
 
     return {
       ...tailored,

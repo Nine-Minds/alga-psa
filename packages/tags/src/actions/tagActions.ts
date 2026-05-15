@@ -9,7 +9,7 @@ import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
 import { Knex } from 'knex';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildTagAppliedPayload,
   buildTagDefinitionCreatedPayload,
@@ -277,24 +277,22 @@ export const updateTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
         board_id: tag.board_id
       });
 
-      if (nextTagText && nextTagText !== previousTagText) {
-        const occurredAt = new Date().toISOString();
-        await publishWorkflowEvent({
-          eventType: 'TAG_DEFINITION_UPDATED',
-          payload: buildTagDefinitionUpdatedPayload({
-            tagId: existingTag.definition_tag_id,
-            previousName: previousTagText,
-            newName: nextTagText,
-            updatedByUserId: currentUser.user_id,
-            updatedAt: occurredAt,
-          }),
-          ctx: {
-            tenantId: tenant,
-            occurredAt,
-            actor: { actorType: 'USER', actorUserId: currentUser.user_id },
-          },
-        });
-      }
+      const occurredAt = new Date().toISOString();
+      await publishWorkflowEvent({
+        eventType: 'TAG_DEFINITION_UPDATED',
+        payload: buildTagDefinitionUpdatedPayload({
+          tagId: existingTag.definition_tag_id,
+          previousName: previousTagText,
+          newName: nextTagText,
+          updatedByUserId: currentUser.user_id,
+          updatedAt: occurredAt,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt,
+          actor: { actorType: 'USER', actorUserId: currentUser.user_id },
+        },
+      });
     } catch (error) {
       console.error(`Error updating tag with id ${id}:`, error);
       if (error instanceof Error && error.message.includes('Permission denied')) {
@@ -386,7 +384,18 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
 
       // If caller explicitly wants to delete the orphaned definition, do so
       if (deleteDefinition) {
-        await TagDefinition.deleteOrphaned(trx, tenant, [existingTag.definition_tag_id]);
+        const deletedDefinitions = await TagDefinition.deleteOrphaned(trx, tenant, [existingTag.definition_tag_id]);
+        if (deletedDefinitions > 0) {
+          await publishEvent({
+            eventType: 'TAG_DEFINITION_DELETED',
+            payload: {
+              tenantId: tenant,
+              tagId: existingTag.definition_tag_id,
+              userId: currentUser.user_id,
+              timestamp: new Date().toISOString(),
+            },
+          });
+        }
       }
 
       const occurredAt = new Date().toISOString();
@@ -728,6 +737,23 @@ export const updateTagColor = withAuth(async (currentUser: IUserWithRoles, { ten
         await TagDefinition.update(trx, tenant, definition.tag_id, {
           background_color: backgroundColor,
           text_color: textColor
+        });
+
+        const occurredAt = new Date().toISOString();
+        await publishWorkflowEvent({
+          eventType: 'TAG_DEFINITION_UPDATED',
+          payload: buildTagDefinitionUpdatedPayload({
+            tagId: definition.tag_id,
+            previousName: tag.tag_text,
+            newName: tag.tag_text,
+            updatedByUserId: currentUser.user_id,
+            updatedAt: occurredAt,
+          }),
+          ctx: {
+            tenantId: tenant,
+            occurredAt,
+            actor: { actorType: 'USER', actorUserId: currentUser.user_id },
+          },
         });
       }
       return {

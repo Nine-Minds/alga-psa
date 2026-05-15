@@ -294,6 +294,9 @@ def "main cleanup" [
         "sessions"
 
         # === LEVEL 1: Leaf tables with no dependencies ===
+        # Global search index (no FKs, denormalized projection)
+        "app_search_index"
+
         # Workflow details
         "workflow_action_results" "workflow_event_attachments" "workflow_snapshots"
         "workflow_action_dependencies" "workflow_sync_points" "workflow_timers"

@@ -1389,8 +1389,8 @@
       "title": "55555",
       "subtitle": "55555 {{count}} 55555",
       "noTasks": "55555",
-      "emptyValue": "-",
-      "hoursValue": "55555 {{actual}} / {{estimated}} 55555",
+      "emptyValue": "55555",
+      "hoursValue": "55555 {{actual}} 55555 {{estimated}} 55555",
       "columns": {
         "task": "55555",
         "phase": "55555",

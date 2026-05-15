@@ -589,6 +589,19 @@ export const updateTaskWithChecklist = withAuth(async (
                         });
                     }
                 }
+
+                await publishEvent({
+                    eventType: 'PROJECT_TASK_UPDATED',
+                    payload: {
+                        tenantId: tenant,
+                        projectId: phase.project_id,
+                        phaseId: phase.phase_id,
+                        taskId,
+                        userId: user.user_id,
+                        timestamp: new Date().toISOString(),
+                        changes: validatedTaskData as Record<string, unknown>,
+                    }
+                });
             }
 
             if (checklist_items) {
@@ -963,6 +976,17 @@ export const deleteTask = withAuth(async (
             await ProjectTaskModel.deleteChecklistItems(trx, tenant, taskId);
 
             await ProjectTaskModel.deleteTask(trx, tenant, taskId);
+
+            await publishEvent({
+                eventType: 'PROJECT_TASK_DELETED',
+                payload: {
+                    tenantId: tenant,
+                    projectId,
+                    taskId,
+                    userId: user.user_id,
+                    timestamp: new Date().toISOString(),
+                }
+            });
         });
     } catch (error) {
         console.error('Error deleting task:', error);
@@ -1762,6 +1786,22 @@ export const moveTaskToPhase = withAuth(async (
                     });
                 }
             }
+
+            await publishEvent({
+                eventType: 'PROJECT_TASK_UPDATED',
+                payload: {
+                    tenantId: tenant,
+                    projectId: newPhase.project_id,
+                    phaseId: newPhaseId,
+                    taskId,
+                    userId: user.user_id,
+                    timestamp: new Date().toISOString(),
+                    changes: {
+                        phase_id: newPhaseId,
+                        project_status_mapping_id: finalStatusMappingId,
+                    },
+                }
+            });
 
             return updatedTask;
         });

@@ -6,6 +6,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 async function orderCategoriesHierarchically(categories: ITicketCategory[]): Promise<ITicketCategory[]> {
   // First separate parent categories and subcategories
@@ -311,6 +312,18 @@ export const createCategory = withAuth(async (user, { tenant }, data: {
         })
         .returning(['category_id', 'category_name', 'display_order', 'board_id', 'parent_category']);
 
+      await publishEvent({
+        eventType: 'CATEGORY_CREATED',
+        payload: {
+          tenantId: tenant,
+          categoryId: newCategory.category_id,
+          boardId: newCategory.board_id ?? null,
+          userId: user.user_id,
+          changes: { after: newCategory },
+          timestamp: new Date().toISOString(),
+        },
+      });
+
       return newCategory;
     } catch (error) {
       console.error('Error creating category:', error);
@@ -353,6 +366,18 @@ export const updateCategory = withAuth(async (
           .where({ parent_category: categoryId, tenant })
           .update({ board_id: data.board_id });
       }
+
+      await publishEvent({
+        eventType: 'CATEGORY_UPDATED',
+        payload: {
+          tenantId: tenant,
+          categoryId,
+          boardId: updatedCategory.board_id ?? null,
+          userId: _user.user_id,
+          changes: data,
+          timestamp: new Date().toISOString(),
+        },
+      });
 
       return updatedCategory;
     } catch (error) {
@@ -563,6 +588,16 @@ export const deleteCategory = withAuth(async (
         };
       }
 
+      await publishEvent({
+        eventType: 'CATEGORY_DELETED',
+        payload: {
+          tenantId: tenant,
+          categoryId,
+          userId: _user.user_id,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
       return {
         canDelete: true,
         dependencies: [],
@@ -583,6 +618,18 @@ export const deleteCategory = withAuth(async (
       throw new Error('Category not found');
     }
   });
+
+  if (result.deleted === true) {
+    await publishEvent({
+      eventType: 'CATEGORY_DELETED',
+      payload: {
+        tenantId: tenant,
+        categoryId,
+        userId: _user.user_id,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
 
   return {
     ...result,

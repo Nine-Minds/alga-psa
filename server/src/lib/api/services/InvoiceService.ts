@@ -433,6 +433,17 @@ export class InvoiceService extends BaseService<IInvoice> {
         details: { action: 'invoice.created' }
       });
 
+      await publishEvent({
+        eventType: 'INVOICE_CREATED',
+        payload: {
+          tenantId: context.tenant,
+          invoiceId: invoice.invoice_id,
+          clientId: invoice.client_id,
+          userId: context.userId,
+          timestamp: new Date().toISOString()
+        }
+      });
+
       return this.getById(invoice.invoice_id, context) as Promise<IInvoice>;
     });
   }
@@ -480,9 +491,26 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       // Update line items if provided
       if (data.items) {
+        const replacedItemIds = await trx('invoice_line_items')
+          .where({ invoice_id: id, tenant: context.tenant })
+          .pluck('item_id');
+
         await trx('invoice_line_items')
           .where({ invoice_id: id, tenant: context.tenant })
           .del();
+
+        for (const itemId of replacedItemIds) {
+          await publishEvent({
+            eventType: 'INVOICE_ITEM_DELETED',
+            payload: {
+              tenantId: context.tenant,
+              invoiceId: id,
+              itemId,
+              userId: context.userId,
+              timestamp: new Date().toISOString()
+            }
+          });
+        }
         
       // Normalize header alias: prefer is_bundle_header, but accept is_bundle_header
       const normalizedItems = data.items.map((it: any) => {
@@ -612,6 +640,18 @@ export class InvoiceService extends BaseService<IInvoice> {
           });
         }
       }
+
+      await publishEvent({
+        eventType: 'INVOICE_UPDATED',
+        payload: {
+          tenantId: context.tenant,
+          invoiceId: id,
+          clientId: existing.client_id,
+          userId: context.userId,
+          changes: data as Record<string, unknown>,
+          timestamp: occurredAt
+        }
+      });
 
       return this.getById(id, context) as Promise<IInvoice>;
     });
@@ -2037,6 +2077,19 @@ export class InvoiceService extends BaseService<IInvoice> {
     }));
 
     await trx('invoice_line_items').insert(lineItemsData);
+
+    for (const item of lineItemsData) {
+      await publishEvent({
+        eventType: 'INVOICE_ITEM_CREATED',
+        payload: {
+          tenantId: context.tenant,
+          invoiceId,
+          itemId: item.item_id,
+          userId: context.userId,
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
   }
 
   private async sendInvoiceEmail(

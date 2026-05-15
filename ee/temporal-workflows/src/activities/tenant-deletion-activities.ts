@@ -38,6 +38,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'sessions',
 
   // === LEVEL 1: Leaf tables with no dependencies ===
+  // Global search index (no FKs, denormalized projection)
+  'app_search_index',
+
   // Workflow task details
   'workflow_task_history', 'workflow_form_schemas',
 

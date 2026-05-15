@@ -1360,6 +1360,11 @@
     "addItem": "11111",
     "fill": "11111",
     "clearValues": "11111",
+    "askAi": {
+      "ariaLabel": "11111",
+      "title": "11111",
+      "shortcutHint": "11111"
+    },
     "applySuggestions": "11111 {{count}} 11111",
     "applySuggestionTitle": "11111 {{sourcePath}} 11111",
     "fuzzySuffix": "11111",
@@ -1403,11 +1408,6 @@
       "openEditor": "11111",
       "apply": "11111",
       "cancel": "11111"
-    },
-    "askAi": {
-      "ariaLabel": "11111",
-      "title": "11111",
-      "shortcutHint": "11111"
     }
   },
   "schemaReference": {
