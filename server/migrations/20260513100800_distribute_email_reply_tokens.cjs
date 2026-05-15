@@ -24,21 +24,10 @@ exports.up = async function up(knex) {
     // Drop orphaned tokens before distribution: create_distributed_table copies
     // rows into shards where the composite FKs are enforced per-shard. A token
     // whose ticket/project/comment/tenant was deleted (tokens are ephemeral and
-    // these FKs don't cascade) can't be placed and aborts the copy. Such a token
-    // is dead anyway — its target entity is gone.
-    await knex.raw(
-      `DELETE FROM email_reply_tokens ert
-        WHERE NOT EXISTS (SELECT 1 FROM tenants tn WHERE tn.tenant = ert.tenant)
-           OR (ert.ticket_id IS NOT NULL AND NOT EXISTS (
-                 SELECT 1 FROM tickets t
-                  WHERE t.tenant = ert.tenant AND t.ticket_id = ert.ticket_id))
-           OR (ert.project_id IS NOT NULL AND NOT EXISTS (
-                 SELECT 1 FROM projects p
-                  WHERE p.tenant = ert.tenant AND p.project_id = ert.project_id))
-           OR (ert.comment_id IS NOT NULL AND NOT EXISTS (
-                 SELECT 1 FROM comments c
-                  WHERE c.tenant = ert.tenant AND c.comment_id = ert.comment_id))`
-    );
+    // these FKs don't cascade) can't be placed and aborts the copy. It's dead
+    // anyway. Citus forbids local<->distributed joins, so each step queries one
+    // table kind only: read local, check existence on distributed, delete local.
+    await deleteOrphanedEmailReplyTokens(knex);
 
     // Citus rejects create_distributed_table() if a unique/exclude constraint
     // or unique index omits the distribution column. email_reply_tokens has a
@@ -103,6 +92,76 @@ exports.up = async function up(knex) {
   await truncateLocalDataIfNeeded(knex, 'comments');
   await truncateLocalDataIfNeeded(knex, 'project_task_comments');
 };
+
+async function deleteOrphanedEmailReplyTokens(knex) {
+  const { rows: tokens } = await knex.raw(
+    `SELECT tenant::text AS tenant, token,
+            ticket_id::text AS ticket_id,
+            project_id::text AS project_id,
+            comment_id::text AS comment_id
+       FROM email_reply_tokens`
+  );
+  if (tokens.length === 0) {
+    return;
+  }
+
+  const uniqPairs = (rows, idKey) => {
+    const seen = new Set();
+    const out = [];
+    for (const r of rows) {
+      if (!r[idKey]) continue;
+      const k = `${r.tenant}|${r[idKey]}`;
+      if (!seen.has(k)) {
+        seen.add(k);
+        out.push([r.tenant, r[idKey]]);
+      }
+    }
+    return out;
+  };
+
+  // Existence lookups hit ONLY the distributed table (no local table joined),
+  // so Citus can route them. Keep tenant uncast so shard pruning still applies.
+  const existing = async (table, idCol, pairs) => {
+    if (pairs.length === 0) return new Set();
+    const placeholders = pairs.map(() => '(?::uuid,?::uuid)').join(',');
+    const { rows } = await knex.raw(
+      `SELECT tenant::text AS tenant, ${idCol}::text AS id
+         FROM ${table}
+        WHERE (tenant, ${idCol}) IN (${placeholders})`,
+      pairs.flat()
+    );
+    return new Set(rows.map((r) => `${r.tenant}|${r.id}`));
+  };
+
+  const ticketsOk = await existing('tickets', 'ticket_id', uniqPairs(tokens, 'ticket_id'));
+  const projectsOk = await existing('projects', 'project_id', uniqPairs(tokens, 'project_id'));
+  const commentsOk = await existing('comments', 'comment_id', uniqPairs(tokens, 'comment_id'));
+
+  const tenantList = [...new Set(tokens.map((t) => t.tenant))];
+  const { rows: tnRows } = await knex.raw(
+    `SELECT tenant::text AS tenant FROM tenants
+      WHERE tenant IN (${tenantList.map(() => '?::uuid').join(',')})`,
+    tenantList
+  );
+  const tenantsOk = new Set(tnRows.map((r) => r.tenant));
+
+  const orphans = tokens.filter((t) =>
+    !tenantsOk.has(t.tenant) ||
+    (t.ticket_id && !ticketsOk.has(`${t.tenant}|${t.ticket_id}`)) ||
+    (t.project_id && !projectsOk.has(`${t.tenant}|${t.project_id}`)) ||
+    (t.comment_id && !commentsOk.has(`${t.tenant}|${t.comment_id}`))
+  );
+  if (orphans.length === 0) {
+    return;
+  }
+
+  // Local-only delete (no distributed table referenced).
+  const ph = orphans.map(() => '(?::uuid,?)').join(',');
+  await knex.raw(
+    `DELETE FROM email_reply_tokens WHERE (tenant, token) IN (${ph})`,
+    orphans.flatMap((o) => [o.tenant, o.token])
+  );
+}
 
 async function isDistributed(knex, table) {
   const res = await knex.raw(
