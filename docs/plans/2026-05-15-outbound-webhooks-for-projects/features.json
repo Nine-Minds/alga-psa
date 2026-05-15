@@ -8,7 +8,7 @@
   {
     "id": "F002",
     "description": "Rename projection helper `projectWebhookPayload` -> `applyPayloadAllowlist` across server/src/lib/webhooks/payloadFields.ts and all callers (webhookSubscriber.ts, integration test mocks, payloadFields.test.ts). Add an optional 4th argument `extraAlwaysIncluded?: string[]` that is unioned into the always-included key set (additive, no behavior change for existing ticket callers). One mechanical, isolated commit; all existing webhook tests stay green.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["6", "7"]
   },
   {

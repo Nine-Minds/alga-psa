@@ -8,7 +8,7 @@ import {
   fetchTicketCommentsForWebhook,
   type TicketWebhookSourceEvent,
 } from './webhook/webhookTicketPayload';
-import { projectWebhookPayload, webhookEntityForEventType } from '../../webhooks/payloadFields';
+import { applyPayloadAllowlist, webhookEntityForEventType } from '../../webhooks/payloadFields';
 import { webhookModel } from '../../webhooks/webhookModel';
 import { WebhookDeliveryQueue } from '../../webhooks/WebhookDeliveryQueue';
 
@@ -122,7 +122,7 @@ async function handleTicketEvent(event: unknown): Promise<void> {
         const payloadWithComments = wantsCommentsFor(subscriber) && fullCommentThread !== null
           ? { ...payload, comments: fullCommentThread }
           : payload;
-        const subscriberPayload = projectWebhookPayload(
+        const subscriberPayload = applyPayloadAllowlist(
           entity,
           payloadWithComments,
           allowlistFor(subscriber),

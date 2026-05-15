@@ -120,10 +120,11 @@ export function webhookEntityForEventType(publicEventType: string): string {
  * allowlist for the given entity. Returns the original payload unchanged
  * when `allowedFields` is null (the default: no filtering, full payload).
  */
-export function projectWebhookPayload<T extends Record<string, unknown>>(
+export function applyPayloadAllowlist<T extends Record<string, unknown>>(
   entity: string,
   payload: T,
   allowedFields: string[] | null,
+  extraAlwaysIncluded: string[] = [],
 ): T {
   if (allowedFields === null) {
     return payload;
@@ -131,6 +132,9 @@ export function projectWebhookPayload<T extends Record<string, unknown>>(
 
   const allowed = new Set<string>(allowedFields);
   for (const key of ALWAYS_INCLUDED_KEYS_BY_ENTITY[entity as WebhookPayloadEntity] ?? []) {
+    allowed.add(key);
+  }
+  for (const key of extraAlwaysIncluded) {
     allowed.add(key);
   }
 

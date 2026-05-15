@@ -14,31 +14,31 @@
   {
     "id": "T003",
     "description": "Phase 0 precondition: workspace type-check resolves all webhook import paths (no dangling refs to deleted webhookPayloadFields.ts / removed projectTicketWebhookPayload).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F001"]
   },
   {
     "id": "T004",
     "description": "applyPayloadAllowlist returns payload unchanged when allowedFields is null (default passthrough preserved post-rename).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
     "id": "T005",
     "description": "applyPayloadAllowlist retains entity always-included keys (ticket_id for ticket) when projecting a subset.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
     "id": "T006",
     "description": "applyPayloadAllowlist with extraAlwaysIncluded:['task_id'] retains task_id even when not in the subscriber allowlist; without it task_id is stripped.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {
     "id": "T007",
     "description": "No remaining references to the old name `projectWebhookPayload`; all callers and integration-test mocks use applyPayloadAllowlist; existing webhook tests stay green.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F002"]
   },
   {

@@ -102,3 +102,15 @@
   (F001 implemented:true, uncommitted). Phase 1 not started.
 - 2026-05-15: Added F008 (tag-change webhooks, projects + tickets parity) per
   user decision → 8 features + 30 tests. Runs 4th in execution order.
+- 2026-05-15: Completed F002. Renamed `projectWebhookPayload` to
+  `applyPayloadAllowlist` in `payloadFields.ts`, updated the ticket webhook
+  subscriber and payload-field tests, and added the optional
+  `extraAlwaysIncluded` parameter for future task payload projection.
+  Verification:
+  `cd server && npx vitest run src/lib/webhooks/__tests__/payloadFields.test.ts --coverage=false`
+  (4/4) and
+  `cd server && npx vitest run src/test/integration/webhookDelivery.entityIdFilter.test.ts src/test/integration/webhookDelivery.tenantIsolation.test.ts --coverage=false`
+  (3/3). Source search with coverage excluded has no remaining
+  `projectWebhookPayload` references. `npm run typecheck` OOMed under the
+  default Node heap; `NODE_OPTIONS='--max-old-space-size=8192' npm run typecheck`
+  passed and also satisfies T003.
