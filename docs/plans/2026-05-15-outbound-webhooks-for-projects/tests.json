@@ -86,37 +86,37 @@
   {
     "id": "T015",
     "description": "buildProjectWebhookPayload builds correct scalar payload + url (${NEXTAUTH_URL}/msp/projects/:id); contains NO `tags` key.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
     "id": "T016",
     "description": "buildProjectWebhookPayload resolves previous_status_id/previous_status_name on PROJECT_STATUS_CHANGED and populates `changes` on PROJECT_UPDATED.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
     "id": "T017",
     "description": "Project payload cache: second build within TTL is a cache hit; LRU eviction past 256 entries.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
     "id": "T018",
     "description": "buildProjectTaskWebhookPayload includes project context + task fields and resolves `tags` via TagMapping.getByEntity(..., 'project_task').",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
     "id": "T019",
     "description": "fetchProjectPhasesForWebhook returns phases ordered by order_key; fetchProjectTaskCountsForWebhook returns {total,completed,overdue,by_status}.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {
     "id": "T020",
     "description": "webhookProjectEventMap: PROJECT_INTERNAL_TO_PUBLIC maps every internal event to its public name; isProjectTaskEvent true only for task events; deprecated aliases resolve to closed/completed semantics.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005"]
   },
   {

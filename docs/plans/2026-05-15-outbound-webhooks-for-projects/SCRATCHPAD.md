@@ -149,3 +149,15 @@
   `cd server && npx vitest run src/lib/webhooks/__tests__/payloadFields.test.ts src/lib/api/schemas/__tests__/webhookSchemas.test.ts src/lib/actions/__tests__/webhookActions.supportedEvents.test.ts --coverage=false`
   (7/7) and
   `cd server && NODE_OPTIONS='--max-old-space-size=8192' npm run typecheck`.
+- 2026-05-15: Completed F005. Added `webhookProjectEventMap.ts` with internal
+  to public project mappings, including `PROJECT_CLOSED` -> both
+  `project.closed` and deprecated `project.completed`. Added
+  `webhookProjectPayload.ts` for project and task payload builders, 60s/256
+  LRU caches, `project_task` tag resolution for task payloads, status-change
+  previous status enrichment, update `changes`, and uncached `phases` /
+  `task_counts` helpers. Task URL is implemented as
+  `/msp/projects/:projectId?taskId=:taskId`; no existing route reference was
+  found in source search, matching the PRD's accepted shape. Verification:
+  `cd server && npx vitest run src/lib/eventBus/subscribers/webhook/__tests__/webhookProjectEventMap.test.ts src/lib/eventBus/subscribers/webhook/__tests__/webhookProjectPayload.test.ts --coverage=false`
+  (7/7) and
+  `cd server && NODE_OPTIONS='--max-old-space-size=8192' npm run typecheck`.

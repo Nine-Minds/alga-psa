@@ -32,7 +32,7 @@
   {
     "id": "F005",
     "description": "Project event map + payload builders (pure new code, no callers yet). New webhookProjectEventMap.ts: ProjectWebhookPublicEvent/ProjectWebhookInternalEvent unions, PROJECT_INTERNAL_TO_PUBLIC map with deprecated-alias resolution, publicEventsForProject(), isProjectTaskEvent(). New webhookProjectPayload.ts: ProjectWebhookPayload (no tags) and ProjectTaskWebhookPayload (tags via 'project_task') types; buildProjectWebhookPayload (joins projects->clients/statuses/contacts/users, previous_status_* for status_changed, changes for updated); buildProjectTaskWebhookPayload (joins project_tasks->project_phases->projects->clients/statuses/users); 60s/256-LRU caches; uncached opt-in helpers fetchProjectPhasesForWebhook and fetchProjectTaskCountsForWebhook.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5", "7", "8"]
   },
   {
