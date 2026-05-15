@@ -1066,6 +1066,22 @@ export const deleteAsset = withAuth(async (
             revalidatePath('/msp/assets');
             revalidatePath(`/assets/${asset_id}`);
             revalidatePath(`/msp/assets/${asset_id}`);
+
+            const occurredAt = new Date().toISOString();
+            await publishWorkflowEvent({
+                eventType: 'ASSET_DELETED',
+                payload: {
+                    assetId: asset_id,
+                    userId: user.user_id,
+                    timestamp: occurredAt,
+                },
+                ctx: {
+                    tenantId: tenant,
+                    occurredAt,
+                    actor: { actorType: 'USER', actorUserId: user.user_id },
+                },
+                idempotencyKey: `asset_deleted:${asset_id}:${occurredAt}`,
+            });
         }
 
         return {

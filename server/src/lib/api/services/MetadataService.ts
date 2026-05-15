@@ -18,6 +18,7 @@ import {
 } from '../schemas/metadataSchemas';
 import { DatabaseService } from './DatabaseService';
 import { EventBusService } from './EventBusService';
+import { getApiMetadataProducts } from '../../productSurfaceRegistry';
 // import { validateTenantAccess } from '../../utils/validation';
 import fs from 'fs/promises';
 import path from 'path';
@@ -878,6 +879,7 @@ export class MetadataService {
         deprecated: endpoint.deprecated,
         security: endpoint.requiresAuth ? [{ ApiKeyAuth: [] }] : [],
         parameters: this.generateOpenApiParameters(endpoint),
+        'x-alga-products': getApiMetadataProducts(endpoint.path),
         responses: {
           '200': {
             description: 'Successful response',

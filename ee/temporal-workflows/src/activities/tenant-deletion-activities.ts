@@ -38,6 +38,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'sessions',
 
   // === LEVEL 1: Leaf tables with no dependencies ===
+  // Global search index (no FKs, denormalized projection)
+  'app_search_index',
+
   // Workflow task details
   'workflow_task_history', 'workflow_form_schemas',
 
@@ -146,6 +149,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Custom reports
   'custom_reports',
+
+  // Inbound webhooks
+  'inbound_webhook_deliveries', 'inbound_webhooks',
 
   // External entity mappings references assets and import_sources with NO ACTION,
   // so it must be deleted before both.

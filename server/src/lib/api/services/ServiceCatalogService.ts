@@ -1,5 +1,6 @@
 import type { IService } from '@/interfaces/billing.interfaces';
 import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { ListOptions } from '../controllers/types';
 
 type SortField = 'service_name' | 'billing_method' | 'default_rate';
@@ -12,6 +13,38 @@ type FilterOptions = {
   item_kind?: 'service' | 'product' | 'any';
   is_active?: boolean;
 };
+
+type ServiceCatalogSearchEventType =
+  | 'SERVICE_CATALOG_CREATED'
+  | 'SERVICE_CATALOG_UPDATED'
+  | 'SERVICE_CATALOG_DELETED';
+
+export async function publishServiceCatalogSearchEvent(
+  eventType: ServiceCatalogSearchEventType,
+  tenant: string,
+  serviceId: string,
+  options: {
+    userId?: string;
+    itemKind?: 'service' | 'product';
+    changedFields?: string[];
+  } = {},
+): Promise<void> {
+  try {
+    await publishEvent({
+      eventType,
+      payload: {
+        tenantId: tenant,
+        serviceId,
+        userId: options.userId,
+        itemKind: options.itemKind,
+        changedFields: options.changedFields,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  } catch (eventError) {
+    console.error(`[ServiceCatalogService] Failed to publish ${eventType} search event:`, eventError);
+  }
+}
 
 export class ServiceCatalogService extends BaseService<IService> {
   constructor() {
@@ -225,6 +258,12 @@ export class ServiceCatalogService extends BaseService<IService> {
       .insert(serviceData)
       .returning('*');
 
+    await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, created.service_id, {
+      userId: context.userId,
+      itemKind: created.item_kind,
+      changedFields: Object.keys(serviceData),
+    });
+
     return this.getById(created.service_id, context) as Promise<IService>;
   }
 
@@ -249,6 +288,12 @@ export class ServiceCatalogService extends BaseService<IService> {
       throw new Error('Resource not found or permission denied');
     }
 
+    await publishServiceCatalogSearchEvent('SERVICE_CATALOG_UPDATED', tenant, id, {
+      userId: context.userId,
+      itemKind: updated.item_kind,
+      changedFields: Object.keys(updateData),
+    });
+
     return this.getById(id, context) as Promise<IService>;
   }
 
@@ -256,9 +301,19 @@ export class ServiceCatalogService extends BaseService<IService> {
     const { knex } = await this.getKnex();
     const tenant = context.tenant;
 
+    const existing = await knex('service_catalog')
+      .where({ service_id: id, tenant })
+      .select('item_kind')
+      .first();
+
     await knex('service_catalog')
       .where({ service_id: id, tenant })
       .delete();
+
+    await publishServiceCatalogSearchEvent('SERVICE_CATALOG_DELETED', tenant, id, {
+      userId: context.userId,
+      itemKind: existing?.item_kind,
+    });
   }
 
   private normalizeSortField(sort?: string | null): SortField {

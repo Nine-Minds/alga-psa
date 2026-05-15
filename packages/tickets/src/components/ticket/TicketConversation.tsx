@@ -427,7 +427,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       return (
       <>
         <CommentItem
-          id={`${id}-comment-${mergedConversation.comment_id}`}
+          id={mergedConversation.comment_id ? `comment-${mergedConversation.comment_id}` : `${id}-comment-unknown`}
           conversation={mergedConversation}
           currentUserId={currentUser?.id}
           isEditing={isEditing && currentComment?.comment_id === mergedConversation.comment_id}

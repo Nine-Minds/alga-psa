@@ -286,13 +286,16 @@ export const addInvoiceAnnotation = withAuth(async (
     return newAnnotation;
 });
 
-export async function getInvoiceAnnotations(invoiceId: string): Promise<IInvoiceAnnotation[]> {
-    // Implementation to fetch annotations for an invoice
-    console.warn(`getInvoiceAnnotations implementation needed for invoice ${invoiceId}`);
-    // const { knex, tenant } = await createTenantKnex();
-    // return knex('invoice_annotations').where({ invoice_id: invoiceId, tenant }); // Example query
-    return [];
-}
+export const getInvoiceAnnotations = withAuth(async (
+    user,
+    { tenant },
+    invoiceId: string
+): Promise<IInvoiceAnnotation[]> => {
+    const { knex } = await createTenantKnex();
+    return knex('invoice_annotations')
+        .where({ invoice_id: invoiceId, tenant })
+        .orderBy('created_at', 'asc');
+});
 // --- Server-Side Rendering Action ---
 
 /**

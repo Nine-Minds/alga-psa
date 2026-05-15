@@ -699,7 +699,7 @@
     "pageTitle": "Modifica risorsa"
   },
   "associatedAssets": {
-    "title": "Beni associati",
+    "title": "Beni",
     "description": "Gestione delle relazioni tra asset padre e figlio con azioni sugli asset collegati",
     "loading": {
       "assets": "Caricamento risorse..."

@@ -10,6 +10,7 @@ import { withAuth, hasPermission } from '@alga-psa/auth';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { v4 as uuidv4 } from 'uuid';
 import { BoardTicketStatusInput, saveBoardTicketStatusesForBoard } from './boardTicketStatusActions';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 export interface FindBoardByNameOutput {
   id: string;
@@ -295,6 +296,17 @@ export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBo
 	        );
 	      }
 
+      await publishEvent({
+        eventType: 'BOARD_CREATED',
+        payload: {
+          tenantId: tenant,
+          boardId: newBoard.board_id,
+          userId: user.user_id,
+          changes: { after: newBoard },
+          timestamp: new Date().toISOString(),
+        },
+      });
+
       return normalizeBoardLiveTimerSetting(newBoard);
     });
   } catch (error) {
@@ -541,6 +553,16 @@ export const deleteBoard = withAuth(async (
         };
       }
 
+      await publishEvent({
+        eventType: 'BOARD_DELETED',
+        payload: {
+          tenantId: tenant,
+          boardId,
+          userId: user.user_id,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
       return {
         success: true,
         message: 'Board deleted.'
@@ -563,6 +585,16 @@ export const deleteBoard = withAuth(async (
     await trx('boards')
       .where({ tenant, board_id: boardId })
       .delete();
+
+    await publishEvent({
+      eventType: 'BOARD_DELETED',
+      payload: {
+        tenantId: tenant,
+        boardId,
+        userId: user.user_id,
+        timestamp: new Date().toISOString(),
+      },
+    });
 
     // 12. If last ITIL board and cleanup confirmed, remove unused ITIL data
     let itilCleanupMessage = '';
@@ -712,6 +744,17 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
           ticketStatuses
         );
       }
+
+      await publishEvent({
+        eventType: 'BOARD_UPDATED',
+        payload: {
+          tenantId: tenant,
+          boardId,
+          userId: user.user_id,
+          changes: { after: updatedBoard },
+          timestamp: new Date().toISOString(),
+        },
+      });
 
       return normalizeBoardLiveTimerSetting(updatedBoard);
     });

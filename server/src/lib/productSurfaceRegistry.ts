@@ -1,4 +1,4 @@
-import type { ProductCode } from '@alga-psa/types';
+import { PRODUCT_CODES, type ProductCode } from '@alga-psa/types';
 
 export type ProductRouteBehavior = 'allowed' | 'upgrade_boundary' | 'not_found';
 export type ProductApiBehavior = 'allowed' | 'denied';
@@ -233,6 +233,10 @@ export function isApiVisibleInMetadata(productCode: ProductCode, path: string): 
   }
 
   return matched.visibleInMetadataByProduct[productCode];
+}
+
+export function getApiMetadataProducts(path: string): ProductCode[] {
+  return PRODUCT_CODES.filter((productCode) => isApiVisibleInMetadata(productCode, path));
 }
 
 type MenuLikeItem = { href?: string; subItems?: MenuLikeItem[] };

@@ -206,6 +206,20 @@ export const createTaskComment = withAuth(async (
       }
     });
 
+    await publishEvent({
+      eventType: 'PROJECT_TASK_COMMENT_CREATED',
+      payload: {
+        tenantId: tenant,
+        taskId: comment.taskId,
+        projectId: task.project_id,
+        userId,
+        taskCommentId: newComment.task_comment_id,
+        taskName: task.task_name,
+        commentContent: comment.note,
+        isUpdate: false
+      }
+    });
+
     return newComment.task_comment_id;
   });
 });
@@ -326,6 +340,21 @@ export const updateTaskComment = withAuth(async (
         isUpdate: true  // Flag to indicate this is an update
       }
     });
+
+    await publishEvent({
+      eventType: 'PROJECT_TASK_COMMENT_UPDATED',
+      payload: {
+        tenantId: tenant,
+        taskId: existingComment.task_id,
+        projectId: task.project_id,
+        userId,
+        taskCommentId: taskCommentId,
+        taskName: task.task_name,
+        oldCommentContent: existingComment.note,
+        newCommentContent: updates.note,
+        isUpdate: true
+      }
+    });
   });
 });
 
@@ -351,6 +380,21 @@ export const deleteTaskComment = withAuth(async (
 
     await assertOwnCommentOrInternalUser(trx, user, tenant, taskCommentId, existingComment.user_id, 'delete');
 
+    const task = await trx('project_tasks')
+      .join('project_phases', function() {
+        this.on('project_tasks.phase_id', 'project_phases.phase_id')
+          .andOn('project_tasks.tenant', 'project_phases.tenant');
+      })
+      .where('project_tasks.task_id', existingComment.task_id)
+      .where('project_tasks.tenant', tenant)
+      .select('project_phases.project_id', 'project_tasks.task_name')
+      .first();
+
+    if (!task) {
+      throw new Error('Task not found');
+    }
+
+    // If the comment still has replies, soft-delete it so the thread structure survives
     const child = await trx('project_task_comments')
       .select('task_comment_id')
       .where({ parent_comment_id: taskCommentId, tenant })
@@ -366,6 +410,19 @@ export const deleteTaskComment = withAuth(async (
           deleted_at: now,
           updated_at: now,
         });
+
+      await publishEvent({
+        eventType: 'PROJECT_TASK_COMMENT_DELETED',
+        payload: {
+          tenantId: tenant,
+          taskId: existingComment.task_id,
+          projectId: task.project_id,
+          userId,
+          taskCommentId,
+          taskName: task.task_name,
+          timestamp: new Date().toISOString(),
+        }
+      });
       return;
     }
 
@@ -389,6 +446,19 @@ export const deleteTaskComment = withAuth(async (
         .where({ tenant, thread_id: existingComment.thread_id })
         .del();
     }
+
+    await publishEvent({
+      eventType: 'PROJECT_TASK_COMMENT_DELETED',
+      payload: {
+        tenantId: tenant,
+        taskId: existingComment.task_id,
+        projectId: task.project_id,
+        userId,
+        taskCommentId,
+        taskName: task.task_name,
+        timestamp: new Date().toISOString(),
+      }
+    });
   });
 });
 

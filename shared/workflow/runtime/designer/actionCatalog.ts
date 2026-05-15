@@ -63,7 +63,8 @@ const BUILT_IN_CATALOG_SEEDS: BuiltInCatalogSeed[] = [
     tileKind: 'core-object',
     description: 'Create, find, update, assign, and manage tickets.',
     defaultActionId: 'tickets.create',
-    modules: ['tickets']
+    modules: ['tickets'],
+    actionIds: ['assets.find_associated_tickets']
   },
   {
     groupKey: 'contact',

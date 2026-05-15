@@ -939,6 +939,19 @@ export class TimeSheetService extends BaseService<any> {
           assignedByUserId: context.userId
         });
 
+        await publishEvent({
+          eventType: 'SCHEDULE_ENTRY_CREATED',
+          payload: {
+            tenantId: context.tenant,
+            userId: context.userId,
+            entryId: entry.entry_id,
+            changes: {
+              after: entry,
+              assignedUserIds: data.assigned_user_ids || [],
+            },
+          },
+        });
+
         return this.getScheduleEntry(entry.entry_id, context);
       });
     }
@@ -986,7 +999,25 @@ export class TimeSheetService extends BaseService<any> {
             await trx('schedule_entry_assignees').insert(assigneeData);
           }
         }
-  
+
+        const updated = await trx('schedule_entries')
+          .where({ entry_id: id, tenant: context.tenant })
+          .first();
+
+        await publishEvent({
+          eventType: 'SCHEDULE_ENTRY_UPDATED',
+          payload: {
+            tenantId: context.tenant,
+            userId: context.userId,
+            entryId: id,
+            changes: {
+              before: existing,
+              after: updated,
+              assignedUserIds: data.assigned_user_ids,
+            },
+          },
+        });
+
         return this.getScheduleEntry(id, context);
       });
     }
@@ -1012,6 +1043,18 @@ export class TimeSheetService extends BaseService<any> {
         await trx('schedule_entries')
           .where({ entry_id: id, tenant: context.tenant })
           .del();
+
+        await publishEvent({
+          eventType: 'SCHEDULE_ENTRY_DELETED',
+          payload: {
+            tenantId: context.tenant,
+            userId: context.userId,
+            entryId: id,
+            changes: {
+              before: existing,
+            },
+          },
+        });
       });
     }
 

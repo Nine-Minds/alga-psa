@@ -8,6 +8,7 @@ import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
+import { publishEvent } from 'server/src/lib/eventBus/publishers';
 
 // Import tag models and interfaces
 import TagDefinition, { ITagDefinition } from '@alga-psa/tags/models/tagDefinition';
@@ -79,6 +80,58 @@ export class TagService extends BaseService {
     });
   }
 
+  private async publishTagDefinitionCreated(definition: ITagDefinition, context: ServiceContext): Promise<void> {
+    const occurredAt = new Date().toISOString();
+    await publishEvent({
+      eventType: 'TAG_DEFINITION_CREATED',
+      payload: {
+        tenantId: context.tenant,
+        occurredAt,
+        actorType: 'USER',
+        actorUserId: context.userId,
+        tagId: definition.tag_id,
+        tagName: definition.tag_text,
+        createdByUserId: context.userId,
+        createdAt: definition.created_at ? new Date(definition.created_at).toISOString() : occurredAt,
+      },
+    });
+  }
+
+  private async publishTagDefinitionUpdated(
+    tagId: string,
+    previousName: string | undefined,
+    newName: string | undefined,
+    context: ServiceContext,
+  ): Promise<void> {
+    const occurredAt = new Date().toISOString();
+    await publishEvent({
+      eventType: 'TAG_DEFINITION_UPDATED',
+      payload: {
+        tenantId: context.tenant,
+        occurredAt,
+        actorType: 'USER',
+        actorUserId: context.userId,
+        tagId,
+        previousName,
+        newName,
+        updatedByUserId: context.userId,
+        updatedAt: occurredAt,
+      },
+    });
+  }
+
+  private async publishTagDefinitionDeleted(tagId: string, context: ServiceContext): Promise<void> {
+    await publishEvent({
+      eventType: 'TAG_DEFINITION_DELETED',
+      payload: {
+        tenantId: context.tenant,
+        tagId,
+        userId: context.userId,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+
   // ========================================================================
   // TAG CRUD OPERATIONS
   // ========================================================================
@@ -133,7 +186,7 @@ export class TagService extends BaseService {
           };
 
           // Get or create tag definition
-          const definition = await TagDefinition.getOrCreate(
+          const { definition, created: createdDefinition } = await TagDefinition.getOrCreateWithStatus(
             trx,
             tenant,
             tagData.tag_text,
@@ -151,6 +204,10 @@ export class TagService extends BaseService {
             tagged_id: tagData.tagged_id,
             tagged_type: tagData.tagged_type
           }, context.userId);
+
+          if (createdDefinition) {
+            await this.publishTagDefinitionCreated(definition, context);
+          }
           
           // Get the created tag for return
           const created = await trx('tag_mappings as tm')
@@ -202,6 +259,8 @@ export class TagService extends BaseService {
       if (!mapping) {
         throw new Error(`Tag mapping with id ${id} not found`);
       }
+
+      const previousDefinition = await TagDefinition.get(trx, tenant, mapping.tag_id);
       
       // Update the definition (only certain fields can be updated)
       await TagDefinition.update(trx, tenant, mapping.tag_id, {
@@ -210,6 +269,13 @@ export class TagService extends BaseService {
         text_color: updateData.text_color,
         board_id: updateData.board_id
       });
+
+      await this.publishTagDefinitionUpdated(
+        mapping.tag_id,
+        previousDefinition?.tag_text,
+        updateData.tag_text ?? previousDefinition?.tag_text,
+        context,
+      );
       
       // Get updated tag
       const updated = await trx('tag_mappings as tm')
@@ -633,6 +699,13 @@ export class TagService extends BaseService {
         text_color: textColor
       });
 
+      await this.publishTagDefinitionUpdated(
+        definition.tag_id,
+        definition.tag_text,
+        definition.tag_text,
+        context,
+      );
+
       // Get count of affected mappings
       const updated = await TagMapping.getUsageCount(trx, tenant, definition.tag_id);
 
@@ -716,6 +789,13 @@ export class TagService extends BaseService {
         tag_text: trimmedNewText
       });
 
+      await this.publishTagDefinitionUpdated(
+        oldDefinition.tag_id,
+        tag.tag_text,
+        trimmedNewText,
+        context,
+      );
+
       // Return count of affected mappings
       const updatedCount = await TagMapping.getUsageCount(trx, tenant, oldDefinition.tag_id);
 
@@ -756,6 +836,7 @@ export class TagService extends BaseService {
 
         // Delete the definition (mappings will cascade delete)
         await TagDefinition.delete(trx, tenant, definition.tag_id);
+        await this.publishTagDefinitionDeleted(definition.tag_id, context);
       }
       
       return {

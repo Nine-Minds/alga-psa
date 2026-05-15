@@ -41,6 +41,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSearchHighlighted, setIsSearchHighlighted] = useState(false);
   const [editedContent, setEditedContent] = useState<PartialBlock[]>(() => {
     try {
       const parsedContent = JSON.parse(comment.note || '');
@@ -71,6 +72,27 @@ const TaskComment: React.FC<TaskCommentProps> = ({
     `task-comment-${comment.taskCommentId}`,
     [comment.taskCommentId]
   );
+  const searchAnchorId = useMemo(() =>
+    `comment-${comment.taskCommentId}`,
+    [comment.taskCommentId]
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.location.hash !== `#${searchAnchorId}`) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(searchAnchorId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setIsSearchHighlighted(true);
+    });
+    const timeout = window.setTimeout(() => setIsSearchHighlighted(false), 2000);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
+    };
+  }, [searchAnchorId]);
 
   // Only allow users to edit their own comments
   const canEdit = useMemo(() => {
@@ -164,8 +186,13 @@ const TaskComment: React.FC<TaskCommentProps> = ({
 
   return (
     <div
-      {...withDataAutomationId({ id: commentId })}
-      className="group/comment rounded-lg p-2 mb-2 shadow-sm border border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))] bg-white dark:bg-[rgb(var(--color-card))]"
+      id={searchAnchorId}
+      data-automation-id={commentId}
+      className={`group/comment rounded-lg p-2 mb-2 shadow-sm border bg-white dark:bg-[rgb(var(--color-card))] ${
+        isSearchHighlighted
+          ? 'search-highlight border-yellow-400 bg-yellow-50'
+          : 'border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))]'
+      }`}
     >
       <div className="flex items-start mb-1">
         <div className="mr-2">

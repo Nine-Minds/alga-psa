@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   filterMenuSectionsByProduct,
   filterPortalNavigationByProduct,
+  getApiMetadataProducts,
   isApiVisibleInMetadata,
   matchesDynamicPattern,
   matchesStaticPrefix,
@@ -45,6 +46,13 @@ describe('product surface registry', () => {
     expect(isApiVisibleInMetadata('algadesk', '/api/v1/tickets/ticket-1/time-entries')).toBe(false);
     expect(isApiVisibleInMetadata('algadesk', '/api/v1/billing')).toBe(false);
     expect(isApiVisibleInMetadata('algadesk', '/api/v1/unknown-area')).toBe(false);
+  });
+
+  it('T003: exposes API metadata product availability for OpenAPI extensions', () => {
+    expect(getApiMetadataProducts('/api/v1/tickets')).toEqual(['psa', 'algadesk']);
+    expect(getApiMetadataProducts('/api/v1/projects')).toEqual(['psa']);
+    expect(getApiMetadataProducts('/api/v1/tickets/{id}/time-entries')).toEqual(['psa']);
+    expect(getApiMetadataProducts('/api/v1/unknown-area')).toEqual(['psa']);
   });
 
   it('T003: provides static and dynamic route matcher helpers', () => {

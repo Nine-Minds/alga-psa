@@ -91,6 +91,14 @@ export const clientArchivedEventPayloadSchema = BaseDomainEventPayloadSchema.ext
 
 export type ClientArchivedEventPayload = z.infer<typeof clientArchivedEventPayloadSchema>;
 
+export const clientDeletedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  clientId: clientIdSchema,
+  deletedByUserId: userIdSchema.optional(),
+  deletedAt: z.string().datetime().optional(),
+}).describe('Payload for CLIENT_DELETED');
+
+export type ClientDeletedEventPayload = z.infer<typeof clientDeletedEventPayloadSchema>;
+
 export const contactCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   contactId: contactIdSchema,
   clientId: clientIdSchema.optional(),
@@ -139,6 +147,15 @@ export const contactArchivedEventPayloadSchema = BaseDomainEventPayloadSchema.ex
 }).describe('Payload for CONTACT_ARCHIVED');
 
 export type ContactArchivedEventPayload = z.infer<typeof contactArchivedEventPayloadSchema>;
+
+export const contactDeletedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
+  contactId: contactIdSchema,
+  clientId: clientIdSchema.optional(),
+  deletedByUserId: userIdSchema.optional(),
+  deletedAt: z.string().datetime().optional(),
+}).describe('Payload for CONTACT_DELETED');
+
+export type ContactDeletedEventPayload = z.infer<typeof contactDeletedEventPayloadSchema>;
 
 export const contactMergedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   sourceContactId: contactIdSchema,

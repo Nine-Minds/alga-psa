@@ -45,7 +45,7 @@
     "actions": {
       "viewReport": "55555",
       "openInBilling": "55555",
-      "requiresTier": "55555",
+      "requiresTier": "55555 {{tier}} 55555",
       "comingSoon": "55555"
     },
     "errors": {
@@ -60,10 +60,10 @@
     },
     "fallbackTitle": "55555",
     "dateRange": {
-      "lastDays": "55555"
+      "lastDays": "55555 {{count}} 55555"
     },
     "units": {
-      "daysWithCount": "55555"
+      "daysWithCount": "55555 {{count}} 55555"
     },
     "metrics": {
       "created": "55555",

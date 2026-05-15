@@ -13,6 +13,7 @@ const InvoiceAnnotations: React.FC<InvoiceAnnotationsProps> = ({ invoiceId }) =>
   const { t } = useTranslation('msp/invoicing');
   const [annotations, setAnnotations] = useState<IInvoiceAnnotation[]>([]);
   const [newAnnotation, setNewAnnotation] = useState('');
+  const [highlightedAnnotationId, setHighlightedAnnotationId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAnnotations();
@@ -37,12 +38,43 @@ const InvoiceAnnotations: React.FC<InvoiceAnnotationsProps> = ({ invoiceId }) =>
     }
   };
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const annotationId = window.location.hash.startsWith('#annotation-')
+      ? window.location.hash.slice('#annotation-'.length)
+      : '';
+    if (!annotationId || !annotations.some((annotation) => annotation.annotation_id === annotationId)) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      const target = document.getElementById(`annotation-${annotationId}`);
+      target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedAnnotationId(annotationId);
+    });
+    const timeout = window.setTimeout(() => setHighlightedAnnotationId(null), 2000);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
+    };
+  }, [annotations]);
+
   return (
     <div>
       <h3>{t('annotations.title', { defaultValue: 'Invoice Annotations' })}</h3>
       <ul>
         {annotations.map((annotation): React.JSX.Element => (
-          <li key={annotation.annotation_id}>
+          <li
+            key={annotation.annotation_id}
+            id={`annotation-${annotation.annotation_id}`}
+            className={highlightedAnnotationId === annotation.annotation_id
+              ? 'search-highlight rounded ring-2 ring-yellow-400 bg-yellow-50'
+              : undefined}
+          >
             {annotation.content} - {annotation.is_internal
               ? t('annotations.labels.internal', { defaultValue: 'Internal' })
               : t('annotations.labels.external', { defaultValue: 'External' })}
