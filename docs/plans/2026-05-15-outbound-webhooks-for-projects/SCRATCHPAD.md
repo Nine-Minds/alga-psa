@@ -173,3 +173,13 @@
   `cd server && npx vitest run src/lib/eventBus/subscribers/__tests__/projectWebhookSubscriber.test.ts src/lib/eventBus/subscribers/__tests__/subscriberIndex.projectWebhook.test.ts src/test/integration/webhookDelivery.entityIdFilter.test.ts src/test/integration/webhookDelivery.tenantIsolation.test.ts --coverage=false`
   (6/6) and
   `cd server && NODE_OPTIONS='--max-old-space-size=8192' npm run typecheck`.
+- 2026-05-15: Completed F007. Added
+  `webhookDelivery.projectWebhooks.test.ts` covering project.created projection
+  with `phases`, project.task.updated tag-only delivery with `task_id`
+  retained, and ticket.updated tag-only parity. The "integration" style matches
+  the existing webhook delivery integration tests in this repo: subscriber
+  registration, event dispatch, mocked model/payload builders, and queue job
+  assertions rather than a live HTTP server/DB row. Verification:
+  `cd server && npx vitest run src/test/integration/webhookDelivery.projectWebhooks.test.ts src/test/integration/webhookDelivery.entityIdFilter.test.ts src/test/integration/webhookDelivery.tenantIsolation.test.ts src/lib/eventBus/subscribers/webhook/__tests__/webhookProjectEventMap.test.ts src/lib/eventBus/subscribers/webhook/__tests__/webhookProjectPayload.test.ts src/lib/eventBus/subscribers/__tests__/projectWebhookSubscriber.test.ts src/lib/eventBus/subscribers/__tests__/subscriberIndex.projectWebhook.test.ts src/lib/webhooks/__tests__/payloadFields.test.ts --coverage=false`
+  (20/20) and
+  `cd server && NODE_OPTIONS='--max-old-space-size=8192' npm run typecheck`.

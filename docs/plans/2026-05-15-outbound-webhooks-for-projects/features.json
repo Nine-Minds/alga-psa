@@ -44,7 +44,7 @@
   {
     "id": "F007",
     "description": "Test suite for project webhooks (unit + integration), one commit. Unit under server/src/lib/eventBus/subscribers/webhook/__tests__/: project payload shape/url/cache/projection, previous_status_* resolution, phases/task_counts opt-in gating, task payload with task_id surviving projection and project_task tags, event-map mapping incl. deprecated aliases. Integration: extend webhookDelivery.entityIdFilter.test.ts and webhookDelivery.tenantIsolation.test.ts with a project.created end-to-end fixture (create webhook -> mutate project -> assert HTTP delivery + webhook_deliveries row + correct projection). Full webhook suite + workspace type-check green.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["10"]
   }
 ]

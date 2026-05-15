@@ -140,13 +140,13 @@
   {
     "id": "T024",
     "description": "Integration: create a project.created webhook with a field subset + phases -> create project -> assert signed HTTP delivery, webhook_deliveries row, and payload projected to allowlist with project_id retained.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F007"]
   },
   {
     "id": "T025",
     "description": "Integration: project.task.created/updated delivery end-to-end with task_id retained; full webhook unit+integration suite and workspace type-check green.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007"]
   },
   {
@@ -176,7 +176,7 @@
   {
     "id": "T030",
     "description": "Integration: a subscriber to project.task.updated receives a tag-only delivery (changes.tags, task_id retained) when a tag is added to a task; ticket.updated subscriber receives the analogous tag-only delivery.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008", "F007"]
   }
 ]
