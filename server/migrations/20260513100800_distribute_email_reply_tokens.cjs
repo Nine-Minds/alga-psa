@@ -67,9 +67,17 @@ exports.up = async function up(knex) {
       await knex.raw('DROP INDEX IF EXISTS ??', [row.indexname]);
     }
 
-    await knex.raw(
-      "SELECT create_distributed_table('email_reply_tokens', 'tenant', colocate_with => 'comments')"
-    );
+    // email_reply_tokens has an FK to the reference table standard_service_types.
+    // Citus forbids the default parallel DDL of create_distributed_table when a
+    // reference-table FK is involved ("cannot execute parallel DDL ... because
+    // there is a foreign key"). Run it in its own transaction with sequential
+    // mode (SET LOCAL auto-resets on commit) and no prior reference-table access.
+    await knex.transaction(async (trx) => {
+      await trx.raw("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'");
+      await trx.raw(
+        "SELECT create_distributed_table('email_reply_tokens', 'tenant', colocate_with => 'comments')"
+      );
+    });
   }
 
   await truncateLocalDataIfNeeded(knex, 'email_reply_tokens');
