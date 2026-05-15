@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   applyPayloadAllowlist,
+  ALWAYS_INCLUDED_KEYS_BY_ENTITY,
   payloadFieldsByEntitySchema,
   WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY,
 } from '../payloadFields';
@@ -25,10 +26,29 @@ describe('webhook payload fields', () => {
         ticket: ['not_a_ticket_field'],
       }).success,
     ).toBe(false);
+
+    expect(
+      payloadFieldsByEntitySchema.safeParse({
+        project: ['project_name', 'phases', 'task_name', 'tags'],
+      }).success,
+    ).toBe(true);
+
+    expect(
+      payloadFieldsByEntitySchema.safeParse({
+        project: ['not_a_project_field'],
+      }).success,
+    ).toBe(false);
   });
 
   it('projects payloads while retaining always-included entity keys', () => {
     expect(WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY.ticket).toContain('title');
+    expect(WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY.project).toContain('project_name');
+    expect(WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY.project).toContain('task_name');
+    expect(WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY.project).toContain('phases');
+    expect(WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY.project).toContain('task_counts');
+    expect(WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY.project).toContain('tags');
+    expect(WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY.project).not.toContain('project_id');
+    expect(ALWAYS_INCLUDED_KEYS_BY_ENTITY.project).toEqual(['project_id']);
 
     const projected = applyPayloadAllowlist(
       'ticket',
@@ -65,12 +85,14 @@ describe('webhook payload fields', () => {
     };
 
     expect(applyPayloadAllowlist('project', payload, ['task_name'])).toEqual({
+      project_id: 'project-1',
       task_name: 'Plan rollout',
     });
 
     expect(
       applyPayloadAllowlist('project', payload, ['task_name'], ['task_id']),
     ).toEqual({
+      project_id: 'project-1',
       task_id: 'task-1',
       task_name: 'Plan rollout',
     });

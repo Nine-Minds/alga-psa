@@ -20,9 +20,11 @@ import {
 } from './common';
 export {
   WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY,
+  WEBHOOK_PROJECT_PAYLOAD_FIELDS,
   WEBHOOK_TICKET_PAYLOAD_FIELDS,
   payloadFieldsByEntitySchema,
   webhookEntityForEventType,
+  type WebhookProjectPayloadField,
   type SupportedPayloadField,
   type WebhookPayloadEntity,
   type WebhookTicketPayloadField,
@@ -39,9 +41,15 @@ export const webhookEventTypeSchema = z.enum([
   'ticket.comment.added',
   'project.created',
   'project.updated',
+  'project.status_changed',
+  'project.assigned',
+  'project.closed',
+  // Deprecated compatibility alias for project.closed.
   'project.completed',
   'project.task.created',
   'project.task.updated',
+  'project.task.status_changed',
+  'project.task.assigned',
   'project.task.completed',
   'client.created',
   'client.updated',

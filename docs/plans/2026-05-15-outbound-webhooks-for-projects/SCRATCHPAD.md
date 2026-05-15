@@ -138,3 +138,14 @@
   `cd server && npx vitest run ../packages/tags/src/actions/tagActions.webhookEmission.contract.test.ts src/lib/eventBus/subscribers/webhook/__tests__/webhookTicketPayload.test.ts --coverage=false`
   (8/8) and
   `cd server && NODE_OPTIONS='--max-old-space-size=8192' npm run typecheck`.
+- 2026-05-15: Completed F004. Added project and project-task public events to
+  `SUPPORTED_WEBHOOK_EVENTS`, `webhookEventTypeSchema`, and the OpenAPI route
+  event enum, preserving `project.completed` as the deprecated
+  `project.closed` compatibility alias. Added `WEBHOOK_PROJECT_PAYLOAD_FIELDS`
+  and the single `project` payload entity; `project_id` is excluded from the
+  selectable list and retained via `ALWAYS_INCLUDED_KEYS_BY_ENTITY.project`.
+  Task-only `tags` is present in the combined project field list, with no
+  project-level tag field in the future project payload. Verification:
+  `cd server && npx vitest run src/lib/webhooks/__tests__/payloadFields.test.ts src/lib/api/schemas/__tests__/webhookSchemas.test.ts src/lib/actions/__tests__/webhookActions.supportedEvents.test.ts --coverage=false`
+  (7/7) and
+  `cd server && NODE_OPTIONS='--max-old-space-size=8192' npm run typecheck`.

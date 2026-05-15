@@ -62,25 +62,25 @@
   {
     "id": "T011",
     "description": "All 10 project/task public events are present in SUPPORTED_WEBHOOK_EVENTS and accepted by the create-webhook input schema; listWebhookEvents() surfaces them.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
     "id": "T012",
     "description": "Public webhook enum still accepts 'project.completed' and 'project.task.completed' (deprecated aliases) — existing webhook_subscriptions rows referencing them validate without error.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
     "id": "T013",
     "description": "payloadFieldsByEntitySchema accepts a valid 'project' field subset and rejects unknown project fields and unknown entities; OpenAPI per-entity schema includes the 'project' enum.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {
     "id": "T014",
     "description": "ALWAYS_INCLUDED_KEYS_BY_ENTITY includes project:['project_id'] and still type-checks under the strict `satisfies Record<WebhookPayloadEntity, readonly string[]>` (compile-time guard, no missing entity key).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004"]
   },
   {

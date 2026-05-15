@@ -24,6 +24,17 @@ const SUPPORTED_WEBHOOK_EVENTS = [
   'ticket.status_changed',
   'ticket.closed',
   'ticket.comment.added',
+  'project.created',
+  'project.updated',
+  'project.status_changed',
+  'project.assigned',
+  'project.closed',
+  'project.completed',
+  'project.task.created',
+  'project.task.updated',
+  'project.task.status_changed',
+  'project.task.assigned',
+  'project.task.completed',
 ] as const;
 
 const webhookInputSchema = z.object({

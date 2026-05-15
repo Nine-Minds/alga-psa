@@ -48,11 +48,57 @@ export const WEBHOOK_TICKET_PAYLOAD_FIELDS = [
 export type WebhookTicketPayloadField = (typeof WEBHOOK_TICKET_PAYLOAD_FIELDS)[number];
 
 /**
+ * Combined project/project-task selectable fields. Both project-level and
+ * task-level events use the `project` entity allowlist.
+ *
+ * `project_id` is always retained through ALWAYS_INCLUDED_KEYS_BY_ENTITY.
+ * `task_id` is selectable and task subscribers also retain it via
+ * applyPayloadAllowlist(..., extraAlwaysIncluded:['task_id']).
+ */
+export const WEBHOOK_PROJECT_PAYLOAD_FIELDS = [
+  'project_name',
+  'wbs_code',
+  'description',
+  'status_id',
+  'status_name',
+  'is_closed',
+  'previous_status_id',
+  'previous_status_name',
+  'client_id',
+  'client_name',
+  'contact_name_id',
+  'contact_name',
+  'contact_email',
+  'assigned_to',
+  'assigned_to_name',
+  'start_date',
+  'end_date',
+  'budgeted_hours',
+  'url',
+  'changes',
+  'phases',
+  'task_counts',
+  'task_id',
+  'phase_id',
+  'phase_name',
+  'task_name',
+  'estimated_hours',
+  'actual_hours',
+  'due_date',
+  'priority_id',
+  'priority_name',
+  'tags',
+] as const;
+
+export type WebhookProjectPayloadField = (typeof WEBHOOK_PROJECT_PAYLOAD_FIELDS)[number];
+
+/**
  * Per-entity selectable payload field registry. New entities are added here so
  * validation, OpenAPI docs, UI controls, and runtime projection stay aligned.
  */
 export const WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY = {
   ticket: WEBHOOK_TICKET_PAYLOAD_FIELDS,
+  project: WEBHOOK_PROJECT_PAYLOAD_FIELDS,
 } as const satisfies Record<string, readonly string[]>;
 
 export type WebhookPayloadEntity = keyof typeof WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY;
@@ -65,6 +111,7 @@ export type SupportedPayloadField =
  */
 export const ALWAYS_INCLUDED_KEYS_BY_ENTITY = {
   ticket: ['ticket_id'],
+  project: ['project_id'],
 } as const satisfies Record<WebhookPayloadEntity, readonly string[]>;
 
 /**
