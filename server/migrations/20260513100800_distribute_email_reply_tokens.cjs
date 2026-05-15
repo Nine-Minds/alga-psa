@@ -1,12 +1,13 @@
 // `comments` was distributed earlier without the required
 // truncate_local_data_after_distributing_table() follow-up, stranding
-// pre-distribution rows in the coordinator parent heap. Those NULL-thread_id
-// shadow rows are invisible to Citus-routed DML but break ALTER ... SET NOT
-// NULL (core PG DDL scans the parent heap). The official cleanup is blocked
-// while a non-distributed table FKs `comments`; the only one is
-// email_reply_tokens. Distributing it unblocks the cleanup and removes the
-// local->distributed FK smell. Rule: distributing a non-empty table MUST be
-// followed by truncate_local_data_after_distributing_table().
+// pre-distribution NULL-thread_id rows in the coordinator parent heap. They are
+// invisible to Citus-routed DML but break ALTER ... SET NOT NULL (core PG DDL
+// scans the parent heap). That cleanup is refused while ANY non-distributed
+// table has an FK to comments. Several do (email_reply_tokens, vectors,
+// ticket_bundle_mirrors, ...). This migration distributes every such local
+// referrer co-located with comments, then runs the official cleanup.
+// Rule: distributing a possibly-non-empty table MUST be followed by
+// truncate_local_data_after_distributing_table().
 
 exports.up = async function up(knex) {
   const citus = await knex.raw(
@@ -16,150 +17,213 @@ exports.up = async function up(knex) {
     return;
   }
 
+  // Colocation anchor must be distributed; nothing to do otherwise.
   if (!(await isDistributed(knex, 'comments'))) {
     return;
   }
 
-  if (!(await isDistributed(knex, 'email_reply_tokens'))) {
-    // Drop orphaned tokens before distribution: create_distributed_table copies
-    // rows into shards where the composite FKs are enforced per-shard. A token
-    // whose ticket/project/comment/tenant was deleted (tokens are ephemeral and
-    // these FKs don't cascade) can't be placed and aborts the copy. It's dead
-    // anyway. Citus forbids local<->distributed joins, so each step queries one
-    // table kind only: read local, check existence on distributed, delete local.
-    await deleteOrphanedEmailReplyTokens(knex);
+  const referrers = await knex.raw(
+    `SELECT DISTINCT con.conrelid::regclass::text AS tbl
+       FROM pg_constraint con
+      WHERE con.contype = 'f'
+        AND con.confrelid IN ('comments'::regclass, 'project_task_comments'::regclass)
+        AND con.conrelid <> con.confrelid
+        AND NOT EXISTS (
+          SELECT 1 FROM citus_tables ct WHERE ct.table_name = con.conrelid
+        )
+      ORDER BY 1`
+  );
 
-    // Citus rejects create_distributed_table() if a unique/exclude constraint
-    // or unique index omits the distribution column. email_reply_tokens has a
-    // global UNIQUE(token); the PK (tenant, token) already covers tenant-scoped
-    // lookups and tokens are random secrets, so dropping it is safe.
-    const blockingUniques = await knex.raw(
-      `SELECT con.conname AS conname
-         FROM pg_constraint con
-        WHERE con.conrelid = 'email_reply_tokens'::regclass
-          AND con.contype IN ('u', 'x')
-          AND NOT EXISTS (
-            SELECT 1
-              FROM unnest(con.conkey) AS k(attnum)
-              JOIN pg_attribute a
-                ON a.attrelid = con.conrelid
-               AND a.attnum = k.attnum
-             WHERE a.attname = 'tenant'
-          )`
-    );
-    for (const row of blockingUniques.rows ?? []) {
-      await knex.raw('ALTER TABLE email_reply_tokens DROP CONSTRAINT ??', [row.conname]);
-    }
-
-    const blockingIndexes = await knex.raw(
-      `SELECT i.relname AS indexname
-         FROM pg_index x
-         JOIN pg_class i ON i.oid = x.indexrelid
-         JOIN pg_class t ON t.oid = x.indrelid
-        WHERE t.relname = 'email_reply_tokens'
-          AND x.indisunique
-          AND NOT x.indisprimary
-          AND NOT EXISTS (
-            SELECT 1 FROM pg_constraint c WHERE c.conindid = x.indexrelid
-          )
-          AND NOT EXISTS (
-            SELECT 1
-              FROM unnest(x.indkey) AS k(attnum)
-              JOIN pg_attribute a
-                ON a.attrelid = x.indrelid
-               AND a.attnum = k.attnum
-             WHERE a.attname = 'tenant'
-          )`
-    );
-    for (const row of blockingIndexes.rows ?? []) {
-      await knex.raw('DROP INDEX IF EXISTS ??', [row.indexname]);
-    }
-
-    // Joining colocation group 16 pulls email_reply_tokens into an FK graph that
-    // reaches a reference table; Citus then forbids the default parallel DDL of
-    // create_distributed_table ("cannot execute parallel DDL ... foreign key").
-    // Run it in its own transaction in sequential mode (SET LOCAL auto-resets
-    // on commit) with no prior reference-table access in that transaction.
+  const distributedNow = [];
+  for (const { tbl } of referrers.rows ?? []) {
+    await makeDistributable(knex, tbl);
+    // Joining the colocation group pulls the table into an FK graph that may
+    // reach a reference table; Citus then forbids the default parallel DDL of
+    // create_distributed_table. Run it in its own transaction in sequential
+    // mode (SET LOCAL auto-resets on commit) with no prior reference access.
     await knex.transaction(async (trx) => {
       await trx.raw("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'");
       await trx.raw(
-        "SELECT create_distributed_table('email_reply_tokens', 'tenant', colocate_with => 'comments')"
+        "SELECT create_distributed_table(?, 'tenant', colocate_with => 'comments')",
+        [tbl]
       );
     });
+    distributedNow.push(tbl);
   }
 
-  await truncateLocalDataIfNeeded(knex, 'email_reply_tokens');
-  await truncateLocalDataIfNeeded(knex, 'comments');
-  await truncateLocalDataIfNeeded(knex, 'project_task_comments');
+  for (const tbl of [...distributedNow, 'email_reply_tokens', 'comments', 'project_task_comments']) {
+    await truncateLocalDataIfNeeded(knex, tbl);
+  }
 };
 
-async function deleteOrphanedEmailReplyTokens(knex) {
-  const { rows: tokens } = await knex.raw(
-    `SELECT tenant::text AS tenant, token,
-            ticket_id::text AS ticket_id,
-            project_id::text AS project_id,
-            comment_id::text AS comment_id
-       FROM email_reply_tokens`
+// Prepare a local table for create_distributed_table: it must have the
+// distribution column, no unique/exclude constraint or unique index that omits
+// it, and no rows whose composite FKs point at now-deleted distributed parents
+// (those abort the shard copy; the referenced entity is gone so the row is
+// dead).
+async function makeDistributable(knex, table) {
+  const hasTenant = await knex.raw(
+    `SELECT EXISTS (
+       SELECT 1 FROM information_schema.columns
+        WHERE table_name = ? AND column_name = 'tenant'
+     ) AS ok`,
+    [table]
   );
-  if (tokens.length === 0) {
+  if (!hasTenant.rows?.[0]?.ok) {
+    throw new Error(
+      `Cannot distribute ${table}: it FKs comments/project_task_comments but ` +
+      `has no tenant column. Handle it explicitly before this migration.`
+    );
+  }
+
+  const blockingUniques = await knex.raw(
+    `SELECT con.conname AS conname
+       FROM pg_constraint con
+      WHERE con.conrelid = ?::regclass
+        AND con.contype IN ('u', 'x')
+        AND NOT EXISTS (
+          SELECT 1
+            FROM unnest(con.conkey) AS k(attnum)
+            JOIN pg_attribute a
+              ON a.attrelid = con.conrelid AND a.attnum = k.attnum
+           WHERE a.attname = 'tenant'
+        )`,
+    [table]
+  );
+  for (const row of blockingUniques.rows ?? []) {
+    await knex.raw('ALTER TABLE ?? DROP CONSTRAINT ??', [table, row.conname]);
+  }
+
+  const blockingIndexes = await knex.raw(
+    `SELECT i.relname AS indexname
+       FROM pg_index x
+       JOIN pg_class i ON i.oid = x.indexrelid
+       JOIN pg_class t ON t.oid = x.indrelid
+      WHERE t.relname = ?
+        AND x.indisunique
+        AND NOT x.indisprimary
+        AND NOT EXISTS (SELECT 1 FROM pg_constraint c WHERE c.conindid = x.indexrelid)
+        AND NOT EXISTS (
+          SELECT 1
+            FROM unnest(x.indkey) AS k(attnum)
+            JOIN pg_attribute a
+              ON a.attrelid = x.indrelid AND a.attnum = k.attnum
+           WHERE a.attname = 'tenant'
+        )`,
+    [table]
+  );
+  for (const row of blockingIndexes.rows ?? []) {
+    await knex.raw('DROP INDEX IF EXISTS ??', [row.indexname]);
+  }
+
+  await purgeOrphanRows(knex, table);
+}
+
+// Delete rows whose FK columns reference a parent row that no longer exists.
+// Citus forbids local<->distributed joins, so every step touches one table
+// kind only: read local, check existence on the (distributed) parent, delete
+// local by primary key.
+async function purgeOrphanRows(knex, table) {
+  const pkRes = await knex.raw(
+    `SELECT a.attname
+       FROM pg_constraint c
+       JOIN unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord) ON true
+       JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum
+      WHERE c.conrelid = ?::regclass AND c.contype = 'p'
+      ORDER BY k.ord`,
+    [table]
+  );
+  const pkCols = (pkRes.rows ?? []).map((r) => r.attname);
+  if (pkCols.length === 0) {
     return;
   }
 
-  const uniqPairs = (rows, idKey) => {
-    const seen = new Set();
-    const out = [];
-    for (const r of rows) {
-      if (!r[idKey]) continue;
-      const k = `${r.tenant}|${r[idKey]}`;
-      if (!seen.has(k)) {
-        seen.add(k);
-        out.push([r.tenant, r[idKey]]);
-      }
-    }
-    return out;
-  };
-
-  // Existence lookups hit ONLY the distributed table (no local table joined),
-  // so Citus can route them. Keep tenant uncast so shard pruning still applies.
-  const existing = async (table, idCol, pairs) => {
-    if (pairs.length === 0) return new Set();
-    const placeholders = pairs.map(() => '(?::uuid,?::uuid)').join(',');
-    const { rows } = await knex.raw(
-      `SELECT tenant::text AS tenant, ${idCol}::text AS id
-         FROM ${table}
-        WHERE (tenant, ${idCol}) IN (${placeholders})`,
-      pairs.flat()
-    );
-    return new Set(rows.map((r) => `${r.tenant}|${r.id}`));
-  };
-
-  const ticketsOk = await existing('tickets', 'ticket_id', uniqPairs(tokens, 'ticket_id'));
-  const projectsOk = await existing('projects', 'project_id', uniqPairs(tokens, 'project_id'));
-  const commentsOk = await existing('comments', 'comment_id', uniqPairs(tokens, 'comment_id'));
-
-  const tenantList = [...new Set(tokens.map((t) => t.tenant))];
-  const { rows: tnRows } = await knex.raw(
-    `SELECT tenant::text AS tenant FROM tenants
-      WHERE tenant IN (${tenantList.map(() => '?::uuid').join(',')})`,
-    tenantList
+  const fkRes = await knex.raw(
+    `SELECT c.conname,
+            c.confrelid::regclass::text AS parent,
+            (SELECT array_agg(a.attname ORDER BY k.ord)
+               FROM unnest(c.conkey) WITH ORDINALITY k(attnum, ord)
+               JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum
+            ) AS local_cols,
+            (SELECT array_agg(a.attname ORDER BY k.ord)
+               FROM unnest(c.confkey) WITH ORDINALITY k(attnum, ord)
+               JOIN pg_attribute a ON a.attrelid = c.confrelid AND a.attnum = k.attnum
+            ) AS parent_cols
+       FROM pg_constraint c
+      WHERE c.conrelid = ?::regclass AND c.contype = 'f'`,
+    [table]
   );
-  const tenantsOk = new Set(tnRows.map((r) => r.tenant));
+  const fks = fkRes.rows ?? [];
+  if (fks.length === 0) {
+    return;
+  }
 
-  const orphans = tokens.filter((t) =>
-    !tenantsOk.has(t.tenant) ||
-    (t.ticket_id && !ticketsOk.has(`${t.tenant}|${t.ticket_id}`)) ||
-    (t.project_id && !projectsOk.has(`${t.tenant}|${t.project_id}`)) ||
-    (t.comment_id && !commentsOk.has(`${t.tenant}|${t.comment_id}`))
+  const fkCols = [...new Set(fks.flatMap((f) => f.local_cols))];
+  const selectCols = [...new Set([...pkCols, ...fkCols])];
+  const { rows } = await knex.raw(
+    `SELECT ${selectCols.map((_, i) => `??::text AS c${i}`).join(', ')} FROM ??`,
+    [...selectCols, table]
+  );
+  if (rows.length === 0) {
+    return;
+  }
+  const colIndex = new Map(selectCols.map((c, i) => [c, `c${i}`]));
+  const val = (row, col) => row[colIndex.get(col)];
+
+  // Existence set per FK, built from the parent (single-table, Citus-routable).
+  // Keep `tenant` as uuid so shard pruning still applies; compare other cols
+  // as text so we don't need each parent column's exact type.
+  const okSets = [];
+  for (const fk of fks) {
+    const pairs = [];
+    for (const row of rows) {
+      if (fk.local_cols.some((lc) => val(row, lc) == null)) continue;
+      pairs.push(fk.local_cols.map((lc) => val(row, lc)));
+    }
+    const uniq = [...new Map(pairs.map((p) => [p.join('|'), p])).values()];
+    if (uniq.length === 0) {
+      okSets.push(new Set());
+      continue;
+    }
+    const tuple = fk.parent_cols
+      .map((pc) => (pc === 'tenant' ? 'tenant' : `??::text`))
+      .join(', ');
+    const ph = '(' + fk.parent_cols
+      .map((pc) => (pc === 'tenant' ? '?::uuid' : '?::text'))
+      .join(', ') + ')';
+    const idents = fk.parent_cols.filter((pc) => pc !== 'tenant');
+    const sql =
+      `SELECT ${fk.parent_cols.map((_, i) => `??::text AS k${i}`).join(', ')} ` +
+      `FROM ?? WHERE (${tuple}) IN (${uniq.map(() => ph).join(', ')})`;
+    const binds = [
+      ...fk.parent_cols, // SELECT ??::text AS k{i}
+      fk.parent,         // FROM ??
+      ...idents,         // tuple ??::text (non-tenant parent cols)
+      ...uniq.flat(),    // IN (...) values
+    ];
+    const res = await knex.raw(sql, binds);
+    okSets.push(
+      new Set((res.rows ?? []).map((r) => fk.parent_cols.map((_, i) => r[`k${i}`]).join('|')))
+    );
+  }
+
+  const orphans = rows.filter((row) =>
+    fks.some((fk, i) => {
+      if (fk.local_cols.some((lc) => val(row, lc) == null)) return false;
+      const key = fk.local_cols.map((lc) => val(row, lc)).join('|');
+      return !okSets[i].has(key);
+    })
   );
   if (orphans.length === 0) {
     return;
   }
 
-  // Local-only delete (no distributed table referenced).
-  const ph = orphans.map(() => '(?::uuid,?)').join(',');
+  // Local-only delete by primary key (no distributed table referenced).
+  const pkTuple = pkCols.map(() => '??::text').join(', ');
+  const rowPh = '(' + pkCols.map(() => '?').join(', ') + ')';
   await knex.raw(
-    `DELETE FROM email_reply_tokens WHERE (tenant, token) IN (${ph})`,
-    orphans.flatMap((o) => [o.tenant, o.token])
+    `DELETE FROM ?? WHERE (${pkTuple}) IN (${orphans.map(() => rowPh).join(', ')})`,
+    [table, ...pkCols, ...orphans.flatMap((o) => pkCols.map((c) => val(o, c)))]
   );
 }
 
@@ -177,9 +241,8 @@ async function truncateLocalDataIfNeeded(knex, table) {
   if (!(await isDistributed(knex, table))) {
     return;
   }
-  // A cleanly-distributed table has a 0-byte parent heap; non-zero means
-  // create_distributed_table() left pre-distribution rows behind. The guard
-  // also makes this a no-op on fresh installs and re-runs.
+  // 0-byte parent heap = cleanly distributed; nothing to do (also the no-op
+  // guard for re-runs and fresh installs).
   const heap = await knex.raw('SELECT pg_relation_size(?::regclass) AS bytes', [table]);
   if (Number(heap.rows?.[0]?.bytes ?? 0) === 0) {
     return;
@@ -188,7 +251,8 @@ async function truncateLocalDataIfNeeded(knex, table) {
 }
 
 // Forward-only schema hygiene; undistribute_table() is too heavy/risky to
-// auto-reverse and the dropped global UNIQUE(token) is superseded by the PK.
+// auto-reverse and dropped non-tenant uniques are superseded by tenant-scoped
+// keys.
 exports.down = async function down(_knex) {};
 
 // create_distributed_table() / truncate_local_data_after_distributing_table()
