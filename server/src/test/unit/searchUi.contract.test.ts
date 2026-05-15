@@ -351,7 +351,8 @@ describe('app-wide search UI contracts', () => {
     expect(source).toContain("aria-label={t('search.paginationLabel')}");
     expect(source).toContain('href={row.url}');
     expect(source).toContain('href={buildFilterUrl(type)}');
-    expect(source).toContain('href={buildSortUrl(sort)}');
+    expect(source).toContain('<ViewSwitcher<SearchSort>');
+    expect(source).toContain('router.push(buildSortUrl(sort))');
     expect(source).not.toContain('role="button"');
   });
 

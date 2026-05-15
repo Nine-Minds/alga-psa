@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Search } from 'lucide-react';
+import { Clock, Search } from 'lucide-react';
+import { Badge } from '@alga-psa/ui/components/Badge';
+import { Input } from '@alga-psa/ui/components/Input';
+import ViewSwitcher, { type ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 import type { SearchAppResult } from '@/lib/actions/searchActions';
@@ -27,6 +30,8 @@ interface SearchPageClientProps {
   registeredTypes: SearchObjectType[];
 }
 
+type SearchSort = 'relevance' | 'recent';
+
 export default function SearchPageClient({
   initialQuery,
   initialType,
@@ -42,9 +47,15 @@ export default function SearchPageClient({
   const [query, setQuery] = useState(initialQuery);
   const activeType = initialType && initialType !== 'all' ? initialType : 'all';
   const isUpdatingQuery = query.trim() !== initialQuery;
+  const previousInitialQueryRef = useRef(initialQuery);
 
   useEffect(() => {
-    setQuery(initialQuery);
+    const previous = previousInitialQueryRef.current;
+    if (previous === initialQuery) {
+      return;
+    }
+    previousInitialQueryRef.current = initialQuery;
+    setQuery((current) => (current === previous ? initialQuery : current));
   }, [initialQuery]);
 
   const stableUrlState = useMemo(() => ({
@@ -140,6 +151,25 @@ export default function SearchPageClient({
     return params.toString() ? `${pathname}?${params.toString()}` : pathname;
   };
 
+  const sortOptions: ViewSwitcherOption<SearchSort>[] = [
+    {
+      value: 'relevance',
+      label: t('search.sort.relevance'),
+      icon: Search,
+      id: 'app-search-sort-relevance',
+    },
+    {
+      value: 'recent',
+      label: t('search.sort.recent'),
+      icon: Clock,
+      id: 'app-search-sort-recent',
+    },
+  ];
+
+  const handleSortChange = (sort: SearchSort) => {
+    router.push(buildSortUrl(sort));
+  };
+
   const submitQuery = () => {
     const normalizedQuery = query.trim();
     const params = new URLSearchParams();
@@ -188,7 +218,12 @@ export default function SearchPageClient({
       href={row.url}
       className="block rounded-md border border-gray-200 bg-white px-4 py-3 text-gray-900 hover:border-purple-300 hover:bg-purple-50"
     >
-      <span className="block text-sm font-medium">{row.title}</span>
+      <span className="flex items-start justify-between gap-3">
+        <span className="min-w-0 text-sm font-medium">{row.title}</span>
+        <Badge variant="default-muted" size="sm" className="shrink-0">
+          {groupLabel(row.type)}
+        </Badge>
+      </span>
       {row.subtitle ? (
         <span className="mt-1 block text-xs text-gray-600">{row.subtitle}</span>
       ) : null}
@@ -223,13 +258,15 @@ export default function SearchPageClient({
         </h1>
         <div className="relative mt-4 max-w-2xl">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" aria-hidden="true" />
-          <input
+          <Input
             id="app-search-page-input"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleSearchInputKeyDown}
             placeholder={t('search.placeholder')}
-            className="h-11 w-full rounded-md border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20"
+            containerClassName="mb-0"
+            className="pl-9"
+            size="lg"
           />
         </div>
         <p className="mt-3 text-sm text-gray-600">
@@ -254,9 +291,9 @@ export default function SearchPageClient({
             }`}
           >
             <span>{t('search.filters.all')}</span>
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+            <Badge variant={activeType === 'all' ? 'primary' : 'default-muted'} size="sm">
               {initialResult.totalCount}
-            </span>
+            </Badge>
           </a>
           {typeEntries.map(([type, count]) => (
             <a
@@ -272,29 +309,20 @@ export default function SearchPageClient({
               <span>
                 {filterLabel(type)}
               </span>
-              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+              <Badge variant={activeType === type ? 'primary' : 'default-muted'} size="sm">
                 {count}
-              </span>
+              </Badge>
             </a>
           ))}
         </nav>
 
-        <div className="inline-flex w-fit rounded-md border border-gray-300 bg-white p-1" aria-label={t('search.sortLabel')}>
-          {(['relevance', 'recent'] as const).map((sort) => (
-            <a
-              key={sort}
-              id={`app-search-sort-${sort}`}
-              href={buildSortUrl(sort)}
-              className={`rounded px-3 py-1.5 text-sm ${
-                initialSort === sort
-                  ? 'bg-purple-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              {t(`search.sort.${sort}`)}
-            </a>
-          ))}
-        </div>
+        <ViewSwitcher<SearchSort>
+          currentView={initialSort}
+          onChange={handleSortChange}
+          options={sortOptions}
+          className="w-fit bg-white"
+          aria-label={t('search.sortLabel')}
+        />
       </div>
 
       {isUpdatingQuery ? (
@@ -334,7 +362,9 @@ export default function SearchPageClient({
             <div key={section.type} className="space-y-2">
               <h2 className="text-sm font-semibold text-gray-700">
                 {groupLabel(section.type)}
-                <span className="ml-2 text-xs font-normal text-gray-500">{section.count}</span>
+                <Badge variant="default-muted" size="sm" className="ml-2 align-middle">
+                  {section.count}
+                </Badge>
               </h2>
               <div className="space-y-2">
                 {section.rows.map(renderResultRow)}

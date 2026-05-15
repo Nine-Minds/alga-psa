@@ -8,7 +8,6 @@ interface UserSearchRow {
   first_name: string | null;
   last_name: string | null;
   email: string | null;
-  role: string | null;
   user_type: string | null;
   created_at?: Date | string | null;
   updated_at?: Date | string | null;
@@ -34,7 +33,7 @@ function toSearchDoc(tenant: string, row: UserSearchRow): SearchDoc {
     objectType: 'user',
     objectId: row.user_id,
     title: buildTitle(row),
-    subtitle: compactJoin([row.username, row.email, row.role]),
+    subtitle: compactJoin([row.username, row.email]),
     url: `/msp/team/${row.user_id}`,
     acl: {
       requiredPermission: 'user:read',
@@ -49,7 +48,7 @@ export const userIndexer: EntityIndexer = {
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await knex<UserSearchRow>('users')
-      .select('user_id', 'username', 'first_name', 'last_name', 'email', 'role', 'user_type', 'created_at', 'updated_at')
+      .select('user_id', 'username', 'first_name', 'last_name', 'email', 'user_type', 'created_at', 'updated_at')
       .where('tenant', tenant)
       .andWhere('user_id', id)
       .andWhere('user_type', 'internal')
@@ -65,7 +64,7 @@ export const userIndexer: EntityIndexer = {
     limit: number,
   ): Promise<SearchDoc[]> {
     const query = knex<UserSearchRow>('users')
-      .select('user_id', 'username', 'first_name', 'last_name', 'email', 'role', 'user_type', 'created_at', 'updated_at')
+      .select('user_id', 'username', 'first_name', 'last_name', 'email', 'user_type', 'created_at', 'updated_at')
       .where('tenant', tenant)
       .andWhere('user_type', 'internal')
       .orderBy('user_id', 'asc')

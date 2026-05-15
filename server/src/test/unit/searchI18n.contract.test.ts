@@ -121,7 +121,8 @@ describe('app-wide search i18n contracts', () => {
     expect(sources).toContain("t('search.placeholder')");
     expect(sources).toContain("t('search.seeAllResults'");
     expect(sources).toContain("t('search.noResults'");
-    expect(sources).toContain("t(`search.sort.${sort}`)");
+    expect(sources).toContain("t('search.sort.relevance')");
+    expect(sources).toContain("t('search.sort.recent')");
   });
 
   it('T150 renders pseudo-locale search strings with pseudo fill and no English leaks', () => {

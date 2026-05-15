@@ -80,7 +80,7 @@ describe('search index upsert helpers', () => {
     expect(sql).toContain('search_vector = EXCLUDED.search_vector');
     expect(sql).toContain('source_updated_at = EXCLUDED.source_updated_at');
     expect(sql).toContain('indexed_at = now()');
-    expect(sql).toContain("setweight(to_tsvector('english', public.process_large_lexemes(?)), 'A')");
+    expect(sql).toContain("setweight(public.process_large_lexemes(?), 'A')");
     expect(bindings).toContain('ACME Corp Updated');
     expect(bindings).toContain('Updated searchable body');
     expect(bindings.at(-1)).toEqual(doc.sourceUpdatedAt);
@@ -164,8 +164,8 @@ describe('search index upsert helpers', () => {
     }));
 
     const [sql] = knex.raw.mock.calls[0] as [string, unknown[]];
-    expect(sql).toContain("setweight(to_tsvector('english', public.process_large_lexemes(?)), 'A')");
-    expect(sql).toContain("setweight(to_tsvector('english', public.process_large_lexemes(?)), 'B')");
-    expect(sql).toContain("setweight(to_tsvector('english', public.process_large_lexemes(?)), 'C')");
+    expect(sql).toContain("setweight(public.process_large_lexemes(?), 'A')");
+    expect(sql).toContain("setweight(public.process_large_lexemes(?), 'B')");
+    expect(sql).toContain("setweight(public.process_large_lexemes(?), 'C')");
   });
 });

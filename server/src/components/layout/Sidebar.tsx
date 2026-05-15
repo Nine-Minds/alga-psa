@@ -334,7 +334,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         onCollapsedClick={() => setSidebarOpen(true)}
       />
 
-      <nav className={`${isSubMode ? 'mt-2' : 'mt-4'} flex-grow min-h-0 overflow-y-auto overscroll-contain sidebar-nav`}>
+      <nav className={`${isSubMode ? 'mt-0' : 'mt-1'} flex-grow min-h-0 overflow-y-auto overscroll-contain sidebar-nav`}>
         <div
           className={`transition-all duration-200 ease-out ${
             isTransitioning

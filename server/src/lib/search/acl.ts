@@ -305,15 +305,26 @@ registerSearchVisibilityVerifier('project_task_comment', async (knex, user, row)
 });
 
 registerSearchVisibilityVerifier('document', async (knex, user, row) => {
-  const query = knex<{ client_id: string | null }>('documents')
-    .select('client_id')
+  const documentQuery = knex<{ document_id: string }>('documents')
+    .select('document_id')
     .where('document_id', row.id)
     .first();
   if (user.tenant) {
-    query.andWhere('tenant', user.tenant);
+    documentQuery.andWhere('tenant', user.tenant);
   }
-  const document = await query;
-  return Boolean(document) && hasClientAccess(user, document?.client_id);
+  const document = await documentQuery;
+  if (!document) return false;
+
+  const associationQuery = knex<{ entity_id: string }>('document_associations')
+    .select('entity_id')
+    .where('document_id', row.id)
+    .andWhere('entity_type', 'client')
+    .first();
+  if (user.tenant) {
+    associationQuery.andWhere('tenant', user.tenant);
+  }
+  const association = await associationQuery;
+  return hasClientAccess(user, association?.entity_id ?? null);
 });
 
 registerSearchVisibilityVerifier('workflow_task', async (knex, user, row) => {

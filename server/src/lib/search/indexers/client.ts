@@ -5,8 +5,7 @@ import type { EntityIndexer, SearchDoc } from '../types';
 interface ClientSearchRow {
   client_id: string;
   client_name: string;
-  email: string | null;
-  phone_no: string | null;
+  billing_email: string | null;
   notes: string | null;
   created_at?: Date | string | null;
   updated_at?: Date | string | null;
@@ -28,7 +27,7 @@ function toSearchDoc(tenant: string, row: ClientSearchRow): SearchDoc {
     objectType: 'client',
     objectId: row.client_id,
     title: row.client_name,
-    subtitle: compactJoin([row.email, row.phone_no]),
+    subtitle: compactJoin([row.billing_email]),
     body: row.notes ?? undefined,
     url: `/msp/clients/${row.client_id}`,
     acl: {
@@ -44,7 +43,7 @@ export const clientIndexer: EntityIndexer = {
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await knex<ClientSearchRow>('clients')
-      .select('client_id', 'client_name', 'email', 'phone_no', 'notes', 'created_at', 'updated_at')
+      .select('client_id', 'client_name', 'billing_email', 'notes', 'created_at', 'updated_at')
       .where('tenant', tenant)
       .andWhere('client_id', id)
       .first();
@@ -59,7 +58,7 @@ export const clientIndexer: EntityIndexer = {
     limit: number,
   ): Promise<SearchDoc[]> {
     const query = knex<ClientSearchRow>('clients')
-      .select('client_id', 'client_name', 'email', 'phone_no', 'notes', 'created_at', 'updated_at')
+      .select('client_id', 'client_name', 'billing_email', 'notes', 'created_at', 'updated_at')
       .where('tenant', tenant)
       .orderBy('client_id', 'asc')
       .limit(limit);

@@ -13,8 +13,6 @@ interface InteractionSearchRow {
   ticket_number: string | null;
   ticket_title: string | null;
   interaction_date?: Date | string | null;
-  created_at?: Date | string | null;
-  updated_at?: Date | string | null;
 }
 
 function compactJoin(values: Array<string | null | undefined>): string | undefined {
@@ -23,7 +21,7 @@ function compactJoin(values: Array<string | null | undefined>): string | undefin
 }
 
 function toSourceUpdatedAt(row: InteractionSearchRow): Date {
-  const value = row.updated_at ?? row.interaction_date ?? row.created_at;
+  const value = row.interaction_date;
   return value ? new Date(value) : new Date();
 }
 
@@ -68,8 +66,6 @@ function baseInteractionQuery(knex: Knex, tenant: string) {
       'i.title',
       'i.notes',
       'i.interaction_date',
-      'i.created_at',
-      'i.updated_at',
       'it.type_name',
       'c.client_name',
       'cn.full_name as contact_name',

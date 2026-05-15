@@ -60,7 +60,7 @@ describe('app-wide search hash-anchor contracts', () => {
 
     expect(indexerSource).toContain('url: `/msp/tickets/${row.ticket_id}#comment-${row.comment_id}`');
     expect(indexerSource).toContain("parentType: 'ticket'");
-    expect(indexerSource).toContain('body: row.note ? flattenMarkdown(row.note) : undefined');
+    expect(indexerSource).toContain('body: resolveCommentBody(row)');
     expect(commentItemSource).toContain('const expectedHash = `#comment-${conversation.comment_id}`');
     expect(commentItemSource).toContain('target?.scrollIntoView({ behavior: \'smooth\', block: \'center\' })');
     expect(commentItemSource).toContain('search-highlight ring-2 ring-yellow-400 bg-yellow-50');

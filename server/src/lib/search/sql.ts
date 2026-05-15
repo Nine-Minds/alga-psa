@@ -6,9 +6,9 @@ export interface SqlFragment {
 export function buildTsvectorSql(title: string, subtitle?: string | null, body?: string | null): SqlFragment {
   return {
     sql: [
-      "setweight(to_tsvector('english', public.process_large_lexemes(?)), 'A')",
-      "setweight(to_tsvector('english', public.process_large_lexemes(?)), 'B')",
-      "setweight(to_tsvector('english', public.process_large_lexemes(?)), 'C')",
+      "setweight(public.process_large_lexemes(?), 'A')",
+      "setweight(public.process_large_lexemes(?), 'B')",
+      "setweight(public.process_large_lexemes(?), 'C')",
     ].join(' || '),
     bindings: [title, subtitle ?? '', body ?? ''],
   };

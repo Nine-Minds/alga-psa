@@ -1,17 +1,30 @@
 import type { Knex } from 'knex';
 
-import { flattenMarkdown } from '../normalize';
+import { flattenBlockNote, flattenMarkdown } from '../normalize';
 import type { EntityIndexer, SearchDoc } from '../types';
 
 interface TicketCommentSearchRow {
   comment_id: string;
   ticket_id: string;
   note: string | null;
+  markdown_content: string | null;
   is_internal: boolean | null;
   created_at?: Date | string | null;
   updated_at?: Date | string | null;
   ticket_title: string | null;
   ticket_number: string | null;
+}
+
+function resolveCommentBody(row: TicketCommentSearchRow): string | undefined {
+  if (row.markdown_content && row.markdown_content.trim()) {
+    return flattenMarkdown(row.markdown_content);
+  }
+  const note = row.note?.trim();
+  if (note) {
+    const looksLikeBlockNoteJson = note.startsWith('[') || note.startsWith('{');
+    return looksLikeBlockNoteJson ? flattenBlockNote(note) : flattenMarkdown(note);
+  }
+  return undefined;
 }
 
 function compactJoin(values: Array<string | null | undefined>): string | undefined {
@@ -33,7 +46,7 @@ function toSearchDoc(tenant: string, row: TicketCommentSearchRow): SearchDoc {
     parentId: row.ticket_id,
     title: row.ticket_title ?? row.ticket_number ?? row.ticket_id,
     subtitle: compactJoin([row.ticket_title, row.ticket_number]),
-    body: row.note ? flattenMarkdown(row.note) : undefined,
+    body: resolveCommentBody(row),
     url: `/msp/tickets/${row.ticket_id}#comment-${row.comment_id}`,
     acl: {
       requiredPermission: 'ticket:read',
@@ -52,6 +65,7 @@ function baseTicketCommentQuery(knex: Knex, tenant: string) {
       'c.comment_id',
       'c.ticket_id',
       'c.note',
+      'c.markdown_content',
       'c.is_internal',
       'c.created_at',
       'c.updated_at',

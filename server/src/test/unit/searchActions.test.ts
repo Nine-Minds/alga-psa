@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   verifyResultVisibility: vi.fn(),
   runSearchQuery: vi.fn(),
   runSearchTypeaheadQuery: vi.fn(),
+  countSearchMatches: vi.fn(),
+  countSearchMatchesByType: vi.fn(),
   encodeSearchCursor: vi.fn(),
   loggerInfo: vi.fn(),
 }));
@@ -34,20 +36,26 @@ vi.mock('../../lib/search/acl', () => ({
 vi.mock('../../lib/search/query', () => ({
   runSearchQuery: mocks.runSearchQuery,
   runSearchTypeaheadQuery: mocks.runSearchTypeaheadQuery,
+  countSearchMatches: mocks.countSearchMatches,
+  countSearchMatchesByType: mocks.countSearchMatchesByType,
   encodeSearchCursor: mocks.encodeSearchCursor,
 }));
 
 import {
   searchAppAction,
+  searchAppTypeaheadAction,
+} from '../../lib/actions/searchActions';
+import {
   searchAppInputSchema,
   searchAppResultSchema,
-  searchAppTypeaheadAction,
   SearchRateLimitError,
-} from '../../lib/actions/searchActions';
+} from '../../lib/actions/searchActionShared';
 
 describe('search actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.countSearchMatches.mockResolvedValue(0);
+    mocks.countSearchMatchesByType.mockResolvedValue({});
   });
 
   it('T153 emits search query count and latency telemetry for full search calls', async () => {
@@ -242,6 +250,7 @@ describe('search actions', () => {
     mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
     mocks.runSearchQuery.mockResolvedValue(hits);
     mocks.verifyResultVisibility.mockResolvedValue(hits);
+    mocks.countSearchMatchesByType.mockResolvedValue({ client: 1, ticket: 1 });
 
     const result = await searchAppAction(
       {
@@ -348,6 +357,7 @@ describe('search actions', () => {
     mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
     mocks.runSearchQuery.mockResolvedValue(hits);
     mocks.verifyResultVisibility.mockResolvedValue(hits);
+    mocks.countSearchMatchesByType.mockResolvedValue({ client: 1, ticket: 2 });
 
     const result = await searchAppAction(
       {
@@ -563,6 +573,7 @@ describe('search actions', () => {
     mocks.resolveSearchAclPrincipal.mockResolvedValue(acl);
     mocks.runSearchTypeaheadQuery.mockResolvedValue(hits);
     mocks.verifyResultVisibility.mockResolvedValue(hits);
+    mocks.countSearchMatches.mockResolvedValue(6);
 
     const result = await searchAppTypeaheadAction(
       {

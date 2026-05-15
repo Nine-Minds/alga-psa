@@ -7,7 +7,7 @@ interface TicketSearchRow {
   ticket_number: string | null;
   title: string | null;
   client_name: string | null;
-  created_at?: Date | string | null;
+  entered_at?: Date | string | null;
   updated_at?: Date | string | null;
 }
 
@@ -17,7 +17,7 @@ function compactJoin(values: Array<string | null | undefined>): string | undefin
 }
 
 function toSourceUpdatedAt(row: TicketSearchRow): Date {
-  const value = row.updated_at ?? row.created_at;
+  const value = row.updated_at ?? row.entered_at;
   return value ? new Date(value) : new Date();
 }
 
@@ -48,7 +48,7 @@ function baseTicketQuery(knex: Knex, tenant: string) {
       't.ticket_id',
       't.ticket_number',
       't.title',
-      't.created_at',
+      't.entered_at',
       't.updated_at',
       'c.client_name',
     )

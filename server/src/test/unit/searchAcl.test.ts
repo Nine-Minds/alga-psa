@@ -290,19 +290,25 @@ describe('search ACL SQL predicate', () => {
   });
 
   it('T168 drops document hits outside the user accessible client scope', async () => {
-    const documentQuery = {
-      select: vi.fn(() => documentQuery),
-      where: vi.fn(() => documentQuery),
-      first: vi.fn(() => documentQuery),
-      andWhere: vi.fn(() => documentQuery),
-      then: (
-        resolve: (value: { client_id: string }) => unknown,
-        reject: (reason?: unknown) => unknown,
-      ) => Promise.resolve({ client_id: 'client-x' }).then(resolve, reject),
+    const makeQuery = <TRow,>(row: TRow) => {
+      const query = {
+        select: vi.fn(() => query),
+        where: vi.fn(() => query),
+        first: vi.fn(() => query),
+        andWhere: vi.fn(() => query),
+        then: (
+          resolve: (value: TRow) => unknown,
+          reject: (reason?: unknown) => unknown,
+        ) => Promise.resolve(row).then(resolve, reject),
+      };
+      return query;
     };
+    const documentQuery = makeQuery({ document_id: 'document-1' });
+    const associationQuery = makeQuery({ entity_id: 'client-x' });
     const knex = vi.fn((table: string) => {
-      expect(table).toBe('documents');
-      return documentQuery;
+      if (table === 'documents') return documentQuery;
+      if (table === 'document_associations') return associationQuery;
+      throw new Error(`Unexpected table ${table}`);
     });
 
     await expect(verifyResultVisibility(
@@ -319,6 +325,7 @@ describe('search ACL SQL predicate', () => {
 
     expect(documentQuery.where).toHaveBeenCalledWith('document_id', 'document-1');
     expect(documentQuery.andWhere).toHaveBeenCalledWith('tenant', 'tenant-1');
+    expect(associationQuery.andWhere).toHaveBeenCalledWith('entity_type', 'client');
   });
 
   it('T194 emits zero acl_drift for rows whose SQL and record-level ACL agree', async () => {
@@ -339,10 +346,12 @@ describe('search ACL SQL predicate', () => {
       return query;
     };
     const ticketQuery = makeQuery({ ticket_id: 'ticket-1' });
-    const documentQuery = makeQuery({ client_id: 'client-1' });
+    const documentQuery = makeQuery({ document_id: 'document-1' });
+    const associationQuery = makeQuery({ entity_id: 'client-1' });
     const knex = vi.fn((table: string) => {
       if (table === 'tickets') return ticketQuery;
       if (table === 'documents') return documentQuery;
+      if (table === 'document_associations') return associationQuery;
       throw new Error(`Unexpected table ${table}`);
     });
     const rows = [

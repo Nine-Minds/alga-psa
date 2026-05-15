@@ -26,6 +26,24 @@ export interface ParsedSearchQuery {
   normalized: string;
   isIdentifierLike: boolean;
   identifier?: string;
+  prefixTsquery: string | null;
+}
+
+const TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
+
+export function buildPrefixTsquery(raw: string): string | null {
+  const tokens = raw
+    .toLowerCase()
+    .replace(TSQUERY_UNSAFE_RE, ' ')
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+
+  if (tokens.length === 0) {
+    return null;
+  }
+
+  return tokens.map((token) => `${token}:*`).join(' & ');
 }
 
 export interface SearchQueryOptions {
@@ -97,6 +115,7 @@ export function parseQuery(raw: string): ParsedSearchQuery {
     normalized: exactIdentifierMatch && identifier ? identifier : trimmed,
     isIdentifierLike: Boolean(identifier),
     identifier,
+    prefixTsquery: buildPrefixTsquery(trimmed),
   };
 }
 
@@ -306,6 +325,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
       WITH q AS (
         SELECT
           websearch_to_tsquery('english', ?) AS tsq,
+          CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
           ?::text AS raw,
           ?::text AS identifier
       ),
@@ -331,6 +351,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
             ELSE (
               (
                 ts_rank_cd(s.search_vector, q.tsq)
+                + CASE WHEN q.prefix_tsq IS NOT NULL THEN ts_rank_cd(s.search_vector, q.prefix_tsq) * 0.7 ELSE 0 END
                 + GREATEST(
                     similarity(s.title, q.raw),
                     similarity(coalesce(s.subtitle, ''), q.raw)
@@ -349,6 +370,9 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
           AND ${aclPredicate.sql}
           AND (
             s.search_vector @@ q.tsq
+            OR (q.prefix_tsq IS NOT NULL AND s.search_vector @@ q.prefix_tsq)
+            OR s.title ILIKE '%' || q.raw || '%'
+            OR coalesce(s.subtitle, '') ILIKE '%' || q.raw || '%'
             OR s.title % q.raw
             OR coalesce(s.subtitle, '') % q.raw
             OR (
@@ -370,6 +394,8 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
     `,
     [
       parsed.raw,
+      parsed.prefixTsquery,
+      parsed.prefixTsquery,
       parsed.raw,
       parsed.identifier ?? null,
       options.tenant,
@@ -392,4 +418,130 @@ export async function runSearchTypeaheadQuery(
     limit: 5,
     includeSnippets: false,
   });
+}
+
+export async function countSearchMatchesByType(
+  options: Omit<SearchQueryOptions, 'limit' | 'offset' | 'cursor' | 'sort' | 'includeSnippets'>,
+): Promise<Record<SearchObjectType, number>> {
+  const parsed = parseQuery(options.query);
+  const empty = {} as Record<SearchObjectType, number>;
+
+  if (options.allowedTypes.length === 0) {
+    return empty;
+  }
+
+  const aclPredicate = options.acl
+    ? aclPredicateSql(options.acl)
+    : { sql: 'TRUE', bindings: [] };
+
+  const result = await options.knex.raw<{ rows: Array<{ object_type: SearchObjectType; total: string | number }> }>(
+    `
+      WITH q AS (
+        SELECT
+          websearch_to_tsquery('english', ?) AS tsq,
+          CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
+          ?::text AS raw,
+          ?::text AS identifier
+      )
+      SELECT s.object_type, count(*)::bigint AS total
+      FROM app_search_index s
+      CROSS JOIN q
+      WHERE s.tenant = ?::uuid
+        AND s.object_type = ANY(?::text[])
+        AND ${aclPredicate.sql}
+        AND (
+          s.search_vector @@ q.tsq
+          OR (q.prefix_tsq IS NOT NULL AND s.search_vector @@ q.prefix_tsq)
+          OR s.title ILIKE '%' || q.raw || '%'
+          OR coalesce(s.subtitle, '') ILIKE '%' || q.raw || '%'
+          OR s.title % q.raw
+          OR coalesce(s.subtitle, '') % q.raw
+          OR (
+            q.identifier IS NOT NULL
+            AND lower(coalesce(s.metadata->>'identifier', '')) = q.identifier
+          )
+          OR (
+            q.identifier IS NOT NULL
+            AND lower(coalesce(s.metadata->>'identifier', '')) LIKE q.identifier || '%'
+          )
+        )
+      GROUP BY s.object_type
+    `,
+    [
+      parsed.raw,
+      parsed.prefixTsquery,
+      parsed.prefixTsquery,
+      parsed.raw,
+      parsed.identifier ?? null,
+      options.tenant,
+      options.allowedTypes,
+      ...aclPredicate.bindings,
+    ],
+  );
+
+  const counts = {} as Record<SearchObjectType, number>;
+  for (const row of result.rows) {
+    counts[row.object_type] = Number(row.total);
+  }
+  return counts;
+}
+
+export async function countSearchMatches(
+  options: Omit<SearchQueryOptions, 'limit' | 'offset' | 'cursor' | 'sort' | 'includeSnippets'>,
+): Promise<number> {
+  const parsed = parseQuery(options.query);
+
+  if (options.allowedTypes.length === 0) {
+    return 0;
+  }
+
+  const aclPredicate = options.acl
+    ? aclPredicateSql(options.acl)
+    : { sql: 'TRUE', bindings: [] };
+
+  const result = await options.knex.raw<{ rows: Array<{ total: string | number }> }>(
+    `
+      WITH q AS (
+        SELECT
+          websearch_to_tsquery('english', ?) AS tsq,
+          CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
+          ?::text AS raw,
+          ?::text AS identifier
+      )
+      SELECT count(*)::bigint AS total
+      FROM app_search_index s
+      CROSS JOIN q
+      WHERE s.tenant = ?::uuid
+        AND s.object_type = ANY(?::text[])
+        AND ${aclPredicate.sql}
+        AND (
+          s.search_vector @@ q.tsq
+          OR (q.prefix_tsq IS NOT NULL AND s.search_vector @@ q.prefix_tsq)
+          OR s.title ILIKE '%' || q.raw || '%'
+          OR coalesce(s.subtitle, '') ILIKE '%' || q.raw || '%'
+          OR s.title % q.raw
+          OR coalesce(s.subtitle, '') % q.raw
+          OR (
+            q.identifier IS NOT NULL
+            AND lower(coalesce(s.metadata->>'identifier', '')) = q.identifier
+          )
+          OR (
+            q.identifier IS NOT NULL
+            AND lower(coalesce(s.metadata->>'identifier', '')) LIKE q.identifier || '%'
+          )
+        )
+    `,
+    [
+      parsed.raw,
+      parsed.prefixTsquery,
+      parsed.prefixTsquery,
+      parsed.raw,
+      parsed.identifier ?? null,
+      options.tenant,
+      options.allowedTypes,
+      ...aclPredicate.bindings,
+    ],
+  );
+
+  return Number(result.rows[0]?.total ?? 0);
 }

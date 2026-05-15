@@ -5,9 +5,26 @@ import { createRequire } from 'module';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { allIndexers, getIndexer } from '../lib/search';
+import { ceIndexers } from '../lib/search/indexers';
 import { upsertSearchDoc } from '../lib/search/upsert';
 import type { EntityIndexer } from '../lib/search/types';
+
+async function loadAllIndexers(): Promise<EntityIndexer[]> {
+  let ee: EntityIndexer[] = [];
+  try {
+    const mod = await import('@ee/lib/search/indexers');
+    const exported = (mod as { eeIndexers?: EntityIndexer[]; default?: { eeIndexers?: EntityIndexer[] } });
+    ee = exported.eeIndexers ?? exported.default?.eeIndexers ?? [];
+  } catch {
+    ee = [];
+  }
+  return [...ceIndexers, ...ee];
+}
+
+async function findIndexer(type: string): Promise<EntityIndexer | undefined> {
+  const list = await loadAllIndexers();
+  return list.find((indexer) => indexer.objectType === type);
+}
 
 const require = createRequire(import.meta.url);
 const knexfilePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../knexfile.cjs');
@@ -65,12 +82,12 @@ export async function resolveBackfillTenants(
   return rows.map((row) => row.tenant);
 }
 
-export function resolveBackfillIndexers(options: SearchBackfillOptions): EntityIndexer[] {
+export async function resolveBackfillIndexers(options: SearchBackfillOptions): Promise<EntityIndexer[]> {
   if (!options.type) {
-    return allIndexers();
+    return loadAllIndexers();
   }
 
-  const indexer = getIndexer(options.type);
+  const indexer = await findIndexer(options.type);
   if (!indexer) {
     throw new Error(`Unknown search object_type "${options.type}"`);
   }
@@ -119,13 +136,26 @@ export async function runSearchBackfill(
 
   try {
     const tenants = await resolveBackfillTenants(knex, options);
-    const indexers = resolveBackfillIndexers(options);
+    const indexers = await resolveBackfillIndexers(options);
     console.log(`Search backfill selected ${tenants.length} tenant(s).`);
     console.log(`Search backfill selected ${indexers.length} indexer(s).`);
+    const failures: Array<{ tenant: string; type: string; message: string }> = [];
     for (const tenant of tenants) {
       for (const indexer of indexers) {
-        const total = await upsertBackfillBatches(knex, tenant, indexer);
-        console.log(`[tenant=${tenant}] [type=${indexer.objectType}] upserted ${total} search row(s)`);
+        try {
+          const total = await upsertBackfillBatches(knex, tenant, indexer);
+          console.log(`[tenant=${tenant}] [type=${indexer.objectType}] upserted ${total} search row(s)`);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          failures.push({ tenant, type: indexer.objectType, message });
+          console.error(`[tenant=${tenant}] [type=${indexer.objectType}] FAILED: ${message}`);
+        }
+      }
+    }
+    if (failures.length > 0) {
+      console.error(`\n${failures.length} indexer(s) failed:`);
+      for (const failure of failures) {
+        console.error(`  - ${failure.type}: ${failure.message.split('\n')[0]}`);
       }
     }
   } finally {

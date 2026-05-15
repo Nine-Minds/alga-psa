@@ -5,7 +5,6 @@ import logger from '@alga-psa/core/logger';
 import { createTenantKnex } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
-import { z } from 'zod';
 
 import { registeredObjectTypes } from '../search';
 import {
@@ -13,77 +12,30 @@ import {
   verifyResultVisibility,
 } from '../search/acl';
 import {
+  countSearchMatches,
+  countSearchMatchesByType,
   encodeSearchCursor,
   runSearchQuery,
   runSearchTypeaheadQuery,
 } from '../search/query';
 import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '../search/types';
+import {
+  SearchRateLimitError,
+  searchAppInputSchema,
+  searchAppResultSchema,
+  searchTypeaheadResultSchema,
+  type SearchAppInput,
+  type SearchAppResult,
+  type SearchResultRow,
+  type SearchTypeaheadResult,
+} from './searchActionShared';
 
-const searchObjectTypeSchema = z.enum(SEARCH_OBJECT_TYPES);
-
-export const searchAppInputSchema = z.object({
-  query: z.string().trim().min(1).max(200),
-  types: z.array(searchObjectTypeSchema).optional(),
-  limit: z.number().int().min(1).max(100).optional(),
-  cursor: z.string().min(1).optional(),
-  sort: z.enum(['relevance', 'recent']).optional(),
-});
-
-export type SearchAppInput = z.infer<typeof searchAppInputSchema>;
-
-const searchResultRowSchema = z.object({
-  type: searchObjectTypeSchema,
-  id: z.string().min(1),
-  parentId: z.string().min(1).optional(),
-  title: z.string().min(1),
-  subtitle: z.string().optional(),
-  snippet: z.string().optional(),
-  url: z.string().min(1),
-  score: z.number(),
-  updatedAt: z.string().datetime(),
-});
-
-const searchGroupsSchema = z.object(
-  Object.fromEntries(
-    SEARCH_OBJECT_TYPES.map((type) => [type, z.number().int().min(0)]),
-  ),
-);
-
-export const searchAppResultSchema = z.object({
-  results: z.array(searchResultRowSchema),
-  groups: searchGroupsSchema,
-  totalCount: z.number().int().min(0),
-  nextCursor: z.string().min(1).optional(),
-});
-
-export const searchTypeaheadResultSchema = z.object({
-  results: z.array(searchResultRowSchema),
-  totalCount: z.number().int().min(0),
-});
-
-export interface SearchResultRow {
-  type: SearchObjectType;
-  id: string;
-  parentId?: string;
-  title: string;
-  subtitle?: string;
-  snippet?: string;
-  url: string;
-  score: number;
-  updatedAt: string;
-}
-
-export interface SearchAppResult {
-  results: SearchResultRow[];
-  groups: Record<SearchObjectType, number>;
-  totalCount: number;
-  nextCursor?: string;
-}
-
-export interface SearchTypeaheadResult {
-  results: SearchResultRow[];
-  totalCount: number;
-}
+export type {
+  SearchAppInput,
+  SearchAppResult,
+  SearchResultRow,
+  SearchTypeaheadResult,
+} from './searchActionShared';
 
 const SEARCH_OBJECT_TYPE_SET = new Set<string>(SEARCH_OBJECT_TYPES);
 const fullSearchLimiter = new RateLimiterMemory({ points: 10, duration: 1 });
@@ -117,16 +69,6 @@ const TYPE_REQUIRED_PERMISSION: Record<SearchObjectType, string> = {
   category: 'ticket:read',
   tag: 'ticket:read',
 };
-
-export class SearchRateLimitError extends Error {
-  public readonly code = 'SEARCH_RATE_LIMITED';
-  public readonly status = 429;
-
-  constructor(public readonly retryAfterMs?: number) {
-    super('Search rate limit exceeded');
-    this.name = 'SearchRateLimitError';
-  }
-}
 
 function emitSearchTelemetry(
   metric: 'search.query.count' | 'search.query.empty' | 'search.query.latency_ms',
@@ -236,30 +178,40 @@ export const searchAppAction = withAuth(async (
     const acl = await resolveSearchAclPrincipal(knex, user, accessibleClientIds);
     const allowedTypes = filterTypesByPermission(requestedTypes, acl.permissions);
 
-    const hits = await runSearchQuery({
-      knex,
-      tenant,
-      query: parsedInput.query,
-      allowedTypes,
-      limit: limit + 1,
-      cursor: parsedInput.cursor,
-      sort: parsedInput.sort,
-      includeSnippets: true,
-      acl,
-    });
+    const [hits, typeCounts] = await Promise.all([
+      runSearchQuery({
+        knex,
+        tenant,
+        query: parsedInput.query,
+        allowedTypes,
+        limit: limit + 1,
+        cursor: parsedInput.cursor,
+        sort: parsedInput.sort,
+        includeSnippets: true,
+        acl,
+      }),
+      countSearchMatchesByType({
+        knex,
+        tenant,
+        query: parsedInput.query,
+        allowedTypes,
+        acl,
+      }),
+    ]);
 
     const visibleHits = await verifyResultVisibility(knex, acl, hits);
     const pageHits = visibleHits.slice(0, limit);
     const groups = emptyGroups();
-    for (const hit of visibleHits) {
-      groups[hit.type] += 1;
+    for (const [type, count] of Object.entries(typeCounts) as Array<[SearchObjectType, number]>) {
+      groups[type] = count;
     }
+    const totalCount = Object.values(typeCounts).reduce((sum, value) => sum + value, 0);
 
     const lastHit = pageHits[pageHits.length - 1];
     const result: SearchAppResult = {
       results: pageHits.map(toSearchResultRow),
       groups,
-      totalCount: visibleHits.length,
+      totalCount,
       nextCursor: visibleHits.length > limit && lastHit ? encodeSearchCursor(lastHit) : undefined,
     };
 
@@ -307,14 +259,23 @@ export const searchAppTypeaheadAction = withAuth(async (
     const acl = await resolveSearchAclPrincipal(knex, user, accessibleClientIds);
     const allowedTypes = filterTypesByPermission(requestedTypes, acl.permissions);
 
-    const hits = await runSearchTypeaheadQuery({
-      knex,
-      tenant,
-      query: parsedInput.query,
-      allowedTypes,
-      cursor: parsedInput.cursor,
-      acl,
-    });
+    const [hits, totalCount] = await Promise.all([
+      runSearchTypeaheadQuery({
+        knex,
+        tenant,
+        query: parsedInput.query,
+        allowedTypes,
+        cursor: parsedInput.cursor,
+        acl,
+      }),
+      countSearchMatches({
+        knex,
+        tenant,
+        query: parsedInput.query,
+        allowedTypes,
+        acl,
+      }),
+    ]);
 
     const visibleHits = await verifyResultVisibility(knex, acl, hits);
     const result: SearchTypeaheadResult = {
@@ -322,7 +283,7 @@ export const searchAppTypeaheadAction = withAuth(async (
         ...toSearchResultRow(hit),
         snippet: undefined,
       })),
-      totalCount: visibleHits.length,
+      totalCount,
     };
 
     if (result.totalCount === 0) {

@@ -74,8 +74,7 @@ describe('search entity indexers', () => {
     const { knex, queryBuilder } = createFirstRowKnex({
       client_id: 'client-1',
       client_name: 'ACME Corp',
-      email: 'support@acme.example',
-      phone_no: '555-0100',
+      billing_email: 'support@acme.example',
       notes: 'Managed firewall customer',
       created_at: '2026-05-12T10:00:00.000Z',
       updated_at: '2026-05-13T10:00:00.000Z',
@@ -98,7 +97,7 @@ describe('search entity indexers', () => {
       objectType: 'client',
       objectId: 'client-1',
       title: 'ACME Corp',
-      subtitle: 'support@acme.example | 555-0100',
+      subtitle: 'support@acme.example',
       body: 'Managed firewall customer',
       url: '/msp/clients/client-1',
       acl: { requiredPermission: 'client:read' },
@@ -146,12 +145,11 @@ describe('search entity indexers', () => {
     expect(docs.every((doc) => doc.acl.requiredPermission === 'client:read')).toBe(true);
   });
 
-  it('T029 contact subtitle includes email, phone, and role', async () => {
+  it('T029 contact subtitle includes email and role', async () => {
     const { knex, queryBuilder } = createFirstRowKnex({
       contact_name_id: 'contact-1',
       full_name: 'Ada Lovelace',
       email: 'ada@example.com',
-      phone_number: '555-0110',
       role: 'Primary Contact',
       updated_at: '2026-05-13T10:00:00.000Z',
     });
@@ -168,7 +166,7 @@ describe('search entity indexers', () => {
       objectType: 'contact',
       objectId: 'contact-1',
       title: 'Ada Lovelace',
-      subtitle: 'ada@example.com | 555-0110 | Primary Contact',
+      subtitle: 'ada@example.com | Primary Contact',
       url: '/msp/contacts/contact-1',
       acl: { requiredPermission: 'contact:read' },
     });
@@ -709,12 +707,13 @@ describe('search entity indexers', () => {
     expect(doc?.body).toHaveLength(65_536);
   });
 
-  it('T045 document indexer sets client scope and leaves private ACL hints unset', async () => {
+  it('T045 document indexer requires document:read and defers client scope to the visibility verifier', async () => {
     const { knex } = createFirstRowKnex({
       document_id: 'document-2',
       document_name: 'Client runbook',
       content: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Runbook' }] }]),
-      client_id: 'client-1',
+      block_data: null,
+      side_content: null,
       updated_at: '2026-05-13T10:00:00.000Z',
     });
 
@@ -726,8 +725,8 @@ describe('search entity indexers', () => {
 
     expect(doc?.acl).toMatchObject({
       requiredPermission: 'document:read',
-      clientScopeId: 'client-1',
     });
+    expect(doc?.acl).not.toHaveProperty('clientScopeId');
     expect(doc?.acl).not.toHaveProperty('isPrivate');
     expect(doc?.acl).not.toHaveProperty('visibleToUserIds');
   });
@@ -798,16 +797,14 @@ describe('search entity indexers', () => {
     });
   });
 
-  it('T047 service catalog indexer includes flattened attributes in body', async () => {
+  it('T047 service catalog indexer includes sku, vendor, and manufacturer in body', async () => {
     const { knex } = createFirstRowKnex({
       service_id: 'service-1',
       service_name: 'Managed firewall',
       description: 'Monthly firewall management',
-      attributes: {
-        vendor: 'Fortinet',
-        tier: 'Advanced',
-      },
-      updated_at: '2026-05-13T10:00:00.000Z',
+      sku: 'FW-ADV-01',
+      vendor: 'Fortinet',
+      manufacturer: 'Fortinet Inc',
     });
 
     const doc = await serviceCatalogIndexer.loadOne(
@@ -821,7 +818,7 @@ describe('search entity indexers', () => {
       objectType: 'service_catalog',
       objectId: 'service-1',
       title: 'Managed firewall',
-      body: 'Monthly firewall management | Fortinet Advanced',
+      body: 'Monthly firewall management | FW-ADV-01 | Fortinet | Fortinet Inc',
       url: '/msp/billing/services/service-1',
       acl: { requiredPermission: 'service_catalog:read' },
     });

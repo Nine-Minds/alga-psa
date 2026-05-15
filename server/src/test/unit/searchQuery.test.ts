@@ -28,6 +28,7 @@ describe('search query parsing', () => {
       normalized: 'Acme Corp',
       isIdentifierLike: false,
       identifier: undefined,
+      prefixTsquery: 'acme:* & corp:*',
     });
 
     expect(parseQuery('  TIC-1023  ')).toEqual({
@@ -35,6 +36,7 @@ describe('search query parsing', () => {
       normalized: 'tic-1023',
       isIdentifierLike: true,
       identifier: 'tic-1023',
+      prefixTsquery: 'tic:* & 1023:*',
     });
   });
 
@@ -230,7 +232,7 @@ describe('search query parsing', () => {
     const [sql, bindings] = knex.raw.mock.calls[0] as [string, unknown[]];
     expect(sql).toContain("lower(coalesce(s.metadata->>'identifier', '')) = q.identifier");
     expect(sql).toContain('THEN 1000');
-    expect(bindings[2]).toBe('tic-1023');
+    expect(bindings[4]).toBe('tic-1023');
     expect(results[0]).toMatchObject({
       type: 'ticket',
       id: 'ticket-1023',
@@ -266,7 +268,7 @@ describe('search query parsing', () => {
 
     const [sql, bindings] = knex.raw.mock.calls[0] as [string, unknown[]];
     expect(sql).toContain("lower(coalesce(s.metadata->>'identifier', '')) = q.identifier");
-    expect(bindings[2]).toBe('lap-0042');
+    expect(bindings[4]).toBe('lap-0042');
     expect(results[0]).toMatchObject({
       type: 'asset',
       id: 'asset-42',
@@ -318,7 +320,7 @@ describe('search query parsing', () => {
 
     const [sql, bindings] = knex.raw.mock.calls[0] as [string, unknown[]];
     expect(sql).toContain("lower(coalesce(s.metadata->>'identifier', '')) = q.identifier");
-    expect(bindings[2]).toBe('tic-1023');
+    expect(bindings[4]).toBe('tic-1023');
     expect(results[0]).toMatchObject({
       type: 'ticket',
       id: 'ticket-1023',
@@ -358,7 +360,7 @@ describe('search query parsing', () => {
     expect(sql).toContain("lower(coalesce(s.metadata->>'identifier', '')) LIKE q.identifier || '%'");
     expect(sql).toContain('THEN 1000');
     expect(sql).toContain('THEN 900');
-    expect(bindings[2]).toBe('tic-10');
+    expect(bindings[4]).toBe('tic-10');
     expect(results[0]).toMatchObject({
       type: 'ticket',
       id: 'ticket-1023',
@@ -439,7 +441,7 @@ describe('search query parsing', () => {
     expect(sql).toContain('score < ?::double precision');
     expect(sql).toContain('source_updated_at < ?::timestamptz');
     expect(sql).toContain('object_id > ?');
-    expect(bindings.slice(5, 12)).toEqual([
+    expect(bindings.slice(7, 14)).toEqual([
       3.14,
       3.14,
       3.14,
@@ -517,7 +519,7 @@ describe('search query parsing', () => {
     const knex = {
       raw: vi.fn(async (sql: string, bindings: unknown[]) => {
         expect(sql).toContain('s.tenant = ?::uuid');
-        const tenant = bindings[3] as string;
+        const tenant = bindings[5] as string;
         if (!tenants.includes(tenant)) {
           leakedRows.push(`unknown:${tenant}`);
         }
@@ -573,6 +575,6 @@ describe('search query parsing', () => {
 
     const [sql, bindings] = knex.raw.mock.calls[0] as [string, unknown[]];
     expect(sql).toContain('WHERE s.tenant = ?::uuid');
-    expect(bindings[3]).toBe('00000000-0000-4000-8000-000000000123');
+    expect(bindings[5]).toBe('00000000-0000-4000-8000-000000000123');
   });
 });
