@@ -2327,17 +2327,45 @@ export const addTicketCommentWithCache = withAuth(async (
       markdownContent = "[Error converting content to markdown]";
     }
     
-    // Insert comment with markdown_content
+    // Insert comment with markdown_content. comments.thread_id is NOT NULL, so
+    // create the thread row first using IDs generated up-front.
+    const idsResult = await trx.raw(
+      'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
+    );
+    const generatedIds = idsResult.rows?.[0] as { comment_id: string; thread_id: string } | undefined;
+    if (!generatedIds?.comment_id || !generatedIds?.thread_id) {
+      throw new Error('Failed to generate comment/thread identifiers');
+    }
+    const newCommentId = generatedIds.comment_id;
+    const threadId = generatedIds.thread_id;
+    const effectiveIsInternal = authorType === 'internal' ? isInternal : false;
+    const nowIso = new Date().toISOString();
+
+    await trx('comment_threads').insert({
+      tenant,
+      thread_id: threadId,
+      ticket_id: ticketId,
+      project_task_id: null,
+      root_comment_id: newCommentId,
+      is_internal: effectiveIsInternal,
+      reply_count: 0,
+      last_activity_at: nowIso,
+      created_at: nowIso,
+      created_by: user.user_id || null,
+    });
+
     const [newComment] = await trx('comments').insert({
       tenant,
+      comment_id: newCommentId,
+      thread_id: threadId,
       ticket_id: ticketId,
       user_id: user.user_id,
       author_type: authorType,
       note: content,
-      is_internal: authorType === 'internal' ? isInternal : false,
+      is_internal: effectiveIsInternal,
       is_resolution: isResolution,
-      markdown_content: markdownContent, // Add markdown content
-      created_at: new Date().toISOString()
+      markdown_content: markdownContent,
+      created_at: nowIso,
     }).returning('*');
 
     // Update ticket response state based on comment visibility and author (F005-F008)
@@ -2363,44 +2391,65 @@ export const addTicketCommentWithCache = withAuth(async (
 
         const now = new Date().toISOString();
         for (const child of children) {
-          await trx.raw(
-            `
-            WITH existing AS (
-              SELECT 1
-              FROM ticket_bundle_mirrors
-              WHERE tenant = ?
-                AND source_comment_id = ?
-                AND child_ticket_id = ?
-              LIMIT 1
-            ),
-            ins_comment AS (
-              INSERT INTO comments (
-                tenant,
-                ticket_id,
-                user_id,
-                author_type,
-                note,
-                is_internal,
-                is_resolution,
-                is_system_generated,
-                markdown_content,
-                created_at
-              )
-              SELECT ?, ?, NULL, 'unknown', ?, false, ?, true, ?, ?
-              WHERE NOT EXISTS (SELECT 1 FROM existing)
-              RETURNING comment_id
-            )
-            INSERT INTO ticket_bundle_mirrors (tenant, source_comment_id, child_ticket_id, child_comment_id)
-            SELECT ?, ?, ?, comment_id
-            FROM ins_comment
-            ON CONFLICT DO NOTHING;
-            `,
-            [
-              tenant, newComment.comment_id, child.ticket_id,
-              tenant, child.ticket_id, content, isResolution, markdownContent, now,
-              tenant, newComment.comment_id, child.ticket_id
-            ]
+          const existingMirror = await trx('ticket_bundle_mirrors')
+            .where({
+              tenant,
+              source_comment_id: newComment.comment_id,
+              child_ticket_id: child.ticket_id,
+            })
+            .first();
+
+          if (existingMirror) {
+            continue;
+          }
+
+          const childIds = await trx.raw(
+            'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
           );
+          const childGenerated = childIds.rows?.[0] as
+            | { comment_id: string; thread_id: string }
+            | undefined;
+          if (!childGenerated?.comment_id || !childGenerated?.thread_id) {
+            throw new Error('Failed to generate mirrored comment/thread identifiers');
+          }
+
+          await trx('comment_threads').insert({
+            tenant,
+            thread_id: childGenerated.thread_id,
+            ticket_id: child.ticket_id,
+            project_task_id: null,
+            root_comment_id: childGenerated.comment_id,
+            is_internal: false,
+            reply_count: 0,
+            last_activity_at: now,
+            created_at: now,
+            created_by: null,
+          });
+
+          await trx('comments').insert({
+            tenant,
+            comment_id: childGenerated.comment_id,
+            thread_id: childGenerated.thread_id,
+            ticket_id: child.ticket_id,
+            user_id: null,
+            author_type: 'unknown',
+            note: content,
+            is_internal: false,
+            is_resolution: isResolution,
+            is_system_generated: true,
+            markdown_content: markdownContent,
+            created_at: now,
+          });
+
+          await trx('ticket_bundle_mirrors')
+            .insert({
+              tenant,
+              source_comment_id: newComment.comment_id,
+              child_ticket_id: child.ticket_id,
+              child_comment_id: childGenerated.comment_id,
+            })
+            .onConflict()
+            .ignore();
         }
       }
     }

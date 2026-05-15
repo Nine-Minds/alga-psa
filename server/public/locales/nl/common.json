@@ -275,6 +275,13 @@
       }
     }
   },
+  "commentThread": {
+    "replies_one": "{{count}} antwoord",
+    "replies_other": "{{count}} antwoorden",
+    "collapse": "Inklappen",
+    "expand": "Uitklappen",
+    "showInDrawer": "Tonen in zijpaneel"
+  },
   "pagination": {
     "previous": "Vorige",
     "next": "Volgende",

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { PartialBlock } from '@blocknote/core';
 import { formatDistanceToNow } from 'date-fns';
-import { Pencil, Trash } from 'lucide-react';
+import { CornerUpLeft, Pencil, Trash } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
@@ -20,6 +20,7 @@ interface TaskCommentProps {
   comment: IProjectTaskCommentWithUser;
   onUpdate: () => void;
   onDelete: () => void;
+  onReply?: (comment: IProjectTaskCommentWithUser) => void;
   currentUserId?: string;
   reactions?: IAggregatedReaction[];
   onToggleReaction?: (taskCommentId: string, emoji: string) => void;
@@ -30,6 +31,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
   comment,
   onUpdate,
   onDelete,
+  onReply,
   currentUserId,
   reactions,
   onToggleReaction,
@@ -94,8 +96,9 @@ const TaskComment: React.FC<TaskCommentProps> = ({
 
   // Only allow users to edit their own comments
   const canEdit = useMemo(() => {
+    if (comment.deletedAt) return false;
     return currentUserId === comment.userId;
-  }, [comment.userId, currentUserId]);
+  }, [comment.deletedAt, comment.userId, currentUserId]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -236,30 +239,52 @@ const TaskComment: React.FC<TaskCommentProps> = ({
                 </p>
               </div>
             </div>
-            {canEdit && !isEditing && (
-              <div className="space-x-2">
-                <Button
-                  id={`edit-comment-${comment.taskCommentId}-button`}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsEditing(true)}
-                  aria-label={t('common.editComment', 'Edit comment')}
-                >
-                  <Pencil className="w-4 h-4" />
-                </Button>
-                <Button
-                  id={`delete-comment-${comment.taskCommentId}-button`}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsDeleteDialogOpen(true)}
-                  aria-label={t('common.deleteCommentAriaLabel', 'Delete comment')}
-                >
-                  <Trash className="w-4 h-4" />
-                </Button>
+            {((onReply && !comment.deletedAt) || (canEdit && !isEditing)) && (
+              <div className="c-actions space-x-2">
+                {onReply && !comment.deletedAt && (
+                  <Button
+                    id={`reply-comment-${comment.taskCommentId}-button`}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onReply(comment)}
+                    aria-label={t('common.replyComment', 'Reply to comment')}
+                  >
+                    <CornerUpLeft className="w-4 h-4" />
+                  </Button>
+                )}
+                {canEdit && !isEditing && (
+                  <>
+                    <Button
+                      id={`edit-comment-${comment.taskCommentId}-button`}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsEditing(true)}
+                      aria-label={t('common.editComment', 'Edit comment')}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      id={`delete-comment-${comment.taskCommentId}-button`}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsDeleteDialogOpen(true)}
+                      aria-label={t('common.deleteCommentAriaLabel', 'Delete comment')}
+                    >
+                      <Trash className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
               </div>
             )}
           </div>
-          {isEditing ? (
+          {comment.deletedAt ? (
+            <div
+              {...withDataAutomationId({ id: `${commentId}-content` })}
+              className="mt-1 text-sm text-gray-500 opacity-70"
+            >
+              [deleted]
+            </div>
+          ) : isEditing ? (
             <div className="mt-2">
               <TextEditor
                 {...withDataAutomationId({ id: `${commentId}-text-editor` })}

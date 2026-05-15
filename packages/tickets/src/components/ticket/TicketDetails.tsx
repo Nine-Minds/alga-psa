@@ -1587,6 +1587,58 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             return false;
         }
     };
+
+    const handleAddReplyComment = async (
+        content: PartialBlock[],
+        parentCommentId: string,
+        isInternal: boolean
+    ): Promise<boolean> => {
+        const contentStr = JSON.stringify(content);
+        const hasContent = contentStr !== JSON.stringify([{
+            type: "paragraph",
+            props: {
+                textAlignment: "left",
+                backgroundColor: "default",
+                textColor: "default"
+            },
+            content: [{
+                type: "text",
+                text: "",
+                styles: {}
+            }]
+        }]);
+
+        if (!hasContent || !ticket.ticket_id || !userId) {
+            return false;
+        }
+
+        try {
+            await createComment({
+                ticket_id: ticket.ticket_id,
+                note: contentStr,
+                is_internal: isInternal,
+                is_resolution: false,
+                user_id: userId,
+                author_type: 'internal',
+                parent_comment_id: parentCommentId
+            });
+
+            const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
+            setConversations(updatedComments);
+
+            if (!isInternal && responseStateTrackingEnabled) {
+                setTicket((prev: any) => ({
+                    ...prev,
+                    response_state: 'awaiting_client'
+                }));
+            }
+
+            return true;
+        } catch (error) {
+            handleError(error, t('messages.addCommentFailed', 'Failed to add comment'));
+            return false;
+        }
+    };
     
     const handleEdit = (conversation: IComment) => {
         // Only allow users to edit their own comments
@@ -2716,6 +2768,7 @@ const handleClose = () => {
                                     editorKey={editorKey}
                                     onNewCommentContentChange={setNewCommentContent}
                                     onAddNewComment={handleAddNewComment}
+                                    onAddReplyComment={handleAddReplyComment}
                                     onTabChange={setActiveTab}
                                     onEdit={handleEdit}
                                     onSave={handleSave}

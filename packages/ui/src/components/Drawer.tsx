@@ -37,6 +37,20 @@ const Drawer = ({
   drawerVariant,
   width
 }: DrawerComponentProps): React.ReactElement => {
+  const contentRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handle = window.setTimeout(() => {
+      contentRef.current?.focus();
+    }, 0);
+
+    return () => window.clearTimeout(handle);
+  }, [isOpen]);
+
   // Determine width classes and styles based on width prop or default behavior
   const widthClasses = width
     ? '' // Use inline style when width is specified
@@ -80,6 +94,7 @@ const Drawer = ({
           />
         )}
         <Dialog.Content
+          ref={contentRef}
           className={`fixed inset-y-0 right-0 ${widthClasses} bg-[rgb(var(--color-card))] shadow-lg focus:outline-none overflow-y-auto transform transition-all duration-300 ease-in-out will-change-transform data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${drawerVariant === 'document' ? 'ticket-document-drawer' : ''} ${isInDrawer ? 'z-[61]' : 'z-50'}`}
           style={isInsideDialog ? { ...widthStyle, pointerEvents: 'auto' } : widthStyle}
           onOpenAutoFocus={(e) => {

@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 interface TaskCommentFormProps {
   taskId: string;
   projectId: string;
+  parentCommentId?: string | null;
   onCommentAdded: () => void;
   onCancel?: () => void;
 }
@@ -18,6 +19,7 @@ interface TaskCommentFormProps {
 export function TaskCommentForm({
   taskId,
   projectId,
+  parentCommentId = null,
   onCommentAdded,
   onCancel
 }: TaskCommentFormProps): React.JSX.Element {
@@ -54,7 +56,8 @@ export function TaskCommentForm({
 
       await createTaskComment({
         taskId: taskId,
-        note
+        note,
+        parent_comment_id: parentCommentId
       });
 
       // Clear the editor by replacing content with default empty block
@@ -93,7 +96,11 @@ export function TaskCommentForm({
           disabled={isSubmitting}
           variant="default"
         >
-          {isSubmitting ? t('comments.submitting', 'Submitting...') : t('comments.addComment', 'Add Comment')}
+          {isSubmitting
+            ? t('comments.submitting', 'Submitting...')
+            : parentCommentId
+              ? t('comments.reply', 'Reply')
+              : t('comments.addComment', 'Add Comment')}
         </Button>
         {onCancel && (
           <Button
