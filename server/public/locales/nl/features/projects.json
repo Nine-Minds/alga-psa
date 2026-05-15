@@ -248,6 +248,8 @@
     "bulkDeletePartial": "{{deleted}} taak/taken verwijderd, {{failed}} mislukt.",
     "bulkAssignSuccess": "{{count}} taak/taken succesvol toegewezen!",
     "bulkAssignPartial": "{{success}} taak/taken toegewezen, {{failed}} mislukt.",
+    "bulkAssignTeamSuccess": "{{count}} taak/taken succesvol aan team toegewezen!",
+    "bulkAssignTeamPartial": "{{success}} taak/taken aan team toegewezen, {{failed}} mislukt.",
     "bulkDeleteTitle": "Taken verwijderen",
     "bulkDeleteMessage": "Weet je zeker dat je {{count}} geselecteerde taak/taken wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
     "bulkTasksMovedSuccess": "{{count}} taken verplaatst",
@@ -534,7 +536,6 @@
       "updatedAt": "Bijgewerkt op"
     },
     "exportSelected": "{{count}} geselecteerde exporteren",
-    "printSelected": "{{count}} geselecteerde afdrukken",
     "selectedTasksNotice": "{{count}} geselecteerde taak{{plural}} exporteren."
   },
   "import": {
@@ -736,7 +737,8 @@
       "message": "{{count}} geselecteerde taak/taken toewijzen aan:",
       "unassigned": "Niet toegewezen",
       "assigning": "Toewijzen...",
-      "confirm": "Taken toewijzen"
+      "confirm": "Taken toewijzen",
+      "teamReplaceNotice": "Taken die al aan een ander team zijn toegewezen, worden aan het nieuwe team toegewezen."
     }
   },
   "filters": {

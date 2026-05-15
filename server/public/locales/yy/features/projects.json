@@ -248,6 +248,8 @@
     "bulkDeletePartial": "55555 {{deleted}} 55555 {{failed}} 55555",
     "bulkAssignSuccess": "55555 {{count}} 55555",
     "bulkAssignPartial": "55555 {{success}} 55555 {{failed}} 55555",
+    "bulkAssignTeamSuccess": "55555 {{count}} 55555",
+    "bulkAssignTeamPartial": "55555 {{success}} 55555 {{failed}} 55555",
     "bulkDeleteTitle": "55555",
     "bulkDeleteMessage": "55555 {{count}} 55555",
     "bulkTasksMovedSuccess": "55555 {{count}} 55555",
@@ -534,7 +536,6 @@
       "updatedAt": "55555"
     },
     "exportSelected": "55555 {{count}} 55555",
-    "printSelected": "55555 {{count}} 55555",
     "selectedTasksNotice": "55555 {{count}} 55555 {{plural}} 55555"
   },
   "import": {
@@ -736,7 +737,8 @@
       "message": "55555 {{count}} 55555",
       "unassigned": "55555",
       "assigning": "55555",
-      "confirm": "55555"
+      "confirm": "55555",
+      "teamReplaceNotice": "55555"
     }
   },
   "filters": {

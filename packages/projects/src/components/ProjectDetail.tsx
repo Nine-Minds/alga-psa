@@ -991,18 +991,51 @@ export default function ProjectDetail({
   ) => {
     // Bulk move: when the dragged task is part of a multi-selection, move them all
     if (selectedTaskIds.has(taskId) && selectedTaskIds.size > 1) {
-      const tasksToMove = allProjectTasks.filter(t => selectedTaskIds.has(t.task_id));
+      // Sort selected tasks by current order_key so they land in their existing
+      // relative order. Tasks already in the target phase are repositioned;
+      // cross-phase tasks are moved in.
+      const tasksToMove = allProjectTasks
+        .filter(t => selectedTaskIds.has(t.task_id))
+        .sort((a, b) => {
+          const ka = a.order_key || '';
+          const kb = b.order_key || '';
+          return ka < kb ? -1 : ka > kb ? 1 : 0;
+        });
       if (tasksToMove.length === 0) return;
+
+      // Don't anchor positioning to tasks that are themselves being moved
+      const safeBefore = beforeTaskId && selectedTaskIds.has(beforeTaskId) ? null : beforeTaskId;
+      const safeAfter = afterTaskId && selectedTaskIds.has(afterTaskId) ? null : afterTaskId;
 
       let success = 0;
       let failed = 0;
+      let crossPhaseMoved = 0;
+      // Chain inserts so each subsequent task lands immediately after the
+      // previous one, preserving the relative order at the drop position.
+      let prevBefore: string | null = safeBefore;
+      const statusUpdatedById = new Map<string, IProjectTask>();
       for (const task of tasksToMove) {
         try {
           if (task.phase_id !== newPhaseId) {
-            await moveTaskToPhase(task.task_id, newPhaseId, newStatusMappingId);
+            await moveTaskToPhase(
+              task.task_id,
+              newPhaseId,
+              newStatusMappingId,
+              undefined,
+              prevBefore,
+              safeAfter,
+            );
+            crossPhaseMoved++;
           } else {
-            await updateTaskStatus(task.task_id, newStatusMappingId, null, null);
+            const updatedTask = await updateTaskStatus(
+              task.task_id,
+              newStatusMappingId,
+              prevBefore,
+              safeAfter,
+            );
+            statusUpdatedById.set(task.task_id, updatedTask);
           }
+          prevBefore = task.task_id;
           success++;
         } catch (error) {
           console.error(`Failed to move task ${task.task_id}:`, error);
@@ -1010,17 +1043,33 @@ export default function ProjectDetail({
         }
       }
 
-      setAllProjectTasks(prev => prev.map(t =>
-        selectedTaskIds.has(t.task_id)
-          ? { ...t, phase_id: newPhaseId, project_status_mapping_id: newStatusMappingId }
-          : t
-      ));
-      setProjectTasks(prev => prev.flatMap(t => {
-        if (!selectedTaskIds.has(t.task_id)) return [t];
-        // Drop from the current kanban view if moved out of the selected phase
-        if (selectedPhase && newPhaseId !== selectedPhase.phase_id) return [];
-        return [{ ...t, project_status_mapping_id: newStatusMappingId }];
-      }));
+      if (crossPhaseMoved > 0) {
+        // Cross-phase movement changes which list buckets a task belongs to and
+        // can invalidate cached ordering for the target status. Bump the version
+        // so the board reloads with correct grouping/ordering.
+        setAllProjectTasks(prev => prev.map(t => {
+          const u = statusUpdatedById.get(t.task_id);
+          if (u) {
+            return { ...t, project_status_mapping_id: u.project_status_mapping_id, order_key: u.order_key };
+          }
+          if (selectedTaskIds.has(t.task_id) && t.phase_id !== newPhaseId) {
+            return { ...t, phase_id: newPhaseId, project_status_mapping_id: newStatusMappingId };
+          }
+          return t;
+        }));
+        setStatusVersion(v => v + 1);
+      } else {
+        // Pure same-phase reorder/status change — apply server-returned
+        // order_key/status so the list reflects the exact drop position.
+        const applyUpdate = (taskItem: IProjectTask): IProjectTask => {
+          const u = statusUpdatedById.get(taskItem.task_id);
+          return u
+            ? { ...taskItem, project_status_mapping_id: u.project_status_mapping_id, order_key: u.order_key }
+            : taskItem;
+        };
+        setProjectTasks(prev => prev.map(applyUpdate));
+        setAllProjectTasks(prev => prev.map(applyUpdate));
+      }
 
       if (failed === 0) {
         toast.success(
@@ -2246,6 +2295,10 @@ export default function ProjectDetail({
     setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
     setAllProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
     setPhaseTaskResources(prev => ({ ...prev, [taskId]: resources }));
+    // List view + project-wide agent filter read from the project-wide map.
+    // Keep it in sync so team-member additions/removals are reflected without
+    // a page reload.
+    setAllProjectTaskResources(prev => ({ ...prev, [taskId]: resources }));
   };
 
   const performTeamAssign = async (taskId: string, teamId: string) => {
@@ -2622,61 +2675,142 @@ export default function ProjectDetail({
     setIsBulkDeleteOpen(false);
   };
 
-  // Handler for bulk assign confirmation
-  const handleBulkAssignConfirm = async (userId: string | null) => {
+  // Handler for bulk assign confirmation — dispatches to user- or team-assign
+  // based on the dialog's selection.
+  const handleBulkAssignConfirm = async (
+    selection: { kind: 'user'; userId: string | null } | { kind: 'team'; teamId: string },
+  ) => {
     const ids = Array.from(selectedTaskIds);
     if (ids.length === 0) return;
 
     let success = 0;
     let failed = 0;
 
-    for (const taskId of ids) {
-      const task = projectTasks.find(t => t.task_id === taskId)
-        || allProjectTasks.find(t => t.task_id === taskId);
-      if (!task) {
-        failed++;
-        continue;
-      }
-      try {
-        // A user assignment should become the primary assignee. The UI renders the
-        // team over the user, so any existing team assignment must be removed first.
-        if (task.assigned_team_id) {
-          await removeTeamFromProjectTask(taskId, { mode: 'remove_all' });
+    if (selection.kind === 'user') {
+      const userId = selection.userId;
+      // Tasks whose team_member resource rows were just wiped — their cached
+      // resources need to be refetched so list-view and the agent filter no
+      // longer count the removed members.
+      const resourcesToRefresh: string[] = [];
+
+      for (const taskId of ids) {
+        const task = projectTasks.find(t => t.task_id === taskId)
+          || allProjectTasks.find(t => t.task_id === taskId);
+        if (!task) {
+          failed++;
+          continue;
         }
-        const updatedTask = await updateTaskWithChecklist(taskId, {
-          ...task,
-          assigned_to: userId,
-          assigned_team_id: null,
-          estimated_hours: Number(task.estimated_hours) || 0,
-          actual_hours: Number(task.actual_hours) || 0,
-          checklist_items: task.checklist_items,
-        });
-        if (updatedTask) {
-          const checklistItems = await getTaskChecklistItems(taskId);
-          const taskWithChecklist = { ...updatedTask, assigned_team_id: null, checklist_items: checklistItems };
-          setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
-          setAllProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
-          success++;
-        } else {
+        try {
+          // A user assignment should become the primary assignee. The UI renders the
+          // team over the user, so any existing team assignment must be removed first.
+          if (task.assigned_team_id) {
+            await removeTeamFromProjectTask(taskId, { mode: 'remove_all' });
+            resourcesToRefresh.push(taskId);
+          }
+          const updatedTask = await updateTaskWithChecklist(taskId, {
+            ...task,
+            assigned_to: userId,
+            assigned_team_id: null,
+            estimated_hours: Number(task.estimated_hours) || 0,
+            actual_hours: Number(task.actual_hours) || 0,
+            checklist_items: task.checklist_items,
+          });
+          if (updatedTask) {
+            const checklistItems = await getTaskChecklistItems(taskId);
+            const taskWithChecklist = { ...updatedTask, assigned_team_id: null, checklist_items: checklistItems };
+            setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
+            setAllProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
+            success++;
+          } else {
+            failed++;
+          }
+        } catch (error) {
+          console.error(`Failed to assign task ${taskId}:`, error);
           failed++;
         }
-      } catch (error) {
-        console.error(`Failed to assign task ${taskId}:`, error);
-        failed++;
       }
-    }
 
-    if (failed === 0) {
-      toast.success(
-        t('projectDetail.bulkAssignSuccess', '{{count}} task(s) assigned successfully!', { count: success }),
-      );
+      if (resourcesToRefresh.length > 0) {
+        const refreshed = await Promise.all(
+          resourcesToRefresh.map(async (id) => {
+            try {
+              return [id, await getTaskResourcesAction(id)] as const;
+            } catch (error) {
+              console.error(`Failed to refresh resources for task ${id}:`, error);
+              return null;
+            }
+          }),
+        );
+        const updates = refreshed.filter((r): r is readonly [string, ITaskResource[]] => r !== null);
+        if (updates.length > 0) {
+          setPhaseTaskResources(prev => {
+            const next = { ...prev };
+            for (const [id, resources] of updates) next[id] = resources;
+            return next;
+          });
+          setAllProjectTaskResources(prev => {
+            const next = { ...prev };
+            for (const [id, resources] of updates) next[id] = resources;
+            return next;
+          });
+        }
+      }
+
+      if (failed === 0) {
+        toast.success(
+          t('projectDetail.bulkAssignSuccess', '{{count}} task(s) assigned successfully!', { count: success }),
+        );
+      } else {
+        toast.error(
+          t('projectDetail.bulkAssignPartial', 'Assigned {{success}} task(s), {{failed}} failed.', {
+            success,
+            failed,
+          }),
+        );
+      }
     } else {
-      toast.error(
-        t('projectDetail.bulkAssignPartial', 'Assigned {{success}} task(s), {{failed}} failed.', {
-          success,
-          failed,
-        }),
-      );
+      const teamId = selection.teamId;
+      for (const taskId of ids) {
+        const task = projectTasks.find(t => t.task_id === taskId)
+          || allProjectTasks.find(t => t.task_id === taskId);
+        if (!task) {
+          failed++;
+          continue;
+        }
+        if (task.assigned_team_id === teamId) {
+          // Already assigned to this team — nothing to do, count as success.
+          success++;
+          continue;
+        }
+
+        try {
+          // If a different team is currently assigned, drop it first. Bulk mode
+          // can't surface the per-task keep/remove prompt, so we mirror the
+          // single-user-assign path (which always removes the prior team).
+          if (task.assigned_team_id) {
+            await removeTeamFromProjectTask(taskId, { mode: 'remove_all' });
+          }
+          await assignTeamToProjectTask(taskId, teamId);
+          await refreshTaskAfterTeamChange(taskId);
+          success++;
+        } catch (error) {
+          console.error(`Failed to assign team to task ${taskId}:`, error);
+          failed++;
+        }
+      }
+
+      if (failed === 0) {
+        toast.success(
+          t('projectDetail.bulkAssignTeamSuccess', '{{count}} task(s) assigned to team successfully!', { count: success }),
+        );
+      } else {
+        toast.error(
+          t('projectDetail.bulkAssignTeamPartial', 'Assigned {{success}} task(s) to team, {{failed}} failed.', {
+            success,
+            failed,
+          }),
+        );
+      }
     }
 
     clearSelection();
@@ -3602,13 +3736,14 @@ export default function ProjectDetail({
         />
       )}
 
-      {/* Bulk Assign Dialog */}
+      {/* Bulk Assign Dialog (users + teams) */}
       {isBulkAssignOpen && (
         <BulkAssignDialog
           isOpen={isBulkAssignOpen}
           onClose={() => setIsBulkAssignOpen(false)}
           taskCount={selectedTaskIds.size}
           users={users}
+          teams={teams}
           onConfirm={handleBulkAssignConfirm}
         />
       )}

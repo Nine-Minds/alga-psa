@@ -248,6 +248,8 @@
     "bulkDeletePartial": "Deleted {{deleted}} task(s), {{failed}} failed.",
     "bulkAssignSuccess": "{{count}} task(s) assigned successfully!",
     "bulkAssignPartial": "Assigned {{success}} task(s), {{failed}} failed.",
+    "bulkAssignTeamSuccess": "{{count}} task(s) assigned to team successfully!",
+    "bulkAssignTeamPartial": "Assigned {{success}} task(s) to team, {{failed}} failed.",
     "bulkDeleteTitle": "Delete Tasks",
     "bulkDeleteMessage": "Are you sure you want to delete {{count}} selected task(s)? This action cannot be undone.",
     "bulkTasksMovedSuccess": "{{count}} tasks moved",
@@ -534,7 +536,6 @@
       "updatedAt": "Updated At"
     },
     "exportSelected": "Export {{count}} Selected",
-    "printSelected": "Print {{count}} Selected",
     "selectedTasksNotice": "Exporting {{count}} selected task{{plural}}."
   },
   "import": {
@@ -736,7 +737,8 @@
       "message": "Assign {{count}} selected task(s) to:",
       "unassigned": "Not assigned",
       "assigning": "Assigning...",
-      "confirm": "Assign Tasks"
+      "confirm": "Assign Tasks",
+      "teamReplaceNotice": "Tasks already assigned to a different team will have that team replaced."
     }
   },
   "filters": {

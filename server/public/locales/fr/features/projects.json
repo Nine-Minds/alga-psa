@@ -248,6 +248,8 @@
     "bulkDeletePartial": "{{deleted}} tâche(s) supprimée(s), {{failed}} en échec.",
     "bulkAssignSuccess": "{{count}} tâche(s) affectée(s) avec succès !",
     "bulkAssignPartial": "{{success}} tâche(s) affectée(s), {{failed}} en échec.",
+    "bulkAssignTeamSuccess": "{{count}} tâche(s) affectée(s) à une équipe avec succès !",
+    "bulkAssignTeamPartial": "{{success}} tâche(s) affectée(s) à l’équipe, {{failed}} en échec.",
     "bulkDeleteTitle": "Supprimer les tâches",
     "bulkDeleteMessage": "Voulez-vous vraiment supprimer {{count}} tâche(s) sélectionnée(s) ? Cette action est irréversible.",
     "bulkTasksMovedSuccess": "{{count}} tâches déplacées",
@@ -534,7 +536,6 @@
       "updatedAt": "Mis à jour le"
     },
     "exportSelected": "Exporter {{count}} sélectionnée(s)",
-    "printSelected": "Imprimer {{count}} sélectionnée(s)",
     "selectedTasksNotice": "Export de {{count}} tâche{{plural}} sélectionnée(s)."
   },
   "import": {
@@ -736,7 +737,8 @@
       "message": "Affecter {{count}} tâche(s) sélectionnée(s) à :",
       "unassigned": "Non affecté",
       "assigning": "Affectation...",
-      "confirm": "Affecter les tâches"
+      "confirm": "Affecter les tâches",
+      "teamReplaceNotice": "Les tâches déjà affectées à une autre équipe seront réaffectées à l’équipe sélectionnée."
     }
   },
   "filters": {

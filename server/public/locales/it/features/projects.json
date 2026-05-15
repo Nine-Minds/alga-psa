@@ -248,6 +248,8 @@
     "bulkDeletePartial": "{{deleted}} attività eliminata/e, {{failed}} non riuscite.",
     "bulkAssignSuccess": "{{count}} attività assegnata/e con successo!",
     "bulkAssignPartial": "{{success}} attività assegnata/e, {{failed}} non riuscite.",
+    "bulkAssignTeamSuccess": "{{count}} attività assegnata/e al team con successo!",
+    "bulkAssignTeamPartial": "{{success}} attività assegnata/e al team, {{failed}} non riuscite.",
     "bulkDeleteTitle": "Elimina attività",
     "bulkDeleteMessage": "Sei sicuro di voler eliminare {{count}} attività selezionata/e? Questa azione non può essere annullata.",
     "bulkTasksMovedSuccess": "{{count}} attività spostate",
@@ -534,7 +536,6 @@
       "updatedAt": "Aggiornato il"
     },
     "exportSelected": "Esporta {{count}} selezionata/e",
-    "printSelected": "Stampa {{count}} selezionata/e",
     "selectedTasksNotice": "Esportazione di {{count}} attività selezionat{{plural}}."
   },
   "import": {
@@ -736,7 +737,8 @@
       "message": "Assegna {{count}} attività selezionata/e a:",
       "unassigned": "Non assegnato",
       "assigning": "Assegnazione...",
-      "confirm": "Assegna attività"
+      "confirm": "Assegna attività",
+      "teamReplaceNotice": "Le attività già assegnate a un altro team verranno riassegnate al team selezionato."
     }
   },
   "filters": {

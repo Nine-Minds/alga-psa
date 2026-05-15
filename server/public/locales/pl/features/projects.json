@@ -248,6 +248,8 @@
     "bulkDeletePartial": "Usunięto {{deleted}} zadania, nie powiodło się: {{failed}}.",
     "bulkAssignSuccess": "Przypisano {{count}} zadania!",
     "bulkAssignPartial": "Przypisano {{success}} zadania, nie powiodło się: {{failed}}.",
+    "bulkAssignTeamSuccess": "Przypisano {{count}} zadania do zespołu!",
+    "bulkAssignTeamPartial": "Przypisano {{success}} zadania do zespołu, nie powiodło się: {{failed}}.",
     "bulkDeleteTitle": "Usuń zadania",
     "bulkDeleteMessage": "Czy na pewno chcesz usunąć {{count}} wybrane zadania? Tej operacji nie można cofnąć.",
     "bulkTasksMovedSuccess": "Przeniesiono {{count}} zadania",
@@ -534,7 +536,6 @@
       "updatedAt": "Zaktualizowano o godz"
     },
     "exportSelected": "Eksportuj {{count}} wybrane",
-    "printSelected": "Drukuj {{count}} wybrane",
     "selectedTasksNotice": "Eksportowanie {{count}} wybranego zadania{{plural}}."
   },
   "import": {
@@ -736,7 +737,8 @@
       "message": "Przypisz {{count}} wybrane zadania do:",
       "unassigned": "Nieprzypisane",
       "assigning": "Przypisywanie...",
-      "confirm": "Przypisz zadania"
+      "confirm": "Przypisz zadania",
+      "teamReplaceNotice": "Zadania już przypisane do innego zespołu zostaną przeniesione do wybranego zespołu."
     }
   },
   "filters": {

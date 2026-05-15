@@ -265,7 +265,7 @@ export default function ProjectInfo({
 }
 
 function ProjectTasksShareMenu() {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation('features/projects');
   const { t: tCommon } = useTranslation('common');
   const { registration } = useTaskShareActions();
   const { selectedTaskIds } = useTaskSelection();
@@ -278,7 +278,7 @@ function ProjectTasksShareMenu() {
       id: 'project-tasks-share-print',
       icon: Printer,
       label: selectedTaskCount > 0
-        ? t('export.printSelected', { defaultValue: 'Print {{count}} Selected', count: selectedTaskCount })
+        ? tCommon('actions.printSelected', { defaultValue: 'Print selected ({{count}})', count: selectedTaskCount })
         : tCommon('actions.print', { defaultValue: 'Print' }),
       onSelect: () => { void registration.triggerPrint(); },
       disabled: registration.isPrinting,

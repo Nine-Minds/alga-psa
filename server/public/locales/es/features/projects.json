@@ -248,6 +248,8 @@
     "bulkDeletePartial": "{{deleted}} tarea(s) eliminada(s), {{failed}} con errores.",
     "bulkAssignSuccess": "¡{{count}} tarea(s) asignada(s) correctamente!",
     "bulkAssignPartial": "{{success}} tarea(s) asignada(s), {{failed}} con errores.",
+    "bulkAssignTeamSuccess": "¡{{count}} tarea(s) asignada(s) al equipo correctamente!",
+    "bulkAssignTeamPartial": "{{success}} tarea(s) asignada(s) al equipo, {{failed}} con errores.",
     "bulkDeleteTitle": "Eliminar tareas",
     "bulkDeleteMessage": "¿Seguro que quieres eliminar {{count}} tarea(s) seleccionada(s)? Esta acción no se puede deshacer.",
     "bulkTasksMovedSuccess": "{{count}} tareas movidas",
@@ -534,7 +536,6 @@
       "updatedAt": "Actualizado el"
     },
     "exportSelected": "Exportar {{count}} seleccionada(s)",
-    "printSelected": "Imprimir {{count}} seleccionada(s)",
     "selectedTasksNotice": "Exportando {{count}} tarea{{plural}} seleccionada(s)."
   },
   "import": {
@@ -736,7 +737,8 @@
       "message": "Asignar {{count}} tarea(s) seleccionada(s) a:",
       "unassigned": "Sin asignar",
       "assigning": "Asignando...",
-      "confirm": "Asignar tareas"
+      "confirm": "Asignar tareas",
+      "teamReplaceNotice": "Las tareas ya asignadas a otro equipo se reasignarán al equipo seleccionado."
     }
   },
   "filters": {
