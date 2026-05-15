@@ -123,19 +123,17 @@ async function addThreadingColumnsToComments(knex) {
     });
   }
 
-  await knex.schema.alterTable('comments', (table) => {
-    // CASCADE so that deleting a comment_threads row (whether via the application
-    // layer or through tickets -> comment_threads cascade) doesn't leave orphan
-    // comments referencing a missing thread.
+  // CASCADE: deleting a thread (incl. via tickets -> comment_threads) must not
+  // orphan comments; self-FK CASCADE lets bulk ticket deletes drop parent+child
+  // without stalling on the self-referential check.
+  await addForeignKeyIfMissing(knex, 'comments', 'comments_thread_fk', (table) => {
     table
       .foreign(['tenant', 'thread_id'], 'comments_thread_fk')
       .references(['tenant', 'thread_id'])
       .inTable('comment_threads')
       .onDelete('CASCADE');
-    // CASCADE on the self-FK so bulk deletes via tickets -> comments don't stall
-    // on self-referential constraint checks when parent + child are deleted
-    // together. The application layer soft-deletes any parent with children, so
-    // this edge is only traversed by cascading deletes from the ticket side.
+  });
+  await addForeignKeyIfMissing(knex, 'comments', 'comments_parent_comment_fk', (table) => {
     table
       .foreign(['tenant', 'parent_comment_id'], 'comments_parent_comment_fk')
       .references(['tenant', 'comment_id'])
@@ -157,12 +155,14 @@ async function addThreadingColumnsToProjectTaskComments(knex) {
     });
   }
 
-  await knex.schema.alterTable('project_task_comments', (table) => {
+  await addForeignKeyIfMissing(knex, 'project_task_comments', 'project_task_comments_thread_fk', (table) => {
     table
       .foreign(['tenant', 'thread_id'], 'project_task_comments_thread_fk')
       .references(['tenant', 'thread_id'])
       .inTable('comment_threads')
       .onDelete('CASCADE');
+  });
+  await addForeignKeyIfMissing(knex, 'project_task_comments', 'project_task_comments_parent_comment_fk', (table) => {
     table
       .foreign(['tenant', 'parent_comment_id'], 'project_task_comments_parent_comment_fk')
       .references(['tenant', 'task_comment_id'])
@@ -190,9 +190,8 @@ async function addCommentThreadIdToEmailSendingLogs(knex) {
     });
   }
 
-  // SET NULL preserves email-log history when the application layer deletes a
-  // thread (e.g. when its sole top-level comment is hard-deleted).
-  await knex.schema.alterTable('email_sending_logs', (table) => {
+  // SET NULL preserves email-log history when a thread is deleted.
+  await addForeignKeyIfMissing(knex, 'email_sending_logs', 'email_sending_logs_comment_thread_fk', (table) => {
     table
       .foreign(['tenant', 'comment_thread_id'], 'email_sending_logs_comment_thread_fk')
       .references(['tenant', 'thread_id'])
@@ -205,6 +204,20 @@ async function addCommentThreadIdToEmailSendingLogs(knex) {
     ON email_sending_logs (tenant, comment_thread_id, created_at DESC)
     WHERE comment_thread_id IS NOT NULL
   `);
+}
+
+// Re-runnable FK add: knex .foreign() has no IF NOT EXISTS, so a re-run
+// (after wiping knex_migrations to replay this branch) would fail on the
+// already-present constraint.
+async function addForeignKeyIfMissing(knex, table, constraintName, build) {
+  const exists = await knex.raw(
+    'SELECT 1 FROM pg_constraint WHERE conname = ? AND conrelid = ?::regclass',
+    [constraintName, table]
+  );
+  if (exists.rows?.length) {
+    return;
+  }
+  await knex.schema.alterTable(table, build);
 }
 
 /**

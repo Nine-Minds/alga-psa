@@ -1,17 +1,12 @@
-/**
- * Enforce thread_id NOT NULL on both comment tables.
- *
- * Self-healing: rolling deploys can leave a window where stale app instances
- * keep inserting comments with NULL thread_id even after the dedicated backfill
- * migration runs. This step therefore performs the same backfill one final
- * time — single-table INSERT then UPDATE-with-FROM-join, both Citus-friendly —
- * inside the same migration, immediately before applying the constraint. The
- * INSERT is idempotent (ON CONFLICT DO NOTHING) and the UPDATE only touches
- * rows whose thread row now exists, so previously-completed work is preserved.
- *
- * @param {import('knex').Knex} knex
- * @returns {Promise<void>}
- */
+// Enforce thread_id NOT NULL on both comment tables.
+//
+// finalizeBackfill repeats the backfill once more here to close the
+// rolling-deploy window where stale app instances may still insert NULL
+// thread_id after the dedicated backfill migration ran. truncateLocalDataIfNeeded
+// is a defensive net: 20260513100800 already empties the coordinator parent
+// heap (its NULL shadow rows are invisible to Citus-routed DML but break
+// ALTER ... SET NOT NULL, which scans the parent heap directly). All steps are
+// idempotent / no-op on clean and non-Citus environments.
 exports.up = async function up(knex) {
   await finalizeBackfill(knex, {
     sourceTable: 'comments',
@@ -25,6 +20,9 @@ exports.up = async function up(knex) {
     parentColumn: 'task_id',
     parentIsTask: true,
   });
+
+  await truncateLocalDataIfNeeded(knex, 'comments');
+  await truncateLocalDataIfNeeded(knex, 'project_task_comments');
 
   await knex.raw(`
     DO $$
@@ -47,6 +45,38 @@ exports.up = async function up(knex) {
     table.uuid('thread_id').notNullable().alter();
   });
 };
+
+async function truncateLocalDataIfNeeded(knex, table) {
+  const citus = await knex.raw(
+    "SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'citus') AS enabled"
+  );
+  if (!citus.rows?.[0]?.enabled) {
+    return;
+  }
+
+  const distributed = await knex.raw(
+    `SELECT EXISTS (
+       SELECT 1 FROM pg_dist_partition
+       WHERE logicalrelid = ?::regclass
+     ) AS is_distributed`,
+    [table]
+  );
+  if (!distributed.rows?.[0]?.is_distributed) {
+    return;
+  }
+
+  // 0-byte parent heap = cleanly distributed; nothing to do (also the no-op
+  // guard for re-runs).
+  const heap = await knex.raw(
+    `SELECT pg_relation_size(?::regclass) AS bytes`,
+    [table]
+  );
+  if (Number(heap.rows?.[0]?.bytes ?? 0) === 0) {
+    return;
+  }
+
+  await knex.raw(`SELECT truncate_local_data_after_distributing_table(?::regclass)`, [table]);
+}
 
 async function finalizeBackfill(knex, { sourceTable, idColumn, parentColumn, parentIsTask }) {
   const { rows } = await knex.raw(

@@ -1,19 +1,7 @@
-/**
- * Backfill one top-level thread per existing comment on both surfaces.
- *
- * Citus does not reliably execute multi-table modifications inside a single
- * WITH ... INSERT ... UPDATE statement against two distributed tables, so the
- * backfill runs as two single-table statements per source table: an INSERT
- * into comment_threads (idempotent via ON CONFLICT) followed by an UPDATE on
- * the source table to point at the newly created thread row.
- *
- * Legacy thread_id is set to the comment_id for deterministic, idempotent
- * reruns and to avoid maintaining a temporary mapping table. Future writes
- * use application-generated thread IDs.
- *
- * @param {import('knex').Knex} knex
- * @returns {Promise<void>}
- */
+// Backfill one top-level thread per existing comment. Two single-table
+// statements per surface (INSERT ... ON CONFLICT, then UPDATE ... FROM):
+// Citus does not reliably run multi-table WITH...INSERT...UPDATE across two
+// distributed tables. Legacy thread_id = comment_id for idempotent reruns.
 exports.up = async function up(knex) {
   await backfillTicketComments(knex);
   await backfillProjectTaskComments(knex);
@@ -58,13 +46,9 @@ async function backfillTicketComments(knex) {
     ON CONFLICT (tenant, thread_id) DO NOTHING
   `);
 
-  // UPDATE ... FROM with a co-located join is Citus's most reliable cross-table
-  // modification pattern. Using a correlated EXISTS subquery inside UPDATE has
-  // inconsistent support across Citus versions; UPDATE ... FROM on the
-  // distribution column (tenant) is always supported when both tables are
-  // co-located, and naturally restricts the write to comments whose thread row
-  // already exists — a concurrent insert that beats us to creating a NULL
-  // thread_id row will be picked up by the recovery / enforce migrations.
+  // UPDATE ... FROM on the co-located tenant column: Citus's reliable
+  // cross-table write (correlated EXISTS in UPDATE is inconsistently
+  // supported). Only touches rows whose thread row now exists.
   await knex.raw(`
     UPDATE comments c
     SET thread_id = ct.thread_id
