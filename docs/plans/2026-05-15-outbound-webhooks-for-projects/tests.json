@@ -44,19 +44,19 @@
   {
     "id": "T008",
     "description": "PROJECT_TASK_UPDATED is accepted by the event-bus schema; valid payload parses, missing tenantId/projectId/projectTaskId/phaseId rejected.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
     "id": "T009",
     "description": "updateTaskWithChecklist emits PROJECT_TASK_UPDATED with a correct `changes` diff when >=1 tracked field changes, and does NOT emit when nothing tracked changed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {
     "id": "T010",
     "description": "Regression: updateTaskStatus / moveTaskToPhase / reorderTask / reorderTasksInStatus / updateTaskDependency do NOT emit PROJECT_TASK_UPDATED (scope guard).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F003"]
   },
   {

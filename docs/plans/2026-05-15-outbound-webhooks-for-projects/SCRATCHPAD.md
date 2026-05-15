@@ -114,3 +114,14 @@
   `projectWebhookPayload` references. `npm run typecheck` OOMed under the
   default Node heap; `NODE_OPTIONS='--max-old-space-size=8192' npm run typecheck`
   passed and also satisfies T003.
+- 2026-05-15: Completed F003. Added canonical `PROJECT_TASK_UPDATED` schema
+  with `projectTaskId` + `phaseId`, exported `ProjectTaskUpdatedEvent`, and
+  emit it from `updateTaskWithChecklist` only when
+  `buildProjectTaskWebhookChanges(...)` returns a non-empty diff. Extracted the
+  diff builder to `packages/projects/src/lib/projectTaskWebhookChanges.ts` so
+  date normalization and no-op behavior are unit tested without a DB/auth
+  harness. Added a contract test proving the five out-of-scope task mutation
+  entry points do not emit `PROJECT_TASK_UPDATED`. Verification:
+  `cd server && npx vitest run ../packages/event-schemas/src/schemas/eventBusSchema.projectTaskUpdated.test.ts ../packages/projects/src/lib/projectTaskWebhookChanges.test.ts ../packages/projects/src/actions/projectTaskWebhookUpdated.contract.test.ts --coverage=false`
+  (9/9) and
+  `cd server && NODE_OPTIONS='--max-old-space-size=8192' npm run typecheck`.

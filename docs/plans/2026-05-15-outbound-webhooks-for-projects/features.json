@@ -14,7 +14,7 @@
   {
     "id": "F003",
     "description": "New internal event PROJECT_TASK_UPDATED. In packages/event-schemas/src/schemas/eventBusSchema.ts: add 'PROJECT_TASK_UPDATED' to the event-type enum, define projectTaskUpdatedEventPayloadSchema { tenantId, projectId, projectTaskId, phaseId, userId?, occurredAt?, changes?: Record<string,{previous,new}> }, register it in the EventSchemas map and export the inferred type. In packages/projects/src/actions/projectTaskActions.ts: emit it from `updateTaskWithChecklist` ONLY, reusing the existing field-change diff, when >=1 tracked field changed. The other five task-mutation entry points intentionally do not emit it.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5", "7", "8"]
   },
   {
