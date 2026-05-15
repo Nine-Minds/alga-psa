@@ -257,9 +257,9 @@ describe('HybridThreadNode', () => {
     expect(bars[1]).toHaveClass('comment-thread-bar-subthread');
 
     const css = readFileSync(resolve(process.cwd(), '../packages/ui/src/components/CommentThread.css'), 'utf8');
-    expect(css).toContain('background: #f9fafb;');
+    expect(css).toContain('background: rgb(var(--color-border-50));');
     expect(css).toContain('.comment-thread-bar-subthread');
     expect(css).toContain('border-style: dashed;');
-    expect(css).toContain('background: #ffffff;');
+    expect(css).toContain('background: rgb(var(--color-background));');
   });
 });
