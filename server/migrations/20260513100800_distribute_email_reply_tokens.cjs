@@ -141,11 +141,11 @@ async function purgeOrphanRows(knex, table) {
   const fkRes = await knex.raw(
     `SELECT c.conname,
             c.confrelid::regclass::text AS parent,
-            (SELECT array_agg(a.attname ORDER BY k.ord)
+            (SELECT string_agg(a.attname, ',' ORDER BY k.ord)
                FROM unnest(c.conkey) WITH ORDINALITY k(attnum, ord)
                JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum
             ) AS local_cols,
-            (SELECT array_agg(a.attname ORDER BY k.ord)
+            (SELECT string_agg(a.attname, ',' ORDER BY k.ord)
                FROM unnest(c.confkey) WITH ORDINALITY k(attnum, ord)
                JOIN pg_attribute a ON a.attrelid = c.confrelid AND a.attnum = k.attnum
             ) AS parent_cols
@@ -153,7 +153,13 @@ async function purgeOrphanRows(knex, table) {
       WHERE c.conrelid = ?::regclass AND c.contype = 'f'`,
     [table]
   );
-  const fks = fkRes.rows ?? [];
+  // string_agg keeps these as scalar text regardless of driver array parsing.
+  const fks = (fkRes.rows ?? []).map((r) => ({
+    conname: r.conname,
+    parent: r.parent,
+    local_cols: r.local_cols.split(','),
+    parent_cols: r.parent_cols.split(','),
+  }));
   if (fks.length === 0) {
     return;
   }
