@@ -176,13 +176,15 @@ describe('webhookProjectPayload', () => {
   it('adds previous status metadata for status changes and changes for updates', async () => {
     const { knex } = createFakeKnex({ statusRows: { status_name: 'In Progress' } });
 
+    // PROJECT_STATUS_CHANGED carries `previousStatus` as a project status_id
+    // (the `projects.status` column); the name is resolved from that id.
     const statusPayload = await buildProjectWebhookPayload(
       {
         ...PROJECT_EVENT,
         eventType: 'PROJECT_STATUS_CHANGED',
         payload: {
           ...PROJECT_EVENT.payload,
-          previousStatusId: 'status-progress',
+          previousStatus: 'status-progress',
         },
       },
       knex,
@@ -317,6 +319,58 @@ describe('webhookProjectPayload', () => {
         Open: 1,
         Done: 1,
       },
+    });
+  });
+
+  it('uses the resolved status name for task status changes without a previous id', async () => {
+    tagMappingState.getByEntityMock.mockResolvedValue([]);
+    const { knex } = createFakeKnex();
+
+    // PROJECT_TASK_STATUS_CHANGED carries `previousStatus` as an already
+    // resolved status name; no previous mapping id is in the event.
+    const payload = await buildProjectTaskWebhookPayload(
+      {
+        ...TASK_EVENT,
+        eventType: 'PROJECT_TASK_STATUS_CHANGED',
+        payload: {
+          ...TASK_EVENT.payload,
+          previousStatus: 'In Progress',
+        },
+      },
+      knex,
+    );
+
+    expect(payload.previous_status_name).toBe('In Progress');
+    expect(payload.previous_status_id).toBeNull();
+  });
+
+  it('reconciles task tags with changes.tags.new on PROJECT_TASK_UPDATED', async () => {
+    // Cached/DB snapshot is stale relative to the tag mutation that fired the
+    // event; the delivered payload must not contradict its own changes.tags.
+    tagMappingState.getByEntityMock.mockResolvedValue([{ tag_text: 'old' }]);
+    const { knex } = createFakeKnex();
+
+    const payload = await buildProjectTaskWebhookPayload(
+      {
+        ...TASK_EVENT,
+        eventType: 'PROJECT_TASK_UPDATED',
+        payload: {
+          ...TASK_EVENT.payload,
+          changes: {
+            tags: {
+              previous: ['old'],
+              new: ['old', 'new'],
+            },
+          },
+        },
+      },
+      knex,
+    );
+
+    expect(payload.tags).toEqual(['old', 'new']);
+    expect(payload.changes?.tags).toEqual({
+      previous: ['old'],
+      new: ['old', 'new'],
     });
   });
 });

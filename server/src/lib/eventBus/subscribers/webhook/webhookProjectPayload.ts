@@ -133,10 +133,14 @@ export async function buildProjectWebhookPayload(
   };
 
   if (internalEvent.eventType === 'PROJECT_STATUS_CHANGED') {
-    payload.previous_status_id = resolvePreviousStatusId(internalEvent) ?? null;
-    payload.previous_status_name = payload.previous_status_id
-      ? await fetchProjectStatusName(knex, tenantId, payload.previous_status_id)
-      : resolvePreviousStatusName(internalEvent);
+    // PROJECT_STATUS_CHANGED carries `previousStatus` as a project status id
+    // (the `projects.status` column is a status_id), so resolve the name from
+    // that id rather than treating the raw value as a display name.
+    const previousStatusId = resolvePreviousProjectStatusId(internalEvent);
+    payload.previous_status_id = previousStatusId;
+    payload.previous_status_name = previousStatusId
+      ? await fetchProjectStatusName(knex, tenantId, previousStatusId)
+      : null;
   }
 
   const changes = normalizeChanges(internalEvent.payload.changes);
@@ -163,15 +167,26 @@ export async function buildProjectTaskWebhookPayload(
   };
 
   if (internalEvent.eventType === 'PROJECT_TASK_STATUS_CHANGED') {
-    payload.previous_status_id = resolvePreviousStatusId(internalEvent) ?? null;
-    payload.previous_status_name = payload.previous_status_id
-      ? await fetchProjectStatusName(knex, tenantId, payload.previous_status_id)
-      : resolvePreviousStatusName(internalEvent);
+    // PROJECT_TASK_STATUS_CHANGED carries `previousStatus` as an already
+    // resolved status name (project_status_mappings -> custom_name/status
+    // name); the previous mapping id is not in the event, so `previous_status_id`
+    // is only populated when an explicit id is supplied.
+    payload.previous_status_id = resolveExplicitPreviousStatusId(internalEvent);
+    payload.previous_status_name = resolvePreviousStatusName(internalEvent);
   }
 
   const changes = normalizeChanges(internalEvent.payload.changes);
   if (changes && internalEvent.eventType === 'PROJECT_TASK_UPDATED') {
     payload.changes = changes;
+
+    // F008 tag mutations emit PROJECT_TASK_UPDATED with changes.tags carrying
+    // the authoritative post-change tag set. The cached `tags` snapshot can be
+    // up to PROJECT_WEBHOOK_CACHE_TTL_MS stale, so reconcile the body with the
+    // diff to avoid a payload that contradicts its own changes.tags.new.
+    const newTags = changes.tags?.new;
+    if (Array.isArray(newTags) && newTags.every((tag) => typeof tag === 'string')) {
+      payload.tags = newTags as string[];
+    }
   }
 
   return payload;
@@ -581,7 +596,13 @@ function resolveTaskId(internalEvent: ProjectWebhookSourceEvent): string | undef
   return typeof taskId === 'string' && taskId.length > 0 ? taskId : undefined;
 }
 
-function resolvePreviousStatusId(internalEvent: ProjectWebhookSourceEvent): string | undefined {
+/**
+ * Previous status id from explicit/legacy carriers only: an explicit
+ * `previousStatusId`, or a `changes` diff entry. Deliberately does NOT read
+ * `previousStatus` — for PROJECT_TASK_STATUS_CHANGED that field is a resolved
+ * status *name*, not an id.
+ */
+function resolveExplicitPreviousStatusId(internalEvent: ProjectWebhookSourceEvent): string | null {
   const payload = internalEvent.payload as {
     previousStatusId?: unknown;
     changes?: {
@@ -608,9 +629,28 @@ function resolvePreviousStatusId(internalEvent: ProjectWebhookSourceEvent): stri
 
   return typeof previousFromChanges === 'string' && previousFromChanges.length > 0
     ? previousFromChanges
-    : undefined;
+    : null;
 }
 
+/**
+ * Previous status id for project-level PROJECT_STATUS_CHANGED. The domain
+ * event carries `previousStatus` as a project status_id (the `projects.status`
+ * column), so accept that in addition to explicit/legacy id carriers.
+ */
+function resolvePreviousProjectStatusId(internalEvent: ProjectWebhookSourceEvent): string | null {
+  const explicit = resolveExplicitPreviousStatusId(internalEvent);
+  if (explicit) {
+    return explicit;
+  }
+
+  const previousStatus = internalEvent.payload.previousStatus;
+  return typeof previousStatus === 'string' && previousStatus.length > 0 ? previousStatus : null;
+}
+
+/**
+ * Previous status display name. Used for PROJECT_TASK_STATUS_CHANGED, whose
+ * `previousStatus` field is an already resolved status name.
+ */
 function resolvePreviousStatusName(internalEvent: ProjectWebhookSourceEvent): string | null {
   const previousStatus = internalEvent.payload.previousStatus;
   return typeof previousStatus === 'string' && previousStatus.length > 0 ? previousStatus : null;

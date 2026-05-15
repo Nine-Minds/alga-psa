@@ -102,10 +102,12 @@ async function publishEntityTagUpdateEvent(params: {
       payload: {
         tenantId: params.tenant,
         projectId: context.projectId,
-        projectTaskId: params.taggedId,
+        // Canonical PROJECT_TASK_UPDATED shape (shared with search index):
+        // taskId/timestamp, not projectTaskId/occurredAt.
+        taskId: params.taggedId,
         phaseId: context.phaseId,
         userId: params.userId,
-        occurredAt: params.occurredAt,
+        timestamp: params.occurredAt,
         changes,
       },
     });

@@ -187,7 +187,7 @@ describe('projectWebhookSubscriber', () => {
       payload: {
         tenantId: TENANT,
         projectId: 'project-1',
-        projectTaskId: 'task-1',
+        taskId: 'task-1',
         changes: {
           tags: {
             previous: [],

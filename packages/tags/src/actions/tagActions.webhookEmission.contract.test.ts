@@ -42,8 +42,9 @@ describe('tag webhook entity-update emission contract', () => {
     expect(publisher).toContain("params.taggedType === 'project_task'");
     expect(publisher).toContain('resolveProjectTaskTagContext(params.trx, params.tenant, params.taggedId)');
     expect(publisher).toContain("eventType: 'PROJECT_TASK_UPDATED'");
-    expect(publisher).toContain('projectTaskId: params.taggedId');
+    expect(publisher).toContain('taskId: params.taggedId');
     expect(publisher).toContain('phaseId: context.phaseId');
+    expect(publisher).toContain('timestamp: params.occurredAt');
     expect(publisher).toContain('changes');
   });
 

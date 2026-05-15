@@ -173,7 +173,7 @@ describe('project webhook delivery integration fixtures', () => {
   it('delivers project.task.updated tag-only payloads with task_id retained', async () => {
     projectPayloadState.buildProjectTaskWebhookPayloadMock.mockImplementation(async (event: any) => ({
       project_id: event.payload.projectId,
-      task_id: event.payload.projectTaskId,
+      task_id: event.payload.taskId,
       task_name: 'Draft plan',
       changes: event.payload.changes,
     }));
@@ -192,7 +192,7 @@ describe('project webhook delivery integration fixtures', () => {
       payload: {
         tenantId: TENANT,
         projectId: 'project-1',
-        projectTaskId: 'task-1',
+        taskId: 'task-1',
         changes: {
           tags: {
             previous: [],

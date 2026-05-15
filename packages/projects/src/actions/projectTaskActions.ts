@@ -1799,21 +1799,28 @@ export const moveTaskToPhase = withAuth(async (
                 }
             }
 
-            await publishEvent({
-                eventType: 'PROJECT_TASK_UPDATED',
-                payload: {
-                    tenantId: tenant,
-                    projectId: newPhase.project_id,
-                    phaseId: newPhaseId,
-                    taskId,
-                    userId: user.user_id,
-                    timestamp: new Date().toISOString(),
-                    changes: {
-                        phase_id: newPhaseId,
-                        project_status_mapping_id: finalStatusMappingId,
-                    },
-                }
-            });
+            // A phase move is a task update: emit PROJECT_TASK_UPDATED with a
+            // rich {previous,new} diff so the webhook delivers a meaningful
+            // changes body (search treats `changes` opaquely either way).
+            const moveChanges = buildProjectTaskWebhookChanges(
+                existingTask,
+                updatedTask,
+                ['phase_id', 'project_status_mapping_id']
+            );
+            if (Object.keys(moveChanges).length > 0) {
+                await publishEvent({
+                    eventType: 'PROJECT_TASK_UPDATED',
+                    payload: {
+                        tenantId: tenant,
+                        projectId: newPhase.project_id,
+                        phaseId: newPhaseId,
+                        taskId,
+                        userId: user.user_id,
+                        timestamp: new Date().toISOString(),
+                        changes: moveChanges,
+                    }
+                });
+            }
 
             return updatedTask;
         });
