@@ -20,7 +20,7 @@
   {
     "id": "F008",
     "description": "Tag-change webhook emission for project tasks + tickets (parity). In packages/tags/src/actions/tagActions.ts, on INTERACTIVE single-entity tag mutations ONLY (createTag :101, deleteTag :335, and the post-creation TagManager onChange path) and NOT the bulk createTagsForEntity :534 / createTagsForEntityWithTransaction :571 used at entity-creation time: when the entity's tag set actually changes, if tagged_type==='project_task' resolve {projectId, phaseId} from the task row and publishEvent PROJECT_TASK_UPDATED with changes:{tags:{previous,new}}; if tagged_type==='ticket' publishEvent TICKET_UPDATED with changes:{tags:{previous,new}}. No new public event types — these surface as the EXISTING project.task.updated / ticket.updated deliveries with a changes.tags diff (ticket webhook builder already attaches changes on TICKET_UPDATED at webhookTicketPayload.ts:143; F005 does the same for project tasks). CRITICAL: must not double-fire on entity creation (createTagsForEntity at TaskForm.tsx:910 runs immediately after PROJECT_TASK_CREATED). No-op tag writes emit nothing. Project side depends on F003; ticket side uses existing TICKET_UPDATED.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["3", "5", "6", "7", "10"]
   },
   {

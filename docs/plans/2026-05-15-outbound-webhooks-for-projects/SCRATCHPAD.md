@@ -125,3 +125,16 @@
   `cd server && npx vitest run ../packages/event-schemas/src/schemas/eventBusSchema.projectTaskUpdated.test.ts ../packages/projects/src/lib/projectTaskWebhookChanges.test.ts ../packages/projects/src/actions/projectTaskWebhookUpdated.contract.test.ts --coverage=false`
   (9/9) and
   `cd server && NODE_OPTIONS='--max-old-space-size=8192' npm run typecheck`.
+- 2026-05-15: Completed F008. Interactive `createTag` / `deleteTag` now
+  snapshots unique tag text sets before and after mutation and publishes
+  entity update events only when the set changes. `project_task` resolves
+  `{ projectId, phaseId }` and emits `PROJECT_TASK_UPDATED`; `ticket` emits
+  `TICKET_UPDATED`; both carry `changes.tags`. Added
+  `suppressEntityUpdateEvent` for `createTag` and use it from
+  `createTagsForEntity` so initial tag application does not double-fire;
+  `createTagsForEntityWithTransaction` remains bulk-only and never calls the
+  entity update publisher. Added a ticket payload regression proving
+  `TICKET_UPDATED` tag diffs reach `payload.changes`. Verification:
+  `cd server && npx vitest run ../packages/tags/src/actions/tagActions.webhookEmission.contract.test.ts src/lib/eventBus/subscribers/webhook/__tests__/webhookTicketPayload.test.ts --coverage=false`
+  (8/8) and
+  `cd server && NODE_OPTIONS='--max-old-space-size=8192' npm run typecheck`.

@@ -152,25 +152,25 @@
   {
     "id": "T026",
     "description": "createTag/deleteTag on a project_task emits PROJECT_TASK_UPDATED with changes:{tags:{previous,new}} and correctly resolves projectId/phaseId from the task row.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
     "id": "T027",
     "description": "Parity regression: createTag/deleteTag on a ticket emits TICKET_UPDATED with changes:{tags:{previous,new}} and the existing ticket webhook delivers it as ticket.updated with a changes.tags diff.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
     "id": "T028",
     "description": "No double-fire: creating a task/ticket with initial tags via bulk createTagsForEntity does NOT emit a spurious PROJECT_TASK_UPDATED/TICKET_UPDATED alongside the *_CREATED event.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
     "id": "T029",
     "description": "No-op tag write (re-applying the same tag set, or a tag mutation that changes nothing) emits no webhook event.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F008"]
   },
   {
