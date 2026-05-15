@@ -18,6 +18,8 @@ Rolling notes for adding first-party workflow integration modules and the first 
 
 ## Discoveries / Constraints
 
+- (2026-05-10) Review follow-up fixed package typecheck failures caused by Vitest `vi.mock` third-argument usage for `@alga-psa/db/workDate`; the package export exists, so the virtual flag was unnecessary.
+- (2026-05-10) Review follow-up fixed NinjaOne handler guards: local device query no longer references nonexistent `assets.hostname`, alert DB reads/updates are scoped by `integration_id`, timestamp outputs are normalized to ISO strings, and device IDs are coerced/validated as positive integers before side-effect calls.
 - (2026-05-10) Existing action catalog builder lives at `shared/workflow/runtime/designer/actionCatalog.ts` and already groups unknown action prefixes into `tileKind: 'app'` records.
 - (2026-05-10) Existing designer catalog endpoint is backed by `listWorkflowDesignerActionCatalogAction` in `ee/packages/workflows/src/actions/workflow-runtime-v2-actions.ts`.
 - (2026-05-10) Existing app filtering only checks enabled extension installs via `tenant_extension_install` and `extension_registry`; it does not handle first-party integration availability.

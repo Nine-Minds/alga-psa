@@ -23,15 +23,16 @@ const createKnexForFind = () => {
       asset_id: '550e8400-e29b-41d4-a716-446655440000',
       rmm_device_id: '123',
       rmm_organization_id: 'org-1',
-      hostname: 'srv-1',
       name: 'Server 1',
-      last_seen_at: '2026-05-10T12:00:00.000Z',
+      agent_status: 'online',
+      last_seen_at: new Date('2026-05-10T12:00:00.000Z'),
       secret_ref: 'should-not-leak'
     }
   ];
 
   const assetsBuilder: any = {
     where: vi.fn().mockReturnThis(),
+    whereNotNull: vi.fn().mockReturnThis(),
     modify: vi.fn().mockImplementation((cb: (qb: any) => void) => {
       cb({
         andWhere: vi.fn(),
@@ -101,7 +102,7 @@ describe('NinjaOne workflow action handlers', () => {
         external_device_id: '123',
         asset_id: '550e8400-e29b-41d4-a716-446655440000',
         organization_id: 'org-1',
-        hostname: 'srv-1',
+        hostname: null,
         display_name: 'Server 1',
         dns_name: null,
         agent_online: true,
@@ -126,7 +127,7 @@ describe('NinjaOne workflow action handlers', () => {
       throw new Error(`Unexpected table ${table}`);
     });
 
-    const result = await action.handler({ device_id: '123' }, { ...baseCtx, tenantId: 'tenant-1', knex } as any);
+    const result = await action.handler({ device_id: 123 }, { ...baseCtx, tenantId: 'tenant-1', knex } as any);
     expect(syncDevice).toHaveBeenCalledWith({ tenantId: 'tenant-1', integrationId: 'int-1', deviceId: 123 });
     expect(result).toEqual({
       synced: true,
@@ -167,8 +168,9 @@ describe('NinjaOne workflow action handlers', () => {
       message: 'CPU critical',
       external_device_id: 'dev-1',
       asset_id: '550e8400-e29b-41d4-a716-446655440000',
-      triggered_at: '2026-05-10T12:00:00.000Z',
-      updated_at: '2026-05-10T12:10:00.000Z'
+      integration_id: 'int-1',
+      triggered_at: new Date('2026-05-10T12:00:00.000Z'),
+      updated_at: new Date('2026-05-10T12:10:00.000Z')
     }];
     const alertsBuilder: any = {
       where: vi.fn().mockReturnThis(),
@@ -182,6 +184,7 @@ describe('NinjaOne workflow action handlers', () => {
     });
 
     const result = await action.handler({ limit: 10, live: false }, { ...baseCtx, tenantId: 'tenant-1', knex } as any);
+    expect(alertsBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-1', integration_id: 'int-1', status: 'active' });
     expect(result.count).toBe(1);
     expect(result.alerts[0]).toMatchObject({
       alert_id: 'a1',
@@ -205,6 +208,7 @@ describe('NinjaOne workflow action handlers', () => {
       throw new Error(`Unexpected table ${table}`);
     });
     const found = await action.handler({ external_alert_id: 'ext-a1' }, { ...baseCtx, tenantId: 'tenant-1', knex: foundKnex } as any);
+    expect(foundBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-1', integration_id: 'int-1', external_alert_id: 'ext-a1' });
     expect(found.alert.external_alert_id).toBe('ext-a1');
 
     const missingBuilder: any = { where: vi.fn().mockReturnThis(), first: vi.fn().mockResolvedValue(undefined) };
@@ -233,6 +237,7 @@ describe('NinjaOne workflow action handlers', () => {
 
     const result = await action.handler({ external_alert_id: 'ext-a1' }, { ...baseCtx, tenantId: 'tenant-1', knex } as any);
     expect(resetAlert).toHaveBeenCalledWith('ext-a1');
+    expect(alertsBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-1', integration_id: 'int-1', external_alert_id: 'ext-a1' });
     expect(update).toHaveBeenCalled();
     expect(result).toEqual({ acknowledged: true, alert_id: 'ext-a1' });
   });

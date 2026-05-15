@@ -77,7 +77,7 @@ vi.mock('@alga-psa/analytics', () => ({
 vi.mock('@alga-psa/db/workDate', () => ({
   computeWorkDateFields: vi.fn(() => ({ localDate: '2026-01-01' })),
   resolveUserTimeZone: vi.fn(() => 'America/New_York')
-}), { virtual: true });
+}));
 
 vi.mock('@alga-psa/workflows/runtime', () => {
   return {

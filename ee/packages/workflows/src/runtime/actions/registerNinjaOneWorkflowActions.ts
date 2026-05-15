@@ -35,6 +35,16 @@ const alertSchema = z.object({
   acknowledged: z.boolean()
 });
 
+const ninjaOneDeviceIdSchema = z.coerce.number().int().positive();
+
+const toNullableIsoString = (value: unknown): string | null => {
+  if (value === null || value === undefined) return null;
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' && Number.isFinite(value)) return new Date(value).toISOString();
+  return String(value);
+};
+
 async function requireNinjaOneIntegration(ctx: ActionContext): Promise<{
   tenantId: string;
   knex: any;
@@ -68,19 +78,28 @@ async function requireNinjaOneIntegration(ctx: ActionContext): Promise<{
   };
 }
 
-const normalizeNinjaDevice = (device: any, source: 'local' | 'ninjaone') => ({
-  external_device_id: String(device.id ?? device.rmm_device_id ?? ''),
-  asset_id: device.asset_id ?? null,
-  organization_id: device.organizationId ? String(device.organizationId) : (device.rmm_organization_id ?? null),
-  hostname: device.systemName ?? device.hostname ?? null,
-  display_name: device.displayName ?? device.name ?? null,
-  dns_name: device.dnsName ?? null,
-  agent_online: !(device.offline ?? false),
-  last_seen_at: device.lastContact ?? device.last_seen_at ?? null,
-  os_name: device.os?.name ?? null,
-  node_class: device.nodeClass ?? null,
-  source
-});
+const normalizeNinjaDevice = (device: any, source: 'local' | 'ninjaone') => {
+  const agentStatus = typeof device.agent_status === 'string' ? device.agent_status.toLowerCase() : null;
+  const agentOnline = typeof device.offline === 'boolean'
+    ? !device.offline
+    : agentStatus
+      ? agentStatus === 'online'
+      : true;
+
+  return {
+    external_device_id: String(device.id ?? device.rmm_device_id ?? ''),
+    asset_id: device.asset_id ?? null,
+    organization_id: device.organizationId ? String(device.organizationId) : (device.rmm_organization_id ?? null),
+    hostname: device.systemName ?? null,
+    display_name: device.displayName ?? device.name ?? null,
+    dns_name: device.dnsName ?? null,
+    agent_online: agentOnline,
+    last_seen_at: toNullableIsoString(device.lastContact ?? device.last_seen_at),
+    os_name: device.os?.name ?? null,
+    node_class: device.nodeClass ?? null,
+    source
+  };
+};
 
 const normalizeNinjaAlert = (alert: any) => ({
   alert_id: String(alert.alert_id ?? alert.uid ?? ''),
@@ -93,8 +112,8 @@ const normalizeNinjaAlert = (alert: any) => ({
   device_id: alert.external_device_id ? String(alert.external_device_id) : (alert.deviceId ? String(alert.deviceId) : null),
   asset_id: alert.asset_id ?? null,
   source_type: alert.source_type ?? alert.sourceType ?? null,
-  created_at: alert.triggered_at ?? alert.createTime ?? null,
-  updated_at: alert.updated_at ?? alert.updateTime ?? null,
+  created_at: toNullableIsoString(alert.triggered_at ?? alert.createTime),
+  updated_at: toNullableIsoString(alert.updated_at ?? alert.updateTime),
   acknowledged: String(alert.status ?? '').toLowerCase() === 'acknowledged'
 });
 
@@ -110,9 +129,9 @@ export function registerNinjaOneWorkflowActionsV2(): void {
     sideEffectful: false,
     idempotency: { mode: 'engineProvided' },
     inputSchema: z.object({
-      device_id: z.union([z.string(), z.number()]).optional(),
+      device_id: ninjaOneDeviceIdSchema.optional(),
       asset_id: z.string().uuid().optional(),
-      query: z.string().optional(),
+      query: z.string().trim().min(1).optional(),
       live: z.boolean().default(false),
       limit: z.number().int().min(1).max(200).default(50)
     }),
@@ -130,12 +149,16 @@ export function registerNinjaOneWorkflowActionsV2(): void {
       const { tenantId, knex, integrationId } = await requireNinjaOneIntegration(ctx);
       let rows = await knex('assets')
         .where({ tenant: tenantId, rmm_provider: 'ninjaone' })
+        .whereNotNull('rmm_device_id')
         .modify((qb: any) => {
           if (input.asset_id) qb.andWhere('asset_id', input.asset_id);
           if (input.device_id !== undefined) qb.andWhere('rmm_device_id', String(input.device_id));
           if (input.query) {
             qb.andWhere((inner: any) => {
-              inner.whereILike('name', `%${input.query}%`).orWhereILike('hostname', `%${input.query}%`);
+              inner
+                .whereILike('name', `%${input.query}%`)
+                .orWhereILike('asset_tag', `%${input.query}%`)
+                .orWhereILike('serial_number', `%${input.query}%`);
             });
           }
         })
@@ -147,7 +170,12 @@ export function registerNinjaOneWorkflowActionsV2(): void {
       }
 
       const client = await createNinjaOneClient(tenantId, undefined, { integrationId, provider: 'ninjaone' });
-      const liveDevices = (await client.getDevices({ pageSize: input.limit })).map((device) => normalizeNinjaDevice(device, 'ninjaone'));
+      const liveDeviceRows = input.device_id !== undefined
+        ? [await client.getDevice(input.device_id)]
+        : input.asset_id && localDevices[0]?.external_device_id
+          ? [await client.getDevice(Number(localDevices[0].external_device_id))]
+          : await client.getDevices({ pageSize: input.limit, ...(input.query ? { df: input.query } : {}) });
+      const liveDevices = liveDeviceRows.map((device) => normalizeNinjaDevice(device, 'ninjaone'));
       return { devices: liveDevices, count: liveDevices.length };
     }
   });
@@ -158,7 +186,7 @@ export function registerNinjaOneWorkflowActionsV2(): void {
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
     inputSchema: z.object({
-      device_id: z.union([z.string(), z.number()])
+      device_id: ninjaOneDeviceIdSchema
     }),
     outputSchema: z.object({
       synced: z.boolean(),
@@ -177,7 +205,7 @@ export function registerNinjaOneWorkflowActionsV2(): void {
       const asset = await strategy.syncDevice({
         tenantId,
         integrationId,
-        deviceId: Number(input.device_id),
+        deviceId: input.device_id,
       });
       return {
         synced: true,
@@ -193,7 +221,7 @@ export function registerNinjaOneWorkflowActionsV2(): void {
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
     inputSchema: z.object({
-      device_id: z.union([z.string(), z.number()])
+      device_id: ninjaOneDeviceIdSchema
     }),
     outputSchema: z.object({
       reboot_requested: z.boolean(),
@@ -208,7 +236,7 @@ export function registerNinjaOneWorkflowActionsV2(): void {
     handler: async (input, ctx) => {
       const { tenantId, integrationId } = await requireNinjaOneIntegration(ctx);
       const client = await createNinjaOneClient(tenantId, undefined, { integrationId, provider: 'ninjaone' });
-      await client.rebootDevice(Number(input.device_id));
+      await client.rebootDevice(input.device_id);
       return { reboot_requested: true, external_device_id: String(input.device_id) };
     }
   });
@@ -236,7 +264,7 @@ export function registerNinjaOneWorkflowActionsV2(): void {
       const { tenantId, knex, integrationId } = await requireNinjaOneIntegration(ctx);
       if (!input.live) {
         const rows = await knex('rmm_alerts')
-          .where({ tenant: tenantId, status: 'active' })
+          .where({ tenant: tenantId, integration_id: integrationId, status: 'active' })
           .orderBy('triggered_at', 'desc')
           .limit(input.limit);
         const alerts = rows.map((row: any) => normalizeNinjaAlert(row));
@@ -270,10 +298,10 @@ export function registerNinjaOneWorkflowActionsV2(): void {
       icon: 'ninjaone'
     },
     handler: async (input, ctx) => {
-      const { tenantId, knex } = await requireNinjaOneIntegration(ctx);
+      const { tenantId, knex, integrationId } = await requireNinjaOneIntegration(ctx);
       const externalId = input.external_alert_id ?? input.alert_uid;
       const row = await knex('rmm_alerts')
-        .where({ tenant: tenantId, external_alert_id: externalId })
+        .where({ tenant: tenantId, integration_id: integrationId, external_alert_id: externalId })
         .first();
       if (!row) {
         throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Alert not found' });
@@ -309,7 +337,7 @@ export function registerNinjaOneWorkflowActionsV2(): void {
       const client = await createNinjaOneClient(tenantId, undefined, { integrationId, provider: 'ninjaone' });
       await client.resetAlert(alertId);
       await knex('rmm_alerts')
-        .where({ tenant: tenantId, external_alert_id: alertId })
+        .where({ tenant: tenantId, integration_id: integrationId, external_alert_id: alertId })
         .update({ status: 'acknowledged', updated_at: new Date().toISOString() });
       return {
         acknowledged: true,

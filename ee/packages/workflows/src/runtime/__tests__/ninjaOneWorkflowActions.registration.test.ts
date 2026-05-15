@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('@alga-psa/db/workDate', () => ({
   computeWorkDateFields: vi.fn(() => ({ localDate: '2026-01-01' })),
   resolveUserTimeZone: vi.fn(() => 'America/New_York')
-}), { virtual: true });
+}));
 
 const NINJAONE_ACTION_IDS = [
   'ninjaone.devices.find',
