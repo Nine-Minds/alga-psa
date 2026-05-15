@@ -122,19 +122,19 @@
   {
     "id": "T021",
     "description": "phases/task_counts only populated when in the subscriber allowlist or full payload; absent otherwise; fetched once per event regardless of subscriber count.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005", "F006"]
   },
   {
     "id": "T022",
     "description": "handleProjectEvent: project-level event enqueues delivery for matching subscribers, entity-id filter on projectId; tenant isolation enforced (no cross-tenant delivery).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {
     "id": "T023",
     "description": "handleProjectEvent: task-level event filters on projectTaskId and projected payload always retains task_id via extraAlwaysIncluded; subscriber registered in subscribers/index.ts so events dispatch.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006"]
   },
   {

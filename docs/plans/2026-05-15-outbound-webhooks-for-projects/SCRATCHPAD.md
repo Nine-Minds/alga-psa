@@ -161,3 +161,15 @@
   `cd server && npx vitest run src/lib/eventBus/subscribers/webhook/__tests__/webhookProjectEventMap.test.ts src/lib/eventBus/subscribers/webhook/__tests__/webhookProjectPayload.test.ts --coverage=false`
   (7/7) and
   `cd server && NODE_OPTIONS='--max-old-space-size=8192' npm run typecheck`.
+- 2026-05-15: Completed F006. Added live
+  `projectWebhookSubscriber.ts`, registered it from subscriber index, and
+  widened `WebhookDeliveryQueue` typing from ticket-only to generic webhook
+  event/payload because the queue was already runtime entity-agnostic.
+  Project events filter on `projectId`; task events filter on
+  `projectTaskId`/`taskId` and project allowlist projection passes
+  `extraAlwaysIncluded:['task_id']`. Project `phases` and `task_counts`
+  opt-ins are fetched lazily once per event and reused for all matching
+  subscribers. Verification:
+  `cd server && npx vitest run src/lib/eventBus/subscribers/__tests__/projectWebhookSubscriber.test.ts src/lib/eventBus/subscribers/__tests__/subscriberIndex.projectWebhook.test.ts src/test/integration/webhookDelivery.entityIdFilter.test.ts src/test/integration/webhookDelivery.tenantIsolation.test.ts --coverage=false`
+  (6/6) and
+  `cd server && NODE_OPTIONS='--max-old-space-size=8192' npm run typecheck`.

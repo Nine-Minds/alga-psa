@@ -8,12 +8,10 @@ import { z } from 'zod';
 
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { getUserRoles } from '@alga-psa/auth/actions';
-import type { TicketWebhookPayload } from '@/lib/eventBus/subscribers/webhook/webhookTicketPayload';
-import type { TicketWebhookPublicEvent } from '@/lib/eventBus/subscribers/webhook/webhookEventMap';
 import { buildSignedWebhookRequestHeaders, buildWebhookEnvelope } from '@/lib/webhooks/processWebhookDeliveryJob';
 import { performWebhookDeliveryRequest } from '@/lib/webhooks/delivery';
 import { signRequest } from '@/lib/webhooks/sign';
-import { WebhookDeliveryQueue } from '@/lib/webhooks/WebhookDeliveryQueue';
+import { WebhookDeliveryQueue, type WebhookDeliveryPayload } from '@/lib/webhooks/WebhookDeliveryQueue';
 import { webhookModel, type WebhookDeliveryRecord, type WebhookRecord } from '@/lib/webhooks/webhookModel';
 import { payloadFieldsByEntitySchema } from '@/lib/webhooks/payloadFields';
 
@@ -436,10 +434,10 @@ export const retryWebhookDelivery = withAuth(async (user, _ctx, webhookId: strin
   await queue.enqueue({
     webhookId,
     eventId: parsedEnvelope.data.event_id,
-    eventType: parsedEnvelope.data.event_type as TicketWebhookPublicEvent,
+    eventType: parsedEnvelope.data.event_type,
     occurredAt: parsedEnvelope.data.occurred_at,
     tenantId: user.tenant,
-    payload: parsedEnvelope.data.data as TicketWebhookPayload,
+    payload: parsedEnvelope.data.data as WebhookDeliveryPayload,
     attempt: 1,
     deliverAt: Date.now(),
   });

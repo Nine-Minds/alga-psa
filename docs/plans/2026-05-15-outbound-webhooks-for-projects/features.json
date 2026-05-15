@@ -38,7 +38,7 @@
   {
     "id": "F006",
     "description": "Project webhook subscriber, going live. New server/src/lib/eventBus/subscribers/projectWebhookSubscriber.ts: WEBHOOK_PROJECT_EVENT_TYPES, register/unregister fns, handleProjectEvent with toProjectWebhookSourceEvent type guard, branch on isProjectTaskEvent (project-level: buildProjectWebhookPayload, entity-id filter on projectId; task-level: buildProjectTaskWebhookPayload, filter on projectTaskId, applyPayloadAllowlist(..., extraAlwaysIncluded:['task_id'])), opt-in phases/task_counts fetched once per event batched outside the per-subscriber loop. Register the subscriber in server/src/lib/eventBus/subscribers/index.ts (this is the activation point).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["4", "6", "7", "10"]
   },
   {
