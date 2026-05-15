@@ -216,7 +216,7 @@ export default function SearchPageClient({
       key={`${row.type}-${row.id}`}
       id={`app-search-result-row-${toDomIdPart(row.type)}-${toDomIdPart(row.id)}`}
       href={row.url}
-      className="block rounded-md border border-gray-200 bg-white px-4 py-3 text-gray-900 hover:border-purple-300 hover:bg-purple-50"
+      className="block rounded-md border border-gray-200 bg-white px-4 py-3 text-gray-900 hover:border-primary-300 hover:bg-primary-50"
     >
       <span className="flex items-start justify-between gap-3">
         <span className="min-w-0 text-sm font-medium">{row.title}</span>
@@ -286,8 +286,8 @@ export default function SearchPageClient({
             href={buildFilterUrl('all')}
             className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${
               activeType === 'all'
-                ? 'border-purple-500 bg-purple-50 text-purple-800'
-                : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300'
+                ? 'border-primary-500 bg-primary-50 text-primary-800'
+                : 'border-gray-300 bg-white text-gray-700 hover:border-primary-300'
             }`}
           >
             <span>{t('search.filters.all')}</span>
@@ -302,8 +302,8 @@ export default function SearchPageClient({
               href={buildFilterUrl(type)}
               className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm ${
                 activeType === type
-                  ? 'border-purple-500 bg-purple-50 text-purple-800'
-                  : 'border-gray-300 bg-white text-gray-700 hover:border-purple-300'
+                  ? 'border-primary-500 bg-primary-50 text-primary-800'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-primary-300'
               }`}
             >
               <span>
@@ -350,7 +350,7 @@ export default function SearchPageClient({
             <a
               id="app-search-empty-clear-filter"
               href={buildFilterUrl('all')}
-              className="mt-4 inline-flex rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:border-purple-300 hover:text-purple-700"
+              className="mt-4 inline-flex rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:border-primary-300 hover:text-primary-700"
             >
               {t('search.filters.all')}
             </a>
@@ -384,7 +384,7 @@ export default function SearchPageClient({
             <a
               id="app-search-pagination-prev"
               href={buildPageUrl(previousCursor, previousCursorStack)}
-              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:border-purple-300 hover:text-purple-700"
+              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:border-primary-300 hover:text-primary-700"
             >
               {t('search.pagination.previous')}
             </a>
@@ -395,7 +395,7 @@ export default function SearchPageClient({
             <a
               id="app-search-pagination-next"
               href={buildPageUrl(initialResult.nextCursor, nextCursorStack)}
-              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:border-purple-300 hover:text-purple-700"
+              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 hover:border-primary-300 hover:text-primary-700"
             >
               {t('search.pagination.next')}
             </a>

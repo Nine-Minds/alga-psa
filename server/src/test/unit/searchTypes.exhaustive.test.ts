@@ -36,6 +36,7 @@ function exhaustiveSearchTypeLabel(type: SearchObjectType): string {
     case 'board':
     case 'category':
     case 'tag':
+    case 'status':
       return type;
     default: {
       const exhaustive: never = type;
@@ -45,11 +46,11 @@ function exhaustiveSearchTypeLabel(type: SearchObjectType): string {
 }
 
 describe('SearchObjectType exhaustiveness', () => {
-  it('T011 covers all 27 app-wide search object types with an exhaustive switch', () => {
+  it('T011 covers all 28 app-wide search object types with an exhaustive switch', () => {
     const labels = SEARCH_OBJECT_TYPES.map(exhaustiveSearchTypeLabel);
 
-    expect(SEARCH_OBJECT_TYPES).toHaveLength(27);
-    expect(new Set(SEARCH_OBJECT_TYPES)).toHaveProperty('size', 27);
+    expect(SEARCH_OBJECT_TYPES).toHaveLength(28);
+    expect(new Set(SEARCH_OBJECT_TYPES)).toHaveProperty('size', 28);
     expect(labels).toEqual([...SEARCH_OBJECT_TYPES]);
   });
 

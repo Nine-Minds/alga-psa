@@ -65,7 +65,7 @@ describe('search actions', () => {
       tenant: 'tenant-1',
       permissions: ['client:read'],
       isInternal: true,
-      accessibleClientIds: ['client-1'],
+      clientAccess: { mode: 'all' },
     };
     const hits = [{
       type: 'client',
@@ -115,7 +115,7 @@ describe('search actions', () => {
       tenant: 'tenant-1',
       permissions: ['client:read'],
       isInternal: true,
-      accessibleClientIds: ['client-1'],
+      clientAccess: { mode: 'all' },
     };
 
     mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
@@ -149,7 +149,7 @@ describe('search actions', () => {
       tenant: 'tenant-rate-limit',
       permissions: ['client:read'],
       isInternal: true,
-      accessibleClientIds: ['client-1'],
+      clientAccess: { mode: 'all' },
     };
     const user = {
       user_id: 'user-typeahead-rate-limit',
@@ -185,7 +185,7 @@ describe('search actions', () => {
       tenant: 'tenant-full-rate-limit',
       permissions: ['client:read'],
       isInternal: true,
-      accessibleClientIds: ['client-1'],
+      clientAccess: { mode: 'all' },
     };
     const user = {
       user_id: 'user-full-rate-limit',
@@ -221,7 +221,7 @@ describe('search actions', () => {
       tenant: 'tenant-acceptance-acme',
       permissions: ['client:read', 'ticket:read'],
       isInternal: true,
-      accessibleClientIds: ['client-acme'],
+      clientAccess: { mode: 'all' },
     };
     const hits = [
       {
@@ -280,7 +280,7 @@ describe('search actions', () => {
       permissions: ['client:read'],
       roles: ['technician'],
       isInternal: true,
-      accessibleClientIds: ['client-1'],
+      clientAccess: { mode: 'all' },
     };
     const hits = [{
       type: 'client',
@@ -309,7 +309,11 @@ describe('search actions', () => {
     );
 
     expect(mocks.resolveSearchAclPrincipal).toHaveBeenCalledTimes(1);
-    expect(mocks.resolveSearchAclPrincipal).toHaveBeenCalledWith(knex, expect.any(Object), ['client-1']);
+    expect(mocks.resolveSearchAclPrincipal).toHaveBeenCalledWith(
+      knex,
+      expect.any(Object),
+      { mode: 'scoped', clientIds: ['client-1'] },
+    );
     expect(mocks.runSearchQuery).toHaveBeenCalledWith(expect.objectContaining({ acl }));
     expect(mocks.verifyResultVisibility).toHaveBeenCalledWith(knex, acl, hits);
   });
@@ -321,7 +325,7 @@ describe('search actions', () => {
       tenant: 'tenant-1',
       permissions: ['client:read', 'ticket:read'],
       isInternal: true,
-      accessibleClientIds: ['client-1'],
+      clientAccess: { mode: 'all' },
     };
     const hits = [
       {
@@ -389,7 +393,7 @@ describe('search actions', () => {
       tenant: 'tenant-a',
       permissions: ['client:read'],
       isInternal: true,
-      accessibleClientIds: ['client-1'],
+      clientAccess: { mode: 'all' },
     };
 
     mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-a' });
@@ -423,7 +427,7 @@ describe('search actions', () => {
       tenant: 'tenant-type-filter',
       permissions: ['client:read'],
       isInternal: true,
-      accessibleClientIds: ['client-1'],
+      clientAccess: { mode: 'all' },
     };
 
     mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-type-filter' });
@@ -454,7 +458,7 @@ describe('search actions', () => {
       tenant: 'tenant-bad-cursor',
       permissions: ['client:read'],
       isInternal: true,
-      accessibleClientIds: ['client-1'],
+      clientAccess: { mode: 'all' },
     };
     const cursorError = Object.assign(new Error('Search cursor is invalid'), {
       code: 'invalid_cursor',
@@ -483,7 +487,7 @@ describe('search actions', () => {
       tenant: 'tenant-latency',
       permissions: ['client:read'],
       isInternal: true,
-      accessibleClientIds: ['client-1'],
+      clientAccess: { mode: 'all' },
     };
     const elapsedSamples: number[] = [];
 
@@ -526,7 +530,7 @@ describe('search actions', () => {
         'admin',
       ],
       isInternal: true,
-      accessibleClientIds: ['client-1'],
+      clientAccess: { mode: 'all' },
     };
 
     mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-orphan-ee' });
@@ -556,7 +560,7 @@ describe('search actions', () => {
       tenant: 'tenant-1',
       permissions: ['client:read'],
       isInternal: true,
-      accessibleClientIds: ['client-1'],
+      clientAccess: { mode: 'all' },
     };
     const hits = Array.from({ length: 6 }, (_, index) => ({
       type: 'client',
@@ -599,7 +603,7 @@ describe('search actions', () => {
       tenant: 'tenant-1',
       permissions: ['client:read'],
       isInternal: true,
-      accessibleClientIds: ['client-1'],
+      clientAccess: { mode: 'all' },
     };
 
     mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });

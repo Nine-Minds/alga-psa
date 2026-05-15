@@ -203,7 +203,7 @@ export default function SearchPalette({
             onValueChange={handleQueryChange}
             onKeyDown={handleInputKeyDown}
             placeholder={t('search.placeholder')}
-            className="h-10 w-full rounded-md border border-gray-500/70 bg-white/10 py-2 pl-8 pr-3 text-sm text-sidebar-text outline-none placeholder:text-gray-400 focus:border-purple-400 focus:ring-2 focus:ring-purple-500/30"
+            className="h-10 w-full rounded-md border border-gray-500/70 bg-white/10 py-2 pl-8 pr-3 text-sm text-sidebar-text outline-none placeholder:text-gray-400 focus:border-primary-400 focus:ring-2 focus:ring-primary-500/30"
           />
         </div>
         {isOpen && (
@@ -239,7 +239,7 @@ export default function SearchPalette({
                 <a
                   id="app-search-option-see-all-results"
                   href={seeAllUrl}
-                  className={`mt-1 block cursor-pointer rounded border-t border-gray-700 px-3 py-2 text-purple-300 aria-selected:bg-white/10 ${
+                  className={`mt-1 block cursor-pointer rounded border-t border-gray-700 px-3 py-2 text-primary-300 aria-selected:bg-white/10 ${
                     activeIndex === visibleResults.length ? 'bg-white/10' : ''
                   }`}
                 >

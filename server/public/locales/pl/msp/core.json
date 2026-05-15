@@ -280,7 +280,8 @@
       "time_entry": "Time entries",
       "board": "Boards",
       "category": "Categories",
-      "tag": "Tags"
+      "tag": "Tags",
+      "status": "Statusy"
     },
     "groups": {
       "client": "Clients",
@@ -309,7 +310,8 @@
       "time_entry": "Time entries",
       "board": "Boards",
       "category": "Categories",
-      "tag": "Tags"
+      "tag": "Tags",
+      "status": "Statusy"
     },
     "sort": {
       "relevance": "Relevance",

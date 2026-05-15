@@ -10,6 +10,7 @@ import { registeredObjectTypes } from '../search';
 import {
   resolveSearchAclPrincipal,
   verifyResultVisibility,
+  type ClientAccess,
 } from '../search/acl';
 import {
   countSearchMatches,
@@ -40,7 +41,12 @@ export type {
 const SEARCH_OBJECT_TYPE_SET = new Set<string>(SEARCH_OBJECT_TYPES);
 const fullSearchLimiter = new RateLimiterMemory({ points: 10, duration: 1 });
 const typeaheadSearchLimiter = new RateLimiterMemory({ points: 30, duration: 1 });
-const TYPE_REQUIRED_PERMISSION: Record<SearchObjectType, string> = {
+// Coarse query-time gate: a type is queried only if the user holds at least
+// one of these permissions. The precise per-row filter is the stored
+// `required_permission` enforced by aclPredicateSql. Types whose rows can
+// require different permissions (e.g. `status` spans ticket vs project
+// statuses) list all of them so no class of user is wrongly excluded.
+const TYPE_REQUIRED_PERMISSION: Record<SearchObjectType, string | readonly string[]> = {
   client: 'client:read',
   contact: 'contact:read',
   user: 'user:read',
@@ -68,6 +74,7 @@ const TYPE_REQUIRED_PERMISSION: Record<SearchObjectType, string> = {
   board: 'ticket:read',
   category: 'ticket:read',
   tag: 'ticket:read',
+  status: ['ticket:read', 'project:read'],
 };
 
 function emitSearchTelemetry(
@@ -118,7 +125,11 @@ function filterTypesByPermission(
   permissions: readonly string[],
 ): SearchObjectType[] {
   const permissionSet = new Set(permissions);
-  return types.filter((type) => permissionSet.has(TYPE_REQUIRED_PERMISSION[type]));
+  return types.filter((type) => {
+    const required = TYPE_REQUIRED_PERMISSION[type];
+    const candidates = Array.isArray(required) ? required : [required];
+    return candidates.some((permission) => permissionSet.has(permission));
+  });
 }
 
 function emptyGroups(): Record<SearchObjectType, number> {
@@ -127,19 +138,25 @@ function emptyGroups(): Record<SearchObjectType, number> {
   ) as Record<SearchObjectType, number>;
 }
 
-async function resolveAccessibleClientIds(
-  knex: Awaited<ReturnType<typeof createTenantKnex>>['knex'],
-  tenant: string,
-  user: IUserWithRoles,
-): Promise<string[]> {
+/**
+ * Single source of truth for which clients a search principal may see.
+ *
+ * Internal/MSP users are currently unrestricted, so they get `{ mode: 'all' }`
+ * — no `clients` table scan and no giant UUID array bound into every search
+ * query. Client-portal users are scoped to their own client.
+ *
+ * When ABAC per-internal-user client restrictions are introduced, the *only*
+ * change is here: return `{ mode: 'scoped', clientIds }` for restricted
+ * internal users. The SQL predicate and the per-row visibility verifier both
+ * consume this mode, so the restriction is enforced in both layers without
+ * an `isInternal` shortcut to audit.
+ */
+function resolveClientAccess(user: IUserWithRoles): ClientAccess {
   if (user.user_type === 'client') {
-    return user.clientId ? [user.clientId] : [];
+    return { mode: 'scoped', clientIds: user.clientId ? [user.clientId] : [] };
   }
 
-  const rows = await knex<{ client_id: string }>('clients')
-    .select('client_id')
-    .where('tenant', tenant);
-  return rows.map((row) => row.client_id);
+  return { mode: 'all' };
 }
 
 function toSearchResultRow(hit: Awaited<ReturnType<typeof runSearchQuery>>[number]): SearchResultRow {
@@ -174,8 +191,8 @@ export const searchAppAction = withAuth(async (
     const { knex } = await createTenantKnex();
     const limit = normalizeLimit(parsedInput.limit);
     const requestedTypes = resolveAllowedTypes(parsedInput.types);
-    const accessibleClientIds = await resolveAccessibleClientIds(knex, tenant, user);
-    const acl = await resolveSearchAclPrincipal(knex, user, accessibleClientIds);
+    const clientAccess = resolveClientAccess(user);
+    const acl = await resolveSearchAclPrincipal(knex, user, clientAccess);
     const allowedTypes = filterTypesByPermission(requestedTypes, acl.permissions);
 
     const [hits, typeCounts] = await Promise.all([
@@ -255,8 +272,8 @@ export const searchAppTypeaheadAction = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
     const requestedTypes = resolveAllowedTypes(parsedInput.types);
-    const accessibleClientIds = await resolveAccessibleClientIds(knex, tenant, user);
-    const acl = await resolveSearchAclPrincipal(knex, user, accessibleClientIds);
+    const clientAccess = resolveClientAccess(user);
+    const acl = await resolveSearchAclPrincipal(knex, user, clientAccess);
     const allowedTypes = filterTypesByPermission(requestedTypes, acl.permissions);
 
     const [hits, totalCount] = await Promise.all([

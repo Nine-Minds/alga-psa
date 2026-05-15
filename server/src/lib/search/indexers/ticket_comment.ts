@@ -77,7 +77,7 @@ function baseTicketCommentQuery(knex: Knex, tenant: string) {
 
 export const ticketCommentIndexer: EntityIndexer = {
   objectType: 'ticket_comment',
-  sourceEvents: ['TICKET_COMMENT_ADDED', 'TICKET_COMMENT_UPDATED'],
+  sourceEvents: ['TICKET_COMMENT_ADDED', 'TICKET_COMMENT_UPDATED', 'TICKET_COMMENT_DELETED'],
 
   async loadOne(knex: Knex, tenant: string, id: string): Promise<SearchDoc | null> {
     const row = await baseTicketCommentQuery(knex, tenant)

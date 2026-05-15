@@ -10,6 +10,14 @@ interface TagSearchRow {
   created_at?: Date | string | null;
 }
 
+function humanizeTaggedType(taggedType: string): string {
+  const normalized = taggedType.replace(/_/g, ' ').trim();
+  const label = normalized
+    ? normalized.charAt(0).toUpperCase() + normalized.slice(1)
+    : taggedType;
+  return `${label} tag`;
+}
+
 function toSearchDoc(tenant: string, row: TagSearchRow): SearchDoc {
   const metadata: Record<string, unknown> = {};
   if (row.tagged_type) {
@@ -24,6 +32,7 @@ function toSearchDoc(tenant: string, row: TagSearchRow): SearchDoc {
     objectType: 'tag',
     objectId: row.tag_id,
     title: row.tag_text,
+    subtitle: row.tagged_type ? humanizeTaggedType(row.tagged_type) : undefined,
     url: `/msp/tickets?tags=${encodeURIComponent(row.tag_text)}`,
     metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
     acl: {

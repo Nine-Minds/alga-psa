@@ -509,9 +509,9 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
 
 export const deleteComment = withAuth(async (user, _ctx, id: string) => {
   const { knex: db } = await createTenantKnex();
+  const tenant = _ctx?.tenant;
   try {
-    await withTransaction(db, async (trx: Knex.Transaction) => {
-      const tenant = _ctx?.tenant;
+    const deletedTicketId = await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!tenant) {
         throw new Error('Tenant is required to delete comment');
       }
@@ -544,7 +544,27 @@ export const deleteComment = withAuth(async (user, _ctx, id: string) => {
           updatedAt: new Date().toISOString(),
         });
       }
+
+      return existingComment?.ticket_id ?? null;
     });
+
+    if (tenant && deletedTicketId) {
+      try {
+        await publishEvent({
+          eventType: 'TICKET_COMMENT_DELETED',
+          payload: {
+            tenantId: tenant,
+            ticketId: deletedTicketId,
+            commentId: id,
+            userId: user?.user_id,
+          },
+        });
+      } catch (eventError) {
+        // Comment is already deleted; the search index self-heals via the
+        // daily reconcile pass if this event fails to publish.
+        console.error(`[deleteComment] Failed to publish TICKET_COMMENT_DELETED event:`, eventError);
+      }
+    }
   } catch (error) {
     console.error(`Failed to delete comment with id ${id}:`, error);
     throw new Error(`Failed to delete comment with id ${id}`);

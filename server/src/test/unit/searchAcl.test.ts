@@ -64,16 +64,29 @@ describe('search ACL SQL predicate', () => {
     expect(fragment.bindings[4]).toBe(userId);
   });
 
-  it('T111 filters client_scope_id through accessible clients', () => {
-    const accessibleClientIds = ['10000000-0000-0000-0000-000000000001'];
+  it('T111 filters client_scope_id through scoped client access', () => {
+    const clientIds = ['10000000-0000-0000-0000-000000000001'];
     const fragment = aclPredicateSql({
       userId: '00000000-0000-0000-0000-000000000001',
       permissions: ['document:read'],
-      accessibleClientIds,
+      clientAccess: { mode: 'scoped', clientIds },
     });
 
     expect(fragment.sql).toContain('(client_scope_id IS NULL OR client_scope_id = ANY(?::uuid[]))');
-    expect(fragment.bindings[5]).toEqual(accessibleClientIds);
+    expect(fragment.bindings[5]).toEqual(clientIds);
+  });
+
+  it('T111b bypasses the client_scope_id predicate for unrestricted (mode: all) principals', () => {
+    const fragment = aclPredicateSql({
+      userId: '00000000-0000-0000-0000-000000000001',
+      permissions: ['document:read'],
+      clientAccess: { mode: 'all' },
+    });
+
+    expect(fragment.sql).not.toContain('client_scope_id = ANY(?::uuid[])');
+    expect(fragment.sql).toContain('AND TRUE');
+    // No client array bound — only the 5 fixed ACL bindings.
+    expect(fragment.bindings).toHaveLength(5);
   });
 
   it('T112 drops rows rejected by the record-level verifier', async () => {
@@ -280,7 +293,7 @@ describe('search ACL SQL predicate', () => {
         tenant: 'tenant-1',
         permissions: ['project:read'],
         isInternal: true,
-        accessibleClientIds: ['client-a'],
+        clientAccess: { mode: 'scoped', clientIds: ['client-a'] },
       },
       [{ type: 'project' as const, id: 'project-1' }],
     )).resolves.toEqual([]);
@@ -318,7 +331,7 @@ describe('search ACL SQL predicate', () => {
         tenant: 'tenant-1',
         permissions: ['document:read'],
         isInternal: true,
-        accessibleClientIds: ['client-a'],
+        clientAccess: { mode: 'scoped', clientIds: ['client-a'] },
       },
       [{ type: 'document' as const, id: 'document-1' }],
     )).resolves.toEqual([]);
@@ -367,7 +380,7 @@ describe('search ACL SQL predicate', () => {
           tenant: 'tenant-1',
           permissions: ['ticket:read', 'document:read'],
           isInternal: true,
-          accessibleClientIds: ['client-1'],
+          clientAccess: { mode: 'scoped', clientIds: ['client-1'] },
         },
         rows,
       )).resolves.toEqual(rows);

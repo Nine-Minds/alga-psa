@@ -39,6 +39,7 @@ const OBJECT_ID_FIELDS: Record<SearchObjectType, string[]> = {
   board: ['boardId', 'board_id'],
   category: ['categoryId', 'category_id'],
   tag: ['tagId', 'tag_id'],
+  status: ['statusId', 'status_id'],
 };
 
 const CASCADE_BATCH_SIZE = 500;
@@ -113,6 +114,33 @@ async function reindexTicketComments(knex: Knex, tenant: string, ticketId: strin
 
   for (const row of rows) {
     const doc = await commentIndexer.loadOne(knex, tenant, row.comment_id);
+    if (doc) {
+      await upsertSearchDoc(knex, doc);
+    }
+  }
+
+  return rows.length;
+}
+
+async function reindexProjectTaskComments(knex: Knex, tenant: string, taskId: string): Promise<number> {
+  const commentIndexer = getIndexer('project_task_comment');
+  if (!commentIndexer) {
+    logger.warn('[SearchIndexSubscriber] Project task comment indexer is not registered');
+    return 0;
+  }
+
+  // Task-comment rows denormalize the parent task's project_id (and task name)
+  // into their URL/title. When a task is renamed or moved between phases —
+  // possibly into a different project — those comments go stale until the
+  // daily reconcile unless we re-index them here.
+  const rows = await knex<{ task_comment_id: string }>('project_task_comments')
+    .select('task_comment_id')
+    .where('tenant', tenant)
+    .andWhere('task_id', taskId)
+    .orderBy('task_comment_id', 'asc');
+
+  for (const row of rows) {
+    const doc = await commentIndexer.loadOne(knex, tenant, row.task_comment_id);
     if (doc) {
       await upsertSearchDoc(knex, doc);
     }
@@ -474,6 +502,16 @@ async function handleSearchIndexEvent(event: Event): Promise<void> {
         eventId: event.id,
         projectId: objectId,
         ...counts,
+      });
+    }
+
+    if (event.eventType === 'PROJECT_TASK_UPDATED' && indexer.objectType === 'project_task') {
+      const count = await reindexProjectTaskComments(knex, tenant, objectId);
+      logger.debug('[SearchIndexSubscriber] Cascaded project task comment re-index', {
+        eventType: event.eventType,
+        eventId: event.id,
+        taskId: objectId,
+        count,
       });
     }
 

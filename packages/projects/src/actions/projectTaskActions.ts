@@ -595,6 +595,7 @@ export const updateTaskWithChecklist = withAuth(async (
                     payload: {
                         tenantId: tenant,
                         projectId: phase.project_id,
+                        phaseId: phase.phase_id,
                         taskId,
                         userId: user.user_id,
                         timestamp: new Date().toISOString(),
@@ -1791,6 +1792,7 @@ export const moveTaskToPhase = withAuth(async (
                 payload: {
                     tenantId: tenant,
                     projectId: newPhase.project_id,
+                    phaseId: newPhaseId,
                     taskId,
                     userId: user.user_id,
                     timestamp: new Date().toISOString(),

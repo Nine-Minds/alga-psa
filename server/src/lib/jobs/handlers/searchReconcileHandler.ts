@@ -204,22 +204,66 @@ export async function insertRowsMissingFromIndex(
 export async function searchReconcileHandler(data: SearchReconcileJobData): Promise<void> {
   const tenants = await resolveReconcileTenants(data);
   const indexers = resolveReconcileIndexers(data);
+  // When the job targets a single tenant (manual / targeted run) a failure
+  // should surface so the operator sees it. When sweeping every tenant
+  // (nightly cron) one poisoned tenant must NOT abort the rest or cause
+  // pg-boss to perpetually retry the whole batch — reconcile is idempotent
+  // and self-healing, so we isolate, log, and continue.
+  const isSingleTenantRun = Boolean(data.tenantId);
+  const failedTenants: Array<{ tenant: string; message: string }> = [];
 
   for (const tenant of tenants) {
-    const { knex } = await createTenantKnex(tenant);
-    for (const indexer of indexers) {
-      const updatedCounts = await reindexRowsAfterWatermark(knex, tenant, indexer);
-      const staleCounts = await deleteRowsMissingFromSource(knex, tenant, indexer);
-      const missingCounts = await insertRowsMissingFromIndex(knex, tenant, indexer);
-      logger.info('[SearchReconcileJob] Re-indexed rows after watermark', {
+    try {
+      const { knex } = await createTenantKnex(tenant);
+      for (const indexer of indexers) {
+        try {
+          const updatedCounts = await reindexRowsAfterWatermark(knex, tenant, indexer);
+          const staleCounts = await deleteRowsMissingFromSource(knex, tenant, indexer);
+          const missingCounts = await insertRowsMissingFromIndex(knex, tenant, indexer);
+          logger.info('[SearchReconcileJob] Re-indexed rows after watermark', {
+            tenant,
+            objectType: indexer.objectType,
+            ...updatedCounts,
+            staleChecked: staleCounts.checked,
+            staleDeleted: staleCounts.deleted,
+            missingScanned: missingCounts.scanned,
+            missingInserted: missingCounts.inserted,
+          });
+        } catch (error) {
+          if (isSingleTenantRun) {
+            throw error;
+          }
+          logger.error('[SearchReconcileJob] Indexer failed; continuing', {
+            tenant,
+            objectType: indexer.objectType,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          failedTenants.push({
+            tenant,
+            message: `${indexer.objectType}: ${error instanceof Error ? error.message : String(error)}`,
+          });
+        }
+      }
+    } catch (error) {
+      if (isSingleTenantRun) {
+        throw error;
+      }
+      logger.error('[SearchReconcileJob] Tenant failed; continuing', {
         tenant,
-        objectType: indexer.objectType,
-        ...updatedCounts,
-        staleChecked: staleCounts.checked,
-        staleDeleted: staleCounts.deleted,
-        missingScanned: missingCounts.scanned,
-        missingInserted: missingCounts.inserted,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      failedTenants.push({
+        tenant,
+        message: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+
+  if (failedTenants.length > 0) {
+    logger.error('[SearchReconcileJob] Completed with tenant failure(s)', {
+      failedCount: failedTenants.length,
+      totalTenants: tenants.length,
+      failures: failedTenants,
+    });
   }
 }

@@ -298,11 +298,22 @@ const CommentItem: React.FC<CommentItemProps> = ({
       target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       setIsSearchHighlighted(true);
     });
-    const timeout = window.setTimeout(() => setIsSearchHighlighted(false), 2000);
+
+    // Keep the highlight until the user actually does something, so it stays
+    // visible long enough to register no matter how long they take to look.
+    // A generous fallback clears it if they never interact. Deliberately not
+    // listening to 'scroll' — the smooth scrollIntoView above would otherwise
+    // dismiss it immediately.
+    const dismiss = () => setIsSearchHighlighted(false);
+    const fallback = window.setTimeout(dismiss, 15000);
+    window.addEventListener('pointerdown', dismiss, { once: true });
+    window.addEventListener('keydown', dismiss, { once: true });
 
     return () => {
       window.cancelAnimationFrame(frame);
-      window.clearTimeout(timeout);
+      window.clearTimeout(fallback);
+      window.removeEventListener('pointerdown', dismiss);
+      window.removeEventListener('keydown', dismiss);
     };
   }, [commentId, conversation.comment_id]);
 

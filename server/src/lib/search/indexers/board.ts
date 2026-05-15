@@ -13,7 +13,7 @@ function toSearchDoc(tenant: string, row: BoardSearchRow): SearchDoc {
     objectType: 'board',
     objectId: row.board_id,
     title: row.board_name,
-    url: `/msp/tickets?board=${encodeURIComponent(row.board_id)}`,
+    url: `/msp/tickets?boardId=${encodeURIComponent(row.board_id)}`,
     acl: {
       requiredPermission: 'ticket:read',
     },

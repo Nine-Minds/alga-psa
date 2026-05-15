@@ -167,6 +167,7 @@ export const EVENT_TYPES = [
   'TICKET_ADDITIONAL_AGENT_ASSIGNED',
   'TICKET_COMMENT_ADDED',
   'TICKET_COMMENT_UPDATED',
+  'TICKET_COMMENT_DELETED',
   'TICKET_DELETED',
   'TICKET_RESPONSE_STATE_CHANGED',
 
@@ -324,6 +325,9 @@ export const EVENT_TYPES = [
   'CATEGORY_CREATED',
   'CATEGORY_UPDATED',
   'CATEGORY_DELETED',
+  'STATUS_CREATED',
+  'STATUS_UPDATED',
+  'STATUS_DELETED',
 
   // Users
   'USER_CREATED',
@@ -528,6 +532,9 @@ export const ProjectTaskAdditionalAgentPayloadSchema = BasePayloadSchema.extend(
 export const ProjectTaskSearchEventPayloadSchema = BasePayloadSchema.extend({
   projectId: z.string().uuid(),
   taskId: z.string().uuid(),
+  // Optional: the task's (destination) phase. Carried so webhook/workflow
+  // consumers can react to phase moves without re-querying.
+  phaseId: z.string().uuid().optional(),
   userId: z.string().uuid().optional(),
   timestamp: z.string().datetime().optional(),
   changes: z.record(z.unknown()).optional(),
@@ -562,6 +569,15 @@ export const TaskCommentDeletedPayloadSchema = BasePayloadSchema.extend({
   taskCommentId: z.string().uuid(),
   taskName: z.string().optional(),
   timestamp: z.string().datetime().optional(),
+});
+
+// Ticket comment delete event payload schema.
+// commentId is top-level so the search index subscriber's extractObjectId can resolve it.
+export const TicketCommentDeletedPayloadSchema = BasePayloadSchema.extend({
+  ticketId: z.string().uuid(),
+  commentId: z.string().uuid(),
+  userId: z.string().uuid().optional(),
+  isInternal: z.boolean().optional(),
 });
 
 // Ticket comment update event payload schema
@@ -804,6 +820,17 @@ export const CategoryEventPayloadSchema = BasePayloadSchema.extend({
   timestamp: z.string().datetime().optional(),
 });
 
+// Status reference-data event payload. statusId is top-level so the search
+// index subscriber's extractObjectId can resolve it on every STATUS_* event.
+export const StatusEventPayloadSchema = BasePayloadSchema.extend({
+  statusId: z.string().uuid(),
+  statusType: z.enum(['ticket', 'project', 'project_task', 'interaction']).optional(),
+  boardId: z.string().uuid().nullable().optional(),
+  userId: z.string().uuid().optional(),
+  changes: z.record(z.unknown()).optional(),
+  timestamp: z.string().datetime().optional(),
+});
+
 export const TagDefinitionDeletedPayloadSchema = BasePayloadSchema.extend({
   tagId: z.string().uuid(),
   userId: z.string().uuid().optional(),
@@ -1013,6 +1040,7 @@ export const EventPayloadSchemas = {
   TICKET_ADDITIONAL_AGENT_ASSIGNED: TicketAdditionalAgentPayloadSchema,
   TICKET_COMMENT_ADDED: TicketEventPayloadSchema,
   TICKET_COMMENT_UPDATED: TicketCommentUpdatedPayloadSchema,
+  TICKET_COMMENT_DELETED: TicketCommentDeletedPayloadSchema,
   TICKET_RESPONSE_STATE_CHANGED: TicketResponseStateChangedPayloadSchemaV2,
 
   // Tickets (domain expansion)
@@ -1169,6 +1197,9 @@ export const EventPayloadSchemas = {
   CATEGORY_CREATED: CategoryEventPayloadSchema,
   CATEGORY_UPDATED: CategoryEventPayloadSchema,
   CATEGORY_DELETED: CategoryEventPayloadSchema,
+  STATUS_CREATED: StatusEventPayloadSchema,
+  STATUS_UPDATED: StatusEventPayloadSchema,
+  STATUS_DELETED: StatusEventPayloadSchema,
 
   // Users
   USER_CREATED: UserEventPayloadSchema,
@@ -1315,6 +1346,7 @@ export type TicketAssignedEvent = z.infer<typeof EventSchemas.TICKET_ASSIGNED>;
 export type TicketAdditionalAgentAssignedEvent = z.infer<typeof EventSchemas.TICKET_ADDITIONAL_AGENT_ASSIGNED>;
 export type TicketCommentAddedEvent = z.infer<typeof EventSchemas.TICKET_COMMENT_ADDED>;
 export type TicketCommentUpdatedEvent = z.infer<typeof EventSchemas.TICKET_COMMENT_UPDATED>;
+export type TicketCommentDeletedEvent = z.infer<typeof EventSchemas.TICKET_COMMENT_DELETED>;
 export type TicketResponseStateChangedEvent = z.infer<typeof EventSchemas.TICKET_RESPONSE_STATE_CHANGED>;
 export type ProjectCreatedEvent = z.infer<typeof EventSchemas.PROJECT_CREATED>;
 export type ProjectUpdatedEvent = z.infer<typeof EventSchemas.PROJECT_UPDATED>;
@@ -1346,6 +1378,9 @@ export type BoardDeletedEvent = z.infer<typeof EventSchemas.BOARD_DELETED>;
 export type CategoryCreatedEvent = z.infer<typeof EventSchemas.CATEGORY_CREATED>;
 export type CategoryUpdatedEvent = z.infer<typeof EventSchemas.CATEGORY_UPDATED>;
 export type CategoryDeletedEvent = z.infer<typeof EventSchemas.CATEGORY_DELETED>;
+export type StatusCreatedEvent = z.infer<typeof EventSchemas.STATUS_CREATED>;
+export type StatusUpdatedEvent = z.infer<typeof EventSchemas.STATUS_UPDATED>;
+export type StatusDeletedEvent = z.infer<typeof EventSchemas.STATUS_DELETED>;
 export type CalendarSyncStartedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC_STARTED>;
 export type CalendarSyncCompletedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC_COMPLETED>;
 export type CalendarSyncFailedEvent = z.infer<typeof EventSchemas.CALENDAR_SYNC_FAILED>;

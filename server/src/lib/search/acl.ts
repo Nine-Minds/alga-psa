@@ -25,13 +25,26 @@ export interface ComposedAclHints {
   requiredPermission?: string;
 }
 
+/**
+ * Client visibility for a search principal. `all` means unrestricted (today:
+ * every internal/MSP user). `scoped` means the principal may only see rows
+ * whose `client_scope_id` is in `clientIds` (client-portal users now; the seam
+ * for future ABAC per-internal-user client restrictions). Keeping this an
+ * explicit mode — rather than overloading an empty array — is what lets a
+ * future restriction be a single change in the resolver without the SQL
+ * predicate and per-row verifier disagreeing.
+ */
+export type ClientAccess =
+  | { mode: 'all' }
+  | { mode: 'scoped'; clientIds: string[] };
+
 export interface SearchAclPrincipal {
   userId: string;
   tenant?: string;
   permissions: string[];
   roles?: string[];
   isInternal?: boolean;
-  accessibleClientIds?: string[];
+  clientAccess: ClientAccess;
 }
 
 export interface SqlFragment {
@@ -88,6 +101,14 @@ export function composeAclHints(opts: AclMetadata = {}): ComposedAclHints {
 }
 
 export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
+  const clientAccess = user.clientAccess ?? { mode: 'all' };
+  const clientScopeClause = clientAccess.mode === 'all'
+    ? 'TRUE'
+    : '(client_scope_id IS NULL OR client_scope_id = ANY(?::uuid[]))';
+  const clientScopeBindings = clientAccess.mode === 'all'
+    ? []
+    : [clientAccess.clientIds];
+
   return {
     sql: `
       (
@@ -96,7 +117,7 @@ export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
         AND (cardinality(visible_to_roles) = 0 OR visible_to_roles && ?::text[])
         AND (is_internal_only = false OR ?::boolean = true)
         AND (is_private = false OR visible_to_user_ids && ARRAY[?]::uuid[])
-        AND (client_scope_id IS NULL OR client_scope_id = ANY(?::uuid[]))
+        AND ${clientScopeClause}
       )
     `,
     bindings: [
@@ -105,7 +126,7 @@ export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
       user.roles ?? [],
       user.isInternal ?? false,
       user.userId,
-      user.accessibleClientIds ?? [],
+      ...clientScopeBindings,
     ],
   };
 }
@@ -113,7 +134,7 @@ export function aclPredicateSql(user: SearchAclPrincipal): SqlFragment {
 export async function resolveSearchAclPrincipal(
   knex: Knex,
   user: Pick<IUserWithRoles, 'user_id' | 'user_type' | 'tenant'>,
-  accessibleClientIds: string[] = [],
+  clientAccess: ClientAccess = { mode: 'all' },
 ): Promise<SearchAclPrincipal> {
   const rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
   const isClientPortal = user.user_type === 'client';
@@ -139,7 +160,7 @@ export async function resolveSearchAclPrincipal(
     permissions: [...permissions],
     roles: [...roles],
     isInternal: !isClientPortal,
-    accessibleClientIds,
+    clientAccess,
   };
 }
 
@@ -178,10 +199,11 @@ function hasClientAccess(user: SearchAclPrincipal, clientId: string | null | und
   if (!clientId) {
     return true;
   }
-  if (!user.accessibleClientIds || user.accessibleClientIds.length === 0) {
+  const clientAccess = user.clientAccess ?? { mode: 'all' };
+  if (clientAccess.mode === 'all') {
     return true;
   }
-  return user.accessibleClientIds.includes(clientId);
+  return clientAccess.clientIds.includes(clientId);
 }
 
 function parseAssignedUsers(value: unknown): string[] {
@@ -340,4 +362,23 @@ registerSearchVisibilityVerifier('workflow_task', async (knex, user, row) => {
 
   const assignedUsers = parseAssignedUsers(task.assigned_users);
   return assignedUsers.length === 0 || assignedUsers.includes(user.userId);
+});
+
+// Statuses are tenant-wide reference data. The SQL layer already enforces the
+// required_permission gate; this record-level check drops rows whose source
+// status was removed (defence-in-depth against a missed STATUS_DELETED event,
+// e.g. from a bulk seeding path that does not publish per-status events).
+registerSearchVisibilityVerifier('status', async (knex, user, row) => {
+  // Status search rows are keyed by name (ticket statuses only, deduped
+  // across boards), so the existence check matches on name, not status_id.
+  const query = knex<{ name: string }>('statuses')
+    .select('name')
+    .where('name', row.id)
+    .andWhere('status_type', 'ticket')
+    .first();
+  if (user.tenant) {
+    query.andWhere('tenant', user.tenant);
+  }
+  const status = await query;
+  return Boolean(status);
 });

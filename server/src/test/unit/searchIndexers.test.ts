@@ -21,6 +21,7 @@ import { scheduleEntryIndexer } from '../../lib/search/indexers/schedule_entry';
 import { serviceCatalogIndexer } from '../../lib/search/indexers/service_catalog';
 import { serviceRequestDefinitionIndexer } from '../../lib/search/indexers/service_request_definition';
 import { serviceRequestSubmissionIndexer } from '../../lib/search/indexers/service_request_submission';
+import { statusIndexer } from '../../lib/search/indexers/status';
 import { tagIndexer } from '../../lib/search/indexers/tag';
 import { ticketIndexer } from '../../lib/search/indexers/ticket';
 import { ticketCommentIndexer } from '../../lib/search/indexers/ticket_comment';
@@ -47,6 +48,7 @@ function createFirstRowKnex(row: unknown) {
     whereNotNull: vi.fn().mockReturnThis(),
     andWhere: vi.fn().mockReturnThis(),
     groupBy: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
     first: vi.fn().mockResolvedValue(row),
   };
   const knex = vi.fn().mockReturnValue(queryBuilder);
@@ -58,6 +60,7 @@ function createFirstRowKnex(row: unknown) {
 
 function createBatchKnex(rows: unknown[]) {
   const queryBuilder = {
+    distinctOn: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     andWhere: vi.fn().mockReturnThis(),
@@ -1161,5 +1164,46 @@ describe('search entity indexers', () => {
       title: 'urgent',
       acl: { requiredPermission: 'ticket:read' },
     });
+  });
+
+  it('T207 ticket status indexes one row per name linking to the name-based filter', async () => {
+    const { knex, queryBuilder } = createFirstRowKnex({
+      name: 'Awaiting Customer',
+      is_closed: false,
+      created_at: '2026-05-15T10:00:00.000Z',
+    });
+
+    const doc = await statusIndexer.loadOne(knex as never, 'tenant-1', 'status-1');
+
+    expect(knex).toHaveBeenCalledWith('statuses');
+    // Scoped to ticket statuses only (project/task/interaction excluded).
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith('status_type', 'ticket');
+    expect(doc).toMatchObject({
+      objectType: 'status',
+      // Keyed by name, not status_id, so boards collapse to one result.
+      objectId: 'Awaiting Customer',
+      title: 'Awaiting Customer',
+      subtitle: 'Ticket status',
+      url: '/msp/tickets?statusId=__status_name__%3AAwaiting%2520Customer',
+      metadata: { status_type: 'ticket', is_closed: false },
+      acl: { requiredPermission: 'ticket:read' },
+    });
+  });
+
+  it('T208 status loadBatch dedupes by name and only queries ticket statuses', async () => {
+    const { knex, queryBuilder } = createBatchKnex([
+      { name: 'Open', is_closed: false, created_at: '2026-05-15T10:00:00.000Z' },
+      { name: 'Closed', is_closed: true, created_at: '2026-05-15T10:00:00.000Z' },
+    ]);
+
+    const docs = await statusIndexer.loadBatch(knex as never, 'tenant-1', undefined, 500);
+
+    expect(knex).toHaveBeenCalledWith('statuses');
+    expect(queryBuilder.distinctOn).toHaveBeenCalledWith('name');
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith('status_type', 'ticket');
+    expect(queryBuilder.orderBy).toHaveBeenCalledWith('name', 'asc');
+    expect(docs.map((d) => d.objectId)).toEqual(['Open', 'Closed']);
+    expect(docs.every((d) => d.acl.requiredPermission === 'ticket:read')).toBe(true);
+    expect(docs.every((d) => d.url.startsWith('/msp/tickets?statusId=__status_name__'))).toBe(true);
   });
 });

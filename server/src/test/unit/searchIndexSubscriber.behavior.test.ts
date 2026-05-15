@@ -33,6 +33,7 @@ import { projectPhaseIndexer } from '../../lib/search/indexers/project_phase';
 import { projectTaskIndexer } from '../../lib/search/indexers/project_task';
 import { projectTaskCommentIndexer } from '../../lib/search/indexers/project_task_comment';
 import { documentIndexer } from '../../lib/search/indexers/document';
+import { statusIndexer } from '../../lib/search/indexers/status';
 import { handleSearchIndexEventForTest } from '../../lib/eventBus/subscribers/searchIndexSubscriber';
 import { runSearchBackfill } from '../../scripts/search-backfill';
 import type { SearchDoc } from '../../lib/search/types';
@@ -579,6 +580,165 @@ describe('search index subscriber event handling', () => {
     expect(mocks.deleteSearchDoc).toHaveBeenCalledWith(knex, 'tenant-1', 'ticket', 'ticket-1');
     expect(mocks.upsertSearchDoc).not.toHaveBeenCalled();
     expect(loadOne).not.toHaveBeenCalled();
+  });
+
+  it('T206 deletes a ticket comment search document for TICKET_COMMENT_DELETED', async () => {
+    const knex = { client: 'knex' };
+    const loadOne = vi.spyOn(ticketCommentIndexer, 'loadOne');
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+
+    const event: Event = {
+      id: 'event-206',
+      eventType: 'TICKET_COMMENT_DELETED',
+      timestamp: '2026-05-15T12:00:00.000Z',
+      payload: {
+        tenantId: 'tenant-1',
+        ticketId: 'ticket-1',
+        commentId: 'comment-1',
+        userId: 'user-1',
+      },
+    } as Event;
+
+    await handleSearchIndexEventForTest(event);
+
+    expect(mocks.createTenantKnex).toHaveBeenCalledWith('tenant-1');
+    expect(mocks.deleteSearchDoc).toHaveBeenCalledWith(knex, 'tenant-1', 'ticket_comment', 'comment-1');
+    expect(mocks.upsertSearchDoc).not.toHaveBeenCalled();
+    expect(loadOne).not.toHaveBeenCalled();
+  });
+
+  it('T209 deletes a status search document for STATUS_DELETED', async () => {
+    const knex = { client: 'knex' };
+    const loadOne = vi.spyOn(statusIndexer, 'loadOne');
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+
+    const event: Event = {
+      id: 'event-209',
+      eventType: 'STATUS_DELETED',
+      timestamp: '2026-05-15T12:00:00.000Z',
+      payload: {
+        tenantId: 'tenant-1',
+        statusId: 'status-1',
+        statusType: 'ticket',
+        boardId: 'board-1',
+        userId: 'user-1',
+      },
+    } as Event;
+
+    await handleSearchIndexEventForTest(event);
+
+    expect(mocks.createTenantKnex).toHaveBeenCalledWith('tenant-1');
+    expect(mocks.deleteSearchDoc).toHaveBeenCalledWith(knex, 'tenant-1', 'status', 'status-1');
+    expect(mocks.upsertSearchDoc).not.toHaveBeenCalled();
+    expect(loadOne).not.toHaveBeenCalled();
+  });
+
+  it('T210 upserts a status search document for STATUS_CREATED', async () => {
+    const knex = { client: 'knex' };
+    const doc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'status',
+      objectId: 'status-1',
+      title: 'Awaiting Customer',
+      subtitle: 'Service Desk',
+      url: '/msp/tickets?statusId=status-1&boardId=board-1',
+      metadata: { status_type: 'ticket', board_id: 'board-1', is_closed: false },
+      acl: { requiredPermission: 'ticket:read' },
+      sourceUpdatedAt: new Date('2026-05-15T12:00:00.000Z'),
+    };
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+    vi.spyOn(statusIndexer, 'loadOne').mockResolvedValue(doc);
+
+    const event: Event = {
+      id: 'event-210',
+      eventType: 'STATUS_CREATED',
+      timestamp: '2026-05-15T12:00:00.000Z',
+      payload: {
+        tenantId: 'tenant-1',
+        statusId: 'status-1',
+        statusType: 'ticket',
+        boardId: 'board-1',
+      },
+    } as Event;
+
+    await handleSearchIndexEventForTest(event);
+
+    expect(statusIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'status-1');
+    expect(mocks.upsertSearchDoc).toHaveBeenCalledWith(knex, doc);
+    expect(mocks.deleteSearchDoc).not.toHaveBeenCalled();
+  });
+
+  it('T211 cascades PROJECT_TASK_UPDATED to the task comments', async () => {
+    const taskDoc: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'project_task',
+      objectId: 'task-1',
+      parentType: 'project',
+      parentId: 'project-2',
+      title: 'Moved task',
+      url: '/msp/projects/project-2/tasks/task-1',
+      acl: { requiredPermission: 'project:read' },
+      sourceUpdatedAt: new Date('2026-05-15T12:00:00.000Z'),
+    };
+    const taskCommentDoc1: SearchDoc = {
+      tenant: 'tenant-1',
+      objectType: 'project_task_comment',
+      objectId: 'task-comment-1',
+      parentType: 'project_task',
+      parentId: 'task-1',
+      title: 'Moved task',
+      url: '/msp/projects/project-2/tasks/task-1#comment-task-comment-1',
+      acl: { requiredPermission: 'project:read' },
+      sourceUpdatedAt: new Date('2026-05-15T12:00:00.000Z'),
+    };
+    const taskCommentDoc2: SearchDoc = {
+      ...taskCommentDoc1,
+      objectId: 'task-comment-2',
+      url: '/msp/projects/project-2/tasks/task-1#comment-task-comment-2',
+    };
+    const commentRows = [{ task_comment_id: 'task-comment-1' }, { task_comment_id: 'task-comment-2' }];
+    const commentQuery = {
+      select: vi.fn(() => commentQuery),
+      where: vi.fn(() => commentQuery),
+      andWhere: vi.fn(() => commentQuery),
+      orderBy: vi.fn(() => commentQuery),
+      then: (resolve: (rows: typeof commentRows) => unknown, reject: (reason?: unknown) => unknown) =>
+        Promise.resolve(commentRows).then(resolve, reject),
+    };
+    const knex = vi.fn((table: string) => {
+      expect(table).toBe('project_task_comments');
+      return commentQuery;
+    });
+
+    mocks.createTenantKnex.mockResolvedValue({ knex, tenant: 'tenant-1' });
+    vi.spyOn(projectTaskIndexer, 'loadOne').mockResolvedValue(taskDoc);
+    vi.spyOn(projectTaskCommentIndexer, 'loadOne')
+      .mockResolvedValueOnce(taskCommentDoc1)
+      .mockResolvedValueOnce(taskCommentDoc2);
+
+    const event: Event = {
+      id: 'event-211',
+      eventType: 'PROJECT_TASK_UPDATED',
+      timestamp: '2026-05-15T12:00:00.000Z',
+      payload: {
+        tenantId: 'tenant-1',
+        projectId: 'project-2',
+        phaseId: 'phase-9',
+        taskId: 'task-1',
+      },
+    } as Event;
+
+    await handleSearchIndexEventForTest(event);
+
+    expect(projectTaskIndexer.loadOne).toHaveBeenCalledWith(knex, 'tenant-1', 'task-1');
+    expect(commentQuery.where).toHaveBeenCalledWith('tenant', 'tenant-1');
+    expect(commentQuery.andWhere).toHaveBeenCalledWith('task_id', 'task-1');
+    expect(projectTaskCommentIndexer.loadOne).toHaveBeenNthCalledWith(1, knex, 'tenant-1', 'task-comment-1');
+    expect(projectTaskCommentIndexer.loadOne).toHaveBeenNthCalledWith(2, knex, 'tenant-1', 'task-comment-2');
+    expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(1, knex, taskDoc);
+    expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(2, knex, taskCommentDoc1);
+    expect(mocks.upsertSearchDoc).toHaveBeenNthCalledWith(3, knex, taskCommentDoc2);
   });
 
   it('T184 backfills a seed tenant then accepts live incremental updates', async () => {

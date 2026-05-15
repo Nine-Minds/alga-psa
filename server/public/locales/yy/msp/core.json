@@ -280,7 +280,8 @@
       "time_entry": "55555",
       "board": "55555",
       "category": "55555",
-      "tag": "55555"
+      "tag": "55555",
+      "status": "55555"
     },
     "groups": {
       "client": "55555",
@@ -309,7 +310,8 @@
       "time_entry": "55555",
       "board": "55555",
       "category": "55555",
-      "tag": "55555"
+      "tag": "55555",
+      "status": "55555"
     },
     "sort": {
       "relevance": "55555",

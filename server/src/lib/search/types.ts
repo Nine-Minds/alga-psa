@@ -29,6 +29,7 @@ export const SEARCH_OBJECT_TYPES = [
   'board',
   'category',
   'tag',
+  'status',
 ] as const;
 
 export type SearchObjectType = (typeof SEARCH_OBJECT_TYPES)[number];

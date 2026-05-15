@@ -140,22 +140,35 @@ export async function runSearchBackfill(
     console.log(`Search backfill selected ${tenants.length} tenant(s).`);
     console.log(`Search backfill selected ${indexers.length} indexer(s).`);
     const failures: Array<{ tenant: string; type: string; message: string }> = [];
+    let tenantIndex = 0;
     for (const tenant of tenants) {
+      tenantIndex += 1;
+      const startedAt = Date.now();
+      console.log(`=== [${tenantIndex}/${tenants.length}] tenant ${tenant} — start ===`);
+      let tenantRows = 0;
+      let tenantFailed = 0;
       for (const indexer of indexers) {
         try {
           const total = await upsertBackfillBatches(knex, tenant, indexer);
+          tenantRows += total;
           console.log(`[tenant=${tenant}] [type=${indexer.objectType}] upserted ${total} search row(s)`);
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
+          tenantFailed += 1;
           failures.push({ tenant, type: indexer.objectType, message });
           console.error(`[tenant=${tenant}] [type=${indexer.objectType}] FAILED: ${message}`);
         }
       }
+      const elapsedMs = Date.now() - startedAt;
+      console.log(
+        `=== [${tenantIndex}/${tenants.length}] tenant ${tenant} — done: ${tenantRows} row(s), `
+        + `${tenantFailed} indexer failure(s), ${elapsedMs}ms ===`,
+      );
     }
     if (failures.length > 0) {
-      console.error(`\n${failures.length} indexer(s) failed:`);
+      console.error(`\n${failures.length} indexer failure(s) across all tenants:`);
       for (const failure of failures) {
-        console.error(`  - ${failure.type}: ${failure.message.split('\n')[0]}`);
+        console.error(`  - [${failure.tenant}] ${failure.type}: ${failure.message.split('\n')[0]}`);
       }
     }
   } finally {

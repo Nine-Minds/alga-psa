@@ -18,7 +18,11 @@ describe('app-wide search hash-anchor contracts', () => {
     expect(source).toContain('document.getElementById(commentId)');
     expect(source).toContain("target?.scrollIntoView({ behavior: 'smooth', block: 'center' })");
     expect(source).toContain('setIsSearchHighlighted(true)');
-    expect(source).toContain('window.setTimeout(() => setIsSearchHighlighted(false), 2000)');
+    // Highlight clears on user interaction with a long fallback (not a short
+    // fixed timer) so it stays visible long enough to register.
+    expect(source).toContain('const dismiss = () => setIsSearchHighlighted(false)');
+    expect(source).toContain("window.addEventListener('pointerdown', dismiss, { once: true })");
+    expect(source).toContain('window.setTimeout(dismiss, 15000)');
     expect(source).toContain("'search-highlight ring-2 ring-yellow-400 bg-yellow-50'");
   });
 

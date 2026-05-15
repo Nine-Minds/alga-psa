@@ -15,7 +15,7 @@ function toSearchDoc(tenant: string, row: CategorySearchRow): SearchDoc {
     objectType: 'category',
     objectId: row.category_id,
     title: row.category_name,
-    url: `/msp/tickets?category=${encodeURIComponent(row.category_id)}`,
+    url: `/msp/tickets?categoryId=${encodeURIComponent(row.category_id)}`,
     metadata: row.board_id ? { board_id: row.board_id } : undefined,
     acl: {
       requiredPermission: 'ticket:read',
