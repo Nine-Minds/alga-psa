@@ -6,10 +6,9 @@ import { publicEventsFor, type TicketWebhookInternalEvent } from './webhook/webh
 import {
   buildTicketWebhookPayload,
   fetchTicketCommentsForWebhook,
-  projectWebhookPayload,
   type TicketWebhookSourceEvent,
 } from './webhook/webhookTicketPayload';
-import { webhookEntityForEventType } from '../../api/schemas/webhookSchemas';
+import { projectWebhookPayload, webhookEntityForEventType } from '../../webhooks/payloadFields';
 import { webhookModel } from '../../webhooks/webhookModel';
 import { WebhookDeliveryQueue } from '../../webhooks/WebhookDeliveryQueue';
 

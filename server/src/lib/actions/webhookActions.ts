@@ -15,11 +15,7 @@ import { performWebhookDeliveryRequest } from '@/lib/webhooks/delivery';
 import { signRequest } from '@/lib/webhooks/sign';
 import { WebhookDeliveryQueue } from '@/lib/webhooks/WebhookDeliveryQueue';
 import { webhookModel, type WebhookDeliveryRecord, type WebhookRecord } from '@/lib/webhooks/webhookModel';
-import { WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY } from './webhookPayloadFields';
-// Types and the registry constant live in ./webhookPayloadFields and must be
-// imported from there directly. This module is "use server" — Next's RSC
-// bundler rejects any non-async-function export, so we cannot re-export
-// types or the registry from here.
+import { payloadFieldsByEntitySchema } from '@/lib/webhooks/payloadFields';
 
 const SUPPORTED_WEBHOOK_EVENTS = [
   'ticket.created',
@@ -29,43 +25,6 @@ const SUPPORTED_WEBHOOK_EVENTS = [
   'ticket.closed',
   'ticket.comment.added',
 ] as const;
-
-// Per-webhook allowlist:
-//   null              — full payload for every entity (default).
-//   {}                — same as null.
-//   { ticket: null }  — full payload for that entity (explicit).
-//   { ticket: [] }    — required-only for that entity.
-//   { ticket: [...] } — only these fields for that entity (plus required).
-// Entities not present in the map fall back to "full payload".
-const payloadFieldsByEntitySchema = z
-  .record(z.string(), z.array(z.string()).nullable())
-  .nullable()
-  .superRefine((value, ctx) => {
-    if (!value) return;
-    for (const [entity, fields] of Object.entries(value)) {
-      const allowed =
-        (WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY as Record<string, readonly string[]>)[entity];
-      if (!allowed) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: [entity],
-          message: `Unknown webhook entity "${entity}"`,
-        });
-        continue;
-      }
-      if (fields === null) continue;
-      const allowedSet = new Set(allowed);
-      for (const f of fields) {
-        if (!allowedSet.has(f)) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: [entity],
-            message: `Unknown field "${f}" for entity "${entity}"`,
-          });
-        }
-      }
-    }
-  });
 
 const webhookInputSchema = z.object({
   webhookId: z.string().uuid().optional(),
