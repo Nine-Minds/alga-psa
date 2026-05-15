@@ -62,6 +62,27 @@ describe('enforceApiRateLimit', () => {
     });
   });
 
+  it('uses a non-uuid subject for the bucket identity but not for the config lookup', async () => {
+    tryConsumeMock.mockResolvedValue({
+      allowed: true,
+      remaining: 100,
+    });
+
+    const { enforceApiRateLimit } = await import('@/lib/api/rateLimit/enforce');
+
+    const decision = await enforceApiRateLimit('http://example.com/api/v1/tickets', {
+      tenant: 'tenant-1',
+      userId: '00000000-0000-0000-0000-000000000000',
+      rateLimitSubjectId: 'nm_store',
+    });
+
+    // 'nm_store' must never reach the config getter (api_key_id is a uuid
+    // column); it is only the token-bucket identity.
+    expect(apiRateLimitConfigGetterMock).toHaveBeenCalledWith('tenant-1', undefined);
+    expect(tryConsumeMock).toHaveBeenCalledWith('api', 'tenant-1', 'nm_store');
+    expect(decision).toMatchObject({ limit: 120, remaining: 100 });
+  });
+
   it('throws TooManyRequestsError with retry headers when RATE_LIMIT_ENFORCE is true', async () => {
     process.env.RATE_LIMIT_ENFORCE = 'true';
     tryConsumeMock.mockResolvedValue({
