@@ -1,10 +1,10 @@
 /** @vitest-environment jsdom */
 
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { buildCommentThreadGroups } from './CommentThreadList';
 import CommentThreadDrawer from './CommentThreadDrawer';
 import HybridThreadNode from './HybridThreadNode';
@@ -12,6 +12,10 @@ import HybridThreadNode from './HybridThreadNode';
 vi.mock('../editor', () => ({
   TextEditor: () => <textarea aria-label="Reply editor" />,
 }));
+
+afterEach(() => {
+  cleanup();
+});
 
 interface TestComment {
   id: string;
@@ -256,7 +260,18 @@ describe('HybridThreadNode', () => {
     expect(bars[1].classList.contains('depth-1')).toBe(true);
     expect(bars[1].classList.contains('comment-thread-bar-subthread')).toBe(true);
 
-    const css = readFileSync(resolve(process.cwd(), '../packages/ui/src/components/CommentThread.css'), 'utf8');
+    // jsdom rewrites import.meta.url to an http URL, so resolve from cwd,
+    // tolerating either the package dir or the repo root as the working dir.
+    const cssPath = [
+      'src/components/CommentThread.css',
+      'packages/ui/src/components/CommentThread.css',
+    ]
+      .map((candidate) => resolve(process.cwd(), candidate))
+      .find(existsSync);
+    if (!cssPath) {
+      throw new Error(`CommentThread.css not found from ${process.cwd()}`);
+    }
+    const css = readFileSync(cssPath, 'utf8');
     expect(css).toContain('background: rgb(var(--color-border-50));');
     expect(css).toContain('.comment-thread-bar-subthread');
     expect(css).toContain('border-style: dashed;');

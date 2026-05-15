@@ -1,13 +1,17 @@
 /** @vitest-environment jsdom */
 
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import InlineReplyComposer from './InlineReplyComposer';
 
 vi.mock('../editor', () => ({
   TextEditor: () => <textarea aria-label="Reply editor" />,
 }));
+
+afterEach(() => {
+  cleanup();
+});
 
 describe('InlineReplyComposer', () => {
   it('T049: shows only the internal visibility switch and submits the inherited internal default', () => {
