@@ -21,6 +21,25 @@ exports.up = async function up(knex) {
   }
 
   if (!(await isDistributed(knex, 'email_reply_tokens'))) {
+    // Drop orphaned tokens before distribution: create_distributed_table copies
+    // rows into shards where the composite FKs are enforced per-shard. A token
+    // whose ticket/project/comment/tenant was deleted (tokens are ephemeral and
+    // these FKs don't cascade) can't be placed and aborts the copy. Such a token
+    // is dead anyway — its target entity is gone.
+    await knex.raw(
+      `DELETE FROM email_reply_tokens ert
+        WHERE NOT EXISTS (SELECT 1 FROM tenants tn WHERE tn.tenant = ert.tenant)
+           OR (ert.ticket_id IS NOT NULL AND NOT EXISTS (
+                 SELECT 1 FROM tickets t
+                  WHERE t.tenant = ert.tenant AND t.ticket_id = ert.ticket_id))
+           OR (ert.project_id IS NOT NULL AND NOT EXISTS (
+                 SELECT 1 FROM projects p
+                  WHERE p.tenant = ert.tenant AND p.project_id = ert.project_id))
+           OR (ert.comment_id IS NOT NULL AND NOT EXISTS (
+                 SELECT 1 FROM comments c
+                  WHERE c.tenant = ert.tenant AND c.comment_id = ert.comment_id))`
+    );
+
     // Citus rejects create_distributed_table() if a unique/exclude constraint
     // or unique index omits the distribution column. email_reply_tokens has a
     // global UNIQUE(token); the PK (tenant, token) already covers tenant-scoped
@@ -67,11 +86,11 @@ exports.up = async function up(knex) {
       await knex.raw('DROP INDEX IF EXISTS ??', [row.indexname]);
     }
 
-    // email_reply_tokens has an FK to the reference table standard_service_types.
-    // Citus forbids the default parallel DDL of create_distributed_table when a
-    // reference-table FK is involved ("cannot execute parallel DDL ... because
-    // there is a foreign key"). Run it in its own transaction with sequential
-    // mode (SET LOCAL auto-resets on commit) and no prior reference-table access.
+    // Joining colocation group 16 pulls email_reply_tokens into an FK graph that
+    // reaches a reference table; Citus then forbids the default parallel DDL of
+    // create_distributed_table ("cannot execute parallel DDL ... foreign key").
+    // Run it in its own transaction in sequential mode (SET LOCAL auto-resets
+    // on commit) with no prior reference-table access in that transaction.
     await knex.transaction(async (trx) => {
       await trx.raw("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'");
       await trx.raw(
