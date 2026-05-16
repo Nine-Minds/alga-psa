@@ -18,7 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { ChevronDown, ChevronRight, MoreVertical } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronRight, MoreVertical } from 'lucide-react';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import type { IClient, IContact, IQuote, IQuoteDocumentTemplate, IQuoteListItem, QuoteConversionPreview, QuoteStatus } from '@alga-psa/types';
 import { isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
@@ -392,23 +392,24 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
   };
 
   const handleSubmit = async () => {
+    setError(null);
+
+    if (!isTemplate && !form.client_id) {
+      setError(t('quoteForm.validation.clientRequired', { defaultValue: 'Client is required' }));
+      return;
+    }
+
+    if (!form.title && !form.template_id) {
+      setError(
+        t('quoteForm.validation.titleRequired', {
+          defaultValue: 'Title is required unless creating from template',
+        }),
+      );
+      return;
+    }
+
     try {
       setIsSaving(true);
-      setError(null);
-
-      if (!isTemplate && !form.client_id) {
-        throw new Error(
-          t('quoteForm.validation.clientRequired', { defaultValue: 'Client is required' }),
-        );
-      }
-
-      if (!form.title && !form.template_id) {
-        throw new Error(
-          t('quoteForm.validation.titleRequired', {
-            defaultValue: 'Title is required unless creating from template',
-          }),
-        );
-      }
 
       const payload = {
         client_id: form.client_id || null,
@@ -1135,6 +1136,19 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
   return (
     <Card size="2">
       <Box p="4" className="space-y-6">
+        <Button
+          id="quote-form-back-to-list"
+          variant="soft"
+          size="sm"
+          onClick={onCancel}
+          className="gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          {isTemplate
+            ? t('quoteForm.actions.backToTemplates', { defaultValue: 'Back to Quote Templates' })
+            : t('quoteForm.actions.backToQuotes', { defaultValue: 'Back to Quotes' })}
+        </Button>
+
         {/* ============ TOP HEADER BAR ============ */}
         <header className="flex flex-col gap-3 border-b border-border pb-4 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0 flex-1 space-y-2">
@@ -1189,9 +1203,6 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
                   </Button>
                 </>
               )}
-              <Button id="quote-form-cancel" variant="outline" onClick={onCancel}>
-                {t('quoteForm.actions.back', { defaultValue: 'Back' })}
-              </Button>
               {secondaryAction && (
                 <Button id={secondaryAction.id} variant="outline" onClick={secondaryAction.onClick} disabled={secondaryAction.disabled}>
                   {secondaryAction.label}

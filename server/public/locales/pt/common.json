@@ -40,7 +40,14 @@
     "duplicate": "Duplicate",
     "openMenu": "Open menu",
     "confirmDeletion": "Confirm Deletion",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "print": "Imprimir",
+    "printSelected_one": "Imprimir selecionado ({{count}})",
+    "printSelected_other": "Imprimir selecionados ({{count}})",
+    "printOptions": "Opções de impressão",
+    "resetPrintOptions": "Redefinir opções de impressão",
+    "share": "Compartilhar",
+    "done": "Concluído"
   },
   "status": {
     "loading": "Loading...",
@@ -311,6 +318,13 @@
         "description": "Click \"Add Location\" to get started"
       }
     }
+  },
+  "commentThread": {
+    "replies_one": "{{count}} resposta",
+    "replies_other": "{{count}} respostas",
+    "collapse": "Recolher",
+    "expand": "Expandir",
+    "showInDrawer": "Mostrar no painel"
   },
   "pagination": {
     "previous": "Previous",
@@ -1130,6 +1144,30 @@
       "remoteValue": "Valor remoto:",
       "keepYours": "Manter o seu",
       "takeTheirs": "Usar o remoto"
+    }
+  },
+  "labels": {
+    "printColumns": "Colunas de impressão"
+  },
+  "deleteEntity": {
+    "checkingDependenciesTitle": "Verificando dependências",
+    "deleteTitle": "Excluir {{entityName}}",
+    "cannotDeleteTitle": "Não é possível excluir",
+    "deleting": "Excluindo...",
+    "checkingDependenciesMessage": "Verificando dependências...",
+    "fallbackBlockMessage": "Remova ou reatribua estes itens antes de excluir.",
+    "confirmationMessage": "Tem certeza de que deseja excluir \"{{entityName}}\"? Esta ação não pode ser desfeita.",
+    "alternatives": {
+      "deactivate": {
+        "label": "Marcar como inativo",
+        "description": "Desativa o registro sem excluir seus dados.",
+        "warning": "Registros inativos não poderão mais ser selecionados em novos fluxos de trabalho."
+      },
+      "archive": {
+        "label": "Arquivar",
+        "description": "Move o registro para fora do uso ativo preservando o histórico.",
+        "warning": "Registros arquivados ficam ocultos nas visualizações padrão."
+      }
     }
   }
 }

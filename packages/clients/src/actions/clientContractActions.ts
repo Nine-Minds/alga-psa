@@ -215,6 +215,23 @@ export const assignContractToClient = withAuth(async (
       idempotencyKey: `contract_created:${clientContract.contract_id}:${clientContract.client_id}`,
     });
 
+    await publishWorkflowEvent({
+      eventType: 'CLIENT_CONTRACT_CREATED',
+      payload: {
+        clientContractId: clientContract.client_contract_id,
+        contractId: clientContract.contract_id,
+        clientId: clientContract.client_id,
+        userId: _user.user_id,
+        timestamp: createdAt,
+      },
+      ctx: {
+        tenantId: tenant,
+        occurredAt: createdAt,
+        actor: maybeUserActor(_user),
+      },
+      idempotencyKey: `client_contract_created:${clientContract.client_contract_id}:${createdAt}`,
+    });
+
     const renewal = clientContract.end_date
       ? computeContractRenewalUpcoming({
           renewalAt: clientContract.end_date,
@@ -325,6 +342,23 @@ export const createClientContract = withAuth(async (
         actor: maybeUserActor(_user),
       },
       idempotencyKey: `contract_created:${createdForEvent.contract_id}:${createdForEvent.client_id}`,
+    });
+
+    await publishWorkflowEvent({
+      eventType: 'CLIENT_CONTRACT_CREATED',
+      payload: {
+        clientContractId: createdForEvent.client_contract_id,
+        contractId: createdForEvent.contract_id,
+        clientId: createdForEvent.client_id,
+        userId: _user.user_id,
+        timestamp: createdAt,
+      },
+      ctx: {
+        tenantId: tenant,
+        occurredAt: createdAt,
+        actor: maybeUserActor(_user),
+      },
+      idempotencyKey: `client_contract_created:${createdForEvent.client_contract_id}:${createdAt}`,
     });
 
     const renewal = createdForEvent.end_date
@@ -486,6 +520,24 @@ export const updateClientContract = withAuth(async (
       });
     }
 
+    await publishWorkflowEvent({
+      eventType: 'CLIENT_CONTRACT_UPDATED',
+      payload: {
+        clientContractId,
+        contractId: updatedClientContract.contract_id,
+        clientId: updatedClientContract.client_id,
+        userId: _user.user_id,
+        changes,
+        timestamp: updatedAt,
+      },
+      ctx: {
+        tenantId: tenant,
+        occurredAt: updatedAt,
+        actor: maybeUserActor(_user),
+      },
+      idempotencyKey: `client_contract_updated:${clientContractId}:${updatedAt}`,
+    });
+
     const previousStatus = deriveClientContractWorkflowStatus({
       isActive: beforeContract.is_active,
       startDate: beforeContract.start_date,
@@ -613,6 +665,24 @@ export const deactivateClientContract = withAuth(async (
         idempotencyKey: `contract_status_changed:${deactivatedContract.contract_id}:${deactivatedContract.client_id}:${previousStatus}->${newStatus}:${changedAt}`,
       });
     }
+
+    await publishWorkflowEvent({
+      eventType: 'CLIENT_CONTRACT_UPDATED',
+      payload: {
+        clientContractId,
+        contractId: deactivatedContract.contract_id,
+        clientId: deactivatedContract.client_id,
+        userId: _user.user_id,
+        changes: { is_active: false },
+        timestamp: changedAt,
+      },
+      ctx: {
+        tenantId: tenant,
+        occurredAt: changedAt,
+        actor: maybeUserActor(_user),
+      },
+      idempotencyKey: `client_contract_updated:${clientContractId}:${changedAt}`,
+    });
 
     return deactivatedContract;
   } catch (error) {

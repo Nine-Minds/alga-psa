@@ -15,6 +15,7 @@ import { registerExtensionGatewayRoutes } from './routes/extensionGateway';
 import { registerFileRoutes } from './routes/files';
 import { registerFinancialInvoiceRoutes } from './routes/financialInvoices';
 import { registerInstallRoutes } from './routes/installs';
+import { registerInboundWebhookRoutes } from './routes/inboundWebhooks';
 import { registerStatusRoutes } from './routes/statuses';
 import { registerProjectRoutes } from './routes/projects';
 import { registerServiceCategoryRoutes } from './routes/serviceCategories';
@@ -54,6 +55,7 @@ export function buildBaseRegistry(options: RegistryInitOptions = {}): ApiOpenApi
   registerExtensionGatewayRoutes(registry);
   registerFinancialInvoiceRoutes(registry);
   registerFileRoutes(registry);
+  registerInboundWebhookRoutes(registry);
   registerSystemRoutes(registry);
   registerInstallRoutes(registry);
   registerQuickBooksRoutes(registry);

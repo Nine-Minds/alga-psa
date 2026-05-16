@@ -294,6 +294,9 @@ def "main cleanup" [
         "sessions"
 
         # === LEVEL 1: Leaf tables with no dependencies ===
+        # Global search index (no FKs, denormalized projection)
+        "app_search_index"
+
         # Workflow details
         "workflow_action_results" "workflow_event_attachments" "workflow_snapshots"
         "workflow_action_dependencies" "workflow_sync_points" "workflow_timers"
@@ -325,7 +328,10 @@ def "main cleanup" [
         "document_folders" "document_system_entries"
 
         # Messages and comments
-        "comments"
+        # comment_threads is the parent of comments.thread_id / project_task_comments.thread_id
+        # (CASCADE) and email_sending_logs.comment_thread_id (SET NULL); delete AFTER comments
+        # and project_task_comments (which is removed at the project_task_comments line above).
+        "comments" "comment_threads"
         "gmail_processed_history" "email_processed_messages"
         "email_reply_tokens" "email_sending_logs" "email_rate_limits"
 

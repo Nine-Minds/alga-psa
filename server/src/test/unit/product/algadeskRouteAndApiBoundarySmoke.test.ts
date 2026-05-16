@@ -20,7 +20,6 @@ describe('AlgaDesk route/API boundary smoke', () => {
       '/msp/workflow-editor',
       '/msp/surveys',
       '/msp/extensions',
-      '/msp/reports',
       '/msp/service-requests',
     ];
 
@@ -31,6 +30,8 @@ describe('AlgaDesk route/API boundary smoke', () => {
 
     expect(resolveProductRouteBehavior('algadesk', '/msp/test/ui-kit')).toBe('not_found');
     expect(resolveProductRouteBehavior('psa', '/msp/test/ui-kit')).toBe('allowed');
+    expect(resolveProductRouteBehavior('algadesk', '/msp/reports')).toBe('allowed');
+    expect(resolveProductRouteBehavior('psa', '/msp/reports')).toBe('allowed');
   });
 
   it('T019: AlgaDesk API boundary allows ticket/client/contact/KB/email and denies representative PSA-only groups', () => {

@@ -887,8 +887,41 @@ export const validateClientDeletion = withAuth(async (
     };
   }
 
-  return preCheckDeletion('client', clientId);
+  const result = await preCheckDeletion('client', clientId);
+  return tailorClientDeleteAlternatives(result, client.is_inactive);
 });
+
+// Tailor the generic "Mark as Inactive" alternative for client-specific UX:
+// - drop it when the client is already inactive (no-op)
+// - split into "Client Only" + "Client & Contacts" when active contacts exist
+// Applied to both validateClientDeletion (precheck) and deleteClient (post-check)
+// so dependency surfaces always get the right buttons.
+function tailorClientDeleteAlternatives(
+  result: DeletionValidationResult,
+  clientIsInactive: boolean
+): DeletionValidationResult {
+  const contactDependency = result.dependencies.find((d) => d.type === 'contact');
+  const hasContacts = (contactDependency?.count ?? 0) > 0;
+
+  const alternatives = result.alternatives.flatMap((alt) => {
+    if (alt.action !== 'deactivate') return [alt];
+    if (clientIsInactive) return [];
+    if (hasContacts) {
+      return [
+        {
+          action: 'deactivate_client_only',
+          label: 'Client Only',
+          description: 'Deactivate the client but leave its contacts active.',
+          warning: alt.warning
+        },
+        { ...alt, label: 'Client & Contacts' }
+      ];
+    }
+    return [alt];
+  });
+
+  return { ...result, alternatives };
+}
 
 export const deleteClient = withAuth(async (user, { tenant }, clientId: string): Promise<DeletionValidationResult & {
   success: boolean;
@@ -1039,8 +1072,27 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
       return acc;
     }, {});
 
+    const tailored = tailorClientDeleteAlternatives(result, client.is_inactive);
+    if (result.deleted) {
+      const occurredAt = new Date().toISOString();
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_DELETED',
+        payload: {
+          clientId,
+          deletedByUserId: user.user_id,
+          deletedAt: occurredAt,
+        },
+        ctx: {
+          tenantId: tenant,
+          occurredAt,
+          actor: maybeUserActor(user),
+        },
+        idempotencyKey: `client_deleted:${clientId}:${occurredAt}`,
+      });
+    }
+
     return {
-      ...result,
+      ...tailored,
       deleted: result.deleted,
       success: result.deleted === true,
       counts

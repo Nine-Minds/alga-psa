@@ -20,6 +20,55 @@ function formatLiveUpdateDisplayName(user: any): string {
   return `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || 'Unknown User';
 }
 
+async function assertClientCanCreateComment(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: any,
+  comment: Omit<IComment, 'tenant'>
+): Promise<void> {
+  if (user?.user_type !== 'client') {
+    return;
+  }
+
+  if (comment.is_internal) {
+    throw new Error('Client users cannot create internal comments');
+  }
+
+  if (comment.user_id && user.user_id && comment.user_id !== user.user_id) {
+    throw new Error('Client users can only create their own comments');
+  }
+
+  if (!comment.ticket_id) {
+    throw new Error('ticket_id is required for client comments');
+  }
+
+  let clientId = user.clientId || user.client_id || null;
+  if (!clientId) {
+    const clientRow = await trx('users as u')
+      .leftJoin('contacts as c', function() {
+        this.on('u.contact_id', 'c.contact_name_id')
+          .andOn('u.tenant', 'c.tenant');
+      })
+      .select('c.client_id')
+      .where({ 'u.tenant': tenant, 'u.user_id': user.user_id })
+      .first();
+    clientId = clientRow?.client_id ?? null;
+  }
+
+  if (!clientId) {
+    throw new Error('Client user is not associated with a client');
+  }
+
+  const ticket = await trx('tickets')
+    .select('client_id')
+    .where({ tenant, ticket_id: comment.ticket_id })
+    .first();
+
+  if (!ticket || ticket.client_id !== clientId) {
+    throw new Error('Client user cannot access this ticket');
+  }
+}
+
 /**
  * Helper function to determine the new response state based on comment properties
  * and update the ticket's response_state accordingly.
@@ -194,6 +243,8 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
     const { knex: db } = await createTenantKnex();
     const commentTenant = tenant;
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      await assertClientCanCreateComment(trx, commentTenant!, user, commentToInsert);
+
       const commentId = await Comment.insert(trx, commentTenant!, commentToInsert);
       console.log(`[createComment] Comment inserted with ID:`, commentId);
 
@@ -232,18 +283,25 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
         // Publish TICKET_COMMENT_ADDED event for mention notifications
         // Note: Using try-catch to avoid blocking comment creation if event publishing fails
         try {
+          const eventComment = await Comment.get(trx, commentTenant, commentId);
           await publishEvent({
             eventType: 'TICKET_COMMENT_ADDED',
             payload: {
               tenantId: commentTenant,
               ticketId: comment.ticket_id!,
               userId: comment.user_id,
+              thread_id: eventComment?.thread_id,
+              parent_comment_id: eventComment?.parent_comment_id ?? null,
+              is_reply: Boolean(eventComment?.parent_comment_id),
               comment: {
                 id: commentId,
                 content: comment.note!,
                 author: authorName,
                 isInternal: comment.is_internal || false,
-                authorType: comment.author_type // F039: Include author_type in event payload
+                authorType: comment.author_type, // F039: Include author_type in event payload
+                thread_id: eventComment?.thread_id,
+                parent_comment_id: eventComment?.parent_comment_id ?? null,
+                is_reply: Boolean(eventComment?.parent_comment_id)
               }
             }
           });
@@ -509,9 +567,9 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
 
 export const deleteComment = withAuth(async (user, _ctx, id: string) => {
   const { knex: db } = await createTenantKnex();
+  const tenant = _ctx?.tenant;
   try {
-    await withTransaction(db, async (trx: Knex.Transaction) => {
-      const tenant = _ctx?.tenant;
+    const deletedTicketId = await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!tenant) {
         throw new Error('Tenant is required to delete comment');
       }
@@ -544,7 +602,27 @@ export const deleteComment = withAuth(async (user, _ctx, id: string) => {
           updatedAt: new Date().toISOString(),
         });
       }
+
+      return existingComment?.ticket_id ?? null;
     });
+
+    if (tenant && deletedTicketId) {
+      try {
+        await publishEvent({
+          eventType: 'TICKET_COMMENT_DELETED',
+          payload: {
+            tenantId: tenant,
+            ticketId: deletedTicketId,
+            commentId: id,
+            userId: user?.user_id,
+          },
+        });
+      } catch (eventError) {
+        // Comment is already deleted; the search index self-heals via the
+        // daily reconcile pass if this event fails to publish.
+        console.error(`[deleteComment] Failed to publish TICKET_COMMENT_DELETED event:`, eventError);
+      }
+    }
   } catch (error) {
     console.error(`Failed to delete comment with id ${id}:`, error);
     throw new Error(`Failed to delete comment with id ${id}`);

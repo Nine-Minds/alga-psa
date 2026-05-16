@@ -1268,7 +1268,8 @@
     "templateCreatedSuccess": "Sjabloon succesvol aangemaakt",
     "notAvailable": "N.v.t.",
     "saveAsTemplate": "Opslaan als sjabloon",
-    "materials": "Materialen"
+    "materials": "Materialen",
+    "shareTooltip": "Afdrukken, importeren en exporteren"
   },
   "projectPhases": {
     "addTask": "Taak toevoegen",
@@ -1382,5 +1383,35 @@
     "unknownTask": "Onbekende taak",
     "blocks": "Blokkeert"
   },
-  "columnsHidden": "kolom(men) verborgen door beperkte ruimte. Verklein/vergroot het browservenster om meer te zien."
+  "columnsHidden": "kolom(men) verborgen door beperkte ruimte. Verklein/vergroot het browservenster om meer te zien.",
+  "projectPrint": {
+    "tasks": {
+      "title": "Projecttaken",
+      "subtitle": "{{count}} taken",
+      "noTasks": "Geen projecttaken om af te drukken",
+      "emptyValue": "-",
+      "hoursValue": "{{actual}} / {{estimated}}",
+      "columns": {
+        "task": "Taak",
+        "phase": "Fase",
+        "status": "Status",
+        "assignee": "Toegewezen aan",
+        "dueDate": "Vervaldatum",
+        "hours": "Uren"
+      },
+      "optionsDialog": {
+        "title": "Afdrukopties",
+        "description": "Kies welke kolommen worden opgenomen bij het afdrukken van projecttaken."
+      },
+      "fields": {
+        "phase": "Fase",
+        "status": "Status",
+        "assignee": "Toegewezen aan",
+        "dueDate": "Vervaldatum",
+        "estimatedHours": "Geschatte uren",
+        "wbsCode": "WBS-code",
+        "description": "Beschrijving"
+      }
+    }
+  }
 }

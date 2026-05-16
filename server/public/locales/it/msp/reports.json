@@ -32,6 +32,144 @@
         "title": "Prestazioni del team",
         "placeholder": "[Segnaposto del grafico delle prestazioni del team]"
       }
+    },
+    "description": "Report operativi predefiniti per lo spazio di lavoro corrente. Ulteriori opzioni di personalizzazione saranno aggiunte a questo catalogo in seguito.",
+    "categories": {
+      "helpdesk": "Help desk",
+      "operations": "Operazioni",
+      "billing": "Fatturazione"
+    },
+    "badges": {
+      "planned": "Pianificato"
+    },
+    "actions": {
+      "viewReport": "Visualizza report",
+      "openInBilling": "Apri in fatturazione",
+      "requiresTier": "Richiede {{tier}}",
+      "comingSoon": "In arrivo"
+    },
+    "errors": {
+      "loadReport": "Impossibile caricare il report."
+    },
+    "empty": {
+      "noData": "Nessun dato per questo report.",
+      "noOpenTicketsInRange": "Nessun ticket aperto in questo intervallo.",
+      "noDate": "Nessuna data",
+      "notAvailable": "n/d",
+      "noEmailChannels": "Nessun canale email configurato."
+    },
+    "fallbackTitle": "Report",
+    "dateRange": {
+      "lastDays": "Ultimi {{count}} giorni"
+    },
+    "units": {
+      "daysWithCount": "{{count}} giorni"
+    },
+    "metrics": {
+      "created": "Creati",
+      "closed": "Chiusi",
+      "openNow": "Aperti ora",
+      "awaitingCustomer": "In attesa del cliente",
+      "awaitingInternal": "In attesa interna",
+      "under2Days": "Meno di 2 giorni",
+      "days2To7": "Da 2 a 7 giorni",
+      "days8To30": "Da 8 a 30 giorni",
+      "over30Days": "Oltre 30 giorni",
+      "activeChannels": "Canali attivi",
+      "healthyChannels": "Canali integri",
+      "problemChannels": "Canali con problemi",
+      "emailsProcessed": "Email elaborate",
+      "ticketsFromEmail": "Ticket da email",
+      "failedEmails": "Email non riuscite",
+      "avgProcessingTime": "Tempo medio di elaborazione",
+      "avgTicketCreationTime": "Tempo medio email-ticket",
+      "totalHours": "Ore totali",
+      "billableHours": "Ore fatturabili",
+      "nonBillableHours": "Ore non fatturabili",
+      "billablePercent": "% fatturabile",
+      "timeEntries": "Voci tempo",
+      "activeContracts": "Contratti attivi",
+      "monthlyRecurring": "Ricorrente mensile",
+      "renewalsDue": "Rinnovi in scadenza",
+      "bucketUsedHours": "Ore pacchetto usate",
+      "bucketOverageHours": "Extra pacchetto",
+      "openAssigned": "Aperti assegnati",
+      "activeAssignees": "Assegnatari attivi",
+      "avgResolutionTime": "Tempo medio risoluzione"
+    },
+    "sections": {
+      "openByStatus": "Aperti per stato",
+      "openByPriority": "Aperti per priorità",
+      "openByAssignee": "Aperti per assegnatario",
+      "ageDistribution": "Distribuzione per età",
+      "responseOwnership": "Responsabile della risposta",
+      "oldestOpenTickets": "Ticket aperti meno recenti",
+      "emailProcessingStatus": "Stato elaborazione",
+      "emailChannels": "Canali email",
+      "timeByUser": "Tempo per utente",
+      "billableHoursByService": "Ore fatturabili per servizio",
+      "entriesByWorkType": "Voci per tipo lavoro",
+      "contractRevenue": "Ricavi contratti",
+      "upcomingRenewals": "Rinnovi imminenti",
+      "bucketUsage": "Uso pacchetto",
+      "performanceByAssignee": "Prestazioni per assegnatario",
+      "closedByAssignee": "Chiusi per assegnatario"
+    },
+    "reportCatalog": {
+      "ticketWorkload": {
+        "title": "Carico ticket",
+        "description": "Ticket creati, chiusi, attualmente aperti, raggruppati per stato, priorità, assegnatario."
+      },
+      "ticketAging": {
+        "title": "Età dei ticket",
+        "description": "Fasce di età dei ticket aperti, responsabile della risposta, ticket attivi meno recenti."
+      },
+      "emailChannelHealth": {
+        "title": "Stato dei canali e-mail",
+        "description": "Volume email in ingresso, velocita di creazione dei ticket e stato di connessione delle caselle."
+      },
+      "timeUtilization": {
+        "title": "Utilizzo del tempo",
+        "description": "Lavoro tracciato per persona, area di servizio, operazioni PSA."
+      },
+      "teamPerformance": {
+        "title": "Prestazioni del team",
+        "description": "Volume del team, responsabilità della risposta, spazi di lavoro multiutente."
+      },
+      "contractReports": {
+        "title": "Report contratti",
+        "description": "Ricavi dei contratti, rinnovi, utilizzo dei pacchetti, redditività semplice."
+      }
+    },
+    "table": {
+      "channel": "Canale",
+      "status": "Stato",
+      "processed": "Elaborate",
+      "tickets": "Ticket",
+      "avgEmailToTicket": "Media email-ticket",
+      "assignee": "Assegnatario",
+      "created": "Creati",
+      "closed": "Chiusi",
+      "open": "Aperti",
+      "avgResolution": "Risoluzione media",
+      "user": "Utente",
+      "totalHours": "Ore totali",
+      "billableHours": "Ore fatturabili",
+      "entries": "Voci",
+      "ticket": "Ticket",
+      "entered": "Inserito",
+      "age": "Eta"
+    },
+    "statusValues": {
+      "connected": "Connesso",
+      "disconnected": "Disconnesso",
+      "error": "Errore",
+      "configuring": "Configurazione",
+      "unknown": "Sconosciuto",
+      "success": "Riuscito",
+      "failed": "Non riuscito",
+      "partial": "Parziale",
+      "processing": "In elaborazione"
     }
   },
   "contractReports": {
@@ -68,7 +206,7 @@
     "sections": {
       "revenue": {
         "title": "Report ricavi contratti",
-        "description": "Panoramica dei ricavi ricorrenti mensili e dei periodi di servizio fatturati da inizio anno per contratto.",
+        "description": "Panoramica dei ricavi ricorrenti mensili con periodi di servizio fatturati da inizio anno per contratto.",
         "empty": "Nessun dato sui ricavi dei contratti disponibile"
       },
       "expiration": {

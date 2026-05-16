@@ -11,6 +11,7 @@ import { IDocument } from '@alga-psa/types';
 import { PartialBlock } from '@blocknote/core';
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { CommentThreadDrawer, CommentThreadList, HybridThreadNode, InlineReplyComposer, buildCommentThreadGroups } from '@alga-psa/ui/components';
 
 // Dynamic import for TextEditor
 const TextEditor = dynamic(() => import('@alga-psa/ui/editor').then((mod) => mod.TextEditor), {
@@ -48,6 +49,7 @@ import {
   getStoredTicketConversationNewestFirst,
   setStoredTicketConversationNewestFirst,
 } from './ticketConversationOrderPreference';
+import { buildTicketThreadTabState } from './ticketConversationThreadTabs';
 import { toggleCommentReaction, getCommentsReactionsBatch } from '../../actions/comment-actions/commentReactionActions';
 import type { IAggregatedReaction } from '@alga-psa/types';
 
@@ -65,6 +67,7 @@ interface TicketConversationProps {
   editorKey: number;
   onNewCommentContentChange: (content: PartialBlock[]) => void;
   onAddNewComment: (isInternal: boolean, isResolution: boolean, closeStatusId?: string | null) => Promise<boolean>;
+  onAddReplyComment?: (content: PartialBlock[], parentCommentId: string, isInternal: boolean) => Promise<boolean>;
   onTabChange: (tab: string) => void;
   onEdit: (conversation: IComment) => void;
   onSave: (updates: Partial<IComment>) => void;
@@ -110,6 +113,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   editorKey,
   onNewCommentContentChange,
   onAddNewComment,
+  onAddReplyComment,
   onTabChange,
   onEdit,
   onSave,
@@ -143,6 +147,27 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [contactAvatarUrls, setContactAvatarUrls] = useState<Record<string, string | null>>({});
   const [reactionsMap, setReactionsMap] = useState<Record<string, IAggregatedReaction[]>>({});
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
+  const [openPanelCommentId, setOpenPanelCommentId] = useState<string | null>(null);
+  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
+  const drawerReturnFocusRef = useRef<HTMLElement | null>(null);
+
+  const openCommentThreadPanel = useCallback((commentId: string) => {
+    drawerReturnFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    setOpenPanelCommentId(commentId);
+  }, []);
+
+  const closeCommentThreadPanel = useCallback(() => {
+    const returnFocusTo = drawerReturnFocusRef.current;
+    setOpenPanelCommentId(null);
+    window.setTimeout(() => {
+      if (returnFocusTo?.isConnected) {
+        returnFocusTo.focus();
+      }
+      drawerReturnFocusRef.current = null;
+    }, 0);
+  }, []);
 
   const discardComposeEditor = React.useCallback(() => {
     onNewCommentContentChange(DEFAULT_BLOCK);
@@ -389,48 +414,110 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     }
   }, [currentUser?.id, currentUser?.name]);
 
-  const renderComments = (comments: IComment[]): React.JSX.Element[] => {
-    // Use the sorted comments based on the reverseOrder state
-    const commentsToRender = reverseOrder ? [...comments].reverse() : comments;
-    
-    return commentsToRender.map((conversation): React.JSX.Element => {
+  const renderCommentItem = (conversation: IComment): React.JSX.Element => {
       const override = overrides[conversation.comment_id || ''];
       const mergedConversation = override
         ? { ...conversation, ...(override.note ? { note: override.note } : {}), ...(override.updated_at ? { updated_at: override.updated_at } : {}) }
         : conversation;
-      const itemKey = `${conversation.comment_id}-${conversation.updated_at || ''}-${(conversation.note || '').length}`;
       if (process.env.NODE_ENV !== 'production') console.log('[TicketConversation][renderComments] Rendering', {
-        key: itemKey,
         comment_id: mergedConversation.comment_id,
         updated_at: mergedConversation.updated_at,
         noteLen: (mergedConversation.note || '').length,
       });
       return (
-      <CommentItem
-        key={itemKey}
-        id={`${id}-comment-${mergedConversation.comment_id}`}
-        conversation={mergedConversation}
-        currentUserId={currentUser?.id}
-        isEditing={isEditing && currentComment?.comment_id === mergedConversation.comment_id}
-        currentComment={currentComment}
-        ticketId={ticket.ticket_id || ''}
-        userMap={userMap}
-        contactMap={contactMap}
-        onContentChange={onContentChange}
-        onSave={onSave}
-        onClose={onClose}
-        onEdit={() => onEdit(mergedConversation)}
-        onDelete={onDelete}
-        hideInternalTab={hideInternalTab}
-        uploadFile={existingCommentUploadSession.uploadFile}
-        reactions={reactionsMap[mergedConversation.comment_id || ''] || []}
-        onToggleReaction={handleToggleReaction}
-        userNames={reactionUserNames}
-        canViewCommentMetadataDebug={canViewCommentMetadataDebug}
+      <>
+        <CommentItem
+          id={mergedConversation.comment_id ? `comment-${mergedConversation.comment_id}` : `${id}-comment-unknown`}
+          conversation={mergedConversation}
+          currentUserId={currentUser?.id}
+          isEditing={isEditing && currentComment?.comment_id === mergedConversation.comment_id}
+          currentComment={currentComment}
+          ticketId={ticket.ticket_id || ''}
+          userMap={userMap}
+          contactMap={contactMap}
+          onContentChange={onContentChange}
+          onSave={onSave}
+          onClose={onClose}
+          onEdit={() => onEdit(mergedConversation)}
+          onDelete={onDelete}
+          onReply={() => setReplyingToCommentId(mergedConversation.comment_id ?? null)}
+          hideInternalTab={hideInternalTab}
+          uploadFile={existingCommentUploadSession.uploadFile}
+          reactions={reactionsMap[mergedConversation.comment_id || ''] || []}
+          onToggleReaction={handleToggleReaction}
+          userNames={reactionUserNames}
+          canViewCommentMetadataDebug={canViewCommentMetadataDebug}
+        />
+        {replyingToCommentId === mergedConversation.comment_id && mergedConversation.comment_id && (
+          <InlineReplyComposer
+            id={`${compId}-reply-${mergedConversation.comment_id}`}
+            parentCommentId={mergedConversation.comment_id}
+            roomName={`ticket-${ticket.ticket_id}-reply-${mergedConversation.comment_id}`}
+            initialInternal={Boolean(mergedConversation.is_internal)}
+            showInternalToggle={false}
+            uploadFile={existingCommentUploadSession.uploadFile}
+            searchMentions={searchUsersForMentions}
+            onSubmit={async ({ content, parentCommentId, isInternal }) => {
+              const success = await onAddReplyComment?.(content, parentCommentId, isInternal);
+              if (success) {
+                setReplyingToCommentId(null);
+              }
+            }}
+            onCancel={() => setReplyingToCommentId(null)}
+          />
+        )}
+      </>
+    );
+  };
+
+  const renderComments = (comments: IComment[]): React.ReactNode => {
+    return (
+      <CommentThreadList<IComment>
+        comments={comments}
+        newestFirst={reverseOrder}
+        getCommentId={(comment) => comment.comment_id}
+        getThreadId={(comment) => comment.thread_id || comment.comment_id}
+        getParentCommentId={(comment) => comment.parent_comment_id}
+        getCreatedAt={(comment) => comment.created_at}
+        getUpdatedAt={(comment) => comment.updated_at}
+        renderThreadGroup={(group) => (
+          <HybridThreadNode<IComment>
+            key={`${group.threadId}-${group.replyCount}`}
+            group={group}
+            comment={group.root}
+            getCommentId={(comment) => comment.comment_id}
+            renderComment={(comment) => renderCommentItem(comment)}
+            onOpenPanel={openCommentThreadPanel}
+          />
+        )}
       />
     );
-    });
   };
+
+  const threadGroups = useMemo(
+    () => buildCommentThreadGroups<IComment>({
+      comments: conversations,
+      getCommentId: (comment) => comment.comment_id,
+      getThreadId: (comment) => comment.thread_id || comment.comment_id,
+      getParentCommentId: (comment) => comment.parent_comment_id,
+      getCreatedAt: (comment) => comment.created_at,
+      getUpdatedAt: (comment) => comment.updated_at,
+    }),
+    [conversations]
+  );
+
+  const threadTabState = useMemo(
+    () => buildTicketThreadTabState(threadGroups, hideInternalTab),
+    [threadGroups, hideInternalTab]
+  );
+  const openPanelThreadGroup = openPanelCommentId
+    ? threadGroups.find((group) =>
+      group.comments.some((comment) => comment.comment_id === openPanelCommentId)
+    ) ?? null
+    : null;
+  const openPanelComment = openPanelCommentId && openPanelThreadGroup
+    ? openPanelThreadGroup.comments.find((comment) => comment.comment_id === openPanelCommentId) ?? openPanelThreadGroup.root
+    : null;
 
   const renderExternalComments = (): React.JSX.Element | null => {
     if (!externalComments || externalComments.length === 0) {
@@ -481,46 +568,44 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const baseTabs = [
     {
       id: ALL_COMMENTS_TAB_ID,
-      label: t('conversation.allComments', 'All Comments'),
+      label: `${t('conversation.allComments', 'All Comments')} (${threadTabState.counts.all})`,
       content: (
         <ReflectionContainer id={`${id}-all-comments`} label="All Comments">
           {renderComments(hideInternalTab
             // For client portal, "All Comments" should exclude internal comments (same as "Client Visible")
-            ? conversations.filter(conversation => !conversation.is_internal)
+            ? threadTabState.allTabComments
             // For MSP portal, "All Comments" includes all comments
-            : conversations)}
+            : threadTabState.allTabComments)}
         </ReflectionContainer>
       )
     },
     {
       id: CLIENT_TAB_ID,
-      label: t('conversation.client', 'Client'),
+      label: `${t('conversation.client', 'Client')} (${threadTabState.counts.client})`,
       content: (
         <ReflectionContainer id={`${id}-client-visible-comments`} label="Client Comments">
-          {renderComments(conversations.filter(conversation => !conversation.is_internal))}
+          {renderComments(threadTabState.clientTabComments)}
           {renderExternalComments()}
         </ReflectionContainer>
       )
     },
     {
       id: INTERNAL_TAB_ID,
-      label: t('conversation.internal', 'Internal'),
+      label: `${t('conversation.internal', 'Internal')} (${threadTabState.counts.internal})`,
       content: (
         <ReflectionContainer id={`${id}-internal-comments`} label="Internal Comments">
           <h3 className="text-lg font-medium mb-4">{t('conversation.internalComments', 'Internal Comments')}</h3>
-          {renderComments(conversations.filter(conversation => conversation.is_internal))}
+          {renderComments(threadTabState.internalTabComments)}
         </ReflectionContainer>
       )
     },
     {
       id: RESOLUTION_TAB_ID,
-      label: t('conversation.resolution', 'Resolution'),
+      label: `${t('conversation.resolution', 'Resolution')} (${threadTabState.counts.resolution})`,
       content: (
         <ReflectionContainer id={`${id}-resolution-comments`} label="Resolution Comments">
           <h3 className="text-lg font-medium mb-4">{t('conversation.resolutionComments', 'Resolution Comments')}</h3>
-          {renderComments(conversations.filter(conversation =>
-            conversation.is_resolution && (!hideInternalTab || !conversation.is_internal)
-          ))}
+          {renderComments(threadTabState.resolutionTabComments)}
         </ReflectionContainer>
       )
     }
@@ -697,6 +782,24 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         thirdButtonLabel={t('conversation.keepUploadedImages', 'Keep Images')}
         cancelLabel={t('common.continueEditing', 'Continue Editing')}
         isConfirming={composeUploadSession.isDeletingDraftImages}
+      />
+      <CommentThreadDrawer<IComment>
+        id={`${compId}-comment-thread-drawer`}
+        isOpen={Boolean(openPanelThreadGroup)}
+        onClose={closeCommentThreadPanel}
+        group={openPanelThreadGroup}
+        getCommentId={(comment) => comment.comment_id}
+        renderComment={(comment) => renderCommentItem(comment)}
+        replyParentCommentId={openPanelComment?.comment_id ?? null}
+        replyRoomName={(parentCommentId) => `ticket-${ticket.ticket_id}-reply-${parentCommentId}`}
+        initialInternal={Boolean(openPanelComment?.is_internal ?? openPanelThreadGroup?.root.is_internal)}
+        showInternalToggle={false}
+        onSubmitReply={async ({ content, parentCommentId, isInternal }) => {
+          const success = await onAddReplyComment?.(content, parentCommentId, isInternal);
+          if (success) {
+            closeCommentThreadPanel();
+          }
+        }}
       />
     </div>
   );

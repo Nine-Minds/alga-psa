@@ -196,6 +196,8 @@ spec:
             value: "{{ .Values.server.verify_email}}"
           - name: SERVER_ACTIONS_BODY_LIMIT
             value: "{{ .Values.server.serverActionsBodyLimit | default "200mb" }}"
+          - name: SEARCH_INDEX_LIVE
+            value: {{ ternary "true" "false" (.Values.server.searchIndexLive | default false) | quote }}
           - name: RATE_LIMIT_ENFORCE
             value: "{{ (default dict .Values.rateLimit).enforce | default "false" }}"
           {{- if and .Values.vaultAgent.enabled .Values.vaultAgent.gcpServiceAccount.secretPath }}

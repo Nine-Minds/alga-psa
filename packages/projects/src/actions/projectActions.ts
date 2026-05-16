@@ -571,6 +571,18 @@ export const updatePhase = withAuth(async (user, { tenant }, phaseId: string, ph
             });
         });
 
+        await publishEvent({
+            eventType: 'PROJECT_PHASE_UPDATED',
+            payload: {
+                tenantId: tenant,
+                projectId: updatedPhase.project_id,
+                phaseId,
+                userId: user.user_id,
+                timestamp: new Date().toISOString(),
+                changes: phaseData as Record<string, unknown>,
+            }
+        });
+
         return updatedPhase;
     } catch (error) {
         console.error('Error updating project phase:', error);
@@ -590,14 +602,29 @@ export const deletePhase = withAuth(async (user, { tenant }, phaseId: string): P
         const denied = await checkPermission(user, 'project', 'delete', knex);
         if (denied) return denied;
 
+        let projectIdForEvent: string | null = null;
         await withTransaction(knex, async (trx: Knex.Transaction) => {
             const projectId = await resolveProjectIdForPhase(trx, tenant, phaseId);
             if (!projectId) {
                 throw new Error('Project phase not found');
             }
             await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+            projectIdForEvent = projectId;
             await ProjectModel.deletePhase(trx, tenant, phaseId);
         });
+
+        if (projectIdForEvent) {
+            await publishEvent({
+                eventType: 'PROJECT_PHASE_DELETED',
+                payload: {
+                    tenantId: tenant,
+                    projectId: projectIdForEvent,
+                    phaseId,
+                    userId: user.user_id,
+                    timestamp: new Date().toISOString(),
+                }
+            });
+        }
     } catch (error) {
         console.error('Error deleting project phase:', error);
         throw error;
@@ -619,7 +646,7 @@ export const addProjectPhase = withAuth(async (user, { tenant }, phaseData: Omit
         const denied = await checkPermission(user, 'project', 'update', knex);
         if (denied) return denied;
 
-        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const createdPhase = await withTransaction(knex, async (trx: Knex.Transaction) => {
             const project = await ProjectModel.getById(trx, tenant, phaseData.project_id);
             if (!project) {
                 throw new Error('Project not found');
@@ -668,6 +695,19 @@ export const addProjectPhase = withAuth(async (user, { tenant }, phaseData: Omit
 
             return await ProjectModel.addPhase(trx, tenant, phaseWithDefaults as Omit<IProjectPhase, 'phase_id' | 'created_at' | 'updated_at' | 'tenant'>);
         });
+
+        await publishEvent({
+            eventType: 'PROJECT_PHASE_CREATED',
+            payload: {
+                tenantId: tenant,
+                projectId: createdPhase.project_id,
+                phaseId: createdPhase.phase_id,
+                userId: user.user_id,
+                timestamp: new Date().toISOString(),
+            }
+        });
+
+        return createdPhase;
     } catch (error) {
         console.error('Error adding project phase:', error);
         throw error;
@@ -1154,11 +1194,25 @@ export const deleteProject = withAuth(async (
             await ProjectModel.delete(trx, tenantId, projectId);
         });
 
-        return {
+        const response = {
             ...result,
             success: result.deleted === true,
             deleted: result.deleted
         };
+
+        if (response.success) {
+            await publishEvent({
+                eventType: 'PROJECT_DELETED',
+                payload: {
+                    tenantId: tenant,
+                    projectId,
+                    userId: user.user_id,
+                    timestamp: new Date().toISOString(),
+                }
+            });
+        }
+
+        return response;
     } catch (error) {
         console.error('Error deleting project:', error);
         return {

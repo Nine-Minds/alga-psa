@@ -98,6 +98,7 @@ export const ticketUpdateSchema = ticketSchema.partial().omit({
 export const createCommentSchema = z.object({
   ticket_id: z.string().uuid('Ticket ID must be a valid UUID'),
   content: z.string().min(1, 'Comment content is required'),
+  parent_comment_id: z.string().uuid('Parent comment ID must be a valid UUID').optional(),
   is_internal: z.boolean().optional(),
   is_resolution: z.boolean().optional(),
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
@@ -160,6 +161,7 @@ export interface UpdateTicketInput {
   location_id?: string | null;
   contact_name_id?: string | null;
   status_id?: string;
+  board_id?: string;
   category_id?: string | null;
   subcategory_id?: string | null;
   updated_by?: string;
@@ -195,6 +197,7 @@ export interface TicketValidationResult {
 export interface CreateCommentValidationInput {
   ticket_id: string;
   content: string;
+  parent_comment_id?: string;
   is_internal?: boolean;
   is_resolution?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
@@ -218,6 +221,7 @@ export interface CreateTicketOutput {
 export interface CreateCommentInput {
   ticket_id: string;
   content: string;
+  parent_comment_id?: string;
   is_internal?: boolean;
   is_resolution?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
@@ -1157,6 +1161,9 @@ export class TicketModel {
     }
 
     const commentId = uuidv4();
+    const parentCommentId = validatedData.parent_comment_id || null;
+    let threadId = uuidv4();
+    let commentIsInternal = validatedData.is_internal || false;
     const now = new Date();
 
     // Map legacy/alias author types to current enum: internal | client | unknown
@@ -1173,22 +1180,81 @@ export class TicketModel {
       }
     })();
 
+    if (parentCommentId) {
+      const parent = await trx('comments as parent')
+        .join('comment_threads as thread', function() {
+          this.on('parent.tenant', 'thread.tenant')
+            .andOn('parent.thread_id', 'thread.thread_id');
+        })
+        .select(
+          'parent.comment_id',
+          'parent.ticket_id',
+          'parent.thread_id',
+          'parent.deleted_at',
+          'thread.is_internal as thread_is_internal'
+        )
+        .where('parent.tenant', tenant)
+        .where('parent.comment_id', parentCommentId)
+        .first();
+
+      if (!parent) {
+        throw new Error('Parent comment not found');
+      }
+
+      if (parent.ticket_id !== validatedData.ticket_id) {
+        throw new Error('Parent comment must belong to the same ticket');
+      }
+
+      if (parent.deleted_at) {
+        throw new Error('Cannot reply to a deleted comment');
+      }
+
+      threadId = parent.thread_id;
+      commentIsInternal = Boolean(parent.thread_is_internal);
+    }
+
     const baseCommentData: any = {
       comment_id: commentId,
       tenant,
       ticket_id: validatedData.ticket_id,
       note: validatedData.content,
-      is_internal: validatedData.is_internal || false,
+      is_internal: commentIsInternal,
       is_resolution: validatedData.is_resolution || false,
       author_type: dbAuthorType as any,
       user_id: validatedData.author_id || null,
       contact_id: validatedData.contact_id || null,
       metadata: validatedData.metadata ? JSON.stringify(validatedData.metadata) : null,
+      thread_id: threadId,
+      parent_comment_id: parentCommentId,
       created_at: now,
       updated_at: now
     };
 
+    if (!parentCommentId) {
+      await trx('comment_threads').insert({
+        tenant,
+        thread_id: threadId,
+        ticket_id: validatedData.ticket_id,
+        project_task_id: null,
+        root_comment_id: commentId,
+        is_internal: commentIsInternal,
+        reply_count: 0,
+        last_activity_at: now,
+        created_at: now,
+        created_by: validatedData.author_id || null,
+      });
+    }
+
     await trx('comments').insert(baseCommentData);
+
+    if (parentCommentId) {
+      await trx('comment_threads')
+        .where({ tenant, thread_id: threadId })
+        .update({
+          reply_count: trx.raw('reply_count + 1'),
+          last_activity_at: now,
+        });
+    }
 
     if (!validatedData.is_internal && validatedData.author_type === 'contact') {
       // Only update response state if tracking is enabled for this tenant

@@ -13,11 +13,20 @@ let initialized = false;
 export function initializeWorkflowRuntimeV2(): void {
   if (initialized) return;
   const schemaRegistry = getSchemaRegistry();
-  schemaRegistry.register(EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF, emptyWorkflowPayloadSchema);
-  schemaRegistry.register('payload.EmailWorkflowPayload.v1', emailWorkflowPayloadSchema);
-  schemaRegistry.register(WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF, workflowClockTriggerPayloadSchema);
+  // Use has() guards so re-init (e.g. via HMR or dual module instances) is safe.
+  if (!schemaRegistry.has(EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF)) {
+    schemaRegistry.register(EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF, emptyWorkflowPayloadSchema);
+  }
+  if (!schemaRegistry.has('payload.EmailWorkflowPayload.v1')) {
+    schemaRegistry.register('payload.EmailWorkflowPayload.v1', emailWorkflowPayloadSchema);
+  }
+  if (!schemaRegistry.has(WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF)) {
+    schemaRegistry.register(WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF, workflowClockTriggerPayloadSchema);
+  }
   for (const [ref, schema] of Object.entries(workflowEventPayloadSchemas)) {
-    schemaRegistry.register(ref, schema);
+    if (!schemaRegistry.has(ref)) {
+      schemaRegistry.register(ref, schema);
+    }
   }
 
   registerDefaultNodes();

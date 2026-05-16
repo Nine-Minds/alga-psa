@@ -92,6 +92,24 @@
         "future": "11111",
         "all": "11111"
       }
+    },
+    "print": {
+      "title": "11111",
+      "subtitle": "11111 {{count}} 11111",
+      "noEntries": "11111",
+      "emptyValue": "11111",
+      "columns": {
+        "title": "11111",
+        "type": "11111",
+        "start": "11111",
+        "end": "11111",
+        "assigned": "11111",
+        "status": "11111"
+      },
+      "optionsDialog": {
+        "title": "11111",
+        "description": "11111"
+      }
     }
   },
   "weeklyEvent": {

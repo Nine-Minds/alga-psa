@@ -1463,12 +1463,16 @@
     "heading": "Services à frais fixes",
     "preview": {
       "labels": {
+        "alternateFrequency": "Fréquence de facturation alternative :",
         "billingTiming": "Moment de facturation :",
         "cadenceOwner": "Propriétaire de la cadence :",
         "invoiceWindow": "Fenêtre de facturation :",
         "recurringRate": "Tarif récurrent :",
         "service": "Service :",
         "services": "Services :"
+      },
+      "materializedPeriods": {
+        "tooltip": "Aperçu des prochaines périodes de service et des fenêtres de facturation qui seraient générées pour elles selon les paramètres actuels. Ces données permettent de vérifier la cadence avant l'enregistrement — les factures réelles sont produites plus tard lors de l'exécution de facturation."
       },
       "title": "Aperçu récurrent avant enregistrement"
     },
@@ -1538,14 +1542,24 @@
     },
     "summary": {
       "labels": {
+        "alternateFrequency": "Fréquence de facturation alternative :",
+        "bucketsHeading": "Banques :",
+        "includedHours": "Heures incluses :",
         "minimumTime": "Temps minimum :",
+        "overageRate": "Tarif de dépassement :",
+        "rollover": "Report :",
         "roundUp": "Arrondi :",
+        "serviceFallback": "Service {{index}}",
         "services": "Services :"
       },
       "title": "Résumé des services horaires",
       "values": {
         "everyMinutes": "Toutes les {{count}} minutes",
-        "minutes": "{{count}} minutes"
+        "hours": "{{count}} heures",
+        "minutes": "{{count}} minutes",
+        "overageRatePerHour": "{{rate}}/heure",
+        "rolloverDisabled": "Désactivé",
+        "rolloverEnabled": "Activé"
       }
     }
   },

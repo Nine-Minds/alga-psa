@@ -1,6 +1,7 @@
 import type { IService } from '@/interfaces/billing.interfaces';
 import { BaseService, ServiceContext, ListResult } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
+import { publishServiceCatalogSearchEvent } from './ServiceCatalogService';
 
 type SortField = 'service_name' | 'billing_method' | 'default_rate';
 
@@ -217,6 +218,12 @@ export class ProductCatalogService extends BaseService<IService> {
       await this.setServicePrices(knex, created.service_id, tenant, prices);
     }
 
+    await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, created.service_id, {
+      userId: context.userId,
+      itemKind: 'product',
+      changedFields: Object.keys(productData),
+    });
+
     return this.getById(created.service_id, context) as Promise<IService>;
   }
 
@@ -248,6 +255,12 @@ export class ProductCatalogService extends BaseService<IService> {
       await this.setServicePrices(knex, id, tenant, prices);
     }
 
+    await publishServiceCatalogSearchEvent('SERVICE_CATALOG_UPDATED', tenant, id, {
+      userId: context.userId,
+      itemKind: 'product',
+      changedFields: Object.keys(updateData),
+    });
+
     return this.getById(id, context) as Promise<IService>;
   }
 
@@ -258,6 +271,11 @@ export class ProductCatalogService extends BaseService<IService> {
     await knex('service_catalog')
       .where({ service_id: id, tenant })
       .delete();
+
+    await publishServiceCatalogSearchEvent('SERVICE_CATALOG_DELETED', tenant, id, {
+      userId: context.userId,
+      itemKind: 'product',
+    });
   }
 
   private async setServicePrices(

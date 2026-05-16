@@ -371,18 +371,18 @@ export const deleteTimePeriod = withAuth(async (_user, { tenant }, periodId: str
   try {
     const { knex } = await createTenantKnex();
     // Check if period exists and has no associated time records
-    const period = await TimePeriod.findById(knex, periodId);
+    const period = await TimePeriod.findById(knex, tenant, periodId);
     if (!period) {
       throw new Error('Time period not found');
     }
 
-    const isEditable = await TimePeriod.isEditable(knex, periodId);
+    const isEditable = await TimePeriod.isEditable(knex, tenant, periodId);
     if (!isEditable) {
       throw new Error('Cannot delete time period with associated time sheets');
     }
 
     try {
-      await TimePeriod.delete(knex, periodId);
+      await TimePeriod.delete(knex, tenant, periodId);
       revalidatePath('/msp/time-entry');
     } catch (error: any) {
       if (error.message.includes('belongs to different tenant')) {
@@ -412,12 +412,12 @@ export const updateTimePeriod = withAuth(async (
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Check if period exists and has no associated time records
-      const period = await TimePeriod.findById(trx, periodId);
+      const period = await TimePeriod.findById(trx, tenant, periodId);
       if (!period) {
         throw new Error('Time period not found');
       }
 
-      const isEditable = await TimePeriod.isEditable(trx, periodId);
+      const isEditable = await TimePeriod.isEditable(trx, tenant, periodId);
       if (!isEditable) {
         throw new Error('Cannot update time period with associated time sheets');
       }
@@ -426,14 +426,14 @@ export const updateTimePeriod = withAuth(async (
       if (updates.start_date || updates.end_date) {
         const startDate = updates.start_date || period.start_date;
         const endDate = updates.end_date || period.end_date;
-        const overlappingPeriod = await TimePeriod.findOverlapping(trx, startDate, endDate, periodId);
+        const overlappingPeriod = await TimePeriod.findOverlapping(trx, tenant, startDate, endDate, periodId);
         if (overlappingPeriod) {
           throw new Error('Cannot update time period: overlaps with existing period');
         }
       }
 
       try {
-        const updatedPeriod = await TimePeriod.update(trx, periodId, updates);
+        const updatedPeriod = await TimePeriod.update(trx, tenant, periodId, updates);
         const validatedPeriod = validateData(timePeriodSchema, updatedPeriod);
 
         revalidatePath('/msp/time-entry');
@@ -464,6 +464,7 @@ export const generateAndSaveTimePeriods = withAuth(async (_user, { tenant }, sta
       for (const period of generatedPeriods) {
         const overlappingPeriod = await TimePeriod.findOverlapping(
           trx,
+          tenant,
           toPlainDate(period.start_date),
           toPlainDate(period.end_date)
         );
@@ -475,7 +476,7 @@ export const generateAndSaveTimePeriods = withAuth(async (_user, { tenant }, sta
       // Save generated periods to the database
       const savedPeriods = await Promise.all(generatedPeriods.map((period: ITimePeriodView): Promise<ITimePeriod> => {
         // Convert string dates to Temporal.PlainDate for database
-        return TimePeriod.create(trx, {
+        return TimePeriod.create(trx, tenant, {
           ...period,
           start_date: toPlainDate(period.start_date),
           end_date: toPlainDate(period.end_date)

@@ -1463,12 +1463,16 @@
     "heading": "11111",
     "preview": {
       "labels": {
+        "alternateFrequency": "11111",
         "billingTiming": "11111",
         "cadenceOwner": "11111",
         "invoiceWindow": "11111",
         "recurringRate": "11111",
         "service": "11111",
         "services": "11111"
+      },
+      "materializedPeriods": {
+        "tooltip": "11111"
       },
       "title": "11111"
     },
@@ -1538,14 +1542,24 @@
     },
     "summary": {
       "labels": {
+        "alternateFrequency": "11111",
+        "bucketsHeading": "11111",
+        "includedHours": "11111",
         "minimumTime": "11111",
+        "overageRate": "11111",
+        "rollover": "11111",
         "roundUp": "11111",
+        "serviceFallback": "11111 {{index}} 11111",
         "services": "11111"
       },
       "title": "11111",
       "values": {
         "everyMinutes": "11111 {{count}} 11111",
-        "minutes": "11111 {{count}} 11111"
+        "hours": "11111 {{count}} 11111",
+        "minutes": "11111 {{count}} 11111",
+        "overageRatePerHour": "11111 {{rate}} 11111",
+        "rolloverDisabled": "11111",
+        "rolloverEnabled": "11111"
       }
     }
   },

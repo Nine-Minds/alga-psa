@@ -132,7 +132,34 @@
     },
     "deleteSelectedPrompt": "Êtes-vous sûr de vouloir supprimer {{count}} sélectionné {{clientsLabel}} ? Cette action ne peut pas être annulée.",
     "singleInactiveWithContactsSuccess_one": "{{name}} et {{count}} contact ont été désactivés avec succès.",
-    "singleInactiveWithContactsSuccess_other": "{{name}} et {{count}} contacts ont été désactivés avec succès."
+    "singleInactiveWithContactsSuccess_other": "{{name}} et {{count}} contacts ont été désactivés avec succès.",
+    "clientTypes": {
+      "company": "Entreprise",
+      "individual": "Particulier"
+    },
+    "print": {
+      "title": "Clients",
+      "selectedTitle": "Clients sélectionnés",
+      "subtitle": "{{count}} clients",
+      "noClients": "Aucun client à imprimer",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Client",
+        "type": "Type",
+        "phone": "Téléphone",
+        "address": "Adresse",
+        "status": "Statut"
+      },
+      "optionsDialog": {
+        "title": "Options d'impression",
+        "description": "Choisissez les colonnes à inclure lors de l'impression des clients."
+      }
+    },
+    "shareTooltip": "Imprimer, importer et exporter"
+    ,
+    "defaultClientDeleteError": "Impossible de supprimer le client par défaut. Définissez d’abord un autre client comme client par défaut dans les paramètres généraux.",
+    "clientNotFound": "Client introuvable.",
+    "deletePermissionDenied": "Autorisation refusée : impossible de supprimer des clients."
   },
   "clientDetails": {
     "title": "Détails du client",
@@ -216,7 +243,15 @@
     "inboundDomainAdded": "Domaine de courrier entrant ajouté",
     "inboundDomainAddFailed": "Échec de l'ajout du domaine",
     "inboundDomainRemoved": "Domaine de courrier entrant supprimé",
-    "inboundDomainRemoveFailed": "Échec de la suppression du domaine"
+    "inboundDomainRemoveFailed": "Échec de la suppression du domaine",
+    "fields": {
+      "accountManager": "Responsable de compte",
+      "url": "URL",
+      "status": "Statut"
+    }
+    ,
+    "deactivateClientDescription": "Désactive l’enregistrement sans supprimer ses données.",
+    "deactivateClientOnlyDescription": "Désactive le client, mais laisse ses contacts actifs."
   },
   "quickAddClient": {
     "title": "Ajouter un nouveau client",

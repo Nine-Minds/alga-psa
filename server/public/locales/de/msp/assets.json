@@ -197,6 +197,25 @@
       "client_name": "Kundenname",
       "location": "Standort",
       "actions": "Aktionen"
+    },
+    "print": {
+      "title": "Assets",
+      "selectedTitle": "Ausgewählte Assets",
+      "subtitle": "{{count}} Assets",
+      "noAssets": "Keine Assets zum Drucken",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Name",
+        "tag": "Tag",
+        "type": "Typ",
+        "status": "Status",
+        "client": "Kunde",
+        "location": "Standort"
+      },
+      "optionsDialog": {
+        "title": "Druckoptionen",
+        "description": "Wählen Sie die beim Drucken von Assets enthaltenen Spalten."
+      }
     }
   },
   "assetDashboardGrid": {
@@ -364,6 +383,14 @@
     "errors": {
       "title": "Fehler",
       "notFound": "Das Asset wurde nicht gefunden oder Sie haben keine Berechtigung, es anzuzeigen."
+    },
+    "fields": {
+      "assetTag": "Asset-Tag",
+      "serialNumber": "Seriennummer",
+      "assetType": "Typ",
+      "client": "Kunde",
+      "status": "Status",
+      "location": "Standort"
     }
   },
   "assetDetails": {
@@ -672,7 +699,7 @@
     "pageTitle": "Asset bearbeiten"
   },
   "associatedAssets": {
-    "title": "Zugehörige Vermögenswerte",
+    "title": "Vermögenswerte",
     "description": "Verwaltung der Beziehungen zwischen übergeordneten und untergeordneten Assets mit verknüpften Asset-Aktionen",
     "loading": {
       "assets": "Assets werden geladen..."

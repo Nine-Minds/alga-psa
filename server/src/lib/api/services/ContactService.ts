@@ -378,6 +378,38 @@ export class ContactService extends BaseService<IContact> {
     );
   }
 
+  async delete(id: string, context: ServiceContext): Promise<void> {
+    const { knex } = await this.getKnex();
+
+    const deletedContact = await withTransaction(knex, async (trx) => {
+      const before = await ContactModel.getContactById(id, context.tenant, trx);
+      if (!before) {
+        throw new NotFoundError('Contact not found');
+      }
+
+      await trx('contacts')
+        .where('contact_name_id', id)
+        .where('tenant', context.tenant)
+        .delete();
+
+      return before;
+    });
+
+    const occurredAt = new Date().toISOString();
+    const actor = maybeUserActorFromContext(context);
+    await publishWorkflowEvent({
+      eventType: 'CONTACT_DELETED',
+      payload: {
+        contactId: id,
+        ...(deletedContact.client_id ? { clientId: deletedContact.client_id } : {}),
+        ...(typeof context.userId === 'string' ? { deletedByUserId: context.userId } : {}),
+        deletedAt: occurredAt,
+      },
+      ctx: { tenantId: context.tenant, occurredAt, actor },
+      idempotencyKey: `contact_deleted:${id}:${occurredAt}`,
+    });
+  }
+
   async search(searchData: ContactSearchData, context: ServiceContext): Promise<IContact[]> {
     const { knex } = await this.getKnex();
 

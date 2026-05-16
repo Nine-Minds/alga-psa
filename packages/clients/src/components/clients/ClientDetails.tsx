@@ -40,6 +40,8 @@ import { DeleteEntityDialog } from '@alga-psa/ui';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { Button } from '@alga-psa/ui/components/Button';
+import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { PrintableDetailHeader, type PrintableDetailField } from '@alga-psa/ui/components/PrintableDetailHeader';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { ExternalLink, RefreshCw, Trash2 } from 'lucide-react';
 import BackNav from '@alga-psa/ui/components/BackNav';
@@ -325,12 +327,89 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     };
   }, [entraSyncRunId, fetchEntraSyncRunStatus]);
 
+  const localizeClientDeleteValidation = useCallback((result: DeletionValidationResult): DeletionValidationResult => {
+    const hasClientOnlyAlternative = result.alternatives.some((alternative) => alternative.action === 'deactivate_client_only');
+    const dependencyLabel = (type: string, count: number, fallback: string) => {
+      const dependencyKeys: Record<string, [string, string, string, string]> = {
+        contact: ['clientsPage.dependency.contact', 'contact', 'clientsPage.dependency.contacts', 'contacts'],
+        ticket: ['clientsPage.dependency.ticket', 'ticket', 'clientsPage.dependency.tickets', 'tickets'],
+        project: ['clientsPage.dependency.project', 'project', 'clientsPage.dependency.projects', 'projects'],
+        invoice: ['clientsPage.dependency.invoice', 'invoice', 'clientsPage.dependency.invoices', 'invoices'],
+        document: ['clientsPage.dependency.document', 'document', 'clientsPage.dependency.documents', 'documents'],
+        interaction: ['clientsPage.dependency.interaction', 'interaction', 'clientsPage.dependency.interactions', 'interactions'],
+        asset: ['clientsPage.dependency.asset', 'asset', 'clientsPage.dependency.assets', 'assets'],
+        usage: ['clientsPage.dependency.serviceUsageRecord', 'service usage record', 'clientsPage.dependency.serviceUsageRecords', 'service usage records'],
+        bucket_usage: ['clientsPage.dependency.bucketUsageRecord', 'bucket usage record', 'clientsPage.dependency.bucketUsageRecords', 'bucket usage records'],
+      };
+      const keys = dependencyKeys[type];
+      if (!keys) return fallback;
+      const [singularKey, singularDefault, pluralKey, pluralDefault] = keys;
+      return count === 1
+        ? t(singularKey, { defaultValue: singularDefault })
+        : t(pluralKey, { defaultValue: pluralDefault });
+    };
+
+    const message = (() => {
+      if (result.code === 'DEPENDENCIES_EXIST') {
+        return t('clientsPage.deleteClientUnable', { defaultValue: 'Unable to delete this client.' });
+      }
+      if (result.code === 'IS_DEFAULT') {
+        return t('clientsPage.defaultClientDeleteError', {
+          defaultValue: 'Cannot delete the default client. Please set another client as default in General Settings first.',
+        });
+      }
+      if (result.code === 'NOT_FOUND') {
+        return t('clientsPage.clientNotFound', { defaultValue: 'Client not found.' });
+      }
+      if (result.code === 'PERMISSION_DENIED') {
+        return t('clientsPage.deletePermissionDenied', {
+          defaultValue: 'Permission denied: Cannot delete clients.',
+        });
+      }
+      return result.message;
+    })();
+
+    return {
+      ...result,
+      message,
+      dependencies: result.dependencies.map((dependency) => ({
+        ...dependency,
+        label: dependencyLabel(dependency.type, dependency.count, dependency.label),
+      })),
+      alternatives: result.alternatives.map((alternative) => {
+        if (alternative.action === 'deactivate_client_only') {
+          return {
+            ...alternative,
+            label: t('clientDetails.clientOnly', { defaultValue: 'Client Only' }),
+            description: t('clientDetails.deactivateClientOnlyDescription', {
+              defaultValue: 'Deactivate the client but leave its contacts active.',
+            }),
+          };
+        }
+
+        if (alternative.action === 'deactivate') {
+          return {
+            ...alternative,
+            label: hasClientOnlyAlternative
+              ? t('clientDetails.clientAndContacts', { defaultValue: 'Client & Contacts' })
+              : t('clientsPage.markAsInactive', { defaultValue: 'Mark as Inactive' }),
+            description: t('clientDetails.deactivateClientDescription', {
+              defaultValue: 'Deactivates the record without deleting its data.',
+            }),
+          };
+        }
+
+        return alternative;
+      }),
+    };
+  }, [t]);
+
 
   const runDeleteValidation = useCallback(async () => {
     setIsDeleteValidating(true);
     try {
       const result = await validateClientDeletion(editedClient.client_id);
-      setDeleteValidation(result);
+      setDeleteValidation(localizeClientDeleteValidation(result));
     } catch (error: any) {
       console.error('Failed to validate client deletion:', error);
       setDeleteValidation({
@@ -345,7 +424,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     } finally {
       setIsDeleteValidating(false);
     }
-  }, [editedClient.client_id]);
+  }, [editedClient.client_id, localizeClientDeleteValidation, t]);
 
   const handleDeleteClient = () => {
     setIsDeleteDialogOpen(true);
@@ -358,7 +437,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       const result = await deleteClient(editedClient.client_id);
 
       if (!result.success) {
-        setDeleteValidation(result);
+        setDeleteValidation(localizeClientDeleteValidation(result));
         return;
       }
 
@@ -381,13 +460,13 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   };
 
   const handleDeleteAlternativeAction = async (action: string) => {
-    if (action !== 'deactivate') {
-      return;
-    }
-
     setIsDeleteProcessing(true);
     try {
-      await handleMarkClientInactiveAll();
+      if (action === 'deactivate') {
+        await handleMarkClientInactiveAll();
+      } else if (action === 'deactivate_client_only') {
+        await handleMarkClientInactiveOnly();
+      }
     } finally {
       setIsDeleteProcessing(false);
     }
@@ -1731,7 +1810,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             </Button>
           )}
 
-          <div className="flex items-center gap-2 mr-8">
+          <div className="flex items-center gap-2 mr-8" data-print-hide>
             {showEntraSyncAction && (
               <div className="flex flex-col items-end gap-1">
                 <Button
@@ -1760,6 +1839,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                 ) : null}
               </div>
             )}
+            <PrintButton
+              id={`${id}-print-button`}
+              variant="outline"
+              size="sm"
+            />
             <Button
               id={`${id}-delete-client-button`}
               onClick={handleDeleteClient}
@@ -1775,7 +1859,36 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       </div>
 
       {/* Content Area */}
-      <div>
+      <div data-print-region data-print-title={editedClient.client_name}>
+        <div className="app-print-section">
+          <PrintableDetailHeader
+            title={editedClient.client_name}
+            subtitle={[
+              editedClient.client_type
+                ? t(`clientsPage.clientTypes.${editedClient.client_type}`, {
+                    defaultValue: editedClient.client_type,
+                  })
+                : undefined,
+              editedClient.url,
+            ].filter(Boolean).join(' — ')}
+            fields={[
+              {
+                label: t('clientDetails.fields.accountManager', { defaultValue: 'Account Manager' }),
+                value: editedClient.account_manager_full_name,
+              },
+              {
+                label: t('clientDetails.fields.url', { defaultValue: 'URL' }),
+                value: editedClient.url,
+              },
+              {
+                label: t('clientDetails.fields.status', { defaultValue: 'Status' }),
+                value: editedClient.is_inactive
+                  ? t('common.states.inactive', { defaultValue: 'Inactive' })
+                  : t('common.states.active', { defaultValue: 'Active' }),
+              },
+            ] satisfies PrintableDetailField[]}
+          />
+        </div>
         <CustomTabs
           tabs={quickView ? [tabContent[0]] : tabContent}
           // In quick view we only render the Details tab. Force default to details

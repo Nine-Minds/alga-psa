@@ -8,6 +8,14 @@ import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, Ban, GitBranch,
 import { extractTaskDescriptionText } from '../lib/taskRichText';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Button } from '@alga-psa/ui/components/Button';
+import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
+import {
+  PrintOptionsDialog,
+  type PrintColumnOption,
+  usePrintColumnSelection,
+} from '@alga-psa/ui/components/PrintOptionsDialog';
+import { useRegisterTaskShareActions } from './TaskShareActionsContext';
+import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { format } from 'date-fns';
 import { TagList } from '@alga-psa/ui/components';
@@ -80,6 +88,7 @@ interface TaskListViewProps {
   selectedPriorityFilter?: string;
   selectedTaskTags?: string[];
   selectedAgentFilter?: string[];
+  selectedTeamFilter?: string[];
   includeUnassignedAgents?: boolean;
   primaryAgentOnly?: boolean;
   searchQuery?: string;
@@ -120,6 +129,7 @@ export default function TaskListView({
   selectedPriorityFilter = 'all',
   selectedTaskTags = [],
   selectedAgentFilter = [],
+  selectedTeamFilter = [],
   includeUnassignedAgents = false,
   primaryAgentOnly = false,
   searchQuery = '',
@@ -278,8 +288,8 @@ export default function TaskListView({
       });
     }
 
-    // Apply agent filter
-    if (selectedAgentFilter.length > 0 || includeUnassignedAgents) {
+    // Apply agent / team filter
+    if (selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents) {
       filtered = filtered.filter(task => {
         // Check if task is unassigned (no primary assignee)
         const isUnassigned = !task.assigned_to;
@@ -309,12 +319,17 @@ export default function TaskListView({
           }
         }
 
+        // If specific teams are selected, match by the task's assigned team
+        if (selectedTeamFilter.length > 0 && task.assigned_team_id && selectedTeamFilter.includes(task.assigned_team_id)) {
+          return true;
+        }
+
         return false;
       });
     }
 
     return filtered;
-  }, [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, taskResources, taskDescriptionTextMap]);
+  }, [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly, taskResources, taskDescriptionTextMap]);
 
   // Group tasks by phase and status - include ALL phases and ALL statuses for drag-and-drop
   const phaseGroups = useMemo((): PhaseGroup[] => {
@@ -686,8 +701,164 @@ export default function TaskListView({
   // Calculate visible column count for colSpan
   const visibleColumnCount = COLUMN_CONFIG.filter(c => isColumnVisible(c.key ?? '')).length;
 
+  const printRows = useMemo(() => {
+    return phaseGroups.flatMap((phaseGroup) =>
+      phaseGroup.statusGroups.flatMap((statusGroup) =>
+        statusGroup.tasks.map((task) => ({
+          task,
+          phaseName: phaseGroup.phase.phase_name,
+          statusName: statusGroup.status.custom_name || statusGroup.status.name,
+        }))
+      )
+    );
+  }, [phaseGroups]);
+
+  const printColumns = useMemo<PrintColumnOption<typeof printRows[number]>[]>(() => [
+    {
+      key: 'task',
+      label: t('tasks.taskName', 'Name'),
+      header: t('tasks.taskName', 'Name'),
+      render: ({ task }) => task.task_name,
+    },
+    {
+      key: 'phase',
+      label: t('projectPrint.tasks.columns.phase', 'Phase'),
+      header: t('projectPrint.tasks.columns.phase', 'Phase'),
+      render: ({ phaseName }) => phaseName,
+    },
+    {
+      key: 'status',
+      label: t('projectPrint.tasks.columns.status', 'Status'),
+      header: t('projectPrint.tasks.columns.status', 'Status'),
+      render: ({ statusName }) => statusName,
+    },
+    {
+      key: 'deps',
+      label: t('tasks.dependencies', 'Deps'),
+      header: t('tasks.dependencies', 'Deps'),
+      render: ({ task }) => {
+        const deps = taskDependencies[task.task_id];
+        const dependencyCount = (deps?.predecessors.length ?? 0) + (deps?.successors.length ?? 0);
+        return dependencyCount > 0 ? String(dependencyCount) : t('projectPrint.tasks.emptyValue', '-');
+      },
+    },
+    {
+      key: 'checklist',
+      label: t('tasks.checklist', 'Checklist'),
+      header: t('tasks.checklist', 'Checklist'),
+      render: ({ task }) => {
+        const checklist = checklistItems[task.task_id];
+        return checklist && checklist.total > 0
+          ? t('projectDetail.checklistSummary', '{{completed}} of {{total}} complete', {
+              completed: checklist.completed,
+              total: checklist.total,
+            })
+          : t('projectPrint.tasks.emptyValue', '-');
+      },
+    },
+    {
+      key: 'tags',
+      label: t('projectList.columns.tags', 'Tags'),
+      header: t('projectList.columns.tags', 'Tags'),
+      render: ({ task }) => {
+        const tags = taskTags[task.task_id] ?? [];
+        return tags.length > 0
+          ? tags.map((tag) => tag.tag_text).join(', ')
+          : t('projectPrint.tasks.emptyValue', '-');
+      },
+    },
+    {
+      key: 'assignee',
+      label: t('tasks.assignee', 'Assignee'),
+      header: t('tasks.assignee', 'Assignee'),
+      render: ({ task }) => {
+        const primary = task.assigned_team_id && teamNames[task.assigned_team_id]
+          ? teamNames[task.assigned_team_id]
+          : getAssigneeName(task.assigned_to);
+        const additionalAssignees = (taskResources[task.task_id] ?? [])
+          .map((resource) => getAssigneeName(resource.additional_user_id))
+          .filter(Boolean);
+        return additionalAssignees.length > 0
+          ? `${primary}; +${additionalAssignees.length}: ${additionalAssignees.join(', ')}`
+          : primary;
+      },
+    },
+    {
+      key: 'est_hours',
+      label: t('tasks.estHours', 'Est. Hours'),
+      header: t('tasks.estHours', 'Est. Hours'),
+      render: ({ task }) => task.estimated_hours != null
+        ? (task.estimated_hours / 60).toFixed(1)
+        : t('projectPrint.tasks.emptyValue', '-'),
+    },
+    {
+      key: 'actual_hours',
+      label: t('tasks.actualHours', 'Actual Hours'),
+      header: t('tasks.actualHours', 'Actual Hours'),
+      render: ({ task }) => task.actual_hours != null
+        ? (task.actual_hours / 60).toFixed(1)
+        : t('projectPrint.tasks.emptyValue', '-'),
+    },
+    {
+      key: 'dueDate',
+      label: t('tasks.dueDate', 'Due Date'),
+      header: t('tasks.dueDate', 'Due Date'),
+      render: ({ task }) => task.due_date
+        ? format(new Date(task.due_date), 'PP')
+        : t('projectPrint.tasks.emptyValue', '-'),
+    },
+    {
+      key: 'attachments',
+      label: t('tasks.attachments', 'Attachments'),
+      header: t('tasks.attachments', 'Attachments'),
+      render: ({ task }) => documentCounts[task.task_id] || t('projectPrint.tasks.emptyValue', '-'),
+    },
+  ], [checklistItems, documentCounts, getAssigneeName, t, taskDependencies, taskResources, taskTags, teamNames]);
+  const {
+    selectedColumnKeys: selectedTaskPrintColumnKeys,
+    selectedColumns: selectedTaskPrintColumns,
+    setSelectedColumnKeys: setSelectedTaskPrintColumnKeys,
+    resetSelectedColumnKeys: resetSelectedTaskPrintColumnKeys,
+  } = usePrintColumnSelection('print-columns:project-tasks-list', printColumns);
+
+  const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
+
+  const { triggerPrint: triggerPrintTasks, isPreparing: isPreparingTaskPrint } = usePrintAction();
+
+  const shareRegistration = useMemo(() => ({
+    triggerPrint: triggerPrintTasks,
+    openPrintOptions: () => setIsPrintOptionsOpen(true),
+    isPrinting: isPreparingTaskPrint,
+  }), [triggerPrintTasks, isPreparingTaskPrint]);
+  useRegisterTaskShareActions(shareRegistration);
+
   return (
     <div ref={containerRef} className="flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden h-[calc(100vh-220px)] min-h-[400px]">
+      <div className="app-print-root app-print-only">
+        <PrintableTable
+          title={t('projectPrint.tasks.title', 'Project Tasks')}
+          subtitle={t('projectPrint.tasks.subtitle', '{{count}} tasks', {
+            count: printRows.length,
+          })}
+          rows={printRows}
+          columns={selectedTaskPrintColumns}
+          getRowKey={({ task }) => task.task_id}
+          emptyMessage={t('projectPrint.tasks.noTasks', 'No project tasks to print')}
+        />
+      </div>
+      <PrintOptionsDialog
+        id="project-tasks-print-options-dialog"
+        open={isPrintOptionsOpen}
+        onOpenChange={setIsPrintOptionsOpen}
+        title={t('projectPrint.tasks.optionsDialog.title', 'Print options')}
+        description={t('projectPrint.tasks.optionsDialog.description', 'Choose which columns to include when printing project tasks.')}
+        columns={printColumns}
+        selectedColumnKeys={selectedTaskPrintColumnKeys}
+        onSelectedColumnKeysChange={setSelectedTaskPrintColumnKeys}
+        onReset={resetSelectedTaskPrintColumnKeys}
+        onPrint={() => triggerPrintTasks()}
+        isPrinting={isPreparingTaskPrint}
+      />
       {/* Hidden columns alert */}
       {hiddenColumnCount > 0 && (
         <Alert variant="info" className="rounded-none border-x-0 border-t-0">

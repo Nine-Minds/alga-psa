@@ -28,6 +28,7 @@ export * from './calendar.interfaces';
 export * from './client.interfaces';
 export * from './comment.interface';
 export * from './commentReaction.interface';
+export * from './commentThread.interface';
 export * from './contact.interfaces';
 export * from './contract.interfaces';
 export * from './contractLineServiceConfiguration.interfaces';

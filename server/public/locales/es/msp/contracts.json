@@ -1463,12 +1463,16 @@
     "heading": "Servicios de tarifa fija",
     "preview": {
       "labels": {
+        "alternateFrequency": "Frecuencia de facturación alternativa:",
         "billingTiming": "Momento de facturación:",
         "cadenceOwner": "Propietario de la cadencia:",
         "invoiceWindow": "Ventana de facturación:",
         "recurringRate": "Tarifa recurrente:",
         "service": "Servicio:",
         "services": "Servicios:"
+      },
+      "materializedPeriods": {
+        "tooltip": "Vista previa de los próximos periodos de servicio y las ventanas de facturación que se generarían para ellos según la configuración actual. Permiten verificar la cadencia antes de guardar — las facturas reales se generan después en la ejecución de facturación."
       },
       "title": "Vista previa recurrente antes de guardar"
     },
@@ -1538,14 +1542,24 @@
     },
     "summary": {
       "labels": {
+        "alternateFrequency": "Frecuencia de facturación alternativa:",
+        "bucketsHeading": "Bloques:",
+        "includedHours": "Horas incluidas:",
         "minimumTime": "Tiempo mínimo:",
+        "overageRate": "Tarifa de exceso:",
+        "rollover": "Traslado:",
         "roundUp": "Redondear:",
+        "serviceFallback": "Servicio {{index}}",
         "services": "Servicios:"
       },
       "title": "Resumen de servicios por hora",
       "values": {
         "everyMinutes": "Cada {{count}} minutos",
-        "minutes": "{{count}} minutos"
+        "hours": "{{count}} horas",
+        "minutes": "{{count}} minutos",
+        "overageRatePerHour": "{{rate}}/hora",
+        "rolloverDisabled": "Deshabilitado",
+        "rolloverEnabled": "Habilitado"
       }
     }
   },

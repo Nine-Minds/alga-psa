@@ -92,6 +92,24 @@
         "future": "This and future events",
         "all": "All events"
       }
+    },
+    "print": {
+      "title": "Agenda da programação",
+      "subtitle": "{{count}} entradas agendadas",
+      "noEntries": "Nenhuma entrada agendada para imprimir",
+      "emptyValue": "-",
+      "columns": {
+        "title": "Título",
+        "type": "Tipo",
+        "start": "Início",
+        "end": "Fim",
+        "assigned": "Atribuído",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Opções de impressão",
+        "description": "Escolha quais colunas incluir ao imprimir a agenda."
+      }
     }
   },
   "weeklyEvent": {

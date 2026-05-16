@@ -132,7 +132,34 @@
       "bucketUsageRecord": "bucket usage record",
       "bucketUsageRecords": "bucket usage records"
     },
-    "deleteSelectedPrompt": "Are you sure you want to delete {{count}} selected {{clientsLabel}}? This action cannot be undone."
+    "deleteSelectedPrompt": "Are you sure you want to delete {{count}} selected {{clientsLabel}}? This action cannot be undone.",
+    "clientTypes": {
+      "company": "Company",
+      "individual": "Individual"
+    },
+    "print": {
+      "title": "Clients",
+      "selectedTitle": "Selected Clients",
+      "subtitle": "{{count}} clients",
+      "noClients": "No clients to print",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Client",
+        "type": "Type",
+        "phone": "Phone",
+        "address": "Address",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Print options",
+        "description": "Choose which columns to include when printing clients."
+      }
+    },
+    "shareTooltip": "Print, import and export"
+    ,
+    "defaultClientDeleteError": "Cannot delete the default client. Please set another client as default in General Settings first.",
+    "clientNotFound": "Client not found.",
+    "deletePermissionDenied": "Permission denied: Cannot delete clients."
   },
   "clientDetails": {
     "title": "Client Details",
@@ -216,7 +243,15 @@
     "status": {
       "label": "Status",
       "helper": "Set client status as active or inactive"
+    },
+    "fields": {
+      "accountManager": "Account Manager",
+      "url": "URL",
+      "status": "Status"
     }
+    ,
+    "deactivateClientDescription": "Deactivates the record without deleting its data.",
+    "deactivateClientOnlyDescription": "Deactivate the client but leave its contacts active."
   },
   "quickAddClient": {
     "title": "Add New Client",

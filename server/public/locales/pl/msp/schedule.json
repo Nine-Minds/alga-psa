@@ -92,6 +92,24 @@
         "future": "To i przyszłe wydarzenia",
         "all": "Wszystkie wydarzenia"
       }
+    },
+    "print": {
+      "title": "Agenda harmonogramu",
+      "subtitle": "{{count}} zaplanowanych pozycji",
+      "noEntries": "Brak zaplanowanych pozycji do wydruku",
+      "emptyValue": "-",
+      "columns": {
+        "title": "Tytuł",
+        "type": "Typ",
+        "start": "Początek",
+        "end": "Koniec",
+        "assigned": "Przypisano",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Opcje drukowania",
+        "description": "Wybierz, które kolumny dołączyć podczas drukowania harmonogramu."
+      }
     }
   },
   "weeklyEvent": {

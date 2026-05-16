@@ -32,6 +32,144 @@
         "title": "Rendimiento del equipo",
         "placeholder": "[Marcador de posición del gráfico de rendimiento del equipo]"
       }
+    },
+    "description": "Informes operativos predefinidos para el espacio de trabajo actual. Más personalización se añadirá sobre este catálogo más adelante.",
+    "categories": {
+      "helpdesk": "Mesa de ayuda",
+      "operations": "Operaciones",
+      "billing": "Facturación"
+    },
+    "badges": {
+      "planned": "Planificado"
+    },
+    "actions": {
+      "viewReport": "Ver informe",
+      "openInBilling": "Abrir en facturación",
+      "requiresTier": "Requiere {{tier}}",
+      "comingSoon": "Próximamente"
+    },
+    "errors": {
+      "loadReport": "No se pudo cargar el informe."
+    },
+    "empty": {
+      "noData": "No hay datos para este informe.",
+      "noOpenTicketsInRange": "No hay tickets abiertos en este intervalo.",
+      "noDate": "Sin fecha",
+      "notAvailable": "n/d",
+      "noEmailChannels": "No hay canales de correo configurados."
+    },
+    "fallbackTitle": "Informe",
+    "dateRange": {
+      "lastDays": "Últimos {{count}} días"
+    },
+    "units": {
+      "daysWithCount": "{{count}} días"
+    },
+    "metrics": {
+      "created": "Creados",
+      "closed": "Cerrados",
+      "openNow": "Abiertos ahora",
+      "awaitingCustomer": "Esperando al cliente",
+      "awaitingInternal": "Esperando internamente",
+      "under2Days": "Menos de 2 días",
+      "days2To7": "2 a 7 días",
+      "days8To30": "8 a 30 días",
+      "over30Days": "Más de 30 días",
+      "activeChannels": "Canales activos",
+      "healthyChannels": "Canales correctos",
+      "problemChannels": "Canales con problemas",
+      "emailsProcessed": "Correos procesados",
+      "ticketsFromEmail": "Tickets por correo",
+      "failedEmails": "Correos fallidos",
+      "avgProcessingTime": "Tiempo medio de procesamiento",
+      "avgTicketCreationTime": "Tiempo medio correo-ticket",
+      "totalHours": "Horas totales",
+      "billableHours": "Horas facturables",
+      "nonBillableHours": "Horas no facturables",
+      "billablePercent": "% facturable",
+      "timeEntries": "Entradas de tiempo",
+      "activeContracts": "Contratos activos",
+      "monthlyRecurring": "Recurrente mensual",
+      "renewalsDue": "Renovaciones pendientes",
+      "bucketUsedHours": "Horas de bolsa usadas",
+      "bucketOverageHours": "Exceso de bolsa",
+      "openAssigned": "Abiertos asignados",
+      "activeAssignees": "Asignados activos",
+      "avgResolutionTime": "Tiempo medio de resolucion"
+    },
+    "sections": {
+      "openByStatus": "Abiertos por estado",
+      "openByPriority": "Abiertos por prioridad",
+      "openByAssignee": "Abiertos por responsable",
+      "ageDistribution": "Distribución por antigüedad",
+      "responseOwnership": "Responsable de respuesta",
+      "oldestOpenTickets": "Tickets abiertos más antiguos",
+      "emailProcessingStatus": "Estado de procesamiento",
+      "emailChannels": "Canales de correo",
+      "timeByUser": "Tiempo por usuario",
+      "billableHoursByService": "Horas facturables por servicio",
+      "entriesByWorkType": "Entradas por tipo de trabajo",
+      "contractRevenue": "Ingresos de contratos",
+      "upcomingRenewals": "Renovaciones proximas",
+      "bucketUsage": "Uso de bolsa",
+      "performanceByAssignee": "Rendimiento por asignado",
+      "closedByAssignee": "Cerrados por asignado"
+    },
+    "reportCatalog": {
+      "ticketWorkload": {
+        "title": "Carga de tickets",
+        "description": "Tickets creados, cerrados y abiertos actualmente agrupados por estado, prioridad y responsable."
+      },
+      "ticketAging": {
+        "title": "Antigüedad de tickets",
+        "description": "Rangos de antigüedad de tickets abiertos, responsable de respuesta y tickets activos más antiguos."
+      },
+      "emailChannelHealth": {
+        "title": "Estado de canales de correo",
+        "description": "Volumen de correo entrante, velocidad de creacion de tickets y estado de conexion de los buzones."
+      },
+      "timeUtilization": {
+        "title": "Utilización de tiempo",
+        "description": "Trabajo registrado por persona y área de servicio para operaciones PSA."
+      },
+      "teamPerformance": {
+        "title": "Rendimiento del equipo",
+        "description": "Productividad del equipo y responsable de respuesta para espacios con varios usuarios."
+      },
+      "contractReports": {
+        "title": "Informes de contratos",
+        "description": "Ingresos de contratos, renovaciones, uso de bolsas y rentabilidad simple."
+      }
+    },
+    "table": {
+      "channel": "Canal",
+      "status": "Estado",
+      "processed": "Procesados",
+      "tickets": "Tickets",
+      "avgEmailToTicket": "Prom. correo a ticket",
+      "assignee": "Asignado",
+      "created": "Creados",
+      "closed": "Cerrados",
+      "open": "Abiertos",
+      "avgResolution": "Resolucion media",
+      "user": "Usuario",
+      "totalHours": "Horas totales",
+      "billableHours": "Horas facturables",
+      "entries": "Entradas",
+      "ticket": "Ticket",
+      "entered": "Ingresado",
+      "age": "Antiguedad"
+    },
+    "statusValues": {
+      "connected": "Conectado",
+      "disconnected": "Desconectado",
+      "error": "Error",
+      "configuring": "Configurando",
+      "unknown": "Desconocido",
+      "success": "Correcto",
+      "failed": "Fallido",
+      "partial": "Parcial",
+      "processing": "Procesando"
     }
   },
   "contractReports": {

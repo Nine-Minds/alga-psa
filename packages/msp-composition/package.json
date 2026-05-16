@@ -81,6 +81,10 @@
     "./workflows/registerScheduleEntryIntegration": {
       "import": "./src/workflows/registerScheduleEntryIntegration.ts",
       "types": "./src/workflows/registerScheduleEntryIntegration.ts"
+    },
+    "./reports/*": {
+      "import": "./src/reports/*.tsx",
+      "types": "./src/reports/*.tsx"
     }
   },
   "dependencies": {
@@ -93,6 +97,7 @@
     "@alga-psa/documents": "*",
     "@alga-psa/formatting": "*",
     "@alga-psa/projects": "*",
+    "@alga-psa/reporting": "*",
     "@alga-psa/scheduling": "*",
     "@alga-psa/sla": "*",
     "@alga-psa/surveys": "*",

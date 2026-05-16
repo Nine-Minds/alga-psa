@@ -32,6 +32,144 @@
         "title": "Teamleistung",
         "placeholder": "[Platzhalter für Teamleistungsdiagramm]"
       }
+    },
+    "description": "Vordefinierte operative Berichte für den aktuellen Arbeitsbereich. Mehr Anpassung wird später auf diesen Katalog aufbauen.",
+    "categories": {
+      "helpdesk": "Helpdesk",
+      "operations": "Betrieb",
+      "billing": "Abrechnung"
+    },
+    "badges": {
+      "planned": "Geplant"
+    },
+    "actions": {
+      "viewReport": "Bericht anzeigen",
+      "openInBilling": "In Abrechnung öffnen",
+      "requiresTier": "Erfordert {{tier}}",
+      "comingSoon": "Demnächst"
+    },
+    "errors": {
+      "loadReport": "Bericht konnte nicht geladen werden."
+    },
+    "empty": {
+      "noData": "Keine Daten für diesen Bericht.",
+      "noOpenTicketsInRange": "Keine offenen Tickets in diesem Zeitraum.",
+      "noDate": "Kein Datum",
+      "notAvailable": "k. A.",
+      "noEmailChannels": "Es sind keine E-Mail-Kanaele konfiguriert."
+    },
+    "fallbackTitle": "Bericht",
+    "dateRange": {
+      "lastDays": "Letzte {{count}} Tage"
+    },
+    "units": {
+      "daysWithCount": "{{count}} Tage"
+    },
+    "metrics": {
+      "created": "Erstellt",
+      "closed": "Geschlossen",
+      "openNow": "Aktuell offen",
+      "awaitingCustomer": "Wartet auf Kunde",
+      "awaitingInternal": "Wartet intern",
+      "under2Days": "Unter 2 Tage",
+      "days2To7": "2 bis 7 Tage",
+      "days8To30": "8 bis 30 Tage",
+      "over30Days": "Über 30 Tage",
+      "activeChannels": "Aktive Kanaele",
+      "healthyChannels": "Gesunde Kanaele",
+      "problemChannels": "Kanaele mit Problemen",
+      "emailsProcessed": "Verarbeitete E-Mails",
+      "ticketsFromEmail": "Tickets aus E-Mail",
+      "failedEmails": "Fehlgeschlagene E-Mails",
+      "avgProcessingTime": "Durchschn. Verarbeitungszeit",
+      "avgTicketCreationTime": "Durchschn. E-Mail-zu-Ticket-Zeit",
+      "totalHours": "Gesamtstunden",
+      "billableHours": "Abrechenbare Stunden",
+      "nonBillableHours": "Nicht abrechenbare Stunden",
+      "billablePercent": "Abrechenbar %",
+      "timeEntries": "Zeiteintraege",
+      "activeContracts": "Aktive Vertraege",
+      "monthlyRecurring": "Monatlich wiederkehrend",
+      "renewalsDue": "Faellige Verlaengerungen",
+      "bucketUsedHours": "Genutzte Kontingentstunden",
+      "bucketOverageHours": "Kontingentueberziehung",
+      "openAssigned": "Offen zugewiesen",
+      "activeAssignees": "Aktive Bearbeiter",
+      "avgResolutionTime": "Durchschn. Loesungszeit"
+    },
+    "sections": {
+      "openByStatus": "Offen nach Status",
+      "openByPriority": "Offen nach Priorität",
+      "openByAssignee": "Offen nach Bearbeiter",
+      "ageDistribution": "Altersverteilung",
+      "responseOwnership": "Antwortzustand",
+      "oldestOpenTickets": "Älteste offene Tickets",
+      "emailProcessingStatus": "Verarbeitungsstatus",
+      "emailChannels": "E-Mail-Kanaele",
+      "timeByUser": "Zeit nach Benutzer",
+      "billableHoursByService": "Abrechenbare Stunden nach Service",
+      "entriesByWorkType": "Eintraege nach Arbeitstyp",
+      "contractRevenue": "Vertragserloese",
+      "upcomingRenewals": "Anstehende Verlaengerungen",
+      "bucketUsage": "Kontingentnutzung",
+      "performanceByAssignee": "Leistung nach Bearbeiter",
+      "closedByAssignee": "Geschlossen nach Bearbeiter"
+    },
+    "reportCatalog": {
+      "ticketWorkload": {
+        "title": "Ticket-Auslastung",
+        "description": "Erstellte, geschlossene und aktuell offene Tickets nach Status, Priorität und Bearbeiter."
+      },
+      "ticketAging": {
+        "title": "Ticket-Alter",
+        "description": "Altersgruppen offener Tickets, Antwortzustand und älteste aktive Tickets."
+      },
+      "emailChannelHealth": {
+        "title": "E-Mail-Kanalstatus",
+        "description": "E-Mail-Eingangsvolumen, Geschwindigkeit der Ticketerstellung und Verbindungsstatus der Postfaecher."
+      },
+      "timeUtilization": {
+        "title": "Zeitauslastung",
+        "description": "Erfasste Arbeit nach Person und Leistungsbereich für PSA-Abläufe."
+      },
+      "teamPerformance": {
+        "title": "Teamleistung",
+        "description": "Teamdurchsatz und Antwortzustand für Arbeitsbereiche mit mehreren Benutzern."
+      },
+      "contractReports": {
+        "title": "Vertragsberichte",
+        "description": "Vertragserlöse, Verlängerungen, Kontingentnutzung und einfache Rentabilität."
+      }
+    },
+    "table": {
+      "channel": "Kanal",
+      "status": "Status",
+      "processed": "Verarbeitet",
+      "tickets": "Tickets",
+      "avgEmailToTicket": "Durchschn. E-Mail zu Ticket",
+      "assignee": "Bearbeiter",
+      "created": "Erstellt",
+      "closed": "Geschlossen",
+      "open": "Offen",
+      "avgResolution": "Durchschn. Loesung",
+      "user": "Benutzer",
+      "totalHours": "Gesamtstunden",
+      "billableHours": "Abrechenbare Stunden",
+      "entries": "Eintraege",
+      "ticket": "Ticket",
+      "entered": "Eingegeben",
+      "age": "Alter"
+    },
+    "statusValues": {
+      "connected": "Verbunden",
+      "disconnected": "Getrennt",
+      "error": "Fehler",
+      "configuring": "Wird konfiguriert",
+      "unknown": "Unbekannt",
+      "success": "Erfolg",
+      "failed": "Fehlgeschlagen",
+      "partial": "Teilweise",
+      "processing": "In Verarbeitung"
     }
   },
   "contractReports": {

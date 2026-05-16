@@ -4757,7 +4757,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                             {payloadSchemaStatus === 'error' && t('designer.schemaSettings.loadPreviewFailed')}
                             {payloadSchemaStatus === 'idle' && 'Schema preview is available once loaded.'}
                             {payloadSchemaStatus === 'loaded' && payloadSchema && (() => {
-                              const props = (payloadSchema as any)?.properties ?? null;
+                              // Follow $ref/definitions so payload.X.v1 schemas (which are emitted as
+                              // { $ref, definitions } by zod-to-json-schema) show their fields here.
+                              const resolved = resolveSchema(payloadSchema as JsonSchema, payloadSchema as JsonSchema);
+                              const props = (resolved as any)?.properties ?? null;
                               if (!props || typeof props !== 'object') return 'No top-level properties.';
                               const keys = Object.keys(props);
                               if (keys.length === 0) return 'No top-level properties.';

@@ -1268,7 +1268,8 @@
     "saveAsTemplate": "Save as Template",
     "materials": "Materials",
     "hoursUsageDescription": "Shows budget hours usage for the entire project",
-    "templateCreatedSuccess": "Template created successfully"
+    "templateCreatedSuccess": "Template created successfully",
+    "shareTooltip": "Print, import and export"
   },
   "comments": {
     "title": "Comments",
@@ -1382,5 +1383,35 @@
     "unknownTask": "Unknown task",
     "blocks": "Blocks"
   },
-  "columnsHidden": "column(s) hidden due to limited space. Resize browser to see more."
+  "columnsHidden": "column(s) hidden due to limited space. Resize browser to see more.",
+  "projectPrint": {
+    "tasks": {
+      "title": "Project Tasks",
+      "subtitle": "{{count}} tasks",
+      "noTasks": "No project tasks to print",
+      "emptyValue": "-",
+      "hoursValue": "{{actual}} / {{estimated}}",
+      "columns": {
+        "task": "Task",
+        "phase": "Phase",
+        "status": "Status",
+        "assignee": "Assignee",
+        "dueDate": "Due Date",
+        "hours": "Hours"
+      },
+      "optionsDialog": {
+        "title": "Print options",
+        "description": "Choose which columns to include when printing project tasks."
+      },
+      "fields": {
+        "phase": "Phase",
+        "status": "Status",
+        "assignee": "Assignee",
+        "dueDate": "Due Date",
+        "estimatedHours": "Estimated Hours",
+        "wbsCode": "WBS Code",
+        "description": "Description"
+      }
+    }
+  }
 }
