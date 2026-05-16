@@ -110,6 +110,93 @@ function classifyFailureCategory(phase, status, failure) {
   return 'app-readiness';
 }
 
+function isEarlyKubernetesBootstrapPhase(phase) {
+  const normalized = String(phase || 'setup').toLowerCase();
+  return [
+    'setup',
+    'dns',
+    'network',
+    'github-release-source',
+    'release',
+    'storage',
+    'k3s',
+    'flux'
+  ].some((earlyPhase) => normalized.includes(earlyPhase));
+}
+
+function commandUnavailableText(result) {
+  return `${result?.stderr || ''}\n${result?.stdout || ''}`.toLowerCase();
+}
+
+function isKubernetesQueryUnavailable(result) {
+  if (result?.ok) {
+    return false;
+  }
+
+  const output = commandUnavailableText(result);
+  return result?.status === 124 ||
+    output.includes('kubectl: not found') ||
+    output.includes('kubectl: command not found') ||
+    output.includes('no such file or directory') ||
+    output.includes('connection refused') ||
+    output.includes('the connection to the server') ||
+    output.includes('unable to connect to the server') ||
+    output.includes('kubeconfig') ||
+    output.includes('command timed out');
+}
+
+function skippedKubernetesQuery(command, reason) {
+  return {
+    ok: true,
+    status: 0,
+    command,
+    stdout: '',
+    stderr: `Skipped after ${reason}.`
+  };
+}
+
+function isExpectedEarlyKubernetesUnavailable(installState, results) {
+  if (!isEarlyKubernetesBootstrapPhase(installState?.phase)) {
+    return false;
+  }
+
+  if (installState?.failure) {
+    return false;
+  }
+
+  return results.some((result) => {
+    if (result?.ok) {
+      return false;
+    }
+    const output = commandUnavailableText(result);
+    return output.includes('kubectl: not found') ||
+      output.includes('kubectl: command not found') ||
+      output.includes('no such file or directory') ||
+      output.includes('connection refused') ||
+      output.includes('the connection to the server') ||
+      output.includes('unable to connect to the server') ||
+      output.includes('kubeconfig') ||
+      output.includes('command timed out');
+  });
+}
+
+function isExpectedHelmReleaseCrdUnavailable(installState, result) {
+  if (installState?.failure || result?.ok) {
+    return false;
+  }
+
+  const output = commandUnavailableText(result);
+  return output.includes("the server doesn't have a resource type") &&
+    output.includes('helmreleases');
+}
+
+function appUrlFromInput(value) {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
 function guidanceForCategory(category) {
   if (category === 'dns') {
     return 'Check resolver settings and internal DNS reachability before retrying.';
@@ -158,6 +245,22 @@ function helmReleaseIssues(helmLines) {
   }
 
   return issues;
+}
+
+function isTransientHelmReleaseConvergenceIssue(issue) {
+  const lower = String(issue || '').toLowerCase();
+  return lower.includes("running 'install' action with timeout") ||
+    lower.includes('running "install" action with timeout') ||
+    lower.includes("dependency 'alga-system/alga-core' is not ready") ||
+    lower.includes('dependency "alga-system/alga-core" is not ready');
+}
+
+function blockingHelmReleaseIssues(installState, helmIssues) {
+  if (installState?.failure) {
+    return helmIssues;
+  }
+
+  return helmIssues.filter((issue) => !isTransientHelmReleaseConvergenceIssue(issue));
 }
 
 function deriveFailureSummary(installState, podLines, helmIssues, warnings) {
@@ -341,10 +444,11 @@ function rollupFromState(installState, tiers, failures) {
   }
 
   if (!tiers.platformReady) {
+    const phase = String(installState?.phase || 'setup').toLowerCase();
     return {
       state: 'installing',
-      message: 'Waiting for Kubernetes to become reachable.',
-      nextAction: 'Watch k3s/Flux startup progress.'
+      message: phase === 'setup' ? 'Starting the appliance installation.' : 'Preparing Kubernetes.',
+      nextAction: 'Kubernetes is not ready yet. This is expected during early setup.'
     };
   }
 
@@ -412,22 +516,21 @@ function deriveBootstrapInfo(jobLines) {
   };
 }
 
-export function collectStatusSnapshot(options = {}) {
-  const stateFile = options.stateFile || DEFAULT_STATE_FILE;
-  const setupInputsFile = options.setupInputsFile || DEFAULT_SETUP_INPUTS_FILE;
-  const releaseSelectionFile = options.releaseSelectionFile || DEFAULT_RELEASE_SELECTION_FILE;
-  const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
-  const kubectlPrefix = options.kubectlPrefix || `kubectl --request-timeout=5s --kubeconfig ${kubeconfigPath}`;
-
+function buildStatusSnapshot({
+  stateFile,
+  setupInputsFile,
+  releaseSelectionFile,
+  kubeconfigPath,
+  nodeResult,
+  podResult,
+  jobResult,
+  helmResult,
+  eventsResult,
+  diagnostics
+}) {
   const installState = readJsonFile(stateFile);
   const setupInputs = readJsonFile(setupInputsFile);
   const releaseSelection = readJsonFile(releaseSelectionFile);
-  const nodeResult = runCommand(`${kubectlPrefix} get nodes -o json`, { timeoutMs: 6_000 });
-  const podResult = runCommand(`${kubectlPrefix} get pods -A --no-headers`, { timeoutMs: 6_000 });
-  const jobResult = runCommand(`${kubectlPrefix} -n msp get jobs --no-headers`, { timeoutMs: 6_000 });
-  const helmResult = runCommand(`${kubectlPrefix} -n alga-system get helmreleases.helm.toolkit.fluxcd.io --no-headers`, { timeoutMs: 6_000 });
-  const eventsResult = runCommand(`${kubectlPrefix} get events -A -o json`, { timeoutMs: 6_000 });
-  const diagnostics = options.includeDiagnostics === true ? collectDiagnostics(kubectlPrefix) : [];
 
   let nodes = [];
   if (nodeResult.ok) {
@@ -454,13 +557,28 @@ export function collectStatusSnapshot(options = {}) {
     : [];
 
   const helmIssues = helmReleaseIssues(helmLines);
-  const warnings = [
-    ...(nodeResult.ok ? [] : [`node query failed: ${nodeResult.stderr.trim() || nodeResult.stdout.trim() || 'unknown error'}`]),
-    ...(podResult.ok ? [] : [`pod query failed: ${podResult.stderr.trim() || podResult.stdout.trim() || 'unknown error'}`]),
-    ...(helmResult.ok ? [] : [`helm release query failed: ${helmResult.stderr.trim() || helmResult.stdout.trim() || 'unknown error'}`])
+  const blockingHelmIssues = blockingHelmReleaseIssues(installState, helmIssues);
+  const nodeWarnings = nodeResult.ok ? [] : [`node query failed: ${nodeResult.stderr.trim() || nodeResult.stdout.trim() || 'unknown error'}`];
+  const podWarnings = podResult.ok ? [] : [`pod query failed: ${podResult.stderr.trim() || podResult.stdout.trim() || 'unknown error'}`];
+  const helmWarnings = helmResult.ok ? [] : [`helm release query failed: ${helmResult.stderr.trim() || helmResult.stdout.trim() || 'unknown error'}`];
+  const suppressKubernetesWarnings = isExpectedEarlyKubernetesUnavailable(installState, [
+    nodeResult,
+    podResult,
+    helmResult
+  ]);
+  const suppressTransientHelmReleaseWarning = isExpectedHelmReleaseCrdUnavailable(installState, helmResult);
+  const rawWarnings = [
+    ...nodeWarnings,
+    ...podWarnings,
+    ...(suppressTransientHelmReleaseWarning ? [] : helmWarnings)
   ];
-  const tiers = deriveReadiness(installState, nodes, podLines, jobLines, helmLines, helmIssues, warnings);
-  const failures = deriveFailureSummary(installState, podLines, helmIssues, warnings);
+  const warnings = suppressKubernetesWarnings ? [] : rawWarnings;
+  const suppressedWarnings = suppressKubernetesWarnings
+    ? [...nodeWarnings, ...podWarnings, ...helmWarnings]
+    : (suppressTransientHelmReleaseWarning ? helmWarnings : []);
+  const readinessWarnings = [...warnings, ...(suppressTransientHelmReleaseWarning ? helmWarnings : [])];
+  const tiers = deriveReadiness(installState, nodes, podLines, jobLines, helmLines, helmIssues, readinessWarnings);
+  const failures = deriveFailureSummary(installState, podLines, blockingHelmIssues, warnings);
   const readinessTiers = normalizeReadinessTiers(tiers);
   const rollup = rollupFromState(installState, tiers, failures);
   const topBlockers = failures.map(blockerFromFailure);
@@ -485,7 +603,7 @@ export function collectStatusSnapshot(options = {}) {
     activeOperations,
     bootstrap,
     urls: {
-      loginUrl: setupInputs?.appHostname ? `https://${String(setupInputs.appHostname).replace(/^https?:\/\//i, '')}` : null,
+      loginUrl: appUrlFromInput(setupInputs?.appHostname),
       statusUrl: null
     },
     release: releaseSelection,
@@ -494,8 +612,102 @@ export function collectStatusSnapshot(options = {}) {
       podCount: podLines.length,
       jobCount: jobLines.length,
       helmReleaseCount: helmLines.length,
-      warnings
+      warnings,
+      suppressedWarnings
     },
     diagnostics
   };
+}
+
+function statusSnapshotCommandContext(options = {}) {
+  const stateFile = options.stateFile || DEFAULT_STATE_FILE;
+  const setupInputsFile = options.setupInputsFile || DEFAULT_SETUP_INPUTS_FILE;
+  const releaseSelectionFile = options.releaseSelectionFile || DEFAULT_RELEASE_SELECTION_FILE;
+  const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
+  const requestTimeoutSeconds = Math.max(1, Math.ceil((options.kubectlRequestTimeoutMs || 20_000) / 1000));
+  const kubectlPrefix = options.kubectlPrefix || `kubectl --request-timeout=${requestTimeoutSeconds}s --kubeconfig ${kubeconfigPath}`;
+
+  return {
+    stateFile,
+    setupInputsFile,
+    releaseSelectionFile,
+    kubeconfigPath,
+    kubectlPrefix,
+    nodeCommand: `${kubectlPrefix} get nodes -o json`,
+    podCommand: `${kubectlPrefix} get pods -A --no-headers`,
+    jobCommand: `${kubectlPrefix} -n msp get jobs --no-headers`,
+    helmCommand: `${kubectlPrefix} -n alga-system get helmreleases.helm.toolkit.fluxcd.io --no-headers`,
+    eventsCommand: `${kubectlPrefix} get events -A -o json`
+  };
+}
+
+async function collectDiagnosticsAsync(kubectlPrefix, runner) {
+  const commands = [
+    ['host-service-status', 'systemctl --no-pager --full status alga-appliance.service alga-appliance-console.service'],
+    ['host-service-journal', 'journalctl -u alga-appliance.service -u alga-appliance-console.service -n 200 --no-pager'],
+    ['k3s-status', 'systemctl --no-pager --full status k3s'],
+    ['kubernetes-namespaces', `${kubectlPrefix} get namespaces -o wide`],
+    ['kubernetes-nodes', `${kubectlPrefix} get nodes -o wide`],
+    ['kubernetes-pods', `${kubectlPrefix} get pods -A -o wide`],
+    ['kubernetes-jobs', `${kubectlPrefix} get jobs -A -o wide`],
+    ['kubernetes-helmreleases', `${kubectlPrefix} get helmreleases.helm.toolkit.fluxcd.io -A`],
+    ['kubernetes-storageclasses', `${kubectlPrefix} get storageclass -o wide`],
+    ['kubernetes-pv-pvc', `${kubectlPrefix} get pv,pvc -A -o wide`],
+    ['kubernetes-events', `${kubectlPrefix} get events -A --sort-by=.lastTimestamp | tail -n 150`]
+  ];
+
+  const diagnostics = [];
+  for (const [name, command] of commands) {
+    diagnostics.push({ name, ...(await runner(command, { timeoutMs: 30_000 })) });
+  }
+  return diagnostics;
+}
+
+export function collectStatusSnapshot(options = {}) {
+  const context = statusSnapshotCommandContext(options);
+  const timeoutMs = options.kubectlTimeoutMs || 20_000;
+
+  const nodeResult = runCommand(context.nodeCommand, { timeoutMs });
+  const skipClusterQueries = isKubernetesQueryUnavailable(nodeResult);
+  const skipReason = 'node query failed or timed out';
+  const podResult = skipClusterQueries ? skippedKubernetesQuery(context.podCommand, skipReason) : runCommand(context.podCommand, { timeoutMs });
+  const jobResult = skipClusterQueries ? skippedKubernetesQuery(context.jobCommand, skipReason) : runCommand(context.jobCommand, { timeoutMs });
+  const helmResult = skipClusterQueries ? skippedKubernetesQuery(context.helmCommand, skipReason) : runCommand(context.helmCommand, { timeoutMs });
+  const eventsResult = skipClusterQueries ? skippedKubernetesQuery(context.eventsCommand, skipReason) : runCommand(context.eventsCommand, { timeoutMs });
+  const diagnostics = options.includeDiagnostics === true ? collectDiagnostics(context.kubectlPrefix) : [];
+
+  return buildStatusSnapshot({
+    ...context,
+    nodeResult,
+    podResult,
+    jobResult,
+    helmResult,
+    eventsResult,
+    diagnostics
+  });
+}
+
+export async function collectStatusSnapshotAsync(options = {}) {
+  const context = statusSnapshotCommandContext(options);
+  const timeoutMs = options.kubectlTimeoutMs || 20_000;
+  const runner = options.runCommand || ((command, commandOptions) => Promise.resolve(runCommand(command, commandOptions)));
+
+  const nodeResult = await runner(context.nodeCommand, { timeoutMs });
+  const skipClusterQueries = isKubernetesQueryUnavailable(nodeResult);
+  const skipReason = 'node query failed or timed out';
+  const podResult = skipClusterQueries ? skippedKubernetesQuery(context.podCommand, skipReason) : await runner(context.podCommand, { timeoutMs });
+  const jobResult = skipClusterQueries ? skippedKubernetesQuery(context.jobCommand, skipReason) : await runner(context.jobCommand, { timeoutMs });
+  const helmResult = skipClusterQueries ? skippedKubernetesQuery(context.helmCommand, skipReason) : await runner(context.helmCommand, { timeoutMs });
+  const eventsResult = skipClusterQueries ? skippedKubernetesQuery(context.eventsCommand, skipReason) : await runner(context.eventsCommand, { timeoutMs });
+  const diagnostics = options.includeDiagnostics === true ? await collectDiagnosticsAsync(context.kubectlPrefix, runner) : [];
+
+  return buildStatusSnapshot({
+    ...context,
+    nodeResult,
+    podResult,
+    jobResult,
+    helmResult,
+    eventsResult,
+    diagnostics
+  });
 }

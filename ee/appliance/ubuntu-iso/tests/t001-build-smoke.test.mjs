@@ -218,6 +218,34 @@ test('T006 alga-core appliance profile gives the app Deployment a first-install-
   assert.ok(deployment.spec.progressDeadlineSeconds >= 1800);
 });
 
+test('T006b alga-core appliance bootstrap is serialized and avoids duplicate first-boot app image pulls', () => {
+  const docs = helmTemplate(algaCoreChartPath, path.join(repoRoot, 'ee', 'appliance', 'flux', 'profiles', 'talos-single-node', 'values', 'alga-core.talos-single-node.yaml'));
+  const job = docs.find((doc) => doc.kind === 'Job' && doc.metadata?.name === 'test-release-sebastian-bootstrap');
+  const deployment = docs.find((doc) => doc.kind === 'Deployment' && doc.metadata?.name === 'test-release-sebastian');
+  const configMap = docs.find((doc) => doc.kind === 'ConfigMap' && doc.metadata?.name === 'test-release-sebastian-appliance-bootstrap');
+
+  assert.ok(job);
+  assert.equal(job.metadata.annotations['helm.sh/hook'], 'post-install,post-upgrade');
+  assert.match(job.metadata.annotations['helm.sh/hook-delete-policy'], /before-hook-creation/);
+  assert.equal(job.spec.backoffLimit, 0);
+  assert.equal(job.spec.template.spec.containers[0].imagePullPolicy, 'IfNotPresent');
+
+  assert.ok(deployment);
+  const waitInit = deployment.spec.template.spec.initContainers.find((container) => container.name === 'wait-for-bootstrap');
+  assert.ok(waitInit);
+  assert.equal(waitInit.image, 'ankane/pgvector:latest');
+  assert.equal(waitInit.imagePullPolicy, 'IfNotPresent');
+  assert.equal(deployment.spec.template.spec.containers[0].imagePullPolicy, 'IfNotPresent');
+
+  assert.ok(configMap);
+  const script = configMap.data['appliance-bootstrap.sh'];
+  assert.match(script, /createdb_admin\(\)/);
+  assert.match(script, /acquire_bootstrap_lock\(\)/);
+  assert.match(script, /alga_appliance_bootstrap_lock/);
+  assert.match(script, /clear_stale_knex_migration_lock/);
+  assert.match(script, /Database .* was created by another bootstrap attempt/);
+});
+
 test('T007 Flux HelmReleases retry transient single-node install stalls', () => {
   for (const file of fs.readdirSync(fluxReleaseDir).filter((name) => name.endsWith('.yaml'))) {
     const doc = parse(fs.readFileSync(path.join(fluxReleaseDir, file), 'utf8'));

@@ -9,7 +9,7 @@ OUTPUT_DIR="${ALGA_APPLIANCE_ISO_OUTPUT_DIR:-$ROOT_DIR/output}"
 usage() {
   cat <<USAGE
 Usage:
-  $(basename "$0") --base-iso <path> --release-version <version> [--dry-run] [--scaffold]
+  $(basename "$0") --base-iso <path> --release-version <version> [--dry-run] [--scaffold] [--preinstall-rootfs]
 
 Builds a custom Ubuntu appliance autoinstall ISO.
 
@@ -20,6 +20,9 @@ Required flags:
 Optional flags:
   --dry-run                 Validate arguments and directory layout only.
   --scaffold                Create a placeholder artifact for unit tests without remastering an ISO.
+  --preinstall-rootfs       Merge the Ubuntu server install source, install appliance-required
+                            packages, apply security updates, and repack the squashfs.
+                            Requires Docker/Colima with linux/amd64 container support.
 USAGE
 }
 
@@ -27,6 +30,7 @@ BASE_ISO=""
 RELEASE_VERSION=""
 DRY_RUN=0
 SCAFFOLD=0
+PREINSTALL_ROOTFS=0
 
 while (($#)); do
   case "$1" in
@@ -44,6 +48,10 @@ while (($#)); do
       ;;
     --scaffold)
       SCAFFOLD=1
+      shift
+      ;;
+    --preinstall-rootfs)
+      PREINSTALL_ROOTFS=1
       shift
       ;;
     -h|--help)
@@ -95,6 +103,12 @@ if [[ ! -x "$STAGE_SCRIPT" ]]; then
   exit 1
 fi
 
+PREINSTALL_SCRIPT="$ROOT_DIR/scripts/preinstall-rootfs-in-docker.sh"
+if [[ "$PREINSTALL_ROOTFS" -eq 1 && ! -x "$PREINSTALL_SCRIPT" ]]; then
+  echo "Missing executable preinstall script: $PREINSTALL_SCRIPT" >&2
+  exit 1
+fi
+
 OUTPUT_ISO="$OUTPUT_DIR/alga-appliance-ubuntu-${RELEASE_VERSION}.iso"
 OUTPUT_SHA="$OUTPUT_ISO.sha256"
 
@@ -104,6 +118,7 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
 [dry-run] base-iso: $BASE_ISO
 [dry-run] release-version: $RELEASE_VERSION
 [dry-run] output-iso: $OUTPUT_ISO
+[dry-run] preinstall-rootfs: $PREINSTALL_ROOTFS
 DRY
   exit 0
 fi
@@ -134,6 +149,31 @@ cp -R "$ROOT_DIR/config/nocloud" "$ISO_WORK/nocloud"
 cp -R "$ROOT_DIR/overlay" "$ISO_WORK/alga-overlay"
 mkdir -p "$ISO_WORK/.disk"
 printf 'AlgaPSA Install\n' > "$ISO_WORK/.disk/info"
+
+if [[ "$PREINSTALL_ROOTFS" -eq 1 ]]; then
+  "$PREINSTALL_SCRIPT" "$ISO_WORK"
+  python3 - "$ISO_WORK/nocloud/user-data" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+lines = path.read_text().splitlines()
+out = []
+skipping = False
+
+for line in lines:
+    if line.startswith('  packages:'):
+        skipping = True
+        continue
+    if skipping:
+        if line.startswith('    - '):
+            continue
+        skipping = False
+    out.append(line)
+
+path.write_text('\n'.join(out) + '\n')
+PY
+fi
 
 for grub_file in "$ISO_WORK/boot/grub/grub.cfg" "$ISO_WORK/boot/grub/loopback.cfg"; do
   if [[ -f "$grub_file" ]]; then

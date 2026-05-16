@@ -125,7 +125,7 @@ export default function SetupPage() {
       <section className={styles.hero}>
         <div className={styles.eyebrow}>Guided setup</div>
         <h1>Configure your appliance</h1>
-        <p>Confirm the release channel, app hostname, and DNS behavior. Network and disk selection happen in the Ubuntu Server installer before this step.</p>
+        <p>Confirm the release channel, app URL, and DNS behavior. Network and disk selection happen in the Ubuntu Server installer before this step.</p>
       </section>
 
       <section className={styles.grid}>
@@ -160,9 +160,9 @@ export default function SetupPage() {
               </div>
 
               <div className={styles.field}>
-                <label htmlFor="setup-app-hostname">App URL / hostname</label>
-                <input id="setup-app-hostname" name="appHostname" value={appHostname} onChange={(event) => setAppHostname(event.target.value)} placeholder="psa.example.com" disabled={busy || !config} />
-                <span className={styles.helpText}>Use the hostname users will enter in their browser.</span>
+                <label htmlFor="setup-app-hostname">App URL</label>
+                <input id="setup-app-hostname" name="appHostname" value={appHostname} onChange={(event) => setAppHostname(event.target.value)} placeholder="http://192.168.1.50:3000" disabled={busy || !config} />
+                <span className={styles.helpText}>Use the full URL users will enter in their browser. The default local URL works out of the box.</span>
               </div>
 
               <div className={styles.field}>

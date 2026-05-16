@@ -3,9 +3,10 @@ import http from 'node:http';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawn, spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { URL } from 'node:url';
-import { collectStatusSnapshot } from './status-engine.mjs';
+import { collectStatusSnapshotAsync } from './status-engine.mjs';
+import { createKubectlQueue } from './kubectl-queue.mjs';
 import { persistSetupInputs, validateSetupInputs } from './setup-engine.mjs';
 import { generateSupportBundle } from './support-bundle.mjs';
 import { runAppChannelUpdate } from './update-engine.mjs';
@@ -17,6 +18,11 @@ const setupInputsFile = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/etc/al
 const kubeconfigPath = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3s/k3s.yaml';
 const staticUiDir = process.env.ALGA_APPLIANCE_STATUS_UI_DIR || '/opt/alga-appliance/status-ui/dist';
 const STATUS_CACHE_TTL_MS = Number(process.env.ALGA_APPLIANCE_STATUS_CACHE_TTL_MS || 10_000);
+const KUBECTL_REQUEST_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_REQUEST_TIMEOUT_MS || 20_000);
+const KUBECTL_STATUS_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_STATUS_TIMEOUT_MS || 20_000);
+const KUBECTL_API_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_API_TIMEOUT_MS || 30_000);
+const KUBECTL_LOG_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_LOG_TIMEOUT_MS || 60_000);
+const kubectlQueue = createKubectlQueue({ name: 'host-service-kubectl' });
 let cachedStatusSnapshot = null;
 let cachedStatusSnapshotAt = 0;
 
@@ -62,8 +68,19 @@ function renderPreBlock(title, value) {
 }
 
 function jsonResponse(res, statusCode, value) {
+  if (res.destroyed || res.writableEnded) return;
   res.writeHead(statusCode, { 'content-type': 'application/json' });
   res.end(JSON.stringify(value));
+}
+
+function requestAbortSignal(req, res) {
+  const controller = new AbortController();
+  const abortIfUnfinished = () => {
+    if (!res.writableEnded) controller.abort();
+  };
+  req.on('aborted', abortIfUnfinished);
+  res.on('close', abortIfUnfinished);
+  return controller.signal;
 }
 
 function contentTypeFor(file) {
@@ -107,10 +124,28 @@ function serveStaticFile(res, file) {
   fs.createReadStream(file).pipe(res);
 }
 
-function readSetupDefaults() {
+function defaultAppUrlForRequest(requestHost) {
+  let hostname = '';
+  try {
+    hostname = new URL(`http://${requestHost || ''}`).hostname.replace(/^\[|\]$/g, '');
+  } catch {
+    hostname = '';
+  }
+
+  const lower = hostname.toLowerCase();
+  if (!hostname || lower === 'localhost' || lower === '::1' || hostname.startsWith('127.')) {
+    hostname = systemNetworkSummary().addresses[0] || '';
+  }
+
+  if (!hostname) return '';
+  const formattedHost = hostname.includes(':') && !hostname.startsWith('[') ? `[${hostname}]` : hostname;
+  return `http://${formattedHost}:3000`;
+}
+
+function readSetupDefaults(requestHost) {
   const fallback = {
     channel: 'stable',
-    appHostname: '',
+    appHostname: defaultAppUrlForRequest(requestHost),
     dnsMode: 'system',
     dnsServers: '',
     repoUrl: 'https://github.com/Nine-Minds/alga-psa.git',
@@ -118,7 +153,8 @@ function readSetupDefaults() {
   };
   if (!fs.existsSync(setupInputsFile)) return fallback;
   try {
-    return { ...fallback, ...JSON.parse(fs.readFileSync(setupInputsFile, 'utf8')) };
+    const parsed = JSON.parse(fs.readFileSync(setupInputsFile, 'utf8'));
+    return { ...fallback, ...parsed, appHostname: parsed.appHostname || fallback.appHostname };
   } catch {
     return fallback;
   }
@@ -163,27 +199,22 @@ function shellQuote(value) {
   return `'${String(value).replaceAll("'", "'\\''")}'`;
 }
 
-function runCommand(command, timeoutMs = 10_000) {
-  const result = spawnSync('sh', ['-c', command], {
-    env: process.env,
-    encoding: 'utf8',
-    timeout: timeoutMs
+function kubectlCommand(args, requestTimeoutMs = KUBECTL_REQUEST_TIMEOUT_MS) {
+  const requestTimeoutSeconds = Math.max(1, Math.ceil(requestTimeoutMs / 1000));
+  return `kubectl --request-timeout=${requestTimeoutSeconds}s --kubeconfig ${shellQuote(kubeconfigPath)} ${args}`;
+}
+
+function runQueuedKubectl(command, options = {}) {
+  return kubectlQueue.enqueue(command, {
+    timeoutMs: options.timeoutMs || KUBECTL_API_TIMEOUT_MS,
+    onStart: options.onStart,
+    onDone: options.onDone,
+    signal: options.signal
   });
-  const timedOut = result.error?.code === 'ETIMEDOUT';
-  return {
-    ok: result.status === 0,
-    status: timedOut ? 124 : (result.status ?? 1),
-    stdout: result.stdout || '',
-    stderr: timedOut ? `${result.stderr || ''}\nCommand timed out after ${timeoutMs}ms.` : (result.stderr || '')
-  };
 }
 
-function kubectlCommand(args) {
-  return `kubectl --request-timeout=8s --kubeconfig ${shellQuote(kubeconfigPath)} ${args}`;
-}
-
-function runKubectlJson(args, timeoutMs = 10_000) {
-  const result = runCommand(kubectlCommand(`${args} -o json`), timeoutMs);
+async function runKubectlJson(args, timeoutMs = KUBECTL_API_TIMEOUT_MS, signal) {
+  const result = await runQueuedKubectl(kubectlCommand(`${args} -o json`, timeoutMs), { timeoutMs, signal });
   if (!result.ok) return { ...result, value: null };
   try {
     return { ...result, value: JSON.parse(result.stdout || '{}') };
@@ -307,7 +338,7 @@ const server = http.createServer(async (req, res) => {
     }
     jsonResponse(res, 200, {
       mode,
-      defaults: readSetupDefaults(),
+      defaults: readSetupDefaults(req.headers.host || ''),
       network: systemNetworkSummary()
     });
     return;
@@ -370,16 +401,24 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    const signal = requestAbortSignal(req, res);
     const includeDiagnostics = url.searchParams.get('diagnostics') === '1';
     const now = Date.now();
     const cacheUsable = !includeDiagnostics && cachedStatusSnapshot && now - cachedStatusSnapshotAt < STATUS_CACHE_TTL_MS;
     const snapshot = cacheUsable
       ? cachedStatusSnapshot
-      : collectStatusSnapshot({ stateFile, includeDiagnostics });
+      : await collectStatusSnapshotAsync({
+        stateFile,
+        includeDiagnostics,
+        kubectlTimeoutMs: KUBECTL_STATUS_TIMEOUT_MS,
+        kubectlRequestTimeoutMs: KUBECTL_REQUEST_TIMEOUT_MS,
+        runCommand: (command, options = {}) => runQueuedKubectl(command, { timeoutMs: options.timeoutMs || KUBECTL_STATUS_TIMEOUT_MS, signal })
+      });
     if (!includeDiagnostics) {
       cachedStatusSnapshot = snapshot;
       cachedStatusSnapshotAt = now;
     }
+    if (res.destroyed || res.writableEnded) return;
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(JSON.stringify(snapshot));
     return;
@@ -391,7 +430,8 @@ const server = http.createServer(async (req, res) => {
       jsonResponse(res, 401, { error: 'Unauthorized: valid status token required.' });
       return;
     }
-    const result = runKubectlJson('get namespaces', 10_000);
+    const signal = requestAbortSignal(req, res);
+    const result = await runKubectlJson('get namespaces', KUBECTL_API_TIMEOUT_MS, signal);
     if (!result.ok) {
       jsonResponse(res, 502, { error: result.stderr || result.stdout || 'Unable to list namespaces.' });
       return;
@@ -417,8 +457,9 @@ const server = http.createServer(async (req, res) => {
       jsonResponse(res, 400, { error: 'Invalid namespace.' });
       return;
     }
-    const deployments = runKubectlJson(`${nsFlag} get deployments`, 12_000);
-    const replicaSets = runKubectlJson(`${nsFlag} get replicasets`, 12_000);
+    const signal = requestAbortSignal(req, res);
+    const deployments = await runKubectlJson(`${nsFlag} get deployments`, KUBECTL_API_TIMEOUT_MS, signal);
+    const replicaSets = await runKubectlJson(`${nsFlag} get replicasets`, KUBECTL_API_TIMEOUT_MS, signal);
     if (!deployments.ok) {
       jsonResponse(res, 502, { error: deployments.stderr || deployments.stdout || 'Unable to list deployments.' });
       return;
@@ -442,7 +483,8 @@ const server = http.createServer(async (req, res) => {
       jsonResponse(res, 400, { error: 'Invalid namespace.' });
       return;
     }
-    const pods = runKubectlJson(`${nsFlag} get pods`, 12_000);
+    const signal = requestAbortSignal(req, res);
+    const pods = await runKubectlJson(`${nsFlag} get pods`, KUBECTL_API_TIMEOUT_MS, signal);
     if (!pods.ok) {
       jsonResponse(res, 502, { error: pods.stderr || pods.stdout || 'Unable to list pods.' });
       return;
@@ -472,7 +514,8 @@ const server = http.createServer(async (req, res) => {
     }
     const containerArg = container ? ` -c ${shellQuote(container)}` : '';
     const previousArg = previous ? ' --previous' : '';
-    const result = runCommand(kubectlCommand(`-n ${shellQuote(namespace)} logs ${shellQuote(pod)}${containerArg} --tail=${tail}${previousArg}`), 15_000);
+    const signal = requestAbortSignal(req, res);
+    const result = await runQueuedKubectl(kubectlCommand(`-n ${shellQuote(namespace)} logs ${shellQuote(pod)}${containerArg} --tail=${tail}${previousArg}`, KUBECTL_LOG_TIMEOUT_MS), { timeoutMs: KUBECTL_LOG_TIMEOUT_MS, signal });
     if (!result.ok) {
       jsonResponse(res, 502, { error: result.stderr || result.stdout || 'Unable to read logs.' });
       return;
@@ -572,7 +615,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (url.pathname === '/setup') {
+  if (url.pathname === '/setup' || url.pathname === '/setup/') {
     const providedToken = url.searchParams.get('token') || '';
     if (!setupToken || providedToken !== setupToken) {
       res.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' });
@@ -637,8 +680,9 @@ const server = http.createServer(async (req, res) => {
           <option value="nightly">nightly (testing/support-directed)</option>
         </select><br /><br />
 
-        <label>App URL / hostname</label><br />
-        <input type="text" name="appHostname" placeholder="psa.example.com" /><br /><br />
+        <label>App URL</label><br />
+        <input type="text" name="appHostname" value="${defaultAppUrlForRequest(req.headers.host || '')}" placeholder="http://192.168.1.50:3000" /><br />
+        <small>Use the full URL users will enter in their browser. The default local URL works out of the box.</small><br /><br />
 
         <label>DNS mode</label><br />
         <select name="dnsMode">
@@ -681,7 +725,13 @@ const server = http.createServer(async (req, res) => {
       return;
     }
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    const snapshot = collectStatusSnapshot({ stateFile });
+    const signal = requestAbortSignal(req, res);
+    const snapshot = await collectStatusSnapshotAsync({
+      stateFile,
+      kubectlTimeoutMs: KUBECTL_STATUS_TIMEOUT_MS,
+      kubectlRequestTimeoutMs: KUBECTL_REQUEST_TIMEOUT_MS,
+      runCommand: (command, options = {}) => runQueuedKubectl(command, { timeoutMs: options.timeoutMs || KUBECTL_STATUS_TIMEOUT_MS, signal })
+    });
     const failureItems = (snapshot.failures || [])
       .map((failure) => `<li><strong>${escapeHtml(failure.category)}</strong>: ${escapeHtml(failure.suspectedCause)}<br/><em>Next:</em> ${escapeHtml(failure.suggestedNextStep)}<br/><em>Retry safe:</em> ${failure.retrySafe ? 'yes' : 'no'}${failure.logs?.length ? `<br/><em>Useful commands:</em><pre>${escapeHtml(failure.logs.join('\n'))}</pre>` : ''}</li>`)
       .join('');

@@ -14,7 +14,7 @@ test('collectStatusSnapshot reads local state and kubeconfig-driven kubectl outp
   const setupInputsFile = path.join(tmp, 'setup-inputs.json');
   const releaseSelectionFile = path.join(tmp, 'release-selection.json');
   fs.writeFileSync(stateFile, JSON.stringify({ phase: 'flux', status: 'flux-source-complete' }));
-  fs.writeFileSync(setupInputsFile, JSON.stringify({ channel: 'stable', repoBranch: 'feature/on-premise-email-processing' }));
+  fs.writeFileSync(setupInputsFile, JSON.stringify({ channel: 'stable', appHostname: 'http://192.0.2.10:3000', repoBranch: 'feature/on-premise-email-processing' }));
   fs.writeFileSync(releaseSelectionFile, JSON.stringify({ selectedChannel: 'stable', repoBranch: 'feature/on-premise-email-processing' }));
 
   const kubectlPath = path.join(fakeBin, 'kubectl');
@@ -56,6 +56,7 @@ exit 1
     assert.equal(snapshot.currentPhase, 'flux');
     assert.equal(snapshot.status, 'flux-source-complete');
     assert.equal(snapshot.setupInputs.repoBranch, 'feature/on-premise-email-processing');
+    assert.equal(snapshot.urls.loginUrl, 'http://192.0.2.10:3000');
     assert.equal(snapshot.releaseSelection.repoBranch, 'feature/on-premise-email-processing');
     assert.equal(snapshot.kubernetes.nodes.length, 1);
     assert.equal(snapshot.kubernetes.nodes[0].ready, true);
@@ -297,6 +298,220 @@ exit 1
     assert.equal(snapshot.tiers.loginReady, true);
     assert.equal(snapshot.tiers.fullyHealthy, false);
     assert.equal(snapshot.failures.some((failure) => failure.suspectedCause.includes('temporal missing')), true);
+  } finally {
+    process.env.PATH = originalPath;
+  }
+});
+
+test('early setup treats missing kubectl as expected install progress, not a blocker', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-early-kubectl-'));
+  const stateFile = path.join(tmp, 'install-state.json');
+  const fakeBin = path.join(tmp, 'bin');
+  fs.mkdirSync(fakeBin, { recursive: true });
+
+  fs.writeFileSync(stateFile, JSON.stringify({
+    phase: 'setup',
+    status: 'setup-accepted',
+    lastAction: 'Setup accepted; background workflow is starting'
+  }));
+
+  const kubectlPath = path.join(fakeBin, 'kubectl');
+  fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
+echo 'sh: 1: kubectl: not found' >&2
+exit 127
+`);
+  fs.chmodSync(kubectlPath, 0o755);
+
+  const originalPath = process.env.PATH;
+  process.env.PATH = `${fakeBin}:${originalPath}`;
+  try {
+    const snapshot = collectStatusSnapshot({
+      stateFile,
+      kubeconfigPath: '/tmp/k3s.yaml',
+      kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
+    });
+
+    assert.equal(snapshot.rollup.state, 'installing');
+    assert.equal(snapshot.rollup.message, 'Starting the appliance installation.');
+    assert.equal(snapshot.tiers.platformReady, false);
+    assert.equal(snapshot.readinessTiers.platformReady.status, 'waiting_for_kubernetes');
+    assert.equal(snapshot.failures.length, 0);
+    assert.equal(snapshot.topBlockers.length, 0);
+    assert.equal(snapshot.kubernetes.warnings.length, 0);
+    assert.equal(snapshot.kubernetes.suppressedWarnings.length, 1);
+  } finally {
+    process.env.PATH = originalPath;
+  }
+});
+
+test('app-readiness treats HelmRelease dependency convergence as progress, not a blocker', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-readiness-helm-converge-'));
+  const stateFile = path.join(tmp, 'install-state.json');
+  const fakeBin = path.join(tmp, 'bin');
+  fs.mkdirSync(fakeBin, { recursive: true });
+
+  fs.writeFileSync(stateFile, JSON.stringify({
+    phase: 'app-readiness',
+    status: 'release-config-complete',
+    lastAction: 'Checking application readiness.'
+  }));
+
+  const kubectlPath = path.join(fakeBin, 'kubectl');
+  fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
+if [[ "$*" == *"get nodes -o json"* ]]; then
+  cat <<'JSON'
+{"items":[{"metadata":{"name":"node-1"},"status":{"conditions":[{"type":"Ready","status":"True"}]}}]}
+JSON
+  exit 0
+fi
+if [[ "$*" == *"get pods -A --no-headers"* ]]; then
+  cat <<'TXT'
+msp alga-core-abc Running
+TXT
+  exit 0
+fi
+if [[ "$*" == *"-n msp get jobs --no-headers"* ]]; then
+  exit 0
+fi
+if [[ "$*" == *"-n alga-system get helmreleases"* ]]; then
+  cat <<'TXT'
+alga-core 4m38s Unknown Running 'install' action with timeout of 30m0s
+email-service 4m38s False dependency 'alga-system/alga-core' is not ready
+pgbouncer 4m37s False dependency 'alga-system/alga-core' is not ready
+temporal 4m37s False dependency 'alga-system/alga-core' is not ready
+temporal-worker 4m36s False dependency 'alga-system/alga-core' is not ready
+workflow-worker 4m35s False dependency 'alga-system/alga-core' is not ready
+TXT
+  exit 0
+fi
+if [[ "$*" == *"get events -A -o json"* ]]; then
+  echo '{"items":[]}'
+  exit 0
+fi
+exit 1
+`);
+  fs.chmodSync(kubectlPath, 0o755);
+
+  const originalPath = process.env.PATH;
+  process.env.PATH = `${fakeBin}:${originalPath}`;
+  try {
+    const snapshot = collectStatusSnapshot({
+      stateFile,
+      kubeconfigPath: '/tmp/k3s.yaml',
+      kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
+    });
+
+    assert.equal(snapshot.rollup.state, 'installing');
+    assert.equal(snapshot.tiers.platformReady, true);
+    assert.equal(snapshot.tiers.loginReady, false);
+    assert.equal(snapshot.tiers.backgroundReady, false);
+    assert.equal(snapshot.tiers.fullyHealthy, false);
+    assert.equal(snapshot.kubernetes.helmReleaseCount, 6);
+    assert.equal(snapshot.failures.length, 0);
+    assert.equal(snapshot.topBlockers.length, 0);
+  } finally {
+    process.env.PATH = originalPath;
+  }
+});
+
+test('app-readiness treats missing HelmRelease CRD as transient progress, not a blocker', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-readiness-helm-crd-'));
+  const stateFile = path.join(tmp, 'install-state.json');
+  const fakeBin = path.join(tmp, 'bin');
+  fs.mkdirSync(fakeBin, { recursive: true });
+
+  fs.writeFileSync(stateFile, JSON.stringify({
+    phase: 'app-readiness',
+    status: 'release-config-complete',
+    lastAction: 'Checking application readiness.'
+  }));
+
+  const kubectlPath = path.join(fakeBin, 'kubectl');
+  fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
+if [[ "$*" == *"get nodes -o json"* ]]; then
+  cat <<'JSON'
+{"items":[{"metadata":{"name":"node-1"},"status":{"conditions":[{"type":"Ready","status":"True"}]}}]}
+JSON
+  exit 0
+fi
+if [[ "$*" == *"get pods -A --no-headers"* ]]; then
+  cat <<'TXT'
+kube-system flux-controller-abc Running
+TXT
+  exit 0
+fi
+if [[ "$*" == *"-n msp get jobs --no-headers"* ]]; then
+  exit 0
+fi
+if [[ "$*" == *"-n alga-system get helmreleases"* ]]; then
+  printf '%s\n' "error: the server doesn't have a resource type \"helmreleases\"" >&2
+  exit 1
+fi
+if [[ "$*" == *"get events -A -o json"* ]]; then
+  echo '{"items":[]}'
+  exit 0
+fi
+exit 1
+`);
+  fs.chmodSync(kubectlPath, 0o755);
+
+  const originalPath = process.env.PATH;
+  process.env.PATH = `${fakeBin}:${originalPath}`;
+  try {
+    const snapshot = collectStatusSnapshot({
+      stateFile,
+      kubeconfigPath: '/tmp/k3s.yaml',
+      kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
+    });
+
+    assert.equal(snapshot.rollup.state, 'installing');
+    assert.equal(snapshot.rollup.message, 'Checking application readiness.');
+    assert.equal(snapshot.tiers.platformReady, true);
+    assert.equal(snapshot.tiers.loginReady, false);
+    assert.equal(snapshot.tiers.fullyHealthy, false);
+    assert.equal(snapshot.failures.length, 0);
+    assert.equal(snapshot.topBlockers.length, 0);
+    assert.equal(snapshot.kubernetes.warnings.length, 0);
+    assert.equal(snapshot.kubernetes.suppressedWarnings.length, 1);
+  } finally {
+    process.env.PATH = originalPath;
+  }
+});
+
+test('app-readiness still reports kubectl query failures as blockers', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-readiness-kubectl-'));
+  const stateFile = path.join(tmp, 'install-state.json');
+  const fakeBin = path.join(tmp, 'bin');
+  fs.mkdirSync(fakeBin, { recursive: true });
+
+  fs.writeFileSync(stateFile, JSON.stringify({
+    phase: 'app-readiness',
+    status: 'release-config-complete',
+    lastAction: 'Checking application readiness.'
+  }));
+
+  const kubectlPath = path.join(fakeBin, 'kubectl');
+  fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
+echo 'sh: 1: kubectl: not found' >&2
+exit 127
+`);
+  fs.chmodSync(kubectlPath, 0o755);
+
+  const originalPath = process.env.PATH;
+  process.env.PATH = `${fakeBin}:${originalPath}`;
+  try {
+    const snapshot = collectStatusSnapshot({
+      stateFile,
+      kubeconfigPath: '/tmp/k3s.yaml',
+      kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
+    });
+
+    assert.equal(snapshot.rollup.state, 'blocked');
+    assert.equal(snapshot.failures.length, 1);
+    assert.equal(snapshot.failures[0].category, 'app-readiness');
+    assert.equal(snapshot.topBlockers.length, 1);
+    assert.equal(snapshot.kubernetes.warnings.length, 1);
+    assert.equal(snapshot.kubernetes.suppressedWarnings.length, 0);
   } finally {
     process.env.PATH = originalPath;
   }

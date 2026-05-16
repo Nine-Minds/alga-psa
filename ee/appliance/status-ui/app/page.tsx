@@ -62,7 +62,7 @@ function badgeClass(value?: string | boolean) {
   const normalized = String(value ?? 'unknown');
   if (['true', 'fully_healthy', 'ready_to_log_in', 'ready_with_background_issues', 'healthy', 'Running', 'Succeeded', 'ready', 'True'].includes(normalized)) return styles.ready;
   if (['installing', 'progressing', 'unknown', 'Pending', 'ContainerCreating', 'PodInitializing', 'setup-queued', 'not_fully_healthy'].includes(normalized)) return styles.installing;
-  if (['warning', 'background', 'degraded_background_services', 'Unknown'].includes(normalized)) return styles.warning;
+  if (['false', 'not ready', 'warning', 'background', 'degraded_background_services', 'Unknown'].includes(normalized)) return styles.warning;
   return styles.failed;
 }
 
@@ -140,23 +140,34 @@ export default function StatusPage() {
   const logPaneRef = useRef<HTMLPreElement | null>(null);
   const lineRefs = useRef<Array<HTMLDivElement | null>>([]);
   const pendingLogScroll = useRef<null | { mode: 'preserve' | 'end'; previousScrollHeight: number; previousScrollTop: number }>(null);
+  const statusRequestInFlight = useRef(false);
+  const statusAbortController = useRef<AbortController | null>(null);
 
   useEffect(() => {
     setQuery(tokenQuery());
   }, []);
 
   const loadStatus = useCallback(async () => {
-    if (!query) return;
+    if (!query || statusRequestInFlight.current) return;
+
+    const controller = new AbortController();
+    statusRequestInFlight.current = true;
+    statusAbortController.current = controller;
     setLoadingStatus(true);
     try {
-      const response = await fetch(apiPath('/api/status', query), { cache: 'no-store' });
+      const response = await fetch(apiPath('/api/status', query), { cache: 'no-store', signal: controller.signal });
       if (!response.ok) throw new Error(response.status === 401 ? 'Unauthorized: check the setup token.' : 'Status API unavailable.');
       setStatus(await response.json());
       setError(null);
     } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       setError(err instanceof Error ? err.message : String(err));
     } finally {
-      setLoadingStatus(false);
+      if (statusAbortController.current === controller) {
+        statusRequestInFlight.current = false;
+        statusAbortController.current = null;
+        setLoadingStatus(false);
+      }
     }
   }, [query]);
 
@@ -244,7 +255,10 @@ export default function StatusPage() {
     loadStatus();
     loadNamespaces();
     const timer = setInterval(loadStatus, 15000);
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      statusAbortController.current?.abort();
+    };
   }, [loadNamespaces, loadStatus]);
 
   useEffect(() => {

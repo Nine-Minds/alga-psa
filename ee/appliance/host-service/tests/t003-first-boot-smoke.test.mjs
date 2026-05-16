@@ -115,11 +115,14 @@ test('T003 first-boot smoke: console output and host web service health', async 
     assert.equal(staticAsset.statusCode, 200);
     assert.match(staticAsset.body, /status-ui/);
 
-    const config = await httpGet('http://127.0.0.1:18081/api/setup/config?token=token-123');
+    const config = await httpRequest('http://127.0.0.1:18081/api/setup/config?token=token-123', {
+      headers: { Host: '192.0.2.10:18081' }
+    });
     assert.equal(config.statusCode, 200);
     const configBody = JSON.parse(config.body);
     assert.equal(configBody.mode, 'setup');
     assert.equal(configBody.defaults.channel, 'stable');
+    assert.equal(configBody.defaults.appHostname, 'http://192.0.2.10:3000');
     assert.equal(Array.isArray(configBody.network.addresses), true);
 
     const submit = await httpRequest('http://127.0.0.1:18081/api/setup?token=token-123', {

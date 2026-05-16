@@ -1,4 +1,7 @@
 {{- if and (not .Values.devEnv.enabled) (not (include "sebastian.hostedEnvEnabled" .)) }}
+{{- $waitForBootstrapImageName := default .Values.setup.image.name .Values.setup.waitForBootstrap.image.name }}
+{{- $waitForBootstrapImageTag := default .Values.setup.image.tag .Values.setup.waitForBootstrap.image.tag }}
+{{- $waitForBootstrapPullPolicy := default .Values.setup.pullPolicy .Values.setup.waitForBootstrap.pullPolicy }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -103,8 +106,8 @@ spec:
         - name: wait-for-bootstrap
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.setup.image.name }}:{{ .Values.setup.image.tag }}"
-          imagePullPolicy: {{ .Values.setup.pullPolicy }}
+          image: "{{ $waitForBootstrapImageName }}:{{ $waitForBootstrapImageTag }}"
+          imagePullPolicy: {{ $waitForBootstrapPullPolicy }}
           command: ["/bin/sh", "-ec"]
           args:
             - |
