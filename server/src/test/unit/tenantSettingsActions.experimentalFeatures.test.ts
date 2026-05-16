@@ -39,11 +39,13 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUserPermissions: getCurrentUserPermissionsMock,
 }));
 
-vi.mock('@alga-psa/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/core')>();
+vi.mock('@alga-psa/core/server', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/core/server')>();
   return {
     ...actual,
-    isFeatureFlagEnabled: featureFlagIsEnabledMock,
+    featureFlags: {
+      isEnabled: featureFlagIsEnabledMock,
+    },
   };
 });
 
@@ -100,7 +102,7 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
       '../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions'
     );
 
-    await expect(getExperimentalFeatures()).resolves.toEqual({ aiAssistant: false, workflowAutomation: false });
+    await expect(getExperimentalFeatures()).resolves.toEqual({ aiAssistant: false });
     expect(createTenantKnexMock).toHaveBeenCalled();
   });
 
@@ -110,7 +112,6 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
       settings: {
         experimentalFeatures: {
           aiAssistant: true,
-          workflowAutomation: true,
         },
       },
     };
@@ -119,7 +120,7 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
       '../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions'
     );
 
-    await expect(getExperimentalFeatures()).resolves.toEqual({ aiAssistant: true, workflowAutomation: true });
+    await expect(getExperimentalFeatures()).resolves.toEqual({ aiAssistant: true });
     expect(knexWhereMock).toHaveBeenCalledWith({ tenant: 'tenant-test' });
     expect(featureFlagIsEnabledMock).toHaveBeenCalledWith('ai-assistant-activation', {
       tenantId: 'tenant-test',
@@ -133,7 +134,6 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
       settings: {
         experimentalFeatures: {
           aiAssistant: true,
-          workflowAutomation: true,
         },
       },
     };
@@ -142,7 +142,7 @@ describe('tenantSettingsActions.getExperimentalFeatures', () => {
       '../../../../packages/tenancy/src/actions/tenant-settings-actions/tenantSettingsActions'
     );
 
-    await expect(getExperimentalFeatures()).resolves.toEqual({ aiAssistant: false, workflowAutomation: true });
+    await expect(getExperimentalFeatures()).resolves.toEqual({ aiAssistant: false });
   });
 });
 
@@ -236,7 +236,6 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
     expect(parsedSettings).toEqual({
       experimentalFeatures: {
         aiAssistant: true,
-        workflowAutomation: false,
       },
     });
 
@@ -276,7 +275,6 @@ describe('tenantSettingsActions.updateExperimentalFeatures', () => {
       },
       experimentalFeatures: {
         aiAssistant: true,
-        workflowAutomation: false,
       },
     });
   });

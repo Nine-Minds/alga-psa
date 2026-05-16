@@ -2372,13 +2372,7 @@
     }
   },
   "automationGate": {
-    "loading": "55555",
-    "featureName": "55555",
-    "notEnabled": "55555",
-    "experimental": "55555",
-    "enableHint": "55555",
-    "goToExperimental": "55555",
-    "openSettings": "55555"
+    "loading": "55555"
   },
   "flow": {
     "designer": {

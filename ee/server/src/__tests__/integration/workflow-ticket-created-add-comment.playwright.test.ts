@@ -323,7 +323,6 @@ test('E2E: TICKET_CREATED triggers workflow that adds a ticket comment', async (
     tenantData = await createTenantAndLogin(db, page, {
       tenantOptions: { companyName: `Workflow Ticket ${uuidv4().slice(0, 6)}` },
       completeOnboarding: { completedAt: new Date() },
-      experimentalFeatures: { workflowAutomation: true },
       permissions: ADMIN_PERMISSIONS,
     });
     const tenantId = tenantData.tenant.tenantId;

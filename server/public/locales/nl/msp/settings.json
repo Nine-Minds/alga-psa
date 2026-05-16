@@ -90,10 +90,6 @@
         "name": "AI-assistent",
         "description": "Schakel AI-gestuurde Snel Vragen en Chat-zijbalk in.",
         "restriction": "Alleen beschikbaar voor de hoofd-facturatietenant."
-      },
-      "workflowAutomation": {
-        "name": "Workflowautomatisering",
-        "description": "Schakel experimentele workflowautomatiseringsfuncties in het workflowbedieningspaneel en de editor in."
       }
     },
     "actions": {

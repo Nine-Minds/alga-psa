@@ -90,10 +90,6 @@
         "name": "Asistente de IA",
         "description": "Habilitar la consulta rápida y la barra lateral de chat con tecnología de IA.",
         "restriction": "Solo disponible para el inquilino de facturación principal."
-      },
-      "workflowAutomation": {
-        "name": "Automatización de flujos de trabajo",
-        "description": "Habilitar funciones experimentales de automatización de flujos de trabajo en el panel de control y el editor de flujos de trabajo."
       }
     },
     "actions": {
