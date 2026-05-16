@@ -2520,6 +2520,27 @@ export const listWorkflowRunSummaryAction = withAuth(async (user, { tenant }, in
   return { total, byStatus: summary };
 });
 
+export const getWorkflowStepQuotaSummaryAction = withAuth(async (user, { tenant }) => {
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+  if (!tenant) {
+    return throwHttpError(400, 'Tenant context required');
+  }
+
+  const { workflowStepQuotaService } = await import('@alga-psa/workflows/runtime/core');
+  const summary = await workflowStepQuotaService.resolveQuotaSummary(knex, tenant);
+  return {
+    periodStart: summary.periodStart,
+    periodEnd: summary.periodEnd,
+    periodSource: summary.periodSource,
+    effectiveLimit: summary.effectiveLimit,
+    usedCount: summary.usedCount,
+    remaining: summary.remaining,
+    tier: summary.tier,
+    limitSource: summary.limitSource,
+  };
+});
+
 export const getWorkflowRunSummaryMetadataAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = RunIdInput.parse(input);
   const { knex } = await createTenantKnex();

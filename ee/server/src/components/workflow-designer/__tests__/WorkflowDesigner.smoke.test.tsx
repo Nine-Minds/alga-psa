@@ -13,6 +13,7 @@ const {
   listWorkflowDesignerActionCatalogActionMock,
   listWorkflowSchemaRefsActionMock,
   listWorkflowSchemasMetaActionMock,
+  getWorkflowStepQuotaSummaryActionMock,
   listEventCatalogOptionsV2ActionMock,
   getEventCatalogEntryByEventTypeMock,
   routerReplaceMock
@@ -25,6 +26,7 @@ const {
   listWorkflowDesignerActionCatalogActionMock: vi.fn(),
   listWorkflowSchemaRefsActionMock: vi.fn(),
   listWorkflowSchemasMetaActionMock: vi.fn(),
+  getWorkflowStepQuotaSummaryActionMock: vi.fn(),
   listEventCatalogOptionsV2ActionMock: vi.fn(),
   getEventCatalogEntryByEventTypeMock: vi.fn(),
   routerReplaceMock: vi.fn()
@@ -109,6 +111,20 @@ vi.mock('@alga-psa/ui/components/Skeleton', () => ({
   Skeleton: () => <div data-testid="skeleton-smoke" />
 }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (_key: string, options?: Record<string, unknown>) => {
+      let value = typeof options?.defaultValue === 'string' ? options.defaultValue : _key;
+      Object.entries(options ?? {}).forEach(([key, replacement]) => {
+        if (key !== 'defaultValue') {
+          value = value.replaceAll(`{{${key}}}`, String(replacement));
+        }
+      });
+      return value;
+    },
+  }),
+}));
+
 vi.mock('@alga-psa/analytics/client', () => ({
   analytics: {
     capture: vi.fn()
@@ -117,7 +133,37 @@ vi.mock('@alga-psa/analytics/client', () => ({
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: (...args: unknown[]) => getCurrentUserMock(...args),
-  getCurrentUserPermissions: (...args: unknown[]) => getCurrentUserPermissionsMock(...args)
+  getCurrentUserPermissions: (...args: unknown[]) => getCurrentUserPermissionsMock(...args),
+  getAllUsersBasic: vi.fn(async () => []),
+  getUserAvatarUrlsBatchAction: vi.fn(async () => ({})),
+}));
+
+vi.mock('@alga-psa/teams/actions', () => ({
+  getTeamsBasic: vi.fn(async () => []),
+  getTeamAvatarUrlsBatchAction: vi.fn(async () => ({})),
+}));
+
+vi.mock('@alga-psa/clients/actions', () => ({
+  getAllContacts: vi.fn(async () => []),
+  getContactsByClient: vi.fn(async () => []),
+}));
+
+vi.mock('@alga-psa/integrations/actions', () => ({
+  getAvailableStatuses: vi.fn(async () => []),
+  getTicketFieldOptions: vi.fn(async () => ({})),
+}));
+
+vi.mock('@alga-psa/tickets/actions', () => ({
+  getTicketById: vi.fn(async () => null),
+  getTicketsForList: vi.fn(async () => []),
+}));
+
+vi.mock('@alga-psa/projects/actions/projectActions', () => ({
+  getProjectsWithPhases: vi.fn(async () => []),
+}));
+
+vi.mock('@alga-psa/projects/actions/projectTaskActions', () => ({
+  getProjectTaskData: vi.fn(async () => []),
 }));
 
 vi.mock('@alga-psa/workflows/actions', () => ({
@@ -133,6 +179,7 @@ vi.mock('@alga-psa/workflows/actions', () => ({
   listWorkflowRegistryActionsAction: (...args: unknown[]) => listWorkflowRegistryActionsActionMock(...args),
   listWorkflowRegistryNodesAction: (...args: unknown[]) => listWorkflowRegistryNodesActionMock(...args),
   listWorkflowRunsAction: vi.fn(async () => []),
+  getWorkflowStepQuotaSummaryAction: (...args: unknown[]) => getWorkflowStepQuotaSummaryActionMock(...args),
   publishWorkflowDefinitionAction: vi.fn(),
   updateWorkflowDefinitionDraftAction: vi.fn(),
   updateWorkflowDefinitionMetadataAction: vi.fn()
@@ -142,6 +189,16 @@ vi.mock('@alga-psa/workflows/runtime', () => ({
   buildWorkflowDesignerActionCatalog: vi.fn(() => []),
   WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF: 'payload.WorkflowClock.v1',
   isWorkflowAiInferAction: vi.fn(() => false),
+  resolveWorkflowAiSchemaFromConfig: vi.fn(() => ({ schema: null, errors: [] })),
+  validateExpressionSource: vi.fn(() => []),
+}));
+
+vi.mock('@alga-psa/workflows/authoring', () => ({
+  buildWorkflowDesignerActionCatalog: vi.fn(() => []),
+  WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF: 'payload.WorkflowClock.v1',
+  isWorkflowAiInferAction: vi.fn(() => false),
+  isWorkflowComposeTextAction: vi.fn(() => false),
+  resolveComposeTextOutputSchemaFromConfig: vi.fn(() => ({ schema: null, errors: [] })),
   resolveWorkflowAiSchemaFromConfig: vi.fn(() => ({ schema: null, errors: [] })),
   validateExpressionSource: vi.fn(() => []),
 }));
@@ -222,6 +279,10 @@ vi.mock('../WorkflowActionInputSection', () => ({
   WorkflowActionInputSection: () => <div data-testid="workflow-action-input-smoke" />
 }));
 
+vi.mock('../WorkflowActionInputFixedPicker', () => ({
+  WorkflowActionInputFixedPicker: () => <div data-testid="workflow-action-fixed-picker-smoke" />
+}));
+
 import WorkflowDesigner from '../WorkflowDesigner';
 
 describe('WorkflowDesigner smoke', () => {
@@ -234,6 +295,7 @@ describe('WorkflowDesigner smoke', () => {
     listWorkflowDesignerActionCatalogActionMock.mockReset();
     listWorkflowSchemaRefsActionMock.mockReset();
     listWorkflowSchemasMetaActionMock.mockReset();
+    getWorkflowStepQuotaSummaryActionMock.mockReset();
     listEventCatalogOptionsV2ActionMock.mockReset();
     getEventCatalogEntryByEventTypeMock.mockReset();
     routerReplaceMock.mockReset();
@@ -246,6 +308,16 @@ describe('WorkflowDesigner smoke', () => {
     listWorkflowDesignerActionCatalogActionMock.mockResolvedValue([]);
     listWorkflowSchemaRefsActionMock.mockResolvedValue([]);
     listWorkflowSchemasMetaActionMock.mockResolvedValue([]);
+    getWorkflowStepQuotaSummaryActionMock.mockResolvedValue({
+      periodStart: '2026-05-01T00:00:00.000Z',
+      periodEnd: '2026-06-01T00:00:00.000Z',
+      periodSource: 'fallback_calendar',
+      effectiveLimit: 750,
+      usedCount: 42,
+      remaining: 708,
+      tier: 'pro',
+      limitSource: 'tier_default',
+    });
     listEventCatalogOptionsV2ActionMock.mockResolvedValue({ events: [] });
     getEventCatalogEntryByEventTypeMock.mockResolvedValue(null);
   });
@@ -261,5 +333,16 @@ describe('WorkflowDesigner smoke', () => {
     expect(listWorkflowRegistryNodesActionMock).toHaveBeenCalled();
     expect(listWorkflowRegistryActionsActionMock).toHaveBeenCalled();
     expect(listWorkflowDesignerActionCatalogActionMock).toHaveBeenCalled();
+  });
+
+  it('renders workflow action quota usage on the control panel', async () => {
+    render(<WorkflowDesigner mode="control-panel" />);
+
+    await waitFor(() => {
+      expect(screen.getByText('42 consumed')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('708 remaining')).toBeInTheDocument();
+    expect(getWorkflowStepQuotaSummaryActionMock).toHaveBeenCalled();
   });
 });
