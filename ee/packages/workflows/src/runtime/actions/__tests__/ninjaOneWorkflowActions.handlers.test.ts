@@ -1,11 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../../../../server/src/lib/integrations/ninjaone', () => ({
-  createNinjaOneClient: vi.fn()
-}));
-
-vi.mock('../../../../../../server/src/lib/integrations/ninjaone/sync/syncStrategy', () => ({
-  getNinjaOneSyncStrategy: vi.fn(() => ({ syncDevice: vi.fn() }))
+vi.mock('../ninjaOneWorkflowRuntimeSupport', () => ({
+  createNinjaOneWorkflowClient: vi.fn(),
+  syncNinjaOneDevice: vi.fn()
 }));
 
 const baseCtx = {
@@ -118,9 +115,8 @@ describe('NinjaOne workflow action handlers', () => {
 
   it('T009: ninjaone.devices.sync delegates to sync strategy and returns synced identifiers', async () => {
     const action = await loadActionById('ninjaone.devices.sync');
-    const syncDevice = vi.fn().mockResolvedValue({ asset_id: '550e8400-e29b-41d4-a716-446655440000' });
-    const syncStrategyModule = await import('../../../../../../server/src/lib/integrations/ninjaone/sync/syncStrategy');
-    vi.mocked(syncStrategyModule.getNinjaOneSyncStrategy).mockReturnValue({ syncDevice } as any);
+    const supportModule = await import('../ninjaOneWorkflowRuntimeSupport');
+    vi.mocked(supportModule.syncNinjaOneDevice).mockResolvedValue({ asset_id: '550e8400-e29b-41d4-a716-446655440000' });
 
     const knex: any = vi.fn((table: string) => {
       if (table === 'rmm_integrations') return createActiveIntegrationBuilder();
@@ -128,7 +124,7 @@ describe('NinjaOne workflow action handlers', () => {
     });
 
     const result = await action.handler({ device_id: 123 }, { ...baseCtx, tenantId: 'tenant-1', knex } as any);
-    expect(syncDevice).toHaveBeenCalledWith({ tenantId: 'tenant-1', integrationId: 'int-1', deviceId: 123 });
+    expect(supportModule.syncNinjaOneDevice).toHaveBeenCalledWith({ tenantId: 'tenant-1', integrationId: 'int-1', deviceId: 123 });
     expect(result).toEqual({
       synced: true,
       external_device_id: '123',
@@ -138,9 +134,9 @@ describe('NinjaOne workflow action handlers', () => {
 
   it('T010: ninjaone.devices.reboot guards inactive integration and delegates reboot on success', async () => {
     const action = await loadActionById('ninjaone.devices.reboot');
-    const ninjaModule = await import('../../../../../../server/src/lib/integrations/ninjaone');
+    const supportModule = await import('../ninjaOneWorkflowRuntimeSupport');
     const rebootDevice = vi.fn().mockResolvedValue(undefined);
-    vi.mocked(ninjaModule.createNinjaOneClient).mockResolvedValue({ rebootDevice } as any);
+    vi.mocked(supportModule.createNinjaOneWorkflowClient).mockResolvedValue({ rebootDevice } as any);
 
     const inactiveKnex: any = vi.fn((table: string) => {
       if (table === 'rmm_integrations') return createInactiveIntegrationBuilder();
@@ -223,9 +219,9 @@ describe('NinjaOne workflow action handlers', () => {
 
   it('T013: ninjaone.alerts.reset calls reset operation and returns acknowledged output', async () => {
     const action = await loadActionById('ninjaone.alerts.reset');
-    const ninjaModule = await import('../../../../../../server/src/lib/integrations/ninjaone');
+    const supportModule = await import('../ninjaOneWorkflowRuntimeSupport');
     const resetAlert = vi.fn().mockResolvedValue(undefined);
-    vi.mocked(ninjaModule.createNinjaOneClient).mockResolvedValue({ resetAlert } as any);
+    vi.mocked(supportModule.createNinjaOneWorkflowClient).mockResolvedValue({ resetAlert } as any);
 
     const update = vi.fn().mockResolvedValue(1);
     const alertsBuilder: any = { where: vi.fn().mockReturnThis(), update };

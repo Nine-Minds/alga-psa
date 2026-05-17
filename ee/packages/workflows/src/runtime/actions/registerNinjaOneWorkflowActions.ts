@@ -2,8 +2,8 @@ import { z } from 'zod';
 import { getActionRegistryV2 } from '../../../../../../shared/workflow/runtime/registries/actionRegistry';
 import { throwActionError } from '../../../../../../shared/workflow/runtime/actions/businessOperations/shared';
 import type { ActionContext } from '../../../../../../shared/workflow/runtime/registries/actionRegistry';
-import { createNinjaOneClient } from '../../../../../server/src/lib/integrations/ninjaone';
-import { getNinjaOneSyncStrategy } from '../../../../../server/src/lib/integrations/ninjaone/sync/syncStrategy';
+
+const loadNinjaOneRuntimeSupport = () => import('./ninjaOneWorkflowRuntimeSupport');
 
 const deviceSchema = z.object({
   external_device_id: z.string(),
@@ -169,7 +169,8 @@ export function registerNinjaOneWorkflowActionsV2(): void {
         return { devices: localDevices, count: localDevices.length };
       }
 
-      const client = await createNinjaOneClient(tenantId, undefined, { integrationId, provider: 'ninjaone' });
+      const { createNinjaOneWorkflowClient } = await loadNinjaOneRuntimeSupport();
+      const client = await createNinjaOneWorkflowClient(tenantId, integrationId);
       const liveDeviceRows = input.device_id !== undefined
         ? [await client.getDevice(input.device_id)]
         : input.asset_id && localDevices[0]?.external_device_id
@@ -201,8 +202,8 @@ export function registerNinjaOneWorkflowActionsV2(): void {
     },
     handler: async (input, ctx) => {
       const { tenantId, integrationId } = await requireNinjaOneIntegration(ctx);
-      const strategy = getNinjaOneSyncStrategy();
-      const asset = await strategy.syncDevice({
+      const { syncNinjaOneDevice } = await loadNinjaOneRuntimeSupport();
+      const asset = await syncNinjaOneDevice({
         tenantId,
         integrationId,
         deviceId: input.device_id,
@@ -235,7 +236,8 @@ export function registerNinjaOneWorkflowActionsV2(): void {
     },
     handler: async (input, ctx) => {
       const { tenantId, integrationId } = await requireNinjaOneIntegration(ctx);
-      const client = await createNinjaOneClient(tenantId, undefined, { integrationId, provider: 'ninjaone' });
+      const { createNinjaOneWorkflowClient } = await loadNinjaOneRuntimeSupport();
+      const client = await createNinjaOneWorkflowClient(tenantId, integrationId);
       await client.rebootDevice(input.device_id);
       return { reboot_requested: true, external_device_id: String(input.device_id) };
     }
@@ -271,7 +273,8 @@ export function registerNinjaOneWorkflowActionsV2(): void {
         return { alerts, count: alerts.length };
       }
 
-      const client = await createNinjaOneClient(tenantId, undefined, { integrationId, provider: 'ninjaone' });
+      const { createNinjaOneWorkflowClient } = await loadNinjaOneRuntimeSupport();
+      const client = await createNinjaOneWorkflowClient(tenantId, integrationId);
       const alerts = (await client.getAlerts({ pageSize: input.limit })).map((alert) => normalizeNinjaAlert(alert));
       return { alerts, count: alerts.length };
     }
@@ -334,7 +337,8 @@ export function registerNinjaOneWorkflowActionsV2(): void {
     handler: async (input, ctx) => {
       const { tenantId, knex, integrationId } = await requireNinjaOneIntegration(ctx);
       const alertId = input.alert_uid ?? input.external_alert_id!;
-      const client = await createNinjaOneClient(tenantId, undefined, { integrationId, provider: 'ninjaone' });
+      const { createNinjaOneWorkflowClient } = await loadNinjaOneRuntimeSupport();
+      const client = await createNinjaOneWorkflowClient(tenantId, integrationId);
       await client.resetAlert(alertId);
       await knex('rmm_alerts')
         .where({ tenant: tenantId, integration_id: integrationId, external_alert_id: alertId })
