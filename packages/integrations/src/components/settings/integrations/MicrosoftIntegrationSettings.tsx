@@ -34,7 +34,7 @@ import {
   getVisibleMicrosoftConsumerTypes,
   isMicrosoftConsumerEnterpriseEdition,
 } from '../../../lib/microsoftConsumerVisibility';
-import { resolveTeamsAvailability } from '../../../lib/teamsAvailability';
+import { resolveTeamsAvailability } from '../../../lib/teamsAvailabilityCore';
 import {
   AlertTriangle,
   Archive,

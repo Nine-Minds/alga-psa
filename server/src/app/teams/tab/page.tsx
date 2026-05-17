@@ -1,5 +1,5 @@
 import { Card } from '@alga-psa/ui/components/Card';
-import { isTeamsEnterpriseEdition, TEAMS_AVAILABILITY_MESSAGES } from '@alga-psa/integrations/lib/teamsAvailability';
+import { isTeamsEnterpriseEdition, TEAMS_AVAILABILITY_MESSAGES } from '@alga-psa/integrations/lib/teamsAvailabilityCore';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { ReactNode } from 'react';
 

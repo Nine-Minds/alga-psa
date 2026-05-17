@@ -130,12 +130,13 @@ describe('teamsAvailability', () => {
     expect(hoisted.createTenantKnexMock).not.toHaveBeenCalled();
   });
 
-  it('keeps the shared Teams availability helpers outside use-server modules so UI and action code can import the same file safely', () => {
-    const moduleSource = fs.readFileSync(path.resolve(__dirname, 'teamsAvailability.ts'), 'utf8');
+  it('keeps client-safe Teams availability helpers in a module without database imports', () => {
+    const clientSafeSource = fs.readFileSync(path.resolve(__dirname, 'teamsAvailabilityCore.ts'), 'utf8');
+    const serverSource = fs.readFileSync(path.resolve(__dirname, 'teamsAvailability.ts'), 'utf8');
 
-    expect(moduleSource).not.toMatch(/['"]use server['"]/);
-    expect(moduleSource).not.toMatch(/import \{ createTenantKnex \} from ['"]@alga-psa\/db['"]/);
-    expect(moduleSource).toContain('export function resolveTeamsAvailability');
-    expect(moduleSource).toContain('export async function getTeamsAvailability');
+    expect(clientSafeSource).not.toMatch(/['"]use server['"]/);
+    expect(clientSafeSource).not.toContain('@alga-psa/db');
+    expect(clientSafeSource).toContain('export function resolveTeamsAvailability');
+    expect(serverSource).toContain('export async function getTeamsAvailability');
   });
 });
