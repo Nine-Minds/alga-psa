@@ -2372,13 +2372,7 @@
     }
   },
   "automationGate": {
-    "loading": "A carregar automação de fluxos de trabalho...",
-    "featureName": "Automação de fluxos de trabalho",
-    "notEnabled": "Esta funcionalidade é experimental e não está ativada para o seu inquilino.",
-    "experimental": "Experimental",
-    "enableHint": "Ative a Automação de fluxos de trabalho em Definições para aceder.",
-    "goToExperimental": "Ir para funcionalidades experimentais",
-    "openSettings": "Abrir definições"
+    "loading": "A carregar automação de fluxos de trabalho..."
   },
   "flow": {
     "designer": {

@@ -62,7 +62,6 @@ async function setupDesigner(page: Page): Promise<{
       companyName: `Workflow UI ${uuidv4().slice(0, 6)}`,
     },
     completeOnboarding: { completedAt: new Date() },
-    experimentalFeatures: { workflowAutomation: true },
     permissions: ADMIN_PERMISSIONS,
   });
 
@@ -380,7 +379,6 @@ test.describe('Workflow Designer UI - basic', () => {
         companyName: `Workflow UI ${uuidv4().slice(0, 6)}`,
       },
       completeOnboarding: { completedAt: new Date() },
-      experimentalFeatures: { workflowAutomation: true },
       permissions: ADMIN_PERMISSIONS,
     });
 

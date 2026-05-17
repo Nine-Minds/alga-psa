@@ -85,6 +85,7 @@ import {
   listWorkflowRegistryActionsAction,
   listWorkflowRegistryNodesAction,
   listWorkflowRunsAction,
+  getWorkflowStepQuotaSummaryAction,
   publishWorkflowDefinitionAction,
   updateWorkflowDefinitionDraftAction,
   updateWorkflowDefinitionMetadataAction
@@ -204,6 +205,17 @@ type WorkflowDefinitionRecord = {
     last_run_status?: string | null;
     last_error?: string | null;
   } | null;
+};
+
+type WorkflowStepQuotaSummary = {
+  periodStart: string;
+  periodEnd: string;
+  periodSource: string;
+  effectiveLimit: number | null;
+  usedCount: number;
+  remaining: number | null;
+  tier: string;
+  limitSource: string;
 };
 
 type NodeRegistryItem = {
@@ -1269,6 +1281,18 @@ const duplicateWorkflowStepWithNewIds = (step: Step): Step => {
   } as Step;
 };
 
+const formatWorkflowQuotaNumber = (value: number | null | undefined): string => {
+  if (value == null) return 'Unlimited';
+  return value.toLocaleString();
+};
+
+const formatWorkflowQuotaReset = (value: string | null | undefined): string => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
 const createStepFromPalette = (
   type: Step['type'],
   nodeRegistry: Record<string, NodeRegistryItem>
@@ -1344,6 +1368,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const [activeWorkflowId, setActiveWorkflowId] = useState<string | null>(null);
   const [runStatusByWorkflow, setRunStatusByWorkflow] = useState<Map<string, string>>(new Map());
   const [runCountByWorkflow, setRunCountByWorkflow] = useState<Map<string, number>>(new Map());
+  const [workflowStepQuotaSummary, setWorkflowStepQuotaSummary] = useState<WorkflowStepQuotaSummary | null>(null);
+  const [workflowStepQuotaStatus, setWorkflowStepQuotaStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
   const [nodeRegistry, setNodeRegistry] = useState<NodeRegistryItem[]>([]);
   const [actionRegistry, setActionRegistry] = useState<ActionRegistryItem[]>([]);
   const [designerActionCatalog, setDesignerActionCatalog] = useState<WorkflowDesignerCatalogRecord[]>([]);
@@ -2254,6 +2280,18 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     }
   }, []);
 
+  const loadWorkflowStepQuotaSummary = useCallback(async () => {
+    setWorkflowStepQuotaStatus('loading');
+    try {
+      const result = await getWorkflowStepQuotaSummaryAction();
+      setWorkflowStepQuotaSummary(result as WorkflowStepQuotaSummary);
+      setWorkflowStepQuotaStatus('loaded');
+    } catch {
+      setWorkflowStepQuotaSummary(null);
+      setWorkflowStepQuotaStatus('error');
+    }
+  }, []);
+
   const loadEventCatalogOptions = useCallback(async () => {
     setEventCatalogStatus('loading');
     try {
@@ -2520,8 +2558,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     loadDefinitions();
     loadRegistries();
     loadRunSummary();
+    if (mode === 'control-panel') {
+      loadWorkflowStepQuotaSummary();
+    }
     loadEventCatalogOptions();
-  }, [loadDefinitions, loadRegistries, loadEventCatalogOptions]);
+  }, [loadDefinitions, loadRegistries, loadRunSummary, loadWorkflowStepQuotaSummary, loadEventCatalogOptions, mode]);
 
   useEffect(() => {
     const overrides = getWorkflowPlaywrightOverrides();
@@ -5087,6 +5128,15 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         ? t('designer.page.designerDescription', { defaultValue: 'Build and maintain workflow automations.' })
         : t('designer.page.editorDescription', { defaultValue: 'Choose a workflow to edit or create a new workflow.' });
 
+  const workflowStepQuotaUsed = workflowStepQuotaSummary?.usedCount ?? null;
+  const workflowStepQuotaLimit = workflowStepQuotaSummary?.effectiveLimit ?? null;
+  const workflowStepQuotaRemaining = workflowStepQuotaSummary?.remaining ?? null;
+  const workflowStepQuotaReset = formatWorkflowQuotaReset(workflowStepQuotaSummary?.periodEnd);
+  const workflowStepQuotaPercent =
+    workflowStepQuotaLimit != null && workflowStepQuotaLimit > 0 && workflowStepQuotaUsed != null
+      ? Math.min(100, Math.max(0, (workflowStepQuotaUsed / workflowStepQuotaLimit) * 100))
+      : null;
+
   const handleBackToWorkflowList = useCallback(() => {
     requestDiscardChangesConfirmation(() => {
       router.push('/msp/workflow-editor');
@@ -5123,7 +5173,77 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{pageTitle}</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">{pageDescription}</p>
           </div>
-          {isEditorDesignerMode && (
+          {isControlPanelMode ? (
+            <div
+              id="workflow-control-quota-summary"
+              className="w-full max-w-sm rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-sm dark:border-[rgb(var(--color-border-200))] dark:bg-[rgb(var(--color-card))]"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 font-medium text-gray-900 dark:text-gray-100">
+                  <Zap className="h-4 w-4 text-primary-600" aria-hidden="true" />
+                  <span>{t('designer.controlPanel.quota.title', { defaultValue: 'Workflow actions' })}</span>
+                </div>
+                {workflowStepQuotaStatus === 'loading' || workflowStepQuotaStatus === 'idle' ? (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {t('designer.controlPanel.quota.loading', { defaultValue: 'Loading...' })}
+                  </span>
+                ) : workflowStepQuotaStatus === 'error' ? (
+                  <span className="text-xs text-red-600 dark:text-red-400">
+                    {t('designer.controlPanel.quota.unavailable', { defaultValue: 'Unavailable' })}
+                  </span>
+                ) : (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {workflowStepQuotaLimit == null
+                      ? t('designer.controlPanel.quota.unlimitedPlan', { defaultValue: 'Unlimited plan' })
+                      : t('designer.controlPanel.quota.planLimit', {
+                          defaultValue: '{{limit}} limit',
+                          limit: formatWorkflowQuotaNumber(workflowStepQuotaLimit),
+                        })}
+                  </span>
+                )}
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-normal text-gray-500 dark:text-gray-400">
+                    {t('designer.controlPanel.quota.consumedLabel', { defaultValue: 'Consumed' })}
+                  </div>
+                  <div className="text-lg font-semibold leading-6 text-gray-900 dark:text-gray-100">
+                    {workflowStepQuotaStatus === 'loaded'
+                      ? `${formatWorkflowQuotaNumber(workflowStepQuotaUsed)} ${t('designer.controlPanel.quota.consumedUnit', { defaultValue: 'consumed' })}`
+                      : '--'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[11px] uppercase tracking-normal text-gray-500 dark:text-gray-400">
+                    {t('designer.controlPanel.quota.remainingLabel', { defaultValue: 'Remaining' })}
+                  </div>
+                  <div className="text-lg font-semibold leading-6 text-gray-900 dark:text-gray-100">
+                    {workflowStepQuotaStatus === 'loaded'
+                      ? workflowStepQuotaLimit == null
+                        ? t('designer.controlPanel.quota.unlimitedRemaining', { defaultValue: 'Unlimited' })
+                        : `${formatWorkflowQuotaNumber(workflowStepQuotaRemaining)} ${t('designer.controlPanel.quota.remainingUnit', { defaultValue: 'remaining' })}`
+                      : '--'}
+                  </div>
+                </div>
+              </div>
+              {workflowStepQuotaPercent != null && (
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-200 dark:bg-[rgb(var(--color-border-100))]">
+                  <div
+                    className="h-full rounded-full bg-primary-600"
+                    style={{ width: `${workflowStepQuotaPercent}%` }}
+                  />
+                </div>
+              )}
+              {workflowStepQuotaStatus === 'loaded' && workflowStepQuotaReset && (
+                <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  {t('designer.controlPanel.quota.resetsOn', {
+                    defaultValue: 'Resets {{date}}',
+                    date: workflowStepQuotaReset,
+                  })}
+                </div>
+              )}
+            </div>
+          ) : isEditorDesignerMode && (
             <div className="flex items-center gap-2">
               {activeWorkflowRecord && (
                 <span

@@ -2372,13 +2372,7 @@
     }
   },
   "automationGate": {
-    "loading": "Cargando automatización de flujos de trabajo...",
-    "featureName": "Automatización de flujos de trabajo",
-    "notEnabled": "Esta función es experimental y no está habilitada para su tenant.",
-    "experimental": "Experimental",
-    "enableHint": "Habilite la automatización de flujos de trabajo en la configuración para acceder a ella.",
-    "goToExperimental": "Ir a funciones experimentales",
-    "openSettings": "Abrir configuración"
+    "loading": "Cargando automatización de flujos de trabajo..."
   },
   "flow": {
     "designer": {

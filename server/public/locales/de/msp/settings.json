@@ -90,10 +90,6 @@
         "name": "KI-Assistent",
         "description": "Aktivieren Sie den KI-gestützten Schnellzugriff und die Chat-Seitenleiste.",
         "restriction": "Nur für den Hauptabrechnungsmandanten verfügbar."
-      },
-      "workflowAutomation": {
-        "name": "Workflow-Automatisierung",
-        "description": "Aktivieren Sie experimentelle Workflow-Automatisierungsfunktionen im Workflow-Kontrollpanel und -Editor."
       }
     },
     "actions": {

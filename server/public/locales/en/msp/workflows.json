@@ -2372,13 +2372,7 @@
     }
   },
   "automationGate": {
-    "loading": "Loading workflow automation...",
-    "featureName": "Workflow Automation",
-    "notEnabled": "This feature is experimental and is not enabled for your tenant.",
-    "experimental": "Experimental",
-    "enableHint": "Enable Workflow Automation in Settings to access workflow automation features.",
-    "goToExperimental": "Go to Experimental Features",
-    "openSettings": "Open settings"
+    "loading": "Loading workflow automation..."
   },
   "flow": {
     "designer": {

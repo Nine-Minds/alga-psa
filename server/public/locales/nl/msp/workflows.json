@@ -2372,13 +2372,7 @@
     }
   },
   "automationGate": {
-    "loading": "Workflowautomatisering wordt geladen...",
-    "featureName": "Workflowautomatisering",
-    "notEnabled": "Deze functie is experimenteel en niet ingeschakeld voor uw tenant.",
-    "experimental": "Experimenteel",
-    "enableHint": "Schakel Workflowautomatisering in bij Instellingen om er toegang toe te krijgen.",
-    "goToExperimental": "Ga naar experimentele functies",
-    "openSettings": "Instellingen openen"
+    "loading": "Workflowautomatisering wordt geladen..."
   },
   "flow": {
     "designer": {

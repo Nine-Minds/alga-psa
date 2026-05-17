@@ -90,10 +90,6 @@
         "name": "AI Assistant",
         "description": "Enable AI-powered Quick Ask and Chat sidebar.",
         "restriction": "Only available for whitelisted tenants."
-      },
-      "workflowAutomation": {
-        "name": "Workflow Automation",
-        "description": "Enable experimental workflow automation features in the workflow control panel and editor."
       }
     },
     "actions": {
