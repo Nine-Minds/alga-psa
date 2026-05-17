@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Activity, Boxes, ScrollText, Server, SlidersHorizontal } from 'lucide-react';
+import { AlgaLogo } from './AlgaLogo';
 import styles from './status.module.css';
 
 type RawTierMap = Record<string, boolean | { ready?: boolean; status?: string }>;
@@ -36,7 +38,7 @@ type Pod = {
   containers: Array<{ name: string; image?: string; ready?: boolean; restarts?: number; state?: Record<string, unknown> | null }>;
 };
 
-type Tab = 'overview' | 'deployments' | 'pods' | 'logs' | 'diagnostics';
+type Tab = 'overview' | 'deployments' | 'pods' | 'logs';
 type LogLoadOptions = { preserveScroll?: boolean; scrollToEnd?: boolean };
 
 function tokenQuery() {
@@ -60,6 +62,7 @@ function apiPath(path: string, query: string, params: Record<string, string | nu
 
 function badgeClass(value?: string | boolean) {
   const normalized = String(value ?? 'unknown');
+  if (['loading'].includes(normalized)) return styles.loading;
   if (['true', 'fully_healthy', 'ready_to_log_in', 'ready_with_background_issues', 'healthy', 'Running', 'Succeeded', 'ready', 'True'].includes(normalized)) return styles.ready;
   if (['installing', 'progressing', 'unknown', 'Pending', 'ContainerCreating', 'PodInitializing', 'setup-queued', 'not_fully_healthy'].includes(normalized)) return styles.installing;
   if (['false', 'not ready', 'warning', 'background', 'degraded_background_services', 'Unknown'].includes(normalized)) return styles.warning;
@@ -94,6 +97,20 @@ function ageFrom(date?: string | null) {
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
   return `${Math.floor(seconds / 86400)}d`;
 }
+
+function elapsedLabel(seconds?: number | null) {
+  if (seconds === null || seconds === undefined) return 'elapsed time unavailable';
+  if (seconds < 60) return `${Math.max(0, Math.floor(seconds))}s elapsed`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m elapsed`;
+  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m elapsed`;
+}
+
+const statusTabs = [
+  { value: 'overview', label: 'Overview', Icon: Activity },
+  { value: 'deployments', label: 'Deployments', Icon: Boxes },
+  { value: 'pods', label: 'Pods', Icon: Server },
+  { value: 'logs', label: 'Logs', Icon: ScrollText }
+] satisfies Array<{ value: Tab; label: string; Icon: typeof Activity }>;
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -285,6 +302,11 @@ export default function StatusPage() {
   }, []) : [], [filteredLogLines, logSearch]);
   const searchMatches = matchLineIndexes.length;
   const state = status?.rollup?.state || status?.status || status?.installState?.status || 'loading';
+  const blockerList = blockers(status);
+  const runningOperations = status?.activeOperations || [];
+  const primaryOperation = runningOperations[0];
+  const currentPhase = status?.currentPhase || status?.installState?.phase || 'loading';
+  const nextAction = status?.rollup?.nextAction || status?.installState?.lastAction || 'Waiting for the next appliance update';
 
   useEffect(() => {
     setActiveMatch(0);
@@ -308,13 +330,28 @@ export default function StatusPage() {
   return (
     <main className={styles.shell}>
       <aside className={styles.sidebar}>
-        <div className={styles.brand}><span className={styles.logo}>A</span><span>Appliance Control</span></div>
-        <nav className={styles.nav} aria-label="Appliance status tabs">
-          {(['overview', 'deployments', 'pods', 'logs', 'diagnostics'] as Tab[]).map((tab) => (
-            <button key={tab} className={activeTab === tab ? styles.activeTab : ''} onClick={() => setActiveTab(tab)}>{tab}</button>
+        <div className={styles.brand}>
+          <span className={styles.logo}><AlgaLogo className={styles.logoSvg} /></span>
+          <span className={styles.brandText}><span>Alga PSA</span><small>Setup status</small></span>
+        </div>
+        <nav className={styles.nav} aria-label="Alga PSA setup status tabs" role="tablist">
+          {statusTabs.map(({ value, label, Icon }) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              id={`appliance-tab-${value}`}
+              aria-selected={activeTab === value}
+              aria-controls={`appliance-panel-${value}`}
+              className={activeTab === value ? styles.activeTab : ''}
+              onClick={() => setActiveTab(value)}
+            >
+              <Icon className={styles.navIcon} aria-hidden="true" />
+              <span>{label}</span>
+            </button>
           ))}
         </nav>
-        <a className={styles.setupLink} href={withToken('/setup/', query)}>Setup</a>
+        <a className={styles.setupLink} href={withToken('/setup/', query)}><SlidersHorizontal className={styles.navIcon} aria-hidden="true" /><span>Setup</span></a>
       </aside>
 
       <section className={styles.workspace}>
@@ -327,15 +364,50 @@ export default function StatusPage() {
         </header>
 
         {activeTab === 'overview' ? (
-          <div className={styles.grid}>
+          <div id="appliance-panel-overview" role="tabpanel" aria-labelledby="appliance-tab-overview" className={styles.grid}>
             <article className={`${styles.panel} ${styles.wide}`}>
-              <h2>Install overview</h2>
+              <h2>What is running now</h2>
+              {loadingStatus && !status ? <SkeletonBlock lines={4} /> : (
+                <div className={styles.runSummary}>
+                  <div className={styles.runHeader}>
+                    <div>
+                      <strong>{primaryOperation?.component || currentPhase}</strong>
+                      <p className={styles.runMessage}>{primaryOperation?.message || nextAction}</p>
+                    </div>
+                    <span className={`${styles.statusPill} ${badgeClass(state)}`}>{state}</span>
+                  </div>
+                  <div className={styles.runMeta}>
+                    <span>Phase: {currentPhase}</span>
+                    <span>{elapsedLabel(primaryOperation?.elapsedSeconds)}</span>
+                    <span>Login: {status?.urls?.loginUrl ? 'available' : 'not available yet'}</span>
+                    <span>{status?.kubernetes?.podCount ?? 0} pods</span>
+                  </div>
+                  {runningOperations.length > 1 ? (
+                    <ul className={styles.runList} aria-label="Other active operations">
+                      {runningOperations.slice(1, 4).map((op, index) => <li key={`${op.component}-${index}`}>{op.component}: {op.message}</li>)}
+                    </ul>
+                  ) : null}
+                </div>
+              )}
+            </article>
+
+            <article className={styles.panel}>
+              <h2>Next checkpoint</h2>
               {loadingStatus && !status ? <SkeletonBlock lines={4} /> : <dl className={styles.kv}>
-                <div><dt>Current phase</dt><dd>{status?.currentPhase || status?.installState?.phase || 'loading'}</dd></div>
-                <div><dt>Last action</dt><dd>{status?.installState?.lastAction || status?.rollup?.nextAction || '—'}</dd></div>
+                <div><dt>Current phase</dt><dd>{currentPhase}</dd></div>
+                <div><dt>Next action</dt><dd>{nextAction}</dd></div>
                 <div><dt>Login URL</dt><dd>{status?.urls?.loginUrl || 'Not available yet'}</dd></div>
                 <div><dt>Cluster objects</dt><dd>{status?.kubernetes?.podCount ?? 0} pods · {status?.kubernetes?.helmReleaseCount ?? 0} releases</dd></div>
               </dl>}
+            </article>
+
+            <article className={styles.panel}>
+              <h2>Blockers</h2>
+              {loadingStatus && !status ? <SkeletonBlock lines={3} /> : blockerList.length === 0 ? <p className={styles.muted}>No action-required blockers detected.</p> : blockerList.map((blocker, index) => (
+                <div className={`${styles.blocker} ${blocker.loginBlocking === false ? styles.backgroundBlocker : ''}`} key={index}>
+                  <strong>{blocker.component || blocker.layer}</strong><p>{blocker.reason}</p><small>{blocker.nextAction}</small>
+                </div>
+              ))}
             </article>
 
             <article className={styles.panel}>
@@ -346,17 +418,8 @@ export default function StatusPage() {
             </article>
 
             <article className={styles.panel}>
-              <h2>Blockers</h2>
-              {loadingStatus && !status ? <SkeletonBlock lines={3} /> : blockers(status).length === 0 ? <p className={styles.muted}>No action-required blockers detected from the live API.</p> : blockers(status).map((blocker, index) => (
-                <div className={`${styles.blocker} ${blocker.loginBlocking === false ? styles.backgroundBlocker : ''}`} key={index}>
-                  <strong>{blocker.component || blocker.layer}</strong><p>{blocker.reason}</p><small>{blocker.nextAction}</small>
-                </div>
-              ))}
-            </article>
-
-            <article className={styles.panel}>
               <h2>Active operations</h2>
-              {loadingStatus && !status ? <SkeletonBlock lines={3} /> : (status?.activeOperations || []).length === 0 ? <p className={styles.muted}>No active image pull or long-running pod operation detected.</p> : status?.activeOperations?.map((op, index) => (
+              {loadingStatus && !status ? <SkeletonBlock lines={3} /> : runningOperations.length === 0 ? <p className={styles.muted}>No active image pull or long-running pod operation detected.</p> : runningOperations.map((op, index) => (
                 <div className={styles.operation} key={index}><strong>{op.component}</strong><p>{op.message}</p></div>
               ))}
             </article>
@@ -367,11 +430,17 @@ export default function StatusPage() {
                 <div className={styles.event} key={index}><b>{event.type} {event.reason}</b><span>{event.namespace} · {event.involvedObject}</span><p>{event.message}</p></div>
               ))}{(status?.recentEvents || []).length === 0 ? <p className={styles.muted}>Kubernetes events are not available yet.</p> : null}</div>}
             </article>
+
+            <details className={styles.advancedSupport}>
+              <summary className={styles.advancedSummary}>Advanced support diagnostics</summary>
+              <p className={styles.helpText}>Use this raw payload when support asks for exact appliance state.</p>
+              {loadingStatus && !status ? <SkeletonBlock lines={12} /> : <pre className={styles.raw}>{JSON.stringify(status || { error }, null, 2)}</pre>}
+            </details>
           </div>
         ) : null}
 
         {activeTab === 'deployments' ? (
-          <section className={styles.panel}>
+          <section id="appliance-panel-deployments" role="tabpanel" aria-labelledby="appliance-tab-deployments" className={styles.panel}>
             <Toolbar namespace={namespace} namespaces={namespaces} loadingNamespaces={loadingNamespaces} onNamespace={setNamespace} filter={deploymentFilter} onFilter={setDeploymentFilter} onRefresh={loadDeployments} />
             <div className={styles.tableWrap}><table><thead><tr><th>Deployment</th><th>Ready</th><th>Revision</th><th>Strategy</th><th>Images</th><th>History</th></tr></thead><tbody>{loadingDeployments ? <SkeletonRows columns={6} rows={7} /> : visibleDeployments.length === 0 ? <tr><td colSpan={6} className={styles.emptyCell}>No deployments found.</td></tr> : visibleDeployments.map((deployment) => (
               <tr key={`${deployment.namespace}/${deployment.name}`}><td><b>{deployment.name}</b><small>{deployment.namespace}</small></td><td><span className={`${styles.badge} ${badgeClass(deployment.readyReplicas === deployment.replicas)}`}>{deployment.readyReplicas}/{deployment.replicas}</span></td><td>{deployment.revision || '—'}</td><td>{deployment.strategy}</td><td>{deployment.images?.map((image) => <code key={image}>{image}</code>)}</td><td><div className={styles.history}>{deployment.replicaSets?.slice(0, 4).map((rs) => <span key={rs.name}>r{rs.revision || '?'} {rs.readyReplicas}/{rs.replicas} · {ageFrom(rs.createdAt)}</span>)}</div></td></tr>
@@ -380,28 +449,28 @@ export default function StatusPage() {
         ) : null}
 
         {activeTab === 'pods' ? (
-          <section className={styles.panel}>
+          <section id="appliance-panel-pods" role="tabpanel" aria-labelledby="appliance-tab-pods" className={styles.panel}>
             <Toolbar namespace={namespace} namespaces={namespaces} loadingNamespaces={loadingNamespaces} onNamespace={setNamespace} filter={podFilter} onFilter={setPodFilter} onRefresh={loadPods} />
-            <div className={styles.tableWrap}><table><thead><tr><th>Pod</th><th>Status</th><th>Ready</th><th>Restarts</th><th>Node/IP</th><th>Containers</th></tr></thead><tbody>{loadingPods ? <SkeletonRows columns={6} rows={8} /> : visiblePods.length === 0 ? <tr><td colSpan={6} className={styles.emptyCell}>No pods found.</td></tr> : visiblePods.map((pod) => (
-              <tr key={`${pod.namespace}/${pod.name}`} onClick={() => { setNamespace(pod.namespace); setSelectedPod(pod.name); setSelectedContainer(pod.containers[0]?.name || ''); setActiveTab('logs'); }}><td><b>{pod.name}</b><small>{pod.namespace}</small></td><td><span className={`${styles.badge} ${badgeClass(pod.phase)}`}>{pod.phase}</span></td><td>{pod.readyContainers}/{pod.totalContainers}</td><td>{pod.restarts}</td><td><small>{pod.node || '—'}<br />{pod.podIP || '—'}</small></td><td>{pod.containers.map((container) => <code key={container.name}>{container.name}</code>)}</td></tr>
+            <div className={styles.tableWrap}><table><thead><tr><th>Pod</th><th>Status</th><th>Ready</th><th>Restarts</th><th>Node/IP</th><th>Containers</th><th>Action</th></tr></thead><tbody>{loadingPods ? <SkeletonRows columns={7} rows={8} /> : visiblePods.length === 0 ? <tr><td colSpan={7} className={styles.emptyCell}>No pods found.</td></tr> : visiblePods.map((pod) => (
+              <tr key={`${pod.namespace}/${pod.name}`} onClick={() => { setNamespace(pod.namespace); setSelectedPod(pod.name); setSelectedContainer(pod.containers[0]?.name || ''); setActiveTab('logs'); }}><td><b>{pod.name}</b><small>{pod.namespace}</small></td><td><span className={`${styles.badge} ${badgeClass(pod.phase)}`}>{pod.phase}</span></td><td>{pod.readyContainers}/{pod.totalContainers}</td><td>{pod.restarts}</td><td><small>{pod.node || '—'}<br />{pod.podIP || '—'}</small></td><td>{pod.containers.map((container) => <code key={container.name}>{container.name}</code>)}</td><td><button type="button" onClick={(event) => { event.stopPropagation(); setNamespace(pod.namespace); setSelectedPod(pod.name); setSelectedContainer(pod.containers[0]?.name || ''); setActiveTab('logs'); }}>View logs</button></td></tr>
             ))}</tbody></table></div>
           </section>
         ) : null}
 
         {activeTab === 'logs' ? (
-          <section className={styles.panel}>
+          <section id="appliance-panel-logs" role="tabpanel" aria-labelledby="appliance-tab-logs" className={styles.panel}>
             <div className={styles.logControls}>
-              <select value={namespace} disabled={loadingNamespaces} onChange={(event) => { setNamespace(event.target.value); setSelectedPod(''); }}><option value="msp">msp</option>{namespaces.filter((ns) => ns.name !== 'msp').map((ns) => <option key={ns.name} value={ns.name}>{ns.name}</option>)}</select>
-              <select value={selectedPod} disabled={loadingPods} onChange={(event) => { setSelectedPod(event.target.value); setSelectedContainer(''); }}>{pods.map((pod) => <option key={pod.name} value={pod.name}>{pod.name}</option>)}</select>
-              <select value={selectedContainer} disabled={loadingPods || !selectedPodData} onChange={(event) => setSelectedContainer(event.target.value)}>{(selectedPodData?.containers || []).map((container) => <option key={container.name} value={container.name}>{container.name}</option>)}</select>
-              <button onClick={() => loadLogs(logTail, { scrollToEnd: true })}>Refresh</button>
+              <select aria-label="Namespace" value={namespace} disabled={loadingNamespaces} onChange={(event) => { setNamespace(event.target.value); setSelectedPod(''); }}><option value="msp">msp</option>{namespaces.filter((ns) => ns.name !== 'msp').map((ns) => <option key={ns.name} value={ns.name}>{ns.name}</option>)}</select>
+              <select aria-label="Pod" value={selectedPod} disabled={loadingPods} onChange={(event) => { setSelectedPod(event.target.value); setSelectedContainer(''); }}>{pods.map((pod) => <option key={pod.name} value={pod.name}>{pod.name}</option>)}</select>
+              <select aria-label="Container" value={selectedContainer} disabled={loadingPods || !selectedPodData} onChange={(event) => setSelectedContainer(event.target.value)}>{(selectedPodData?.containers || []).map((container) => <option key={container.name} value={container.name}>{container.name}</option>)}</select>
+              <button type="button" onClick={() => loadLogs(logTail, { scrollToEnd: true })}>Refresh</button>
               <span className={styles.muted}>tail {logTail} · scroll up for older lines</span>
             </div>
             <div className={styles.logControls}>
-              <input value={logFilter} onChange={(event) => setLogFilter(event.target.value)} placeholder="Filter visible log lines" />
-              <input value={logSearch} onChange={(event) => setLogSearch(event.target.value)} placeholder="Search and highlight" />
-              <button disabled={searchMatches === 0} onClick={() => jumpMatch(-1)}>Previous</button>
-              <button disabled={searchMatches === 0} onClick={() => jumpMatch(1)}>Next</button>
+              <input aria-label="Filter visible log lines" value={logFilter} onChange={(event) => setLogFilter(event.target.value)} placeholder="Filter visible log lines" />
+              <input aria-label="Search and highlight log lines" value={logSearch} onChange={(event) => setLogSearch(event.target.value)} placeholder="Search and highlight" />
+              <button type="button" disabled={searchMatches === 0} onClick={() => jumpMatch(-1)}>Previous</button>
+              <button type="button" disabled={searchMatches === 0} onClick={() => jumpMatch(1)}>Next</button>
               <span className={styles.matchCount}>{searchMatches ? `${activeMatch + 1}/${searchMatches}` : '0 matches'}</span>
             </div>
             {logError ? <div className={styles.alert}>{logError}</div> : null}
@@ -414,14 +483,11 @@ export default function StatusPage() {
           </section>
         ) : null}
 
-        {activeTab === 'diagnostics' ? (
-          <section className={styles.panel}><h2>Raw status payload</h2>{loadingStatus && !status ? <SkeletonBlock lines={16} /> : <pre className={styles.raw}>{JSON.stringify(status || { error }, null, 2)}</pre>}</section>
-        ) : null}
       </section>
     </main>
   );
 }
 
 function Toolbar({ namespace, namespaces, loadingNamespaces, onNamespace, filter, onFilter, onRefresh }: { namespace: string; namespaces: NamespaceItem[]; loadingNamespaces?: boolean; onNamespace: (value: string) => void; filter: string; onFilter: (value: string) => void; onRefresh: () => void }) {
-  return <div className={styles.toolbar}><select value={namespace} disabled={loadingNamespaces} onChange={(event) => onNamespace(event.target.value)}><option value="all">all namespaces</option><option value="msp">msp</option>{namespaces.filter((ns) => ns.name !== 'msp').map((ns) => <option key={ns.name} value={ns.name}>{ns.name}</option>)}</select><input value={filter} onChange={(event) => onFilter(event.target.value)} placeholder="Filter by name, image, state…" /><button onClick={onRefresh}>Refresh</button></div>;
+  return <div className={styles.toolbar}><select aria-label="Namespace" value={namespace} disabled={loadingNamespaces} onChange={(event) => onNamespace(event.target.value)}><option value="all">all namespaces</option><option value="msp">msp</option>{namespaces.filter((ns) => ns.name !== 'msp').map((ns) => <option key={ns.name} value={ns.name}>{ns.name}</option>)}</select><input aria-label="Filter by name, image, or state" value={filter} onChange={(event) => onFilter(event.target.value)} placeholder="Filter by name, image, state…" /><button type="button" onClick={onRefresh}>Refresh</button></div>;
 }
