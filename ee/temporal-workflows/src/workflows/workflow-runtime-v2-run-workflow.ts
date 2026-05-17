@@ -1,9 +1,11 @@
-import { condition, continueAsNew, defineQuery, defineSignal, executeChild, proxyActivities, setHandler, sleep } from '@temporalio/workflow';
+import { ApplicationFailure, condition, continueAsNew, defineQuery, defineSignal, executeChild, proxyActivities, setHandler, sleep } from '@temporalio/workflow';
 import {
   WORKFLOW_RUNTIME_V2_EVENT_SIGNAL,
   WORKFLOW_RUNTIME_V2_HUMAN_TASK_SIGNAL,
   WORKFLOW_RUNTIME_V2_QUOTA_RESUME_SIGNAL,
   WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE,
+  WORKFLOW_RUNTIME_V2_DEFAULT_EXECUTION_TIMEOUT,
+  WORKFLOW_RUNTIME_V2_DEFAULT_RUN_TIMEOUT,
   type WorkflowRuntimeV2TemporalRunInput,
 } from '@alga-psa/workflows/lib/workflowRuntimeV2TemporalContract';
 import { compileExpression, type CompiledExpression } from '@alga-psa/workflows/runtime/expressionEngine';
@@ -313,7 +315,7 @@ export async function workflowRuntimeV2RunWorkflow(
           { frames: state.frames }
         );
         await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, status: 'FAILED' });
-        throw corruptionError;
+        throw toWorkflowApplicationFailure(corruptionError);
       }
       await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, status: 'SUCCEEDED' });
       return {
@@ -483,6 +485,8 @@ export async function workflowRuntimeV2RunWorkflow(
             const childResult = await executeChild(workflowRuntimeV2RunWorkflow, {
               workflowId: childStart.temporalWorkflowId,
               taskQueue: WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE,
+              workflowExecutionTimeout: WORKFLOW_RUNTIME_V2_DEFAULT_EXECUTION_TIMEOUT,
+              workflowRunTimeout: WORKFLOW_RUNTIME_V2_DEFAULT_RUN_TIMEOUT,
               args: [{
                 runId: childStart.childRunId,
                 tenantId: state.scopes.system.tenantId,
@@ -912,7 +916,7 @@ export async function workflowRuntimeV2RunWorkflow(
           errorMessage: runtimeError.message,
         });
         await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, status: 'FAILED' });
-        throw error;
+        throw toWorkflowApplicationFailure(runtimeError);
       }
 
       await activities.projectWorkflowRuntimeV2StepCompletion({
@@ -952,7 +956,7 @@ export async function workflowRuntimeV2RunWorkflow(
       }
 
       await activities.completeWorkflowRuntimeV2Run({ runId: input.runId, status: 'FAILED' });
-      throw runtimeError;
+      throw toWorkflowApplicationFailure(runtimeError);
     }
 
     await maybeContinueAsNew();
@@ -1707,6 +1711,20 @@ type RuntimeErrorLike = {
   code?: string;
   details?: unknown;
 };
+
+function toWorkflowApplicationFailure(error: RuntimeErrorLike): ApplicationFailure {
+  return ApplicationFailure.nonRetryable(
+    error.message,
+    `WorkflowRuntimeV2.${error.category}`,
+    {
+      category: error.category,
+      nodePath: error.nodePath,
+      at: error.at,
+      ...(error.code ? { code: error.code } : {}),
+      ...(error.details !== undefined ? { details: error.details } : {}),
+    }
+  );
+}
 
 function normalizeRuntimeError(error: unknown, stepPath: string): RuntimeErrorLike {
   if (isRuntimeErrorLike(error)) {

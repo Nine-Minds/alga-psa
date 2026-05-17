@@ -1,0 +1,154 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit test the workflow integration module registry rejects duplicate group keys and returns registered module metadata.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Unit test designer catalog construction includes the registered NinjaOne module with stable group key, default action, icon token, and only approved action IDs.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F009",
+      "F030"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "DB-backed integration test: tenant with active NinjaOne rmm_integrations row receives the NinjaOne designer catalog record.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F008"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "DB-backed integration test: tenants with no NinjaOne row, inactive NinjaOne row, or null connected_at do not receive the NinjaOne designer catalog record.",
+    "implemented": true,
+    "featureIds": [
+      "F007",
+      "F008",
+      "F025"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "Regression test that extension app catalog filtering still works after first-party integration filtering is added.",
+    "implemented": true,
+    "featureIds": [
+      "F005"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Runtime registration test verifies server/publish runtime and worker runtime both include the six NinjaOne action IDs.",
+    "implemented": true,
+    "featureIds": [
+      "F027",
+      "F028",
+      "F029"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Unit test NinjaOne action metadata: side-effectful flags, idempotency modes, labels, descriptions, and Acknowledge alert wording.",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F021",
+      "F022",
+      "F033"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Handler test for ninjaone.devices.find covers a happy path returning normalized device fields without secrets.",
+    "implemented": true,
+    "featureIds": [
+      "F011",
+      "F012",
+      "F026"
+    ]
+  },
+  {
+    "id": "T009",
+    "description": "Handler test for ninjaone.devices.sync verifies single-device sync delegates to existing sync behavior and returns asset/device identifiers.",
+    "implemented": true,
+    "featureIds": [
+      "F013",
+      "F014"
+    ]
+  },
+  {
+    "id": "T010",
+    "description": "Handler test for ninjaone.devices.reboot verifies inactive integration guard and successful reboot delegation with normalized output.",
+    "implemented": true,
+    "featureIds": [
+      "F015",
+      "F016",
+      "F025"
+    ]
+  },
+  {
+    "id": "T011",
+    "description": "Handler test for ninjaone.alerts.list_active verifies active alert list output includes fields needed by tickets.create mapping.",
+    "implemented": true,
+    "featureIds": [
+      "F017",
+      "F018",
+      "F031"
+    ]
+  },
+  {
+    "id": "T012",
+    "description": "Handler test for ninjaone.alerts.get verifies lookup by alert UID/external ID and not-found failure behavior.",
+    "implemented": true,
+    "featureIds": [
+      "F019",
+      "F020"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Handler test for ninjaone.alerts.reset verifies Acknowledge alert calls the NinjaOne reset operation and returns acknowledged output.",
+    "implemented": true,
+    "featureIds": [
+      "F021",
+      "F023"
+    ]
+  },
+  {
+    "id": "T014",
+    "description": "Publish-validation or registry API test verifies NinjaOne action schemas are available for action.call configuration.",
+    "implemented": true,
+    "featureIds": [
+      "F027",
+      "F029"
+    ]
+  },
+  {
+    "id": "T015",
+    "description": "Workflow Designer component test verifies active-catalog NinjaOne tile renders with NinjaOne-specific icon token and action dropdown options.",
+    "implemented": true,
+    "featureIds": [
+      "F010",
+      "F030",
+      "F033"
+    ]
+  },
+  {
+    "id": "T016",
+    "description": "Representative workflow authoring test verifies NinjaOne alert output can be selected/mapped into a generic Ticket action without a NinjaOne create-ticket action.",
+    "implemented": true,
+    "featureIds": [
+      "F031",
+      "F032"
+    ]
+  }
+]

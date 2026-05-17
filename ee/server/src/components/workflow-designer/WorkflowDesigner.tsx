@@ -3486,6 +3486,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
         case 'crm': return <Handshake className={iconClass} />;
         case 'transform': return <Wand2 className={iconClass} />;
         case 'ai': return <Bot className={iconClass} />;
+        case 'ninjaone': return <ShieldAlert className={iconClass} />;
         case 'app': return <AppWindow className={iconClass} />;
         default: return <Box className={iconClass} />;
       }

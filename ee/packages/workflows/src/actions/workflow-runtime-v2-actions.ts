@@ -23,6 +23,7 @@ import {
   isWorkflowTimeTrigger,
   resolveActionCallOutputSchema,
   buildWorkflowDesignerActionCatalog,
+  getWorkflowIntegrationModuleRegistry,
   zodToWorkflowJsonSchema,
   validateWorkflowDefinition,
   validateInputMapping,
@@ -203,6 +204,30 @@ const loadAvailableWorkflowDesignerAppKeys = async (
   }
 
   return availableKeys;
+};
+
+const loadAvailableFirstPartyIntegrationAppKeys = async (
+  knex: Knex,
+  tenantId: string | null | undefined
+): Promise<Set<string>> => {
+  if (!tenantId) return new Set();
+  const available = new Set<string>();
+  const registry = getWorkflowIntegrationModuleRegistry();
+  for (const module of registry.list()) {
+    if (!module.availabilityKey) continue;
+    if (module.availabilityKey === 'rmm:ninjaone') {
+      const row = await knex('rmm_integrations')
+        .where({
+          tenant: tenantId,
+          provider: 'ninjaone',
+          is_active: true
+        })
+        .whereNotNull('connected_at')
+        .first();
+      if (row) available.add(module.groupKey);
+    }
+  }
+  return available;
 };
 
 const isEnterpriseEdition = (): boolean => {
@@ -3398,9 +3423,19 @@ export const listWorkflowDesignerActionCatalogAction = withAuth(async (user, { t
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
   const registry = getActionRegistryV2();
-  const catalog = buildWorkflowDesignerActionCatalog(registry.list().map(serializeWorkflowRegistryAction));
+  const integrationModules = getWorkflowIntegrationModuleRegistry().list();
+  const catalog = buildWorkflowDesignerActionCatalog(
+    registry.list().map(serializeWorkflowRegistryAction),
+    { modules: integrationModules }
+  );
   const availableAppKeys = await loadAvailableWorkflowDesignerAppKeys(knex, tenant);
-  return catalog.filter((record) => record.tileKind !== 'app' || availableAppKeys.has(record.groupKey));
+  const availableFirstPartyKeys = await loadAvailableFirstPartyIntegrationAppKeys(knex, tenant);
+  const firstPartyModuleKeys: Set<string> = new Set(integrationModules.map((module) => module.groupKey));
+  return catalog.filter((record) => {
+    if (record.tileKind !== 'app') return true;
+    if (firstPartyModuleKeys.has(record.groupKey)) return availableFirstPartyKeys.has(record.groupKey);
+    return availableAppKeys.has(record.groupKey);
+  });
 });
 
 export const getWorkflowSchemaAction = withAuth(async (user, { tenant }, input: unknown) => {
