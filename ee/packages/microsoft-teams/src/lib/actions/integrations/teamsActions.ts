@@ -1,6 +1,7 @@
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
+import { getTeamsAvailability } from '../../teams/teamsAvailability';
 import {
   TEAMS_ALLOWED_ACTIONS,
   TEAMS_CAPABILITIES,
@@ -43,6 +44,15 @@ interface MicrosoftProfileRow {
   is_archived: boolean;
 }
 
+const DEFAULT_EXECUTION_STATE: TeamsIntegrationExecutionState = {
+  selectedProfileId: null,
+  installStatus: 'not_configured',
+  enabledCapabilities: ['personal_tab', 'personal_bot', 'message_extension', 'activity_notifications'],
+  allowedActions: ['assign_ticket', 'add_note', 'reply_to_contact', 'log_time', 'approval_response'],
+  appId: null,
+  packageMetadata: null,
+};
+
 function isClientPortalUser(user: any): boolean {
   return user?.user_type === 'client';
 }
@@ -56,11 +66,20 @@ function isTeamsInstallStatus(value: string): value is TeamsInstallStatus {
 }
 
 function normalizeEnumArray<T extends string>(values: unknown, supported: readonly T[]): T[] {
-  if (!Array.isArray(values)) {
+  let normalizedValues = values;
+  if (typeof normalizedValues === 'string') {
+    try {
+      normalizedValues = JSON.parse(normalizedValues);
+    } catch {
+      return [];
+    }
+  }
+
+  if (!Array.isArray(normalizedValues)) {
     return [];
   }
 
-  const requested = new Set(values.filter((value): value is T => typeof value === 'string' && supported.includes(value as T)));
+  const requested = new Set(normalizedValues.filter((value): value is T => typeof value === 'string' && supported.includes(value as T)));
   return supported.filter((value) => requested.has(value));
 }
 
@@ -162,6 +181,14 @@ export async function getTeamsIntegrationStatusImpl(
     if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
     if (!(await canManageTeamsSettings(user))) return { success: false, error: 'Forbidden' };
 
+    const availability = await getTeamsAvailability({
+      tenantId: tenant,
+      userId: (user as any)?.user_id,
+    });
+    if (availability.enabled === false) {
+      return { success: false, error: availability.message };
+    }
+
     const { knex } = await createTenantKnex();
     const row = await getTeamsIntegrationRow(knex, tenant);
     return {
@@ -176,6 +203,11 @@ export async function getTeamsIntegrationStatusImpl(
 export async function getTeamsIntegrationExecutionStateImpl(
   tenant: string
 ): Promise<TeamsIntegrationExecutionState> {
+  const availability = await getTeamsAvailability({ tenantId: tenant });
+  if (availability.enabled === false) {
+    return DEFAULT_EXECUTION_STATE;
+  }
+
   const { knex } = await createTenantKnex();
   const row = await getTeamsIntegrationRow(knex, tenant);
   const integration = mapTeamsIntegrationRow(row);
@@ -198,6 +230,14 @@ export async function saveTeamsIntegrationSettingsImpl(
   try {
     if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
     if (!(await canManageTeamsSettings(user))) return { success: false, error: 'Forbidden' };
+
+    const availability = await getTeamsAvailability({
+      tenantId: tenant,
+      userId: (user as any)?.user_id,
+    });
+    if (availability.enabled === false) {
+      return { success: false, error: availability.message };
+    }
 
     const { knex } = await createTenantKnex();
 

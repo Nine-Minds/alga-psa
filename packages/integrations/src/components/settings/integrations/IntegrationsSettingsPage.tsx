@@ -19,6 +19,7 @@ import {
   CreditCard,
   Cloud,
   Shield,
+  Lock,
 } from 'lucide-react';
 import AccountingIntegrationsSetup from './AccountingIntegrationsSetup';
 import RmmIntegrationsSetup from './RmmIntegrationsSetup';
@@ -58,7 +59,6 @@ const StripeConnectionSettings = dynamic(
 );
 
 import { EntraIntegrationSettings } from '@alga-psa/integrations/entra/components/entry';
-import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
 
 // Integration category definitions
 interface IntegrationCategory {
@@ -77,12 +77,37 @@ interface IntegrationItem {
   isEE?: boolean;
 }
 
+function AddOnRequiredNotice({ featureName, addOnName, description }: {
+  featureName: string;
+  addOnName: string;
+  description: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
+      <div className="rounded-full bg-muted p-4 mb-6">
+        <Lock className="w-8 h-8 text-muted-foreground" />
+      </div>
+      <h2 className="text-xl font-semibold mb-2">
+        {featureName} requires the {addOnName} add-on
+      </h2>
+      <p className="text-muted-foreground max-w-md mb-6">{description}</p>
+      <a
+        id={`manage-${addOnName.toLowerCase()}-addon-link`}
+        href="/msp/settings/account"
+        className="inline-flex items-center justify-center px-6 py-3 bg-primary text-primary-foreground hover:bg-primary/90 font-medium rounded-lg transition-colors"
+      >
+        Manage add-ons
+      </a>
+    </div>
+  );
+}
+
 interface IntegrationsSettingsPageProps {
-  /** Whether the user can use Entra sync (premium feature) */
+  /** Whether the user can use Entra sync (Enterprise add-on) */
   canUseEntraSync?: boolean;
   /** Whether the user can use CIPP (premium feature) */
   canUseCipp?: boolean;
-  /** Whether the user can use Teams integration (pro feature) */
+  /** Whether the user can use Teams integration (Teams add-on) */
   canUseTeams?: boolean;
 }
 
@@ -171,10 +196,10 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           component: canUseTeams
             ? TeamsEnterpriseIntegrationSettings
             : () => (
-                <FeatureUpgradeNotice
+                <AddOnRequiredNotice
                   featureName={t('integrations.items.teams.name')}
-                  requiredTier="pro"
-                  description={t('integrations.items.teams.upgradeDescription')}
+                  addOnName="Teams"
+                  description="Purchase the Teams add-on to activate the Microsoft Teams tab, bot, message extension, quick actions, and activity notifications."
                 />
               ),
           isEE: true,
@@ -222,7 +247,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
                 </CardHeader>
               </Card>
               <GoogleIntegrationSettings />
-              <MicrosoftIntegrationSettings />
+              <MicrosoftIntegrationSettings canUseTeams={canUseTeams} />
               <MspSsoLoginDomainsSettings />
             </div>
           ),
@@ -242,10 +267,10 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           component: canUseEntraSync
             ? () => <EntraIntegrationSettings canUseCipp={canUseCipp} />
             : () => (
-                <FeatureUpgradeNotice
+                <AddOnRequiredNotice
                   featureName={t('integrations.items.entra.name')}
-                  requiredTier="premium"
-                  description={t('integrations.items.entra.upgradeDescription')}
+                  addOnName="Enterprise"
+                  description="Purchase the Enterprise add-on to activate Microsoft Entra Sync, including tenant discovery, client mapping, contact sync, and reconciliation workflows."
                 />
               ),
           isEE: true,

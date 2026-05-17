@@ -43,6 +43,7 @@ const hoisted = vi.hoisted(() => {
     tenantSecrets: new Map<string, string>(),
     microsoftProfiles: [] as MicrosoftProfileRecord[],
     teamsIntegrations: [] as TeamsIntegrationRecord[],
+    tenantAddOns: [] as Array<{ tenant: string; addon_key: string; expires_at: string | null }>,
     microsoftConsumerBindings: [] as MicrosoftConsumerBindingRecord[],
   };
 
@@ -63,6 +64,9 @@ const hoisted = vi.hoisted(() => {
       if (table === 'microsoft_profile_consumer_bindings') {
         return state.microsoftConsumerBindings;
       }
+      if (table === 'tenant_addons') {
+        return state.tenantAddOns;
+      }
       return [] as Array<Record<string, unknown>>;
     };
 
@@ -71,6 +75,12 @@ const hoisted = vi.hoisted(() => {
     return {
       where(conditions: Record<string, unknown>) {
         filters.push(conditions);
+        return this;
+      },
+      andWhere(callback: (builder: any) => void) {
+        callback({
+          whereNull: () => ({ orWhere: () => undefined }),
+        });
         return this;
       },
       async first() {
@@ -111,7 +121,7 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
-const { microsoftProfiles, teamsIntegrations, microsoftConsumerBindings, tenantSecrets } = hoisted.state;
+const { microsoftProfiles, teamsIntegrations, tenantAddOns, microsoftConsumerBindings, tenantSecrets } = hoisted.state;
 const { hasPermissionMock, isFeatureFlagEnabledMock, knexMock } = hoisted;
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
@@ -191,6 +201,8 @@ describe('Teams integration actions', () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     microsoftProfiles.length = 0;
     teamsIntegrations.length = 0;
+    tenantAddOns.length = 0;
+    tenantAddOns.push({ tenant: 'tenant-1', addon_key: 'teams', expires_at: null });
     microsoftConsumerBindings.length = 0;
     tenantSecrets.clear();
     hasPermissionMock.mockClear();
@@ -220,6 +232,17 @@ describe('Teams integration actions', () => {
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 
+  it('returns an add-on required result when the tenant lacks the Teams add-on', async () => {
+    tenantAddOns.length = 0;
+
+    const result = await getTeamsIntegrationStatus();
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Microsoft Teams integration requires the Teams add-on.',
+    });
+  });
+
   it('T083/T084: keeps the Teams integration record tenant-scoped and returns defaults when missing', async () => {
     addMicrosoftProfile({
       tenant: 'tenant-2',
@@ -229,6 +252,7 @@ describe('Teams integration actions', () => {
       secretRef: 'tenant-two-secret-ref',
     });
     tenantSecrets.set('tenant-2:tenant-two-secret-ref', 'tenant-two-secret');
+    tenantAddOns.push({ tenant: 'tenant-2', addon_key: 'teams', expires_at: null });
 
     hoisted.state.mockCtx = { tenant: 'tenant-2' };
     await saveTeamsIntegrationSettings({

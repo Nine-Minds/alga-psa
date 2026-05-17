@@ -538,6 +538,10 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
         return t('availabilitySettings.teamsMeetings.verify.reasons.notConfigured', {
           defaultValue: 'Teams integration must be active before an organizer can be verified.',
         });
+      case 'addon_required':
+        return t('availabilitySettings.teamsMeetings.verify.reasons.addonRequired', {
+          defaultValue: 'The Teams add-on must be active before an organizer can be verified.',
+        });
       case 'user_not_found':
         return t('availabilitySettings.teamsMeetings.verify.reasons.userNotFound', {
           defaultValue: 'Microsoft could not find a user for that organizer value.',

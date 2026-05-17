@@ -44,12 +44,12 @@ describe('assertTierAccess', () => {
       });
     });
 
-    it('does not throw for premium tenant accessing ENTRA_SYNC', async () => {
+    it('throws for premium tenant accessing add-on-only ENTRA_SYNC by tier', async () => {
       vi.mocked(getSession).mockResolvedValue({
         user: { plan: 'premium' },
       } as any);
 
-      await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).resolves.toBeUndefined();
+      await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).rejects.toThrow(TierAccessError);
     });
 
     it('does not throw for solo tenant accessing INTEGRATIONS (now unlocked at solo)', async () => {
@@ -97,7 +97,7 @@ describe('assertTierAccess', () => {
       });
     });
 
-    it('does not throw for solo tenants accessing TEAMS_INTEGRATION during an active Solo -> Pro trial', async () => {
+    it('throws for solo tenants accessing add-on-only TEAMS_INTEGRATION during an active Solo -> Pro trial', async () => {
       vi.mocked(getSession).mockResolvedValue({
         user: {
           plan: 'solo',
@@ -105,7 +105,7 @@ describe('assertTierAccess', () => {
         },
       } as any);
 
-      await expect(assertTierAccess(TIER_FEATURES.TEAMS_INTEGRATION)).resolves.toBeUndefined();
+      await expect(assertTierAccess(TIER_FEATURES.TEAMS_INTEGRATION)).rejects.toThrow(TierAccessError);
     });
 
     it('throws for NULL plan tenant (misconfigured → pro)', async () => {
@@ -127,19 +127,18 @@ describe('assertTierAccess', () => {
         },
       } as any);
 
-      // TEAMS_INTEGRATION stays gated at Pro+, so once the trial expires a
-      // Solo tenant is blocked from it again.
+      // TEAMS_INTEGRATION remains add-on-only, so the expired trial is still blocked.
       await expect(assertTierAccess(TIER_FEATURES.TEAMS_INTEGRATION)).rejects.toMatchObject({
         currentTier: 'solo',
       });
     });
 
-    it('does not throw for pro tenants accessing TEAMS_INTEGRATION (moved from premium to pro)', async () => {
+    it('throws for pro tenants accessing add-on-only TEAMS_INTEGRATION by tier', async () => {
       vi.mocked(getSession).mockResolvedValue({
         user: { plan: 'pro' },
       } as any);
 
-      await expect(assertTierAccess(TIER_FEATURES.TEAMS_INTEGRATION)).resolves.toBeUndefined();
+      await expect(assertTierAccess(TIER_FEATURES.TEAMS_INTEGRATION)).rejects.toThrow(TierAccessError);
     });
   });
 });

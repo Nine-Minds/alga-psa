@@ -107,6 +107,10 @@ async function getStripeConfig() {
   const premiumUserAnnualPriceId = process.env.STRIPE_PREMIUM_USER_ANNUAL_PRICE_ID || null;
   const aiAddOnPriceId = process.env.STRIPE_AI_ADDON_PRICE_ID || null;
   const aiAddOnAnnualPriceId = process.env.STRIPE_AI_ADDON_ANNUAL_PRICE_ID || null;
+  const teamsAddOnPriceId = process.env.STRIPE_TEAMS_ADDON_PRICE_ID || null;
+  const teamsAddOnAnnualPriceId = process.env.STRIPE_TEAMS_ADDON_ANNUAL_PRICE_ID || null;
+  const enterpriseAddOnPriceId = process.env.STRIPE_ENTERPRISE_ADDON_PRICE_ID || null;
+  const enterpriseAddOnAnnualPriceId = process.env.STRIPE_ENTERPRISE_ADDON_ANNUAL_PRICE_ID || null;
 
   // Early adopters prices (grandfathered customers migrated from preview)
   const earlyAdoptersBasePriceId = process.env.STRIPE_EARLY_ADOPTERS_BASE_PRICE_ID || null;
@@ -153,6 +157,10 @@ async function getStripeConfig() {
     premiumUserAnnualPriceId,
     aiAddOnPriceId,
     aiAddOnAnnualPriceId,
+    teamsAddOnPriceId,
+    teamsAddOnAnnualPriceId,
+    enterpriseAddOnPriceId,
+    enterpriseAddOnAnnualPriceId,
     earlyAdoptersBasePriceId,
     earlyAdoptersUserPriceId,
     earlyAdoptersBaseAnnualPriceId,
@@ -1117,8 +1125,8 @@ export class StripeService {
 
   private getAddOnKeyFromMetadata(metadata: Stripe.Metadata | null | undefined): AddOnKey | null {
     const addOnKey = metadata?.addon_key;
-    if (addOnKey === ADD_ONS.AI_ASSISTANT) {
-      return addOnKey;
+    if (Object.values(ADD_ONS).includes(addOnKey as ADD_ONS)) {
+      return addOnKey as AddOnKey;
     }
     return null;
   }
@@ -1643,15 +1651,31 @@ export class StripeService {
     addOn: AddOnKey,
     interval: 'month' | 'year' = 'month'
   ): string | null {
-    if (addOn !== ADD_ONS.AI_ASSISTANT) {
+    const priceIds: Record<AddOnKey, { monthly: string | null; annual: string | null }> = {
+      [ADD_ONS.AI_ASSISTANT]: {
+        monthly: this.config.aiAddOnPriceId,
+        annual: this.config.aiAddOnAnnualPriceId,
+      },
+      [ADD_ONS.TEAMS]: {
+        monthly: this.config.teamsAddOnPriceId,
+        annual: this.config.teamsAddOnAnnualPriceId,
+      },
+      [ADD_ONS.ENTERPRISE]: {
+        monthly: this.config.enterpriseAddOnPriceId,
+        annual: this.config.enterpriseAddOnAnnualPriceId,
+      },
+    };
+
+    const prices = priceIds[addOn];
+    if (!prices) {
       return null;
     }
 
-    if (interval === 'year' && this.config.aiAddOnAnnualPriceId) {
-      return this.config.aiAddOnAnnualPriceId;
+    if (interval === 'year' && prices.annual) {
+      return prices.annual;
     }
 
-    return this.config.aiAddOnPriceId;
+    return prices.monthly;
   }
 
   /**
