@@ -60,6 +60,8 @@ async function backfillTicketComments(knex) {
 }
 
 async function backfillProjectTaskComments(knex) {
+  await pruneOrphanProjectTaskComments(knex);
+
   const { rows } = await knex.raw(
     'SELECT EXISTS (SELECT 1 FROM project_task_comments WHERE thread_id IS NULL) AS has_gap'
   );
@@ -81,18 +83,21 @@ async function backfillProjectTaskComments(knex) {
       created_by
     )
     SELECT
-      tenant,
-      task_comment_id,
+      c.tenant,
+      c.task_comment_id,
       NULL,
-      task_id,
-      task_comment_id,
+      c.task_id,
+      c.task_comment_id,
       false,
       0,
-      COALESCE(created_at, now()),
-      COALESCE(created_at, now()),
-      user_id
-    FROM project_task_comments
-    WHERE thread_id IS NULL
+      COALESCE(c.created_at, now()),
+      COALESCE(c.created_at, now()),
+      c.user_id
+    FROM project_task_comments c
+    JOIN project_tasks pt
+      ON pt.tenant = c.tenant
+     AND pt.task_id = c.task_id
+    WHERE c.thread_id IS NULL
     ON CONFLICT (tenant, thread_id) DO NOTHING
   `);
 
@@ -104,6 +109,64 @@ async function backfillProjectTaskComments(knex) {
       AND ct.thread_id = c.task_comment_id
       AND c.thread_id IS NULL
   `);
+}
+
+async function pruneOrphanProjectTaskComments(knex) {
+  // 20260313120000_create_comment_reactions deliberately re-added the
+  // project_task_comments -> project_tasks FK as NOT VALID because some hosts
+  // already had legacy comments whose task had been deleted. Those rows cannot
+  // receive comment_threads: the new thread row must FK to an existing task.
+  // Remove them now, matching the cascade behavior the original FK intended.
+  const { rows: orphanTasks } = await knex.raw(`
+    SELECT c.tenant, c.task_id
+    FROM project_task_comments c
+    LEFT JOIN project_tasks pt
+      ON pt.tenant = c.tenant
+     AND pt.task_id = c.task_id
+    WHERE pt.task_id IS NULL
+    GROUP BY c.tenant, c.task_id
+  `);
+
+  if (!orphanTasks?.length) {
+    return;
+  }
+
+  const hasReactions = await knex.schema.hasTable('project_task_comment_reactions');
+  let deletedComments = 0;
+  let deletedReactions = 0;
+
+  for (const orphanTask of orphanTasks) {
+    const ids = await knex('project_task_comments')
+      .select('task_comment_id')
+      .where({ tenant: orphanTask.tenant, task_id: orphanTask.task_id });
+    const taskCommentIds = ids.map((row) => row.task_comment_id);
+
+    if (hasReactions && taskCommentIds.length > 0) {
+      for (const idBatch of chunk(taskCommentIds, 1000)) {
+        deletedReactions += Number(await knex('project_task_comment_reactions')
+          .where({ tenant: orphanTask.tenant })
+          .whereIn('task_comment_id', idBatch)
+          .delete());
+      }
+    }
+
+    deletedComments += Number(await knex('project_task_comments')
+      .where({ tenant: orphanTask.tenant, task_id: orphanTask.task_id })
+      .delete());
+  }
+
+  console.warn(
+    `[backfill_comment_threads] Removed ${deletedComments} legacy project task comments ` +
+    `and ${deletedReactions} reactions whose project task no longer exists before thread backfill`
+  );
+}
+
+function chunk(values, size) {
+  const batches = [];
+  for (let index = 0; index < values.length; index += size) {
+    batches.push(values.slice(index, index + size));
+  }
+  return batches;
 }
 
 /**

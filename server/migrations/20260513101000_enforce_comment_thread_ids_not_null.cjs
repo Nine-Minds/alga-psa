@@ -78,7 +78,69 @@ async function truncateLocalDataIfNeeded(knex, table) {
   await knex.raw(`SELECT truncate_local_data_after_distributing_table(?::regclass)`, [table]);
 }
 
+async function pruneOrphanProjectTaskComments(knex) {
+  // 20260313120000_create_comment_reactions deliberately re-added the
+  // project_task_comments -> project_tasks FK as NOT VALID because some hosts
+  // already had legacy comments whose task had been deleted. Those rows cannot
+  // receive comment_threads: the new thread row must FK to an existing task.
+  // Remove them now, matching the cascade behavior the original FK intended.
+  const { rows: orphanTasks } = await knex.raw(`
+    SELECT c.tenant, c.task_id
+    FROM project_task_comments c
+    LEFT JOIN project_tasks pt
+      ON pt.tenant = c.tenant
+     AND pt.task_id = c.task_id
+    WHERE pt.task_id IS NULL
+    GROUP BY c.tenant, c.task_id
+  `);
+
+  if (!orphanTasks?.length) {
+    return;
+  }
+
+  const hasReactions = await knex.schema.hasTable('project_task_comment_reactions');
+  let deletedComments = 0;
+  let deletedReactions = 0;
+
+  for (const orphanTask of orphanTasks) {
+    const ids = await knex('project_task_comments')
+      .select('task_comment_id')
+      .where({ tenant: orphanTask.tenant, task_id: orphanTask.task_id });
+    const taskCommentIds = ids.map((row) => row.task_comment_id);
+
+    if (hasReactions && taskCommentIds.length > 0) {
+      for (const idBatch of chunk(taskCommentIds, 1000)) {
+        deletedReactions += Number(await knex('project_task_comment_reactions')
+          .where({ tenant: orphanTask.tenant })
+          .whereIn('task_comment_id', idBatch)
+          .delete());
+      }
+    }
+
+    deletedComments += Number(await knex('project_task_comments')
+      .where({ tenant: orphanTask.tenant, task_id: orphanTask.task_id })
+      .delete());
+  }
+
+  console.warn(
+    `[enforce_comment_thread_ids_not_null] Removed ${deletedComments} legacy project task comments ` +
+    `and ${deletedReactions} reactions whose project task no longer exists before final thread backfill`
+  );
+}
+
+function chunk(values, size) {
+  const batches = [];
+  for (let index = 0; index < values.length; index += size) {
+    batches.push(values.slice(index, index + size));
+  }
+  return batches;
+}
+
 async function finalizeBackfill(knex, { sourceTable, idColumn, parentColumn, parentIsTask }) {
+  if (parentIsTask) {
+    await pruneOrphanProjectTaskComments(knex);
+  }
+
   const { rows } = await knex.raw(
     `SELECT EXISTS (SELECT 1 FROM ${sourceTable} WHERE thread_id IS NULL) AS has_gap`
   );
@@ -101,18 +163,21 @@ async function finalizeBackfill(knex, { sourceTable, idColumn, parentColumn, par
         created_by
       )
       SELECT
-        tenant,
-        ${idColumn},
+        c.tenant,
+        c.${idColumn},
         NULL,
-        ${parentColumn},
-        ${idColumn},
+        c.${parentColumn},
+        c.${idColumn},
         false,
         0,
-        COALESCE(created_at, now()),
-        COALESCE(created_at, now()),
-        user_id
-      FROM ${sourceTable}
-      WHERE thread_id IS NULL
+        COALESCE(c.created_at, now()),
+        COALESCE(c.created_at, now()),
+        c.user_id
+      FROM ${sourceTable} c
+      JOIN project_tasks pt
+        ON pt.tenant = c.tenant
+       AND pt.task_id = c.${parentColumn}
+      WHERE c.thread_id IS NULL
       ON CONFLICT (tenant, thread_id) DO NOTHING
     `);
   } else {
