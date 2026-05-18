@@ -172,6 +172,76 @@ const caseInsensitiveSort: SortingFn<any> = (rowA, rowB, columnId) => {
   return String(a ?? '').toLowerCase().localeCompare(String(b ?? '').toLowerCase());
 };
 
+interface OverflowTooltipProps {
+  text?: string;
+  children: React.ReactNode;
+  className?: string;
+}
+
+const isElementOverflowing = (element: HTMLElement): boolean => (
+  element.scrollWidth > element.clientWidth + 1 || element.scrollHeight > element.clientHeight + 1
+);
+
+const hasOverflow = (element: HTMLElement): boolean => {
+  if (isElementOverflowing(element)) {
+    return true;
+  }
+
+  return Array.from(element.querySelectorAll<HTMLElement>('*')).some(isElementOverflowing);
+};
+
+const OverflowTooltip = ({ text, children, className }: OverflowTooltipProps) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [activeTitle, setActiveTitle] = useState<string | undefined>(undefined);
+
+  const updateTitle = () => {
+    const element = contentRef.current;
+    setActiveTitle(element && text && hasOverflow(element) ? text : undefined);
+  };
+
+  const clearTitle = () => setActiveTitle(undefined);
+
+  return (
+    <div
+      ref={contentRef}
+      className={className}
+      title={activeTitle}
+      onMouseEnter={updateTitle}
+      onFocus={updateTitle}
+      onMouseLeave={clearTitle}
+      onBlur={clearTitle}
+    >
+      {children}
+    </div>
+  );
+};
+
+const OverflowTooltipSpan = ({ text, children, className }: OverflowTooltipProps) => {
+  const contentRef = useRef<HTMLSpanElement>(null);
+  const [activeTitle, setActiveTitle] = useState<string | undefined>(undefined);
+
+  const updateTitle = () => {
+    const element = contentRef.current;
+    setActiveTitle(element && text && hasOverflow(element) ? text : undefined);
+  };
+
+  const clearTitle = () => setActiveTitle(undefined);
+
+  return (
+    <span
+      ref={contentRef}
+      className={className}
+      title={activeTitle}
+      onMouseEnter={updateTitle}
+      onFocus={updateTitle}
+      onMouseLeave={clearTitle}
+      onBlur={clearTitle}
+    >
+      {children}
+    </span>
+  );
+};
+
 // Component to register table cell content with UI reflection system
 interface ReflectedTableCellProps {
   id: string;
@@ -209,14 +279,13 @@ const ReflectedTableCell = ({
       className={className}
       style={style}
       data-automation-id={id}
-      title={tooltipText}
     >
-      <div
+      <OverflowTooltip
+        text={tooltipText}
         className="min-w-0 overflow-hidden whitespace-nowrap [&_.break-all]:![overflow-wrap:normal] [&_.break-all]:![word-break:normal] [&_.break-words]:![overflow-wrap:normal] [&_.flex-wrap]:!flex-nowrap [&_a]:block [&_a]:max-w-full [&_a]:overflow-hidden [&_a]:text-ellipsis [&_a]:!text-[rgb(var(--color-text-800))] [&_a]:!whitespace-nowrap [&_a]:![overflow-wrap:normal] [&_a]:![word-break:normal] [&_a:hover]:!text-[rgb(var(--color-primary-700))] [&_button]:max-w-full [&_button]:overflow-hidden [&_button]:text-ellipsis [&_button]:!whitespace-nowrap"
-        title={tooltipText}
       >
         {children}
-      </div>
+      </OverflowTooltip>
     </td>
   );
 };
@@ -718,7 +787,6 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                     <th
                       key={`header_${columnId}_${headerIndex}`}
                       id={id ? `${id}-header-${columnId}` : `header-${columnId}`}
-                      title={headerTitle}
                       onClick={isSortable ? (event) => {
                         if (suppressNextHeaderSortClickRef.current) {
                           event.preventDefault();
@@ -741,7 +809,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                       style={{ width: header.getSize() }}
                     >
                         <div className={`flex min-w-0 items-center gap-1.5 ${colDef?.headerClassName?.includes('text-center') ? 'justify-center' : ''}`}>
-                          <span className="min-w-0 overflow-hidden text-ellipsis" title={headerTitle}>{flexRender(header.column.columnDef.header, header.getContext())}</span>
+                          <OverflowTooltipSpan className="min-w-0 overflow-hidden text-ellipsis" text={headerTitle}>{flexRender(header.column.columnDef.header, header.getContext())}</OverflowTooltipSpan>
                           {isSortable && (
                             <span className="shrink-0 text-[rgb(var(--color-text-400))]">
                               {{
