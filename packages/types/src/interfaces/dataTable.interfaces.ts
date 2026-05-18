@@ -59,4 +59,6 @@ export interface DataTableProps<T> {
    * Use custom options for grid views (e.g., [9, 18, 27, 36]) or special cases.
    */
   itemsPerPageOptions?: Array<{ value: string; label: string }>;
+  /** Minimum width per column (px) for the responsive auto-hide calculation. Defaults to 120. */
+  minColumnWidth?: number;
 }

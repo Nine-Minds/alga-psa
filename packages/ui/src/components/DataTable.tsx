@@ -176,6 +176,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     onVisibleRowsChange,
     onItemsPerPageChange,
     itemsPerPageOptions,
+    minColumnWidth = 120,
   } = props;
   const { t } = useTranslation('common');
   const defaultItemsPerPageOptions = useMemo(() => [
@@ -199,55 +200,53 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     if (!tableContainerRef.current) return;
     
     const containerWidth = tableContainerRef.current.clientWidth;
-    const minColumnWidth = 120; // Reduced minimum width to show more columns with multiline content
-    
+
     // Check if the last column is 'Actions' or 'Action' with interactive elements
     const lastColumnIndex = columns.length - 1;
     const lastColumn = columns[lastColumnIndex];
-    const isActionsColumn = lastColumn && 
-      (lastColumn.title === 'Actions' || lastColumn.title === 'Action') && 
+    const isActionsColumn = lastColumn &&
+      (lastColumn.title === 'Actions' || lastColumn.title === 'Action') &&
       lastColumn.render !== undefined;
-    
+
     const prioritizedColumns = [...columns].sort((a, b) => {
       // Always prioritize Actions column if it's the last column
       if (isActionsColumn) {
         if (a === lastColumn) return -1;
         if (b === lastColumn) return 1;
       }
-      
+
       // Keep ID column and any columns with explicit width as highest priority
       const aIsId = Array.isArray(a.dataIndex) ? a.dataIndex.includes('id') : a.dataIndex === 'id';
       const bIsId = Array.isArray(b.dataIndex) ? b.dataIndex.includes('id') : b.dataIndex === 'id';
-      
+
       if (aIsId && !bIsId) return -1;
       if (!aIsId && bIsId) return 1;
-      
+
       // Then prioritize columns with explicit width
       if (a.width && !b.width) return -1;
       if (!a.width && b.width) return 1;
-      
+
       return 0;
     });
-    
+
     // Calculate how many columns we can fit
     const maxColumns = Math.max(1, Math.floor(containerWidth / minColumnWidth));
-    
+
     // Get the IDs of columns that should be visible
     const newVisibleColumnIds = prioritizedColumns
       .slice(0, maxColumns)
       .map(col => Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex);
-    
+
     setVisibleColumnIds(newVisibleColumnIds);
   };
-  
+
   // Add resize event listener
   useEffect(() => {
     // Define updateVisibleColumns inside the effect to properly capture the columns dependency
     const updateVisibleColumnsEffect = () => {
       if (!tableContainerRef.current) return;
-      
+
       const containerWidth = tableContainerRef.current.clientWidth;
-      const minColumnWidth = 120; // Reduced minimum width to show more columns with multiline content
       
       // Check if the last column is 'Actions' or 'Action' with interactive elements
       const lastColumnIndex = columns.length - 1;
@@ -298,7 +297,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [columns]); // Re-run when columns change
+  }, [columns, minColumnWidth]); // Re-run when columns or min column width change
 
   // Memoize the initial column configuration to prevent loops
   const columnConfig = useMemo(() => {

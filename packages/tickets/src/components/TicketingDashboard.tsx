@@ -114,18 +114,35 @@ const useDebounce = <T,>(value: T, delay: number): T => {
 
 const TICKET_LIST_DENSITY_STORAGE_KEY = 'ticket_list_density_level';
 const EMPTY_STRING_ARRAY: string[] = [];
-const TICKET_LIST_DENSITY_PRESETS = [0, 25, 50, 75, 100] as const;
+const TICKET_LIST_DENSITY_STEP = 10;
+const TICKET_LIST_DENSITY_DEFAULT = 50;
 const TICKET_PRINT_FALLBACK_PAGE_SIZE = 500;
 
-type TicketListDensityPreset = (typeof TICKET_LIST_DENSITY_PRESETS)[number];
-
-const normalizeTicketListDensityLevel = (value: number): TicketListDensityPreset => {
+const normalizeTicketListDensityLevel = (value: number): number => {
   const clamped = Math.min(100, Math.max(0, value));
-
-  return TICKET_LIST_DENSITY_PRESETS.reduce((closest, preset) => {
-    return Math.abs(preset - clamped) < Math.abs(closest - clamped) ? preset : closest;
-  }, TICKET_LIST_DENSITY_PRESETS[0]);
+  return Math.round(clamped / TICKET_LIST_DENSITY_STEP) * TICKET_LIST_DENSITY_STEP;
 };
+
+// Indexed by zoom/10; `[&>td_*]:!text-[Xpx]` forces descendant elements to follow the row font-size.
+const TICKET_LIST_DENSITY_PRESETS: ReadonlyArray<{
+  filterPadding: string;
+  filterGap: string;
+  bodyPadding: string;
+  tableRowDensity: string;
+  minColumnWidth: number;
+}> = [
+  { filterPadding: 'p-3',   filterGap: 'gap-2',   bodyPadding: 'p-2.5', tableRowDensity: '[&>td]:!py-0.5 [&>td]:!text-[11px] [&>td_*]:!text-[11px]', minColumnWidth: 80 },
+  { filterPadding: 'p-3',   filterGap: 'gap-2',   bodyPadding: 'p-3',   tableRowDensity: '[&>td]:!py-1 [&>td]:!text-[12px] [&>td_*]:!text-[12px]',   minColumnWidth: 90 },
+  { filterPadding: 'p-3.5', filterGap: 'gap-2.5', bodyPadding: 'p-3',   tableRowDensity: '[&>td]:!py-1.5 [&>td]:!text-[12px] [&>td_*]:!text-[12px]', minColumnWidth: 100 },
+  { filterPadding: 'p-3.5', filterGap: 'gap-2.5', bodyPadding: 'p-3.5', tableRowDensity: '[&>td]:!py-2 [&>td]:!text-[13px] [&>td_*]:!text-[13px]',   minColumnWidth: 105 },
+  { filterPadding: 'p-4',   filterGap: 'gap-3',   bodyPadding: 'p-4',   tableRowDensity: '[&>td]:!py-2.5 [&>td]:!text-[13px] [&>td_*]:!text-[13px]', minColumnWidth: 115 },
+  { filterPadding: 'p-5',   filterGap: 'gap-4',   bodyPadding: 'p-5',   tableRowDensity: '[&>td]:!py-3 [&>td]:!text-[14px] [&>td_*]:!text-[14px]',   minColumnWidth: 130 },
+  { filterPadding: 'p-5',   filterGap: 'gap-4',   bodyPadding: 'p-5',   tableRowDensity: '[&>td]:!py-3.5 [&>td]:!text-[14px] [&>td_*]:!text-[14px]', minColumnWidth: 145 },
+  { filterPadding: 'p-6',   filterGap: 'gap-5',   bodyPadding: 'p-6',   tableRowDensity: '[&>td]:!py-4 [&>td]:!text-[15px] [&>td_*]:!text-[15px]',   minColumnWidth: 165 },
+  { filterPadding: 'p-6',   filterGap: 'gap-5',   bodyPadding: 'p-7',   tableRowDensity: '[&>td]:!py-5 [&>td]:!text-[15px] [&>td_*]:!text-[15px]',   minColumnWidth: 185 },
+  { filterPadding: 'p-7',   filterGap: 'gap-6',   bodyPadding: 'p-7',   tableRowDensity: '[&>td]:!py-6 [&>td]:!text-[16px] [&>td_*]:!text-[16px]',   minColumnWidth: 210 },
+  { filterPadding: 'p-8',   filterGap: 'gap-6',   bodyPadding: 'p-8',   tableRowDensity: '[&>td]:!py-7 [&>td]:!text-[17px] [&>td_*]:!text-[17px]',   minColumnWidth: 240 },
+];
 
 function formatPrintDate(value?: string | null): string {
   if (!value) return '';
@@ -273,7 +290,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const selectedResponseState = (filterValues.responseState ?? 'all') as 'awaiting_client' | 'awaiting_internal' | 'none' | 'all';
   const selectedSlaStatus = allowSlaStatusFilter ? (filterValues.slaStatusFilter ?? 'all') : 'all';
   const bundleView = (filterValues.bundleView ?? 'bundled') as 'bundled' | 'individual';
-  const [ticketListDensityLevel, setTicketListDensityLevel] = useState<TicketListDensityPreset>(50);
+  const [ticketListDensityLevel, setTicketListDensityLevel] = useState<number>(TICKET_LIST_DENSITY_DEFAULT);
 
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
@@ -399,46 +416,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, []);
 
   const densityClasses = useMemo(() => {
-    const densityPresetClasses: Record<TicketListDensityPreset, {
-      filterPadding: string;
-      filterGap: string;
-      bodyPadding: string;
-      tableRowDensity: string;
-    }> = {
-      0: {
-        filterPadding: 'p-3',
-        filterGap: 'gap-2',
-        bodyPadding: 'p-3',
-        tableRowDensity: '[&>td]:!py-1 [&>td]:!text-[12px]',
-      },
-      25: {
-        filterPadding: 'p-4',
-        filterGap: 'gap-3',
-        bodyPadding: 'p-4',
-        tableRowDensity: '[&>td]:!py-1.5 [&>td]:!text-[13px]',
-      },
-      50: {
-        filterPadding: 'p-5',
-        filterGap: 'gap-4',
-        bodyPadding: 'p-5',
-        tableRowDensity: '[&>td]:!py-2.5 [&>td]:!text-[14px]',
-      },
-      75: {
-        filterPadding: 'p-6',
-        filterGap: 'gap-5',
-        bodyPadding: 'p-7',
-        tableRowDensity: '[&>td]:!py-3.5 [&>td]:!text-[15px]',
-      },
-      100: {
-        filterPadding: 'p-8',
-        filterGap: 'gap-6',
-        bodyPadding: 'p-9',
-        tableRowDensity: '[&>td]:!py-5 [&>td]:!text-[16px]',
-      },
-    };
-
-    return densityPresetClasses[ticketListDensityLevel];
+    const index = Math.min(
+      TICKET_LIST_DENSITY_PRESETS.length - 1,
+      Math.max(0, Math.round(ticketListDensityLevel / TICKET_LIST_DENSITY_STEP))
+    );
+    return TICKET_LIST_DENSITY_PRESETS[index];
   }, [ticketListDensityLevel]);
+
 
   const statusOptions = useMemo(
     () => buildTicketStatusFilterOptions(rawStatusOptions, selectedBoard, selectedStatus),
@@ -1979,7 +1963,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     idPrefix={`${id}-list-density`}
                     value={ticketListDensityLevel}
                     onChange={handleTicketListDensityChange}
-                    step={25}
+                    step={TICKET_LIST_DENSITY_STEP}
                     compactLabel={t('dashboard.spacing.compact', 'Compact')}
                     spaciousLabel={t('dashboard.spacing.spacious', 'Spacious')}
                     decreaseTitle={t('dashboard.spacing.decrease', 'Decrease ticket list spacing')}
@@ -2051,6 +2035,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               pageSize={pageSize}
               totalItems={totalCount}
               onItemsPerPageChange={onPageSizeChange}
+              minColumnWidth={densityClasses.minColumnWidth}
               rowClassName={(record: ITicketListItem) =>
                 `${densityClasses.tableRowDensity} cursor-pointer ${record.ticket_id && selectedTicketIds.has(record.ticket_id)
                   ? '!bg-table-selected'
