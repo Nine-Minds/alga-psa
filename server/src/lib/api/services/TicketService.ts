@@ -1162,9 +1162,16 @@ export class TicketService extends BaseService<ITicket> {
           created_by_name: comment.created_by_name || comment.author_contact_name || null,
           author_contact_id: comment.author_contact_id || comment.contact_id || null,
           author_contact_name: comment.author_contact_name || null,
+          // Threading fields (mobile threaded comments) — explicitly enumerated
+          // here since the compact branch does not spread the raw row.
+          thread_id: comment.thread_id ?? null,
+          parent_comment_id: comment.parent_comment_id ?? null,
+          deleted_at: comment.deleted_at ?? null,
         };
       }
 
+      // Full branch: select('tc.*') above means ...comment already carries
+      // thread_id / parent_comment_id / deleted_at — no explicit mapping needed.
       return {
         ...comment,
         comment_text: comment.note,
@@ -1202,35 +1209,88 @@ export class TicketService extends BaseService<ITicket> {
         throw new NotFoundError('Ticket not found');
       }
 
-      // comments.thread_id is NOT NULL — generate IDs and create the thread row first.
-      const apiCommentIds = await trx.raw(
-        'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
-      );
-      const apiGeneratedIds = apiCommentIds.rows?.[0] as
-        | { comment_id: string; thread_id: string }
-        | undefined;
-      if (!apiGeneratedIds?.comment_id || !apiGeneratedIds?.thread_id) {
-        throw new Error('Failed to generate comment/thread identifiers');
-      }
       const apiNowIso = new Date().toISOString();
-      const apiIsInternal = data.is_internal || false;
+      const apiParentCommentId = data.parent_comment_id || null;
+      const apiIsReply = Boolean(apiParentCommentId);
 
-      await trx('comment_threads').insert({
-        tenant: context.tenant,
-        thread_id: apiGeneratedIds.thread_id,
-        ticket_id: ticketId,
-        project_task_id: null,
-        root_comment_id: apiGeneratedIds.comment_id,
-        is_internal: apiIsInternal,
-        reply_count: 0,
-        last_activity_at: apiNowIso,
-        created_at: apiNowIso,
-        created_by: context.userId || null,
-      });
+      let apiCommentId: string;
+      let apiThreadId: string;
+      let apiIsInternal: boolean;
+
+      if (apiIsReply) {
+        // Reply: attach to the parent's existing thread and inherit its
+        // visibility. Mirrors Comment.insert's parent/thread invariant — the
+        // native composer never sends is_internal for replies, so the
+        // schema-defaulted false is intentionally ignored here and the thread
+        // root's visibility is inherited instead.
+        const parent = await trx('comments as parent')
+          .join('comment_threads as thread', function () {
+            this.on('parent.tenant', 'thread.tenant')
+              .andOn('parent.thread_id', 'thread.thread_id');
+          })
+          .select(
+            'parent.ticket_id',
+            'parent.thread_id',
+            'parent.deleted_at',
+            'thread.is_internal as thread_is_internal'
+          )
+          .where('parent.tenant', context.tenant)
+          .where('parent.comment_id', apiParentCommentId)
+          .first();
+
+        if (!parent) {
+          throw new NotFoundError('Parent comment not found');
+        }
+        if (parent.ticket_id !== ticketId) {
+          throw new ValidationError('Parent comment must belong to the same ticket');
+        }
+        if (parent.deleted_at) {
+          throw new ValidationError('Cannot reply to a deleted comment');
+        }
+
+        const replyIds = await trx.raw('SELECT gen_random_uuid() AS comment_id');
+        const replyGeneratedId = replyIds.rows?.[0]?.comment_id as string | undefined;
+        if (!replyGeneratedId) {
+          throw new Error('Failed to generate comment identifier');
+        }
+
+        apiCommentId = replyGeneratedId;
+        apiThreadId = parent.thread_id;
+        apiIsInternal = Boolean(parent.thread_is_internal);
+      } else {
+        // comments.thread_id is NOT NULL — generate IDs and create the thread row first.
+        const apiCommentIds = await trx.raw(
+          'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
+        );
+        const apiGeneratedIds = apiCommentIds.rows?.[0] as
+          | { comment_id: string; thread_id: string }
+          | undefined;
+        if (!apiGeneratedIds?.comment_id || !apiGeneratedIds?.thread_id) {
+          throw new Error('Failed to generate comment/thread identifiers');
+        }
+
+        apiCommentId = apiGeneratedIds.comment_id;
+        apiThreadId = apiGeneratedIds.thread_id;
+        apiIsInternal = data.is_internal || false;
+
+        await trx('comment_threads').insert({
+          tenant: context.tenant,
+          thread_id: apiThreadId,
+          ticket_id: ticketId,
+          project_task_id: null,
+          root_comment_id: apiCommentId,
+          is_internal: apiIsInternal,
+          reply_count: 0,
+          last_activity_at: apiNowIso,
+          created_at: apiNowIso,
+          created_by: context.userId || null,
+        });
+      }
 
       const commentData = {
-        comment_id: apiGeneratedIds.comment_id,
-        thread_id: apiGeneratedIds.thread_id,
+        comment_id: apiCommentId,
+        thread_id: apiThreadId,
+        parent_comment_id: apiParentCommentId,
         ticket_id: ticketId,
         note: data.comment_text,
         is_internal: apiIsInternal,
@@ -1243,6 +1303,15 @@ export class TicketService extends BaseService<ITicket> {
       };
 
       const [comment] = await trx('comments').insert(commentData).returning('*');
+
+      if (apiIsReply) {
+        await trx('comment_threads')
+          .where({ tenant: context.tenant, thread_id: apiThreadId })
+          .update({
+            reply_count: trx.raw('reply_count + 1'),
+            last_activity_at: apiNowIso,
+          });
+      }
 
       if (!comment.is_internal) {
         await maybeReopenBundleMasterFromChildReply(trx, context.tenant, ticketId, context.userId);
