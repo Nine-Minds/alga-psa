@@ -217,6 +217,18 @@ const buildFunctionCallMeta = (
   };
 };
 
+const buildAutoToolBundleMeta = (items: FunctionCallMeta[]): FunctionCallMeta => ({
+  displayName: `Ran ${items.length} read-only calls`,
+  method: 'AUTO',
+  endpoint: `${items.length} searches/API calls`,
+  action: 'approve',
+  status: items.some((item) => item.status === 'error') ? 'error' : 'success',
+  timestamp: items.at(-1)?.timestamp ?? new Date().toISOString(),
+  preview: 'Alga automatically gathered read-only context. Expand to inspect each call.',
+  autoExecuted: true,
+  bundleItems: items,
+});
+
 type ChatProps = {
   clientUrl: string;
   accountId: string;
@@ -403,7 +415,8 @@ export const Chat: React.FC<ChatProps> = ({
   };
 
   const appendAutoExecutedToolMarker = (event: SseToolExecuted) => {
-    appendFunctionCallMarker(
+    const meta = buildFunctionCallMeta(
+      t,
       {
         metadata: event.function,
         assistantPreview: event.assistantPreview,
@@ -415,6 +428,32 @@ export const Chat: React.FC<ChatProps> = ({
       'approve',
       'success',
     );
+    meta.autoExecuted = true;
+
+    setNewChatMessages((prev) => {
+      const last = prev.at(-1);
+      const lastMeta = last?.functionCallMeta;
+      if (last?.role !== 'function-call' || !lastMeta?.autoExecuted) {
+        return [
+          ...prev,
+          {
+            _id: resolveMessageId(),
+            role: 'function-call',
+            content: '',
+            functionCallMeta: meta,
+          },
+        ];
+      }
+
+      const bundleItems = lastMeta.bundleItems ? [...lastMeta.bundleItems, meta] : [lastMeta, meta];
+      return [
+        ...prev.slice(0, -1),
+        {
+          ...last,
+          functionCallMeta: buildAutoToolBundleMeta(bundleItems),
+        },
+      ];
+    });
   };
 
   void accountId;
