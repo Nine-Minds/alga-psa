@@ -301,7 +301,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         const [contractLine] = await trx('contract_lines').insert(planData).returning('*');
 
         return {
-          contractLine: await this.getById(contractLine.contract_line_id, context),
+          contractLineId: contractLine.contract_line_id,
           eventPayload: {
             contractLineId: contractLine.contract_line_id,
             contractLineName: data.contract_line_name,
@@ -322,7 +322,9 @@ export class ContractLineService extends BaseService<IContractLine> {
         }
       });
 
-      return result.contractLine;
+      // Re-fetch after commit so the read uses a committed, tenant-scoped
+      // connection (getById does not run on the transaction connection).
+      return this.getById(result.contractLineId, context);
     }
 
 

@@ -384,7 +384,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     const { knex } = await this.getKnex();
     const deferredEvents: DeferredEvent[] = [];
     
-    const invoice = await withTransaction(knex, async (trx) => {
+    const invoiceId = await withTransaction(knex, async (trx) => {
       // Generate invoice number
       const invoiceNumber = await generateInvoiceNumber(trx);
 
@@ -453,11 +453,14 @@ export class InvoiceService extends BaseService<IInvoice> {
         }
       }));
 
-      return this.getById(invoice.invoice_id, context) as Promise<IInvoice>;
+      return invoice.invoice_id;
     });
 
     await publishDeferredEvents(deferredEvents);
-    return invoice;
+
+    // Re-fetch after commit: getById runs on a pooled (non-transaction)
+    // connection, so it must read the row only after the tx commits.
+    return this.getById(invoiceId, context) as Promise<IInvoice>;
   }
 
   /**
@@ -468,8 +471,8 @@ export class InvoiceService extends BaseService<IInvoice> {
 
     const { knex } = await this.getKnex();
     const deferredEvents: DeferredEvent[] = [];
-    
-    const invoice = await withTransaction(knex, async (trx) => {
+
+    await withTransaction(knex, async (trx) => {
       const existing = await trx('invoices')
         .where({ invoice_id: id, tenant: context.tenant })
         .first();
@@ -665,12 +668,13 @@ export class InvoiceService extends BaseService<IInvoice> {
           timestamp: occurredAt
         }
       }));
-
-      return this.getById(id, context) as Promise<IInvoice>;
     });
 
     await publishDeferredEvents(deferredEvents);
-    return invoice;
+
+    // Re-fetch after commit: getById runs on a pooled (non-transaction)
+    // connection, so it must read the row only after the tx commits.
+    return this.getById(id, context) as Promise<IInvoice>;
   }
 
   /**
@@ -786,8 +790,8 @@ export class InvoiceService extends BaseService<IInvoice> {
 
     const { knex } = await this.getKnex();
     const deferredEvents: DeferredEvent[] = [];
-    
-    const invoice = await withTransaction(knex, async (trx) => {
+
+    await withTransaction(knex, async (trx) => {
       const invoice = await trx('invoices')
         .where({ invoice_id: data.invoice_id, tenant: context.tenant })
         .first();
@@ -867,12 +871,13 @@ export class InvoiceService extends BaseService<IInvoice> {
           actor: { actorType: 'USER', actorUserId: context.userId },
         },
       }));
-
-      return this.getById(data.invoice_id, context) as Promise<IInvoice>;
     });
 
     await publishDeferredEvents(deferredEvents);
-    return invoice;
+
+    // Re-fetch after commit: getById runs on a pooled (non-transaction)
+    // connection, so it must read the row only after the tx commits.
+    return this.getById(data.invoice_id, context) as Promise<IInvoice>;
   }
 
   /**
@@ -883,8 +888,8 @@ export class InvoiceService extends BaseService<IInvoice> {
 
     const { knex } = await this.getKnex();
     const deferredEvents: DeferredEvent[] = [];
-    
-    const invoice = await withTransaction(knex, async (trx) => {
+
+    await withTransaction(knex, async (trx) => {
       const invoice = await trx('invoices')
         .where({ invoice_id: data.invoice_id, tenant: context.tenant })
         .first();
@@ -980,12 +985,13 @@ export class InvoiceService extends BaseService<IInvoice> {
           },
         }));
       }
-
-      return this.getById(data.invoice_id, context) as Promise<IInvoice>;
     });
 
     await publishDeferredEvents(deferredEvents);
-    return invoice;
+
+    // Re-fetch after commit: getById runs on a pooled (non-transaction)
+    // connection, so it must read the row only after the tx commits.
+    return this.getById(data.invoice_id, context) as Promise<IInvoice>;
   }
 
   /**
@@ -996,8 +1002,8 @@ export class InvoiceService extends BaseService<IInvoice> {
 
     const { knex } = await this.getKnex();
     const deferredEvents: DeferredEvent[] = [];
-    
-    const invoice = await withTransaction(knex, async (trx) => {
+
+    await withTransaction(knex, async (trx) => {
       const occurredAt = new Date().toISOString();
 
       const invoice = await trx('invoices')
@@ -1139,11 +1145,13 @@ export class InvoiceService extends BaseService<IInvoice> {
 	        }
 	      }));
 
-      return this.getById(data.invoice_id, context) as Promise<IInvoice>;
     });
 
     await publishDeferredEvents(deferredEvents);
-    return invoice;
+
+    // Re-fetch after commit: getById runs on a pooled (non-transaction)
+    // connection, so it must read the row only after the tx commits.
+    return this.getById(data.invoice_id, context) as Promise<IInvoice>;
   }
 
   /**
@@ -1154,8 +1162,8 @@ export class InvoiceService extends BaseService<IInvoice> {
 
     const { knex } = await this.getKnex();
     const deferredEvents: DeferredEvent[] = [];
-    
-    const invoice = await withTransaction(knex, async (trx) => {
+
+    await withTransaction(knex, async (trx) => {
       const invoice = await trx('invoices')
         .where({ invoice_id: data.invoice_id, tenant: context.tenant })
         .first();
@@ -1272,11 +1280,13 @@ export class InvoiceService extends BaseService<IInvoice> {
 	        }
 	      }));
 
-      return this.getById(data.invoice_id, context) as Promise<IInvoice>;
     });
 
     await publishDeferredEvents(deferredEvents);
-    return invoice;
+
+    // Re-fetch after commit: getById runs on a pooled (non-transaction)
+    // connection, so it must read the row only after the tx commits.
+    return this.getById(data.invoice_id, context) as Promise<IInvoice>;
   }
 
   /**
@@ -1289,7 +1299,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     const { knex } = await this.getKnex();
     const deferredEvents: DeferredEvent[] = [];
 
-    const invoice = await withTransaction(knex, async (trx) => {
+    await withTransaction(knex, async (trx) => {
       const occurredAt = new Date().toISOString();
 
       const invoice = await trx('invoices')
@@ -1427,11 +1437,13 @@ export class InvoiceService extends BaseService<IInvoice> {
 	        }
 	      }));
 
-      return this.getById(data.invoice_id, context) as Promise<IInvoice>;
     });
 
     await publishDeferredEvents(deferredEvents);
-    return invoice;
+
+    // Re-fetch after commit: getById runs on a pooled (non-transaction)
+    // connection, so it must read the row only after the tx commits.
+    return this.getById(data.invoice_id, context) as Promise<IInvoice>;
   }
 
   // ============================================================================
