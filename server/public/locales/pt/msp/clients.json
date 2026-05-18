@@ -36,7 +36,7 @@
   "clientsPage": {
     "title": "Clients Page",
     "description": "Main clients management page with search, filters, and client grid/list view",
-    "searchPlaceholder": "Search clients",
+    "searchPlaceholder": "Search clients, notes, documents, and interactions",
     "createClient": "Create Client",
     "createClientShort": "+ Create Client",
     "allClients": "All Clients",

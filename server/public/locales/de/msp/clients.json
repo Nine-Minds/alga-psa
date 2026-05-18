@@ -36,7 +36,7 @@
   "clientsPage": {
     "title": "Kundenseite",
     "description": "Hauptseite zur Kundenverwaltung mit Suche, Filtern und Kundenraster-/Listenansicht",
-    "searchPlaceholder": "Kunden suchen",
+    "searchPlaceholder": "Kunden, Notizen, Dokumente und Interaktionen suchen",
     "createClient": "Client erstellen",
     "createClientShort": "+ Client erstellen",
     "allClients": "Alle Kunden",

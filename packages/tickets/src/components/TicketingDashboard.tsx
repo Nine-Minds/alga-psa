@@ -1934,7 +1934,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 />
                 <Input
                   id={`${id}-search-tickets-input`}
-                  placeholder={t('filters.search', 'Search tickets...')}
+                  placeholder={t('filters.search', 'Search tickets and comments...')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="h-[38px] min-w-[350px] text-sm"
