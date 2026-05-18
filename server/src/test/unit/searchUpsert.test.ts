@@ -79,11 +79,18 @@ describe('search index upsert helpers', () => {
     expect(sql).toContain('body = EXCLUDED.body');
     expect(sql).toContain('search_vector = EXCLUDED.search_vector');
     expect(sql).toContain('source_updated_at = EXCLUDED.source_updated_at');
-    expect(sql).toContain('indexed_at = now()');
+    // indexed_at must be a bound param, not now(): Citus forbids non-IMMUTABLE
+    // functions in the DO UPDATE SET clause of distributed-table upserts.
+    expect(sql).toContain('indexed_at = ?');
+    expect(sql).not.toContain('indexed_at = now()');
     expect(sql).toContain("setweight(public.process_large_lexemes(?), 'A')");
     expect(bindings).toContain('ACME Corp Updated');
     expect(bindings).toContain('Updated searchable body');
-    expect(bindings.at(-1)).toEqual(doc.sourceUpdatedAt);
+    // ...source_updated_at, then the same indexedAt bound twice (VALUES + DO UPDATE)
+    const indexedAt = bindings.at(-1);
+    expect(indexedAt).toBeInstanceOf(Date);
+    expect(bindings.at(-2)).toBe(indexedAt);
+    expect(bindings.at(-3)).toEqual(doc.sourceUpdatedAt);
   });
 
   it('T025 deletes a search row by tenant/type/id and tolerates no matching row', async () => {
