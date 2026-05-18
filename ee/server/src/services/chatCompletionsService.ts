@@ -1621,7 +1621,7 @@ export class ChatCompletionsService {
             iteration,
             toolNames: toolCalls.map((toolCall) => toolCall.function?.name ?? 'unknown'),
           });
-          conversation = autoConversation;
+          conversation = autoConversation.conversation;
           continue;
         }
 

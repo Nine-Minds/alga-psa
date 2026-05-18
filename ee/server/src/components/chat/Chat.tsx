@@ -422,7 +422,7 @@ export const Chat: React.FC<ChatProps> = ({
         assistantPreview: event.assistantPreview,
         assistantReasoning: event.assistantReasoning,
         functionCall: event.functionCall,
-        nextMessages: event.modelMessages ?? event.nextMessages,
+        nextMessages: (event.modelMessages ?? event.nextMessages) as ChatCompletionMessage[],
         chatId,
       },
       'approve',
