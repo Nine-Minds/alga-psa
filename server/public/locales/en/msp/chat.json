@@ -107,6 +107,16 @@
       "reviewAndApprove": "Review and approve when you are ready.",
       "completedNoDetails": "The action completed without additional details.",
       "emDash": "—"
+    },
+    "continuation": {
+      "badge": "CONTINUE",
+      "endpoint": "search/tool chain",
+      "title": "Continue gathering results?",
+      "description": "Alga reached the tool step limit while gathering information.",
+      "status": "The searches and read-only calls above were completed. Continue from the same point to gather more or finish the answer.",
+      "continue": "Continue",
+      "continueAriaLabel": "Continue the AI response from the tool limit",
+      "defaultPrompt": "Continue"
     }
   },
   "quickAsk": {

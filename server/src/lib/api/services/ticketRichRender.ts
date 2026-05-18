@@ -22,7 +22,16 @@ function fallbackTicketHtml(content: unknown): string {
   return `<p>${escapeHtml(plainText)}</p>`;
 }
 
+function isLikelySerializedRichText(content: string): boolean {
+  const trimmed = content.trim();
+  return trimmed.startsWith('{') || trimmed.startsWith('[');
+}
+
 export function renderTicketRichTextHtml(content: unknown): string {
+  if (typeof content === 'string' && !isLikelySerializedRichText(content)) {
+    return fallbackTicketHtml(content);
+  }
+
   try {
     const html = convertBlockContentToHTML(content);
     if (

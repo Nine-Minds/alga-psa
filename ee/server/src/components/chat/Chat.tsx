@@ -19,7 +19,9 @@ import { useAIChatContext } from '@product/chat/context';
 
 import {
   readAssistantContentFromSse,
+  type SseContinuationAvailable,
   type SseFunctionProposal,
+  type SseToolExecuted,
 } from './readAssistantContentFromSse';
 import { ChatMentionChip, type ChatMention } from './ChatMentionChip';
 import {
@@ -80,6 +82,12 @@ type PendingFunctionState = {
   assistantPreview: string;
   assistantReasoning?: string;
   functionCall: FunctionCallInfo;
+  nextMessages: ChatCompletionMessage[];
+  chatId?: string | null;
+};
+
+type PendingContinuationState = {
+  reason: string;
   nextMessages: ChatCompletionMessage[];
   chatId?: string | null;
 };
@@ -183,6 +191,16 @@ const buildFunctionCallMeta = (
   status: FunctionCallMeta['status'],
 ): FunctionCallMeta => {
   const httpDetails = determineHttpDetails(fn);
+  const rawDetails = {
+    ...(fn.metadata?.arguments ?? {}),
+    ...(fn.functionCall?.arguments ?? {}),
+  };
+  const details = Object.fromEntries(
+    Object.entries(rawDetails).filter(
+      ([key, value]) => value !== undefined && !['method', 'path'].includes(key),
+    ),
+  );
+
   return {
     displayName: fn.metadata.displayName ?? fn.functionCall?.name ?? t('chat.defaultFunctionName'),
     method: httpDetails.method,
@@ -191,12 +209,25 @@ const buildFunctionCallMeta = (
     status,
     timestamp: new Date().toISOString(),
     preview: sanitizeThinking(fn.assistantPreview ?? ''),
+    details: Object.keys(details).length > 0 ? details : undefined,
     notice:
       fn.functionCall.toolResultTruncated && action === 'approve'
         ? t('chat.resultTruncated')
         : undefined,
   };
 };
+
+const buildAutoToolBundleMeta = (items: FunctionCallMeta[]): FunctionCallMeta => ({
+  displayName: `Ran ${items.length} read-only calls`,
+  method: 'AUTO',
+  endpoint: `${items.length} searches/API calls`,
+  action: 'approve',
+  status: items.some((item) => item.status === 'error') ? 'error' : 'success',
+  timestamp: items.at(-1)?.timestamp ?? new Date().toISOString(),
+  preview: 'Alga automatically gathered read-only context. Expand to inspect each call.',
+  autoExecuted: true,
+  bundleItems: items,
+});
 
 type ChatProps = {
   clientUrl: string;
@@ -321,6 +352,7 @@ export const Chat: React.FC<ChatProps> = ({
   const [pendingFunctionStatus, setPendingFunctionStatus] = useState<'idle' | 'awaiting' | 'executing'>('idle');
   const [pendingFunctionAction, setPendingFunctionAction] = useState<'none' | 'approve' | 'decline'>('none');
   const [functionError, setFunctionError] = useState<string | null>(null);
+  const [pendingContinuation, setPendingContinuation] = useState<PendingContinuationState | null>(null);
   const [autoApprovedMethods, setAutoApprovedMethods] = useState<string[]>([]);
   const [mentions, setMentions] = useState<ChatMention[]>([]);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
@@ -380,6 +412,48 @@ export const Chat: React.FC<ChatProps> = ({
         functionCallMeta: meta,
       },
     ]);
+  };
+
+  const appendAutoExecutedToolMarker = (event: SseToolExecuted) => {
+    const meta = buildFunctionCallMeta(
+      t,
+      {
+        metadata: event.function,
+        assistantPreview: event.assistantPreview,
+        assistantReasoning: event.assistantReasoning,
+        functionCall: event.functionCall,
+        nextMessages: (event.modelMessages ?? event.nextMessages) as ChatCompletionMessage[],
+        chatId,
+      },
+      'approve',
+      'success',
+    );
+    meta.autoExecuted = true;
+
+    setNewChatMessages((prev) => {
+      const last = prev.at(-1);
+      const lastMeta = last?.functionCallMeta;
+      if (last?.role !== 'function-call' || !lastMeta?.autoExecuted) {
+        return [
+          ...prev,
+          {
+            _id: resolveMessageId(),
+            role: 'function-call',
+            content: '',
+            functionCallMeta: meta,
+          },
+        ];
+      }
+
+      const bundleItems = lastMeta.bundleItems ? [...lastMeta.bundleItems, meta] : [lastMeta, meta];
+      return [
+        ...prev.slice(0, -1),
+        {
+          ...last,
+          functionCallMeta: buildAutoToolBundleMeta(bundleItems),
+        },
+      ];
+    });
   };
 
   void accountId;
@@ -707,6 +781,7 @@ export const Chat: React.FC<ChatProps> = ({
   ) => {
     const reuseExistingUserMessage = options?.reuseExistingUserMessage ?? false;
     setFunctionError(null);
+    setPendingContinuation(null);
     setEditingMessageIndex(null);
     setFullMessageStatus(null);
     setFullMessageStatusDetail(null);
@@ -832,6 +907,7 @@ export const Chat: React.FC<ChatProps> = ({
       let sawToken = false;
       let shouldContinueStreaming = true;
       let streamedFunctionProposal: PendingFunctionState | null = null;
+      let streamedContinuation: PendingContinuationState | null = null;
       let streamedReasoning: string | null = null;
 
       const scheduleIncomingRender = () => {
@@ -880,6 +956,21 @@ export const Chat: React.FC<ChatProps> = ({
             };
             shouldContinueStreaming = false;
           },
+          onToolExecuted: (event: SseToolExecuted) => {
+            if (generationIdRef.current !== generationId) {
+              return;
+            }
+            appendAutoExecutedToolMarker(event);
+          },
+          onContinuationAvailable: (event: SseContinuationAvailable) => {
+            const modelMessages = (event.modelMessages ??
+              event.nextMessages) as ChatCompletionMessage[];
+            streamedContinuation = {
+              reason: event.reason,
+              nextMessages: modelMessages,
+              chatId: createdChatId ?? chatId,
+            };
+          },
         });
 
       if (generationIdRef.current !== generationId) {
@@ -893,6 +984,17 @@ export const Chat: React.FC<ChatProps> = ({
         setPendingFunctionAction('none');
         setIncomingMessage('');
         setIsFunction(true);
+        setGeneratingResponse(false);
+        streamingTextRef.current = null;
+        streamAbortControllerRef.current = null;
+        return;
+      }
+
+      if (streamedContinuation) {
+        setConversation(streamedContinuation.nextMessages);
+        setPendingContinuation(streamedContinuation);
+        setIncomingMessage('');
+        setIsFunction(false);
         setGeneratingResponse(false);
         streamingTextRef.current = null;
         streamAbortControllerRef.current = null;
@@ -979,6 +1081,22 @@ export const Chat: React.FC<ChatProps> = ({
     mentions,
     t,
   ]);
+
+  const handleContinueFromToolLimit = useCallback(async () => {
+    if (!pendingContinuation) {
+      return;
+    }
+    const lastUserMessage = [...pendingContinuation.nextMessages]
+      .reverse()
+      .find((message) => message.role === 'user' && typeof message.content === 'string');
+    const prompt = typeof lastUserMessage?.content === 'string' && lastUserMessage.content.trim().length > 0
+      ? lastUserMessage.content
+      : t('chat.continuation.defaultPrompt');
+    await handleSend(prompt, {
+      reuseExistingUserMessage: true,
+      baseConversation: pendingContinuation.nextMessages,
+    });
+  }, [handleSend, pendingContinuation, t]);
 
   useEffect(() => {
     if (!autoSendPrompt) {
@@ -1385,7 +1503,7 @@ export const Chat: React.FC<ChatProps> = ({
   }, [autoResizeTextarea]);
 
   const canModifyHistory =
-    !generatingResponse && !isFunction && !isExecutingFunction && !pendingFunction;
+    !generatingResponse && !isFunction && !isExecutingFunction && !pendingFunction && !pendingContinuation;
   const canStop = generatingResponse || isExecutingFunction;
 
   const handleChatScroll = useCallback(() => {
@@ -1614,6 +1732,40 @@ export const Chat: React.FC<ChatProps> = ({
                   reasoning={fullReasoning ?? undefined}
                   showStreamingCursor={generatingResponse && !isFunction}
                 />
+              )}
+              {pendingContinuation && (
+                <div className="function-approval-wrapper">
+                  <Image
+                    className="chat-img"
+                    src="/avatar-purple-no-shadow.svg"
+                    alt={t('chat.avatarAlt')}
+                    width={18}
+                    height={18}
+                  />
+                  <div className="function-approval-bubble function-approval-bubble--continuation">
+                    <div className="function-approval-header">
+                      <span className="function-approval-badge">{t('chat.continuation.badge')}</span>
+                      <span className="function-approval-endpoint">{t('chat.continuation.endpoint')}</span>
+                    </div>
+                    <h3 className="function-approval-title">{t('chat.continuation.title')}</h3>
+                    <p className="function-approval-preview">
+                      {pendingContinuation.reason || t('chat.continuation.description')}
+                    </p>
+                    <div className="function-approval-status">{t('chat.continuation.status')}</div>
+                    <div className="function-approval-actions">
+                      <Button
+                        id="chat-continue-tool-chain"
+                        label={t('chat.continuation.continueAriaLabel')}
+                        size="sm"
+                        variant="default"
+                        onClick={() => void handleContinueFromToolLimit()}
+                        disabled={generatingResponse || isFunction}
+                      >
+                        {t('chat.continuation.continue')}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               )}
               {pendingFunction && (
                 <div className="function-approval-wrapper">

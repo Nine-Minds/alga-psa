@@ -107,6 +107,16 @@
       "reviewAndApprove": "Przejrzyj i zatwierdź, gdy będziesz gotowy.",
       "completedNoDetails": "Akcja została zakończona bez dodatkowych szczegółów.",
       "emDash": "—"
+    },
+    "continuation": {
+      "badge": "KONTYNUUJ",
+      "endpoint": "łańcuch wyszukiwania/narzędzi",
+      "title": "Kontynuować zbieranie wyników?",
+      "description": "Alga osiągnęła limit kroków narzędzi podczas zbierania informacji.",
+      "status": "Powyższe wyszukiwania i wywołania tylko do odczytu zostały zakończone. Kontynuuj od tego samego miejsca, aby zebrać więcej danych lub dokończyć odpowiedź.",
+      "continue": "Kontynuuj",
+      "continueAriaLabel": "Kontynuuj odpowiedź AI od limitu narzędzi",
+      "defaultPrompt": "Kontynuuj"
     }
   },
   "quickAsk": {

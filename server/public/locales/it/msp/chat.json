@@ -107,6 +107,16 @@
       "reviewAndApprove": "Rivedi e approva quando sei pronto.",
       "completedNoDetails": "L'azione è stata completata senza ulteriori dettagli.",
       "emDash": "—"
+    },
+    "continuation": {
+      "badge": "CONTINUA",
+      "endpoint": "catena ricerca/strumenti",
+      "title": "Continuare a raccogliere risultati?",
+      "description": "Alga ha raggiunto il limite di passaggi degli strumenti durante la raccolta delle informazioni.",
+      "status": "Le ricerche e le chiamate in sola lettura sopra sono state completate. Continua dallo stesso punto per raccogliere altro o completare la risposta.",
+      "continue": "Continua",
+      "continueAriaLabel": "Continua la risposta IA dal limite degli strumenti",
+      "defaultPrompt": "Continua"
     }
   },
   "quickAsk": {
