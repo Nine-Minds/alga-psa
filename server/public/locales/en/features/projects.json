@@ -74,7 +74,7 @@
     "addProject": "Add Project",
     "createFromTemplate": "Create from Template",
     "openMenu": "Open menu",
-    "searchPlaceholder": "Search projects",
+    "searchPlaceholder": "Search projects, tasks, and comments",
     "statusPlaceholder": "Select status",
     "contactPlaceholder": "Filter by contact",
     "managerPlaceholder": "All managers",

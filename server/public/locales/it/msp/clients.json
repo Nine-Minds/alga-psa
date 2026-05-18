@@ -36,7 +36,7 @@
   "clientsPage": {
     "title": "Pagina clienti",
     "description": "Pagina di gestione dei clienti principali con ricerca, filtri e visualizzazione griglia/elenco dei clienti",
-    "searchPlaceholder": "Cerca clienti",
+    "searchPlaceholder": "Cerca clienti, note, documenti e interazioni",
     "createClient": "Crea cliente",
     "createClientShort": "+ Crea cliente",
     "allClients": "Tutti i clienti",

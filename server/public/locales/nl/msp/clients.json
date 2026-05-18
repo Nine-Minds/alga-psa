@@ -36,7 +36,7 @@
   "clientsPage": {
     "title": "Klantenpagina",
     "description": "Hoofdbeheerpagina voor klanten met zoeken, filters en klantenraster/lijstweergave",
-    "searchPlaceholder": "Zoek klanten",
+    "searchPlaceholder": "Zoek klanten, notities, documenten en interacties",
     "createClient": "Klant aanmaken",
     "createClientShort": "+ Klant aanmaken",
     "allClients": "Alle klanten",

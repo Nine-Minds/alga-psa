@@ -68,6 +68,9 @@ function getEmailEventChannel(): string {
   return EMAIL_EVENT_CHANNEL;
 }
 
+const TICKET_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
+const TICKET_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
+
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into tickets.
 }
@@ -949,7 +952,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 async function buildTicketListBaseQuery(
   trx: Knex.Transaction,
   tenant: string,
-  user: { user_id: string },
+  user: { user_id: string; user_type?: string; clientId?: string | null },
   validatedFilters: ITicketListFilters
 ): Promise<{ builder: Knex.QueryBuilder }> {
     const parsedStatusFilter = parseTicketStatusFilterValue(validatedFilters.statusId);
@@ -1072,26 +1075,7 @@ async function buildTicketListBaseQuery(
       }
     }
 
-    if (validatedFilters.searchQuery) {
-      const searchTerm = `%${validatedFilters.searchQuery}%`;
-      baseQuery = baseQuery.where(function(this: any) {
-        this.where('t.title', 'ilike', searchTerm)
-          .orWhere('t.ticket_number', 'ilike', searchTerm);
-
-        if (validatedFilters.bundleView === 'bundled') {
-          this.orWhereExists(function(this: any) {
-            this.select('*')
-              .from('tickets as tc')
-              .whereRaw('tc.tenant = t.tenant')
-              .andWhereRaw('tc.master_ticket_id = t.ticket_id')
-              .andWhere(function(this: any) {
-                this.where('tc.title', 'ilike', searchTerm)
-                  .orWhere('tc.ticket_number', 'ilike', searchTerm);
-              });
-          });
-        }
-      });
-    }
+    baseQuery = applyTicketListIndexedSearchFilter(trx, baseQuery, tenant, user, validatedFilters);
 
     // Apply tag filter if provided
     if (validatedFilters.tags && validatedFilters.tags.length > 0) {
@@ -1265,6 +1249,152 @@ async function buildTicketListBaseQuery(
     // Knex query builders have .then(), so returning one from an async function
     // would execute the query instead of returning the builder.
     return { builder: baseQuery };
+}
+
+function buildTicketListSearchPrefixTsquery(raw: string): string | null {
+  const tokens = raw
+    .toLowerCase()
+    .replace(TICKET_LIST_SEARCH_TSQUERY_UNSAFE_RE, ' ')
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+
+  if (tokens.length === 0) {
+    return null;
+  }
+
+  return tokens.map((token) => `${token}:*`).join(' & ');
+}
+
+function applyTicketListIndexedSearchFilter(
+  trx: Knex.Transaction,
+  baseQuery: Knex.QueryBuilder,
+  tenant: string,
+  user: { user_id: string; user_type?: string; clientId?: string | null },
+  validatedFilters: ITicketListFilters
+): Knex.QueryBuilder {
+  const rawSearch = validatedFilters.searchQuery?.replace(/\s+/g, ' ').trim();
+  if (!rawSearch) {
+    return baseQuery;
+  }
+
+  const prefixTsquery = buildTicketListSearchPrefixTsquery(rawSearch);
+  const identifier = rawSearch.match(TICKET_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
+  const includeBundledChildren = validatedFilters.bundleView === 'bundled';
+  const isInternalUser = user.user_type !== 'client';
+  const clientScopePredicate = isInternalUser
+    ? 'TRUE'
+    : user.clientId
+      ? '(si.client_scope_id IS NULL OR si.client_scope_id = ?::uuid)'
+      : 'si.client_scope_id IS NULL';
+  const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
+
+  return baseQuery.where(function(this: Knex.QueryBuilder) {
+    this.whereRaw(
+      `
+        EXISTS (
+          SELECT 1
+          FROM app_search_index si
+          CROSS JOIN (
+            SELECT
+              websearch_to_tsquery('english', ?) AS tsq,
+              CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
+              ?::text AS raw,
+              ?::text AS identifier
+          ) q
+          WHERE si.tenant = ?::uuid
+            AND si.object_type = ANY(?::text[])
+            AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
+            AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+            AND (si.is_internal_only = false OR ?::boolean = true)
+            AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+            AND ${clientScopePredicate}
+            AND (
+              (
+                si.object_type = 'ticket'
+                AND (
+                  si.object_id = t.ticket_id::text
+                  OR (
+                    ?::boolean = true
+                    AND EXISTS (
+                      SELECT 1
+                      FROM tickets child_ticket
+                      WHERE child_ticket.tenant = t.tenant
+                        AND child_ticket.master_ticket_id = t.ticket_id
+                        AND child_ticket.ticket_id::text = si.object_id
+                    )
+                  )
+                )
+              )
+              OR (
+                si.object_type = 'ticket_comment'
+                AND (
+                  si.parent_id = t.ticket_id::text
+                  OR (
+                    ?::boolean = true
+                    AND EXISTS (
+                      SELECT 1
+                      FROM tickets child_ticket
+                      WHERE child_ticket.tenant = t.tenant
+                        AND child_ticket.master_ticket_id = t.ticket_id
+                        AND child_ticket.ticket_id::text = si.parent_id
+                    )
+                  )
+                )
+              )
+            )
+            AND (
+              si.search_vector @@ q.tsq
+              OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
+              OR si.title ILIKE '%' || q.raw || '%'
+              OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
+              OR si.title % q.raw
+              OR coalesce(si.subtitle, '') % q.raw
+              OR (
+                q.identifier IS NOT NULL
+                AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier
+              )
+              OR (
+                q.identifier IS NOT NULL
+                AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%'
+              )
+            )
+        )
+      `,
+      [
+        rawSearch,
+        prefixTsquery,
+        prefixTsquery,
+        rawSearch,
+        identifier,
+        tenant,
+        ['ticket', 'ticket_comment'],
+        ['ticket:read'],
+        user.user_id,
+        isInternalUser,
+        user.user_id,
+        ...clientScopeBindings,
+        includeBundledChildren,
+        includeBundledChildren,
+      ]
+    ).orWhere(function(this: Knex.QueryBuilder) {
+      this.where('t.title', 'ilike', `%${rawSearch}%`)
+        .orWhere('t.ticket_number', 'ilike', `%${rawSearch}%`);
+
+      if (includeBundledChildren) {
+        this.orWhereExists(function(this: Knex.QueryBuilder) {
+          this.select('*')
+            .from('tickets as tc')
+            .whereRaw('tc.tenant = t.tenant')
+            .andWhereRaw('tc.master_ticket_id = t.ticket_id')
+            .andWhere(function(this: Knex.QueryBuilder) {
+              this.where('tc.title', 'ilike', `%${rawSearch}%`)
+                .orWhere('tc.ticket_number', 'ilike', `%${rawSearch}%`);
+            });
+        });
+      }
+    });
+  });
 }
 
 /**

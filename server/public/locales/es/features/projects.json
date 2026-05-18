@@ -74,7 +74,7 @@
     "addProject": "Agregar proyecto",
     "createFromTemplate": "Crear desde plantilla",
     "openMenu": "Abrir menú",
-    "searchPlaceholder": "Buscar proyectos",
+    "searchPlaceholder": "Buscar proyectos, tareas y comentarios",
     "statusPlaceholder": "Seleccionar estado",
     "contactPlaceholder": "Filtrar por contacto",
     "managerPlaceholder": "Todos los responsables",

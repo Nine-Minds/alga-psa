@@ -26,6 +26,10 @@ import {
 import { buildContactPrimarySetPayload } from '@alga-psa/workflow-streams';
 import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
 
+const CLIENT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
+const CLIENT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
+const CLIENT_LIST_SEARCH_TYPES = ['client', 'document', 'interaction'] as const;
+
 function maybeUserActor(currentUser: any) {
   const userId = currentUser?.user_id;
   if (typeof userId !== 'string' || !userId) return undefined;
@@ -477,10 +481,130 @@ export interface BillingCycleDateRange {
   to?: string;
 }
 
+function buildClientListSearchPrefixTsquery(raw: string): string | null {
+  const tokens = raw
+    .toLowerCase()
+    .replace(CLIENT_LIST_SEARCH_TSQUERY_UNSAFE_RE, ' ')
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+
+  if (tokens.length === 0) {
+    return null;
+  }
+
+  return tokens.map((token) => `${token}:*`).join(' & ');
+}
+
+function applyClientListIndexedSearchFilter(
+  baseQuery: Knex.QueryBuilder,
+  tenant: string,
+  user: { user_id: string; user_type?: string; clientId?: string | null },
+  rawSearchInput: string | undefined,
+  permissions: string[]
+): Knex.QueryBuilder {
+  const rawSearch = rawSearchInput?.replace(/\s+/g, ' ').trim();
+  if (!rawSearch) {
+    return baseQuery;
+  }
+
+  const prefixTsquery = buildClientListSearchPrefixTsquery(rawSearch);
+  const identifier = rawSearch.match(CLIENT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
+  const isInternalUser = user.user_type !== 'client';
+  const clientScopePredicate = isInternalUser
+    ? 'TRUE'
+    : user.clientId
+      ? '(si.client_scope_id IS NULL OR si.client_scope_id = ?::uuid)'
+      : 'si.client_scope_id IS NULL';
+  const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
+
+  return baseQuery.where(function(this: Knex.QueryBuilder) {
+    this.whereRaw(
+      `
+        EXISTS (
+          SELECT 1
+          FROM app_search_index si
+          CROSS JOIN (
+            SELECT
+              websearch_to_tsquery('english', ?) AS tsq,
+              CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
+              ?::text AS raw,
+              ?::text AS identifier
+          ) q
+          LEFT JOIN interactions interaction_match
+            ON si.object_type = 'interaction'
+            AND interaction_match.tenant = si.tenant
+            AND interaction_match.interaction_id::text = si.object_id
+          LEFT JOIN document_associations document_client_match
+            ON si.object_type = 'document'
+            AND document_client_match.tenant = si.tenant
+            AND document_client_match.document_id::text = si.object_id
+            AND document_client_match.entity_type = 'client'
+          WHERE si.tenant = ?::uuid
+            AND si.object_type = ANY(?::text[])
+            AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
+            AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+            AND (si.is_internal_only = false OR ?::boolean = true)
+            AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+            AND ${clientScopePredicate}
+            AND (
+              (si.object_type = 'client' AND si.object_id = c.client_id::text)
+              OR (si.object_type = 'interaction' AND interaction_match.client_id = c.client_id)
+              OR (si.object_type = 'document' AND document_client_match.entity_id = c.client_id::text)
+            )
+            AND (
+              si.search_vector @@ q.tsq
+              OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
+              OR si.title ILIKE '%' || q.raw || '%'
+              OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
+              OR si.title % q.raw
+              OR coalesce(si.subtitle, '') % q.raw
+              OR (
+                q.identifier IS NOT NULL
+                AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier
+              )
+              OR (
+                q.identifier IS NOT NULL
+                AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%'
+              )
+            )
+        )
+      `,
+      [
+        rawSearch,
+        prefixTsquery,
+        prefixTsquery,
+        rawSearch,
+        identifier,
+        tenant,
+        [...CLIENT_LIST_SEARCH_TYPES],
+        permissions,
+        user.user_id,
+        isInternalUser,
+        user.user_id,
+        ...clientScopeBindings,
+      ]
+    ).orWhere(function(this: Knex.QueryBuilder) {
+      this.where('c.client_name', 'ilike', `%${rawSearch}%`)
+        .orWhere('cl.phone', 'ilike', `%${rawSearch}%`)
+        .orWhere('cl.address_line1', 'ilike', `%${rawSearch}%`)
+        .orWhere('cl.address_line2', 'ilike', `%${rawSearch}%`)
+        .orWhere('cl.city', 'ilike', `%${rawSearch}%`);
+    });
+  });
+}
+
 export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: ClientPaginationParams = {}): Promise<PaginatedClientsResponse> => {
   // Check permission for client reading (in MSP, clients are managed via 'client' resource)
   if (!await hasPermissionAsync(user, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
+  }
+  const searchPermissions = ['client:read'];
+  if (await hasPermissionAsync(user, 'document', 'read')) {
+    searchPermissions.push('document:read');
+  }
+  if (await hasPermissionAsync(user, 'interaction', 'read')) {
+    searchPermissions.push('interaction:read');
   }
 
   const {
@@ -525,15 +649,7 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
       }
 
       // Apply filters
-      if (searchTerm) {
-        baseQuery = baseQuery.where(function() {
-          this.where('c.client_name', 'ilike', `%${searchTerm}%`)
-              .orWhere('cl.phone', 'ilike', `%${searchTerm}%`)
-              .orWhere('cl.address_line1', 'ilike', `%${searchTerm}%`)
-              .orWhere('cl.address_line2', 'ilike', `%${searchTerm}%`)
-              .orWhere('cl.city', 'ilike', `%${searchTerm}%`);
-        });
-      }
+      baseQuery = applyClientListIndexedSearchFilter(baseQuery, tenant, user, searchTerm, searchPermissions);
 
       if (clientTypeFilter !== 'all') {
         baseQuery = baseQuery.where('c.client_type', clientTypeFilter);
@@ -659,6 +775,13 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
   if (!await hasPermissionAsync(user, 'client', 'read')) {
     throw new Error('Permission denied: Cannot read clients');
   }
+  const searchPermissions = ['client:read'];
+  if (await hasPermissionAsync(user, 'document', 'read')) {
+    searchPermissions.push('document:read');
+  }
+  if (await hasPermissionAsync(user, 'interaction', 'read')) {
+    searchPermissions.push('interaction:read');
+  }
 
   const {
     page = 1,
@@ -700,15 +823,7 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
         baseQuery = baseQuery.andWhere('c.is_inactive', false);
       }
 
-      if (searchTerm) {
-        baseQuery = baseQuery.where(function() {
-          this.where('c.client_name', 'ilike', `%${searchTerm}%`)
-              .orWhere('cl.phone', 'ilike', `%${searchTerm}%`)
-              .orWhere('cl.address_line1', 'ilike', `%${searchTerm}%`)
-              .orWhere('cl.address_line2', 'ilike', `%${searchTerm}%`)
-              .orWhere('cl.city', 'ilike', `%${searchTerm}%`);
-        });
-      }
+      baseQuery = applyClientListIndexedSearchFilter(baseQuery, tenant, user, searchTerm, searchPermissions);
 
       if (clientTypeFilter !== 'all') {
         baseQuery = baseQuery.where('c.client_type', clientTypeFilter);
