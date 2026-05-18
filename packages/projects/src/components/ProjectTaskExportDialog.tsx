@@ -16,6 +16,8 @@ interface ProjectTaskExportDialogProps {
   onClose: () => void;
   projectId: string;
   phases: IProjectPhase[];
+  /** When non-empty, the export is scoped to exactly these task IDs and the phase picker is hidden. */
+  selectedTaskIds?: Set<string>;
 }
 
 type ExportStep = 'configure' | 'exporting' | 'complete';
@@ -46,10 +48,12 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
   onClose,
   projectId,
   phases,
+  selectedTaskIds,
 }) => {
   const { t } = useTranslation(['features/projects', 'common']);
   const exportT = useCallback((key: string, fallback: string, options?: Record<string, unknown>) =>
     t(`export.${key}`, { defaultValue: fallback, ...(options ?? {}) }), [t]);
+  const isSelectionMode = (selectedTaskIds?.size ?? 0) > 0;
   const [step, setStep] = useState<ExportStep>('configure');
   const [selectedFields, setSelectedFields] = useState<Set<string>>(new Set(ALL_FIELD_KEYS));
   const [selectedPhaseIds, setSelectedPhaseIds] = useState<Set<string>>(
@@ -119,8 +123,9 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
       const orderedFields = ALL_FIELD_KEYS.filter(k => selectedFields.has(k));
       const { csv, count } = await exportProjectTasksToCSV(
         projectId,
-        Array.from(selectedPhaseIds),
+        isSelectionMode ? [] : Array.from(selectedPhaseIds),
         orderedFields,
+        isSelectionMode ? Array.from(selectedTaskIds!) : undefined,
       );
 
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -141,7 +146,7 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
       setStep('configure');
       handleError(err, exportT('failed', 'Failed to export tasks'));
     }
-  }, [projectId, selectedFields, selectedPhaseIds, exportT]);
+  }, [projectId, selectedFields, selectedPhaseIds, isSelectionMode, selectedTaskIds, exportT]);
 
   const footer =
     step === 'configure' ? (
@@ -156,7 +161,7 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
         <Button
           id="export-tasks-btn"
           onClick={() => void handleExport()}
-          disabled={noPhasesSelected || noFieldsSelected}
+          disabled={(!isSelectionMode && noPhasesSelected) || noFieldsSelected}
           className="flex items-center gap-2"
         >
           <Download className="h-4 w-4" />
@@ -192,7 +197,20 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
         {/* Step 1: Configure */}
         {step === 'configure' && (
           <div>
+            {/* Selection-mode notice */}
+            {isSelectionMode && (
+              <div className="mb-4 rounded-lg border border-primary-200 bg-primary-50 dark:border-[rgb(var(--color-primary-700))] dark:bg-[rgb(var(--color-primary-900))] p-3">
+                <p className="text-sm text-primary-700 dark:text-[rgb(var(--color-primary-200))]">
+                  {exportT('selectedTasksNotice', 'Exporting {{count}} selected task{{plural}}.', {
+                    count: selectedTaskIds!.size,
+                    plural: selectedTaskIds!.size === 1 ? '' : 's',
+                  })}
+                </p>
+              </div>
+            )}
+
             {/* Phase selection */}
+            {!isSelectionMode && (
             <div className="mb-4">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-sm font-medium text-gray-700 dark:text-[rgb(var(--color-text-200))]">
@@ -232,6 +250,7 @@ const ProjectTaskExportDialog: React.FC<ProjectTaskExportDialogProps> = ({
                 })}
               </p>
             </div>
+            )}
 
             {/* Field selection */}
             <div>

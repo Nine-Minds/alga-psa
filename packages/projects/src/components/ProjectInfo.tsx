@@ -17,6 +17,7 @@ import CreateTemplateDialog from './project-templates/CreateTemplateDialog';
 import ProjectMaterialsDrawer from './ProjectMaterialsDrawer';
 import ProjectTaskExportDialog from './ProjectTaskExportDialog';
 import { useTaskShareActions } from './TaskShareActionsContext';
+import { useTaskSelection } from './TaskSelectionContext';
 import { useTranslation } from 'react-i18next';
 
 interface ProjectInfoProps {
@@ -52,6 +53,8 @@ export default function ProjectInfo({
 }: ProjectInfoProps) {
   const { t } = useTranslation(['features/projects', 'common']);
   const { openDrawer, closeDrawer } = useDrawer();
+  const { selectedTaskIds } = useTaskSelection();
+  const selectedTaskCount = selectedTaskIds.size;
 
   const [currentProject, setCurrentProject] = useState(project);
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
@@ -160,7 +163,9 @@ export default function ProjectInfo({
             onClick={() => setShowExportDialog(true)}
           >
             <Download className="h-4 w-4 mr-2" />
-            {t('export.exportTasks', 'Export Tasks')}
+            {selectedTaskCount > 0
+              ? t('export.exportSelected', 'Export {{count}} Selected', { count: selectedTaskCount })
+              : t('export.exportTasks', 'Export Tasks')}
           </Button>
           <ProjectTasksShareMenu />
           <Button
@@ -253,15 +258,18 @@ export default function ProjectInfo({
         onClose={() => setShowExportDialog(false)}
         projectId={currentProject.project_id}
         phases={phases}
+        selectedTaskIds={selectedTaskIds}
       />
     </div>
   );
 }
 
 function ProjectTasksShareMenu() {
-  const { t } = useTranslation('projects');
+  const { t } = useTranslation('features/projects');
   const { t: tCommon } = useTranslation('common');
   const { registration } = useTaskShareActions();
+  const { selectedTaskIds } = useTaskSelection();
+  const selectedTaskCount = selectedTaskIds.size;
 
   if (!registration) return null;
 
@@ -269,7 +277,9 @@ function ProjectTasksShareMenu() {
     {
       id: 'project-tasks-share-print',
       icon: Printer,
-      label: tCommon('actions.print', { defaultValue: 'Print' }),
+      label: selectedTaskCount > 0
+        ? tCommon('actions.printSelected', { defaultValue: 'Print selected ({{count}})', count: selectedTaskCount })
+        : tCommon('actions.print', { defaultValue: 'Print' }),
       onSelect: () => { void registration.triggerPrint(); },
       disabled: registration.isPrinting,
     },
