@@ -32,6 +32,7 @@ services:
       DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
       DB_PORT: ${PGBOUNCER_PORT:-6432}
       REQUIRE_HOCUSPOCUS: ${REQUIRE_HOCUSPOCUS:-false}
+      COLLAB_PERSIST_API_KEY: ${COLLAB_PERSIST_API_KEY:-alga-collab-persist-dev}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
@@ -317,6 +318,8 @@ services:
       DB_USER_HOCUSPOCUS: ${DB_USER_HOCUSPOCUS:-hocuspocus_user}
       AI_DOCUMENT_API_URL: ${AI_DOCUMENT_API_URL:-http://host.docker.internal:3000/api/v1/ai/document-assist}
       AI_DOCUMENT_API_KEY: ${AI_DOCUMENT_API_KEY:-}
+      COLLAB_PERSIST_API_URL: ${COLLAB_PERSIST_API_URL:-http://host.docker.internal:3000/api/internal/collab/persist}
+      COLLAB_PERSIST_API_KEY: ${COLLAB_PERSIST_API_KEY:-alga-collab-persist-dev}
     secrets:
       - postgres_password
       - db_password_hocuspocus
