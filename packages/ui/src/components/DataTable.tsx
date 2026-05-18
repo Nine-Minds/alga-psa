@@ -243,6 +243,25 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
 
   // Reference to the table container for measuring available width
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const suppressNextHeaderSortClickRef = useRef(false);
+  const suppressHeaderSortClickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const suppressNextHeaderSortClick = () => {
+    suppressNextHeaderSortClickRef.current = true;
+    if (suppressHeaderSortClickTimeoutRef.current) {
+      clearTimeout(suppressHeaderSortClickTimeoutRef.current);
+    }
+    suppressHeaderSortClickTimeoutRef.current = setTimeout(() => {
+      suppressNextHeaderSortClickRef.current = false;
+      suppressHeaderSortClickTimeoutRef.current = null;
+    }, 500);
+  };
+
+  useEffect(() => () => {
+    if (suppressHeaderSortClickTimeoutRef.current) {
+      clearTimeout(suppressHeaderSortClickTimeoutRef.current);
+    }
+  }, []);
   
   // State to track which columns should be visible
   const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>(
@@ -682,7 +701,19 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                     <th
                       key={`header_${columnId}_${headerIndex}`}
                       id={id ? `${id}-header-${columnId}` : `header-${columnId}`}
-                      onClick={isSortable ? header.column.getToggleSortingHandler() : undefined}
+                      onClick={isSortable ? (event) => {
+                        if (suppressNextHeaderSortClickRef.current) {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          suppressNextHeaderSortClickRef.current = false;
+                          if (suppressHeaderSortClickTimeoutRef.current) {
+                            clearTimeout(suppressHeaderSortClickTimeoutRef.current);
+                            suppressHeaderSortClickTimeoutRef.current = null;
+                          }
+                          return;
+                        }
+                        header.column.getToggleSortingHandler()?.(event);
+                      } : undefined}
                       className={cn(
                         'group relative h-8 whitespace-nowrap border-b border-r border-[rgb(var(--color-border-100)/0.82)] px-3 py-1.5 text-[12px] font-medium text-[rgb(var(--color-text-500))] transition-colors first:pl-4 last:border-r-0 last:pr-4',
                         isSortable && 'cursor-pointer hover:bg-[rgb(var(--color-border-100)/0.62)] hover:text-[rgb(var(--color-text-700))]',
@@ -707,15 +738,22 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                             role="separator"
                             aria-orientation="vertical"
                             aria-label={`Resize ${typeof colDef?.title === 'string' ? colDef.title : columnId} column`}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                            }}
                             onMouseDown={(event) => {
                               event.stopPropagation();
+                              suppressNextHeaderSortClick();
                               header.getResizeHandler(document)(event);
                             }}
                             onTouchStart={(event) => {
                               event.stopPropagation();
+                              suppressNextHeaderSortClick();
                               header.getResizeHandler(document)(event);
                             }}
                             onDoubleClick={(event) => {
+                              event.preventDefault();
                               event.stopPropagation();
                               header.column.resetSize();
                               setColumnSizing(prev => {
