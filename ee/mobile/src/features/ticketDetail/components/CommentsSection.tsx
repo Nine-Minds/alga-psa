@@ -15,14 +15,27 @@ import { getClientMetadataHeaders } from "../../../device/clientMetadata";
 import { formatDateTimeWithRelative } from "../../../ui/formatters/dateTime";
 import { useModeration } from "../../moderation/useModeration";
 import {
+  extractPlainTextFromRichEditorJson,
   extractPlainTextFromSerializedRichEditorContent,
   isMalformedRichEditorContent,
   serializeRichEditorJson,
 } from "../../ticketRichText/helpers";
 import { TicketRichTextEditor } from "../../ticketRichText/TicketRichTextEditor";
+import {
+  buildCommentThreadGroups,
+  flattenThreadGroups,
+  type FlattenedThreadNode,
+} from "../commentThreads";
 import { ExpandableComment } from "./ExpandableComment";
 
 const QUICK_EMOJIS = ['👍', '👎', '❤️', '😂', '🎉', '👀'];
+const THREAD_INDENT_STEP = 14;
+
+type ReplySubmit = (params: {
+  parentCommentId: string;
+  serializedDraft: string;
+  text: string;
+}) => Promise<boolean>;
 
 export function CommentsSection({
   comments,
@@ -34,6 +47,7 @@ export function CommentsSection({
   baseUrl,
   ticketId,
   onCommentUpdated,
+  onSubmitReply,
 }: {
   comments: TicketComment[];
   visibleCount: number;
@@ -44,29 +58,74 @@ export function CommentsSection({
   baseUrl?: string | null;
   ticketId: string;
   onCommentUpdated?: () => void;
+  onSubmitReply?: ReplySubmit;
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
   const { session } = useAuth();
   const moderation = useModeration();
-  // Sort order: "newest" shows latest first, "oldest" shows oldest first (API default)
+  // Sort order: "newest" shows latest-active threads first, "oldest" oldest
+  // first. Ordering is now at the thread level (by last activity); replies
+  // inside a thread are always chronological.
   const [sortOrder, setSortOrder] = useState<"newest" | "oldest">("newest");
 
-  // Filter comments from muted authors, preserving system events (kind === "event").
-  const visibleComments = useMemo(
+  const meUserId = session?.user?.id;
+
+  const isSystemEvent = useCallback(
+    (c: TicketComment) => c.kind === "event" || typeof c.event_type === "string",
+    [],
+  );
+  const isDeleted = useCallback(
+    (c: TicketComment) => Boolean(c.deleted_at) || c.comment_text === "[deleted]",
+    [],
+  );
+
+  // Group all comments (including muted/deleted) so the tree stays well-formed;
+  // visibility is decided per-node at render time so children never orphan.
+  const threadGroups = useMemo(
     () =>
-      comments.filter((c) => {
-        if (c.kind === "event" || typeof c.event_type === "string") return true;
-        return !moderation.isMuted(c.created_by ?? null);
+      buildCommentThreadGroups<TicketComment>({
+        comments,
+        getCommentId: (c) => c.comment_id,
+        getThreadId: (c) => c.thread_id,
+        getParentCommentId: (c) => c.parent_comment_id,
+        getCreatedAt: (c) => c.created_at,
+        newestFirst: sortOrder === "newest",
       }),
-    [comments, moderation],
+    [comments, sortOrder],
   );
-  const sorted = useMemo(
-    () => sortOrder === "newest" ? [...visibleComments].reverse() : visibleComments,
-    [visibleComments, sortOrder],
+
+  // Per-thread collapse, keyed by the root's comment_id (threadId fallback) —
+  // the same key flattenThreadGroups uses. Independent of the global collapse.
+  const [collapsedRootIds, setCollapsedRootIds] = useState<Set<string>>(new Set());
+
+  // Classify a node for moderation: 'visible' renders normally, 'hidden'
+  // renders a [hidden] placeholder (muted author but has children — keep the
+  // subtree), 'drop' removes it entirely (muted leaf/standalone — today's
+  // behavior). System events and optimistic rows are never muted.
+  const mutedState = useCallback(
+    (node: FlattenedThreadNode<TicketComment>): "visible" | "hidden" | "drop" => {
+      const c = node.comment;
+      if (isSystemEvent(c) || c.optimistic) return "visible";
+      if (!moderation.isMuted(c.created_by ?? null)) return "visible";
+      const childCount = c.comment_id
+        ? node.group.childrenByParentId.get(c.comment_id)?.length ?? 0
+        : 0;
+      return childCount > 0 ? "hidden" : "drop";
+    },
+    [isSystemEvent, moderation],
   );
-  const visible = sorted.slice(0, visibleCount);
-  const remainingCount = Math.max(0, sorted.length - visibleCount);
+
+  const renderable = useMemo(() => {
+    const flat = flattenThreadGroups<TicketComment>(threadGroups, {
+      getCommentId: (c) => c.comment_id,
+      collapsedRootIds,
+    });
+    return flat.filter((node) => mutedState(node) !== "drop");
+  }, [threadGroups, collapsedRootIds, mutedState]);
+
+  const visible = renderable.slice(0, visibleCount);
+  const remainingCount = Math.max(0, renderable.length - visibleCount);
 
   // Local reactions state (initialized from comment data, updated optimistically)
   const [reactionsOverrides, setReactionsOverrides] = useState<Record<string, AggregatedReaction[]>>({});
@@ -79,7 +138,7 @@ export function CommentsSection({
   const [expandedMap, setExpandedMap] = useState<Record<string, boolean>>({});
   const toggleRef = useRef<Record<string, () => void>>({});
 
-  // Collapse state
+  // Collapse state (global collapse-all; independent of per-thread collapse)
   const [collapsed, setCollapsed] = useState(false);
 
   // Comment editing state
@@ -88,7 +147,12 @@ export function CommentsSection({
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
-  const meUserId = session?.user?.id;
+  // Inline reply composer state (one active reply at a time)
+  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
+  const [replyDraft, setReplyDraft] = useState("");
+  const [replyPlainText, setReplyPlainText] = useState("");
+  const [replySaving, setReplySaving] = useState(false);
+  const [replyError, setReplyError] = useState<string | null>(null);
 
   const startEditing = (comment: TicketComment) => {
     setEditingCommentId(comment.comment_id ?? null);
@@ -99,6 +163,51 @@ export function CommentsSection({
   const cancelEditing = () => {
     setEditingCommentId(null);
     setEditError(null);
+  };
+
+  const startReplying = (comment: TicketComment) => {
+    setReplyingToCommentId(comment.comment_id ?? null);
+    setReplyDraft("");
+    setReplyPlainText("");
+    setReplyError(null);
+  };
+
+  const cancelReplying = () => {
+    setReplyingToCommentId(null);
+    setReplyError(null);
+  };
+
+  const toggleThreadCollapsed = (rootKey: string) => {
+    setCollapsedRootIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(rootKey)) next.delete(rootKey);
+      else next.add(rootKey);
+      return next;
+    });
+  };
+
+  const submitReply = async (parentCommentId: string) => {
+    if (!onSubmitReply || replySaving) return;
+    if (!replyPlainText.trim()) {
+      setReplyError(t("comments.errors.empty"));
+      return;
+    }
+    setReplySaving(true);
+    setReplyError(null);
+    try {
+      const ok = await onSubmitReply({
+        parentCommentId,
+        serializedDraft: replyDraft,
+        text: replyPlainText,
+      });
+      if (ok) {
+        cancelReplying();
+      } else {
+        setReplyError(t("comments.errors.generic"));
+      }
+    } finally {
+      setReplySaving(false);
+    }
   };
 
   const confirmReport = useCallback(
@@ -329,29 +438,122 @@ export function CommentsSection({
         <Text style={{ ...typography.body, marginTop: spacing.sm, color: colors.textSecondary }}>{t("comments.noComments")}</Text>
       ) : (
         <View style={{ marginTop: spacing.sm }}>
-          {visible.map((c, idx) => {
+          {visible.map((node, idx) => {
+            const c = node.comment;
+            const indent = node.visualDepth * THREAD_INDENT_STEP;
+            const isReplyNode = !node.isRoot;
+            const rootKey = node.group.root.comment_id ?? node.group.threadId;
+            const threadCollapsed = collapsedRootIds.has(rootKey);
             const kind = c.kind;
             const eventType = c.event_type;
-            const isSystemEvent = kind === "event" || typeof eventType === "string";
+            const isSystemEventComment = kind === "event" || typeof eventType === "string";
             const isOptimistic = Boolean(c.optimistic);
-            const canEdit = !isSystemEvent && !isOptimistic && Boolean(meUserId && c.created_by === meUserId);
+            const deleted = isDeleted(c);
+            const hidden = mutedState(node) === "hidden";
             const isEditingThis = editingCommentId === c.comment_id;
+            const isReplyingThis = replyingToCommentId === c.comment_id;
+            const canEdit = !isSystemEventComment && !isOptimistic && !deleted && !hidden && Boolean(meUserId && c.created_by === meUserId);
+            const canReply = Boolean(onSubmitReply) && !isSystemEventComment && !isOptimistic && !deleted && !hidden && !isEditingThis;
             const commentPlainText = extractPlainTextFromSerializedRichEditorContent(c.comment_text);
             const eventText = c.event_text ?? (eventType ? `${eventType}: ${commentPlainText}` : commentPlainText);
-            const badgeLabel = isSystemEvent ? t("comments.event") : isOptimistic ? t("comments.sending") : c.is_resolution ? t("comments.resolution") : c.is_internal ? t("comments.internal") : t("comments.client");
+            const badgeLabel = isSystemEventComment ? t("comments.event") : isOptimistic ? t("comments.sending") : c.is_resolution ? t("comments.resolution") : c.is_internal ? t("comments.internal") : t("comments.client");
             const accessibilityLabel = `${badgeLabel}. ${c.created_by_name ?? t("common:unknown")}. ${formatDateTimeWithRelative(c.created_at)}. ${
-              isSystemEvent ? eventText : commentPlainText || t("comments.richComment")
+              isSystemEventComment ? eventText : commentPlainText || t("comments.richComment")
             }`;
 
-            return (
+            // Connector rail is an explicit absolutely-positioned element: a
+            // left CSS border is ~invisible against the dark card and RN does
+            // not render a dashed single-side border on a content view. The
+            // inter-comment gap is paddingTop (inside the wrapper) so the rail
+            // spans it and consecutive replies read as one continuous line.
+            const nodeWrapperStyle = {
+              marginLeft: indent,
+              opacity: isOptimistic ? 0.75 : 1,
+              ...(isReplyNode
+                ? {
+                    position: "relative" as const,
+                    paddingLeft: 12,
+                    paddingTop: idx === 0 ? 0 : spacing.md,
+                  }
+                : { marginTop: idx === 0 ? 0 : spacing.md }),
+            } as const;
+
+            // Direct replies (data depth 1) get a solid rail; nested
+            // sub-threads (depth >= 2) get a dashed rail, mirroring the web's
+            // dashed sub-thread rail. colors.textSecondary is the same gray as
+            // the timestamp text — guaranteed visible on the dark card.
+            // RN's borderStyle:'dashed' is unreliable on a single-side border
+            // (renders nothing on iOS), so the dashed sub-thread rail is built
+            // from real stacked segments clipped to the node height — this
+            // always renders. Depth-1 rail is a plain solid bar.
+            const railEl = !isReplyNode ? null : node.depth >= 2 ? (
               <View
-                key={c.comment_id ?? String(idx)}
+                pointerEvents="none"
+                style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 2, overflow: "hidden" }}
+              >
+                {Array.from({ length: 120 }).map((_, i) => (
+                  <View
+                    key={i}
+                    style={{ width: 2, height: 4, marginBottom: 4, backgroundColor: colors.textSecondary }}
+                  />
+                ))}
+              </View>
+            ) : (
+              <View
+                pointerEvents="none"
+                style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 2, backgroundColor: colors.textSecondary }}
+              />
+            );
+
+            // Deleted / moderation-hidden placeholder: keep position + subtree.
+            if (deleted || hidden) {
+              return (
+                <React.Fragment key={c.comment_id ?? String(idx)}>
+                  <View style={nodeWrapperStyle}>
+                    {railEl}
+                    <Text
+                      style={{ ...typography.caption, color: colors.textSecondary, fontStyle: "italic" }}
+                    >
+                      {deleted ? t("comments.deletedPlaceholder") : t("comments.hiddenPlaceholder")}
+                    </Text>
+                  </View>
+                  {node.isRoot && node.group.replyCount > 0 ? (
+                    <Pressable
+                      onPress={() => toggleThreadCollapsed(rootKey)}
+                      accessibilityRole="button"
+                      accessibilityLabel={threadCollapsed ? t("comments.expand") : t("comments.collapse")}
+                      style={({ pressed }) => ({
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                        marginTop: spacing.xs,
+                        marginLeft: indent,
+                        opacity: pressed ? 0.85 : 1,
+                      })}
+                    >
+                      <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+                        {t("comments.repliesCount", { count: node.group.replyCount })}
+                      </Text>
+                      <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
+                        {threadCollapsed ? t("comments.expand") : t("comments.collapse")}
+                      </Text>
+                      <Feather name={threadCollapsed ? "chevron-down" : "chevron-up"} size={12} color={colors.primary} />
+                    </Pressable>
+                  ) : null}
+                </React.Fragment>
+              );
+            }
+
+            return (
+              <React.Fragment key={c.comment_id ?? String(idx)}>
+              <View
                 accessible
                 accessibilityLabel={accessibilityLabel}
-                style={{ marginTop: idx === 0 ? 0 : spacing.md, opacity: isOptimistic ? 0.75 : 1 }}
+                style={nodeWrapperStyle}
               >
+                {railEl}
                 <View style={{ flexDirection: "row", alignItems: "center" }}>
-                  {!isSystemEvent ? (
+                  {!isSystemEventComment ? (
                     <Avatar
                       name={c.created_by_name ?? undefined}
                       imageUri={c.created_by_avatar_url && baseUrl ? `${baseUrl}${c.created_by_avatar_url}` : undefined}
@@ -359,12 +561,12 @@ export function CommentsSection({
                       size="sm"
                     />
                   ) : null}
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", flex: 1, marginLeft: isSystemEvent ? 0 : spacing.sm }}>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", flex: 1, marginLeft: isSystemEventComment ? 0 : spacing.sm }}>
                     <Text style={{ ...typography.caption, color: colors.textSecondary }}>
                       {c.created_by_name ?? t("common:unknown")} • {formatDateTimeWithRelative(c.created_at)}
                     </Text>
                     <View style={{ width: spacing.sm }} />
-                    {isSystemEvent ? (
+                    {isSystemEventComment ? (
                       <Badge label={t("comments.event")} tone="neutral" />
                     ) : isOptimistic ? (
                       <Badge label={t("comments.sending")} tone="neutral" />
@@ -405,6 +607,16 @@ export function CommentsSection({
                     </View>
                   ) : (
                     <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      {canReply ? (
+                        <Pressable
+                          onPress={() => startReplying(c)}
+                          accessibilityRole="button"
+                          accessibilityLabel={t("comments.reply")}
+                          style={{ padding: spacing.xs }}
+                        >
+                          <Feather name="corner-up-left" size={16} color={colors.textSecondary} />
+                        </Pressable>
+                      ) : null}
                       {canEdit ? (
                         <Pressable
                           onPress={() => startEditing(c)}
@@ -415,7 +627,7 @@ export function CommentsSection({
                           <Feather name="edit-2" size={16} color={colors.textSecondary} />
                         </Pressable>
                       ) : null}
-                      {!isSystemEvent && !isOptimistic ? (
+                      {!isSystemEventComment && !isOptimistic ? (
                         <Pressable
                           onPress={() => openModerationMenu(c)}
                           accessibilityRole="button"
@@ -448,7 +660,7 @@ export function CommentsSection({
                       </Text>
                     ) : null}
                   </>
-                ) : isSystemEvent ? (
+                ) : isSystemEventComment ? (
                   <Text style={{ ...typography.body, color: colors.text, marginTop: 2, fontStyle: "italic" }}>
                     {eventText}
                   </Text>
@@ -487,8 +699,65 @@ export function CommentsSection({
                     />
                   )
                 )}
+                {/* Inline reply composer */}
+                {isReplyingThis ? (
+                  <View style={{ marginTop: spacing.sm }}>
+                    <TicketRichTextEditor
+                      content={replyDraft}
+                      editable={!replySaving}
+                      showToolbar
+                      height={140}
+                      loadingLabel={t("comments.loadingCommentEditor")}
+                      onContentChange={({ json }) => {
+                        setReplyDraft(serializeRichEditorJson(json));
+                        setReplyPlainText(extractPlainTextFromRichEditorJson(json));
+                      }}
+                    />
+                    {replyError ? (
+                      <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.xs }}>
+                        {replyError}
+                      </Text>
+                    ) : null}
+                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "flex-end", gap: spacing.md, marginTop: spacing.sm }}>
+                      <Pressable
+                        onPress={cancelReplying}
+                        disabled={replySaving}
+                        accessibilityRole="button"
+                        accessibilityLabel={t("common:cancel")}
+                        style={{ paddingVertical: spacing.xs, paddingHorizontal: spacing.sm, opacity: replySaving ? 0.4 : 1 }}
+                      >
+                        <Text style={{ ...typography.caption, color: colors.textSecondary, fontWeight: "600" }}>
+                          {t("common:cancel")}
+                        </Text>
+                      </Pressable>
+                      <Pressable
+                        onPress={() => void submitReply(c.comment_id!)}
+                        disabled={replySaving || replyPlainText.trim().length === 0}
+                        accessibilityRole="button"
+                        accessibilityLabel={t("comments.reply")}
+                        style={{
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 6,
+                          paddingVertical: spacing.xs,
+                          paddingHorizontal: spacing.md,
+                          borderRadius: 8,
+                          backgroundColor: colors.primary,
+                          opacity: replySaving || replyPlainText.trim().length === 0 ? 0.5 : 1,
+                        }}
+                      >
+                        {replySaving ? (
+                          <ActivityIndicator size="small" color={colors.background} />
+                        ) : null}
+                        <Text style={{ ...typography.caption, color: colors.background, fontWeight: "600" }}>
+                          {replySaving ? t("comments.sending") : t("comments.reply")}
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </View>
+                ) : null}
                 {/* Reactions (left) + see more (right) — two-column row */}
-                {!isSystemEvent && c.comment_id ? (
+                {!isSystemEventComment && c.comment_id ? (
                   <View style={{ flexDirection: "row", alignItems: "center", marginTop: spacing.xs }}>
                     {/* Left: reaction pills + add button */}
                     <View style={{ flexDirection: "row", flexWrap: "wrap", alignItems: "center", flex: 1, gap: 4 }}>
@@ -576,6 +845,31 @@ export function CommentsSection({
                   </View>
                 ) : null}
               </View>
+              {/* Per-thread bar (root with replies) */}
+              {node.isRoot && node.group.replyCount > 0 ? (
+                <Pressable
+                  onPress={() => toggleThreadCollapsed(rootKey)}
+                  accessibilityRole="button"
+                  accessibilityLabel={threadCollapsed ? t("comments.expand") : t("comments.collapse")}
+                  style={({ pressed }) => ({
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    marginTop: spacing.xs,
+                    marginLeft: indent,
+                    opacity: pressed ? 0.85 : 1,
+                  })}
+                >
+                  <Text style={{ ...typography.caption, color: colors.textSecondary }}>
+                    {t("comments.repliesCount", { count: node.group.replyCount })}
+                  </Text>
+                  <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
+                    {threadCollapsed ? t("comments.expand") : t("comments.collapse")}
+                  </Text>
+                  <Feather name={threadCollapsed ? "chevron-down" : "chevron-up"} size={12} color={colors.primary} />
+                </Pressable>
+              ) : null}
+              </React.Fragment>
             );
           })}
 

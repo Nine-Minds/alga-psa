@@ -602,6 +602,7 @@ export function TicketDetailBody({
             baseUrl={config.ok ? config.baseUrl : null}
             ticketId={ticketId}
             onCommentUpdated={() => void fetchComments()}
+            onSubmitReply={commentDraftHook.submitReply}
           />
           <View style={{ height: spacing.sm }} />
           <CommentComposer
