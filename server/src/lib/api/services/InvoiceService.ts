@@ -83,6 +83,14 @@ import {
   updateInvoiceTotalsAndRecordTransaction
 } from '@alga-psa/billing/services/invoiceService';
 
+type DeferredEvent = () => Promise<void>;
+
+async function publishDeferredEvents(events: DeferredEvent[]): Promise<void> {
+  for (const publish of events) {
+    await publish();
+  }
+}
+
 export interface InvoiceServiceContext extends ServiceContext {
   permissions?: string[];
 }
@@ -374,8 +382,9 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'create');
 
     const { knex } = await this.getKnex();
+    const deferredEvents: DeferredEvent[] = [];
     
-    return withTransaction(knex, async (trx) => {
+    const invoice = await withTransaction(knex, async (trx) => {
       // Generate invoice number
       const invoiceNumber = await generateInvoiceNumber(trx);
 
@@ -433,7 +442,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         details: { action: 'invoice.created' }
       });
 
-      await publishEvent({
+      deferredEvents.push(() => publishEvent({
         eventType: 'INVOICE_CREATED',
         payload: {
           tenantId: context.tenant,
@@ -442,10 +451,13 @@ export class InvoiceService extends BaseService<IInvoice> {
           userId: context.userId,
           timestamp: new Date().toISOString()
         }
-      });
+      }));
 
       return this.getById(invoice.invoice_id, context) as Promise<IInvoice>;
     });
+
+    await publishDeferredEvents(deferredEvents);
+    return invoice;
   }
 
   /**
@@ -455,8 +467,9 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'update');
 
     const { knex } = await this.getKnex();
+    const deferredEvents: DeferredEvent[] = [];
     
-    return withTransaction(knex, async (trx) => {
+    const invoice = await withTransaction(knex, async (trx) => {
       const existing = await trx('invoices')
         .where({ invoice_id: id, tenant: context.tenant })
         .first();
@@ -500,7 +513,7 @@ export class InvoiceService extends BaseService<IInvoice> {
           .del();
 
         for (const itemId of replacedItemIds) {
-          await publishEvent({
+          deferredEvents.push(() => publishEvent({
             eventType: 'INVOICE_ITEM_DELETED',
             payload: {
               tenantId: context.tenant,
@@ -509,7 +522,7 @@ export class InvoiceService extends BaseService<IInvoice> {
               userId: context.userId,
               timestamp: new Date().toISOString()
             }
-          });
+          }));
         }
         
       // Normalize header alias: prefer is_bundle_header, but accept is_bundle_header
@@ -548,7 +561,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       const nextDueDate = updateData.due_date ? toIsoDateString(updateData.due_date) : previousDueDate;
 
       if (newStatus !== previousStatus) {
-        await publishWorkflowEvent({
+        deferredEvents.push(() => publishWorkflowEvent({
           eventType: 'INVOICE_STATUS_CHANGED',
           payload: buildInvoiceStatusChangedPayload({
             invoiceId: id,
@@ -562,11 +575,11 @@ export class InvoiceService extends BaseService<IInvoice> {
             occurredAt,
             actor: { actorType: 'USER', actorUserId: context.userId },
           },
-        });
+        }));
       }
 
       if (previousDueDate && nextDueDate && previousDueDate !== nextDueDate) {
-        await publishWorkflowEvent({
+        deferredEvents.push(() => publishWorkflowEvent({
           eventType: 'INVOICE_DUE_DATE_CHANGED',
           payload: buildInvoiceDueDateChangedPayload({
             invoiceId: id,
@@ -580,7 +593,7 @@ export class InvoiceService extends BaseService<IInvoice> {
             occurredAt,
             actor: { actorType: 'USER', actorUserId: context.userId },
           },
-        });
+        }));
       }
 
       if (newStatus === 'overdue' && previousStatus !== 'overdue') {
@@ -593,7 +606,7 @@ export class InvoiceService extends BaseService<IInvoice> {
           tenantId: context.tenant,
         });
 
-        await publishWorkflowEvent({
+        deferredEvents.push(() => publishWorkflowEvent({
           eventType: 'INVOICE_OVERDUE',
           payload: buildInvoiceOverduePayload({
             invoiceId: id,
@@ -609,7 +622,7 @@ export class InvoiceService extends BaseService<IInvoice> {
             occurredAt,
             actor: { actorType: 'USER', actorUserId: context.userId },
           },
-        });
+        }));
       }
 
       if (previousStatus === 'overdue' && newStatus === 'cancelled') {
@@ -623,7 +636,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         });
 
         if (amountDue > 0) {
-          await publishWorkflowEvent({
+          deferredEvents.push(() => publishWorkflowEvent({
             eventType: 'INVOICE_WRITTEN_OFF',
             payload: buildInvoiceWrittenOffPayload({
               invoiceId: id,
@@ -637,11 +650,11 @@ export class InvoiceService extends BaseService<IInvoice> {
               occurredAt,
               actor: { actorType: 'USER', actorUserId: context.userId },
             },
-          });
+          }));
         }
       }
 
-      await publishEvent({
+      deferredEvents.push(() => publishEvent({
         eventType: 'INVOICE_UPDATED',
         payload: {
           tenantId: context.tenant,
@@ -651,10 +664,13 @@ export class InvoiceService extends BaseService<IInvoice> {
           changes: data as Record<string, unknown>,
           timestamp: occurredAt
         }
-      });
+      }));
 
       return this.getById(id, context) as Promise<IInvoice>;
     });
+
+    await publishDeferredEvents(deferredEvents);
+    return invoice;
   }
 
   /**
@@ -664,8 +680,9 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'delete');
 
     const { knex } = await this.getKnex();
+    const deferredEvents: DeferredEvent[] = [];
     
-    return withTransaction(knex, async (trx) => {
+    await withTransaction(knex, async (trx) => {
       const invoice = await trx('invoices')
         .where({ invoice_id: id, tenant: context.tenant })
         .first();
@@ -725,7 +742,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	      });
 
 	      if (softCancelled && String(invoice.status) !== 'cancelled') {
-	        await publishWorkflowEvent({
+	        deferredEvents.push(() => publishWorkflowEvent({
 	          eventType: 'INVOICE_STATUS_CHANGED',
 	          payload: buildInvoiceStatusChangedPayload({
 	            invoiceId: id,
@@ -739,11 +756,11 @@ export class InvoiceService extends BaseService<IInvoice> {
 	            occurredAt,
 	            actor: { actorType: 'USER', actorUserId: context.userId },
 	          },
-	        });
+	        }));
 	      }
 
 	      // Publish event
-	      await publishEvent({
+	      deferredEvents.push(() => publishEvent({
 	        eventType: 'INVOICE_DELETED',
 	        payload: {
 	          tenantId: context.tenant,
@@ -751,8 +768,10 @@ export class InvoiceService extends BaseService<IInvoice> {
 	          userId: context.userId,
 	          timestamp: occurredAt
 	        }
-	      });
+	      }));
     });
+
+    await publishDeferredEvents(deferredEvents);
   }
 
   // ============================================================================
@@ -766,8 +785,9 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'finalize');
 
     const { knex } = await this.getKnex();
+    const deferredEvents: DeferredEvent[] = [];
     
-    return withTransaction(knex, async (trx) => {
+    const invoice = await withTransaction(knex, async (trx) => {
       const invoice = await trx('invoices')
         .where({ invoice_id: data.invoice_id, tenant: context.tenant })
         .first();
@@ -822,7 +842,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       });
 
       // Publish event
-      await publishEvent({
+      deferredEvents.push(() => publishEvent({
         eventType: 'INVOICE_FINALIZED',
         payload: {
           tenantId: context.tenant,
@@ -831,9 +851,9 @@ export class InvoiceService extends BaseService<IInvoice> {
           userId: context.userId,
           timestamp: new Date().toISOString()
         }
-      });
+      }));
 
-      await publishWorkflowEvent({
+      deferredEvents.push(() => publishWorkflowEvent({
         eventType: 'INVOICE_STATUS_CHANGED',
         payload: buildInvoiceStatusChangedPayload({
           invoiceId: data.invoice_id,
@@ -846,10 +866,13 @@ export class InvoiceService extends BaseService<IInvoice> {
           tenantId: context.tenant,
           actor: { actorType: 'USER', actorUserId: context.userId },
         },
-      });
+      }));
 
       return this.getById(data.invoice_id, context) as Promise<IInvoice>;
     });
+
+    await publishDeferredEvents(deferredEvents);
+    return invoice;
   }
 
   /**
@@ -859,8 +882,9 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'send');
 
     const { knex } = await this.getKnex();
+    const deferredEvents: DeferredEvent[] = [];
     
-    return withTransaction(knex, async (trx) => {
+    const invoice = await withTransaction(knex, async (trx) => {
       const invoice = await trx('invoices')
         .where({ invoice_id: data.invoice_id, tenant: context.tenant })
         .first();
@@ -919,7 +943,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       // Publish event
       const sentAt = new Date().toISOString();
-      await publishWorkflowEvent({
+      deferredEvents.push(() => publishWorkflowEvent({
         eventType: 'INVOICE_SENT',
         payload: buildInvoiceSentPayload({
           invoiceId: data.invoice_id,
@@ -937,10 +961,10 @@ export class InvoiceService extends BaseService<IInvoice> {
           occurredAt: sentAt,
           actor: { actorType: 'USER', actorUserId: context.userId },
         },
-      });
+      }));
 
       if (String(invoice.status) !== 'sent') {
-        await publishWorkflowEvent({
+        deferredEvents.push(() => publishWorkflowEvent({
           eventType: 'INVOICE_STATUS_CHANGED',
           payload: buildInvoiceStatusChangedPayload({
             invoiceId: data.invoice_id,
@@ -954,11 +978,14 @@ export class InvoiceService extends BaseService<IInvoice> {
             occurredAt: sentAt,
             actor: { actorType: 'USER', actorUserId: context.userId },
           },
-        });
+        }));
       }
 
       return this.getById(data.invoice_id, context) as Promise<IInvoice>;
     });
+
+    await publishDeferredEvents(deferredEvents);
+    return invoice;
   }
 
   /**
@@ -968,8 +995,9 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'payment');
 
     const { knex } = await this.getKnex();
+    const deferredEvents: DeferredEvent[] = [];
     
-    return withTransaction(knex, async (trx) => {
+    const invoice = await withTransaction(knex, async (trx) => {
       const occurredAt = new Date().toISOString();
 
       const invoice = await trx('invoices')
@@ -1000,7 +1028,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       await trx('invoice_payments').insert(paymentData);
 
-      await publishWorkflowEvent({
+      deferredEvents.push(() => publishWorkflowEvent({
         eventType: 'PAYMENT_RECORDED',
         payload: buildPaymentRecordedPayload({
           paymentId: paymentData.payment_id,
@@ -1018,9 +1046,9 @@ export class InvoiceService extends BaseService<IInvoice> {
           actor: { actorType: 'USER', actorUserId: context.userId },
         },
         idempotencyKey: `payment_recorded:${paymentData.payment_id}`,
-      });
+      }));
 
-      await publishWorkflowEvent({
+      deferredEvents.push(() => publishWorkflowEvent({
         eventType: 'PAYMENT_APPLIED',
         payload: buildPaymentAppliedPayload({
           paymentId: paymentData.payment_id,
@@ -1034,7 +1062,7 @@ export class InvoiceService extends BaseService<IInvoice> {
           actor: { actorType: 'USER', actorUserId: context.userId },
         },
         idempotencyKey: `payment_applied:${paymentData.payment_id}:${data.invoice_id}`,
-      });
+      }));
 
       // Calculate total payments
       const payments = await trx('invoice_payments')
@@ -1080,7 +1108,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	      });
 
 	      if (String(newStatus) !== String(invoice.status)) {
-	        await publishWorkflowEvent({
+	        deferredEvents.push(() => publishWorkflowEvent({
 	          eventType: 'INVOICE_STATUS_CHANGED',
 	          payload: buildInvoiceStatusChangedPayload({
 	            invoiceId: data.invoice_id,
@@ -1094,11 +1122,11 @@ export class InvoiceService extends BaseService<IInvoice> {
 	            occurredAt,
 	            actor: { actorType: 'USER', actorUserId: context.userId },
 	          },
-	        });
+	        }));
 	      }
 
 	      // Publish event
-	      await publishEvent({
+	      deferredEvents.push(() => publishEvent({
 	        eventType: 'INVOICE_PAYMENT_RECORDED',
 	        payload: {
 	          tenantId: context.tenant,
@@ -1109,10 +1137,13 @@ export class InvoiceService extends BaseService<IInvoice> {
 	          userId: context.userId,
 	          timestamp: new Date().toISOString()
 	        }
-	      });
+	      }));
 
       return this.getById(data.invoice_id, context) as Promise<IInvoice>;
     });
+
+    await publishDeferredEvents(deferredEvents);
+    return invoice;
   }
 
   /**
@@ -1122,8 +1153,9 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'credit');
 
     const { knex } = await this.getKnex();
+    const deferredEvents: DeferredEvent[] = [];
     
-    return withTransaction(knex, async (trx) => {
+    const invoice = await withTransaction(knex, async (trx) => {
       const invoice = await trx('invoices')
         .where({ invoice_id: data.invoice_id, tenant: context.tenant })
         .first();
@@ -1208,7 +1240,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 
 	      if (String(newStatus) !== String(invoice.status)) {
 	        const occurredAt = new Date().toISOString();
-	        await publishWorkflowEvent({
+	        deferredEvents.push(() => publishWorkflowEvent({
 	          eventType: 'INVOICE_STATUS_CHANGED',
 	          payload: buildInvoiceStatusChangedPayload({
 	            invoiceId: data.invoice_id,
@@ -1222,11 +1254,11 @@ export class InvoiceService extends BaseService<IInvoice> {
 	            occurredAt,
 	            actor: { actorType: 'USER', actorUserId: context.userId },
 	          },
-	        });
+	        }));
 	      }
 
 	      // Publish event
-	      await publishEvent({
+	      deferredEvents.push(() => publishEvent({
 	        eventType: 'INVOICE_CREDIT_APPLIED',
 	        payload: {
 	          tenantId: context.tenant,
@@ -1238,10 +1270,13 @@ export class InvoiceService extends BaseService<IInvoice> {
 	          userId: context.userId,
 	          timestamp: new Date().toISOString()
 	        }
-	      });
+	      }));
 
       return this.getById(data.invoice_id, context) as Promise<IInvoice>;
     });
+
+    await publishDeferredEvents(deferredEvents);
+    return invoice;
   }
 
   /**
@@ -1252,8 +1287,9 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'refund');
 
     const { knex } = await this.getKnex();
+    const deferredEvents: DeferredEvent[] = [];
 
-    return withTransaction(knex, async (trx) => {
+    const invoice = await withTransaction(knex, async (trx) => {
       const occurredAt = new Date().toISOString();
 
       const invoice = await trx('invoices')
@@ -1296,7 +1332,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 
       await trx('invoice_payments').insert(refundData);
 
-      await publishWorkflowEvent({
+      deferredEvents.push(() => publishWorkflowEvent({
         eventType: 'PAYMENT_REFUNDED',
         payload: buildPaymentRefundedPayload({
           paymentId: refundData.payment_id,
@@ -1312,7 +1348,7 @@ export class InvoiceService extends BaseService<IInvoice> {
           actor: { actorType: 'USER', actorUserId: context.userId },
         },
         idempotencyKey: `payment_refunded:${refundData.payment_id}`,
-      });
+      }));
 
       // Calculate net payments after refund
       const netPayments = await trx('invoice_payments')
@@ -1359,7 +1395,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	      });
 
 	      if (String(newStatus) !== String(invoice.status)) {
-	        await publishWorkflowEvent({
+	        deferredEvents.push(() => publishWorkflowEvent({
 	          eventType: 'INVOICE_STATUS_CHANGED',
 	          payload: buildInvoiceStatusChangedPayload({
 	            invoiceId: data.invoice_id,
@@ -1373,11 +1409,11 @@ export class InvoiceService extends BaseService<IInvoice> {
 	            occurredAt,
 	            actor: { actorType: 'USER', actorUserId: context.userId },
 	          },
-	        });
+	        }));
 	      }
 
 	      // Publish event
-	      await publishEvent({
+	      deferredEvents.push(() => publishEvent({
 	        eventType: 'INVOICE_REFUND_RECORDED',
 	        payload: {
 	          tenantId: context.tenant,
@@ -1389,10 +1425,13 @@ export class InvoiceService extends BaseService<IInvoice> {
 	          userId: context.userId,
 	          timestamp: new Date().toISOString()
 	        }
-	      });
+	      }));
 
       return this.getById(data.invoice_id, context) as Promise<IInvoice>;
     });
+
+    await publishDeferredEvents(deferredEvents);
+    return invoice;
   }
 
   // ============================================================================
@@ -1406,8 +1445,9 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'bulk_update');
 
     const { knex } = await this.getKnex();
+    const deferredEvents: DeferredEvent[] = [];
     
-    return withTransaction(knex, async (trx) => {
+    const result = await withTransaction(knex, async (trx) => {
       const results: { updated_count: number; errors: string[] } = { updated_count: 0, errors: [] };
 
       for (const invoiceId of data.invoice_ids) {
@@ -1458,7 +1498,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	          const newStatus = String(data.status);
 
 	          if (newStatus !== previousStatus) {
-	            await publishWorkflowEvent({
+	            deferredEvents.push(() => publishWorkflowEvent({
 	              eventType: 'INVOICE_STATUS_CHANGED',
 	              payload: buildInvoiceStatusChangedPayload({
 	                invoiceId,
@@ -1472,7 +1512,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	                occurredAt,
 	                actor: { actorType: 'USER', actorUserId: context.userId },
 	              },
-	            });
+	            }));
 	          }
 
 	          if (newStatus === 'overdue' && previousStatus !== 'overdue') {
@@ -1483,7 +1523,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	              tenantId: context.tenant,
 	            });
 
-	            await publishWorkflowEvent({
+	            deferredEvents.push(() => publishWorkflowEvent({
 	              eventType: 'INVOICE_OVERDUE',
 	              payload: buildInvoiceOverduePayload({
 	                invoiceId,
@@ -1499,7 +1539,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	                occurredAt,
 	                actor: { actorType: 'USER', actorUserId: context.userId },
 	              },
-	            });
+	            }));
 	          }
 
 	          if (previousStatus === 'overdue' && newStatus === 'cancelled') {
@@ -1511,7 +1551,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	            });
 
 	            if (amountDue > 0) {
-	              await publishWorkflowEvent({
+	              deferredEvents.push(() => publishWorkflowEvent({
 	                eventType: 'INVOICE_WRITTEN_OFF',
 	                payload: buildInvoiceWrittenOffPayload({
 	                  invoiceId,
@@ -1525,7 +1565,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	                  occurredAt,
 	                  actor: { actorType: 'USER', actorUserId: context.userId },
 	                },
-	              });
+	              }));
 	            }
 	          }
 
@@ -1536,7 +1576,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       }
 
       // Publish bulk event
-      await publishEvent({
+      deferredEvents.push(() => publishEvent({
         eventType: 'INVOICE_BULK_STATUS_UPDATE',
         payload: {
           tenantId: context.tenant,
@@ -1547,10 +1587,13 @@ export class InvoiceService extends BaseService<IInvoice> {
           userId: context.userId,
           timestamp: new Date().toISOString()
         }
-      });
+      }));
 
       return results;
     });
+
+    await publishDeferredEvents(deferredEvents);
+    return result;
   }
 
   /**

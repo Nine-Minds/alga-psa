@@ -11,12 +11,9 @@ import { ITicketMaterial } from 'server/src/interfaces/material.interfaces';
 import { TICKET_ORIGINS } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
-import { getEventBus } from 'server/src/lib/eventBus';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
-import { getEmailEventChannel } from '@alga-psa/notifications';
 import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
-import { ServerEventPublisher } from '@alga-psa/event-bus';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 // Event types no longer needed as we create objects directly
 import {
@@ -773,7 +770,7 @@ export class TicketService extends BaseService<ITicket> {
     private async createTicket(data: CreateTicketData, context: ServiceContext): Promise<ITicket> {
       const { knex } = await this.getKnex();
   
-      return withTransaction(knex, async (trx) => {
+      const fullTicket = await withTransaction(knex, async (trx) => {
         // Validate status belongs to the specified board before proceeding
         const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
           data.status_id,
@@ -806,17 +803,17 @@ export class TicketService extends BaseService<ITicket> {
           ticket_origin: TICKET_ORIGINS.API,
         };
 
-        // Create adapters for API service context
-        const eventPublisher = new ServerEventPublisher();
+        // Publish after the transaction commits so notification subscribers can
+        // read the newly-created ticket on their own connections.
         const analyticsTracker = new ServerAnalyticsTracker();
 
-        // Use shared TicketModel with retry logic, events, and analytics
+        // Use shared TicketModel with retry logic and analytics
         const ticketResult = await TicketModel.createTicketWithRetry(
           createTicketInput,
           context.tenant,
           trx,
           {}, // validation options
-          eventPublisher,
+          undefined,
           analyticsTracker,
           context.userId,
           3 // max retries
@@ -843,6 +840,21 @@ export class TicketService extends BaseService<ITicket> {
 
         return fullTicket as ITicket;
       });
+
+      await this.safePublishEvent('TICKET_CREATED', context, {
+        ticketId: fullTicket.ticket_id,
+        userId: context.userId,
+        createdByUserId: context.userId,
+        createdAt: fullTicket.entered_at
+          ? new Date(fullTicket.entered_at as unknown as string).toISOString()
+          : new Date().toISOString(),
+        source: 'api',
+        board_id: fullTicket.board_id,
+        priority_id: fullTicket.priority_id,
+        client_id: fullTicket.client_id,
+      });
+
+      return fullTicket;
     }
 
 
@@ -999,7 +1011,7 @@ export class TicketService extends BaseService<ITicket> {
   async createFromAsset(data: CreateTicketFromAssetData, context: ServiceContext): Promise<ITicket> {
     const { knex } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
+    const fullTicket = await withTransaction(knex, async (trx) => {
       // Verify asset exists
       const asset = await trx('assets')
         .where({ asset_id: data.asset_id, tenant: context.tenant })
@@ -1022,8 +1034,8 @@ export class TicketService extends BaseService<ITicket> {
         ]);
       }
 
-      // Create adapters for API service context
-      const eventPublisher = new ServerEventPublisher();
+      // Publish after the transaction commits so notification subscribers can
+      // read the newly-created ticket on their own connections.
       const analyticsTracker = new ServerAnalyticsTracker();
 
       // Use shared TicketModel for asset ticket creation
@@ -1040,7 +1052,7 @@ export class TicketService extends BaseService<ITicket> {
         context.userId,
         context.tenant,
         trx,
-        eventPublisher,
+        undefined,
         analyticsTracker
       );
 
@@ -1063,6 +1075,21 @@ export class TicketService extends BaseService<ITicket> {
 
       return fullTicket as ITicket;
     });
+
+    await this.safePublishEvent('TICKET_CREATED', context, {
+      ticketId: fullTicket.ticket_id,
+      userId: context.userId,
+      createdByUserId: context.userId,
+      createdAt: fullTicket.entered_at
+        ? new Date(fullTicket.entered_at as unknown as string).toISOString()
+        : new Date().toISOString(),
+      source: 'api',
+      board_id: fullTicket.board_id,
+      priority_id: fullTicket.priority_id,
+      client_id: fullTicket.client_id,
+    });
+
+    return fullTicket;
   }
 
   /**
@@ -1192,7 +1219,7 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<any> {
     const { knex } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
+    const result = await withTransaction(knex, async (trx) => {
       // Verify ticket exists
       const ticket = await trx('tickets')
         .where({ ticket_id: ticketId, tenant: context.tenant })
@@ -1264,20 +1291,8 @@ export class TicketService extends BaseService<ITicket> {
 
       const authorName = user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
 
-      // Publish TICKET_COMMENT_ADDED event for mention notifications
-      await this.safePublishEvent('TICKET_COMMENT_ADDED', context, {
-        ticketId: ticketId,
-        userId: context.userId,
-        comment: {
-          id: comment.comment_id,
-          content: comment.note,
-          author: authorName,
-          isInternal: comment.is_internal
-        }
-      });
-
       // Map database fields to API response format
-      return {
+      const response = {
         ...comment,
         comment_text: comment.note,
         comment_html: renderTicketRichTextHtml(comment.note),
@@ -1286,7 +1301,27 @@ export class TicketService extends BaseService<ITicket> {
         author_contact_name: null,
         author_contact_email: null
       };
+
+      return {
+        response,
+        eventPayload: {
+          ticketId: ticketId,
+          userId: context.userId,
+          comment: {
+            id: comment.comment_id,
+            content: comment.note,
+            author: authorName,
+            isInternal: comment.is_internal
+          }
+        }
+      };
     });
+
+    // Publish after the transaction commits so email and in-app notification
+    // subscribers can load the ticket/comment rows reliably.
+    await this.safePublishEvent('TICKET_COMMENT_ADDED', context, result.eventPayload);
+
+    return result.response;
   }
 
   /**

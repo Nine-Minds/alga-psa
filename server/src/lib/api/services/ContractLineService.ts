@@ -272,7 +272,7 @@ export class ContractLineService extends BaseService<IContractLine> {
   async create(data: any, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      return withTransaction(knex, async (trx) => {
+      const result = await withTransaction(knex, async (trx) => {
         const planData = this.addCreateAuditFields(data, context);
         planData.contract_line_id = uuidv4();
 
@@ -300,21 +300,29 @@ export class ContractLineService extends BaseService<IContractLine> {
 
         const [contractLine] = await trx('contract_lines').insert(planData).returning('*');
 
-        // Publish event
-        await publishEvent({
-          eventType: 'CONTRACT_LINE_CREATED',
-          payload: {
-            tenantId: context.tenant,
+        return {
+          contractLine: await this.getById(contractLine.contract_line_id, context),
+          eventPayload: {
             contractLineId: contractLine.contract_line_id,
             contractLineName: data.contract_line_name,
             contractLineType: data.contract_line_type,
-            userId: context.userId,
-            timestamp: new Date().toISOString()
-          }
-        });
-  
-        return this.getById(contractLine.contract_line_id, context);
+          },
+        };
       });
+
+      await publishEvent({
+        eventType: 'CONTRACT_LINE_CREATED',
+        payload: {
+          tenantId: context.tenant,
+          contractLineId: result.eventPayload.contractLineId,
+          contractLineName: result.eventPayload.contractLineName,
+          contractLineType: result.eventPayload.contractLineType,
+          userId: context.userId,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      return result.contractLine;
     }
 
 
