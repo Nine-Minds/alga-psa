@@ -107,6 +107,16 @@
       "reviewAndApprove": "Beoordeel en keur goed wanneer u klaar bent.",
       "completedNoDetails": "De actie is voltooid zonder aanvullende details.",
       "emDash": "—"
+    },
+    "continuation": {
+      "badge": "DOORGAAN",
+      "endpoint": "zoek-/toolketen",
+      "title": "Doorgaan met resultaten verzamelen?",
+      "description": "Alga heeft de limiet voor toolstappen bereikt tijdens het verzamelen van informatie.",
+      "status": "De bovenstaande zoekopdrachten en alleen-lezen aanroepen zijn voltooid. Ga verder vanaf hetzelfde punt om meer te verzamelen of het antwoord af te ronden.",
+      "continue": "Doorgaan",
+      "continueAriaLabel": "AI-antwoord voortzetten vanaf de toollimiet",
+      "defaultPrompt": "Doorgaan"
     }
   },
   "quickAsk": {
