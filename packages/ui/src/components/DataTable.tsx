@@ -12,6 +12,7 @@ import {
   getPaginationRowModel,
   flexRender,
   ColumnDef,
+  ColumnSizingState,
   Row,
   SortingFn,
   SortingState,
@@ -81,6 +82,60 @@ const getDisplayText = (columnDef: ColumnDefinition<any> | undefined, cellValue:
   }
   
   return String(cellValue);
+};
+
+const COLUMN_SIZE_BASE_WIDTH = 1800;
+const DEFAULT_COLUMN_SIZE = 160;
+const COMPACT_COLUMN_IDS = new Set(['selection', 'actions', 'tags']);
+
+const getColumnId = (dataIndex: string | string[]): string => (
+  Array.isArray(dataIndex) ? dataIndex.join('_') : dataIndex
+);
+
+const parseColumnWidth = (width: string | undefined): number | undefined => {
+  if (!width) return undefined;
+
+  const trimmed = width.trim();
+  if (trimmed.endsWith('px')) {
+    const px = Number.parseFloat(trimmed);
+    return Number.isFinite(px) ? Math.round(px) : undefined;
+  }
+
+  if (trimmed.endsWith('%')) {
+    const percent = Number.parseFloat(trimmed);
+    return Number.isFinite(percent) ? Math.round((percent / 100) * COLUMN_SIZE_BASE_WIDTH) : undefined;
+  }
+
+  const numeric = Number.parseFloat(trimmed);
+  return Number.isFinite(numeric) ? Math.round(numeric) : undefined;
+};
+
+const getColumnSizeConfig = (column: ColumnDefinition<any>): { size: number; minSize: number; maxSize: number } => {
+  const columnId = getColumnId(column.dataIndex);
+  const parsedWidth = parseColumnWidth(column.width);
+  const titleLength = typeof column.title === 'string' ? column.title.length : 12;
+
+  if (COMPACT_COLUMN_IDS.has(columnId)) {
+    return {
+      size: parsedWidth ?? 64,
+      minSize: columnId === 'selection' ? 44 : 56,
+      maxSize: 180,
+    };
+  }
+
+  if (columnId === 'title') {
+    return {
+      size: parsedWidth ?? 320,
+      minSize: 180,
+      maxSize: 720,
+    };
+  }
+
+  return {
+    size: parsedWidth ?? Math.max(DEFAULT_COLUMN_SIZE, Math.min(280, titleLength * 12 + 72)),
+    minSize: 96,
+    maxSize: 520,
+  };
 };
 
 // Custom case-insensitive sorting function for all columns
@@ -191,8 +246,41 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   
   // State to track which columns should be visible
   const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>(
-    columns.map(col => Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex)
+    columns.map(col => getColumnId(col.dataIndex))
   );
+
+  const columnIds = useMemo(() => columns.map(col => getColumnId(col.dataIndex)), [columns]);
+  const columnSizingStorageKey = id ? `datatable-column-sizing:${id}` : null;
+  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
+  const [hasLoadedColumnSizing, setHasLoadedColumnSizing] = useState(false);
+
+  useEffect(() => {
+    if (!columnSizingStorageKey || typeof window === 'undefined') {
+      setColumnSizing({});
+      setHasLoadedColumnSizing(true);
+      return;
+    }
+
+    try {
+      const stored = window.localStorage.getItem(columnSizingStorageKey);
+      const parsed = stored ? JSON.parse(stored) as Record<string, unknown> : {};
+      const validColumnIds = new Set(columnIds);
+      const nextSizing = Object.fromEntries(
+        Object.entries(parsed).filter(([key, value]) => validColumnIds.has(key) && typeof value === 'number' && Number.isFinite(value))
+      ) as ColumnSizingState;
+      setColumnSizing(nextSizing);
+    } catch {
+      setColumnSizing({});
+    } finally {
+      setHasLoadedColumnSizing(true);
+    }
+  }, [columnIds, columnSizingStorageKey]);
+
+  useEffect(() => {
+    if (!hasLoadedColumnSizing || !columnSizingStorageKey || typeof window === 'undefined') return;
+
+    window.localStorage.setItem(columnSizingStorageKey, JSON.stringify(columnSizing));
+  }, [columnSizing, columnSizingStorageKey, hasLoadedColumnSizing]);
 
   // Function to calculate which columns should be visible based on available width
   const updateVisibleColumns = () => {
@@ -339,17 +427,24 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     () =>
       columns
         .filter(col => {
-          const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
+          const colId = getColumnId(col.dataIndex);
           return visibleColumnIds.includes(colId);
         })
-        .map((col): ColumnDef<T> => ({
-          id: Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex,
-          accessorFn: (row) => getNestedValue(row, col.dataIndex),
-          header: () => col.title,
-          cell: (info) => col.render ? col.render(info.getValue(), info.row.original, info.row.index) : info.getValue(),
-          sortingFn: caseInsensitiveSort,
-          enableSorting: col.sortable !== false,
-        })),
+        .map((col): ColumnDef<T> => {
+          const sizing = getColumnSizeConfig(col);
+          return {
+            id: getColumnId(col.dataIndex),
+            accessorFn: (row) => getNestedValue(row, col.dataIndex),
+            header: () => col.title,
+            cell: (info) => col.render ? col.render(info.getValue(), info.row.original, info.row.index) : info.getValue(),
+            sortingFn: caseInsensitiveSort,
+            enableSorting: col.sortable !== false,
+            enableResizing: true,
+            size: sizing.size,
+            minSize: sizing.minSize,
+            maxSize: sizing.maxSize,
+          };
+        }),
     [columns, visibleColumnIds]
   );
 
@@ -437,7 +532,11 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
         pageSize: currentPageSize,
       },
       sorting: validSorting,
+      columnSizing,
     },
+    enableColumnResizing: true,
+    columnResizeMode: 'onChange',
+    onColumnSizingChange: setColumnSizing,
     onPaginationChange: setPagination,
     onSortingChange: (updater) => {
       if (manualSorting && onSortChange) {
@@ -566,7 +665,8 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
         )}
         <div className="overflow-x-auto [scrollbar-color:rgb(var(--color-border-300))_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[rgb(var(--color-border-300)/0.65)] [&::-webkit-scrollbar-thumb:hover]:bg-[rgb(var(--color-border-400)/0.8)]">
           <table
-            className="w-full border-collapse text-[13px]"
+            className="border-collapse text-[13px]"
+            style={{ minWidth: '100%', width: table.getTotalSize() }}
           >
             <thead className="bg-[rgb(var(--color-border-50)/0.55)]">
               {table.getHeaderGroups().map((headerGroup): React.JSX.Element => (
@@ -584,17 +684,17 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                       id={id ? `${id}-header-${columnId}` : `header-${columnId}`}
                       onClick={isSortable ? header.column.getToggleSortingHandler() : undefined}
                       className={cn(
-                        'h-8 min-w-[10rem] whitespace-nowrap border-b border-r border-[rgb(var(--color-border-100)/0.82)] px-3 py-1.5 text-[12px] font-medium text-[rgb(var(--color-text-500))] transition-colors first:w-12 first:min-w-12 first:pl-4 last:border-r-0 last:pr-4',
+                        'group relative h-8 whitespace-nowrap border-b border-r border-[rgb(var(--color-border-100)/0.82)] px-3 py-1.5 text-[12px] font-medium text-[rgb(var(--color-text-500))] transition-colors first:pl-4 last:border-r-0 last:pr-4',
                         isSortable && 'cursor-pointer hover:bg-[rgb(var(--color-border-100)/0.62)] hover:text-[rgb(var(--color-text-700))]',
                         colDef?.headerClassName?.includes('text-center') ? 'text-center' : 'text-left',
                         colDef?.headerClassName ?? ''
                       )}
-                      style={{ width: colDef?.width }}
+                      style={{ width: header.getSize() }}
                     >
-                        <div className={`flex items-center gap-1.5 ${colDef?.headerClassName?.includes('text-center') ? 'justify-center' : ''}`}>
-                          <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
+                        <div className={`flex min-w-0 items-center gap-1.5 ${colDef?.headerClassName?.includes('text-center') ? 'justify-center' : ''}`}>
+                          <span className="min-w-0 overflow-hidden text-ellipsis">{flexRender(header.column.columnDef.header, header.getContext())}</span>
                           {isSortable && (
-                            <span className="text-[rgb(var(--color-text-400))]">
+                            <span className="shrink-0 text-[rgb(var(--color-text-400))]">
                               {{
                                 asc: '↑',
                                 desc: '↓',
@@ -602,6 +702,36 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                             </span>
                           )}
                         </div>
+                        {header.column.getCanResize() && headerIndex < headerGroup.headers.length - 1 && (
+                          <div
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label={`Resize ${typeof colDef?.title === 'string' ? colDef.title : columnId} column`}
+                            onMouseDown={(event) => {
+                              event.stopPropagation();
+                              header.getResizeHandler(document)(event);
+                            }}
+                            onTouchStart={(event) => {
+                              event.stopPropagation();
+                              header.getResizeHandler(document)(event);
+                            }}
+                            onDoubleClick={(event) => {
+                              event.stopPropagation();
+                              header.column.resetSize();
+                              setColumnSizing(prev => {
+                                const next = { ...prev };
+                                delete next[header.column.id];
+                                return next;
+                              });
+                            }}
+                            className={cn(
+                              'absolute -right-1 top-0 z-10 h-full w-2 cursor-col-resize touch-none select-none',
+                              'after:absolute after:right-1 after:top-1 after:h-[calc(100%-0.5rem)] after:w-px after:rounded-full after:bg-transparent after:transition-colors',
+                              'hover:after:bg-[rgb(var(--color-primary-400))] group-hover:after:bg-[rgb(var(--color-border-300)/0.9)]',
+                              header.column.getIsResizing() && 'after:bg-[rgb(var(--color-primary-500))]'
+                            )}
+                          />
+                        )}
                       </th>
                     );
                   })}
@@ -644,8 +774,8 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                           key={`cell_${rowId}_${columnId}_${cellIndex}`}
                           id={cellId}
                           content={cellContent}
-                          className={`h-8 min-w-[10rem] max-w-0 overflow-hidden border-r border-[rgb(var(--color-border-100)/0.72)] px-3 py-1.5 text-[13px] leading-4 text-[rgb(var(--color-text-700))] align-middle first:w-12 first:min-w-12 first:pl-4 last:border-r-0 last:pr-4 ${columnDef?.cellClassName ?? ''}`}
-                          style={{ width: columnDef?.width }}
+                          className={`h-8 max-w-0 overflow-hidden border-r border-[rgb(var(--color-border-100)/0.72)] px-3 py-1.5 text-[13px] leading-4 text-[rgb(var(--color-text-700))] align-middle first:pl-4 last:border-r-0 last:pr-4 ${columnDef?.cellClassName ?? ''}`}
+                          style={{ width: cell.column.getSize() }}
                         >
                           <div className="min-w-0">
                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
