@@ -143,7 +143,7 @@ const ReflectedTableCell = ({
       style={style}
       data-automation-id={id}
     >
-      <div className="break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap">
+      <div className="min-w-0 overflow-hidden whitespace-nowrap [&_.break-all]:![overflow-wrap:normal] [&_.break-all]:![word-break:normal] [&_.break-words]:![overflow-wrap:normal] [&_.flex-wrap]:!flex-nowrap [&_a]:block [&_a]:max-w-full [&_a]:overflow-hidden [&_a]:text-ellipsis [&_a]:!text-[rgb(var(--color-text-800))] [&_a]:!whitespace-nowrap [&_a]:![overflow-wrap:normal] [&_a]:![word-break:normal] [&_a:hover]:!text-[rgb(var(--color-primary-700))] [&_button]:max-w-full [&_button]:overflow-hidden [&_button]:text-ellipsis [&_button]:!whitespace-nowrap">
         {children}
       </div>
     </td>
@@ -550,7 +550,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
 
   return (
     <div
-      className="datatable-container overflow-hidden bg-background rounded-lg border border-border"
+      className="datatable-container overflow-hidden rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] shadow-sm"
       data-automation-id={id}
       ref={tableContainerRef}
     >
@@ -564,11 +564,11 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
             </AlertDescription>
           </Alert>
         )}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto [scrollbar-color:rgb(var(--color-border-300))_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[rgb(var(--color-border-300)/0.65)] [&::-webkit-scrollbar-thumb:hover]:bg-[rgb(var(--color-border-400)/0.8)]">
           <table
-            className="w-full divide-y divide-[rgb(var(--color-border-200))]"
+            className="w-full border-collapse text-[13px]"
           >
-            <thead className="bg-background">
+            <thead className="bg-[rgb(var(--color-border-50)/0.55)]">
               {table.getHeaderGroups().map((headerGroup): React.JSX.Element => (
                 <tr key={`headergroup_${headerGroup.id}`}>
                   {headerGroup.headers.map((header, headerIndex): React.JSX.Element => {
@@ -584,20 +584,20 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                       id={id ? `${id}-header-${columnId}` : `header-${columnId}`}
                       onClick={isSortable ? header.column.getToggleSortingHandler() : undefined}
                       className={cn(
-                        'px-6 py-3 text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors',
-                        isSortable && 'cursor-pointer hover:bg-muted',
+                        'h-8 min-w-[10rem] whitespace-nowrap border-b border-r border-[rgb(var(--color-border-100)/0.82)] px-3 py-1.5 text-[12px] font-medium text-[rgb(var(--color-text-500))] transition-colors first:w-12 first:min-w-12 first:pl-4 last:border-r-0 last:pr-4',
+                        isSortable && 'cursor-pointer hover:bg-[rgb(var(--color-border-100)/0.62)] hover:text-[rgb(var(--color-text-700))]',
                         colDef?.headerClassName?.includes('text-center') ? 'text-center' : 'text-left',
                         colDef?.headerClassName ?? ''
                       )}
                       style={{ width: colDef?.width }}
                     >
-                        <div className={`flex space-x-1 ${colDef?.headerClassName?.includes('text-center') ? 'justify-center' : ''} items-center`}>
+                        <div className={`flex items-center gap-1.5 ${colDef?.headerClassName?.includes('text-center') ? 'justify-center' : ''}`}>
                           <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
                           {isSortable && (
-                            <span className="text-muted-foreground">
+                            <span className="text-[rgb(var(--color-text-400))]">
                               {{
-                                asc: ' ↑',
-                                desc: ' ↓',
+                                asc: '↑',
+                                desc: '↓',
                               }[header.column.getIsSorted() as string] ?? null}
                             </span>
                           )}
@@ -608,8 +608,8 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                 </tr>
               ))}
             </thead>
-            <tbody className="divide-y divide-[rgb(var(--color-border-100))]">
-              {table.getPaginationRowModel().rows.map((row, rowIndex): React.JSX.Element => {
+            <tbody className="divide-y divide-[rgb(var(--color-border-100)/0.72)] bg-[rgb(var(--color-card))]">
+              {table.getPaginationRowModel().rows.map((row): React.JSX.Element => {
                 // Use the id property if it exists in the data, otherwise use row.id
                 const rowId = ('id' in row.original) ? (row.original as { id: string }).id : row.id;
                 const extraRowClass = typeof rowClassName === 'function' ? rowClassName(row.original as any) : '';
@@ -618,9 +618,9 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                     key={`row_${rowId}`}
                     onClick={(e) => handleRowClick(e, row)}
                     className={`
-                    ${rowIndex % 2 === 0 ? 'bg-table-row-alt' : 'bg-background'}
-                    ${onRowClick ? 'hover:bg-table-hover cursor-pointer' : 'cursor-default'}
-                    transition-colors
+                    bg-[rgb(var(--color-card))]
+                    ${onRowClick ? 'hover:bg-[rgb(var(--color-border-50)/0.82)] cursor-pointer' : 'cursor-default'}
+                    transition-colors duration-150
                     ${extraRowClass}
                   `}
                   >
@@ -644,7 +644,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                           key={`cell_${rowId}_${columnId}_${cellIndex}`}
                           id={cellId}
                           content={cellContent}
-                          className={`px-6 py-3 text-[14px] leading-relaxed text-[rgb(var(--color-text-700))] max-w-0 align-top ${columnDef?.cellClassName ?? ''}`}
+                          className={`h-8 min-w-[10rem] max-w-0 overflow-hidden border-r border-[rgb(var(--color-border-100)/0.72)] px-3 py-1.5 text-[13px] leading-4 text-[rgb(var(--color-text-700))] align-middle first:w-12 first:min-w-12 first:pl-4 last:border-r-0 last:pr-4 ${columnDef?.cellClassName ?? ''}`}
                           style={{ width: columnDef?.width }}
                         >
                           <div className="min-w-0">
@@ -660,7 +660,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
           </table>
         </div>
         {pagination && safeData.length > 0 && (totalPages > 1 || onItemsPerPageChange) && (
-          <div className="border-t border-[rgb(var(--color-border-100))]">
+          <div className="border-t border-[rgb(var(--color-border-100)/0.72)]">
             <Pagination
               id={id ? `${id}-pagination` : 'datatable-pagination'}
               currentPage={pageIndex + 1}
