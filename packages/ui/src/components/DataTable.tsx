@@ -45,6 +45,27 @@ const getNestedValue = (obj: unknown, path: string | string[]): unknown => {
   }, obj);
 };
 
+const extractTextFromReactNode = (node: React.ReactNode): string => {
+  if (node === null || node === undefined || typeof node === 'boolean') {
+    return '';
+  }
+
+  if (typeof node === 'string' || typeof node === 'number') {
+    return String(node);
+  }
+
+  if (Array.isArray(node)) {
+    return node.map(extractTextFromReactNode).filter(Boolean).join(' ');
+  }
+
+  if (React.isValidElement(node)) {
+    const resultProps = node.props as { children?: React.ReactNode };
+    return extractTextFromReactNode(resultProps.children);
+  }
+
+  return '';
+};
+
 // Helper function to extract display text from column render function
 const getDisplayText = (columnDef: ColumnDefinition<any> | undefined, cellValue: unknown, rowData: any): string => {
   if (!columnDef || !columnDef.render) {
@@ -60,20 +81,9 @@ const getDisplayText = (columnDef: ColumnDefinition<any> | undefined, cellValue:
     return renderResult;
   }
   
-  // For JSX elements, try to extract text content based on common patterns
-  if (React.isValidElement(renderResult)) {
-    // Handle common patterns in the codebase
-    const resultProps = renderResult.props as { children?: React.ReactNode };
-    if (resultProps && resultProps.children) {
-      const children = resultProps.children;
-      if (typeof children === 'string') {
-        return children;
-      }
-      // Handle nested text content
-      if (Array.isArray(children)) {
-        return children.filter(child => typeof child === 'string').join(' ');
-      }
-    }
+  const renderedText = extractTextFromReactNode(renderResult);
+  if (renderedText) {
+    return renderedText;
   }
   
   // Fallback: use the original value with N/A handling
@@ -192,13 +202,19 @@ const ReflectedTableCell = ({
     }
   }, [content, updateCellMetadata]);
   
+  const tooltipText = content && content !== 'N/A' ? content : undefined;
+
   return (
     <td
       className={className}
       style={style}
       data-automation-id={id}
+      title={tooltipText}
     >
-      <div className="min-w-0 overflow-hidden whitespace-nowrap [&_.break-all]:![overflow-wrap:normal] [&_.break-all]:![word-break:normal] [&_.break-words]:![overflow-wrap:normal] [&_.flex-wrap]:!flex-nowrap [&_a]:block [&_a]:max-w-full [&_a]:overflow-hidden [&_a]:text-ellipsis [&_a]:!text-[rgb(var(--color-text-800))] [&_a]:!whitespace-nowrap [&_a]:![overflow-wrap:normal] [&_a]:![word-break:normal] [&_a:hover]:!text-[rgb(var(--color-primary-700))] [&_button]:max-w-full [&_button]:overflow-hidden [&_button]:text-ellipsis [&_button]:!whitespace-nowrap">
+      <div
+        className="min-w-0 overflow-hidden whitespace-nowrap [&_.break-all]:![overflow-wrap:normal] [&_.break-all]:![word-break:normal] [&_.break-words]:![overflow-wrap:normal] [&_.flex-wrap]:!flex-nowrap [&_a]:block [&_a]:max-w-full [&_a]:overflow-hidden [&_a]:text-ellipsis [&_a]:!text-[rgb(var(--color-text-800))] [&_a]:!whitespace-nowrap [&_a]:![overflow-wrap:normal] [&_a]:![word-break:normal] [&_a:hover]:!text-[rgb(var(--color-primary-700))] [&_button]:max-w-full [&_button]:overflow-hidden [&_button]:text-ellipsis [&_button]:!whitespace-nowrap"
+        title={tooltipText}
+      >
         {children}
       </div>
     </td>
@@ -697,10 +713,12 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                     return colId === header.column.id;
                   });
                   const isSortable = header.column.getCanSort();
+                  const headerTitle = typeof colDef?.title === 'string' ? colDef.title : undefined;
                   return (
                     <th
                       key={`header_${columnId}_${headerIndex}`}
                       id={id ? `${id}-header-${columnId}` : `header-${columnId}`}
+                      title={headerTitle}
                       onClick={isSortable ? (event) => {
                         if (suppressNextHeaderSortClickRef.current) {
                           event.preventDefault();
@@ -723,7 +741,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                       style={{ width: header.getSize() }}
                     >
                         <div className={`flex min-w-0 items-center gap-1.5 ${colDef?.headerClassName?.includes('text-center') ? 'justify-center' : ''}`}>
-                          <span className="min-w-0 overflow-hidden text-ellipsis">{flexRender(header.column.columnDef.header, header.getContext())}</span>
+                          <span className="min-w-0 overflow-hidden text-ellipsis" title={headerTitle}>{flexRender(header.column.columnDef.header, header.getContext())}</span>
                           {isSortable && (
                             <span className="shrink-0 text-[rgb(var(--color-text-400))]">
                               {{
