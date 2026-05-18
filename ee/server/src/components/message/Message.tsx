@@ -17,6 +17,7 @@ export type FunctionCallMeta = {
   timestamp: string;
   preview?: string;
   notice?: string;
+  details?: Record<string, unknown>;
 };
 
 type MessageProps = {
@@ -94,6 +95,25 @@ const FunctionStatusIcon: React.FC<{ status: FunctionCallMeta['status'] }> = ({ 
   );
 };
 
+const formatDetailValue = (value: unknown): string => {
+  if (value === null || value === undefined || value === '') {
+    return '—';
+  }
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+};
+
+const formatDetailKey = (key: string) =>
+  key
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
 const formatTimestamp = (timestamp?: string) => {
   if (!timestamp) {
     return '';
@@ -156,6 +176,9 @@ export const Message: React.FC<MessageProps> = ({
     const preview =
       previewRaw && previewRaw.length > 220 ? `${previewRaw.slice(0, 217)}…` : previewRaw;
     const notice = functionCallMeta.notice?.trim();
+    const detailEntries = Object.entries(functionCallMeta.details ?? {}).filter(
+      ([, value]) => value !== undefined,
+    );
     const statusLabel =
       functionCallMeta.status === 'success'
         ? t('message.functionStatus.success')
@@ -191,6 +214,25 @@ export const Message: React.FC<MessageProps> = ({
             </div>
             {preview ? <p className="function-card__preview">{preview}</p> : null}
             {notice ? <p className="function-card__preview">{notice}</p> : null}
+            {detailEntries.length > 0 ? (
+              <details className="function-card__details">
+                <summary>{t('chat.viewDetails')}</summary>
+                <dl className="function-card__detail-list">
+                  {detailEntries.map(([key, value]) => {
+                    const formatted = formatDetailValue(value);
+                    const isStructured = formatted.includes('\n') || formatted.length > 90;
+                    return (
+                      <div key={key} className="function-card__detail-row">
+                        <dt>{formatDetailKey(key)}</dt>
+                        <dd>
+                          {isStructured ? <pre>{formatted}</pre> : <span>{formatted}</span>}
+                        </dd>
+                      </div>
+                    );
+                  })}
+                </dl>
+              </details>
+            ) : null}
             <span className="function-card__timestamp">
               {formatTimestamp(functionCallMeta.timestamp)}
             </span>

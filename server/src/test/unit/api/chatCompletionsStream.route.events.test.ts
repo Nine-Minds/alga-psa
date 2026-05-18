@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server';
 const isExperimentalFeatureEnabledMock = vi.hoisted(() =>
   vi.fn<(featureKey: string) => Promise<boolean>>(),
 );
+const getCurrentUserMock = vi.hoisted(() => vi.fn());
 
 const createStructuredCompletionStreamMock = vi.hoisted(() =>
   vi.fn<
@@ -23,6 +24,14 @@ const createStructuredCompletionStreamMock = vi.hoisted(() =>
 
 vi.mock('@alga-psa/tenancy/actions', () => ({
   isExperimentalFeatureEnabled: isExperimentalFeatureEnabledMock,
+}));
+
+vi.mock('@alga-psa/user-composition/actions', () => ({
+  getCurrentUser: getCurrentUserMock,
+}));
+
+vi.mock('@/app/api/chat/productAccess', () => ({
+  assertPsaChatProductAccess: () => Promise.resolve(null),
 }));
 
 vi.mock('@product/chat/entry', () => ({
@@ -61,6 +70,8 @@ describe('POST /api/chat/v1/completions/stream (structured events)', () => {
 
   beforeEach(() => {
     isExperimentalFeatureEnabledMock.mockReset();
+    getCurrentUserMock.mockReset();
+    getCurrentUserMock.mockResolvedValue({ tenant: 'tenant-1', user_id: 'user-1' });
     createStructuredCompletionStreamMock.mockReset();
     process.env.EDITION = 'ee';
     delete process.env.NEXT_PUBLIC_EDITION;
@@ -310,6 +321,67 @@ describe('POST /api/chat/v1/completions/stream (structured events)', () => {
             name: 'call_api_endpoint',
             toolCallId: 'tool-call-1',
           }),
+        }),
+      ]),
+    );
+  });
+
+  it('emits auto-executed tool and continuation SSE events', async () => {
+    isExperimentalFeatureEnabledMock.mockResolvedValue(true);
+    createStructuredCompletionStreamMock.mockResolvedValue(
+      (async function* () {
+        yield {
+          type: 'tool_executed',
+          function: {
+            id: 'search_business_data',
+            displayName: 'Search business data',
+            approvalRequired: false,
+            arguments: { method: 'SEARCH', path: 'business data: laptops' },
+          },
+          assistantPreview: 'Searching business data.',
+          functionCall: {
+            name: 'search_business_data',
+            arguments: { query: 'laptops' },
+            toolCallId: 'tool-call-search-1',
+            entryId: 'search_business_data',
+          },
+          nextMessages: [{ role: 'function', name: 'search_business_data', content: '{}' }],
+          modelMessages: [{ role: 'function', name: 'search_business_data', content: '{}' }],
+        };
+        yield {
+          type: 'continuation_available',
+          reason: 'Reached the 6-step tool limit while gathering information.',
+          nextMessages: [{ role: 'function', name: 'search_business_data', content: '{}' }],
+          modelMessages: [{ role: 'function', name: 'search_business_data', content: '{}' }],
+        };
+        yield { type: 'done' };
+      })(),
+    );
+
+    vi.resetModules();
+    const { POST } = await import('@/app/api/chat/v1/completions/stream/route');
+
+    const response = await POST(
+      makeRequest({
+        messages: [{ role: 'user', content: 'Find laptop tickets' }],
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const payloads = await readSsePayloads(response);
+
+    expect(payloads).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'tool_executed',
+          functionCall: expect.objectContaining({
+            name: 'search_business_data',
+            toolCallId: 'tool-call-search-1',
+          }),
+        }),
+        expect.objectContaining({
+          type: 'continuation_available',
+          reason: 'Reached the 6-step tool limit while gathering information.',
         }),
       ]),
     );

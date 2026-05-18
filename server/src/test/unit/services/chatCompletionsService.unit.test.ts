@@ -614,6 +614,28 @@ describe('ChatCompletionsService (unit)', () => {
     expect(systemPrompt.content).toContain('null file_id');
   });
 
+  it('defines and explains search_business_data as a first-class tool', async () => {
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const tools = (ChatCompletionsService as any).buildToolDefinitions('openrouter');
+    expect(tools.map((tool: any) => tool.function.name)).toContain('search_business_data');
+
+    const converted = (ChatCompletionsService as any).buildOpenAiMessages(
+      [{ role: 'user', content: 'Find Acme tickets' }],
+      'openrouter',
+    );
+    const systemPrompt = converted[0] as Record<string, unknown>;
+    expect(systemPrompt.content).toContain('search_business_data searches tenant-scoped business data');
+    expect(systemPrompt.content).toContain('GET call_api_endpoint calls execute automatically');
+    expect(systemPrompt.content).toContain('query="laptop OR workstation OR desktop"');
+    expect(systemPrompt.content).toContain('not query="tickets related to laptops or workstations"');
+    const businessSearchTool = tools.find((tool: any) => tool.function.name === 'search_business_data');
+    expect(businessSearchTool.function.description).toContain('concise full-text search expression');
+    expect(businessSearchTool.function.parameters.properties.query.description).toContain(
+      'Avoid filler phrases',
+    );
+  });
+
   it('builds prompt context with current user and resolved ticket details', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-03-09T17:50:00Z'));
@@ -809,6 +831,65 @@ describe('ChatCompletionsService (unit)', () => {
     expect(Array.isArray(parsedContent.suggestions)).toBe(true);
   });
 
+  it('auto-executes streamed GET call_api_endpoint calls and continues streaming the final response', async () => {
+    process.env.AI_CHAT_PROVIDER = 'openrouter';
+    setSecrets({
+      OPENROUTER_API_KEY: 'openrouter-key',
+      OPENROUTER_CHAT_MODEL: 'openrouter/model',
+    });
+
+    openAiCreateSpy
+      .mockResolvedValueOnce(
+        buildChunkStream([
+          {
+            choices: [
+              {
+                index: 0,
+                delta: {
+                  tool_calls: [
+                    {
+                      index: 0,
+                      id: 'tool-call-stream-auto-get',
+                      type: 'function',
+                      function: {
+                        name: 'call_api_endpoint',
+                        arguments: JSON.stringify({ entryId: 'tickets.list' }),
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ]),
+      )
+      .mockResolvedValueOnce(buildFinishResponseChunkStream('Streamed ticket result.'));
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+    const executeFunctionCallSpy = vi
+      .spyOn(ChatCompletionsService as any, 'executeFunctionCall')
+      .mockResolvedValue({ status: 200, ok: true, data: [{ ticket_id: 'ticket-1' }] });
+
+    const streamedEvents: Array<{ type: string; delta?: string }> = [];
+    for await (const event of ChatCompletionsService.createStructuredCompletionStream(
+      [{ role: 'user', content: 'List tickets' }],
+      {
+        baseUrl: 'https://example.invalid',
+        tenantId: 'tenant-1',
+        userId: 'user-1',
+      },
+    )) {
+      streamedEvents.push(event as { type: string; delta?: string });
+    }
+
+    expect(executeFunctionCallSpy).toHaveBeenCalledTimes(1);
+    expect(streamedEvents).toEqual([
+      { type: 'content_delta', delta: 'Streamed ticket result.' },
+      { type: 'done' },
+    ]);
+    expect(openAiCreateSpy).toHaveBeenCalledTimes(2);
+  });
+
   it('retries streamed tool calls when the model emits invalid JSON arguments', async () => {
     process.env.AI_CHAT_PROVIDER = 'openrouter';
     setSecrets({
@@ -932,12 +1013,22 @@ describe('ChatCompletionsService (unit)', () => {
     );
   });
 
-  it('appends assistant reasoning_content during tool-call proposal turns', async () => {
+  it('appends assistant reasoning_content during mutating tool-call proposal turns', async () => {
     process.env.AI_CHAT_PROVIDER = 'openrouter';
     setSecrets({
       OPENROUTER_API_KEY: 'openrouter-key',
       OPENROUTER_CHAT_MODEL: 'openrouter/model',
     });
+    getRegistryMock.mockReturnValue([
+      buildRegistryEntry({
+        id: 'tickets.create',
+        method: 'post',
+        path: '/api/v1/tickets',
+        displayName: 'Create ticket',
+        summary: 'Create ticket',
+        description: 'Creates a ticket.',
+      }),
+    ]);
 
     openAiCreateSpy.mockResolvedValueOnce(
       buildCompletion({
@@ -951,7 +1042,7 @@ describe('ChatCompletionsService (unit)', () => {
             type: 'function',
             function: {
               name: 'call_api_endpoint',
-              arguments: JSON.stringify({ entryId: 'tickets.list' }),
+              arguments: JSON.stringify({ entryId: 'tickets.create', body: { title: 'New ticket' } }),
             },
           },
         ],
@@ -961,7 +1052,7 @@ describe('ChatCompletionsService (unit)', () => {
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
 
     const result = await (ChatCompletionsService as any).processModelInteraction({
-      messages: [{ role: 'user', content: 'List tickets' }],
+      messages: [{ role: 'user', content: 'Create a ticket' }],
       chatId: 'chat-1',
       baseUrl: 'https://example.invalid',
       tenantId: 'tenant-1',
@@ -1211,12 +1302,23 @@ describe('ChatCompletionsService (unit)', () => {
     expect(request.tool_choice).toBeUndefined();
   });
 
-  it('returns function_proposed with nextMessages/modelMessages preserving reasoning context', async () => {
+  it('returns function_proposed with nextMessages/modelMessages preserving reasoning context for mutating calls', async () => {
     process.env.AI_CHAT_PROVIDER = 'openrouter';
     setSecrets({
       OPENROUTER_API_KEY: 'openrouter-key',
       OPENROUTER_CHAT_MODEL: 'openrouter/model',
     });
+    getRegistryMock.mockReturnValue([
+      buildRegistryEntry({
+        id: 'tickets.update',
+        method: 'patch',
+        path: '/api/v1/tickets/{id}',
+        displayName: 'Update ticket',
+        summary: 'Update ticket',
+        description: 'Updates a ticket.',
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+      }),
+    ]);
 
     openAiCreateSpy.mockResolvedValueOnce(
       buildCompletion({
@@ -1228,7 +1330,7 @@ describe('ChatCompletionsService (unit)', () => {
             type: 'function',
             function: {
               name: 'call_api_endpoint',
-              arguments: JSON.stringify({ entryId: 'tickets.list' }),
+              arguments: JSON.stringify({ entryId: 'tickets.update', path: { id: 'ticket-1' }, body: { title: 'Updated' } }),
             },
           },
         ],
@@ -1238,7 +1340,7 @@ describe('ChatCompletionsService (unit)', () => {
     const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
 
     const result = await (ChatCompletionsService as any).processModelInteraction({
-      messages: [{ role: 'user', content: 'Execute tickets list' }],
+      messages: [{ role: 'user', content: 'Update a ticket' }],
       chatId: 'chat-1',
       baseUrl: 'https://example.invalid',
       tenantId: 'tenant-1',
@@ -1260,6 +1362,63 @@ describe('ChatCompletionsService (unit)', () => {
           role: 'assistant',
           reasoning_content: 'Need to execute endpoint now',
         }),
+      ]),
+    );
+  });
+
+  it('auto-executes GET call_api_endpoint calls and continues to the final response', async () => {
+    process.env.AI_CHAT_PROVIDER = 'openrouter';
+    setSecrets({
+      OPENROUTER_API_KEY: 'openrouter-key',
+      OPENROUTER_CHAT_MODEL: 'openrouter/model',
+    });
+
+    openAiCreateSpy
+      .mockResolvedValueOnce(
+        buildCompletion({
+          content: 'Fetching tickets',
+          tool_calls: [
+            {
+              id: 'tool-call-auto-get',
+              type: 'function',
+              function: {
+                name: 'call_api_endpoint',
+                arguments: JSON.stringify({ entryId: 'tickets.list' }),
+              },
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(buildFinishResponseCompletion('Found one ticket.'));
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+    const executeFunctionCallSpy = vi
+      .spyOn(ChatCompletionsService as any, 'executeFunctionCall')
+      .mockResolvedValue({ status: 200, ok: true, data: [{ ticket_id: 'ticket-1' }] });
+
+    const result = await (ChatCompletionsService as any).processModelInteraction({
+      messages: [{ role: 'user', content: 'List tickets' }],
+      chatId: 'chat-1',
+      baseUrl: 'https://example.invalid',
+      tenantId: 'tenant-1',
+      userId: 'user-1',
+    });
+
+    expect(executeFunctionCallSpy).toHaveBeenCalledTimes(1);
+    expect(executeFunctionCallSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entry: expect.objectContaining({ id: 'tickets.list', method: 'get' }),
+        args: expect.objectContaining({ entryId: 'tickets.list' }),
+      }),
+    );
+    expect(result).toMatchObject({
+      type: 'assistant_message',
+      message: expect.objectContaining({ content: 'Found one ticket.' }),
+    });
+    const followUpRequest = openAiCreateSpy.mock.calls[1]?.[0] as Record<string, unknown>;
+    expect(followUpRequest.messages).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ role: 'tool', content: expect.stringContaining('ticket-1') }),
       ]),
     );
   });
@@ -1636,6 +1795,27 @@ describe('ChatCompletionsService (unit)', () => {
       functionCall: expect.objectContaining({
         toolCallId: 'stable-id-123',
       }),
+    });
+  });
+
+  it('repairs stream-truncated tool argument objects when braces are missing', async () => {
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+
+    const parsed = (ChatCompletionsService as any).parseToolArguments(
+      '{"entryId":"get-_api_v1_tickets_id","path":{"id":"ticket-1"}',
+      {
+        source: 'stream',
+        functionName: 'call_api_endpoint',
+        toolCallId: 'tool-1',
+      },
+    );
+
+    expect(parsed).toEqual({
+      ok: true,
+      value: {
+        entryId: 'get-_api_v1_tickets_id',
+        path: { id: 'ticket-1' },
+      },
     });
   });
 
