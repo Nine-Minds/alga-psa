@@ -229,8 +229,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                   e.stopPropagation();
                   onTicketClick(record.ticket_id as string);
                 }}
-                className="text-blue-600 hover:text-blue-800 break-all whitespace-normal text-left"
-                style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
+                className="text-blue-600 hover:text-blue-800 whitespace-normal text-left"
               >
                 {value}
               </Link>

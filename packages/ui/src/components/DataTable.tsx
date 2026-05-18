@@ -143,7 +143,7 @@ const ReflectedTableCell = ({
       style={style}
       data-automation-id={id}
     >
-      <div className="break-words min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap">
+      <div className="break-normal min-w-0 [&_button:not(.whitespace-normal)]:whitespace-nowrap [&_a:not(.whitespace-normal)]:whitespace-nowrap">
         {children}
       </div>
     </td>
