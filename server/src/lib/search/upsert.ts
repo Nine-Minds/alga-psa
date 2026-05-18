@@ -7,6 +7,9 @@ import type { SearchDoc, SearchObjectType } from '@alga-psa/types';
 export async function upsertSearchDoc(knex: Knex, doc: SearchDoc): Promise<void> {
   const vector = buildTsvectorSql(doc.title, doc.subtitle, doc.body);
   const acl = composeAclHints(doc.acl);
+  // Citus rejects non-IMMUTABLE functions (e.g. now()) in the DO UPDATE SET
+  // target list of upserts on distributed tables, so bind the timestamp here.
+  const indexedAt = new Date();
 
   await knex.raw(
     `
@@ -52,7 +55,7 @@ export async function upsertSearchDoc(knex: Knex, doc: SearchDoc): Promise<void>
         ${vector.sql},
         'english',
         ?,
-        now()
+        ?
       )
       ON CONFLICT (tenant, object_type, object_id)
       DO UPDATE SET
@@ -72,7 +75,7 @@ export async function upsertSearchDoc(knex: Knex, doc: SearchDoc): Promise<void>
         search_vector = EXCLUDED.search_vector,
         search_lang = EXCLUDED.search_lang,
         source_updated_at = EXCLUDED.source_updated_at,
-        indexed_at = now()
+        indexed_at = ?
     `,
     [
       doc.tenant,
@@ -93,6 +96,8 @@ export async function upsertSearchDoc(knex: Knex, doc: SearchDoc): Promise<void>
       acl.requiredPermission ?? null,
       ...vector.bindings,
       doc.sourceUpdatedAt,
+      indexedAt,
+      indexedAt,
     ],
   );
 }
