@@ -37,6 +37,7 @@ import Drawer from '@alga-psa/ui/components/Drawer';
 import { ApplyTemplateDialog } from './project-templates/ApplyTemplateDialog';
 import { useClientIntegration } from '../context/ClientIntegrationContext';
 import { useTranslation } from 'react-i18next';
+import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 export interface ProjectListFilters {
   searchQuery?: string;
@@ -162,6 +163,8 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
   }, [initialProjects]);
 
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const openProjectQuickAdd = useCallback(() => setShowQuickAdd(true), []);
+  usePageCreateShortcut(openProjectQuickAdd);
   const [showApplyTemplate, setShowApplyTemplate] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<IProject | null>(null);
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
@@ -811,7 +814,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
             <FileText className="h-4 w-4 mr-2" />
             {projectListT('createFromTemplate', 'Create from Template')}
           </Button>
-          <Button id='add-project-button' onClick={() => setShowQuickAdd(true)}>
+          <Button id='add-project-button' onClick={openProjectQuickAdd}>
             {projectListT('addProject', 'Add Project')}
           </Button>
         </div>

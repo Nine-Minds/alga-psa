@@ -50,6 +50,7 @@ export const SHORTCUT_ACTION_CATALOG: readonly ShortcutActionCatalogEntry[] = [
   entry('global.quickCreate', 'global', 'page', ['c']),
   entry('ai.quickAsk', 'ai', 'global', ['mod+ArrowUp']),
 
+  entry('page.create', 'page', 'page', ['c']),
   entry('page.save', 'page', 'page', ['mod+s']),
   entry('selection.previous', 'selection', 'page', ['k']),
   entry('selection.next', 'selection', 'page', ['j']),
@@ -89,6 +90,8 @@ export const SHORTCUT_ACTION_CATALOG: readonly ShortcutActionCatalogEntry[] = [
 ];
 
 export const OPTIONAL_ALTERNATE_BINDINGS: Readonly<Record<string, readonly string[]>> = {
+  // Ctrl/Cmd+N is browser-owned (new window) in common browsers and may not be interceptable.
+  'page.create': ['mod+n'],
   'record.previous': ['alt+ArrowLeft'],
   'record.next': ['alt+ArrowRight'],
 };

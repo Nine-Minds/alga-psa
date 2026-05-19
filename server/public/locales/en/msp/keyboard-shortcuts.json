@@ -80,6 +80,10 @@
       }
     },
     "page": {
+      "create": {
+        "label": "Create on page",
+        "description": "Create a new item on the current page."
+      },
       "save": {
         "label": "Save page",
         "description": "Save the current page."

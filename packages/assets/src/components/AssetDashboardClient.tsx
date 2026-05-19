@@ -34,7 +34,7 @@ import { getAllClientsForAssets } from '../actions/clientLookupActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { QuickAddAsset } from './QuickAddAsset';
 import { AssetCommandPalette } from './AssetCommandPalette';
-import { useShortcutAction, useShortcutScope, type ShortcutAction } from '@alga-psa/ui/keyboard-shortcuts';
+import { usePageCreateShortcut, useShortcutAction, useShortcutScope, type ShortcutAction } from '@alga-psa/ui/keyboard-shortcuts';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
 import { RmmStatusIndicator } from './RmmStatusIndicator';
 import {
@@ -293,6 +293,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   }), []);
 
   useShortcutScope('page');
+  usePageCreateShortcut(triggerQuickAdd);
   useShortcutAction(assetCommandPaletteShortcut);
 
   const assetsByClient = useMemo(() => {

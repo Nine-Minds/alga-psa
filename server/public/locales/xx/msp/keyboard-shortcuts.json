@@ -80,6 +80,10 @@
       }
     },
     "page": {
+      "create": {
+        "label": "11111",
+        "description": "11111"
+      },
       "save": {
         "label": "11111",
         "description": "11111"

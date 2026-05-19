@@ -80,6 +80,10 @@
       }
     },
     "page": {
+      "create": {
+        "label": "Op pagina maken",
+        "description": "Maak een nieuw item op de huidige pagina."
+      },
       "save": {
         "label": "Pagina opslaan",
         "description": "Sla de huidige pagina op."

@@ -138,7 +138,15 @@ function scopeStackIndex(action: ShortcutAction, activeScopes: readonly ScopeEnt
 }
 
 function isScopeEligible(action: ShortcutAction, activeScopes: readonly ScopeEntry[]): boolean {
-  return action.scope === 'global' || activeScopes.some((entry) => entry.scope === action.scope);
+  if (action.scope !== 'global' && !activeScopes.some((entry) => entry.scope === action.scope)) {
+    return false;
+  }
+
+  if (action.scope === 'page' && activeScopes.some((entry) => entry.scope === 'panel' || entry.scope === 'dialog' || entry.scope === 'editor')) {
+    return false;
+  }
+
+  return true;
 }
 
 export function KeyboardShortcutsProvider({

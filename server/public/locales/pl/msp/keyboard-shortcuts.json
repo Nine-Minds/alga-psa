@@ -80,6 +80,10 @@
       }
     },
     "page": {
+      "create": {
+        "label": "Utwórz na stronie",
+        "description": "Utwórz nowy element na bieżącej stronie."
+      },
       "save": {
         "label": "Zapisz stronę",
         "description": "Zapisz bieżącą stronę."
