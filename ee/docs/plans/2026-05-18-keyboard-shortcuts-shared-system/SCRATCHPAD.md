@@ -276,6 +276,16 @@ decisions; update earlier notes when a decision changes.
   from `packages/ui` passed (6 tests);
   `npx tsc --noEmit -p packages/ui/tsconfig.json` passed;
   `npm run typecheck --workspace server` passed.
+- (2026-05-19) Completed settings-ui group F160-F172/T160-T174. Added
+  `KeyboardShortcutsSettings` as a settings tab with shared Card/Table/Switch/
+  Button/LoadingIndicator/ConfirmationDialog components. The panel lists
+  catalog actions by group, captures bindings inline, writes preference deltas
+  immediately through `useKeyboardShortcutPreferenceStorage`, supports disable,
+  reset one, reset all, and conflict confirmation, and uses toast/handleError.
+- (2026-05-19) Verification for settings-ui:
+  `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/settings-ui.contract.test.ts`
+  from `packages/ui` passed (3 tests);
+  `npm run typecheck --workspace server` passed.
 
 ## Open Questions
 
