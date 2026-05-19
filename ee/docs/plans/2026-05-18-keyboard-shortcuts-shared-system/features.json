@@ -132,7 +132,7 @@
   {
     "id": "F020",
     "description": "matchEvent: resolve mod from platform (Meta on mac, Ctrl on other) at match time",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR3",
       "FR4"
@@ -142,7 +142,7 @@
   {
     "id": "F021",
     "description": "matchEvent: code-kind match via event.code + exact modifier-set equality",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR3"
     ],
@@ -151,7 +151,7 @@
   {
     "id": "F022",
     "description": "matchEvent: char-kind match via event.key produced char; Shift implied by glyph, not separately required",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR3"
     ],
@@ -160,7 +160,7 @@
   {
     "id": "F023",
     "description": "matchEvent: code-kind correctly matches macOS Option+letter (event.key='Dead' but event.code='KeyN')",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR3",
       "Cross-Platform"
@@ -170,7 +170,7 @@
   {
     "id": "F024",
     "description": "matchEvent: code-kind correctly matches mod+letter on international layouts (Cyrillic/German physical S)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR3",
       "Cross-Platform"
@@ -180,7 +180,7 @@
   {
     "id": "F025",
     "description": "matchEvent: AltGr (ctrl+alt producing a character) does not false-match mod combos",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR3"
     ],

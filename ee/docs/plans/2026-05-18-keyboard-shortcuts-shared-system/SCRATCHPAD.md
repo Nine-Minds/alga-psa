@@ -131,6 +131,15 @@ decisions; update earlier notes when a decision changes.
 - (2026-05-19) Verification for parser:
   `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/parser.test.ts`
   from `packages/ui` passed (27 tests).
+- (2026-05-19) Completed matcher group F020-F025/T020-T025. Added
+  `matcher.ts` with platform-time `mod` resolution, exact modifier matching for
+  code tokens, produced-character matching for char tokens with Shift ignored
+  only as the glyph-producing modifier, and AltGraph protection. Tests cover
+  mac/other `mod`, macOS Option dead-key behavior, international-layout
+  physical-code matching, and AltGr false-positive prevention.
+- (2026-05-19) Verification for matcher:
+  `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/matcher.test.ts`
+  from `packages/ui` passed (6 tests).
 
 ## Open Questions
 
