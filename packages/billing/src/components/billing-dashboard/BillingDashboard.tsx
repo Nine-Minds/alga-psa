@@ -25,6 +25,7 @@ import { billingTabDefinitions, BillingTabValue } from './billingTabsConfig';
 import InvoicingHub from './InvoicingHub';
 import ServiceCatalogManager from '../settings/billing/ServiceCatalogManager';
 import ProductsManager from '../settings/billing/ProductsManager';
+import ServiceTypeSettings from '../settings/billing/ServiceTypeSettings';
 import AccountingExportsTab from './accounting/AccountingExportsTab';
 import QuotesTab from './quotes/QuotesTab';
 import QuoteDocumentTemplatesPage from './quotes/QuoteDocumentTemplatesPage';
@@ -222,6 +223,10 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
         <Tabs.Content value="usage-tracking">
           <UsageTracking initialServices={initialServices} />
+        </Tabs.Content>
+
+        <Tabs.Content value="service-types">
+          <ServiceTypeSettings />
         </Tabs.Content>
 
         <Tabs.Content value="service-catalog">

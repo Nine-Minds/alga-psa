@@ -56,7 +56,7 @@ const ProductsManager: React.FC = () => {
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
   const [allServiceTypes, setAllServiceTypes] = useState<
-    { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]
+    { id: string; name: string; is_standard: boolean }[]
   >([]);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -81,18 +81,10 @@ const ProductsManager: React.FC = () => {
     }, {});
   }, [categories]);
 
-  const productServiceTypes = useMemo(() => {
-    const usageTypes = allServiceTypes.filter((t) => t.billing_method === 'usage');
-
-    const selectedTypeId = editingProduct?.custom_service_type_id || null;
-
-    if (selectedTypeId && !usageTypes.some((t) => t.id === selectedTypeId)) {
-      const selected = allServiceTypes.find((t) => t.id === selectedTypeId);
-      if (selected) return [...usageTypes, selected];
-    }
-
-    return usageTypes;
-  }, [allServiceTypes, editingProduct?.custom_service_type_id]);
+  // Products and Services draw from one shared Type taxonomy (service_types),
+  // managed on the dedicated Service Types settings tab. The full list is
+  // exposed to both forms — no billing_method filtering.
+  const productServiceTypes = allServiceTypes;
 
   const fetchServiceTypes = async () => {
     const types = await getServiceTypesForSelection();

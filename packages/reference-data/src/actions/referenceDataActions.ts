@@ -123,7 +123,6 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
     targetTable: 'service_types',
     mapFields: (source: IStandardServiceType, tenantId: string, userId: string, options?: any) => ({
       name: source.name,
-      billing_method: source.billing_method,
       tenant: tenantId,
       is_active: true,
       description: null,

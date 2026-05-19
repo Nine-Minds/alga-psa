@@ -203,7 +203,7 @@
         "list": {
           "title": "55555",
           "loading": "55555",
-          "configuredCount": "55555",
+          "configuredCount": "55555 {{count}} 55555",
           "empty": "55555",
           "columns": {
             "name": "55555",
@@ -227,7 +227,7 @@
           "slugRequired": "55555",
           "actionRequired": "55555",
           "workflowRequired": "55555",
-          "missingRequiredFields": "55555"
+          "missingRequiredFields": "55555 {{fields}} 55555"
         },
         "dialog": {
           "createTitle": "55555",
@@ -294,7 +294,7 @@
           "title": "55555",
           "help": "55555",
           "toggle": "55555",
-          "autoDisabled": "55555",
+          "autoDisabled": "55555 {{date}} 55555",
           "updateFailed": "55555"
         },
         "handler": {
@@ -335,14 +335,14 @@
           "help": "55555",
           "createFirst": "55555",
           "captureButton": "55555",
-          "captureActive": "55555",
+          "captureActive": "55555 {{expiresAt}} 55555",
           "sampleAvailable": "55555",
           "noSample": "55555",
           "captureFailed": "55555"
         },
         "sampleTree": {
           "title": "55555",
-          "help": "55555",
+          "help": "55555 {{field}} 55555",
           "focusHelp": "55555",
           "empty": "55555"
         },
@@ -352,8 +352,8 @@
           "unknownReference": "55555",
           "loading": "55555",
           "errors": {
-            "INVALID_INT": "55555",
-            "INVALID_NUMBER": "55555",
+            "INVALID_INT": "55555 {{value}} 55555",
+            "INVALID_NUMBER": "55555 {{value}} 55555",
             "INVALID_BOOLEAN": "55555",
             "INVALID_JSON": "55555"
           }
@@ -363,8 +363,8 @@
           "help": "55555",
           "empty": "55555",
           "loadFailed": "55555",
-          "pageSummary": "55555",
-          "durationMs": "55555",
+          "pageSummary": "55555 {{page}} 55555 {{total}} 55555",
+          "durationMs": "55555 {{duration}} 55555",
           "allStatuses": "55555",
           "columns": {
             "received": "55555",

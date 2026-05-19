@@ -48,7 +48,8 @@
       "servicePeriods": "Servicezeiträume",
       "usageTracking": "Nutzungsverfolgung",
       "reports": "Berichte",
-      "serviceCatalog": "Servicekatalog",
+      "serviceTypes": "Servicetypen",
+      "serviceCatalog": "Dienste",
       "products": "Produkte"
     }
   },

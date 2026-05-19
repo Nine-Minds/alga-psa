@@ -334,8 +334,8 @@
     }
   },
   "commentThread": {
-    "replies_one": "{{count}} 11111",
-    "replies_other": "{{count}} 11111",
+    "replies_one": "11111 {{count}} 11111",
+    "replies_other": "11111 {{count}} 11111",
     "collapse": "11111",
     "expand": "11111",
     "showInDrawer": "11111"

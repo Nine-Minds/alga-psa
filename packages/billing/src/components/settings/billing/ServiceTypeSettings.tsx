@@ -10,7 +10,6 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Label } from '@alga-psa/ui/components/Label';
 import { MoreVertical, Plus } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -38,7 +37,6 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 type ServiceTypeSelectionItem = {
   id: string;
   name: string;
-  billing_method: 'fixed' | 'hourly' | 'usage';
   is_standard: boolean;
 };
 
@@ -150,11 +148,6 @@ const ServiceTypeSettings: React.FC = () => {
       errors.push(t('serviceTypes.validation.name', { defaultValue: 'Service Type name' }));
     }
     
-    // Billing method is now mandatory for custom types
-    if (!editingType.billing_method) {
-      errors.push(t('serviceTypes.validation.billingMethod', { defaultValue: 'Billing method' }));
-    }
-    
     if (!editingType.order_number && editingType.order_number !== 0) {
       errors.push(t('serviceTypes.validation.displayOrder', { defaultValue: 'Display order' }));
     }
@@ -190,7 +183,6 @@ const ServiceTypeSettings: React.FC = () => {
         // We've already validated these fields exist above
         const createData = {
             name: editingType.name!,
-            billing_method: editingType.billing_method!, // Now required
             description: editingType.description || null,
             is_active: editingType.is_active ?? true, // Default to active
             order_number: editingType.order_number!,
@@ -310,17 +302,7 @@ const ServiceTypeSettings: React.FC = () => {
       dataIndex: 'name',
       width: '35%'
     },
-    { 
-      title: t('common.columns.billingMethod', { defaultValue: 'Billing Method' }), 
-      dataIndex: 'billing_method',
-      width: '20%', 
-      render: (value) => {
-        if (value === 'fixed') return t('common.billingMethod.fixed', { defaultValue: 'Fixed' });
-        if (value === 'hourly') return t('common.billingMethod.hourly', { defaultValue: 'Hourly' });
-        return t('common.billingMethod.usage', { defaultValue: 'Usage' });
-      }
-    },
-    { 
+    {
       title: t('common.columns.description', { defaultValue: 'Description' }),
       dataIndex: 'description',
       width: '20%',
@@ -445,7 +427,7 @@ const ServiceTypeSettings: React.FC = () => {
               id="save-type-button"
               type="button"
               onClick={() => (document.getElementById('service-type-edit-form') as HTMLFormElement | null)?.requestSubmit()}
-              className={!editingType?.name?.trim() || !editingType?.billing_method || (!editingType?.order_number && editingType?.order_number !== 0) ? 'opacity-50' : ''}
+              className={!editingType?.name?.trim() || (!editingType?.order_number && editingType?.order_number !== 0) ? 'opacity-50' : ''}
             >
               {t('serviceTypes.actions.save', { defaultValue: 'Save' })}
             </Button>
@@ -498,31 +480,6 @@ const ServiceTypeSettings: React.FC = () => {
                 placeholder={t('serviceTypes.fields.description.placeholder', {
                   defaultValue: 'Describe this service type'
                 })}
-              />
-            </div>
-            <div>
-              <Label htmlFor="billing-method-select">
-                {t('serviceTypes.fields.billingMethod.label', { defaultValue: 'Billing Method *' })}
-              </Label>
-              <CustomSelect
-                id="billing-method-select"
-                options={[
-                  { value: 'fixed', label: t('common.billingMethod.fixed', { defaultValue: 'Fixed' }) },
-                  { value: 'hourly', label: t('common.billingMethod.hourly', { defaultValue: 'Hourly' }) },
-                  { value: 'usage', label: t('common.billingMethod.usageBased', { defaultValue: 'Usage Based' }) },
-                ]}
-                value={editingType?.billing_method || ''}
-                onValueChange={(value: string) => {
-                  if (value === 'fixed' || value === 'hourly' || value === 'usage') {
-                    setEditingType({ ...editingType, billing_method: value as 'fixed' | 'hourly' | 'usage' });
-                    clearErrorIfSubmitted();
-                  }
-                }}
-                placeholder={t('serviceTypes.fields.billingMethod.placeholder', {
-                  defaultValue: 'Select billing method...'
-                })}
-                required
-                className={hasAttemptedSubmit && !editingType?.billing_method ? 'ring-1 ring-red-500' : ''}
               />
             </div>
             <div>
@@ -640,7 +597,6 @@ const ServiceTypeSettings: React.FC = () => {
                   <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
                     <div className="w-8"></div> {/* Checkbox column */}
                     <div className="flex-1">{t('common.columns.name', { defaultValue: 'Name' })}</div>
-                    <div className="w-24 text-center">{t('common.columns.billingMethod', { defaultValue: 'Billing Method' })}</div>
                     <div className="w-16 text-center">{t('common.columns.order', { defaultValue: 'Order' })}</div>
                   </div>
                   {/* Table Body */}
@@ -665,13 +621,6 @@ const ServiceTypeSettings: React.FC = () => {
                           />
                         </div>
                         <div className="flex-1">{type.name}</div>
-                        <div className="w-24 text-center text-sm text-muted-foreground">
-                          {type.billing_method === 'fixed'
-                            ? t('common.billingMethod.fixed', { defaultValue: 'Fixed' })
-                            : type.billing_method === 'hourly'
-                              ? t('common.billingMethod.hourly', { defaultValue: 'Hourly' })
-                              : t('common.billingMethod.usage', { defaultValue: 'Usage' })}
-                        </div>
                         <div className="w-16 text-center text-sm text-muted-foreground">
                           {type.display_order}
                         </div>
