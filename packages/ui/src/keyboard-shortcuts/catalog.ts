@@ -88,6 +88,11 @@ export const SHORTCUT_ACTION_CATALOG: readonly ShortcutActionCatalogEntry[] = [
   entry('editor.moveRight', 'editor', 'editor', ['ArrowRight']),
 ];
 
+export const OPTIONAL_ALTERNATE_BINDINGS: Readonly<Record<string, readonly string[]>> = {
+  'record.previous': ['alt+ArrowLeft'],
+  'record.next': ['alt+ArrowRight'],
+};
+
 export function getShortcutCatalogEntry(id: string): ShortcutActionCatalogEntry | undefined {
   return SHORTCUT_ACTION_CATALOG.find((candidate) => candidate.id === id);
 }

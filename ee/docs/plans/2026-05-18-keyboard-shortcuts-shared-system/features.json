@@ -556,7 +556,7 @@
   {
     "id": "F100",
     "description": "panel.close action registered for drawers, Radix-integrated (Escape)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR16",
       "FR12"
@@ -566,7 +566,7 @@
   {
     "id": "F101",
     "description": "drawer.historyBack / drawer.historyForward actions registered",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR16"
     ],
@@ -575,7 +575,7 @@
   {
     "id": "F102",
     "description": "Migrate server/src/context/DrawerContext.tsx keydown handling to registered actions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR16"
     ],
@@ -584,7 +584,7 @@
   {
     "id": "F103",
     "description": "Migrate packages/ui/src/context/DrawerContext.tsx keydown handling to registered actions (both contexts migrated together)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR16"
     ],
@@ -593,7 +593,7 @@
   {
     "id": "F104",
     "description": "Drawer/panel scope pushed while a drawer is open, popped on close (ref-counted)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR7",
       "FR17"
@@ -603,7 +603,7 @@
   {
     "id": "F105",
     "description": "record.previous / record.next registered defaulting to [ and ] (code-kind)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR17",
       "Initial Default Bindings"
@@ -613,7 +613,7 @@
   {
     "id": "F106",
     "description": "Alt+ArrowLeft/Right offered only as opt-in alternate bindings for record.previous/next (not default)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR17",
       "Cross-Platform"
@@ -623,7 +623,7 @@
   {
     "id": "F107",
     "description": "Migrate TicketNavigation.tsx adjacent-record nav to record.previous/next; remove its window listener",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR17"
     ],
@@ -632,7 +632,7 @@
   {
     "id": "F108",
     "description": "Drawer/panel scope wins over ticket page scope while a drawer is open",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR17",
       "FR8"

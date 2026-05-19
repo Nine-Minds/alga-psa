@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useEffect, useState, useCallback, useContext } from 'react';
+import React, { useEffect, useState, useCallback, useContext, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { UnsavedChangesContext } from '@alga-psa/ui/context/UnsavedChangesContext';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useShortcutAction, type ShortcutAction } from '@alga-psa/ui/keyboard-shortcuts';
 import { getAdjacentTicketIds } from '../../actions/optimizedTicketActions';
 import { parseReturnFilters, DEFAULT_TICKET_LIST_FILTERS } from '../../lib/ticketFilterUtils';
 
@@ -71,33 +72,37 @@ export default function TicketNavigation({ currentTicketId }: TicketNavigationPr
     }
   }, [returnFilters, unsavedChangesContext]);
 
-  // Keyboard shortcuts: Alt+ArrowLeft / Alt+ArrowRight
-  useEffect(() => {
-    if (!adjacentData) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.tagName === 'SELECT' ||
-        target.isContentEditable
-      ) {
-        return;
+  const previousRecordShortcut = useMemo<ShortcutAction>(() => ({
+    id: 'record.previous',
+    labelKey: 'actions.record.previous.label',
+    groupKey: 'groups.record',
+    defaultBindings: ['['],
+    scope: 'page',
+    enabled: Boolean(adjacentData?.prevTicketId),
+    handler: () => {
+      if (!adjacentData?.prevTicketId) {
+        return false;
       }
-
-      if (e.altKey && e.key === 'ArrowLeft' && adjacentData.prevTicketId) {
-        e.preventDefault();
-        navigateToTicket(adjacentData.prevTicketId);
-      } else if (e.altKey && e.key === 'ArrowRight' && adjacentData.nextTicketId) {
-        e.preventDefault();
-        navigateToTicket(adjacentData.nextTicketId);
+      navigateToTicket(adjacentData.prevTicketId);
+    },
+  }), [adjacentData?.prevTicketId, navigateToTicket]);
+  const nextRecordShortcut = useMemo<ShortcutAction>(() => ({
+    id: 'record.next',
+    labelKey: 'actions.record.next.label',
+    groupKey: 'groups.record',
+    defaultBindings: [']'],
+    scope: 'page',
+    enabled: Boolean(adjacentData?.nextTicketId),
+    handler: () => {
+      if (!adjacentData?.nextTicketId) {
+        return false;
       }
-    };
+      navigateToTicket(adjacentData.nextTicketId);
+    },
+  }), [adjacentData?.nextTicketId, navigateToTicket]);
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [adjacentData, navigateToTicket]);
+  useShortcutAction(previousRecordShortcut);
+  useShortcutAction(nextRecordShortcut);
 
   if (isLoading) {
     return (
