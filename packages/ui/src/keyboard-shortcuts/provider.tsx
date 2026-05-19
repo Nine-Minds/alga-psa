@@ -439,36 +439,48 @@ export function useKeyboardShortcutsContext(): KeyboardShortcutsContextValue {
   return context;
 }
 
+function useOptionalKeyboardShortcutsContext(): KeyboardShortcutsContextValue | null {
+  return useContext(KeyboardShortcutsContext);
+}
+
 export function useShortcutStorage(): ShortcutStorage {
   return useKeyboardShortcutsContext().storage;
 }
 
 export function useShortcutAction(action: ShortcutAction): void {
-  const { registerAction } = useKeyboardShortcutsContext();
+  const context = useOptionalKeyboardShortcutsContext();
 
   useEffect(() => {
-    return registerAction(action);
-  }, [action, registerAction]);
-}
-
-export function useShortcutScope(scope: ShortcutScope): void {
-  const { pushScope } = useKeyboardShortcutsContext();
-
-  useEffect(() => {
-    return pushScope(scope);
-  }, [pushScope, scope]);
-}
-
-export function useShortcutActiveRegion(active = true): void {
-  const { registerActiveRegion } = useKeyboardShortcutsContext();
-
-  useEffect(() => {
-    if (!active) {
+    if (!context) {
       return;
     }
 
-    return registerActiveRegion();
-  }, [active, registerActiveRegion]);
+    return context.registerAction(action);
+  }, [action, context]);
+}
+
+export function useShortcutScope(scope: ShortcutScope): void {
+  const context = useOptionalKeyboardShortcutsContext();
+
+  useEffect(() => {
+    if (!context) {
+      return;
+    }
+
+    return context.pushScope(scope);
+  }, [context, scope]);
+}
+
+export function useShortcutActiveRegion(active = true): void {
+  const context = useOptionalKeyboardShortcutsContext();
+
+  useEffect(() => {
+    if (!active || !context) {
+      return;
+    }
+
+    return context.registerActiveRegion();
+  }, [active, context]);
 }
 
 export function useKeyboardShortcutRegistry(): KeyboardShortcutRegistrySnapshot {

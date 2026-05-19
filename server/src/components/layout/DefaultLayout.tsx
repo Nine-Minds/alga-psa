@@ -26,6 +26,13 @@ import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/docu
 import { MspSchedulingCrossFeatureProvider } from '@alga-psa/msp-composition/scheduling/MspSchedulingCrossFeatureProvider';
 import { MspActivityCrossFeatureProvider } from '@alga-psa/msp-composition/workflows';
 import { useTier } from 'server/src/context/TierContext';
+import {
+  useShortcutAction,
+  useShortcutActiveRegion,
+  useShortcutScope,
+  type ShortcutAction,
+} from '@alga-psa/ui/keyboard-shortcuts';
+import { QuickCreateDialog, type QuickCreateType } from './QuickCreateDialog';
 
 interface DefaultLayoutProps {
   children: React.ReactNode;
@@ -120,6 +127,8 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
 
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [quickAskOpen, setQuickAskOpen] = useState(false);
+  const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
+  const [quickCreateType, setQuickCreateType] = useState<QuickCreateType | null>(null);
   const [isChatInterruptible, setIsChatInterruptible] = useState(false);
   const [pendingInterruptKind, setPendingInterruptKind] = useState<'close-sidebar' | 'navigate' | null>(null);
   const [sidebarHandoff, setSidebarHandoff] = useState<{ chatId: string | null; nonce: number }>({
@@ -210,41 +219,79 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
     cancelActiveChatWorkRef.current = null;
   }, [rightSidebarOpen]);
 
+  const toggleChatShortcut = useMemo<ShortcutAction>(() => ({
+    id: 'global.toggleChat',
+    labelKey: 'actions.global.toggleChat.label',
+    groupKey: 'groups.ai',
+    defaultBindings: ['mod+l'],
+    scope: 'global',
+    enabled: aiAssistantAvailable,
+    handler: () => {
+      if (!aiAssistantAvailable) {
+        return false;
+      }
+
+      if (rightSidebarOpen) {
+        requestSidebarClose();
+        return;
+      }
+
+      setRightSidebarOpen(true);
+    },
+  }), [aiAssistantAvailable, requestSidebarClose, rightSidebarOpen]);
+
+  const quickAskShortcut = useMemo<ShortcutAction>(() => ({
+    id: 'ai.quickAsk',
+    labelKey: 'actions.ai.quickAsk.label',
+    groupKey: 'groups.ai',
+    defaultBindings: ['mod+ArrowUp'],
+    scope: 'global',
+    enabled: aiAssistantAvailable,
+    handler: () => {
+      if (!aiAssistantAvailable) {
+        return false;
+      }
+
+      if (rightSidebarOpen) {
+        const input = document.querySelector('[data-automation-id="chat-input"]') as HTMLElement | null;
+        input?.focus();
+        return;
+      }
+
+      setQuickAskOpen(prev => !prev);
+    },
+  }), [aiAssistantAvailable, rightSidebarOpen]);
+
+  const openShortcutsShortcut = useMemo<ShortcutAction>(() => ({
+    id: 'global.openShortcuts',
+    labelKey: 'actions.global.openShortcuts.label',
+    groupKey: 'groups.global',
+    defaultBindings: ['?'],
+    scope: 'global',
+    handler: () => {
+      setShortcutsHelpOpen(true);
+    },
+  }), []);
+
+  const quickCreateShortcut = useMemo<ShortcutAction>(() => ({
+    id: 'global.quickCreate',
+    labelKey: 'actions.global.quickCreate.label',
+    groupKey: 'groups.global',
+    defaultBindings: ['c'],
+    scope: 'page',
+    handler: () => {
+      setQuickCreateType('ticket');
+    },
+  }), []);
+
+  useShortcutScope('page');
+  useShortcutActiveRegion(true);
+  useShortcutAction(toggleChatShortcut);
+  useShortcutAction(quickAskShortcut);
+  useShortcutAction(openShortcutsShortcut);
+  useShortcutAction(quickCreateShortcut);
+
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === 'l') {
-        if (!aiAssistantAvailable) {
-          return;
-        }
-
-        event.preventDefault();
-        if (rightSidebarOpen) {
-          requestSidebarClose();
-          return;
-        }
-
-        setRightSidebarOpen(true);
-      }
-
-      if ((event.metaKey || event.ctrlKey) && event.key === 'ArrowUp') {
-        if (!aiAssistantAvailable) {
-          return;
-        }
-
-        event.preventDefault();
-
-        if (rightSidebarOpen) {
-          const input = document.querySelector('[data-automation-id="chat-input"]') as HTMLElement | null;
-          input?.focus();
-          return;
-        }
-
-        setQuickAskOpen(prev => !prev);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-
     const bootstrapChatContext = async () => {
       // Fetch or set up the necessary data for Chat component
       setClientUrl('https://example.com');
@@ -277,10 +324,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
 
     bootstrapChatContext();
 
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [aiAssistantAvailable, requestSidebarClose, rightSidebarOpen]);
+  }, []);
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -494,6 +538,34 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
                   setChatTitle={setChatTitle}
                   isTitleLocked={isTitleLocked}
                   hf={null}
+                />
+              ) : null}
+              {shortcutsHelpOpen ? (
+                <div
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Keyboard shortcuts"
+                  id="keyboard-shortcuts-help-dialog"
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+                  onClick={() => setShortcutsHelpOpen(false)}
+                >
+                  <div className="rounded-md bg-white p-4 shadow-lg" onClick={(event) => event.stopPropagation()}>
+                    <h2 className="text-lg font-semibold">Keyboard shortcuts</h2>
+                    <button
+                      id="keyboard-shortcuts-help-close"
+                      type="button"
+                      className="mt-4 rounded border px-3 py-1"
+                      onClick={() => setShortcutsHelpOpen(false)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+              {quickCreateType ? (
+                <QuickCreateDialog
+                  type={quickCreateType}
+                  onClose={() => setQuickCreateType(null)}
                 />
               ) : null}
             </QuickAskProvider>

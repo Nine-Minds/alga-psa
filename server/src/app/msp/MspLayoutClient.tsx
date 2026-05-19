@@ -19,6 +19,7 @@ import type { SupportedLocale } from "@alga-psa/core/i18n/config";
 import type { ProductCode } from '@alga-psa/types';
 import { resolveProductRouteBehavior } from '@/lib/productSurfaceRegistry';
 import { ProductRouteBoundary } from '@/components/product/ProductRouteBoundary';
+import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
 
 interface Props {
   children: React.ReactNode;
@@ -106,21 +107,24 @@ export function MspLayoutClient({
               }}
             >
               {isOnboardingPage ? children : (
-                isAlgaDesk ? (
-                  routeBehavior === 'allowed' ? (
-                    <AlgaDeskMspShell initialSidebarCollapsed={initialSidebarCollapsed}>
-                      {children}
-                    </AlgaDeskMspShell>
+                <KeyboardShortcutsProvider routeKey={pathname ?? '/msp'}>
+                  {isAlgaDesk ? (
+                    routeBehavior === 'allowed' ? (
+                      <AlgaDeskMspShell initialSidebarCollapsed={initialSidebarCollapsed}>
+                        {children}
+                      </AlgaDeskMspShell>
+                    ) : (
+                      <ProductRouteBoundary behavior={routeBehavior} scope="msp" />
+                    )
                   ) : (
-                    <ProductRouteBoundary behavior={routeBehavior} scope="msp" />
+                    <AIChatContextProvider>
+                      <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
+                        {children}
+                      </DefaultLayout>
+                    </AIChatContextProvider>
                   )
-                ) : (
-                  <AIChatContextProvider>
-                    <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
-                      {children}
-                    </DefaultLayout>
-                  </AIChatContextProvider>
-                )
+                  }
+                </KeyboardShortcutsProvider>
               )}
             </ClientUIStateProvider>
           </TagProvider>
