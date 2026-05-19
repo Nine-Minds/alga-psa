@@ -159,7 +159,7 @@
   {
     "id": "T026",
     "description": "Unit: platform detection returns a value only post-mount; SSR render path does not call navigator",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F231"

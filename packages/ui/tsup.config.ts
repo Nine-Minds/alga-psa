@@ -5,6 +5,7 @@ export default defineConfig({
     'index': 'src/index.ts',
     'components/index': 'src/components/index.ts',
     'ui-reflection/index': 'src/ui-reflection/index.ts',
+    'keyboard-shortcuts/index': 'src/keyboard-shortcuts/index.ts',
     'lib/index': 'src/lib/index.ts',
     'hooks/index': 'src/hooks/index.ts',
   },
