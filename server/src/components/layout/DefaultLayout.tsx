@@ -285,12 +285,54 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
     },
   }), []);
 
+  const goTicketsShortcut = useMemo<ShortcutAction>(() => ({
+    id: 'navigation.goTickets',
+    labelKey: 'actions.navigation.goTickets.label',
+    groupKey: 'groups.navigation',
+    descriptionKey: 'actions.navigation.goTickets.description',
+    defaultBindings: ['g t'],
+    scope: 'global',
+    sequence: true,
+    handler: () => {
+      router.push('/msp/tickets');
+    },
+  }), [router]);
+
+  const goAssetsShortcut = useMemo<ShortcutAction>(() => ({
+    id: 'navigation.goAssets',
+    labelKey: 'actions.navigation.goAssets.label',
+    groupKey: 'groups.navigation',
+    descriptionKey: 'actions.navigation.goAssets.description',
+    defaultBindings: ['g a'],
+    scope: 'global',
+    sequence: true,
+    handler: () => {
+      router.push('/msp/assets');
+    },
+  }), [router]);
+
+  const goClientsShortcut = useMemo<ShortcutAction>(() => ({
+    id: 'navigation.goClients',
+    labelKey: 'actions.navigation.goClients.label',
+    groupKey: 'groups.navigation',
+    descriptionKey: 'actions.navigation.goClients.description',
+    defaultBindings: ['g c'],
+    scope: 'global',
+    sequence: true,
+    handler: () => {
+      router.push('/msp/clients');
+    },
+  }), [router]);
+
   useShortcutScope('page');
   useShortcutActiveRegion(true);
   useShortcutAction(toggleChatShortcut);
   useShortcutAction(quickAskShortcut);
   useShortcutAction(openShortcutsShortcut);
   useShortcutAction(quickCreateShortcut);
+  useShortcutAction(goTicketsShortcut);
+  useShortcutAction(goAssetsShortcut);
+  useShortcutAction(goClientsShortcut);
 
   useEffect(() => {
     const bootstrapChatContext = async () => {
