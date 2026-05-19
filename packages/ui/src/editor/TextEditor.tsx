@@ -22,6 +22,7 @@ import {
 import { TextSelection } from '@tiptap/pm/state';
 import { Mention } from './Mention';
 import { Emoticon } from './EmoticonExtension';
+import { useShortcutScope } from '../keyboard-shortcuts';
 
 // Debug flag
 const DEBUG = false;
@@ -175,6 +176,7 @@ export default function TextEditor({
   placeholder,
   uploadFile,
 }: TextEditorProps) {
+  useShortcutScope('editor');
   const { resolvedTheme } = useTheme();
   const blockNoteTheme = resolvedTheme === 'dark' ? 'dark' : 'light';
   // Parse initial content and remove empty trailing blocks
@@ -450,7 +452,7 @@ export default function TextEditor({
   }, [editor, onContentChange]);
 
   return (
-    <div className="w-full h-full min-w-0">
+    <div className="w-full h-full min-w-0" data-keyboard-shortcuts-editor-root="true">
       {children}
       <div
         className="min-h-[100px] h-full w-full editor-paper border border-[#e5e7eb] dark:border-[rgb(var(--color-border-200))] rounded-lg p-4 overflow-auto min-w-0"
