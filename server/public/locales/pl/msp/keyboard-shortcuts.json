@@ -42,6 +42,23 @@
     "close": "Zamknij skróty klawiaturowe",
     "custom": "Niestandardowy"
   },
+  "commandPalette": {
+    "title": "Paleta poleceń",
+    "placeholder": "Szukaj rekordów, nawigacji i akcji",
+    "loading": "Wyszukiwanie...",
+    "resultCount": "{{count}} wyników",
+    "syntax": {
+      "title": "Składnia wyszukiwania",
+      "summary": "Pola, operatory, słowa kluczowe $ i sigile",
+      "inlineHelp": "Użyj ticket:, client:, >action, /nav, @user, #id, $mine oraz fraz w cudzysłowie."
+    },
+    "types": {
+      "nav": "Nawigacja",
+      "action": "Akcja",
+      "record": "Rekord",
+      "help": "Pomoc"
+    }
+  },
   "groups": {
     "global": "Globalne",
     "ai": "AI",

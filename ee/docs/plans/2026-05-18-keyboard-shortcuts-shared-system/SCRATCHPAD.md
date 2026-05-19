@@ -520,3 +520,29 @@ items are `implemented: true` (one-commit-per-group rule).
   `npx tsc --noEmit -p packages/projects/tsconfig.json`;
   `npx tsc --noEmit -p packages/assets/tsconfig.json`; and
   `npm run typecheck --workspace server`.
+
+## 2026-05-19 — command-palette group implementation
+- F340-F353: Implemented the command palette overlay opened by `global.search`
+  (`mod+k`) from `SearchPalette`. The overlay merges navigation menu entries,
+  catalog shortcut actions, and existing record typeahead search; supports
+  keyboard navigation/activation, Escape close, localStorage frequency boosts,
+  accessible combobox/listbox roles, live result counts, visible `mod+k` hint,
+  and in-palette syntax help.
+- F343-F347: Added pure UI-decoupled
+  `packages/ui/src/keyboard-shortcuts/command-palette-query.ts` parser with
+  field aliases, sigils, quoted phrases, exclusion, wildcards, fuzzy suffixes,
+  OR/AND metadata, and `$mine`/`$recent`/`$open` aliases.
+- F350/F352: Added command palette chrome/syntax/type labels across
+  en/fr/es/de/nl/it/pl/pt, regenerated pseudo locales, and added a shortcut
+  help-dialog link to the palette syntax affordance.
+- T340-T349: Covered by parser unit tests, command palette source wiring smoke,
+  translation validation, server/UI typecheck, and the existing keyboard
+  shortcut dependency-boundary/graph guard.
+- Checks passed:
+  `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/command-palette-query.test.ts src/keyboard-shortcuts/command-palette.source.test.ts`;
+  `npx tsc --noEmit -p packages/ui/tsconfig.json`;
+  `npm run typecheck --workspace server`;
+  `node scripts/generate-pseudo-locales.cjs`;
+  `node scripts/validate-translations.cjs` (pre-existing Polish plural
+  warnings only); and
+  `npx nx graph --file=/tmp/project-graph.json && node scripts/guard-keyboard-shortcuts-boundary.mjs --graph /tmp/project-graph.json`.

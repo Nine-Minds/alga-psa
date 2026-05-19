@@ -42,6 +42,23 @@
     "close": "Tastenkürzel schließen",
     "custom": "Benutzerdefiniert"
   },
+  "commandPalette": {
+    "title": "Befehlspalette",
+    "placeholder": "Datensätze, Navigation und Aktionen suchen",
+    "loading": "Suche...",
+    "resultCount": "{{count}} Ergebnisse",
+    "syntax": {
+      "title": "Suchsyntax",
+      "summary": "Felder, Operatoren, $Schlüsselwörter und Sigel",
+      "inlineHelp": "Nutzen Sie ticket:, client:, >action, /nav, @user, #id, $mine und Phrasen in Anführungszeichen."
+    },
+    "types": {
+      "nav": "Navigation",
+      "action": "Aktion",
+      "record": "Datensatz",
+      "help": "Hilfe"
+    }
+  },
   "groups": {
     "global": "Global",
     "ai": "KI",

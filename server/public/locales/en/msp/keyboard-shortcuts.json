@@ -42,6 +42,23 @@
     "close": "Close keyboard shortcuts",
     "custom": "Custom"
   },
+  "commandPalette": {
+    "title": "Command Palette",
+    "placeholder": "Search records, navigation, and actions",
+    "loading": "Searching...",
+    "resultCount": "{{count}} results",
+    "syntax": {
+      "title": "Search syntax",
+      "summary": "Fields, operators, $keywords, and sigils",
+      "inlineHelp": "Use ticket:, client:, >action, /nav, @user, #id, $mine, and quoted phrases."
+    },
+    "types": {
+      "nav": "Navigation",
+      "action": "Action",
+      "record": "Record",
+      "help": "Help"
+    }
+  },
   "groups": {
     "global": "Global",
     "ai": "AI",

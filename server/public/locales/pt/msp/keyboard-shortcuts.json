@@ -42,6 +42,23 @@
     "close": "Fechar atalhos de teclado",
     "custom": "Personalizado"
   },
+  "commandPalette": {
+    "title": "Paleta de comandos",
+    "placeholder": "Pesquisar registros, navegação e ações",
+    "loading": "Pesquisando...",
+    "resultCount": "{{count}} resultados",
+    "syntax": {
+      "title": "Sintaxe de pesquisa",
+      "summary": "Campos, operadores, palavras-chave $ e sigilos",
+      "inlineHelp": "Use ticket:, client:, >action, /nav, @user, #id, $mine e frases entre aspas."
+    },
+    "types": {
+      "nav": "Navegação",
+      "action": "Ação",
+      "record": "Registro",
+      "help": "Ajuda"
+    }
+  },
   "groups": {
     "global": "Global",
     "ai": "IA",

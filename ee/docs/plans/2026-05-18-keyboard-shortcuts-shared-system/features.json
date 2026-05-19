@@ -1368,7 +1368,7 @@
   {
     "id": "F340",
     "description": "Command palette overlay (Spotlight) component, fully keyboard-driven (Up/Down/Enter/Escape, no mouse needed); shared, i18n-ready",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR33"
     ],
@@ -1377,7 +1377,7 @@
   {
     "id": "F341",
     "description": "Binding: mod+k opens the command palette. SUPERSEDES the prior 'mod+k focuses sidebar search' \u2014 palette's default free-text mode includes record search so existing behavior is preserved/enhanced; asset palette stays rescoped (mod+shift+k)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR33",
       "Open Questions"
@@ -1387,7 +1387,7 @@
   {
     "id": "F342",
     "description": "Result providers merged & ranked: navigation destinations (from menuConfig), registered shortcut actions (runnable commands), and record search (existing app search)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR33"
     ],
@@ -1396,7 +1396,7 @@
   {
     "id": "F343",
     "description": "Pure, UI-decoupled query parser module (mirrors parser/matcher discipline); unit-tested; obeys the architecture-guard import boundary",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR33",
       "FR30"
@@ -1406,7 +1406,7 @@
   {
     "id": "F344",
     "description": "TeamCity-style field-scoped syntax field:value with a field registry + short aliases (e.g. ticket:/t:, client:/c:, project:/p:, asset:/a:, user:/u:/@, nav:/ , action:>)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR33",
       "Appendix: Command Palette Syntax"
@@ -1416,7 +1416,7 @@
   {
     "id": "F345",
     "description": "Operators: double-quoted phrases; - / NOT exclusion; * and ? wildcards (not leading *); prefix-match default; OR default between unscoped terms; AND only within the same field scope",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR33",
       "Appendix: Command Palette Syntax"
@@ -1426,7 +1426,7 @@
   {
     "id": "F346",
     "description": "Magic $ keywords abbreviated to first syllable (e.g. $mine/$m, $recent/$rec, $open) \u00e0 la TeamCity $pinned/$p",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR33",
       "Appendix: Command Palette Syntax"
@@ -1436,7 +1436,7 @@
   {
     "id": "F347",
     "description": "Special leading sigils: > run action/command, # open by record id/number, @ people, / navigation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR33",
       "Appendix: Command Palette Syntax"
@@ -1446,7 +1446,7 @@
   {
     "id": "F348",
     "description": "Selecting a result navigates / runs the action / opens the record; empty query shows recent + primary nav; recents and frequency boost ranking",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR33"
     ],
@@ -1455,7 +1455,7 @@
   {
     "id": "F349",
     "description": "Palette is a registered shortcut action (global scope) so it appears in help and is rebindable; default mod+k per F341",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR33",
       "FR24"
@@ -1465,7 +1465,7 @@
   {
     "id": "F350",
     "description": "i18n: palette chrome, field names, placeholders, syntax help in en + 7 locales + pseudo; ROUTE_NAMESPACES updated if a new namespace; validate-translations.cjs passes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR28",
       "FR33"
@@ -1475,7 +1475,7 @@
   {
     "id": "F351",
     "description": "a11y: combobox/listbox roles, aria-activedescendant, result-count live region, visible kbd hints; no SSR/hydration mismatch",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR33",
       "FR26",
@@ -1486,7 +1486,7 @@
   {
     "id": "F352",
     "description": "In-palette syntax help (field list + operators + $keywords + sigils); global help dialog links to it",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR33",
       "FR24"
@@ -1496,7 +1496,7 @@
   {
     "id": "F353",
     "description": "Dependency-boundary guard extended to the palette module (no @alga-psa/user-composition or feature-package imports; npx nx graph shows no new cycle)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR30",
       "FR33"
