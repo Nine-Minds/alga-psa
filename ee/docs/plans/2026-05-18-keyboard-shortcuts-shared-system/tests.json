@@ -1288,7 +1288,7 @@
   {
     "id": "T340",
     "description": "E2E: mod+k opens the command palette; arrow keys move selection; Enter activates; Escape closes; usable with no mouse",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F340",
       "F341",
@@ -1299,7 +1299,7 @@
   {
     "id": "T341",
     "description": "E2E: palette free-text returns merged nav + actions + record results, ranked; empty query shows recent + nav",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F342",
       "F348"
@@ -1309,7 +1309,7 @@
   {
     "id": "T342",
     "description": "Unit: parser handles field:value with aliases (t:/ticket:, p:/project:, @user, > action, / nav, # id)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F343",
       "F344",
@@ -1320,7 +1320,7 @@
   {
     "id": "T343",
     "description": "Unit: operators \u2014 quoted phrase, -/NOT exclusion, * and ? wildcards, leading-* rejected, prefix-match default, OR default, AND only within same field",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F345"
     ],
@@ -1329,7 +1329,7 @@
   {
     "id": "T344",
     "description": "Unit: $ magic keywords incl. first-syllable abbreviations ($mine/$m, $recent/$rec)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F346"
     ],
@@ -1338,7 +1338,7 @@
   {
     "id": "T345",
     "description": "E2E: > runs a registered shortcut action; # opens a record by id; @ filters people; / filters navigation",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F347",
       "F342"
@@ -1348,7 +1348,7 @@
   {
     "id": "T346",
     "description": "i18n: palette strings/field names/help across 8 locales + pseudo; validate-translations.cjs passes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F350"
     ],
@@ -1357,7 +1357,7 @@
   {
     "id": "T347",
     "description": "a11y: combobox/listbox roles + aria-activedescendant + live result count; no hydration mismatch",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F351"
     ],
@@ -1366,7 +1366,7 @@
   {
     "id": "T348",
     "description": "Component: in-palette syntax help lists fields/operators/$keywords/sigils; global help dialog links to it",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F352"
     ],
@@ -1375,7 +1375,7 @@
   {
     "id": "T349",
     "description": "Static/graph: palette module has no @alga-psa/user-composition or feature imports; npx nx graph shows no new cycle vs known-cycles.json",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F353"
     ],

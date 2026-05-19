@@ -55,6 +55,13 @@ export function ShortcutHelpDialog({ isOpen, onClose, disabledActionIds = [] }: 
               </div>
             </section>
           ))}
+          <a
+            id="keyboard-shortcuts-command-palette-syntax"
+            href="#command-palette"
+            className="block text-sm text-blue-600 underline"
+          >
+            {t('commandPalette.syntax.summary', { defaultValue: 'Fields, operators, $keywords, and sigils' })}
+          </a>
         </div>
       </div>
     </div>

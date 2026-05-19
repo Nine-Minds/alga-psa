@@ -42,6 +42,23 @@
     "close": "Fermer les raccourcis clavier",
     "custom": "Personnalisé"
   },
+  "commandPalette": {
+    "title": "Palette de commandes",
+    "placeholder": "Rechercher des enregistrements, la navigation et des actions",
+    "loading": "Recherche...",
+    "resultCount": "{{count}} résultats",
+    "syntax": {
+      "title": "Syntaxe de recherche",
+      "summary": "Champs, opérateurs, mots-clés $ et sigles",
+      "inlineHelp": "Utilisez ticket:, client:, >action, /nav, @user, #id, $mine et des expressions entre guillemets."
+    },
+    "types": {
+      "nav": "Navigation",
+      "action": "Action",
+      "record": "Enregistrement",
+      "help": "Aide"
+    }
+  },
   "groups": {
     "global": "Global",
     "ai": "IA",

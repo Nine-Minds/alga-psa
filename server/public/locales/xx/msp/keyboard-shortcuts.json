@@ -42,6 +42,23 @@
     "close": "11111",
     "custom": "11111"
   },
+  "commandPalette": {
+    "title": "11111",
+    "placeholder": "11111",
+    "loading": "11111",
+    "resultCount": "11111 {{count}} 11111",
+    "syntax": {
+      "title": "11111",
+      "summary": "11111",
+      "inlineHelp": "11111"
+    },
+    "types": {
+      "nav": "11111",
+      "action": "11111",
+      "record": "11111",
+      "help": "11111"
+    }
+  },
   "groups": {
     "global": "11111",
     "ai": "11111",

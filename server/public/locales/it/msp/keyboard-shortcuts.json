@@ -42,6 +42,23 @@
     "close": "Chiudi scorciatoie da tastiera",
     "custom": "Personalizzata"
   },
+  "commandPalette": {
+    "title": "Tavolozza comandi",
+    "placeholder": "Cerca record, navigazione e azioni",
+    "loading": "Ricerca...",
+    "resultCount": "{{count}} risultati",
+    "syntax": {
+      "title": "Sintassi di ricerca",
+      "summary": "Campi, operatori, parole chiave $ e sigilli",
+      "inlineHelp": "Usa ticket:, client:, >action, /nav, @user, #id, $mine e frasi tra virgolette."
+    },
+    "types": {
+      "nav": "Navigazione",
+      "action": "Azione",
+      "record": "Record",
+      "help": "Aiuto"
+    }
+  },
   "groups": {
     "global": "Globale",
     "ai": "IA",

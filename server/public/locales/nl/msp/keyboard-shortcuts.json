@@ -42,6 +42,23 @@
     "close": "Sneltoetsen sluiten",
     "custom": "Aangepast"
   },
+  "commandPalette": {
+    "title": "Commandopalet",
+    "placeholder": "Zoek records, navigatie en acties",
+    "loading": "Zoeken...",
+    "resultCount": "{{count}} resultaten",
+    "syntax": {
+      "title": "Zoeksyntaxis",
+      "summary": "Velden, operators, $trefwoorden en sigils",
+      "inlineHelp": "Gebruik ticket:, client:, >action, /nav, @user, #id, $mine en zinnen tussen aanhalingstekens."
+    },
+    "types": {
+      "nav": "Navigatie",
+      "action": "Actie",
+      "record": "Record",
+      "help": "Help"
+    }
+  },
   "groups": {
     "global": "Globaal",
     "ai": "AI",

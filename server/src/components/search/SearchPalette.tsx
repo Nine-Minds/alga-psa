@@ -10,6 +10,7 @@ import {
   searchAppTypeaheadAction,
   type SearchResultRow,
 } from '@/lib/actions/searchActions';
+import { CommandPalette } from './CommandPalette';
 
 function toDomIdPart(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -30,6 +31,7 @@ export default function SearchPalette({
   const [totalCount, setTotalCount] = useState(0);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [focusAfterExpand, setFocusAfterExpand] = useState(false);
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -53,15 +55,9 @@ export default function SearchPalette({
     defaultBindings: ['mod+k'],
     scope: 'global',
     handler: () => {
-      if (collapsed) {
-        setFocusAfterExpand(true);
-        onCollapsedClick?.();
-        return;
-      }
-
-      inputRef.current?.focus();
+      setIsCommandPaletteOpen(true);
     },
-  }), [collapsed, onCollapsedClick]);
+  }), []);
 
   useShortcutAction(searchShortcut);
 
@@ -175,20 +171,24 @@ export default function SearchPalette({
 
   if (collapsed) {
     return (
-      <button
-        id="app-search-collapsed-button"
-        type="button"
-        onClick={onCollapsedClick}
-        className="mx-3 my-3 flex h-10 w-10 items-center justify-center rounded-md border border-gray-500/70 bg-white/10 text-gray-300 hover:bg-white/15"
-        aria-label={t('search.placeholder')}
-      >
-        <Search className="h-5 w-5" aria-hidden="true" />
-      </button>
+      <>
+        <CommandPalette open={isCommandPaletteOpen} onClose={() => setIsCommandPaletteOpen(false)} />
+        <button
+          id="app-search-collapsed-button"
+          type="button"
+          onClick={onCollapsedClick}
+          className="mx-3 my-3 flex h-10 w-10 items-center justify-center rounded-md border border-gray-500/70 bg-white/10 text-gray-300 hover:bg-white/15"
+          aria-label={t('search.placeholder')}
+        >
+          <Search className="h-5 w-5" aria-hidden="true" />
+        </button>
+      </>
     );
   }
 
   return (
     <div className="px-4 py-2">
+      <CommandPalette open={isCommandPaletteOpen} onClose={() => setIsCommandPaletteOpen(false)} />
       <Command shouldFilter={false} className="relative">
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />

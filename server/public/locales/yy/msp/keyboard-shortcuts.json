@@ -42,6 +42,23 @@
     "close": "55555",
     "custom": "55555"
   },
+  "commandPalette": {
+    "title": "55555",
+    "placeholder": "55555",
+    "loading": "55555",
+    "resultCount": "55555 {{count}} 55555",
+    "syntax": {
+      "title": "55555",
+      "summary": "55555",
+      "inlineHelp": "55555"
+    },
+    "types": {
+      "nav": "55555",
+      "action": "55555",
+      "record": "55555",
+      "help": "55555"
+    }
+  },
   "groups": {
     "global": "55555",
     "ai": "55555",
