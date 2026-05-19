@@ -1122,7 +1122,7 @@
   {
     "id": "T095",
     "description": "E2E: on an /msp page (not in a text field), tapping g then t / g a / g c navigates to /msp/tickets | /msp/assets | /msp/clients; no modifier; suppressed while typing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F095",
       "F050"
