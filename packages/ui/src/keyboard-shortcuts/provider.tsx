@@ -13,7 +13,8 @@ import { matchEvent } from './matcher';
 import { parseBinding } from './parser';
 import { normalizeDefaultBindings, ShortcutRegistry } from './registry';
 import { DEFAULT_PLATFORM, useClientPlatform } from './platform';
-import type { BindingDescriptor, Platform, ShortcutAction, ShortcutScope } from './types';
+import { createMemoryShortcutStorage } from './storage';
+import type { BindingDescriptor, Platform, ShortcutAction, ShortcutScope, ShortcutStorage } from './types';
 
 interface ScopeEntry {
   id: number;
@@ -39,6 +40,7 @@ interface KeyboardShortcutsContextValue {
   registerAction: (action: ShortcutAction) => () => void;
   pushScope: (scope: ShortcutScope) => () => void;
   registerActiveRegion: () => () => void;
+  storage: ShortcutStorage;
   getState: () => DispatchState;
 }
 
@@ -47,6 +49,7 @@ export interface KeyboardShortcutsProviderProps {
   platform?: Platform;
   routeKey?: string;
   disabledActionIds?: readonly string[];
+  storage?: ShortcutStorage;
   onConflict?: (conflict: ShortcutConflict) => void;
 }
 
@@ -122,11 +125,13 @@ export function KeyboardShortcutsProvider({
   platform,
   routeKey,
   disabledActionIds = [],
+  storage,
   onConflict,
 }: KeyboardShortcutsProviderProps) {
   const detectedPlatform = useClientPlatform(DEFAULT_PLATFORM);
   const effectivePlatform = platform ?? detectedPlatform;
   const registryRef = useRef(new ShortcutRegistry());
+  const defaultStorageRef = useRef(createMemoryShortcutStorage());
   const activeScopesRef = useRef<ScopeEntry[]>([]);
   const activeRegionsRef = useRef<ActiveRegionEntry[]>([]);
   const platformRef = useRef(effectivePlatform);
@@ -265,9 +270,10 @@ export function KeyboardShortcutsProvider({
       registerAction,
       pushScope,
       registerActiveRegion,
+      storage: storage ?? defaultStorageRef.current,
       getState,
     }),
-    [getState, pushScope, registerAction, registerActiveRegion],
+    [getState, pushScope, registerAction, registerActiveRegion, storage],
   );
 
   return (
@@ -284,6 +290,10 @@ export function useKeyboardShortcutsContext(): KeyboardShortcutsContextValue {
   }
 
   return context;
+}
+
+export function useShortcutStorage(): ShortcutStorage {
+  return useKeyboardShortcutsContext().storage;
 }
 
 export function useShortcutAction(action: ShortcutAction): void {

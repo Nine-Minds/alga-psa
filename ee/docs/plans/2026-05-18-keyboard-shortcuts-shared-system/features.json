@@ -340,13 +340,22 @@
   },
   {
     "id": "F043",
-    "description": "KeyboardShortcutsProvider accepts an injected ShortcutStorage (prop/context); defaults to the F006 in-memory adapter \u2014 the inversion seam that keeps packages/ui free of user-composition",
-    "implemented": false,
+    "description": "KeyboardShortcutsProvider accepts an injected ShortcutStorage (prop/context); defaults to an in-memory adapter \u2014 the inversion seam that keeps packages/ui free of user-composition",
+    "implemented": true,
     "prdRefs": [
       "FR30",
       "FR19"
     ],
-    "commitGroup": "registry"
+    "commitGroup": "architecture-boundary"
+  },
+  {
+    "id": "F044",
+    "description": "Architecture boundary guard: keyboard-shortcuts engine must not import user-composition or feature packages; CI path delegates circular dependency check to known-cycles baseline",
+    "implemented": true,
+    "prdRefs": [
+      "FR30"
+    ],
+    "commitGroup": "architecture-boundary"
   },
   {
     "id": "F050",
