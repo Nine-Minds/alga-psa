@@ -1296,6 +1296,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
                       onChange={(e) => setInboundDomainDraft(e.target.value)}
                       placeholder="acme.com"
                       className="flex-1"
+                      autoComplete="off"
+                      data-bwignore
+                      data-1p-ignore
+                      data-lpignore="true"
+                      data-form-type="other"
                     />
                     <Button
                       id="client-inbound-email-domain-add"
@@ -1730,6 +1735,12 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     handleDefaultContactChange,
     inboundDestinationOptions,
     isInboundDestinationOptionsLoading,
+    inboundEmailDomains,
+    inboundDomainDraft,
+    isInboundDomainBusy,
+    handleAddInboundDomain,
+    handleRemoveInboundDomain,
+    normalizeInboundDomain,
     currentUser,
     documents,
     memoizedRouter,

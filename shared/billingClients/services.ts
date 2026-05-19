@@ -223,14 +223,13 @@ export async function deleteService(
 export async function getServiceTypesForSelection(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string
-): Promise<Array<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }>> {
+): Promise<Array<{ id: string; name: string; is_standard: boolean }>> {
   const rows = await knexOrTrx('service_types')
     .where({ tenant, is_active: true })
-    .select('id', 'name', 'billing_method')
+    .select('id', 'name')
     .orderBy('name', 'asc');
   return rows.map((r: any) => ({
     ...r,
-    billing_method: r.billing_method === 'per_unit' ? 'usage' : r.billing_method,
     is_standard: false,
   }));
 }
