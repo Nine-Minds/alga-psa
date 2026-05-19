@@ -1436,7 +1436,7 @@ const Clients: React.FC = () => {
             <SearchInput
               value={searchInput}
               onChange={handleSearchInputChange}
-              placeholder={t('clientsPage.searchPlaceholder', { defaultValue: 'Search clients' })}
+              placeholder={t('clientsPage.searchPlaceholder', { defaultValue: 'Search clients, notes, documents, and interactions' })}
             />
 
             <div className="w-48 shrink-0">

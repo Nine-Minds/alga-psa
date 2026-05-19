@@ -175,7 +175,7 @@ export class TagService extends BaseService {
       ): Promise<TagResponse> {
         const { knex, tenant } = await this.getKnex();
 
-        return withTransaction(knex, async (trx) => {
+        const { created, definitionToPublish } = await withTransaction(knex, async (trx) => {
           const tagData: Omit<ITag, 'tenant' | 'tag_id'> = {
             tag_text: data.tag_text,
             tagged_id: data.tagged_id,
@@ -205,10 +205,6 @@ export class TagService extends BaseService {
             tagged_type: tagData.tagged_type
           }, context.userId);
 
-          if (createdDefinition) {
-            await this.publishTagDefinitionCreated(definition, context);
-          }
-          
           // Get the created tag for return
           const created = await trx('tag_mappings as tm')
             .join('tag_definitions as td', function() {
@@ -230,8 +226,19 @@ export class TagService extends BaseService {
             )
             .first();
 
-          return created as TagResponse;
+          return {
+            created: created as TagResponse,
+            definitionToPublish: createdDefinition ? definition : null,
+          };
         });
+
+        // Publish after the transaction commits so subscribers can read the
+        // newly-created tag definition on their own connections.
+        if (definitionToPublish) {
+          await this.publishTagDefinitionCreated(definitionToPublish, context);
+        }
+
+        return created;
       }
 
   /**
@@ -244,7 +251,7 @@ export class TagService extends BaseService {
   ): Promise<TagResponse> {
     const { knex, tenant } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
+    const { updated, tagUpdate } = await withTransaction(knex, async (trx) => {
       const updateData = { ...data };
       if (updateData.tag_text) {
         updateData.tag_text = updateData.tag_text.toLowerCase().trim();
@@ -270,13 +277,6 @@ export class TagService extends BaseService {
         board_id: updateData.board_id
       });
 
-      await this.publishTagDefinitionUpdated(
-        mapping.tag_id,
-        previousDefinition?.tag_text,
-        updateData.tag_text ?? previousDefinition?.tag_text,
-        context,
-      );
-      
       // Get updated tag
       const updated = await trx('tag_mappings as tm')
         .join('tag_definitions as td', function() {
@@ -302,8 +302,26 @@ export class TagService extends BaseService {
         throw new Error('Tag not found after update');
       }
 
-      return updated as TagResponse;
+      return {
+        updated: updated as TagResponse,
+        tagUpdate: {
+          tagId: mapping.tag_id,
+          previousName: previousDefinition?.tag_text,
+          newName: updateData.tag_text ?? previousDefinition?.tag_text,
+        },
+      };
     });
+
+    // Publish after the transaction commits so subscribers can read the
+    // updated tag definition on their own connections.
+    await this.publishTagDefinitionUpdated(
+      tagUpdate.tagId,
+      tagUpdate.previousName,
+      tagUpdate.newName,
+      context,
+    );
+
+    return updated;
   }
 
   /**
@@ -677,7 +695,7 @@ export class TagService extends BaseService {
   ): Promise<{ updated: number }> {
     const { knex, tenant } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
+    const result = await withTransaction(knex, async (trx) => {
       // Validate hex color codes if provided
       const hexColorRegex = /^#[0-9A-F]{6}$/i;
       if (backgroundColor && !hexColorRegex.test(backgroundColor)) {
@@ -691,7 +709,7 @@ export class TagService extends BaseService {
       const definition = await TagDefinition.findByTextAndType(trx, tenant, tagText, entityType);
 
       if (!definition) {
-        return { updated: 0 };
+        return { updated: 0, definitionToPublish: null };
       }
 
       await TagDefinition.update(trx, tenant, definition.tag_id, {
@@ -699,18 +717,27 @@ export class TagService extends BaseService {
         text_color: textColor
       });
 
-      await this.publishTagDefinitionUpdated(
-        definition.tag_id,
-        definition.tag_text,
-        definition.tag_text,
-        context,
-      );
-
       // Get count of affected mappings
       const updated = await TagMapping.getUsageCount(trx, tenant, definition.tag_id);
 
-      return { updated };
+      return {
+        updated,
+        definitionToPublish: { tagId: definition.tag_id, tagText: definition.tag_text },
+      };
     });
+
+    // Publish after the transaction commits so subscribers can read the
+    // updated tag definition on their own connections.
+    if (result.definitionToPublish) {
+      await this.publishTagDefinitionUpdated(
+        result.definitionToPublish.tagId,
+        result.definitionToPublish.tagText,
+        result.definitionToPublish.tagText,
+        context,
+      );
+    }
+
+    return { updated: result.updated };
   }
 
   /**
@@ -723,7 +750,7 @@ export class TagService extends BaseService {
   ): Promise<{ old_tag_text: string; new_tag_text: string; tagged_type: TaggedEntityType; updated_count: number; }> {
     const { knex, tenant } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
+    const { result, publish } = await withTransaction(knex, async (trx) => {
       // Validate tag text
       if (!newTagText || !newTagText.trim()) {
         throw new Error('Tag text cannot be empty');
@@ -758,10 +785,13 @@ export class TagService extends BaseService {
       // Don't update if text is the same
       if (tag.tag_text === trimmedNewText) {
         return {
-          old_tag_text: tag.tag_text,
-          new_tag_text: trimmedNewText,
-          tagged_type: tag.tagged_type,
-          updated_count: 0,
+          result: {
+            old_tag_text: tag.tag_text,
+            new_tag_text: trimmedNewText,
+            tagged_type: tag.tagged_type,
+            updated_count: 0,
+          },
+          publish: null,
         };
       }
 
@@ -770,10 +800,13 @@ export class TagService extends BaseService {
 
       if (!oldDefinition) {
         return {
-          old_tag_text: tag.tag_text,
-          new_tag_text: trimmedNewText,
-          tagged_type: tag.tagged_type,
-          updated_count: 0,
+          result: {
+            old_tag_text: tag.tag_text,
+            new_tag_text: trimmedNewText,
+            tagged_type: tag.tagged_type,
+            updated_count: 0,
+          },
+          publish: null,
         };
       }
 
@@ -789,23 +822,36 @@ export class TagService extends BaseService {
         tag_text: trimmedNewText
       });
 
-      await this.publishTagDefinitionUpdated(
-        oldDefinition.tag_id,
-        tag.tag_text,
-        trimmedNewText,
-        context,
-      );
-
       // Return count of affected mappings
       const updatedCount = await TagMapping.getUsageCount(trx, tenant, oldDefinition.tag_id);
 
       return {
-        old_tag_text: tag.tag_text,
-        new_tag_text: trimmedNewText,
-        tagged_type: tag.tagged_type,
-        updated_count: updatedCount,
+        result: {
+          old_tag_text: tag.tag_text,
+          new_tag_text: trimmedNewText,
+          tagged_type: tag.tagged_type,
+          updated_count: updatedCount,
+        },
+        publish: {
+          tagId: oldDefinition.tag_id,
+          previousName: tag.tag_text,
+          newName: trimmedNewText,
+        },
       };
     });
+
+    // Publish after the transaction commits so subscribers can read the
+    // updated tag definition on their own connections.
+    if (publish) {
+      await this.publishTagDefinitionUpdated(
+        publish.tagId,
+        publish.previousName,
+        publish.newName,
+        context,
+      );
+    }
+
+    return result;
   }
 
   /**
@@ -818,7 +864,7 @@ export class TagService extends BaseService {
   ): Promise<{ deleted_count: number }> {
     const { knex, tenant } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
+    const { deletedCount, deletedTagId } = await withTransaction(knex, async (trx) => {
       // Validate tag text
       if (!tagText || !tagText.trim()) {
         throw new Error('Tag text cannot be empty');
@@ -829,6 +875,7 @@ export class TagService extends BaseService {
       // Find the definition and delete it (mappings will cascade delete)
       const definition = await TagDefinition.findByTextAndType(trx, tenant, trimmedText, taggedType);
       let deletedCount = 0;
+      let deletedTagId: string | null = null;
 
       if (definition) {
         // Get count before deletion
@@ -836,13 +883,21 @@ export class TagService extends BaseService {
 
         // Delete the definition (mappings will cascade delete)
         await TagDefinition.delete(trx, tenant, definition.tag_id);
-        await this.publishTagDefinitionDeleted(definition.tag_id, context);
+        deletedTagId = definition.tag_id;
       }
-      
-      return {
-        deleted_count: deletedCount,
-      };
+
+      return { deletedCount, deletedTagId };
     });
+
+    // Publish after the transaction commits so subscribers can observe the
+    // deletion on their own connections.
+    if (deletedTagId) {
+      await this.publishTagDefinitionDeleted(deletedTagId, context);
+    }
+
+    return {
+      deleted_count: deletedCount,
+    };
   }
 
   // ========================================================================

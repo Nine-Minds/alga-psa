@@ -5,7 +5,7 @@ import type { DeletionValidationResult, IContact } from '@alga-psa/types';
 import type { IClient } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
-import { getAllContacts, getContactsByClient, getAllClients } from '@alga-psa/clients/actions';
+import { getAllContacts, getContactsByClient, getAllClients, searchContactListIds } from '@alga-psa/clients/actions';
 import { exportContactsToCSV, deleteContact, updateContact, getContactLastUsagePhoneTypes, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -93,6 +93,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [searchTerm, setSearchTerm] = useState('');
+  const [indexedSearchContactIds, setIndexedSearchContactIds] = useState<Set<string> | null>(null);
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -787,14 +788,52 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     },
   ];
 
+  useEffect(() => {
+    const query = searchTerm.trim();
+    if (!query) {
+      setIndexedSearchContactIds(null);
+      return;
+    }
+
+    setIndexedSearchContactIds(null);
+    let isCancelled = false;
+    const timeout = setTimeout(() => {
+      searchContactListIds(query)
+        .then((contactIds) => {
+          if (!isCancelled) {
+            setIndexedSearchContactIds(new Set(contactIds));
+          }
+        })
+        .catch((error) => {
+          console.error('Error searching contacts:', error);
+          if (!isCancelled) {
+            setIndexedSearchContactIds(new Set());
+          }
+        });
+    }, 300);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [searchTerm]);
+
   const filteredContacts = useMemo(() => {
     return contacts.filter(contact => {
       const searchTermLower = searchTerm.toLowerCase();
-      const matchesSearch = contact.full_name.toLowerCase().includes(searchTermLower) || 
-                          (contact.email && contact.email.toLowerCase().includes(searchTermLower)) ||
-                          contact.additional_email_addresses?.some((emailAddress) =>
-                            emailAddress.email_address.toLowerCase().includes(searchTermLower)
-                          );
+      const matchesSearch = !searchTermLower ||
+                          (indexedSearchContactIds
+                            ? indexedSearchContactIds.has(contact.contact_name_id) ||
+                              contact.full_name.toLowerCase().includes(searchTermLower) ||
+                              (contact.email && contact.email.toLowerCase().includes(searchTermLower)) ||
+                              contact.additional_email_addresses?.some((emailAddress) =>
+                                emailAddress.email_address.toLowerCase().includes(searchTermLower)
+                              )
+                            : contact.full_name.toLowerCase().includes(searchTermLower) ||
+                              (contact.email && contact.email.toLowerCase().includes(searchTermLower)) ||
+                              contact.additional_email_addresses?.some((emailAddress) =>
+                                emailAddress.email_address.toLowerCase().includes(searchTermLower)
+                              ));
       const matchesStatus = filterStatus === 'all' ||
         (filterStatus === 'active' && !contact.is_inactive) ||
         (filterStatus === 'inactive' && contact.is_inactive);
@@ -807,7 +846,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
 
       return matchesSearch && matchesStatus && matchesTags;
     });
-  }, [contacts, searchTerm, filterStatus, selectedTags]);
+  }, [contacts, searchTerm, filterStatus, selectedTags, indexedSearchContactIds]);
 
   // Memoize the data transformation for DataTable
   const tableData = useMemo(() => filteredContacts.map((contact) => ({
@@ -956,7 +995,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
                 <SearchInput
                   id='filter-contacts'
                   placeholder={t('contactsPage.searchPlaceholder', {
-                    defaultValue: 'Search contacts'
+                    defaultValue: 'Search contacts, notes, and interactions'
                   })}
                   className="w-64"
                   value={searchTerm}

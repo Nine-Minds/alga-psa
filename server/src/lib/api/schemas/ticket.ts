@@ -193,6 +193,7 @@ export const createTicketCommentSchema = z.object({
   is_resolution: z.boolean().optional().default(false),
   time_spent: z.number().min(0).optional(),
   metadata: z.record(z.unknown()).optional(),
+  parent_comment_id: uuidSchema.optional(),
 });
 
 export const updateTicketCommentSchema = z.object({
@@ -220,7 +221,12 @@ export const ticketCommentResponseSchema = z.object({
   updated_at: z.string().datetime().nullable(),
   tenant: uuidSchema,
   contact_id: uuidSchema.nullable().optional(),
-  
+
+  // Threading fields (mobile threaded comments)
+  thread_id: uuidSchema.nullable().optional(),
+  parent_comment_id: uuidSchema.nullable().optional(),
+  deleted_at: z.string().datetime().nullable().optional(),
+
   // Joined fields
   created_by_name: z.string().nullable().optional(),
   author_contact_id: uuidSchema.nullable().optional(),

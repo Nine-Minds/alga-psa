@@ -38,7 +38,7 @@ describe('ticketing dashboard i18n wiring contract', () => {
     expect(source).toContain("t('dashboard.filters.dueDate', 'Due Date')");
     expect(source).toContain("t('dashboard.filters.slaStatus', 'SLA Status')");
     expect(source).toContain("t('filters.category', 'Filter by category')");
-    expect(source).toContain("t('filters.search', 'Search tickets...')");
+    expect(source).toContain("t('filters.search', 'Search tickets and comments...')");
     expect(source).toContain("t('resetFilters', 'Reset')");
     expect(source).toContain("t('dashboard.bundledToggle', 'Bundled')");
     expect(source).toContain("t('dashboard.spacing.compact', 'Compact')");

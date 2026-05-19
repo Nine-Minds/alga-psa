@@ -46,6 +46,7 @@ services:
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
+      COLLAB_PERSIST_API_KEY: ${COLLAB_PERSIST_API_KEY:-alga-collab-persist-dev}
       TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:-temporal-dev:7233}
       TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
       TEMPORAL_JOB_TASK_QUEUE: ${TEMPORAL_JOB_TASK_QUEUE:-alga-jobs}
@@ -365,6 +366,8 @@ services:
       DB_PORT: ${DB_PORT:-5432}
       AI_DOCUMENT_API_URL: ${AI_DOCUMENT_API_URL:-http://server:3000/api/v1/ai/document-assist}
       AI_DOCUMENT_API_KEY: ${AI_DOCUMENT_API_KEY:-}
+      COLLAB_PERSIST_API_URL: ${COLLAB_PERSIST_API_URL:-http://server:3000/api/internal/collab/persist}
+      COLLAB_PERSIST_API_KEY: ${COLLAB_PERSIST_API_KEY:-alga-collab-persist-dev}
     volumes:
       - type: bind
         source: ./secrets/db_password_server

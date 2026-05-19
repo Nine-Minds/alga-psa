@@ -74,7 +74,7 @@
     "addProject": "Dodaj projekt",
     "createFromTemplate": "Utwórz z szablonu",
     "openMenu": "Otwórz menu",
-    "searchPlaceholder": "Wyszukaj projekty",
+    "searchPlaceholder": "Wyszukaj projekty, zadania i komentarze",
     "statusPlaceholder": "Wybierz status",
     "contactPlaceholder": "Filtruj według kontaktu",
     "managerPlaceholder": "Wszyscy menedżerowie",
@@ -240,7 +240,22 @@
     "dueLabel": "Termin",
     "noDueDate": "Brak terminu",
     "hideTags": "Ukryj tagi",
-    "criticalPath": "Ścieżka krytyczna"
+    "criticalPath": "Ścieżka krytyczna",
+    "selectTaskAria": "Zaznacz zadanie {{taskName}}",
+    "bulkMoveSuccess": "Przeniesiono {{count}} zadania!",
+    "bulkMovePartial": "Przeniesiono {{moved}} zadania, nie powiodło się: {{failed}}.",
+    "bulkDeleteSuccess": "Usunięto {{count}} zadania!",
+    "bulkDeletePartial": "Usunięto {{deleted}} zadania, nie powiodło się: {{failed}}.",
+    "bulkAssignSuccess": "Przypisano {{count}} zadania!",
+    "bulkAssignPartial": "Przypisano {{success}} zadania, nie powiodło się: {{failed}}.",
+    "bulkAssignTeamSuccess": "Przypisano {{count}} zadania do zespołu!",
+    "bulkAssignTeamPartial": "Przypisano {{success}} zadania do zespołu, nie powiodło się: {{failed}}.",
+    "bulkDeleteTitle": "Usuń zadania",
+    "bulkDeleteMessage": "Czy na pewno chcesz usunąć {{count}} wybrane zadania? Tej operacji nie można cofnąć.",
+    "bulkTasksMovedSuccess": "Przeniesiono {{count}} zadania",
+    "bulkTasksMovedToPhase": "Przeniesiono {{count}} zadania do {{phaseName}}",
+    "moveTasksTitle": "Przenieś zadania",
+    "confirmMoveTasksMessage": "Czy na pewno chcesz przenieść {{count}} wybrane zadania do fazy „{{targetPhase}}”?"
   },
   "taskForm": {
     "addTitle": "Dodaj nowe zadanie",
@@ -519,7 +534,9 @@
       "tags": "Tagi",
       "createdAt": "Utworzono o godz",
       "updatedAt": "Zaktualizowano o godz"
-    }
+    },
+    "exportSelected": "Eksportuj {{count}} wybrane",
+    "selectedTasksNotice": "Eksportowanie {{count}} wybranego zadania{{plural}}."
   },
   "import": {
     "title": "Importuj fazy i zadania",
@@ -709,6 +726,19 @@
       "tasks": "Zadania",
       "badgeCount": "{{count}} Zadanie",
       "badgeCount_other": "{{count}} Zadania"
+    },
+    "bulkMoveTask": {
+      "title": "Przenieś zadania",
+      "message": "Przenieś {{count}} wybrane zadania do nowej fazy/statusu:",
+      "confirm": "Przenieś zadania"
+    },
+    "bulkAssign": {
+      "title": "Przypisz zadania",
+      "message": "Przypisz {{count}} wybrane zadania do:",
+      "unassigned": "Nieprzypisane",
+      "assigning": "Przypisywanie...",
+      "confirm": "Przypisz zadania",
+      "teamReplaceNotice": "Zadania już przypisane do innego zespołu zostaną przeniesione do wybranego zespołu."
     }
   },
   "filters": {
@@ -1411,7 +1441,15 @@
         "estimatedHours": "Szacowane godziny",
         "wbsCode": "Kod WBS",
         "description": "Opis"
-      }
+      },
+      "subtitleSelected": "{{count}} wybrane zadania"
     }
+  },
+  "bulkActions": {
+    "selectedCount": "Wybrano: {{count}}",
+    "move": "Przenieś",
+    "assign": "Przypisz",
+    "delete": "Usuń",
+    "clear": "Wyczyść"
   }
 }

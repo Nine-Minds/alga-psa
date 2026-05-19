@@ -199,6 +199,11 @@
     "expandComposer": "Expand comment editor",
     "seeMore": "See more",
     "seeLess": "See less",
+    "reply": "Reply",
+    "repliesCount_one": "1 reply",
+    "repliesCount_other": "{{count}} replies",
+    "deletedPlaceholder": "[deleted]",
+    "hiddenPlaceholder": "[hidden]",
     "loadMore": "Load more ({{count}} remaining)",
     "loadMoreAccessibility": "Load more comments",
     "moderation": {

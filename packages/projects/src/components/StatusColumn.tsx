@@ -4,6 +4,7 @@ import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType, 
 import { ITag } from '@alga-psa/types';
 import { IPriority, IStandardPriority } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Circle, Plus } from 'lucide-react';
 import TaskCard from './TaskCard';
 import styles from './ProjectDetail.module.css';
@@ -11,6 +12,7 @@ import { IUserWithRoles } from '@alga-psa/types';
 import { useState, useRef } from 'react';
 import { useTheme } from 'next-themes';
 import { darkenColor } from '@alga-psa/ui/lib/colorUtils';
+import { useTaskSelection } from './TaskSelectionContext';
 
 interface StatusColumnProps {
   status: ProjectStatus;
@@ -113,6 +115,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
 }) => {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
+  const { isSelected, setTasksSelected } = useTaskSelection();
   const [isDraggedOver, setIsDraggedOver] = useState(false);
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | null>(null);
@@ -308,6 +311,11 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
     return keyA < keyB ? -1 : keyA > keyB ? 1 : 0;
   });
 
+  // Select-all state for this status column
+  const statusTaskIds = displayTasks.map(t => t.task_id);
+  const allTasksSelected = statusTaskIds.length > 0 && statusTaskIds.every(id => isSelected(id));
+  const someTasksSelected = statusTaskIds.some(id => isSelected(id));
+
   // Helper to lighten hex color (for background)
   const lightenColor = (hex: string, percent: number) => {
     const num = parseInt(hex.replace('#', ''), 16);
@@ -341,6 +349,17 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
       {!hideHeader && (
         <div className={`font-bold ${zoomLevel <= 30 ? 'text-xs p-2' : 'text-sm p-3'} rounded-t-lg`}>
           <div className="flex items-center justify-between gap-2">
+            {statusTaskIds.length > 0 && (
+              <Checkbox
+                id={`select-status-column-${status.project_status_mapping_id}`}
+                checked={allTasksSelected}
+                indeterminate={someTasksSelected && !allTasksSelected}
+                onChange={() => setTasksSelected(statusTaskIds, !allTasksSelected)}
+                size="sm"
+                containerClassName="mb-0 flex-shrink-0"
+                skipRegistration
+              />
+            )}
             <div
               className={`flex ${configuredColor ? '' : darkBackgroundColor} ${zoomLevel <= 30 ? 'rounded-xl border px-2 py-1.5' : 'rounded-2xl border-2 ps-3 py-3 pe-4'} ${configuredColor ? '' : borderColor} shadow-sm items-center min-w-0 flex-1`}
               style={configuredColor ? {

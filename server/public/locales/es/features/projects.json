@@ -74,7 +74,7 @@
     "addProject": "Agregar proyecto",
     "createFromTemplate": "Crear desde plantilla",
     "openMenu": "Abrir menú",
-    "searchPlaceholder": "Buscar proyectos",
+    "searchPlaceholder": "Buscar proyectos, tareas y comentarios",
     "statusPlaceholder": "Seleccionar estado",
     "contactPlaceholder": "Filtrar por contacto",
     "managerPlaceholder": "Todos los responsables",
@@ -240,7 +240,22 @@
     "dueLabel": "Vencimiento",
     "noDueDate": "Sin fecha de vencimiento",
     "hideTags": "Ocultar etiquetas",
-    "criticalPath": "Ruta crítica"
+    "criticalPath": "Ruta crítica",
+    "selectTaskAria": "Seleccionar tarea {{taskName}}",
+    "bulkMoveSuccess": "¡{{count}} tarea(s) movida(s) correctamente!",
+    "bulkMovePartial": "{{moved}} tarea(s) movida(s), {{failed}} con errores.",
+    "bulkDeleteSuccess": "¡{{count}} tarea(s) eliminada(s) correctamente!",
+    "bulkDeletePartial": "{{deleted}} tarea(s) eliminada(s), {{failed}} con errores.",
+    "bulkAssignSuccess": "¡{{count}} tarea(s) asignada(s) correctamente!",
+    "bulkAssignPartial": "{{success}} tarea(s) asignada(s), {{failed}} con errores.",
+    "bulkAssignTeamSuccess": "¡{{count}} tarea(s) asignada(s) al equipo correctamente!",
+    "bulkAssignTeamPartial": "{{success}} tarea(s) asignada(s) al equipo, {{failed}} con errores.",
+    "bulkDeleteTitle": "Eliminar tareas",
+    "bulkDeleteMessage": "¿Seguro que quieres eliminar {{count}} tarea(s) seleccionada(s)? Esta acción no se puede deshacer.",
+    "bulkTasksMovedSuccess": "{{count}} tareas movidas",
+    "bulkTasksMovedToPhase": "{{count}} tareas movidas a {{phaseName}}",
+    "moveTasksTitle": "Mover tareas",
+    "confirmMoveTasksMessage": "¿Seguro que quieres mover {{count}} tareas seleccionadas a la fase \"{{targetPhase}}\"?"
   },
   "taskForm": {
     "addTitle": "Agregar tarea",
@@ -519,7 +534,9 @@
       "tags": "Etiquetas",
       "createdAt": "Creado el",
       "updatedAt": "Actualizado el"
-    }
+    },
+    "exportSelected": "Exportar {{count}} seleccionada(s)",
+    "selectedTasksNotice": "Exportando {{count}} tarea{{plural}} seleccionada(s)."
   },
   "import": {
     "title": "Importar fases y tareas",
@@ -709,6 +726,19 @@
       "tasks": "Tareas",
       "badgeCount": "{{count}} Tarea",
       "badgeCount_other": "{{count}} Tareas"
+    },
+    "bulkMoveTask": {
+      "title": "Mover tareas",
+      "message": "Mover {{count}} tarea(s) seleccionada(s) a una nueva fase/estado:",
+      "confirm": "Mover tareas"
+    },
+    "bulkAssign": {
+      "title": "Asignar tareas",
+      "message": "Asignar {{count}} tarea(s) seleccionada(s) a:",
+      "unassigned": "Sin asignar",
+      "assigning": "Asignando...",
+      "confirm": "Asignar tareas",
+      "teamReplaceNotice": "Las tareas ya asignadas a otro equipo se reasignarán al equipo seleccionado."
     }
   },
   "filters": {
@@ -1411,7 +1441,15 @@
         "estimatedHours": "Horas estimadas",
         "wbsCode": "Código WBS",
         "description": "Descripción"
-      }
+      },
+      "subtitleSelected": "{{count}} tareas seleccionadas"
     }
+  },
+  "bulkActions": {
+    "selectedCount": "{{count}} seleccionada(s)",
+    "move": "Mover",
+    "assign": "Asignar",
+    "delete": "Eliminar",
+    "clear": "Borrar"
   }
 }

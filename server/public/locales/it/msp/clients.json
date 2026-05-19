@@ -36,7 +36,7 @@
   "clientsPage": {
     "title": "Pagina clienti",
     "description": "Pagina di gestione dei clienti principali con ricerca, filtri e visualizzazione griglia/elenco dei clienti",
-    "searchPlaceholder": "Cerca clienti",
+    "searchPlaceholder": "Cerca clienti, note, documenti e interazioni",
     "createClient": "Crea cliente",
     "createClientShort": "+ Crea cliente",
     "allClients": "Tutti i clienti",
@@ -628,10 +628,10 @@
     "scenarios": {
       "description": "Questi esempi illustrano come funziona la disambiguazione delle righe di contratto negli scenari comuni per questo cliente.",
       "scenario1Description": "Quando un servizio viene visualizzato sia in una riga di contratto bucket che in una riga di contratto standard per questo cliente:",
-      "scenario1Item1": "Per impostazione predefinita, alla riga del contratto bucket viene data priorità",
-      "scenario1Item2": "Gli inserimenti di tempo e l'utilizzo verranno fatturati in base alla riga del contratto dell'intervallo fino al suo esaurimento",
-      "scenario1Item3": "Una volta esaurito il bucket, la riga di contratto standard verrà utilizzata automaticamente",
-      "scenario1Item4": "Gli utenti possono ignorare manualmente questo comportamento selezionando esplicitamente una riga di contratto durante l'immissione delle ore",
+      "scenario1Item1": "La riga del contratto bucket viene selezionata per impostazione predefinita",
+      "scenario1Item2": "Gli inserimenti di tempo e l'utilizzo consumano la quantità inclusa nel bucket e poi continuano sulla stessa riga del contratto bucket come eccedenza alla tariffa di eccedenza configurata",
+      "scenario1Item3": "La fatturazione non passa automaticamente alla riga di contratto standard quando il bucket è esaurito",
+      "scenario1Item4": "Gli utenti possono ignorare manualmente questa impostazione predefinita selezionando una riga di contratto diversa durante l'immissione delle ore",
       "scenario1Title": "Scenario 1: piano a scaglioni + piano standard",
       "scenario2Description": "Quando un servizio appare in più righe di contratto standard per questo cliente:",
       "scenario2Item1": "Agli utenti verrà richiesto di selezionare la riga di contratto da fatturare durante l'immissione dell'orario",
