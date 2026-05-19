@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "Unit: parseBinding('mod+s') \u2192 mods{mod} + token{kind:code,value:KeyS}",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F011"
@@ -12,7 +12,7 @@
   {
     "id": "T002",
     "description": "Unit: parseBinding('alt+n') \u2192 mods{alt} + token{kind:code,value:KeyN}",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F011"
@@ -22,7 +22,7 @@
   {
     "id": "T003",
     "description": "Unit: parseBinding('?') \u2192 mods{} + token{kind:char,value:'?'}",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F015"
     ],
@@ -31,7 +31,7 @@
   {
     "id": "T004",
     "description": "Unit: parseBinding('[') / ']' \u2192 BracketLeft/BracketRight code-kind",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ],
@@ -40,7 +40,7 @@
   {
     "id": "T005",
     "description": "Unit: parseBinding for Enter/Escape/Tab/Space/Arrow*/Delete/Backspace/Home/End/PageUp/PageDown \u2192 code-kind named keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F013"
     ],
@@ -49,7 +49,7 @@
   {
     "id": "T006",
     "description": "Unit: parseBinding for digits and F1..F12 \u2192 Digit*/F* code-kind",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012"
     ],
@@ -58,7 +58,7 @@
   {
     "id": "T007",
     "description": "Unit: literal ctrl+s and meta+s parse distinctly from mod+s and are flagged not-remapped",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016"
     ],
@@ -67,7 +67,7 @@
   {
     "id": "T008",
     "description": "Unit: modifier order normalizes deterministically; printable keys lowercased",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ],
@@ -76,7 +76,7 @@
   {
     "id": "T009",
     "description": "Unit: invalid syntax (e.g. 'mod+', 'foo+bar', '') returns typed error result",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018"
     ],
@@ -85,7 +85,7 @@
   {
     "id": "T010",
     "description": "Unit: parseSequence('g t') \u2192 ordered [chord g, chord t]; 'g t c' \u2192 3 chords",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ],
@@ -94,7 +94,7 @@
   {
     "id": "T011",
     "description": "Unit: parseSequence rejects a sequence element with bad chord syntax",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019",
       "F018"

@@ -40,7 +40,7 @@
   {
     "id": "F010",
     "description": "parseBinding(str): parse modifier set + single key token",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR1"
     ],
@@ -49,7 +49,7 @@
   {
     "id": "F011",
     "description": "parseBinding: classify token as code-kind for letters a-z (\u2192 KeyA..KeyZ)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR1"
     ],
@@ -58,7 +58,7 @@
   {
     "id": "F012",
     "description": "parseBinding: classify digits (\u2192 Digit0..9) and function keys (F1..F12) as code-kind",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR1"
     ],
@@ -67,7 +67,7 @@
   {
     "id": "F013",
     "description": "parseBinding: classify named keys (Enter, Escape, Tab, Space, ArrowUp/Down/Left/Right, Delete, Backspace, Home, End, PageUp/Down) as code-kind",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR1"
     ],
@@ -76,7 +76,7 @@
   {
     "id": "F014",
     "description": "parseBinding: classify bracket tokens [ ] as code-kind (BracketLeft/BracketRight)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR1"
     ],
@@ -85,7 +85,7 @@
   {
     "id": "F015",
     "description": "parseBinding: classify glyph tokens (e.g. ?) as char-kind matched on produced character",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR1"
     ],
@@ -94,7 +94,7 @@
   {
     "id": "F016",
     "description": "parseBinding: support `mod` token plus literal `ctrl`/`meta`/`shift`/`alt` modifiers; literal ctrl/meta not remapped across OS",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR1",
       "Shortcut Syntax & Matching"
@@ -104,7 +104,7 @@
   {
     "id": "F017",
     "description": "parseBinding: deterministic modifier normalization order and lowercase printable normalization",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR1"
     ],
@@ -113,7 +113,7 @@
   {
     "id": "F018",
     "description": "parseBinding: reject invalid/unsupported syntax with a typed error result",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR1",
       "FR23"
@@ -123,7 +123,7 @@
   {
     "id": "F019",
     "description": "parseSequence(str): parse space-separated chord sequence (e.g. 'g t') into ordered BindingDescriptor[]",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR2"
     ],
