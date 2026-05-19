@@ -409,31 +409,31 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         filterPadding: 'p-3',
         filterGap: 'gap-2',
         bodyPadding: 'p-3',
-        tableRowDensity: '[&>td]:!py-1 [&>td]:!text-[12px]',
+        tableRowDensity: '[&>td]:!py-0.5 [&>td]:!text-[12px]',
       },
       25: {
         filterPadding: 'p-4',
         filterGap: 'gap-3',
         bodyPadding: 'p-4',
-        tableRowDensity: '[&>td]:!py-1.5 [&>td]:!text-[13px]',
+        tableRowDensity: '[&>td]:!py-1 [&>td]:!text-[12px]',
       },
       50: {
         filterPadding: 'p-5',
         filterGap: 'gap-4',
         bodyPadding: 'p-5',
-        tableRowDensity: '[&>td]:!py-2.5 [&>td]:!text-[14px]',
+        tableRowDensity: '[&>td]:!py-1 [&>td]:!text-[13px]',
       },
       75: {
         filterPadding: 'p-6',
         filterGap: 'gap-5',
         bodyPadding: 'p-7',
-        tableRowDensity: '[&>td]:!py-3.5 [&>td]:!text-[15px]',
+        tableRowDensity: '[&>td]:!py-1.5 [&>td]:!text-[13px]',
       },
       100: {
         filterPadding: 'p-8',
         filterGap: 'gap-6',
         bodyPadding: 'p-9',
-        tableRowDensity: '[&>td]:!py-5 [&>td]:!text-[16px]',
+        tableRowDensity: '[&>td]:!py-2 [&>td]:!text-[14px]',
       },
     };
 

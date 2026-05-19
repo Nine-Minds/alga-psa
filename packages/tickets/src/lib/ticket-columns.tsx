@@ -187,7 +187,8 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     actions: true,
   });
 
-  const tagsInlineUnderTitle = displaySettings?.list?.tagsInlineUnderTitle || false;
+  const tagsInlineUnderTitle = displaySettings?.list?.tagsInlineUnderTitle ?? true;
+  const showInlineTagsInTitle = columnVisibility.tags && showTags && !showAllAvailableColumns;
   const dateTimeFormat = displaySettings?.dateTimeFormat || 'MMM d, yyyy h:mm a';
 
   const columns: Array<{ key: string; col: ColumnDefinition<ITicketListItem> }> = [];
@@ -273,7 +274,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     col: {
       title: t('fields.title', 'Title'),
       dataIndex: 'title',
-      width: tagsInlineUnderTitle ? '20%' : '16%',
+      width: showInlineTagsInTitle ? '20%' : '16%',
       render: (value: string, record: ITicketListItem) => (
         <div className="flex flex-col gap-1 overflow-hidden">
           <Link
@@ -288,7 +289,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
           >
             {value}
           </Link>
-          {tagsInlineUnderTitle && columnVisibility.tags && showTags && ticketTagsRef && onTagsChange && record.ticket_id && (
+          {showInlineTagsInTitle && ticketTagsRef && onTagsChange && record.ticket_id && (ticketTagsRef.current[record.ticket_id]?.length ?? 0) > 0 && (
             <div onClick={(e) => e.stopPropagation()}>
               <TagManager
                 entityId={record.ticket_id}
@@ -316,13 +317,14 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
           const responseState = (record as any).response_state as TicketResponseState | undefined;
           const showResponseState = displaySettings?.responseStateTrackingEnabled !== false;
           return (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span>{value || 'No Status'}</span>
+            <div className="flex items-center gap-1.5 overflow-hidden whitespace-nowrap">
+              <span className="overflow-hidden text-ellipsis">{value || 'No Status'}</span>
               {showResponseState && responseState && (
                 <ResponseStateBadge
                   responseState={responseState}
-                  variant="badge"
+                  variant="text"
                   size="sm"
+                  className="h-5 w-5 shrink-0 justify-center overflow-hidden border-transparent !bg-transparent px-0 py-0 text-transparent opacity-75 [&_span]:hidden"
                 />
               )}
             </div>
@@ -601,8 +603,8 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     });
   }
 
-  // Tags (as separate column)
-  if (columnVisibility.tags && !tagsInlineUnderTitle && showTags && ticketTagsRef && onTagsChange) {
+  // Tags (as separate column; retained for print/export column selection, not the default ticket list)
+  if (showAllAvailableColumns && columnVisibility.tags && !tagsInlineUnderTitle && showTags && ticketTagsRef && onTagsChange) {
     columns.push({
       key: 'tags',
       col: {
