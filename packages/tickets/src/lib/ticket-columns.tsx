@@ -322,9 +322,9 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
               {showResponseState && responseState && (
                 <ResponseStateBadge
                   responseState={responseState}
-                  variant="icon"
+                  variant="text"
                   size="sm"
-                  className="h-5 w-5 shrink-0 justify-center border-transparent !bg-transparent px-0 py-0 opacity-75"
+                  className="h-5 w-5 shrink-0 justify-center overflow-hidden border-transparent !bg-transparent px-0 py-0 text-transparent opacity-75 [&_span]:hidden"
                 />
               )}
             </div>
