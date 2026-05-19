@@ -1122,7 +1122,7 @@
   {
     "id": "T231",
     "description": "Regression: component-local widget handlers (DatePicker, SearchableSelect, TagInput, comboboxes, Radix internals) unchanged; their keys not stolen",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F232",
       "F036"
@@ -1132,7 +1132,7 @@
   {
     "id": "T232",
     "description": "Build/SSR: no hydration warnings; engine modules are client-only",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F231",
       "F031",
@@ -1143,7 +1143,7 @@
   {
     "id": "T233",
     "description": "Migration discipline: a legacy handler is removed only after its replacement action passes regression (verified per phase)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F230"
     ],

@@ -344,3 +344,12 @@ decisions; update earlier notes when a decision changes.
 - T013: Verified with guard/storage tests and Nx graph baseline check; marked complete under the current architecture-guard checklist ids.
 - T014: Verified with guard/storage tests and Nx graph baseline check; marked complete under the current architecture-guard checklist ids.
 - Checks: `node --test scripts/tests/guard-keyboard-shortcuts-boundary.test.mjs`, `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/storage.test.tsx`, and `npx nx graph --file=/tmp/project-graph.json && node scripts/guard-keyboard-shortcuts-boundary.mjs --graph /tmp/project-graph.json` passed.
+
+## 2026-05-19 — regression group implementation
+- F230: Added final regression contract coverage asserting migrated legacy shortcut listeners remain removed after replacement actions are present.
+- F231: Added SSR/client-only regression coverage for platform-sensitive shortcut components and navigator access ordering.
+- F232: Added regression coverage proving DatePicker, SearchableSelect, AsyncSearchableSelect, TagInput, and TagInputInline keep local onKeyDown handling and do not register shared shortcut actions.
+- T231: Covered by `regression.contract.test.ts` widget-local assertions.
+- T232: Covered by `regression.contract.test.ts` client-only/platform assertions plus existing `platform.test.ts`.
+- T233: Covered by `regression.contract.test.ts` migrated legacy-listener assertions plus phase contract tests.
+- Checks: `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/regression.contract.test.ts src/keyboard-shortcuts/global-migration.contract.test.ts src/keyboard-shortcuts/panels-drawers.contract.test.ts src/keyboard-shortcuts/editors.contract.test.ts src/keyboard-shortcuts/platform.test.ts` passed; `npx tsc --noEmit -p packages/ui/tsconfig.json` passed.
