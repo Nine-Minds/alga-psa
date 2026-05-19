@@ -2,6 +2,7 @@ export * from './catalog';
 export * from './display';
 export * from './escape';
 export * from './matcher';
+export * from './page-actions';
 export * from './parser';
 export * from './platform';
 export * from './preferences';

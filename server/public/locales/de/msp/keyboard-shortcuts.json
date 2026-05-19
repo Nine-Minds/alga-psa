@@ -80,6 +80,10 @@
       }
     },
     "page": {
+      "create": {
+        "label": "Auf der Seite erstellen",
+        "description": "Ein neues Element auf der aktuellen Seite erstellen."
+      },
       "save": {
         "label": "Seite speichern",
         "description": "Die aktuelle Seite speichern."

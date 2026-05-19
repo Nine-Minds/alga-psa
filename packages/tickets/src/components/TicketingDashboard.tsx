@@ -64,6 +64,7 @@ import { toast } from 'react-hot-toast';
 import { handleError, isActionMessageError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
 import Spinner from '@alga-psa/ui/components/Spinner';
+import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 import QuickAddCategory from './QuickAddCategory';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
@@ -342,6 +343,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const openQuickAddTicket = useCallback(() => setIsQuickAddOpen(true), []);
+  usePageCreateShortcut(openQuickAddTicket);
 
   // Tag filter values from props
   const selectedTags = filterValues.tags ?? EMPTY_STRING_ARRAY;
@@ -1993,7 +1996,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               },
             ] satisfies ShareAction[]}
           />
-          <Button id="add-ticket-button" onClick={() => setIsQuickAddOpen(true)}>
+          <Button id="add-ticket-button" onClick={openQuickAddTicket}>
             {t('dashboard.addTicket', 'Add Ticket')}
           </Button>
         </div>

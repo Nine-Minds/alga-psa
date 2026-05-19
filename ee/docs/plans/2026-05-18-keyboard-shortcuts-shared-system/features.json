@@ -1155,7 +1155,7 @@
   {
     "id": "F300",
     "description": "Catalog: add page.create (scope page, default ['c'], non-editable + active-region); register mod+n as a configurable OPTIONAL_ALTERNATE_BINDING with a documented 'browser may intercept (new window)' note; keep page.save default ['mod+s']",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR31",
       "Initial Default Bindings"
@@ -1165,7 +1165,7 @@
   {
     "id": "F301",
     "description": "usePageCreateShortcut(handler,{labelKey}) helper: a page registers page.create wired to its own Create/New button or dialog; page scope wins over global.quickCreate while mounted",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR31"
     ],
@@ -1174,7 +1174,7 @@
   {
     "id": "F302",
     "description": "usePageSaveShortcut(handler) helper: registers page.save (mod+s, preventDefault browser save) wired to the page's primary Save action",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR31"
     ],
@@ -1183,7 +1183,7 @@
   {
     "id": "F303",
     "description": "Wire page.create on the Tickets list page (opens Create Ticket)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR31"
     ],
@@ -1192,7 +1192,7 @@
   {
     "id": "F304",
     "description": "Wire page.create on the Clients list page (opens Create Client)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR31"
     ],
@@ -1201,7 +1201,7 @@
   {
     "id": "F305",
     "description": "Wire page.create on the Contacts list page (opens Create Contact)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR31"
     ],
@@ -1210,7 +1210,7 @@
   {
     "id": "F306",
     "description": "Wire page.create on the Interactions surface (opens Create Interaction)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR31"
     ],
@@ -1219,7 +1219,7 @@
   {
     "id": "F307",
     "description": "Wire page.create on the Projects list page (opens Create Project)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR31"
     ],
@@ -1228,7 +1228,7 @@
   {
     "id": "F308",
     "description": "Wire page.create on the Assets list page (opens Create Asset)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR31"
     ],
@@ -1237,7 +1237,7 @@
   {
     "id": "F309",
     "description": "Wire page.save on primary editable detail/form pages that expose a Save button (e.g. ticket/client/project detail)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR31"
     ],
@@ -1246,7 +1246,7 @@
   {
     "id": "F310",
     "description": "page.create/page.save suppressed in editable targets and when a dialog/drawer owns scope; global.quickCreate is the fallback only when no page.create is registered for the route",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR31",
       "FR8"
@@ -1256,7 +1256,7 @@
   {
     "id": "F311",
     "description": "i18n: labelKey/groupKey for page.create & page.save in en + fr/es/de/nl/it/pl/pt + pseudo; validate-translations.cjs passes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR28",
       "FR31"

@@ -52,6 +52,7 @@ import { useRouter } from 'next/navigation';
 import ContactsSkeleton from './ContactsSkeleton';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 const CONTACTS_PAGE_SIZE_SETTING = 'contacts_page_size';
 
@@ -101,6 +102,8 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   const [isFiltered, setIsFiltered] = useState(false);
   const [sortBy, setSortBy] = useState<string>('full_name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const openQuickAddContact = useCallback(() => setIsQuickAddOpen(true), []);
+  usePageCreateShortcut(openQuickAddContact);
   const { openDrawer } = useDrawer();
   const clientDrawer = useClientDrawer();
   const router = useRouter();
@@ -936,7 +939,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           <div className="flex items-center gap-2">
             <Button
               id="new-contact-dialog-button"
-              onClick={() => setIsQuickAddOpen(true)}
+              onClick={openQuickAddContact}
             >
               {t('contactsPage.addContact', { defaultValue: '+ Add Contact' })}
             </Button>

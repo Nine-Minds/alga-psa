@@ -46,7 +46,7 @@ export interface ShortcutAction {
   enabled?: boolean;
   allowInEditable?: boolean;
   sequence?: boolean;
-  handler: (event: KeyboardEvent) => void | boolean;
+  handler: (event: KeyboardEvent) => void | boolean | Promise<void | boolean>;
 }
 
 export interface PersistedShortcuts {

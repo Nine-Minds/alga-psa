@@ -466,3 +466,34 @@ items are `implemented: true` (one-commit-per-group rule).
   `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/customization-wiring.test.tsx src/keyboard-shortcuts/provider.test.tsx src/keyboard-shortcuts/storage.test.tsx src/keyboard-shortcuts/display.test.tsx src/keyboard-shortcuts/settings-ui.contract.test.ts src/keyboard-shortcuts/persistence-bridge.contract.test.ts src/keyboard-shortcuts/global-migration.contract.test.ts`.
   Type checks passed: `npx tsc --noEmit -p packages/ui/tsconfig.json` and
   `npm run typecheck --workspace server`.
+
+## 2026-05-19 — page-actions group implementation
+- F300-F302/F310: Added `page.create` to the catalog with default `c`, kept
+  `mod+n` only as an optional alternate with a browser-owned new-window caveat,
+  and added shared `usePageCreateShortcut`/`usePageSaveShortcut` helpers in
+  `packages/ui/src/keyboard-shortcuts/page-actions.ts`. Page-scoped actions are
+  now suppressed when panel/dialog/editor scope is active, in addition to the
+  existing editable-target suppression.
+- F303-F308: Wired page create shortcuts to existing create controls:
+  `TicketingDashboard` (ticket), `Clients` (client), `Contacts` (contact),
+  `InteractionsFeed` (interaction), `Projects` (project), and
+  `AssetDashboardClient` (asset).
+- F309: Wired page save to primary editable Save controls found in this pass:
+  `ClientDetails` (`handleSave`) and ticket `TicketInfo`
+  (`handleSaveChanges`). I did not find a route-level project-detail Save
+  equivalent; project detail appears to save scoped phase/task edits through
+  local controls.
+- F311/T304: Added `actions.page.create` label/description to en/fr/es/de/nl/it/pl/pt
+  and regenerated xx/yy pseudo-locales.
+- Tests/checks: Added `page-actions.test.tsx` for catalog/default/optional
+  alternate behavior, create/save dispatch, editable suppression, and
+  panel-scope suppression. Added `page-actions.source.test.ts` to smoke the
+  page component wiring. Passed:
+  `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/page-actions.test.tsx src/keyboard-shortcuts/page-actions.source.test.ts src/keyboard-shortcuts/provider.test.tsx src/keyboard-shortcuts/catalog.test.ts src/keyboard-shortcuts/i18n.contract.test.ts`;
+  `node scripts/validate-translations.cjs` (pre-existing Polish plural
+  warnings only); `npx tsc --noEmit -p packages/ui/tsconfig.json`;
+  `npx tsc --noEmit -p packages/tickets/tsconfig.json`;
+  `npx tsc --noEmit -p packages/clients/tsconfig.json`;
+  `npx tsc --noEmit -p packages/projects/tsconfig.json`;
+  `npx tsc --noEmit -p packages/assets/tsconfig.json`; and
+  `npm run typecheck --workspace server`.
