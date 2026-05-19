@@ -459,16 +459,16 @@ export function useShortcutAction(action: ShortcutAction): void {
   }, [action, context]);
 }
 
-export function useShortcutScope(scope: ShortcutScope): void {
+export function useShortcutScope(scope: ShortcutScope, active = true): void {
   const context = useOptionalKeyboardShortcutsContext();
 
   useEffect(() => {
-    if (!context) {
+    if (!active || !context) {
       return;
     }
 
     return context.pushScope(scope);
-  }, [context, scope]);
+  }, [active, context, scope]);
 }
 
 export function useShortcutActiveRegion(active = true): void {

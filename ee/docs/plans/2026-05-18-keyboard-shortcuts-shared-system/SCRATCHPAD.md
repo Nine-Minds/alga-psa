@@ -238,6 +238,19 @@ decisions; update earlier notes when a decision changes.
   layout Vitest files hit an existing Vitest 4/coverage-v8 3.2.4 harness error
   before tests executed (`Cannot read properties of undefined (reading
   'fetchCache')`).
+- (2026-05-19) Completed panels-drawers group F100-F108/T100-T107. Both
+  `server/src/context/DrawerContext.tsx` and
+  `packages/ui/src/context/DrawerContext.tsx` now register `panel.close`,
+  `drawer.historyBack`, and `drawer.historyForward`; both push `panel` scope
+  only while open. `TicketNavigation` now registers `record.previous`/`next`
+  on `[`/`]` and removed its `Alt+Arrow` window listener. The catalog keeps
+  `Alt+ArrowLeft/Right` only in `OPTIONAL_ALTERNATE_BINDINGS`.
+- (2026-05-19) Verification for panels-drawers:
+  `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/panels-drawers.contract.test.ts src/keyboard-shortcuts/provider.test.tsx src/keyboard-shortcuts/catalog.test.ts`
+  from `packages/ui` passed (25 tests);
+  `npx tsc --noEmit -p packages/ui/tsconfig.json` passed;
+  `npx tsc --noEmit -p packages/tickets/tsconfig.json` passed;
+  `npm run typecheck --workspace server` passed.
 
 ## Open Questions
 

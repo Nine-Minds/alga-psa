@@ -5,6 +5,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode, useCa
 import { Activity, ActivityType } from "server/src/interfaces/activity.interfaces";
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from "@alga-psa/ui/components/Button";
+import { useShortcutAction, useShortcutScope, type ShortcutAction } from '@alga-psa/ui/keyboard-shortcuts';
 
 // Define the drawer history entry type
 interface DrawerHistoryEntry {
@@ -315,24 +316,45 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const goForward = useCallback(() => {
     dispatch({ type: 'GO_FORWARD' });
   }, []);
-  
-  // Handle keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (state.isOpen) {
-        if (event.key === 'Escape') {
-          dispatch({ type: 'CLOSE_DRAWER' });
-        } else if (event.altKey && event.key === 'ArrowLeft' && canGoBack) {
-          dispatch({ type: 'GO_BACK' });
-        } else if (event.altKey && event.key === 'ArrowRight' && canGoForward) {
-          dispatch({ type: 'GO_FORWARD' });
-        }
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [state.isOpen, canGoBack, canGoForward]);
+
+  useShortcutScope('panel', state.isOpen);
+  const panelCloseShortcut = React.useMemo<ShortcutAction>(() => ({
+    id: 'panel.close',
+    labelKey: 'actions.panel.close.label',
+    groupKey: 'groups.panel',
+    defaultBindings: ['Escape'],
+    scope: 'panel',
+    enabled: state.isOpen,
+    handler: () => {
+      closeDrawer();
+    },
+  }), [closeDrawer, state.isOpen]);
+  const drawerBackShortcut = React.useMemo<ShortcutAction>(() => ({
+    id: 'drawer.historyBack',
+    labelKey: 'actions.drawer.historyBack.label',
+    groupKey: 'groups.panel',
+    defaultBindings: ['alt+ArrowLeft'],
+    scope: 'panel',
+    enabled: state.isOpen && canGoBack,
+    handler: () => {
+      goBack();
+    },
+  }), [canGoBack, goBack, state.isOpen]);
+  const drawerForwardShortcut = React.useMemo<ShortcutAction>(() => ({
+    id: 'drawer.historyForward',
+    labelKey: 'actions.drawer.historyForward.label',
+    groupKey: 'groups.panel',
+    defaultBindings: ['alt+ArrowRight'],
+    scope: 'panel',
+    enabled: state.isOpen && canGoForward,
+    handler: () => {
+      goForward();
+    },
+  }), [canGoForward, goForward, state.isOpen]);
+
+  useShortcutAction(panelCloseShortcut);
+  useShortcutAction(drawerBackShortcut);
+  useShortcutAction(drawerForwardShortcut);
 
   return (
     <DrawerContext value={{

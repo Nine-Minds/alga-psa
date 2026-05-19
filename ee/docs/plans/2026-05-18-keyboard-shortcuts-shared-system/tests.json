@@ -559,7 +559,7 @@
   {
     "id": "T100",
     "description": "E2E: Escape closes an open drawer (panel.close), Radix-integrated",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F100",
       "F062"
@@ -569,7 +569,7 @@
   {
     "id": "T101",
     "description": "E2E: drawer.historyBack/Forward navigate drawer history as before",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F101",
       "F102",
@@ -580,7 +580,7 @@
   {
     "id": "T102",
     "description": "Regression: both DrawerContext files behave identically post-migration; no duplicate handling",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F102",
       "F103"
@@ -590,7 +590,7 @@
   {
     "id": "T103",
     "description": "Component: drawer/panel scope pushed on open, popped (ref-counted) on close",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F104"
     ],
@@ -599,7 +599,7 @@
   {
     "id": "T104",
     "description": "E2E: [ and ] move to previous/next record in a detail drawer",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F105"
     ],
@@ -608,7 +608,7 @@
   {
     "id": "T105",
     "description": "Cross-platform: [ / ] record nav works on Windows without triggering browser navigation; Alt+Arrow available only if user opts in",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F105",
       "F106"
@@ -618,7 +618,7 @@
   {
     "id": "T106",
     "description": "Regression: ticket adjacent-record navigation behavior preserved after migration (now [ / ]); TicketNavigation window listener removed",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F107"
     ],
@@ -627,7 +627,7 @@
   {
     "id": "T107",
     "description": "E2E: with a detail drawer open over a ticket list, [ / ] navigate records (panel scope) not list rows (page scope)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F108",
       "F038"
