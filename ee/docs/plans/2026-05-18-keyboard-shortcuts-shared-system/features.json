@@ -434,7 +434,7 @@
   {
     "id": "F070",
     "description": "Standard action ID catalog defined (global.*, page.*, selection.*, record.*, drawer.*, editor.*, assets.*, ai.*) with per-platform defaults",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Standard Action IDs",
       "Initial Default Bindings"
@@ -444,7 +444,7 @@
   {
     "id": "F071",
     "description": "Per-platform default for editor.redo: mac=mod+shift+z, other=ctrl+y/ctrl+shift+z",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR18",
       "Initial Default Bindings"

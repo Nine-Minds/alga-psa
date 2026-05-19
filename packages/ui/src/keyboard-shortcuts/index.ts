@@ -1,3 +1,4 @@
+export * from './catalog';
 export * from './escape';
 export * from './matcher';
 export * from './parser';

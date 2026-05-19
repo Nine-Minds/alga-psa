@@ -441,7 +441,7 @@
   {
     "id": "T070",
     "description": "Unit: editor.redo default = mac:mod+shift+z, other:ctrl+y (and ctrl+shift+z) \u2014 resolves per platform",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F071",
       "F142"
@@ -451,7 +451,7 @@
   {
     "id": "T071",
     "description": "Unit: action ID catalog has per-platform defaults for every catalogued action",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070"
     ],

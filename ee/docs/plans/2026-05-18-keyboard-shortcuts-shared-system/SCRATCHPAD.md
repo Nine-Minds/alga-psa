@@ -207,6 +207,16 @@ decisions; update earlier notes when a decision changes.
   `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/escape.test.tsx src/keyboard-shortcuts/provider.test.tsx`
   from `packages/ui` passed (22 tests);
   `npx tsc --noEmit -p packages/ui/tsconfig.json` passed.
+- (2026-05-19) Completed action-catalog group F070-F071/T070-T071. Added
+  `catalog.ts` with stable metadata entries for global, AI, page, selection,
+  navigation sequence, assets, dialog/panel/drawer, record, and editor actions.
+  Each entry carries `labelKey`/`groupKey`, scope, priority, defaults, and
+  flags like `sequence`/`allowInEditable`; `editor.redo` resolves to
+  `mod+shift+z` on mac and `ctrl+y`/`ctrl+shift+z` elsewhere.
+- (2026-05-19) Verification for action-catalog:
+  `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/catalog.test.ts`
+  from `packages/ui` passed (2 tests);
+  `npx tsc --noEmit -p packages/ui/tsconfig.json` passed.
 
 ## Open Questions
 
