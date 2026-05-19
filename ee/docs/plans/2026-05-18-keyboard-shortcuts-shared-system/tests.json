@@ -102,6 +102,38 @@
     "commitGroup": "parser"
   },
   {
+    "id": "T012",
+    "description": "Static/boundary: no file under packages/ui/src/keyboard-shortcuts imports @alga-psa/user-composition or any feature package (@alga-psa/tickets|billing|assets|projects|clients|scheduling|...); engine resolves persistence only through the ShortcutStorage interface",
+    "implemented": false,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F007"
+    ],
+    "commitGroup": "architecture-guard"
+  },
+  {
+    "id": "T013",
+    "description": "`npx nx graph` shows NO new circular dependency vs .github/known-cycles.json after the keyboard-shortcuts engine + MSP-wrapper injection are added (no @alga-psa/ui -> @alga-psa/user-composition -> @alga-psa/ui edge)",
+    "implemented": false,
+    "featureIds": [
+      "F007",
+      "F140",
+      "F043"
+    ],
+    "commitGroup": "architecture-guard"
+  },
+  {
+    "id": "T014",
+    "description": "Component: provider uses an injected ShortcutStorage when given; falls back to the in-memory default when none injected (inversion seam works without user-composition)",
+    "implemented": false,
+    "featureIds": [
+      "F043",
+      "F006"
+    ],
+    "commitGroup": "architecture-guard"
+  },
+  {
     "id": "T020",
     "description": "Unit: matchEvent resolves mod\u2192Meta on mac platform, \u2192Ctrl on other",
     "implemented": true,
@@ -169,7 +201,7 @@
   {
     "id": "T030",
     "description": "Unit: registry add/remove keeps a single source of truth keyed by id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ],
@@ -178,7 +210,7 @@
   {
     "id": "T031",
     "description": "Component: provider installs exactly one document keydown listener (capture); none added per-hook",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031",
       "F032"
@@ -188,7 +220,7 @@
   {
     "id": "T032",
     "description": "Component: useShortcutAction registers on mount and unregisters on unmount (no leak, no fire after unmount)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ],
@@ -197,7 +229,7 @@
   {
     "id": "T033",
     "description": "Unit: single-array defaultBindings sugar expands to {mac,other}; per-platform map respected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032",
       "F070"
@@ -207,7 +239,7 @@
   {
     "id": "T034",
     "description": "Component: disabled action does not fire and does not preventDefault (browser default preserved)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033",
       "F146"
@@ -217,7 +249,7 @@
   {
     "id": "T035",
     "description": "Component: preventDefault fires only when an enabled action actually handles the event",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ],
@@ -226,7 +258,7 @@
   {
     "id": "T036",
     "description": "Component: useShortcutScope ref-counts (two consumers; scope stays active until last unmounts)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ],
@@ -235,7 +267,7 @@
   {
     "id": "T037",
     "description": "Component: active scopes cleared on route change (stale scope does not leak)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035"
     ],
@@ -244,7 +276,7 @@
   {
     "id": "T038",
     "description": "Unit/Component: dispatch skips when event.defaultPrevented (no double-fire vs a component that already handled the key)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ],
@@ -253,7 +285,7 @@
   {
     "id": "T039",
     "description": "Unit: dispatch filters matched actions to active scopes only",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037"
     ],
@@ -262,7 +294,7 @@
   {
     "id": "T040",
     "description": "Unit: highest priority wins; equal priority \u2192 most-local active scope (top of stack)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ],
@@ -271,7 +303,7 @@
   {
     "id": "T041",
     "description": "Unit: residual tie reported as conflict; NOT resolved by registration order",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ],
@@ -280,7 +312,7 @@
   {
     "id": "T042",
     "description": "Component: shortcut suppressed in input/textarea/select/contenteditable/role=textbox/role=combobox/editor root",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ],
@@ -289,7 +321,7 @@
   {
     "id": "T043",
     "description": "Component: allowInEditable:true action fires inside an editable target",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ],
@@ -298,7 +330,7 @@
   {
     "id": "T044",
     "description": "Component: selection.* / single-letter page action fires only when an active region is registered, not on a focused button",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042"
     ],
@@ -1093,7 +1125,7 @@
   {
     "id": "T234",
     "description": "Perf: single keydown dispatch does no measurable input latency with the full action catalog registered",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031",
       "F030"

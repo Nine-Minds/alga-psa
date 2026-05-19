@@ -140,6 +140,22 @@ decisions; update earlier notes when a decision changes.
 - (2026-05-19) Verification for matcher:
   `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/matcher.test.ts`
   from `packages/ui` passed (6 tests).
+- (2026-05-19) Completed registry group F030-F042/T030-T044/T234.
+  Added `ShortcutRegistry`, `normalizeDefaultBindings`, and a client
+  `KeyboardShortcutsProvider` with one capture-phase document listener.
+  Hooks now register actions, scopes, and active regions without adding
+  listeners. Dispatch skips `defaultPrevented`, honors enabled/disabled gates,
+  suppresses editable targets unless opted in, filters by active scopes, uses
+  priority then most-local active scope, and reports residual ties through
+  `onConflict`.
+- (2026-05-19) Route-change clearing is represented in the UI package by a
+  provider `routeKey` prop so MSP can pass pathname later without coupling the
+  package to Next routing. Active-region gating covers `selection.*` and
+  unmodified single-letter page actions.
+- (2026-05-19) Verification for registry:
+  `npx vitest run --config vitest.config.ts src/keyboard-shortcuts` from
+  `packages/ui` passed (57 tests). `npx tsc --noEmit -p packages/ui/tsconfig.json`
+  passed.
 
 ## Open Questions
 

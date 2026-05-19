@@ -38,6 +38,36 @@
     "commitGroup": "scaffold"
   },
   {
+    "id": "F005",
+    "description": "Define ShortcutStorage adapter interface (read/write/subscribe over the persisted keyboard_shortcuts_v1 shape) in packages/ui/src/keyboard-shortcuts/storage.ts; all engine persistence code depends only on this interface",
+    "implemented": false,
+    "prdRefs": [
+      "FR30",
+      "Architecture"
+    ],
+    "commitGroup": "architecture-guard"
+  },
+  {
+    "id": "F006",
+    "description": "Provide a default in-memory/no-op ShortcutStorage so packages/ui/keyboard-shortcuts works standalone with ZERO @alga-psa/user-composition or feature-package (tickets/billing/assets/projects/...) imports",
+    "implemented": false,
+    "prdRefs": [
+      "FR30",
+      "Non-functional Requirements"
+    ],
+    "commitGroup": "architecture-guard"
+  },
+  {
+    "id": "F007",
+    "description": "Dependency-boundary guard: a CI-runnable check that fails if any file under packages/ui/src/keyboard-shortcuts imports @alga-psa/user-composition or any feature package, or if `npx nx graph` introduces a cycle absent from .github/known-cycles.json (aligns with .github/workflows/circular-deps.yml and eslint-plugin-custom-rules)",
+    "implemented": false,
+    "prdRefs": [
+      "FR30",
+      "Acceptance Criteria"
+    ],
+    "commitGroup": "architecture-guard"
+  },
+  {
     "id": "F010",
     "description": "parseBinding(str): parse modifier set + single key token",
     "implemented": true,
@@ -189,7 +219,7 @@
   {
     "id": "F030",
     "description": "useKeyboardShortcutRegistry: in-memory registry of actions keyed by id with add/remove",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR5",
       "FR6"
@@ -199,7 +229,7 @@
   {
     "id": "F031",
     "description": "KeyboardShortcutsProvider: single capture-phase keydown listener on document; client-only ('use client')",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR5",
       "Non-functional Requirements"
@@ -209,7 +239,7 @@
   {
     "id": "F032",
     "description": "useShortcutAction(def): register on mount, unregister on unmount; stable id; per-platform defaultBindings {mac,other} with single-array sugar expansion",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR6"
     ],
@@ -218,7 +248,7 @@
   {
     "id": "F033",
     "description": "useShortcutAction: enabled flag gates matching and preventDefault (preventDefault only when an enabled action handles the event)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR6",
       "FR8"
@@ -228,7 +258,7 @@
   {
     "id": "F034",
     "description": "useShortcutScope(scope): ref-counted push/pop of active scope stack",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR7"
     ],
@@ -237,7 +267,7 @@
   {
     "id": "F035",
     "description": "useShortcutScope: active scopes cleared on route change",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR7"
     ],
@@ -246,7 +276,7 @@
   {
     "id": "F036",
     "description": "Dispatch: skip handling when event.defaultPrevented is true",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR8",
       "Shortcut Syntax & Matching"
@@ -256,7 +286,7 @@
   {
     "id": "F037",
     "description": "Dispatch: filter matched actions by active scopes",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR8"
     ],
@@ -265,7 +295,7 @@
   {
     "id": "F038",
     "description": "Dispatch: pick highest priority; tie \u2192 most-local active scope (top of stack)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR8"
     ],
@@ -274,7 +304,7 @@
   {
     "id": "F039",
     "description": "Dispatch: residual tie reported as a conflict (dev/settings), never resolved by silent registration order",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR8"
     ],
@@ -283,7 +313,7 @@
   {
     "id": "F040",
     "description": "Editable-target suppression: input/textarea/select/contenteditable/role=textbox/role=combobox/editor roots",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR9"
     ],
@@ -292,7 +322,7 @@
   {
     "id": "F041",
     "description": "allowInEditable: true opt-in bypasses editable suppression for the action",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR9",
       "FR6"
@@ -302,9 +332,19 @@
   {
     "id": "F042",
     "description": "Active-region API: register/unregister a roving-focus region; selection.* and single-letter page actions fire only when a region is active",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR10"
+    ],
+    "commitGroup": "registry"
+  },
+  {
+    "id": "F043",
+    "description": "KeyboardShortcutsProvider accepts an injected ShortcutStorage (prop/context); defaults to the F006 in-memory adapter \u2014 the inversion seam that keeps packages/ui free of user-composition",
+    "implemented": false,
+    "prdRefs": [
+      "FR30",
+      "FR19"
     ],
     "commitGroup": "registry"
   },
@@ -639,7 +679,7 @@
   },
   {
     "id": "F140",
-    "description": "Override persistence wired via useUserPreference under key keyboard_shortcuts_v1 (localStorage + debounced server sync)",
+    "description": "MSP wrapper (server/user-composition layer) implements a useUserPreference-backed ShortcutStorage (key keyboard_shortcuts_v1; localStorage + debounced server sync) and INJECTS it into KeyboardShortcutsProvider via F043 \u2014 the @alga-psa/user-composition import lives here, NOT in packages/ui/keyboard-shortcuts",
     "implemented": false,
     "prdRefs": [
       "FR19",
