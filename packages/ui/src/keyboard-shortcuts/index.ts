@@ -3,6 +3,7 @@ export * from './parser';
 export * from './platform';
 export * from './provider';
 export * from './registry';
+export * from './storage';
 export type {
   BindingDescriptor,
   ParsedToken,

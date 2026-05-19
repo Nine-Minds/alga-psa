@@ -337,6 +337,33 @@
     "commitGroup": "registry"
   },
   {
+    "id": "T045",
+    "description": "Component: provider exposes injected ShortcutStorage and default in-memory storage without importing user-composition",
+    "implemented": true,
+    "featureIds": [
+      "F043"
+    ],
+    "commitGroup": "architecture-boundary"
+  },
+  {
+    "id": "T046",
+    "description": "Guard: scripts/guard-keyboard-shortcuts-boundary.mjs passes for current engine imports and fails on forbidden feature/user-composition imports",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ],
+    "commitGroup": "architecture-boundary"
+  },
+  {
+    "id": "T047",
+    "description": "CI guard: circular-deps workflow runs keyboard shortcut boundary guard with the Nx project graph/known-cycles baseline",
+    "implemented": true,
+    "featureIds": [
+      "F044"
+    ],
+    "commitGroup": "architecture-boundary"
+  },
+  {
     "id": "T050",
     "description": "Component: sequence 'g t' resolves and invokes the action",
     "implemented": false,

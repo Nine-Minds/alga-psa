@@ -55,6 +55,11 @@ export interface PersistedShortcuts {
   disabled: readonly string[];
 }
 
+export interface ShortcutStorage {
+  load: () => PersistedShortcuts | Promise<PersistedShortcuts>;
+  save: (value: PersistedShortcuts) => void | Promise<void>;
+}
+
 export type ShortcutParseErrorCode =
   | 'empty'
   | 'missing-key'

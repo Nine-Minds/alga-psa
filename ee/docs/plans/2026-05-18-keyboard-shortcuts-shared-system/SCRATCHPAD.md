@@ -167,6 +167,26 @@ decisions; update earlier notes when a decision changes.
   `npx vitest run --config vitest.config.ts src/keyboard-shortcuts` from
   `packages/ui` passed (57 tests). `npx tsc --noEmit -p packages/ui/tsconfig.json`
   passed.
+- (2026-05-19) PRD/checklist was updated outside my prior commits with new
+  FR30 dependency-boundary requirements and a late F043 storage-adapter item.
+  Moved that late item from the already-committed `registry` group to a new
+  `architecture-boundary` group to preserve the one-commit-per-group rule, and
+  added F044/T045-T047 to cover the boundary guard and CI path.
+- (2026-05-19) Completed architecture-boundary group F043-F044/T045-T047.
+  Added `ShortcutStorage`, default in-memory storage, provider injection via
+  `storage` prop/context, and `useShortcutStorage`. Added
+  `scripts/guard-keyboard-shortcuts-boundary.mjs` plus a package script and
+  circular-deps workflow step. The guard blocks imports from
+  `@alga-psa/user-composition` and feature packages in
+  `packages/ui/src/keyboard-shortcuts`, and delegates graph checks to
+  `scripts/check-circular-deps.mjs --baseline .github/known-cycles.json` when
+  `--graph` is supplied.
+- (2026-05-19) Verification for architecture-boundary:
+  `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/storage.test.tsx`
+  from `packages/ui` passed (2 tests);
+  `node --test scripts/tests/guard-keyboard-shortcuts-boundary.test.mjs`
+  passed (2 tests); `npm run guard:keyboard-shortcuts-boundary` passed;
+  `npx tsc --noEmit -p packages/ui/tsconfig.json` passed.
 
 ## Open Questions
 
