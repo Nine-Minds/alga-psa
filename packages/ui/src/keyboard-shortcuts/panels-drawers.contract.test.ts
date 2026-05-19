@@ -1,4 +1,5 @@
 /* @vitest-environment node */
+/* @behavioralCoverage packages/ui/src/keyboard-shortcuts/gap-hardening.behavior.test.tsx */
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -18,9 +19,9 @@ describe('panel, drawer, and record shortcut migration contract', () => {
   ])('migrates %s drawer key handling to registered panel actions', (relativePath) => {
     const source = read(relativePath);
     expect(source).toContain("useShortcutScope('panel', state.isOpen)");
-    expect(source).toContain("id: 'panel.close'");
-    expect(source).toContain("id: 'drawer.historyBack'");
-    expect(source).toContain("id: 'drawer.historyForward'");
+    expect(source).toContain("useCatalogShortcut('panel.close'");
+    expect(source).toContain("useCatalogShortcut('drawer.historyBack'");
+    expect(source).toContain("useCatalogShortcut('drawer.historyForward'");
     expect(source).not.toContain("window.addEventListener('keydown', handleKeyDown)");
   });
 
@@ -33,10 +34,8 @@ describe('panel, drawer, and record shortcut migration contract', () => {
 
   it('migrates TicketNavigation adjacent-record shortcuts to record.previous/record.next', () => {
     const source = read('packages/tickets/src/components/ticket/TicketNavigation.tsx');
-    expect(source).toContain("id: 'record.previous'");
-    expect(source).toContain("defaultBindings: ['[']");
-    expect(source).toContain("id: 'record.next'");
-    expect(source).toContain("defaultBindings: [']']");
+    expect(source).toContain("useCatalogShortcut('record.previous'");
+    expect(source).toContain("useCatalogShortcut('record.next'");
     expect(source).not.toContain("window.addEventListener('keydown'");
     expect(source).not.toContain('e.altKey && e.key ===');
   });

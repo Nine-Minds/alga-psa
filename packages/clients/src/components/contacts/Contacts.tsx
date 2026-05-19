@@ -52,7 +52,7 @@ import { useRouter } from 'next/navigation';
 import ContactsSkeleton from './ContactsSkeleton';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 const CONTACTS_PAGE_SIZE_SETTING = 'contacts_page_size';
 
@@ -1056,21 +1056,23 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
                 </Button>
             </div>
           </ReflectionContainer>
-          <DataTable
-            key={`${currentPage}-${pageSize}`}
-            id="contacts-table"
-            data={tableData}
-            columns={columns}
-            pagination={true}
-            currentPage={currentPage}
-            onPageChange={handlePageChange}
-            pageSize={pageSize}
-            onItemsPerPageChange={handlePageSizeChange}
-            sortBy={sortBy}
-            sortDirection={sortDirection}
-            onSortChange={handleSortChange}
-            manualSorting={true}
-          />
+          <ShortcutActiveRegion id="contacts-shortcut-region" className="outline-none">
+            <DataTable
+              key={`${currentPage}-${pageSize}`}
+              id="contacts-table"
+              data={tableData}
+              columns={columns}
+              pagination={true}
+              currentPage={currentPage}
+              onPageChange={handlePageChange}
+              pageSize={pageSize}
+              onItemsPerPageChange={handlePageSizeChange}
+              sortBy={sortBy}
+              sortDirection={sortDirection}
+              onSortChange={handleSortChange}
+              manualSorting={true}
+            />
+          </ShortcutActiveRegion>
           <div className="app-print-root app-print-only">
             <PrintableTable
               title={t('contactsPage.print.title', { defaultValue: 'Contacts' })}

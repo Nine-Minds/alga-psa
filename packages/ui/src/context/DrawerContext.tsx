@@ -5,7 +5,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode, useCa
 import type { Activity, ActivityType } from '@alga-psa/types';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { Button } from '../components/Button';
-import { useShortcutAction, useShortcutScope, type ShortcutAction } from '../keyboard-shortcuts';
+import { useCatalogShortcut, useShortcutScope } from '../keyboard-shortcuts';
 
 // Define the drawer history entry type
 interface DrawerHistoryEntry {
@@ -318,43 +318,9 @@ export const DrawerProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   }, []);
 
   useShortcutScope('panel', state.isOpen);
-  const panelCloseShortcut = React.useMemo<ShortcutAction>(() => ({
-    id: 'panel.close',
-    labelKey: 'actions.panel.close.label',
-    groupKey: 'groups.panel',
-    defaultBindings: ['Escape'],
-    scope: 'panel',
-    enabled: state.isOpen,
-    handler: () => {
-      closeDrawer();
-    },
-  }), [closeDrawer, state.isOpen]);
-  const drawerBackShortcut = React.useMemo<ShortcutAction>(() => ({
-    id: 'drawer.historyBack',
-    labelKey: 'actions.drawer.historyBack.label',
-    groupKey: 'groups.panel',
-    defaultBindings: ['alt+ArrowLeft'],
-    scope: 'panel',
-    enabled: state.isOpen && canGoBack,
-    handler: () => {
-      goBack();
-    },
-  }), [canGoBack, goBack, state.isOpen]);
-  const drawerForwardShortcut = React.useMemo<ShortcutAction>(() => ({
-    id: 'drawer.historyForward',
-    labelKey: 'actions.drawer.historyForward.label',
-    groupKey: 'groups.panel',
-    defaultBindings: ['alt+ArrowRight'],
-    scope: 'panel',
-    enabled: state.isOpen && canGoForward,
-    handler: () => {
-      goForward();
-    },
-  }), [canGoForward, goForward, state.isOpen]);
-
-  useShortcutAction(panelCloseShortcut);
-  useShortcutAction(drawerBackShortcut);
-  useShortcutAction(drawerForwardShortcut);
+  useCatalogShortcut('panel.close', closeDrawer, { enabled: state.isOpen });
+  useCatalogShortcut('drawer.historyBack', goBack, { enabled: state.isOpen && canGoBack });
+  useCatalogShortcut('drawer.historyForward', goForward, { enabled: state.isOpen && canGoForward });
 
   return (
     <DrawerContext value={{

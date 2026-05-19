@@ -8,6 +8,7 @@ import React, {
   useMemo,
   useRef,
   useState,
+  type HTMLAttributes,
   type ReactNode,
 } from 'react';
 import { matchEvent } from './matcher';
@@ -16,7 +17,7 @@ import { parseBinding, parseSequence } from './parser';
 import { ShortcutRegistry } from './registry';
 import { DEFAULT_PLATFORM, useClientPlatform } from './platform';
 import { createMemoryShortcutStorage } from './storage';
-import { getDefaultBindingsForPlatform, getShortcutCatalogEntry } from './catalog';
+import { createShortcutAction, getDefaultBindingsForPlatform, getShortcutCatalogEntry } from './catalog';
 import {
   EMPTY_SHORTCUT_PREFERENCES,
   isActionDisabled,
@@ -673,6 +674,19 @@ export function useShortcutAction(action: ShortcutAction): void {
   }, [action, context]);
 }
 
+export function useCatalogShortcut(
+  actionId: string,
+  handler: ShortcutAction['handler'],
+  options: Pick<ShortcutAction, 'enabled'> = {},
+): void {
+  const action = useMemo(
+    () => createShortcutAction(actionId, handler, options),
+    [actionId, handler, options.enabled],
+  );
+
+  useShortcutAction(action);
+}
+
 export function useShortcutScope(scope: ShortcutScope, active = true): void {
   const context = useOptionalKeyboardShortcutsContext();
 
@@ -695,6 +709,42 @@ export function useShortcutActiveRegion(active = true): void {
 
     return context.registerActiveRegion();
   }, [active, context]);
+}
+
+export interface ShortcutActiveRegionProps extends HTMLAttributes<HTMLDivElement> {
+  active?: boolean;
+}
+
+export function ShortcutActiveRegion({
+  active = true,
+  children,
+  onBlurCapture,
+  onFocusCapture,
+  tabIndex,
+  ...props
+}: ShortcutActiveRegionProps): React.JSX.Element {
+  const [focusWithin, setFocusWithin] = useState(false);
+  useShortcutActiveRegion(active && focusWithin);
+
+  return (
+    <div
+      {...props}
+      data-keyboard-shortcuts-active-region="true"
+      tabIndex={tabIndex ?? 0}
+      onFocusCapture={(event) => {
+        setFocusWithin(true);
+        onFocusCapture?.(event);
+      }}
+      onBlurCapture={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setFocusWithin(false);
+        }
+        onBlurCapture?.(event);
+      }}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function useKeyboardShortcutRegistry(): KeyboardShortcutRegistrySnapshot {

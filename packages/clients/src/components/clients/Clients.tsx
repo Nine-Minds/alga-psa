@@ -51,7 +51,7 @@ import { DeleteEntityDialog, handleError, useClientDrawer } from '@alga-psa/ui';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 const COMPANY_VIEW_MODE_SETTING = 'client_list_view_mode';
 const CLIENTS_GRID_PAGE_SIZE_SETTING = 'clients_grid_page_size';
@@ -251,7 +251,7 @@ const ClientResults = memo(({
   }
 
   return (
-    <div className="flex-1">
+    <ShortcutActiveRegion id="clients-shortcut-region" className="flex-1 outline-none">
       {viewMode === 'grid' ? (
         <ClientsGrid
           filteredClients={filteredClients}
@@ -291,7 +291,7 @@ const ClientResults = memo(({
           onSortChange={onSortChange}
         />
       )}
-    </div>
+    </ShortcutActiveRegion>
   );
 });
 

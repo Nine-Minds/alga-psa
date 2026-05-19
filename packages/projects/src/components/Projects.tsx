@@ -37,7 +37,7 @@ import Drawer from '@alga-psa/ui/components/Drawer';
 import { ApplyTemplateDialog } from './project-templates/ApplyTemplateDialog';
 import { useClientIntegration } from '../context/ClientIntegrationContext';
 import { useTranslation } from 'react-i18next';
-import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 export interface ProjectListFilters {
   searchQuery?: string;
@@ -966,18 +966,20 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
       </div>
 
       <div className="bg-white shadow rounded-lg p-4">
-        <DataTable
-          key={`${activeFilters.page}-${activeFilters.pageSize}`}
-          id="projects-table"
-          data={filteredProjects}
-          columns={columns}
-          pagination={true}
-          currentPage={activeFilters.page || 1}
-          onPageChange={(page) => handleFilterChange({ page })}
-          pageSize={activeFilters.pageSize || 10}
-          onItemsPerPageChange={(pageSize) => handleFilterChange({ pageSize, page: 1 })}
-          initialSorting={[{ id: 'created_at', desc: true }]}
-        />
+        <ShortcutActiveRegion id="projects-shortcut-region" className="outline-none">
+          <DataTable
+            key={`${activeFilters.page}-${activeFilters.pageSize}`}
+            id="projects-table"
+            data={filteredProjects}
+            columns={columns}
+            pagination={true}
+            currentPage={activeFilters.page || 1}
+            onPageChange={(page) => handleFilterChange({ page })}
+            pageSize={activeFilters.pageSize || 10}
+            onItemsPerPageChange={(pageSize) => handleFilterChange({ pageSize, page: 1 })}
+            initialSorting={[{ id: 'created_at', desc: true }]}
+          />
+        </ShortcutActiveRegion>
       </div>
 
       {showQuickAdd && (

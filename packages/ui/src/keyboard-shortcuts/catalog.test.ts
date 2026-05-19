@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createShortcutAction,
   getDefaultBindingsForPlatform,
   getShortcutCatalogEntry,
   SHORTCUT_ACTION_CATALOG,
@@ -44,5 +45,22 @@ describe('shortcut action catalog', () => {
       'editor.save',
       'editor.deleteSelection',
     ]));
+  });
+
+  it('creates runtime actions from catalog metadata and rejects unknown ids', () => {
+    const handler = () => undefined;
+    const action = createShortcutAction('global.search', handler);
+    const catalog = getShortcutCatalogEntry('global.search');
+
+    expect(action).toMatchObject({
+      id: 'global.search',
+      labelKey: catalog?.labelKey,
+      groupKey: catalog?.groupKey,
+      defaultBindings: catalog?.defaultBindings,
+      scope: catalog?.scope,
+      priority: catalog?.priority,
+    });
+    expect(action.handler).toBe(handler);
+    expect(() => createShortcutAction('missing.action', handler)).toThrow(/Unknown keyboard shortcut action/);
   });
 });

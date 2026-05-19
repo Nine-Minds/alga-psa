@@ -18,7 +18,7 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ButtonComponent, FormFieldComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
-import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 interface InteractionsFeedProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -275,6 +275,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
           </div>
         </div>
         <CardContent>
+          <ShortcutActiveRegion id={`${id}-shortcut-region`} className="outline-none">
           <ul className="space-y-2">
             {filteredInteractions.map((interaction): React.JSX.Element => (
               <li 
@@ -296,6 +297,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               </li>
             ))}
           </ul>
+          </ShortcutActiveRegion>
         </CardContent>
       </Card>
 

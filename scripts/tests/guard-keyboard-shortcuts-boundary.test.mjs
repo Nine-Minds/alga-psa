@@ -34,3 +34,35 @@ test('keyboard shortcuts boundary guard fails for feature/user-composition impor
   assert.match(result.stderr, /@alga-psa\/user-composition\/hooks/);
   assert.match(result.stderr, /@alga-psa\/tickets/);
 });
+
+test('keyboard shortcuts boundary guard fails for hand-authored registered action metadata', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'keyboard-shortcuts-drift-'));
+  const badFile = join(dir, 'bad.tsx');
+  writeFileSync(
+    badFile,
+    "useShortcutAction({ id: 'global.search', labelKey: 'x', groupKey: 'y', defaultBindings: ['mod+k'], scope: 'global', handler: () => undefined });\n",
+  );
+
+  const result = spawnSync(process.execPath, [guardScript, '--registration-file', badFile], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Catalog drift/);
+  assert.match(result.stderr, /defaultBindings:/);
+});
+
+test('keyboard shortcuts boundary guard fails for catalog shortcut ids missing from the catalog', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'keyboard-shortcuts-missing-id-'));
+  const badFile = join(dir, 'bad.tsx');
+  writeFileSync(badFile, "useCatalogShortcut('missing.action', () => undefined);\n");
+
+  const result = spawnSync(process.execPath, [guardScript, '--registration-file', badFile], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /missing\.action/);
+});

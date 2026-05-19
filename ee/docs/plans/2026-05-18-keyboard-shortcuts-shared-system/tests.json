@@ -1437,7 +1437,7 @@
   {
     "id": "T365",
     "description": "Unit: createShortcutAction('global.search', handler) returns scope/priority/defaultBindings/labelKey/groupKey from the catalog; an unknown id is rejected (throws or is type-prevented)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F367"
     ],
@@ -1446,7 +1446,7 @@
   {
     "id": "T366",
     "description": "Guard: a registered action whose scope/priority diverges from the catalog fails the drift guard; the guard passes once useDesignerShortcuts and the other sites derive metadata from the catalog (no priority:60 vs 0 mismatch)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F369",
       "F368"
@@ -1456,7 +1456,7 @@
   {
     "id": "T367",
     "description": "Behavioral: with no roving-focus region active, simulated c/j/k keydown on a focused non-list element invokes no handler; with the region active the handlers fire",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F370",
       "F371"
@@ -1466,7 +1466,7 @@
   {
     "id": "T368",
     "description": "Regression: mounting DefaultLayout alone does not satisfy requiresActiveRegion for selection.* / single-letter page actions (no unconditional active region)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F370"
     ],
@@ -1475,7 +1475,7 @@
   {
     "id": "T369",
     "description": "Behavioral (replaces global-migration grep): simulated mod+l / mod+ArrowUp / mod+k keydown through the provider invokes the migrated handlers; aiAssistantAvailable gating respected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F372"
     ],
@@ -1484,7 +1484,7 @@
   {
     "id": "T370",
     "description": "Behavioral (replaces panels-drawers grep): with a mounted drawer scope, Escape / [ / ] dispatch invokes the panel/record handlers and panel scope wins over page",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F372"
     ],
@@ -1493,7 +1493,7 @@
   {
     "id": "T371",
     "description": "Behavioral (replaces editors grep): editor-scope undo/redo/save dispatch with allowInEditable honored and per-platform redo resolved",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F372"
     ],
@@ -1502,7 +1502,7 @@
   {
     "id": "T372",
     "description": "Behavioral (replaces persistence-bridge/settings-ui grep beyond T360-T364): a settings rebind mutator updates the provider context resolved binding without any source-string assertion",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F372"
     ],
@@ -1511,7 +1511,7 @@
   {
     "id": "T373",
     "description": "Meta: the test-guard fails a sample *.contract.test.ts that only readFileSync+toContain and passes one that adds a behavioral assertion",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F373"
     ],

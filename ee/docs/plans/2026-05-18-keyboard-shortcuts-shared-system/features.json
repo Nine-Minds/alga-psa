@@ -1576,7 +1576,7 @@
   {
     "id": "F367",
     "description": "Add a catalog-derived action factory (createShortcutAction(id, handler, opts?) / useCatalogShortcut) that derives scope/priority/defaultBindings/labelKey/groupKey/sequence/allowInEditable from SHORTCUT_ACTION_CATALOG; callers pass only id + handler (+ optional runtime enabled)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR35"
     ],
@@ -1585,7 +1585,7 @@
   {
     "id": "F368",
     "description": "Migrate every registration site (SearchPalette, DefaultLayout, server + packages/ui DrawerContext, TicketNavigation, AssetDashboardClient, useDesignerShortcuts) to the catalog factory and delete hand-authored metadata literals, including useDesignerShortcuts priority:60 and the sites that omit priority (runtime 0) and contradict catalog DEFAULT_PRIORITY",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR35"
     ],
@@ -1594,7 +1594,7 @@
   {
     "id": "F369",
     "description": "Catalog-drift guard: a unit test plus an extension of guard-keyboard-shortcuts-boundary.mjs fails when a registered/used action id is absent from the catalog or its scope/priority/sequence/bindings diverge from the catalog entry",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR35"
     ],
@@ -1603,7 +1603,7 @@
   {
     "id": "F370",
     "description": "DefaultLayout no longer calls useShortcutActiveRegion(true) unconditionally; a shared roving-focus region wrapper/hook is provided and applied only to genuine list/selection containers that own j/k/Enter/c semantics",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR36",
       "FR10"
@@ -1613,7 +1613,7 @@
   {
     "id": "F371",
     "description": "selection.* and single-letter page actions (c/j/k) are inert on arbitrary non-editable focus across /msp and fire only when a real roving-focus region is active (requiresActiveRegion satisfied only by F370 regions)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR36",
       "FR10"
@@ -1623,7 +1623,7 @@
   {
     "id": "F372",
     "description": "Replace/augment the readFileSync+toContain *.contract.test.ts suites (global-migration, panels-drawers, editors, persistence-bridge, settings-ui, regression, i18n) with behavioral tests asserting observable dispatch/registration/resolution; keep a minimal source smoke only where behavior cannot be simulated",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR37"
     ],
@@ -1632,7 +1632,7 @@
   {
     "id": "F373",
     "description": "Meta test-guard fails any new *.contract.test.ts that only uses readFileSync+toContain with no behavioral assertion",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR37"
     ],

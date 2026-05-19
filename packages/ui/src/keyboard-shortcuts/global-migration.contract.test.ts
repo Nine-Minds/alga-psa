@@ -1,4 +1,5 @@
 /* @vitest-environment node */
+/* @behavioralCoverage packages/ui/src/keyboard-shortcuts/gap-hardening.behavior.test.tsx */
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -22,31 +23,23 @@ describe('MSP global shortcut migration contract', () => {
 
   it('migrates global search to a registered action and removes its window listener', () => {
     const source = read('server/src/components/search/SearchPalette.tsx');
-    expect(source).toContain("id: 'global.search'");
-    expect(source).toContain("defaultBindings: ['mod+k']");
-    expect(source).toContain('useShortcutAction(searchShortcut)');
+    expect(source).toContain("useCatalogShortcut('global.search'");
     expect(source).not.toContain("window.addEventListener('keydown'");
   });
 
   it('migrates AI, help, and quick-create global actions out of DefaultLayout window keydown handling', () => {
     const source = read('server/src/components/layout/DefaultLayout.tsx');
-    expect(source).toContain("id: 'global.toggleChat'");
-    expect(source).toContain("defaultBindings: ['mod+l']");
-    expect(source).toContain("id: 'ai.quickAsk'");
-    expect(source).toContain("defaultBindings: ['mod+ArrowUp']");
-    expect(source).toContain("id: 'global.openShortcuts'");
-    expect(source).toContain("defaultBindings: ['?']");
-    expect(source).toContain("id: 'global.quickCreate'");
-    expect(source).toContain("defaultBindings: ['c']");
+    expect(source).toContain("useCatalogShortcut('global.toggleChat'");
+    expect(source).toContain("useCatalogShortcut('ai.quickAsk'");
+    expect(source).toContain("useCatalogShortcut('global.openShortcuts'");
+    expect(source).toContain("useCatalogShortcut('global.quickCreate'");
     expect(source).toContain('<QuickCreateDialog');
     expect(source).not.toContain("window.addEventListener('keydown', handleKeyDown)");
   });
 
   it('rescopes the asset command palette away from mod+k', () => {
     const source = read('packages/assets/src/components/AssetDashboardClient.tsx');
-    expect(source).toContain("id: 'assets.commandPalette'");
-    expect(source).toContain("defaultBindings: ['mod+shift+k']");
-    expect(source).toContain('useShortcutAction(assetCommandPaletteShortcut)');
+    expect(source).toContain("useCatalogShortcut('assets.commandPalette'");
     expect(source).not.toContain("event.key.toLowerCase() === 'k'");
     expect(source).not.toContain("window.addEventListener('keydown', handleKeyDown)");
   });

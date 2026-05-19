@@ -1,5 +1,5 @@
-import { useCallback, useMemo } from 'react';
-import { useShortcutAction, useShortcutScope, type ShortcutAction } from '@alga-psa/ui/keyboard-shortcuts';
+import { useCallback } from 'react';
+import { useCatalogShortcut, useShortcutScope } from '@alga-psa/ui/keyboard-shortcuts';
 import { useInvoiceDesignerStore } from '../state/designerStore';
 import { DESIGNER_CANVAS_BOUNDS } from '../constants/layout';
 
@@ -51,103 +51,31 @@ export const useDesignerShortcuts = () => {
     }
   }, [gridSize, nodesById, selectedNodeId, setNodeProp, snapToGrid]);
 
-  const shortcuts = useMemo<ShortcutAction[]>(() => [
-    {
-      id: 'editor.undo',
-      labelKey: 'actions.editor.undo.label',
-      groupKey: 'groups.editor',
-      defaultBindings: ['mod+z'],
-      scope: 'editor',
-      priority: 60,
-      handler: () => {
-        undo();
-      },
-    },
-    {
-      id: 'editor.redo',
-      labelKey: 'actions.editor.redo.label',
-      groupKey: 'groups.editor',
-      defaultBindings: { mac: ['mod+shift+z'], other: ['ctrl+y', 'ctrl+shift+z'] },
-      scope: 'editor',
-      priority: 60,
-      handler: () => {
-        redo();
-      },
-    },
-    {
-      id: 'editor.deleteSelection',
-      labelKey: 'actions.editor.deleteSelection.label',
-      groupKey: 'groups.editor',
-      defaultBindings: ['Delete', 'Backspace'],
-      scope: 'editor',
-      priority: 60,
-      enabled: Boolean(selectedNodeId),
-      handler: () => {
-        if (!selectedNodeId) return false;
-        deleteSelectedNode();
-      },
-    },
-    {
-      id: 'editor.cancel',
-      labelKey: 'actions.editor.cancel.label',
-      groupKey: 'groups.editor',
-      defaultBindings: ['Escape'],
-      scope: 'editor',
-      priority: 60,
-      enabled: Boolean(selectedNodeId),
-      handler: () => {
-        if (!selectedNodeId) return false;
-        selectNode(null);
-      },
-    },
-    {
-      id: 'editor.moveUp',
-      labelKey: 'actions.editor.moveUp.label',
-      groupKey: 'groups.editor',
-      defaultBindings: ['ArrowUp'],
-      scope: 'editor',
-      priority: 60,
-      enabled: Boolean(selectedNodeId),
-      handler: () => moveSelectedNode(0, -1),
-    },
-    {
-      id: 'editor.moveDown',
-      labelKey: 'actions.editor.moveDown.label',
-      groupKey: 'groups.editor',
-      defaultBindings: ['ArrowDown'],
-      scope: 'editor',
-      priority: 60,
-      enabled: Boolean(selectedNodeId),
-      handler: () => moveSelectedNode(0, 1),
-    },
-    {
-      id: 'editor.moveLeft',
-      labelKey: 'actions.editor.moveLeft.label',
-      groupKey: 'groups.editor',
-      defaultBindings: ['ArrowLeft'],
-      scope: 'editor',
-      priority: 60,
-      enabled: Boolean(selectedNodeId),
-      handler: () => moveSelectedNode(-1, 0),
-    },
-    {
-      id: 'editor.moveRight',
-      labelKey: 'actions.editor.moveRight.label',
-      groupKey: 'groups.editor',
-      defaultBindings: ['ArrowRight'],
-      scope: 'editor',
-      priority: 60,
-      enabled: Boolean(selectedNodeId),
-      handler: () => moveSelectedNode(1, 0),
-    },
-  ], [deleteSelectedNode, moveSelectedNode, redo, selectNode, selectedNodeId, undo]);
+  const undoShortcut = useCallback(() => {
+    undo();
+  }, [undo]);
+  const redoShortcut = useCallback(() => {
+    redo();
+  }, [redo]);
+  const deleteSelectionShortcut = useCallback(() => {
+    if (!selectedNodeId) return false;
+    deleteSelectedNode();
+  }, [deleteSelectedNode, selectedNodeId]);
+  const cancelShortcut = useCallback(() => {
+    if (!selectedNodeId) return false;
+    selectNode(null);
+  }, [selectNode, selectedNodeId]);
+  const moveUpShortcut = useCallback(() => moveSelectedNode(0, -1), [moveSelectedNode]);
+  const moveDownShortcut = useCallback(() => moveSelectedNode(0, 1), [moveSelectedNode]);
+  const moveLeftShortcut = useCallback(() => moveSelectedNode(-1, 0), [moveSelectedNode]);
+  const moveRightShortcut = useCallback(() => moveSelectedNode(1, 0), [moveSelectedNode]);
 
-  useShortcutAction(shortcuts[0]);
-  useShortcutAction(shortcuts[1]);
-  useShortcutAction(shortcuts[2]);
-  useShortcutAction(shortcuts[3]);
-  useShortcutAction(shortcuts[4]);
-  useShortcutAction(shortcuts[5]);
-  useShortcutAction(shortcuts[6]);
-  useShortcutAction(shortcuts[7]);
+  useCatalogShortcut('editor.undo', undoShortcut);
+  useCatalogShortcut('editor.redo', redoShortcut);
+  useCatalogShortcut('editor.deleteSelection', deleteSelectionShortcut, { enabled: Boolean(selectedNodeId) });
+  useCatalogShortcut('editor.cancel', cancelShortcut, { enabled: Boolean(selectedNodeId) });
+  useCatalogShortcut('editor.moveUp', moveUpShortcut, { enabled: Boolean(selectedNodeId) });
+  useCatalogShortcut('editor.moveDown', moveDownShortcut, { enabled: Boolean(selectedNodeId) });
+  useCatalogShortcut('editor.moveLeft', moveLeftShortcut, { enabled: Boolean(selectedNodeId) });
+  useCatalogShortcut('editor.moveRight', moveRightShortcut, { enabled: Boolean(selectedNodeId) });
 };

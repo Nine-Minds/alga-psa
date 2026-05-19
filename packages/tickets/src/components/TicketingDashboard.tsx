@@ -64,7 +64,7 @@ import { toast } from 'react-hot-toast';
 import { handleError, isActionMessageError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 import QuickAddCategory from './QuickAddCategory';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
@@ -2282,33 +2282,35 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 </AlertDescription>
               </Alert>
             )}
-            <DataTable
-              key={`${currentPage}-${pageSize}`}
-              {...withDataAutomationId({ id: `${id}-tickets-table` })}
-              data={ticketsWithIds}
-              columns={columns}
-              pagination={true}
-              currentPage={currentPage}
-              onPageChange={onPageChange}
-              pageSize={pageSize}
-              totalItems={totalCount}
-              onItemsPerPageChange={onPageSizeChange}
-              rowClassName={(record: ITicketListItem) =>
-                `${densityClasses.tableRowDensity} cursor-pointer ${record.ticket_id && selectedTicketIds.has(record.ticket_id)
-                  ? '!bg-table-selected'
-                  : ''}`
-              }
-              onRowClick={(record: ITicketListItem) => {
-                if (record.ticket_id) {
-                  handleTicketClick(record.ticket_id);
+            <ShortcutActiveRegion id="tickets-shortcut-region" className="outline-none">
+              <DataTable
+                key={`${currentPage}-${pageSize}`}
+                {...withDataAutomationId({ id: `${id}-tickets-table` })}
+                data={ticketsWithIds}
+                columns={columns}
+                pagination={true}
+                currentPage={currentPage}
+                onPageChange={onPageChange}
+                pageSize={pageSize}
+                totalItems={totalCount}
+                onItemsPerPageChange={onPageSizeChange}
+                rowClassName={(record: ITicketListItem) =>
+                  `${densityClasses.tableRowDensity} cursor-pointer ${record.ticket_id && selectedTicketIds.has(record.ticket_id)
+                    ? '!bg-table-selected'
+                    : ''}`
                 }
-              }}
-              onVisibleRowsChange={handleVisibleRowsChange}
-              manualSorting={true}
-              sortBy={sortBy}
-              sortDirection={sortDirection}
-              onSortChange={handleTableSortChange}
-            />
+                onRowClick={(record: ITicketListItem) => {
+                  if (record.ticket_id) {
+                    handleTicketClick(record.ticket_id);
+                  }
+                }}
+                onVisibleRowsChange={handleVisibleRowsChange}
+                manualSorting={true}
+                sortBy={sortBy}
+                sortDirection={sortDirection}
+                onSortChange={handleTableSortChange}
+              />
+            </ShortcutActiveRegion>
           </>
         )}
         </div>

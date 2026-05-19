@@ -1,4 +1,5 @@
 /* @vitest-environment node */
+/* @behavioralCoverage packages/ui/src/keyboard-shortcuts/gap-hardening.behavior.test.tsx */
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -15,11 +16,11 @@ describe('editor shortcut migration contract', () => {
   it('migrates invoice designer shortcuts into editor-scoped actions', () => {
     const source = read('packages/billing/src/components/invoice-designer/hooks/useDesignerShortcuts.ts');
     expect(source).toContain("useShortcutScope('editor')");
-    expect(source).toContain("id: 'editor.undo'");
-    expect(source).toContain("id: 'editor.redo'");
-    expect(source).toContain("id: 'editor.deleteSelection'");
-    expect(source).toContain("id: 'editor.cancel'");
-    expect(source).toContain("id: 'editor.moveUp'");
+    expect(source).toContain("useCatalogShortcut('editor.undo'");
+    expect(source).toContain("useCatalogShortcut('editor.redo'");
+    expect(source).toContain("useCatalogShortcut('editor.deleteSelection'");
+    expect(source).toContain("useCatalogShortcut('editor.cancel'");
+    expect(source).toContain("useCatalogShortcut('editor.moveUp'");
     expect(source).not.toContain("window.addEventListener('keydown'");
   });
 
