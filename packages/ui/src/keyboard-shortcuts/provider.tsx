@@ -7,15 +7,25 @@ import React, {
   useEffect,
   useMemo,
   useRef,
+  useState,
   type ReactNode,
 } from 'react';
 import { matchEvent } from './matcher';
 import { hasRadixEscapeOwner } from './escape';
 import { parseBinding, parseSequence } from './parser';
-import { normalizeDefaultBindings, ShortcutRegistry } from './registry';
+import { ShortcutRegistry } from './registry';
 import { DEFAULT_PLATFORM, useClientPlatform } from './platform';
 import { createMemoryShortcutStorage } from './storage';
-import type { BindingDescriptor, Platform, ShortcutAction, ShortcutScope, ShortcutStorage } from './types';
+import { getDefaultBindingsForPlatform, getShortcutCatalogEntry } from './catalog';
+import {
+  EMPTY_SHORTCUT_PREFERENCES,
+  isActionDisabled,
+  migrateShortcutPreferences,
+  resolveActionBindings,
+  setActionBindingsDelta,
+  setActionDisabled as setActionDisabledPreference,
+} from './preferences';
+import type { BindingDescriptor, PersistedShortcuts, Platform, ShortcutAction, ShortcutScope, ShortcutStorage } from './types';
 
 interface ScopeEntry {
   id: number;
@@ -42,6 +52,15 @@ interface KeyboardShortcutsContextValue {
   pushScope: (scope: ShortcutScope) => () => void;
   registerActiveRegion: () => () => void;
   storage: ShortcutStorage;
+  platform: Platform;
+  preferences: PersistedShortcuts;
+  preferencesLoaded: boolean;
+  getResolvedBindings: (actionId: string) => readonly string[];
+  isActionDisabled: (actionId: string) => boolean;
+  setActionBindings: (actionId: string, bindings: readonly string[]) => void;
+  setActionDisabled: (actionId: string, disabled: boolean) => void;
+  resetAction: (actionId: string) => void;
+  resetAllShortcuts: () => void;
   getState: () => DispatchState;
 }
 
@@ -135,18 +154,23 @@ export function KeyboardShortcutsProvider({
   const effectivePlatform = platform ?? detectedPlatform;
   const registryRef = useRef(new ShortcutRegistry());
   const defaultStorageRef = useRef(createMemoryShortcutStorage());
+  const activeStorage = storage ?? defaultStorageRef.current;
+  const [preferences, setPreferences] = useState<PersistedShortcuts>(EMPTY_SHORTCUT_PREFERENCES);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const activeScopesRef = useRef<ScopeEntry[]>([]);
   const activeRegionsRef = useRef<ActiveRegionEntry[]>([]);
   const sequenceBufferRef = useRef<KeyboardEvent[]>([]);
   const sequenceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resetSequenceBufferRef = useRef<() => void>(() => undefined);
   const platformRef = useRef(effectivePlatform);
+  const preferencesRef = useRef<PersistedShortcuts>(preferences);
   const sequenceTimeoutMsRef = useRef(sequenceTimeoutMs);
   const disabledActionIdsRef = useRef<readonly string[]>(disabledActionIds);
   const onConflictRef = useRef(onConflict);
   const previousRouteKeyRef = useRef(routeKey);
 
   platformRef.current = effectivePlatform;
+  preferencesRef.current = preferences;
   sequenceTimeoutMsRef.current = sequenceTimeoutMs;
   disabledActionIdsRef.current = disabledActionIds;
   onConflictRef.current = onConflict;
@@ -174,6 +198,88 @@ export function KeyboardShortcutsProvider({
       activeRegionsRef.current = activeRegionsRef.current.filter((candidate) => candidate.id !== entry.id);
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    Promise.resolve(activeStorage.load())
+      .then((loaded) => {
+        if (cancelled) {
+          return;
+        }
+
+        const migrated = migrateShortcutPreferences(loaded);
+        preferencesRef.current = migrated;
+        setPreferences(migrated);
+        setPreferencesLoaded(true);
+      })
+      .catch((error) => {
+        if (cancelled) {
+          return;
+        }
+
+        console.error('[KeyboardShortcutsProvider] Failed to load shortcut preferences', error);
+        preferencesRef.current = EMPTY_SHORTCUT_PREFERENCES;
+        setPreferences(EMPTY_SHORTCUT_PREFERENCES);
+        setPreferencesLoaded(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeStorage]);
+
+  const persistPreferences = useCallback((nextPreferences: PersistedShortcuts) => {
+    const migrated = migrateShortcutPreferences(nextPreferences);
+    preferencesRef.current = migrated;
+    setPreferences(migrated);
+    setPreferencesLoaded(true);
+
+    Promise.resolve(activeStorage.save(migrated)).catch((error) => {
+      console.error('[KeyboardShortcutsProvider] Failed to save shortcut preferences', error);
+    });
+  }, [activeStorage]);
+
+  const getResolvedBindings = useCallback((actionId: string) => {
+    const action = getShortcutCatalogEntry(actionId);
+    if (!action) {
+      return [];
+    }
+
+    return resolveActionBindings(action, preferencesRef.current, platformRef.current);
+  }, []);
+
+  const isDisabledInPreferences = useCallback((actionId: string) => {
+    return isActionDisabled(actionId, preferencesRef.current);
+  }, []);
+
+  const setActionBindings = useCallback((actionId: string, bindings: readonly string[]) => {
+    const action = getShortcutCatalogEntry(actionId);
+    if (!action) {
+      throw new Error(`Unknown keyboard shortcut action: ${actionId}`);
+    }
+
+    persistPreferences(setActionBindingsDelta(preferencesRef.current, action, platformRef.current, bindings));
+  }, [persistPreferences]);
+
+  const setActionDisabled = useCallback((actionId: string, disabled: boolean) => {
+    persistPreferences(setActionDisabledPreference(preferencesRef.current, actionId, disabled));
+  }, [persistPreferences]);
+
+  const resetAction = useCallback((actionId: string) => {
+    const action = getShortcutCatalogEntry(actionId);
+    if (!action) {
+      throw new Error(`Unknown keyboard shortcut action: ${actionId}`);
+    }
+
+    const defaults = getDefaultBindingsForPlatform(action, platformRef.current);
+    const withoutBinding = setActionBindingsDelta(preferencesRef.current, action, platformRef.current, defaults);
+    persistPreferences(setActionDisabledPreference(withoutBinding, actionId, false));
+  }, [persistPreferences]);
+
+  const resetAllShortcuts = useCallback(() => {
+    persistPreferences(EMPTY_SHORTCUT_PREFERENCES);
+  }, [persistPreferences]);
 
   const resetSequenceBuffer = useCallback(() => {
     sequenceBufferRef.current = [];
@@ -214,7 +320,10 @@ export function KeyboardShortcutsProvider({
 
   useEffect(() => {
     const getEligibleActions = (editableTarget: boolean, sequenceOnly: boolean) => {
-      const disabled = new Set(disabledActionIdsRef.current);
+      const disabled = new Set([
+        ...disabledActionIdsRef.current,
+        ...preferencesRef.current.disabled,
+      ]);
       return registryRef.current.list().filter((action) => {
         if (Boolean(action.sequence) !== sequenceOnly) {
           return false;
@@ -274,8 +383,8 @@ export function KeyboardShortcutsProvider({
       }> = [];
 
       for (const action of getEligibleActions(editableTarget, false)) {
-        const defaultBindings = normalizeDefaultBindings(action.defaultBindings)[platformRef.current];
-        for (const binding of defaultBindings) {
+        const resolvedBindings = resolveActionBindings(action, preferencesRef.current, platformRef.current);
+        for (const binding of resolvedBindings) {
           const parsed = parseBinding(binding);
           if (!parsed.ok) {
             continue;
@@ -315,8 +424,8 @@ export function KeyboardShortcutsProvider({
       }
 
       for (const action of getEligibleActions(editableTarget, true)) {
-        const defaultBindings = normalizeDefaultBindings(action.defaultBindings)[platformRef.current];
-        for (const binding of defaultBindings) {
+        const resolvedBindings = resolveActionBindings(action, preferencesRef.current, platformRef.current);
+        for (const binding of resolvedBindings) {
           const parsed = parseSequence(binding);
           if (!parsed.ok || parsed.value.length < events.length) {
             continue;
@@ -417,10 +526,34 @@ export function KeyboardShortcutsProvider({
       registerAction,
       pushScope,
       registerActiveRegion,
-      storage: storage ?? defaultStorageRef.current,
+      storage: activeStorage,
+      platform: effectivePlatform,
+      preferences,
+      preferencesLoaded,
+      getResolvedBindings,
+      isActionDisabled: isDisabledInPreferences,
+      setActionBindings,
+      setActionDisabled,
+      resetAction,
+      resetAllShortcuts,
       getState,
     }),
-    [getState, pushScope, registerAction, registerActiveRegion, storage],
+    [
+      activeStorage,
+      effectivePlatform,
+      getResolvedBindings,
+      getState,
+      isDisabledInPreferences,
+      preferences,
+      preferencesLoaded,
+      pushScope,
+      registerAction,
+      registerActiveRegion,
+      resetAction,
+      resetAllShortcuts,
+      setActionBindings,
+      setActionDisabled,
+    ],
   );
 
   return (
@@ -441,6 +574,79 @@ export function useKeyboardShortcutsContext(): KeyboardShortcutsContextValue {
 
 function useOptionalKeyboardShortcutsContext(): KeyboardShortcutsContextValue | null {
   return useContext(KeyboardShortcutsContext);
+}
+
+export function useKeyboardShortcutPreferences(): Pick<
+  KeyboardShortcutsContextValue,
+  | 'platform'
+  | 'preferences'
+  | 'preferencesLoaded'
+  | 'getResolvedBindings'
+  | 'isActionDisabled'
+  | 'setActionBindings'
+  | 'setActionDisabled'
+  | 'resetAction'
+  | 'resetAllShortcuts'
+> {
+  const context = useKeyboardShortcutsContext();
+  return {
+    platform: context.platform,
+    preferences: context.preferences,
+    preferencesLoaded: context.preferencesLoaded,
+    getResolvedBindings: context.getResolvedBindings,
+    isActionDisabled: context.isActionDisabled,
+    setActionBindings: context.setActionBindings,
+    setActionDisabled: context.setActionDisabled,
+    resetAction: context.resetAction,
+    resetAllShortcuts: context.resetAllShortcuts,
+  };
+}
+
+export function useOptionalKeyboardShortcutPreferences(): Pick<
+  KeyboardShortcutsContextValue,
+  | 'platform'
+  | 'preferences'
+  | 'preferencesLoaded'
+  | 'getResolvedBindings'
+  | 'isActionDisabled'
+  | 'setActionBindings'
+  | 'setActionDisabled'
+  | 'resetAction'
+  | 'resetAllShortcuts'
+> | null {
+  const context = useOptionalKeyboardShortcutsContext();
+  if (!context) {
+    return null;
+  }
+
+  return {
+    platform: context.platform,
+    preferences: context.preferences,
+    preferencesLoaded: context.preferencesLoaded,
+    getResolvedBindings: context.getResolvedBindings,
+    isActionDisabled: context.isActionDisabled,
+    setActionBindings: context.setActionBindings,
+    setActionDisabled: context.setActionDisabled,
+    resetAction: context.resetAction,
+    resetAllShortcuts: context.resetAllShortcuts,
+  };
+}
+
+export function useResolvedShortcutBindings(actionId: string): readonly string[] {
+  const context = useOptionalKeyboardShortcutsContext();
+  const platform = useClientPlatform(DEFAULT_PLATFORM);
+  const action = getShortcutCatalogEntry(actionId);
+
+  if (context) {
+    return context.getResolvedBindings(actionId);
+  }
+
+  return action ? getDefaultBindingsForPlatform(action, platform) : [];
+}
+
+export function useShortcutActionDisabled(actionId: string): boolean {
+  const context = useOptionalKeyboardShortcutsContext();
+  return context ? context.isActionDisabled(actionId) : false;
 }
 
 export function useShortcutStorage(): ShortcutStorage {

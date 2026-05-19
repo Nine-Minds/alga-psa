@@ -20,6 +20,7 @@ import type { ProductCode } from '@alga-psa/types';
 import { resolveProductRouteBehavior } from '@/lib/productSurfaceRegistry';
 import { ProductRouteBoundary } from '@/components/product/ProductRouteBoundary';
 import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
+import { useKeyboardShortcutPreferenceStorage } from '@/hooks/useKeyboardShortcutPreferenceStorage';
 
 interface Props {
   children: React.ReactNode;
@@ -43,6 +44,7 @@ export function MspLayoutClient({
   const isOnboardingPage = pathname === "/msp/onboarding";
   const routeBehavior = resolveProductRouteBehavior(productCode, pathname);
   const sessionTenant = session?.user?.tenant;
+  const shortcutPreference = useKeyboardShortcutPreferenceStorage({ userId: session?.user?.id });
   const [clientNeedsOnboarding, setClientNeedsOnboarding] = useState(false);
   const shouldForceOnboarding = needsOnboarding || clientNeedsOnboarding;
 
@@ -107,7 +109,7 @@ export function MspLayoutClient({
               }}
             >
               {isOnboardingPage ? children : (
-                <KeyboardShortcutsProvider routeKey={pathname ?? '/msp'}>
+                <KeyboardShortcutsProvider routeKey={pathname ?? '/msp'} storage={shortcutPreference.storage}>
                   {isAlgaDesk ? (
                     routeBehavior === 'allowed' ? (
                       <AlgaDeskMspShell initialSidebarCollapsed={initialSidebarCollapsed}>

@@ -12,18 +12,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
-  EMPTY_SHORTCUT_PREFERENCES,
   SHORTCUT_ACTION_CATALOG,
   getDefaultBindingsForPlatform,
-  isActionDisabled,
-  resolveActionBindings,
-  setActionBindingsDelta,
-  setActionDisabled,
-  useClientPlatform,
-  type PersistedShortcuts,
+  useKeyboardShortcutPreferences,
   type ShortcutActionCatalogEntry,
 } from '@alga-psa/ui/keyboard-shortcuts';
-import { useKeyboardShortcutPreferenceStorage } from '@/hooks/useKeyboardShortcutPreferenceStorage';
 
 interface ConflictState {
   action: ShortcutActionCatalogEntry;
@@ -58,8 +51,8 @@ function tokenFromEvent(event: KeyboardEvent): string | null {
 
 export default function KeyboardShortcutsSettings(): React.JSX.Element {
   const { t } = useTranslation('msp/keyboard-shortcuts');
-  const platform = useClientPlatform('other');
-  const preference = useKeyboardShortcutPreferenceStorage();
+  const shortcuts = useKeyboardShortcutPreferences();
+  const platform = shortcuts.platform;
   const [capturingActionId, setCapturingActionId] = useState<string | null>(null);
   const [pendingConflict, setPendingConflict] = useState<ConflictState | null>(null);
   const [resetAllOpen, setResetAllOpen] = useState(false);
@@ -74,9 +67,9 @@ export default function KeyboardShortcutsSettings(): React.JSX.Element {
     return Array.from(groups.entries());
   }, []);
 
-  const updatePreference = (updater: (current: PersistedShortcuts) => PersistedShortcuts, successKey: string) => {
+  const runPreferenceUpdate = (update: () => void, successKey: string) => {
     try {
-      preference.setValue((current) => updater(current));
+      update();
       toast.success(t(successKey, { defaultValue: 'Keyboard shortcut updated' }));
     } catch (error) {
       handleError(error, t('settings.errors.saveFailed', { defaultValue: 'Failed to save keyboard shortcut preferences' }));
@@ -86,13 +79,13 @@ export default function KeyboardShortcutsSettings(): React.JSX.Element {
   const findConflict = (action: ShortcutActionCatalogEntry, binding: string): ShortcutActionCatalogEntry | null => {
     return SHORTCUT_ACTION_CATALOG.find((candidate) => {
       if (candidate.id === action.id) return false;
-      return resolveActionBindings(candidate, preference.value, platform).includes(binding);
+      return shortcuts.getResolvedBindings(candidate.id).includes(binding);
     }) ?? null;
   };
 
   const commitBinding = (action: ShortcutActionCatalogEntry, binding: string) => {
-    updatePreference(
-      (current) => setActionBindingsDelta(current, action, platform, [binding]),
+    runPreferenceUpdate(
+      () => shortcuts.setActionBindings(action.id, [binding]),
       'settings.messages.bindingUpdated',
     );
   };
@@ -115,7 +108,7 @@ export default function KeyboardShortcutsSettings(): React.JSX.Element {
     setCapturingActionId(null);
   };
 
-  if (preference.isLoading && !preference.hasLoadedInitial) {
+  if (!shortcuts.preferencesLoaded) {
     return (
       <div className="flex items-center justify-center py-8">
         <LoadingIndicator layout="stacked" text={t('settings.loading', { defaultValue: 'Loading keyboard shortcuts...' })} spinnerProps={{ size: 'md' }} />
@@ -151,9 +144,9 @@ export default function KeyboardShortcutsSettings(): React.JSX.Element {
               </TableHeader>
               <TableBody>
                 {actions.map((action) => {
-                  const effective = resolveActionBindings(action, preference.value, platform);
                   const defaults = getDefaultBindingsForPlatform(action, platform);
-                  const enabled = !isActionDisabled(action.id, preference.value);
+                  const effective = shortcuts.getResolvedBindings(action.id);
+                  const enabled = !shortcuts.isActionDisabled(action.id);
                   return (
                     <TableRow key={action.id}>
                       <TableCell>
@@ -179,8 +172,8 @@ export default function KeyboardShortcutsSettings(): React.JSX.Element {
                         <Switch
                           id={`keyboard-shortcut-enabled-${action.id.replace(/\./g, '-')}`}
                           checked={enabled}
-                          onCheckedChange={(checked) => updatePreference(
-                            (current) => setActionDisabled(current, action.id, !checked),
+                          onCheckedChange={(checked) => runPreferenceUpdate(
+                            () => shortcuts.setActionDisabled(action.id, !checked),
                             'settings.messages.enabledUpdated',
                           )}
                         />
@@ -190,11 +183,8 @@ export default function KeyboardShortcutsSettings(): React.JSX.Element {
                           id={`keyboard-shortcut-reset-${action.id.replace(/\./g, '-')}`}
                           variant="ghost"
                           size="sm"
-                          onClick={() => updatePreference(
-                            (current) => {
-                              const withoutBinding = setActionBindingsDelta(current, action, platform, defaults);
-                              return setActionDisabled(withoutBinding, action.id, false);
-                            },
+                          onClick={() => runPreferenceUpdate(
+                            () => shortcuts.resetAction(action.id),
                             'settings.messages.resetOne',
                           )}
                         >
@@ -214,7 +204,7 @@ export default function KeyboardShortcutsSettings(): React.JSX.Element {
         isOpen={resetAllOpen}
         onClose={() => setResetAllOpen(false)}
         onConfirm={() => {
-          preference.setValue(EMPTY_SHORTCUT_PREFERENCES);
+          shortcuts.resetAllShortcuts();
           toast.success(t('settings.messages.resetAll', { defaultValue: 'Keyboard shortcuts reset' }));
           setResetAllOpen(false);
         }}

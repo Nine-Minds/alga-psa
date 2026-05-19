@@ -22,11 +22,11 @@ export function useKeyboardShortcutPreferenceStorage(options: Options = {}) {
     skipServerFetch: options.skipServerFetch,
   });
 
-  const value = migrateShortcutPreferences(preference.value);
+  const value = useMemo(() => migrateShortcutPreferences(preference.value), [preference.value]);
   const storage = useMemo<ShortcutStorage>(() => ({
     load: () => value,
     save: (nextValue) => preference.setValue(migrateShortcutPreferences(nextValue)),
-  }), [preference, value]);
+  }), [preference.setValue, value]);
 
   return {
     ...preference,

@@ -2,10 +2,10 @@
 
 import React from 'react';
 import { useTranslation } from '../lib/i18n/client';
-import { getShortcutCatalogEntry, getDefaultBindingsForPlatform } from './catalog';
 import { parseBinding } from './parser';
 import { resolveShortcutModifiers } from './matcher';
 import { useClientPlatform } from './platform';
+import { useResolvedShortcutBindings } from './provider';
 import type { Platform } from './types';
 
 const MAC_LABELS: Record<string, string> = { meta: '⌘', ctrl: '⌃', alt: '⌥', shift: '⇧' };
@@ -57,17 +57,13 @@ export function Kbd({ binding }: { binding: string }): React.JSX.Element {
 }
 
 export function ShortcutHint({ actionId }: { actionId: string }): React.JSX.Element | null {
-  const platform = useClientPlatform('other');
-  const action = getShortcutCatalogEntry(actionId);
-  if (!action) return null;
-  const binding = getDefaultBindingsForPlatform(action, platform)[0];
+  const binding = useResolvedShortcutBindings(actionId)[0];
   if (!binding) return null;
   return <Kbd binding={binding} />;
 }
 
 export function useAriaKeyShortcuts(actionId: string): string | undefined {
   const platform = useClientPlatform('other');
-  const action = getShortcutCatalogEntry(actionId);
-  const binding = action ? getDefaultBindingsForPlatform(action, platform)[0] : undefined;
+  const binding = useResolvedShortcutBindings(actionId)[0];
   return binding ? bindingToAriaKeyShortcuts(binding, platform) : undefined;
 }

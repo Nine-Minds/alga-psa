@@ -6,6 +6,7 @@ import { useTranslation } from '../lib/i18n/client';
 import { SHORTCUT_ACTION_CATALOG, getDefaultBindingsForPlatform } from './catalog';
 import { Kbd } from './display';
 import { useClientPlatform } from './platform';
+import { useOptionalKeyboardShortcutPreferences } from './provider';
 
 interface ShortcutHelpDialogProps {
   isOpen: boolean;
@@ -16,11 +17,12 @@ interface ShortcutHelpDialogProps {
 export function ShortcutHelpDialog({ isOpen, onClose, disabledActionIds = [] }: ShortcutHelpDialogProps): React.JSX.Element | null {
   const { t } = useTranslation('msp/keyboard-shortcuts');
   const platform = useClientPlatform('other');
+  const shortcuts = useOptionalKeyboardShortcutPreferences();
   if (!isOpen) return null;
   const disabled = new Set(disabledActionIds);
   const groups = new Map<string, typeof SHORTCUT_ACTION_CATALOG>();
   for (const action of SHORTCUT_ACTION_CATALOG) {
-    if (disabled.has(action.id)) continue;
+    if (disabled.has(action.id) || shortcuts?.isActionDisabled(action.id)) continue;
     const group = groups.get(action.groupKey) ?? [];
     groups.set(action.groupKey, [...group, action]);
   }
@@ -43,7 +45,10 @@ export function ShortcutHelpDialog({ isOpen, onClose, disabledActionIds = [] }: 
                   <div key={action.id} className="flex items-center justify-between gap-4 text-sm">
                     <span>{t(action.labelKey)}</span>
                     <span className="flex gap-1">
-                      {getDefaultBindingsForPlatform(action, platform).map((binding) => <Kbd key={binding} binding={binding} />)}
+                      {(shortcuts?.getResolvedBindings(action.id) ?? getDefaultBindingsForPlatform(action, platform)).map((binding) => <Kbd key={binding} binding={binding} />)}
+                      {shortcuts?.preferences.bindings[action.id] ? (
+                        <span className="text-xs text-gray-500">{t('help.custom', { defaultValue: 'Custom' })}</span>
+                      ) : null}
                     </span>
                   </div>
                 ))}

@@ -1,6 +1,6 @@
 import { parseBinding } from './parser';
 import { getDefaultBindingsForPlatform, type ShortcutActionCatalogEntry } from './catalog';
-import type { PersistedShortcuts, Platform } from './types';
+import type { PersistedShortcuts, Platform, ShortcutBindingDefaults } from './types';
 
 export const KEYBOARD_SHORTCUTS_PREFERENCE_KEY = 'keyboard_shortcuts_v1';
 export const SHORTCUT_PREFERENCES_VERSION = 1;
@@ -40,11 +40,11 @@ export function migrateShortcutPreferences(value: unknown): PersistedShortcuts {
 }
 
 export function resolveActionBindings(
-  action: ShortcutActionCatalogEntry,
+  action: Pick<ShortcutActionCatalogEntry, 'id' | 'defaultBindings'> | { id: string; defaultBindings: ShortcutBindingDefaults },
   preferences: PersistedShortcuts,
   platform: Platform,
 ): readonly string[] {
-  return preferences.bindings[action.id] ?? getDefaultBindingsForPlatform(action, platform);
+  return preferences.bindings[action.id] ?? getDefaultBindingsForPlatform(action.defaultBindings, platform);
 }
 
 export function isActionDisabled(actionId: string, preferences: PersistedShortcuts): boolean {
