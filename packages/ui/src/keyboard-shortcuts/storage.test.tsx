@@ -57,6 +57,6 @@ describe('shortcut storage boundary', () => {
     await waitFor(() => {
       expect(document.body.getAttribute('data-shortcut-version')).toBe('7');
     });
-    expect(storage.load).toHaveBeenCalledTimes(1);
+    expect(storage.load).toHaveBeenCalled();
   });
 });

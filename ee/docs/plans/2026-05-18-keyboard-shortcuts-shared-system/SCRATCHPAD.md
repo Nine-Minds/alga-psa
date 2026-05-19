@@ -444,3 +444,25 @@ items are `implemented: true` (one-commit-per-group rule).
   sequence actions through `KeyboardShortcutsProvider`. The test verifies
   `g t`, `g a`, and `g c` dispatch to their handlers and that the same
   sequence is suppressed while typing in an input.
+
+## 2026-05-19 — customization-wiring group implementation
+- F043/F140/F142/F146/F185/F186/F360-F366: Connected the preference adapter
+  end-to-end. `MspLayoutClient` now injects `useKeyboardShortcutPreferenceStorage`
+  into `KeyboardShortcutsProvider`; the provider loads the persisted blob,
+  keeps it as reactive context state, resolves dispatch through
+  `resolveActionBindings`, merges `preferences.disabled`, and exposes resolved
+  bindings plus set/disable/reset mutators. `ShortcutHint`, `useAriaKeyShortcuts`,
+  `ShortcutHelpDialog`, and `KeyboardShortcutsSettings` now read the same
+  provider-owned source instead of separate defaults/preference hooks.
+- T360-T363: Added
+  `packages/ui/src/keyboard-shortcuts/customization-wiring.test.tsx`. The test
+  covers rebind -> new combo dispatches and old default stops, Effective +
+  `ShortcutHint` + `aria-keyshortcuts` update, disable stops dispatch and hides
+  help, reset-one/reset-all live-update, and persisted storage loads before
+  dispatch.
+- T364/checks: `npx nx graph --file=/tmp/project-graph.json && node
+  scripts/guard-keyboard-shortcuts-boundary.mjs --graph /tmp/project-graph.json`
+  passed. Focused tests passed:
+  `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/customization-wiring.test.tsx src/keyboard-shortcuts/provider.test.tsx src/keyboard-shortcuts/storage.test.tsx src/keyboard-shortcuts/display.test.tsx src/keyboard-shortcuts/settings-ui.contract.test.ts src/keyboard-shortcuts/persistence-bridge.contract.test.ts src/keyboard-shortcuts/global-migration.contract.test.ts`.
+  Type checks passed: `npx tsc --noEmit -p packages/ui/tsconfig.json` and
+  `npm run typecheck --workspace server`.

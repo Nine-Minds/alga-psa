@@ -1384,7 +1384,7 @@
   {
     "id": "T360",
     "description": "INTEGRATION (the missing test): rebind global.search to mod+j in settings \u2192 mod+j triggers search, mod+k does NOT, settings Effective + ShortcutHint + aria-keyshortcuts all show mod+j \u2014 one action, one source",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F360",
       "F361",
@@ -1397,7 +1397,7 @@
   {
     "id": "T361",
     "description": "INTEGRATION: disable an action in settings \u2192 it no longer fires in dispatch and is hidden from the help dialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F363",
       "F366"
@@ -1407,7 +1407,7 @@
   {
     "id": "T362",
     "description": "INTEGRATION: reset-one / reset-all live-updates dispatch and hints without a reload",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F364",
       "F366"
@@ -1417,7 +1417,7 @@
   {
     "id": "T363",
     "description": "INTEGRATION: provider with injected storage loads persisted overrides on mount (prior session) and applies them to the very first dispatch",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F360",
       "F361"
@@ -1427,7 +1427,7 @@
   {
     "id": "T364",
     "description": "REGRESSION: MspLayoutClient injecting the server adapter introduces no new nx cycle and adds no @alga-psa/user-composition import inside packages/ui (boundary still holds)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F360",
       "F353"

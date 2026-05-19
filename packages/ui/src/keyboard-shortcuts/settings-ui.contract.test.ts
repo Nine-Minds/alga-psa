@@ -20,7 +20,7 @@ describe('keyboard shortcuts settings UI contract', () => {
 
   it('uses shared settings components and preference-backed immediate updates', () => {
     const source = read('server/src/components/settings/general/KeyboardShortcutsSettings.tsx');
-    expect(source).toContain('useKeyboardShortcutPreferenceStorage');
+    expect(source).toContain('useKeyboardShortcutPreferences');
     expect(source).toContain('Table');
     expect(source).toContain('Switch');
     expect(source).toContain('LoadingIndicator');
@@ -33,7 +33,7 @@ describe('keyboard shortcuts settings UI contract', () => {
   it('implements capture, clear/reset, disable, reset-all, conflicts, ids, and variants', () => {
     const source = read('server/src/components/settings/general/KeyboardShortcutsSettings.tsx');
     expect(source).toContain('bindingFromEvent');
-    expect(source).toContain('setActionBindingsDelta');
+    expect(source).toContain('setActionBindings');
     expect(source).toContain('setActionDisabled');
     expect(source).toContain('keyboard-shortcuts-reset-all-confirmation');
     expect(source).toContain('keyboard-shortcuts-conflict-confirmation');

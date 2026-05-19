@@ -14,7 +14,7 @@ describe('MSP global shortcut migration contract', () => {
   it('mounts KeyboardShortcutsProvider in the MSP layout around both product shells', () => {
     const source = read('server/src/app/msp/MspLayoutClient.tsx');
     expect(source).toContain("import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts'");
-    expect(source).toContain('<KeyboardShortcutsProvider routeKey={pathname ?? \'/msp\'}>');
+    expect(source).toContain('<KeyboardShortcutsProvider routeKey={pathname ?? \'/msp\'} storage={shortcutPreference.storage}>');
     expect(source.indexOf('<KeyboardShortcutsProvider')).toBeLessThan(source.indexOf('<AlgaDeskMspShell'));
     expect(source.indexOf('<KeyboardShortcutsProvider')).toBeLessThan(source.indexOf('<DefaultLayout'));
     expect(source).toContain('isOnboardingPage ? children');

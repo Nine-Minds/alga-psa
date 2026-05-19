@@ -341,7 +341,7 @@
   {
     "id": "F043",
     "description": "KeyboardShortcutsProvider accepts an injected ShortcutStorage (prop/context); defaults to an in-memory adapter \u2014 the inversion seam that keeps packages/ui free of user-composition (REOPENED: built but never wired into dispatch/provider/display end-to-end)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR30",
       "FR19"
@@ -699,7 +699,7 @@
   {
     "id": "F140",
     "description": "MSP wrapper (server/user-composition layer) implements a useUserPreference-backed ShortcutStorage (key keyboard_shortcuts_v1; localStorage + debounced server sync) and INJECTS it into KeyboardShortcutsProvider via F043 \u2014 the @alga-psa/user-composition import lives here, NOT in packages/ui/keyboard-shortcuts (REOPENED: built but never wired into dispatch/provider/display end-to-end)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR19",
       "Data / API / Integrations"
@@ -718,7 +718,7 @@
   {
     "id": "F142",
     "description": "Effective binding resolution: userOverride[id] ?? platformDefault(id, platform) (REOPENED: built but never wired into dispatch/provider/display end-to-end)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR20"
     ],
@@ -754,7 +754,7 @@
   {
     "id": "F146",
     "description": "disabled[] action list honored in dispatch (disabled actions never fire) (REOPENED: built but never wired into dispatch/provider/display end-to-end)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR19",
       "FR23"
@@ -942,7 +942,7 @@
   {
     "id": "F185",
     "description": "Visible kbd hints added to curated key controls (global search field, primary action buttons, relevant menu items) and tooltips (REOPENED: built but never wired into dispatch/provider/display end-to-end)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR25"
     ],
@@ -951,7 +951,7 @@
   {
     "id": "F186",
     "description": "aria-keyshortcuts mapping layer: convert effective binding to ARIA value format (REOPENED: built but never wired into dispatch/provider/display end-to-end)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR26"
     ],
@@ -1506,7 +1506,7 @@
   {
     "id": "F360",
     "description": "MspLayoutClient calls useKeyboardShortcutPreferenceStorage() and passes it as the provider `storage` prop (and derives disabledActionIds from it) \u2014 the inversion seam is actually connected at the mount site",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR34",
       "FR30",
@@ -1517,7 +1517,7 @@
   {
     "id": "F361",
     "description": "Provider loads PersistedShortcuts from the injected storage and keeps it reactive (re-resolves when the adapter value changes), holding it as the single source of preference state",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR34",
       "FR19"
@@ -1527,7 +1527,7 @@
   {
     "id": "F362",
     "description": "collectSingleChordCandidates & collectSequenceCandidates resolve via resolveActionBindings(actionId, action.defaultBindings, preferences)[platform] instead of normalizeDefaultBindings(defaults) \u2014 a rebind dispatches the new combo and the old default stops firing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR34",
       "FR20"
@@ -1537,7 +1537,7 @@
   {
     "id": "F363",
     "description": "Provider merges preferences.disabled into the dispatch disabled set (in addition to the disabledActionIds prop) so disabled actions never fire and are hidden from help",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR34",
       "FR19"
@@ -1547,7 +1547,7 @@
   {
     "id": "F364",
     "description": "Provider exposes resolved-binding accessor + preferences + mutators (setActionBindings/setActionDisabled/reset-one/reset-all) via KeyboardShortcutsContext as the single source of truth",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR34"
     ],
@@ -1556,7 +1556,7 @@
   {
     "id": "F365",
     "description": "display.tsx ShortcutHint & useAriaKeyShortcuts consume the provider's resolved binding from context (not getDefaultBindingsForPlatform) so visible kbd hints and aria-keyshortcuts reflect overrides",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR34",
       "FR26"
@@ -1566,7 +1566,7 @@
   {
     "id": "F366",
     "description": "KeyboardShortcutsSettings consumes the provider context instead of its own separate useUserPreference instance, so rebind/disable/reset live-update dispatch + hints + the settings table from one source",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR34",
       "FR23"
