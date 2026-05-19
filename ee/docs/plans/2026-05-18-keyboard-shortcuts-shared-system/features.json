@@ -1,0 +1,1096 @@
+[
+  {
+    "id": "F001",
+    "description": "Scaffold packages/ui/src/keyboard-shortcuts/ directory and index.ts barrel",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Non-functional Requirements"
+    ],
+    "commitGroup": "scaffold"
+  },
+  {
+    "id": "F002",
+    "description": "Add @alga-psa/ui/keyboard-shortcuts and /keyboard-shortcuts/* exports to packages/ui/package.json",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "commitGroup": "scaffold"
+  },
+  {
+    "id": "F003",
+    "description": "types.ts: ShortcutAction, ShortcutScope union, BindingDescriptor, ParsedToken (code|char), Platform, PersistedShortcuts shape",
+    "implemented": false,
+    "prdRefs": [
+      "Functional Requirements"
+    ],
+    "commitGroup": "scaffold"
+  },
+  {
+    "id": "F004",
+    "description": "platform.ts: client-only platform detection (mac vs other) resolved post-mount, never during SSR",
+    "implemented": false,
+    "prdRefs": [
+      "FR4",
+      "Non-functional Requirements"
+    ],
+    "commitGroup": "scaffold"
+  },
+  {
+    "id": "F010",
+    "description": "parseBinding(str): parse modifier set + single key token",
+    "implemented": false,
+    "prdRefs": [
+      "FR1"
+    ],
+    "commitGroup": "parser"
+  },
+  {
+    "id": "F011",
+    "description": "parseBinding: classify token as code-kind for letters a-z (\u2192 KeyA..KeyZ)",
+    "implemented": false,
+    "prdRefs": [
+      "FR1"
+    ],
+    "commitGroup": "parser"
+  },
+  {
+    "id": "F012",
+    "description": "parseBinding: classify digits (\u2192 Digit0..9) and function keys (F1..F12) as code-kind",
+    "implemented": false,
+    "prdRefs": [
+      "FR1"
+    ],
+    "commitGroup": "parser"
+  },
+  {
+    "id": "F013",
+    "description": "parseBinding: classify named keys (Enter, Escape, Tab, Space, ArrowUp/Down/Left/Right, Delete, Backspace, Home, End, PageUp/Down) as code-kind",
+    "implemented": false,
+    "prdRefs": [
+      "FR1"
+    ],
+    "commitGroup": "parser"
+  },
+  {
+    "id": "F014",
+    "description": "parseBinding: classify bracket tokens [ ] as code-kind (BracketLeft/BracketRight)",
+    "implemented": false,
+    "prdRefs": [
+      "FR1"
+    ],
+    "commitGroup": "parser"
+  },
+  {
+    "id": "F015",
+    "description": "parseBinding: classify glyph tokens (e.g. ?) as char-kind matched on produced character",
+    "implemented": false,
+    "prdRefs": [
+      "FR1"
+    ],
+    "commitGroup": "parser"
+  },
+  {
+    "id": "F016",
+    "description": "parseBinding: support `mod` token plus literal `ctrl`/`meta`/`shift`/`alt` modifiers; literal ctrl/meta not remapped across OS",
+    "implemented": false,
+    "prdRefs": [
+      "FR1",
+      "Shortcut Syntax & Matching"
+    ],
+    "commitGroup": "parser"
+  },
+  {
+    "id": "F017",
+    "description": "parseBinding: deterministic modifier normalization order and lowercase printable normalization",
+    "implemented": false,
+    "prdRefs": [
+      "FR1"
+    ],
+    "commitGroup": "parser"
+  },
+  {
+    "id": "F018",
+    "description": "parseBinding: reject invalid/unsupported syntax with a typed error result",
+    "implemented": false,
+    "prdRefs": [
+      "FR1",
+      "FR23"
+    ],
+    "commitGroup": "parser"
+  },
+  {
+    "id": "F019",
+    "description": "parseSequence(str): parse space-separated chord sequence (e.g. 'g t') into ordered BindingDescriptor[]",
+    "implemented": false,
+    "prdRefs": [
+      "FR2"
+    ],
+    "commitGroup": "parser"
+  },
+  {
+    "id": "F020",
+    "description": "matchEvent: resolve mod from platform (Meta on mac, Ctrl on other) at match time",
+    "implemented": false,
+    "prdRefs": [
+      "FR3",
+      "FR4"
+    ],
+    "commitGroup": "matcher"
+  },
+  {
+    "id": "F021",
+    "description": "matchEvent: code-kind match via event.code + exact modifier-set equality",
+    "implemented": false,
+    "prdRefs": [
+      "FR3"
+    ],
+    "commitGroup": "matcher"
+  },
+  {
+    "id": "F022",
+    "description": "matchEvent: char-kind match via event.key produced char; Shift implied by glyph, not separately required",
+    "implemented": false,
+    "prdRefs": [
+      "FR3"
+    ],
+    "commitGroup": "matcher"
+  },
+  {
+    "id": "F023",
+    "description": "matchEvent: code-kind correctly matches macOS Option+letter (event.key='Dead' but event.code='KeyN')",
+    "implemented": false,
+    "prdRefs": [
+      "FR3",
+      "Cross-Platform"
+    ],
+    "commitGroup": "matcher"
+  },
+  {
+    "id": "F024",
+    "description": "matchEvent: code-kind correctly matches mod+letter on international layouts (Cyrillic/German physical S)",
+    "implemented": false,
+    "prdRefs": [
+      "FR3",
+      "Cross-Platform"
+    ],
+    "commitGroup": "matcher"
+  },
+  {
+    "id": "F025",
+    "description": "matchEvent: AltGr (ctrl+alt producing a character) does not false-match mod combos",
+    "implemented": false,
+    "prdRefs": [
+      "FR3"
+    ],
+    "commitGroup": "matcher"
+  },
+  {
+    "id": "F030",
+    "description": "useKeyboardShortcutRegistry: in-memory registry of actions keyed by id with add/remove",
+    "implemented": false,
+    "prdRefs": [
+      "FR5",
+      "FR6"
+    ],
+    "commitGroup": "registry"
+  },
+  {
+    "id": "F031",
+    "description": "KeyboardShortcutsProvider: single capture-phase keydown listener on document; client-only ('use client')",
+    "implemented": false,
+    "prdRefs": [
+      "FR5",
+      "Non-functional Requirements"
+    ],
+    "commitGroup": "registry"
+  },
+  {
+    "id": "F032",
+    "description": "useShortcutAction(def): register on mount, unregister on unmount; stable id; per-platform defaultBindings {mac,other} with single-array sugar expansion",
+    "implemented": false,
+    "prdRefs": [
+      "FR6"
+    ],
+    "commitGroup": "registry"
+  },
+  {
+    "id": "F033",
+    "description": "useShortcutAction: enabled flag gates matching and preventDefault (preventDefault only when an enabled action handles the event)",
+    "implemented": false,
+    "prdRefs": [
+      "FR6",
+      "FR8"
+    ],
+    "commitGroup": "registry"
+  },
+  {
+    "id": "F034",
+    "description": "useShortcutScope(scope): ref-counted push/pop of active scope stack",
+    "implemented": false,
+    "prdRefs": [
+      "FR7"
+    ],
+    "commitGroup": "registry"
+  },
+  {
+    "id": "F035",
+    "description": "useShortcutScope: active scopes cleared on route change",
+    "implemented": false,
+    "prdRefs": [
+      "FR7"
+    ],
+    "commitGroup": "registry"
+  },
+  {
+    "id": "F036",
+    "description": "Dispatch: skip handling when event.defaultPrevented is true",
+    "implemented": false,
+    "prdRefs": [
+      "FR8",
+      "Shortcut Syntax & Matching"
+    ],
+    "commitGroup": "registry"
+  },
+  {
+    "id": "F037",
+    "description": "Dispatch: filter matched actions by active scopes",
+    "implemented": false,
+    "prdRefs": [
+      "FR8"
+    ],
+    "commitGroup": "registry"
+  },
+  {
+    "id": "F038",
+    "description": "Dispatch: pick highest priority; tie \u2192 most-local active scope (top of stack)",
+    "implemented": false,
+    "prdRefs": [
+      "FR8"
+    ],
+    "commitGroup": "registry"
+  },
+  {
+    "id": "F039",
+    "description": "Dispatch: residual tie reported as a conflict (dev/settings), never resolved by silent registration order",
+    "implemented": false,
+    "prdRefs": [
+      "FR8"
+    ],
+    "commitGroup": "registry"
+  },
+  {
+    "id": "F040",
+    "description": "Editable-target suppression: input/textarea/select/contenteditable/role=textbox/role=combobox/editor roots",
+    "implemented": false,
+    "prdRefs": [
+      "FR9"
+    ],
+    "commitGroup": "registry"
+  },
+  {
+    "id": "F041",
+    "description": "allowInEditable: true opt-in bypasses editable suppression for the action",
+    "implemented": false,
+    "prdRefs": [
+      "FR9",
+      "FR6"
+    ],
+    "commitGroup": "registry"
+  },
+  {
+    "id": "F042",
+    "description": "Active-region API: register/unregister a roving-focus region; selection.* and single-letter page actions fire only when a region is active",
+    "implemented": false,
+    "prdRefs": [
+      "FR10"
+    ],
+    "commitGroup": "registry"
+  },
+  {
+    "id": "F050",
+    "description": "Sequence engine: chord buffer accumulates keys and resolves a matching parsed sequence",
+    "implemented": false,
+    "prdRefs": [
+      "FR11",
+      "FR2"
+    ],
+    "commitGroup": "sequence"
+  },
+  {
+    "id": "F051",
+    "description": "Sequence engine: configurable timeout (default ~1s) resets the buffer",
+    "implemented": false,
+    "prdRefs": [
+      "FR11"
+    ],
+    "commitGroup": "sequence"
+  },
+  {
+    "id": "F052",
+    "description": "Sequence engine: buffer resets on non-matching key, scope change, or route change",
+    "implemented": false,
+    "prdRefs": [
+      "FR11"
+    ],
+    "commitGroup": "sequence"
+  },
+  {
+    "id": "F053",
+    "description": "Sequence engine: suppressed in editable targets (no g-nav while typing)",
+    "implemented": false,
+    "prdRefs": [
+      "FR11",
+      "FR9"
+    ],
+    "commitGroup": "sequence"
+  },
+  {
+    "id": "F054",
+    "description": "Sequence engine: single-chord and sequence actions coexist without mutual interference",
+    "implemented": false,
+    "prdRefs": [
+      "FR11"
+    ],
+    "commitGroup": "sequence"
+  },
+  {
+    "id": "F060",
+    "description": "Radix integration: detect when a Radix modal owns Escape via ModalityContext/InsideDialogContext",
+    "implemented": false,
+    "prdRefs": [
+      "FR12"
+    ],
+    "commitGroup": "radix-escape"
+  },
+  {
+    "id": "F061",
+    "description": "Radix integration: dialog.cancel/panel.close route through Radix onEscapeKeyDown semantics; no competing global Escape listener while a Radix modal is open",
+    "implemented": false,
+    "prdRefs": [
+      "FR12"
+    ],
+    "commitGroup": "radix-escape"
+  },
+  {
+    "id": "F062",
+    "description": "Radix integration: nested modal Escape does not double-fire (respects existing stopPropagation/nesting fix)",
+    "implemented": false,
+    "prdRefs": [
+      "FR12"
+    ],
+    "commitGroup": "radix-escape"
+  },
+  {
+    "id": "F070",
+    "description": "Standard action ID catalog defined (global.*, page.*, selection.*, record.*, drawer.*, editor.*, assets.*, ai.*) with per-platform defaults",
+    "implemented": false,
+    "prdRefs": [
+      "Standard Action IDs",
+      "Initial Default Bindings"
+    ],
+    "commitGroup": "action-catalog"
+  },
+  {
+    "id": "F071",
+    "description": "Per-platform default for editor.redo: mac=mod+shift+z, other=ctrl+y/ctrl+shift+z",
+    "implemented": false,
+    "prdRefs": [
+      "FR18",
+      "Initial Default Bindings"
+    ],
+    "commitGroup": "action-catalog"
+  },
+  {
+    "id": "F080",
+    "description": "Mount KeyboardShortcutsProvider in MspLayoutClient.tsx wrapping DefaultLayout and AlgaDeskMspShell",
+    "implemented": false,
+    "prdRefs": [
+      "FR13"
+    ],
+    "commitGroup": "global-migration"
+  },
+  {
+    "id": "F081",
+    "description": "Provider not mounted on auth/client-portal screens",
+    "implemented": false,
+    "prdRefs": [
+      "FR13",
+      "Non-goals"
+    ],
+    "commitGroup": "global-migration"
+  },
+  {
+    "id": "F082",
+    "description": "global.search action registered; remove window mod+k listener from SearchPalette.tsx; focuses global search as before",
+    "implemented": false,
+    "prdRefs": [
+      "FR14"
+    ],
+    "commitGroup": "global-migration"
+  },
+  {
+    "id": "F083",
+    "description": "global.toggleChat action registered from DefaultLayout.tsx (mod+l), preserving aiAssistantAvailable gating and open/close-or-focus behavior",
+    "implemented": false,
+    "prdRefs": [
+      "FR14"
+    ],
+    "commitGroup": "global-migration"
+  },
+  {
+    "id": "F084",
+    "description": "ai.quickAsk action registered from DefaultLayout.tsx (mod+ArrowUp), preserving aiAssistantAvailable gating and quick-ask/focus behavior",
+    "implemented": false,
+    "prdRefs": [
+      "FR14"
+    ],
+    "commitGroup": "global-migration"
+  },
+  {
+    "id": "F085",
+    "description": "Remove the now-migrated window keydown listener block from DefaultLayout.tsx",
+    "implemented": false,
+    "prdRefs": [
+      "FR14"
+    ],
+    "commitGroup": "global-migration"
+  },
+  {
+    "id": "F086",
+    "description": "global.openShortcuts action registered (default `?`) opening the help dialog",
+    "implemented": false,
+    "prdRefs": [
+      "FR14",
+      "FR24"
+    ],
+    "commitGroup": "global-migration"
+  },
+  {
+    "id": "F087",
+    "description": "global.quickCreate action registered (default `c`, non-editable/active-region) opening QuickCreateDialog",
+    "implemented": false,
+    "prdRefs": [
+      "FR14"
+    ],
+    "commitGroup": "global-migration"
+  },
+  {
+    "id": "F088",
+    "description": "assets.commandPalette action registered page-scoped with a distinct non-mod+k default",
+    "implemented": false,
+    "prdRefs": [
+      "FR15"
+    ],
+    "commitGroup": "global-migration"
+  },
+  {
+    "id": "F089",
+    "description": "Remove window mod+k listener from AssetDashboardClient.tsx; asset palette opens via assets.commandPalette",
+    "implemented": false,
+    "prdRefs": [
+      "FR15"
+    ],
+    "commitGroup": "global-migration"
+  },
+  {
+    "id": "F090",
+    "description": "mod+k resolves only to global.search app-wide (conflict removed)",
+    "implemented": false,
+    "prdRefs": [
+      "FR15",
+      "Acceptance Criteria"
+    ],
+    "commitGroup": "global-migration"
+  },
+  {
+    "id": "F100",
+    "description": "panel.close action registered for drawers, Radix-integrated (Escape)",
+    "implemented": false,
+    "prdRefs": [
+      "FR16",
+      "FR12"
+    ],
+    "commitGroup": "panels-drawers"
+  },
+  {
+    "id": "F101",
+    "description": "drawer.historyBack / drawer.historyForward actions registered",
+    "implemented": false,
+    "prdRefs": [
+      "FR16"
+    ],
+    "commitGroup": "panels-drawers"
+  },
+  {
+    "id": "F102",
+    "description": "Migrate server/src/context/DrawerContext.tsx keydown handling to registered actions",
+    "implemented": false,
+    "prdRefs": [
+      "FR16"
+    ],
+    "commitGroup": "panels-drawers"
+  },
+  {
+    "id": "F103",
+    "description": "Migrate packages/ui/src/context/DrawerContext.tsx keydown handling to registered actions (both contexts migrated together)",
+    "implemented": false,
+    "prdRefs": [
+      "FR16"
+    ],
+    "commitGroup": "panels-drawers"
+  },
+  {
+    "id": "F104",
+    "description": "Drawer/panel scope pushed while a drawer is open, popped on close (ref-counted)",
+    "implemented": false,
+    "prdRefs": [
+      "FR7",
+      "FR17"
+    ],
+    "commitGroup": "panels-drawers"
+  },
+  {
+    "id": "F105",
+    "description": "record.previous / record.next registered defaulting to [ and ] (code-kind)",
+    "implemented": false,
+    "prdRefs": [
+      "FR17",
+      "Initial Default Bindings"
+    ],
+    "commitGroup": "panels-drawers"
+  },
+  {
+    "id": "F106",
+    "description": "Alt+ArrowLeft/Right offered only as opt-in alternate bindings for record.previous/next (not default)",
+    "implemented": false,
+    "prdRefs": [
+      "FR17",
+      "Cross-Platform"
+    ],
+    "commitGroup": "panels-drawers"
+  },
+  {
+    "id": "F107",
+    "description": "Migrate TicketNavigation.tsx adjacent-record nav to record.previous/next; remove its window listener",
+    "implemented": false,
+    "prdRefs": [
+      "FR17"
+    ],
+    "commitGroup": "panels-drawers"
+  },
+  {
+    "id": "F108",
+    "description": "Drawer/panel scope wins over ticket page scope while a drawer is open",
+    "implemented": false,
+    "prdRefs": [
+      "FR17",
+      "FR8"
+    ],
+    "commitGroup": "panels-drawers"
+  },
+  {
+    "id": "F120",
+    "description": "editor scope pushed by invoice designer / workflow designer / rich-text editor roots (ref-counted)",
+    "implemented": false,
+    "prdRefs": [
+      "FR7",
+      "FR18"
+    ],
+    "commitGroup": "editors"
+  },
+  {
+    "id": "F121",
+    "description": "Migrate invoice designer useDesignerShortcuts.ts (undo/redo/delete/escape/arrow-move) into editor-scoped registered actions",
+    "implemented": false,
+    "prdRefs": [
+      "FR18"
+    ],
+    "commitGroup": "editors"
+  },
+  {
+    "id": "F122",
+    "description": "editor.undo/redo/save/deleteSelection registered with editor scope and high priority; per-platform redo (F071)",
+    "implemented": false,
+    "prdRefs": [
+      "FR18",
+      "F071"
+    ],
+    "commitGroup": "editors"
+  },
+  {
+    "id": "F123",
+    "description": "Workflow designer keyboard actions migrated/wrapped into editor scope",
+    "implemented": false,
+    "prdRefs": [
+      "FR18"
+    ],
+    "commitGroup": "editors"
+  },
+  {
+    "id": "F124",
+    "description": "Rich-text (BlockNote) editor: editor scope + careful allowInEditable; BlockNote retains its own internal undo/redo (no double-handling)",
+    "implemented": false,
+    "prdRefs": [
+      "FR18"
+    ],
+    "commitGroup": "editors"
+  },
+  {
+    "id": "F140",
+    "description": "Override persistence wired via useUserPreference under key keyboard_shortcuts_v1 (localStorage + debounced server sync)",
+    "implemented": false,
+    "prdRefs": [
+      "FR19",
+      "Data / API / Integrations"
+    ],
+    "commitGroup": "persistence"
+  },
+  {
+    "id": "F141",
+    "description": "Persisted blob is delta-only in platform-neutral syntax (mod + logical tokens), with version and disabled[] fields",
+    "implemented": false,
+    "prdRefs": [
+      "FR19"
+    ],
+    "commitGroup": "persistence"
+  },
+  {
+    "id": "F142",
+    "description": "Effective binding resolution: userOverride[id] ?? platformDefault(id, platform)",
+    "implemented": false,
+    "prdRefs": [
+      "FR20"
+    ],
+    "commitGroup": "persistence"
+  },
+  {
+    "id": "F143",
+    "description": "Drop-equals-default guard: a user value equal to current platform default is removed from storage, not frozen",
+    "implemented": false,
+    "prdRefs": [
+      "FR20"
+    ],
+    "commitGroup": "persistence"
+  },
+  {
+    "id": "F144",
+    "description": "On load, validate overrides against current platform; surface non-blocking advisory for hostile/reserved combos; never silently rewrite",
+    "implemented": false,
+    "prdRefs": [
+      "FR21"
+    ],
+    "commitGroup": "persistence"
+  },
+  {
+    "id": "F145",
+    "description": "Versioned blob with migration function (v1 \u2192 vN)",
+    "implemented": false,
+    "prdRefs": [
+      "FR22"
+    ],
+    "commitGroup": "persistence"
+  },
+  {
+    "id": "F146",
+    "description": "disabled[] action list honored in dispatch (disabled actions never fire)",
+    "implemented": false,
+    "prdRefs": [
+      "FR19",
+      "FR23"
+    ],
+    "commitGroup": "persistence"
+  },
+  {
+    "id": "F147",
+    "description": "Unauthenticated path: localStorage-only via useUserPreference skipServerFetch/isUserLoggedIn",
+    "implemented": false,
+    "prdRefs": [
+      "FR19"
+    ],
+    "commitGroup": "persistence"
+  },
+  {
+    "id": "F160",
+    "description": "Add 'keyboard-shortcuts' tab to SettingsPage.tsx baseTabContent ({id,label,icon:KeyboardIcon,content} wrapped in Card/CardHeader/CardContent)",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "FR23"
+    ],
+    "commitGroup": "settings-ui"
+  },
+  {
+    "id": "F161",
+    "description": "KeyboardShortcutsSettings.tsx component using shared Card/Table/Switch/Button/LoadingIndicator",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "FR23"
+    ],
+    "commitGroup": "settings-ui"
+  },
+  {
+    "id": "F162",
+    "description": "Settings: list actions grouped by group with label, description, scope, default, effective binding (resolved for device)",
+    "implemented": false,
+    "prdRefs": [
+      "FR23"
+    ],
+    "commitGroup": "settings-ui"
+  },
+  {
+    "id": "F163",
+    "description": "Settings: inline key-capture rebind recording event.code for code-kind and event.key for char-kind (matches matcher)",
+    "implemented": false,
+    "prdRefs": [
+      "FR23"
+    ],
+    "commitGroup": "settings-ui"
+  },
+  {
+    "id": "F164",
+    "description": "Settings: clear a custom binding (revert to default)",
+    "implemented": false,
+    "prdRefs": [
+      "FR23"
+    ],
+    "commitGroup": "settings-ui"
+  },
+  {
+    "id": "F165",
+    "description": "Settings: disable an action via Switch (writes disabled[])",
+    "implemented": false,
+    "prdRefs": [
+      "FR23",
+      "F146"
+    ],
+    "commitGroup": "settings-ui"
+  },
+  {
+    "id": "F166",
+    "description": "Settings: reset one action to default (ghost Button + RotateCcw icon)",
+    "implemented": false,
+    "prdRefs": [
+      "FR23"
+    ],
+    "commitGroup": "settings-ui"
+  },
+  {
+    "id": "F167",
+    "description": "Settings: reset all shortcuts to defaults behind a ConfirmationDialog (destructive intent)",
+    "implemented": false,
+    "prdRefs": [
+      "FR23",
+      "UX / UI Notes"
+    ],
+    "commitGroup": "settings-ui"
+  },
+  {
+    "id": "F168",
+    "description": "Settings: inline platform-aware conflict detection before commit; replacing an existing binding requires explicit confirm",
+    "implemented": false,
+    "prdRefs": [
+      "FR23",
+      "Conflict Handling"
+    ],
+    "commitGroup": "settings-ui"
+  },
+  {
+    "id": "F169",
+    "description": "Settings: react-hot-toast success + handleError(error, t(...)) failure, consistent with other panels",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "commitGroup": "settings-ui"
+  },
+  {
+    "id": "F170",
+    "description": "Settings: LoadingIndicator while preferences load; preference-backed immediate debounced save (no explicit Save button)",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "commitGroup": "settings-ui"
+  },
+  {
+    "id": "F171",
+    "description": "Settings: every interactive element has an id; Button variants follow app conventions (default/outline/ghost/destructive)",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "commitGroup": "settings-ui"
+  },
+  {
+    "id": "F172",
+    "description": "Review settingsProductTabs.ts allowlist (no change expected for MSP-only); confirm tab visibility correct",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "commitGroup": "settings-ui"
+  },
+  {
+    "id": "F180",
+    "description": "ShortcutHelpDialog.tsx using shared Dialog; read-only; active shortcuts only",
+    "implemented": false,
+    "prdRefs": [
+      "FR24",
+      "UX / UI Notes"
+    ],
+    "commitGroup": "help-a11y"
+  },
+  {
+    "id": "F181",
+    "description": "Help dialog: grouped by group/scope; disabled/unavailable actions hidden",
+    "implemented": false,
+    "prdRefs": [
+      "FR24"
+    ],
+    "commitGroup": "help-a11y"
+  },
+  {
+    "id": "F182",
+    "description": "Help dialog: custom (non-default) bindings visually flagged",
+    "implemented": false,
+    "prdRefs": [
+      "FR24"
+    ],
+    "commitGroup": "help-a11y"
+  },
+  {
+    "id": "F183",
+    "description": "Help dialog: bindings rendered resolved for current device (post-mount, no hydration mismatch)",
+    "implemented": false,
+    "prdRefs": [
+      "FR24",
+      "Non-functional Requirements"
+    ],
+    "commitGroup": "help-a11y"
+  },
+  {
+    "id": "F184",
+    "description": "Shared <Kbd>/ShortcutHint component renders platform glyphs (\u2318/\u2325/\u21e7/\u2303 mac; Ctrl/Alt/Shift other) post-mount",
+    "implemented": false,
+    "prdRefs": [
+      "FR25"
+    ],
+    "commitGroup": "help-a11y"
+  },
+  {
+    "id": "F185",
+    "description": "Visible kbd hints added to curated key controls (global search field, primary action buttons, relevant menu items) and tooltips",
+    "implemented": false,
+    "prdRefs": [
+      "FR25"
+    ],
+    "commitGroup": "help-a11y"
+  },
+  {
+    "id": "F186",
+    "description": "aria-keyshortcuts mapping layer: convert effective binding to ARIA value format",
+    "implemented": false,
+    "prdRefs": [
+      "FR26"
+    ],
+    "commitGroup": "help-a11y"
+  },
+  {
+    "id": "F187",
+    "description": "aria-keyshortcuts applied to instrumented controls",
+    "implemented": false,
+    "prdRefs": [
+      "FR26"
+    ],
+    "commitGroup": "help-a11y"
+  },
+  {
+    "id": "F200",
+    "description": "Create EN namespace file server/public/locales/en/msp/keyboard-shortcuts.json (settings panel, help dialog, conflict/advisory messages chrome)",
+    "implemented": false,
+    "prdRefs": [
+      "FR27",
+      "FR28"
+    ],
+    "commitGroup": "i18n"
+  },
+  {
+    "id": "F201",
+    "description": "EN: action label keys for every registered action id (global.*, page.*, selection.*, record.*, drawer.*, editor.*, assets.*, ai.*)",
+    "implemented": false,
+    "prdRefs": [
+      "FR27"
+    ],
+    "commitGroup": "i18n"
+  },
+  {
+    "id": "F202",
+    "description": "EN: group name keys for every action group",
+    "implemented": false,
+    "prdRefs": [
+      "FR27"
+    ],
+    "commitGroup": "i18n"
+  },
+  {
+    "id": "F203",
+    "description": "Add 'keyboard-shortcuts' settings-tab label key to en/msp/settings.json",
+    "implemented": false,
+    "prdRefs": [
+      "FR27"
+    ],
+    "commitGroup": "i18n"
+  },
+  {
+    "id": "F204",
+    "description": "Action registration API takes labelKey/groupKey (i18n keys), not raw strings \u2014 enforced from Phase 1",
+    "implemented": false,
+    "prdRefs": [
+      "FR27",
+      "FR6"
+    ],
+    "commitGroup": "i18n"
+  },
+  {
+    "id": "F205",
+    "description": "Register msp/keyboard-shortcuts in ROUTE_NAMESPACES (packages/core/src/lib/i18n/config.ts) so it preloads for /msp",
+    "implemented": false,
+    "prdRefs": [
+      "FR28"
+    ],
+    "commitGroup": "i18n"
+  },
+  {
+    "id": "F206",
+    "description": "French (fr) translations for msp/keyboard-shortcuts + settings-tab label",
+    "implemented": false,
+    "prdRefs": [
+      "FR28"
+    ],
+    "commitGroup": "i18n"
+  },
+  {
+    "id": "F207",
+    "description": "Spanish (es) translations for msp/keyboard-shortcuts + settings-tab label",
+    "implemented": false,
+    "prdRefs": [
+      "FR28"
+    ],
+    "commitGroup": "i18n"
+  },
+  {
+    "id": "F208",
+    "description": "German (de) translations for msp/keyboard-shortcuts + settings-tab label",
+    "implemented": false,
+    "prdRefs": [
+      "FR28"
+    ],
+    "commitGroup": "i18n"
+  },
+  {
+    "id": "F209",
+    "description": "Dutch (nl) translations for msp/keyboard-shortcuts + settings-tab label",
+    "implemented": false,
+    "prdRefs": [
+      "FR28"
+    ],
+    "commitGroup": "i18n"
+  },
+  {
+    "id": "F210",
+    "description": "Italian (it) translations for msp/keyboard-shortcuts + settings-tab label",
+    "implemented": false,
+    "prdRefs": [
+      "FR28"
+    ],
+    "commitGroup": "i18n"
+  },
+  {
+    "id": "F211",
+    "description": "Polish (pl) translations for msp/keyboard-shortcuts + settings-tab label",
+    "implemented": false,
+    "prdRefs": [
+      "FR28"
+    ],
+    "commitGroup": "i18n"
+  },
+  {
+    "id": "F212",
+    "description": "Portuguese (pt) translations for msp/keyboard-shortcuts + settings-tab label",
+    "implemented": false,
+    "prdRefs": [
+      "FR28"
+    ],
+    "commitGroup": "i18n"
+  },
+  {
+    "id": "F213",
+    "description": "Regenerate pseudo-locales xx/yy (node scripts/generate-pseudo-locales.cjs)",
+    "implemented": false,
+    "prdRefs": [
+      "FR28"
+    ],
+    "commitGroup": "i18n"
+  },
+  {
+    "id": "F214",
+    "description": "validate-translations.cjs passes for the new namespace and settings-tab key across all locales",
+    "implemented": false,
+    "prdRefs": [
+      "FR28",
+      "Acceptance Criteria"
+    ],
+    "commitGroup": "i18n"
+  },
+  {
+    "id": "F215",
+    "description": "Platform glyph labels and aria-keyshortcuts text are localized/locale-safe; no hardcoded user-facing strings in engine/settings/help",
+    "implemented": false,
+    "prdRefs": [
+      "FR29"
+    ],
+    "commitGroup": "i18n"
+  },
+  {
+    "id": "F216",
+    "description": "Conflict/advisory messages (cross-device hostile-combo notices) internationalized",
+    "implemented": false,
+    "prdRefs": [
+      "FR29",
+      "FR21"
+    ],
+    "commitGroup": "i18n"
+  },
+  {
+    "id": "F230",
+    "description": "Regression-safe migration order enforced: each legacy handler removed only after its action is registered and verified",
+    "implemented": false,
+    "prdRefs": [
+      "Rollout / Migration"
+    ],
+    "commitGroup": "regression"
+  },
+  {
+    "id": "F231",
+    "description": "No SSR/hydration mismatch from platform/binding resolution (verified)",
+    "implemented": false,
+    "prdRefs": [
+      "Non-functional Requirements",
+      "Acceptance Criteria"
+    ],
+    "commitGroup": "regression"
+  },
+  {
+    "id": "F232",
+    "description": "Component-local widget key handling (DatePicker, SearchableSelect, TagInput, comboboxes, Radix internals) unaffected by the system",
+    "implemented": false,
+    "prdRefs": [
+      "Non-goals",
+      "Acceptance Criteria"
+    ],
+    "commitGroup": "regression"
+  }
+]
