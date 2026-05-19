@@ -10,6 +10,7 @@ import React, {
   type ReactNode,
 } from 'react';
 import { matchEvent } from './matcher';
+import { hasRadixEscapeOwner } from './escape';
 import { parseBinding, parseSequence } from './parser';
 import { normalizeDefaultBindings, ShortcutRegistry } from './registry';
 import { DEFAULT_PLATFORM, useClientPlatform } from './platform';
@@ -379,6 +380,10 @@ export function KeyboardShortcutsProvider({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) {
+        return;
+      }
+
+      if (event.key === 'Escape' && hasRadixEscapeOwner()) {
         return;
       }
 

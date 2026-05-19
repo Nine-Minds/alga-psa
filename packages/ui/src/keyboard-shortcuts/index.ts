@@ -1,3 +1,4 @@
+export * from './escape';
 export * from './matcher';
 export * from './parser';
 export * from './platform';

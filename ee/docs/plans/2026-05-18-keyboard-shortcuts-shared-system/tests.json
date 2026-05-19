@@ -412,7 +412,7 @@
   {
     "id": "T060",
     "description": "Component: while a Radix modal owns Escape, the system does NOT add a competing global Escape listener",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F060",
       "F061"
@@ -422,7 +422,7 @@
   {
     "id": "T061",
     "description": "Component: nested Radix dialog Escape closes only the top modal once (no double-fire)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F062"
     ],
@@ -431,7 +431,7 @@
   {
     "id": "T062",
     "description": "Component: panel.close via Escape closes the drawer and integrates with Radix onEscapeKeyDown",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061",
       "F100"

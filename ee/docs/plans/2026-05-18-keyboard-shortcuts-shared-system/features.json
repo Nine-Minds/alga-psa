@@ -407,7 +407,7 @@
   {
     "id": "F060",
     "description": "Radix integration: detect when a Radix modal owns Escape via ModalityContext/InsideDialogContext",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR12"
     ],
@@ -416,7 +416,7 @@
   {
     "id": "F061",
     "description": "Radix integration: dialog.cancel/panel.close route through Radix onEscapeKeyDown semantics; no competing global Escape listener while a Radix modal is open",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR12"
     ],
@@ -425,7 +425,7 @@
   {
     "id": "F062",
     "description": "Radix integration: nested modal Escape does not double-fire (respects existing stopPropagation/nesting fix)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR12"
     ],

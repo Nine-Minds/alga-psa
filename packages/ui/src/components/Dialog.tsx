@@ -7,6 +7,7 @@ import { X } from 'lucide-react';
 import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 import { ReflectionParentContext } from '../ui-reflection/ReflectionParentContext';
 import { ModalityContext, InsideDialogContext, useInsideDialog } from './ModalityContext';
+import { useRadixEscapeOwner } from '../keyboard-shortcuts';
 import { DialogComponent, AutomationProps } from '../ui-reflection/types';
 import { withDataAutomationId } from '../ui-reflection/withDataAutomationId';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
@@ -86,6 +87,8 @@ export function Dialog({
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [dialogSize, setDialogSize] = useState({ width: 0, height: 0 });
+
+  useRadixEscapeOwner(isOpen);
 
   // Prevent background scroll when dialog is open (non-nested only)
   useEffect(() => {
