@@ -251,6 +251,19 @@ decisions; update earlier notes when a decision changes.
   `npx tsc --noEmit -p packages/ui/tsconfig.json` passed;
   `npx tsc --noEmit -p packages/tickets/tsconfig.json` passed;
   `npm run typecheck --workspace server` passed.
+- (2026-05-19) Completed editors group F120-F124/T120-T124. Invoice designer
+  `useDesignerShortcuts.ts` now pushes `editor` scope and registers undo, redo,
+  delete selection, cancel, and arrow-move actions instead of a window keydown
+  listener. `TextEditor` pushes editor scope and marks the BlockNote root with
+  `data-keyboard-shortcuts-editor-root="true"` but does not register undo/redo,
+  so BlockNote internal editing shortcuts remain local. Search did not find a
+  separate workflow-designer window-level shortcut hook to migrate in this
+  group.
+- (2026-05-19) Verification for editors:
+  `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/editors.contract.test.ts src/keyboard-shortcuts/catalog.test.ts`
+  from `packages/ui` passed (5 tests);
+  `npx tsc --noEmit -p packages/ui/tsconfig.json` passed;
+  `npx tsc --noEmit -p packages/billing/tsconfig.json` passed.
 
 ## Open Questions
 

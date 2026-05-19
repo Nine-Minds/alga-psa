@@ -642,7 +642,7 @@
   {
     "id": "F120",
     "description": "editor scope pushed by invoice designer / workflow designer / rich-text editor roots (ref-counted)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR7",
       "FR18"
@@ -652,7 +652,7 @@
   {
     "id": "F121",
     "description": "Migrate invoice designer useDesignerShortcuts.ts (undo/redo/delete/escape/arrow-move) into editor-scoped registered actions",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR18"
     ],
@@ -661,7 +661,7 @@
   {
     "id": "F122",
     "description": "editor.undo/redo/save/deleteSelection registered with editor scope and high priority; per-platform redo (F071)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR18",
       "F071"
@@ -671,7 +671,7 @@
   {
     "id": "F123",
     "description": "Workflow designer keyboard actions migrated/wrapped into editor scope",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR18"
     ],
@@ -680,7 +680,7 @@
   {
     "id": "F124",
     "description": "Rich-text (BlockNote) editor: editor scope + careful allowInEditable; BlockNote retains its own internal undo/redo (no double-handling)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR18"
     ],

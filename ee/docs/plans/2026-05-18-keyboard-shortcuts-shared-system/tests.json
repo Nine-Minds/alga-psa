@@ -637,7 +637,7 @@
   {
     "id": "T120",
     "description": "Component: editor scope pushed by invoice/workflow designer and rich-text roots (ref-counted)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F120"
     ],
@@ -646,7 +646,7 @@
   {
     "id": "T121",
     "description": "Regression: invoice designer undo/redo/delete/escape/arrow-move behave as before, now editor-scoped",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F121",
       "F122"
@@ -656,7 +656,7 @@
   {
     "id": "T122",
     "description": "Cross-platform: editor.redo = \u21e7\u2318Z on mac, Ctrl+Y on Windows; both invoke redo",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F122",
       "F071"
@@ -666,7 +666,7 @@
   {
     "id": "T123",
     "description": "Regression: workflow designer keyboard actions preserved post-migration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F123"
     ],
@@ -675,7 +675,7 @@
   {
     "id": "T124",
     "description": "Component: BlockNote internal undo/redo still works and is not double-handled by the system",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F124"
     ],
