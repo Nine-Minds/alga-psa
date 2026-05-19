@@ -187,6 +187,16 @@ decisions; update earlier notes when a decision changes.
   `node --test scripts/tests/guard-keyboard-shortcuts-boundary.test.mjs`
   passed (2 tests); `npm run guard:keyboard-shortcuts-boundary` passed;
   `npx tsc --noEmit -p packages/ui/tsconfig.json` passed.
+- (2026-05-19) Completed sequence group F050-F054/T050-T054. The provider now
+  evaluates sequence actions through the same delegated listener, with a
+  configurable `sequenceTimeoutMs` (default 1000ms). Sequence buffers reset on
+  timeout, non-match, scope push/pop, route change, and editable targets.
+  Prefixes do not block single-chord actions; a full sequence prevents default
+  only when its handler reports handled.
+- (2026-05-19) Verification for sequence:
+  `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/sequence.test.tsx src/keyboard-shortcuts/provider.test.tsx`
+  from `packages/ui` passed (24 tests);
+  `npx tsc --noEmit -p packages/ui/tsconfig.json` passed.
 
 ## Open Questions
 

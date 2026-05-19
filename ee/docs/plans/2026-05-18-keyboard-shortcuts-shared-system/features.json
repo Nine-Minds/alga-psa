@@ -360,7 +360,7 @@
   {
     "id": "F050",
     "description": "Sequence engine: chord buffer accumulates keys and resolves a matching parsed sequence",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR11",
       "FR2"
@@ -370,7 +370,7 @@
   {
     "id": "F051",
     "description": "Sequence engine: configurable timeout (default ~1s) resets the buffer",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR11"
     ],
@@ -379,7 +379,7 @@
   {
     "id": "F052",
     "description": "Sequence engine: buffer resets on non-matching key, scope change, or route change",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR11"
     ],
@@ -388,7 +388,7 @@
   {
     "id": "F053",
     "description": "Sequence engine: suppressed in editable targets (no g-nav while typing)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR11",
       "FR9"
@@ -398,7 +398,7 @@
   {
     "id": "F054",
     "description": "Sequence engine: single-chord and sequence actions coexist without mutual interference",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR11"
     ],
