@@ -264,6 +264,18 @@ decisions; update earlier notes when a decision changes.
   from `packages/ui` passed (5 tests);
   `npx tsc --noEmit -p packages/ui/tsconfig.json` passed;
   `npx tsc --noEmit -p packages/billing/tsconfig.json` passed.
+- (2026-05-19) Completed persistence group F140-F147/T140-T150. Added
+  dependency-free preference utilities under `packages/ui` for
+  `keyboard_shortcuts_v1`, version migration, neutral delta storage,
+  override/default resolution, drop-equals-default, disabled action ids, and
+  hostile/reserved combo advisories. Added the MSP bridge hook
+  `server/src/hooks/useKeyboardShortcutPreferenceStorage.ts`, which uses
+  `useUserPreference` with localStorage and `skipServerFetch` support.
+- (2026-05-19) Verification for persistence:
+  `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/preferences.test.ts src/keyboard-shortcuts/persistence-bridge.contract.test.ts`
+  from `packages/ui` passed (6 tests);
+  `npx tsc --noEmit -p packages/ui/tsconfig.json` passed;
+  `npm run typecheck --workspace server` passed.
 
 ## Open Questions
 
