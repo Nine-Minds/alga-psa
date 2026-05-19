@@ -104,7 +104,7 @@
   {
     "id": "T020",
     "description": "Unit: matchEvent resolves mod\u2192Meta on mac platform, \u2192Ctrl on other",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F004"
@@ -114,7 +114,7 @@
   {
     "id": "T021",
     "description": "Unit: code-kind requires exact modifier-set equality (mod+s does not match mod+shift+s)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ],
@@ -123,7 +123,7 @@
   {
     "id": "T022",
     "description": "Unit: char-kind '?' matches event.key='?' regardless of which physical key/modifiers produced it",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022"
     ],
@@ -132,7 +132,7 @@
   {
     "id": "T023",
     "description": "Unit: macOS Option+N (event.key='Dead'/'\u02dc', event.code='KeyN', altKey) matches binding 'alt+n'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ],
@@ -141,7 +141,7 @@
   {
     "id": "T024",
     "description": "Unit: international layout \u2014 mod+s matches when physical S yields event.key='\u044b'/'s' but event.code='KeyS'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ],
@@ -150,7 +150,7 @@
   {
     "id": "T025",
     "description": "Unit: AltGr (ctrlKey&&altKey producing a char) does not false-match a 'mod+<char>' binding",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ],
