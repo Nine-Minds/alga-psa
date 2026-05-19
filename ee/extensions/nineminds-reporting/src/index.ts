@@ -52,6 +52,17 @@ const host: HostBindings = {
   uiProxy: {
     callRoute: async (route: string, payload: Uint8Array | null | undefined) => uiProxyCall(route, payload),
     call: async (route: string, payload: Uint8Array | null | undefined) => uiProxyCall(route, payload)
+  },
+  scheduler: {
+    list: async () => { throw new Error('scheduler not available - cap:scheduler.manage not granted'); },
+    get: async (_scheduleId: string) => { throw new Error('scheduler not available - cap:scheduler.manage not granted'); },
+    create: async (_input: Parameters<HostBindings['scheduler']['create']>[0]) => { throw new Error('scheduler not available - cap:scheduler.manage not granted'); },
+    update: async (_scheduleId: string, _input: Parameters<HostBindings['scheduler']['update']>[1]) => { throw new Error('scheduler not available - cap:scheduler.manage not granted'); },
+    delete: async (_scheduleId: string) => { throw new Error('scheduler not available - cap:scheduler.manage not granted'); },
+    getEndpoints: async () => { throw new Error('scheduler not available - cap:scheduler.manage not granted'); }
+  },
+  user: {
+    getUser: async () => { throw new Error('user not available - cap:user.read not granted'); }
   }
 };
 
