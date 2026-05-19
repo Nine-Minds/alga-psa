@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Scaffold packages/ui/src/keyboard-shortcuts/ directory and index.ts barrel",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations",
       "Non-functional Requirements"
@@ -12,7 +12,7 @@
   {
     "id": "F002",
     "description": "Add @alga-psa/ui/keyboard-shortcuts and /keyboard-shortcuts/* exports to packages/ui/package.json",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],
@@ -21,7 +21,7 @@
   {
     "id": "F003",
     "description": "types.ts: ShortcutAction, ShortcutScope union, BindingDescriptor, ParsedToken (code|char), Platform, PersistedShortcuts shape",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Functional Requirements"
     ],
@@ -30,7 +30,7 @@
   {
     "id": "F004",
     "description": "platform.ts: client-only platform detection (mac vs other) resolved post-mount, never during SSR",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR4",
       "Non-functional Requirements"

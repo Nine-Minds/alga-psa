@@ -110,6 +110,19 @@ decisions; update earlier notes when a decision changes.
 - Locale root: `server/public/locales/`
 - Global memory: Radix Dialog nesting / ModalityContext escape fix.
 
+## Work Log
+
+- (2026-05-19) Completed scaffold group F001-F004/T026. Added
+  `packages/ui/src/keyboard-shortcuts/` with a barrel, core public types
+  (`ShortcutAction`, scopes, binding descriptors, parse result, persisted
+  shortcut blob), and client-only platform detection helpers. Added package
+  exports and a tsup entry for `@alga-psa/ui/keyboard-shortcuts`. Detection
+  now returns `null` when `window` is absent so SSR/node paths do not inspect
+  `navigator`; `useClientPlatform` resolves after mount.
+- (2026-05-19) Verification for scaffold:
+  `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/platform.test.ts`
+  from `packages/ui` passed (3 tests).
+
 ## Open Questions
 
 - Final `assets.commandPalette` default binding after rescope (confirm in P2).
