@@ -104,7 +104,7 @@
   {
     "id": "T012",
     "description": "Static/boundary: no file under packages/ui/src/keyboard-shortcuts imports @alga-psa/user-composition or any feature package (@alga-psa/tickets|billing|assets|projects|clients|scheduling|...); engine resolves persistence only through the ShortcutStorage interface",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F005",
       "F006",
@@ -115,7 +115,7 @@
   {
     "id": "T013",
     "description": "`npx nx graph` shows NO new circular dependency vs .github/known-cycles.json after the keyboard-shortcuts engine + MSP-wrapper injection are added (no @alga-psa/ui -> @alga-psa/user-composition -> @alga-psa/ui edge)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F140",
@@ -126,7 +126,7 @@
   {
     "id": "T014",
     "description": "Component: provider uses an injected ShortcutStorage when given; falls back to the in-memory default when none injected (inversion seam works without user-composition)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043",
       "F006"

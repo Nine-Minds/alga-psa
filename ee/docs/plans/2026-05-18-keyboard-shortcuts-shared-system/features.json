@@ -40,7 +40,7 @@
   {
     "id": "F005",
     "description": "Define ShortcutStorage adapter interface (read/write/subscribe over the persisted keyboard_shortcuts_v1 shape) in packages/ui/src/keyboard-shortcuts/storage.ts; all engine persistence code depends only on this interface",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR30",
       "Architecture"
@@ -50,7 +50,7 @@
   {
     "id": "F006",
     "description": "Provide a default in-memory/no-op ShortcutStorage so packages/ui/keyboard-shortcuts works standalone with ZERO @alga-psa/user-composition or feature-package (tickets/billing/assets/projects/...) imports",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR30",
       "Non-functional Requirements"
@@ -60,7 +60,7 @@
   {
     "id": "F007",
     "description": "Dependency-boundary guard: a CI-runnable check that fails if any file under packages/ui/src/keyboard-shortcuts imports @alga-psa/user-composition or any feature package, or if `npx nx graph` introduces a cycle absent from .github/known-cycles.json (aligns with .github/workflows/circular-deps.yml and eslint-plugin-custom-rules)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR30",
       "Acceptance Criteria"
