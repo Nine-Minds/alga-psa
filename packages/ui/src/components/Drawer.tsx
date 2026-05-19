@@ -8,6 +8,7 @@ import { useRegisterUIComponent } from "../ui-reflection/useRegisterUIComponent"
 import { DrawerComponent, UIComponent, AutomationProps } from "../ui-reflection/types";
 import { withDataAutomationId } from "../ui-reflection/withDataAutomationId";
 import { InsideDialogContext, useInsideDialog } from './ModalityContext';
+import { useRadixEscapeOwner } from '../keyboard-shortcuts';
 
 export interface DrawerProps {
   isOpen: boolean;
@@ -38,6 +39,8 @@ const Drawer = ({
   width
 }: DrawerComponentProps): React.ReactElement => {
   const contentRef = React.useRef<HTMLDivElement | null>(null);
+
+  useRadixEscapeOwner(isOpen);
 
   React.useEffect(() => {
     if (!isOpen) {

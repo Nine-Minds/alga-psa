@@ -197,6 +197,16 @@ decisions; update earlier notes when a decision changes.
   `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/sequence.test.tsx src/keyboard-shortcuts/provider.test.tsx`
   from `packages/ui` passed (24 tests);
   `npx tsc --noEmit -p packages/ui/tsconfig.json` passed.
+- (2026-05-19) Completed radix-escape group F060-F062/T060-T062. Added a
+  ref-counted Radix Escape owner bridge (`useRadixEscapeOwner`) and wired
+  shared `Dialog`/`Drawer` to mark ownership while open. The provider skips
+  Escape dispatch while any Radix owner exists, so document-capture shortcuts
+  cannot race Radix `onEscapeKeyDown` or nested `stopPropagation`. When no
+  Radix owner exists, `panel.close`/Escape actions still dispatch normally.
+- (2026-05-19) Verification for radix-escape:
+  `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/escape.test.tsx src/keyboard-shortcuts/provider.test.tsx`
+  from `packages/ui` passed (22 tests);
+  `npx tsc --noEmit -p packages/ui/tsconfig.json` passed.
 
 ## Open Questions
 
