@@ -78,7 +78,7 @@
   },
   {
     "id": "F011",
-    "description": "parseBinding: classify token as code-kind for letters a-z (\u2192 KeyA..KeyZ)",
+    "description": "parseBinding: classify token as code-kind for letters a-z (→ KeyA..KeyZ)",
     "implemented": true,
     "prdRefs": [
       "FR1"
@@ -87,7 +87,7 @@
   },
   {
     "id": "F012",
-    "description": "parseBinding: classify digits (\u2192 Digit0..9) and function keys (F1..F12) as code-kind",
+    "description": "parseBinding: classify digits (→ Digit0..9) and function keys (F1..F12) as code-kind",
     "implemented": true,
     "prdRefs": [
       "FR1"
@@ -294,7 +294,7 @@
   },
   {
     "id": "F038",
-    "description": "Dispatch: pick highest priority; tie \u2192 most-local active scope (top of stack)",
+    "description": "Dispatch: pick highest priority; tie → most-local active scope (top of stack)",
     "implemented": true,
     "prdRefs": [
       "FR8"
@@ -340,7 +340,7 @@
   },
   {
     "id": "F043",
-    "description": "KeyboardShortcutsProvider accepts an injected ShortcutStorage (prop/context); defaults to an in-memory adapter \u2014 the inversion seam that keeps packages/ui free of user-composition",
+    "description": "KeyboardShortcutsProvider accepts an injected ShortcutStorage (prop/context); defaults to an in-memory adapter — the inversion seam that keeps packages/ui free of user-composition",
     "implemented": true,
     "prdRefs": [
       "FR30",
@@ -688,8 +688,8 @@
   },
   {
     "id": "F140",
-    "description": "MSP wrapper (server/user-composition layer) implements a useUserPreference-backed ShortcutStorage (key keyboard_shortcuts_v1; localStorage + debounced server sync) and INJECTS it into KeyboardShortcutsProvider via F043 \u2014 the @alga-psa/user-composition import lives here, NOT in packages/ui/keyboard-shortcuts",
-    "implemented": false,
+    "description": "MSP wrapper (server/user-composition layer) implements a useUserPreference-backed ShortcutStorage (key keyboard_shortcuts_v1; localStorage + debounced server sync) and INJECTS it into KeyboardShortcutsProvider via F043 — the @alga-psa/user-composition import lives here, NOT in packages/ui/keyboard-shortcuts",
+    "implemented": true,
     "prdRefs": [
       "FR19",
       "Data / API / Integrations"
@@ -699,7 +699,7 @@
   {
     "id": "F141",
     "description": "Persisted blob is delta-only in platform-neutral syntax (mod + logical tokens), with version and disabled[] fields",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR19"
     ],
@@ -708,7 +708,7 @@
   {
     "id": "F142",
     "description": "Effective binding resolution: userOverride[id] ?? platformDefault(id, platform)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR20"
     ],
@@ -717,7 +717,7 @@
   {
     "id": "F143",
     "description": "Drop-equals-default guard: a user value equal to current platform default is removed from storage, not frozen",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR20"
     ],
@@ -726,7 +726,7 @@
   {
     "id": "F144",
     "description": "On load, validate overrides against current platform; surface non-blocking advisory for hostile/reserved combos; never silently rewrite",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR21"
     ],
@@ -734,8 +734,8 @@
   },
   {
     "id": "F145",
-    "description": "Versioned blob with migration function (v1 \u2192 vN)",
-    "implemented": false,
+    "description": "Versioned blob with migration function (v1 → vN)",
+    "implemented": true,
     "prdRefs": [
       "FR22"
     ],
@@ -744,7 +744,7 @@
   {
     "id": "F146",
     "description": "disabled[] action list honored in dispatch (disabled actions never fire)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR19",
       "FR23"
@@ -754,7 +754,7 @@
   {
     "id": "F147",
     "description": "Unauthenticated path: localStorage-only via useUserPreference skipServerFetch/isUserLoggedIn",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR19"
     ],
@@ -922,7 +922,7 @@
   },
   {
     "id": "F184",
-    "description": "Shared <Kbd>/ShortcutHint component renders platform glyphs (\u2318/\u2325/\u21e7/\u2303 mac; Ctrl/Alt/Shift other) post-mount",
+    "description": "Shared <Kbd>/ShortcutHint component renders platform glyphs (⌘/⌥/⇧/⌃ mac; Ctrl/Alt/Shift other) post-mount",
     "implemented": false,
     "prdRefs": [
       "FR25"
@@ -995,7 +995,7 @@
   },
   {
     "id": "F204",
-    "description": "Action registration API takes labelKey/groupKey (i18n keys), not raw strings \u2014 enforced from Phase 1",
+    "description": "Action registration API takes labelKey/groupKey (i18n keys), not raw strings — enforced from Phase 1",
     "implemented": false,
     "prdRefs": [
       "FR27",

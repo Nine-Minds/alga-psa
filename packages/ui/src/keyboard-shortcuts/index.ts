@@ -3,6 +3,7 @@ export * from './escape';
 export * from './matcher';
 export * from './parser';
 export * from './platform';
+export * from './preferences';
 export * from './provider';
 export * from './registry';
 export * from './storage';
@@ -17,4 +18,5 @@ export type {
   ShortcutParseErrorCode,
   ShortcutParseResult,
   ShortcutScope,
+  ShortcutStorage,
 } from './types';

@@ -1,7 +1,7 @@
 [
   {
     "id": "T001",
-    "description": "Unit: parseBinding('mod+s') \u2192 mods{mod} + token{kind:code,value:KeyS}",
+    "description": "Unit: parseBinding('mod+s') → mods{mod} + token{kind:code,value:KeyS}",
     "implemented": true,
     "featureIds": [
       "F010",
@@ -11,7 +11,7 @@
   },
   {
     "id": "T002",
-    "description": "Unit: parseBinding('alt+n') \u2192 mods{alt} + token{kind:code,value:KeyN}",
+    "description": "Unit: parseBinding('alt+n') → mods{alt} + token{kind:code,value:KeyN}",
     "implemented": true,
     "featureIds": [
       "F010",
@@ -21,7 +21,7 @@
   },
   {
     "id": "T003",
-    "description": "Unit: parseBinding('?') \u2192 mods{} + token{kind:char,value:'?'}",
+    "description": "Unit: parseBinding('?') → mods{} + token{kind:char,value:'?'}",
     "implemented": true,
     "featureIds": [
       "F015"
@@ -30,7 +30,7 @@
   },
   {
     "id": "T004",
-    "description": "Unit: parseBinding('[') / ']' \u2192 BracketLeft/BracketRight code-kind",
+    "description": "Unit: parseBinding('[') / ']' → BracketLeft/BracketRight code-kind",
     "implemented": true,
     "featureIds": [
       "F014"
@@ -39,7 +39,7 @@
   },
   {
     "id": "T005",
-    "description": "Unit: parseBinding for Enter/Escape/Tab/Space/Arrow*/Delete/Backspace/Home/End/PageUp/PageDown \u2192 code-kind named keys",
+    "description": "Unit: parseBinding for Enter/Escape/Tab/Space/Arrow*/Delete/Backspace/Home/End/PageUp/PageDown → code-kind named keys",
     "implemented": true,
     "featureIds": [
       "F013"
@@ -48,7 +48,7 @@
   },
   {
     "id": "T006",
-    "description": "Unit: parseBinding for digits and F1..F12 \u2192 Digit*/F* code-kind",
+    "description": "Unit: parseBinding for digits and F1..F12 → Digit*/F* code-kind",
     "implemented": true,
     "featureIds": [
       "F012"
@@ -84,7 +84,7 @@
   },
   {
     "id": "T010",
-    "description": "Unit: parseSequence('g t') \u2192 ordered [chord g, chord t]; 'g t c' \u2192 3 chords",
+    "description": "Unit: parseSequence('g t') → ordered [chord g, chord t]; 'g t c' → 3 chords",
     "implemented": true,
     "featureIds": [
       "F019"
@@ -135,7 +135,7 @@
   },
   {
     "id": "T020",
-    "description": "Unit: matchEvent resolves mod\u2192Meta on mac platform, \u2192Ctrl on other",
+    "description": "Unit: matchEvent resolves mod→Meta on mac platform, →Ctrl on other",
     "implemented": true,
     "featureIds": [
       "F020",
@@ -163,7 +163,7 @@
   },
   {
     "id": "T023",
-    "description": "Unit: macOS Option+N (event.key='Dead'/'\u02dc', event.code='KeyN', altKey) matches binding 'alt+n'",
+    "description": "Unit: macOS Option+N (event.key='Dead'/'˜', event.code='KeyN', altKey) matches binding 'alt+n'",
     "implemented": true,
     "featureIds": [
       "F023"
@@ -172,7 +172,7 @@
   },
   {
     "id": "T024",
-    "description": "Unit: international layout \u2014 mod+s matches when physical S yields event.key='\u044b'/'s' but event.code='KeyS'",
+    "description": "Unit: international layout — mod+s matches when physical S yields event.key='ы'/'s' but event.code='KeyS'",
     "implemented": true,
     "featureIds": [
       "F024"
@@ -293,7 +293,7 @@
   },
   {
     "id": "T040",
-    "description": "Unit: highest priority wins; equal priority \u2192 most-local active scope (top of stack)",
+    "description": "Unit: highest priority wins; equal priority → most-local active scope (top of stack)",
     "implemented": true,
     "featureIds": [
       "F038"
@@ -440,7 +440,7 @@
   },
   {
     "id": "T070",
-    "description": "Unit: editor.redo default = mac:mod+shift+z, other:ctrl+y (and ctrl+shift+z) \u2014 resolves per platform",
+    "description": "Unit: editor.redo default = mac:mod+shift+z, other:ctrl+y (and ctrl+shift+z) — resolves per platform",
     "implemented": true,
     "featureIds": [
       "F071",
@@ -486,7 +486,7 @@
   },
   {
     "id": "T083",
-    "description": "E2E: mod+l toggles AI chat; behavior identical to pre-migration incl. open\u2192focus and aiAssistantAvailable gating",
+    "description": "E2E: mod+l toggles AI chat; behavior identical to pre-migration incl. open→focus and aiAssistantAvailable gating",
     "implemented": true,
     "featureIds": [
       "F083",
@@ -655,7 +655,7 @@
   },
   {
     "id": "T122",
-    "description": "Cross-platform: editor.redo = \u21e7\u2318Z on mac, Ctrl+Y on Windows; both invoke redo",
+    "description": "Cross-platform: editor.redo = ⇧⌘Z on mac, Ctrl+Y on Windows; both invoke redo",
     "implemented": true,
     "featureIds": [
       "F122",
@@ -684,7 +684,7 @@
   {
     "id": "T140",
     "description": "Component: overrides persist via useUserPreference (localStorage immediate, debounced server sync) under keyboard_shortcuts_v1",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F140"
     ],
@@ -693,7 +693,7 @@
   {
     "id": "T141",
     "description": "Unit: persisted blob contains only deltas in neutral syntax (no resolved cmd+/ctrl+, no untouched defaults)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F141",
       "F143"
@@ -703,7 +703,7 @@
   {
     "id": "T142",
     "description": "Unit: resolution = userOverride ?? platformDefault(platform)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F142"
     ],
@@ -712,7 +712,7 @@
   {
     "id": "T143",
     "description": "Unit: a user value equal to current platform default is dropped from storage (not frozen)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F143"
     ],
@@ -721,7 +721,7 @@
   {
     "id": "T144",
     "description": "Cross-device: Mac-stored {global.search:[mod+j]} resolves to Ctrl+J under Windows platform with no migration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F142",
       "F140"
@@ -730,8 +730,8 @@
   },
   {
     "id": "T145",
-    "description": "Cross-device: never-customized editor.redo serves Ctrl+Y on Windows even though Mac session showed \u21e7\u2318Z (default not persisted)",
-    "implemented": false,
+    "description": "Cross-device: never-customized editor.redo serves Ctrl+Y on Windows even though Mac session showed ⇧⌘Z (default not persisted)",
+    "implemented": true,
     "featureIds": [
       "F143",
       "F071"
@@ -741,7 +741,7 @@
   {
     "id": "T146",
     "description": "Cross-device: Mac-set record.next=alt+ArrowRight loads under Windows with a non-blocking advisory, not silently rewritten",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F144"
     ],
@@ -750,7 +750,7 @@
   {
     "id": "T147",
     "description": "Unit: on-load validation flags reserved/hostile combos per current platform",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F144"
     ],
@@ -759,7 +759,7 @@
   {
     "id": "T148",
     "description": "Unit: blob version migration function upgrades an older shape without data loss",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F145"
     ],
@@ -768,7 +768,7 @@
   {
     "id": "T149",
     "description": "Component: disabled[] action never fires in dispatch",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F146",
       "F165"
@@ -778,7 +778,7 @@
   {
     "id": "T150",
     "description": "Component: unauthenticated user gets localStorage-only persistence (skipServerFetch path)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F147"
     ],
@@ -880,7 +880,7 @@
   },
   {
     "id": "T170",
-    "description": "Component: success uses react-hot-toast and failure uses handleError(error,t(...)) \u2014 consistent with other settings panels",
+    "description": "Component: success uses react-hot-toast and failure uses handleError(error,t(...)) — consistent with other settings panels",
     "implemented": false,
     "featureIds": [
       "F169"
@@ -954,7 +954,7 @@
   },
   {
     "id": "T183",
-    "description": "Component: help renders bindings resolved per device (\u2318K mac / Ctrl+K Windows) with no hydration mismatch",
+    "description": "Component: help renders bindings resolved per device (⌘K mac / Ctrl+K Windows) with no hydration mismatch",
     "implemented": false,
     "featureIds": [
       "F183",
@@ -965,7 +965,7 @@
   },
   {
     "id": "T184",
-    "description": "Component: <Kbd> renders mac glyphs (\u2318\u2325\u21e7\u2303) and other-platform text (Ctrl/Alt/Shift) post-mount",
+    "description": "Component: <Kbd> renders mac glyphs (⌘⌥⇧⌃) and other-platform text (Ctrl/Alt/Shift) post-mount",
     "implemented": false,
     "featureIds": [
       "F184"
