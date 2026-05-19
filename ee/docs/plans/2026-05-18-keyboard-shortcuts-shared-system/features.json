@@ -885,7 +885,7 @@
   {
     "id": "F180",
     "description": "ShortcutHelpDialog.tsx using shared Dialog; read-only; active shortcuts only",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR24",
       "UX / UI Notes"
@@ -895,7 +895,7 @@
   {
     "id": "F181",
     "description": "Help dialog: grouped by group/scope; disabled/unavailable actions hidden",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR24"
     ],
@@ -904,7 +904,7 @@
   {
     "id": "F182",
     "description": "Help dialog: custom (non-default) bindings visually flagged",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR24"
     ],
@@ -913,7 +913,7 @@
   {
     "id": "F183",
     "description": "Help dialog: bindings rendered resolved for current device (post-mount, no hydration mismatch)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR24",
       "Non-functional Requirements"
@@ -923,7 +923,7 @@
   {
     "id": "F184",
     "description": "Shared <Kbd>/ShortcutHint component renders platform glyphs (⌘/⌥/⇧/⌃ mac; Ctrl/Alt/Shift other) post-mount",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR25"
     ],
@@ -932,7 +932,7 @@
   {
     "id": "F185",
     "description": "Visible kbd hints added to curated key controls (global search field, primary action buttons, relevant menu items) and tooltips",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR25"
     ],
@@ -941,7 +941,7 @@
   {
     "id": "F186",
     "description": "aria-keyshortcuts mapping layer: convert effective binding to ARIA value format",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR26"
     ],
@@ -950,7 +950,7 @@
   {
     "id": "F187",
     "description": "aria-keyshortcuts applied to instrumented controls",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR26"
     ],

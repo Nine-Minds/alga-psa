@@ -927,7 +927,7 @@
   {
     "id": "T180",
     "description": "E2E: help dialog is read-only, lists only active shortcuts, grouped by group/scope",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F180",
       "F181"
@@ -937,7 +937,7 @@
   {
     "id": "T181",
     "description": "Component: disabled/unavailable actions are hidden from help",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F181"
     ],
@@ -946,7 +946,7 @@
   {
     "id": "T182",
     "description": "Component: custom (non-default) bindings flagged in help",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F182"
     ],
@@ -955,7 +955,7 @@
   {
     "id": "T183",
     "description": "Component: help renders bindings resolved per device (⌘K mac / Ctrl+K Windows) with no hydration mismatch",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F183",
       "F184",
@@ -966,7 +966,7 @@
   {
     "id": "T184",
     "description": "Component: <Kbd> renders mac glyphs (⌘⌥⇧⌃) and other-platform text (Ctrl/Alt/Shift) post-mount",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F184"
     ],
@@ -975,7 +975,7 @@
   {
     "id": "T185",
     "description": "Component: curated controls show a visible kbd hint matching the effective binding; hint updates after a rebind",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F185",
       "F163"
@@ -985,7 +985,7 @@
   {
     "id": "T186",
     "description": "Unit: aria-keyshortcuts mapping converts internal binding to valid ARIA value format (mod resolved)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F186"
     ],
@@ -994,7 +994,7 @@
   {
     "id": "T187",
     "description": "A11y: instrumented controls expose aria-keyshortcuts; screen-reader value is correct for the platform",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F187",
       "F186"
