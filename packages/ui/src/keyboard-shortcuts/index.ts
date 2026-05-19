@@ -1,3 +1,4 @@
+export * from './parser';
 export * from './platform';
 export type {
   BindingDescriptor,

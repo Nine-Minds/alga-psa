@@ -122,6 +122,15 @@ decisions; update earlier notes when a decision changes.
 - (2026-05-19) Verification for scaffold:
   `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/platform.test.ts`
   from `packages/ui` passed (3 tests).
+- (2026-05-19) Completed parser group F010-F019/T001-T011. Added
+  `parser.ts` with typed-result `parseBinding` and `parseSequence`.
+  Supported physical code tokens for letters, digits, F1-F12, named navigation
+  keys, and brackets; glyphs like `?` parse as character tokens. Modifier
+  normalization is deterministic (`mod`, `ctrl`, `meta`, `alt`, `shift`), and
+  literal `ctrl`/`meta` remain distinct from neutral `mod`.
+- (2026-05-19) Verification for parser:
+  `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/parser.test.ts`
+  from `packages/ui` passed (27 tests).
 
 ## Open Questions
 
