@@ -366,7 +366,7 @@
   {
     "id": "T050",
     "description": "Component: sequence 'g t' resolves and invokes the action",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ],
@@ -375,7 +375,7 @@
   {
     "id": "T051",
     "description": "Component: sequence buffer times out after the configured interval; late second key does not trigger",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ],
@@ -384,7 +384,7 @@
   {
     "id": "T052",
     "description": "Component: buffer resets on a non-matching key, scope change, and route change",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052"
     ],
@@ -393,7 +393,7 @@
   {
     "id": "T053",
     "description": "Component: sequences suppressed while typing in an editable target",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F053"
     ],
@@ -402,7 +402,7 @@
   {
     "id": "T054",
     "description": "Component: single-chord action and a sequence starting with the same first key coexist correctly",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054",
       "F050"

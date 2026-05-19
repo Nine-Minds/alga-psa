@@ -10,7 +10,7 @@ import React, {
   type ReactNode,
 } from 'react';
 import { matchEvent } from './matcher';
-import { parseBinding } from './parser';
+import { parseBinding, parseSequence } from './parser';
 import { normalizeDefaultBindings, ShortcutRegistry } from './registry';
 import { DEFAULT_PLATFORM, useClientPlatform } from './platform';
 import { createMemoryShortcutStorage } from './storage';
@@ -48,6 +48,7 @@ export interface KeyboardShortcutsProviderProps {
   children: ReactNode;
   platform?: Platform;
   routeKey?: string;
+  sequenceTimeoutMs?: number;
   disabledActionIds?: readonly string[];
   storage?: ShortcutStorage;
   onConflict?: (conflict: ShortcutConflict) => void;
@@ -124,6 +125,7 @@ export function KeyboardShortcutsProvider({
   children,
   platform,
   routeKey,
+  sequenceTimeoutMs = 1000,
   disabledActionIds = [],
   storage,
   onConflict,
@@ -134,12 +136,17 @@ export function KeyboardShortcutsProvider({
   const defaultStorageRef = useRef(createMemoryShortcutStorage());
   const activeScopesRef = useRef<ScopeEntry[]>([]);
   const activeRegionsRef = useRef<ActiveRegionEntry[]>([]);
+  const sequenceBufferRef = useRef<KeyboardEvent[]>([]);
+  const sequenceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const resetSequenceBufferRef = useRef<() => void>(() => undefined);
   const platformRef = useRef(effectivePlatform);
+  const sequenceTimeoutMsRef = useRef(sequenceTimeoutMs);
   const disabledActionIdsRef = useRef<readonly string[]>(disabledActionIds);
   const onConflictRef = useRef(onConflict);
   const previousRouteKeyRef = useRef(routeKey);
 
   platformRef.current = effectivePlatform;
+  sequenceTimeoutMsRef.current = sequenceTimeoutMs;
   disabledActionIdsRef.current = disabledActionIds;
   onConflictRef.current = onConflict;
 
@@ -149,9 +156,11 @@ export function KeyboardShortcutsProvider({
 
   const pushScope = useCallback((scope: ShortcutScope) => {
     const entry = { id: nextEntryId++, scope };
+    resetSequenceBufferRef.current();
     activeScopesRef.current = [...activeScopesRef.current, entry];
 
     return () => {
+      resetSequenceBufferRef.current();
       activeScopesRef.current = activeScopesRef.current.filter((candidate) => candidate.id !== entry.id);
     };
   }, []);
@@ -163,6 +172,26 @@ export function KeyboardShortcutsProvider({
     return () => {
       activeRegionsRef.current = activeRegionsRef.current.filter((candidate) => candidate.id !== entry.id);
     };
+  }, []);
+
+  const resetSequenceBuffer = useCallback(() => {
+    sequenceBufferRef.current = [];
+    if (sequenceTimeoutRef.current) {
+      clearTimeout(sequenceTimeoutRef.current);
+      sequenceTimeoutRef.current = null;
+    }
+  }, []);
+  resetSequenceBufferRef.current = resetSequenceBuffer;
+
+  const scheduleSequenceTimeout = useCallback(() => {
+    if (sequenceTimeoutRef.current) {
+      clearTimeout(sequenceTimeoutRef.current);
+    }
+
+    sequenceTimeoutRef.current = setTimeout(() => {
+      sequenceBufferRef.current = [];
+      sequenceTimeoutRef.current = null;
+    }, sequenceTimeoutMsRef.current);
   }, []);
 
   const getState = useCallback<KeyboardShortcutsContextValue['getState']>(() => {
@@ -177,18 +206,65 @@ export function KeyboardShortcutsProvider({
     if (previousRouteKeyRef.current !== routeKey) {
       activeScopesRef.current = [];
       activeRegionsRef.current = [];
+      resetSequenceBuffer();
       previousRouteKeyRef.current = routeKey;
     }
-  }, [routeKey]);
+  }, [resetSequenceBuffer, routeKey]);
 
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.defaultPrevented) {
-        return;
+    const getEligibleActions = (editableTarget: boolean, sequenceOnly: boolean) => {
+      const disabled = new Set(disabledActionIdsRef.current);
+      return registryRef.current.list().filter((action) => {
+        if (Boolean(action.sequence) !== sequenceOnly) {
+          return false;
+        }
+
+        if (action.enabled === false || disabled.has(action.id)) {
+          return false;
+        }
+
+        if (!isScopeEligible(action, activeScopesRef.current)) {
+          return false;
+        }
+
+        if (editableTarget && (!action.allowInEditable || sequenceOnly)) {
+          return false;
+        }
+
+        return true;
+      });
+    };
+
+    const resolveWinner = (
+      candidates: Array<{
+        action: ShortcutAction;
+        binding: string;
+        scopeIndex: number;
+        priority: number;
+      }>,
+    ) => {
+      if (candidates.length === 0) {
+        return null;
       }
 
-      const disabled = new Set(disabledActionIdsRef.current);
-      const editableTarget = isEditableTarget(event.target);
+      const highestPriority = Math.max(...candidates.map((candidate) => candidate.priority));
+      const priorityWinners = candidates.filter((candidate) => candidate.priority === highestPriority);
+      const highestScopeIndex = Math.max(...priorityWinners.map((candidate) => candidate.scopeIndex));
+      const scopeWinners = priorityWinners.filter((candidate) => candidate.scopeIndex === highestScopeIndex);
+      const uniqueActionIds = Array.from(new Set(scopeWinners.map((candidate) => candidate.action.id)));
+
+      if (uniqueActionIds.length !== 1) {
+        onConflictRef.current?.({
+          binding: scopeWinners[0]?.binding ?? '',
+          actionIds: uniqueActionIds,
+        });
+        return null;
+      }
+
+      return scopeWinners[0];
+    };
+
+    const collectSingleChordCandidates = (event: KeyboardEvent, editableTarget: boolean) => {
       const candidates: Array<{
         action: ShortcutAction;
         binding: string;
@@ -196,19 +272,7 @@ export function KeyboardShortcutsProvider({
         priority: number;
       }> = [];
 
-      for (const action of registryRef.current.list()) {
-        if (action.enabled === false || disabled.has(action.id)) {
-          continue;
-        }
-
-        if (!isScopeEligible(action, activeScopesRef.current)) {
-          continue;
-        }
-
-        if (editableTarget && !action.allowInEditable) {
-          continue;
-        }
-
+      for (const action of getEligibleActions(editableTarget, false)) {
         const defaultBindings = normalizeDefaultBindings(action.defaultBindings)[platformRef.current];
         for (const binding of defaultBindings) {
           const parsed = parseBinding(binding);
@@ -233,25 +297,102 @@ export function KeyboardShortcutsProvider({
         }
       }
 
-      if (candidates.length === 0) {
+      return candidates;
+    };
+
+    const collectSequenceCandidates = (events: readonly KeyboardEvent[], editableTarget: boolean) => {
+      const fullMatches: Array<{
+        action: ShortcutAction;
+        binding: string;
+        scopeIndex: number;
+        priority: number;
+      }> = [];
+      let hasPrefix = false;
+
+      if (editableTarget) {
+        return { fullMatches, hasPrefix };
+      }
+
+      for (const action of getEligibleActions(editableTarget, true)) {
+        const defaultBindings = normalizeDefaultBindings(action.defaultBindings)[platformRef.current];
+        for (const binding of defaultBindings) {
+          const parsed = parseSequence(binding);
+          if (!parsed.ok || parsed.value.length < events.length) {
+            continue;
+          }
+
+          const isMatch = events.every((event, index) => matchEvent(event, parsed.value[index], platformRef.current));
+          if (!isMatch) {
+            continue;
+          }
+
+          if (parsed.value.length === events.length) {
+            fullMatches.push({
+              action,
+              binding,
+              scopeIndex: scopeStackIndex(action, activeScopesRef.current),
+              priority: action.priority ?? 0,
+            });
+          } else {
+            hasPrefix = true;
+          }
+        }
+      }
+
+      return { fullMatches, hasPrefix };
+    };
+
+    const handleSequence = (event: KeyboardEvent, editableTarget: boolean) => {
+      if (editableTarget) {
+        resetSequenceBuffer();
+        return false;
+      }
+
+      let nextBuffer = [...sequenceBufferRef.current, event];
+      let sequenceCandidates = collectSequenceCandidates(nextBuffer, editableTarget);
+
+      if (sequenceBufferRef.current.length > 0 && !sequenceCandidates.hasPrefix && sequenceCandidates.fullMatches.length === 0) {
+        nextBuffer = [event];
+        sequenceCandidates = collectSequenceCandidates(nextBuffer, editableTarget);
+      }
+
+      const winner = resolveWinner(sequenceCandidates.fullMatches);
+      if (winner) {
+        resetSequenceBuffer();
+        const result = winner.action.handler(event);
+        if (result !== false) {
+          event.preventDefault();
+          return true;
+        }
+        return false;
+      }
+
+      if (sequenceCandidates.hasPrefix) {
+        sequenceBufferRef.current = nextBuffer;
+        scheduleSequenceTimeout();
+      } else {
+        resetSequenceBuffer();
+      }
+
+      return false;
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) {
         return;
       }
 
-      const highestPriority = Math.max(...candidates.map((candidate) => candidate.priority));
-      const priorityWinners = candidates.filter((candidate) => candidate.priority === highestPriority);
-      const highestScopeIndex = Math.max(...priorityWinners.map((candidate) => candidate.scopeIndex));
-      const scopeWinners = priorityWinners.filter((candidate) => candidate.scopeIndex === highestScopeIndex);
-      const uniqueActionIds = Array.from(new Set(scopeWinners.map((candidate) => candidate.action.id)));
+      const editableTarget = isEditableTarget(event.target);
 
-      if (uniqueActionIds.length !== 1) {
-        onConflictRef.current?.({
-          binding: scopeWinners[0]?.binding ?? '',
-          actionIds: uniqueActionIds,
-        });
+      if (handleSequence(event, editableTarget)) {
         return;
       }
 
-      const winner = scopeWinners[0];
+      const winner = resolveWinner(collectSingleChordCandidates(event, editableTarget));
+      if (!winner) {
+        return;
+      }
+
       const result = winner.action.handler(event);
       if (result !== false) {
         event.preventDefault();
@@ -262,8 +403,9 @@ export function KeyboardShortcutsProvider({
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown, true);
+      resetSequenceBuffer();
     };
-  }, []);
+  }, [resetSequenceBuffer, scheduleSequenceTimeout]);
 
   const value = useMemo<KeyboardShortcutsContextValue>(
     () => ({
