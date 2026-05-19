@@ -715,7 +715,6 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       isOpen={open}
       onClose={() => onOpenChange(false)}
       title={t('quickAddClient.title', { defaultValue: 'Add New Client' })}
-      disableFocusTrap
       footer={footer}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent>

@@ -1221,7 +1221,7 @@
   {
     "id": "T320",
     "description": "Component: opening a create dialog moves focus to the first field; closing restores focus to the invoker",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F320"
     ],
@@ -1230,7 +1230,7 @@
   {
     "id": "T321",
     "description": "Component: focus trap keeps Tab/Shift+Tab inside the dialog; background controls not focusable",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F321"
     ],
@@ -1239,7 +1239,7 @@
   {
     "id": "T322",
     "description": "Component: mod+Enter submits the form even with a focused textarea/BlockNote field",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F322"
     ],
@@ -1248,7 +1248,7 @@
   {
     "id": "T323",
     "description": "Component: Escape closes the create dialog and is Radix-integrated (no double-close on nesting)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F323"
     ],
@@ -1257,7 +1257,7 @@
   {
     "id": "T324",
     "description": "E2E: complete and submit Create Ticket and Create Client entirely via keyboard (no mouse), incl. selects/date pickers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F324",
       "F325",
@@ -1268,7 +1268,7 @@
   {
     "id": "T325",
     "description": "E2E: keyboard-only completion of Create Contact / Interaction / Project / Asset dialogs",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F327",
       "F328",
@@ -1279,7 +1279,7 @@
   {
     "id": "T326",
     "description": "a11y: create dialogs expose role=dialog/aria-modal/aria-labelledby; SR announces title + first field",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F330"
     ],

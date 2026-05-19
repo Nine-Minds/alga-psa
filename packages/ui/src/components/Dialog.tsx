@@ -27,6 +27,28 @@ function containsDialogDescription(node: ReactNode): boolean {
   return containsDialogDescription((node.props as { children?: ReactNode } | null | undefined)?.children);
 }
 
+function findFirstFocusable(root: HTMLElement | null): HTMLElement | null {
+  if (!root) return null;
+
+  const candidates = root.querySelectorAll<HTMLElement>(
+    [
+      'input:not([disabled])',
+      'textarea:not([disabled])',
+      'select:not([disabled])',
+      'button:not([disabled])',
+      '[href]',
+      '[tabindex]:not([tabindex="-1"])',
+      '[role="combobox"]:not([aria-disabled="true"])',
+    ].join(','),
+  );
+
+  return Array.from(candidates).find((element) => {
+    if (element.closest('[data-dialog-close-button="true"]')) return false;
+    if (element instanceof HTMLInputElement && element.type === 'hidden') return false;
+    return true;
+  }) ?? null;
+}
+
 interface DialogProps {
   isOpen: boolean;
   onClose: () => void;
@@ -82,6 +104,7 @@ export function Dialog({
   });
 
   const dialogRef = useRef<HTMLDivElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
   const preventCloseRef = useRef(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -89,6 +112,16 @@ export function Dialog({
   const [dialogSize, setDialogSize] = useState({ width: 0, height: 0 });
 
   useRadixEscapeOwner(isOpen);
+
+  useEffect(() => {
+    if (isOpen) {
+      restoreFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      return;
+    }
+
+    restoreFocusRef.current?.focus();
+    restoreFocusRef.current = null;
+  }, [isOpen]);
 
   // Prevent background scroll when dialog is open (non-nested only)
   useEffect(() => {
@@ -143,9 +176,31 @@ export function Dialog({
   // Auto-focus nested dialog content on open
   useEffect(() => {
     if (isInsideDialog && isOpen && dialogRef.current) {
-      dialogRef.current.focus();
+      findFirstFocusable(dialogRef.current)?.focus();
     }
   }, [isInsideDialog, isOpen]);
+
+  const submitFirstForm = () => {
+    const form = dialogRef.current?.querySelector('form') as HTMLFormElement | null;
+    if (!form) return false;
+
+    if (typeof form.requestSubmit === 'function') {
+      form.requestSubmit();
+    } else {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    }
+    return true;
+  };
+
+  const handleDialogKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && submitFirstForm()) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
+    onKeyDown?.(e);
+  };
 
   // Handle click outside for dialogs with disabled focus trap.
   // Use pointerdown + capture so we can reliably detect portaled content before it unmounts.
@@ -335,7 +390,7 @@ export function Dialog({
             e.stopPropagation();
             onClose();
           }
-          onKeyDown?.(e);
+          handleDialogKeyDown(e);
         }}
       >
         {/* Overlay */}
@@ -383,6 +438,7 @@ export function Dialog({
           {!hideCloseButton && (
             <button
               onClick={onClose}
+              data-dialog-close-button="true"
               className="absolute top-2 right-2 text-muted-foreground hover:text-[rgb(var(--color-text-600))] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
               aria-label="Close"
             >
@@ -428,9 +484,20 @@ export function Dialog({
             if (disableFocusTrap && e.key === 'Escape') {
               onClose();
             }
-            onKeyDown?.(e);
+            handleDialogKeyDown(e);
           }}
-          onOpenAutoFocus={onOpenAutoFocus}
+          onOpenAutoFocus={(event) => {
+            if (onOpenAutoFocus) {
+              onOpenAutoFocus(event);
+              return;
+            }
+
+            const focusTarget = findFirstFocusable(dialogRef.current);
+            if (focusTarget) {
+              event.preventDefault();
+              focusTarget.focus();
+            }
+          }}
           onInteractOutside={(e) => {
             // Prevent closing dialog when interacting with Radix Select components
             const target = e.target as HTMLElement;
@@ -500,6 +567,7 @@ export function Dialog({
             disableFocusTrap ? (
               <button
                 onClick={onClose}
+                data-dialog-close-button="true"
                 className="absolute top-2 right-2 text-muted-foreground hover:text-[rgb(var(--color-text-600))] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
                 aria-label="Close"
               >
@@ -508,6 +576,7 @@ export function Dialog({
             ) : (
               <RadixDialog.Close asChild>
                 <button
+                  data-dialog-close-button="true"
                   className="absolute top-2 right-2 text-muted-foreground hover:text-[rgb(var(--color-text-600))] focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded z-10"
                   aria-label="Close"
                 >

@@ -1266,7 +1266,7 @@
   {
     "id": "F320",
     "description": "Shared create-dialog a11y contract: on open focus the first interactive field; on close restore focus to the invoking control",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR32"
     ],
@@ -1275,7 +1275,7 @@
   {
     "id": "F321",
     "description": "Focus trap: Tab/Shift+Tab cycle stays within the dialog; background not reachable while open",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR32"
     ],
@@ -1284,7 +1284,7 @@
   {
     "id": "F322",
     "description": "mod+Enter submits the create form (textarea/BlockNote-safe); plain Enter submits from single-line inputs where unambiguous",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR32",
       "FR12"
@@ -1294,7 +1294,7 @@
   {
     "id": "F323",
     "description": "Escape cancels/closes the create dialog, Radix-integrated (respects nesting/ModalityContext)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR32",
       "FR12"
@@ -1304,7 +1304,7 @@
   {
     "id": "F324",
     "description": "Every control (selects, date/time pickers, comboboxes, toggles) in the create dialogs is reachable and operable keyboard-only",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR32"
     ],
@@ -1313,7 +1313,7 @@
   {
     "id": "F325",
     "description": "Apply the a11y contract to the Create Ticket dialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR32"
     ],
@@ -1322,7 +1322,7 @@
   {
     "id": "F326",
     "description": "Apply the a11y contract to the Create Client dialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR32"
     ],
@@ -1331,7 +1331,7 @@
   {
     "id": "F327",
     "description": "Apply the a11y contract to the Create Contact dialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR32"
     ],
@@ -1340,7 +1340,7 @@
   {
     "id": "F328",
     "description": "Apply the a11y contract to the Create Interaction dialog",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR32"
     ],
@@ -1349,7 +1349,7 @@
   {
     "id": "F329",
     "description": "Apply the a11y contract to the Create Project and Create Asset dialogs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR32"
     ],
@@ -1358,7 +1358,7 @@
   {
     "id": "F330",
     "description": "Create dialogs expose role=dialog/aria-modal/aria-labelledby; screen-reader announces title and first field",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR32",
       "FR26"

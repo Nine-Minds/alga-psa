@@ -1025,7 +1025,6 @@ export function QuickAddTicket({
         onClose={handleClose}
         className="w-full max-w-2xl max-h-[90vh]"
         title={t('quickAdd.dialogTitle', 'Quick Add Ticket')}
-        disableFocusTrap
         footer={footer}
       >
         <DialogContent>

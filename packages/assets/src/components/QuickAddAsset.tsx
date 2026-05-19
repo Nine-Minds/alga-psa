@@ -503,7 +503,6 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         title={t('quickAddAsset.title', { defaultValue: 'Add New Asset' })}
         className="max-w-[480px]"
         id="quick-add-asset"
-        disableFocusTrap
         footer={quickAddAssetFooter}
       >
         <DialogContent>
