@@ -1116,7 +1116,7 @@
   {
     "id": "F230",
     "description": "Regression-safe migration order enforced: each legacy handler removed only after its action is registered and verified",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration"
     ],
@@ -1125,7 +1125,7 @@
   {
     "id": "F231",
     "description": "No SSR/hydration mismatch from platform/binding resolution (verified)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Non-functional Requirements",
       "Acceptance Criteria"
@@ -1135,7 +1135,7 @@
   {
     "id": "F232",
     "description": "Component-local widget key handling (DatePicker, SearchableSelect, TagInput, comboboxes, Radix internals) unaffected by the system",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Non-goals",
       "Acceptance Criteria"
