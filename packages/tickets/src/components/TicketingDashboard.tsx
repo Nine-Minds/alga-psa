@@ -7,6 +7,7 @@ import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters, Deletion
 import { ITag } from '@alga-psa/types';
 import { QuickAddTicket } from './QuickAddTicket';
 import { CategoryPicker } from './CategoryPicker';
+import BulkTicketActionBar from './BulkTicketActionBar';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { PrioritySelect } from '@alga-psa/ui/components';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -1649,54 +1650,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           {t('dashboard.title', 'Ticketing Dashboard')}
         </h1>
         <div className="flex items-center gap-3">
-          {hasSelection && canUpdateTickets && (
-            <Button
-              id={`${id}-bulk-move-button`}
-              onClick={() => {
-                setBulkMoveErrors([]);
-                setSelectedDestinationBoardId('');
-                setDestinationBoardStatuses([]);
-                setSelectedDestinationStatusId('');
-                setDestinationStatusError('');
-                setIsBulkMoveDialogOpen(true);
-              }}
-              className="flex items-center gap-2"
-            >
-              {t('bulk.moveToBoard', 'Move to Board')}
-            </Button>
-          )}
-          {hasSelection && (
-            <Button
-              id={`${id}-bulk-delete-button`}
-              variant="destructive"
-              onClick={() => {
-                setBulkDeleteErrors([]);
-                setIsBulkDeleteDialogOpen(true);
-              }}
-              className="flex items-center gap-2"
-            >
-              {t('bulk.deleteSelected', {
-                count: selectedTicketIds.size,
-                defaultValue: 'Delete Selected ({{count}})',
-              })}
-            </Button>
-          )}
-          {selectedTicketIds.size >= 2 && (
-            <Button
-              id={`${id}-bundle-tickets-button`}
-              onClick={() => {
-                setBundleError(null);
-                const first = Array.from(selectedTicketIds)[0] || null;
-                setBundleMasterTicketId(first);
-                setBundleSyncUpdates(true);
-                setIsBundleDialogOpen(true);
-              }}
-              className="flex items-center gap-2"
-              disabled={!canUpdateTickets}
-            >
-              {t('bulk.bundleTickets', 'Bundle Tickets')}
-            </Button>
-          )}
           <ShareActionsMenu
             id={`${id}-share-actions`}
             disabled={isLoadingMore && !hasSelection}
@@ -2467,6 +2420,32 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         filters={exportFilters}
         totalCount={totalCount}
         selectedTicketIds={selectedTicketIdsArray}
+      />
+      <BulkTicketActionBar
+        idPrefix={`${id}-bulk`}
+        count={selectedTicketIds.size}
+        showMove={canUpdateTickets}
+        showBundle={canUpdateTickets}
+        onMove={() => {
+          setBulkMoveErrors([]);
+          setSelectedDestinationBoardId('');
+          setDestinationBoardStatuses([]);
+          setSelectedDestinationStatusId('');
+          setDestinationStatusError('');
+          setIsBulkMoveDialogOpen(true);
+        }}
+        onBundle={() => {
+          setBundleError(null);
+          const first = Array.from(selectedTicketIds)[0] || null;
+          setBundleMasterTicketId(first);
+          setBundleSyncUpdates(true);
+          setIsBundleDialogOpen(true);
+        }}
+        onDelete={() => {
+          setBulkDeleteErrors([]);
+          setIsBulkDeleteDialogOpen(true);
+        }}
+        onClear={clearSelection}
       />
     </ReflectionContainer>
     {isImportDialogOpen && (

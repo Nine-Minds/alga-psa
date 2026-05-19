@@ -430,9 +430,6 @@
     "importAction": "Importuj CSV"
   },
   "bulk": {
-    "moveToBoard": "Przenieś do tablicy",
-    "deleteSelected_one": "Usuń zaznaczone ({{count}})",
-    "deleteSelected_other": "Usuń zaznaczone ({{count}})",
     "bundleTickets": "Połącz zgłoszenia",
     "moveDialogTitle": "Przenieś zaznaczone zgłoszenia",
     "moveDialogDescription": "Wybierz tablicę docelową i status, a następnie potwierdź przeniesienie zaznaczonych zgłoszeń.",
@@ -534,6 +531,15 @@
     "auth": {
       "moveRequired": "Musisz być zalogowany, aby przenosić zgłoszenia",
       "deleteRequired": "Musisz być zalogowany, aby usuwać zgłoszenia"
+    },
+    "actionBar": {
+      "selectedCount_one": "Zaznaczono {{count}}",
+      "selectedCount_other": "Zaznaczono {{count}}",
+      "move": "Przenieś do tablicy",
+      "bundle": "Połącz",
+      "delete": "Usuń",
+      "clear": "Wyczyść zaznaczenie",
+      "bundleNeedsTwo": "Zaznacz co najmniej 2 zgłoszenia, aby je połączyć"
     }
   },
   "quickAdd": {

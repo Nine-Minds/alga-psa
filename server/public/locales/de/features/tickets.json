@@ -430,9 +430,6 @@
     "importAction": "CSV importieren"
   },
   "bulk": {
-    "moveToBoard": "In Board verschieben",
-    "deleteSelected_one": "Ausgewählte Tickets löschen ({{count}})",
-    "deleteSelected_other": "Ausgewählte Tickets löschen ({{count}})",
     "bundleTickets": "Tickets bündeln",
     "moveDialogTitle": "Ausgewählte Tickets verschieben",
     "moveDialogDescription": "Wähle ein Ziel-Board und einen Status aus und bestätige dann das Verschieben der ausgewählten Tickets.",
@@ -534,6 +531,15 @@
     "auth": {
       "moveRequired": "Du musst angemeldet sein, um Tickets zu verschieben",
       "deleteRequired": "Du musst angemeldet sein, um Tickets zu löschen"
+    },
+    "actionBar": {
+      "selectedCount_one": "{{count}} ausgewählt",
+      "selectedCount_other": "{{count}} ausgewählt",
+      "move": "In Board verschieben",
+      "bundle": "Bündeln",
+      "delete": "Löschen",
+      "clear": "Auswahl aufheben",
+      "bundleNeedsTwo": "Wählen Sie mindestens 2 Tickets zum Bündeln aus"
     }
   },
   "quickAdd": {

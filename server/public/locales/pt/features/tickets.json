@@ -430,9 +430,6 @@
     "importAction": "Importar CSV"
   },
   "bulk": {
-    "moveToBoard": "Move to Board",
-    "deleteSelected_one": "Delete Selected ({{count}})",
-    "deleteSelected_other": "Delete Selected ({{count}})",
     "bundleTickets": "Bundle Tickets",
     "moveDialogTitle": "Move Selected Tickets",
     "moveDialogDescription": "Select a destination board and status, then confirm moving the selected tickets.",
@@ -534,6 +531,15 @@
     "auth": {
       "moveRequired": "You must be logged in to move tickets",
       "deleteRequired": "You must be logged in to delete tickets"
+    },
+    "actionBar": {
+      "selectedCount_one": "{{count}} selected",
+      "selectedCount_other": "{{count}} selected",
+      "move": "Move to Board",
+      "bundle": "Bundle",
+      "delete": "Delete",
+      "clear": "Clear",
+      "bundleNeedsTwo": "Select at least 2 tickets to bundle"
     }
   },
   "quickAdd": {

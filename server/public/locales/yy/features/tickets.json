@@ -430,9 +430,6 @@
     "importAction": "55555"
   },
   "bulk": {
-    "moveToBoard": "55555",
-    "deleteSelected_one": "55555 {{count}} 55555",
-    "deleteSelected_other": "55555 {{count}} 55555",
     "bundleTickets": "55555",
     "moveDialogTitle": "55555",
     "moveDialogDescription": "55555",
@@ -534,6 +531,15 @@
     "auth": {
       "moveRequired": "55555",
       "deleteRequired": "55555"
+    },
+    "actionBar": {
+      "selectedCount_one": "55555 {{count}} 55555",
+      "selectedCount_other": "55555 {{count}} 55555",
+      "move": "55555",
+      "bundle": "55555",
+      "delete": "55555",
+      "clear": "55555",
+      "bundleNeedsTwo": "55555"
     }
   },
   "quickAdd": {

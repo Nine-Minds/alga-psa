@@ -430,9 +430,6 @@
     "importAction": "CSV importeren"
   },
   "bulk": {
-    "moveToBoard": "Verplaatsen naar bord",
-    "deleteSelected_one": "Geselecteerde verwijderen ({{count}})",
-    "deleteSelected_other": "Geselecteerde verwijderen ({{count}})",
     "bundleTickets": "Tickets bundelen",
     "moveDialogTitle": "Geselecteerde tickets verplaatsen",
     "moveDialogDescription": "Selecteer een bestemmingsbord en status en bevestig het verplaatsen van de geselecteerde tickets.",
@@ -534,6 +531,15 @@
     "auth": {
       "moveRequired": "Je moet zijn ingelogd om tickets te verplaatsen",
       "deleteRequired": "Je moet zijn ingelogd om tickets te verwijderen"
+    },
+    "actionBar": {
+      "selectedCount_one": "{{count}} geselecteerd",
+      "selectedCount_other": "{{count}} geselecteerd",
+      "move": "Verplaatsen naar bord",
+      "bundle": "Bundelen",
+      "delete": "Verwijderen",
+      "clear": "Selectie wissen",
+      "bundleNeedsTwo": "Selecteer minstens 2 tickets om te bundelen"
     }
   },
   "quickAdd": {

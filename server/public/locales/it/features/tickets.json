@@ -430,9 +430,6 @@
     "importAction": "Importa CSV"
   },
   "bulk": {
-    "moveToBoard": "Sposta su canale",
-    "deleteSelected_one": "Elimina selezionati ({{count}})",
-    "deleteSelected_other": "Elimina selezionati ({{count}})",
     "bundleTickets": "Raggruppa ticket",
     "moveDialogTitle": "Sposta i ticket selezionati",
     "moveDialogDescription": "Seleziona un canale e uno stato di destinazione, quindi conferma lo spostamento dei ticket selezionati.",
@@ -534,6 +531,15 @@
     "auth": {
       "moveRequired": "Devi aver effettuato l'accesso per spostare i ticket",
       "deleteRequired": "Devi aver effettuato l'accesso per eliminare i ticket"
+    },
+    "actionBar": {
+      "selectedCount_one": "{{count}} selezionato",
+      "selectedCount_other": "{{count}} selezionati",
+      "move": "Sposta su canale",
+      "bundle": "Raggruppa",
+      "delete": "Elimina",
+      "clear": "Annulla selezione",
+      "bundleNeedsTwo": "Seleziona almeno 2 ticket per raggruppare"
     }
   },
   "quickAdd": {

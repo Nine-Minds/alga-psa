@@ -430,9 +430,6 @@
     "importAction": "Importer CSV"
   },
   "bulk": {
-    "moveToBoard": "Déplacer à bord",
-    "deleteSelected_one": "Supprimer la sélection ({{count}})",
-    "deleteSelected_other": "Supprimer la sélection ({{count}})",
     "bundleTickets": "Regrouper les tickets",
     "moveDialogTitle": "Déplacer les tickets sélectionnés",
     "moveDialogDescription": "Sélectionnez un tableau de destination et un statut, puis confirmez le déplacement des tickets sélectionnés.",
@@ -534,6 +531,15 @@
     "auth": {
       "moveRequired": "Vous devez être connecté pour déplacer des tickets",
       "deleteRequired": "Vous devez être connecté pour supprimer des tickets"
+    },
+    "actionBar": {
+      "selectedCount_one": "{{count}} sélectionné",
+      "selectedCount_other": "{{count}} sélectionnés",
+      "move": "Déplacer au tableau",
+      "bundle": "Regrouper",
+      "delete": "Supprimer",
+      "clear": "Effacer la sélection",
+      "bundleNeedsTwo": "Sélectionnez au moins 2 tickets pour les regrouper"
     }
   },
   "quickAdd": {
