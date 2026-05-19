@@ -1,7 +1,7 @@
 [
   {
     "id": "T001",
-    "description": "Unit: parseBinding('mod+s') → mods{mod} + token{kind:code,value:KeyS}",
+    "description": "Unit: parseBinding('mod+s') \u2192 mods{mod} + token{kind:code,value:KeyS}",
     "implemented": true,
     "featureIds": [
       "F010",
@@ -11,7 +11,7 @@
   },
   {
     "id": "T002",
-    "description": "Unit: parseBinding('alt+n') → mods{alt} + token{kind:code,value:KeyN}",
+    "description": "Unit: parseBinding('alt+n') \u2192 mods{alt} + token{kind:code,value:KeyN}",
     "implemented": true,
     "featureIds": [
       "F010",
@@ -21,7 +21,7 @@
   },
   {
     "id": "T003",
-    "description": "Unit: parseBinding('?') → mods{} + token{kind:char,value:'?'}",
+    "description": "Unit: parseBinding('?') \u2192 mods{} + token{kind:char,value:'?'}",
     "implemented": true,
     "featureIds": [
       "F015"
@@ -30,7 +30,7 @@
   },
   {
     "id": "T004",
-    "description": "Unit: parseBinding('[') / ']' → BracketLeft/BracketRight code-kind",
+    "description": "Unit: parseBinding('[') / ']' \u2192 BracketLeft/BracketRight code-kind",
     "implemented": true,
     "featureIds": [
       "F014"
@@ -39,7 +39,7 @@
   },
   {
     "id": "T005",
-    "description": "Unit: parseBinding for Enter/Escape/Tab/Space/Arrow*/Delete/Backspace/Home/End/PageUp/PageDown → code-kind named keys",
+    "description": "Unit: parseBinding for Enter/Escape/Tab/Space/Arrow*/Delete/Backspace/Home/End/PageUp/PageDown \u2192 code-kind named keys",
     "implemented": true,
     "featureIds": [
       "F013"
@@ -48,7 +48,7 @@
   },
   {
     "id": "T006",
-    "description": "Unit: parseBinding for digits and F1..F12 → Digit*/F* code-kind",
+    "description": "Unit: parseBinding for digits and F1..F12 \u2192 Digit*/F* code-kind",
     "implemented": true,
     "featureIds": [
       "F012"
@@ -84,7 +84,7 @@
   },
   {
     "id": "T010",
-    "description": "Unit: parseSequence('g t') → ordered [chord g, chord t]; 'g t c' → 3 chords",
+    "description": "Unit: parseSequence('g t') \u2192 ordered [chord g, chord t]; 'g t c' \u2192 3 chords",
     "implemented": true,
     "featureIds": [
       "F019"
@@ -135,7 +135,7 @@
   },
   {
     "id": "T020",
-    "description": "Unit: matchEvent resolves mod→Meta on mac platform, →Ctrl on other",
+    "description": "Unit: matchEvent resolves mod\u2192Meta on mac platform, \u2192Ctrl on other",
     "implemented": true,
     "featureIds": [
       "F020",
@@ -163,7 +163,7 @@
   },
   {
     "id": "T023",
-    "description": "Unit: macOS Option+N (event.key='Dead'/'˜', event.code='KeyN', altKey) matches binding 'alt+n'",
+    "description": "Unit: macOS Option+N (event.key='Dead'/'\u02dc', event.code='KeyN', altKey) matches binding 'alt+n'",
     "implemented": true,
     "featureIds": [
       "F023"
@@ -172,7 +172,7 @@
   },
   {
     "id": "T024",
-    "description": "Unit: international layout — mod+s matches when physical S yields event.key='ы'/'s' but event.code='KeyS'",
+    "description": "Unit: international layout \u2014 mod+s matches when physical S yields event.key='\u044b'/'s' but event.code='KeyS'",
     "implemented": true,
     "featureIds": [
       "F024"
@@ -293,7 +293,7 @@
   },
   {
     "id": "T040",
-    "description": "Unit: highest priority wins; equal priority → most-local active scope (top of stack)",
+    "description": "Unit: highest priority wins; equal priority \u2192 most-local active scope (top of stack)",
     "implemented": true,
     "featureIds": [
       "F038"
@@ -440,7 +440,7 @@
   },
   {
     "id": "T070",
-    "description": "Unit: editor.redo default = mac:mod+shift+z, other:ctrl+y (and ctrl+shift+z) — resolves per platform",
+    "description": "Unit: editor.redo default = mac:mod+shift+z, other:ctrl+y (and ctrl+shift+z) \u2014 resolves per platform",
     "implemented": true,
     "featureIds": [
       "F071",
@@ -486,7 +486,7 @@
   },
   {
     "id": "T083",
-    "description": "E2E: mod+l toggles AI chat; behavior identical to pre-migration incl. open→focus and aiAssistantAvailable gating",
+    "description": "E2E: mod+l toggles AI chat; behavior identical to pre-migration incl. open\u2192focus and aiAssistantAvailable gating",
     "implemented": true,
     "featureIds": [
       "F083",
@@ -655,7 +655,7 @@
   },
   {
     "id": "T122",
-    "description": "Cross-platform: editor.redo = ⇧⌘Z on mac, Ctrl+Y on Windows; both invoke redo",
+    "description": "Cross-platform: editor.redo = \u21e7\u2318Z on mac, Ctrl+Y on Windows; both invoke redo",
     "implemented": true,
     "featureIds": [
       "F122",
@@ -730,7 +730,7 @@
   },
   {
     "id": "T145",
-    "description": "Cross-device: never-customized editor.redo serves Ctrl+Y on Windows even though Mac session showed ⇧⌘Z (default not persisted)",
+    "description": "Cross-device: never-customized editor.redo serves Ctrl+Y on Windows even though Mac session showed \u21e7\u2318Z (default not persisted)",
     "implemented": true,
     "featureIds": [
       "F143",
@@ -880,7 +880,7 @@
   },
   {
     "id": "T170",
-    "description": "Component: success uses react-hot-toast and failure uses handleError(error,t(...)) — consistent with other settings panels",
+    "description": "Component: success uses react-hot-toast and failure uses handleError(error,t(...)) \u2014 consistent with other settings panels",
     "implemented": true,
     "featureIds": [
       "F169"
@@ -954,7 +954,7 @@
   },
   {
     "id": "T183",
-    "description": "Component: help renders bindings resolved per device (⌘K mac / Ctrl+K Windows) with no hydration mismatch",
+    "description": "Component: help renders bindings resolved per device (\u2318K mac / Ctrl+K Windows) with no hydration mismatch",
     "implemented": true,
     "featureIds": [
       "F183",
@@ -965,7 +965,7 @@
   },
   {
     "id": "T184",
-    "description": "Component: <Kbd> renders mac glyphs (⌘⌥⇧⌃) and other-platform text (Ctrl/Alt/Shift) post-mount",
+    "description": "Component: <Kbd> renders mac glyphs (\u2318\u2325\u21e7\u2303) and other-platform text (Ctrl/Alt/Shift) post-mount",
     "implemented": true,
     "featureIds": [
       "F184"
@@ -1120,6 +1120,16 @@
     "commitGroup": "global-migration"
   },
   {
+    "id": "T095",
+    "description": "E2E: on an /msp page (not in a text field), tapping g then t / g a / g c navigates to /msp/tickets | /msp/assets | /msp/clients; no modifier; suppressed while typing",
+    "implemented": false,
+    "featureIds": [
+      "F095",
+      "F050"
+    ],
+    "commitGroup": "navigation"
+  },
+  {
     "id": "T231",
     "description": "Regression: component-local widget handlers (DatePicker, SearchableSelect, TagInput, comboboxes, Radix internals) unchanged; their keys not stolen",
     "implemented": true,
@@ -1158,5 +1168,353 @@
       "F030"
     ],
     "commitGroup": "registry"
+  },
+  {
+    "id": "T300",
+    "description": "E2E: on Tickets list (not in a field) `c` opens Create Ticket; on Clients `c` opens Create Client; etc. (page.create wins over global.quickCreate)",
+    "implemented": false,
+    "featureIds": [
+      "F300",
+      "F301",
+      "F303",
+      "F304"
+    ],
+    "commitGroup": "page-actions"
+  },
+  {
+    "id": "T301",
+    "description": "E2E: mod+s on an editable detail page triggers page.save and does NOT save the browser page",
+    "implemented": false,
+    "featureIds": [
+      "F302",
+      "F309"
+    ],
+    "commitGroup": "page-actions"
+  },
+  {
+    "id": "T302",
+    "description": "Component: page.create/save suppressed while typing in an input/textarea and while a dialog owns scope",
+    "implemented": false,
+    "featureIds": [
+      "F310"
+    ],
+    "commitGroup": "page-actions"
+  },
+  {
+    "id": "T303",
+    "description": "Doc/Component: mod+n is registered only as an optional alternate for page.create with the documented browser-intercept caveat (c is the working default)",
+    "implemented": false,
+    "featureIds": [
+      "F300"
+    ],
+    "commitGroup": "page-actions"
+  },
+  {
+    "id": "T304",
+    "description": "i18n: page.create/page.save keys present across all 8 locales + pseudo; validate-translations.cjs passes",
+    "implemented": false,
+    "featureIds": [
+      "F311"
+    ],
+    "commitGroup": "page-actions"
+  },
+  {
+    "id": "T320",
+    "description": "Component: opening a create dialog moves focus to the first field; closing restores focus to the invoker",
+    "implemented": false,
+    "featureIds": [
+      "F320"
+    ],
+    "commitGroup": "dialog-a11y"
+  },
+  {
+    "id": "T321",
+    "description": "Component: focus trap keeps Tab/Shift+Tab inside the dialog; background controls not focusable",
+    "implemented": false,
+    "featureIds": [
+      "F321"
+    ],
+    "commitGroup": "dialog-a11y"
+  },
+  {
+    "id": "T322",
+    "description": "Component: mod+Enter submits the form even with a focused textarea/BlockNote field",
+    "implemented": false,
+    "featureIds": [
+      "F322"
+    ],
+    "commitGroup": "dialog-a11y"
+  },
+  {
+    "id": "T323",
+    "description": "Component: Escape closes the create dialog and is Radix-integrated (no double-close on nesting)",
+    "implemented": false,
+    "featureIds": [
+      "F323"
+    ],
+    "commitGroup": "dialog-a11y"
+  },
+  {
+    "id": "T324",
+    "description": "E2E: complete and submit Create Ticket and Create Client entirely via keyboard (no mouse), incl. selects/date pickers",
+    "implemented": false,
+    "featureIds": [
+      "F324",
+      "F325",
+      "F326"
+    ],
+    "commitGroup": "dialog-a11y"
+  },
+  {
+    "id": "T325",
+    "description": "E2E: keyboard-only completion of Create Contact / Interaction / Project / Asset dialogs",
+    "implemented": false,
+    "featureIds": [
+      "F327",
+      "F328",
+      "F329"
+    ],
+    "commitGroup": "dialog-a11y"
+  },
+  {
+    "id": "T326",
+    "description": "a11y: create dialogs expose role=dialog/aria-modal/aria-labelledby; SR announces title + first field",
+    "implemented": false,
+    "featureIds": [
+      "F330"
+    ],
+    "commitGroup": "dialog-a11y"
+  },
+  {
+    "id": "T340",
+    "description": "E2E: mod+k opens the command palette; arrow keys move selection; Enter activates; Escape closes; usable with no mouse",
+    "implemented": false,
+    "featureIds": [
+      "F340",
+      "F341",
+      "F349"
+    ],
+    "commitGroup": "command-palette"
+  },
+  {
+    "id": "T341",
+    "description": "E2E: palette free-text returns merged nav + actions + record results, ranked; empty query shows recent + nav",
+    "implemented": false,
+    "featureIds": [
+      "F342",
+      "F348"
+    ],
+    "commitGroup": "command-palette"
+  },
+  {
+    "id": "T342",
+    "description": "Unit: parser handles field:value with aliases (t:/ticket:, p:/project:, @user, > action, / nav, # id)",
+    "implemented": false,
+    "featureIds": [
+      "F343",
+      "F344",
+      "F347"
+    ],
+    "commitGroup": "command-palette"
+  },
+  {
+    "id": "T343",
+    "description": "Unit: operators \u2014 quoted phrase, -/NOT exclusion, * and ? wildcards, leading-* rejected, prefix-match default, OR default, AND only within same field",
+    "implemented": false,
+    "featureIds": [
+      "F345"
+    ],
+    "commitGroup": "command-palette"
+  },
+  {
+    "id": "T344",
+    "description": "Unit: $ magic keywords incl. first-syllable abbreviations ($mine/$m, $recent/$rec)",
+    "implemented": false,
+    "featureIds": [
+      "F346"
+    ],
+    "commitGroup": "command-palette"
+  },
+  {
+    "id": "T345",
+    "description": "E2E: > runs a registered shortcut action; # opens a record by id; @ filters people; / filters navigation",
+    "implemented": false,
+    "featureIds": [
+      "F347",
+      "F342"
+    ],
+    "commitGroup": "command-palette"
+  },
+  {
+    "id": "T346",
+    "description": "i18n: palette strings/field names/help across 8 locales + pseudo; validate-translations.cjs passes",
+    "implemented": false,
+    "featureIds": [
+      "F350"
+    ],
+    "commitGroup": "command-palette"
+  },
+  {
+    "id": "T347",
+    "description": "a11y: combobox/listbox roles + aria-activedescendant + live result count; no hydration mismatch",
+    "implemented": false,
+    "featureIds": [
+      "F351"
+    ],
+    "commitGroup": "command-palette"
+  },
+  {
+    "id": "T348",
+    "description": "Component: in-palette syntax help lists fields/operators/$keywords/sigils; global help dialog links to it",
+    "implemented": false,
+    "featureIds": [
+      "F352"
+    ],
+    "commitGroup": "command-palette"
+  },
+  {
+    "id": "T349",
+    "description": "Static/graph: palette module has no @alga-psa/user-composition or feature imports; npx nx graph shows no new cycle vs known-cycles.json",
+    "implemented": false,
+    "featureIds": [
+      "F353"
+    ],
+    "commitGroup": "command-palette"
+  },
+  {
+    "id": "T360",
+    "description": "INTEGRATION (the missing test): rebind global.search to mod+j in settings \u2192 mod+j triggers search, mod+k does NOT, settings Effective + ShortcutHint + aria-keyshortcuts all show mod+j \u2014 one action, one source",
+    "implemented": false,
+    "featureIds": [
+      "F360",
+      "F361",
+      "F362",
+      "F365",
+      "F366"
+    ],
+    "commitGroup": "customization-wiring"
+  },
+  {
+    "id": "T361",
+    "description": "INTEGRATION: disable an action in settings \u2192 it no longer fires in dispatch and is hidden from the help dialog",
+    "implemented": false,
+    "featureIds": [
+      "F363",
+      "F366"
+    ],
+    "commitGroup": "customization-wiring"
+  },
+  {
+    "id": "T362",
+    "description": "INTEGRATION: reset-one / reset-all live-updates dispatch and hints without a reload",
+    "implemented": false,
+    "featureIds": [
+      "F364",
+      "F366"
+    ],
+    "commitGroup": "customization-wiring"
+  },
+  {
+    "id": "T363",
+    "description": "INTEGRATION: provider with injected storage loads persisted overrides on mount (prior session) and applies them to the very first dispatch",
+    "implemented": false,
+    "featureIds": [
+      "F360",
+      "F361"
+    ],
+    "commitGroup": "customization-wiring"
+  },
+  {
+    "id": "T364",
+    "description": "REGRESSION: MspLayoutClient injecting the server adapter introduces no new nx cycle and adds no @alga-psa/user-composition import inside packages/ui (boundary still holds)",
+    "implemented": false,
+    "featureIds": [
+      "F360",
+      "F353"
+    ],
+    "commitGroup": "customization-wiring"
+  },
+  {
+    "id": "T365",
+    "description": "Unit: createShortcutAction('global.search', handler) returns scope/priority/defaultBindings/labelKey/groupKey from the catalog; an unknown id is rejected (throws or is type-prevented)",
+    "implemented": false,
+    "featureIds": [
+      "F367"
+    ],
+    "commitGroup": "gap-hardening"
+  },
+  {
+    "id": "T366",
+    "description": "Guard: a registered action whose scope/priority diverges from the catalog fails the drift guard; the guard passes once useDesignerShortcuts and the other sites derive metadata from the catalog (no priority:60 vs 0 mismatch)",
+    "implemented": false,
+    "featureIds": [
+      "F369",
+      "F368"
+    ],
+    "commitGroup": "gap-hardening"
+  },
+  {
+    "id": "T367",
+    "description": "Behavioral: with no roving-focus region active, simulated c/j/k keydown on a focused non-list element invokes no handler; with the region active the handlers fire",
+    "implemented": false,
+    "featureIds": [
+      "F370",
+      "F371"
+    ],
+    "commitGroup": "gap-hardening"
+  },
+  {
+    "id": "T368",
+    "description": "Regression: mounting DefaultLayout alone does not satisfy requiresActiveRegion for selection.* / single-letter page actions (no unconditional active region)",
+    "implemented": false,
+    "featureIds": [
+      "F370"
+    ],
+    "commitGroup": "gap-hardening"
+  },
+  {
+    "id": "T369",
+    "description": "Behavioral (replaces global-migration grep): simulated mod+l / mod+ArrowUp / mod+k keydown through the provider invokes the migrated handlers; aiAssistantAvailable gating respected",
+    "implemented": false,
+    "featureIds": [
+      "F372"
+    ],
+    "commitGroup": "gap-hardening"
+  },
+  {
+    "id": "T370",
+    "description": "Behavioral (replaces panels-drawers grep): with a mounted drawer scope, Escape / [ / ] dispatch invokes the panel/record handlers and panel scope wins over page",
+    "implemented": false,
+    "featureIds": [
+      "F372"
+    ],
+    "commitGroup": "gap-hardening"
+  },
+  {
+    "id": "T371",
+    "description": "Behavioral (replaces editors grep): editor-scope undo/redo/save dispatch with allowInEditable honored and per-platform redo resolved",
+    "implemented": false,
+    "featureIds": [
+      "F372"
+    ],
+    "commitGroup": "gap-hardening"
+  },
+  {
+    "id": "T372",
+    "description": "Behavioral (replaces persistence-bridge/settings-ui grep beyond T360-T364): a settings rebind mutator updates the provider context resolved binding without any source-string assertion",
+    "implemented": false,
+    "featureIds": [
+      "F372"
+    ],
+    "commitGroup": "gap-hardening"
+  },
+  {
+    "id": "T373",
+    "description": "Meta: the test-guard fails a sample *.contract.test.ts that only readFileSync+toContain and passes one that adds a behavioral assertion",
+    "implemented": false,
+    "featureIds": [
+      "F373"
+    ],
+    "commitGroup": "gap-hardening"
   }
 ]

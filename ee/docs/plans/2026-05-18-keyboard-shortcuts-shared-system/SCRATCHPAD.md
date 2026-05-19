@@ -56,9 +56,47 @@ decisions; update earlier notes when a decision changes.
   panels-drawers, editors, persistence, settings-ui, help-a11y, i18n,
   regression → ≈15 commits. Commit a group only when all its items are
   implemented:true. Message form: `<type>(<group>): summary [ids]`.
+- (2026-05-19) Added 3 net-new groups from manual-test feedback:
+  `page-actions` (page-scoped `page.create`/`page.save` registered per page;
+  default create = **`c`**, NOT `mod+n` — Ctrl/⌘+N is a browser new-window
+  accelerator not reliably interceptable, esp. Chrome/Windows; `mod+n` is an
+  opt-in alternate with a caveat), `dialog-a11y` (every page's create dialog
+  keyboard-only: focus-on-open, trap, `mod+Enter` submit, Escape, SR roles),
+  `command-palette` (Spotlight on **`mod+k`** — resolves the old open
+  decision; record search now lives inside the palette; asset palette stays
+  `mod+shift+k`). Palette grammar = TeamCity-derived (see PRD Appendix:
+  field:value + aliases, quoted phrases, `-`/NOT, `*`/`?`, prefix+OR default,
+  AND in-field, `$`magic, sigils `> # @ /`). Parser is a pure module under the
+  same FR30 boundary guard. F300-F353 / T300-T349.
+- (2026-05-19) **Code review caught a severe wiring gap: customization is
+  cosmetic.** Provider accepts `storage?`/`disabledActionIds?` but
+  `MspLayoutClient` passes neither (falls back to in-memory). Dispatch
+  (`collectSingleChord/Sequence`) resolves from `normalizeDefaultBindings`,
+  never `resolveActionBindings`; `display.tsx` uses
+  `getDefaultBindingsForPlatform` only. So a rebind persists + shows in the
+  settings Effective column but does nothing; old default still fires;
+  disabled list never reaches dispatch; hints/aria stay on defaults.
+  **Root cause: no integration test.** Every piece had a green unit/contract
+  test in isolation; the architecture-guard checked the *import* boundary but
+  nothing checked the *functional* wiring → F043/F140/F142/F146/F185/F186
+  were flipped true on unit-green. Corrective: reopened those 6
+  (commitGroup→`customization-wiring`), added F360-F366 (inject storage at
+  mount; provider = single source; dispatch via resolveActionBindings; merge
+  disabled; context resolver; settings consumes context) + T360-T364
+  including **T360, the end-to-end test that would have caught it**. FR34
+  added: unit-green is NOT sufficient to mark FR19/20/23/26 done.
+- **Process lesson:** any "engine + adapter + UI" feature needs one
+  integration test across the seam before its features can be marked done;
+  isolated unit tests passing is a false signal.
 
 ## Discoveries / Constraints
 
+- (2026-05-19) GAP found in manual test: `catalog.ts` defined
+  `navigation.goTickets/goAssets/goClients` (sequence `g t/a/c`) but **no
+  component registered handlers** → `g t` was a silent no-op. Source plan had
+  nav as "illustrative"; `sequence` group built the engine only. Fixed:
+  registered the 3 nav actions in `DefaultLayout.tsx` with `router.push`
+  (`navigation` commitGroup, F095 impl, T095 e2e pending).
 - (2026-05-18) ~50 files use `keydown`/`onKeyDown`; only window/document-level
   handlers are in scope. Component-local widget handlers (DatePicker,
   SearchableSelect, TagInput, comboboxes, Radix internals) stay as-is.
@@ -353,3 +391,49 @@ decisions; update earlier notes when a decision changes.
 - T232: Covered by `regression.contract.test.ts` client-only/platform assertions plus existing `platform.test.ts`.
 - T233: Covered by `regression.contract.test.ts` migrated legacy-listener assertions plus phase contract tests.
 - Checks: `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/regression.contract.test.ts src/keyboard-shortcuts/global-migration.contract.test.ts src/keyboard-shortcuts/panels-drawers.contract.test.ts src/keyboard-shortcuts/editors.contract.test.ts src/keyboard-shortcuts/platform.test.ts` passed; `npx tsc --noEmit -p packages/ui/tsconfig.json` passed.
+
+## 2026-05-19 — Gap analysis (post-implementation review) → commitGroup `gap-hardening`
+
+A full end-to-end read of the branch surfaced structural gaps. Finding #1 was
+already captured by the prior `customization-wiring` group (F360-F366 /
+T360-T364, FR34) — verified, not re-added. The remaining three findings are
+added as **F367-F373 / T365-T373 under commitGroup `gap-hardening`**
+(FR35/FR36/FR37). The loop should not commit this group until all of its
+items are `implemented: true` (one-commit-per-group rule).
+
+- (FR35, F367-F369/T365-T366) **Catalog is not the source of truth.**
+  `catalog.ts` carries scope/priority/bindings, but registration sites
+  hand-author `ShortcutAction` literals. Concrete divergence: only
+  `useDesignerShortcuts` sets `priority: 60`; `DefaultLayout`,
+  both `DrawerContext`, `SearchPalette`, `TicketNavigation`,
+  `AssetDashboardClient` omit `priority` so the provider uses `?? 0`,
+  contradicting `catalog.ts` `DEFAULT_PRIORITY` (panel 40 / page 20 / editor
+  60). The settings UI/help show catalog priorities; dispatch uses different
+  ones. Fix = a catalog-derived factory (id + handler only) + a drift guard
+  (unit + extend `guard-keyboard-shortcuts-boundary.mjs`). This is distinct
+  from FR30 (import boundary), which the guard already enforces correctly.
+
+- (FR36, F370-F371/T367-T368) **Active-region gating is a no-op.**
+  `DefaultLayout` calls `useShortcutActiveRegion(true)` unconditionally, so
+  `activeRegionsRef` is always non-empty while the MSP shell is mounted →
+  `requiresActiveRegion()` never gates anything. `global.quickCreate` (`c`),
+  `selection.next` (`j`), `selection.previous` (`k`) fire on any non-editable
+  focus app-wide, the opposite of FR10's intent. Fix = register an active
+  region only from genuine roving-focus list/selection containers via a
+  shared wrapper/hook.
+
+- (FR37, F372-F373/T369-T373) **Contract tests are source greps, not
+  behavioral.** Every `*.contract.test.ts` (global-migration, panels-drawers,
+  editors, persistence-bridge, settings-ui, regression, i18n) is
+  `readFileSync` + `.toContain('...')`. They assert code *exists*, never that
+  it *works* — which is why findings #1-#3 shipped "green". `T360-T364`
+  already add behavioral coverage for the customization path; `gap-hardening`
+  converts the remaining grep suites to behavioral and adds a meta test-guard
+  so a new grep-only contract test fails CI.
+
+- Uncommitted working tree at review time: `DefaultLayout.tsx` carries the
+  F095 nav handlers (legit, not yet committed); `features.json`/`tests.json`
+  have incidental `\uXXXX` escape churn from a JSON re-serializer (the new
+  `gap-hardening` items are authored in plain ASCII to avoid adding to it).
+  These are pre-existing and out of scope for `gap-hardening` — flag for the
+  branch owner, do not bundle into this group's commit.

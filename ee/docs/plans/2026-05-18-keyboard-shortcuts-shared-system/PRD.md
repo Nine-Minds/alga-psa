@@ -250,6 +250,100 @@ registration (`labelKey`/`groupKey`).
   new circular dependency vs `.github/known-cycles.json` (consistent with
   `.github/workflows/circular-deps.yml` and `eslint-plugin-custom-rules`).
 
+**Page-scoped create/save (commitGroup `page-actions`)**
+
+- FR31. `page.create` is a page-scoped action defaulting to **`c`**
+  (non-editable, active-region). `mod+n` is offered only as a
+  user-configurable *alternate* with a documented caveat: `Ctrl/⌘+N` is a
+  browser "new window" accelerator and is not reliably interceptable
+  (especially Chrome on Windows), so `c` is the working default. Each page
+  with a Create/New control registers `page.create` (via a
+  `usePageCreateShortcut` helper) wired to that page's create dialog;
+  `global.quickCreate` remains the fallback only where no `page.create` is
+  registered. `page.save` (`mod+s`, `preventDefault` browser save) is
+  registered by pages with a primary Save. Both are suppressed in editable
+  targets and when a dialog/drawer owns scope.
+
+**Create-dialog keyboard usability (commitGroup `dialog-a11y`)**
+
+- FR32. Every page's create dialog is fully operable without a mouse: focus
+  the first field on open and restore focus to the invoker on close; a focus
+  trap; `mod+Enter` submit (textarea/BlockNote-safe); `Escape` cancel
+  (Radix-integrated); all controls (selects, pickers, comboboxes, toggles)
+  keyboard-reachable; correct `role=dialog`/`aria-modal`/`aria-labelledby`.
+
+**Command palette / Spotlight (commitGroup `command-palette`)**
+
+- FR33. A keyboard-driven command palette opened by **`mod+k`** (this
+  **resolves and supersedes** the prior open decision — `mod+k` no longer just
+  focuses the sidebar search; the palette's default free-text mode includes
+  record search so existing behavior is preserved/enhanced; the asset palette
+  stays rescoped to `mod+shift+k`). Results merge navigation destinations
+  (`menuConfig`), runnable registered shortcut actions, and record search,
+  ranked with recents/frequency. The query grammar follows the TeamCity search
+  model (see Appendix). The parser is a pure, UI-decoupled, unit-tested module
+  obeying the FR30 boundary. Fully accessible (combobox/listbox roles,
+  `aria-activedescendant`, live result count), i18n in all 8 locales +
+  pseudo, with in-palette syntax help linked from the global help dialog.
+
+**End-to-end customization wiring (commitGroup `customization-wiring`)**
+
+- FR34. The persistence/override layer must be **functionally connected**, not
+  only unit-tested in isolation. The provider is the single source of
+  preference state: `MspLayoutClient` injects the `useUserPreference`-backed
+  `ShortcutStorage`; the provider loads `PersistedShortcuts`, dispatch resolves
+  bindings via `resolveActionBindings` (override → platform default), merges
+  the persisted `disabled` list, and exposes resolved bindings + mutators via
+  context; `display.tsx` hints/`aria-keyshortcuts` and the settings panel all
+  read from that one source. **An integration test is required** asserting:
+  rebind in settings → the new combo dispatches, the old default stops, the
+  settings "Effective" column, `ShortcutHint`, and `aria-keyshortcuts` all
+  reflect it; disable stops dispatch and hides from help; reset live-updates.
+  Unit/contract green on isolated pieces is **not** sufficient to mark
+  FR19/FR20/FR23/FR26 or F043/F140 done.
+
+**Gap-analysis remediation (commitGroup `gap-hardening`)**
+
+These three requirements came out of a post-implementation review of the
+branch. They are distinct from FR34 (which covers only the
+persistence/dispatch wiring) and address structural issues that let the
+review-discovered bugs ship "green".
+
+- FR35. **Catalog is the single source of truth for action metadata.**
+  `scope`, `priority`, `defaultBindings`, `labelKey`, `groupKey`, `sequence`,
+  and `allowInEditable` live only in `catalog.ts`. Registration sites build
+  actions through a catalog-derived factory (e.g.
+  `createShortcutAction(id, handler, { enabled? })` / `useCatalogShortcut`)
+  supplying only `id` + `handler` (+ optional runtime `enabled`); hand-authored
+  metadata literals are removed from `SearchPalette`, `DefaultLayout`, both
+  `DrawerContext` files, `TicketNavigation`, `AssetDashboardClient`, and
+  `useDesignerShortcuts`. A guard (unit + the boundary script) fails when a
+  registered/used action id is absent from the catalog or its
+  scope/priority/sequence/bindings diverge from the catalog entry. This
+  resolves the current divergence where `useDesignerShortcuts` hardcodes
+  `priority: 60` while every other site omits `priority` (runtime `0`),
+  contradicting `catalog.ts` `DEFAULT_PRIORITY` — so the priorities the
+  settings UI/help show are not the priorities dispatch uses.
+
+- FR36. **Active-region gating is enforced, not nominal.** `DefaultLayout`
+  must not call `useShortcutActiveRegion(true)` unconditionally. An active
+  region is registered only by genuine roving-focus list/selection containers
+  (via a shared region wrapper/hook applied to the real list views). As a
+  result `selection.*` and single-letter page actions (`c`/`j`/`k`) are inert
+  on arbitrary non-editable focus anywhere in `/msp` and fire only when such a
+  region is focused/active. This turns FR10 from documented intent into
+  enforced behavior.
+
+- FR37. **Behavioral test coverage replaces source greps.** The
+  `readFileSync` + `toContain` `*.contract.test.ts` suites
+  (`global-migration`, `panels-drawers`, `editors`, `persistence-bridge`,
+  `settings-ui`, `regression`, `i18n`) are replaced/augmented with tests that
+  assert observable dispatch/registration/resolution behavior rather than
+  source-string presence; a thin source-presence smoke is kept only where the
+  behavior genuinely cannot be simulated. A meta test-guard flags any new
+  `*.contract.test.ts` that only greps source without a behavioral assertion,
+  so "green CI" cannot again mean "the feature was never exercised".
+
 ### Non-functional Requirements
 
 - One global listener; O(registered actions) match per keydown; no measurable
@@ -308,8 +402,12 @@ registration (`labelKey`/`groupKey`).
 - Tenant-level defaults / admin lock (deferred; not in scope).
 - Export/import of overrides (deferred).
 - Whether client portal adopts the system later (deferred).
-- Final default binding for `assets.commandPalette` after rescoping (proposed:
-  a page-scoped non-`mod+k` default; confirm during P2).
+- Final default binding for `assets.commandPalette` after rescoping
+  (implemented: `mod+shift+k`).
+- (Resolved) `mod+k` = the command palette / Spotlight (FR33), not just
+  sidebar search; record search lives inside the palette.
+- `$` magic-keyword set and the exact field-alias list are finalized during
+  `command-palette` implementation (Appendix is the starting spec).
 
 ## Acceptance Criteria (Definition of Done)
 
@@ -338,3 +436,33 @@ registration (`labelKey`/`groupKey`).
 - All user-facing strings internationalized in 8 locales + pseudo;
   `validate-translations.cjs` passes; namespace preloads via `ROUTE_NAMESPACES`.
 - No SSR/hydration mismatch.
+- `page.create` (`c`) opens the current page's create dialog on every page
+  with a Create control; `page.save` (`mod+s`) saves on pages with a Save;
+  both suppressed while typing / when a dialog owns scope.
+- Every page's create dialog is completable end-to-end with the keyboard only.
+- `mod+k` opens the command palette; field-scoped syntax + operators per the
+  Appendix work; results span nav + actions + records; fully keyboard/SR
+  accessible; palette module passes the FR30 dependency-boundary guard.
+- Customization is wired end-to-end: a rebind/disable/reset made in settings
+  immediately changes what the dispatcher fires and what hints/`aria` show,
+  from a single provider-owned source; the FR34 integration test passes.
+
+## Appendix: Command Palette Syntax (TeamCity-derived)
+
+Adapted from JetBrains TeamCity search
+(`https://www.jetbrains.com/help/teamcity/search.html`).
+
+- **Field-scoped:** `field:value` with short aliases. Initial registry:
+  `ticket:`/`t:`, `client:`/`c:`, `contact:`, `project:`/`p:`, `asset:`/`a:`,
+  `user:`/`u:` (and `@name`), `nav:` (and `/path`), `action:` (and `>cmd`).
+  Record-id sigil `#1234`. Final alias list confirmed in implementation.
+- **Operators:** double-quoted phrases (`status:"in progress"`); `-` / `NOT`
+  exclusion; `*` and `?` wildcards (no leading `*`); fuzzy `term~`;
+  **prefix-match by default**; **OR** is the default between unscoped terms;
+  **AND** only within the same field scope (`tag:a AND tag:b`).
+- **Magic keywords:** `$`-prefixed, abbreviable to first syllable
+  (`$mine`/`$m`, `$recent`/`$rec`, `$open`) — mirrors TeamCity `$pinned`/`$p`.
+- **Sigils (leading):** `>` run action/command, `#` open by record id,
+  `@` people, `/` navigation.
+- **No field given:** free-text fuzzy/prefix across nav + actions + records,
+  ranked with recents/frequency.
