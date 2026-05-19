@@ -25,6 +25,7 @@ import {
   HelpCircle,
   Home,
   KeyRound,
+  Layers3,
   LayoutDashboard,
   LayoutTemplate,
   ListTodo,
@@ -327,7 +328,8 @@ export const billingNavigationSections: NavigationSection[] = [
     title: 'Pricing',
     translationKey: 'nav.billing.sections.pricing',
     items: [
-      { name: 'Service Catalog', translationKey: 'nav.billing.serviceCatalog', icon: Package, href: '/msp/billing?tab=service-catalog' },
+      { name: 'Service Types', translationKey: 'nav.billing.serviceTypes', icon: Layers3, href: '/msp/billing?tab=service-types' },
+      { name: 'Services', translationKey: 'nav.billing.serviceCatalog', icon: Package, href: '/msp/billing?tab=service-catalog' },
       { name: 'Products', translationKey: 'nav.billing.products', icon: Package, href: '/msp/billing?tab=products' },
       { name: 'Tax Rates', translationKey: 'nav.billing.taxRates', icon: Percent, href: '/msp/billing?tab=tax-rates' },
     ]

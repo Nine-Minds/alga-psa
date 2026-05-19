@@ -16,7 +16,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { ContractLineDialog } from '../ContractLineDialog';
 import { getContractLinePresets, deleteContractLinePreset } from '@alga-psa/billing/actions/contractLinePresetActions';
-import { IContractLinePreset, IServiceType } from '@alga-psa/types'; // Added IServiceType
+import { IContractLinePreset } from '@alga-psa/types';
 import { getServiceTypesForSelection } from '@alga-psa/billing/actions'; // Added import for fetching types
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
@@ -38,7 +38,7 @@ const ContractLinesOverview: React.FC = () => {
   const [editingPlan, setEditingPlan] = useState<IContractLinePreset | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [allServiceTypes, setAllServiceTypes] = useState<
-    { id: string; name: string; billing_method: IServiceType['billing_method']; is_standard: boolean }[]
+    { id: string; name: string; is_standard: boolean }[]
   >([]); // Added state for service types
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');

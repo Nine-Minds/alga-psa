@@ -203,7 +203,7 @@
         "list": {
           "title": "11111",
           "loading": "11111",
-          "configuredCount": "11111",
+          "configuredCount": "11111 {{count}} 11111",
           "empty": "11111",
           "columns": {
             "name": "11111",
@@ -227,7 +227,7 @@
           "slugRequired": "11111",
           "actionRequired": "11111",
           "workflowRequired": "11111",
-          "missingRequiredFields": "11111"
+          "missingRequiredFields": "11111 {{fields}} 11111"
         },
         "dialog": {
           "createTitle": "11111",
@@ -294,7 +294,7 @@
           "title": "11111",
           "help": "11111",
           "toggle": "11111",
-          "autoDisabled": "11111",
+          "autoDisabled": "11111 {{date}} 11111",
           "updateFailed": "11111"
         },
         "handler": {
@@ -335,14 +335,14 @@
           "help": "11111",
           "createFirst": "11111",
           "captureButton": "11111",
-          "captureActive": "11111",
+          "captureActive": "11111 {{expiresAt}} 11111",
           "sampleAvailable": "11111",
           "noSample": "11111",
           "captureFailed": "11111"
         },
         "sampleTree": {
           "title": "11111",
-          "help": "11111",
+          "help": "11111 {{field}} 11111",
           "focusHelp": "11111",
           "empty": "11111"
         },
@@ -352,8 +352,8 @@
           "unknownReference": "11111",
           "loading": "11111",
           "errors": {
-            "INVALID_INT": "11111",
-            "INVALID_NUMBER": "11111",
+            "INVALID_INT": "11111 {{value}} 11111",
+            "INVALID_NUMBER": "11111 {{value}} 11111",
             "INVALID_BOOLEAN": "11111",
             "INVALID_JSON": "11111"
           }
@@ -363,8 +363,8 @@
           "help": "11111",
           "empty": "11111",
           "loadFailed": "11111",
-          "pageSummary": "11111",
-          "durationMs": "11111",
+          "pageSummary": "11111 {{page}} 11111 {{total}} 11111",
+          "durationMs": "11111 {{duration}} 11111",
           "allStatuses": "11111",
           "columns": {
             "received": "11111",

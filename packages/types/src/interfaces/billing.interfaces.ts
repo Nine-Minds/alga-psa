@@ -218,7 +218,6 @@ export interface IService extends TenantEntity {
 export interface IStandardServiceType {
   id: string;
   name: string;
-  billing_method: 'fixed' | 'hourly' | 'usage'; // Updated to match service billing methods
   display_order: number;
   created_at: ISO8601String;
   updated_at: ISO8601String;
@@ -228,8 +227,6 @@ export interface IStandardServiceType {
 export interface IServiceType extends TenantEntity {
   id: string;
   name: string;
-  billing_method: 'fixed' | 'hourly' | 'usage'; // Updated to match service billing methods
-  // standard_service_type_id removed
   is_active: boolean;
   description?: string | null;
   order_number: number;
