@@ -238,6 +238,18 @@ registration (`labelKey`/`groupKey`).
   localized/handled per locale; no hardcoded user-facing strings anywhere in
   the system, settings, or help.
 
+**Architecture boundary (dependency direction)**
+
+- FR30. The engine in `packages/ui/src/keyboard-shortcuts` persists only
+  through a `ShortcutStorage` adapter interface and **must not import**
+  `@alga-psa/user-composition` or any feature package
+  (`@alga-psa/tickets|billing|assets|projects|clients|scheduling|...`). The
+  `useUserPreference`-backed adapter is implemented in the MSP wrapper
+  (`server`/user-composition layer) and injected into the provider. A
+  CI-runnable dependency-boundary guard enforces no forbidden imports and no
+  new circular dependency vs `.github/known-cycles.json` (consistent with
+  `.github/workflows/circular-deps.yml` and `eslint-plugin-custom-rules`).
+
 ### Non-functional Requirements
 
 - One global listener; O(registered actions) match per keydown; no measurable
@@ -250,10 +262,13 @@ registration (`labelKey`/`groupKey`).
 
 ## Data / API / Integrations
 
-- Persistence: `useUserPreference`
+- Persistence: engine exposes a `ShortcutStorage` adapter interface; the
+  concrete adapter is `useUserPreference`-backed
   (`packages/user-composition/src/hooks/useUserPreference.ts`), key
   `keyboard_shortcuts_v1`, localStorage + debounced server sync, unauthenticated
-  path supported. No new tables/endpoints (reuses existing
+  path supported. The adapter and its `@alga-psa/user-composition` import live
+  in the MSP wrapper (`server`), injected into the provider — never imported
+  into `packages/ui`. No new tables/endpoints (reuses existing
   `user_preferences`).
 - Stored shape:
   `{ "version": 1, "bindings": { "<id>": ["<neutral-binding>"...] }, "disabled": ["<id>"...] }`
@@ -307,6 +322,10 @@ registration (`labelKey`/`groupKey`).
 - Scope/priority/active-region prevent global/page/panel/dialog/editor
   conflicts; drawer wins over page; Escape integrates with Radix.
 - `mod+k` conflict removed; asset palette rescoped and functional.
+- `packages/ui/src/keyboard-shortcuts` has zero imports of
+  `@alga-psa/user-composition` or feature packages; persistence flows through
+  the injected `ShortcutStorage` adapter; `npx nx graph` shows no new cycle
+  vs `.github/known-cycles.json`; the dependency-boundary guard passes.
 - Existing AI/search/drawer/ticket/designer shortcuts preserved post-migration
   (regression + Playwright verified).
 - User can rebind/clear/disable/reset; overrides persist as neutral deltas
