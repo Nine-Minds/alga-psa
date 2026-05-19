@@ -32,6 +32,17 @@ decisions; update earlier notes when a decision changes.
 - (2026-05-18) Engine lives in `packages/ui/src/keyboard-shortcuts/*`, kept
   dependency-light; preference wiring lives in the MSP wrapper via
   `useUserPreference` (`@alga-psa/user-composition/hooks`).
+- (2026-05-19) **Dependency-boundary guard (group `architecture-guard`,
+  F005-F007/T012-T014, placed right after `scaffold` so it lands before
+  `persistence`).** Engine persists ONLY via a `ShortcutStorage` interface
+  (F005) + default in-memory adapter (F006); provider takes an injected
+  storage (F043); the `useUserPreference` adapter lives in `server` and is
+  injected (F140 reworded). Rationale: importing `useUserPreference` into
+  `packages/ui` creates `ui → user-composition → ui`, a NEW cycle that fails
+  `.github/workflows/circular-deps.yml` (not in `known-cycles.json`). Guard
+  (F007) + T012 (no forbidden imports) + T013 (`nx graph` no new cycle)
+  enforce it. Repo also has `eslint-plugin-custom-rules/`
+  `no-feature-to-feature-imports` (CI `error`).
 - (2026-05-18) i18n namespace = new `msp/keyboard-shortcuts` (action labels,
   groups, help, settings-panel chrome). Settings **tab label** goes in existing
   `msp/settings`. Action `labelKey`/`groupKey` are i18n keys from Phase 1
