@@ -1,0 +1,210 @@
+{
+  "settings": {
+    "title": "Sneltoetsen",
+    "description": "Pas sneltoetsen aan voor dit apparaat en account.",
+    "loading": "Sneltoetsen laden...",
+    "capturePrompt": "Druk op toetsen",
+    "columns": {
+      "action": "Actie",
+      "scope": "Bereik",
+      "default": "Standaard",
+      "effective": "Actieve sneltoets",
+      "enabled": "Ingeschakeld",
+      "reset": "Resetten"
+    },
+    "actions": {
+      "resetAll": "Alles resetten",
+      "replace": "Vervangen"
+    },
+    "messages": {
+      "bindingUpdated": "Sneltoets bijgewerkt",
+      "enabledUpdated": "Sneltoets bijgewerkt",
+      "resetOne": "Sneltoets gereset",
+      "resetAll": "Sneltoetsen gereset"
+    },
+    "errors": {
+      "saveFailed": "Opslaan van sneltoetsvoorkeuren mislukt"
+    },
+    "resetAll": {
+      "title": "Alle sneltoetsen resetten?",
+      "message": "Alle aangepaste sneltoetsen worden verwijderd."
+    },
+    "conflict": {
+      "title": "Bestaande sneltoets vervangen?",
+      "message": "{{binding}} is al toegewezen aan {{action}}."
+    },
+    "advisory": {
+      "hostileCombo": "{{binding}} kan conflicteren met browser- of systeemsneltoetsen voor {{action}}."
+    }
+  },
+  "help": {
+    "title": "Sneltoetsen",
+    "close": "Sneltoetsen sluiten",
+    "custom": "Aangepast"
+  },
+  "groups": {
+    "global": "Globaal",
+    "ai": "AI",
+    "page": "Pagina",
+    "selection": "Selectie",
+    "navigation": "Navigatie",
+    "assets": "Assets",
+    "dialog": "Dialoog",
+    "panel": "Paneel",
+    "record": "Record",
+    "editor": "Editor"
+  },
+  "actions": {
+    "global": {
+      "search": {
+        "label": "Zoeken",
+        "description": "Open het globale zoekpalet."
+      },
+      "toggleChat": {
+        "label": "AI-chat wisselen",
+        "description": "Open de AI-assistent of focus de huidige chat."
+      },
+      "openShortcuts": {
+        "label": "Sneltoetsen openen",
+        "description": "Toon het overzicht van sneltoetsen."
+      },
+      "quickCreate": {
+        "label": "Snel aanmaken",
+        "description": "Open het dialoogvenster voor snel aanmaken."
+      }
+    },
+    "ai": {
+      "quickAsk": {
+        "label": "AI snel vragen",
+        "description": "Start een snelle vraag aan de AI-assistent."
+      }
+    },
+    "page": {
+      "save": {
+        "label": "Pagina opslaan",
+        "description": "Sla de huidige pagina op."
+      }
+    },
+    "selection": {
+      "previous": {
+        "label": "Vorig item",
+        "description": "Verplaats de selectie naar het vorige item."
+      },
+      "next": {
+        "label": "Volgend item",
+        "description": "Verplaats de selectie naar het volgende item."
+      },
+      "open": {
+        "label": "Selectie openen",
+        "description": "Open het geselecteerde item."
+      }
+    },
+    "navigation": {
+      "goTickets": {
+        "label": "Naar tickets",
+        "description": "Navigeer naar de ticketpagina."
+      },
+      "goAssets": {
+        "label": "Naar assets",
+        "description": "Navigeer naar de assetpagina."
+      },
+      "goClients": {
+        "label": "Naar klanten",
+        "description": "Navigeer naar de klantenpagina."
+      }
+    },
+    "assets": {
+      "commandPalette": {
+        "label": "Asset-opdrachtpalet",
+        "description": "Open opdrachten voor de assetpagina."
+      }
+    },
+    "dialog": {
+      "cancel": {
+        "label": "Dialoog annuleren",
+        "description": "Sluit of annuleer het actieve dialoogvenster."
+      }
+    },
+    "panel": {
+      "close": {
+        "label": "Paneel sluiten",
+        "description": "Sluit het actieve paneel of de lade."
+      }
+    },
+    "drawer": {
+      "historyBack": {
+        "label": "Lade terug",
+        "description": "Ga terug in de ladegeschiedenis."
+      },
+      "historyForward": {
+        "label": "Lade vooruit",
+        "description": "Ga vooruit in de ladegeschiedenis."
+      }
+    },
+    "record": {
+      "previous": {
+        "label": "Vorig record",
+        "description": "Open het vorige record."
+      },
+      "next": {
+        "label": "Volgend record",
+        "description": "Open het volgende record."
+      }
+    },
+    "editor": {
+      "undo": {
+        "label": "Ongedaan maken",
+        "description": "Maak de editorwijziging ongedaan."
+      },
+      "redo": {
+        "label": "Opnieuw uitvoeren",
+        "description": "Voer de editorwijziging opnieuw uit."
+      },
+      "save": {
+        "label": "Editor opslaan",
+        "description": "Sla de editorinhoud op."
+      },
+      "deleteSelection": {
+        "label": "Selectie verwijderen",
+        "description": "Verwijder het geselecteerde editoritem."
+      },
+      "cancel": {
+        "label": "Editoractie annuleren",
+        "description": "Annuleer de actieve editoractie."
+      },
+      "moveUp": {
+        "label": "Omhoog verplaatsen",
+        "description": "Verplaats het geselecteerde editoritem omhoog."
+      },
+      "moveDown": {
+        "label": "Omlaag verplaatsen",
+        "description": "Verplaats het geselecteerde editoritem omlaag."
+      },
+      "moveLeft": {
+        "label": "Naar links verplaatsen",
+        "description": "Verplaats het geselecteerde editoritem naar links."
+      },
+      "moveRight": {
+        "label": "Naar rechts verplaatsen",
+        "description": "Verplaats het geselecteerde editoritem naar rechts."
+      }
+    }
+  },
+  "platform": {
+    "modifiers": {
+      "meta": "Meta",
+      "ctrl": "Ctrl",
+      "alt": "Alt",
+      "shift": "Shift"
+    },
+    "keys": {
+      "space": "Spatie"
+    },
+    "aria": {
+      "control": "Control",
+      "meta": "Meta",
+      "alt": "Alt",
+      "shift": "Shift"
+    }
+  }
+}

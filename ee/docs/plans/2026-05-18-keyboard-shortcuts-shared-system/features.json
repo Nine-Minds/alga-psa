@@ -959,7 +959,7 @@
   {
     "id": "F200",
     "description": "Create EN namespace file server/public/locales/en/msp/keyboard-shortcuts.json (settings panel, help dialog, conflict/advisory messages chrome)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR27",
       "FR28"
@@ -969,7 +969,7 @@
   {
     "id": "F201",
     "description": "EN: action label keys for every registered action id (global.*, page.*, selection.*, record.*, drawer.*, editor.*, assets.*, ai.*)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR27"
     ],
@@ -978,7 +978,7 @@
   {
     "id": "F202",
     "description": "EN: group name keys for every action group",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR27"
     ],
@@ -987,7 +987,7 @@
   {
     "id": "F203",
     "description": "Add 'keyboard-shortcuts' settings-tab label key to en/msp/settings.json",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR27"
     ],
@@ -996,7 +996,7 @@
   {
     "id": "F204",
     "description": "Action registration API takes labelKey/groupKey (i18n keys), not raw strings — enforced from Phase 1",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR27",
       "FR6"
@@ -1006,7 +1006,7 @@
   {
     "id": "F205",
     "description": "Register msp/keyboard-shortcuts in ROUTE_NAMESPACES (packages/core/src/lib/i18n/config.ts) so it preloads for /msp",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR28"
     ],
@@ -1015,7 +1015,7 @@
   {
     "id": "F206",
     "description": "French (fr) translations for msp/keyboard-shortcuts + settings-tab label",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR28"
     ],
@@ -1024,7 +1024,7 @@
   {
     "id": "F207",
     "description": "Spanish (es) translations for msp/keyboard-shortcuts + settings-tab label",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR28"
     ],
@@ -1033,7 +1033,7 @@
   {
     "id": "F208",
     "description": "German (de) translations for msp/keyboard-shortcuts + settings-tab label",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR28"
     ],
@@ -1042,7 +1042,7 @@
   {
     "id": "F209",
     "description": "Dutch (nl) translations for msp/keyboard-shortcuts + settings-tab label",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR28"
     ],
@@ -1051,7 +1051,7 @@
   {
     "id": "F210",
     "description": "Italian (it) translations for msp/keyboard-shortcuts + settings-tab label",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR28"
     ],
@@ -1060,7 +1060,7 @@
   {
     "id": "F211",
     "description": "Polish (pl) translations for msp/keyboard-shortcuts + settings-tab label",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR28"
     ],
@@ -1069,7 +1069,7 @@
   {
     "id": "F212",
     "description": "Portuguese (pt) translations for msp/keyboard-shortcuts + settings-tab label",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR28"
     ],
@@ -1078,7 +1078,7 @@
   {
     "id": "F213",
     "description": "Regenerate pseudo-locales xx/yy (node scripts/generate-pseudo-locales.cjs)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR28"
     ],
@@ -1087,7 +1087,7 @@
   {
     "id": "F214",
     "description": "validate-translations.cjs passes for the new namespace and settings-tab key across all locales",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR28",
       "Acceptance Criteria"
@@ -1097,7 +1097,7 @@
   {
     "id": "F215",
     "description": "Platform glyph labels and aria-keyshortcuts text are localized/locale-safe; no hardcoded user-facing strings in engine/settings/help",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR29"
     ],
@@ -1106,7 +1106,7 @@
   {
     "id": "F216",
     "description": "Conflict/advisory messages (cross-device hostile-combo notices) internationalized",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR29",
       "FR21"

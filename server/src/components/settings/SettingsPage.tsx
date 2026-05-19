@@ -183,7 +183,7 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
     },
     {
       id: 'keyboard-shortcuts',
-      label: t('tabs.keyboardShortcuts', { defaultValue: 'Keyboard Shortcuts' }),
+      label: t('tabs.keyboardShortcuts'),
       icon: Keyboard,
       content: <KeyboardShortcutsSettings />,
     },

@@ -304,3 +304,34 @@ decisions; update earlier notes when a decision changes.
   designer canvases (confirm in P4 against `useDesignerShortcuts.ts`).
 - Exact set of controls to receive visible `kbd` hints / `aria-keyshortcuts`
   (curate during P6 — avoid hint clutter).
+
+## 2026-05-19 — i18n group implementation
+- F200: Implemented in commitGroup i18n. Added the keyboard-shortcuts namespace, settings tab key, route preload, pseudo-locale generation support, and localized platform/advisory/help/settings/action strings as applicable.
+- F201: Implemented in commitGroup i18n. Added the keyboard-shortcuts namespace, settings tab key, route preload, pseudo-locale generation support, and localized platform/advisory/help/settings/action strings as applicable.
+- F202: Implemented in commitGroup i18n. Added the keyboard-shortcuts namespace, settings tab key, route preload, pseudo-locale generation support, and localized platform/advisory/help/settings/action strings as applicable.
+- F203: Implemented in commitGroup i18n. Added the keyboard-shortcuts namespace, settings tab key, route preload, pseudo-locale generation support, and localized platform/advisory/help/settings/action strings as applicable.
+- F204: Implemented in commitGroup i18n. Added the keyboard-shortcuts namespace, settings tab key, route preload, pseudo-locale generation support, and localized platform/advisory/help/settings/action strings as applicable.
+- F205: Implemented in commitGroup i18n. Added the keyboard-shortcuts namespace, settings tab key, route preload, pseudo-locale generation support, and localized platform/advisory/help/settings/action strings as applicable.
+- F206: Implemented in commitGroup i18n. Added the keyboard-shortcuts namespace, settings tab key, route preload, pseudo-locale generation support, and localized platform/advisory/help/settings/action strings as applicable.
+- F207: Implemented in commitGroup i18n. Added the keyboard-shortcuts namespace, settings tab key, route preload, pseudo-locale generation support, and localized platform/advisory/help/settings/action strings as applicable.
+- F208: Implemented in commitGroup i18n. Added the keyboard-shortcuts namespace, settings tab key, route preload, pseudo-locale generation support, and localized platform/advisory/help/settings/action strings as applicable.
+- F209: Implemented in commitGroup i18n. Added the keyboard-shortcuts namespace, settings tab key, route preload, pseudo-locale generation support, and localized platform/advisory/help/settings/action strings as applicable.
+- F210: Implemented in commitGroup i18n. Added the keyboard-shortcuts namespace, settings tab key, route preload, pseudo-locale generation support, and localized platform/advisory/help/settings/action strings as applicable.
+- F211: Implemented in commitGroup i18n. Added the keyboard-shortcuts namespace, settings tab key, route preload, pseudo-locale generation support, and localized platform/advisory/help/settings/action strings as applicable.
+- F212: Implemented in commitGroup i18n. Added the keyboard-shortcuts namespace, settings tab key, route preload, pseudo-locale generation support, and localized platform/advisory/help/settings/action strings as applicable.
+- F213: Implemented in commitGroup i18n. Added the keyboard-shortcuts namespace, settings tab key, route preload, pseudo-locale generation support, and localized platform/advisory/help/settings/action strings as applicable.
+- F214: Implemented in commitGroup i18n. Added the keyboard-shortcuts namespace, settings tab key, route preload, pseudo-locale generation support, and localized platform/advisory/help/settings/action strings as applicable.
+- F215: Implemented in commitGroup i18n. Added the keyboard-shortcuts namespace, settings tab key, route preload, pseudo-locale generation support, and localized platform/advisory/help/settings/action strings as applicable.
+- F216: Implemented in commitGroup i18n. Added the keyboard-shortcuts namespace, settings tab key, route preload, pseudo-locale generation support, and localized platform/advisory/help/settings/action strings as applicable.
+- T200: Verified in commitGroup i18n via the keyboard shortcuts i18n contract test plus pseudo-locale generation and validate-translations.cjs.
+- T201: Verified in commitGroup i18n via the keyboard shortcuts i18n contract test plus pseudo-locale generation and validate-translations.cjs.
+- T202: Verified in commitGroup i18n via the keyboard shortcuts i18n contract test plus pseudo-locale generation and validate-translations.cjs.
+- T203: Verified in commitGroup i18n via the keyboard shortcuts i18n contract test plus pseudo-locale generation and validate-translations.cjs.
+- T204: Verified in commitGroup i18n via the keyboard shortcuts i18n contract test plus pseudo-locale generation and validate-translations.cjs.
+- T205: Verified in commitGroup i18n via the keyboard shortcuts i18n contract test plus pseudo-locale generation and validate-translations.cjs.
+- T206: Verified in commitGroup i18n via the keyboard shortcuts i18n contract test plus pseudo-locale generation and validate-translations.cjs.
+- T207: Verified in commitGroup i18n via the keyboard shortcuts i18n contract test plus pseudo-locale generation and validate-translations.cjs.
+- T208: Verified in commitGroup i18n via the keyboard shortcuts i18n contract test plus pseudo-locale generation and validate-translations.cjs.
+- T209: Verified in commitGroup i18n via the keyboard shortcuts i18n contract test plus pseudo-locale generation and validate-translations.cjs.
+- Checks: `node scripts/validate-translations.cjs` passed with pre-existing Polish plural warnings only; `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/i18n.contract.test.ts src/keyboard-shortcuts/display.test.tsx` passed; `npx tsc --noEmit -p packages/ui/tsconfig.json` passed.
+- Additional check: `npm run typecheck --workspace server` passed for i18n wiring.

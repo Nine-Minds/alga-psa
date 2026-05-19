@@ -25,7 +25,8 @@
     "teamManagement": "Team Management",
     "loadingTeam": "Loading team configuration...",
     "loadingExperimental": "Loading experimental feature configuration...",
-    "loadingInteractions": "Loading interaction settings..."
+    "loadingInteractions": "Loading interaction settings...",
+    "keyboardShortcuts": "Keyboard Shortcuts"
   },
   "unsavedChanges": {
     "title": "Unsaved Changes",

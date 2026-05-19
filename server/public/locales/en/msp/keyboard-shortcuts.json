@@ -1,0 +1,210 @@
+{
+  "settings": {
+    "title": "Keyboard Shortcuts",
+    "description": "Customize keyboard shortcuts for this device and account.",
+    "loading": "Loading keyboard shortcuts...",
+    "capturePrompt": "Press keys",
+    "columns": {
+      "action": "Action",
+      "scope": "Scope",
+      "default": "Default",
+      "effective": "Effective binding",
+      "enabled": "Enabled",
+      "reset": "Reset"
+    },
+    "actions": {
+      "resetAll": "Reset all",
+      "replace": "Replace"
+    },
+    "messages": {
+      "bindingUpdated": "Keyboard shortcut updated",
+      "enabledUpdated": "Keyboard shortcut updated",
+      "resetOne": "Keyboard shortcut reset",
+      "resetAll": "Keyboard shortcuts reset"
+    },
+    "errors": {
+      "saveFailed": "Failed to save keyboard shortcut preferences"
+    },
+    "resetAll": {
+      "title": "Reset all shortcuts?",
+      "message": "All custom keyboard shortcuts will be removed."
+    },
+    "conflict": {
+      "title": "Replace existing shortcut?",
+      "message": "{{binding}} is already assigned to {{action}}."
+    },
+    "advisory": {
+      "hostileCombo": "{{binding}} may conflict with browser or operating system shortcuts for {{action}}."
+    }
+  },
+  "help": {
+    "title": "Keyboard shortcuts",
+    "close": "Close keyboard shortcuts",
+    "custom": "Custom"
+  },
+  "groups": {
+    "global": "Global",
+    "ai": "AI",
+    "page": "Page",
+    "selection": "Selection",
+    "navigation": "Navigation",
+    "assets": "Assets",
+    "dialog": "Dialog",
+    "panel": "Panel",
+    "record": "Record",
+    "editor": "Editor"
+  },
+  "actions": {
+    "global": {
+      "search": {
+        "label": "Search",
+        "description": "Open the global search palette."
+      },
+      "toggleChat": {
+        "label": "Toggle AI chat",
+        "description": "Open the AI assistant or focus the current chat."
+      },
+      "openShortcuts": {
+        "label": "Open keyboard shortcuts",
+        "description": "Show the keyboard shortcuts reference."
+      },
+      "quickCreate": {
+        "label": "Quick create",
+        "description": "Open the quick create dialog."
+      }
+    },
+    "ai": {
+      "quickAsk": {
+        "label": "Quick ask AI",
+        "description": "Start a quick AI assistant prompt."
+      }
+    },
+    "page": {
+      "save": {
+        "label": "Save page",
+        "description": "Save the current page."
+      }
+    },
+    "selection": {
+      "previous": {
+        "label": "Previous item",
+        "description": "Move selection to the previous item."
+      },
+      "next": {
+        "label": "Next item",
+        "description": "Move selection to the next item."
+      },
+      "open": {
+        "label": "Open selection",
+        "description": "Open the selected item."
+      }
+    },
+    "navigation": {
+      "goTickets": {
+        "label": "Go to tickets",
+        "description": "Navigate to the tickets page."
+      },
+      "goAssets": {
+        "label": "Go to assets",
+        "description": "Navigate to the assets page."
+      },
+      "goClients": {
+        "label": "Go to clients",
+        "description": "Navigate to the clients page."
+      }
+    },
+    "assets": {
+      "commandPalette": {
+        "label": "Asset command palette",
+        "description": "Open asset page commands."
+      }
+    },
+    "dialog": {
+      "cancel": {
+        "label": "Cancel dialog",
+        "description": "Close or cancel the active dialog."
+      }
+    },
+    "panel": {
+      "close": {
+        "label": "Close panel",
+        "description": "Close the active panel or drawer."
+      }
+    },
+    "drawer": {
+      "historyBack": {
+        "label": "Drawer back",
+        "description": "Go back in drawer history."
+      },
+      "historyForward": {
+        "label": "Drawer forward",
+        "description": "Go forward in drawer history."
+      }
+    },
+    "record": {
+      "previous": {
+        "label": "Previous record",
+        "description": "Open the previous record."
+      },
+      "next": {
+        "label": "Next record",
+        "description": "Open the next record."
+      }
+    },
+    "editor": {
+      "undo": {
+        "label": "Undo",
+        "description": "Undo the editor change."
+      },
+      "redo": {
+        "label": "Redo",
+        "description": "Redo the editor change."
+      },
+      "save": {
+        "label": "Save editor",
+        "description": "Save the editor content."
+      },
+      "deleteSelection": {
+        "label": "Delete selection",
+        "description": "Delete the selected editor item."
+      },
+      "cancel": {
+        "label": "Cancel editor action",
+        "description": "Cancel the active editor action."
+      },
+      "moveUp": {
+        "label": "Move up",
+        "description": "Move the selected editor item up."
+      },
+      "moveDown": {
+        "label": "Move down",
+        "description": "Move the selected editor item down."
+      },
+      "moveLeft": {
+        "label": "Move left",
+        "description": "Move the selected editor item left."
+      },
+      "moveRight": {
+        "label": "Move right",
+        "description": "Move the selected editor item right."
+      }
+    }
+  },
+  "platform": {
+    "modifiers": {
+      "meta": "Meta",
+      "ctrl": "Ctrl",
+      "alt": "Alt",
+      "shift": "Shift"
+    },
+    "keys": {
+      "space": "Space"
+    },
+    "aria": {
+      "control": "Control",
+      "meta": "Meta",
+      "alt": "Alt",
+      "shift": "Shift"
+    }
+  }
+}

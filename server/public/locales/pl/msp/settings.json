@@ -25,7 +25,8 @@
     "teamManagement": "Zarządzanie zespołem",
     "loadingTeam": "Ładowanie konfiguracji zespołu...",
     "loadingExperimental": "Ładowanie konfiguracji funkcji eksperymentalnych...",
-    "loadingInteractions": "Ładowanie ustawień interakcji..."
+    "loadingInteractions": "Ładowanie ustawień interakcji...",
+    "keyboardShortcuts": "Skróty klawiaturowe"
   },
   "unsavedChanges": {
     "title": "Niezapisane zmiany",

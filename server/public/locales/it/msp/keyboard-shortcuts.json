@@ -1,0 +1,210 @@
+{
+  "settings": {
+    "title": "Scorciatoie da tastiera",
+    "description": "Personalizza le scorciatoie da tastiera per questo dispositivo e account.",
+    "loading": "Caricamento scorciatoie da tastiera...",
+    "capturePrompt": "Premi i tasti",
+    "columns": {
+      "action": "Azione",
+      "scope": "Ambito",
+      "default": "Predefinito",
+      "effective": "Scorciatoia attiva",
+      "enabled": "Abilitato",
+      "reset": "Ripristina"
+    },
+    "actions": {
+      "resetAll": "Ripristina tutto",
+      "replace": "Sostituisci"
+    },
+    "messages": {
+      "bindingUpdated": "Scorciatoia da tastiera aggiornata",
+      "enabledUpdated": "Scorciatoia da tastiera aggiornata",
+      "resetOne": "Scorciatoia da tastiera ripristinata",
+      "resetAll": "Scorciatoie da tastiera ripristinate"
+    },
+    "errors": {
+      "saveFailed": "Impossibile salvare le preferenze delle scorciatoie da tastiera"
+    },
+    "resetAll": {
+      "title": "Ripristinare tutte le scorciatoie?",
+      "message": "Tutte le scorciatoie da tastiera personalizzate verranno rimosse."
+    },
+    "conflict": {
+      "title": "Sostituire la scorciatoia esistente?",
+      "message": "{{binding}} è già assegnata a {{action}}."
+    },
+    "advisory": {
+      "hostileCombo": "{{binding}} potrebbe entrare in conflitto con scorciatoie del browser o del sistema per {{action}}."
+    }
+  },
+  "help": {
+    "title": "Scorciatoie da tastiera",
+    "close": "Chiudi scorciatoie da tastiera",
+    "custom": "Personalizzata"
+  },
+  "groups": {
+    "global": "Globale",
+    "ai": "IA",
+    "page": "Pagina",
+    "selection": "Selezione",
+    "navigation": "Navigazione",
+    "assets": "Asset",
+    "dialog": "Finestra",
+    "panel": "Pannello",
+    "record": "Record",
+    "editor": "Editor"
+  },
+  "actions": {
+    "global": {
+      "search": {
+        "label": "Cerca",
+        "description": "Apri la palette di ricerca globale."
+      },
+      "toggleChat": {
+        "label": "Attiva chat IA",
+        "description": "Apri l’assistente IA o metti a fuoco la chat corrente."
+      },
+      "openShortcuts": {
+        "label": "Apri scorciatoie da tastiera",
+        "description": "Mostra il riferimento delle scorciatoie da tastiera."
+      },
+      "quickCreate": {
+        "label": "Creazione rapida",
+        "description": "Apri la finestra di creazione rapida."
+      }
+    },
+    "ai": {
+      "quickAsk": {
+        "label": "Chiedi rapidamente all’IA",
+        "description": "Avvia una richiesta rapida all’assistente IA."
+      }
+    },
+    "page": {
+      "save": {
+        "label": "Salva pagina",
+        "description": "Salva la pagina corrente."
+      }
+    },
+    "selection": {
+      "previous": {
+        "label": "Elemento precedente",
+        "description": "Sposta la selezione all’elemento precedente."
+      },
+      "next": {
+        "label": "Elemento successivo",
+        "description": "Sposta la selezione all’elemento successivo."
+      },
+      "open": {
+        "label": "Apri selezione",
+        "description": "Apri l’elemento selezionato."
+      }
+    },
+    "navigation": {
+      "goTickets": {
+        "label": "Vai ai ticket",
+        "description": "Vai alla pagina dei ticket."
+      },
+      "goAssets": {
+        "label": "Vai agli asset",
+        "description": "Vai alla pagina degli asset."
+      },
+      "goClients": {
+        "label": "Vai ai clienti",
+        "description": "Vai alla pagina dei clienti."
+      }
+    },
+    "assets": {
+      "commandPalette": {
+        "label": "Palette comandi asset",
+        "description": "Apri i comandi della pagina asset."
+      }
+    },
+    "dialog": {
+      "cancel": {
+        "label": "Annulla finestra",
+        "description": "Chiudi o annulla la finestra attiva."
+      }
+    },
+    "panel": {
+      "close": {
+        "label": "Chiudi pannello",
+        "description": "Chiudi il pannello o drawer attivo."
+      }
+    },
+    "drawer": {
+      "historyBack": {
+        "label": "Drawer indietro",
+        "description": "Torna indietro nella cronologia del drawer."
+      },
+      "historyForward": {
+        "label": "Drawer avanti",
+        "description": "Vai avanti nella cronologia del drawer."
+      }
+    },
+    "record": {
+      "previous": {
+        "label": "Record precedente",
+        "description": "Apri il record precedente."
+      },
+      "next": {
+        "label": "Record successivo",
+        "description": "Apri il record successivo."
+      }
+    },
+    "editor": {
+      "undo": {
+        "label": "Annulla",
+        "description": "Annulla la modifica nell’editor."
+      },
+      "redo": {
+        "label": "Ripeti",
+        "description": "Ripeti la modifica nell’editor."
+      },
+      "save": {
+        "label": "Salva editor",
+        "description": "Salva il contenuto dell’editor."
+      },
+      "deleteSelection": {
+        "label": "Elimina selezione",
+        "description": "Elimina l’elemento selezionato nell’editor."
+      },
+      "cancel": {
+        "label": "Annulla azione editor",
+        "description": "Annulla l’azione attiva dell’editor."
+      },
+      "moveUp": {
+        "label": "Sposta su",
+        "description": "Sposta verso l’alto l’elemento selezionato nell’editor."
+      },
+      "moveDown": {
+        "label": "Sposta giù",
+        "description": "Sposta verso il basso l’elemento selezionato nell’editor."
+      },
+      "moveLeft": {
+        "label": "Sposta a sinistra",
+        "description": "Sposta a sinistra l’elemento selezionato nell’editor."
+      },
+      "moveRight": {
+        "label": "Sposta a destra",
+        "description": "Sposta a destra l’elemento selezionato nell’editor."
+      }
+    }
+  },
+  "platform": {
+    "modifiers": {
+      "meta": "Meta",
+      "ctrl": "Ctrl",
+      "alt": "Alt",
+      "shift": "Maiusc"
+    },
+    "keys": {
+      "space": "Spazio"
+    },
+    "aria": {
+      "control": "Control",
+      "meta": "Meta",
+      "alt": "Alt",
+      "shift": "Shift"
+    }
+  }
+}
