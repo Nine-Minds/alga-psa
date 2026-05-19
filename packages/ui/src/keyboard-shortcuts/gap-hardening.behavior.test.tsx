@@ -1,0 +1,177 @@
+/** @vitest-environment jsdom */
+
+import React from 'react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  KeyboardShortcutsProvider,
+  ShortcutActiveRegion,
+  useCatalogShortcut,
+  useKeyboardShortcutPreferences,
+  useShortcutScope,
+} from './provider';
+
+afterEach(() => {
+  cleanup();
+});
+
+function dispatchShortcut(init: KeyboardEventInit & { key: string; code: string }) {
+  const event = new KeyboardEvent('keydown', {
+    bubbles: true,
+    cancelable: true,
+    ctrlKey: false,
+    metaKey: false,
+    altKey: false,
+    shiftKey: false,
+    ...init,
+  });
+
+  document.dispatchEvent(event);
+  return event;
+}
+
+function RegisteredCatalogShortcut({
+  actionId,
+  handler,
+  enabled,
+}: {
+  actionId: string;
+  handler: () => void | boolean;
+  enabled?: boolean;
+}) {
+  useCatalogShortcut(actionId, handler, { enabled });
+  return null;
+}
+
+function PageScope({ children }: { children?: React.ReactNode }) {
+  useShortcutScope('page');
+  return <>{children}</>;
+}
+
+function PanelScope({ children }: { children?: React.ReactNode }) {
+  useShortcutScope('panel');
+  return <>{children}</>;
+}
+
+function EditorScope({ children }: { children?: React.ReactNode }) {
+  useShortcutScope('editor');
+  return <>{children}</>;
+}
+
+function SettingsProbe() {
+  const shortcuts = useKeyboardShortcutPreferences();
+  return (
+    <div>
+      <span data-testid="effective">{shortcuts.getResolvedBindings('global.search').join(',')}</span>
+      <button type="button" onClick={() => shortcuts.setActionBindings('global.search', ['mod+j'])}>
+        rebind
+      </button>
+    </div>
+  );
+}
+
+describe('gap hardening behavioral coverage', () => {
+  it('requires a real active region for c/j/k page and selection actions', async () => {
+    const createHandler = vi.fn();
+    const selectionHandler = vi.fn();
+
+    render(
+      <KeyboardShortcutsProvider platform="other">
+        <PageScope>
+          <RegisteredCatalogShortcut actionId="page.create" handler={createHandler} />
+          <RegisteredCatalogShortcut actionId="selection.next" handler={selectionHandler} />
+          <button type="button">outside region</button>
+          <ShortcutActiveRegion>
+            <button type="button">inside region</button>
+          </ShortcutActiveRegion>
+        </PageScope>
+      </KeyboardShortcutsProvider>,
+    );
+
+    screen.getByRole('button', { name: 'outside region' }).focus();
+    expect(dispatchShortcut({ key: 'c', code: 'KeyC' }).defaultPrevented).toBe(false);
+    expect(dispatchShortcut({ key: 'j', code: 'KeyJ' }).defaultPrevented).toBe(false);
+    expect(createHandler).not.toHaveBeenCalled();
+    expect(selectionHandler).not.toHaveBeenCalled();
+
+    screen.getByRole('button', { name: 'inside region' }).focus();
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByRole('button', { name: 'inside region' }));
+    });
+    await waitFor(() => {
+      expect(dispatchShortcut({ key: 'c', code: 'KeyC' }).defaultPrevented).toBe(true);
+    });
+    expect(dispatchShortcut({ key: 'j', code: 'KeyJ' }).defaultPrevented).toBe(true);
+    expect(createHandler).toHaveBeenCalledTimes(1);
+    expect(selectionHandler).toHaveBeenCalledTimes(1);
+  });
+
+  it('dispatches catalog-derived global actions with runtime enabled gates', () => {
+    const enabledHandler = vi.fn();
+    const disabledHandler = vi.fn();
+
+    render(
+      <KeyboardShortcutsProvider platform="other">
+        <RegisteredCatalogShortcut actionId="global.toggleChat" handler={enabledHandler} enabled />
+        <RegisteredCatalogShortcut actionId="ai.quickAsk" handler={disabledHandler} enabled={false} />
+      </KeyboardShortcutsProvider>,
+    );
+
+    expect(dispatchShortcut({ key: 'l', code: 'KeyL', ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(dispatchShortcut({ key: 'ArrowUp', code: 'ArrowUp', ctrlKey: true }).defaultPrevented).toBe(false);
+    expect(enabledHandler).toHaveBeenCalledTimes(1);
+    expect(disabledHandler).not.toHaveBeenCalled();
+  });
+
+  it('honors panel scope priority and editor allowInEditable from catalog metadata', () => {
+    const pageCreate = vi.fn();
+    const panelPrevious = vi.fn();
+    const redo = vi.fn();
+
+    render(
+      <KeyboardShortcutsProvider platform="other">
+        <PageScope>
+          <ShortcutActiveRegion>
+            <button type="button">region</button>
+          </ShortcutActiveRegion>
+          <RegisteredCatalogShortcut actionId="page.create" handler={pageCreate} />
+        </PageScope>
+        <PanelScope>
+          <RegisteredCatalogShortcut actionId="record.previous" handler={panelPrevious} />
+        </PanelScope>
+        <EditorScope>
+          <RegisteredCatalogShortcut actionId="editor.redo" handler={redo} />
+          <input aria-label="editor input" />
+        </EditorScope>
+      </KeyboardShortcutsProvider>,
+    );
+
+    screen.getByRole('button', { name: 'region' }).focus();
+    expect(dispatchShortcut({ key: 'c', code: 'KeyC' }).defaultPrevented).toBe(false);
+    expect(pageCreate).not.toHaveBeenCalled();
+
+    expect(dispatchShortcut({ key: '[', code: 'BracketLeft' }).defaultPrevented).toBe(true);
+    expect(panelPrevious).toHaveBeenCalledTimes(1);
+
+    screen.getByLabelText('editor input').focus();
+    expect(dispatchShortcut({ key: 'y', code: 'KeyY', ctrlKey: true }).defaultPrevented).toBe(true);
+    expect(redo).toHaveBeenCalledTimes(1);
+  });
+
+  it('settings mutators update resolved bindings through provider state', async () => {
+    render(
+      <KeyboardShortcutsProvider platform="other">
+        <SettingsProbe />
+      </KeyboardShortcutsProvider>,
+    );
+
+    await screen.findByTestId('effective');
+    expect(screen.getByTestId('effective').textContent).toBe('mod+k');
+
+    fireEvent.click(screen.getByRole('button', { name: 'rebind' }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('effective').textContent).toBe('mod+j');
+    });
+  });
+});

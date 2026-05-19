@@ -14,8 +14,7 @@ describe('command palette application wiring', () => {
   it('opens the command palette from the registered mod+k shortcut', () => {
     const source = read('server/src/components/search/SearchPalette.tsx');
 
-    expect(source).toContain("id: 'global.search'");
-    expect(source).toContain("defaultBindings: ['mod+k']");
+    expect(source).toContain("useCatalogShortcut('global.search'");
     expect(source).toContain('setIsCommandPaletteOpen(true)');
     expect(source).toContain('<CommandPalette open={isCommandPaletteOpen}');
   });

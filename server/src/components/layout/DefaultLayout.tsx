@@ -27,10 +27,8 @@ import { MspSchedulingCrossFeatureProvider } from '@alga-psa/msp-composition/sch
 import { MspActivityCrossFeatureProvider } from '@alga-psa/msp-composition/workflows';
 import { useTier } from 'server/src/context/TierContext';
 import {
-  useShortcutAction,
-  useShortcutActiveRegion,
+  useCatalogShortcut,
   useShortcutScope,
-  type ShortcutAction,
 } from '@alga-psa/ui/keyboard-shortcuts';
 import { ShortcutHelpDialog } from '@alga-psa/ui/keyboard-shortcuts';
 import { QuickCreateDialog, type QuickCreateType } from './QuickCreateDialog';
@@ -220,14 +218,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
     cancelActiveChatWorkRef.current = null;
   }, [rightSidebarOpen]);
 
-  const toggleChatShortcut = useMemo<ShortcutAction>(() => ({
-    id: 'global.toggleChat',
-    labelKey: 'actions.global.toggleChat.label',
-    groupKey: 'groups.ai',
-    defaultBindings: ['mod+l'],
-    scope: 'global',
-    enabled: aiAssistantAvailable,
-    handler: () => {
+  const toggleChatShortcut = useCallback(() => {
       if (!aiAssistantAvailable) {
         return false;
       }
@@ -238,17 +229,9 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
       }
 
       setRightSidebarOpen(true);
-    },
-  }), [aiAssistantAvailable, requestSidebarClose, rightSidebarOpen]);
+  }, [aiAssistantAvailable, requestSidebarClose, rightSidebarOpen]);
 
-  const quickAskShortcut = useMemo<ShortcutAction>(() => ({
-    id: 'ai.quickAsk',
-    labelKey: 'actions.ai.quickAsk.label',
-    groupKey: 'groups.ai',
-    defaultBindings: ['mod+ArrowUp'],
-    scope: 'global',
-    enabled: aiAssistantAvailable,
-    handler: () => {
+  const quickAskShortcut = useCallback(() => {
       if (!aiAssistantAvailable) {
         return false;
       }
@@ -260,79 +243,36 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
       }
 
       setQuickAskOpen(prev => !prev);
-    },
-  }), [aiAssistantAvailable, rightSidebarOpen]);
+  }, [aiAssistantAvailable, rightSidebarOpen]);
 
-  const openShortcutsShortcut = useMemo<ShortcutAction>(() => ({
-    id: 'global.openShortcuts',
-    labelKey: 'actions.global.openShortcuts.label',
-    groupKey: 'groups.global',
-    defaultBindings: ['?'],
-    scope: 'global',
-    handler: () => {
-      setShortcutsHelpOpen(true);
-    },
-  }), []);
+  const openShortcutsShortcut = useCallback(() => {
+    setShortcutsHelpOpen(true);
+  }, []);
 
-  const quickCreateShortcut = useMemo<ShortcutAction>(() => ({
-    id: 'global.quickCreate',
-    labelKey: 'actions.global.quickCreate.label',
-    groupKey: 'groups.global',
-    defaultBindings: ['c'],
-    scope: 'page',
-    handler: () => {
-      setQuickCreateType('ticket');
-    },
-  }), []);
+  const quickCreateShortcut = useCallback(() => {
+    setQuickCreateType('ticket');
+  }, []);
 
-  const goTicketsShortcut = useMemo<ShortcutAction>(() => ({
-    id: 'navigation.goTickets',
-    labelKey: 'actions.navigation.goTickets.label',
-    groupKey: 'groups.navigation',
-    descriptionKey: 'actions.navigation.goTickets.description',
-    defaultBindings: ['g t'],
-    scope: 'global',
-    sequence: true,
-    handler: () => {
-      router.push('/msp/tickets');
-    },
-  }), [router]);
+  const goTicketsShortcut = useCallback(() => {
+    router.push('/msp/tickets');
+  }, [router]);
 
-  const goAssetsShortcut = useMemo<ShortcutAction>(() => ({
-    id: 'navigation.goAssets',
-    labelKey: 'actions.navigation.goAssets.label',
-    groupKey: 'groups.navigation',
-    descriptionKey: 'actions.navigation.goAssets.description',
-    defaultBindings: ['g a'],
-    scope: 'global',
-    sequence: true,
-    handler: () => {
-      router.push('/msp/assets');
-    },
-  }), [router]);
+  const goAssetsShortcut = useCallback(() => {
+    router.push('/msp/assets');
+  }, [router]);
 
-  const goClientsShortcut = useMemo<ShortcutAction>(() => ({
-    id: 'navigation.goClients',
-    labelKey: 'actions.navigation.goClients.label',
-    groupKey: 'groups.navigation',
-    descriptionKey: 'actions.navigation.goClients.description',
-    defaultBindings: ['g c'],
-    scope: 'global',
-    sequence: true,
-    handler: () => {
-      router.push('/msp/clients');
-    },
-  }), [router]);
+  const goClientsShortcut = useCallback(() => {
+    router.push('/msp/clients');
+  }, [router]);
 
   useShortcutScope('page');
-  useShortcutActiveRegion(true);
-  useShortcutAction(toggleChatShortcut);
-  useShortcutAction(quickAskShortcut);
-  useShortcutAction(openShortcutsShortcut);
-  useShortcutAction(quickCreateShortcut);
-  useShortcutAction(goTicketsShortcut);
-  useShortcutAction(goAssetsShortcut);
-  useShortcutAction(goClientsShortcut);
+  useCatalogShortcut('global.toggleChat', toggleChatShortcut, { enabled: aiAssistantAvailable });
+  useCatalogShortcut('ai.quickAsk', quickAskShortcut, { enabled: aiAssistantAvailable });
+  useCatalogShortcut('global.openShortcuts', openShortcutsShortcut);
+  useCatalogShortcut('global.quickCreate', quickCreateShortcut);
+  useCatalogShortcut('navigation.goTickets', goTicketsShortcut);
+  useCatalogShortcut('navigation.goAssets', goAssetsShortcut);
+  useCatalogShortcut('navigation.goClients', goClientsShortcut);
 
   useEffect(() => {
     const bootstrapChatContext = async () => {

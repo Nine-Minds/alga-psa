@@ -1,4 +1,5 @@
 /* @vitest-environment node */
+/* @behavioralCoverage packages/ui/src/keyboard-shortcuts/gap-hardening.behavior.test.tsx */
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -24,7 +25,7 @@ describe('keyboard shortcuts final regression contract', () => {
 
     for (const relativePath of migratedFiles) {
       const source = read(relativePath);
-      expect(source, relativePath).toContain('useShortcutAction');
+      expect(source, relativePath).toMatch(/use(?:Catalog)?Shortcut/);
       expect(source, relativePath).not.toContain("window.addEventListener('keydown'");
       expect(source, relativePath).not.toContain('window.addEventListener("keydown"');
       expect(source, relativePath).not.toContain("document.addEventListener('keydown'");

@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { Command } from 'cmdk';
 import { Search } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { ShortcutHint, useAriaKeyShortcuts, useShortcutAction, type ShortcutAction } from '@alga-psa/ui/keyboard-shortcuts';
+import { ShortcutHint, useAriaKeyShortcuts, useCatalogShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 import {
   searchAppTypeaheadAction,
@@ -48,18 +48,11 @@ export default function SearchPalette({
     : undefined;
   const searchAriaShortcut = useAriaKeyShortcuts('global.search');
 
-  const searchShortcut = React.useMemo<ShortcutAction>(() => ({
-    id: 'global.search',
-    labelKey: 'actions.global.search.label',
-    groupKey: 'groups.global',
-    defaultBindings: ['mod+k'],
-    scope: 'global',
-    handler: () => {
-      setIsCommandPaletteOpen(true);
-    },
-  }), []);
+  const openCommandPalette = React.useCallback(() => {
+    setIsCommandPaletteOpen(true);
+  }, []);
 
-  useShortcutAction(searchShortcut);
+  useCatalogShortcut('global.search', openCommandPalette);
 
   useEffect(() => {
     if (collapsed || !focusAfterExpand) {

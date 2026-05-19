@@ -1,4 +1,4 @@
-import type { ShortcutBindingDefaults, ShortcutScope } from './types';
+import type { ShortcutAction, ShortcutBindingDefaults, ShortcutScope } from './types';
 import { normalizeDefaultBindings } from './registry';
 import type { Platform } from './types';
 
@@ -98,6 +98,23 @@ export const OPTIONAL_ALTERNATE_BINDINGS: Readonly<Record<string, readonly strin
 
 export function getShortcutCatalogEntry(id: string): ShortcutActionCatalogEntry | undefined {
   return SHORTCUT_ACTION_CATALOG.find((candidate) => candidate.id === id);
+}
+
+export function createShortcutAction(
+  id: string,
+  handler: ShortcutAction['handler'],
+  options: Pick<ShortcutAction, 'enabled'> = {},
+): ShortcutAction {
+  const catalogEntry = getShortcutCatalogEntry(id);
+  if (!catalogEntry) {
+    throw new Error(`Unknown keyboard shortcut action: ${id}`);
+  }
+
+  return {
+    ...catalogEntry,
+    enabled: options.enabled,
+    handler,
+  };
 }
 
 export function getDefaultBindingsForPlatform(

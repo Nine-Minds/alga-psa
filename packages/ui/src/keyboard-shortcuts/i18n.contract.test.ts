@@ -1,4 +1,5 @@
 /* @vitest-environment node */
+/* @behavioralCoverage packages/ui/src/keyboard-shortcuts/i18n.contract.test.ts */
 
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';

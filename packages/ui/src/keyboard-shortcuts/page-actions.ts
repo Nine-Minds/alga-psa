@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { getShortcutCatalogEntry } from './catalog';
+import { createShortcutAction } from './catalog';
 import { useShortcutAction } from './provider';
 import type { ShortcutAction } from './types';
 
@@ -15,16 +15,7 @@ function useCatalogPageShortcut(
   options: PageShortcutOptions = {},
 ): void {
   const action = useMemo<ShortcutAction>(() => {
-    const entry = getShortcutCatalogEntry(id);
-    if (!entry) {
-      throw new Error(`Missing keyboard shortcut catalog entry: ${id}`);
-    }
-
-    return {
-      ...entry,
-      enabled: options.enabled,
-      handler,
-    };
+    return createShortcutAction(id, handler, { enabled: options.enabled });
   }, [handler, id, options.enabled]);
 
   useShortcutAction(action);

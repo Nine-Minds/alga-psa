@@ -546,3 +546,32 @@ items are `implemented: true` (one-commit-per-group rule).
   `node scripts/validate-translations.cjs` (pre-existing Polish plural
   warnings only); and
   `npx nx graph --file=/tmp/project-graph.json && node scripts/guard-keyboard-shortcuts-boundary.mjs --graph /tmp/project-graph.json`.
+
+## 2026-05-19 — gap-hardening group implementation
+- F367-F369: Added catalog-derived `createShortcutAction` and
+  `useCatalogShortcut`, then migrated SearchPalette, DefaultLayout, both
+  DrawerContexts, TicketNavigation, AssetDashboardClient, and invoice designer
+  shortcuts away from hand-authored metadata. The boundary guard now also
+  checks these registration sites for hand-authored shortcut metadata and
+  unknown catalog IDs.
+- F370-F371: Removed the unconditional `useShortcutActiveRegion(true)` from
+  `DefaultLayout`. Added shared `ShortcutActiveRegion`, which registers an
+  active region only while focus is within the real list region, and applied it
+  to ticket/client/contact/interaction/project/asset list surfaces.
+- F372-F373: Added behavioral gap-hardening coverage for global, panel, editor,
+  active-region, and settings preference behavior; added a contract-test guard
+  so grep-only contract tests must carry behavioral coverage. Existing source
+  smoke tests were updated to assert the catalog-hook wiring rather than stale
+  metadata literals.
+- Checks passed:
+  `npx vitest run --config vitest.config.ts src/keyboard-shortcuts`;
+  `node --test scripts/tests/guard-keyboard-shortcuts-contract-tests.test.mjs scripts/tests/guard-keyboard-shortcuts-boundary.test.mjs`;
+  `node scripts/guard-keyboard-shortcuts-contract-tests.mjs`;
+  `npx tsc --noEmit -p packages/ui/tsconfig.json`;
+  `npx tsc --noEmit -p packages/tickets/tsconfig.json`;
+  `npx tsc --noEmit -p packages/clients/tsconfig.json`;
+  `npx tsc --noEmit -p packages/assets/tsconfig.json`;
+  `npx tsc --noEmit -p packages/projects/tsconfig.json`;
+  `npx tsc --noEmit -p packages/billing/tsconfig.json`;
+  `npm run typecheck --workspace server`; and
+  `npx nx graph --file=/tmp/project-graph.json && node scripts/guard-keyboard-shortcuts-boundary.mjs --graph /tmp/project-graph.json && node scripts/guard-keyboard-shortcuts-contract-tests.mjs`.

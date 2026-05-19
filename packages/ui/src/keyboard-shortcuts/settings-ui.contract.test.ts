@@ -1,4 +1,5 @@
 /* @vitest-environment node */
+/* @behavioralCoverage packages/ui/src/keyboard-shortcuts/customization-wiring.test.tsx */
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';

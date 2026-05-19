@@ -34,7 +34,7 @@ import { getAllClientsForAssets } from '../actions/clientLookupActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { QuickAddAsset } from './QuickAddAsset';
 import { AssetCommandPalette } from './AssetCommandPalette';
-import { usePageCreateShortcut, useShortcutAction, useShortcutScope, type ShortcutAction } from '@alga-psa/ui/keyboard-shortcuts';
+import { ShortcutActiveRegion, useCatalogShortcut, usePageCreateShortcut, useShortcutScope } from '@alga-psa/ui/keyboard-shortcuts';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
 import { RmmStatusIndicator } from './RmmStatusIndicator';
 import {
@@ -281,20 +281,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     }
   }, [activeDrawerTab, drawerAssetId, loadDrawerData]);
 
-  const assetCommandPaletteShortcut = useMemo<ShortcutAction>(() => ({
-    id: 'assets.commandPalette',
-    labelKey: 'actions.assets.commandPalette.label',
-    groupKey: 'groups.assets',
-    defaultBindings: ['mod+shift+k'],
-    scope: 'page',
-    handler: () => {
-      setIsCommandPaletteOpen(prev => !prev);
-    },
-  }), []);
+  const assetCommandPaletteShortcut = useCallback(() => {
+    setIsCommandPaletteOpen(prev => !prev);
+  }, []);
 
   useShortcutScope('page');
   usePageCreateShortcut(triggerQuickAdd);
-  useShortcutAction(assetCommandPaletteShortcut);
+  useCatalogShortcut('assets.commandPalette', assetCommandPaletteShortcut);
 
   const assetsByClient = useMemo(() => {
     return assets.reduce((acc, asset) => {
@@ -1313,22 +1306,24 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               />
             </div>
 
-            <DataTable
-              id="asset-table"
-              data={assets}
-              columns={columns}
-              pagination
-              pageSize={pageSize}
-              currentPage={currentPage}
-              totalItems={totalAssets}
-              onPageChange={setCurrentPage}
-              onItemsPerPageChange={setPageSize}
-              onRowClick={(asset) => openAssetRecordPage(asset.asset_id)}
-              manualSorting={true}
-              sortBy={sortBy}
-              sortDirection={sortDirection}
-              onSortChange={handleTableSortChange}
-            />
+            <ShortcutActiveRegion id="assets-shortcut-region" className="outline-none">
+              <DataTable
+                id="asset-table"
+                data={assets}
+                columns={columns}
+                pagination
+                pageSize={pageSize}
+                currentPage={currentPage}
+                totalItems={totalAssets}
+                onPageChange={setCurrentPage}
+                onItemsPerPageChange={setPageSize}
+                onRowClick={(asset) => openAssetRecordPage(asset.asset_id)}
+                manualSorting={true}
+                sortBy={sortBy}
+                sortDirection={sortDirection}
+                onSortChange={handleTableSortChange}
+              />
+            </ShortcutActiveRegion>
             <div className="app-print-root app-print-only">
               <PrintableTable
                 title={selectedAssetIds.length > 0
