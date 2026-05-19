@@ -437,3 +437,10 @@ items are `implemented: true` (one-commit-per-group rule).
   `gap-hardening` items are authored in plain ASCII to avoid adding to it).
   These are pre-existing and out of scope for `gap-hardening` — flag for the
   branch owner, do not bundle into this group's commit.
+
+## 2026-05-19 — navigation group verification
+- T095: Added `packages/ui/src/keyboard-shortcuts/navigation.test.tsx` to
+  exercise the catalogued `navigation.goTickets`/`goAssets`/`goClients`
+  sequence actions through `KeyboardShortcutsProvider`. The test verifies
+  `g t`, `g a`, and `g c` dispatch to their handlers and that the same
+  sequence is suppressed while typing in an input.
