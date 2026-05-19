@@ -87,11 +87,11 @@ async function handleReports(request: ExecuteRequest, host: HostBindings, _param
     try {
       const body = JSON.parse(decoder.decode(new Uint8Array(request.http.body)));
       if (body.__action === 'create' || body.name || body.report_definition) {
-        return handleCreateReport(request, host, _params);
+        return handleCreateReport(request, host);
       }
     } catch { /* treat as list */ }
   }
-  return handleListReports(request, host, _params);
+  return handleListReports(request, host);
 }
 
 // Dispatcher for /reports/:id endpoint
