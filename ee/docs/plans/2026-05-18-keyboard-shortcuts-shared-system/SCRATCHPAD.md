@@ -286,6 +286,16 @@ decisions; update earlier notes when a decision changes.
   `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/settings-ui.contract.test.ts`
   from `packages/ui` passed (3 tests);
   `npm run typecheck --workspace server` passed.
+- (2026-05-19) Completed help-a11y group F180-F187/T180-T187. Added shared
+  `Kbd`, `ShortcutHint`, shortcut formatting, `aria-keyshortcuts` conversion,
+  and `ShortcutHelpDialog`. The search input now exposes `aria-keyshortcuts`
+  and a visible hint, and `global.openShortcuts` renders the shared help
+  dialog instead of the temporary placeholder.
+- (2026-05-19) Verification for help-a11y:
+  `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/display.test.tsx`
+  from `packages/ui` passed (3 tests);
+  `npx tsc --noEmit -p packages/ui/tsconfig.json` passed;
+  `npm run typecheck --workspace server` passed.
 
 ## Open Questions
 

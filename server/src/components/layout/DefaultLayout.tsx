@@ -32,6 +32,7 @@ import {
   useShortcutScope,
   type ShortcutAction,
 } from '@alga-psa/ui/keyboard-shortcuts';
+import { ShortcutHelpDialog } from '@alga-psa/ui/keyboard-shortcuts';
 import { QuickCreateDialog, type QuickCreateType } from './QuickCreateDialog';
 
 interface DefaultLayoutProps {
@@ -540,28 +541,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
                   hf={null}
                 />
               ) : null}
-              {shortcutsHelpOpen ? (
-                <div
-                  role="dialog"
-                  aria-modal="true"
-                  aria-label="Keyboard shortcuts"
-                  id="keyboard-shortcuts-help-dialog"
-                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-                  onClick={() => setShortcutsHelpOpen(false)}
-                >
-                  <div className="rounded-md bg-white p-4 shadow-lg" onClick={(event) => event.stopPropagation()}>
-                    <h2 className="text-lg font-semibold">Keyboard shortcuts</h2>
-                    <button
-                      id="keyboard-shortcuts-help-close"
-                      type="button"
-                      className="mt-4 rounded border px-3 py-1"
-                      onClick={() => setShortcutsHelpOpen(false)}
-                    >
-                      Close
-                    </button>
-                  </div>
-                </div>
-              ) : null}
+              <ShortcutHelpDialog isOpen={shortcutsHelpOpen} onClose={() => setShortcutsHelpOpen(false)} />
               {quickCreateType ? (
                 <QuickCreateDialog
                   type={quickCreateType}

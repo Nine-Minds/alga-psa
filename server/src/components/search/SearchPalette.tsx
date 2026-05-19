@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { Command } from 'cmdk';
 import { Search } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useShortcutAction, type ShortcutAction } from '@alga-psa/ui/keyboard-shortcuts';
+import { ShortcutHint, useAriaKeyShortcuts, useShortcutAction, type ShortcutAction } from '@alga-psa/ui/keyboard-shortcuts';
 
 import {
   searchAppTypeaheadAction,
@@ -44,6 +44,7 @@ export default function SearchPalette({
       ? `app-search-option-${toDomIdPart(visibleResults[activeIndex].type)}-${toDomIdPart(visibleResults[activeIndex].id)}`
       : 'app-search-option-see-all-results'
     : undefined;
+  const searchAriaShortcut = useAriaKeyShortcuts('global.search');
 
   const searchShortcut = React.useMemo<ShortcutAction>(() => ({
     id: 'global.search',
@@ -199,12 +200,16 @@ export default function SearchPalette({
             aria-expanded={isOpen}
             aria-controls="app-search-typeahead-list"
             aria-activedescendant={activeDescendantId}
+            aria-keyshortcuts={searchAriaShortcut}
             value={query}
             onValueChange={handleQueryChange}
             onKeyDown={handleInputKeyDown}
             placeholder={t('search.placeholder')}
             className="h-10 w-full rounded-md border border-gray-500/70 bg-white/10 py-2 pl-8 pr-3 text-sm text-sidebar-text outline-none placeholder:text-gray-400 focus:border-primary-400 focus:ring-2 focus:ring-primary-500/30"
           />
+          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-300">
+            <ShortcutHint actionId="global.search" />
+          </span>
         </div>
         {isOpen && (
           <Command.List
