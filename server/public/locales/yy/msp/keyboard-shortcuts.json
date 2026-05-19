@@ -1,0 +1,210 @@
+{
+  "settings": {
+    "title": "55555",
+    "description": "55555",
+    "loading": "55555",
+    "capturePrompt": "55555",
+    "columns": {
+      "action": "55555",
+      "scope": "55555",
+      "default": "55555",
+      "effective": "55555",
+      "enabled": "55555",
+      "reset": "55555"
+    },
+    "actions": {
+      "resetAll": "55555",
+      "replace": "55555"
+    },
+    "messages": {
+      "bindingUpdated": "55555",
+      "enabledUpdated": "55555",
+      "resetOne": "55555",
+      "resetAll": "55555"
+    },
+    "errors": {
+      "saveFailed": "55555"
+    },
+    "resetAll": {
+      "title": "55555",
+      "message": "55555"
+    },
+    "conflict": {
+      "title": "55555",
+      "message": "55555 {{binding}} 55555 {{action}} 55555"
+    },
+    "advisory": {
+      "hostileCombo": "55555 {{binding}} 55555 {{action}} 55555"
+    }
+  },
+  "help": {
+    "title": "55555",
+    "close": "55555",
+    "custom": "55555"
+  },
+  "groups": {
+    "global": "55555",
+    "ai": "55555",
+    "page": "55555",
+    "selection": "55555",
+    "navigation": "55555",
+    "assets": "55555",
+    "dialog": "55555",
+    "panel": "55555",
+    "record": "55555",
+    "editor": "55555"
+  },
+  "actions": {
+    "global": {
+      "search": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "toggleChat": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "openShortcuts": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "quickCreate": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "ai": {
+      "quickAsk": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "page": {
+      "save": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "selection": {
+      "previous": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "next": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "open": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "navigation": {
+      "goTickets": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "goAssets": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "goClients": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "assets": {
+      "commandPalette": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "dialog": {
+      "cancel": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "panel": {
+      "close": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "drawer": {
+      "historyBack": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "historyForward": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "record": {
+      "previous": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "next": {
+        "label": "55555",
+        "description": "55555"
+      }
+    },
+    "editor": {
+      "undo": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "redo": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "save": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "deleteSelection": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "cancel": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "moveUp": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "moveDown": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "moveLeft": {
+        "label": "55555",
+        "description": "55555"
+      },
+      "moveRight": {
+        "label": "55555",
+        "description": "55555"
+      }
+    }
+  },
+  "platform": {
+    "modifiers": {
+      "meta": "55555",
+      "ctrl": "55555",
+      "alt": "55555",
+      "shift": "55555"
+    },
+    "keys": {
+      "space": "55555"
+    },
+    "aria": {
+      "control": "55555",
+      "meta": "55555",
+      "alt": "55555",
+      "shift": "55555"
+    }
+  }
+}

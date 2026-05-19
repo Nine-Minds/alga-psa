@@ -1,0 +1,210 @@
+{
+  "settings": {
+    "title": "Atajos de teclado",
+    "description": "Personaliza los atajos de teclado para este dispositivo y esta cuenta.",
+    "loading": "Cargando atajos de teclado...",
+    "capturePrompt": "Pulsa las teclas",
+    "columns": {
+      "action": "Acción",
+      "scope": "Ámbito",
+      "default": "Predeterminado",
+      "effective": "Atajo efectivo",
+      "enabled": "Activado",
+      "reset": "Restablecer"
+    },
+    "actions": {
+      "resetAll": "Restablecer todo",
+      "replace": "Reemplazar"
+    },
+    "messages": {
+      "bindingUpdated": "Atajo de teclado actualizado",
+      "enabledUpdated": "Atajo de teclado actualizado",
+      "resetOne": "Atajo de teclado restablecido",
+      "resetAll": "Atajos de teclado restablecidos"
+    },
+    "errors": {
+      "saveFailed": "No se pudieron guardar las preferencias de atajos de teclado"
+    },
+    "resetAll": {
+      "title": "¿Restablecer todos los atajos?",
+      "message": "Se eliminarán todos los atajos de teclado personalizados."
+    },
+    "conflict": {
+      "title": "¿Reemplazar el atajo existente?",
+      "message": "{{binding}} ya está asignado a {{action}}."
+    },
+    "advisory": {
+      "hostileCombo": "{{binding}} puede entrar en conflicto con atajos del navegador o del sistema para {{action}}."
+    }
+  },
+  "help": {
+    "title": "Atajos de teclado",
+    "close": "Cerrar atajos de teclado",
+    "custom": "Personalizado"
+  },
+  "groups": {
+    "global": "Global",
+    "ai": "IA",
+    "page": "Página",
+    "selection": "Selección",
+    "navigation": "Navegación",
+    "assets": "Activos",
+    "dialog": "Diálogo",
+    "panel": "Panel",
+    "record": "Registro",
+    "editor": "Editor"
+  },
+  "actions": {
+    "global": {
+      "search": {
+        "label": "Buscar",
+        "description": "Abrir la paleta de búsqueda global."
+      },
+      "toggleChat": {
+        "label": "Alternar chat de IA",
+        "description": "Abrir el asistente de IA o enfocar el chat actual."
+      },
+      "openShortcuts": {
+        "label": "Abrir atajos de teclado",
+        "description": "Mostrar la referencia de atajos de teclado."
+      },
+      "quickCreate": {
+        "label": "Creación rápida",
+        "description": "Abrir el diálogo de creación rápida."
+      }
+    },
+    "ai": {
+      "quickAsk": {
+        "label": "Pregunta rápida a IA",
+        "description": "Iniciar una consulta rápida del asistente de IA."
+      }
+    },
+    "page": {
+      "save": {
+        "label": "Guardar página",
+        "description": "Guardar la página actual."
+      }
+    },
+    "selection": {
+      "previous": {
+        "label": "Elemento anterior",
+        "description": "Mover la selección al elemento anterior."
+      },
+      "next": {
+        "label": "Elemento siguiente",
+        "description": "Mover la selección al elemento siguiente."
+      },
+      "open": {
+        "label": "Abrir selección",
+        "description": "Abrir el elemento seleccionado."
+      }
+    },
+    "navigation": {
+      "goTickets": {
+        "label": "Ir a tickets",
+        "description": "Navegar a la página de tickets."
+      },
+      "goAssets": {
+        "label": "Ir a activos",
+        "description": "Navegar a la página de activos."
+      },
+      "goClients": {
+        "label": "Ir a clientes",
+        "description": "Navegar a la página de clientes."
+      }
+    },
+    "assets": {
+      "commandPalette": {
+        "label": "Paleta de comandos de activos",
+        "description": "Abrir comandos de la página de activos."
+      }
+    },
+    "dialog": {
+      "cancel": {
+        "label": "Cancelar diálogo",
+        "description": "Cerrar o cancelar el diálogo activo."
+      }
+    },
+    "panel": {
+      "close": {
+        "label": "Cerrar panel",
+        "description": "Cerrar el panel o cajón activo."
+      }
+    },
+    "drawer": {
+      "historyBack": {
+        "label": "Atrás en cajón",
+        "description": "Retroceder en el historial del cajón."
+      },
+      "historyForward": {
+        "label": "Adelante en cajón",
+        "description": "Avanzar en el historial del cajón."
+      }
+    },
+    "record": {
+      "previous": {
+        "label": "Registro anterior",
+        "description": "Abrir el registro anterior."
+      },
+      "next": {
+        "label": "Registro siguiente",
+        "description": "Abrir el registro siguiente."
+      }
+    },
+    "editor": {
+      "undo": {
+        "label": "Deshacer",
+        "description": "Deshacer el cambio del editor."
+      },
+      "redo": {
+        "label": "Rehacer",
+        "description": "Rehacer el cambio del editor."
+      },
+      "save": {
+        "label": "Guardar editor",
+        "description": "Guardar el contenido del editor."
+      },
+      "deleteSelection": {
+        "label": "Eliminar selección",
+        "description": "Eliminar el elemento seleccionado del editor."
+      },
+      "cancel": {
+        "label": "Cancelar acción del editor",
+        "description": "Cancelar la acción activa del editor."
+      },
+      "moveUp": {
+        "label": "Mover arriba",
+        "description": "Mover el elemento seleccionado hacia arriba."
+      },
+      "moveDown": {
+        "label": "Mover abajo",
+        "description": "Mover el elemento seleccionado hacia abajo."
+      },
+      "moveLeft": {
+        "label": "Mover a la izquierda",
+        "description": "Mover el elemento seleccionado a la izquierda."
+      },
+      "moveRight": {
+        "label": "Mover a la derecha",
+        "description": "Mover el elemento seleccionado a la derecha."
+      }
+    }
+  },
+  "platform": {
+    "modifiers": {
+      "meta": "Meta",
+      "ctrl": "Ctrl",
+      "alt": "Alt",
+      "shift": "Mayús"
+    },
+    "keys": {
+      "space": "Espacio"
+    },
+    "aria": {
+      "control": "Control",
+      "meta": "Meta",
+      "alt": "Alt",
+      "shift": "Shift"
+    }
+  }
+}

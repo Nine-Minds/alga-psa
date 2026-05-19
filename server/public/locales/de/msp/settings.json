@@ -25,7 +25,8 @@
     "teamManagement": "Team-Verwaltung",
     "loadingTeam": "Team-Konfiguration wird geladen...",
     "loadingExperimental": "Experimentelle Funktionskonfiguration wird geladen...",
-    "loadingInteractions": "Interaktionseinstellungen werden geladen..."
+    "loadingInteractions": "Interaktionseinstellungen werden geladen...",
+    "keyboardShortcuts": "Tastenkürzel"
   },
   "unsavedChanges": {
     "title": "Ungespeicherte Änderungen",

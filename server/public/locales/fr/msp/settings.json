@@ -25,7 +25,8 @@
     "teamManagement": "Gestion d'équipe",
     "loadingTeam": "Chargement de la configuration de l'équipe...",
     "loadingExperimental": "Chargement de la configuration des fonctionnalités expérimentales...",
-    "loadingInteractions": "Chargement des paramètres d'interaction..."
+    "loadingInteractions": "Chargement des paramètres d'interaction...",
+    "keyboardShortcuts": "Raccourcis clavier"
   },
   "unsavedChanges": {
     "title": "Modifications non enregistrées",

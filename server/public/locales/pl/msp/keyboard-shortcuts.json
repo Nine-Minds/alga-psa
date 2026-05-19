@@ -1,0 +1,210 @@
+{
+  "settings": {
+    "title": "Skróty klawiaturowe",
+    "description": "Dostosuj skróty klawiaturowe dla tego urządzenia i konta.",
+    "loading": "Ładowanie skrótów klawiaturowych...",
+    "capturePrompt": "Naciśnij klawisze",
+    "columns": {
+      "action": "Akcja",
+      "scope": "Zakres",
+      "default": "Domyślne",
+      "effective": "Aktywny skrót",
+      "enabled": "Włączone",
+      "reset": "Resetuj"
+    },
+    "actions": {
+      "resetAll": "Resetuj wszystko",
+      "replace": "Zastąp"
+    },
+    "messages": {
+      "bindingUpdated": "Skrót klawiaturowy zaktualizowany",
+      "enabledUpdated": "Skrót klawiaturowy zaktualizowany",
+      "resetOne": "Skrót klawiaturowy zresetowany",
+      "resetAll": "Skróty klawiaturowe zresetowane"
+    },
+    "errors": {
+      "saveFailed": "Nie udało się zapisać preferencji skrótów klawiaturowych"
+    },
+    "resetAll": {
+      "title": "Zresetować wszystkie skróty?",
+      "message": "Wszystkie niestandardowe skróty klawiaturowe zostaną usunięte."
+    },
+    "conflict": {
+      "title": "Zastąpić istniejący skrót?",
+      "message": "{{binding}} jest już przypisany do {{action}}."
+    },
+    "advisory": {
+      "hostileCombo": "{{binding}} może kolidować ze skrótami przeglądarki lub systemu dla {{action}}."
+    }
+  },
+  "help": {
+    "title": "Skróty klawiaturowe",
+    "close": "Zamknij skróty klawiaturowe",
+    "custom": "Niestandardowy"
+  },
+  "groups": {
+    "global": "Globalne",
+    "ai": "AI",
+    "page": "Strona",
+    "selection": "Zaznaczenie",
+    "navigation": "Nawigacja",
+    "assets": "Zasoby",
+    "dialog": "Okno dialogowe",
+    "panel": "Panel",
+    "record": "Rekord",
+    "editor": "Edytor"
+  },
+  "actions": {
+    "global": {
+      "search": {
+        "label": "Szukaj",
+        "description": "Otwórz globalną paletę wyszukiwania."
+      },
+      "toggleChat": {
+        "label": "Przełącz czat AI",
+        "description": "Otwórz asystenta AI albo ustaw fokus na bieżącym czacie."
+      },
+      "openShortcuts": {
+        "label": "Otwórz skróty klawiaturowe",
+        "description": "Pokaż listę skrótów klawiaturowych."
+      },
+      "quickCreate": {
+        "label": "Szybkie tworzenie",
+        "description": "Otwórz okno szybkiego tworzenia."
+      }
+    },
+    "ai": {
+      "quickAsk": {
+        "label": "Szybkie pytanie do AI",
+        "description": "Rozpocznij szybkie pytanie do asystenta AI."
+      }
+    },
+    "page": {
+      "save": {
+        "label": "Zapisz stronę",
+        "description": "Zapisz bieżącą stronę."
+      }
+    },
+    "selection": {
+      "previous": {
+        "label": "Poprzedni element",
+        "description": "Przenieś zaznaczenie do poprzedniego elementu."
+      },
+      "next": {
+        "label": "Następny element",
+        "description": "Przenieś zaznaczenie do następnego elementu."
+      },
+      "open": {
+        "label": "Otwórz zaznaczenie",
+        "description": "Otwórz zaznaczony element."
+      }
+    },
+    "navigation": {
+      "goTickets": {
+        "label": "Przejdź do zgłoszeń",
+        "description": "Przejdź do strony zgłoszeń."
+      },
+      "goAssets": {
+        "label": "Przejdź do zasobów",
+        "description": "Przejdź do strony zasobów."
+      },
+      "goClients": {
+        "label": "Przejdź do klientów",
+        "description": "Przejdź do strony klientów."
+      }
+    },
+    "assets": {
+      "commandPalette": {
+        "label": "Paleta poleceń zasobów",
+        "description": "Otwórz polecenia strony zasobów."
+      }
+    },
+    "dialog": {
+      "cancel": {
+        "label": "Anuluj okno dialogowe",
+        "description": "Zamknij lub anuluj aktywne okno dialogowe."
+      }
+    },
+    "panel": {
+      "close": {
+        "label": "Zamknij panel",
+        "description": "Zamknij aktywny panel lub szufladę."
+      }
+    },
+    "drawer": {
+      "historyBack": {
+        "label": "Szuflada wstecz",
+        "description": "Wróć w historii szuflady."
+      },
+      "historyForward": {
+        "label": "Szuflada dalej",
+        "description": "Przejdź dalej w historii szuflady."
+      }
+    },
+    "record": {
+      "previous": {
+        "label": "Poprzedni rekord",
+        "description": "Otwórz poprzedni rekord."
+      },
+      "next": {
+        "label": "Następny rekord",
+        "description": "Otwórz następny rekord."
+      }
+    },
+    "editor": {
+      "undo": {
+        "label": "Cofnij",
+        "description": "Cofnij zmianę w edytorze."
+      },
+      "redo": {
+        "label": "Ponów",
+        "description": "Ponów zmianę w edytorze."
+      },
+      "save": {
+        "label": "Zapisz edytor",
+        "description": "Zapisz zawartość edytora."
+      },
+      "deleteSelection": {
+        "label": "Usuń zaznaczenie",
+        "description": "Usuń zaznaczony element edytora."
+      },
+      "cancel": {
+        "label": "Anuluj akcję edytora",
+        "description": "Anuluj aktywną akcję edytora."
+      },
+      "moveUp": {
+        "label": "Przenieś w górę",
+        "description": "Przenieś zaznaczony element edytora w górę."
+      },
+      "moveDown": {
+        "label": "Przenieś w dół",
+        "description": "Przenieś zaznaczony element edytora w dół."
+      },
+      "moveLeft": {
+        "label": "Przenieś w lewo",
+        "description": "Przenieś zaznaczony element edytora w lewo."
+      },
+      "moveRight": {
+        "label": "Przenieś w prawo",
+        "description": "Przenieś zaznaczony element edytora w prawo."
+      }
+    }
+  },
+  "platform": {
+    "modifiers": {
+      "meta": "Meta",
+      "ctrl": "Ctrl",
+      "alt": "Alt",
+      "shift": "Shift"
+    },
+    "keys": {
+      "space": "Spacja"
+    },
+    "aria": {
+      "control": "Control",
+      "meta": "Meta",
+      "alt": "Alt",
+      "shift": "Shift"
+    }
+  }
+}

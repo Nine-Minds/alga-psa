@@ -25,7 +25,8 @@
     "teamManagement": "Gestione team",
     "loadingTeam": "Caricamento configurazione team...",
     "loadingExperimental": "Caricamento configurazione funzionalità sperimentali...",
-    "loadingInteractions": "Caricamento impostazioni interazioni..."
+    "loadingInteractions": "Caricamento impostazioni interazioni...",
+    "keyboardShortcuts": "Scorciatoie da tastiera"
   },
   "unsavedChanges": {
     "title": "Modifiche non salvate",

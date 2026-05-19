@@ -25,7 +25,8 @@
     "teamManagement": "Teambeheer",
     "loadingTeam": "Teamconfiguratie laden...",
     "loadingExperimental": "Configuratie experimentele functies laden...",
-    "loadingInteractions": "Interactie-instellingen laden..."
+    "loadingInteractions": "Interactie-instellingen laden...",
+    "keyboardShortcuts": "Sneltoetsen"
   },
   "unsavedChanges": {
     "title": "Niet-opgeslagen wijzigingen",

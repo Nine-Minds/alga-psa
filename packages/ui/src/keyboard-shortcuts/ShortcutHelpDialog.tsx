@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X } from 'lucide-react';
+import { useTranslation } from '../lib/i18n/client';
 import { SHORTCUT_ACTION_CATALOG, getDefaultBindingsForPlatform } from './catalog';
 import { Kbd } from './display';
 import { useClientPlatform } from './platform';
@@ -13,6 +14,7 @@ interface ShortcutHelpDialogProps {
 }
 
 export function ShortcutHelpDialog({ isOpen, onClose, disabledActionIds = [] }: ShortcutHelpDialogProps): React.JSX.Element | null {
+  const { t } = useTranslation('msp/keyboard-shortcuts');
   const platform = useClientPlatform('other');
   if (!isOpen) return null;
   const disabled = new Set(disabledActionIds);
@@ -27,19 +29,19 @@ export function ShortcutHelpDialog({ isOpen, onClose, disabledActionIds = [] }: 
     <div role="dialog" aria-modal="true" aria-labelledby="keyboard-shortcuts-help-title" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="max-h-[80vh] w-full max-w-3xl overflow-auto rounded-md bg-white p-6 shadow-lg">
         <div className="mb-4 flex items-center justify-between">
-          <h2 id="keyboard-shortcuts-help-title" className="text-lg font-semibold">Keyboard shortcuts</h2>
-          <button id="keyboard-shortcuts-help-close" type="button" onClick={onClose} aria-label="Close keyboard shortcuts">
+          <h2 id="keyboard-shortcuts-help-title" className="text-lg font-semibold">{t('help.title')}</h2>
+          <button id="keyboard-shortcuts-help-close" type="button" onClick={onClose} aria-label={t('help.close')}>
             <X className="h-4 w-4" />
           </button>
         </div>
         <div className="space-y-5">
           {Array.from(groups.entries()).map(([groupKey, actions]) => (
             <section key={groupKey}>
-              <h3 className="mb-2 text-sm font-semibold">{groupKey.replace('groups.', '')}</h3>
+              <h3 className="mb-2 text-sm font-semibold">{t(groupKey)}</h3>
               <div className="space-y-2">
                 {actions.map((action) => (
                   <div key={action.id} className="flex items-center justify-between gap-4 text-sm">
-                    <span>{action.id}</span>
+                    <span>{t(action.labelKey)}</span>
                     <span className="flex gap-1">
                       {getDefaultBindingsForPlatform(action, platform).map((binding) => <Kbd key={binding} binding={binding} />)}
                     </span>

@@ -1,0 +1,210 @@
+{
+  "settings": {
+    "title": "Tastenkürzel",
+    "description": "Passen Sie Tastenkürzel für dieses Gerät und Konto an.",
+    "loading": "Tastenkürzel werden geladen...",
+    "capturePrompt": "Tasten drücken",
+    "columns": {
+      "action": "Aktion",
+      "scope": "Bereich",
+      "default": "Standard",
+      "effective": "Aktives Kürzel",
+      "enabled": "Aktiviert",
+      "reset": "Zurücksetzen"
+    },
+    "actions": {
+      "resetAll": "Alle zurücksetzen",
+      "replace": "Ersetzen"
+    },
+    "messages": {
+      "bindingUpdated": "Tastenkürzel aktualisiert",
+      "enabledUpdated": "Tastenkürzel aktualisiert",
+      "resetOne": "Tastenkürzel zurückgesetzt",
+      "resetAll": "Tastenkürzel zurückgesetzt"
+    },
+    "errors": {
+      "saveFailed": "Tastenkürzel-Einstellungen konnten nicht gespeichert werden"
+    },
+    "resetAll": {
+      "title": "Alle Tastenkürzel zurücksetzen?",
+      "message": "Alle benutzerdefinierten Tastenkürzel werden entfernt."
+    },
+    "conflict": {
+      "title": "Vorhandenes Kürzel ersetzen?",
+      "message": "{{binding}} ist bereits {{action}} zugewiesen."
+    },
+    "advisory": {
+      "hostileCombo": "{{binding}} kann mit Browser- oder Systemkürzeln für {{action}} kollidieren."
+    }
+  },
+  "help": {
+    "title": "Tastenkürzel",
+    "close": "Tastenkürzel schließen",
+    "custom": "Benutzerdefiniert"
+  },
+  "groups": {
+    "global": "Global",
+    "ai": "KI",
+    "page": "Seite",
+    "selection": "Auswahl",
+    "navigation": "Navigation",
+    "assets": "Assets",
+    "dialog": "Dialog",
+    "panel": "Bereich",
+    "record": "Datensatz",
+    "editor": "Editor"
+  },
+  "actions": {
+    "global": {
+      "search": {
+        "label": "Suchen",
+        "description": "Globale Suchpalette öffnen."
+      },
+      "toggleChat": {
+        "label": "KI-Chat umschalten",
+        "description": "Den KI-Assistenten öffnen oder den aktuellen Chat fokussieren."
+      },
+      "openShortcuts": {
+        "label": "Tastenkürzel öffnen",
+        "description": "Die Tastenkürzel-Referenz anzeigen."
+      },
+      "quickCreate": {
+        "label": "Schnellerfassung",
+        "description": "Den Dialog zur Schnellerfassung öffnen."
+      }
+    },
+    "ai": {
+      "quickAsk": {
+        "label": "KI schnell fragen",
+        "description": "Eine schnelle Anfrage an den KI-Assistenten starten."
+      }
+    },
+    "page": {
+      "save": {
+        "label": "Seite speichern",
+        "description": "Die aktuelle Seite speichern."
+      }
+    },
+    "selection": {
+      "previous": {
+        "label": "Vorheriges Element",
+        "description": "Die Auswahl zum vorherigen Element bewegen."
+      },
+      "next": {
+        "label": "Nächstes Element",
+        "description": "Die Auswahl zum nächsten Element bewegen."
+      },
+      "open": {
+        "label": "Auswahl öffnen",
+        "description": "Das ausgewählte Element öffnen."
+      }
+    },
+    "navigation": {
+      "goTickets": {
+        "label": "Zu Tickets",
+        "description": "Zur Ticketseite wechseln."
+      },
+      "goAssets": {
+        "label": "Zu Assets",
+        "description": "Zur Assetseite wechseln."
+      },
+      "goClients": {
+        "label": "Zu Kunden",
+        "description": "Zur Kundenseite wechseln."
+      }
+    },
+    "assets": {
+      "commandPalette": {
+        "label": "Asset-Befehlspalette",
+        "description": "Befehle der Assetseite öffnen."
+      }
+    },
+    "dialog": {
+      "cancel": {
+        "label": "Dialog abbrechen",
+        "description": "Den aktiven Dialog schließen oder abbrechen."
+      }
+    },
+    "panel": {
+      "close": {
+        "label": "Bereich schließen",
+        "description": "Den aktiven Bereich oder Drawer schließen."
+      }
+    },
+    "drawer": {
+      "historyBack": {
+        "label": "Drawer zurück",
+        "description": "In der Drawer-Historie zurückgehen."
+      },
+      "historyForward": {
+        "label": "Drawer vorwärts",
+        "description": "In der Drawer-Historie vorwärtsgehen."
+      }
+    },
+    "record": {
+      "previous": {
+        "label": "Vorheriger Datensatz",
+        "description": "Den vorherigen Datensatz öffnen."
+      },
+      "next": {
+        "label": "Nächster Datensatz",
+        "description": "Den nächsten Datensatz öffnen."
+      }
+    },
+    "editor": {
+      "undo": {
+        "label": "Rückgängig",
+        "description": "Die Änderung im Editor rückgängig machen."
+      },
+      "redo": {
+        "label": "Wiederholen",
+        "description": "Die Änderung im Editor wiederholen."
+      },
+      "save": {
+        "label": "Editor speichern",
+        "description": "Den Editorinhalt speichern."
+      },
+      "deleteSelection": {
+        "label": "Auswahl löschen",
+        "description": "Das ausgewählte Editorelement löschen."
+      },
+      "cancel": {
+        "label": "Editoraktion abbrechen",
+        "description": "Die aktive Editoraktion abbrechen."
+      },
+      "moveUp": {
+        "label": "Nach oben bewegen",
+        "description": "Das ausgewählte Editorelement nach oben bewegen."
+      },
+      "moveDown": {
+        "label": "Nach unten bewegen",
+        "description": "Das ausgewählte Editorelement nach unten bewegen."
+      },
+      "moveLeft": {
+        "label": "Nach links bewegen",
+        "description": "Das ausgewählte Editorelement nach links bewegen."
+      },
+      "moveRight": {
+        "label": "Nach rechts bewegen",
+        "description": "Das ausgewählte Editorelement nach rechts bewegen."
+      }
+    }
+  },
+  "platform": {
+    "modifiers": {
+      "meta": "Meta",
+      "ctrl": "Strg",
+      "alt": "Alt",
+      "shift": "Umschalt"
+    },
+    "keys": {
+      "space": "Leertaste"
+    },
+    "aria": {
+      "control": "Control",
+      "meta": "Meta",
+      "alt": "Alt",
+      "shift": "Shift"
+    }
+  }
+}

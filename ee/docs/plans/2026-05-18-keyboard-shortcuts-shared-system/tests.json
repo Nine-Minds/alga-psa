@@ -1004,7 +1004,7 @@
   {
     "id": "T200",
     "description": "i18n: every registered action has a labelKey and groupKey present in en/msp/keyboard-shortcuts.json (no raw strings)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F200",
       "F201",
@@ -1016,7 +1016,7 @@
   {
     "id": "T201",
     "description": "i18n: settings-tab label key present in en/msp/settings.json and used (not hardcoded)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F203"
     ],
@@ -1025,7 +1025,7 @@
   {
     "id": "T202",
     "description": "i18n: msp/keyboard-shortcuts registered in ROUTE_NAMESPACES and preloads on /msp routes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F205"
     ],
@@ -1034,7 +1034,7 @@
   {
     "id": "T203",
     "description": "i18n: fr/es/de/nl/it/pl/pt files exist with full key parity to en for the new namespace + tab key",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F206",
       "F207",
@@ -1049,7 +1049,7 @@
   {
     "id": "T204",
     "description": "i18n: pseudo-locales xx/yy regenerated and include all new keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F213"
     ],
@@ -1058,7 +1058,7 @@
   {
     "id": "T205",
     "description": "i18n: node scripts/validate-translations.cjs passes (key parity, no extras, valid {{vars}}, valid JSON) for new keys across all locales",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F214"
     ],
@@ -1067,7 +1067,7 @@
   {
     "id": "T206",
     "description": "i18n QA: switching locale to xx shows pseudo for all shortcuts/settings/help strings (no untranslated literals)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F213",
       "F215"
@@ -1077,7 +1077,7 @@
   {
     "id": "T207",
     "description": "i18n: platform glyph labels and aria text contain no hardcoded English; localized/locale-safe",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F215"
     ],
@@ -1086,7 +1086,7 @@
   {
     "id": "T208",
     "description": "i18n: cross-device hostile-combo advisory message is internationalized and interpolates the action/combo",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F216",
       "F144"
@@ -1096,7 +1096,7 @@
   {
     "id": "T209",
     "description": "i18n: help dialog and settings panel render correctly under a non-English locale (de) without layout breakage",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F206",
       "F180",
