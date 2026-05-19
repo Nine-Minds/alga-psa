@@ -497,3 +497,26 @@ items are `implemented: true` (one-commit-per-group rule).
   `npx tsc --noEmit -p packages/projects/tsconfig.json`;
   `npx tsc --noEmit -p packages/assets/tsconfig.json`; and
   `npm run typecheck --workspace server`.
+
+## 2026-05-19 — dialog-a11y group implementation
+- F320-F324/F330: Moved the shared create-dialog keyboard contract into
+  `packages/ui/src/components/Dialog.tsx`: store/restore invoker focus,
+  focus the first focusable field on open when no custom `onOpenAutoFocus` is
+  supplied, keep Radix modal focus trapping enabled, and submit the first form
+  on Ctrl/Cmd+Enter even from textarea/editor-like fields. Escape remains
+  routed through the existing Radix owner bridge.
+- F325-F329: Removed `disableFocusTrap` from Create Ticket, Create Client,
+  Create Contact, Create Project, and Create Asset dialogs. Create Interaction
+  was already on the focus-trapped shared Dialog path.
+- T320-T326: Added `dialog-a11y.test.tsx` for first-field focus, invoker focus
+  restore, Escape close, and mod+Enter form submit. Added
+  `dialog-a11y.source.test.ts` to smoke that all create dialogs use shared
+  Dialog, keep forms, and no longer opt out of focus trapping.
+- Checks passed:
+  `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/dialog-a11y.test.tsx src/keyboard-shortcuts/dialog-a11y.source.test.ts src/keyboard-shortcuts/escape.test.tsx`;
+  `npx tsc --noEmit -p packages/ui/tsconfig.json`;
+  `npx tsc --noEmit -p packages/tickets/tsconfig.json`;
+  `npx tsc --noEmit -p packages/clients/tsconfig.json`;
+  `npx tsc --noEmit -p packages/projects/tsconfig.json`;
+  `npx tsc --noEmit -p packages/assets/tsconfig.json`; and
+  `npm run typecheck --workspace server`.
