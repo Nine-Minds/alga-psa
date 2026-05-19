@@ -335,3 +335,12 @@ decisions; update earlier notes when a decision changes.
 - T209: Verified in commitGroup i18n via the keyboard shortcuts i18n contract test plus pseudo-locale generation and validate-translations.cjs.
 - Checks: `node scripts/validate-translations.cjs` passed with pre-existing Polish plural warnings only; `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/i18n.contract.test.ts src/keyboard-shortcuts/display.test.tsx` passed; `npx tsc --noEmit -p packages/ui/tsconfig.json` passed.
 - Additional check: `npm run typecheck --workspace server` passed for i18n wiring.
+
+## 2026-05-19 — architecture-guard checklist reconciliation
+- F005: Verified existing ShortcutStorage adapter/default memory storage/dependency guard implementation and marked complete under the current architecture-guard checklist ids.
+- F006: Verified existing ShortcutStorage adapter/default memory storage/dependency guard implementation and marked complete under the current architecture-guard checklist ids.
+- F007: Verified existing ShortcutStorage adapter/default memory storage/dependency guard implementation and marked complete under the current architecture-guard checklist ids.
+- T012: Verified with guard/storage tests and Nx graph baseline check; marked complete under the current architecture-guard checklist ids.
+- T013: Verified with guard/storage tests and Nx graph baseline check; marked complete under the current architecture-guard checklist ids.
+- T014: Verified with guard/storage tests and Nx graph baseline check; marked complete under the current architecture-guard checklist ids.
+- Checks: `node --test scripts/tests/guard-keyboard-shortcuts-boundary.test.mjs`, `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/storage.test.tsx`, and `npx nx graph --file=/tmp/project-graph.json && node scripts/guard-keyboard-shortcuts-boundary.mjs --graph /tmp/project-graph.json` passed.
