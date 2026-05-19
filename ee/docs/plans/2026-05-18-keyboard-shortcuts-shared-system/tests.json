@@ -787,7 +787,7 @@
   {
     "id": "T160",
     "description": "Component: Keyboard Shortcuts tab appears in Settings with the right id/label/icon and Card chrome",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F160",
       "F161"
@@ -797,7 +797,7 @@
   {
     "id": "T161",
     "description": "Component: settings list groups actions by group; shows label, description, scope, default, effective binding resolved for device",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F162"
     ],
@@ -806,7 +806,7 @@
   {
     "id": "T162",
     "description": "Component: rebind capture records event.code for a letter binding and event.key for a '?' binding (matches matcher classification)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F163"
     ],
@@ -815,7 +815,7 @@
   {
     "id": "T163",
     "description": "E2E: rebinding global.search in settings changes the effective shortcut immediately",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F163",
       "F142"
@@ -825,7 +825,7 @@
   {
     "id": "T164",
     "description": "Component: clear custom binding reverts the action to its platform default",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F164"
     ],
@@ -834,7 +834,7 @@
   {
     "id": "T165",
     "description": "Component: disable toggle writes disabled[] and the action stops firing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F165",
       "F146"
@@ -844,7 +844,7 @@
   {
     "id": "T166",
     "description": "Component: reset-one restores a single action default",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F166"
     ],
@@ -853,7 +853,7 @@
   {
     "id": "T167",
     "description": "Component: reset-all is gated by ConfirmationDialog and restores all defaults",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F167"
     ],
@@ -862,7 +862,7 @@
   {
     "id": "T168",
     "description": "Component: assigning a combo already used in the same scope shows an inline conflict and requires explicit replace confirm",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F168"
     ],
@@ -871,7 +871,7 @@
   {
     "id": "T169",
     "description": "Component: conflict detection is platform-aware (Alt+Arrow flagged on Windows, not Mac)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F168",
       "F144"
@@ -881,7 +881,7 @@
   {
     "id": "T170",
     "description": "Component: success uses react-hot-toast and failure uses handleError(error,t(...)) — consistent with other settings panels",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F169"
     ],
@@ -890,7 +890,7 @@
   {
     "id": "T171",
     "description": "Component: LoadingIndicator shown while preferences load; no explicit Save button (debounced auto-save)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F170"
     ],
@@ -899,7 +899,7 @@
   {
     "id": "T172",
     "description": "Lint/Component: every interactive element has an id; Button variants match app conventions",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F171"
     ],
@@ -908,7 +908,7 @@
   {
     "id": "T173",
     "description": "Visual consistency: panel structure matches ExperimentalFeaturesSettings/GeneralSettings (Card+Table+Switch+ghost-reset)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F161",
       "F171"
@@ -918,7 +918,7 @@
   {
     "id": "T174",
     "description": "Component: settingsProductTabs allowlist unaffected; tab visible for MSP users",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F172"
     ],

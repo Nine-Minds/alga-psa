@@ -763,7 +763,7 @@
   {
     "id": "F160",
     "description": "Add 'keyboard-shortcuts' tab to SettingsPage.tsx baseTabContent ({id,label,icon:KeyboardIcon,content} wrapped in Card/CardHeader/CardContent)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "FR23"
@@ -773,7 +773,7 @@
   {
     "id": "F161",
     "description": "KeyboardShortcutsSettings.tsx component using shared Card/Table/Switch/Button/LoadingIndicator",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "FR23"
@@ -783,7 +783,7 @@
   {
     "id": "F162",
     "description": "Settings: list actions grouped by group with label, description, scope, default, effective binding (resolved for device)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR23"
     ],
@@ -792,7 +792,7 @@
   {
     "id": "F163",
     "description": "Settings: inline key-capture rebind recording event.code for code-kind and event.key for char-kind (matches matcher)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR23"
     ],
@@ -801,7 +801,7 @@
   {
     "id": "F164",
     "description": "Settings: clear a custom binding (revert to default)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR23"
     ],
@@ -810,7 +810,7 @@
   {
     "id": "F165",
     "description": "Settings: disable an action via Switch (writes disabled[])",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR23",
       "F146"
@@ -820,7 +820,7 @@
   {
     "id": "F166",
     "description": "Settings: reset one action to default (ghost Button + RotateCcw icon)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR23"
     ],
@@ -829,7 +829,7 @@
   {
     "id": "F167",
     "description": "Settings: reset all shortcuts to defaults behind a ConfirmationDialog (destructive intent)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR23",
       "UX / UI Notes"
@@ -839,7 +839,7 @@
   {
     "id": "F168",
     "description": "Settings: inline platform-aware conflict detection before commit; replacing an existing binding requires explicit confirm",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "FR23",
       "Conflict Handling"
@@ -849,7 +849,7 @@
   {
     "id": "F169",
     "description": "Settings: react-hot-toast success + handleError(error, t(...)) failure, consistent with other panels",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ],
@@ -858,7 +858,7 @@
   {
     "id": "F170",
     "description": "Settings: LoadingIndicator while preferences load; preference-backed immediate debounced save (no explicit Save button)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ],
@@ -867,7 +867,7 @@
   {
     "id": "F171",
     "description": "Settings: every interactive element has an id; Button variants follow app conventions (default/outline/ghost/destructive)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ],
@@ -876,7 +876,7 @@
   {
     "id": "F172",
     "description": "Review settingsProductTabs.ts allowlist (no change expected for MSP-only); confirm tab visibility correct",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ],

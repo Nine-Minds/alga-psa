@@ -5,11 +5,12 @@
 
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle, KeyRound, FlaskConical, BookOpen } from 'lucide-react';
+import { Settings, Globe, UserCog, Users, MessageSquare, Layers, Handshake, Bell, Clock, CreditCard, Download, Mail, Plug, Puzzle, KeyRound, FlaskConical, BookOpen, Keyboard } from 'lucide-react';
 import type { TabContent } from "@alga-psa/ui/components/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
 import GeneralSettings from './general/GeneralSettings';
+import KeyboardShortcutsSettings from './general/KeyboardShortcutsSettings';
 import UserManagement from './general/UserManagement';
 import ClientPortalSettings from './general/ClientPortalSettings';
 import MspLanguageSettings from './general/MspLanguageSettings';
@@ -179,6 +180,12 @@ const SettingsPageContent = ({ initialTabParam }: SettingsPageProps): React.JSX.
       label: t('tabs.language'),
       icon: Globe,
       content: <MspLanguageSettings />,
+    },
+    {
+      id: 'keyboard-shortcuts',
+      label: t('tabs.keyboardShortcuts', { defaultValue: 'Keyboard Shortcuts' }),
+      icon: Keyboard,
+      content: <KeyboardShortcutsSettings />,
     },
     {
       id: 'ticketing',
