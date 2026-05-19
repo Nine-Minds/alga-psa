@@ -460,7 +460,7 @@
   {
     "id": "T080",
     "description": "Component: provider mounted in MspLayoutClient wraps DefaultLayout and AlgaDeskMspShell",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080"
     ],
@@ -469,7 +469,7 @@
   {
     "id": "T081",
     "description": "Component/E2E: provider absent on auth/client-portal screens (no global shortcuts there)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F081"
     ],
@@ -478,7 +478,7 @@
   {
     "id": "T082",
     "description": "E2E (Playwright): mod+k focuses global search; SearchPalette no longer has its own window listener",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F082"
     ],
@@ -487,7 +487,7 @@
   {
     "id": "T083",
     "description": "E2E: mod+l toggles AI chat; behavior identical to pre-migration incl. open\u2192focus and aiAssistantAvailable gating",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F083",
       "F085"
@@ -497,7 +497,7 @@
   {
     "id": "T084",
     "description": "E2E: mod+ArrowUp triggers quick-ask / focuses chat input as before; gated when AI unavailable",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084",
       "F085"
@@ -507,7 +507,7 @@
   {
     "id": "T085",
     "description": "Regression: when aiAssistantAvailable=false, mod+l/mod+ArrowUp do nothing and do not preventDefault",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F083",
       "F084",
@@ -518,7 +518,7 @@
   {
     "id": "T086",
     "description": "E2E: `?` opens the read-only help dialog",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F086",
       "F180"
@@ -528,7 +528,7 @@
   {
     "id": "T087",
     "description": "E2E: `c` opens QuickCreateDialog in a non-editable active region; does nothing while typing",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F087",
       "F040",
@@ -539,7 +539,7 @@
   {
     "id": "T088",
     "description": "E2E: on the assets page, the assets command palette opens via its new non-mod+k default (page scope)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F088",
       "F089"
@@ -549,7 +549,7 @@
   {
     "id": "T089",
     "description": "Regression: mod+k now ONLY opens global search everywhere, including the assets page (conflict removed)",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F090",
       "F089"
@@ -1107,7 +1107,7 @@
   {
     "id": "T230",
     "description": "Regression suite: AI/search/drawer/ticket/designer shortcuts all still work after full migration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F082",
       "F083",

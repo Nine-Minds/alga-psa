@@ -34,6 +34,7 @@ import { getAllClientsForAssets } from '../actions/clientLookupActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { QuickAddAsset } from './QuickAddAsset';
 import { AssetCommandPalette } from './AssetCommandPalette';
+import { useShortcutAction, useShortcutScope, type ShortcutAction } from '@alga-psa/ui/keyboard-shortcuts';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
 import { RmmStatusIndicator } from './RmmStatusIndicator';
 import {
@@ -280,17 +281,19 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     }
   }, [activeDrawerTab, drawerAssetId, loadDrawerData]);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        setIsCommandPaletteOpen(prev => !prev);
-      }
-    };
+  const assetCommandPaletteShortcut = useMemo<ShortcutAction>(() => ({
+    id: 'assets.commandPalette',
+    labelKey: 'actions.assets.commandPalette.label',
+    groupKey: 'groups.assets',
+    defaultBindings: ['mod+shift+k'],
+    scope: 'page',
+    handler: () => {
+      setIsCommandPaletteOpen(prev => !prev);
+    },
+  }), []);
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  useShortcutScope('page');
+  useShortcutAction(assetCommandPaletteShortcut);
 
   const assetsByClient = useMemo(() => {
     return assets.reduce((acc, asset) => {

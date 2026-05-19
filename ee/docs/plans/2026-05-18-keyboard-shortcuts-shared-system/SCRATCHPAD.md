@@ -217,6 +217,27 @@ decisions; update earlier notes when a decision changes.
   `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/catalog.test.ts`
   from `packages/ui` passed (2 tests);
   `npx tsc --noEmit -p packages/ui/tsconfig.json` passed.
+- (2026-05-19) Completed global-migration group F080-F090/T080-T089/T230.
+  Mounted `KeyboardShortcutsProvider` in `MspLayoutClient` around the MSP
+  product shells (not auth/client portal). Migrated `global.search` out of
+  `SearchPalette`'s window listener; migrated `global.toggleChat` and
+  `ai.quickAsk` out of `DefaultLayout`'s window listener while preserving
+  `aiAssistantAvailable` gates; registered `global.openShortcuts` and
+  `global.quickCreate`; and rescoped the assets palette to page-scoped
+  `assets.commandPalette` on `mod+shift+k`.
+- (2026-05-19) Temporary note: `global.openShortcuts` currently opens a minimal
+  placeholder dialog in `DefaultLayout`; the full shared help dialog remains
+  owned by the later `help-a11y` group. `global.quickCreate` opens the ticket
+  quick-create dialog by default.
+- (2026-05-19) Verification for global-migration:
+  `npx vitest run --config vitest.config.ts src/keyboard-shortcuts/global-migration.contract.test.ts`
+  from `packages/ui` passed (5 tests);
+  `npx tsc --noEmit -p packages/ui/tsconfig.json` passed;
+  `npx tsc --noEmit -p packages/assets/tsconfig.json` passed;
+  `npm run typecheck --workspace server` passed. Attempting direct server
+  layout Vitest files hit an existing Vitest 4/coverage-v8 3.2.4 harness error
+  before tests executed (`Cannot read properties of undefined (reading
+  'fetchCache')`).
 
 ## Open Questions
 

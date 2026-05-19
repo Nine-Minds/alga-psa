@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { Command } from 'cmdk';
 import { Search } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useShortcutAction, type ShortcutAction } from '@alga-psa/ui/keyboard-shortcuts';
 
 import {
   searchAppTypeaheadAction,
@@ -44,13 +45,13 @@ export default function SearchPalette({
       : 'app-search-option-see-all-results'
     : undefined;
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() !== 'k' || (!event.metaKey && !event.ctrlKey)) {
-        return;
-      }
-
-      event.preventDefault();
+  const searchShortcut = React.useMemo<ShortcutAction>(() => ({
+    id: 'global.search',
+    labelKey: 'actions.global.search.label',
+    groupKey: 'groups.global',
+    defaultBindings: ['mod+k'],
+    scope: 'global',
+    handler: () => {
       if (collapsed) {
         setFocusAfterExpand(true);
         onCollapsedClick?.();
@@ -58,11 +59,10 @@ export default function SearchPalette({
       }
 
       inputRef.current?.focus();
-    };
+    },
+  }), [collapsed, onCollapsedClick]);
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [collapsed, onCollapsedClick]);
+  useShortcutAction(searchShortcut);
 
   useEffect(() => {
     if (collapsed || !focusAfterExpand) {
