@@ -21,6 +21,10 @@ The IMAP-specific flags are OR-ed with the shared in-app flags:
 
 - IMAP webhook ingestion now uses unified pointer queue handoff only (`handoff: "unified_pointer_queue"`).
 - Legacy in-memory IMAP async queue controls were removed.
+- `IMAP_WEBHOOK_SECRET` must be set to the same non-empty random value for the
+  server and email-service containers. The email-service sends it as
+  `x-imap-webhook-secret`; the server rejects IMAP webhook requests when it is
+  missing or mismatched.
 
 ## Artifact concurrency bound
 
