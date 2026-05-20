@@ -163,6 +163,10 @@ describe('MSP SSO provider buttons', () => {
       { callbackUrl: '/dashboard' },
       expect.objectContaining({ state: expect.any(String) })
     ));
+    const authorizationParams = signInMock.mock.calls[0]?.[2] as { state?: string };
+    expect(JSON.parse(authorizationParams.state || '{}')).toMatchObject({
+      callback_url: '/dashboard',
+    });
 
     expect(window.localStorage.getItem('msp_sso_last_provider')).toBe('azure-ad');
   });
@@ -184,7 +188,10 @@ describe('MSP SSO provider buttons', () => {
         '/api/auth/msp/sso/discover',
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ email: 'remembered@example.com' }),
+          body: JSON.stringify({
+            email: 'remembered@example.com',
+            callbackUrl: '/msp',
+          }),
         })
       )
     );

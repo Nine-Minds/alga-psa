@@ -22,7 +22,7 @@ const getEdgeAuth = (): ReturnType<typeof NextAuth> => {
     throw new Error('NEXTAUTH_SECRET environment variable is required for edge auth.');
   }
 
-  cachedEdgeAuth = NextAuth({
+  cachedEdgeAuth = (NextAuth as any)({
     trustHost: true,
     session: {
       strategy: 'jwt',
@@ -34,7 +34,7 @@ const getEdgeAuth = (): ReturnType<typeof NextAuth> => {
     },
     providers: [],
     callbacks: {
-      async session({ session, token }) {
+      async session({ session, token }: any) {
         // Map custom claims from JWT into session.user for Edge consumers
         if (session.user && token) {
           (session.user as any).id = token.id as string | undefined;

@@ -15,6 +15,10 @@ import {
   resolveMspSsoCredentialSource,
 } from '@alga-psa/auth/lib/sso/mspSsoResolution';
 import {
+  CLIENT_PORTAL_SSO_DISCOVERY_COOKIE,
+  CLIENT_PORTAL_SSO_RESOLUTION_COOKIE,
+} from '@alga-psa/auth/lib/sso/clientPortalSsoResolution';
+import {
   buildClearedPendingRememberContextCookie,
   buildPendingRememberContextCookie,
   createPendingRememberContextCookie,
@@ -56,6 +60,23 @@ function buildGenericFailureResponse(): NextResponse {
   });
   response.cookies.set(buildClearedPendingRememberContextCookie());
   return response;
+}
+
+function clearClientPortalSsoCookies(response: NextResponse): void {
+  for (const cookieName of [
+    CLIENT_PORTAL_SSO_DISCOVERY_COOKIE,
+    CLIENT_PORTAL_SSO_RESOLUTION_COOKIE,
+  ]) {
+    response.cookies.set({
+      name: cookieName,
+      value: '',
+      path: '/',
+      maxAge: 0,
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+    });
+  }
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -129,6 +150,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     });
 
     const response = NextResponse.json({ ok: true }, { status: 200 });
+    clearClientPortalSsoCookies(response);
     response.cookies.set({
       name: MSP_SSO_RESOLUTION_COOKIE,
       value: cookie.value,

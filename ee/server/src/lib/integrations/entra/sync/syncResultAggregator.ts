@@ -4,6 +4,7 @@ export interface EntraTenantSyncCounters {
   updated: number;
   ambiguous: number;
   inactivated: number;
+  skipped: number;
 }
 
 export type EntraTenantSyncCounterType =
@@ -11,7 +12,8 @@ export type EntraTenantSyncCounterType =
   | 'linked'
   | 'updated'
   | 'ambiguous'
-  | 'inactivated';
+  | 'inactivated'
+  | 'skipped';
 
 export class EntraSyncResultAggregator {
   private counters: EntraTenantSyncCounters = {
@@ -20,6 +22,7 @@ export class EntraSyncResultAggregator {
     updated: 0,
     ambiguous: 0,
     inactivated: 0,
+    skipped: 0,
   };
 
   public increment(type: EntraTenantSyncCounterType, value = 1): void {
@@ -35,6 +38,7 @@ export class EntraSyncResultAggregator {
     this.increment('updated', counters.updated || 0);
     this.increment('ambiguous', counters.ambiguous || 0);
     this.increment('inactivated', counters.inactivated || 0);
+    this.increment('skipped', counters.skipped || 0);
   }
 
   public toJSON(): EntraTenantSyncCounters {

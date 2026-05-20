@@ -35,6 +35,8 @@ export class OAuthAccountLinkConflictError extends Error {
 
 const TABLE_NAME = 'user_auth_accounts';
 
+type KnexLike = Awaited<ReturnType<typeof getAdminConnection>>;
+
 function normalizeEmail(email?: string | null): string | null {
   if (!email) {
     return null;
@@ -42,30 +44,84 @@ function normalizeEmail(email?: string | null): string | null {
   return email.trim().toLowerCase();
 }
 
-export async function upsertOAuthAccountLink(input: OAuthAccountLinkInput): Promise<void> {
-  const knex = await getAdminConnection();
+async function assertProviderAccountAvailableForUser(
+  knex: KnexLike,
+  input: OAuthAccountLinkInput,
+): Promise<void> {
+  const conflictingLink = await knex<OAuthAccountLinkRecord>(TABLE_NAME)
+    .where({
+      tenant: input.tenant,
+      provider: input.provider,
+      provider_account_id: input.providerAccountId,
+    })
+    .whereNot('user_id', input.userId)
+    .first(['user_id']);
+
+  if (conflictingLink?.user_id) {
+    throw new OAuthAccountLinkConflictError(
+      `Provider account ${input.provider}:${input.providerAccountId} is already linked.`,
+    );
+  }
+}
+
+async function withProviderAccountLock<T>(
+  knex: KnexLike,
+  input: OAuthAccountLinkInput,
+  callback: (trx: KnexLike) => Promise<T>,
+  startTransaction = true
+): Promise<T> {
+  const run = async (trx: KnexLike): Promise<T> => {
+    if (typeof (trx as any).raw === 'function') {
+      const lockKey = `${input.tenant}:${input.provider}:${input.providerAccountId}`;
+      await (trx as any).raw(
+        'select pg_advisory_xact_lock(hashtext(?), hashtext(?))',
+        ['oauth_account_link', lockKey]
+      );
+    }
+
+    return callback(trx);
+  };
+
+  if (startTransaction && typeof (knex as any).transaction === 'function') {
+    return (knex as any).transaction((trx: KnexLike) => run(trx));
+  }
+
+  return run(knex);
+}
+
+export async function upsertOAuthAccountLink(
+  input: OAuthAccountLinkInput,
+  connection?: KnexLike
+): Promise<void> {
+  const knex = connection ?? (await getAdminConnection());
   const metadataPayload = input.metadata ?? {};
   const providerEmail = normalizeEmail(input.providerEmail);
 
   try {
-    await knex(TABLE_NAME)
-      .insert({
-        tenant: input.tenant,
-        user_id: input.userId,
-        provider: input.provider,
-        provider_account_id: input.providerAccountId,
-        provider_email: providerEmail,
-        metadata: metadataPayload,
-        last_used_at: input.lastUsedAt ?? knex.fn.now(),
-      })
-      .onConflict(['tenant', 'user_id', 'provider'])
-      .merge({
-        provider_account_id: input.providerAccountId,
-        provider_email: providerEmail,
-        metadata: metadataPayload,
-        last_used_at: input.lastUsedAt ?? knex.fn.now(),
-        updated_at: knex.fn.now(),
-      });
+    const writeLink = async (trx: KnexLike) => {
+      await assertProviderAccountAvailableForUser(trx, input);
+
+      await trx(TABLE_NAME)
+        .insert({
+          tenant: input.tenant,
+          user_id: input.userId,
+          provider: input.provider,
+          provider_account_id: input.providerAccountId,
+          provider_email: providerEmail,
+          metadata: metadataPayload,
+          last_used_at: input.lastUsedAt ?? trx.fn.now(),
+        })
+        .onConflict(['tenant', 'user_id', 'provider'])
+        .merge({
+          provider_account_id: input.providerAccountId,
+          provider_email: providerEmail,
+          metadata: metadataPayload,
+          last_used_at: input.lastUsedAt ?? trx.fn.now(),
+          updated_at: trx.fn.now(),
+        });
+    };
+
+    await withProviderAccountLock(knex, input, writeLink, !connection);
   } catch (error: any) {
     if (error?.code === '23505') {
       logger.warn('[oauthAccountLinks] conflict while linking account', {
@@ -93,13 +149,21 @@ export async function upsertOAuthAccountLink(input: OAuthAccountLinkInput): Prom
 export async function findOAuthAccountLink(
   provider: OAuthLinkProvider,
   providerAccountId: string,
+  tenant?: string,
 ): Promise<OAuthAccountLinkRecord | undefined> {
   const knex = await getAdminConnection();
-  const record = await knex<OAuthAccountLinkRecord>(TABLE_NAME)
+  const query = knex<OAuthAccountLinkRecord>(TABLE_NAME)
     .where({
       provider,
       provider_account_id: providerAccountId,
-    })
+    });
+
+  if (tenant) {
+    query.andWhere({ tenant });
+  }
+
+  const record = await query
+    .orderBy('updated_at', 'desc')
     .first();
 
   return record ?? undefined;

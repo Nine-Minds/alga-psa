@@ -1,6 +1,10 @@
 import axios from 'axios';
 import { resolveMicrosoftCredentialsForTenant } from './microsoftCredentialResolver';
-import { getEntraDirectRefreshToken, saveEntraDirectTokenSet } from './tokenStore';
+import {
+  getEntraDirectRefreshToken,
+  saveEntraDirectRefreshToken,
+  saveEntraDirectTokenSet,
+} from './tokenStore';
 import { ENTRA_DIRECT_SCOPE_STRING } from './directScopes';
 
 export interface RefreshDirectTokenResult {
@@ -10,8 +14,10 @@ export interface RefreshDirectTokenResult {
   scope: string | null;
 }
 
-export async function refreshEntraDirectToken(
-  tenant: string
+async function refreshEntraDirectTokenForAuthority(
+  tenant: string,
+  authorityTenant = 'common',
+  persistAccessToken = true
 ): Promise<RefreshDirectTokenResult> {
   const credentials = await resolveMicrosoftCredentialsForTenant(tenant);
 
@@ -34,7 +40,7 @@ export async function refreshEntraDirectToken(
   });
 
   const response = await axios.post(
-    'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+    `https://login.microsoftonline.com/${encodeURIComponent(authorityTenant)}/oauth2/v2.0/token`,
     tokenParams.toString(),
     {
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
@@ -53,12 +59,16 @@ export async function refreshEntraDirectToken(
 
   const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
 
-  await saveEntraDirectTokenSet(tenant, {
-    accessToken,
-    refreshToken: newRefreshToken,
-    expiresAt,
-    scope,
-  });
+  if (persistAccessToken) {
+    await saveEntraDirectTokenSet(tenant, {
+      accessToken,
+      refreshToken: newRefreshToken,
+      expiresAt,
+      scope,
+    });
+  } else if (newRefreshToken !== refreshToken) {
+    await saveEntraDirectRefreshToken(tenant, newRefreshToken);
+  }
 
   return {
     accessToken,
@@ -66,4 +76,17 @@ export async function refreshEntraDirectToken(
     expiresAt,
     scope,
   };
+}
+
+export async function refreshEntraDirectToken(
+  tenant: string
+): Promise<RefreshDirectTokenResult> {
+  return refreshEntraDirectTokenForAuthority(tenant);
+}
+
+export async function refreshEntraDirectAccessTokenForTenant(
+  tenant: string,
+  authorityTenant: string
+): Promise<RefreshDirectTokenResult> {
+  return refreshEntraDirectTokenForAuthority(tenant, authorityTenant, false);
 }

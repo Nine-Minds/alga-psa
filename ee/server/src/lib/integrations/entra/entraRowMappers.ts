@@ -50,6 +50,16 @@ const toObjectValue = (value: unknown): Record<string, unknown> => {
   return {};
 };
 
+const toNullableObjectValue = (value: unknown): Record<string, unknown> | null => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return null;
+};
+
 const toArrayValue = (value: unknown): unknown[] => {
   return Array.isArray(value) ? value : [];
 };
@@ -91,6 +101,14 @@ export function mapEntraManagedTenantRow(row: DbRow): EntraManagedTenantRow {
 }
 
 export function mapEntraClientTenantMappingRow(row: DbRow): EntraClientTenantMappingRow {
+  const provisioningModeRaw = toNullableStringValue(row.client_portal_entra_provisioning_mode);
+  const clientPortalEntraProvisioningMode =
+    provisioningModeRaw === 'inherit' ||
+    provisioningModeRaw === 'disabled' ||
+    provisioningModeRaw === 'built_in' ||
+    provisioningModeRaw === 'workflow_managed'
+      ? provisioningModeRaw
+      : 'inherit';
   return {
     tenant: toStringValue(row.tenant, 'tenant'),
     mapping_id: toStringValue(row.mapping_id, 'mapping_id'),
@@ -98,6 +116,12 @@ export function mapEntraClientTenantMappingRow(row: DbRow): EntraClientTenantMap
     client_id: toNullableStringValue(row.client_id),
     mapping_state: toStringValue(row.mapping_state, 'mapping_state') as EntraClientTenantMappingRow['mapping_state'],
     confidence_score: toNullableNumberValue(row.confidence_score),
+    client_portal_entra_provisioning_mode: clientPortalEntraProvisioningMode,
+    client_portal_entitlement_group_id: toNullableStringValue(row.client_portal_entitlement_group_id),
+    client_portal_entitlement_membership_mode: 'transitive',
+    client_portal_default_role_name: toNullableStringValue(row.client_portal_default_role_name),
+    client_portal_workflow_target: toNullableStringValue(row.client_portal_workflow_target),
+    client_portal_workflow_config: toNullableObjectValue(row.client_portal_workflow_config),
     is_active: toBooleanValue(row.is_active, 'is_active'),
     decided_by: toNullableStringValue(row.decided_by),
     decided_at: toNullableStringValue(row.decided_at),

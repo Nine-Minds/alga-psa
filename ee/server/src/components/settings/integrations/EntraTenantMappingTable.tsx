@@ -4,7 +4,7 @@ import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getEntraMappingPreview, confirmEntraMappings } from '@alga-psa/integrations/actions';
+import { getEntraMappingPreview, confirmEntraMappings, listEntraMappingGroups } from '@alga-psa/integrations/actions';
 import { skipEntraTenantMapping, importEntraTenantAsClient } from '@alga-psa/integrations/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
@@ -28,7 +28,18 @@ interface MappingTenantRow {
   state: 'auto_matched' | 'needs_review' | 'unmatched' | 'imported';
   candidates: MappingCandidate[];
   selectedClientId: string | null;
+  selectedEntitlementGroupId: string | null;
+  selectedProvisioningMode: 'inherit' | 'disabled' | 'built_in' | 'workflow_managed';
+  selectedDefaultRoleName: string | null;
   isSkipped: boolean;
+}
+
+interface ExistingMappingSettings {
+  clientId?: string | null;
+  mappingState?: string | null;
+  clientPortalEntraProvisioningMode?: 'inherit' | 'disabled' | 'built_in' | 'workflow_managed' | null;
+  clientPortalEntitlementGroupId?: string | null;
+  clientPortalDefaultRoleName?: string | null;
 }
 
 export interface EntraMappingSummary {
@@ -47,6 +58,25 @@ function formatConfidence(score: number): string {
   return `${Math.round(score * 100)}%`;
 }
 
+function isBroadEntitlementGroup(label: string | null | undefined): boolean {
+  const normalized = String(label || '').trim().toLowerCase();
+  return normalized === 'all users' || normalized.includes('all users');
+}
+
+function normalizeExistingMapping(raw: unknown): ExistingMappingSettings {
+  return raw && typeof raw === 'object' && !Array.isArray(raw)
+    ? (raw as ExistingMappingSettings)
+    : {};
+}
+
+function normalizeProvisioningMode(
+  value: unknown
+): MappingTenantRow["selectedProvisioningMode"] {
+  return value === 'disabled' || value === 'built_in' || value === 'workflow_managed'
+    ? value
+    : 'inherit';
+}
+
 function mapPreviewToRows(payload: any): MappingTenantRow[] {
   const autoMatched = Array.isArray(payload?.autoMatched) ? payload.autoMatched : [];
   const fuzzyCandidates = Array.isArray(payload?.fuzzyCandidates) ? payload.fuzzyCandidates : [];
@@ -56,6 +86,7 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
 
   for (const item of autoMatched) {
     const match = item?.match || {};
+    const existingMapping = normalizeExistingMapping(item?.existingMapping);
     rows.push({
       managedTenantId: String(item?.managedTenantId || ''),
       entraTenantId: String(item?.entraTenantId || ''),
@@ -71,13 +102,21 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
           reason: (match.reason || 'exact_domain') as MatchReason,
         },
       ],
-      selectedClientId: String(match.clientId || '') || null,
-      isSkipped: false,
+      selectedClientId: String(existingMapping.clientId || match.clientId || '') || null,
+      selectedEntitlementGroupId: existingMapping.clientPortalEntitlementGroupId || null,
+      selectedProvisioningMode: normalizeProvisioningMode(
+        existingMapping.clientPortalEntraProvisioningMode
+      ),
+      selectedDefaultRoleName: existingMapping.clientPortalDefaultRoleName || null,
+      isSkipped:
+        existingMapping.mappingState === 'skip_for_now' ||
+        existingMapping.mappingState === 'skipped',
     });
   }
 
   for (const item of fuzzyCandidates) {
     const candidates = Array.isArray(item?.candidates) ? item.candidates : [];
+    const existingMapping = normalizeExistingMapping(item?.existingMapping);
     rows.push({
       managedTenantId: String(item?.managedTenantId || ''),
       entraTenantId: String(item?.entraTenantId || ''),
@@ -91,12 +130,20 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
         confidenceScore: Number(candidate?.confidenceScore || 0),
         reason: (candidate?.reason || 'fuzzy_name') as MatchReason,
       })),
-      selectedClientId: null,
-      isSkipped: false,
+      selectedClientId: existingMapping.clientId || null,
+      selectedEntitlementGroupId: existingMapping.clientPortalEntitlementGroupId || null,
+      selectedProvisioningMode: normalizeProvisioningMode(
+        existingMapping.clientPortalEntraProvisioningMode
+      ),
+      selectedDefaultRoleName: existingMapping.clientPortalDefaultRoleName || null,
+      isSkipped:
+        existingMapping.mappingState === 'skip_for_now' ||
+        existingMapping.mappingState === 'skipped',
     });
   }
 
   for (const item of unmatched) {
+    const existingMapping = normalizeExistingMapping(item?.existingMapping);
     rows.push({
       managedTenantId: String(item?.managedTenantId || ''),
       entraTenantId: String(item?.entraTenantId || ''),
@@ -105,8 +152,15 @@ function mapPreviewToRows(payload: any): MappingTenantRow[] {
       sourceUserCount: Number(item?.sourceUserCount || 0),
       state: 'unmatched',
       candidates: [],
-      selectedClientId: null,
-      isSkipped: false,
+      selectedClientId: existingMapping.clientId || null,
+      selectedEntitlementGroupId: existingMapping.clientPortalEntitlementGroupId || null,
+      selectedProvisioningMode: normalizeProvisioningMode(
+        existingMapping.clientPortalEntraProvisioningMode
+      ),
+      selectedDefaultRoleName: existingMapping.clientPortalDefaultRoleName || null,
+      isSkipped:
+        existingMapping.mappingState === 'skip_for_now' ||
+        existingMapping.mappingState === 'skipped',
     });
   }
 
@@ -138,6 +192,8 @@ export function EntraTenantMappingTable({
   const [importingByRow, setImportingByRow] = React.useState<Record<string, boolean>>({});
   const [confirmingMappings, setConfirmingMappings] = React.useState(false);
   const [confirmFeedback, setConfirmFeedback] = React.useState<string | null>(null);
+  const [groupOptionsByTenant, setGroupOptionsByTenant] = React.useState<Record<string, Array<{ id: string; displayName: string | null }>>>({});
+  const [groupLoadingByTenant, setGroupLoadingByTenant] = React.useState<Record<string, boolean>>({});
 
   const loadPreview = React.useCallback(async () => {
     setLoading(true);
@@ -212,12 +268,16 @@ export function EntraTenantMappingTable({
   const mappingsToConfirm = React.useMemo(
     () =>
       rows
-        .filter((row) => !row.isSkipped && row.state !== 'imported' && Boolean(row.selectedClientId))
+        .filter((row) => !row.isSkipped && Boolean(row.selectedClientId))
         .map((row) => ({
           managedTenantId: row.managedTenantId,
           clientId: String(row.selectedClientId),
           mappingState: 'mapped' as const,
           confidenceScore: row.candidates[0]?.confidenceScore ?? null,
+          clientPortalEntitlementGroupId: row.selectedEntitlementGroupId,
+          clientPortalEntraProvisioningMode: row.selectedProvisioningMode,
+          clientPortalEntitlementMembershipMode: 'transitive' as const,
+          clientPortalDefaultRoleName: row.selectedDefaultRoleName?.trim() || null,
         })),
     [rows]
   );
@@ -231,6 +291,58 @@ export function EntraTenantMappingTable({
       )
     );
   }, []);
+
+  const updateEntitlementGroupSelection = React.useCallback((managedTenantId: string, selectedEntitlementGroupId: string) => {
+    setRows((currentRows) =>
+      currentRows.map((row) =>
+        row.managedTenantId === managedTenantId
+          ? { ...row, selectedEntitlementGroupId: selectedEntitlementGroupId || null }
+          : row
+      )
+    );
+  }, []);
+
+  const updateDefaultRoleName = React.useCallback((managedTenantId: string, selectedDefaultRoleName: string) => {
+    setRows((currentRows) =>
+      currentRows.map((row) =>
+        row.managedTenantId === managedTenantId
+          ? { ...row, selectedDefaultRoleName: selectedDefaultRoleName || null }
+          : row
+      )
+    );
+  }, []);
+
+  const updateProvisioningMode = React.useCallback((
+    managedTenantId: string,
+    selectedProvisioningMode: MappingTenantRow["selectedProvisioningMode"]
+  ) => {
+    setRows((currentRows) =>
+      currentRows.map((row) =>
+        row.managedTenantId === managedTenantId
+          ? { ...row, selectedProvisioningMode }
+          : row
+      )
+    );
+  }, []);
+
+  const loadGroupsForManagedTenant = React.useCallback(async (managedTenantId: string) => {
+    if (!managedTenantId || groupOptionsByTenant[managedTenantId] || groupLoadingByTenant[managedTenantId]) {
+      return;
+    }
+
+    setGroupLoadingByTenant((current) => ({ ...current, [managedTenantId]: true }));
+    try {
+      const result = await listEntraMappingGroups({ managedTenantId });
+      if ('error' in result) {
+        setGroupOptionsByTenant((current) => ({ ...current, [managedTenantId]: [] }));
+        return;
+      }
+      const groups = Array.isArray(result.data?.groups) ? result.data.groups : [];
+      setGroupOptionsByTenant((current) => ({ ...current, [managedTenantId]: groups }));
+    } finally {
+      setGroupLoadingByTenant((current) => ({ ...current, [managedTenantId]: false }));
+    }
+  }, [groupOptionsByTenant, groupLoadingByTenant]);
 
   const handleSkip = React.useCallback(async (row: MappingTenantRow) => {
     if (!row.managedTenantId) {
@@ -290,7 +402,7 @@ export function EntraTenantMappingTable({
       setRows((currentRows) =>
         currentRows.map((r) =>
           r.managedTenantId === row.managedTenantId && 'clientId' in result.data
-            ? { ...r, state: 'imported', selectedClientId: result.data.clientId, isSkipped: false }
+            ? { ...r, state: 'imported', selectedClientId: result.data.clientId, selectedEntitlementGroupId: null, selectedProvisioningMode: 'inherit', selectedDefaultRoleName: null, isSkipped: false }
             : r
         )
       );
@@ -354,7 +466,7 @@ export function EntraTenantMappingTable({
   return (
     <div className="space-y-3" id="entra-mapping-table">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold">{t('integrations.entra.tenantMapping.title')}</p>
+        <p className="text-sm font-semibold">Managed Microsoft tenant to Client mappings</p>
         <div className="flex gap-2">
           <Button
             id="entra-confirm-selected-mappings"
@@ -398,6 +510,9 @@ export function EntraTenantMappingTable({
               <th className="px-3 py-2 font-medium">{t('integrations.entra.tenantMapping.columns.confidence')}</th>
               <th className="px-3 py-2 font-medium">{t('integrations.entra.tenantMapping.columns.selectClient')}</th>
               <th className="px-3 py-2 font-medium">{t('integrations.entra.tenantMapping.columns.actions')}</th>
+              <th className="px-3 py-2 font-medium">Portal access group</th>
+              <th className="px-3 py-2 font-medium">Provisioning mode override</th>
+              <th className="px-3 py-2 font-medium">Default role</th>
             </tr>
           </thead>
           <tbody>
@@ -408,6 +523,7 @@ export function EntraTenantMappingTable({
                   <td className="px-3 py-2">
                     <p className="font-medium">{row.displayName || row.entraTenantId}</p>
                     <p className="text-xs text-muted-foreground">{row.entraTenantId}</p>
+                    <p className="text-xs text-muted-foreground">Managed Microsoft tenant</p>
                   </td>
                   <td className="px-3 py-2">{row.primaryDomain || '—'}</td>
                   <td className="px-3 py-2">
@@ -486,13 +602,83 @@ export function EntraTenantMappingTable({
                       <span className="text-muted-foreground">—</span>
                     )}
                   </td>
+                  <td className="px-3 py-2">
+                    <div className="flex flex-col gap-1">
+                      <select
+                        id={`entra-entitlement-group-${row.managedTenantId}`}
+                        className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                        disabled={!row.selectedClientId || row.isSkipped || Boolean(groupLoadingByTenant[row.managedTenantId])}
+                        value={row.selectedEntitlementGroupId || ''}
+                        onFocus={() => void loadGroupsForManagedTenant(row.managedTenantId)}
+                        onChange={(event) => updateEntitlementGroupSelection(row.managedTenantId, event.target.value)}
+                      >
+                        <option value="">{groupLoadingByTenant[row.managedTenantId] ? 'Loading groups…' : 'No group selected'}</option>
+                        {row.selectedEntitlementGroupId &&
+                        !(groupOptionsByTenant[row.managedTenantId] || []).some(
+                          (group) => group.id === row.selectedEntitlementGroupId
+                        ) ? (
+                          <option value={row.selectedEntitlementGroupId}>
+                            {row.selectedEntitlementGroupId}
+                          </option>
+                        ) : null}
+                        {(groupOptionsByTenant[row.managedTenantId] || []).map((group) => (
+                          <option key={group.id} value={group.id}>
+                            {group.displayName || group.id}
+                          </option>
+                        ))}
+                      </select>
+                      {(() => {
+                        const selectedGroup = (groupOptionsByTenant[row.managedTenantId] || []).find(
+                          (group) => group.id === row.selectedEntitlementGroupId
+                        );
+                        const selectedLabel = selectedGroup?.displayName || selectedGroup?.id || null;
+                        if (!isBroadEntitlementGroup(selectedLabel)) {
+                          return null;
+                        }
+                        return (
+                          <p className="text-xs text-amber-700">
+                            Warning: every enabled user in this Entra group will be eligible for client portal access.
+                          </p>
+                        );
+                      })()}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2">
+                    <select
+                      id={`entra-provisioning-mode-${row.managedTenantId}`}
+                      className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                      disabled={!row.selectedClientId || row.isSkipped}
+                      value={row.selectedProvisioningMode}
+                      onChange={(event) =>
+                        updateProvisioningMode(
+                          row.managedTenantId,
+                          event.target.value as MappingTenantRow["selectedProvisioningMode"]
+                        )
+                      }
+                    >
+                      <option value="inherit">Inherit MSP workspace default</option>
+                      <option value="disabled">Disabled</option>
+                      <option value="built_in">Built-in</option>
+                      <option value="workflow_managed">Workflow-managed</option>
+                    </select>
+                  </td>
+                  <td className="px-3 py-2">
+                    <input
+                      id={`entra-default-role-${row.managedTenantId}`}
+                      className="h-9 w-28 rounded-md border border-input bg-background px-2 text-sm"
+                      disabled={!row.selectedClientId || row.isSkipped}
+                      value={row.selectedDefaultRoleName || ''}
+                      onChange={(event) => updateDefaultRoleName(row.managedTenantId, event.target.value)}
+                      placeholder="Inherit workspace role"
+                    />
+                  </td>
                 </tr>
               );
             })}
 
             {!loading && rows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">
+                <td colSpan={10} className="px-3 py-6 text-center text-muted-foreground">
                   {t('integrations.entra.tenantMapping.empty')}
                 </td>
               </tr>

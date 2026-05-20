@@ -12,6 +12,7 @@ export const routes: Record<string, RouteLoader> = {
     syncRoute: unavailable,
     syncRunsRoute: unavailable,
     mappingsPreviewRoute: unavailable,
+    mappingsGroupsRoute: unavailable,
     mappingsConfirmRoute: unavailable,
     mappingsUnmapRoute: unavailable,
     mappingsRemapRoute: unavailable,

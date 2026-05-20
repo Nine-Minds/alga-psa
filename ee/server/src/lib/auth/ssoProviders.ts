@@ -119,12 +119,29 @@ async function locateUser(
   tenantHint?: string | null,
   userTypeHint?: string | null,
 ): Promise<IUser | undefined> {
+  const normalizedType = pickUserType(userTypeHint ?? undefined);
+  if (normalizedType === 'client') {
+    if (!tenantHint) {
+      return undefined;
+    }
+
+    const tenantId =
+      (await resolveTenantIdFromSlug(tenantHint)) ??
+      (await resolveTenantIdFromVanityHost(tenantHint)) ??
+      tenantHint;
+
+    if (!tenantId) {
+      return undefined;
+    }
+
+    return findUserByEmailTenantAndType(email, tenantId, 'client');
+  }
+
   const defaultUser = await findUserByEmail(email);
   if (defaultUser) {
     return defaultUser;
   }
 
-  const normalizedType = pickUserType(userTypeHint ?? undefined);
   if (tenantHint) {
     const tenantId =
       (await resolveTenantIdFromSlug(tenantHint)) ??
@@ -249,6 +266,7 @@ export async function mapOAuthProfileToExtendedUser(
   input: OAuthProfileMappingInput,
 ): Promise<OAuthProfileMappingResult> {
   const { provider, email, image, profile, tenantHint, userTypeHint, vanityHostHint } = input;
+  const requestedUserType = pickUserType(userTypeHint ?? undefined);
 
   if (!email || typeof email !== 'string') {
     logger.warn(`[auth] ${provider} profile missing email`, { profile });
@@ -265,6 +283,14 @@ export async function mapOAuthProfileToExtendedUser(
 
   if (user.is_inactive) {
     logger.warn(`[auth] Inactive user attempted ${provider} OAuth`, { email: normalizedEmail });
+    throw new Error('User not found');
+  }
+
+  if (requestedUserType === 'client' && user.user_type !== 'client') {
+    logger.warn(`[auth] Non-client user attempted client portal ${provider} OAuth`, {
+      email: normalizedEmail,
+      userType: user.user_type,
+    });
     throw new Error('User not found');
   }
 
@@ -285,7 +311,26 @@ export async function mapOAuthProfileToExtendedUser(
     }
   }
 
-  const resolvedUserType = pickUserType(userTypeHint ?? user.user_type);
+  if (requestedUserType === 'client') {
+    const expectedTenantId =
+      (tenantHint
+        ? ((await resolveTenantIdFromSlug(tenantHint)) ??
+          (await resolveTenantIdFromVanityHost(tenantHint)) ??
+          tenantHint)
+        : undefined) ??
+      (vanityHostHint ? await resolveTenantIdFromVanityHost(vanityHostHint) : undefined);
+
+    if (!expectedTenantId || !tenantId || tenantId !== expectedTenantId) {
+      logger.warn(`[auth] Client portal ${provider} OAuth tenant mismatch`, {
+        email: normalizedEmail,
+        expectedTenantId,
+        resolvedTenantId: tenantId,
+      });
+      throw new Error('User not found');
+    }
+  }
+
+  const resolvedUserType = requestedUserType;
   const tenantSlug = tenantId ? buildTenantPortalSlug(tenantId) : undefined;
 
   logger.info(`[auth] ${provider} OAuth successful`, { email: normalizedEmail, tenant: tenantId, userType: resolvedUserType });

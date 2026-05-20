@@ -20,6 +20,7 @@ interface PreviewTenant {
   displayName: string | null;
   primaryDomain: string | null;
   sourceUserCount: number;
+  existingMapping?: PreviewMappingSettings | null;
 }
 
 interface PreviewCandidate {
@@ -29,6 +30,15 @@ interface PreviewCandidate {
   reason: 'exact_domain' | 'secondary_domain' | 'fuzzy_name';
   matchedDomain?: string;
   autoMatch?: false;
+}
+
+interface PreviewMappingSettings {
+  clientId: string | null;
+  mappingState: string | null;
+  clientPortalEntraProvisioningMode: 'inherit' | 'disabled' | 'built_in' | 'workflow_managed';
+  clientPortalEntitlementGroupId: string | null;
+  clientPortalEntitlementMembershipMode: 'transitive';
+  clientPortalDefaultRoleName: string | null;
 }
 
 export interface EntraMappingPreviewResult {
@@ -43,6 +53,16 @@ interface ClientRow {
   url: string | null;
   properties: Record<string, unknown> | null;
   billing_email: string | null;
+}
+
+interface MappingRow {
+  managed_tenant_id: string;
+  client_id: string | null;
+  mapping_state: string | null;
+  client_portal_entra_provisioning_mode: string | null;
+  client_portal_entitlement_group_id: string | null;
+  client_portal_entitlement_membership_mode: string | null;
+  client_portal_default_role_name: string | null;
 }
 
 function toObject(value: unknown): Record<string, unknown> {
@@ -114,15 +134,41 @@ function buildDomainCandidates(
   return { exactClients, secondaryClients, fuzzyClients };
 }
 
+function normalizeProvisioningMode(
+  value: unknown
+): 'inherit' | 'disabled' | 'built_in' | 'workflow_managed' {
+  if (value === 'disabled' || value === 'built_in' || value === 'workflow_managed') {
+    return value;
+  }
+  return 'inherit';
+}
+
+function mapExistingMapping(row: MappingRow): PreviewMappingSettings {
+  return {
+    clientId: row.client_id ? String(row.client_id) : null,
+    mappingState: row.mapping_state ? String(row.mapping_state) : null,
+    clientPortalEntraProvisioningMode: normalizeProvisioningMode(
+      row.client_portal_entra_provisioning_mode
+    ),
+    clientPortalEntitlementGroupId: row.client_portal_entitlement_group_id
+      ? String(row.client_portal_entitlement_group_id)
+      : null,
+    clientPortalEntitlementMembershipMode: 'transitive',
+    clientPortalDefaultRoleName: row.client_portal_default_role_name
+      ? String(row.client_portal_default_role_name)
+      : null,
+  };
+}
+
 export async function buildEntraMappingPreview(
   tenant: string
 ): Promise<EntraMappingPreviewResult> {
-  const { managedTenants, clients, inboundDomains } = await runWithTenant(tenant, async () => {
+  const { managedTenants, clients, inboundDomains, activeMappings } = await runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex();
 
 
 
-    const [managedTenantRows, clientRows, inboundDomainRows] = await Promise.all([
+    const [managedTenantRows, clientRows, inboundDomainRows, activeMappingRows] = await Promise.all([
       knex('entra_managed_tenants')
         .where({ tenant })
         .orderByRaw('coalesce(display_name, entra_tenant_id) asc')
@@ -133,14 +179,33 @@ export async function buildEntraMappingPreview(
       knex('client_inbound_email_domains')
         .where({ tenant })
         .select('client_id', 'domain'),
+      knex('entra_client_tenant_mappings')
+        .where({ tenant, is_active: true })
+        .select(
+          'managed_tenant_id',
+          'client_id',
+          'mapping_state',
+          'client_portal_entra_provisioning_mode',
+          'client_portal_entitlement_group_id',
+          'client_portal_entitlement_membership_mode',
+          'client_portal_default_role_name'
+        ),
     ]);
 
     return {
       managedTenants: managedTenantRows,
       clients: clientRows as ClientRow[],
       inboundDomains: inboundDomainRows as Array<{ client_id: string; domain: string }>,
+      activeMappings: activeMappingRows as MappingRow[],
     };
   });
+
+  const mappingByManagedTenantId = new Map<string, PreviewMappingSettings>();
+  for (const row of activeMappings) {
+    if (row.managed_tenant_id) {
+      mappingByManagedTenantId.set(String(row.managed_tenant_id), mapExistingMapping(row));
+    }
+  }
 
   const inboundDomainsByClient = new Map<string, string[]>();
   for (const row of inboundDomains) {
@@ -166,6 +231,7 @@ export async function buildEntraMappingPreview(
       displayName: mapped.display_name,
       primaryDomain: mapped.primary_domain,
       sourceUserCount: mapped.source_user_count,
+      existingMapping: mappingByManagedTenantId.get(mapped.managed_tenant_id) ?? null,
     };
 
     const exactMatches = findExactDomainMatches(mapped.primary_domain, exactClients);

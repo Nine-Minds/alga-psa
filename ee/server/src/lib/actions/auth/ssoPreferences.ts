@@ -12,13 +12,34 @@ import { assertTierAccess } from "server/src/lib/tier-gating/assertTierAccess";
 export interface SsoPreferences {
   autoLinkInternal: boolean;
   autoLinkClient: boolean;
+  clientPortalEntraProvisioningMode: "disabled" | "built_in" | "workflow_managed";
+  clientPortalDefaultRoleName: string;
+  deactivateEntraManagedPortalUsersOnEntitlementRemoval: boolean;
 }
 
 function normalizePreferences(raw?: any): SsoPreferences {
   const prefs = raw?.sso ?? {};
+  const provisioningModeRaw = typeof prefs.clientPortalEntraProvisioningMode === "string"
+    ? prefs.clientPortalEntraProvisioningMode
+    : "disabled";
+  const provisioningMode =
+    provisioningModeRaw === "built_in" || provisioningModeRaw === "workflow_managed"
+      ? provisioningModeRaw
+      : "disabled";
+
   return {
     autoLinkInternal: Boolean(prefs.autoLinkInternal),
     autoLinkClient: Boolean(prefs.autoLinkClient),
+    clientPortalEntraProvisioningMode: provisioningMode,
+    clientPortalDefaultRoleName:
+      typeof prefs.clientPortalDefaultRoleName === "string" &&
+      prefs.clientPortalDefaultRoleName.trim().length > 0
+        ? prefs.clientPortalDefaultRoleName.trim()
+        : "User",
+    deactivateEntraManagedPortalUsersOnEntitlementRemoval:
+      prefs.deactivateEntraManagedPortalUsersOnEntitlementRemoval === undefined
+        ? true
+        : Boolean(prefs.deactivateEntraManagedPortalUsersOnEntitlementRemoval),
   };
 }
 
@@ -34,6 +55,24 @@ function safeParse(raw: string): Record<string, unknown> | undefined {
     return JSON.parse(raw);
   } catch {
     return undefined;
+  }
+}
+
+async function assertClientPortalRoleExists(
+  knex: Awaited<ReturnType<typeof createTenantKnex>>["knex"],
+  tenant: string,
+  roleName: string
+): Promise<void> {
+  const role = await knex("roles")
+    .where({
+      tenant,
+      client: true,
+    })
+    .andWhereRaw("lower(role_name) = lower(?)", [roleName])
+    .first(["role_id"]);
+
+  if (!role?.role_id) {
+    throw new Error("Selected default role must be an existing client portal role.");
   }
 }
 
@@ -58,7 +97,21 @@ export const updateSsoPreferencesAction = withAuth(async (
     autoLinkInternal:
       updates.autoLinkInternal ?? Boolean(currentSettings?.sso?.autoLinkInternal),
     autoLinkClient: updates.autoLinkClient ?? Boolean(currentSettings?.sso?.autoLinkClient),
+    clientPortalEntraProvisioningMode:
+      updates.clientPortalEntraProvisioningMode ??
+      normalizePreferences(currentSettings).clientPortalEntraProvisioningMode,
+    clientPortalDefaultRoleName:
+      (typeof updates.clientPortalDefaultRoleName === "string"
+        ? updates.clientPortalDefaultRoleName.trim()
+        : normalizePreferences(currentSettings).clientPortalDefaultRoleName) || "User",
+    deactivateEntraManagedPortalUsersOnEntitlementRemoval:
+      updates.deactivateEntraManagedPortalUsersOnEntitlementRemoval ??
+      normalizePreferences(currentSettings).deactivateEntraManagedPortalUsersOnEntitlementRemoval,
   };
+
+  if (updates.clientPortalDefaultRoleName !== undefined) {
+    await assertClientPortalRoleExists(knex, tenant, nextPreferences.clientPortalDefaultRoleName);
+  }
 
   const updatedSettings = {
     ...currentSettings,
@@ -66,6 +119,10 @@ export const updateSsoPreferencesAction = withAuth(async (
       ...(currentSettings?.sso ?? {}),
       autoLinkInternal: nextPreferences.autoLinkInternal,
       autoLinkClient: nextPreferences.autoLinkClient,
+      clientPortalEntraProvisioningMode: nextPreferences.clientPortalEntraProvisioningMode,
+      clientPortalDefaultRoleName: nextPreferences.clientPortalDefaultRoleName,
+      deactivateEntraManagedPortalUsersOnEntitlementRemoval:
+        nextPreferences.deactivateEntraManagedPortalUsersOnEntitlementRemoval,
     },
   };
 

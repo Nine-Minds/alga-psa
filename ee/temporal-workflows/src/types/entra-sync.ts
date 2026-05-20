@@ -20,6 +20,14 @@ export interface EntraManagedTenantRef {
   managedTenantId: string;
   entraTenantId: string;
   clientId?: string | null;
+  clientPortalEntraProvisioningModeOverride?: 'inherit' | 'disabled' | 'built_in' | 'workflow_managed';
+  clientPortalEntraProvisioningMode?: 'disabled' | 'built_in' | 'workflow_managed';
+  clientPortalEntitlementGroupId?: string | null;
+  clientPortalEntitlementMembershipMode?: 'transitive';
+  clientPortalDefaultRoleNameOverride?: string | null;
+  clientPortalDefaultRoleName?: string | null;
+  clientPortalWorkflowTarget?: string | null;
+  clientPortalWorkflowConfig?: Record<string, unknown> | null;
 }
 
 export interface EntraSyncWorkflowInput {
@@ -51,6 +59,7 @@ export interface EntraSyncRunSummary {
   updated: number;
   ambiguous: number;
   inactivated: number;
+  skipped: number;
 }
 
 export interface EntraTenantSyncResult {
@@ -62,6 +71,7 @@ export interface EntraTenantSyncResult {
   updated: number;
   ambiguous: number;
   inactivated: number;
+  skipped: number;
   errorMessage?: string | null;
 }
 
