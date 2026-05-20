@@ -22,8 +22,7 @@ import { Knex } from 'knex';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { createTagsForEntityWithTransaction, findTagsByEntityIds } from '@alga-psa/tags/actions';
-import { getTeamById } from '@alga-psa/teams/actions';
-import { addTicketResource } from './ticketResourceActions';
+import { assignTeamToTicket, removeTeamFromTicket } from './teamAssignmentActions';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import {
   ticketSchema,
@@ -1760,48 +1759,20 @@ export const bulkAssignTickets = withAuth(async (
     return { updatedIds: [], failed: [] };
   }
 
-  let primaryAssigneeId: string | null = null;
-  let additionalAgentIds: string[] = [];
-
-  if (selection.kind === 'user') {
-    primaryAssigneeId = selection.userId;
-  } else {
-    try {
-      const team = await getTeamById(selection.teamId);
-      primaryAssigneeId = team.manager_id ?? null;
-      if (!primaryAssigneeId) {
-        return {
-          updatedIds: [],
-          failed: uniqueIds.map((ticketId) => ({
-            ticketId,
-            message: 'Selected team has no lead to set as primary assignee',
-          })),
-        };
-      }
-      additionalAgentIds = (team.members ?? [])
-        .map((m) => m.user_id)
-        .filter((uid): uid is string => !!uid && uid !== primaryAssigneeId);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to load team';
-      return {
-        updatedIds: [],
-        failed: uniqueIds.map((ticketId) => ({ ticketId, message })),
-      };
-    }
-  }
-
   const updatedIds: string[] = [];
   const failed: Array<{ ticketId: string; message: string }> = [];
 
   for (const ticketId of uniqueIds) {
     try {
-      await updateTicketWithCache(ticketId, { assigned_to: primaryAssigneeId });
-      for (const additionalUserId of additionalAgentIds) {
-        try {
-          await addTicketResource(ticketId, additionalUserId, 'agent');
-        } catch {
-          // Resource may already exist; skip per-member errors so the assignment as a whole still succeeds.
-        }
+      if (selection.kind === 'team') {
+        // Canonical team flow: sets assigned_team_id + the team lead as primary assignee and
+        // records team members as `team_member` resources, so the team badge/filter persists.
+        await assignTeamToTicket(ticketId, selection.teamId);
+      } else {
+        // Assigning to a single user clears any team assignment (and its team_member resources)
+        // first so a stale assigned_team_id / team badge isn't left behind.
+        await removeTeamFromTicket(ticketId, { mode: 'remove_all' });
+        await updateTicketWithCache(ticketId, { assigned_to: selection.userId });
       }
       updatedIds.push(ticketId);
     } catch (error: unknown) {
@@ -1835,6 +1806,12 @@ export const bulkAddTagsToTickets = withAuth(async (
 
   if (uniqueIds.length === 0 || normalizedTexts.length === 0) {
     return { updatedIds: [], failed: [] };
+  }
+
+  // Tag writes don't go through updateTicketWithCache, so authorize explicitly here.
+  const { knex: authKnex } = await createTenantKnex();
+  if (!(await hasPermission(user, 'ticket', 'update', authKnex))) {
+    throw new Error('Permission denied: Cannot update tickets');
   }
 
   const existingByTicket = new Map<string, Set<string>>();

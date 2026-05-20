@@ -56,12 +56,9 @@ vi.mock('@alga-psa/tags/actions', () => ({
   findTagsByEntityIds: vi.fn(),
 }));
 
-vi.mock('@alga-psa/teams/actions', () => ({
-  getTeamById: vi.fn(),
-}));
-
-vi.mock('./ticketResourceActions', () => ({
-  addTicketResource: vi.fn(),
+vi.mock('./teamAssignmentActions', () => ({
+  assignTeamToTicket: vi.fn(),
+  removeTeamFromTicket: vi.fn(),
 }));
 
 vi.mock('@alga-psa/validation', () => ({

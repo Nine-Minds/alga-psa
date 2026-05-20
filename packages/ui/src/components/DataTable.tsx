@@ -332,7 +332,6 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     onVisibleRowsChange,
     onItemsPerPageChange,
     itemsPerPageOptions,
-    minColumnWidth = 120,
   } = props;
   const { t } = useTranslation('common');
   const defaultItemsPerPageOptions = useMemo(() => [
@@ -476,7 +475,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [columns, minColumnWidth, showAllColumns]); // Re-run when columns, min width, or show-all change
+  }, [columns, showAllColumns]); // Re-run when columns or show-all change
 
   // Memoize the initial column configuration to prevent loops
   const columnConfig = useMemo(() => {
@@ -753,7 +752,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
               <button
                 type="button"
                 onClick={() => setShowAllColumns(false)}
-                className="ml-1 font-medium underline underline-offset-2 hover:opacity-80 focus:outline-none"
+                className="ml-1 font-medium text-[rgb(var(--color-primary-600))] underline underline-offset-2 hover:opacity-80 focus:outline-none"
               >
                 Show less
               </button>
@@ -769,7 +768,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
               <button
                 type="button"
                 onClick={() => setShowAllColumns(true)}
-                className="ml-1 font-medium underline underline-offset-2 hover:opacity-80 focus:outline-none"
+                className="ml-1 font-medium text-[rgb(var(--color-primary-600))] underline underline-offset-2 hover:opacity-80 focus:outline-none"
               >
                 Show all
               </button>

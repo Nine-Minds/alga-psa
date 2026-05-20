@@ -158,21 +158,20 @@ const TICKET_LIST_DENSITY_PRESETS: ReadonlyArray<{
   filterGap: string;
   bodyPadding: string;
   tableRowDensity: string;
-  minColumnWidth: number;
   tagSize: TagSize;
   filterControlClass: string;
 }> = [
-  { filterPadding: 'p-3',   filterGap: 'gap-2',   bodyPadding: 'p-2.5', tableRowDensity: '[&>td]:!py-0.5 [&>td]:!text-[11px] [&>td_*]:!text-[11px]', minColumnWidth: 80,  tagSize: 'sm', filterControlClass: FILTER_CONTROL_30_12 },
-  { filterPadding: 'p-3',   filterGap: 'gap-2',   bodyPadding: 'p-3',   tableRowDensity: '[&>td]:!py-1 [&>td]:!text-[12px] [&>td_*]:!text-[12px]',   minColumnWidth: 90,  tagSize: 'sm', filterControlClass: FILTER_CONTROL_30_12 },
-  { filterPadding: 'p-3.5', filterGap: 'gap-2.5', bodyPadding: 'p-3',   tableRowDensity: '[&>td]:!py-1.5 [&>td]:!text-[12px] [&>td_*]:!text-[12px]', minColumnWidth: 100, tagSize: 'sm', filterControlClass: FILTER_CONTROL_32_12 },
-  { filterPadding: 'p-3.5', filterGap: 'gap-2.5', bodyPadding: 'p-3.5', tableRowDensity: '[&>td]:!py-2 [&>td]:!text-[13px] [&>td_*]:!text-[13px]',   minColumnWidth: 105, tagSize: 'sm', filterControlClass: FILTER_CONTROL_32_12 },
-  { filterPadding: 'p-4',   filterGap: 'gap-3',   bodyPadding: 'p-4',   tableRowDensity: '[&>td]:!py-2.5 [&>td]:!text-[13px] [&>td_*]:!text-[13px]', minColumnWidth: 115, tagSize: 'sm', filterControlClass: FILTER_CONTROL_34_13 },
-  { filterPadding: 'p-5',   filterGap: 'gap-4',   bodyPadding: 'p-5',   tableRowDensity: '[&>td]:!py-3 [&>td]:!text-[14px] [&>td_*]:!text-[14px]',   minColumnWidth: 130, tagSize: 'md', filterControlClass: FILTER_CONTROL_34_13 },
-  { filterPadding: 'p-5',   filterGap: 'gap-4',   bodyPadding: 'p-5',   tableRowDensity: '[&>td]:!py-3.5 [&>td]:!text-[14px] [&>td_*]:!text-[14px]', minColumnWidth: 145, tagSize: 'md', filterControlClass: FILTER_CONTROL_36_13 },
-  { filterPadding: 'p-6',   filterGap: 'gap-5',   bodyPadding: 'p-6',   tableRowDensity: '[&>td]:!py-4 [&>td]:!text-[15px] [&>td_*]:!text-[15px]',   minColumnWidth: 165, tagSize: 'md', filterControlClass: FILTER_CONTROL_36_13 },
-  { filterPadding: 'p-6',   filterGap: 'gap-5',   bodyPadding: 'p-7',   tableRowDensity: '[&>td]:!py-5 [&>td]:!text-[15px] [&>td_*]:!text-[15px]',   minColumnWidth: 185, tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
-  { filterPadding: 'p-7',   filterGap: 'gap-6',   bodyPadding: 'p-7',   tableRowDensity: '[&>td]:!py-6 [&>td]:!text-[16px] [&>td_*]:!text-[16px]',   minColumnWidth: 210, tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
-  { filterPadding: 'p-8',   filterGap: 'gap-6',   bodyPadding: 'p-8',   tableRowDensity: '[&>td]:!py-7 [&>td]:!text-[17px] [&>td_*]:!text-[17px]',   minColumnWidth: 240, tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
+  { filterPadding: 'p-3',   filterGap: 'gap-2',   bodyPadding: 'p-2.5', tableRowDensity: '[&>td]:!py-0.5 [&>td]:!text-[11px] [&>td_*]:!text-[11px]', tagSize: 'sm', filterControlClass: FILTER_CONTROL_30_12 },
+  { filterPadding: 'p-3',   filterGap: 'gap-2',   bodyPadding: 'p-3',   tableRowDensity: '[&>td]:!py-1 [&>td]:!text-[12px] [&>td_*]:!text-[12px]',   tagSize: 'sm', filterControlClass: FILTER_CONTROL_30_12 },
+  { filterPadding: 'p-3.5', filterGap: 'gap-2.5', bodyPadding: 'p-3',   tableRowDensity: '[&>td]:!py-1.5 [&>td]:!text-[12px] [&>td_*]:!text-[12px]', tagSize: 'sm', filterControlClass: FILTER_CONTROL_32_12 },
+  { filterPadding: 'p-3.5', filterGap: 'gap-2.5', bodyPadding: 'p-3.5', tableRowDensity: '[&>td]:!py-2 [&>td]:!text-[13px] [&>td_*]:!text-[13px]',   tagSize: 'sm', filterControlClass: FILTER_CONTROL_32_12 },
+  { filterPadding: 'p-4',   filterGap: 'gap-3',   bodyPadding: 'p-4',   tableRowDensity: '[&>td]:!py-2.5 [&>td]:!text-[13px] [&>td_*]:!text-[13px]', tagSize: 'sm', filterControlClass: FILTER_CONTROL_34_13 },
+  { filterPadding: 'p-5',   filterGap: 'gap-4',   bodyPadding: 'p-5',   tableRowDensity: '[&>td]:!py-3 [&>td]:!text-[14px] [&>td_*]:!text-[14px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_34_13 },
+  { filterPadding: 'p-5',   filterGap: 'gap-4',   bodyPadding: 'p-5',   tableRowDensity: '[&>td]:!py-3.5 [&>td]:!text-[14px] [&>td_*]:!text-[14px]', tagSize: 'md', filterControlClass: FILTER_CONTROL_36_13 },
+  { filterPadding: 'p-6',   filterGap: 'gap-5',   bodyPadding: 'p-6',   tableRowDensity: '[&>td]:!py-4 [&>td]:!text-[15px] [&>td_*]:!text-[15px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_36_13 },
+  { filterPadding: 'p-6',   filterGap: 'gap-5',   bodyPadding: 'p-7',   tableRowDensity: '[&>td]:!py-5 [&>td]:!text-[15px] [&>td_*]:!text-[15px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
+  { filterPadding: 'p-7',   filterGap: 'gap-6',   bodyPadding: 'p-7',   tableRowDensity: '[&>td]:!py-6 [&>td]:!text-[16px] [&>td_*]:!text-[16px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
+  { filterPadding: 'p-8',   filterGap: 'gap-6',   bodyPadding: 'p-8',   tableRowDensity: '[&>td]:!py-7 [&>td]:!text-[17px] [&>td_*]:!text-[17px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
 ];
 
 function formatPrintDate(value?: string | null): string {
@@ -927,13 +926,20 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const selectedTicketsSharedBoardId = useMemo<string | null>(() => {
     if (selectedTicketDetails.length === 0) return null;
+    // We can only determine the board from rows loaded on the current page. If the selection
+    // includes off-page tickets (select-all-matching, or selected rows not in the current page),
+    // their boards are unknown — treat as "no shared board" so bulk status stays disabled rather
+    // than attempting a status change that would fail for tickets on other boards.
+    if (allMatchingMode || selectedTicketDetails.length !== selectedTicketIds.size) {
+      return null;
+    }
     const uniqueBoardIds = new Set(
       selectedTicketDetails
         .map(detail => detail.board_id)
         .filter((id): id is string => typeof id === 'string' && id.length > 0)
     );
     return uniqueBoardIds.size === 1 ? Array.from(uniqueBoardIds)[0] : null;
-  }, [selectedTicketDetails]);
+  }, [selectedTicketDetails, allMatchingMode, selectedTicketIds.size]);
 
   const hasSelection = selectedTicketIds.size > 0;
   const showSelectAllBanner = allVisibleTicketsSelected && !hasHiddenSelections && !allMatchingMode && totalCount > visibleTicketIds.length && visibleTicketIds.length > 0;
@@ -2228,7 +2234,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               pageSize={pageSize}
               totalItems={totalCount}
               onItemsPerPageChange={onPageSizeChange}
-              minColumnWidth={densityClasses.minColumnWidth}
               rowClassName={(record: ITicketListItem) =>
                 `${densityClasses.tableRowDensity} cursor-pointer ${record.ticket_id && selectedTicketIds.has(record.ticket_id)
                   ? '!bg-table-selected'
