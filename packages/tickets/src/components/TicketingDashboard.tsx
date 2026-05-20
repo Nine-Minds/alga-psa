@@ -1250,7 +1250,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             defaultValue: result.updatedIds.length === 1 ? '{{count}} ticket reassigned' : '{{count}} tickets reassigned',
           }));
         }
-        clearSelection();
+        // Keep the selection so the user can run more bulk actions on the same tickets.
         setIsBulkAssignDialogOpen(false);
       }
     } catch (error) {
@@ -1294,7 +1294,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             defaultValue: result.updatedIds.length === 1 ? 'Tags added to {{count}} ticket' : 'Tags added to {{count}} tickets',
           }));
         }
-        clearSelection();
+        // Keep the selection so the user can run more bulk actions on the same tickets.
         setIsBulkTagsDialogOpen(false);
       }
     } catch (error) {
@@ -1338,7 +1338,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             defaultValue: result.updatedIds.length === 1 ? 'Due date updated on {{count}} ticket' : 'Due date updated on {{count}} tickets',
           }));
         }
-        clearSelection();
+        // Keep the selection so the user can run more bulk actions on the same tickets.
         setIsBulkDueDateDialogOpen(false);
       }
     } catch (error) {
@@ -1412,7 +1412,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             defaultValue: result.updatedIds.length === 1 ? 'Status updated on {{count}} ticket' : 'Status updated on {{count}} tickets',
           }));
         }
-        clearSelection();
+        // Keep the selection so the user can run more bulk actions on the same tickets.
         setIsBulkStatusDialogOpen(false);
       }
     } catch (error) {
@@ -1456,7 +1456,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             defaultValue: result.updatedIds.length === 1 ? 'Priority updated on {{count}} ticket' : 'Priority updated on {{count}} tickets',
           }));
         }
-        clearSelection();
+        // Keep the selection so the user can run more bulk actions on the same tickets.
         setIsBulkPriorityDialogOpen(false);
       }
     } catch (error) {
