@@ -1015,7 +1015,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       dataIndex: 'selection',
       width: '4%',
       headerClassName: 'text-center px-4',
-      cellClassName: 'text-center px-4',
+      cellClassName: 'relative text-center px-4',
       sortable: false,
       render: (_value: string, record: ITicketListItem) => {
         const ticketId = record.ticket_id;
@@ -1026,9 +1026,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         const isChecked = selectedTicketIds.has(ticketId);
 
         return (
+          // Overlay fills the whole cell (incl. padding) so clicking anywhere in the
+          // column toggles selection instead of navigating into the ticket.
           <div
-            className="flex justify-center"
-            onClick={(event) => event.stopPropagation()}
+            className="absolute inset-0 flex items-center justify-center cursor-pointer"
+            onClick={(event) => {
+              event.stopPropagation();
+              handleTicketSelectionChange(ticketId, !isChecked);
+            }}
             onMouseDown={(event) => event.stopPropagation()}
           >
             <Checkbox
@@ -1039,7 +1044,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 handleTicketSelectionChange(ticketId, event.target.checked);
               }}
               containerClassName="mb-0"
-              className="m-0"
+              className="m-0 pointer-events-none"
               skipRegistration
             />
           </div>
