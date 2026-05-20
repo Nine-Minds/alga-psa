@@ -329,7 +329,7 @@
   },
   {
     "id": "T044",
-    "description": "Component: selection.* / single-letter page action fires only when an active region is registered, not on a focused button",
+    "description": "Component: selection.* fires only when an active region is registered (not on a focused button); single-letter page actions fire without a region",
     "implemented": true,
     "featureIds": [
       "F042"
@@ -527,7 +527,7 @@
   },
   {
     "id": "T087",
-    "description": "E2E: `c` opens QuickCreateDialog in a non-editable active region; does nothing while typing",
+    "description": "E2E: `c` opens the page's create dialog (QuickCreateDialog where no page.create) on a non-editable target without needing a focused region; does nothing while typing",
     "implemented": true,
     "featureIds": [
       "F087",
@@ -1171,7 +1171,7 @@
   },
   {
     "id": "T300",
-    "description": "E2E: on Tickets list (not in a field) `c` opens Create Ticket; on Clients `c` opens Create Client; etc. (page.create wins over global.quickCreate)",
+    "description": "E2E: on Tickets list (not in a field) `c` opens Create Ticket; on Clients `c` opens Create Client; etc. (page.create uses `c`; global.quickCreate uses `n`)",
     "implemented": true,
     "featureIds": [
       "F300",
@@ -1455,7 +1455,7 @@
   },
   {
     "id": "T367",
-    "description": "Behavioral: with no roving-focus region active, simulated c/j/k keydown on a focused non-list element invokes no handler; with the region active the handlers fire",
+    "description": "Behavioral: with no roving-focus region active, simulated j/k keydown on a focused non-list element invokes no handler while c still fires; with the region active the selection handlers fire too",
     "implemented": true,
     "featureIds": [
       "F370",
@@ -1465,7 +1465,7 @@
   },
   {
     "id": "T368",
-    "description": "Regression: mounting DefaultLayout alone does not satisfy requiresActiveRegion for selection.* / single-letter page actions (no unconditional active region)",
+    "description": "Regression: mounting DefaultLayout alone does not satisfy requiresActiveRegion for selection.* (no unconditional active region); single-letter page actions are not region-gated",
     "implemented": true,
     "featureIds": [
       "F370"
@@ -1516,5 +1516,68 @@
       "F373"
     ],
     "commitGroup": "gap-hardening"
+  },
+  {
+    "id": "T380",
+    "description": "Unit: SHORTCUT_PROFILES ships default/vim/emacs; resolveActionBindings for selection.open returns ['Enter'] under default, ['l'] under vim; user override beats profile delta",
+    "implemented": true,
+    "featureIds": [
+      "F380"
+    ],
+    "commitGroup": "shortcuts-ui-redesign"
+  },
+  {
+    "id": "T381",
+    "description": "Unit: setActionBindingsDelta drops an override equal to the active profile baseline (per-action reset returns to profile baseline, not raw factory)",
+    "implemented": true,
+    "featureIds": [
+      "F380"
+    ],
+    "commitGroup": "shortcuts-ui-redesign"
+  },
+  {
+    "id": "T382",
+    "description": "Unit: normalizeProfileId rejects unknown ids and returns DEFAULT_SHORTCUT_PROFILE; migrateShortcutPreferences upgrades v1 (no profile) to v2 default and preserves a valid stored profile",
+    "implemented": true,
+    "featureIds": [
+      "F380"
+    ],
+    "commitGroup": "shortcuts-ui-redesign"
+  },
+  {
+    "id": "T383",
+    "description": "Contract: UserProfile tabContent includes the keyboard-shortcuts tab + KeyboardShortcutsPanel; SettingsPage no longer references it; old KeyboardShortcutsSettings.tsx is deleted; BASE_PROFILE_TABS contains 'keyboard-shortcuts'",
+    "implemented": true,
+    "featureIds": [
+      "F383"
+    ],
+    "commitGroup": "shortcuts-ui-redesign"
+  },
+  {
+    "id": "T384",
+    "description": "Contract: KeyboardShortcutsPanel.tsx uses useKeyboardShortcutPreferences + getShortcutProfiles + KB_ROWS + buildIndex, registers window keydown capture, calls setActionBindings/setActionDisabled/setProfile/resetAction/resetAllShortcuts, exposes stable ids for capture/reset-all/conflict confirmations",
+    "implemented": true,
+    "featureIds": [
+      "F382"
+    ],
+    "commitGroup": "shortcuts-ui-redesign"
+  },
+  {
+    "id": "T385",
+    "description": "i18n: en/msp/profile.json defines profile.tabs.keyboardShortcuts (non-empty string); validate-translations.cjs passes after adding the key to all production+pseudo locales and regenerating pseudo",
+    "implemented": true,
+    "featureIds": [
+      "F385"
+    ],
+    "commitGroup": "shortcuts-ui-redesign"
+  },
+  {
+    "id": "T386",
+    "description": "FOLLOW-UP (implemented:false): the 7 non-EN production locales render the panel chrome strings as proper translations rather than EN defaultValue fallbacks; pseudo regenerated; validate-translations passes",
+    "implemented": false,
+    "featureIds": [
+      "F386"
+    ],
+    "commitGroup": "shortcuts-ui-redesign"
   }
 ]

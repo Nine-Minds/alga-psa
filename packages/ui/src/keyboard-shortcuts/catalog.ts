@@ -47,7 +47,7 @@ export const SHORTCUT_ACTION_CATALOG: readonly ShortcutActionCatalogEntry[] = [
   entry('global.search', 'global', 'global', ['mod+k']),
   entry('global.toggleChat', 'ai', 'global', ['mod+l']),
   entry('global.openShortcuts', 'global', 'global', ['?']),
-  entry('global.quickCreate', 'global', 'page', ['c']),
+  entry('global.quickCreate', 'global', 'page', ['mod+shift+n']),
   entry('ai.quickAsk', 'ai', 'global', ['mod+ArrowUp']),
 
   entry('page.create', 'page', 'page', ['c']),
@@ -63,11 +63,12 @@ export const SHORTCUT_ACTION_CATALOG: readonly ShortcutActionCatalogEntry[] = [
   entry('assets.commandPalette', 'assets', 'page', ['mod+shift+k']),
 
   entry('dialog.cancel', 'dialog', 'dialog', ['Escape']),
+  entry('dialog.submit', 'dialog', 'dialog', ['mod+s', 'mod+Enter'], { allowInEditable: true }),
   entry('panel.close', 'panel', 'panel', ['Escape']),
   entry('drawer.historyBack', 'panel', 'panel', ['alt+ArrowLeft']),
   entry('drawer.historyForward', 'panel', 'panel', ['alt+ArrowRight']),
-  entry('record.previous', 'record', 'panel', ['[']),
-  entry('record.next', 'record', 'panel', [']']),
+  entry('record.previous', 'record', 'page', ['[']),
+  entry('record.next', 'record', 'page', [']']),
 
   entry('editor.undo', 'editor', 'editor', ['mod+z'], { allowInEditable: true }),
   entry(

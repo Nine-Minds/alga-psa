@@ -3,10 +3,61 @@ import { getDefaultBindingsForPlatform, type ShortcutActionCatalogEntry } from '
 import type { PersistedShortcuts, Platform, ShortcutBindingDefaults } from './types';
 
 export const KEYBOARD_SHORTCUTS_PREFERENCE_KEY = 'keyboard_shortcuts_v1';
-export const SHORTCUT_PREFERENCES_VERSION = 1;
+export const SHORTCUT_PREFERENCES_VERSION = 2;
+export const DEFAULT_SHORTCUT_PROFILE = 'default';
+
+export interface ShortcutProfile {
+  id: string;
+  /** i18n key for the display name; `name` is the English fallback. */
+  nameKey: string;
+  name: string;
+  /** Per-action binding overrides applied on top of factory defaults. */
+  deltas: Readonly<Record<string, readonly string[]>>;
+}
+
+// Preset profiles. `default` is factory defaults (no deltas). The vim/emacs
+// deltas are deliberately conservative, parser-valid single chords keyed by
+// real catalog action ids — multi-chord Emacs sequences are intentionally NOT
+// assigned to non-sequence actions (they would silently never dispatch). These
+// presets are best-guess pending team confirmation (design handoff open Q).
+export const SHORTCUT_PROFILES: readonly ShortcutProfile[] = [
+  { id: 'default', nameKey: 'profiles.default', name: 'Default', deltas: {} },
+  {
+    id: 'vim',
+    nameKey: 'profiles.vim',
+    name: 'Vim-style',
+    deltas: {
+      'global.quickCreate': ['i'],
+      'selection.open': ['l'],
+      'record.next': ['j'],
+      'record.previous': ['k'],
+    },
+  },
+  {
+    id: 'emacs',
+    nameKey: 'profiles.emacs',
+    name: 'Emacs-style',
+    deltas: {
+      'selection.next': ['ctrl+n'],
+      'selection.previous': ['ctrl+p'],
+      'selection.open': ['ctrl+m'],
+    },
+  },
+];
+
+const PROFILE_BY_ID = new Map(SHORTCUT_PROFILES.map((profile) => [profile.id, profile]));
+
+export function getShortcutProfiles(): readonly ShortcutProfile[] {
+  return SHORTCUT_PROFILES;
+}
+
+export function normalizeProfileId(profileId: string | undefined): string {
+  return profileId && PROFILE_BY_ID.has(profileId) ? profileId : DEFAULT_SHORTCUT_PROFILE;
+}
 
 export const EMPTY_SHORTCUT_PREFERENCES: PersistedShortcuts = {
   version: SHORTCUT_PREFERENCES_VERSION,
+  profile: DEFAULT_SHORTCUT_PROFILE,
   bindings: {},
   disabled: [],
 };
@@ -34,17 +85,43 @@ export function migrateShortcutPreferences(value: unknown): PersistedShortcuts {
   const candidate = value as Partial<PersistedShortcuts>;
   return {
     version: SHORTCUT_PREFERENCES_VERSION,
+    profile: normalizeProfileId(candidate.profile),
     bindings: candidate.bindings && typeof candidate.bindings === 'object' ? candidate.bindings : {},
     disabled: Array.isArray(candidate.disabled) ? candidate.disabled : [],
   };
 }
 
+type ActionLike =
+  | Pick<ShortcutActionCatalogEntry, 'id' | 'defaultBindings'>
+  | { id: string; defaultBindings: ShortcutBindingDefaults };
+
+/**
+ * Binding a never-customized action falls back to: profile delta (if the
+ * active profile remaps this action) else the platform factory default.
+ */
+export function getProfileBaselineBindings(
+  action: ActionLike,
+  profileId: string | undefined,
+  platform: Platform,
+): readonly string[] {
+  const profile = PROFILE_BY_ID.get(normalizeProfileId(profileId));
+  const delta = profile?.deltas[action.id];
+  if (delta) {
+    return delta;
+  }
+
+  return getDefaultBindingsForPlatform(action.defaultBindings, platform);
+}
+
 export function resolveActionBindings(
-  action: Pick<ShortcutActionCatalogEntry, 'id' | 'defaultBindings'> | { id: string; defaultBindings: ShortcutBindingDefaults },
+  action: ActionLike,
   preferences: PersistedShortcuts,
   platform: Platform,
 ): readonly string[] {
-  return preferences.bindings[action.id] ?? getDefaultBindingsForPlatform(action.defaultBindings, platform);
+  return (
+    preferences.bindings[action.id] ??
+    getProfileBaselineBindings(action, preferences.profile, platform)
+  );
 }
 
 export function isActionDisabled(actionId: string, preferences: PersistedShortcuts): boolean {
@@ -57,10 +134,12 @@ export function setActionBindingsDelta(
   platform: Platform,
   bindings: readonly string[],
 ): PersistedShortcuts {
-  const platformDefault = getDefaultBindingsForPlatform(action, platform);
+  // A user value equal to the active profile baseline is dropped, not frozen,
+  // so per-action reset returns to the profile baseline (not raw factory).
+  const baseline = getProfileBaselineBindings(action, preferences.profile, platform);
   const nextBindings = { ...preferences.bindings };
 
-  if (arraysEqual(bindings, platformDefault)) {
+  if (arraysEqual(bindings, baseline)) {
     delete nextBindings[action.id];
   } else {
     nextBindings[action.id] = bindings;
@@ -89,6 +168,17 @@ export function setActionDisabled(
     ...preferences,
     version: SHORTCUT_PREFERENCES_VERSION,
     disabled: Array.from(disabledSet),
+  };
+}
+
+export function setProfilePreference(
+  preferences: PersistedShortcuts,
+  profileId: string,
+): PersistedShortcuts {
+  return {
+    ...preferences,
+    version: SHORTCUT_PREFERENCES_VERSION,
+    profile: normalizeProfileId(profileId),
   };
 }
 

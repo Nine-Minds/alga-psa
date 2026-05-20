@@ -575,3 +575,70 @@ items are `implemented: true` (one-commit-per-group rule).
   `npx tsc --noEmit -p packages/billing/tsconfig.json`;
   `npm run typecheck --workspace server`; and
   `npx nx graph --file=/tmp/project-graph.json && node scripts/guard-keyboard-shortcuts-boundary.mjs --graph /tmp/project-graph.json && node scripts/guard-keyboard-shortcuts-contract-tests.mjs`.
+
+## 2026-05-20 — shortcuts-ui-redesign (Profile move + visual keyboard cheatsheet)
+
+Built directly (not via loop) because the work is high-fidelity visual +
+judgment-heavy and the loop has no signal for either. Source: design handoff in
+`~/Downloads/design_handoff_keyboard_shortcuts/` (variation-c is canonical).
+
+- Root cause of "no nav tab" turned out NOT to be the AlgaDesk allowlist
+  (user is on full PSA). The real cause: `SettingsPage.tsx` does not render
+  the tab strip itself — the settings nav is driven by the **Sidebar in
+  settings mode** (`Sidebar.tsx:111`, `DefaultLayout.tsx:52`), a separate
+  curated menu that never got a `keyboard-shortcuts` entry. The content
+  route worked, but there was nothing to click. `settings-ui.contract.test.ts`
+  was a grep that only asserted the `id`/`icon`/`<Component/>` strings were
+  present in SettingsPage source, never that the nav surfaced it — another
+  FR37-class miss the gap-hardening group didn't cover (it converted engine
+  contract tests, not the server-side settings one).
+- Decision: move to **Profile** sub-tab (matches per-user preference
+  convention; uses real `<CustomTabs tabs={tabContent}>` so the tab strip
+  appears immediately; sidesteps any allowlist). Added entry to
+  `UserProfile.tsx tabContent`, deleted `KeyboardShortcutsSettings.tsx` and
+  its `SettingsPage` registration + `Keyboard` lucide import. Added
+  `'keyboard-shortcuts'` to `BASE_PROFILE_TABS` (`calendarAvailability.ts`)
+  so `/msp/profile?tab=keyboard-shortcuts` deep-links.
+- Engine: extended `PersistedShortcuts` to v2 with `profile: string` and a
+  v1→v2 migration; `SHORTCUT_PROFILES` ships `default` / `vim` / `emacs`
+  with parser-valid neutral single-chord deltas keyed by real catalog ids.
+  **Multi-chord emacs sequences (`mod+x mod+s`) were deliberately NOT
+  assigned to non-sequence actions** (page.save etc.) — they would parse-fail
+  and silently never dispatch. Resolution = user override → profile delta →
+  platform default, inside `resolveActionBindings` so dispatch + hints +
+  ARIA + panel all read the same effective binding. `setActionBindingsDelta`
+  now drops overrides equal to the **profile baseline**, so per-action reset
+  returns to the active profile (not raw factory). Provider exposes
+  `profile` + `setProfile`; `useKeyboardShortcutPreferences` includes them.
+  Vim/Emacs deltas are best-guess pending team confirmation (open Q in handoff).
+- Panel: `server/src/components/keyboard-shortcuts/KeyboardShortcutsPanel.tsx`
+  recreates variation-c using product CSS vars (`--color-primary-*`,
+  `--color-card`, `--radius-md`, `--font-mono` — globals.css already defines
+  these) + Radix-based `ConfirmationDialog`/`Switch`/`LoadingIndicator`. Real
+  `keydown` capture via window-level capture-phase listener with
+  `stopImmediatePropagation` so the provider dispatch doesn't double-fire
+  during rebind. Conflict UX = **prompt-to-reassign** (the new binding takes
+  over, the previous owner is left unbound) per user decision. Override
+  scope = **per-account only** (`useUserPreference`); per-device deferred.
+  Unmappable keys (`?`, `Escape`, `Delete`, sequences) route to the chord
+  rail instead of disappearing — improvement over the prototype.
+- Tests: added `profiles.test.ts` (7 behavioral cases for the profile layer).
+  Rewrote `settings-ui.contract.test.ts` to assert the new placement + panel
+  wiring (with `@behavioralCoverage` linking the real behavioral suites).
+  Updated `i18n.contract.test.ts` to assert `profile.tabs.keyboardShortcuts`
+  in `en/msp/profile.json` and that `SettingsPage` no longer references the
+  removed tab. Added the key to all production+pseudo locales for parity
+  and ran `generate-pseudo-locales.cjs` + `validate-translations.cjs`
+  (0 errors, 8 pre-existing Polish plural warnings).
+- Verification: `npx vitest run --config vitest.config.ts src/keyboard-shortcuts`
+  → 29 files / 137 tests pass; `npx tsc --noEmit -p packages/ui/tsconfig.json`
+  clean; `npm run typecheck --workspace server` clean;
+  `node scripts/guard-keyboard-shortcuts-boundary.mjs` OK; meta contract-test
+  guard OK; `node scripts/validate-translations.cjs` PASSED.
+- Follow-up (`F386/T386`, implemented:false): translate panel chrome strings
+  (`settings.*`, `profiles.*`, `legend.*`, `settings.chords.*`,
+  `settings.conflict.*`, `settings.actions.*`) into the 7 non-EN production
+  locales; today the panel falls back via `t(..., { defaultValue })` outside
+  EN. Per-device override scope from the handoff is also deferred.
+- Visual QA: not driven here. Browser/conduit QA pending with the user; the
+  prototype's `prototype/index.html` is the side-by-side reference.

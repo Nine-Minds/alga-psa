@@ -1,4 +1,5 @@
 /* @vitest-environment node */
+/* @behavioralCoverage packages/ui/src/keyboard-shortcuts/profiles.test.ts */
 /* @behavioralCoverage packages/ui/src/keyboard-shortcuts/customization-wiring.test.tsx */
 
 import { readFileSync } from 'node:fs';
@@ -11,38 +12,47 @@ function read(relativePath: string): string {
   return readFileSync(resolve(repoRoot, relativePath), 'utf8');
 }
 
-describe('keyboard shortcuts settings UI contract', () => {
-  it('adds a keyboard-shortcuts tab to SettingsPage with Keyboard icon', () => {
-    const source = read('server/src/components/settings/SettingsPage.tsx');
-    expect(source).toContain("id: 'keyboard-shortcuts'");
-    expect(source).toContain('icon: Keyboard');
-    expect(source).toContain('<KeyboardShortcutsSettings />');
+const panel = 'server/src/components/keyboard-shortcuts/KeyboardShortcutsPanel.tsx';
+
+describe('keyboard shortcuts UI placement contract', () => {
+  it('lives as a tab in the user Profile, not the admin Settings page', () => {
+    const profile = read('server/src/components/settings/profile/UserProfile.tsx');
+    expect(profile).toContain("id: 'keyboard-shortcuts'");
+    expect(profile).toContain('<KeyboardShortcutsPanel />');
+    expect(profile).toContain("profile.tabs.keyboardShortcuts");
+
+    const settings = read('server/src/components/settings/SettingsPage.tsx');
+    expect(settings).not.toContain("id: 'keyboard-shortcuts'");
+    expect(settings).not.toContain('KeyboardShortcutsSettings');
   });
 
-  it('uses shared settings components and preference-backed immediate updates', () => {
-    const source = read('server/src/components/settings/general/KeyboardShortcutsSettings.tsx');
+  it('is reachable via the ?tab= deep-link allowlist', () => {
+    const availability = read('packages/integrations/src/lib/calendarAvailability.ts');
+    expect(availability).toContain("'keyboard-shortcuts'");
+  });
+
+  it('is the visual-keyboard panel wired to the provider single source', () => {
+    const source = read(panel);
     expect(source).toContain('useKeyboardShortcutPreferences');
-    expect(source).toContain('Table');
-    expect(source).toContain('Switch');
-    expect(source).toContain('LoadingIndicator');
+    expect(source).toContain('getShortcutProfiles');
+    expect(source).toContain('KB_ROWS');
+    expect(source).toContain('buildIndex');
     expect(source).toContain('ConfirmationDialog');
-    expect(source).toContain('toast.success');
     expect(source).toContain('handleError');
-    expect(source).not.toContain('Save');
+    expect(source).toContain('toast.success');
   });
 
-  it('implements capture, clear/reset, disable, reset-all, conflicts, ids, and variants', () => {
-    const source = read('server/src/components/settings/general/KeyboardShortcutsSettings.tsx');
+  it('implements real key capture, conflict reassign, disable, reset, profiles', () => {
+    const source = read(panel);
     expect(source).toContain('bindingFromEvent');
+    expect(source).toContain("window.addEventListener('keydown'");
     expect(source).toContain('setActionBindings');
     expect(source).toContain('setActionDisabled');
+    expect(source).toContain('setProfile');
+    expect(source).toContain('resetAction');
+    expect(source).toContain('resetAllShortcuts');
     expect(source).toContain('keyboard-shortcuts-reset-all-confirmation');
     expect(source).toContain('keyboard-shortcuts-conflict-confirmation');
-    expect(source).toContain('variant="ghost"');
-    expect(source).toContain('variant="outline"');
-    expect(source).toContain('variant="destructive"');
-    expect(source).toContain('id={`keyboard-shortcut-capture-');
-    expect(source).toContain('id={`keyboard-shortcut-enabled-');
-    expect(source).toContain('id={`keyboard-shortcut-reset-');
+    expect(source).toContain('id="keyboard-shortcuts-copy"');
   });
 });

@@ -331,7 +331,7 @@
   },
   {
     "id": "F042",
-    "description": "Active-region API: register/unregister a roving-focus region; selection.* and single-letter page actions fire only when a region is active",
+    "description": "Active-region API: register/unregister a roving-focus region; selection.* actions fire only when a region is active (single-letter page actions are not region-gated)",
     "implemented": true,
     "prdRefs": [
       "FR10"
@@ -518,7 +518,7 @@
   },
   {
     "id": "F087",
-    "description": "global.quickCreate action registered (default `c`, non-editable/active-region) opening QuickCreateDialog",
+    "description": "global.quickCreate action registered (default `n`, non-editable, not region-gated) opening QuickCreateDialog",
     "implemented": true,
     "prdRefs": [
       "FR14"
@@ -1154,7 +1154,7 @@
   },
   {
     "id": "F300",
-    "description": "Catalog: add page.create (scope page, default ['c'], non-editable + active-region); register mod+n as a configurable OPTIONAL_ALTERNATE_BINDING with a documented 'browser may intercept (new window)' note; keep page.save default ['mod+s']",
+    "description": "Catalog: add page.create (scope page, default ['c'], non-editable, not region-gated); register mod+n as a configurable OPTIONAL_ALTERNATE_BINDING with a documented 'browser may intercept (new window)' note; keep page.save default ['mod+s']",
     "implemented": true,
     "prdRefs": [
       "FR31",
@@ -1612,7 +1612,7 @@
   },
   {
     "id": "F371",
-    "description": "selection.* and single-letter page actions (c/j/k) are inert on arbitrary non-editable focus across /msp and fire only when a real roving-focus region is active (requiresActiveRegion satisfied only by F370 regions)",
+    "description": "selection.* actions (j/k/Enter) are inert on arbitrary non-editable focus across /msp and fire only when a real roving-focus region is active (requiresActiveRegion satisfied only by F370 regions); single-letter page actions (c/n) are not region-gated",
     "implemented": true,
     "prdRefs": [
       "FR36",
@@ -1637,5 +1637,73 @@
       "FR37"
     ],
     "commitGroup": "gap-hardening"
+  },
+  {
+    "id": "F380",
+    "description": "Profile presets in engine single source: PersistedShortcuts gains profile (schema v2 with v1->v2 migration); SHORTCUT_PROFILES ships default/vim/emacs with parser-valid neutral single-chord deltas keyed by real catalog ids; resolveActionBindings = user override -> profile delta -> platform default; setActionBindingsDelta drops overrides equal to the profile baseline so per-action reset returns to active profile baseline",
+    "implemented": true,
+    "prdRefs": [
+      "FR40"
+    ],
+    "commitGroup": "shortcuts-ui-redesign"
+  },
+  {
+    "id": "F381",
+    "description": "Provider context exposes profile + setProfile (preferencesRef-driven, persisted via setProfilePreference); useKeyboardShortcutPreferences / useOptionalKeyboardShortcutPreferences include them so the panel and any hint consumers see one source",
+    "implemented": true,
+    "prdRefs": [
+      "FR40",
+      "FR34"
+    ],
+    "commitGroup": "shortcuts-ui-redesign"
+  },
+  {
+    "id": "F382",
+    "description": "KeyboardShortcutsPanel.tsx visual-keyboard cheatsheet (variation-c handoff) driven by real catalog + provider single source: KB_ROWS grid, layer toggle with counts, category-tinted bound keys with conflict dots, hover/selection KeyDetail strip (scope chip, Modified badge, Switch, BindingDisplay, Rebind/Cancel, per-action Reset), chord rail with search and Reset-all-to-profile footer, real keydown capture, prompt-to-reassign ConfirmationDialog conflict UX, Copy cheatsheet, react-hot-toast + handleError, every interactive element has an id; unmappable keys (?, Escape, Delete, sequences) route to the chord rail instead of disappearing",
+    "implemented": true,
+    "prdRefs": [
+      "FR39"
+    ],
+    "commitGroup": "shortcuts-ui-redesign"
+  },
+  {
+    "id": "F383",
+    "description": "Placement moved to Profile: KeyboardShortcutsPanel rendered as a CustomTabs sub-tab in UserProfile.tsx tabContent; SettingsPage.tsx tab entry and Keyboard icon import removed; old KeyboardShortcutsSettings.tsx deleted; 'keyboard-shortcuts' added to BASE_PROFILE_TABS so /msp/profile?tab=keyboard-shortcuts deep-links resolve",
+    "implemented": true,
+    "prdRefs": [
+      "FR38"
+    ],
+    "commitGroup": "shortcuts-ui-redesign"
+  },
+  {
+    "id": "F384",
+    "description": "Behavioral tests + contract updates: profiles.test.ts covers profile resolution (default/vim/emacs), override-wins, baseline-drop semantics, normalizeProfileId, v1->v2 migration; settings-ui.contract.test.ts rewritten to assert UserProfile placement, deleted old panel, panel single-source wiring, real capture/conflict/reset/profile ids; i18n.contract.test.ts updated to assert profile.tabs.keyboardShortcuts in EN profile.json and the SettingsPage no longer references the tab",
+    "implemented": true,
+    "prdRefs": [
+      "FR37",
+      "FR38",
+      "FR40"
+    ],
+    "commitGroup": "shortcuts-ui-redesign"
+  },
+  {
+    "id": "F385",
+    "description": "EN-first i18n for the new placement: profile.tabs.keyboardShortcuts added to all production locales' msp/profile.json (EN value as interim placeholder for non-EN languages) for key parity; pseudo-locales regenerated via generate-pseudo-locales.cjs; validate-translations.cjs passes; panel chrome uses t() defaultValue fallbacks pending the full 8-locale translation pass",
+    "implemented": true,
+    "prdRefs": [
+      "FR28",
+      "FR38"
+    ],
+    "commitGroup": "shortcuts-ui-redesign"
+  },
+  {
+    "id": "F386",
+    "description": "FOLLOW-UP (implemented:false): translate panel chrome keys (settings.*, profiles.*, legend.*, settings.chords.*, settings.conflict.*, settings.actions.*) into the 7 non-EN production locales and regenerate pseudo; today the panel renders via defaultValue fallbacks in non-EN locales",
+    "implemented": false,
+    "prdRefs": [
+      "FR28",
+      "FR39"
+    ],
+    "commitGroup": "shortcuts-ui-redesign"
   }
 ]

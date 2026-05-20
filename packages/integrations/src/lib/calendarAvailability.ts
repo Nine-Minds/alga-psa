@@ -12,7 +12,7 @@ const BASE_INTEGRATION_CATEGORY_IDS = [
   'payments',
 ] as const;
 
-const BASE_PROFILE_TABS = ['profile', 'security', 'single-sign-on', 'api-keys', 'notifications'] as const;
+const BASE_PROFILE_TABS = ['profile', 'security', 'single-sign-on', 'api-keys', 'notifications', 'keyboard-shortcuts'] as const;
 
 export function isCalendarEnterpriseEdition(env: NodeJS.ProcessEnv = process.env): boolean {
   if (env === process.env) {

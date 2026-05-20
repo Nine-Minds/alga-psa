@@ -31,7 +31,6 @@ import {
   useShortcutScope,
 } from '@alga-psa/ui/keyboard-shortcuts';
 import { ShortcutHelpDialog } from '@alga-psa/ui/keyboard-shortcuts';
-import { QuickCreateDialog, type QuickCreateType } from './QuickCreateDialog';
 
 interface DefaultLayoutProps {
   children: React.ReactNode;
@@ -127,7 +126,6 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [quickAskOpen, setQuickAskOpen] = useState(false);
   const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
-  const [quickCreateType, setQuickCreateType] = useState<QuickCreateType | null>(null);
   const [isChatInterruptible, setIsChatInterruptible] = useState(false);
   const [pendingInterruptKind, setPendingInterruptKind] = useState<'close-sidebar' | 'navigate' | null>(null);
   const [sidebarHandoff, setSidebarHandoff] = useState<{ chatId: string | null; nonce: number }>({
@@ -250,7 +248,10 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
   }, []);
 
   const quickCreateShortcut = useCallback(() => {
-    setQuickCreateType('ticket');
+    const trigger = document.getElementById('global-quick-create-trigger');
+    if (trigger instanceof HTMLElement) {
+      trigger.click();
+    }
   }, []);
 
   const goTicketsShortcut = useCallback(() => {
@@ -524,12 +525,6 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
                 />
               ) : null}
               <ShortcutHelpDialog isOpen={shortcutsHelpOpen} onClose={() => setShortcutsHelpOpen(false)} />
-              {quickCreateType ? (
-                <QuickCreateDialog
-                  type={quickCreateType}
-                  onClose={() => setQuickCreateType(null)}
-                />
-              ) : null}
             </QuickAskProvider>
           </div>
         </div>

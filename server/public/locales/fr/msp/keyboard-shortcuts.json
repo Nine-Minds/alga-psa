@@ -14,16 +14,21 @@
     },
     "actions": {
       "resetAll": "Tout réinitialiser",
-      "replace": "Remplacer"
+      "replace": "Remplacer",
+      "copyCheatsheet": "Copy cheatsheet",
+      "printCheatsheet": "Print"
     },
     "messages": {
       "bindingUpdated": "Raccourci clavier mis à jour",
       "enabledUpdated": "Raccourci clavier mis à jour",
       "resetOne": "Raccourci clavier réinitialisé",
-      "resetAll": "Raccourcis clavier réinitialisés"
+      "resetAll": "Raccourcis clavier réinitialisés",
+      "cheatsheetCopied": "Cheatsheet copied to clipboard"
     },
     "errors": {
-      "saveFailed": "Échec de l’enregistrement des préférences de raccourcis clavier"
+      "saveFailed": "Échec de l’enregistrement des préférences de raccourcis clavier",
+      "copyFailed": "Failed to copy cheatsheet",
+      "printFailed": "Unable to open print window. Allow pop-ups and try again."
     },
     "resetAll": {
       "title": "Réinitialiser tous les raccourcis ?",
@@ -144,6 +149,10 @@
       "cancel": {
         "label": "Annuler le dialogue",
         "description": "Fermer ou annuler le dialogue actif."
+      },
+      "submit": {
+        "label": "Submit dialog",
+        "description": "Submit the active dialog form."
       }
     },
     "panel": {

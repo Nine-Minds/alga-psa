@@ -109,7 +109,17 @@ export function MspLayoutClient({
               }}
             >
               {isOnboardingPage ? children : (
-                <KeyboardShortcutsProvider routeKey={pathname ?? '/msp'} storage={shortcutPreference.storage}>
+                <KeyboardShortcutsProvider
+                  routeKey={pathname ?? '/msp'}
+                  storage={shortcutPreference.storage}
+                  onConflict={({ binding, actionIds }) => {
+                    if (process.env.NODE_ENV !== 'production') {
+                      console.warn(
+                        `[keyboard-shortcuts] "${binding}" is bound to multiple actions and was ignored: ${actionIds.join(', ')}`,
+                      );
+                    }
+                  }}
+                >
                   {isAlgaDesk ? (
                     routeBehavior === 'allowed' ? (
                       <AlgaDeskMspShell initialSidebarCollapsed={initialSidebarCollapsed}>

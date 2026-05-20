@@ -71,7 +71,7 @@ function SettingsProbe() {
 }
 
 describe('gap hardening behavioral coverage', () => {
-  it('requires a real active region for c/j/k page and selection actions', async () => {
+  it('gates selection.* on a real active region but lets page.create fire page-wide', async () => {
     const createHandler = vi.fn();
     const selectionHandler = vi.fn();
 
@@ -88,10 +88,12 @@ describe('gap hardening behavioral coverage', () => {
       </KeyboardShortcutsProvider>,
     );
 
+    // Focus outside any active region: page.create still fires (page-wide),
+    // selection.next stays inert until a roving-focus region is active.
     screen.getByRole('button', { name: 'outside region' }).focus();
-    expect(dispatchShortcut({ key: 'c', code: 'KeyC' }).defaultPrevented).toBe(false);
+    expect(dispatchShortcut({ key: 'c', code: 'KeyC' }).defaultPrevented).toBe(true);
+    expect(createHandler).toHaveBeenCalledTimes(1);
     expect(dispatchShortcut({ key: 'j', code: 'KeyJ' }).defaultPrevented).toBe(false);
-    expect(createHandler).not.toHaveBeenCalled();
     expect(selectionHandler).not.toHaveBeenCalled();
 
     screen.getByRole('button', { name: 'inside region' }).focus();
@@ -99,11 +101,11 @@ describe('gap hardening behavioral coverage', () => {
       expect(document.activeElement).toBe(screen.getByRole('button', { name: 'inside region' }));
     });
     await waitFor(() => {
-      expect(dispatchShortcut({ key: 'c', code: 'KeyC' }).defaultPrevented).toBe(true);
+      expect(dispatchShortcut({ key: 'j', code: 'KeyJ' }).defaultPrevented).toBe(true);
     });
-    expect(dispatchShortcut({ key: 'j', code: 'KeyJ' }).defaultPrevented).toBe(true);
-    expect(createHandler).toHaveBeenCalledTimes(1);
     expect(selectionHandler).toHaveBeenCalledTimes(1);
+    expect(dispatchShortcut({ key: 'c', code: 'KeyC' }).defaultPrevented).toBe(true);
+    expect(createHandler).toHaveBeenCalledTimes(2);
   });
 
   it('dispatches catalog-derived global actions with runtime enabled gates', () => {
@@ -125,7 +127,7 @@ describe('gap hardening behavioral coverage', () => {
 
   it('honors panel scope priority and editor allowInEditable from catalog metadata', () => {
     const pageCreate = vi.fn();
-    const panelPrevious = vi.fn();
+    const panelBack = vi.fn();
     const redo = vi.fn();
 
     render(
@@ -137,7 +139,7 @@ describe('gap hardening behavioral coverage', () => {
           <RegisteredCatalogShortcut actionId="page.create" handler={pageCreate} />
         </PageScope>
         <PanelScope>
-          <RegisteredCatalogShortcut actionId="record.previous" handler={panelPrevious} />
+          <RegisteredCatalogShortcut actionId="drawer.historyBack" handler={panelBack} />
         </PanelScope>
         <EditorScope>
           <RegisteredCatalogShortcut actionId="editor.redo" handler={redo} />
@@ -150,12 +152,27 @@ describe('gap hardening behavioral coverage', () => {
     expect(dispatchShortcut({ key: 'c', code: 'KeyC' }).defaultPrevented).toBe(false);
     expect(pageCreate).not.toHaveBeenCalled();
 
-    expect(dispatchShortcut({ key: '[', code: 'BracketLeft' }).defaultPrevented).toBe(true);
-    expect(panelPrevious).toHaveBeenCalledTimes(1);
+    expect(dispatchShortcut({ key: 'ArrowLeft', code: 'ArrowLeft', altKey: true }).defaultPrevented).toBe(true);
+    expect(panelBack).toHaveBeenCalledTimes(1);
 
     screen.getByLabelText('editor input').focus();
     expect(dispatchShortcut({ key: 'y', code: 'KeyY', ctrlKey: true }).defaultPrevented).toBe(true);
     expect(redo).toHaveBeenCalledTimes(1);
+  });
+
+  it('fires record.previous from page scope when registered on a record-detail page', () => {
+    const recordPrevious = vi.fn();
+
+    render(
+      <KeyboardShortcutsProvider platform="other">
+        <PageScope>
+          <RegisteredCatalogShortcut actionId="record.previous" handler={recordPrevious} />
+        </PageScope>
+      </KeyboardShortcutsProvider>,
+    );
+
+    expect(dispatchShortcut({ key: '[', code: 'BracketLeft' }).defaultPrevented).toBe(true);
+    expect(recordPrevious).toHaveBeenCalledTimes(1);
   });
 
   it('settings mutators update resolved bindings through provider state', async () => {

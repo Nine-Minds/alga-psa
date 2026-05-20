@@ -183,6 +183,7 @@ describe('keyboard shortcut customization wiring', () => {
     const handler = vi.fn();
     const storage = createStorage({
       version: 1,
+      profile: 'default',
       bindings: { 'global.search': ['mod+j'] },
       disabled: [],
     });

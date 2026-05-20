@@ -1,7 +1,8 @@
 import type { PersistedShortcuts, ShortcutStorage } from './types';
 
 export const DEFAULT_PERSISTED_SHORTCUTS: PersistedShortcuts = {
-  version: 1,
+  version: 2,
+  profile: 'default',
   bindings: {},
   disabled: [],
 };

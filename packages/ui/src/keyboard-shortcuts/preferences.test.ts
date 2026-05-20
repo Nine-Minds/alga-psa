@@ -31,7 +31,8 @@ describe('shortcut preferences', () => {
 
   it('validates hostile/reserved combos without rewriting them', () => {
     const preferences = {
-      version: 1,
+      version: 2,
+      profile: 'default',
       bindings: {
         'record.next': ['alt+ArrowRight'],
         'global.search': ['mod+r'],
@@ -48,8 +49,15 @@ describe('shortcut preferences', () => {
 
   it('migrates old or malformed blobs to the current version without data loss', () => {
     expect(migrateShortcutPreferences({ bindings: { 'global.search': ['mod+j'] } })).toEqual({
-      version: 1,
+      version: 2,
+      profile: 'default',
       bindings: { 'global.search': ['mod+j'] },
+      disabled: [],
+    });
+    expect(migrateShortcutPreferences({ version: 1, profile: 'vim', bindings: {}, disabled: [] })).toEqual({
+      version: 2,
+      profile: 'vim',
+      bindings: {},
       disabled: [],
     });
     expect(migrateShortcutPreferences(null)).toEqual(EMPTY_SHORTCUT_PREFERENCES);

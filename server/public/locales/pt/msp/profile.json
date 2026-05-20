@@ -7,7 +7,8 @@
       "sso": "Single Sign-On",
       "apiKeys": "API Keys",
       "notifications": "Notifications",
-      "calendar": "Calendar"
+      "calendar": "Calendar",
+      "keyboardShortcuts": "Keyboard Shortcuts"
     },
     "basicInfo": {
       "title": "Basic Information"
