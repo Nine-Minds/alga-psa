@@ -11,9 +11,7 @@ import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicke
 import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { getTicketsForListWithCursor } from '@alga-psa/tickets/actions/optimizedTicketActions';
-import { deleteTicket } from '@alga-psa/tickets/actions/ticketActions';
 import { XCircle } from 'lucide-react';
-import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useDrawer } from "@alga-psa/ui";
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
@@ -72,9 +70,6 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
   const [currentUser, setCurrentUser] = useState<IUser | null>(null);
   const [displaySettings, setDisplaySettings] = useState<TicketingDisplaySettings | null>(null);
   const ticketTagsRef = useRef<Record<string, ITag[]>>({});
-  const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
-  const [ticketToDeleteName, setTicketToDeleteName] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
 
   const { openDrawer } = useDrawer();
@@ -171,31 +166,6 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
     loadTickets(undefined, true);
   }, [loadTickets]);
 
-  const handleDeleteTicket = (ticketId: string, ticketNameOrNumber: string) => {
-    setTicketToDelete(ticketId);
-    setTicketToDeleteName(ticketNameOrNumber);
-    setDeleteError(null);
-  };
-
-  const confirmDeleteTicket = async () => {
-    if (!ticketToDelete || !currentUser) return;
-
-    try {
-      await deleteTicket(ticketToDelete);
-      setTickets(prev => prev.filter(t => t.ticket_id !== ticketToDelete));
-      setTicketToDelete(null);
-      setTicketToDeleteName(null);
-      setDeleteError(null);
-    } catch (error: any) {
-      console.error('Failed to delete ticket:', error);
-      if (error.message && error.message.startsWith('VALIDATION_ERROR:')) {
-        setDeleteError(error.message.replace('VALIDATION_ERROR: ', ''));
-      } else {
-        setDeleteError('An unexpected error occurred while deleting the ticket.');
-      }
-    }
-  };
-
   const handleTicketClick = useCallback(async (ticketId: string) => {
     if (!currentUser) {
       toast.error('User not authenticated');
@@ -283,11 +253,10 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
       boards: initialBoards,
       displaySettings: displaySettings || undefined,
       onTicketClick: handleTicketClick,
-      onDeleteClick: handleDeleteTicket,
       ticketTagsRef,
       onTagsChange: handleTagsChange,
       showClient: false, // Don't show client column since we're already on client page
-    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange]);
+    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleTagsChange]);
 
   // Filter tickets by selected tags
   const filteredTickets = useMemo(() => {
@@ -507,25 +476,6 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
           </div>
         )}
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      <ConfirmationDialog
-        isOpen={!!ticketToDelete}
-        onClose={() => {
-          setTicketToDelete(null);
-          setTicketToDeleteName(null);
-          setDeleteError(null);
-        }}
-        onConfirm={confirmDeleteTicket}
-        title="Delete Ticket"
-        message={
-          deleteError
-            ? deleteError
-            : `Are you sure you want to delete ticket "${ticketToDeleteName || ticketToDelete}"? This action cannot be undone.`
-        }
-        confirmLabel={deleteError ? undefined : "Delete"}
-        cancelLabel={deleteError ? "Close" : "Cancel"}
-      />
 
       {/* Quick Add Ticket Dialog */}
       <QuickAddTicket
