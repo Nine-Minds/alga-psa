@@ -1169,5 +1169,12 @@
         "warning": "Zarchiwizowane rekordy są ukryte w widokach domyślnych."
       }
     }
+  },
+  "dataTable": {
+    "columnsHidden_one": "Ukryto {{count}} kolumnę z powodu ograniczonego miejsca.",
+    "columnsHidden_other": "Ukryto {{count}} kolumn z powodu ograniczonego miejsca.",
+    "showAll": "Pokaż wszystko",
+    "showingAllColumns": "Wyświetlane są wszystkie kolumny; przewiń poziomo, aby je zobaczyć.",
+    "showLess": "Pokaż mniej"
   }
 }

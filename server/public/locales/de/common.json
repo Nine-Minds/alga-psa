@@ -1169,5 +1169,12 @@
         "warning": "Archivierte Datensätze werden in Standardansichten ausgeblendet."
       }
     }
+  },
+  "dataTable": {
+    "columnsHidden_one": "{{count}} Spalte aufgrund begrenzten Platzes ausgeblendet.",
+    "columnsHidden_other": "{{count}} Spalten aufgrund begrenzten Platzes ausgeblendet.",
+    "showAll": "Alle anzeigen",
+    "showingAllColumns": "Alle Spalten werden angezeigt; horizontal scrollen, um sie zu sehen.",
+    "showLess": "Weniger anzeigen"
   }
 }

@@ -1169,5 +1169,12 @@
         "warning": "Gearchiveerde records worden verborgen in standaardweergaven."
       }
     }
+  },
+  "dataTable": {
+    "columnsHidden_one": "{{count}} kolom verborgen vanwege beperkte ruimte.",
+    "columnsHidden_other": "{{count}} kolommen verborgen vanwege beperkte ruimte.",
+    "showAll": "Alles tonen",
+    "showingAllColumns": "Alle kolommen worden getoond; scroll horizontaal om ze te zien.",
+    "showLess": "Minder tonen"
   }
 }

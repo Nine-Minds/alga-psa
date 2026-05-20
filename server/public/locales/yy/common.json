@@ -334,8 +334,8 @@
     }
   },
   "commentThread": {
-    "replies_one": "{{count}} 55555",
-    "replies_other": "{{count}} 55555",
+    "replies_one": "55555 {{count}} 55555",
+    "replies_other": "55555 {{count}} 55555",
     "collapse": "55555",
     "expand": "55555",
     "showInDrawer": "55555"
@@ -1169,5 +1169,12 @@
         "warning": "55555"
       }
     }
+  },
+  "dataTable": {
+    "columnsHidden_one": "55555 {{count}} 55555",
+    "columnsHidden_other": "55555 {{count}} 55555",
+    "showAll": "55555",
+    "showingAllColumns": "55555",
+    "showLess": "55555"
   }
 }

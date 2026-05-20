@@ -1169,5 +1169,12 @@
         "warning": "I record archiviati sono nascosti nelle viste predefinite."
       }
     }
+  },
+  "dataTable": {
+    "columnsHidden_one": "{{count}} colonna nascosta per spazio limitato.",
+    "columnsHidden_other": "{{count}} colonne nascoste per spazio limitato.",
+    "showAll": "Mostra tutto",
+    "showingAllColumns": "Vengono mostrate tutte le colonne; scorri orizzontalmente per vederle.",
+    "showLess": "Mostra meno"
   }
 }
