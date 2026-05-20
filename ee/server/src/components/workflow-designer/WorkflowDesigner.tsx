@@ -2558,7 +2558,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     loadDefinitions();
     loadRegistries();
     loadRunSummary();
-    if (mode === 'control-panel') {
+    if (mode === 'control-panel' || mode === 'editor-designer') {
       loadWorkflowStepQuotaSummary();
     }
     loadEventCatalogOptions();
@@ -5138,6 +5138,78 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
       ? Math.min(100, Math.max(0, (workflowStepQuotaUsed / workflowStepQuotaLimit) * 100))
       : null;
 
+  const workflowStepQuotaCard = (
+    <div
+      id="workflow-control-quota-summary"
+      className="w-full max-w-sm rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-sm dark:border-[rgb(var(--color-border-200))] dark:bg-[rgb(var(--color-card))]"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 font-medium text-gray-900 dark:text-gray-100">
+          <Zap className="h-4 w-4 text-primary-600" aria-hidden="true" />
+          <span>{t('designer.controlPanel.quota.title', { defaultValue: 'Workflow actions' })}</span>
+        </div>
+        {workflowStepQuotaStatus === 'loading' || workflowStepQuotaStatus === 'idle' ? (
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {t('designer.controlPanel.quota.loading', { defaultValue: 'Loading...' })}
+          </span>
+        ) : workflowStepQuotaStatus === 'error' ? (
+          <span className="text-xs text-red-600 dark:text-red-400">
+            {t('designer.controlPanel.quota.unavailable', { defaultValue: 'Unavailable' })}
+          </span>
+        ) : (
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {workflowStepQuotaLimit == null
+              ? t('designer.controlPanel.quota.unlimitedPlan', { defaultValue: 'Unlimited plan' })
+              : t('designer.controlPanel.quota.planLimit', {
+                  defaultValue: '{{limit}} limit',
+                  limit: formatWorkflowQuotaNumber(workflowStepQuotaLimit),
+                })}
+          </span>
+        )}
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <div>
+          <div className="text-[11px] uppercase tracking-normal text-gray-500 dark:text-gray-400">
+            {t('designer.controlPanel.quota.consumedLabel', { defaultValue: 'Consumed' })}
+          </div>
+          <div className="text-lg font-semibold leading-6 text-gray-900 dark:text-gray-100">
+            {workflowStepQuotaStatus === 'loaded'
+              ? `${formatWorkflowQuotaNumber(workflowStepQuotaUsed)} ${t('designer.controlPanel.quota.consumedUnit', { defaultValue: 'consumed' })}`
+              : '--'}
+          </div>
+        </div>
+        <div>
+          <div className="text-[11px] uppercase tracking-normal text-gray-500 dark:text-gray-400">
+            {t('designer.controlPanel.quota.remainingLabel', { defaultValue: 'Remaining' })}
+          </div>
+          <div className="text-lg font-semibold leading-6 text-gray-900 dark:text-gray-100">
+            {workflowStepQuotaStatus === 'loaded'
+              ? workflowStepQuotaLimit == null
+                ? t('designer.controlPanel.quota.unlimitedRemaining', { defaultValue: 'Unlimited' })
+                : `${formatWorkflowQuotaNumber(workflowStepQuotaRemaining)} ${t('designer.controlPanel.quota.remainingUnit', { defaultValue: 'remaining' })}`
+              : '--'}
+          </div>
+        </div>
+      </div>
+      {workflowStepQuotaPercent != null && (
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-200 dark:bg-[rgb(var(--color-border-100))]">
+          <div
+            className="h-full rounded-full bg-primary-600"
+            style={{ width: `${workflowStepQuotaPercent}%` }}
+          />
+        </div>
+      )}
+      {workflowStepQuotaStatus === 'loaded' && workflowStepQuotaReset && (
+        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+          {t('designer.controlPanel.quota.resetsOn', {
+            defaultValue: 'Resets {{date}}',
+            date: workflowStepQuotaReset,
+          })}
+        </div>
+      )}
+    </div>
+  );
+
   const handleBackToWorkflowList = useCallback(() => {
     requestDiscardChangesConfirmation(() => {
       router.push('/msp/workflow-editor');
@@ -5175,77 +5247,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             <p className="text-sm text-gray-500 dark:text-gray-400">{pageDescription}</p>
           </div>
           {isControlPanelMode ? (
-            <div
-              id="workflow-control-quota-summary"
-              className="w-full max-w-sm rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-sm dark:border-[rgb(var(--color-border-200))] dark:bg-[rgb(var(--color-card))]"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2 font-medium text-gray-900 dark:text-gray-100">
-                  <Zap className="h-4 w-4 text-primary-600" aria-hidden="true" />
-                  <span>{t('designer.controlPanel.quota.title', { defaultValue: 'Workflow actions' })}</span>
-                </div>
-                {workflowStepQuotaStatus === 'loading' || workflowStepQuotaStatus === 'idle' ? (
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {t('designer.controlPanel.quota.loading', { defaultValue: 'Loading...' })}
-                  </span>
-                ) : workflowStepQuotaStatus === 'error' ? (
-                  <span className="text-xs text-red-600 dark:text-red-400">
-                    {t('designer.controlPanel.quota.unavailable', { defaultValue: 'Unavailable' })}
-                  </span>
-                ) : (
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {workflowStepQuotaLimit == null
-                      ? t('designer.controlPanel.quota.unlimitedPlan', { defaultValue: 'Unlimited plan' })
-                      : t('designer.controlPanel.quota.planLimit', {
-                          defaultValue: '{{limit}} limit',
-                          limit: formatWorkflowQuotaNumber(workflowStepQuotaLimit),
-                        })}
-                  </span>
-                )}
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                <div>
-                  <div className="text-[11px] uppercase tracking-normal text-gray-500 dark:text-gray-400">
-                    {t('designer.controlPanel.quota.consumedLabel', { defaultValue: 'Consumed' })}
-                  </div>
-                  <div className="text-lg font-semibold leading-6 text-gray-900 dark:text-gray-100">
-                    {workflowStepQuotaStatus === 'loaded'
-                      ? `${formatWorkflowQuotaNumber(workflowStepQuotaUsed)} ${t('designer.controlPanel.quota.consumedUnit', { defaultValue: 'consumed' })}`
-                      : '--'}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[11px] uppercase tracking-normal text-gray-500 dark:text-gray-400">
-                    {t('designer.controlPanel.quota.remainingLabel', { defaultValue: 'Remaining' })}
-                  </div>
-                  <div className="text-lg font-semibold leading-6 text-gray-900 dark:text-gray-100">
-                    {workflowStepQuotaStatus === 'loaded'
-                      ? workflowStepQuotaLimit == null
-                        ? t('designer.controlPanel.quota.unlimitedRemaining', { defaultValue: 'Unlimited' })
-                        : `${formatWorkflowQuotaNumber(workflowStepQuotaRemaining)} ${t('designer.controlPanel.quota.remainingUnit', { defaultValue: 'remaining' })}`
-                      : '--'}
-                  </div>
-                </div>
-              </div>
-              {workflowStepQuotaPercent != null && (
-                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-gray-200 dark:bg-[rgb(var(--color-border-100))]">
-                  <div
-                    className="h-full rounded-full bg-primary-600"
-                    style={{ width: `${workflowStepQuotaPercent}%` }}
-                  />
-                </div>
-              )}
-              {workflowStepQuotaStatus === 'loaded' && workflowStepQuotaReset && (
-                <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                  {t('designer.controlPanel.quota.resetsOn', {
-                    defaultValue: 'Resets {{date}}',
-                    date: workflowStepQuotaReset,
-                  })}
-                </div>
-              )}
-            </div>
+            workflowStepQuotaCard
           ) : isEditorDesignerMode && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col items-end gap-3">
+              {workflowStepQuotaCard}
+              <div className="flex items-center gap-2">
               {activeWorkflowRecord && (
                 <span
                   className={`inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-medium ${workflowValidationBadge.className}`}
@@ -5312,6 +5318,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   {t('designer.toolbar.run', { defaultValue: 'Run' })}
                 </Button>
               )}
+              </div>
             </div>
           )}
         </div>
