@@ -18,7 +18,6 @@ export interface BuildCommentThreadGroupsOptions<TComment> {
   getThreadId: (comment: TComment) => string | null | undefined;
   getParentCommentId: (comment: TComment) => string | null | undefined;
   getCreatedAt: (comment: TComment) => string | Date | null | undefined;
-  getUpdatedAt?: (comment: TComment) => string | Date | null | undefined;
   getThreadLastActivityAt?: (comments: TComment[]) => string | Date | null | undefined;
   newestFirst?: boolean;
 }
@@ -90,7 +89,6 @@ export function buildCommentThreadGroups<TComment>(
 
       activityTimestamp = Math.max(
         activityTimestamp,
-        toTimestamp(props.getUpdatedAt?.(comment)),
         toTimestamp(props.getCreatedAt(comment))
       );
 

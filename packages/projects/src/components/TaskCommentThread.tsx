@@ -145,7 +145,6 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
       getThreadId: (comment) => comment.threadId || comment.taskCommentId,
       getParentCommentId: (comment) => comment.parentCommentId,
       getCreatedAt: (comment) => comment.createdAt,
-      getUpdatedAt: (comment) => comment.updatedAt,
     }),
     [comments]
   );
@@ -307,7 +306,6 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
             getThreadId={(comment) => comment.threadId || comment.taskCommentId}
             getParentCommentId={(comment) => comment.parentCommentId}
             getCreatedAt={(comment) => comment.createdAt}
-            getUpdatedAt={(comment) => comment.updatedAt}
             renderThreadGroup={(group) => (
               <HybridThreadNode<IProjectTaskCommentWithUser>
                 group={group}

@@ -479,7 +479,6 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         getThreadId={(comment) => comment.thread_id || comment.comment_id}
         getParentCommentId={(comment) => comment.parent_comment_id}
         getCreatedAt={(comment) => comment.created_at}
-        getUpdatedAt={(comment) => comment.updated_at}
         renderThreadGroup={(group) => (
           <HybridThreadNode<IComment>
             key={`${group.threadId}-${group.replyCount}`}
@@ -501,7 +500,6 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       getThreadId: (comment) => comment.thread_id || comment.comment_id,
       getParentCommentId: (comment) => comment.parent_comment_id,
       getCreatedAt: (comment) => comment.created_at,
-      getUpdatedAt: (comment) => comment.updated_at,
     }),
     [conversations]
   );
