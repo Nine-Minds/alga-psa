@@ -15,20 +15,20 @@
     "actions": {
       "resetAll": "Restablecer todo",
       "replace": "Reemplazar",
-      "copyCheatsheet": "Copy cheatsheet",
-      "printCheatsheet": "Print"
+      "copyCheatsheet": "Copiar atajos",
+      "printCheatsheet": "Imprimir"
     },
     "messages": {
       "bindingUpdated": "Atajo de teclado actualizado",
       "enabledUpdated": "Atajo de teclado actualizado",
       "resetOne": "Atajo de teclado restablecido",
       "resetAll": "Atajos de teclado restablecidos",
-      "cheatsheetCopied": "Cheatsheet copied to clipboard"
+      "cheatsheetCopied": "Atajos copiados al portapapeles"
     },
     "errors": {
       "saveFailed": "No se pudieron guardar las preferencias de atajos de teclado",
-      "copyFailed": "Failed to copy cheatsheet",
-      "printFailed": "Unable to open print window. Allow pop-ups and try again."
+      "copyFailed": "Error al copiar los atajos",
+      "printFailed": "No se pudo abrir la ventana de impresión. Permita las ventanas emergentes e inténtelo de nuevo."
     },
     "resetAll": {
       "title": "¿Restablecer todos los atajos?",
@@ -151,8 +151,8 @@
         "description": "Cerrar o cancelar el diálogo activo."
       },
       "submit": {
-        "label": "Submit dialog",
-        "description": "Submit the active dialog form."
+        "label": "Enviar diálogo",
+        "description": "Enviar el formulario del diálogo activo."
       }
     },
     "panel": {
@@ -179,6 +179,10 @@
       "next": {
         "label": "Registro siguiente",
         "description": "Abrir el registro siguiente."
+      },
+      "addTime": {
+        "label": "Añadir entrada de tiempo",
+        "description": "Abrir el panel de entrada de tiempo para el registro actual."
       }
     },
     "editor": {

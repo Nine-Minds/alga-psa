@@ -9,7 +9,7 @@ import ContactAvatar from './ContactAvatar';
 import type { IContact } from '@alga-psa/types';
 import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from '../ui-reflection/useAutomationIdAndRegister';
-import { AutomationProps, FormFieldComponent } from '../ui-reflection/types';
+import { AutomationProps, ButtonComponent, FormFieldComponent } from '../ui-reflection/types';
 import { withDataAutomationId } from '../ui-reflection/withDataAutomationId';
 
 interface ContactPickerProps {
@@ -28,6 +28,55 @@ interface ContactPickerProps {
   modal?: boolean;
   onAddNew?: () => void;
 }
+
+interface ContactOptionButtonProps {
+  id: string;
+  label: string;
+  selected: boolean;
+  onSelect: () => void;
+  className?: string;
+  children: React.ReactNode;
+}
+
+const ContactOptionButton: React.FC<ContactOptionButtonProps> = ({
+  id,
+  label,
+  selected,
+  onSelect,
+  className,
+  children,
+}) => {
+  const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
+    type: 'button',
+    id,
+    label,
+  });
+
+  return (
+    <button
+      {...automationIdProps}
+      type="button"
+      role="option"
+      aria-selected={selected}
+      data-automation-type="button"
+      className={className}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onSelect();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          event.stopPropagation();
+          onSelect();
+        }
+      }}
+    >
+      {children}
+    </button>
+  );
+};
 
 export const ContactPicker = ({
   id,
@@ -98,11 +147,15 @@ export const ContactPicker = ({
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && searchInputRef.current) {
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 10);
-    }
+    if (!isOpen) return;
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+    };
   }, [isOpen]);
 
   const updateDropdownPosition = () => {
@@ -147,6 +200,7 @@ export const ContactPicker = ({
   }, [isOpen, filteredContacts.length, onAddNew]);
 
   const toggleDropdown = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     if (!disabled) {
       const closing = isOpen;
@@ -157,8 +211,7 @@ export const ContactPicker = ({
     }
   };
 
-  const handleSelect = (contactId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleSelect = (contactId: string) => {
     onValueChange(contactId);
     setIsOpen(false);
   };
@@ -252,6 +305,17 @@ export const ContactPicker = ({
             ref={buttonRef}
             type="button"
             onClick={toggleDropdown}
+            onKeyDown={(event) => {
+              if (disabled) return;
+              if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                setIsOpen(true);
+              }
+            }}
+            disabled={disabled}
+            aria-haspopup="listbox"
+            aria-expanded={isOpen}
+            aria-controls={`${id || 'contact-picker'}-listbox`}
             className={`
               inline-flex items-center justify-between
               rounded-lg p-2 h-10
@@ -316,42 +380,41 @@ export const ContactPicker = ({
                 className="overflow-y-auto"
                 style={{ maxHeight: '200px' }}
                 role="listbox"
+                id={`${id || 'contact-picker'}-listbox`}
                 aria-label="Contacts"
               >
                 {/* "None" Option */}
-                <div
-                  onClick={(e) => handleSelect('', e)}
-                  className="relative flex items-center px-3 py-2 text-sm rounded text-gray-700 cursor-pointer hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-                  role="option"
-                  aria-selected={value === ''}
-                  tabIndex={0}
-                  onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => { if (e.key === 'Enter' || e.key === ' ') { onValueChange(''); setIsOpen(false); } }} // Handle keyboard selection
+                <ContactOptionButton
+                  id={`${id || 'contact-picker'}-option-none`}
+                  label="None"
+                  selected={value === ''}
+                  onSelect={() => handleSelect('')}
+                  className="relative flex w-full items-center px-3 py-2 text-left text-sm rounded text-gray-700 cursor-pointer hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset"
                 >
                   None
-                </div>
+                </ContactOptionButton>
 
                 {/* Contact List */}
                 {filteredContacts.length === 0 ? (
                   <div className="px-4 py-2 text-gray-500">No contacts found</div>
                 ) : (
                   filteredContacts.map((contact) => (
-                    <div
+                    <ContactOptionButton
                       key={contact.contact_name_id}
-                      onClick={(e) => handleSelect(contact.contact_name_id, e)}
+                      id={`${id || 'contact-picker'}-option-${contact.contact_name_id}`}
+                      label={contact.email ? `${contact.full_name} (${contact.email})` : contact.full_name}
+                      selected={contact.contact_name_id === value}
+                      onSelect={() => handleSelect(contact.contact_name_id)}
                       className={`
-                        relative flex items-center justify-between px-3 py-2 text-sm rounded cursor-pointer
-                        hover:bg-gray-100 focus:bg-gray-100 focus:outline-none
+                        relative flex w-full items-center justify-between px-3 py-2 text-left text-sm rounded cursor-pointer
+                        hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset
                         ${contact.is_inactive
                           ? 'text-gray-400 bg-gray-50'
                           : contact.contact_name_id === value
                             ? 'bg-gray-100 font-medium text-gray-900'
                             : 'text-gray-900'
-                        }
+                          }
                       `}
-                      role="option"
-                      aria-selected={contact.contact_name_id === value}
-                      tabIndex={0} // Make it focusable
-                      onKeyDown={(e: React.KeyboardEvent<HTMLDivElement>) => { if (e.key === 'Enter' || e.key === ' ') { onValueChange(contact.contact_name_id); setIsOpen(false); } }} // Handle keyboard selection
                     >
                       <div className="flex items-center gap-2 flex-1">
                          <ContactAvatar
@@ -366,7 +429,7 @@ export const ContactPicker = ({
                          </div>
                        </div>
                       {contact.is_inactive && <span className="text-xs text-gray-400">(Inactive)</span>}
-                    </div>
+                    </ContactOptionButton>
                   ))
                 )}
               </div>

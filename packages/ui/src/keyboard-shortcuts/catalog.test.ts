@@ -30,6 +30,7 @@ describe('shortcut action catalog', () => {
 
     expect(Array.from(ids)).toEqual(expect.arrayContaining([
       'global.search',
+      'global.commandPalette',
       'global.toggleChat',
       'global.openShortcuts',
       'global.quickCreate',

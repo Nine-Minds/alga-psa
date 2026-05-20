@@ -35,6 +35,7 @@ import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError, isActionMessageError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { useDrawer } from "@alga-psa/ui";
+import { useCatalogShortcut } from "@alga-psa/ui/keyboard-shortcuts";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { findUserById, getCurrentUser, getCurrentUserPermissions } from "@alga-psa/user-composition/actions";
 import { findBoardById } from "@alga-psa/tickets/actions";
@@ -1851,6 +1852,8 @@ const handleClose = () => {
     const handleRequestDeleteTimeEntry = (entry: { entry_id: string; user_name: string | null }) => {
         setPendingDeleteTimeEntry(entry);
     };
+
+    useCatalogShortcut('record.addTime', () => { void handleAddTimeEntry(); });
 
     const handleConfirmDeleteTimeEntry = async () => {
         if (!pendingDeleteTimeEntry) return;

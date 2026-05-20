@@ -47,22 +47,45 @@ interface ClientPickerProps {
 interface OptionButtonProps {
   id: string;
   label: string;
-  onClick: (e: React.MouseEvent) => void;
+  onSelect: () => void;
+  disabled?: boolean;
+  selected?: boolean;
   className?: string;
   children: React.ReactNode;
 }
 
-const OptionButton: React.FC<OptionButtonProps> = ({ id, label, onClick, className, children }) => {
+const OptionButton: React.FC<OptionButtonProps> = ({ id, label, onSelect, disabled = false, selected = false, className, children }) => {
   const { automationIdProps } = useAutomationIdAndRegister<ButtonComponent>({
     type: 'button',
     id,
     label,
+    disabled,
   });
 
   return (
-    <div {...automationIdProps} data-automation-type="button" className={className} onClick={onClick}>
+    <button
+      {...automationIdProps}
+      type="button"
+      role="option"
+      aria-selected={selected}
+      disabled={disabled}
+      data-automation-type="button"
+      className={className}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onSelect();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          event.stopPropagation();
+          onSelect();
+        }
+      }}
+    >
       {children}
-    </div>
+    </button>
   );
 };
 
@@ -94,6 +117,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [dropdownCoords, setDropdownCoords] = useState({ top: 0, left: 0, width: 0 });
 
   const selectedClient = useMemo(
@@ -197,10 +221,19 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
     };
   }, [isOpen, updateDropdownPosition]);
 
-  const handleSelect = (clientId: string, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  useEffect(() => {
+    if (!isOpen) return;
 
+    const animationFrame = window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+    };
+  }, [isOpen]);
+
+  const handleSelect = (clientId: string) => {
     if (disabledClientIds?.has(clientId)) return;
 
     if (clientId !== selectedClientId) {
@@ -278,7 +311,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
       updateMetadata(metadata);
       prevMetadataRef.current = metadata;
     }
-  }, [mappedOptions, placeholder, selectedClientId, updateMetadata]);
+  }, [disabled, mappedOptions, placeholder, selectedClientId, updateMetadata]);
 
   const dropdown = (
     <FocusScope
@@ -305,6 +338,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
       <div className="p-3 border-b border-gray-100 bg-gray-50">
         <div className="flex items-center gap-2">
           <Input
+            ref={searchInputRef}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search clients..."
@@ -330,22 +364,25 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
         </div>
       </div>
 
-      <div className="max-h-[320px] overflow-y-auto">
+      <div id={`${id}-listbox`} role="listbox" aria-label={placeholder} className="max-h-[320px] overflow-y-auto">
         {filteredClients.length === 0 ? (
           <div className="p-4 text-sm text-gray-500">No clients found.</div>
         ) : (
           filteredClients.map((client) => {
             const isDisabled = disabledClientIds?.has(client.client_id) ?? false;
+            const isSelected = client.client_id === selectedClientId;
             return (
               <OptionButton
                 key={client.client_id}
                 id={`${id}-option-${client.client_id}`}
                 label={client.client_name}
-                onClick={(e) => handleSelect(client.client_id, e)}
-                className={`flex items-center gap-2 p-3 ${
+                onSelect={() => handleSelect(client.client_id)}
+                disabled={isDisabled}
+                selected={isSelected}
+                className={`flex w-full items-center gap-2 p-3 text-left ${
                   isDisabled
                     ? 'opacity-50 cursor-not-allowed'
-                    : `cursor-pointer hover:bg-gray-50 ${client.client_id === selectedClientId ? 'bg-gray-50' : ''}`
+                    : `cursor-pointer hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset ${isSelected ? 'bg-gray-50' : ''}`
                 }`}
               >
                 <ClientAvatar clientId={client.client_id} clientName={client.client_name} logoUrl={(client as any).logoUrl} size={size} />
@@ -399,7 +436,17 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
             size={triggerSize}
             className={`${fitContent ? 'w-auto' : 'w-full'} justify-between ${triggerButtonClassName}`}
             onClick={() => { if (!disabled) setIsOpen((prev) => !prev); }}
+            onKeyDown={(event) => {
+              if (disabled) return;
+              if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                setIsOpen(true);
+              }
+            }}
             disabled={disabled}
+            aria-haspopup="listbox"
+            aria-expanded={isOpen}
+            aria-controls={`${id}-listbox`}
             data-automation-type={dataAutomationType}
           >
             <div className="flex items-center gap-2 min-w-0">

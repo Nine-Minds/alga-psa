@@ -172,7 +172,15 @@ function bindingFromEvent(e: KeyboardEvent): string | null {
   const mods: string[] = [];
   if (e.metaKey || e.ctrlKey) mods.push('mod');
   if (e.altKey) mods.push('alt');
-  if (e.shiftKey && token.length !== 1) mods.push('shift');
+  const shiftIsExplicit =
+    token.length !== 1 ||
+    /^Key[A-Z]$/.test(e.code) ||
+    /^Digit[0-9]$/.test(e.code) ||
+    e.code === 'BracketLeft' ||
+    e.code === 'BracketRight';
+  if (e.shiftKey && shiftIsExplicit) {
+    mods.push('shift');
+  }
   return [...mods, token].join('+');
 }
 

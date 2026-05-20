@@ -45,9 +45,10 @@ function entry(
 
 export const SHORTCUT_ACTION_CATALOG: readonly ShortcutActionCatalogEntry[] = [
   entry('global.search', 'global', 'global', ['mod+k']),
+  entry('global.commandPalette', 'global', 'global', ['mod+shift+k']),
   entry('global.toggleChat', 'ai', 'global', ['mod+l']),
   entry('global.openShortcuts', 'global', 'global', ['?']),
-  entry('global.quickCreate', 'global', 'page', ['mod+shift+n']),
+  entry('global.quickCreate', 'global', 'page', ['alt+n']),
   entry('ai.quickAsk', 'ai', 'global', ['mod+ArrowUp']),
 
   entry('page.create', 'page', 'page', ['c']),
@@ -69,6 +70,7 @@ export const SHORTCUT_ACTION_CATALOG: readonly ShortcutActionCatalogEntry[] = [
   entry('drawer.historyForward', 'panel', 'panel', ['alt+ArrowRight']),
   entry('record.previous', 'record', 'page', ['[']),
   entry('record.next', 'record', 'page', [']']),
+  entry('record.addTime', 'record', 'page', ['shift+t']),
 
   entry('editor.undo', 'editor', 'editor', ['mod+z'], { allowInEditable: true }),
   entry(

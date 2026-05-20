@@ -2,7 +2,7 @@
 // TODO: Priority index signature issue
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { HelpCircle } from 'lucide-react';
@@ -253,6 +253,7 @@ export function QuickAddTicket({
   const [itilUrgency, setItilUrgency] = useState<number | undefined>(undefined);
   const [showPriorityMatrix, setShowPriorityMatrix] = useState(false);
   const effectiveAssetId = isAlgaDeskMode ? undefined : assetId;
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   // Calculate ITIL priority when impact and urgency are set
   const calculatedItilPriority = useMemo(() => {
@@ -382,6 +383,18 @@ export function QuickAddTicket({
     };
     fetchTeamsData();
   }, [open]);
+
+  useEffect(() => {
+    if (!open || isLoading) return;
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      titleInputRef.current?.focus();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+    };
+  }, [open, isLoading]);
 
   useEffect(() => {
     const fetchClientData = async () => {
@@ -1079,6 +1092,7 @@ export function QuickAddTicket({
 
                   <Input
                     id={`${id}-title`}
+                    ref={titleInputRef}
                     value={title}
                     onChange={(e) => {
                       setTitle(e.target.value);
@@ -1086,6 +1100,7 @@ export function QuickAddTicket({
                     }}
                     placeholder={t('quickAdd.titlePlaceholder', 'Ticket Title *')}
                     className={hasAttemptedSubmit && !title.trim() ? 'border-red-500' : ''}
+                    autoFocus
                   />
                   <div className="space-y-2">
                     <div className="text-sm font-medium text-gray-700">{t('quickAdd.descriptionLabel', 'Description')}</div>

@@ -32,6 +32,7 @@ import { getClientMaintenanceSummaries, listAssets } from '../actions/assetActio
 import { loadAssetDetailDrawerData } from '../actions/assetDrawerActions';
 import { getAllClientsForAssets } from '../actions/clientLookupActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
 import { QuickAddAsset } from './QuickAddAsset';
 import { AssetCommandPalette } from './AssetCommandPalette';
 import { ShortcutActiveRegion, useCatalogShortcut, usePageCreateShortcut, useShortcutScope } from '@alga-psa/ui/keyboard-shortcuts';
@@ -359,6 +360,14 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
   const isAllSelected = filteredCount > 0 && assets.every(asset => selectedAssetIds.includes(asset.asset_id));
   const isIndeterminate = selectedAssetIds.length > 0 && !isAllSelected;
+  const selectedAssetIdSet = useMemo(() => new Set(selectedAssetIds), [selectedAssetIds]);
+
+  const rangeSelect = useRangeSelection<Asset>({
+    items: assets,
+    getId: (asset) => asset.asset_id,
+    selectedIds: selectedAssetIdSet,
+    onSelectedIdsChange: (next) => setSelectedAssetIds(Array.from(next)),
+  });
 
   const toggleSelectAll = useCallback(() => {
     setSelectedAssetIds(prev => {
@@ -580,12 +589,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     });
   }, []);
 
-  const toggleAssetSelection = useCallback((assetId: string) => {
-    setSelectedAssetIds(prev =>
-      prev.includes(assetId) ? prev.filter(id => id !== assetId) : [...prev, assetId]
-    );
-  }, []);
-
   const columnLibrary: Record<ColumnKey, ColumnDefinition<Asset>> = useMemo(() => ({
     select: {
       dataIndex: 'select',
@@ -606,14 +609,23 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       render: (_: unknown, record: Asset) => (
         <Checkbox
           id={`asset-select-${record.asset_id}`}
-          checked={selectedAssetIds.includes(record.asset_id)}
-          onChange={() => toggleAssetSelection(record.asset_id)}
+          checked={rangeSelect.isSelected(record.asset_id)}
+          onClick={(event: React.MouseEvent<HTMLInputElement>) => {
+            event.stopPropagation();
+            const isChecked = rangeSelect.isSelected(record.asset_id);
+            rangeSelect.handleSelect(record.asset_id, {
+              shiftKey: event.shiftKey,
+              selected: !isChecked,
+              preventDefault: () => event.preventDefault(),
+            });
+            event.preventDefault();
+          }}
+          onChange={() => { /* controlled via onClick for shift-range support */ }}
           aria-label={t('assetDashboardClient.selection.selectAsset', {
             defaultValue: 'Select asset {{name}}',
             name: record.name
           })}
           className="translate-y-0.5"
-          onClick={(event) => event.stopPropagation()}
           containerClassName="m-0 flex items-center justify-center"
         />
       ),
@@ -802,9 +814,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     t,
     isAllSelected,
     isIndeterminate,
-    selectedAssetIds,
+    rangeSelect,
     toggleSelectAll,
-    toggleAssetSelection,
     getAssetTypeIcon,
     renderAssetDetails,
     openAssetRecordPage,

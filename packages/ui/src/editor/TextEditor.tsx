@@ -81,6 +81,7 @@ interface TextEditorProps {
   searchMentions?: (query: string) => Promise<MentionUser[]>;
   placeholder?: string;
   uploadFile?: (file: File, blockId?: string) => Promise<string | Record<string, any>>;
+  autoFocus?: boolean;
 }
 
 export const DEFAULT_BLOCK: PartialBlock[] = [{
@@ -175,6 +176,7 @@ export default function TextEditor({
   searchMentions,
   placeholder,
   uploadFile,
+  autoFocus = false,
 }: TextEditorProps) {
   useShortcutScope('editor');
   const { resolvedTheme } = useTheme();
@@ -430,6 +432,22 @@ export default function TextEditor({
       }
     };
   }, [editor, editorRef]);
+
+  useEffect(() => {
+    if (!autoFocus) return;
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      editor.focus();
+    });
+    const timeout = window.setTimeout(() => {
+      editor.focus();
+    }, 0);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.clearTimeout(timeout);
+    };
+  }, [autoFocus, editor]);
 
   // Handle content changes
   useEffect(() => {

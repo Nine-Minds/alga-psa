@@ -15,20 +15,20 @@
     "actions": {
       "resetAll": "Alle zurücksetzen",
       "replace": "Ersetzen",
-      "copyCheatsheet": "Copy cheatsheet",
-      "printCheatsheet": "Print"
+      "copyCheatsheet": "Spickzettel kopieren",
+      "printCheatsheet": "Drucken"
     },
     "messages": {
       "bindingUpdated": "Tastenkürzel aktualisiert",
       "enabledUpdated": "Tastenkürzel aktualisiert",
       "resetOne": "Tastenkürzel zurückgesetzt",
       "resetAll": "Tastenkürzel zurückgesetzt",
-      "cheatsheetCopied": "Cheatsheet copied to clipboard"
+      "cheatsheetCopied": "Spickzettel in Zwischenablage kopiert"
     },
     "errors": {
       "saveFailed": "Tastenkürzel-Einstellungen konnten nicht gespeichert werden",
-      "copyFailed": "Failed to copy cheatsheet",
-      "printFailed": "Unable to open print window. Allow pop-ups and try again."
+      "copyFailed": "Spickzettel konnte nicht kopiert werden",
+      "printFailed": "Druckfenster konnte nicht geöffnet werden. Pop-ups erlauben und erneut versuchen."
     },
     "resetAll": {
       "title": "Alle Tastenkürzel zurücksetzen?",
@@ -151,8 +151,8 @@
         "description": "Den aktiven Dialog schließen oder abbrechen."
       },
       "submit": {
-        "label": "Submit dialog",
-        "description": "Submit the active dialog form."
+        "label": "Dialog absenden",
+        "description": "Aktives Dialogformular absenden."
       }
     },
     "panel": {
@@ -179,6 +179,10 @@
       "next": {
         "label": "Nächster Datensatz",
         "description": "Den nächsten Datensatz öffnen."
+      },
+      "addTime": {
+        "label": "Zeiteintrag hinzufügen",
+        "description": "Zeiterfassungsleiste für den aktuellen Datensatz öffnen."
       }
     },
     "editor": {

@@ -15,20 +15,20 @@
     "actions": {
       "resetAll": "Alles resetten",
       "replace": "Vervangen",
-      "copyCheatsheet": "Copy cheatsheet",
-      "printCheatsheet": "Print"
+      "copyCheatsheet": "Spiekbriefje kopiëren",
+      "printCheatsheet": "Afdrukken"
     },
     "messages": {
       "bindingUpdated": "Sneltoets bijgewerkt",
       "enabledUpdated": "Sneltoets bijgewerkt",
       "resetOne": "Sneltoets gereset",
       "resetAll": "Sneltoetsen gereset",
-      "cheatsheetCopied": "Cheatsheet copied to clipboard"
+      "cheatsheetCopied": "Spiekbriefje gekopieerd naar klembord"
     },
     "errors": {
       "saveFailed": "Opslaan van sneltoetsvoorkeuren mislukt",
-      "copyFailed": "Failed to copy cheatsheet",
-      "printFailed": "Unable to open print window. Allow pop-ups and try again."
+      "copyFailed": "Spiekbriefje kopiëren mislukt",
+      "printFailed": "Kan het afdrukvenster niet openen. Sta pop-ups toe en probeer opnieuw."
     },
     "resetAll": {
       "title": "Alle sneltoetsen resetten?",
@@ -65,7 +65,7 @@
     }
   },
   "groups": {
-    "global": "Globaal",
+    "global": "Algemeen",
     "ai": "AI",
     "page": "Pagina",
     "selection": "Selectie",
@@ -151,8 +151,8 @@
         "description": "Sluit of annuleer het actieve dialoogvenster."
       },
       "submit": {
-        "label": "Submit dialog",
-        "description": "Submit the active dialog form."
+        "label": "Dialoog verzenden",
+        "description": "Het actieve dialoogformulier verzenden."
       }
     },
     "panel": {
@@ -179,6 +179,10 @@
       "next": {
         "label": "Volgend record",
         "description": "Open het volgende record."
+      },
+      "addTime": {
+        "label": "Tijdregistratie toevoegen",
+        "description": "Open het tijdregistratiepaneel voor het huidige record."
       }
     },
     "editor": {

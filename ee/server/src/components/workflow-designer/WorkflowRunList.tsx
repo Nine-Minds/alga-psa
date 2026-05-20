@@ -15,6 +15,7 @@ import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -598,17 +599,12 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
     setSelectedRunIds(new Set(runs.map((run) => run.run_id)));
   };
 
-  const toggleRunSelection = (runId: string) => {
-    setSelectedRunIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(runId)) {
-        next.delete(runId);
-      } else {
-        next.add(runId);
-      }
-      return next;
-    });
-  };
+  const rangeSelect = useRangeSelection<WorkflowRunListItem>({
+    items: runs,
+    getId: (run) => run.run_id,
+    selectedIds: selectedRunIds,
+    onSelectedIdsChange: setSelectedRunIds,
+  });
 
   const performBulkAction = async (action: 'resume' | 'cancel') => {
     if (selectedRuns.length === 0) {
@@ -973,8 +969,18 @@ const WorkflowRunList: React.FC<WorkflowRunListProps> = ({
                     <TableCell>
                       <Checkbox
                         id={`workflow-runs-select-${run.run_id}`}
-                        checked={selectedRunIds.has(run.run_id)}
-                        onChange={() => toggleRunSelection(run.run_id)}
+                        checked={rangeSelect.isSelected(run.run_id)}
+                        onClick={(event: React.MouseEvent<HTMLInputElement>) => {
+                          event.stopPropagation();
+                          const isChecked = rangeSelect.isSelected(run.run_id);
+                          rangeSelect.handleSelect(run.run_id, {
+                            shiftKey: event.shiftKey,
+                            selected: !isChecked,
+                            preventDefault: () => event.preventDefault(),
+                          });
+                          event.preventDefault();
+                        }}
+                        onChange={() => { /* controlled via onClick for shift-range support */ }}
                         containerClassName="mb-0"
                       />
                     </TableCell>

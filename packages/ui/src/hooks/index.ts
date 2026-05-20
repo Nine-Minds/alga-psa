@@ -9,3 +9,4 @@ export * from './useResponsiveColumns';
 export * from './useTicketTimeTracking';
 export * from './useTruncationDetection';
 export * from './useAppTheme';
+export * from './useRangeSelection';

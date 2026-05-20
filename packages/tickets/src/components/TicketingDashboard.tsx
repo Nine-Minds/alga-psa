@@ -43,7 +43,7 @@ import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2 } fro
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { useIntervalTracking } from '@alga-psa/ui/hooks';
+import { useIntervalTracking, useRangeSelection } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionMessageError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
@@ -783,32 +783,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   }, [selectableTicketIds]);
 
-  const handleTicketSelectionChange = useCallback((ticketId: string, isChecked: boolean) => {
-    if (!isChecked) {
-      setAllMatchingMode(false);
-    }
-    setSelectedTicketIds(prev => {
-      const alreadySelected = prev.has(ticketId);
-
-      if (isChecked && alreadySelected) {
-        return prev;
+  const rangeSelect = useRangeSelection<string>({
+    items: visibleTicketIds,
+    getId: (id) => id,
+    selectedIds: selectedTicketIds,
+    onSelectedIdsChange: (next) => {
+      let shrank = false;
+      for (const id of selectedTicketIds) {
+        if (!next.has(id)) { shrank = true; break; }
       }
-
-      if (!isChecked && !alreadySelected) {
-        return prev;
-      }
-
-      const next = new Set(prev);
-
-      if (isChecked) {
-        next.add(ticketId);
-      } else {
-        next.delete(ticketId);
-      }
-
-      return next;
-    });
-  }, []);
+      if (shrank) setAllMatchingMode(false);
+      setSelectedTicketIds(next);
+    },
+  });
 
   const handleSelectAllVisibleTickets = useCallback((shouldSelect: boolean) => {
     if (!shouldSelect) {
@@ -1056,7 +1043,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           return null;
         }
 
-        const isChecked = selectedTicketIds.has(ticketId);
+        const isChecked = rangeSelect.isSelected(ticketId);
 
         return (
           <div
@@ -1067,10 +1054,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             <Checkbox
               id={`${id}-select-${ticketId}`}
               checked={isChecked}
-              onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+              onClick={(event: React.MouseEvent<HTMLInputElement>) => {
                 event.stopPropagation();
-                handleTicketSelectionChange(ticketId, event.target.checked);
+                rangeSelect.handleSelect(ticketId, {
+                  shiftKey: event.shiftKey,
+                  selected: !isChecked,
+                  preventDefault: () => event.preventDefault(),
+                });
+                event.preventDefault();
               }}
+              onChange={() => { /* controlled via onClick for shift-range support */ }}
               containerClassName="mb-0"
               className="m-0"
               skipRegistration
@@ -1094,7 +1087,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     allVisibleTicketsSelected,
     isSelectionIndeterminate,
     handleSelectAllVisibleTickets,
-    handleTicketSelectionChange,
+    rangeSelect,
     selectedTicketIds,
     clearSelection,
     handleSelectAllMatchingTickets,
