@@ -68,7 +68,6 @@ const COLUMN_CONFIG: TaskColumn[] = [
   { key: 'checklist',    priority: 11,                   defaultWidth: 120, minWidth: 90,  maxWidth: 240, resizable: true,  align: 'left'  },
   { key: 'deps',         priority: 12,                   defaultWidth: 90,  minWidth: 70,  maxWidth: 220, resizable: true,  align: 'left'  },
   { key: 'attachments',  priority: 13,                   defaultWidth: 110, minWidth: 80,  maxWidth: 200, resizable: true,  align: 'left'  },
-  { key: 'actions',      priority: 2,  alwaysShow: true, defaultWidth: 130, minWidth: 110, maxWidth: 200, resizable: false, align: 'right' },
 ];
 
 // Task-type icons keyed by type_key (mirrors the kanban board / cards).
@@ -513,7 +512,6 @@ export default function TaskListView({
     actual_hours: t('tasks.actualHours', 'Actual Hours'),
     due_date: t('tasks.dueDate', 'Due Date'),
     attachments: t('tasks.attachments', 'Attachments'),
-    actions: t('projectList.columns.actions', 'Actions'),
   }), [t]);
 
   // Lookups for the Priority and Type columns.
@@ -1933,49 +1931,6 @@ export default function TaskListView({
                                               <span className="text-xs">{docCount}</span>
                                             </div>
                                           )}
-                                        </td>
-                                      );
-                                    case 'actions':
-                                      return (
-                                        <td key="actions" className={`py-2.5 px-3 text-right align-middle ${tdBorder}`}>
-                                          <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Button
-                                              id={`edit-task-${task.task_id}`}
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                onTaskClick(task);
-                                              }}
-                                              title={t('taskForm.editTitle', 'Edit Task')}
-                                            >
-                                              <Pencil className="h-3.5 w-3.5" />
-                                            </Button>
-                                            <Button
-                                              id={`duplicate-task-${task.task_id}`}
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                onTaskDuplicate(task);
-                                              }}
-                                              title={t('common:actions.duplicate', 'Duplicate')}
-                                            >
-                                              <Copy className="h-3.5 w-3.5" />
-                                            </Button>
-                                            <Button
-                                              id={`delete-task-${task.task_id}`}
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                onTaskDelete(task);
-                                              }}
-                                              title={t('common:actions.delete', 'Delete')}
-                                            >
-                                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                                            </Button>
-                                          </div>
                                         </td>
                                       );
                                     default:
