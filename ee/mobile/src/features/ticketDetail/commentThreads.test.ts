@@ -28,7 +28,6 @@ function accessors(
     getThreadId: (c) => c.thread_id,
     getParentCommentId: (c) => c.parent_comment_id,
     getCreatedAt: (c) => c.created_at,
-    getUpdatedAt: (c) => c.updated_at,
     newestFirst,
   };
 }
@@ -100,7 +99,7 @@ describe("buildCommentThreadGroups", () => {
     expect(group.childrenByParentId.get("r1")!.map((c) => c.comment_id)).toEqual(["a", "b"]);
   });
 
-  it("T013: lastActivityAt = max(created/updated), replyCount = n - 1", () => {
+  it("T013: lastActivityAt = max(created_at), edits do not reorder", () => {
     const comments: TestComment[] = [
       {
         comment_id: "r1",
@@ -113,7 +112,8 @@ describe("buildCommentThreadGroups", () => {
         thread_id: "t1",
         parent_comment_id: "r1",
         created_at: "2026-05-18T10:05:00Z",
-        // updated later than any created_at -> drives lastActivityAt
+        // updated_at is intentionally later than any created_at, but edits
+        // must not bump the thread's lastActivityAt.
         updated_at: "2026-05-18T12:00:00Z",
       },
       {
@@ -127,7 +127,7 @@ describe("buildCommentThreadGroups", () => {
     const [group] = buildCommentThreadGroups(accessors(comments));
 
     expect(group.replyCount).toBe(2);
-    expect(group.lastActivityAt).toBe(new Date("2026-05-18T12:00:00Z").getTime());
+    expect(group.lastActivityAt).toBe(new Date("2026-05-18T11:00:00Z").getTime());
   });
 
   it("T014: newestFirst orders an older root w/ newer reply ahead of a more-recent standalone; oldest is inverse; in-thread order unchanged", () => {

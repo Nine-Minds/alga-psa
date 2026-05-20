@@ -21,7 +21,6 @@ function buildGroups(comments: IComment[]) {
     getThreadId: (item) => item.thread_id || item.comment_id,
     getParentCommentId: (item) => item.parent_comment_id,
     getCreatedAt: (item) => item.created_at,
-    getUpdatedAt: (item) => item.updated_at,
   });
 }
 

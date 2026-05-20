@@ -8,7 +8,6 @@ interface TestComment {
   threadId: string;
   parentId: string | null;
   createdAt: string;
-  updatedAt?: string;
   threadLastActivityAt?: string;
 }
 
@@ -20,7 +19,6 @@ function group(comments: TestComment[], newestFirst = false) {
     getThreadId: (comment) => comment.threadId,
     getParentCommentId: (comment) => comment.parentId,
     getCreatedAt: (comment) => comment.createdAt,
-    getUpdatedAt: (comment) => comment.updatedAt,
     getThreadLastActivityAt: (threadComments) => threadComments[0]?.threadLastActivityAt,
   });
 }
