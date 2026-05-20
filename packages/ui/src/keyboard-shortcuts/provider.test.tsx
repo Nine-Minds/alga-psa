@@ -337,7 +337,7 @@ describe('KeyboardShortcutsProvider', () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
-  it('requires an active region for selection actions and single-letter page actions', () => {
+  it('requires an active region for selection actions but not single-letter page actions', () => {
     const selectionHandler = vi.fn();
     const pageHandler = vi.fn();
 
@@ -364,13 +364,15 @@ describe('KeyboardShortcutsProvider', () => {
 
     const { rerender } = render(<Harness activeRegion={false} />);
     expect(dispatchShortcut(document, { key: 'j', code: 'KeyJ' }).defaultPrevented).toBe(false);
-    expect(dispatchShortcut(document, { key: 'c', code: 'KeyC' }).defaultPrevented).toBe(false);
+    expect(selectionHandler).not.toHaveBeenCalled();
+    expect(dispatchShortcut(document, { key: 'c', code: 'KeyC' }).defaultPrevented).toBe(true);
+    expect(pageHandler).toHaveBeenCalledTimes(1);
 
     rerender(<Harness activeRegion />);
     expect(dispatchShortcut(document, { key: 'j', code: 'KeyJ' }).defaultPrevented).toBe(true);
     expect(dispatchShortcut(document, { key: 'c', code: 'KeyC' }).defaultPrevented).toBe(true);
     expect(selectionHandler).toHaveBeenCalledTimes(1);
-    expect(pageHandler).toHaveBeenCalledTimes(1);
+    expect(pageHandler).toHaveBeenCalledTimes(2);
   });
 
   it('dispatches across a full action catalog without measurable input latency', () => {

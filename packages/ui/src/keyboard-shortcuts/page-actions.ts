@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { createShortcutAction } from './catalog';
-import { useShortcutAction } from './provider';
+import { useShortcutAction, useShortcutScope } from './provider';
 import type { ShortcutAction } from './types';
 
 interface PageShortcutOptions {
@@ -27,4 +27,22 @@ export function usePageCreateShortcut(handler: ShortcutAction['handler'], option
 
 export function usePageSaveShortcut(handler: ShortcutAction['handler'], options: PageShortcutOptions = {}): void {
   useCatalogPageShortcut('page.save', handler, options);
+}
+
+interface DialogSubmitShortcutOptions {
+  enabled?: boolean;
+  active?: boolean;
+}
+
+export function useDialogSubmitShortcut(
+  handler: ShortcutAction['handler'],
+  options: DialogSubmitShortcutOptions = {},
+): void {
+  const active = options.active ?? true;
+  useShortcutScope('dialog', active);
+  const action = useMemo<ShortcutAction>(
+    () => createShortcutAction('dialog.submit', handler, { enabled: options.enabled }),
+    [handler, options.enabled],
+  );
+  useShortcutAction(action);
 }

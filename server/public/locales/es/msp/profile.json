@@ -6,7 +6,8 @@
       "sso": "Inicio de sesión único",
       "apiKeys": "Claves API",
       "notifications": "Notificaciones",
-      "calendar": "Calendario"
+      "calendar": "Calendario",
+      "keyboardShortcuts": "Keyboard Shortcuts"
     },
     "basicInfo": {
       "title": "Información básica"

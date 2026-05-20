@@ -45,12 +45,10 @@ describe('keyboard shortcuts i18n contract', () => {
     }
   });
 
-  it('adds the settings tab label across production locales', () => {
-    for (const locale of productionLocales) {
-      const settings = readJson(`server/public/locales/${locale}/msp/settings.json`);
-      expect(settings.tabs.keyboardShortcuts).toEqual(expect.any(String));
-      expect(settings.tabs.keyboardShortcuts.length).toBeGreaterThan(0);
-    }
+  it('adds the Profile tab label (EN authored first; other locales fall back via defaultValue)', () => {
+    const profile = readJson('server/public/locales/en/msp/profile.json');
+    expect(profile.profile?.tabs?.keyboardShortcuts).toEqual(expect.any(String));
+    expect(profile.profile.tabs.keyboardShortcuts.length).toBeGreaterThan(0);
   });
 
   it('preloads the namespace on MSP routes and uses translation keys in UI', () => {
@@ -58,9 +56,10 @@ describe('keyboard shortcuts i18n contract', () => {
     expect(config).toContain("'/msp': ['common', 'msp/core', 'msp/dashboard', 'msp/keyboard-shortcuts']");
     expect(config).toContain("'/msp/settings': ['common', 'msp/core', 'msp/settings', 'msp/keyboard-shortcuts'");
 
+    const userProfile = readFileSync(resolve(repoRoot, 'server/src/components/settings/profile/UserProfile.tsx'), 'utf8');
+    expect(userProfile).toContain("t('profile.tabs.keyboardShortcuts'");
     const settingsPage = readFileSync(resolve(repoRoot, 'server/src/components/settings/SettingsPage.tsx'), 'utf8');
-    expect(settingsPage).toContain("t('tabs.keyboardShortcuts')");
-    expect(settingsPage).not.toContain("t('tabs.keyboardShortcuts', { defaultValue");
+    expect(settingsPage).not.toContain("tabs.keyboardShortcuts");
 
     const helpDialog = readFileSync(resolve(repoRoot, 'packages/ui/src/keyboard-shortcuts/ShortcutHelpDialog.tsx'), 'utf8');
     expect(helpDialog).toContain("useTranslation('msp/keyboard-shortcuts')");

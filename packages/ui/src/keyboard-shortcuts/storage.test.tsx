@@ -26,12 +26,14 @@ describe('shortcut storage boundary', () => {
 
     await storage.save({
       version: 1,
+      profile: 'default',
       bindings: { 'global.search': ['mod+j'] },
       disabled: ['global.help'],
     });
 
     await expect(storage.load()).resolves.toEqual({
       version: 1,
+      profile: 'default',
       bindings: { 'global.search': ['mod+j'] },
       disabled: ['global.help'],
     });
@@ -41,6 +43,7 @@ describe('shortcut storage boundary', () => {
     const storage: ShortcutStorage = {
       load: vi.fn(async () => ({
         version: 7,
+        profile: 'default',
         bindings: {},
         disabled: [],
       })),

@@ -51,6 +51,7 @@ export interface ShortcutAction {
 
 export interface PersistedShortcuts {
   version: number;
+  profile: string;
   bindings: Record<string, readonly string[]>;
   disabled: readonly string[];
 }

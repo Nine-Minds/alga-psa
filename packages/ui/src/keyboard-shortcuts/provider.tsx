@@ -25,8 +25,9 @@ import {
   resolveActionBindings,
   setActionBindingsDelta,
   setActionDisabled as setActionDisabledPreference,
+  setProfilePreference,
 } from './preferences';
-import type { BindingDescriptor, PersistedShortcuts, Platform, ShortcutAction, ShortcutScope, ShortcutStorage } from './types';
+import type { PersistedShortcuts, Platform, ShortcutAction, ShortcutScope, ShortcutStorage } from './types';
 
 interface ScopeEntry {
   id: number;
@@ -62,6 +63,8 @@ interface KeyboardShortcutsContextValue {
   setActionDisabled: (actionId: string, disabled: boolean) => void;
   resetAction: (actionId: string) => void;
   resetAllShortcuts: () => void;
+  profile: string;
+  setProfile: (profileId: string) => void;
   getState: () => DispatchState;
 }
 
@@ -111,17 +114,11 @@ function isEditableTarget(target: EventTarget | null): boolean {
   return target instanceof Element && isElementEditable(target);
 }
 
-function requiresActiveRegion(action: ShortcutAction, descriptor: BindingDescriptor): boolean {
-  if (action.id.startsWith('selection.')) {
-    return true;
-  }
-
-  return (
-    action.scope === 'page' &&
-    descriptor.modifiers.length === 0 &&
-    descriptor.token.kind === 'code' &&
-    /^Key[A-Z]$/.test(descriptor.token.value)
-  );
+function requiresActiveRegion(action: ShortcutAction): boolean {
+  // Only roving-focus selection actions (j/k/Enter) need a focused list region;
+  // page.create/global.quickCreate are page-wide affordances guarded by scope
+  // and editable-target suppression instead.
+  return action.id.startsWith('selection.');
 }
 
 function scopeStackIndex(action: ShortcutAction, activeScopes: readonly ScopeEntry[]): number {
@@ -287,7 +284,11 @@ export function KeyboardShortcutsProvider({
   }, [persistPreferences]);
 
   const resetAllShortcuts = useCallback(() => {
-    persistPreferences(EMPTY_SHORTCUT_PREFERENCES);
+    persistPreferences({ ...EMPTY_SHORTCUT_PREFERENCES, profile: preferencesRef.current.profile });
+  }, [persistPreferences]);
+
+  const setProfile = useCallback((profileId: string) => {
+    persistPreferences(setProfilePreference(preferencesRef.current, profileId));
   }, [persistPreferences]);
 
   const resetSequenceBuffer = useCallback(() => {
@@ -403,7 +404,7 @@ export function KeyboardShortcutsProvider({
             continue;
           }
 
-          if (requiresActiveRegion(action, parsed.value) && activeRegionsRef.current.length === 0) {
+          if (requiresActiveRegion(action) && activeRegionsRef.current.length === 0) {
             continue;
           }
 
@@ -545,6 +546,8 @@ export function KeyboardShortcutsProvider({
       setActionDisabled,
       resetAction,
       resetAllShortcuts,
+      profile: preferences.profile,
+      setProfile,
       getState,
     }),
     [
@@ -562,6 +565,7 @@ export function KeyboardShortcutsProvider({
       resetAllShortcuts,
       setActionBindings,
       setActionDisabled,
+      setProfile,
     ],
   );
 
@@ -585,7 +589,7 @@ function useOptionalKeyboardShortcutsContext(): KeyboardShortcutsContextValue | 
   return useContext(KeyboardShortcutsContext);
 }
 
-export function useKeyboardShortcutPreferences(): Pick<
+type ShortcutPreferenceApi = Pick<
   KeyboardShortcutsContextValue,
   | 'platform'
   | 'preferences'
@@ -596,8 +600,11 @@ export function useKeyboardShortcutPreferences(): Pick<
   | 'setActionDisabled'
   | 'resetAction'
   | 'resetAllShortcuts'
-> {
-  const context = useKeyboardShortcutsContext();
+  | 'profile'
+  | 'setProfile'
+>;
+
+function pickShortcutPreferenceApi(context: KeyboardShortcutsContextValue): ShortcutPreferenceApi {
   return {
     platform: context.platform,
     preferences: context.preferences,
@@ -608,37 +615,18 @@ export function useKeyboardShortcutPreferences(): Pick<
     setActionDisabled: context.setActionDisabled,
     resetAction: context.resetAction,
     resetAllShortcuts: context.resetAllShortcuts,
+    profile: context.profile,
+    setProfile: context.setProfile,
   };
 }
 
-export function useOptionalKeyboardShortcutPreferences(): Pick<
-  KeyboardShortcutsContextValue,
-  | 'platform'
-  | 'preferences'
-  | 'preferencesLoaded'
-  | 'getResolvedBindings'
-  | 'isActionDisabled'
-  | 'setActionBindings'
-  | 'setActionDisabled'
-  | 'resetAction'
-  | 'resetAllShortcuts'
-> | null {
-  const context = useOptionalKeyboardShortcutsContext();
-  if (!context) {
-    return null;
-  }
+export function useKeyboardShortcutPreferences(): ShortcutPreferenceApi {
+  return pickShortcutPreferenceApi(useKeyboardShortcutsContext());
+}
 
-  return {
-    platform: context.platform,
-    preferences: context.preferences,
-    preferencesLoaded: context.preferencesLoaded,
-    getResolvedBindings: context.getResolvedBindings,
-    isActionDisabled: context.isActionDisabled,
-    setActionBindings: context.setActionBindings,
-    setActionDisabled: context.setActionDisabled,
-    resetAction: context.resetAction,
-    resetAllShortcuts: context.resetAllShortcuts,
-  };
+export function useOptionalKeyboardShortcutPreferences(): ShortcutPreferenceApi | null {
+  const context = useOptionalKeyboardShortcutsContext();
+  return context ? pickShortcutPreferenceApi(context) : null;
 }
 
 export function useResolvedShortcutBindings(actionId: string): readonly string[] {

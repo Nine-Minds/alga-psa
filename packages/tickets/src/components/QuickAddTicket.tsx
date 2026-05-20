@@ -54,6 +54,7 @@ import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../l
 import { removeTicketRichTextImageUrls, replaceTicketRichTextImageUrls } from '../lib/ticketRichTextImages';
 import { useQuickAddRichTextUploadSession } from './useQuickAddRichTextUploadSession';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions';
+import { useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 /** Renders a <form> normally, or a plain <div> when embedded to avoid nested form tags. */
 function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; onSubmit: (e: React.FormEvent) => void; children: React.ReactNode }) {
@@ -937,6 +938,11 @@ export function QuickAddTicket({
     e.stopPropagation();
     await handleCreateTicket();
   };
+
+  useDialogSubmitShortcut(
+    () => { void handleCreateTicket(); },
+    { active: open && !isEmbedded, enabled: !isSubmitting && !isLoading },
+  );
 
   const filteredClients = clients.filter(client => {
     if (clientFilterState === 'all') return true;

@@ -15,7 +15,10 @@ describe('MSP global shortcut migration contract', () => {
   it('mounts KeyboardShortcutsProvider in the MSP layout around both product shells', () => {
     const source = read('server/src/app/msp/MspLayoutClient.tsx');
     expect(source).toContain("import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts'");
-    expect(source).toContain('<KeyboardShortcutsProvider routeKey={pathname ?? \'/msp\'} storage={shortcutPreference.storage}>');
+    expect(source).toContain('<KeyboardShortcutsProvider');
+    expect(source).toContain('routeKey={pathname ?? \'/msp\'}');
+    expect(source).toContain('storage={shortcutPreference.storage}');
+    expect(source).toContain('onConflict={');
     expect(source.indexOf('<KeyboardShortcutsProvider')).toBeLessThan(source.indexOf('<AlgaDeskMspShell'));
     expect(source.indexOf('<KeyboardShortcutsProvider')).toBeLessThan(source.indexOf('<DefaultLayout'));
     expect(source).toContain('isOnboardingPage ? children');
@@ -33,8 +36,14 @@ describe('MSP global shortcut migration contract', () => {
     expect(source).toContain("useCatalogShortcut('ai.quickAsk'");
     expect(source).toContain("useCatalogShortcut('global.openShortcuts'");
     expect(source).toContain("useCatalogShortcut('global.quickCreate'");
-    expect(source).toContain('<QuickCreateDialog');
+    expect(source).toContain("'global-quick-create-trigger'");
     expect(source).not.toContain("window.addEventListener('keydown', handleKeyDown)");
+  });
+
+  it('hosts the QuickCreateDialog through the Header picker', () => {
+    const source = read('server/src/components/layout/Header.tsx');
+    expect(source).toContain('id="global-quick-create-trigger"');
+    expect(source).toContain('<QuickCreateDialog');
   });
 
   it('rescopes the asset command palette away from mod+k', () => {

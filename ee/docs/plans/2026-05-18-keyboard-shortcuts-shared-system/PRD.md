@@ -171,8 +171,11 @@ registration (`labelKey`/`groupKey`).
 - FR9. Editable-target suppression for `input`/`textarea`/`select`/
   `contenteditable`/`role=textbox`/`role=combobox`/editor roots unless
   `allowInEditable`.
-- FR10. Active-region: `selection.*` and single-letter page actions fire only
-  when a registered roving-focus region is active.
+- FR10. Active-region: `selection.*` actions fire only when a registered
+  roving-focus region is active. Single-letter page actions
+  (`page.create`/`global.quickCreate`) are **not** region-gated — they fire
+  whenever their page scope is active and the target is non-editable, so the
+  affordance works on page load without first focusing the list.
 - FR11. Sequence dispatch: a chord buffer accumulates keys; resolves a matching
   sequence; resets on timeout (configurable, default ~1s), on a non-matching
   key, on scope/route change, or in editable targets.
@@ -253,14 +256,17 @@ registration (`labelKey`/`groupKey`).
 **Page-scoped create/save (commitGroup `page-actions`)**
 
 - FR31. `page.create` is a page-scoped action defaulting to **`c`**
-  (non-editable, active-region). `mod+n` is offered only as a
+  (non-editable; fires on page scope, not active-region gated). `mod+n` is offered only as a
   user-configurable *alternate* with a documented caveat: `Ctrl/⌘+N` is a
   browser "new window" accelerator and is not reliably interceptable
   (especially Chrome on Windows), so `c` is the working default. Each page
   with a Create/New control registers `page.create` (via a
   `usePageCreateShortcut` helper) wired to that page's create dialog;
-  `global.quickCreate` remains the fallback only where no `page.create` is
-  registered. `page.save` (`mod+s`, `preventDefault` browser save) is
+  `global.quickCreate` has its own distinct default binding **`n`** (the
+  shared `c` default caused a silent unresolved dispatch conflict) and opens
+  the multi-type `QuickCreateDialog`; it is the create affordance on pages
+  with no `page.create` registered and coexists with `page.create` (`c`)
+  elsewhere. `page.save` (`mod+s`, `preventDefault` browser save) is
   registered by pages with a primary Save. Both are suppressed in editable
   targets and when a dialog/drawer owns scope.
 
@@ -329,10 +335,15 @@ review-discovered bugs ship "green".
   must not call `useShortcutActiveRegion(true)` unconditionally. An active
   region is registered only by genuine roving-focus list/selection containers
   (via a shared region wrapper/hook applied to the real list views). As a
-  result `selection.*` and single-letter page actions (`c`/`j`/`k`) are inert
-  on arbitrary non-editable focus anywhere in `/msp` and fire only when such a
-  region is focused/active. This turns FR10 from documented intent into
-  enforced behavior.
+  result `selection.*` actions (`j`/`k`/`Enter`) are inert on arbitrary
+  non-editable focus anywhere in `/msp` and fire only when such a region is
+  focused/active. Single-letter page actions (`page.create` `c`,
+  `global.quickCreate` `n`) are **not** region-gated: they are page-wide
+  affordances guarded by scope eligibility and editable-target suppression
+  only, so they work on page load without first focusing the list (the
+  earlier active-region requirement made `c`/`n` dead until the list was
+  clicked into — rejected as a UX regression). This turns FR10 from
+  documented intent into enforced behavior.
 
 - FR37. **Behavioral test coverage replaces source greps.** The
   `readFileSync` + `toContain` `*.contract.test.ts` suites
@@ -353,6 +364,54 @@ review-discovered bugs ship "green".
   the MSP wrapper/user-composition layer.
 - No regression to component-local widget key handling.
 - Accessibility: screen readers announce shortcuts via `aria-keyshortcuts`.
+
+**Shortcuts UI redesign + Profile placement (commitGroup `shortcuts-ui-redesign`)**
+
+These requirements supersede the original list-Table settings panel
+(`KeyboardShortcutsSettings.tsx`, now deleted) with the design-handoff visual
+keyboard cheatsheet, and correct its placement so users can actually reach it.
+Sourced from `~/Downloads/design_handoff_keyboard_shortcuts/` (variation-c) and
+manual-test feedback that the prior tab never appeared in the sidebar.
+
+- FR38. **Placement: Profile, not Settings.** The keyboard-shortcuts pane is a
+  `CustomTabs` sub-tab under `/msp/profile` (`UserProfile.tsx tabContent`),
+  matching the per-user-preference convention (Profile / Security / SSO / API
+  Keys / Notifications). The old `SettingsPage.tsx baseTabContent` entry and
+  `KeyboardShortcutsSettings.tsx` are removed. `keyboard-shortcuts` is added to
+  `BASE_PROFILE_TABS` in `packages/integrations/src/lib/calendarAvailability.ts`
+  so `/msp/profile?tab=keyboard-shortcuts` deep-links work. The Sidebar
+  settings-mode menu is unaffected (the pane is not a Settings tab).
+
+- FR39. **Visual keyboard panel.** `KeyboardShortcutsPanel.tsx` recreates the
+  design handoff (variation-c) using product CSS variables and Radix primitives,
+  driven by the **real catalog** + provider single source (no parallel data):
+  full keyboard grid (`KB_ROWS`), layer toggle (Plain / ⌘ Mod / ⇧ Shift /
+  ⌘⇧) with per-layer counts, category-tinted bound keys with conflict dots,
+  hover/selection KeyDetail strip (action name + scope chip + Modified badge +
+  description + BindingDisplay + Rebind/Cancel + Enabled switch + per-action
+  Reset), right-rail chord list with search and `Reset all to {profile}`
+  footer, real `keydown` capture wired through `useKeyboardShortcutPreferences`,
+  Copy cheatsheet (print window), `ConfirmationDialog` for reset-all and the
+  **prompt-to-reassign** conflict UX (the new binding takes over, the previous
+  owner is left unbound), `react-hot-toast` + `handleError` parity, every
+  interactive element has an `id`. Bindings whose key isn't on the keyboard
+  (`?`, `Escape`, `Delete`, sequences) route to the chord rail rather than
+  silently disappearing (improvement over the prototype).
+
+- FR40. **Profile presets in the engine single source.** `PersistedShortcuts`
+  gains `profile: string` (schema v2, with a v1→v2 migration that defaults to
+  `'default'` and preserves a valid stored profile). `SHORTCUT_PROFILES` ships
+  `default`, `vim`, `emacs` with parser-valid neutral single-chord deltas keyed
+  by real catalog ids — multi-chord Emacs sequences are deliberately not
+  assigned to non-sequence actions (they would silently never dispatch).
+  Resolution order is **user override → active-profile delta → platform
+  default**, applied inside `resolveActionBindings` so dispatch, hints, ARIA,
+  and the panel all read the same effective binding. `setActionBindingsDelta`
+  drops an override equal to the **profile baseline** (not raw factory), so
+  per-action reset returns to the active profile's baseline. The provider
+  exposes `profile` + `setProfile`. Override scope stays **per-account only**
+  (`useUserPreference`); the prototype's per-device split is intentionally
+  deferred. Vim/Emacs delta maps are best-guess pending team confirmation.
 
 ## Data / API / Integrations
 

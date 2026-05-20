@@ -14,16 +14,21 @@
     },
     "actions": {
       "resetAll": "Reset all",
-      "replace": "Replace"
+      "replace": "Replace",
+      "copyCheatsheet": "Copy cheatsheet",
+      "printCheatsheet": "Print"
     },
     "messages": {
       "bindingUpdated": "Keyboard shortcut updated",
       "enabledUpdated": "Keyboard shortcut updated",
       "resetOne": "Keyboard shortcut reset",
-      "resetAll": "Keyboard shortcuts reset"
+      "resetAll": "Keyboard shortcuts reset",
+      "cheatsheetCopied": "Cheatsheet copied to clipboard"
     },
     "errors": {
-      "saveFailed": "Failed to save keyboard shortcut preferences"
+      "saveFailed": "Failed to save keyboard shortcut preferences",
+      "copyFailed": "Failed to copy cheatsheet",
+      "printFailed": "Unable to open print window. Allow pop-ups and try again."
     },
     "resetAll": {
       "title": "Reset all shortcuts?",
@@ -144,6 +149,10 @@
       "cancel": {
         "label": "Cancel dialog",
         "description": "Close or cancel the active dialog."
+      },
+      "submit": {
+        "label": "Submit dialog",
+        "description": "Submit the active dialog form."
       }
     },
     "panel": {

@@ -14,16 +14,21 @@
     },
     "actions": {
       "resetAll": "Alle zurücksetzen",
-      "replace": "Ersetzen"
+      "replace": "Ersetzen",
+      "copyCheatsheet": "Copy cheatsheet",
+      "printCheatsheet": "Print"
     },
     "messages": {
       "bindingUpdated": "Tastenkürzel aktualisiert",
       "enabledUpdated": "Tastenkürzel aktualisiert",
       "resetOne": "Tastenkürzel zurückgesetzt",
-      "resetAll": "Tastenkürzel zurückgesetzt"
+      "resetAll": "Tastenkürzel zurückgesetzt",
+      "cheatsheetCopied": "Cheatsheet copied to clipboard"
     },
     "errors": {
-      "saveFailed": "Tastenkürzel-Einstellungen konnten nicht gespeichert werden"
+      "saveFailed": "Tastenkürzel-Einstellungen konnten nicht gespeichert werden",
+      "copyFailed": "Failed to copy cheatsheet",
+      "printFailed": "Unable to open print window. Allow pop-ups and try again."
     },
     "resetAll": {
       "title": "Alle Tastenkürzel zurücksetzen?",
@@ -144,6 +149,10 @@
       "cancel": {
         "label": "Dialog abbrechen",
         "description": "Den aktiven Dialog schließen oder abbrechen."
+      },
+      "submit": {
+        "label": "Submit dialog",
+        "description": "Submit the active dialog form."
       }
     },
     "panel": {
