@@ -3,6 +3,7 @@
 import { Star } from 'lucide-react';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { interpolateFallback } from '@alga-psa/ui/lib/i18n/interpolateFallback';
 
 export type RatingType = 'stars' | 'numbers' | 'emojis';
 
@@ -129,16 +130,22 @@ export function RatingButton({
       aria-pressed={selected}
       aria-label={
         label
-          ? t('rating.buttonAriaWithLabel', {
-              defaultValue: '{{rating}} - {{label}}',
-              rating,
-              label,
-            })
-          : t('rating.buttonAria', {
-              defaultValue: 'Rating {{rating}} of {{scale}}',
-              rating,
-              scale,
-            })
+          ? interpolateFallback(
+              t('rating.buttonAriaWithLabel', {
+                defaultValue: '{{rating}} - {{label}}',
+                rating,
+                label,
+              }),
+              { rating, label }
+            )
+          : interpolateFallback(
+              t('rating.buttonAria', {
+                defaultValue: 'Rating {{rating}} of {{scale}}',
+                rating,
+                scale,
+              }),
+              { rating, scale }
+            )
       }
       className={cn(
         'flex flex-col items-center justify-center gap-2 rounded-lg border-2 px-4 py-3 transition-all',
