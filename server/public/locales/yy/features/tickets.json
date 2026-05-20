@@ -530,7 +530,12 @@
     },
     "auth": {
       "moveRequired": "55555",
-      "deleteRequired": "55555"
+      "deleteRequired": "55555",
+      "assignRequired": "55555",
+      "tagsRequired": "55555",
+      "dueDateRequired": "55555",
+      "statusRequired": "55555",
+      "priorityRequired": "55555"
     },
     "actionBar": {
       "selectedCount_one": "55555 {{count}} 55555",
@@ -539,7 +544,83 @@
       "bundle": "55555",
       "delete": "55555",
       "clear": "55555",
-      "bundleNeedsTwo": "55555"
+      "bundleNeedsTwo": "55555",
+      "assign": "55555",
+      "status": "55555",
+      "priority": "55555",
+      "tags": "55555",
+      "dueDate": "55555",
+      "statusDisabledMultiBoard": "55555",
+      "more": "55555"
+    },
+    "assign": {
+      "dialogTitle": "55555",
+      "message": "55555 {{count}} 55555",
+      "unassigned": "55555",
+      "teamHint": "55555",
+      "confirm_one": "55555 {{count}} 55555",
+      "confirm_other": "55555 {{count}} 55555",
+      "submitting": "55555",
+      "success_one": "55555 {{count}} 55555",
+      "success_other": "55555 {{count}} 55555",
+      "partialFailure": "55555",
+      "failure": "55555",
+      "failedHeading": "55555"
+    },
+    "tags": {
+      "dialogTitle": "55555",
+      "message": "55555 {{count}} 55555",
+      "placeholder": "55555",
+      "confirm_one": "55555 {{count}} 55555",
+      "confirm_other": "55555 {{count}} 55555",
+      "submitting": "55555",
+      "success_one": "55555 {{count}} 55555",
+      "success_other": "55555 {{count}} 55555",
+      "partialFailure": "55555",
+      "failure": "55555",
+      "failedHeading": "55555"
+    },
+    "dueDate": {
+      "dialogTitle": "55555",
+      "message": "55555 {{count}} 55555",
+      "modeSet": "55555",
+      "modeClear": "55555",
+      "placeholder": "55555",
+      "confirm_one": "55555 {{count}} 55555",
+      "confirm_other": "55555 {{count}} 55555",
+      "submitting": "55555",
+      "success_one": "55555 {{count}} 55555",
+      "success_other": "55555 {{count}} 55555",
+      "partialFailure": "55555",
+      "failure": "55555",
+      "failedHeading": "55555"
+    },
+    "status": {
+      "dialogTitle": "55555",
+      "message": "55555 {{count}} 55555",
+      "placeholder": "55555",
+      "loading": "55555",
+      "confirm_one": "55555 {{count}} 55555",
+      "confirm_other": "55555 {{count}} 55555",
+      "submitting": "55555",
+      "success_one": "55555 {{count}} 55555",
+      "success_other": "55555 {{count}} 55555",
+      "partialFailure": "55555",
+      "failure": "55555",
+      "failedHeading": "55555"
+    },
+    "priority": {
+      "dialogTitle": "55555",
+      "message": "55555 {{count}} 55555",
+      "placeholder": "55555",
+      "confirm_one": "55555 {{count}} 55555",
+      "confirm_other": "55555 {{count}} 55555",
+      "submitting": "55555",
+      "success_one": "55555 {{count}} 55555",
+      "success_other": "55555 {{count}} 55555",
+      "partialFailure": "55555",
+      "failure": "55555",
+      "failedHeading": "55555"
     }
   },
   "quickAdd": {

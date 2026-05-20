@@ -51,6 +51,19 @@ vi.mock('@alga-psa/tags/lib/tagCleanup', () => ({
   deleteEntityTags: vi.fn(),
 }));
 
+vi.mock('@alga-psa/tags/actions', () => ({
+  createTagsForEntityWithTransaction: vi.fn(),
+  findTagsByEntityIds: vi.fn(),
+}));
+
+vi.mock('@alga-psa/teams/actions', () => ({
+  getTeamById: vi.fn(),
+}));
+
+vi.mock('./ticketResourceActions', () => ({
+  addTicketResource: vi.fn(),
+}));
+
 vi.mock('@alga-psa/validation', () => ({
   validateData: vi.fn((_schema: unknown, data: unknown) => data),
 }));

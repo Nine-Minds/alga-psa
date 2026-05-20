@@ -8,6 +8,7 @@ import type {
   ITicketResource,
   IUser,
   IUserWithRoles,
+  PendingTag,
   TicketResponseState,
 } from '@alga-psa/types';
 import { TICKET_ORIGINS } from '@alga-psa/types';
@@ -20,6 +21,9 @@ import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
+import { createTagsForEntityWithTransaction, findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { getTeamById } from '@alga-psa/teams/actions';
+import { addTicketResource } from './ticketResourceActions';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import {
   ticketSchema,
@@ -1735,6 +1739,262 @@ export const moveTicketsToBoard = withAuth(async (
   }
 
   return { movedIds, failed };
+});
+
+export type BulkTicketAssignSelection =
+  | { kind: 'user'; userId: string | null }
+  | { kind: 'team'; teamId: string };
+
+export const bulkAssignTickets = withAuth(async (
+  user,
+  { tenant },
+  ticketIds: string[],
+  selection: BulkTicketAssignSelection,
+): Promise<{
+  updatedIds: string[];
+  failed: Array<{ ticketId: string; message: string }>;
+}> => {
+  const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
+
+  if (uniqueIds.length === 0) {
+    return { updatedIds: [], failed: [] };
+  }
+
+  let primaryAssigneeId: string | null = null;
+  let additionalAgentIds: string[] = [];
+
+  if (selection.kind === 'user') {
+    primaryAssigneeId = selection.userId;
+  } else {
+    try {
+      const team = await getTeamById(selection.teamId);
+      primaryAssigneeId = team.manager_id ?? null;
+      if (!primaryAssigneeId) {
+        return {
+          updatedIds: [],
+          failed: uniqueIds.map((ticketId) => ({
+            ticketId,
+            message: 'Selected team has no lead to set as primary assignee',
+          })),
+        };
+      }
+      additionalAgentIds = (team.members ?? [])
+        .map((m) => m.user_id)
+        .filter((uid): uid is string => !!uid && uid !== primaryAssigneeId);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to load team';
+      return {
+        updatedIds: [],
+        failed: uniqueIds.map((ticketId) => ({ ticketId, message })),
+      };
+    }
+  }
+
+  const updatedIds: string[] = [];
+  const failed: Array<{ ticketId: string; message: string }> = [];
+
+  for (const ticketId of uniqueIds) {
+    try {
+      await updateTicketWithCache(ticketId, { assigned_to: primaryAssigneeId });
+      for (const additionalUserId of additionalAgentIds) {
+        try {
+          await addTicketResource(ticketId, additionalUserId, 'agent');
+        } catch {
+          // Resource may already exist; skip per-member errors so the assignment as a whole still succeeds.
+        }
+      }
+      updatedIds.push(ticketId);
+    } catch (error: unknown) {
+      failed.push({
+        ticketId,
+        message: error instanceof Error ? error.message : 'Failed to assign ticket',
+      });
+    }
+  }
+
+  if (updatedIds.length > 0) {
+    revalidatePath('/msp/tickets');
+  }
+
+  return { updatedIds, failed };
+});
+
+export const bulkAddTagsToTickets = withAuth(async (
+  user,
+  { tenant },
+  ticketIds: string[],
+  tagTexts: string[],
+): Promise<{
+  updatedIds: string[];
+  failed: Array<{ ticketId: string; message: string }>;
+}> => {
+  const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
+  const normalizedTexts = Array.from(
+    new Set(tagTexts.map((t) => t.trim()).filter((t) => t.length > 0)),
+  );
+
+  if (uniqueIds.length === 0 || normalizedTexts.length === 0) {
+    return { updatedIds: [], failed: [] };
+  }
+
+  const existingByTicket = new Map<string, Set<string>>();
+  try {
+    const existing = await findTagsByEntityIds(uniqueIds, 'ticket');
+    for (const tag of existing) {
+      const set = existingByTicket.get(tag.tagged_id) ?? new Set<string>();
+      set.add(tag.tag_text.toLowerCase());
+      existingByTicket.set(tag.tagged_id, set);
+    }
+  } catch (error) {
+    console.warn('[bulkAddTagsToTickets] Failed to load existing tags for dedupe:', error);
+  }
+
+  const { knex: ticketKnex } = await createTenantKnex();
+  const updatedIds: string[] = [];
+  const failed: Array<{ ticketId: string; message: string }> = [];
+
+  for (const ticketId of uniqueIds) {
+    try {
+      const alreadyOnTicket = existingByTicket.get(ticketId) ?? new Set<string>();
+      const newTexts = normalizedTexts.filter((t) => !alreadyOnTicket.has(t.toLowerCase()));
+      if (newTexts.length === 0) {
+        updatedIds.push(ticketId);
+        continue;
+      }
+      const pendingTags: PendingTag[] = newTexts.map((text) => ({
+        tag_text: text,
+        background_color: null,
+        text_color: null,
+        isNew: true,
+      }));
+      await withTransaction(ticketKnex, async (trx: Knex.Transaction) => {
+        await createTagsForEntityWithTransaction(trx, tenant, ticketId, 'ticket', pendingTags);
+      });
+      updatedIds.push(ticketId);
+    } catch (error: unknown) {
+      failed.push({
+        ticketId,
+        message: error instanceof Error ? error.message : 'Failed to add tags to ticket',
+      });
+    }
+  }
+
+  if (updatedIds.length > 0) {
+    revalidatePath('/msp/tickets');
+  }
+
+  return { updatedIds, failed };
+});
+
+export const bulkUpdateTicketDueDate = withAuth(async (
+  user,
+  { tenant },
+  ticketIds: string[],
+  dueDate: string | null,
+): Promise<{
+  updatedIds: string[];
+  failed: Array<{ ticketId: string; message: string }>;
+}> => {
+  const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
+
+  if (uniqueIds.length === 0) {
+    return { updatedIds: [], failed: [] };
+  }
+
+  const updatedIds: string[] = [];
+  const failed: Array<{ ticketId: string; message: string }> = [];
+
+  for (const ticketId of uniqueIds) {
+    try {
+      await updateTicketWithCache(ticketId, { due_date: dueDate } as Partial<ITicket>);
+      updatedIds.push(ticketId);
+    } catch (error: unknown) {
+      failed.push({
+        ticketId,
+        message: error instanceof Error ? error.message : 'Failed to update due date',
+      });
+    }
+  }
+
+  if (updatedIds.length > 0) {
+    revalidatePath('/msp/tickets');
+  }
+
+  return { updatedIds, failed };
+});
+
+export const bulkUpdateTicketStatus = withAuth(async (
+  user,
+  { tenant },
+  ticketIds: string[],
+  statusId: string,
+): Promise<{
+  updatedIds: string[];
+  failed: Array<{ ticketId: string; message: string }>;
+}> => {
+  const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
+
+  if (uniqueIds.length === 0) {
+    return { updatedIds: [], failed: [] };
+  }
+
+  const updatedIds: string[] = [];
+  const failed: Array<{ ticketId: string; message: string }> = [];
+
+  for (const ticketId of uniqueIds) {
+    try {
+      await updateTicketWithCache(ticketId, { status_id: statusId });
+      updatedIds.push(ticketId);
+    } catch (error: unknown) {
+      failed.push({
+        ticketId,
+        message: error instanceof Error ? error.message : 'Failed to update status',
+      });
+    }
+  }
+
+  if (updatedIds.length > 0) {
+    revalidatePath('/msp/tickets');
+  }
+
+  return { updatedIds, failed };
+});
+
+export const bulkUpdateTicketPriority = withAuth(async (
+  user,
+  { tenant },
+  ticketIds: string[],
+  priorityId: string,
+): Promise<{
+  updatedIds: string[];
+  failed: Array<{ ticketId: string; message: string }>;
+}> => {
+  const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
+
+  if (uniqueIds.length === 0) {
+    return { updatedIds: [], failed: [] };
+  }
+
+  const updatedIds: string[] = [];
+  const failed: Array<{ ticketId: string; message: string }> = [];
+
+  for (const ticketId of uniqueIds) {
+    try {
+      await updateTicketWithCache(ticketId, { priority_id: priorityId });
+      updatedIds.push(ticketId);
+    } catch (error: unknown) {
+      failed.push({
+        ticketId,
+        message: error instanceof Error ? error.message : 'Failed to update priority',
+      });
+    }
+  }
+
+  if (updatedIds.length > 0) {
+    revalidatePath('/msp/tickets');
+  }
+
+  return { updatedIds, failed };
 });
 
 export const getScheduledHoursForTicket = withAuth(async (user, { tenant }, ticketId: string): Promise<IAgentSchedule[]> => {
