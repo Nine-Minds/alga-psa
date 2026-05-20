@@ -15,20 +15,20 @@
     "actions": {
       "resetAll": "Ripristina tutto",
       "replace": "Sostituisci",
-      "copyCheatsheet": "Copy cheatsheet",
-      "printCheatsheet": "Print"
+      "copyCheatsheet": "Copia promemoria",
+      "printCheatsheet": "Stampa"
     },
     "messages": {
       "bindingUpdated": "Scorciatoia da tastiera aggiornata",
       "enabledUpdated": "Scorciatoia da tastiera aggiornata",
       "resetOne": "Scorciatoia da tastiera ripristinata",
       "resetAll": "Scorciatoie da tastiera ripristinate",
-      "cheatsheetCopied": "Cheatsheet copied to clipboard"
+      "cheatsheetCopied": "Promemoria copiato negli appunti"
     },
     "errors": {
       "saveFailed": "Impossibile salvare le preferenze delle scorciatoie da tastiera",
-      "copyFailed": "Failed to copy cheatsheet",
-      "printFailed": "Unable to open print window. Allow pop-ups and try again."
+      "copyFailed": "Impossibile copiare il promemoria",
+      "printFailed": "Impossibile aprire la finestra di stampa. Consenti i pop-up e riprova."
     },
     "resetAll": {
       "title": "Ripristinare tutte le scorciatoie?",
@@ -151,8 +151,8 @@
         "description": "Chiudi o annulla la finestra attiva."
       },
       "submit": {
-        "label": "Submit dialog",
-        "description": "Submit the active dialog form."
+        "label": "Invia finestra di dialogo",
+        "description": "Invia il modulo della finestra di dialogo attiva."
       }
     },
     "panel": {
@@ -179,6 +179,10 @@
       "next": {
         "label": "Record successivo",
         "description": "Apri il record successivo."
+      },
+      "addTime": {
+        "label": "Aggiungi voce di tempo",
+        "description": "Apri il pannello di immissione tempo per il record corrente."
       }
     },
     "editor": {

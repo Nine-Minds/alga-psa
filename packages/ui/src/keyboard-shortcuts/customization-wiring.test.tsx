@@ -141,7 +141,7 @@ describe('keyboard shortcut customization wiring', () => {
     await screen.findByTestId('effective-binding');
     expect(screen.getByText('actions.global.search.label')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Disable search' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Disable search', hidden: true }));
 
     await waitFor(() => {
       expect(screen.queryByText('actions.global.search.label')).toBeNull();

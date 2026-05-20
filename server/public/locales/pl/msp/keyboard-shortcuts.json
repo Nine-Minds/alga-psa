@@ -15,20 +15,20 @@
     "actions": {
       "resetAll": "Resetuj wszystko",
       "replace": "Zastąp",
-      "copyCheatsheet": "Copy cheatsheet",
-      "printCheatsheet": "Print"
+      "copyCheatsheet": "Kopiuj ściągę",
+      "printCheatsheet": "Drukuj"
     },
     "messages": {
       "bindingUpdated": "Skrót klawiaturowy zaktualizowany",
       "enabledUpdated": "Skrót klawiaturowy zaktualizowany",
       "resetOne": "Skrót klawiaturowy zresetowany",
       "resetAll": "Skróty klawiaturowe zresetowane",
-      "cheatsheetCopied": "Cheatsheet copied to clipboard"
+      "cheatsheetCopied": "Ściąga skopiowana do schowka"
     },
     "errors": {
       "saveFailed": "Nie udało się zapisać preferencji skrótów klawiaturowych",
-      "copyFailed": "Failed to copy cheatsheet",
-      "printFailed": "Unable to open print window. Allow pop-ups and try again."
+      "copyFailed": "Nie udało się skopiować ściągi",
+      "printFailed": "Nie można otworzyć okna drukowania. Zezwól na wyskakujące okienka i spróbuj ponownie."
     },
     "resetAll": {
       "title": "Zresetować wszystkie skróty?",
@@ -151,8 +151,8 @@
         "description": "Zamknij lub anuluj aktywne okno dialogowe."
       },
       "submit": {
-        "label": "Submit dialog",
-        "description": "Submit the active dialog form."
+        "label": "Wyślij okno dialogowe",
+        "description": "Wyślij formularz aktywnego okna dialogowego."
       }
     },
     "panel": {
@@ -179,6 +179,10 @@
       "next": {
         "label": "Następny rekord",
         "description": "Otwórz następny rekord."
+      },
+      "addTime": {
+        "label": "Dodaj wpis czasu",
+        "description": "Otwórz panel wpisu czasu dla bieżącego rekordu."
       }
     },
     "editor": {

@@ -49,13 +49,13 @@
   },
   "commandPalette": {
     "title": "Command Palette",
-    "placeholder": "Search records, navigation, and actions",
+    "placeholder": "Search navigation and actions",
     "loading": "Searching...",
     "resultCount": "{{count}} results",
     "syntax": {
-      "title": "Search syntax",
-      "summary": "Fields, operators, $keywords, and sigils",
-      "inlineHelp": "Use ticket:, client:, >action, /nav, @user, #id, $mine, and quoted phrases."
+      "title": "Search tips",
+      "summary": "Type a menu name or action; use /nav or >action to narrow.",
+      "inlineHelp": "Use /nav for navigation or >action for actions."
     },
     "types": {
       "nav": "Navigation",
@@ -80,7 +80,11 @@
     "global": {
       "search": {
         "label": "Search",
-        "description": "Open the global search palette."
+        "description": "Focus the sidebar search field."
+      },
+      "commandPalette": {
+        "label": "Command palette",
+        "description": "Open navigation and action search."
       },
       "toggleChat": {
         "label": "Toggle AI chat",
@@ -179,6 +183,10 @@
       "next": {
         "label": "Next record",
         "description": "Open the next record."
+      },
+      "addTime": {
+        "label": "Add time entry",
+        "description": "Open the time entry drawer for the current record."
       }
     },
     "editor": {

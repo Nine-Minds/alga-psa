@@ -15,20 +15,20 @@
     "actions": {
       "resetAll": "Tout réinitialiser",
       "replace": "Remplacer",
-      "copyCheatsheet": "Copy cheatsheet",
-      "printCheatsheet": "Print"
+      "copyCheatsheet": "Copier l'aide-mémoire",
+      "printCheatsheet": "Imprimer"
     },
     "messages": {
       "bindingUpdated": "Raccourci clavier mis à jour",
       "enabledUpdated": "Raccourci clavier mis à jour",
       "resetOne": "Raccourci clavier réinitialisé",
       "resetAll": "Raccourcis clavier réinitialisés",
-      "cheatsheetCopied": "Cheatsheet copied to clipboard"
+      "cheatsheetCopied": "Aide-mémoire copié dans le presse-papiers"
     },
     "errors": {
       "saveFailed": "Échec de l’enregistrement des préférences de raccourcis clavier",
-      "copyFailed": "Failed to copy cheatsheet",
-      "printFailed": "Unable to open print window. Allow pop-ups and try again."
+      "copyFailed": "Échec de la copie de l'aide-mémoire",
+      "printFailed": "Impossible d'ouvrir la fenêtre d'impression. Autorisez les pop-ups et réessayez."
     },
     "resetAll": {
       "title": "Réinitialiser tous les raccourcis ?",
@@ -151,8 +151,8 @@
         "description": "Fermer ou annuler le dialogue actif."
       },
       "submit": {
-        "label": "Submit dialog",
-        "description": "Submit the active dialog form."
+        "label": "Soumettre la boîte de dialogue",
+        "description": "Soumettre le formulaire de la boîte de dialogue active."
       }
     },
     "panel": {
@@ -179,6 +179,10 @@
       "next": {
         "label": "Enregistrement suivant",
         "description": "Ouvrir l’enregistrement suivant."
+      },
+      "addTime": {
+        "label": "Ajouter une saisie de temps",
+        "description": "Ouvrir le tiroir de saisie de temps pour l'enregistrement actuel."
       }
     },
     "editor": {

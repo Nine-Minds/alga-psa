@@ -179,6 +179,10 @@
       "next": {
         "label": "11111",
         "description": "11111"
+      },
+      "addTime": {
+        "label": "Add time entry",
+        "description": "Open the time entry drawer for the current record."
       }
     },
     "editor": {

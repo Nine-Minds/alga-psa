@@ -75,6 +75,7 @@ const RESERVED_BINDINGS = new Set([
   'mod+w',
   'mod+t',
   'mod+n',
+  'mod+shift+n',
 ]);
 
 export function migrateShortcutPreferences(value: unknown): PersistedShortcuts {

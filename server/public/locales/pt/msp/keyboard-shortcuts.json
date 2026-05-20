@@ -15,20 +15,20 @@
     "actions": {
       "resetAll": "Redefinir tudo",
       "replace": "Substituir",
-      "copyCheatsheet": "Copy cheatsheet",
-      "printCheatsheet": "Print"
+      "copyCheatsheet": "Copiar resumo",
+      "printCheatsheet": "Imprimir"
     },
     "messages": {
       "bindingUpdated": "Atalho de teclado atualizado",
       "enabledUpdated": "Atalho de teclado atualizado",
       "resetOne": "Atalho de teclado redefinido",
       "resetAll": "Atalhos de teclado redefinidos",
-      "cheatsheetCopied": "Cheatsheet copied to clipboard"
+      "cheatsheetCopied": "Resumo copiado para a área de transferência"
     },
     "errors": {
       "saveFailed": "Falha ao salvar preferências de atalhos de teclado",
-      "copyFailed": "Failed to copy cheatsheet",
-      "printFailed": "Unable to open print window. Allow pop-ups and try again."
+      "copyFailed": "Falha ao copiar o resumo",
+      "printFailed": "Não foi possível abrir a janela de impressão. Permita pop-ups e tente novamente."
     },
     "resetAll": {
       "title": "Redefinir todos os atalhos?",
@@ -151,8 +151,8 @@
         "description": "Feche ou cancele o diálogo ativo."
       },
       "submit": {
-        "label": "Submit dialog",
-        "description": "Submit the active dialog form."
+        "label": "Enviar diálogo",
+        "description": "Enviar o formulário do diálogo ativo."
       }
     },
     "panel": {
@@ -179,6 +179,10 @@
       "next": {
         "label": "Próximo registro",
         "description": "Abra o próximo registro."
+      },
+      "addTime": {
+        "label": "Adicionar entrada de tempo",
+        "description": "Abrir o painel de entrada de tempo do registro atual."
       }
     },
     "editor": {

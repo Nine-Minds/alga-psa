@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ClientPicker } from './ClientPicker';
 import type { IClient } from '@alga-psa/types';
 
@@ -75,7 +76,7 @@ describe('ClientPicker', () => {
 
     openPicker();
 
-    const addButton = screen.getByRole('button', { name: /\+ add new client/i });
+    const addButton = screen.getByRole('button', { name: /add new client/i });
     expect(addButton).toBeTruthy();
     expect(addButton.previousElementSibling?.className).toContain('border-t');
   });
@@ -93,11 +94,43 @@ describe('ClientPicker', () => {
     renderPicker({ onAddNew });
 
     openPicker();
-    expect(screen.getByRole('button', { name: /\+ add new client/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /add new client/i })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: /\+ add new client/i }));
+    fireEvent.click(screen.getByRole('button', { name: /add new client/i }));
 
     expect(onAddNew).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole('button', { name: /\+ add new client/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /add new client/i })).toBeNull();
+  });
+
+  it('opens with ArrowDown from the trigger and focuses search', async () => {
+    renderPicker();
+
+    fireEvent.keyDown(screen.getByRole('button', { name: /select client/i }), { key: 'ArrowDown' });
+
+    expect(screen.getByRole('listbox', { name: /select client/i })).toBeTruthy();
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByPlaceholderText(/search clients/i));
+    });
+  });
+
+  it('makes client options keyboard focusable and selectable with Enter', async () => {
+    const user = userEvent.setup();
+    const onSelect = vi.fn();
+    renderPicker({ onSelect });
+
+    await user.click(screen.getByRole('button', { name: /select client/i }));
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByPlaceholderText(/search clients/i));
+    });
+
+    const option = screen.getByRole('option', { name: /acme corp/i });
+    expect(option).toHaveProperty('tabIndex', 0);
+    option.focus();
+    expect(document.activeElement).toBe(option);
+
+    await user.keyboard('{Enter}');
+
+    expect(onSelect).toHaveBeenCalledWith('client-1');
+    expect(screen.queryByRole('listbox', { name: /select client/i })).toBeNull();
   });
 });

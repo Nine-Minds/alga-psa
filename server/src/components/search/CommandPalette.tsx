@@ -1,14 +1,13 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Kbd, SHORTCUT_ACTION_CATALOG, parseCommandPaletteQuery } from '@alga-psa/ui/keyboard-shortcuts';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { navigationSections, bottomMenuItems, type MenuItem } from '@/config/menuConfig';
-import { searchAppTypeaheadAction, type SearchResultRow } from '@/lib/actions/searchActions';
 
-type PaletteResultType = 'nav' | 'action' | 'record' | 'help';
+type PaletteResultType = 'nav' | 'action' | 'help';
 
 interface PaletteResult {
   id: string;
@@ -52,11 +51,8 @@ function matches(value: string, query: string): boolean {
 export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JSX.Element {
   const { t } = useTranslation('msp/keyboard-shortcuts');
   const [query, setQuery] = useState('');
-  const [records, setRecords] = useState<SearchResultRow[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
-  const requestIdRef = useRef(0);
   const parsed = useMemo(() => parseCommandPaletteQuery(query), [query]);
   const firstField = parsed.terms.find((term) => term.field)?.field;
   const normalizedQuery = parsed.terms.map((term) => term.value).join(' ').trim();
@@ -91,49 +87,14 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
       }));
   }, [firstField, normalizedQuery, t]);
 
-  useEffect(() => {
-    if (!open || normalizedQuery.length < 2 || firstField === 'nav' || firstField === 'action') {
-      setRecords([]);
-      return;
-    }
-
-    const requestId = requestIdRef.current + 1;
-    requestIdRef.current = requestId;
-    const timer = window.setTimeout(() => {
-      startTransition(async () => {
-        try {
-          const response = await searchAppTypeaheadAction({ query: normalizedQuery });
-          if (requestIdRef.current === requestId) {
-            setRecords(response.results);
-          }
-        } catch (error) {
-          console.error('command_palette.search_failed', error);
-          if (requestIdRef.current === requestId) {
-            setRecords([]);
-          }
-        }
-      });
-    }, 150);
-
-    return () => window.clearTimeout(timer);
-  }, [firstField, normalizedQuery, open]);
-
-  const recordResults = records.map<PaletteResult>((record) => ({
-    id: `record:${record.type}:${record.id}`,
-    type: 'record',
-    label: record.title,
-    description: record.type,
-    url: record.url,
-  }));
-
   const helpResult: PaletteResult = {
     id: 'help:syntax',
     type: 'help',
-    label: t('commandPalette.syntax.title', { defaultValue: 'Search syntax' }),
-    description: t('commandPalette.syntax.summary', { defaultValue: 'Fields, operators, $keywords, and sigils' }),
+    label: t('commandPalette.syntax.title', { defaultValue: 'Search tips' }),
+    description: t('commandPalette.syntax.summary', { defaultValue: 'Type a menu name or action; use /nav or >action to narrow.' }),
   };
 
-  const results = [...navResults, ...actionResults, ...recordResults, helpResult]
+  const results = [...navResults, ...actionResults, helpResult]
     .sort((left, right) => (frequencies[right.id] ?? 0) - (frequencies[left.id] ?? 0))
     .slice(0, 12);
 
@@ -202,12 +163,10 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
                 onClose();
               }
             }}
-            placeholder={t('commandPalette.placeholder', { defaultValue: 'Search records, navigation, and actions' })}
+            placeholder={t('commandPalette.placeholder', { defaultValue: 'Search navigation and actions' })}
           />
           <div className="text-xs text-muted-foreground" aria-live="polite">
-            {isPending
-              ? t('commandPalette.loading', { defaultValue: 'Searching...' })
-              : t('commandPalette.resultCount', { count: results.length, defaultValue: '{{count}} results' })}
+            {t('commandPalette.resultCount', { count: results.length, defaultValue: '{{count}} results' })}
           </div>
           <div id="command-palette-results" role="listbox" className="max-h-80 overflow-y-auto rounded-md border">
             {results.map((result, index) => (
@@ -232,8 +191,8 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <Kbd binding="mod+k" />
-            <span>{t('commandPalette.syntax.inlineHelp', { defaultValue: 'Use ticket:, client:, >action, /nav, @user, #id, $mine, and quoted phrases.' })}</span>
+            <Kbd binding="mod+shift+k" />
+            <span>{t('commandPalette.syntax.inlineHelp', { defaultValue: 'Use /nav for navigation or >action for actions.' })}</span>
           </div>
         </div>
       </DialogContent>

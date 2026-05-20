@@ -5,7 +5,7 @@ import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { ADD_ONS } from '@alga-psa/types';
 import { type NavMode } from "@/config/menuConfig";
 import SidebarWithFeatureFlags from "./SidebarWithFeatureFlags";
-import Header from "./Header";
+import Header, { QUICK_CREATE_OPEN_EVENT } from "./Header";
 import Body from "./Body";
 import RightSidebar from "./RightSidebar";
 import { DrawerProvider, DrawerOutlet } from "@alga-psa/ui";
@@ -249,9 +249,10 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
 
   const quickCreateShortcut = useCallback(() => {
     const trigger = document.getElementById('global-quick-create-trigger');
-    if (trigger instanceof HTMLElement) {
-      trigger.click();
+    if (!(trigger instanceof HTMLElement)) {
+      return false;
     }
+    window.dispatchEvent(new CustomEvent(QUICK_CREATE_OPEN_EVENT));
   }, []);
 
   const goTicketsShortcut = useCallback(() => {

@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { Command } from 'cmdk';
 import { Search } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { ShortcutHint, useAriaKeyShortcuts, useCatalogShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { useAriaKeyShortcuts, useCatalogShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 import {
   searchAppTypeaheadAction,
@@ -48,11 +48,23 @@ export default function SearchPalette({
     : undefined;
   const searchAriaShortcut = useAriaKeyShortcuts('global.search');
 
+  const focusSearchInput = React.useCallback(() => {
+    if (collapsed) {
+      setFocusAfterExpand(true);
+      onCollapsedClick?.();
+      return;
+    }
+
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, [collapsed, onCollapsedClick]);
+
   const openCommandPalette = React.useCallback(() => {
     setIsCommandPaletteOpen(true);
   }, []);
 
-  useCatalogShortcut('global.search', openCommandPalette);
+  useCatalogShortcut('global.search', focusSearchInput);
+  useCatalogShortcut('global.commandPalette', openCommandPalette);
 
   useEffect(() => {
     if (collapsed || !focusAfterExpand) {
@@ -200,9 +212,6 @@ export default function SearchPalette({
             placeholder={t('search.placeholder')}
             className="h-10 w-full rounded-md border border-gray-500/70 bg-white/10 py-2 pl-8 pr-3 text-sm text-sidebar-text outline-none placeholder:text-gray-400 focus:border-primary-400 focus:ring-2 focus:ring-primary-500/30"
           />
-          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-gray-300">
-            <ShortcutHint actionId="global.search" />
-          </span>
         </div>
         {isOpen && (
           <Command.List

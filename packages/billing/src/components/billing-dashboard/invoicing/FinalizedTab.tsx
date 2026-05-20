@@ -28,6 +28,7 @@ import { toPlainDate } from '@alga-psa/core';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
 
 interface FinalizedTabProps {
   onRefreshNeeded: () => void;
@@ -181,15 +182,12 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     }
   };
 
-  const handleSelectInvoice = (invoiceId: string, checked: boolean) => {
-    const newSelection = new Set(selectedInvoices);
-    if (checked) {
-      newSelection.add(invoiceId);
-    } else {
-      newSelection.delete(invoiceId);
-    }
-    setSelectedInvoices(newSelection);
-  };
+  const rangeSelect = useRangeSelection<DbInvoiceViewModel>({
+    items: filteredInvoices,
+    getId: (invoice) => invoice.invoice_id,
+    selectedIds: selectedInvoices,
+    onSelectedIdsChange: setSelectedInvoices,
+  });
 
   const handleDownload = async () => {
     if (!selectedInvoice) return;
@@ -300,8 +298,18 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
         <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
           <Checkbox
             id={`invoice-${record.invoice_id}`}
-            checked={selectedInvoices.has(record.invoice_id)}
-            onChange={(e) => handleSelectInvoice(record.invoice_id, (e.target as HTMLInputElement).checked)}
+            checked={rangeSelect.isSelected(record.invoice_id)}
+            onClick={(event: React.MouseEvent<HTMLInputElement>) => {
+              event.stopPropagation();
+              const isChecked = rangeSelect.isSelected(record.invoice_id);
+              rangeSelect.handleSelect(record.invoice_id, {
+                shiftKey: event.shiftKey,
+                selected: !isChecked,
+                preventDefault: () => event.preventDefault(),
+              });
+              event.preventDefault();
+            }}
+            onChange={() => { /* controlled via onClick for shift-range support */ }}
           />
         </div>
       ),

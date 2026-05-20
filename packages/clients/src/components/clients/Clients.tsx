@@ -106,6 +106,7 @@ interface ClientResultsProps {
   selectedTags: string[];
   viewMode: 'grid' | 'list';
   selectedClients: string[];
+  onSelectionChange: (clientIds: string[]) => void;
   onCheckboxChange: (clientId: string) => void;
   onEditClient: (clientId: string) => void;
   onDeleteClient: (client: IClient) => void;
@@ -132,6 +133,7 @@ const ClientResults = memo(({
   selectedTags,
   viewMode,
   selectedClients,
+  onSelectionChange,
   onCheckboxChange,
   onEditClient,
   onDeleteClient,
@@ -273,8 +275,7 @@ const ClientResults = memo(({
         <ClientsList
           selectedClients={selectedClients}
           filteredClients={filteredClients}
-          setSelectedClients={() => {}} // This prop seems unused in the component
-          handleCheckboxChange={onCheckboxChange}
+          setSelectedClients={onSelectionChange}
           handleEditClient={onEditClient}
           handleDeleteClient={onDeleteClient}
           onQuickView={onQuickView}
@@ -1592,6 +1593,10 @@ const Clients: React.FC = () => {
         selectedTags={selectedTags}
         viewMode={viewMode!}
         selectedClients={selectedClients}
+        onSelectionChange={(clientIds) => {
+          setSelectedClients(clientIds);
+          setIsSelectAllMode(false);
+        }}
         onCheckboxChange={handleCheckboxChange}
         onEditClient={handleEditClient}
         onDeleteClient={handleDeleteClient}

@@ -14,6 +14,7 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from 'react-i18next';
 import { CommentThreadDrawer, CommentThreadList, HybridThreadNode, buildCommentThreadGroups } from '@alga-psa/ui/components';
+import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 interface TaskCommentThreadProps {
   taskId: string;
@@ -96,6 +97,8 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   const handleCommentDeleted = async () => {
     await loadComments();
   };
+
+  usePageCreateShortcut(() => { setShowEditor(true); }, { enabled: !showEditor });
 
   const toggleCommentOrder = () => {
     setReverseOrder(!reverseOrder);
@@ -191,6 +194,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
             parentCommentId={comment.taskCommentId}
             onCommentAdded={handleCommentAdded}
             onCancel={() => setReplyingToCommentId(null)}
+            autoFocus
           />
         </div>
       )}
@@ -267,6 +271,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
                 projectId={projectId}
                 onCommentAdded={handleCommentAdded}
                 onCancel={() => setShowEditor(false)}
+                autoFocus
               />
             </div>
           </div>

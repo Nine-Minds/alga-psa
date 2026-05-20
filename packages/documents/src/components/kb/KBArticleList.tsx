@@ -18,6 +18,7 @@ import Pagination from '@alga-psa/ui/components/Pagination';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
 import {
   useFormatArticleAudience,
   useFormatArticleStatus,
@@ -98,6 +99,12 @@ export default function KBArticleList({
   const { formatDate } = useFormatters();
 
   const [selectedArticles, setSelectedArticles] = useState<Set<string>>(new Set());
+  const rangeSelect = useRangeSelection<IKBArticleWithDocument>({
+    items: articles,
+    getId: (article) => article.article_id,
+    selectedIds: selectedArticles,
+    onSelectedIdsChange: setSelectedArticles,
+  });
 
   // Local tags ref for optimistic updates from TagManager
   const articleTagsRef = useRef<Record<string, ITag[]>>(initialArticleTags);
@@ -178,16 +185,6 @@ export default function KBArticleList({
       setDeleteDialogOpen(false);
       setArticleToDelete(null);
     }
-  };
-
-  const toggleSelection = (articleId: string) => {
-    const newSelected = new Set(selectedArticles);
-    if (newSelected.has(articleId)) {
-      newSelected.delete(articleId);
-    } else {
-      newSelected.add(articleId);
-    }
-    setSelectedArticles(newSelected);
   };
 
   const toggleSelectAll = () => {
@@ -275,8 +272,18 @@ export default function KBArticleList({
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <Checkbox
                       id={`kb-checkbox-${article.article_id}`}
-                      checked={selectedArticles.has(article.article_id)}
-                      onChange={() => toggleSelection(article.article_id)}
+                      checked={rangeSelect.isSelected(article.article_id)}
+                      onClick={(event: React.MouseEvent<HTMLInputElement>) => {
+                        event.stopPropagation();
+                        const isChecked = rangeSelect.isSelected(article.article_id);
+                        rangeSelect.handleSelect(article.article_id, {
+                          shiftKey: event.shiftKey,
+                          selected: !isChecked,
+                          preventDefault: () => event.preventDefault(),
+                        });
+                        event.preventDefault();
+                      }}
+                      onChange={() => { /* controlled via onClick for shift-range support */ }}
                     />
                   </TableCell>
                   <TableCell>

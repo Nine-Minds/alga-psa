@@ -20,6 +20,7 @@ export interface TextEditorProps {
   editorRef?: MutableRefObject<BlockNoteEditor | null>;
   documentId?: string;
   placeholder?: string;
+  autoFocus?: boolean;
 }
 
 export const DEFAULT_BLOCK: PartialBlock[] = [{
