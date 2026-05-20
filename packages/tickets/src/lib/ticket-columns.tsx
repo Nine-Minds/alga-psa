@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import type { ColumnDefinition, ITicketListItem, ITicketCategory, TicketResponseState, ITag, IBoard } from '@alga-psa/types';
 import { TagManager } from '@alga-psa/tags/components';
+import type { TagSize } from '@alga-psa/ui/components/tags';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
@@ -112,6 +113,7 @@ interface CreateTicketColumnsOptions {
   onTicketClick: (ticketId: string) => void;
   ticketTagsRef?: React.MutableRefObject<Record<string, ITag[]>>;
   onTagsChange?: (ticketId: string, tags: ITag[]) => void;
+  tagSize?: TagSize;
   showTags?: boolean;
   showClient?: boolean;
   onClientClick?: (clientId: string) => void;
@@ -149,6 +151,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     onTicketClick,
     ticketTagsRef,
     onTagsChange,
+    tagSize = 'md',
     showTags = true,
     showClient = true,
     onClientClick,
@@ -286,6 +289,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                 entityType="ticket"
                 initialTags={ticketTagsRef.current[record.ticket_id] || []}
                 onTagsChange={(tags) => onTagsChange(record.ticket_id!, tags)}
+                size={tagSize}
               />
             </div>
           )}
@@ -611,6 +615,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                 entityType="ticket"
                 initialTags={ticketTagsRef.current[record.ticket_id] || []}
                 onTagsChange={(tags) => onTagsChange(record.ticket_id!, tags)}
+                size={tagSize}
               />
             </div>
           );

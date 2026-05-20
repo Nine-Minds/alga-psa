@@ -24,6 +24,7 @@ import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { TagFilter } from '@alga-psa/ui/components';
+import type { TagSize } from '@alga-psa/ui/components/tags';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
   PrintOptionsDialog,
@@ -137,24 +138,41 @@ const normalizeTicketListDensityLevel = (value: number): number => {
 };
 
 // Indexed by zoom/10; `[&>td_*]:!text-[Xpx]` forces descendant elements to follow the row font-size.
+// `tagSize` scales tag padding/gap/icons (font already tracks the row override); sm for the compact
+// half, md for the spacious half — md matches the look tags have at the spacious end today.
+// `filterControlClass` scales the filter controls' height + font via a cascade on the filter rows.
+// These MUST be literal strings so Tailwind's scanner generates the arbitrary utilities — do not
+// build them via interpolation. Applied to Row 1 directly and to a `display:contents` wrapper around
+// Row 2's filter controls so the Bundled toggle / density control stay untouched.
+// 5 bands change every ~2 zoom steps; spacious anchors at ~38px/14px (today's size).
+const FILTER_CONTROL_SHARED =
+  '[&_button]:!min-h-0 [&_button]:!py-0 [&_button]:!items-center';
+const FILTER_CONTROL_30_12 = `[&_button]:!h-[30px] [&_input]:!h-[30px] [&_button]:!text-[12px] [&_input]:!text-[12px] ${FILTER_CONTROL_SHARED}`;
+const FILTER_CONTROL_32_12 = `[&_button]:!h-[32px] [&_input]:!h-[32px] [&_button]:!text-[12px] [&_input]:!text-[12px] ${FILTER_CONTROL_SHARED}`;
+const FILTER_CONTROL_34_13 = `[&_button]:!h-[34px] [&_input]:!h-[34px] [&_button]:!text-[13px] [&_input]:!text-[13px] ${FILTER_CONTROL_SHARED}`;
+const FILTER_CONTROL_36_13 = `[&_button]:!h-[36px] [&_input]:!h-[36px] [&_button]:!text-[13px] [&_input]:!text-[13px] ${FILTER_CONTROL_SHARED}`;
+const FILTER_CONTROL_38_14 = `[&_button]:!h-[38px] [&_input]:!h-[38px] [&_button]:!text-[14px] [&_input]:!text-[14px] ${FILTER_CONTROL_SHARED}`;
+
 const TICKET_LIST_DENSITY_PRESETS: ReadonlyArray<{
   filterPadding: string;
   filterGap: string;
   bodyPadding: string;
   tableRowDensity: string;
   minColumnWidth: number;
+  tagSize: TagSize;
+  filterControlClass: string;
 }> = [
-  { filterPadding: 'p-3',   filterGap: 'gap-2',   bodyPadding: 'p-2.5', tableRowDensity: '[&>td]:!py-0.5 [&>td]:!text-[11px] [&>td_*]:!text-[11px]', minColumnWidth: 80 },
-  { filterPadding: 'p-3',   filterGap: 'gap-2',   bodyPadding: 'p-3',   tableRowDensity: '[&>td]:!py-1 [&>td]:!text-[12px] [&>td_*]:!text-[12px]',   minColumnWidth: 90 },
-  { filterPadding: 'p-3.5', filterGap: 'gap-2.5', bodyPadding: 'p-3',   tableRowDensity: '[&>td]:!py-1.5 [&>td]:!text-[12px] [&>td_*]:!text-[12px]', minColumnWidth: 100 },
-  { filterPadding: 'p-3.5', filterGap: 'gap-2.5', bodyPadding: 'p-3.5', tableRowDensity: '[&>td]:!py-2 [&>td]:!text-[13px] [&>td_*]:!text-[13px]',   minColumnWidth: 105 },
-  { filterPadding: 'p-4',   filterGap: 'gap-3',   bodyPadding: 'p-4',   tableRowDensity: '[&>td]:!py-2.5 [&>td]:!text-[13px] [&>td_*]:!text-[13px]', minColumnWidth: 115 },
-  { filterPadding: 'p-5',   filterGap: 'gap-4',   bodyPadding: 'p-5',   tableRowDensity: '[&>td]:!py-3 [&>td]:!text-[14px] [&>td_*]:!text-[14px]',   minColumnWidth: 130 },
-  { filterPadding: 'p-5',   filterGap: 'gap-4',   bodyPadding: 'p-5',   tableRowDensity: '[&>td]:!py-3.5 [&>td]:!text-[14px] [&>td_*]:!text-[14px]', minColumnWidth: 145 },
-  { filterPadding: 'p-6',   filterGap: 'gap-5',   bodyPadding: 'p-6',   tableRowDensity: '[&>td]:!py-4 [&>td]:!text-[15px] [&>td_*]:!text-[15px]',   minColumnWidth: 165 },
-  { filterPadding: 'p-6',   filterGap: 'gap-5',   bodyPadding: 'p-7',   tableRowDensity: '[&>td]:!py-5 [&>td]:!text-[15px] [&>td_*]:!text-[15px]',   minColumnWidth: 185 },
-  { filterPadding: 'p-7',   filterGap: 'gap-6',   bodyPadding: 'p-7',   tableRowDensity: '[&>td]:!py-6 [&>td]:!text-[16px] [&>td_*]:!text-[16px]',   minColumnWidth: 210 },
-  { filterPadding: 'p-8',   filterGap: 'gap-6',   bodyPadding: 'p-8',   tableRowDensity: '[&>td]:!py-7 [&>td]:!text-[17px] [&>td_*]:!text-[17px]',   minColumnWidth: 240 },
+  { filterPadding: 'p-3',   filterGap: 'gap-2',   bodyPadding: 'p-2.5', tableRowDensity: '[&>td]:!py-0.5 [&>td]:!text-[11px] [&>td_*]:!text-[11px]', minColumnWidth: 80,  tagSize: 'sm', filterControlClass: FILTER_CONTROL_30_12 },
+  { filterPadding: 'p-3',   filterGap: 'gap-2',   bodyPadding: 'p-3',   tableRowDensity: '[&>td]:!py-1 [&>td]:!text-[12px] [&>td_*]:!text-[12px]',   minColumnWidth: 90,  tagSize: 'sm', filterControlClass: FILTER_CONTROL_30_12 },
+  { filterPadding: 'p-3.5', filterGap: 'gap-2.5', bodyPadding: 'p-3',   tableRowDensity: '[&>td]:!py-1.5 [&>td]:!text-[12px] [&>td_*]:!text-[12px]', minColumnWidth: 100, tagSize: 'sm', filterControlClass: FILTER_CONTROL_32_12 },
+  { filterPadding: 'p-3.5', filterGap: 'gap-2.5', bodyPadding: 'p-3.5', tableRowDensity: '[&>td]:!py-2 [&>td]:!text-[13px] [&>td_*]:!text-[13px]',   minColumnWidth: 105, tagSize: 'sm', filterControlClass: FILTER_CONTROL_32_12 },
+  { filterPadding: 'p-4',   filterGap: 'gap-3',   bodyPadding: 'p-4',   tableRowDensity: '[&>td]:!py-2.5 [&>td]:!text-[13px] [&>td_*]:!text-[13px]', minColumnWidth: 115, tagSize: 'sm', filterControlClass: FILTER_CONTROL_34_13 },
+  { filterPadding: 'p-5',   filterGap: 'gap-4',   bodyPadding: 'p-5',   tableRowDensity: '[&>td]:!py-3 [&>td]:!text-[14px] [&>td_*]:!text-[14px]',   minColumnWidth: 130, tagSize: 'md', filterControlClass: FILTER_CONTROL_34_13 },
+  { filterPadding: 'p-5',   filterGap: 'gap-4',   bodyPadding: 'p-5',   tableRowDensity: '[&>td]:!py-3.5 [&>td]:!text-[14px] [&>td_*]:!text-[14px]', minColumnWidth: 145, tagSize: 'md', filterControlClass: FILTER_CONTROL_36_13 },
+  { filterPadding: 'p-6',   filterGap: 'gap-5',   bodyPadding: 'p-6',   tableRowDensity: '[&>td]:!py-4 [&>td]:!text-[15px] [&>td_*]:!text-[15px]',   minColumnWidth: 165, tagSize: 'md', filterControlClass: FILTER_CONTROL_36_13 },
+  { filterPadding: 'p-6',   filterGap: 'gap-5',   bodyPadding: 'p-7',   tableRowDensity: '[&>td]:!py-5 [&>td]:!text-[15px] [&>td_*]:!text-[15px]',   minColumnWidth: 185, tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
+  { filterPadding: 'p-7',   filterGap: 'gap-6',   bodyPadding: 'p-7',   tableRowDensity: '[&>td]:!py-6 [&>td]:!text-[16px] [&>td_*]:!text-[16px]',   minColumnWidth: 210, tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
+  { filterPadding: 'p-8',   filterGap: 'gap-6',   bodyPadding: 'p-8',   tableRowDensity: '[&>td]:!py-7 [&>td]:!text-[17px] [&>td_*]:!text-[17px]',   minColumnWidth: 240, tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
 ];
 
 function formatPrintDate(value?: string | null): string {
@@ -941,6 +959,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       onTicketClick: handleTicketClick,
       ticketTagsRef,
       onTagsChange: handleTagsChange,
+      tagSize: densityClasses.tagSize,
       showClient: true,
       onClientClick: onQuickViewClient,
       additionalAgentAvatarUrls,
@@ -1051,6 +1070,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     isBundleExpanded,
     toggleBundleExpanded,
     bundleView,
+    densityClasses.tagSize,
     t,
   ]);
 
@@ -1916,7 +1936,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">
             <div className={`space-y-3`}>
               {/* Row 1: Primary filters */}
-              <div className={`flex items-center ${densityClasses.filterGap}`}>
+              <div className={`flex items-center ${densityClasses.filterGap} ${densityClasses.filterControlClass}`}>
                 <BoardPicker
                   id={`${id}-board-picker`}
                   boards={boards}
@@ -2046,6 +2066,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
               {/* Row 2: Category, search, tags, reset, bundled, density */}
               <div className={`flex items-center ${densityClasses.filterGap}`}>
+                <div className={`contents ${densityClasses.filterControlClass}`}>
                 <CategoryPicker
                   id={`${id}-category-picker`}
                   categories={categories}
@@ -2100,6 +2121,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   }}
                   onClearTags={() => onFilterChange({ tags: undefined })}
                 />
+                </div>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -2113,13 +2135,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 </Button>
                 <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
                 <div className="flex items-center gap-2 shrink-0">
-                  <Label htmlFor={`${id}-bundle-view-toggle`} className="text-sm text-gray-600">
+                  <Label htmlFor={`${id}-bundle-view-toggle`} className={`${densityClasses.tagSize === 'sm' ? 'text-xs' : 'text-sm'} text-gray-600`}>
                     {t('dashboard.bundledToggle', 'Bundled')}
                   </Label>
                   <Switch
                     id={`${id}-bundle-view-toggle`}
                     checked={bundleView === 'bundled'}
                     onCheckedChange={(checked) => onFilterChange({ bundleView: checked ? 'bundled' : 'individual' })}
+                    size={densityClasses.tagSize}
                   />
                 </div>
                 <div className="h-6 w-px bg-gray-200 mx-1 shrink-0" />
