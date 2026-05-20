@@ -182,9 +182,9 @@ export const deleteContact = withAuth(async (
 
       // Clean up child records owned by the contact
       await trx('contact_phone_numbers').where({ contact_name_id: contactId, tenant: tenantId }).delete();
+      await trx('contact_additional_email_addresses').where({ contact_name_id: contactId, tenant: tenantId }).delete();
       await trx('comments').where({ contact_id: contactId, tenant: tenantId }).delete();
       await trx('portal_invitations').where({ contact_id: contactId, tenant: tenantId }).delete();
-      await trx('contact_phone_numbers').where({ contact_name_id: contactId, tenant: tenantId }).delete();
 
       const contactRecord = await trx('contacts')
         .where({ contact_name_id: contactId, tenant: tenantId })
