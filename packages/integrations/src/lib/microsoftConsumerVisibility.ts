@@ -3,9 +3,9 @@ import type { MicrosoftProfileConsumer } from '../actions/integrations/microsoft
 const CE_VISIBLE_MICROSOFT_CONSUMERS: MicrosoftProfileConsumer[] = ['msp_sso'];
 const EE_VISIBLE_MICROSOFT_CONSUMERS: MicrosoftProfileConsumer[] = ['msp_sso', 'email', 'calendar', 'teams'];
 
-export function isMicrosoftConsumerEnterpriseEdition(env: NodeJS.ProcessEnv = process.env): boolean {
-  const edition = (env.EDITION ?? '').toLowerCase();
-  const publicEdition = (env.NEXT_PUBLIC_EDITION ?? '').toLowerCase();
+export function isMicrosoftConsumerEnterpriseEdition(): boolean {
+  const edition = (process.env.EDITION ?? '').toLowerCase();
+  const publicEdition = (process.env.NEXT_PUBLIC_EDITION ?? '').toLowerCase();
 
   return edition === 'ee' || edition === 'enterprise' || publicEdition === 'enterprise';
 }

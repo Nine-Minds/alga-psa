@@ -7,18 +7,34 @@ import {
 
 describe('microsoftConsumerVisibility', () => {
   it('treats only enterprise editions as multi-consumer Microsoft environments', () => {
-    expect(isMicrosoftConsumerEnterpriseEdition({ EDITION: 'ee' } as unknown as NodeJS.ProcessEnv)).toBe(true);
-    expect(
-      isMicrosoftConsumerEnterpriseEdition({
-        NEXT_PUBLIC_EDITION: 'enterprise',
-      } as unknown as NodeJS.ProcessEnv)
-    ).toBe(true);
-    expect(
-      isMicrosoftConsumerEnterpriseEdition({
-        EDITION: 'ce',
-        NEXT_PUBLIC_EDITION: 'community',
-      } as unknown as NodeJS.ProcessEnv)
-    ).toBe(false);
+    const originalEdition = process.env.EDITION;
+    const originalPublicEdition = process.env.NEXT_PUBLIC_EDITION;
+
+    try {
+      process.env.EDITION = 'ee';
+      delete process.env.NEXT_PUBLIC_EDITION;
+      expect(isMicrosoftConsumerEnterpriseEdition()).toBe(true);
+
+      delete process.env.EDITION;
+      process.env.NEXT_PUBLIC_EDITION = 'enterprise';
+      expect(isMicrosoftConsumerEnterpriseEdition()).toBe(true);
+
+      process.env.EDITION = 'ce';
+      process.env.NEXT_PUBLIC_EDITION = 'community';
+      expect(isMicrosoftConsumerEnterpriseEdition()).toBe(false);
+    } finally {
+      if (originalEdition === undefined) {
+        delete process.env.EDITION;
+      } else {
+        process.env.EDITION = originalEdition;
+      }
+
+      if (originalPublicEdition === undefined) {
+        delete process.env.NEXT_PUBLIC_EDITION;
+      } else {
+        process.env.NEXT_PUBLIC_EDITION = originalPublicEdition;
+      }
+    }
   });
 
   it('returns only MSP SSO in community edition', () => {
