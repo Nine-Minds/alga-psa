@@ -1169,5 +1169,12 @@
         "warning": "Registros arquivados ficam ocultos nas visualizações padrão."
       }
     }
+  },
+  "dataTable": {
+    "columnsHidden_one": "{{count}} column hidden due to limited space.",
+    "columnsHidden_other": "{{count}} columns hidden due to limited space.",
+    "showAll": "Show all",
+    "showingAllColumns": "Showing all columns; scroll horizontally to see them.",
+    "showLess": "Show less"
   }
 }

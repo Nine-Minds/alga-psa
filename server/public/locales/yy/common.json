@@ -1169,5 +1169,12 @@
         "warning": "55555"
       }
     }
+  },
+  "dataTable": {
+    "columnsHidden_one": "55555 {{count}} 55555",
+    "columnsHidden_other": "55555 {{count}} 55555",
+    "showAll": "55555",
+    "showingAllColumns": "55555",
+    "showLess": "55555"
   }
 }

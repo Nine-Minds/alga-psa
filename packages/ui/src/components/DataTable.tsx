@@ -748,13 +748,13 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              Showing all columns; scroll horizontally to see them.{' '}
+              {t('dataTable.showingAllColumns', 'Showing all columns; scroll horizontally to see them.')}{' '}
               <button
                 type="button"
                 onClick={() => setShowAllColumns(false)}
                 className="ml-1 font-medium text-[rgb(var(--color-primary-600))] underline underline-offset-2 hover:opacity-80 focus:outline-none"
               >
-                Show less
+                {t('dataTable.showLess', 'Show less')}
               </button>
             </AlertDescription>
           </Alert>
@@ -764,13 +764,16 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              {columns.length - visibleColumnIds.length} columns hidden due to limited space.{' '}
+              {t('dataTable.columnsHidden', {
+                count: columns.length - visibleColumnIds.length,
+                defaultValue: '{{count}} columns hidden due to limited space.',
+              })}{' '}
               <button
                 type="button"
                 onClick={() => setShowAllColumns(true)}
                 className="ml-1 font-medium text-[rgb(var(--color-primary-600))] underline underline-offset-2 hover:opacity-80 focus:outline-none"
               >
-                Show all
+                {t('dataTable.showAll', 'Show all')}
               </button>
             </AlertDescription>
           </Alert>
