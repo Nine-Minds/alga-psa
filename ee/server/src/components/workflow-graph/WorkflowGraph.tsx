@@ -277,6 +277,7 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
   const getSubtitleRef = useRef(getSubtitle);
   const pendingViewportRef = useRef(false);
   const didInitialViewportRef = useRef(false);
+  const hasLoadedOnceRef = useRef(false);
 
   const statusMap = useMemo(() => statusByStepId ?? new Map<string, string>(), [statusByStepId]);
   const inputMappingStatusMap = useMemo(
@@ -315,10 +316,13 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
 
   useEffect(() => {
     let cancelled = false;
+    const isFirstLoad = !hasLoadedOnceRef.current;
     const load = async () => {
-      setLoading(true);
+      if (isFirstLoad) {
+        setLoading(true);
+        didInitialViewportRef.current = false;
+      }
       setBuildError(null);
-      didInitialViewportRef.current = false;
       try {
         const graph = await buildWorkflowGraph(steps as any, {
           getLabel: (step) => getLabelRef.current(step as any),
@@ -329,15 +333,18 @@ export default function WorkflowGraph<TStep extends { id: string; type: string }
         if (cancelled) return;
         setNodes(graph.nodes);
         setEdges(graph.edges);
+        hasLoadedOnceRef.current = true;
       } catch (err) {
         if (!cancelled) {
           const message = err instanceof Error ? err.message : String(err);
           setBuildError(message || t('graph.errors.buildFailed', { defaultValue: 'Failed to build workflow graph.' }));
-          setNodes([]);
-          setEdges([]);
+          if (isFirstLoad) {
+            setNodes([]);
+            setEdges([]);
+          }
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && isFirstLoad) setLoading(false);
       }
     };
     load();

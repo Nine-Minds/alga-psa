@@ -154,6 +154,36 @@ describe('buildTicketWebhookPayload (T020)', () => {
     expect(payload.tags).toEqual(['urgent', 'vip']);
   });
 
+  it('carries tag-only TICKET_UPDATED diffs into the payload changes object', async () => {
+    tagMappingState.getByEntityMock.mockResolvedValue([{ tag_text: 'urgent' }]);
+    const { knex } = createFakeKnex(makeTicketRow());
+
+    const payload = await buildTicketWebhookPayload(
+      {
+        eventType: 'TICKET_UPDATED',
+        timestamp: '2026-05-06T12:00:00.000Z',
+        payload: {
+          tenantId: TENANT,
+          ticketId: TICKET_ID,
+          changes: {
+            tags: {
+              previous: [],
+              new: ['urgent'],
+            },
+          },
+        },
+      },
+      knex,
+    );
+
+    expect(payload.changes).toEqual({
+      tags: {
+        previous: [],
+        new: ['urgent'],
+      },
+    });
+  });
+
   it('caches by (tenant, ticket_id) within 60s — second call hits neither the join nor the tag query', async () => {
     tagMappingState.getByEntityMock.mockResolvedValue([{ tag_text: 'urgent' }]);
     const { knex, calls } = createFakeKnex(makeTicketRow());

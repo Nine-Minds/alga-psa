@@ -4997,6 +4997,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   {stepsViewMode === 'graph' ? (
                     <div className="h-[650px] rounded border border-gray-200 dark:border-[rgb(var(--color-border-200))] bg-white dark:bg-[rgb(var(--color-card))] overflow-hidden">
                       <WorkflowGraph
+                        key={activeWorkflowId ?? 'none'}
                         steps={(activeDefinition?.steps ?? []) as Step[]}
                         getLabel={(step) => getStepLabel(step as Step, nodeRegistryMap, designerActionCatalog, t)}
                         getSubtitle={(step) => getGraphSubtitle(step as Step) ?? (step as Step).type}

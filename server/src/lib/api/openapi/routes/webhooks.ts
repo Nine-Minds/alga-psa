@@ -1,9 +1,23 @@
 import type { ZodTypeAny } from 'zod';
+import { WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY } from '../../../webhooks/payloadFields';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import type { ApiResponseSpec } from '../types';
 
 export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const tag = 'Webhooks';
+  const payloadFieldDescription = Object.entries(WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY)
+    .map(([entity, fields]) => `${entity}: ${fields.join(', ')}`)
+    .join('; ');
+  const payloadFieldsByEntityShape: Record<string, ZodTypeAny> = {};
+  for (const [entity, fields] of Object.entries(WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY)) {
+    const [firstField, ...otherFields] = fields;
+    payloadFieldsByEntityShape[entity] = firstField
+      ? zOpenApi
+          .array(zOpenApi.enum([firstField, ...otherFields] as [string, ...string[]]))
+          .nullable()
+          .optional()
+      : zOpenApi.array(zOpenApi.string()).nullable().optional();
+  }
 
   // ---------------------------------------------------------------------------
   // Path / query parameters
@@ -100,9 +114,14 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       'ticket.comment.added',
       'project.created',
       'project.updated',
+      'project.status_changed',
+      'project.assigned',
+      'project.closed',
       'project.completed',
       'project.task.created',
       'project.task.updated',
+      'project.task.status_changed',
+      'project.task.assigned',
       'project.task.completed',
       'client.created',
       'client.updated',
@@ -135,10 +154,10 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   // ---------------------------------------------------------------------------
 
   const PayloadFieldsByEntity = zOpenApi
-    .record(zOpenApi.string(), zOpenApi.array(zOpenApi.string()).nullable())
+    .object(payloadFieldsByEntityShape)
     .nullable()
     .describe(
-      'Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Validated against WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in webhookSchemas.',
+      `Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ${payloadFieldDescription}.`,
     );
 
   const CreateWebhookBody = registry.registerSchema(

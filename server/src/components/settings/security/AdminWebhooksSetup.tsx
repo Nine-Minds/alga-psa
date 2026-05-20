@@ -59,7 +59,7 @@ import {
   type InboundActionDefinitionView,
   type InboundWorkflowOptionView,
 } from '@/lib/actions/inboundWebhookActions';
-import { WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY } from '@/lib/actions/webhookPayloadFields';
+import { WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY } from '@/lib/webhooks/payloadFields';
 import type {
   InboundWebhookConfig,
   InboundWebhookDelivery,
