@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Alga PSA API",
+    "title": "AlgaPSA API",
     "version": "0.1.0",
     "description": "OpenAPI specification generated from registered route metadata."
   },
@@ -14377,14 +14377,6 @@
           "search": {
             "type": "string"
           },
-          "billing_method": {
-            "type": "string",
-            "enum": [
-              "fixed",
-              "hourly",
-              "usage"
-            ]
-          },
           "is_active": {
             "type": "boolean"
           },
@@ -14413,14 +14405,6 @@
           "name": {
             "type": "string"
           },
-          "billing_method": {
-            "type": "string",
-            "enum": [
-              "fixed",
-              "hourly",
-              "usage"
-            ]
-          },
           "is_active": {
             "type": "boolean"
           },
@@ -14446,7 +14430,6 @@
           "id",
           "tenant",
           "name",
-          "billing_method",
           "is_active",
           "order_number",
           "created_at",
@@ -14695,9 +14678,14 @@
           "ticket.comment.added",
           "project.created",
           "project.updated",
+          "project.status_changed",
+          "project.assigned",
+          "project.closed",
           "project.completed",
           "project.task.created",
           "project.task.updated",
+          "project.task.status_changed",
+          "project.task.assigned",
           "project.task.completed",
           "client.created",
           "client.updated",
@@ -14786,16 +14774,93 @@
               "object",
               "null"
             ],
-            "additionalProperties": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string"
+            "properties": {
+              "ticket": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "ticket_number",
+                    "title",
+                    "url",
+                    "status_id",
+                    "status_name",
+                    "is_closed",
+                    "previous_status_id",
+                    "previous_status_name",
+                    "priority_id",
+                    "priority_name",
+                    "client_id",
+                    "client_name",
+                    "contact_name_id",
+                    "contact_name",
+                    "contact_email",
+                    "assigned_to",
+                    "assigned_to_name",
+                    "assigned_team_id",
+                    "board_id",
+                    "board_name",
+                    "category_id",
+                    "subcategory_id",
+                    "entered_at",
+                    "updated_at",
+                    "closed_at",
+                    "due_date",
+                    "tags",
+                    "comment",
+                    "changes",
+                    "comments"
+                  ]
+                }
+              },
+              "project": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "project_name",
+                    "wbs_code",
+                    "description",
+                    "status_id",
+                    "status_name",
+                    "is_closed",
+                    "previous_status_id",
+                    "previous_status_name",
+                    "client_id",
+                    "client_name",
+                    "contact_name_id",
+                    "contact_name",
+                    "contact_email",
+                    "assigned_to",
+                    "assigned_to_name",
+                    "start_date",
+                    "end_date",
+                    "budgeted_hours",
+                    "url",
+                    "changes",
+                    "phases",
+                    "task_counts",
+                    "task_id",
+                    "phase_id",
+                    "phase_name",
+                    "task_name",
+                    "estimated_hours",
+                    "actual_hours",
+                    "due_date",
+                    "priority_id",
+                    "priority_name",
+                    "tags"
+                  ]
+                }
               }
             },
-            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Validated against WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in webhookSchemas."
+            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
           },
           "payload_transformation": {
             "type": "object",
@@ -15064,16 +15129,93 @@
               "object",
               "null"
             ],
-            "additionalProperties": {
-              "type": [
-                "array",
-                "null"
-              ],
-              "items": {
-                "type": "string"
+            "properties": {
+              "ticket": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "ticket_number",
+                    "title",
+                    "url",
+                    "status_id",
+                    "status_name",
+                    "is_closed",
+                    "previous_status_id",
+                    "previous_status_name",
+                    "priority_id",
+                    "priority_name",
+                    "client_id",
+                    "client_name",
+                    "contact_name_id",
+                    "contact_name",
+                    "contact_email",
+                    "assigned_to",
+                    "assigned_to_name",
+                    "assigned_team_id",
+                    "board_id",
+                    "board_name",
+                    "category_id",
+                    "subcategory_id",
+                    "entered_at",
+                    "updated_at",
+                    "closed_at",
+                    "due_date",
+                    "tags",
+                    "comment",
+                    "changes",
+                    "comments"
+                  ]
+                }
+              },
+              "project": {
+                "type": [
+                  "array",
+                  "null"
+                ],
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "project_name",
+                    "wbs_code",
+                    "description",
+                    "status_id",
+                    "status_name",
+                    "is_closed",
+                    "previous_status_id",
+                    "previous_status_name",
+                    "client_id",
+                    "client_name",
+                    "contact_name_id",
+                    "contact_name",
+                    "contact_email",
+                    "assigned_to",
+                    "assigned_to_name",
+                    "start_date",
+                    "end_date",
+                    "budgeted_hours",
+                    "url",
+                    "changes",
+                    "phases",
+                    "task_counts",
+                    "task_id",
+                    "phase_id",
+                    "phase_name",
+                    "task_name",
+                    "estimated_hours",
+                    "actual_hours",
+                    "due_date",
+                    "priority_id",
+                    "priority_name",
+                    "tags"
+                  ]
+                }
               }
             },
-            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Validated against WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in webhookSchemas."
+            "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, previous_status_id, previous_status_name, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags."
           },
           "payload_transformation": {
             "type": [
@@ -60806,19 +60948,6 @@
             },
             "required": false,
             "name": "search",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "fixed",
-                "hourly",
-                "usage"
-              ]
-            },
-            "required": false,
-            "name": "billing_method",
             "in": "query"
           },
           {
