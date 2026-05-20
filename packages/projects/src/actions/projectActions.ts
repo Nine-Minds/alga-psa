@@ -1667,6 +1667,39 @@ export const getProjectTaskStatuses = withAuth(async (
     }
 });
 
+/**
+ * Resolve the effective status mappings for every phase in a project, keyed by
+ * phase_id. The list view renders all phases at once, and status mapping IDs are
+ * per-phase (a phase either has its own mappings or falls back to the project
+ * defaults), so a single phase's statuses cannot bucket tasks from other phases.
+ */
+export const getProjectStatusesByPhase = withAuth(async (
+    user,
+    { tenant },
+    projectId: string
+): Promise<Record<string, ProjectStatus[]>> => {
+    try {
+        const { knex } = await createTenantKnex();
+
+        const phases = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+            return await ProjectModel.getPhases(trx, tenant, projectId);
+        });
+
+        const entries = await Promise.all(
+            phases.map(async (phase): Promise<readonly [string, ProjectStatus[]]> => {
+                const statuses = await getProjectTaskStatusesInternal2(tenant, projectId, user, phase.phase_id);
+                return [phase.phase_id, statuses] as const;
+            })
+        );
+
+        return Object.fromEntries(entries);
+    } catch (error) {
+        console.error('Error fetching project statuses by phase:', error);
+        return {};
+    }
+});
+
 export const addStatusToProject = withAuth(async (user, { tenant }, projectId: string, statusData: Omit<IStatus, 'status_id' | 'created_at' | 'updated_at'>): Promise<IStatus | ActionPermissionError> => {
     try {
         const { knex } = await createTenantKnex();
