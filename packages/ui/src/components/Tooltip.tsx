@@ -12,6 +12,11 @@ interface TooltipProps extends AutomationProps { // Include AutomationProps here
   side?: TooltipPrimitive.TooltipContentProps['side'];
   align?: TooltipPrimitive.TooltipContentProps['align'];
   sideOffset?: TooltipPrimitive.TooltipContentProps['sideOffset'];
+  /** Controlled open state (e.g. to gate the tooltip on truncation). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Hover delay before the tooltip opens (ms). */
+  delayDuration?: number;
 }
 
 export const Tooltip = ({ // Removed AutomationProps from here as it's in the interface
@@ -21,13 +26,16 @@ export const Tooltip = ({ // Removed AutomationProps from here as it's in the in
   side,
   align,
   sideOffset = 6, // Default offset like Radix
+  open,
+  onOpenChange,
+  delayDuration,
   ...props // Pass down automation props if needed, though Radix might handle accessibility
 }: TooltipProps) => {
   // Removed useState, useCallback, useRef, handleMouseMove
 
   return (
-    <TooltipPrimitive.Provider>
-      <TooltipPrimitive.Root>
+    <TooltipPrimitive.Provider delayDuration={delayDuration}>
+      <TooltipPrimitive.Root open={open} onOpenChange={onOpenChange} delayDuration={delayDuration}>
         <TooltipPrimitive.Trigger asChild>
           {children}
         </TooltipPrimitive.Trigger>

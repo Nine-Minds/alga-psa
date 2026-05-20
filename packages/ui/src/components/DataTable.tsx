@@ -22,6 +22,7 @@ import { ReflectionContainer } from '../ui-reflection/ReflectionContainer';
 import { cn } from '../lib/utils';
 import Pagination from './Pagination';
 import { Alert, AlertDescription } from './Alert';
+import { Tooltip } from './Tooltip';
 import { useTranslation } from '../lib/i18n/client';
 
 // Helper function to get nested property value
@@ -190,55 +191,70 @@ const hasOverflow = (element: HTMLElement): boolean => {
   return Array.from(element.querySelectorAll<HTMLElement>('*')).some(isElementOverflowing);
 };
 
+// Shows the custom Tooltip only when the content is actually truncated. The open state is
+// controlled and vetoed in onOpenChange so overflow is measured lazily (on hover) — no tooltip
+// is shown for content that fits.
 const OverflowTooltip = ({ text, children, className }: OverflowTooltipProps) => {
   const contentRef = useRef<HTMLDivElement>(null);
-  const [activeTitle, setActiveTitle] = useState<string | undefined>(undefined);
+  const [open, setOpen] = useState(false);
 
-  const updateTitle = () => {
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
+      setOpen(false);
+      return;
+    }
     const element = contentRef.current;
-    setActiveTitle(element && text && hasOverflow(element) ? text : undefined);
+    if (text && element && hasOverflow(element)) {
+      setOpen(true);
+    }
   };
 
-  const clearTitle = () => setActiveTitle(undefined);
-
-  return (
-    <div
-      ref={contentRef}
-      className={className}
-      title={activeTitle}
-      onMouseEnter={updateTitle}
-      onFocus={updateTitle}
-      onMouseLeave={clearTitle}
-      onBlur={clearTitle}
-    >
+  const content = (
+    <div ref={contentRef} className={className}>
       {children}
     </div>
+  );
+
+  if (!text) {
+    return content;
+  }
+
+  return (
+    <Tooltip content={text} open={open} onOpenChange={handleOpenChange}>
+      {content}
+    </Tooltip>
   );
 };
 
 const OverflowTooltipSpan = ({ text, children, className }: OverflowTooltipProps) => {
   const contentRef = useRef<HTMLSpanElement>(null);
-  const [activeTitle, setActiveTitle] = useState<string | undefined>(undefined);
+  const [open, setOpen] = useState(false);
 
-  const updateTitle = () => {
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
+      setOpen(false);
+      return;
+    }
     const element = contentRef.current;
-    setActiveTitle(element && text && hasOverflow(element) ? text : undefined);
+    if (text && element && hasOverflow(element)) {
+      setOpen(true);
+    }
   };
 
-  const clearTitle = () => setActiveTitle(undefined);
-
-  return (
-    <span
-      ref={contentRef}
-      className={className}
-      title={activeTitle}
-      onMouseEnter={updateTitle}
-      onFocus={updateTitle}
-      onMouseLeave={clearTitle}
-      onBlur={clearTitle}
-    >
+  const content = (
+    <span ref={contentRef} className={className}>
       {children}
     </span>
+  );
+
+  if (!text) {
+    return content;
+  }
+
+  return (
+    <Tooltip content={text} open={open} onOpenChange={handleOpenChange}>
+      {content}
+    </Tooltip>
   );
 };
 
@@ -353,6 +369,9 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
   const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>(
     columns.map(col => getColumnId(col.dataIndex))
   );
+  // When true, every column renders and the table scrolls horizontally; otherwise only the
+  // columns that fully fit the container are shown (no horizontal overflow).
+  const [showAllColumns, setShowAllColumns] = useState(false);
 
   const columnIds = useMemo(() => columns.map(col => getColumnId(col.dataIndex)), [columns]);
   const columnSizingStorageKey = id ? `datatable-column-sizing:${id}` : null;
@@ -387,109 +406,77 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     window.localStorage.setItem(columnSizingStorageKey, JSON.stringify(columnSizing));
   }, [columnSizing, columnSizingStorageKey, hasLoadedColumnSizing]);
 
-  // Function to calculate which columns should be visible based on available width
-  const updateVisibleColumns = () => {
-    if (!tableContainerRef.current) return;
-    
-    const containerWidth = tableContainerRef.current.clientWidth;
-
-    // Check if the last column is 'Actions' or 'Action' with interactive elements
-    const lastColumnIndex = columns.length - 1;
-    const lastColumn = columns[lastColumnIndex];
-    const isActionsColumn = lastColumn &&
-      (lastColumn.title === 'Actions' || lastColumn.title === 'Action') &&
-      lastColumn.render !== undefined;
-
-    const prioritizedColumns = [...columns].sort((a, b) => {
-      // Always prioritize Actions column if it's the last column
-      if (isActionsColumn) {
-        if (a === lastColumn) return -1;
-        if (b === lastColumn) return 1;
-      }
-
-      // Keep ID column and any columns with explicit width as highest priority
-      const aIsId = Array.isArray(a.dataIndex) ? a.dataIndex.includes('id') : a.dataIndex === 'id';
-      const bIsId = Array.isArray(b.dataIndex) ? b.dataIndex.includes('id') : b.dataIndex === 'id';
-
-      if (aIsId && !bIsId) return -1;
-      if (!aIsId && bIsId) return 1;
-
-      // Then prioritize columns with explicit width
-      if (a.width && !b.width) return -1;
-      if (!a.width && b.width) return 1;
-
-      return 0;
-    });
-
-    // Calculate how many columns we can fit
-    const maxColumns = Math.max(1, Math.floor(containerWidth / minColumnWidth));
-
-    // Get the IDs of columns that should be visible
-    const newVisibleColumnIds = prioritizedColumns
-      .slice(0, maxColumns)
-      .map(col => Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex);
-
-    setVisibleColumnIds(newVisibleColumnIds);
-  };
-
-  // Add resize event listener
+  // Recalculate which columns fit the container. Columns are accumulated in priority order using
+  // their real sizes (not a uniform estimate) so the visible set never exceeds the container width
+  // and the table doesn't scroll horizontally. `showAllColumns` bypasses this and renders everything.
   useEffect(() => {
-    // Define updateVisibleColumns inside the effect to properly capture the columns dependency
+    const allColumnIds = columns.map(col => getColumnId(col.dataIndex));
+
     const updateVisibleColumnsEffect = () => {
+      if (showAllColumns) {
+        setVisibleColumnIds(allColumnIds);
+        return;
+      }
       if (!tableContainerRef.current) return;
 
       const containerWidth = tableContainerRef.current.clientWidth;
-      
+
       // Check if the last column is 'Actions' or 'Action' with interactive elements
-      const lastColumnIndex = columns.length - 1;
-      const lastColumn = columns[lastColumnIndex];
-      const isActionsColumn = lastColumn && 
-        (lastColumn.title === 'Actions' || lastColumn.title === 'Action') && 
+      const lastColumn = columns[columns.length - 1];
+      const isActionsColumn = !!lastColumn &&
+        (lastColumn.title === 'Actions' || lastColumn.title === 'Action') &&
         lastColumn.render !== undefined;
-      
+
       const prioritizedColumns = [...columns].sort((a, b) => {
         // Always prioritize Actions column if it's the last column
         if (isActionsColumn) {
           if (a === lastColumn) return -1;
           if (b === lastColumn) return 1;
         }
-        
+
         // Keep ID column and any columns with explicit width as highest priority
         const aIsId = Array.isArray(a.dataIndex) ? a.dataIndex.includes('id') : a.dataIndex === 'id';
         const bIsId = Array.isArray(b.dataIndex) ? b.dataIndex.includes('id') : b.dataIndex === 'id';
-        
+
         if (aIsId && !bIsId) return -1;
         if (!aIsId && bIsId) return 1;
-        
+
         // Then prioritize columns with explicit width
         if (a.width && !b.width) return -1;
         if (!a.width && b.width) return 1;
-        
+
         return 0;
       });
-      
-      // Calculate how many columns we can fit
-      const maxColumns = Math.max(1, Math.floor(containerWidth / minColumnWidth));
-      
-      // Get the IDs of columns that should be visible
-      const newVisibleColumnIds = prioritizedColumns
-        .slice(0, maxColumns)
-        .map(col => Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex);
-      
-      setVisibleColumnIds(newVisibleColumnIds);
+
+      // Greedily include columns (highest priority first) until the next one would overflow.
+      // Using each column's real rendered size keeps the visible set within the container.
+      const visible = new Set<string>();
+      let usedWidth = 0;
+      for (const col of prioritizedColumns) {
+        const colId = getColumnId(col.dataIndex);
+        const { size } = getColumnSizeConfig(col);
+        if (visible.size > 0 && usedWidth + size > containerWidth) {
+          break;
+        }
+        usedWidth += size;
+        visible.add(colId);
+      }
+
+      // Preserve original column order in the visible list.
+      setVisibleColumnIds(allColumnIds.filter(colId => visible.has(colId)));
     };
-    
+
     updateVisibleColumnsEffect();
-    
+
     const handleResize = () => {
       updateVisibleColumnsEffect();
     };
-    
+
     window.addEventListener('resize', handleResize);
     return () => {
       window.removeEventListener('resize', handleResize);
     };
-  }, [columns, minColumnWidth]); // Re-run when columns or min column width change
+  }, [columns, minColumnWidth, showAllColumns]); // Re-run when columns, min width, or show-all change
 
   // Memoize the initial column configuration to prevent loops
   const columnConfig = useMemo(() => {
@@ -756,13 +743,36 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
       data-automation-id={id}
       ref={tableContainerRef}
     >
-        {visibleColumnIds.length < columns.length && (
+        {showAllColumns ? (
           <Alert variant="info" className="rounded-none border-x-0 border-t-0">
             <AlertDescription className="flex items-center text-sm">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              {columns.length - visibleColumnIds.length} columns hidden due to limited space. Resize browser to see more.
+              Showing all columns; scroll horizontally to see them.{' '}
+              <button
+                type="button"
+                onClick={() => setShowAllColumns(false)}
+                className="ml-1 font-medium underline underline-offset-2 hover:opacity-80 focus:outline-none"
+              >
+                Show less
+              </button>
+            </AlertDescription>
+          </Alert>
+        ) : visibleColumnIds.length < columns.length && (
+          <Alert variant="info" className="rounded-none border-x-0 border-t-0">
+            <AlertDescription className="flex items-center text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              {columns.length - visibleColumnIds.length} columns hidden due to limited space.{' '}
+              <button
+                type="button"
+                onClick={() => setShowAllColumns(true)}
+                className="ml-1 font-medium underline underline-offset-2 hover:opacity-80 focus:outline-none"
+              >
+                Show all
+              </button>
             </AlertDescription>
           </Alert>
         )}
