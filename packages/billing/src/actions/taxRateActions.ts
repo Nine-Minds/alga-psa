@@ -140,11 +140,37 @@ export const deleteTaxRate = withAuth(async (_user, { tenant }, taxRateId: strin
     await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
     const { knex } = await createTenantKnex();
     const result = await deleteEntityWithValidation('tax_rate', taxRateId, knex, tenant, async (trx, tenantId) => {
-      // Clean up child records owned by the tax rate
-      await trx('composite_tax_mappings').where({ composite_tax_id: taxRateId, tenant }).del();
+      // Fail-fast tenant guard: confirm the tax rate belongs to this tenant before touching
+      // any tenant-less child tables (composite_tax_mappings/tax_holidays/tax_rate_thresholds).
+      const exists = await trx('tax_rates')
+        .where({ tax_rate_id: taxRateId, tenant })
+        .first('tax_rate_id');
+      if (!exists) {
+        throw new Error('Tax rate not found or already deleted.');
+      }
+
+      // Clean up child records owned by the tax rate.
+      // composite_tax_mappings/tax_holidays/tax_rate_thresholds have no tenant column
+      // (in Citus, tax_rates.PK is compound (tenant, tax_rate_id), so tax_rate_id alone
+      // isn't globally unique). Scope each delete by joining back to tax_rates with the
+      // tenant guard so we can never touch another tenant's rows.
+      const ownedTaxRate = trx('tax_rates')
+        .select('tax_rate_id')
+        .where({ tax_rate_id: taxRateId, tenant });
+
+      await trx('composite_tax_mappings')
+        .where({ composite_tax_id: taxRateId })
+        .whereIn('composite_tax_id', ownedTaxRate.clone())
+        .del();
       await trx('tax_components').where({ tax_rate_id: taxRateId, tenant }).del();
-      await trx('tax_holidays').where({ tax_rate_id: taxRateId, tenant }).del();
-      await trx('tax_rate_thresholds').where({ tax_rate_id: taxRateId, tenant }).del();
+      await trx('tax_holidays')
+        .where({ tax_rate_id: taxRateId })
+        .whereIn('tax_rate_id', ownedTaxRate.clone())
+        .del();
+      await trx('tax_rate_thresholds')
+        .where({ tax_rate_id: taxRateId })
+        .whereIn('tax_rate_id', ownedTaxRate.clone())
+        .del();
 
       const deletedCount = await trx('tax_rates')
         .where({
