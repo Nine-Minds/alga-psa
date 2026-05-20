@@ -7,9 +7,9 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { createAsset } from '../actions/assetActions';
-import type { CreateAssetRequest, IClient } from '@alga-psa/types';
+import type { CreateAssetRequest, IClient, IClientLocation } from '@alga-psa/types';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { getAllClientsForAssets } from '../actions/clientLookupActions';
+import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -34,6 +34,8 @@ interface FormData {
   asset_type: AssetType | '';
   status: AssetStatus;
   serial_number: string;
+  location_id: string | null;
+  location: string;
   workstation: {
     os_type: string;
     os_version: string;
@@ -68,6 +70,8 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
   const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
+  const [clientLocations, setClientLocations] = useState<IClientLocation[]>([]);
+  const [locationsLoading, setLocationsLoading] = useState(false);
   const statusOptions: SelectOption[] = STATUS_OPTION_VALUES.map((value) => ({
     value,
     label: t(`quickAddAsset.statusOptions.${value}`, {
@@ -93,6 +97,8 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     asset_type: '',
     status: 'active',
     serial_number: '',
+    location_id: null,
+    location: '',
     // Type-specific fields will be added conditionally
     workstation: {
       os_type: '',
@@ -141,9 +147,68 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     }
   }, [open, clientId, t]);
 
+  const effectiveClientId = clientId || selectedClientId;
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      if (!open || !effectiveClientId) {
+        setClientLocations([]);
+        return;
+      }
+
+      setLocationsLoading(true);
+      try {
+        const locations = await getClientLocationsForAssets(effectiveClientId);
+        setClientLocations(locations);
+      } catch (error) {
+        console.error('Error fetching client locations:', error);
+        setClientLocations([]);
+      } finally {
+        setLocationsLoading(false);
+      }
+    };
+
+    void fetchLocations();
+  }, [open, effectiveClientId]);
+
+  const formatClientLocation = (location: IClientLocation) => [
+    location.location_name,
+    location.address_line1,
+    location.address_line2,
+    location.city,
+    location.state_province,
+    location.postal_code,
+    location.country_name,
+  ].filter(Boolean).join(', ');
+
+  const locationOptions: SelectOption[] = [
+    ...clientLocations.map((location) => ({
+      value: location.location_id,
+      label: location.location_name || formatClientLocation(location),
+    })),
+    {
+      value: 'custom',
+      label: t('quickAddAsset.fields.customLocationOption', { defaultValue: 'Custom location' }),
+    },
+  ];
+
+  const handleLocationSelect = (value: string) => {
+    if (value === 'custom') {
+      setFormData(prev => ({ ...prev, location_id: null }));
+      return;
+    }
+
+    const location = clientLocations.find(loc => loc.location_id === value);
+    if (!location) return;
+    setFormData(prev => ({
+      ...prev,
+      location_id: location.location_id,
+      location: formatClientLocation(location),
+    }));
+  };
+
   const validateForm = () => {
     const validationErrors: string[] = [];
-    const effectiveClientId = clientId || selectedClientId;
     if (!effectiveClientId) validationErrors.push(t('quickAddAsset.validation.client', { defaultValue: 'Client' }));
     if (!formData.name.trim()) validationErrors.push(t('quickAddAsset.validation.assetName', { defaultValue: 'Asset Name' }));
     if (!formData.asset_tag.trim()) validationErrors.push(t('quickAddAsset.validation.assetTag', { defaultValue: 'Asset Tag' }));
@@ -187,6 +252,8 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         asset_tag: formData.asset_tag,
         name: formData.name,
         status: formData.status,
+        location_id: formData.location_id,
+        location: formData.location.trim() || undefined,
         serial_number: formData.serial_number || undefined
       };
 
@@ -260,6 +327,8 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         asset_type: '',
         status: 'active',
         serial_number: '',
+        location_id: null,
+        location: '',
         workstation: { os_type: '', os_version: '' },
         network_device: { device_type: 'switch', management_ip: '' },
         server: { os_type: '', os_version: '' },
@@ -536,6 +605,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                     selectedClientId={selectedClientId}
                     onSelect={(id) => {
                       setSelectedClientId(id);
+                      setFormData(prev => ({ ...prev, location_id: null, location: '' }));
                       clearErrorIfSubmitted();
                     }}
                     filterState={clientFilterState}
@@ -547,6 +617,39 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                 </div>
               </div>
             )}
+
+            <div {...withDataAutomationId({ id: 'asset-location-container' })}>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.location', { defaultValue: 'Location' })}
+              </label>
+              <CustomSelect
+                {...withDataAutomationId({ id: 'asset-location-select' })}
+                options={locationOptions}
+                value={formData.location_id ?? 'custom'}
+                onValueChange={handleLocationSelect}
+                placeholder={effectiveClientId
+                  ? (locationsLoading
+                    ? t('quickAddAsset.placeholders.loadingLocations', { defaultValue: 'Loading locations...' })
+                    : t('quickAddAsset.placeholders.selectLocation', { defaultValue: 'Select location' }))
+                  : t('quickAddAsset.placeholders.selectClientFirst', { defaultValue: 'Select a client first' })}
+                disabled={!effectiveClientId || locationsLoading}
+              />
+              {effectiveClientId && formData.location_id === null && (
+                <Input
+                  {...withDataAutomationId({ id: 'asset-custom-location-input' })}
+                  className="mt-2"
+                  value={formData.location}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    location_id: null,
+                    location: e.target.value,
+                  }))}
+                  placeholder={t('quickAddAsset.placeholders.customLocation', {
+                    defaultValue: 'Enter a custom location or area'
+                  })}
+                />
+              )}
+            </div>
 
             <div {...withDataAutomationId({ id: 'asset-name-container' })}>
               <label className="block text-sm font-medium text-gray-700">
@@ -657,6 +760,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         onClientAdded: (newClient) => {
           setClients(prev => [...prev, newClient]);
           setSelectedClientId(newClient.client_id);
+          setFormData(prev => ({ ...prev, location_id: null, location: '' }));
         },
         skipSuccessDialog: true,
       })}

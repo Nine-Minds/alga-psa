@@ -60,6 +60,9 @@ export class AssetService extends BaseService<any> {
       if (filters.client_id) {
         query.where(`${this.tableName}.client_id`, filters.client_id);
       }
+      if (filters.location_id) {
+        query.where(`${this.tableName}.location_id`, filters.location_id);
+      }
       if (filters.asset_type) {
         query.where(`${this.tableName}.asset_type`, filters.asset_type);
       }
@@ -134,6 +137,9 @@ export class AssetService extends BaseService<any> {
       // Apply the same filters to count query
       if (filters.client_id) {
         countQuery.where(`${this.tableName}.client_id`, filters.client_id);
+      }
+      if (filters.location_id) {
+        countQuery.where(`${this.tableName}.location_id`, filters.location_id);
       }
       if (filters.status) {
         countQuery.where(`${this.tableName}.status`, filters.status);
@@ -230,6 +236,11 @@ export class AssetService extends BaseService<any> {
 
   async create(data: CreateAssetWithExtensionData, context: ServiceContext): Promise<any> {
     const { extension_data, ...assetData } = data;
+    const knex = await this.getDbForContext(context);
+
+    if (assetData.location_id) {
+      await this.assertLocationBelongsToClient(knex, context.tenant, assetData.client_id, assetData.location_id);
+    }
     
     const assetRecord = {
       ...assetData,
@@ -238,7 +249,6 @@ export class AssetService extends BaseService<any> {
       updated_at: new Date()
     };
 
-    const knex = await this.getDbForContext(context);
     const [asset] = await knex(this.tableName)
       .insert(assetRecord)
       .returning('*');
@@ -263,12 +273,25 @@ export class AssetService extends BaseService<any> {
   }
 
   async update(id: string, data: UpdateAssetData, context: ServiceContext): Promise<any> {
+    const knex = await this.getDbForContext(context);
+
+    if (data.location_id) {
+      const clientId = data.client_id || (await knex(this.tableName)
+        .where({ [this.primaryKey]: id, tenant: context.tenant })
+        .first('client_id'))?.client_id;
+
+      if (!clientId) {
+        throw new Error('Asset not found');
+      }
+
+      await this.assertLocationBelongsToClient(knex, context.tenant, clientId, data.location_id);
+    }
+
     const updateData = {
       ...data,
       updated_at: new Date()
     };
 
-    const knex = await this.getDbForContext(context);
     await knex(this.tableName)
       .where({ [this.primaryKey]: id, tenant: context.tenant })
       .update(updateData);
@@ -286,6 +309,26 @@ export class AssetService extends BaseService<any> {
     });
 
     return this.getById(id, context);
+  }
+
+  private async assertLocationBelongsToClient(
+    knex: Knex,
+    tenant: string,
+    clientId: string,
+    locationId: string
+  ): Promise<void> {
+    const location = await knex('client_locations')
+      .where({
+        tenant,
+        client_id: clientId,
+        location_id: locationId,
+        is_active: true,
+      })
+      .first('location_id');
+
+    if (!location) {
+      throw new Error('Selected location is not available for this client');
+    }
   }
 
   async delete(id: string, context: ServiceContext): Promise<void> {

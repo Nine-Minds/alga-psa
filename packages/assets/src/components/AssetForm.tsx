@@ -84,6 +84,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     asset_tag: '',
     serial_number: '',
     status: '',
+    location_id: null,
     location: '',
     purchase_date: '',
     warranty_end_date: ''
@@ -166,6 +167,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
           asset_tag: data.asset_tag || '',
           serial_number: data.serial_number || '',
           status: data.status || 'active',
+          location_id: data.location_id ?? null,
           location: data.location || '',
           purchase_date: purchaseDate,
           warranty_end_date: warrantyEndDate,
@@ -227,7 +229,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
           } : undefined
         });
         setCustomLocation(data.location || '');
-        setSelectedLocationId(data.location ? 'custom' : '');
+        setSelectedLocationId(data.location_id ?? (data.location ? 'custom' : ''));
       } catch (error) {
         console.error('Error loading asset:', error);
         setLoadError(t('assetForm.errors.loadFailed', { defaultValue: 'Failed to load asset details' }));
@@ -388,6 +390,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     setFormData(prev => ({
       ...prev,
       client_id: clientId,
+      location_id: null,
       location: ''
     }));
     setSelectedLocationId('custom');
@@ -400,6 +403,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
       setSelectedLocationId('custom');
       setFormData(prev => ({
         ...prev,
+        location_id: null,
         location: customLocation
       }));
       return;
@@ -410,6 +414,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     if (location) {
       setFormData(prev => ({
         ...prev,
+        location_id: location.location_id,
         location: formatClientLocation(location)
       }));
     }
@@ -420,6 +425,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     setSelectedLocationId('custom');
     setFormData(prev => ({
       ...prev,
+      location_id: null,
       location: value
     }));
   };

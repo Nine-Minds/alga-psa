@@ -89,7 +89,45 @@ export interface AssetDetailBundle {
     documents: IDocument[];
 }
 
+export interface BulkAssetActionResult {
+    asset_id: string;
+    success: boolean;
+    asset?: Asset;
+    error?: string;
+}
+
+export interface BulkAssetActionResponse {
+    total: number;
+    succeeded: number;
+    failed: number;
+    results: BulkAssetActionResult[];
+}
+
+const BULK_ASSET_ACTION_LIMIT = 100;
+
 const normalizeNullableString = (value: string | null | undefined) => (value ?? undefined);
+
+function normalizeBulkAssetIds(assetIds: string[]): string[] {
+    const ids = Array.from(new Set(assetIds.map((id) => id.trim()).filter(Boolean)));
+    if (ids.length === 0) {
+        throw new Error('Select at least one asset');
+    }
+    if (ids.length > BULK_ASSET_ACTION_LIMIT) {
+        throw new Error(`Bulk actions are limited to ${BULK_ASSET_ACTION_LIMIT} assets at a time`);
+    }
+    z.array(z.string().uuid()).parse(ids);
+    return ids;
+}
+
+function buildBulkAssetActionResponse(results: BulkAssetActionResult[]): BulkAssetActionResponse {
+    const succeeded = results.filter((result) => result.success).length;
+    return {
+        total: results.length,
+        succeeded,
+        failed: results.length - succeeded,
+        results,
+    };
+}
 
 function pruneNullishValues(value: unknown): unknown {
     if (Array.isArray(value)) {
@@ -139,7 +177,67 @@ function sanitizeUpdatePayload(data: UpdateAssetRequest): UpdateAssetRequest {
         }))(data.printer) : undefined
     };
 
-    return pruneNullishValues(sanitized) as UpdateAssetRequest;
+    const cleaned = pruneNullishValues(sanitized) as UpdateAssetRequest;
+    if (data.location_id === null) {
+        cleaned.location_id = null;
+    }
+    return cleaned;
+}
+
+type AssetLocationRow = {
+    location_id: string;
+    location_name?: string | null;
+    address_line1?: string | null;
+    address_line2?: string | null;
+    city?: string | null;
+    state_province?: string | null;
+    postal_code?: string | null;
+    country_name?: string | null;
+};
+
+function formatAssetLocation(location: AssetLocationRow): string {
+    return [
+        location.location_name,
+        location.address_line1,
+        location.address_line2,
+        location.city,
+        location.state_province,
+        location.postal_code,
+        location.country_name,
+    ].filter(Boolean).join(', ');
+}
+
+async function resolveValidatedAssetLocation(
+    trx: Knex.Transaction,
+    tenant: string,
+    clientId: string,
+    locationId: string | null | undefined
+): Promise<{ location_id: string | null; location?: string } | undefined> {
+    if (locationId === undefined) {
+        return undefined;
+    }
+
+    if (locationId === null) {
+        return { location_id: null };
+    }
+
+    const location = await trx('client_locations')
+        .where({
+            tenant,
+            client_id: clientId,
+            location_id: locationId,
+            is_active: true,
+        })
+        .first<AssetLocationRow>();
+
+    if (!location) {
+        throw new Error('Selected location is not available for this client');
+    }
+
+    return {
+        location_id: location.location_id,
+        location: formatAssetLocation(location),
+    };
 }
 
 type AssetAuthUser = {
@@ -562,6 +660,7 @@ function formatAssetForOutput(asset: any): Asset {
         // Handle optional fields
         serial_number: asset.serial_number || undefined,
         location: asset.location || undefined,
+        location_id: asset.location_id ?? null,
         // Ensure client data is properly structured
         // The SQL JOIN returns client_name as a flat field; build the nested object from it
         client: asset.client_id ? {
@@ -673,6 +772,12 @@ export const createAsset = withAuth(async (user, { tenant }, data: CreateAssetRe
             const validatedData = validateData(createAssetSchema, data);
 
             const now = new Date().toISOString();
+            const selectedLocation = await resolveValidatedAssetLocation(
+                trx,
+                tenant,
+                validatedData.client_id,
+                validatedData.location_id
+            );
 
             // Extract only the base asset fields and ensure dates are only included if they exist
             const baseAssetData = {
@@ -682,7 +787,8 @@ export const createAsset = withAuth(async (user, { tenant }, data: CreateAssetRe
                 asset_tag: validatedData.asset_tag,
                 name: validatedData.name,
                 status: validatedData.status,
-                location: validatedData.location || '',
+                location_id: selectedLocation?.location_id ?? null,
+                location: selectedLocation?.location ?? (validatedData.location || ''),
                 serial_number: validatedData.serial_number || '',
                 created_at: now,
                 updated_at: now,
@@ -832,6 +938,30 @@ export const updateAsset = withAuth(async (user, { tenant }, asset_id: string, d
 
             if (!asset) {
                 throw new Error('Asset not found');
+            }
+
+            const locationIdWasProvided = Object.prototype.hasOwnProperty.call(baseCandidate, 'location_id');
+            if (locationIdWasProvided) {
+                const selectedLocation = await resolveValidatedAssetLocation(
+                    trx,
+                    tenant,
+                    (baseCandidate.client_id as string | undefined) ?? asset.client_id,
+                    baseCandidate.location_id as string | null | undefined
+                );
+
+                if (selectedLocation) {
+                    baseCandidate.location_id = selectedLocation.location_id;
+                    if (selectedLocation.location !== undefined) {
+                        baseCandidate.location = selectedLocation.location;
+                    } else if (!Object.prototype.hasOwnProperty.call(baseCandidate, 'location')) {
+                        baseCandidate.location = '';
+                    }
+                }
+            } else if (baseCandidate.client_id && baseCandidate.client_id !== asset.client_id && asset.location_id) {
+                baseCandidate.location_id = null;
+                if (!Object.prototype.hasOwnProperty.call(baseCandidate, 'location')) {
+                    baseCandidate.location = '';
+                }
             }
 
             // Update base asset fields (excluding extension payloads)
@@ -1102,6 +1232,69 @@ export const deleteAsset = withAuth(async (
     }
 });
 
+export const bulkUpdateAssets = withAuth(async (
+    user,
+    _ctx,
+    assetIds: string[],
+    data: Pick<UpdateAssetRequest, 'status' | 'location' | 'location_id'>
+): Promise<BulkAssetActionResponse> => {
+    if (!await hasPermission(user, 'asset', 'update')) {
+        throw new Error('Permission denied: Cannot update assets');
+    }
+
+    const ids = normalizeBulkAssetIds(assetIds);
+    const normalizedData = sanitizeUpdatePayload(data);
+    validateData(updateAssetSchema, normalizedData);
+
+    const results: BulkAssetActionResult[] = [];
+    for (const asset_id of ids) {
+        try {
+            const asset = await updateAsset(asset_id, normalizedData);
+            results.push({ asset_id, success: true, asset });
+        } catch (error) {
+            results.push({
+                asset_id,
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to update asset',
+            });
+        }
+    }
+
+    return buildBulkAssetActionResponse(results);
+});
+
+export const bulkDeleteAssets = withAuth(async (
+    user,
+    _ctx,
+    assetIds: string[]
+): Promise<BulkAssetActionResponse> => {
+    if (!await hasPermission(user, 'asset', 'delete')) {
+        throw new Error('Permission denied: Cannot delete assets');
+    }
+
+    const ids = normalizeBulkAssetIds(assetIds);
+    const results: BulkAssetActionResult[] = [];
+
+    for (const asset_id of ids) {
+        try {
+            const result = await deleteAsset(asset_id);
+            results.push({
+                asset_id,
+                success: result.success === true,
+                error: result.success === true ? undefined : result.message,
+            });
+        } catch (error) {
+            results.push({
+                asset_id,
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to delete asset',
+            });
+        }
+    }
+
+    return buildBulkAssetActionResponse(results);
+});
+
 async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: string): Promise<Asset> {
     // Get base asset data with client info
     const asset = await knex('assets')
@@ -1369,6 +1562,9 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 if (validatedParams.client_id) {
                     query.where('assets.client_id', validatedParams.client_id);
                 }
+                if (validatedParams.location_id) {
+                    query.where('assets.location_id', validatedParams.location_id);
+                }
                 if (validatedParams.asset_type) {
                     query.where('assets.asset_type', validatedParams.asset_type);
                 }
@@ -1381,6 +1577,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                         this.whereILike('assets.name', searchTerm)
                             .orWhereILike('assets.asset_tag', searchTerm)
                             .orWhereILike('assets.serial_number', searchTerm)
+                            .orWhereILike('assets.location', searchTerm)
                             .orWhereILike('clients.client_name', searchTerm);
                     });
                 }

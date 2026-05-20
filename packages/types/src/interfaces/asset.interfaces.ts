@@ -55,6 +55,7 @@ export interface Asset {
   serial_number?: string;
   name: string;
   status: string;
+  location_id?: string | null;
   location?: string;
   purchase_date?: string;
   warranty_end_date?: string;
@@ -380,6 +381,7 @@ export interface CreateAssetRequest {
   asset_tag: string;
   name: string;
   status: string;
+  location_id?: string | null;
   location?: string;
   serial_number?: string;
   purchase_date?: string;
@@ -438,6 +440,7 @@ export interface CreateMaintenanceHistoryRequest {
 export interface AssetQueryParams {
   client_id?: string;
   client_name?: string;
+  location_id?: string;
   asset_type?: 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer' | 'unknown';
   status?: string;
   search?: string;
