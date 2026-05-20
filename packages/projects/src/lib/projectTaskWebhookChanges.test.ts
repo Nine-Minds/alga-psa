@@ -20,8 +20,8 @@ function task(overrides: Partial<IProjectTask> = {}): IProjectTask {
     due_date: new Date('2026-01-10T00:00:00.000Z'),
     priority_id: null,
     service_id: null,
-    task_type_key: undefined,
-    order_key: null,
+    task_type_key: 'task',
+    order_key: undefined,
     ...overrides,
   };
 }
