@@ -45,6 +45,10 @@
     "./workDate": {
       "import": "./dist/lib/workDate.js",
       "types": "./src/lib/workDate.ts"
+    },
+    "./appointmentApprovers": {
+      "import": "./dist/lib/appointmentApprovers.js",
+      "types": "./src/lib/appointmentApprovers.ts"
     }
   },
   "scripts": {

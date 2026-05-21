@@ -12,7 +12,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
-import { readApproverIdsFromConfig } from '../../lib/appointmentApprovers';
+import { readApproverIdsFromConfig } from '@alga-psa/db/appointmentApprovers';
 import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { Calendar } from '@alga-psa/ui/components/Calendar';
 import { Badge } from '@alga-psa/ui/components/Badge';

@@ -31,7 +31,7 @@ import {
   getAvailableDates as getDatesFromService
 } from '../../services/availabilityService';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
-import { resolveAppointmentApproverUserIds } from '@alga-psa/scheduling/lib/appointmentApprovers';
+import { resolveAppointmentApproverUserIds } from '@alga-psa/db/appointmentApprovers';
 import { isValidEmail } from '@alga-psa/core';
 import { isEnterprise } from '@alga-psa/core/features';
 import { format, type Locale } from 'date-fns';

@@ -249,7 +249,7 @@
         "deleting": "Eliminando..."
       },
       "defaultApprover": {
-        "placeholder": "Seleccione un aprobador"
+        "placeholder": "Seleccione aprobadores"
       },
       "teamSelect": {
         "label": "Seleccionar equipo",
@@ -272,8 +272,8 @@
         }
       },
       "defaultApprover": {
-        "label": "Aprobador predeterminado",
-        "help": "Aprobador predeterminado en toda la empresa para solicitudes de citas que requieren aprobación manual. Esto se puede anular por técnico en la configuración de Horas de usuario."
+        "label": "Aprobadores",
+        "help": "Aprobadores en toda la empresa para solicitudes de citas que requieren aprobación manual. Agregue varios usuarios y/o equipos: todas las personas seleccionadas reciben una notificación y pueden aprobar. Esto se puede anular por técnico en la configuración de Horas de usuario."
       },
       "advanceBookingDays": {
         "label": "Reserva anticipada predeterminada (días)"
@@ -315,8 +315,8 @@
           "placeholder": "15"
         },
         "defaultApprover": {
-          "label": "Aprobador predeterminado",
-          "help": "¿Quién debe revisar y aprobar las solicitudes de citas para este técnico que requieren aprobación manual?"
+          "label": "Aprobadores",
+          "help": "¿Quién debe revisar y aprobar las solicitudes de citas para este técnico que requieren aprobación manual? Agregue varios usuarios y/o equipos. Déjelo vacío para usar los aprobadores de toda la empresa."
         },
         "allowClientPreference": {
           "label": "Permitir preferencia del cliente",

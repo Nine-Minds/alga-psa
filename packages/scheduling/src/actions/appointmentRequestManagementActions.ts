@@ -38,7 +38,7 @@ import {
 import { generateICSBuffer, generateICSFilename, ICSEventData } from '../utils/icsGenerator';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import { resolveTeamsMeetingService } from '../lib/teamsMeetingService';
-import { readApproverIdsFromConfig } from '../lib/appointmentApprovers';
+import { readApproverIdsFromConfig } from '@alga-psa/db/appointmentApprovers';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
