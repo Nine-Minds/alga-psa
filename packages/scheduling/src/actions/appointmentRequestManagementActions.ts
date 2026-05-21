@@ -38,6 +38,7 @@ import {
 import { generateICSBuffer, generateICSFilename, ICSEventData } from '../utils/icsGenerator';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import { resolveTeamsMeetingService } from '../lib/teamsMeetingService';
+import { readApproverIdsFromConfig } from '../lib/appointmentApprovers';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -178,10 +179,13 @@ export const getAppointmentRequests = withAuth(async (
       const hasFullAccess = await hasPermission(user, 'user', 'read', trx);
 
       // If user doesn't have full access, they can only see:
-      // 1. Requests assigned to them
-      // 2. Requests they're designated to approve (via availability settings)
-      // 3. Requests for their team members (if they're a team manager)
+      // 1. Requests for technicians they're scoped to (themselves, team members, reports)
+      // 2. Requests for technicians they're a per-technician approver of
+      // 3. ALL requests, if they're a company-wide approver
+      // Approvers can be configured as individual users or as teams (expanded to members).
       let scopedUserIds: string[] = [];
+      // Company-wide approvers (and full-access users) can see every request.
+      let canSeeAllRequests = false;
 
       if (!hasFullAccess) {
         // Add current user
@@ -205,14 +209,34 @@ export const getAppointmentRequests = withAuth(async (
         const subordinateIds = await User.getReportsToSubordinateIds(trx, user.user_id);
         scopedUserIds.push(...subordinateIds);
 
-        // Check if user is designated as an approver in availability settings
+        // Teams the current user belongs to (for team-based approver matching)
+        const memberships = await trx('team_members')
+          .where({ tenant, user_id: user.user_id })
+          .select('team_id');
+        const userTeamIds = new Set(memberships.map(m => m.team_id));
+
+        // Inspect approver configuration across general + per-user availability settings.
         const approverSettings = await trx('availability_settings')
           .where({ tenant })
-          .whereRaw("config_json->>'default_approver_id' = ?", [user.user_id])
-          .select('user_id');
+          .whereIn('setting_type', ['general_settings', 'user_hours'])
+          .whereNotNull('config_json')
+          .select('setting_type', 'user_id', 'config_json');
 
-        if (approverSettings.length > 0) {
-          scopedUserIds.push(...approverSettings.map(s => s.user_id).filter(Boolean));
+        for (const setting of approverSettings) {
+          const { userIds, teamIds } = readApproverIdsFromConfig(setting.config_json);
+          const isApprover =
+            userIds.includes(user.user_id) ||
+            teamIds.some(teamId => userTeamIds.has(teamId));
+
+          if (!isApprover) continue;
+
+          if (setting.setting_type === 'general_settings') {
+            // Company-wide approver: can review every request.
+            canSeeAllRequests = true;
+          } else if (setting.setting_type === 'user_hours' && setting.user_id) {
+            // Per-technician approver: can review that technician's requests.
+            scopedUserIds.push(setting.user_id);
+          }
         }
 
         // Remove duplicates
@@ -260,8 +284,9 @@ export const getAppointmentRequests = withAuth(async (
         )
         .orderBy('ar.created_at', 'desc');
 
-      // Apply scoped access filter if user doesn't have full access
-      if (!hasFullAccess && scopedUserIds.length > 0) {
+      // Apply scoped access filter unless the user can see all requests
+      // (full access, or a company-wide approver).
+      if (!hasFullAccess && !canSeeAllRequests) {
         query = query.whereIn('ar.preferred_assigned_user_id', scopedUserIds);
       }
 
@@ -500,7 +525,9 @@ export const approveAppointmentRequest = withAuth(async (
             updated_at: new Date()
           });
 
-        // Update assignee if changed
+        // Reconcile the assignee to the approver's selection. The pending entry may
+        // have been created unassigned (request had no preferred technician), so we
+        // must insert when no assignee row exists yet — not only when one differs.
         const currentAssignee = await trx('schedule_entry_assignees')
           .where({
             entry_id: request.schedule_entry_id,
@@ -508,8 +535,8 @@ export const approveAppointmentRequest = withAuth(async (
           })
           .first();
 
-        if (currentAssignee && currentAssignee.user_id !== validatedData.assigned_user_id) {
-          // Remove old assignee
+        if ((currentAssignee?.user_id || null) !== validatedData.assigned_user_id) {
+          // Clear any existing assignees
           await trx('schedule_entry_assignees')
             .where({
               entry_id: request.schedule_entry_id,
@@ -517,7 +544,7 @@ export const approveAppointmentRequest = withAuth(async (
             })
             .delete();
 
-          // Add new assignee
+          // Assign the approver-selected user
           await trx('schedule_entry_assignees').insert({
             entry_id: request.schedule_entry_id,
             user_id: validatedData.assigned_user_id,
