@@ -31,7 +31,7 @@ import {
   useCatalogShortcut,
   useShortcutScope,
 } from '@alga-psa/ui/keyboard-shortcuts';
-import { ShortcutHelpDialog } from '@alga-psa/ui/keyboard-shortcuts';
+import { ShortcutHelpDialog, ShortcutHintHud } from '@alga-psa/ui/keyboard-shortcuts';
 
 interface DefaultLayoutProps {
   children: React.ReactNode;
@@ -528,6 +528,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
               ) : null}
               <VimNavigationLayer onOpenHelp={openShortcutsShortcut} />
               <ShortcutHelpDialog isOpen={shortcutsHelpOpen} onClose={() => setShortcutsHelpOpen(false)} />
+              <ShortcutHintHud />
             </QuickAskProvider>
           </div>
         </div>

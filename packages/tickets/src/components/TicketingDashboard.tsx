@@ -1081,10 +1081,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           // Overlay fills the whole cell (incl. padding) so clicking anywhere in the
           // column toggles selection instead of navigating into the ticket.
           <div
-            className="absolute inset-0 flex items-center justify-center cursor-pointer"
+            className="absolute inset-0 flex items-center justify-center cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
             onClick={(event) => {
               event.stopPropagation();
-              handleTicketSelectionChange(ticketId, !isChecked);
+              rangeSelect.handleSelect(ticketId, {
+                shiftKey: event.shiftKey,
+                selected: !isChecked,
+                preventDefault: () => event.preventDefault(),
+              });
+              event.preventDefault();
             }}
             onMouseDown={(event) => event.stopPropagation()}
           >
@@ -2288,7 +2293,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 totalItems={totalCount}
                 onItemsPerPageChange={onPageSizeChange}
                 rowClassName={(record: ITicketListItem) =>
-                  `${densityClasses.tableRowDensity} cursor-pointer ${record.ticket_id && selectedTicketIds.has(record.ticket_id)
+                  `${densityClasses.tableRowDensity} cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus-within:outline-none focus-visible:ring-0 hover:!bg-table-hover ${record.ticket_id && selectedTicketIds.has(record.ticket_id)
                     ? '!bg-table-selected'
                     : ''}`
                 }

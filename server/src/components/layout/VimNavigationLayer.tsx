@@ -299,6 +299,7 @@ export default function VimNavigationLayer({ onOpenHelp }: VimNavigationLayerPro
   const hintInputRef = useRef("");
   const hintTargetsRef = useRef<Record<string, HTMLElement>>({});
   const linkHintNewTabRef = useRef(false);
+  const hintActivationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [visualMode, setVisualMode] = useState(false);
   const [macroStatus, setMacroStatus] = useState<string | null>(null);
   const [hints, setHints] = useState<LinkHint[]>([]);
@@ -384,6 +385,10 @@ export default function VimNavigationLayer({ onOpenHelp }: VimNavigationLayerPro
   }, [updateRowMarkers]);
 
   const closeHints = useCallback(() => {
+    if (hintActivationTimerRef.current) {
+      clearTimeout(hintActivationTimerRef.current);
+      hintActivationTimerRef.current = null;
+    }
     hintInputRef.current = "";
     hintTargetsRef.current = {};
     setHints([]);
@@ -520,12 +525,31 @@ export default function VimNavigationLayer({ onOpenHelp }: VimNavigationLayerPro
         const nextInput = `${hintInputRef.current}${event.key.toLowerCase()}`;
         const labels = Object.keys(hintTargetsRef.current);
 
-        if (hintTargetsRef.current[nextInput]) {
+        if (hintActivationTimerRef.current) {
+          clearTimeout(hintActivationTimerRef.current);
+          hintActivationTimerRef.current = null;
+        }
+
+        const exactMatch = hintTargetsRef.current[nextInput];
+        const hasLongerPrefix = labels.some(
+          (label) => label.length > nextInput.length && label.startsWith(nextInput),
+        );
+
+        if (exactMatch && !hasLongerPrefix) {
           activateHint(nextInput);
           return;
         }
 
-        if (labels.some((label) => label.startsWith(nextInput))) {
+        if (exactMatch && hasLongerPrefix) {
+          hintInputRef.current = nextInput;
+          hintActivationTimerRef.current = setTimeout(() => {
+            hintActivationTimerRef.current = null;
+            activateHint(nextInput);
+          }, 250);
+          return;
+        }
+
+        if (hasLongerPrefix) {
           hintInputRef.current = nextInput;
           return;
         }
@@ -625,11 +649,10 @@ export default function VimNavigationLayer({ onOpenHelp }: VimNavigationLayerPro
     <>
       <style>{`
         tr[data-vim-active-row="true"] {
-          outline: 2px solid #2563eb;
-          outline-offset: -2px;
+          background-color: rgb(var(--color-table-selected));
         }
         tr[data-vim-range-row="true"] {
-          background-color: rgba(37, 99, 235, 0.08);
+          background-color: rgb(var(--color-table-hover));
         }
       `}</style>
       {hints.length > 0 ? (

@@ -11,6 +11,7 @@ export * from './provider';
 export * from './registry';
 export * from './storage';
 export * from './ShortcutHelpDialog';
+export * from './ShortcutHintHud';
 export type {
   BindingDescriptor,
   ParsedToken,
