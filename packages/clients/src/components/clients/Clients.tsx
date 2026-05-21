@@ -365,7 +365,8 @@ const Clients: React.FC = () => {
   // Use user preferences for page sizes (separate for grid and list views)
   const {
     value: gridPageSize,
-    setValue: setGridPageSize
+    setValue: setGridPageSize,
+    isLoading: isGridPageSizeLoading
   } = useUserPreference<number>(
     CLIENTS_GRID_PAGE_SIZE_SETTING,
     {
@@ -377,7 +378,8 @@ const Clients: React.FC = () => {
 
   const {
     value: listPageSize,
-    setValue: setListPageSize
+    setValue: setListPageSize,
+    isLoading: isListPageSizeLoading
   } = useUserPreference<number>(
     CLIENTS_LIST_PAGE_SIZE_SETTING,
     {
@@ -389,6 +391,7 @@ const Clients: React.FC = () => {
 
   // Current page size based on view mode
   const pageSize = viewMode === 'grid' ? gridPageSize : listPageSize;
+  const areClientPreferencesLoading = isViewModeLoading || isGridPageSizeLoading || isListPageSizeLoading;
 
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [isSelectAllMode, setIsSelectAllMode] = useState(false);
@@ -1319,7 +1322,7 @@ const Clients: React.FC = () => {
     }
   };
 
-  if (viewMode === null) {
+  if (viewMode === null || areClientPreferencesLoading) {
     return (
       <div className="w-full">
         <div className="flex justify-end mb-4 flex-wrap gap-6">
