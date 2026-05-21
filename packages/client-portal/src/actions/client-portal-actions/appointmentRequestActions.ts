@@ -31,6 +31,7 @@ import {
   getAvailableDates as getDatesFromService
 } from '../../services/availabilityService';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
+import { resolveAppointmentApproverUserIds } from '@alga-psa/scheduling/lib/appointmentApprovers';
 import { isValidEmail } from '@alga-psa/core';
 import { isEnterprise } from '@alga-psa/core/features';
 import { format, type Locale } from 'date-fns';
@@ -77,46 +78,6 @@ type TenantSettings = {
   tenantName: string;
   defaultLocale: string;
 };
-
-type ScheduleApprover = {
-  user_id: string;
-  email: string;
-  first_name: string;
-  last_name: string;
-};
-
-async function getScheduleApprovers(tenant: string): Promise<ScheduleApprover[]> {
-  const { knex: db } = await createTenantKnex();
-
-  return await withTransaction(db, async (trx) => {
-    const approvers = await trx('users as u')
-      .join('user_roles as ur', function () {
-        this.on('u.user_id', 'ur.user_id').andOn('u.tenant', 'ur.tenant');
-      })
-      .join('roles as r', function () {
-        this.on('ur.role_id', 'r.role_id').andOn('ur.tenant', 'r.tenant');
-      })
-      .join('role_permissions as rp', function () {
-        this.on('r.role_id', 'rp.role_id').andOn('r.tenant', 'rp.tenant');
-      })
-      .join('permissions as p', function () {
-        this.on('rp.permission_id', 'p.permission_id').andOn('rp.tenant', 'p.tenant');
-      })
-      .where({
-        'u.tenant': tenant,
-        'u.user_type': 'internal',
-        'p.resource': 'user_schedule',
-        'p.action': 'update',
-      })
-      .where(function () {
-        this.where('u.is_inactive', false).orWhereNull('u.is_inactive');
-      })
-      .select('u.user_id', 'u.email', 'u.first_name', 'u.last_name')
-      .distinct();
-
-    return approvers;
-  });
-}
 
 async function getTenantSettings(tenant: string): Promise<TenantSettings> {
   const { knex: db } = await createTenantKnex();
@@ -429,27 +390,10 @@ export const createAppointmentRequest = withAuth(async (
       status: appointmentRequest.status
     });
 
-    // Determine who should be assigned this appointment
-    let assignedUserId = validatedData.preferred_assigned_user_id;
-
-    // If no preferred technician, assign to the default approver
-    if (!assignedUserId) {
-      // Get the default approver from general settings
-      const approverSetting = await withTransaction(db, async (trx: Knex.Transaction) => {
-        // Fall back to general default approver
-        const generalSetting = await trx('availability_settings')
-          .where({
-            tenant,
-            setting_type: 'general_settings'
-          })
-          .whereNotNull('config_json')
-          .first();
-
-        return generalSetting?.config_json?.default_approver_id || null;
-      });
-
-      assignedUserId = approverSetting;
-    }
+    // Determine who should be assigned this appointment.
+    // Only a client-specified preferred technician is auto-assigned. When none is
+    // specified the request is left unassigned for an approver to claim on approval.
+    const assignedUserId = validatedData.preferred_assigned_user_id || null;
 
     // ALWAYS create a schedule entry for this appointment request
     // If no assigned user, it will still appear on the calendar as unassigned
@@ -590,27 +534,23 @@ export const createAppointmentRequest = withAuth(async (
         tenantId: tenant
       });
 
-      // Get default approver for notifications
-      const defaultApproverId = await withTransaction(db, async (trx: Knex.Transaction) => {
-        const generalSetting = await trx('availability_settings')
-          .where({
-            tenant,
-            setting_type: 'general_settings'
-          })
-          .whereNotNull('config_json')
-          .first();
-
-        return generalSetting?.config_json?.default_approver_id || null;
+      // Resolve the configured approvers (multiple users and/or teams, expanded to
+      // their current members). Falls back to the company-wide approvers when the
+      // preferred technician has no per-technician override configured.
+      const approverUserIds = await withTransaction(db, async (trx: Knex.Transaction) => {
+        return resolveAppointmentApproverUserIds(trx, tenant, {
+          preferredTechnicianId: validatedData.preferred_assigned_user_id || null
+        });
       });
 
-      // Determine which staff users should receive notifications
-      // Only notify: assigned user and default approver (if different)
+      // Determine which staff users should receive notifications:
+      // the preferred technician (if any) plus every resolved approver.
       const notifyUserIds = new Set<string>();
       if (assignedUserId) {
         notifyUserIds.add(assignedUserId);
       }
-      if (defaultApproverId) {
-        notifyUserIds.add(defaultApproverId);
+      for (const approverId of approverUserIds) {
+        notifyUserIds.add(approverId);
       }
 
       // Get user details for notifications
@@ -629,7 +569,7 @@ export const createAppointmentRequest = withAuth(async (
         count: staffUsers.length,
         userIds: staffUsers.map(u => u.user_id),
         assignedUserId,
-        defaultApproverId
+        approverUserIds
       });
 
       // Resolve preferred technician name
@@ -880,31 +820,19 @@ export const updateAppointmentRequest = withAuth(async (
             updated_at: new Date(),
           });
 
-        // Update assignee if changed
+        // Update assignee if changed. Only a preferred technician is auto-assigned;
+        // clearing it leaves the request unassigned for an approver to claim.
         if (validatedData.preferred_assigned_user_id !== existingRequest.preferred_assigned_user_id) {
-          // Determine new assignee (preferred tech or default approver)
-          let newAssigneeId = validatedData.preferred_assigned_user_id;
+          const newAssigneeId = validatedData.preferred_assigned_user_id || null;
 
-          if (!newAssigneeId) {
-            const generalSetting = await trx('availability_settings')
-              .where({
-                tenant,
-                setting_type: 'general_settings',
-              })
-              .whereNotNull('config_json')
-              .first();
-
-            newAssigneeId = generalSetting?.config_json?.default_approver_id || null;
-          }
+          await trx('schedule_entry_assignees')
+            .where({
+              entry_id: existingRequest.schedule_entry_id,
+              tenant,
+            })
+            .delete();
 
           if (newAssigneeId) {
-            await trx('schedule_entry_assignees')
-              .where({
-                entry_id: existingRequest.schedule_entry_id,
-                tenant,
-              })
-              .delete();
-
             await trx('schedule_entry_assignees').insert({
               entry_id: existingRequest.schedule_entry_id,
               user_id: newAssigneeId,
@@ -1368,12 +1296,20 @@ export const cancelAppointmentRequest = withAuth(async (
           });
         }
 
-        // Send internal notifications to MSP STAFF
-        const staffUsers = await getScheduleApprovers(tenant);
-        for (const staffUser of staffUsers) {
+        // Send internal notifications to MSP STAFF.
+        // Notify the configured approvers (users + teams, expanded to members) plus the
+        // assigned technician, mirroring who was notified when the request was created.
+        const cancellationApproverIds = await resolveAppointmentApproverUserIds(trx, tenant, {
+          preferredTechnicianId: request.preferred_assigned_user_id || null
+        });
+        const cancellationNotifyIds = new Set<string>(cancellationApproverIds);
+        if (request.preferred_assigned_user_id) {
+          cancellationNotifyIds.add(request.preferred_assigned_user_id);
+        }
+        for (const staffUserId of cancellationNotifyIds) {
           await createNotificationFromTemplateInternal(trx, {
             tenant: tenant,
-            user_id: staffUser.user_id,
+            user_id: staffUserId,
             template_name: 'appointment-request-cancelled-staff',
             type: 'info',
             category: 'appointments',
