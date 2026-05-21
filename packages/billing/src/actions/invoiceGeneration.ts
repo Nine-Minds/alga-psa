@@ -1816,11 +1816,6 @@ async function generateInvoiceForNormalizedSelectionInputs(params: {
     user.user_id,
   );
 
-  const nextBillingDateStr = await getNextBillingDate(client_id, cycleEnd);
-  const nextBillingDate = toPlainDate(nextBillingDateStr);
-  const nextBillingTimestamp = toISOTimestamp(nextBillingDate);
-  await billingEngine.rolloverUnapprovedTime(client_id, cycleEnd, nextBillingTimestamp);
-
   return Invoice.getFullInvoiceById(knex, tenant, createdInvoice.invoice_id);
 }
 
