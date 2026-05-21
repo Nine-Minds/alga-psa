@@ -1,13 +1,16 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Compass, Search } from 'lucide-react';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Kbd, SHORTCUT_ACTION_CATALOG, parseCommandPaletteQuery } from '@alga-psa/ui/keyboard-shortcuts';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { navigationSections, bottomMenuItems, type MenuItem } from '@/config/menuConfig';
+import { searchAppTypeaheadAction } from '@/lib/actions/searchActions';
 
-type PaletteResultType = 'nav' | 'action' | 'help';
+type PaletteResultType = 'nav' | 'action' | 'help' | 'record';
+type CommandPaletteMode = 'navigation' | 'fulltext';
 
 interface PaletteResult {
   id: string;
@@ -23,6 +26,7 @@ interface CommandPaletteProps {
 }
 
 const STORAGE_KEY = 'msp_command_palette_frequency_v1';
+const MODE_STORAGE_KEY = 'msp_command_palette_mode_v1';
 
 function flattenMenuItems(items: MenuItem[]): MenuItem[] {
   return items.flatMap((item) => [item, ...(item.subItems ? flattenMenuItems(item.subItems) : [])]);
@@ -48,15 +52,29 @@ function matches(value: string, query: string): boolean {
   return value.toLowerCase().includes(query.toLowerCase());
 }
 
+function loadInitialMode(): CommandPaletteMode {
+  if (typeof window === 'undefined') return 'navigation';
+  const stored = window.localStorage.getItem(MODE_STORAGE_KEY);
+  return stored === 'fulltext' ? 'fulltext' : 'navigation';
+}
+
 export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JSX.Element {
   const { t } = useTranslation('msp/keyboard-shortcuts');
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [mode, setMode] = useState<CommandPaletteMode>(loadInitialMode);
+  const [recordResults, setRecordResults] = useState<PaletteResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const parsed = useMemo(() => parseCommandPaletteQuery(query), [query]);
   const firstField = parsed.terms.find((term) => term.field)?.field;
   const normalizedQuery = parsed.terms.map((term) => term.value).join(' ').trim();
   const frequencies = useMemo(() => getFrequencies(), [open, query]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(MODE_STORAGE_KEY, mode);
+  }, [mode]);
 
   const navResults = useMemo<PaletteResult[]>(() => {
     if (firstField && firstField !== 'nav') return [];
@@ -94,9 +112,61 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
     description: t('commandPalette.syntax.summary', { defaultValue: 'Type a menu name or action; use /nav or >action to narrow.' }),
   };
 
-  const results = [...navResults, ...actionResults, helpResult]
-    .sort((left, right) => (frequencies[right.id] ?? 0) - (frequencies[left.id] ?? 0))
-    .slice(0, 12);
+  // Debounced full-text typeahead while in fulltext mode.
+  useEffect(() => {
+    if (!open || mode !== 'fulltext') return;
+    const trimmed = query.trim();
+    if (trimmed.length < 2) {
+      setRecordResults([]);
+      setIsSearching(false);
+      return;
+    }
+    let cancelled = false;
+    setIsSearching(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await searchAppTypeaheadAction({ query: trimmed });
+        if (cancelled) return;
+        setRecordResults(response.results.map((row) => ({
+          id: `record:${row.type}:${row.id}`,
+          type: 'record',
+          label: row.title,
+          description: row.subtitle ?? row.snippet ?? row.type,
+          url: row.url,
+        })));
+      } catch (err) {
+        if (!cancelled) setRecordResults([]);
+        console.error('command-palette.fulltext_failed', err);
+      } finally {
+        if (!cancelled) setIsSearching(false);
+      }
+    }, 200);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [open, mode, query]);
+
+  const seeAllUrl = query.trim() ? `/msp/search?q=${encodeURIComponent(query.trim())}` : null;
+
+  const results = useMemo<PaletteResult[]>(() => {
+    if (mode === 'fulltext') {
+      const items: PaletteResult[] = [...recordResults];
+      if (seeAllUrl && recordResults.length > 0) {
+        items.push({
+          id: 'fulltext:see-all',
+          type: 'help',
+          label: t('commandPalette.seeAll', { defaultValue: 'See all results' }),
+          description: seeAllUrl,
+          url: seeAllUrl,
+        });
+      }
+      return items;
+    }
+    return [...navResults, ...actionResults, helpResult]
+      .sort((left, right) => (frequencies[right.id] ?? 0) - (frequencies[left.id] ?? 0))
+      .slice(0, 12);
+  }, [mode, recordResults, navResults, actionResults, helpResult, frequencies, seeAllUrl, t]);
 
   useEffect(() => {
     if (open) {
@@ -108,7 +178,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
 
   useEffect(() => {
     setActiveIndex(0);
-  }, [query]);
+  }, [query, mode]);
 
   const activeResult = results[activeIndex];
   const activeDescendant = activeResult ? `command-palette-result-${activeResult.id.replace(/[^a-z0-9]+/gi, '-')}` : undefined;
@@ -127,6 +197,10 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
     onClose();
   };
 
+  const placeholder = mode === 'fulltext'
+    ? t('commandPalette.placeholderFulltext', { defaultValue: 'Search records, comments, documents…' })
+    : t('commandPalette.placeholder', { defaultValue: 'Search navigation and actions' });
+
   return (
     <Dialog
       id="command-palette"
@@ -138,6 +212,43 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
     >
       <DialogContent>
         <div className="space-y-3">
+          <div
+            id="command-palette-mode-toggle"
+            role="tablist"
+            aria-label={t('commandPalette.modes.ariaLabel', { defaultValue: 'Search mode' })}
+            className="inline-flex rounded-md border border-[rgb(var(--color-border-200))] p-0.5 text-xs"
+          >
+            <button
+              id="command-palette-mode-navigation"
+              type="button"
+              role="tab"
+              aria-selected={mode === 'navigation'}
+              onClick={() => setMode('navigation')}
+              className={`flex items-center gap-1 rounded px-2 py-1 transition-colors ${
+                mode === 'navigation'
+                  ? 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-700))]'
+                  : 'text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-700))]'
+              }`}
+            >
+              <Compass className="h-3.5 w-3.5" aria-hidden="true" />
+              {t('commandPalette.modes.navigation', { defaultValue: 'Navigation' })}
+            </button>
+            <button
+              id="command-palette-mode-fulltext"
+              type="button"
+              role="tab"
+              aria-selected={mode === 'fulltext'}
+              onClick={() => setMode('fulltext')}
+              className={`flex items-center gap-1 rounded px-2 py-1 transition-colors ${
+                mode === 'fulltext'
+                  ? 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-700))]'
+                  : 'text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-700))]'
+              }`}
+            >
+              <Search className="h-3.5 w-3.5" aria-hidden="true" />
+              {t('commandPalette.modes.fulltext', { defaultValue: 'Full text' })}
+            </button>
+          </div>
           <Input
             ref={inputRef}
             id="command-palette-input"
@@ -161,12 +272,19 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
               } else if (event.key === 'Escape') {
                 event.preventDefault();
                 onClose();
+              } else if ((event.metaKey || event.ctrlKey) && event.key === '/') {
+                event.preventDefault();
+                setMode((current) => (current === 'navigation' ? 'fulltext' : 'navigation'));
               }
             }}
-            placeholder={t('commandPalette.placeholder', { defaultValue: 'Search navigation and actions' })}
+            placeholder={placeholder}
           />
           <div className="text-xs text-muted-foreground" aria-live="polite">
-            {t('commandPalette.resultCount', { count: results.length, defaultValue: '{{count}} results' })}
+            {mode === 'fulltext' && isSearching
+              ? t('commandPalette.loading', { defaultValue: 'Searching…' })
+              : mode === 'fulltext' && query.trim().length < 2
+                ? t('commandPalette.fulltextHint', { defaultValue: 'Type at least 2 characters to search records.' })
+                : t('commandPalette.resultCount', { count: results.length, defaultValue: '{{count}} results' })}
           </div>
           <div id="command-palette-results" role="listbox" className="max-h-80 overflow-y-auto rounded-md border">
             {results.map((result, index) => (
@@ -192,7 +310,12 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <Kbd binding="mod+shift+k" />
-            <span>{t('commandPalette.syntax.inlineHelp', { defaultValue: 'Use /nav for navigation or >action for actions.' })}</span>
+            <Kbd binding="mod+/" />
+            <span>
+              {mode === 'navigation'
+                ? t('commandPalette.syntax.inlineHelp', { defaultValue: 'Use /nav for navigation or >action for actions.' })
+                : t('commandPalette.fulltextInlineHelp', { defaultValue: 'Searching across records, comments, and documents.' })}
+            </span>
           </div>
         </div>
       </DialogContent>

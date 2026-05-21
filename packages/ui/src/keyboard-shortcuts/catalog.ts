@@ -51,15 +51,42 @@ export const SHORTCUT_ACTION_CATALOG: readonly ShortcutActionCatalogEntry[] = [
   entry('global.quickCreate', 'global', 'page', ['alt+n']),
   entry('ai.quickAsk', 'ai', 'global', ['mod+ArrowUp']),
 
+  entry('scroll.halfDown', 'scroll', 'page', ['ctrl+d']),
+  entry('scroll.halfUp', 'scroll', 'page', ['ctrl+u']),
+  entry('scroll.fullDown', 'scroll', 'page', ['ctrl+f']),
+  entry('scroll.fullUp', 'scroll', 'page', ['ctrl+b']),
+  entry('scroll.top', 'scroll', 'page', ['g g'], { sequence: true }),
+  entry('scroll.bottom', 'scroll', 'page', ['shift+g']),
+  entry('focus.primarySearch', 'navigation', 'page', ['/']),
+
+  entry('table.nextRow', 'selection', 'page', ['j'], { priority: 21 }),
+  entry('table.previousRow', 'selection', 'page', ['k'], { priority: 21 }),
+  entry('table.toggleRow', 'selection', 'page', ['x']),
+  entry('table.visualRange', 'selection', 'page', ['shift+v']),
+  entry('table.openRow', 'selection', 'page', ['o']),
+
+  entry('repeat.lastAction', 'global', 'page', ['.']),
+  entry('linkhints.show', 'navigation', 'page', ['f']),
+  entry('linkhints.showNewTab', 'navigation', 'page', ['shift+f']),
+  entry('macro.record', 'global', 'page', ['q']),
+  entry('macro.play', 'global', 'page', ['@']),
+
   entry('page.create', 'page', 'page', ['c']),
   entry('page.save', 'page', 'page', ['mod+s']),
   entry('selection.previous', 'selection', 'page', ['k']),
   entry('selection.next', 'selection', 'page', ['j']),
   entry('selection.open', 'selection', 'page', ['Enter']),
 
+  entry('navigation.goDashboard', 'navigation', 'global', ['g d'], { sequence: true }),
   entry('navigation.goTickets', 'navigation', 'global', ['g t'], { sequence: true }),
   entry('navigation.goAssets', 'navigation', 'global', ['g a'], { sequence: true }),
   entry('navigation.goClients', 'navigation', 'global', ['g c'], { sequence: true }),
+  entry('navigation.goProjects', 'navigation', 'global', ['g p'], { sequence: true }),
+  entry('navigation.goBilling', 'navigation', 'global', ['g i'], { sequence: true }),
+  entry('navigation.goSettings', 'navigation', 'global', ['g s'], { sequence: true }),
+  entry('navigation.goSearch', 'navigation', 'global', ['g /'], { sequence: true }),
+  entry('navigation.goHelp', 'navigation', 'global', ['g h'], { sequence: true }),
+  entry('navigation.backToParent', 'navigation', 'global', ['g b'], { sequence: true }),
 
   entry('assets.commandPalette', 'assets', 'page', ['mod+shift+k']),
 

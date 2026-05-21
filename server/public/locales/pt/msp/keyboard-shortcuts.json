@@ -62,6 +62,15 @@
       "action": "Ação",
       "record": "Registro",
       "help": "Ajuda"
+    },
+    "placeholderFulltext": "Pesquisar registros, comentários, documentos…",
+    "seeAll": "Ver todos os resultados",
+    "fulltextHint": "Digite ao menos 2 caracteres para pesquisar.",
+    "fulltextInlineHelp": "Pesquisando em registros, comentários e documentos.",
+    "modes": {
+      "ariaLabel": "Modo de pesquisa",
+      "navigation": "Navegação",
+      "fulltext": "Texto completo"
     }
   },
   "groups": {
@@ -74,7 +83,8 @@
     "dialog": "Diálogo",
     "panel": "Painel",
     "record": "Registro",
-    "editor": "Editor"
+    "editor": "Editor",
+    "scroll": "Scroll"
   },
   "actions": {
     "global": {
@@ -93,6 +103,10 @@
       "quickCreate": {
         "label": "Criação rápida",
         "description": "Abra o diálogo de criação rápida."
+      },
+      "commandPalette": {
+        "label": "Paleta de comandos",
+        "description": "Abrir a pesquisa de navegação e ações."
       }
     },
     "ai": {
@@ -137,6 +151,34 @@
       "goClients": {
         "label": "Ir para clientes",
         "description": "Navegue para a página de clientes."
+      },
+      "goDashboard": {
+        "label": "Go to dashboard",
+        "description": "Navigate to the dashboard."
+      },
+      "goProjects": {
+        "label": "Go to projects",
+        "description": "Navigate to the projects page."
+      },
+      "goBilling": {
+        "label": "Go to billing",
+        "description": "Navigate to billing."
+      },
+      "goSettings": {
+        "label": "Go to settings",
+        "description": "Navigate to settings."
+      },
+      "goSearch": {
+        "label": "Go to global search",
+        "description": "Focus the global search field."
+      },
+      "goHelp": {
+        "label": "Go to keyboard help",
+        "description": "Open the keyboard shortcuts reference."
+      },
+      "backToParent": {
+        "label": "Back to parent list",
+        "description": "Activate the page back navigation button when one is available."
       }
     },
     "assets": {
@@ -221,6 +263,86 @@
       "moveRight": {
         "label": "Mover à direita",
         "description": "Mova o item selecionado do editor à direita."
+      }
+    },
+    "scroll": {
+      "halfDown": {
+        "label": "Scroll half page down",
+        "description": "Scroll down by half a page."
+      },
+      "halfUp": {
+        "label": "Scroll half page up",
+        "description": "Scroll up by half a page."
+      },
+      "fullDown": {
+        "label": "Scroll full page down",
+        "description": "Scroll down by one full page."
+      },
+      "fullUp": {
+        "label": "Scroll full page up",
+        "description": "Scroll up by one full page."
+      },
+      "top": {
+        "label": "Scroll to top",
+        "description": "Scroll to the top of the current page or panel."
+      },
+      "bottom": {
+        "label": "Scroll to bottom",
+        "description": "Scroll to the bottom of the current page or panel."
+      }
+    },
+    "focus": {
+      "primarySearch": {
+        "label": "Focus page search",
+        "description": "Focus the primary search field on the current page."
+      }
+    },
+    "table": {
+      "nextRow": {
+        "label": "Next table row",
+        "description": "Move the active row marker to the next selectable table row."
+      },
+      "previousRow": {
+        "label": "Previous table row",
+        "description": "Move the active row marker to the previous selectable table row."
+      },
+      "toggleRow": {
+        "label": "Toggle table row",
+        "description": "Select or deselect the active table row."
+      },
+      "visualRange": {
+        "label": "Visual row range",
+        "description": "Start or stop selecting a contiguous table row range."
+      },
+      "openRow": {
+        "label": "Open table row",
+        "description": "Open the active table row."
+      }
+    },
+    "repeat": {
+      "lastAction": {
+        "label": "Repeat last action",
+        "description": "Repeat the last Vim-style navigation action."
+      }
+    },
+    "macro": {
+      "record": {
+        "label": "Record macro",
+        "description": "Start or stop recording a Vim-style navigation macro."
+      },
+      "play": {
+        "label": "Play macro",
+        "description": "Play a recorded Vim-style navigation macro."
+      }
+    },
+    "linkhints": {
+      "show": {
+        "label": "Show link hints",
+        "description": "Show keyboard hints for visible links and controls."
+      },
+      "showNewTab": {
+        "label": "Show link hints in new tab",
+        "description": "Show keyboard hints and open links in a new tab when possible."
       }
     }
   },

@@ -16,6 +16,7 @@ import { savePreference } from '@alga-psa/ui/lib';
 import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
 import { QuickAskProvider } from './QuickAskContext';
 import { PlatformNotificationBanner } from './PlatformNotificationBanner';
+import VimNavigationLayer from './VimNavigationLayer';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
 import { SchedulingProviderWithCallbacks } from '@alga-psa/scheduling/providers/SchedulingProviderWithCallbacks';
 import { MspTicketIntegrationProvider, MspClientIntegrationProvider } from '@alga-psa/msp-composition/projects';
@@ -525,6 +526,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
                   hf={null}
                 />
               ) : null}
+              <VimNavigationLayer onOpenHelp={openShortcutsShortcut} />
               <ShortcutHelpDialog isOpen={shortcutsHelpOpen} onClose={() => setShortcutsHelpOpen(false)} />
             </QuickAskProvider>
           </div>
