@@ -1169,5 +1169,12 @@
         "warning": "11111"
       }
     }
+  },
+  "dataTable": {
+    "columnsHidden_one": "11111 {{count}} 11111",
+    "columnsHidden_other": "11111 {{count}} 11111",
+    "showAll": "11111",
+    "showingAllColumns": "11111",
+    "showLess": "11111"
   }
 }
