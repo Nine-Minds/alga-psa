@@ -126,7 +126,7 @@
     "cross-spawn": "^7.0.3",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
-    "dompurify": "^3.1.6",
+    "dompurify": "^3.4.0",
     "dotenv": "^16.4.5",
     "ejs": "^3.1.10",
     "elkjs": "^0.10.0",
@@ -148,7 +148,7 @@
     "lucide-react": "^0.428.0",
     "marked": "^14.1.3",
     "moment": "^2.30.1",
-    "next": "^16.1.6",
+    "next": "^16.2.6",
     "next-auth": "^5.0.0-beta.30",
     "node-vault": "^0.10.2",
     "nodemailer": "^8.0.5",
@@ -178,7 +178,7 @@
     "react-icons": "^5.2.1",
     "react-markdown": "^9.0.1",
     "react-resizable-panels": "^3.0.6",
-    "react-server-dom-webpack": "^19.2.4",
+    "react-server-dom-webpack": "^19.2.6",
     "reactflow": "^11.11.4",
     "recharts": "^2.12.7",
     "redis": "^4.7.0",
@@ -194,7 +194,7 @@
     "tsx": "^4.20.3",
     "turndown": "^7.2.0",
     "ua-parser-js": "^2.0.6",
-    "uuid": "^10.0.0",
+    "uuid": "^11.1.1",
     "winston": "^3.13.1",
     "winston-daily-rotate-file": "^5.0.0",
     "y-prosemirror": "^1.3.7",
@@ -249,8 +249,8 @@
     "ink-testing-library": "^4.0.0",
     "jsdom": "^25.0.1",
     "nx": "^22.6.5",
-    "postcss": "^8",
-    "protobufjs": "^7.4.0",
+    "postcss": "^8.5.10",
+    "protobufjs": "^7.5.8",
     "tailwindcss": "^3.4.7",
     "ts-morph": "^25.0.1",
     "ts-node": "^10.9.2",
@@ -272,9 +272,10 @@
   "overrides": {
     "preact": "^10.25.4",
     "tsup": "^8.5.1",
-    "fast-xml-parser": ">=5.5.9",
+    "fast-xml-parser": ">=5.7.0",
+    "fast-xml-builder": ">=1.1.7",
     "serialize-javascript": ">=6.0.3",
-    "basic-ftp": ">=5.2.2",
+    "basic-ftp": ">=5.3.1",
     "form-data": ">=4.0.2",
     "tough-cookie": ">=4.1.4",
     "jsonpath-plus": ">=10.4.0",
@@ -290,7 +291,8 @@
     "brace-expansion": ">=1.1.13",
     "yaml": ">=2.8.3",
     "nx": {
-      "brace-expansion": "^2.0.3"
+      "brace-expansion": "^2.0.3",
+      "axios": ">=1.15.2"
     },
     "qs": ">=6.14.0",
     "path-to-regexp": ">=8.0.0",
@@ -300,6 +302,21 @@
     "lodash": ">=4.18.1",
     "@nestjs/core": ">=11.1.18",
     "mailparser": ">=3.9.8",
-    "axios": "^1.16.0"
+    "@protobufjs/utf8": ">=1.1.1",
+    "i18next-fs-backend": ">=2.6.4",
+    "@opentelemetry/otlp-transformer": {
+      "protobufjs": ">=8.2.0"
+    },
+    "engine.io-client": {
+      "ws": ">=8.20.1"
+    },
+    "next": {
+      "postcss": ">=8.5.10"
+    },
+    "fast-uri": ">=3.1.2",
+    "picomatch": ">=2.3.2",
+    "ws": ">=8.20.1",
+    "follow-redirects": ">=1.16.0",
+    "ip-address": ">=10.1.1"
   }
 }
