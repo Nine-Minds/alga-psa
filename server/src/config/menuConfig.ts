@@ -243,7 +243,6 @@ export const settingsNavigationSections: NavigationSection[] = [
     translationKey: 'settings.sections.workManagement',
     items: [
       { name: 'Ticketing', translationKey: 'settings.tabs.ticketing', icon: Ticket, href: '/msp/settings?tab=ticketing' },
-      { name: 'Knowledge Base', translationKey: 'settings.tabs.knowledgeBase', icon: BookOpen, href: '/msp/settings?tab=knowledge-base' },
       { name: 'SLA', translationKey: 'settings.tabs.sla', icon: Timer, href: '/msp/settings/sla' },
       { name: 'Projects', translationKey: 'settings.tabs.projects', icon: ListTodo, href: '/msp/settings?tab=projects' },
       { name: 'Interactions', translationKey: 'settings.tabs.interactions', icon: Handshake, href: '/msp/settings?tab=interactions' },

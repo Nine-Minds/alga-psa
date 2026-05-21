@@ -101,7 +101,6 @@ describe('product surface registry', () => {
       {
         items: [
           { href: '/msp/settings?tab=email' },
-          { href: '/msp/settings?tab=knowledge-base' },
           { href: '/msp/settings?tab=integrations' },
           { href: '/msp/settings/extensions' },
           { href: '/msp/settings/notifications' },
@@ -113,7 +112,6 @@ describe('product surface registry', () => {
       {
         items: [
           { href: '/msp/settings?tab=email' },
-          { href: '/msp/settings?tab=knowledge-base' },
         ],
       },
     ]);
