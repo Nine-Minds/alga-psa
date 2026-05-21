@@ -1466,6 +1466,19 @@ async function getProjectTaskStatusesInternal(
         throw new Error('Permission denied: Cannot read project');
     }
     await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+    return resolvePhaseStatusesInternal(trx, tenant, projectId, phaseId);
+}
+
+// Resolve the effective statuses for a single phase (or the project defaults
+// when phaseId is null). The caller is responsible for having verified read
+// permission on the project within `trx`, so this can be looped over many
+// phases inside a single transaction without repeating the permission checks.
+async function resolvePhaseStatusesInternal(
+    trx: Knex.Transaction,
+    tenant: string,
+    projectId: string,
+    phaseId?: string | null
+): Promise<ProjectStatus[]> {
     const statusMappings = await ProjectModel.getEffectiveStatusMappings(trx, tenant, projectId, phaseId);
     if (!statusMappings || statusMappings.length === 0) {
         console.warn(`No status mappings found for project ${projectId}`);
@@ -1678,26 +1691,30 @@ export const getProjectStatusesByPhase = withAuth(async (
     { tenant },
     projectId: string
 ): Promise<Record<string, ProjectStatus[]>> => {
-    try {
-        const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
 
-        const phases = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
-            return await ProjectModel.getPhases(trx, tenant, projectId);
-        });
+    // Resolve every phase's statuses inside a single transaction. Previously
+    // each phase opened its own transaction (an N+1 connection pattern) and
+    // re-ran the same project-level permission checks; here we verify access
+    // once and reuse the connection for all phases.
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        if (!await hasPermission(user, 'project', 'read', trx)) {
+            throw new Error('Permission denied: Cannot read project');
+        }
+        await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
-        const entries = await Promise.all(
-            phases.map(async (phase): Promise<readonly [string, ProjectStatus[]]> => {
-                const statuses = await getProjectTaskStatusesInternal2(tenant, projectId, user, phase.phase_id);
-                return [phase.phase_id, statuses] as const;
-            })
-        );
+        const phases = await ProjectModel.getPhases(trx, tenant, projectId);
+
+        // Run sequentially: all phases share one transaction (one connection),
+        // and node-postgres cannot run concurrent queries on a single connection.
+        const entries: Array<readonly [string, ProjectStatus[]]> = [];
+        for (const phase of phases) {
+            const statuses = await resolvePhaseStatusesInternal(trx, tenant, projectId, phase.phase_id);
+            entries.push([phase.phase_id, statuses] as const);
+        }
 
         return Object.fromEntries(entries);
-    } catch (error) {
-        console.error('Error fetching project statuses by phase:', error);
-        return {};
-    }
+    });
 });
 
 export const addStatusToProject = withAuth(async (user, { tenant }, projectId: string, statusData: Omit<IStatus, 'status_id' | 'created_at' | 'updated_at'>): Promise<IStatus | ActionPermissionError> => {

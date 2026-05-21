@@ -157,6 +157,16 @@ interface TaskListViewProps {
    * back to `statuses` for any phase not present in the map.
    */
   statusesByPhase?: Record<string, ProjectStatus[]>;
+  /**
+   * Persisted column widths (column key -> px). Server-backed via the parent's
+   * user preferences, replacing the previous localStorage-only store. When
+   * omitted, widths fall back to component-local state (not persisted).
+   */
+  columnWidths?: Record<string, number>;
+  /** Persist a column-width change. Supports functional updates. */
+  onColumnWidthsChange?: (
+    value: Record<string, number> | ((prev: Record<string, number>) => Record<string, number>)
+  ) => void;
   /** Row density (zoom): cell font size in px, applied to all cell text. */
   densityFontPx?: number;
   /** Row density (zoom): cell vertical padding (CSS length, e.g. "10px"). */
@@ -219,6 +229,8 @@ export default function TaskListView({
   tasks,
   statuses,
   statusesByPhase = {},
+  columnWidths: columnWidthsProp,
+  onColumnWidthsChange,
   densityFontPx = 13,
   densityCellPadding = '10px',
   densityScale = 1,
@@ -360,11 +372,25 @@ export default function TaskListView({
   // columns hide), a Show all / Show less toggle, and draggable resize handles
   // with widths persisted per project. Task-row drag-reordering is unaffected.
   const containerRef = useRef<HTMLDivElement>(null);
-  const projectId = phases[0]?.project_id ?? 'global';
-  const columnSizingStorageKey = `tasklistview-column-sizing:${projectId}`;
 
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({});
-  const [hasLoadedColumnWidths, setHasLoadedColumnWidths] = useState(false);
+  // Column widths are server-persisted by the parent (via user preferences),
+  // so they survive across devices and reloads. Fall back to local state when
+  // no persistence handler is supplied.
+  const [localColumnWidths, setLocalColumnWidths] = useState<Record<string, number>>({});
+  const persistedColumnWidths = columnWidthsProp ?? localColumnWidths;
+  const persistColumnWidths = onColumnWidthsChange ?? setLocalColumnWidths;
+
+  // While a resize drag is in progress, keep the dragged column's width in
+  // local state for smooth updates; persisting on every pointer move would
+  // re-render the (large) parent each frame. The final width is persisted once
+  // on pointer up.
+  const [draftColumnWidth, setDraftColumnWidth] = useState<{ key: string; width: number } | null>(null);
+  const columnWidths = useMemo(
+    () => (draftColumnWidth
+      ? { ...persistedColumnWidths, [draftColumnWidth.key]: draftColumnWidth.width }
+      : persistedColumnWidths),
+    [persistedColumnWidths, draftColumnWidth]
+  );
   const [showAllColumns, setShowAllColumns] = useState(false);
   const [visibleColumnIds, setVisibleColumnIds] = useState<string[]>(
     () => COLUMN_CONFIG.map(c => c.key)
@@ -384,30 +410,6 @@ export default function TaskListView({
     (key: string): number => Math.round(getColumnWidth(key) * densityScale),
     [getColumnWidth, densityScale]
   );
-
-  // Load persisted widths
-  useEffect(() => {
-    if (typeof window === 'undefined') { setHasLoadedColumnWidths(true); return; }
-    try {
-      const raw = window.localStorage.getItem(columnSizingStorageKey);
-      const parsed = raw ? JSON.parse(raw) as Record<string, unknown> : {};
-      const valid = Object.fromEntries(
-        Object.entries(parsed).filter(([k, v]) =>
-          COLUMN_CONFIG.some(c => c.key === k) && typeof v === 'number' && Number.isFinite(v))
-      ) as Record<string, number>;
-      setColumnWidths(valid);
-    } catch {
-      setColumnWidths({});
-    } finally {
-      setHasLoadedColumnWidths(true);
-    }
-  }, [columnSizingStorageKey]);
-
-  // Persist widths
-  useEffect(() => {
-    if (!hasLoadedColumnWidths || typeof window === 'undefined') return;
-    window.localStorage.setItem(columnSizingStorageKey, JSON.stringify(columnWidths));
-  }, [columnWidths, columnSizingStorageKey, hasLoadedColumnWidths]);
 
   // Greedy fit: always keep alwaysShow columns, then add optional columns by
   // priority using each column's real width until the next would overflow.
@@ -456,29 +458,38 @@ export default function TaskListView({
   );
 
   // Column resize via pointer drag on the header handles.
-  const resizeStateRef = useRef<{ key: string; startX: number; startWidth: number; min: number; max: number } | null>(null);
+  const resizeStateRef = useRef<{ key: string; startX: number; startWidth: number; min: number; max: number; lastWidth: number } | null>(null);
   const handleResizeMove = useCallback((e: PointerEvent) => {
     const state = resizeStateRef.current;
     if (!state) return;
     const next = Math.min(state.max, Math.max(state.min, state.startWidth + (e.clientX - state.startX)));
-    setColumnWidths(prev => (prev[state.key] === next ? prev : { ...prev, [state.key]: next }));
+    state.lastWidth = next;
+    // Only the local draft updates during the drag; persistence happens on end.
+    setDraftColumnWidth(prev => (prev && prev.key === state.key && prev.width === next ? prev : { key: state.key, width: next }));
   }, []);
   const handleResizeEnd = useCallback(() => {
+    const state = resizeStateRef.current;
     resizeStateRef.current = null;
+    if (state) {
+      persistColumnWidths(prev => (prev[state.key] === state.lastWidth ? prev : { ...prev, [state.key]: state.lastWidth }));
+    }
+    setDraftColumnWidth(null);
     window.removeEventListener('pointermove', handleResizeMove);
     window.removeEventListener('pointerup', handleResizeEnd);
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
-  }, [handleResizeMove]);
+  }, [handleResizeMove, persistColumnWidths]);
   const handleResizeStart = useCallback((e: React.PointerEvent, col: TaskColumn) => {
     e.preventDefault();
     e.stopPropagation();
+    const startWidth = getColumnWidth(col.key);
     resizeStateRef.current = {
       key: col.key,
       startX: e.clientX,
-      startWidth: getColumnWidth(col.key),
+      startWidth,
       min: col.minWidth,
       max: col.maxWidth,
+      lastWidth: startWidth,
     };
     window.addEventListener('pointermove', handleResizeMove);
     window.addEventListener('pointerup', handleResizeEnd);
@@ -486,13 +497,13 @@ export default function TaskListView({
     document.body.style.userSelect = 'none';
   }, [getColumnWidth, handleResizeMove, handleResizeEnd]);
   const handleResizeReset = useCallback((key: string) => {
-    setColumnWidths(prev => {
+    persistColumnWidths(prev => {
       if (!(key in prev)) return prev;
       const next = { ...prev };
       delete next[key];
       return next;
     });
-  }, []);
+  }, [persistColumnWidths]);
   useEffect(() => () => {
     window.removeEventListener('pointermove', handleResizeMove);
     window.removeEventListener('pointerup', handleResizeEnd);

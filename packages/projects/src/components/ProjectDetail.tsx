@@ -66,6 +66,11 @@ const PROJECT_KANBAN_ZOOM_LEVEL_SETTING = 'project_kanban_zoom_level';
 const PROJECT_HEADER_PINNED_SETTING = 'project_header_pinned';
 const PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING = 'project_kanban_sticky_status_names';
 const PROJECT_LIST_DENSITY_LEVEL_SETTING = 'project_list_density_level';
+const PROJECT_LIST_COLUMN_WIDTHS_SETTING = 'project_list_column_widths';
+// Legacy localStorage key previously used by TaskListView; reused for one-time
+// hydration so existing per-project widths survive the move to server prefs.
+const projectListColumnWidthsLegacyKey = (projectId: string) =>
+  `tasklistview-column-sizing:${projectId}`;
 
 // Row density (zoom) presets for the list view, mirroring the tickets table.
 // Indexed by level/10 (0..10); each scales row vertical padding + font size,
@@ -206,6 +211,9 @@ export default function ProjectDetail({
 
   // Batch-load all user preferences in a single server action (instead of 5 separate calls)
   type ProjectViewMode = 'kanban' | 'list';
+  // Column widths are scoped per project (each project can show different
+  // columns), so the preference key includes the project id.
+  const columnWidthsPrefKey = `${PROJECT_LIST_COLUMN_WIDTHS_SETTING}:${project.project_id}`;
   const prefs = useUserPreferencesBatch([
     { key: PROJECT_VIEW_MODE_SETTING, defaultValue: 'kanban' as ProjectViewMode, debounceMs: 300 },
     { key: PROJECT_PHASES_PANEL_VISIBLE_SETTING, defaultValue: true, debounceMs: 300 },
@@ -213,6 +221,12 @@ export default function ProjectDetail({
     { key: PROJECT_HEADER_PINNED_SETTING, defaultValue: false, debounceMs: 300 },
     { key: PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING, defaultValue: false, debounceMs: 300 },
     { key: PROJECT_LIST_DENSITY_LEVEL_SETTING, defaultValue: PROJECT_LIST_DENSITY_DEFAULT, debounceMs: 300 },
+    {
+      key: columnWidthsPrefKey,
+      defaultValue: {} as Record<string, number>,
+      localStorageKey: projectListColumnWidthsLegacyKey(project.project_id),
+      debounceMs: 500,
+    },
   ]);
   const { value: viewMode, setValue: setViewMode, isLoading: isViewModeLoading } = prefs[PROJECT_VIEW_MODE_SETTING];
   const { value: isPhasesPanelVisible, setValue: setIsPhasesPanelVisible } = prefs[PROJECT_PHASES_PANEL_VISIBLE_SETTING];
@@ -220,6 +234,7 @@ export default function ProjectDetail({
   const { value: isHeaderPinned, setValue: setIsHeaderPinned } = prefs[PROJECT_HEADER_PINNED_SETTING];
   const { value: showStickyStatusNames, setValue: setShowStickyStatusNames } = prefs[PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING];
   const { value: listDensityLevel, setValue: setListDensityLevel } = prefs[PROJECT_LIST_DENSITY_LEVEL_SETTING];
+  const { value: listColumnWidths, setValue: setListColumnWidths } = prefs[columnWidthsPrefKey];
   const listDensity = useMemo(() => {
     const index = Math.min(
       PROJECT_LIST_DENSITY_PRESETS.length - 1,
@@ -2352,8 +2367,10 @@ export default function ProjectDetail({
       });
 
       if (updatedTask) {
-        const checklistItems = await getTaskChecklistItems(taskId);
-        const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
+        // Inline list edits (status, priority, due date, hours, etc.) never
+        // touch checklist items, so reuse the ones we already have instead of
+        // refetching them on every cell edit.
+        const taskWithChecklist = { ...updatedTask, checklist_items: task.checklist_items ?? [] };
         setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
         setAllProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
       }
@@ -3378,6 +3395,8 @@ export default function ProjectDetail({
           tasks={allProjectTasks}
           statuses={projectStatuses}
           statusesByPhase={statusesByPhase}
+          columnWidths={listColumnWidths}
+          onColumnWidthsChange={setListColumnWidths}
           densityFontPx={listDensity.fontPx}
           densityCellPadding={listDensity.cellPadding}
           densityScale={listDensity.scale}
