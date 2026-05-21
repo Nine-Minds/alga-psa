@@ -5106,6 +5106,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   );
   const isControlPanelMode = mode === 'control-panel';
   const isEditorDesignerMode = mode === 'editor-designer';
+  const isEditorListMode = mode === 'editor-list';
 
   const controlPanelTabs = [
     { id: 'schedules', label: t('designer.controlPanel.tabs.schedules', { defaultValue: 'Schedules' }), content: schedulesContent },
@@ -5320,9 +5321,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
               )}
               </div>
             </div>
-          ) : (
+          ) : isEditorListMode ? (
             workflowStepQuotaCard
-          )}
+          ) : null}
         </div>
       </div>
 
