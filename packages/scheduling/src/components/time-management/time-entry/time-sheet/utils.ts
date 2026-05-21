@@ -150,3 +150,28 @@ function formatTime24(date: Date): string {
     const minutes = date.getMinutes().toString().padStart(2, '0');
     return `${hours}:${minutes}`;
 }
+
+type TimeEntryDateSource = {
+  start_time: string;
+  work_date?: string | Date | null;
+};
+
+export function getTimeEntryWorkDate(entry: TimeEntryDateSource): string {
+  const workDateValue = entry.work_date;
+  if (typeof workDateValue === 'string') {
+    const trimmedValue = workDateValue.trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmedValue)) {
+      return trimmedValue;
+    }
+  }
+
+  if (workDateValue instanceof Date && !Number.isNaN(workDateValue.getTime())) {
+    return formatISO(workDateValue, { representation: 'date' });
+  }
+
+  return formatISO(parseISO(entry.start_time), { representation: 'date' });
+}
+
+export function isTimeEntryOnWorkDate(entry: TimeEntryDateSource, dateKey: string): boolean {
+  return getTimeEntryWorkDate(entry) === dateKey;
+}

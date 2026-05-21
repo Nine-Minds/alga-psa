@@ -77,3 +77,36 @@
 - Validation blocker/gotcha:
   - Vitest execution failed in this environment due to dependency resolution (`Cannot find package 'dotenv'` from generated Vitest config import path) and engine skew (`node v25.5.0` vs repo engine `>=20 <25`).
   - Tests were added and are logically scoped, but runtime verification is pending a compatible local Node/dependency environment.
+
+## 2026-05-21 Implementation Log (Work-Date UI Canonicalization)
+
+- Completed `F009`: added shared helper for canonical entry date resolution.
+  - File: `packages/scheduling/src/components/time-management/time-entry/time-sheet/utils.ts`
+  - Added:
+    - `getTimeEntryWorkDate(entry)` → prefers `work_date`, falls back to `start_time` date.
+    - `isTimeEntryOnWorkDate(entry, dateKey)` → date-key predicate used by grouping/filtering logic.
+
+- Completed `F004` + `F005`: switched time sheet grid/list grouping/filtering from `start_time` day matching to shared work-date helper.
+  - Files:
+    - `packages/scheduling/src/components/time-management/time-entry/time-sheet/TimeSheetTable.tsx`
+    - `packages/scheduling/src/components/time-management/time-entry/time-sheet/TimeSheetListView.tsx`
+  - Rationale: boundary entries now render/group under `work_date` while preserving legacy fallback.
+
+- Completed `F007`: quick-add continuation now locates same-day existing entries by resolved work-date.
+  - File: `packages/scheduling/src/components/time-management/time-entry/time-sheet/TimeSheet.tsx`
+
+- Completed `F006` + `F008`: approval views and daily summary breakdown now use resolved work-date.
+  - File: `packages/scheduling/src/components/time-management/approvals/TimeSheetApproval.tsx`
+
+- Completed `F010`: PRD already documents deferred read-only support/audit tool; marked implemented in checklist without code changes.
+
+- Completed tests:
+  - `T003` + `T008` helper behavior tests:
+    - File: `packages/scheduling/src/components/time-management/time-entry/time-sheet/utils.test.ts`
+  - `T004` + `T005` + `T006` + `T007` wiring regressions:
+    - File: `packages/scheduling/src/components/time-management/time-entry/time-sheet/workDateWiring.test.ts`
+  - Assertions verify grid/list/approval/quick-add paths use the shared helper.
+
+- Additional command:
+  - `npx vitest run packages/scheduling/src/components/time-management/time-entry/time-sheet/utils.test.ts`
+  - Same environment blocker persists (`Cannot find package 'dotenv'` from vitest config import path).

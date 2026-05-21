@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { clampDurationToSameDay, getSameDayDurationLimit, validateTimeEntry } from './utils';
+import {
+  clampDurationToSameDay,
+  getSameDayDurationLimit,
+  getTimeEntryWorkDate,
+  isTimeEntryOnWorkDate,
+  validateTimeEntry,
+} from './utils';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -55,5 +61,26 @@ describe('time entry same-day duration helpers', () => {
       billable_duration: 90,
     } as any)).toBe(false);
     expect(alertMock).toHaveBeenCalledWith('Time entry must end on the same day');
+  });
+
+  it('T003: prefers work_date for timezone-boundary display grouping', () => {
+    const entry = {
+      work_date: '2026-03-31',
+      start_time: '2026-04-01T00:00:00.000Z',
+    } as any;
+
+    expect(getTimeEntryWorkDate(entry)).toBe('2026-03-31');
+    expect(isTimeEntryOnWorkDate(entry, '2026-03-31')).toBe(true);
+    expect(isTimeEntryOnWorkDate(entry, '2026-04-01')).toBe(false);
+  });
+
+  it('T008: falls back to start_time date when work_date is missing', () => {
+    const entry = {
+      work_date: null,
+      start_time: '2026-04-01T00:00:00.000Z',
+    } as any;
+
+    expect(getTimeEntryWorkDate(entry)).toBe('2026-04-01');
+    expect(isTimeEntryOnWorkDate(entry, '2026-04-01')).toBe(true);
   });
 });

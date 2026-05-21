@@ -14,37 +14,37 @@
   {
     "id": "T003",
     "description": "Timezone boundary helper test: an entry with work_date 2026-03-31 and start_time 2026-04-01T00:00:00Z resolves to display date 2026-03-31.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F005", "F006", "F009"]
   },
   {
     "id": "T004",
     "description": "Time sheet grid test: a UTC/local boundary entry appears in the grid cell for work_date rather than the UTC start_time date.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F009"]
   },
   {
     "id": "T005",
     "description": "Time sheet list test: list view includes and groups boundary entries by work_date within the selected time period.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F005", "F009"]
   },
   {
     "id": "T006",
     "description": "Time approval display test: approval grouping/display uses work_date where present.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F006", "F009"]
   },
   {
     "id": "T007",
     "description": "Quick-add continuation test: adding time on a selected date finds existing entries whose work_date matches that date even when start_time is a UTC boundary timestamp.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F007", "F009"]
   },
   {
     "id": "T008",
     "description": "Legacy fallback test: entries without work_date still group by start_time so older/incomplete records remain visible.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": ["F004", "F005", "F006", "F009"]
   }
 ]

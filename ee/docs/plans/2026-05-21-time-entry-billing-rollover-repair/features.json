@@ -20,43 +20,43 @@
   {
     "id": "F004",
     "description": "Update time sheet grid grouping to use entry.work_date when present, falling back to start_time only for legacy records without work_date.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {
     "id": "F005",
     "description": "Update time sheet list filtering and grouping to use entry.work_date when present, falling back to start_time only for legacy records without work_date.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {
     "id": "F006",
     "description": "Update time approval views to display/group entries by work_date when present.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {
     "id": "F007",
     "description": "Update quick-add continuation logic to find existing entries by selected work_date rather than only by parsed start_time day.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {
     "id": "F008",
     "description": "Update time period summaries to consistently use work_date where available.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Functional Requirements"]
   },
   {
     "id": "F009",
     "description": "Add or reuse a shared helper for resolving a time entry's display/grouping date from work_date with start_time fallback.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Data / API Notes"]
   },
   {
     "id": "F010",
     "description": "Document the deferred read-only support/audit tool in the PRD without implementing it in this scope.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["Future Support/Audit Tool — Documented but Deferred"]
   }
 ]
