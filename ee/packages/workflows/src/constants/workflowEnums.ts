@@ -92,12 +92,13 @@ export const WORKFLOW_AI_SCHEMA_TYPE_LABEL_DEFAULTS: Record<WorkflowAiSchemaType
   array: 'Array',
 };
 
-export const WORKFLOW_INPUT_SOURCE_MODE_VALUES = ['reference', 'fixed'] as const;
+export const WORKFLOW_INPUT_SOURCE_MODE_VALUES = ['reference', 'fixed', 'expression'] as const;
 export type WorkflowInputSourceMode = (typeof WORKFLOW_INPUT_SOURCE_MODE_VALUES)[number];
 
 export const WORKFLOW_INPUT_SOURCE_MODE_LABEL_DEFAULTS: Record<WorkflowInputSourceMode, string> = {
   reference: 'Reference',
   fixed: 'Fixed value',
+  expression: 'Expression',
 };
 
 export const WORKFLOW_REFERENCE_SECTION_VALUES = [

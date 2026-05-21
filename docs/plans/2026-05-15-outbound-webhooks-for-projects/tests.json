@@ -1,0 +1,182 @@
+[
+  {
+    "id": "T001",
+    "description": "Phase 0 precondition: `npx vitest run src/lib/webhooks/__tests__/payloadFields.test.ts` passes (schema validation + projection retains always-included keys).",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T002",
+    "description": "Phase 0 precondition: webhookDelivery.entityIdFilter.test.ts + webhookDelivery.tenantIsolation.test.ts pass against the real (un-stubbed) projection passthrough.",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T003",
+    "description": "Phase 0 precondition: workspace type-check resolves all webhook import paths (no dangling refs to deleted webhookPayloadFields.ts / removed projectTicketWebhookPayload).",
+    "implemented": true,
+    "featureIds": ["F001"]
+  },
+  {
+    "id": "T004",
+    "description": "applyPayloadAllowlist returns payload unchanged when allowedFields is null (default passthrough preserved post-rename).",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T005",
+    "description": "applyPayloadAllowlist retains entity always-included keys (ticket_id for ticket) when projecting a subset.",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T006",
+    "description": "applyPayloadAllowlist with extraAlwaysIncluded:['task_id'] retains task_id even when not in the subscriber allowlist; without it task_id is stripped.",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T007",
+    "description": "No remaining references to the old name `projectWebhookPayload`; all callers and integration-test mocks use applyPayloadAllowlist; existing webhook tests stay green.",
+    "implemented": true,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T008",
+    "description": "PROJECT_TASK_UPDATED is accepted by the event-bus schema; valid payload parses, missing tenantId/projectId/projectTaskId/phaseId rejected.",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T009",
+    "description": "updateTaskWithChecklist emits PROJECT_TASK_UPDATED with a correct `changes` diff when >=1 tracked field changes, and does NOT emit when nothing tracked changed.",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T010",
+    "description": "Regression: updateTaskStatus / moveTaskToPhase / reorderTask / reorderTasksInStatus / updateTaskDependency do NOT emit PROJECT_TASK_UPDATED (scope guard).",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T011",
+    "description": "All 10 project/task public events are present in SUPPORTED_WEBHOOK_EVENTS and accepted by the create-webhook input schema; listWebhookEvents() surfaces them.",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T012",
+    "description": "Public webhook enum still accepts 'project.completed' and 'project.task.completed' (deprecated aliases) — existing webhook_subscriptions rows referencing them validate without error.",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T013",
+    "description": "payloadFieldsByEntitySchema accepts a valid 'project' field subset and rejects unknown project fields and unknown entities; OpenAPI per-entity schema includes the 'project' enum.",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T014",
+    "description": "ALWAYS_INCLUDED_KEYS_BY_ENTITY includes project:['project_id'] and still type-checks under the strict `satisfies Record<WebhookPayloadEntity, readonly string[]>` (compile-time guard, no missing entity key).",
+    "implemented": true,
+    "featureIds": ["F004"]
+  },
+  {
+    "id": "T015",
+    "description": "buildProjectWebhookPayload builds correct scalar payload + url (${NEXTAUTH_URL}/msp/projects/:id); contains NO `tags` key.",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T016",
+    "description": "buildProjectWebhookPayload resolves previous_status_id/previous_status_name on PROJECT_STATUS_CHANGED and populates `changes` on PROJECT_UPDATED.",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T017",
+    "description": "Project payload cache: second build within TTL is a cache hit; LRU eviction past 256 entries.",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T018",
+    "description": "buildProjectTaskWebhookPayload includes project context + task fields and resolves `tags` via TagMapping.getByEntity(..., 'project_task').",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T019",
+    "description": "fetchProjectPhasesForWebhook returns phases ordered by order_key; fetchProjectTaskCountsForWebhook returns {total,completed,overdue,by_status}.",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T020",
+    "description": "webhookProjectEventMap: PROJECT_INTERNAL_TO_PUBLIC maps every internal event to its public name; isProjectTaskEvent true only for task events; deprecated aliases resolve to closed/completed semantics.",
+    "implemented": true,
+    "featureIds": ["F005"]
+  },
+  {
+    "id": "T021",
+    "description": "phases/task_counts only populated when in the subscriber allowlist or full payload; absent otherwise; fetched once per event regardless of subscriber count.",
+    "implemented": true,
+    "featureIds": ["F005", "F006"]
+  },
+  {
+    "id": "T022",
+    "description": "handleProjectEvent: project-level event enqueues delivery for matching subscribers, entity-id filter on projectId; tenant isolation enforced (no cross-tenant delivery).",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T023",
+    "description": "handleProjectEvent: task-level event filters on projectTaskId and projected payload always retains task_id via extraAlwaysIncluded; subscriber registered in subscribers/index.ts so events dispatch.",
+    "implemented": true,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T024",
+    "description": "Integration: create a project.created webhook with a field subset + phases -> create project -> assert signed HTTP delivery, webhook_deliveries row, and payload projected to allowlist with project_id retained.",
+    "implemented": true,
+    "featureIds": ["F006", "F007"]
+  },
+  {
+    "id": "T025",
+    "description": "Integration: project.task.created/updated delivery end-to-end with task_id retained; full webhook unit+integration suite and workspace type-check green.",
+    "implemented": true,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T026",
+    "description": "createTag/deleteTag on a project_task emits PROJECT_TASK_UPDATED with changes:{tags:{previous,new}} and correctly resolves projectId/phaseId from the task row.",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T027",
+    "description": "Parity regression: createTag/deleteTag on a ticket emits TICKET_UPDATED with changes:{tags:{previous,new}} and the existing ticket webhook delivers it as ticket.updated with a changes.tags diff.",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T028",
+    "description": "No double-fire: creating a task/ticket with initial tags via bulk createTagsForEntity does NOT emit a spurious PROJECT_TASK_UPDATED/TICKET_UPDATED alongside the *_CREATED event.",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T029",
+    "description": "No-op tag write (re-applying the same tag set, or a tag mutation that changes nothing) emits no webhook event.",
+    "implemented": true,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T030",
+    "description": "Integration: a subscriber to project.task.updated receives a tag-only delivery (changes.tags, task_id retained) when a tag is added to a task; ticket.updated subscriber receives the analogous tag-only delivery.",
+    "implemented": true,
+    "featureIds": ["F008", "F007"]
+  }
+]

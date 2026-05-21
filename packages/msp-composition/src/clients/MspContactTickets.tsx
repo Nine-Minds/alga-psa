@@ -11,9 +11,7 @@ import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicke
 import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { getTicketsForListWithCursor } from '@alga-psa/tickets/actions/optimizedTicketActions';
-import { deleteTicket } from '@alga-psa/tickets/actions/ticketActions';
 import { XCircle } from 'lucide-react';
-import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useDrawer } from "@alga-psa/ui";
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
@@ -80,9 +78,6 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
   const [currentUser, setCurrentUser] = useState<IUser | null>(null);
   const [displaySettings, setDisplaySettings] = useState<TicketingDisplaySettings | null>(null);
   const ticketTagsRef = useRef<Record<string, ITag[]>>({});
-  const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
-  const [ticketToDeleteName, setTicketToDeleteName] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
   const { openDrawer } = useDrawer();
 
@@ -177,31 +172,6 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
   useEffect(() => {
     loadTickets(undefined, true);
   }, [loadTickets]);
-
-  const handleDeleteTicket = (ticketId: string, ticketNameOrNumber: string) => {
-    setTicketToDelete(ticketId);
-    setTicketToDeleteName(ticketNameOrNumber);
-    setDeleteError(null);
-  };
-
-  const confirmDeleteTicket = async () => {
-    if (!ticketToDelete || !currentUser) return;
-
-    try {
-      await deleteTicket(ticketToDelete);
-      setTickets(prev => prev.filter(t => t.ticket_id !== ticketToDelete));
-      setTicketToDelete(null);
-      setTicketToDeleteName(null);
-      setDeleteError(null);
-    } catch (error: any) {
-      console.error('Failed to delete ticket:', error);
-      if (error.message && error.message.startsWith('VALIDATION_ERROR:')) {
-        setDeleteError(error.message.replace('VALIDATION_ERROR: ', ''));
-      } else {
-        setDeleteError('An unexpected error occurred while deleting the ticket.');
-      }
-    }
-  };
 
   const handleTicketClick = useCallback(async (ticketId: string) => {
     if (!currentUser) {
@@ -312,12 +282,11 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
       boards: initialBoards,
       displaySettings: displaySettings || undefined,
       onTicketClick: handleTicketClick,
-      onDeleteClick: handleDeleteTicket,
       ticketTagsRef,
       onTagsChange: handleTagsChange,
       showClient: true, // Show client column in contact view
       onClientClick: handleClientClick,
-    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange, handleClientClick]);
+    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleTagsChange, handleClientClick]);
 
   const handleCategorySelect = (
     selectedCategories: string[],
@@ -541,26 +510,6 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
             </>
           )}
         </div>
-
-        {/* Delete Confirmation Dialog */}
-        <ConfirmationDialog
-          id="delete-ticket-dialog"
-          isOpen={!!ticketToDelete}
-          onClose={() => {
-            setTicketToDelete(null);
-            setTicketToDeleteName(null);
-            setDeleteError(null);
-          }}
-          onConfirm={confirmDeleteTicket}
-          title="Delete Ticket"
-          message={
-            deleteError
-              ? deleteError
-              : `Are you sure you want to delete ticket "${ticketToDeleteName}"? This action cannot be undone.`
-          }
-          confirmLabel={deleteError ? undefined : "Delete"}
-          cancelLabel={deleteError ? "Close" : "Cancel"}
-        />
 
         {/* Quick Add Ticket Dialog */}
         <QuickAddTicket

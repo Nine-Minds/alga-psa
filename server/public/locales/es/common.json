@@ -1171,8 +1171,8 @@
     }
   },
   "dataTable": {
-    "columnsHidden_one": "{{count}} columna oculta por espacio limitado.",
-    "columnsHidden_other": "{{count}} columnas ocultas por espacio limitado.",
+    "columnsHidden_one": "{{count}} columna oculta por falta de espacio.",
+    "columnsHidden_other": "{{count}} columnas ocultas por falta de espacio.",
     "showAll": "Mostrar todo",
     "showingAllColumns": "Mostrando todas las columnas; desplázate horizontalmente para verlas.",
     "showLess": "Mostrar menos"

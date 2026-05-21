@@ -764,7 +764,7 @@ export const getServicesByCategory = withAuth(async (user, { tenant }, categoryI
 });
 
 // New action to get combined service types for UI selection
-export const getServiceTypesForSelection = withAuth(async (user, { tenant }): Promise<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]> => {
+export const getServiceTypesForSelection = withAuth(async (user, { tenant }): Promise<{ id: string; name: string; is_standard: boolean }[]> => {
    try {
        const { knex: db } = await createTenantKnex();
        const serviceTypes = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -892,13 +892,12 @@ export const deleteServiceType = withAuth(async (user, { tenant }, id: string): 
 
 /**
  * Create a new service type with just a name (inline creation)
- * Creates with the provided billing_method and generates next order number
+ * Generates the next order number
  */
 export const createServiceTypeInline = withAuth(async (
   user,
   { tenant },
-  name: string,
-  billing_method: 'fixed' | 'hourly' | 'usage' = 'usage'
+  name: string
 ): Promise<IServiceType> => {
   try {
     const { knex: db } = await createTenantKnex();
@@ -929,7 +928,6 @@ export const createServiceTypeInline = withAuth(async (
         .insert({
           tenant,
           name: normalizedName,
-          billing_method,
           description: null,
           is_active: true,
           order_number: nextOrder,

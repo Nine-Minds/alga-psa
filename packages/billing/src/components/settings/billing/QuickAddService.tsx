@@ -22,7 +22,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client'
 
 interface QuickAddServiceProps {
   onServiceAdded: () => void;
-  allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage' }[]; // Updated billing methods
+  allServiceTypes: { id: string; name: string }[];
   onServiceTypesChange: () => void; // Add callback to refresh service types
   // Optional controlled mode props for quick create integration
   isOpen?: boolean;
@@ -447,10 +447,7 @@ if (createdService?.service_id) {
                 }}
                 serviceTypes={allServiceTypes}
                 onCreateType={async (name) => {
-                  await createServiceTypeInline(
-                    name,
-                    (serviceData.billing_method || 'fixed') as 'fixed' | 'hourly' | 'usage'
-                  );
+                  await createServiceTypeInline(name);
                   onServiceTypesChange(); // Refresh the service types list
                 }}
                 onUpdateType={async (id, name) => {

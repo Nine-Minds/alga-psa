@@ -1171,8 +1171,8 @@
     }
   },
   "dataTable": {
-    "columnsHidden_one": "{{count}} colonne masquée faute d'espace.",
-    "columnsHidden_other": "{{count}} colonnes masquées faute d'espace.",
+    "columnsHidden_one": "{{count}} colonne masquée faute de place.",
+    "columnsHidden_other": "{{count}} colonnes masquées faute de place.",
     "showAll": "Tout afficher",
     "showingAllColumns": "Toutes les colonnes sont affichées ; faites défiler horizontalement pour les voir.",
     "showLess": "Afficher moins"

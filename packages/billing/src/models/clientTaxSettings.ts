@@ -98,11 +98,9 @@ const ClientTaxSettings = {
       if (!tenant) {
         throw new Error('Tenant context is required for tax components lookup');
       }
+      // composite_tax_mappings has no tenant column; tax_components.tenant gates isolation.
       const components = await db<ITaxComponent>('tax_components')
-        .join('composite_tax_mappings', function() {
-          this.on('tax_components.tax_component_id', '=', 'composite_tax_mappings.tax_component_id')
-            .andOn('tax_components.tenant', '=', 'composite_tax_mappings.tenant');
-        })
+        .join('composite_tax_mappings', 'tax_components.tax_component_id', 'composite_tax_mappings.tax_component_id')
         .where({
           'composite_tax_mappings.composite_tax_id': tax_rate_id,
           'tax_components.tenant': tenant,
@@ -167,7 +165,6 @@ const ClientTaxSettings = {
         composite_tax_id: createdTaxRate.tax_rate_id,
         tax_component_id: component.tax_component_id,
         sequence: index + 1,
-        tenant: tenant!
       }));
 
       await trx<ICompositeTaxMapping>('composite_tax_mappings').insert(compositeMappings);
@@ -199,17 +196,13 @@ const ClientTaxSettings = {
         .returning('*');
 
       await trx<ICompositeTaxMapping>('composite_tax_mappings')
-        .where({
-          composite_tax_id: tax_rate_id,
-          tenant
-        })
+        .where({ composite_tax_id: tax_rate_id })
         .del();
 
       const compositeMappings = components.map((component, index): ICompositeTaxMapping => ({
         composite_tax_id: tax_rate_id,
         tax_component_id: component.tax_component_id,
         sequence: index + 1,
-        tenant: tenant!
       }));
 
       await trx<ICompositeTaxMapping>('composite_tax_mappings').insert(compositeMappings);

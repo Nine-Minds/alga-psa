@@ -2,12 +2,11 @@ import React from 'react';
 import Link from 'next/link';
 import type { ColumnDefinition, ITicketListItem, ITicketCategory, TicketResponseState, ITag, IBoard } from '@alga-psa/types';
 import { TagManager } from '@alga-psa/tags/components';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
-import { Button } from '@alga-psa/ui/components/Button';
+import type { TagSize } from '@alga-psa/ui/components/tags';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
-import { MoreVertical, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { ResponseStateBadge } from '@alga-psa/ui/components';
 import { SlaIndicator } from '@alga-psa/ui/components/sla';
@@ -94,8 +93,7 @@ type TicketListColumnKey =
   | 'due_date'
   | 'created'
   | 'created_by'
-  | 'tags'
-  | 'actions';
+  | 'tags';
 
 type TicketListSettings = {
   columnVisibility?: Partial<Record<TicketListColumnKey, boolean>>;
@@ -113,10 +111,9 @@ interface CreateTicketColumnsOptions {
   boards: IBoard[];
   displaySettings?: TicketingDisplaySettings;
   onTicketClick: (ticketId: string) => void;
-  onDeleteClick?: (ticketId: string, ticketName: string) => void;
   ticketTagsRef?: React.MutableRefObject<Record<string, ITag[]>>;
   onTagsChange?: (ticketId: string, tags: ITag[]) => void;
-  showActions?: boolean;
+  tagSize?: TagSize;
   showTags?: boolean;
   showClient?: boolean;
   onClientClick?: (clientId: string) => void;
@@ -144,7 +141,6 @@ const ALL_TICKET_LIST_COLUMN_VISIBILITY: Record<TicketListColumnKey, boolean> = 
   created: true,
   created_by: true,
   tags: true,
-  actions: true,
 };
 
 export function createTicketColumns(options: CreateTicketColumnsOptions): ColumnDefinition<ITicketListItem>[] {
@@ -153,10 +149,9 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     boards: _boards,
     displaySettings,
     onTicketClick,
-    onDeleteClick,
     ticketTagsRef,
     onTagsChange,
-    showActions = true,
+    tagSize = 'md',
     showTags = true,
     showClient = true,
     onClientClick,
@@ -184,7 +179,6 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     created: true,
     created_by: true,
     tags: true,
-    actions: true,
   });
 
   const tagsInlineUnderTitle = displaySettings?.list?.tagsInlineUnderTitle ?? true;
@@ -230,8 +224,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                   e.stopPropagation();
                   onTicketClick(record.ticket_id as string);
                 }}
-                className="text-blue-600 hover:text-blue-800 break-all whitespace-normal text-left"
-                style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
+                className="text-blue-600 hover:text-blue-800 whitespace-normal text-left"
               >
                 {value}
               </Link>
@@ -296,6 +289,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                 entityType="ticket"
                 initialTags={ticketTagsRef.current[record.ticket_id] || []}
                 onTagsChange={(tags) => onTagsChange(record.ticket_id!, tags)}
+                size={tagSize}
               />
             </div>
           )}
@@ -621,42 +615,11 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
                 entityType="ticket"
                 initialTags={ticketTagsRef.current[record.ticket_id] || []}
                 onTagsChange={(tags) => onTagsChange(record.ticket_id!, tags)}
+                size={tagSize}
               />
             </div>
           );
         },
-      }
-    });
-  }
-
-  // Actions
-  if (columnVisibility.actions && showActions && onDeleteClick) {
-    columns.push({
-      key: 'actions',
-      col: {
-        title: t('fields.actions', 'Actions'),
-        dataIndex: 'actions',
-        width: '3%',
-        sortable: false,
-        render: (_value: string, record: ITicketListItem) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button id={`ticket-actions-${record.ticket_id}`} variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-white z-50">
-              <DropdownMenuItem
-                className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 text-red-600 dark:text-red-400 flex items-center"
-                onSelect={() => onDeleteClick(record.ticket_id as string, record.title || record.ticket_number)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t('actions.delete', 'Delete')}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ),
       }
     });
   }

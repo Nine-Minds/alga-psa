@@ -48,6 +48,7 @@
       "servicePeriods": "11111",
       "usageTracking": "11111",
       "reports": "11111",
+      "serviceTypes": "11111",
       "serviceCatalog": "11111",
       "products": "11111"
     }

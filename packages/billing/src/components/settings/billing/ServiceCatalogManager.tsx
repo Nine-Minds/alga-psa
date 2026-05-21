@@ -46,7 +46,7 @@ const ServiceCatalogManager: React.FC = () => {
   // Note: Categories are currently hidden in favor of using Service Types for organization
   const [categories, setCategories] = useState<IServiceCategory[]>([]);
   // Update state type to match what getServiceTypesForSelection returns
-  const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]>([]);
+  const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; is_standard: boolean }[]>([]);
   const [editingService, setEditingService] = useState<(IService & {
     inventory_count?: number;
     seat_limit?: number;
@@ -756,10 +756,7 @@ const ServiceCatalogManager: React.FC = () => {
                 }}
                 serviceTypes={allServiceTypes}
                 onCreateType={async (name) => {
-                  await createServiceTypeInline(
-                    name,
-                    ((editingService?.billing_method as 'fixed' | 'hourly' | 'usage') ?? 'fixed')
-                  );
+                  await createServiceTypeInline(name);
                   fetchAllServiceTypes(); // Refresh the service types list
                 }}
                 onUpdateType={async (id, name) => {

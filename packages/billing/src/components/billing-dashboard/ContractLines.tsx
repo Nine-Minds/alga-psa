@@ -20,7 +20,7 @@ import { getContractLines, getContractLineById, updateContractLine, deleteContra
 import { getContractLineServices, addServiceToContractLine, updateContractLineService, removeServiceFromContractLine } from '@alga-psa/billing/actions/contractLineServiceActions';
 // Import new action and type
 import { getServiceTypesForSelection } from '@alga-psa/billing/actions';
-import { DeletionValidationResult, IContractLine, IContractLineService, IService, IServiceType } from '@alga-psa/types';
+import { DeletionValidationResult, IContractLine, IContractLineService, IService } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
@@ -56,7 +56,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
   const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   // Add state for all service types (standard + tenant-specific)
   const [allServiceTypes, setAllServiceTypes] = useState<
-    { id: string; name: string; billing_method: IServiceType['billing_method']; is_standard: boolean }[]
+    { id: string; name: string; is_standard: boolean }[]
   >([]);
   const tenant = useTenant();
 

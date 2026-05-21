@@ -177,6 +177,7 @@ export const ExpressionEditorField: React.FC<ExpressionEditorFieldProps> = ({
         disabled={disabled}
         hasError={!!error}
         ariaLabel={label}
+        idPrefix={idPrefix}
       />
 
       {/* Error message */}

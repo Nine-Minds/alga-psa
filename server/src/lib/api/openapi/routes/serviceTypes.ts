@@ -18,7 +18,6 @@ export function registerServiceTypeRoutes(
     'ServiceTypeListQuery',
     zOpenApi.object({
       search: zOpenApi.string().optional(),
-      billing_method: zOpenApi.enum(['fixed', 'hourly', 'usage']).optional(),
       is_active: zOpenApi.boolean().optional(),
       page: zOpenApi.number().int().min(1).optional(),
       limit: zOpenApi.number().int().min(1).max(100).optional(),
@@ -31,7 +30,6 @@ export function registerServiceTypeRoutes(
       id: zOpenApi.string().uuid(),
       tenant: zOpenApi.string().uuid(),
       name: zOpenApi.string(),
-      billing_method: zOpenApi.enum(['fixed', 'hourly', 'usage']),
       is_active: zOpenApi.boolean(),
       description: zOpenApi.string().nullable().optional(),
       order_number: zOpenApi.number().int(),

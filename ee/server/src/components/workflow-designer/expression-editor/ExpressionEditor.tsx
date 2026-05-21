@@ -50,6 +50,8 @@ export interface ExpressionEditorProps {
   className?: string;
   /** Accessible label */
   ariaLabel?: string;
+  /** Optional stable id prefix; the input element gets `${idPrefix}-expr`. */
+  idPrefix?: string;
   /** Called when validation errors change */
   onValidationChange?: (errors: string[]) => void;
   /** Called when editor receives focus */
@@ -135,6 +137,16 @@ const extractDropText = (dataTransfer: DataTransfer): string | null => {
 };
 
 /**
+ * When true, render a plain <textarea> instead of the Monaco editor. Monaco's
+ * input pipeline (EditContext / suggestion widget) makes it unreliable for
+ * programmatic / automated text entry, which silently corrupts stored JSONata.
+ * The textarea keeps the exact same value/onChange contract and persists
+ * normally. Syntax highlighting / inline autocomplete are traded for
+ * reliability; the "Insert field" picker still works via the imperative handle.
+ */
+const FORCE_PLAINTEXT_EXPRESSION_EDITOR = true;
+
+/**
  * Expression Editor Component
  */
 export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEditorProps>(
@@ -151,6 +163,7 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
       hasError = false,
       className = '',
       ariaLabel,
+      idPrefix,
       onValidationChange,
       onFocus,
       onBlur,
@@ -161,6 +174,7 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === 'dark';
     const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+    const plainTextAreaRef = useRef<HTMLTextAreaElement | null>(null);
     const monacoRef = useRef<typeof monaco | null>(null);
     const contextRef = useRef<ExpressionContext>(context);
     const diagnosticsProviderRef = useRef<ReturnType<typeof createDiagnosticsProvider> | null>(null);
@@ -188,9 +202,30 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
     // Expose methods via ref
     useImperativeHandle(ref, () => ({
       focus: () => {
+        if (FORCE_PLAINTEXT_EXPRESSION_EDITOR) {
+          plainTextAreaRef.current?.focus();
+          return;
+        }
         editorRef.current?.focus();
       },
       insertAtCursor: (text: string) => {
+        if (FORCE_PLAINTEXT_EXPRESSION_EDITOR) {
+          const ta = plainTextAreaRef.current;
+          const insert = normalizeInsertedText(text);
+          const current = value ?? '';
+          const start = ta?.selectionStart ?? current.length;
+          const end = ta?.selectionEnd ?? current.length;
+          const next = current.slice(0, start) + insert + current.slice(end);
+          onChange(next);
+          requestAnimationFrame(() => {
+            if (ta) {
+              const caret = start + insert.length;
+              ta.focus();
+              ta.setSelectionRange(caret, caret);
+            }
+          });
+          return;
+        }
         const editor = editorRef.current;
         if (!editor) return;
         insertTextIntoMonacoEditor(editor, normalizeInsertedText(text), {
@@ -429,6 +464,11 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
     // Editor options
     const options: monaco.editor.IStandaloneEditorConstructionOptions = useMemo(
       () => ({
+        // Use the classic hidden-textarea input pipeline instead of the
+        // browser EditContext API so the model updates from programmatic /
+        // automated input as well as IME. (experimentalEditContext: <=0.52,
+        // editContext: >=0.53 — set both for version-safety.)
+        ...({ experimentalEditContext: false, editContext: false } as Record<string, unknown>),
         // Appearance
         minimap: { enabled: false },
         scrollbar: {
@@ -459,11 +499,16 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
         fontLigatures: false,
 
         // Features
-        quickSuggestions: true,
-        suggestOnTriggerCharacters: true,
+        // Suggestions are opt-in (Ctrl+Space / the "Insert field" picker) so
+        // that typed/automated input is inserted verbatim — auto-accepting a
+        // suggestion on a commit char (e.g. ".") or Enter silently rewrites
+        // expressions like `payload.body.x`.
+        quickSuggestions: false,
+        suggestOnTriggerCharacters: false,
         fixedOverflowWidgets: true,
-        acceptSuggestionOnEnter: 'on',
-        tabCompletion: 'on',
+        acceptSuggestionOnEnter: 'off',
+        acceptSuggestionOnCommitCharacter: false,
+        tabCompletion: 'off',
         wordBasedSuggestions: 'off',
         parameterHints: { enabled: true },
         suggest: {
@@ -500,6 +545,41 @@ export const ExpressionEditor = forwardRef<ExpressionEditorHandle, ExpressionEdi
       const disabledStyle = disabled ? 'opacity-50 cursor-not-allowed bg-[rgb(var(--color-border-50))]' : 'bg-[rgb(var(--color-card))]';
       return `${base} ${focusRing} ${errorBorder} ${disabledStyle} ${className}`.trim();
     }, [isFocused, hasError, disabled, className]);
+
+    if (FORCE_PLAINTEXT_EXPRESSION_EDITOR) {
+      return (
+        <div className={`${wrapperClasses} relative`} style={{ height: computedHeight }}>
+          <textarea
+            ref={plainTextAreaRef}
+            id={idPrefix ? `${idPrefix}-expr` : undefined}
+            value={value}
+            onChange={(e) => handleChange(e.target.value)}
+            onFocus={() => { setIsFocused(true); onFocus?.(); }}
+            onBlur={() => { setIsFocused(false); onBlur?.(); }}
+            placeholder={placeholder}
+            disabled={disabled || readOnly}
+            spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
+            wrap={singleLine ? 'off' : 'soft'}
+            aria-label={ariaLabel || t('expressionEditor.ariaLabel', { defaultValue: 'Expression editor' })}
+            className="h-full w-full resize-none bg-transparent px-2 py-1 pr-12 font-mono text-[13px] leading-5 text-[rgb(var(--color-text-900))] outline-none placeholder:text-gray-400"
+            style={{ whiteSpace: singleLine ? 'pre' : 'pre-wrap' }}
+          />
+          {!disabled && !readOnly && value ? (
+            <button
+              type="button"
+              id={idPrefix ? `${idPrefix}-expr-clear` : undefined}
+              aria-label="Clear expression"
+              onClick={() => { handleChange(''); plainTextAreaRef.current?.focus(); }}
+              className="absolute right-1 top-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-gray-500 hover:bg-[rgb(var(--color-border-100))] hover:text-gray-800"
+            >
+              Clear
+            </button>
+          ) : null}
+        </div>
+      );
+    }
 
     return (
       <div className={wrapperClasses} style={{ height: computedHeight }}>

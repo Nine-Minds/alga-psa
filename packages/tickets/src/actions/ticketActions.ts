@@ -8,6 +8,7 @@ import type {
   ITicketResource,
   IUser,
   IUserWithRoles,
+  PendingTag,
   TicketResponseState,
 } from '@alga-psa/types';
 import { TICKET_ORIGINS } from '@alga-psa/types';
@@ -20,6 +21,8 @@ import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { deleteEntityWithValidation } from '@alga-psa/core';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
+import { createTagsForEntityWithTransaction, findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { assignTeamToTicket, removeTeamFromTicket } from './teamAssignmentActions';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import {
   ticketSchema,
@@ -57,7 +60,7 @@ import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransi
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility';
-import { updateTicketWithCache } from './optimizedTicketActions';
+import { updateTicketWithCache, updateTicketInTransaction } from './optimizedTicketActions';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,
@@ -1735,6 +1738,276 @@ export const moveTicketsToBoard = withAuth(async (
   }
 
   return { movedIds, failed };
+});
+
+export type BulkTicketAssignSelection =
+  | { kind: 'user'; userId: string | null }
+  | { kind: 'team'; teamId: string };
+
+export const bulkAssignTickets = withAuth(async (
+  user,
+  { tenant },
+  ticketIds: string[],
+  selection: BulkTicketAssignSelection,
+): Promise<{
+  updatedIds: string[];
+  failed: Array<{ ticketId: string; message: string }>;
+}> => {
+  const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
+
+  if (uniqueIds.length === 0) {
+    return { updatedIds: [], failed: [] };
+  }
+
+  // Authorize once up front. The team helpers and the per-ticket update each still
+  // verify permission internally, but this entry check fails fast before any mutation.
+  const { knex } = await createTenantKnex();
+  if (!(await hasPermission(user, 'ticket', 'update', knex))) {
+    throw new Error('Permission denied: Cannot update tickets');
+  }
+
+  const updatedIds: string[] = [];
+  const failed: Array<{ ticketId: string; message: string }> = [];
+
+  for (const ticketId of uniqueIds) {
+    try {
+      if (selection.kind === 'team') {
+        // Canonical team flow: sets assigned_team_id + the team lead as primary assignee and
+        // records team members as `team_member` resources, so the team badge/filter persists.
+        await assignTeamToTicket(ticketId, selection.teamId);
+      } else {
+        // Assigning to a single user clears any team assignment (and its team_member resources)
+        // first so a stale assigned_team_id / team badge isn't left behind.
+        await removeTeamFromTicket(ticketId, { mode: 'remove_all' });
+        await withTransaction(knex, (trx: Knex.Transaction) =>
+          updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { assigned_to: selection.userId }),
+        );
+      }
+      updatedIds.push(ticketId);
+    } catch (error: unknown) {
+      failed.push({
+        ticketId,
+        message: error instanceof Error ? error.message : 'Failed to assign ticket',
+      });
+    }
+  }
+
+  if (updatedIds.length > 0) {
+    revalidatePath('/msp/tickets');
+  }
+
+  return { updatedIds, failed };
+});
+
+export const bulkAddTagsToTickets = withAuth(async (
+  user,
+  { tenant },
+  ticketIds: string[],
+  tagTexts: string[],
+): Promise<{
+  updatedIds: string[];
+  failed: Array<{ ticketId: string; message: string }>;
+}> => {
+  const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
+  const normalizedTexts = Array.from(
+    new Set(tagTexts.map((t) => t.trim()).filter((t) => t.length > 0)),
+  );
+
+  if (uniqueIds.length === 0 || normalizedTexts.length === 0) {
+    return { updatedIds: [], failed: [] };
+  }
+
+  // Tag writes don't go through updateTicketWithCache, so authorize explicitly here.
+  const { knex: authKnex } = await createTenantKnex();
+  if (!(await hasPermission(user, 'ticket', 'update', authKnex))) {
+    throw new Error('Permission denied: Cannot update tickets');
+  }
+
+  const existingByTicket = new Map<string, Set<string>>();
+  try {
+    const existing = await findTagsByEntityIds(uniqueIds, 'ticket');
+    for (const tag of existing) {
+      const set = existingByTicket.get(tag.tagged_id) ?? new Set<string>();
+      set.add(tag.tag_text.toLowerCase());
+      existingByTicket.set(tag.tagged_id, set);
+    }
+  } catch (error) {
+    console.warn('[bulkAddTagsToTickets] Failed to load existing tags for dedupe:', error);
+  }
+
+  const { knex: ticketKnex } = await createTenantKnex();
+  const updatedIds: string[] = [];
+  const failed: Array<{ ticketId: string; message: string }> = [];
+
+  for (const ticketId of uniqueIds) {
+    try {
+      const alreadyOnTicket = existingByTicket.get(ticketId) ?? new Set<string>();
+      const newTexts = normalizedTexts.filter((t) => !alreadyOnTicket.has(t.toLowerCase()));
+      if (newTexts.length === 0) {
+        updatedIds.push(ticketId);
+        continue;
+      }
+      const pendingTags: PendingTag[] = newTexts.map((text) => ({
+        tag_text: text,
+        background_color: null,
+        text_color: null,
+        isNew: true,
+      }));
+      await withTransaction(ticketKnex, async (trx: Knex.Transaction) => {
+        await createTagsForEntityWithTransaction(trx, tenant, ticketId, 'ticket', pendingTags);
+      });
+      updatedIds.push(ticketId);
+    } catch (error: unknown) {
+      failed.push({
+        ticketId,
+        message: error instanceof Error ? error.message : 'Failed to add tags to ticket',
+      });
+    }
+  }
+
+  if (updatedIds.length > 0) {
+    revalidatePath('/msp/tickets');
+  }
+
+  return { updatedIds, failed };
+});
+
+export const bulkUpdateTicketDueDate = withAuth(async (
+  user,
+  { tenant },
+  ticketIds: string[],
+  dueDate: string | null,
+): Promise<{
+  updatedIds: string[];
+  failed: Array<{ ticketId: string; message: string }>;
+}> => {
+  const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
+
+  if (uniqueIds.length === 0) {
+    return { updatedIds: [], failed: [] };
+  }
+
+  // Authorize once up front instead of paying a permission lookup per ticket.
+  const { knex } = await createTenantKnex();
+  if (!(await hasPermission(user, 'ticket', 'update', knex))) {
+    throw new Error('Permission denied: Cannot update tickets');
+  }
+
+  const updatedIds: string[] = [];
+  const failed: Array<{ ticketId: string; message: string }> = [];
+
+  // Per-ticket transactions preserve partial success: one bad ticket fails alone.
+  for (const ticketId of uniqueIds) {
+    try {
+      await withTransaction(knex, (trx: Knex.Transaction) =>
+        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { due_date: dueDate } as Partial<ITicket>),
+      );
+      updatedIds.push(ticketId);
+    } catch (error: unknown) {
+      failed.push({
+        ticketId,
+        message: error instanceof Error ? error.message : 'Failed to update due date',
+      });
+    }
+  }
+
+  if (updatedIds.length > 0) {
+    revalidatePath('/msp/tickets');
+  }
+
+  return { updatedIds, failed };
+});
+
+export const bulkUpdateTicketStatus = withAuth(async (
+  user,
+  { tenant },
+  ticketIds: string[],
+  statusId: string,
+): Promise<{
+  updatedIds: string[];
+  failed: Array<{ ticketId: string; message: string }>;
+}> => {
+  const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
+
+  if (uniqueIds.length === 0) {
+    return { updatedIds: [], failed: [] };
+  }
+
+  // Authorize once up front instead of paying a permission lookup per ticket.
+  const { knex } = await createTenantKnex();
+  if (!(await hasPermission(user, 'ticket', 'update', knex))) {
+    throw new Error('Permission denied: Cannot update tickets');
+  }
+
+  const updatedIds: string[] = [];
+  const failed: Array<{ ticketId: string; message: string }> = [];
+
+  // Per-ticket transactions preserve partial success: one bad ticket fails alone.
+  for (const ticketId of uniqueIds) {
+    try {
+      await withTransaction(knex, (trx: Knex.Transaction) =>
+        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { status_id: statusId }),
+      );
+      updatedIds.push(ticketId);
+    } catch (error: unknown) {
+      failed.push({
+        ticketId,
+        message: error instanceof Error ? error.message : 'Failed to update status',
+      });
+    }
+  }
+
+  if (updatedIds.length > 0) {
+    revalidatePath('/msp/tickets');
+  }
+
+  return { updatedIds, failed };
+});
+
+export const bulkUpdateTicketPriority = withAuth(async (
+  user,
+  { tenant },
+  ticketIds: string[],
+  priorityId: string,
+): Promise<{
+  updatedIds: string[];
+  failed: Array<{ ticketId: string; message: string }>;
+}> => {
+  const uniqueIds = Array.from(new Set(ticketIds.filter((id) => !!id)));
+
+  if (uniqueIds.length === 0) {
+    return { updatedIds: [], failed: [] };
+  }
+
+  // Authorize once up front instead of paying a permission lookup per ticket.
+  const { knex } = await createTenantKnex();
+  if (!(await hasPermission(user, 'ticket', 'update', knex))) {
+    throw new Error('Permission denied: Cannot update tickets');
+  }
+
+  const updatedIds: string[] = [];
+  const failed: Array<{ ticketId: string; message: string }> = [];
+
+  // Per-ticket transactions preserve partial success: one bad ticket fails alone.
+  for (const ticketId of uniqueIds) {
+    try {
+      await withTransaction(knex, (trx: Knex.Transaction) =>
+        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { priority_id: priorityId }),
+      );
+      updatedIds.push(ticketId);
+    } catch (error: unknown) {
+      failed.push({
+        ticketId,
+        message: error instanceof Error ? error.message : 'Failed to update priority',
+      });
+    }
+  }
+
+  if (updatedIds.length > 0) {
+    revalidatePath('/msp/tickets');
+  }
+
+  return { updatedIds, failed };
 });
 
 export const getScheduledHoursForTicket = withAuth(async (user, { tenant }, ticketId: string): Promise<IAgentSchedule[]> => {

@@ -18,6 +18,7 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { InputMapping, MappingValue, Expr } from '@alga-psa/workflows/runtime';
 import {
+  ExpressionEditorField,
   type ExpressionContext,
   type JsonSchema
 } from '../expression-editor';
@@ -283,7 +284,7 @@ export interface InputMappingEditorProps {
 /**
  * Value type for a mapping entry
  */
-type ValueType = 'reference' | 'fixed' | 'legacy';
+type ValueType = 'reference' | 'fixed' | 'expression' | 'legacy';
 
 /**
  * Determine the type of a MappingValue
@@ -293,7 +294,7 @@ function getMappingValueType(value: MappingValue | undefined): ValueType {
   if (typeof value === 'object' && value !== null) {
     if ('$secret' in value) return 'legacy';
     if ('$expr' in value) {
-      return isWorkflowActionInputLegacyValue(value) ? 'legacy' : 'reference';
+      return isWorkflowActionInputLegacyValue(value) ? 'expression' : 'reference';
     }
   }
   return 'fixed';
@@ -377,7 +378,18 @@ const MappingFieldEditor: React.FC<{
   const [preservedReferenceValue, setPreservedReferenceValue] = useState<MappingValue | undefined>(() =>
     deriveWorkflowActionInputSourceMode(value).mode === 'reference' ? value : undefined
   );
+  const [preservedExpressionValue, setPreservedExpressionValue] = useState<MappingValue | undefined>(() =>
+    deriveWorkflowActionInputSourceMode(value).mode === 'expression' ? value : undefined
+  );
+  const [manualMode, setManualMode] = useState<WorkflowActionInputSourceModeValue | null>(null);
   const valueType = useMemo(() => getMappingValueType(value), [value]);
+  // An empty `{ $expr: '' }` derives as 'reference', so an explicit user choice of
+  // Expression/Reference must win until the value is unambiguous (literal/secret).
+  const effectiveValueType: ValueType = useMemo(() => {
+    if (valueType === 'legacy') return 'legacy';
+    const derived = deriveWorkflowActionInputSourceMode(value).mode;
+    return (manualMode ?? derived) as ValueType;
+  }, [valueType, value, manualMode]);
 
   const resolvedFieldPath = fieldPath ?? field.name;
   const idPrefix = `mapping-${stepId}-${resolvedFieldPath}`;
@@ -413,12 +425,15 @@ const MappingFieldEditor: React.FC<{
       {
         preservedFixedValue,
         preservedReferenceValue,
+        preservedExpressionValue,
       }
     );
     setPreservedFixedValue(transition.preservedFixedValue);
     setPreservedReferenceValue(transition.preservedReferenceValue);
+    setPreservedExpressionValue(transition.preservedExpressionValue);
+    setManualMode(nextMode);
     onChange(transition.nextValue);
-  }, [field, onChange, preservedFixedValue, preservedReferenceValue, value, valueType]);
+  }, [field, onChange, preservedFixedValue, preservedReferenceValue, preservedExpressionValue, value, valueType]);
 
   const handleLiteralChange = useCallback((literalValue: unknown) => {
     onChange(literalValue as MappingValue);
@@ -478,7 +493,7 @@ const MappingFieldEditor: React.FC<{
   }, [valueType, value, sourceTypeMap, field.type]);
 
   const [showBrowseSources, setShowBrowseSources] = useState(false);
-  const currentSourceMode = valueType === 'legacy' ? deriveWorkflowActionInputSourceMode(value).mode : valueType;
+  const currentSourceMode = effectiveValueType === 'legacy' ? deriveWorkflowActionInputSourceMode(value).mode : effectiveValueType;
   const selectedReferencePath = currentSourceMode === 'reference' ? extractPrimaryPath(getDisplayValue(value)) : null;
   const referenceSourceModel = useMemo(
     () => buildReferenceSourceModel(referenceBrowseContext, fieldOptions, expressionContext?.payloadSchema),
@@ -570,8 +585,9 @@ const MappingFieldEditor: React.FC<{
               value={value}
               onModeChange={handleSourceModeChange}
               disabled={disabled}
+              mode={effectiveValueType !== 'legacy' ? effectiveValueType : undefined}
             />
-            {compatibilityBadge && valueType === 'reference' && (
+            {compatibilityBadge && effectiveValueType === 'reference' && (
               <Badge
                 className={`text-[10px] ${compatibilityBadge.classes.bg} ${compatibilityBadge.classes.text} ${compatibilityBadge.classes.border}`}
                 title={`${compatibilityBadge.label}: ${compatibilityBadge.sourceType ?? 'unknown'} → ${compatibilityBadge.targetType}`}
@@ -580,7 +596,7 @@ const MappingFieldEditor: React.FC<{
               </Badge>
             )}
           </div>
-          {valueType === 'reference' && (
+          {effectiveValueType === 'reference' && (
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
                 <Button
@@ -632,7 +648,7 @@ const MappingFieldEditor: React.FC<{
             </div>
           )}
 
-          {valueType === 'legacy' && (
+          {effectiveValueType === 'legacy' && (
             <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
               <div className="flex items-start gap-2 text-sm text-amber-900">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -675,7 +691,33 @@ const MappingFieldEditor: React.FC<{
             </div>
           )}
 
-          {valueType === 'fixed' && (
+          {effectiveValueType === 'expression' && (
+            <div className="space-y-2">
+              <ExpressionEditorField
+                idPrefix={idPrefix}
+                value={getDisplayValue(value)}
+                onChange={(expr) => onChange({ $expr: expr })}
+                fieldOptions={fieldOptions}
+                dataContext={{
+                  payloadSchema: expressionContext?.payloadSchema ?? null,
+                  varsSchema: expressionContext?.varsSchema ?? null,
+                  inCatchBlock: expressionContext?.inCatchBlock,
+                  forEachItemVar: expressionContext?.forEachItemVar,
+                  forEachItemSchema: expressionContext?.forEachItemSchema ?? null,
+                  forEachIndexVar: expressionContext?.forEachIndexVar,
+                }}
+                singleLine={false}
+                height={96}
+                showFieldPicker
+                placeholder={t('inputMappingEditor.expression.placeholder', {
+                  defaultValue: 'e.g. payload.body.task_name',
+                })}
+                disabled={disabled}
+              />
+            </div>
+          )}
+
+          {effectiveValueType === 'fixed' && (
             <LiteralValueEditor
               value={value as MappingValue}
               onChange={handleLiteralChange}

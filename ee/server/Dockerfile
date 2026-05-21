@@ -2,7 +2,9 @@
 # Designed for Argo workflows and CI systems that build separately
 # Expects .next, dist, shared/dist to exist locally with EE features included
 
-FROM node:alpine
+# Pin to the production-known-good Node runtime. node:alpine floated to Node 26.2.0
+# and broke bundled Vault provider initialization in the blue deployment.
+FROM node:26.1.0-alpine
 RUN apk add --no-cache \
     bash \
     postgresql-client \

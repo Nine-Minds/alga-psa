@@ -2,13 +2,17 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ include "sebastian.fullname" . }}-bootstrap-r{{ .Release.Revision }}
+  name: {{ include "sebastian.fullname" . }}-bootstrap
   namespace: {{ include "sebastian.namespace" . }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
 spec:
   ttlSecondsAfterFinished: 300
   template:
     metadata:
-      name: {{ include "sebastian.fullname" . }}-bootstrap-r{{ .Release.Revision }}
+      name: {{ include "sebastian.fullname" . }}-bootstrap
     spec:
       {{- if .Values.setup.image.is_private }}
       imagePullSecrets:
@@ -213,6 +217,12 @@ spec:
               value: {{ .Values.setup.applianceBootstrap.waitTimeoutSeconds | default 300 | quote }}
             - name: BOOTSTRAP_WAIT_RETRY_SECONDS
               value: {{ .Values.setup.applianceBootstrap.retryIntervalSeconds | default 2 | quote }}
+            - name: BOOTSTRAP_LOCK_TIMEOUT_SECONDS
+              value: {{ .Values.setup.applianceBootstrap.lockTimeoutSeconds | default 1800 | quote }}
+            - name: BOOTSTRAP_LOCK_STALE_SECONDS
+              value: {{ .Values.setup.applianceBootstrap.lockStaleSeconds | default 120 | quote }}
+            - name: BOOTSTRAP_LOCK_HEARTBEAT_SECONDS
+              value: {{ .Values.setup.applianceBootstrap.lockHeartbeatSeconds | default 10 | quote }}
             {{- if .Values.setup.applianceBootstrap.enabled }}
             - name: SEEDS_DIR
               value: "/app/ee/server/seeds/onboarding"
@@ -388,5 +398,5 @@ spec:
             name: {{ include "sebastian.fullname" . }}-appliance-bootstrap
             defaultMode: 0755
       {{- end }}
-  backoffLimit: 2
+  backoffLimit: 0
 {{- end }}

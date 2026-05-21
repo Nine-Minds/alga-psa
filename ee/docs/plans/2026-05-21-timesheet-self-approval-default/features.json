@@ -1,0 +1,27 @@
+[
+  {
+    "id": "F001",
+    "description": "Remove the unconditional built-in timesheet self-approval denial from the server-action authorization flow.",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Retain ABAC bundle-provider enforcement of the `not_self_approver` constraint for configured authorization bundles.",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Update workflow time approval to allow self-approval by default while directly checking assigned active bundle rules for `not_self_approver`.",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Preserve existing approve-other-users authorization semantics based on approve permission plus read_all or manager relationship.",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Remove the timesheet-specific built-in self-approval denial from the authorization bundle simulator while leaving billing behavior unchanged.",
+    "implemented": true
+  }
+]
