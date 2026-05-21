@@ -2558,7 +2558,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     loadDefinitions();
     loadRegistries();
     loadRunSummary();
-    if (mode === 'control-panel' || mode === 'editor-designer') {
+    if (mode === 'control-panel' || mode === 'editor-designer' || mode === 'editor-list') {
       loadWorkflowStepQuotaSummary();
     }
     loadEventCatalogOptions();
@@ -5248,7 +5248,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           </div>
           {isControlPanelMode ? (
             workflowStepQuotaCard
-          ) : isEditorDesignerMode && (
+          ) : isEditorDesignerMode ? (
             <div className="flex flex-col items-end gap-3">
               {workflowStepQuotaCard}
               <div className="flex items-center gap-2">
@@ -5320,6 +5320,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
               )}
               </div>
             </div>
+          ) : (
+            workflowStepQuotaCard
           )}
         </div>
       </div>
