@@ -103,6 +103,8 @@
       "created": "Gemaakt",
       "projectManager": "Projectmanager",
       "tags": "Labels",
+      "priority": "Prioriteit",
+      "taskType": "Type",
       "actions": "Acties"
     },
     "unknownUser": "Onbekend"

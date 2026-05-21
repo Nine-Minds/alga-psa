@@ -1169,5 +1169,12 @@
         "warning": "Los registros archivados se ocultan en las vistas predeterminadas."
       }
     }
+  },
+  "dataTable": {
+    "columnsHidden_one": "{{count}} columna oculta por espacio limitado.",
+    "columnsHidden_other": "{{count}} columnas ocultas por espacio limitado.",
+    "showAll": "Mostrar todo",
+    "showingAllColumns": "Mostrando todas las columnas; desplázate horizontalmente para verlas.",
+    "showLess": "Mostrar menos"
   }
 }

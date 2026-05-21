@@ -1169,5 +1169,12 @@
         "warning": "Les enregistrements archivés sont masqués dans les vues par défaut."
       }
     }
+  },
+  "dataTable": {
+    "columnsHidden_one": "{{count}} colonne masquée faute d'espace.",
+    "columnsHidden_other": "{{count}} colonnes masquées faute d'espace.",
+    "showAll": "Tout afficher",
+    "showingAllColumns": "Toutes les colonnes sont affichées ; faites défiler horizontalement pour les voir.",
+    "showLess": "Afficher moins"
   }
 }
