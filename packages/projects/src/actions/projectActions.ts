@@ -1485,13 +1485,25 @@ async function resolvePhaseStatusesInternal(
         return [];
     }
 
-    // Batch-fetch all standard and custom statuses in 2 queries instead of 1 per mapping
-    const standardIds = statusMappings
-        .filter(m => m.is_standard && m.standard_status_id)
-        .map(m => m.standard_status_id!);
-    const customIds = statusMappings
-        .filter(m => !m.is_standard && m.status_id)
-        .map(m => m.status_id!);
+    const { standardMap, customMap } = await fetchStatusesForMappings(trx, tenant, statusMappings);
+    return mapStatusMappingsToStatuses(statusMappings, standardMap, customMap);
+}
+
+// Batch-fetch the standard and custom status rows referenced by a set of
+// mappings in 2 queries (one per status table) instead of 1 per mapping.
+async function fetchStatusesForMappings(
+    trx: Knex.Transaction,
+    tenant: string,
+    mappings: IProjectStatusMapping[]
+): Promise<{ standardMap: Map<string, IStandardStatus>; customMap: Map<string, IStatus> }> {
+    // De-dupe ids: when multiple phases fall back to the same default mappings
+    // the same status can appear many times across the merged mapping list.
+    const standardIds = [...new Set(
+        mappings.filter(m => m.is_standard && m.standard_status_id).map(m => m.standard_status_id!)
+    )];
+    const customIds = [...new Set(
+        mappings.filter(m => !m.is_standard && m.status_id).map(m => m.status_id!)
+    )];
 
     const [standardStatusRows, customStatusRows] = await Promise.all([
         standardIds.length > 0
@@ -1502,9 +1514,19 @@ async function resolvePhaseStatusesInternal(
             : []
     ]);
 
-    const standardMap = new Map((standardStatusRows as IStandardStatus[]).map(s => [s.standard_status_id, s]));
-    const customMap = new Map((customStatusRows as IStatus[]).map(s => [s.status_id, s]));
+    return {
+        standardMap: new Map((standardStatusRows as IStandardStatus[]).map(s => [s.standard_status_id, s])),
+        customMap: new Map((customStatusRows as IStatus[]).map(s => [s.status_id, s])),
+    };
+}
 
+// Transform status mappings into resolved ProjectStatus rows using pre-fetched
+// status lookups. Pure (no I/O), so it can resolve many phases from one batch.
+function mapStatusMappingsToStatuses(
+    statusMappings: IProjectStatusMapping[],
+    standardMap: Map<string, IStandardStatus>,
+    customMap: Map<string, IStatus>
+): ProjectStatus[] {
     const statuses = statusMappings.map((mapping: IProjectStatusMapping): ProjectStatus | null => {
         if (mapping.is_standard && mapping.standard_status_id) {
             const standardStatus = standardMap.get(mapping.standard_status_id);
@@ -1693,10 +1715,10 @@ export const getProjectStatusesByPhase = withAuth(async (
 ): Promise<Record<string, ProjectStatus[]>> => {
     const { knex } = await createTenantKnex();
 
-    // Resolve every phase's statuses inside a single transaction. Previously
-    // each phase opened its own transaction (an N+1 connection pattern) and
-    // re-ran the same project-level permission checks; here we verify access
-    // once and reuse the connection for all phases.
+    // Resolve every phase's statuses inside a single transaction, verifying
+    // access once. The actual resolution batches all phases into 3 queries
+    // total (see resolveAllPhaseStatusesInternal) rather than querying per
+    // phase, which previously also opened a transaction per phase.
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
         if (!await hasPermission(user, 'project', 'read', trx)) {
             throw new Error('Permission denied: Cannot read project');
@@ -1704,18 +1726,62 @@ export const getProjectStatusesByPhase = withAuth(async (
         await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
         const phases = await ProjectModel.getPhases(trx, tenant, projectId);
-
-        // Run sequentially: all phases share one transaction (one connection),
-        // and node-postgres cannot run concurrent queries on a single connection.
-        const entries: Array<readonly [string, ProjectStatus[]]> = [];
-        for (const phase of phases) {
-            const statuses = await resolvePhaseStatusesInternal(trx, tenant, projectId, phase.phase_id);
-            entries.push([phase.phase_id, statuses] as const);
-        }
-
-        return Object.fromEntries(entries);
+        return resolveAllPhaseStatusesInternal(trx, tenant, projectId, phases);
     });
 });
+
+// Resolve the effective statuses for every phase in 3 queries total, regardless
+// of phase count: one query for all of the project's status mappings (phase
+// rows + the phase_id IS NULL defaults), grouped by phase in memory, then two
+// queries to resolve every referenced standard/custom status. This replaces the
+// per-phase query fan-out of looping resolvePhaseStatusesInternal.
+async function resolveAllPhaseStatusesInternal(
+    trx: Knex.Transaction,
+    tenant: string,
+    projectId: string,
+    phases: IProjectPhase[]
+): Promise<Record<string, ProjectStatus[]>> {
+    const allMappings = await trx<IProjectStatusMapping>('project_status_mappings')
+        .where('project_id', projectId)
+        .andWhere('tenant', tenant)
+        .orderBy('display_order');
+
+    // Split into per-phase groups and the project-level defaults (phase_id null).
+    // Iteration order follows the display_order sort, so each group stays ordered.
+    const defaultMappings: IProjectStatusMapping[] = [];
+    const mappingsByPhase = new Map<string, IProjectStatusMapping[]>();
+    for (const mapping of allMappings) {
+        if (mapping.phase_id) {
+            const list = mappingsByPhase.get(mapping.phase_id);
+            if (list) {
+                list.push(mapping);
+            } else {
+                mappingsByPhase.set(mapping.phase_id, [mapping]);
+            }
+        } else {
+            defaultMappings.push(mapping);
+        }
+    }
+
+    // A phase uses its own mappings when present, otherwise the project defaults
+    // — mirroring ProjectModel.getEffectiveStatusMappings, but without a query.
+    const effectiveByPhase = new Map<string, IProjectStatusMapping[]>();
+    for (const phase of phases) {
+        const own = mappingsByPhase.get(phase.phase_id);
+        effectiveByPhase.set(phase.phase_id, own && own.length > 0 ? own : defaultMappings);
+    }
+
+    // Resolve every referenced status across all phases in 2 queries.
+    const effectiveMappings = Array.from(effectiveByPhase.values()).flat();
+    const { standardMap, customMap } = await fetchStatusesForMappings(trx, tenant, effectiveMappings);
+
+    const result: Record<string, ProjectStatus[]> = {};
+    for (const phase of phases) {
+        const mappings = effectiveByPhase.get(phase.phase_id) ?? [];
+        result[phase.phase_id] = mapStatusMappingsToStatuses(mappings, standardMap, customMap);
+    }
+    return result;
+}
 
 export const addStatusToProject = withAuth(async (user, { tenant }, projectId: string, statusData: Omit<IStatus, 'status_id' | 'created_at' | 'updated_at'>): Promise<IStatus | ActionPermissionError> => {
     try {
