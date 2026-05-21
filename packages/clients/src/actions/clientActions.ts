@@ -549,8 +549,8 @@ function applyClientListIndexedSearchFilter(
             AND ${clientScopePredicate}
             AND (
               (si.object_type = 'client' AND si.object_id = c.client_id::text)
-              OR (si.object_type = 'interaction' AND interaction_match.client_id = c.client_id)
-              OR (si.object_type = 'document' AND document_client_match.entity_id = c.client_id::text)
+              OR (si.object_type = 'interaction' AND interaction_match.client_id::text = c.client_id::text)
+              OR (si.object_type = 'document' AND document_client_match.entity_id::text = c.client_id::text)
             )
             AND (
               si.search_vector @@ q.tsq
@@ -586,12 +586,53 @@ function applyClientListIndexedSearchFilter(
       ]
     ).orWhere(function(this: Knex.QueryBuilder) {
       this.where('c.client_name', 'ilike', `%${rawSearch}%`)
-        .orWhere('cl.phone', 'ilike', `%${rawSearch}%`)
-        .orWhere('cl.address_line1', 'ilike', `%${rawSearch}%`)
-        .orWhere('cl.address_line2', 'ilike', `%${rawSearch}%`)
-        .orWhere('cl.city', 'ilike', `%${rawSearch}%`);
+        .orWhere('c.billing_email', 'ilike', `%${rawSearch}%`)
+        .orWhere('c.url', 'ilike', `%${rawSearch}%`)
+        .orWhere('c.notes', 'ilike', `%${rawSearch}%`)
+        .orWhereExists(function(this: Knex.QueryBuilder) {
+          this.select('*')
+            .from('client_locations as cl_search')
+            .whereRaw('cl_search.tenant = c.tenant')
+            .andWhereRaw('cl_search.client_id = c.client_id')
+            .andWhere(function(this: Knex.QueryBuilder) {
+              this.where('cl_search.phone', 'ilike', `%${rawSearch}%`)
+                .orWhere('cl_search.email', 'ilike', `%${rawSearch}%`)
+                .orWhere('cl_search.address_line1', 'ilike', `%${rawSearch}%`)
+                .orWhere('cl_search.address_line2', 'ilike', `%${rawSearch}%`)
+                .orWhere('cl_search.city', 'ilike', `%${rawSearch}%`)
+                .orWhere('cl_search.state_province', 'ilike', `%${rawSearch}%`)
+                .orWhere('cl_search.postal_code', 'ilike', `%${rawSearch}%`)
+                .orWhere('cl_search.country_name', 'ilike', `%${rawSearch}%`);
+            });
+        });
     });
   });
+}
+
+function buildDefaultClientLocationSubquery(trx: Knex.Transaction, tenant: string): Knex.QueryBuilder {
+  return trx('client_locations')
+    .select(
+      'tenant',
+      'client_id',
+      'phone',
+      'email',
+      'address_line1',
+      'address_line2',
+      'city',
+      'state_province',
+      'postal_code',
+      'country_name'
+    )
+    .select(
+      trx.raw(`
+        ROW_NUMBER() OVER (
+          PARTITION BY tenant, client_id
+          ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST, location_id
+        ) as rn
+      `)
+    )
+    .where({ tenant, is_default: true })
+    .as('cl');
 }
 
 export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: ClientPaginationParams = {}): Promise<PaginatedClientsResponse> => {
@@ -633,10 +674,10 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
           this.on('c.account_manager_id', '=', 'u.user_id')
               .andOn('c.tenant', '=', 'u.tenant');
         })
-        .leftJoin('client_locations as cl', function() {
+        .leftJoin(buildDefaultClientLocationSubquery(trx, tenant), function() {
           this.on('c.client_id', '=', 'cl.client_id')
               .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.is_default', '=', trx.raw('true'));
+              .andOn('cl.rn', '=', trx.raw('1'));
         })
         .where({ 'c.tenant': tenant });
 
@@ -671,7 +712,7 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
       }
 
       // Get total count
-      const countResult = await baseQuery.clone().count('* as count').first();
+      const countResult = await baseQuery.clone().countDistinct('c.client_id as count').first();
       const totalCount = parseInt(countResult?.count as string || '0', 10);
 
       // Get paginated clients with location data and default flag
@@ -808,10 +849,10 @@ export const getClientsWithBillingCycleRangePaginated = withAuth(async (
           this.on('c.account_manager_id', '=', 'u.user_id')
               .andOn('c.tenant', '=', 'u.tenant');
         })
-        .leftJoin('client_locations as cl', function() {
+        .leftJoin(buildDefaultClientLocationSubquery(trx, tenant), function() {
           this.on('c.client_id', '=', 'cl.client_id')
               .andOn('c.tenant', '=', 'cl.tenant')
-              .andOn('cl.is_default', '=', trx.raw('true'));
+              .andOn('cl.rn', '=', trx.raw('1'));
         })
         .where({ 'c.tenant': tenant });
 
