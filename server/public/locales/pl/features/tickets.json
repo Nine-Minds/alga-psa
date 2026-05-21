@@ -551,6 +551,7 @@
       "tags": "Tagi",
       "dueDate": "Termin",
       "statusDisabledMultiBoard": "Wybrane zgłoszenia są na różnych tablicach",
+      "statusResolvingBoards": "Sprawdzanie tablic wybranych zgłoszeń…",
       "more": "Więcej"
     },
     "assign": {

@@ -551,6 +551,7 @@
       "tags": "Tags",
       "dueDate": "Fälligkeitsdatum",
       "statusDisabledMultiBoard": "Ausgewählte Tickets liegen auf verschiedenen Boards",
+      "statusResolvingBoards": "Boards der ausgewählten Tickets werden geprüft…",
       "more": "Mehr"
     },
     "assign": {

@@ -551,6 +551,7 @@
       "tags": "Tags",
       "dueDate": "Vervaldatum",
       "statusDisabledMultiBoard": "Geselecteerde tickets staan op verschillende borden",
+      "statusResolvingBoards": "Borden van geselecteerde tickets controleren…",
       "more": "Meer"
     },
     "assign": {

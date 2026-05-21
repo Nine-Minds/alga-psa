@@ -551,6 +551,7 @@
       "tags": "Etiquetas",
       "dueDate": "Fecha de vencimiento",
       "statusDisabledMultiBoard": "Los tickets seleccionados están en tableros distintos",
+      "statusResolvingBoards": "Comprobando los tableros de los tickets seleccionados…",
       "more": "Más"
     },
     "assign": {

@@ -1756,6 +1756,54 @@ export const getAllMatchingTicketIds = withAuth(async (
 });
 
 /**
+ * Resolve the board for a specific set of ticket ids, scoped to what the caller is
+ * authorized to see. Used by the list's bulk action bar to determine whether a
+ * selection that spans off-page rows (paginate-then-select or select-all-matching)
+ * shares a single board, so the Status action can stay enabled. Tickets the caller
+ * can't access are simply omitted from the result.
+ */
+export const getTicketBoardIds = withAuth(async (
+  user,
+  { tenant },
+  ticketIds: string[]
+): Promise<Array<{ ticket_id: string; board_id: string | null }>> => {
+  const uniqueIds = Array.from(
+    new Set(ticketIds.filter((id): id is string => typeof id === 'string' && id.length > 0))
+  );
+  if (uniqueIds.length === 0) {
+    return [];
+  }
+
+  const { knex: db } = await createTenantKnex();
+
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
+    }
+
+    const authorizationContext = await createTicketAuthorizationContext(
+      trx,
+      tenant,
+      user as IUserWithRoles
+    );
+
+    const rows = await trx('tickets as t')
+      .where('t.tenant', tenant)
+      .whereIn('t.ticket_id', uniqueIds)
+      .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id');
+
+    const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, rows);
+    return authorizedRows
+      .filter((row: { ticket_id?: string | null }): row is { ticket_id: string; board_id?: string | null } =>
+        typeof row.ticket_id === 'string' && row.ticket_id.length > 0)
+      .map((row) => ({
+        ticket_id: row.ticket_id,
+        board_id: row.board_id ?? null,
+      }));
+  });
+});
+
+/**
  * Get all options needed for ticket forms and filters
  * This consolidates multiple API calls into a single request
  */
@@ -1905,14 +1953,20 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
 /**
  * Update ticket with proper caching
  */
-export const updateTicketWithCache = withAuth(async (user, { tenant }, id: string, data: Partial<ITicket>) => {
-  const {knex: db} = await createTenantKnex();
-
-  return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'update', trx)) {
-      throw new Error('Permission denied: Cannot update ticket');
-    }
-
+/**
+ * Core ticket-update logic, executed inside a caller-provided transaction.
+ *
+ * Intentionally does NOT check permissions — callers must authorize first. The public
+ * `updateTicketWithCache` wrapper performs the `ticket:update` check; bulk callers hoist
+ * a single check and reuse this core per ticket, avoiding one permission lookup per row.
+ */
+export async function updateTicketInTransaction(
+  trx: Knex.Transaction,
+  user: IUserWithRoles,
+  tenant: string,
+  id: string,
+  data: Partial<ITicket>,
+): Promise<'success'> {
     try {
       // Validate update data
       const validatedData = validateData(ticketUpdateSchema, data);
@@ -2396,6 +2450,17 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
       }
       throw new Error('Failed to update ticket');
     }
+}
+
+export const updateTicketWithCache = withAuth(async (user, { tenant }, id: string, data: Partial<ITicket>) => {
+  const { knex: db } = await createTenantKnex();
+
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'update', trx)) {
+      throw new Error('Permission denied: Cannot update ticket');
+    }
+
+    return updateTicketInTransaction(trx, user as IUserWithRoles, tenant, id, data);
   });
 });
 

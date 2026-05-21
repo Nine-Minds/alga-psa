@@ -60,7 +60,7 @@ import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransi
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility';
-import { updateTicketWithCache } from './optimizedTicketActions';
+import { updateTicketWithCache, updateTicketInTransaction } from './optimizedTicketActions';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,
@@ -1759,6 +1759,13 @@ export const bulkAssignTickets = withAuth(async (
     return { updatedIds: [], failed: [] };
   }
 
+  // Authorize once up front. The team helpers and the per-ticket update each still
+  // verify permission internally, but this entry check fails fast before any mutation.
+  const { knex } = await createTenantKnex();
+  if (!(await hasPermission(user, 'ticket', 'update', knex))) {
+    throw new Error('Permission denied: Cannot update tickets');
+  }
+
   const updatedIds: string[] = [];
   const failed: Array<{ ticketId: string; message: string }> = [];
 
@@ -1772,7 +1779,9 @@ export const bulkAssignTickets = withAuth(async (
         // Assigning to a single user clears any team assignment (and its team_member resources)
         // first so a stale assigned_team_id / team badge isn't left behind.
         await removeTeamFromTicket(ticketId, { mode: 'remove_all' });
-        await updateTicketWithCache(ticketId, { assigned_to: selection.userId });
+        await withTransaction(knex, (trx: Knex.Transaction) =>
+          updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { assigned_to: selection.userId }),
+        );
       }
       updatedIds.push(ticketId);
     } catch (error: unknown) {
@@ -1878,12 +1887,21 @@ export const bulkUpdateTicketDueDate = withAuth(async (
     return { updatedIds: [], failed: [] };
   }
 
+  // Authorize once up front instead of paying a permission lookup per ticket.
+  const { knex } = await createTenantKnex();
+  if (!(await hasPermission(user, 'ticket', 'update', knex))) {
+    throw new Error('Permission denied: Cannot update tickets');
+  }
+
   const updatedIds: string[] = [];
   const failed: Array<{ ticketId: string; message: string }> = [];
 
+  // Per-ticket transactions preserve partial success: one bad ticket fails alone.
   for (const ticketId of uniqueIds) {
     try {
-      await updateTicketWithCache(ticketId, { due_date: dueDate } as Partial<ITicket>);
+      await withTransaction(knex, (trx: Knex.Transaction) =>
+        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { due_date: dueDate } as Partial<ITicket>),
+      );
       updatedIds.push(ticketId);
     } catch (error: unknown) {
       failed.push({
@@ -1915,12 +1933,21 @@ export const bulkUpdateTicketStatus = withAuth(async (
     return { updatedIds: [], failed: [] };
   }
 
+  // Authorize once up front instead of paying a permission lookup per ticket.
+  const { knex } = await createTenantKnex();
+  if (!(await hasPermission(user, 'ticket', 'update', knex))) {
+    throw new Error('Permission denied: Cannot update tickets');
+  }
+
   const updatedIds: string[] = [];
   const failed: Array<{ ticketId: string; message: string }> = [];
 
+  // Per-ticket transactions preserve partial success: one bad ticket fails alone.
   for (const ticketId of uniqueIds) {
     try {
-      await updateTicketWithCache(ticketId, { status_id: statusId });
+      await withTransaction(knex, (trx: Knex.Transaction) =>
+        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { status_id: statusId }),
+      );
       updatedIds.push(ticketId);
     } catch (error: unknown) {
       failed.push({
@@ -1952,12 +1979,21 @@ export const bulkUpdateTicketPriority = withAuth(async (
     return { updatedIds: [], failed: [] };
   }
 
+  // Authorize once up front instead of paying a permission lookup per ticket.
+  const { knex } = await createTenantKnex();
+  if (!(await hasPermission(user, 'ticket', 'update', knex))) {
+    throw new Error('Permission denied: Cannot update tickets');
+  }
+
   const updatedIds: string[] = [];
   const failed: Array<{ ticketId: string; message: string }> = [];
 
+  // Per-ticket transactions preserve partial success: one bad ticket fails alone.
   for (const ticketId of uniqueIds) {
     try {
-      await updateTicketWithCache(ticketId, { priority_id: priorityId });
+      await withTransaction(knex, (trx: Knex.Transaction) =>
+        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { priority_id: priorityId }),
+      );
       updatedIds.push(ticketId);
     } catch (error: unknown) {
       failed.push({

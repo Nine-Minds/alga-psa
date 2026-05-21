@@ -445,6 +445,7 @@
       "tags": "Tags",
       "dueDate": "Due Date",
       "statusDisabledMultiBoard": "Selected tickets are on different boards",
+      "statusResolvingBoards": "Checking the boards of selected tickets…",
       "more": "More"
     },
     "moveDialogTitle": "Move Selected Tickets",

@@ -551,6 +551,7 @@
       "tags": "11111",
       "dueDate": "11111",
       "statusDisabledMultiBoard": "11111",
+      "statusResolvingBoards": "11111",
       "more": "11111"
     },
     "assign": {

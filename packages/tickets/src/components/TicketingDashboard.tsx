@@ -51,7 +51,7 @@ import {
 } from '../actions/ticketActions';
 import { getBoardTicketStatuses } from '../actions/board-actions/boardTicketStatusActions';
 import { bundleTicketsAction, getBundleMasterStatusAction } from '../actions/ticketBundleActions';
-import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds } from '../actions/optimizedTicketActions';
+import { fetchBundleChildrenForMaster, fetchTicketsWithPagination, getAllMatchingTicketIds, getTicketBoardIds } from '../actions/optimizedTicketActions';
 import TicketExportDialog from './TicketExportDialog';
 import TicketImportDialog from './TicketImportDialog';
 import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2 } from 'lucide-react';
@@ -250,6 +250,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
   const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(new Set());
   const [allMatchingMode, setAllMatchingMode] = useState(false);
+  // Boards resolved on demand for selected tickets that aren't on the current page
+  // (paginate-then-select / select-all-matching). Maps ticket_id -> board_id (or null).
+  const [offPageBoardById, setOffPageBoardById] = useState<Record<string, string | null>>({});
   const [visibleTicketIds, setVisibleTicketIds] = useState<string[]>([]);
   const currentUser = user || null;
   const { openDrawer, replaceDrawer } = useDrawer();
@@ -877,6 +880,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const clearSelection = useCallback(() => {
     setSelectedTicketIds(prev => (prev.size === 0 ? prev : new Set<string>()));
     setAllMatchingMode(false);
+    setOffPageBoardById(prev => (Object.keys(prev).length === 0 ? prev : {}));
   }, []);
 
   const visibleTicketIdSet = useMemo(() => new Set(visibleTicketIds.filter((id): id is string => !!id)), [visibleTicketIds]);
@@ -924,22 +928,74 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     return uniqueClientIds.size > 1;
   }, [selectedTicketDetails]);
 
-  const selectedTicketsSharedBoardId = useMemo<string | null>(() => {
-    if (selectedTicketDetails.length === 0) return null;
-    // We can only determine the board from rows loaded on the current page. If the selection
-    // includes off-page tickets (select-all-matching, or selected rows not in the current page),
-    // their boards are unknown — treat as "no shared board" so bulk status stays disabled rather
-    // than attempting a status change that would fail for tickets on other boards.
-    if (allMatchingMode || selectedTicketDetails.length !== selectedTicketIds.size) {
-      return null;
+  // Board id for every ticket currently rendered on the page.
+  const onPageBoardById = useMemo(() => {
+    const map = new Map<string, string | null>();
+    for (const ticket of tickets) {
+      if (ticket.ticket_id) {
+        map.set(ticket.ticket_id, ticket.board_id ?? null);
+      }
     }
-    const uniqueBoardIds = new Set(
-      selectedTicketDetails
-        .map(detail => detail.board_id)
-        .filter((id): id is string => typeof id === 'string' && id.length > 0)
-    );
+    return map;
+  }, [tickets]);
+
+  // Selected tickets whose board we don't yet know (not on this page, not yet fetched).
+  const unresolvedBoardTicketIds = useMemo(
+    () => selectedTicketIdsArray.filter(
+      id => !onPageBoardById.has(id) && !(id in offPageBoardById)
+    ),
+    [selectedTicketIdsArray, onPageBoardById, offPageBoardById]
+  );
+
+  // While any selected board is still unknown the shared board can't be determined.
+  const isResolvingSelectedBoards = unresolvedBoardTicketIds.length > 0;
+
+  // Fetch boards for off-page selected rows so paginate-then-select and select-all-matching
+  // can still determine a shared board. Both success and failure populate every requested id
+  // (failures resolve to null) so the effect terminates and never refetches in a loop.
+  useEffect(() => {
+    if (unresolvedBoardTicketIds.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      let resolved: Array<{ ticket_id: string; board_id: string | null }> = [];
+      try {
+        resolved = await getTicketBoardIds(unresolvedBoardTicketIds);
+      } catch (error) {
+        console.error('[TicketingDashboard] Failed to resolve selected ticket boards:', error);
+      }
+      if (cancelled) return;
+      setOffPageBoardById(prev => {
+        const next = { ...prev };
+        for (const row of resolved) {
+          next[row.ticket_id] = row.board_id ?? null;
+        }
+        // Any id not returned (unauthorized or fetch failed) resolves to null so it is
+        // treated as "no shared board" rather than being requested again indefinitely.
+        for (const id of unresolvedBoardTicketIds) {
+          if (!(id in next)) next[id] = null;
+        }
+        return next;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [unresolvedBoardTicketIds]);
+
+  const selectedTicketsSharedBoardId = useMemo<string | null>(() => {
+    if (selectedTicketIds.size === 0) return null;
+    // Wait until every selected ticket's board is known.
+    if (isResolvingSelectedBoards) return null;
+    const uniqueBoardIds = new Set<string>();
+    for (const id of selectedTicketIdsArray) {
+      const boardId = onPageBoardById.has(id) ? onPageBoardById.get(id) : offPageBoardById[id];
+      // A selected ticket with no board (or one we couldn't resolve) means there's no
+      // single board to scope the status change to.
+      if (typeof boardId !== 'string' || boardId.length === 0) return null;
+      uniqueBoardIds.add(boardId);
+    }
     return uniqueBoardIds.size === 1 ? Array.from(uniqueBoardIds)[0] : null;
-  }, [selectedTicketDetails, allMatchingMode, selectedTicketIds.size]);
+  }, [selectedTicketIds.size, selectedTicketIdsArray, isResolvingSelectedBoards, onPageBoardById, offPageBoardById]);
 
   const hasSelection = selectedTicketIds.size > 0;
   const showSelectAllBanner = allVisibleTicketsSelected && !hasHiddenSelections && !allMatchingMode && totalCount > visibleTicketIds.length && visibleTicketIds.length > 0;
@@ -2667,7 +2723,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         showTags={canUpdateTickets}
         showDueDate={canUpdateTickets}
         statusDisabled={!selectedTicketsSharedBoardId}
-        statusDisabledTitle={t('bulk.actionBar.statusDisabledMultiBoard', 'Selected tickets are on different boards')}
+        statusDisabledTitle={isResolvingSelectedBoards
+          ? t('bulk.actionBar.statusResolvingBoards', 'Checking the boards of selected tickets…')
+          : t('bulk.actionBar.statusDisabledMultiBoard', 'Selected tickets are on different boards')}
         onMove={() => {
           setBulkMoveErrors([]);
           setSelectedDestinationBoardId('');

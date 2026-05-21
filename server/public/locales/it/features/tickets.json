@@ -551,6 +551,7 @@
       "tags": "Tag",
       "dueDate": "Scadenza",
       "statusDisabledMultiBoard": "I ticket selezionati sono su canali diversi",
+      "statusResolvingBoards": "Verifica dei canali dei ticket selezionati…",
       "more": "Altro"
     },
     "assign": {
