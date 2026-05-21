@@ -404,7 +404,7 @@ export async function runSearchQuery(options: SearchQueryOptions): Promise<Searc
       ...cursorBindings,
       limit,
       offset,
-    ],
+    ] as Knex.RawBinding[],
   );
 
   return result.rows.map(toSearchHit);
@@ -476,7 +476,7 @@ export async function countSearchMatchesByType(
       options.tenant,
       options.allowedTypes,
       ...aclPredicate.bindings,
-    ],
+    ] as Knex.RawBinding[],
   );
 
   const counts = {} as Record<SearchObjectType, number>;
@@ -540,7 +540,7 @@ export async function countSearchMatches(
       options.tenant,
       options.allowedTypes,
       ...aclPredicate.bindings,
-    ],
+    ] as Knex.RawBinding[],
   );
 
   return Number(result.rows[0]?.total ?? 0);

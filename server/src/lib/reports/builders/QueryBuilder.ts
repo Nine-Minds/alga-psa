@@ -275,7 +275,7 @@ export class QueryBuilder {
       throw new ReportExecutionError('Raw SQL contains an invalid or unresolved parameter placeholder');
     }
 
-    return trx.raw(processedSql, bindings) as unknown as Knex.QueryBuilder;
+    return trx.raw(processedSql, bindings as Knex.RawBinding[]) as unknown as Knex.QueryBuilder;
   }
 
   /**

@@ -156,11 +156,12 @@ export const searchServiceCatalogForPicker = withAuth(async (
       );
 
     if (options.currency_code) {
+      const currencyCode = options.currency_code;
       query
         .leftJoin('service_prices as sp', function () {
           this.on('sp.service_id', 'sc.service_id')
             .andOn('sp.tenant', 'sc.tenant')
-            .andOn('sp.currency_code', trx.raw('?', [options.currency_code]));
+            .andOn('sp.currency_code', trx.raw('?', [currencyCode]));
         })
         .select(trx.raw('CAST(sp.rate AS FLOAT) as currency_rate'))
         .select(trx.raw(

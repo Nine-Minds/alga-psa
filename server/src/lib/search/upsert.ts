@@ -98,7 +98,7 @@ export async function upsertSearchDoc(knex: Knex, doc: SearchDoc): Promise<void>
       doc.sourceUpdatedAt,
       indexedAt,
       indexedAt,
-    ],
+    ] as Knex.RawBinding[],
   );
 }
 
