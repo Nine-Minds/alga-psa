@@ -71,6 +71,7 @@ import QuickAddContact from '../contacts/QuickAddContact';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { ClientLanguagePreference } from './ClientLanguagePreference';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import type { SurveyClientSatisfactionSummary } from '@alga-psa/types';
 import {
   formatEntraRunStatusLabel,
@@ -951,6 +952,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       setIsSaving(false);
     }
   }, [client.client_id]);
+
+  usePageSaveShortcut(handleSave, { enabled: hasUnsavedChanges && !isSaving });
 
   const handleSyncEntraNow = async () => {
     if (isSyncingEntra) return;

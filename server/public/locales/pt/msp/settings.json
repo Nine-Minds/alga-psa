@@ -25,7 +25,8 @@
     "teamManagement": "Gestão de equipe",
     "loadingTeam": "Carregando configuração da equipe...",
     "loadingExperimental": "Carregando configuração de recursos experimentais...",
-    "loadingInteractions": "Carregando configurações de interação..."
+    "loadingInteractions": "Carregando configurações de interação...",
+    "keyboardShortcuts": "Atalhos de teclado"
   },
   "unsavedChanges": {
     "title": "Unsaved Changes",

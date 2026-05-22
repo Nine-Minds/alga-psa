@@ -25,7 +25,8 @@
     "teamManagement": "Gestión de equipo",
     "loadingTeam": "Cargando configuración del equipo...",
     "loadingExperimental": "Cargando configuración de funciones experimentales...",
-    "loadingInteractions": "Cargando configuración de interacciones..."
+    "loadingInteractions": "Cargando configuración de interacciones...",
+    "keyboardShortcuts": "Atajos de teclado"
   },
   "unsavedChanges": {
     "title": "Cambios sin guardar",

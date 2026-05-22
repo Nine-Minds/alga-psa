@@ -58,12 +58,13 @@ import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2 } fro
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { useIntervalTracking } from '@alga-psa/ui/hooks';
+import { useIntervalTracking, useRangeSelection } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionMessageError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
 import Spinner from '@alga-psa/ui/components/Spinner';
+import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 import QuickAddCategory from './QuickAddCategory';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
@@ -342,6 +343,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const openQuickAddTicket = useCallback(() => setIsQuickAddOpen(true), []);
+  usePageCreateShortcut(openQuickAddTicket);
 
   // Tag filter values from props
   const selectedTags = filterValues.tags ?? EMPTY_STRING_ARRAY;
@@ -741,32 +744,19 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   }, [selectableTicketIds]);
 
-  const handleTicketSelectionChange = useCallback((ticketId: string, isChecked: boolean) => {
-    if (!isChecked) {
-      setAllMatchingMode(false);
-    }
-    setSelectedTicketIds(prev => {
-      const alreadySelected = prev.has(ticketId);
-
-      if (isChecked && alreadySelected) {
-        return prev;
+  const rangeSelect = useRangeSelection<string>({
+    items: visibleTicketIds,
+    getId: (id) => id,
+    selectedIds: selectedTicketIds,
+    onSelectedIdsChange: (next) => {
+      let shrank = false;
+      for (const id of selectedTicketIds) {
+        if (!next.has(id)) { shrank = true; break; }
       }
-
-      if (!isChecked && !alreadySelected) {
-        return prev;
-      }
-
-      const next = new Set(prev);
-
-      if (isChecked) {
-        next.add(ticketId);
-      } else {
-        next.delete(ticketId);
-      }
-
-      return next;
-    });
-  }, []);
+      if (shrank) setAllMatchingMode(false);
+      setSelectedTicketIds(next);
+    },
+  });
 
   const handleSelectAllVisibleTickets = useCallback((shouldSelect: boolean) => {
     if (!shouldSelect) {
@@ -1085,26 +1075,37 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           return null;
         }
 
-        const isChecked = selectedTicketIds.has(ticketId);
+        const isChecked = rangeSelect.isSelected(ticketId);
 
         return (
           // Overlay fills the whole cell (incl. padding) so clicking anywhere in the
           // column toggles selection instead of navigating into the ticket.
           <div
-            className="absolute inset-0 flex items-center justify-center cursor-pointer"
+            className="absolute inset-0 flex items-center justify-center cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
             onClick={(event) => {
               event.stopPropagation();
-              handleTicketSelectionChange(ticketId, !isChecked);
+              rangeSelect.handleSelect(ticketId, {
+                shiftKey: event.shiftKey,
+                selected: !isChecked,
+                preventDefault: () => event.preventDefault(),
+              });
+              event.preventDefault();
             }}
             onMouseDown={(event) => event.stopPropagation()}
           >
             <Checkbox
               id={`${id}-select-${ticketId}`}
               checked={isChecked}
-              onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+              onClick={(event: React.MouseEvent<HTMLInputElement>) => {
                 event.stopPropagation();
-                handleTicketSelectionChange(ticketId, event.target.checked);
+                rangeSelect.handleSelect(ticketId, {
+                  shiftKey: event.shiftKey,
+                  selected: !isChecked,
+                  preventDefault: () => event.preventDefault(),
+                });
+                event.preventDefault();
               }}
+              onChange={() => { /* controlled via onClick for shift-range support */ }}
               containerClassName="mb-0"
               className="m-0 pointer-events-none"
               skipRegistration
@@ -1127,7 +1128,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     allVisibleTicketsSelected,
     isSelectionIndeterminate,
     handleSelectAllVisibleTickets,
-    handleTicketSelectionChange,
+    rangeSelect,
     selectedTicketIds,
     clearSelection,
     handleSelectAllMatchingTickets,
@@ -1993,7 +1994,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               },
             ] satisfies ShareAction[]}
           />
-          <Button id="add-ticket-button" onClick={() => setIsQuickAddOpen(true)}>
+          <Button id="add-ticket-button" onClick={openQuickAddTicket}>
             {t('dashboard.addTicket', 'Add Ticket')}
           </Button>
         </div>
@@ -2279,33 +2280,35 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                 </AlertDescription>
               </Alert>
             )}
-            <DataTable
-              key={`${currentPage}-${pageSize}`}
-              {...withDataAutomationId({ id: `${id}-tickets-table` })}
-              data={ticketsWithIds}
-              columns={columns}
-              pagination={true}
-              currentPage={currentPage}
-              onPageChange={onPageChange}
-              pageSize={pageSize}
-              totalItems={totalCount}
-              onItemsPerPageChange={onPageSizeChange}
-              rowClassName={(record: ITicketListItem) =>
-                `${densityClasses.tableRowDensity} cursor-pointer ${record.ticket_id && selectedTicketIds.has(record.ticket_id)
-                  ? '!bg-table-selected'
-                  : ''}`
-              }
-              onRowClick={(record: ITicketListItem) => {
-                if (record.ticket_id) {
-                  handleTicketClick(record.ticket_id);
+            <ShortcutActiveRegion id="tickets-shortcut-region" className="outline-none">
+              <DataTable
+                key={`${currentPage}-${pageSize}`}
+                {...withDataAutomationId({ id: `${id}-tickets-table` })}
+                data={ticketsWithIds}
+                columns={columns}
+                pagination={true}
+                currentPage={currentPage}
+                onPageChange={onPageChange}
+                pageSize={pageSize}
+                totalItems={totalCount}
+                onItemsPerPageChange={onPageSizeChange}
+                rowClassName={(record: ITicketListItem) =>
+                  `${densityClasses.tableRowDensity} cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus-within:outline-none focus-visible:ring-0 hover:!bg-table-hover ${record.ticket_id && selectedTicketIds.has(record.ticket_id)
+                    ? '!bg-table-selected'
+                    : ''}`
                 }
-              }}
-              onVisibleRowsChange={handleVisibleRowsChange}
-              manualSorting={true}
-              sortBy={sortBy}
-              sortDirection={sortDirection}
-              onSortChange={handleTableSortChange}
-            />
+                onRowClick={(record: ITicketListItem) => {
+                  if (record.ticket_id) {
+                    handleTicketClick(record.ticket_id);
+                  }
+                }}
+                onVisibleRowsChange={handleVisibleRowsChange}
+                manualSorting={true}
+                sortBy={sortBy}
+                sortDirection={sortDirection}
+                onSortChange={handleTableSortChange}
+              />
+            </ShortcutActiveRegion>
           </>
         )}
         </div>

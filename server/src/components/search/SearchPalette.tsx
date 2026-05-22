@@ -4,11 +4,13 @@ import React, { useEffect, useRef, useState, useTransition } from 'react';
 import { Command } from 'cmdk';
 import { Search } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useAriaKeyShortcuts, useCatalogShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 import {
   searchAppTypeaheadAction,
   type SearchResultRow,
 } from '@/lib/actions/searchActions';
+import { CommandPalette } from './CommandPalette';
 
 function toDomIdPart(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -29,6 +31,7 @@ export default function SearchPalette({
   const [totalCount, setTotalCount] = useState(0);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [focusAfterExpand, setFocusAfterExpand] = useState(false);
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -43,26 +46,25 @@ export default function SearchPalette({
       ? `app-search-option-${toDomIdPart(visibleResults[activeIndex].type)}-${toDomIdPart(visibleResults[activeIndex].id)}`
       : 'app-search-option-see-all-results'
     : undefined;
+  const searchAriaShortcut = useAriaKeyShortcuts('global.search');
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() !== 'k' || (!event.metaKey && !event.ctrlKey)) {
-        return;
-      }
+  const focusSearchInput = React.useCallback(() => {
+    if (collapsed) {
+      setFocusAfterExpand(true);
+      onCollapsedClick?.();
+      return;
+    }
 
-      event.preventDefault();
-      if (collapsed) {
-        setFocusAfterExpand(true);
-        onCollapsedClick?.();
-        return;
-      }
-
-      inputRef.current?.focus();
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    inputRef.current?.focus();
+    inputRef.current?.select();
   }, [collapsed, onCollapsedClick]);
+
+  const openCommandPalette = React.useCallback(() => {
+    setIsCommandPaletteOpen(true);
+  }, []);
+
+  useCatalogShortcut('global.search', focusSearchInput);
+  useCatalogShortcut('global.commandPalette', openCommandPalette);
 
   useEffect(() => {
     if (collapsed || !focusAfterExpand) {
@@ -174,20 +176,24 @@ export default function SearchPalette({
 
   if (collapsed) {
     return (
-      <button
-        id="app-search-collapsed-button"
-        type="button"
-        onClick={onCollapsedClick}
-        className="mx-3 my-3 flex h-10 w-10 items-center justify-center rounded-md border border-gray-500/70 bg-white/10 text-gray-300 hover:bg-white/15"
-        aria-label={t('search.placeholder')}
-      >
-        <Search className="h-5 w-5" aria-hidden="true" />
-      </button>
+      <>
+        <CommandPalette open={isCommandPaletteOpen} onClose={() => setIsCommandPaletteOpen(false)} />
+        <button
+          id="app-search-collapsed-button"
+          type="button"
+          onClick={onCollapsedClick}
+          className="mx-3 my-3 flex h-10 w-10 items-center justify-center rounded-md border border-gray-500/70 bg-white/10 text-gray-300 hover:bg-white/15"
+          aria-label={t('search.placeholder')}
+        >
+          <Search className="h-5 w-5" aria-hidden="true" />
+        </button>
+      </>
     );
   }
 
   return (
     <div className="px-4 py-2">
+      <CommandPalette open={isCommandPaletteOpen} onClose={() => setIsCommandPaletteOpen(false)} />
       <Command shouldFilter={false} className="relative">
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
@@ -199,6 +205,7 @@ export default function SearchPalette({
             aria-expanded={isOpen}
             aria-controls="app-search-typeahead-list"
             aria-activedescendant={activeDescendantId}
+            aria-keyshortcuts={searchAriaShortcut}
             value={query}
             onValueChange={handleQueryChange}
             onKeyDown={handleInputKeyDown}

@@ -51,6 +51,7 @@ import { DeleteEntityDialog, handleError, useClientDrawer } from '@alga-psa/ui';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 const COMPANY_VIEW_MODE_SETTING = 'client_list_view_mode';
 const CLIENTS_GRID_PAGE_SIZE_SETTING = 'clients_grid_page_size';
@@ -105,6 +106,7 @@ interface ClientResultsProps {
   selectedTags: string[];
   viewMode: 'grid' | 'list';
   selectedClients: string[];
+  onSelectionChange: (clientIds: string[]) => void;
   onCheckboxChange: (clientId: string) => void;
   onEditClient: (clientId: string) => void;
   onDeleteClient: (client: IClient) => void;
@@ -131,6 +133,7 @@ const ClientResults = memo(({
   selectedTags,
   viewMode,
   selectedClients,
+  onSelectionChange,
   onCheckboxChange,
   onEditClient,
   onDeleteClient,
@@ -250,7 +253,7 @@ const ClientResults = memo(({
   }
 
   return (
-    <div className="flex-1">
+    <ShortcutActiveRegion id="clients-shortcut-region" className="flex-1 outline-none">
       {viewMode === 'grid' ? (
         <ClientsGrid
           filteredClients={filteredClients}
@@ -272,8 +275,7 @@ const ClientResults = memo(({
         <ClientsList
           selectedClients={selectedClients}
           filteredClients={filteredClients}
-          setSelectedClients={() => {}} // This prop seems unused in the component
-          handleCheckboxChange={onCheckboxChange}
+          setSelectedClients={onSelectionChange}
           handleEditClient={onEditClient}
           handleDeleteClient={onDeleteClient}
           onQuickView={onQuickView}
@@ -290,7 +292,7 @@ const ClientResults = memo(({
           onSortChange={onSortChange}
         />
       )}
-    </div>
+    </ShortcutActiveRegion>
   );
 });
 
@@ -330,6 +332,8 @@ const Clients: React.FC = () => {
    });
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const openCreateClient = useCallback(() => setIsDialogOpen(true), []);
+  usePageCreateShortcut(openCreateClient);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [refreshKey, setRefreshKey] = useState(0);
@@ -1349,7 +1353,7 @@ const Clients: React.FC = () => {
           <div className="flex gap-2">
             <Button
               id="create-client-button"
-              onClick={() => setIsDialogOpen(true)}
+              onClick={openCreateClient}
             >
               {t('clientsPage.createClientShort', { defaultValue: '+ Create Client' })}
             </Button>
@@ -1589,6 +1593,10 @@ const Clients: React.FC = () => {
         selectedTags={selectedTags}
         viewMode={viewMode!}
         selectedClients={selectedClients}
+        onSelectionChange={(clientIds) => {
+          setSelectedClients(clientIds);
+          setIsSelectAllMode(false);
+        }}
         onCheckboxChange={handleCheckboxChange}
         onEditClient={handleEditClient}
         onDeleteClient={handleDeleteClient}

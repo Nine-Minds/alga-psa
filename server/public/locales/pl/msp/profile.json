@@ -6,7 +6,8 @@
       "sso": "Pojedyncze logowanie",
       "apiKeys": "Klucze API",
       "notifications": "Powiadomienia",
-      "calendar": "Kalendarz"
+      "calendar": "Kalendarz",
+      "keyboardShortcuts": "Keyboard Shortcuts"
     },
     "basicInfo": {
       "title": "Podstawowe informacje"

@@ -6,7 +6,8 @@
       "sso": "SSO",
       "apiKeys": "Clés API",
       "notifications": "Notifications",
-      "calendar": "Calendrier"
+      "calendar": "Calendrier",
+      "keyboardShortcuts": "Keyboard Shortcuts"
     },
     "basicInfo": {
       "title": "Informations de base"

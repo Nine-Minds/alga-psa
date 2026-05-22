@@ -46,6 +46,7 @@ import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { TicketLiveConflictState } from './ticketLiveFields';
+import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 
 interface TicketInfoProps {
@@ -948,6 +949,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       setIsSaving(false);
     }
   }, [finalizeSavedDescription, hasActiveLiveConflict, hasUnsavedChanges, isEditingDescription, onAssignTeam, onItilFieldChange, onRemoveTeamAssignment, onSaveChanges, onSelectChange, pendingChanges, pendingItilChanges, pendingTeamId, pendingTeamRemoval, persistDescriptionChanges, requiresDestinationStatusSelection, ticket.title, titleValue]);
+
+  usePageSaveShortcut(handleSaveChanges, {
+    enabled: hasUnsavedChanges && !requiresDestinationStatusSelection && !hasActiveLiveConflict,
+  });
 
   // Handler for discarding all pending changes
   const discardNonDescriptionChanges = useCallback(() => {

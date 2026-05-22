@@ -7,6 +7,7 @@ import { createTaskComment } from '../actions/projectTaskCommentActions';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { useTranslation } from 'react-i18next';
+import { useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 interface TaskCommentFormProps {
   taskId: string;
@@ -14,6 +15,7 @@ interface TaskCommentFormProps {
   parentCommentId?: string | null;
   onCommentAdded: () => void;
   onCancel?: () => void;
+  autoFocus?: boolean;
 }
 
 export function TaskCommentForm({
@@ -21,7 +23,8 @@ export function TaskCommentForm({
   projectId,
   parentCommentId = null,
   onCommentAdded,
-  onCancel
+  onCancel,
+  autoFocus = false,
 }: TaskCommentFormProps): React.JSX.Element {
   const { t } = useTranslation(['features/projects', 'common']);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -76,6 +79,8 @@ export function TaskCommentForm({
     }
   };
 
+  useDialogSubmitShortcut(() => { void handleSubmit(); }, { enabled: !isSubmitting });
+
   return (
     <div className="space-y-3">
       <TextEditor
@@ -83,6 +88,7 @@ export function TaskCommentForm({
         editorRef={editorRef}
         initialContent={DEFAULT_BLOCK}
         searchMentions={searchUsersForMentions}
+        autoFocus={autoFocus}
       />
       <div className="flex justify-end gap-2">
         <Button

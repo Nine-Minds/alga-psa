@@ -37,6 +37,7 @@ import CommentItem from './CommentItem';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import styles from './TicketDetails.module.css';
 import { Button } from '@alga-psa/ui/components/Button';
+import { useDialogSubmitShortcut, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -270,6 +271,12 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const handleCancelComment = () => {
     composeUploadSession.requestDiscard();
   };
+
+  usePageCreateShortcut(() => { handleAddCommentClick(true); }, { enabled: !showEditor });
+  useDialogSubmitShortcut(() => { void handleSubmitComment(); }, {
+    active: showEditor,
+    enabled: !isSubmitting,
+  });
 
   const toggleCommentOrder = () => {
     setReverseOrder((previousValue) => {
@@ -713,6 +720,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                     onContentChange={onNewCommentContentChange}
                     searchMentions={searchUsersForMentions}
                     uploadFile={composeUploadSession.uploadFile}
+                    autoFocus
                   />
                 </Suspense>
                 <div className="flex justify-end space-x-2 mt-1">

@@ -1,0 +1,366 @@
+{
+  "settings": {
+    "title": "Scorciatoie da tastiera",
+    "description": "Personalizza le scorciatoie da tastiera per questo dispositivo e account.",
+    "loading": "Caricamento scorciatoie da tastiera...",
+    "capturePrompt": "Premi i tasti",
+    "columns": {
+      "action": "Azione",
+      "scope": "Ambito",
+      "default": "Predefinito",
+      "effective": "Scorciatoia attiva",
+      "enabled": "Abilitato",
+      "reset": "Ripristina"
+    },
+    "actions": {
+      "resetAll": "Ripristina tutto",
+      "replace": "Sostituisci",
+      "copyCheatsheet": "Copia promemoria",
+      "printCheatsheet": "Stampa"
+    },
+    "messages": {
+      "bindingUpdated": "Scorciatoia da tastiera aggiornata",
+      "enabledUpdated": "Scorciatoia da tastiera aggiornata",
+      "resetOne": "Scorciatoia da tastiera ripristinata",
+      "resetAll": "Scorciatoie da tastiera ripristinate",
+      "cheatsheetCopied": "Promemoria copiato negli appunti"
+    },
+    "errors": {
+      "saveFailed": "Impossibile salvare le preferenze delle scorciatoie da tastiera",
+      "copyFailed": "Impossibile copiare il promemoria",
+      "printFailed": "Impossibile aprire la finestra di stampa. Consenti i pop-up e riprova."
+    },
+    "resetAll": {
+      "title": "Ripristinare tutte le scorciatoie?",
+      "message": "Tutte le scorciatoie da tastiera personalizzate verranno rimosse."
+    },
+    "conflict": {
+      "title": "Sostituire la scorciatoia esistente?",
+      "message": "{{binding}} è già assegnata a {{action}}."
+    },
+    "advisory": {
+      "hostileCombo": "{{binding}} potrebbe entrare in conflitto con scorciatoie del browser o del sistema per {{action}}."
+    }
+  },
+  "help": {
+    "title": "Scorciatoie da tastiera",
+    "close": "Chiudi scorciatoie da tastiera",
+    "custom": "Personalizzata"
+  },
+  "commandPalette": {
+    "title": "Tavolozza comandi",
+    "placeholder": "Cerca record, navigazione e azioni",
+    "loading": "Ricerca...",
+    "resultCount": "{{count}} risultati",
+    "syntax": {
+      "title": "Sintassi di ricerca",
+      "summary": "Campi, operatori, parole chiave $ e sigilli",
+      "inlineHelp": "Usa ticket:, client:, >action, /nav, @user, #id, $mine e frasi tra virgolette."
+    },
+    "types": {
+      "nav": "Navigazione",
+      "action": "Azione",
+      "record": "Record",
+      "help": "Aiuto"
+    },
+    "placeholderFulltext": "Cerca record, commenti, documenti…",
+    "seeAll": "Mostra tutti i risultati",
+    "fulltextHint": "Digita almeno 2 caratteri per cercare.",
+    "fulltextInlineHelp": "Cerca tra record, commenti e documenti.",
+    "modes": {
+      "ariaLabel": "Modalità di ricerca",
+      "navigation": "Navigazione",
+      "fulltext": "Testo completo"
+    }
+  },
+  "groups": {
+    "global": "Globale",
+    "ai": "IA",
+    "page": "Pagina",
+    "selection": "Selezione",
+    "navigation": "Navigazione",
+    "assets": "Asset",
+    "dialog": "Finestra",
+    "panel": "Pannello",
+    "record": "Record",
+    "editor": "Editor",
+    "scroll": "Scroll"
+  },
+  "actions": {
+    "global": {
+      "search": {
+        "label": "Cerca",
+        "description": "Apri la palette di ricerca globale."
+      },
+      "toggleChat": {
+        "label": "Attiva chat IA",
+        "description": "Apri l’assistente IA o metti a fuoco la chat corrente."
+      },
+      "openShortcuts": {
+        "label": "Apri scorciatoie da tastiera",
+        "description": "Mostra il riferimento delle scorciatoie da tastiera."
+      },
+      "quickCreate": {
+        "label": "Creazione rapida",
+        "description": "Apri la finestra di creazione rapida."
+      },
+      "commandPalette": {
+        "label": "Tavolozza comandi",
+        "description": "Apri la ricerca di navigazione e azioni."
+      }
+    },
+    "ai": {
+      "quickAsk": {
+        "label": "Chiedi rapidamente all’IA",
+        "description": "Avvia una richiesta rapida all’assistente IA."
+      }
+    },
+    "page": {
+      "create": {
+        "label": "Crea nella pagina",
+        "description": "Crea un nuovo elemento nella pagina corrente."
+      },
+      "save": {
+        "label": "Salva pagina",
+        "description": "Salva la pagina corrente."
+      }
+    },
+    "selection": {
+      "previous": {
+        "label": "Elemento precedente",
+        "description": "Sposta la selezione all’elemento precedente."
+      },
+      "next": {
+        "label": "Elemento successivo",
+        "description": "Sposta la selezione all’elemento successivo."
+      },
+      "open": {
+        "label": "Apri selezione",
+        "description": "Apri l’elemento selezionato."
+      }
+    },
+    "navigation": {
+      "goTickets": {
+        "label": "Vai ai ticket",
+        "description": "Vai alla pagina dei ticket."
+      },
+      "goAssets": {
+        "label": "Vai agli asset",
+        "description": "Vai alla pagina degli asset."
+      },
+      "goClients": {
+        "label": "Vai ai clienti",
+        "description": "Vai alla pagina dei clienti."
+      },
+      "goDashboard": {
+        "label": "Go to dashboard",
+        "description": "Navigate to the dashboard."
+      },
+      "goProjects": {
+        "label": "Go to projects",
+        "description": "Navigate to the projects page."
+      },
+      "goBilling": {
+        "label": "Go to billing",
+        "description": "Navigate to billing."
+      },
+      "goSettings": {
+        "label": "Go to settings",
+        "description": "Navigate to settings."
+      },
+      "goSearch": {
+        "label": "Go to global search",
+        "description": "Focus the global search field."
+      },
+      "goHelp": {
+        "label": "Go to keyboard help",
+        "description": "Open the keyboard shortcuts reference."
+      },
+      "backToParent": {
+        "label": "Back to parent list",
+        "description": "Activate the page back navigation button when one is available."
+      }
+    },
+    "assets": {
+      "commandPalette": {
+        "label": "Palette comandi asset",
+        "description": "Apri i comandi della pagina asset."
+      }
+    },
+    "dialog": {
+      "cancel": {
+        "label": "Annulla finestra",
+        "description": "Chiudi o annulla la finestra attiva."
+      },
+      "submit": {
+        "label": "Invia finestra di dialogo",
+        "description": "Invia il modulo della finestra di dialogo attiva."
+      }
+    },
+    "panel": {
+      "close": {
+        "label": "Chiudi pannello",
+        "description": "Chiudi il pannello o drawer attivo."
+      }
+    },
+    "drawer": {
+      "historyBack": {
+        "label": "Drawer indietro",
+        "description": "Torna indietro nella cronologia del drawer."
+      },
+      "historyForward": {
+        "label": "Drawer avanti",
+        "description": "Vai avanti nella cronologia del drawer."
+      }
+    },
+    "record": {
+      "previous": {
+        "label": "Record precedente",
+        "description": "Apri il record precedente."
+      },
+      "next": {
+        "label": "Record successivo",
+        "description": "Apri il record successivo."
+      },
+      "addTime": {
+        "label": "Aggiungi voce di tempo",
+        "description": "Apri il pannello di immissione tempo per il record corrente."
+      }
+    },
+    "editor": {
+      "undo": {
+        "label": "Annulla",
+        "description": "Annulla la modifica nell’editor."
+      },
+      "redo": {
+        "label": "Ripeti",
+        "description": "Ripeti la modifica nell’editor."
+      },
+      "save": {
+        "label": "Salva editor",
+        "description": "Salva il contenuto dell’editor."
+      },
+      "deleteSelection": {
+        "label": "Elimina selezione",
+        "description": "Elimina l’elemento selezionato nell’editor."
+      },
+      "cancel": {
+        "label": "Annulla azione editor",
+        "description": "Annulla l’azione attiva dell’editor."
+      },
+      "moveUp": {
+        "label": "Sposta su",
+        "description": "Sposta verso l’alto l’elemento selezionato nell’editor."
+      },
+      "moveDown": {
+        "label": "Sposta giù",
+        "description": "Sposta verso il basso l’elemento selezionato nell’editor."
+      },
+      "moveLeft": {
+        "label": "Sposta a sinistra",
+        "description": "Sposta a sinistra l’elemento selezionato nell’editor."
+      },
+      "moveRight": {
+        "label": "Sposta a destra",
+        "description": "Sposta a destra l’elemento selezionato nell’editor."
+      }
+    },
+    "scroll": {
+      "halfDown": {
+        "label": "Scroll half page down",
+        "description": "Scroll down by half a page."
+      },
+      "halfUp": {
+        "label": "Scroll half page up",
+        "description": "Scroll up by half a page."
+      },
+      "fullDown": {
+        "label": "Scroll full page down",
+        "description": "Scroll down by one full page."
+      },
+      "fullUp": {
+        "label": "Scroll full page up",
+        "description": "Scroll up by one full page."
+      },
+      "top": {
+        "label": "Scroll to top",
+        "description": "Scroll to the top of the current page or panel."
+      },
+      "bottom": {
+        "label": "Scroll to bottom",
+        "description": "Scroll to the bottom of the current page or panel."
+      }
+    },
+    "focus": {
+      "primarySearch": {
+        "label": "Focus page search",
+        "description": "Focus the primary search field on the current page."
+      }
+    },
+    "table": {
+      "nextRow": {
+        "label": "Next table row",
+        "description": "Move the active row marker to the next selectable table row."
+      },
+      "previousRow": {
+        "label": "Previous table row",
+        "description": "Move the active row marker to the previous selectable table row."
+      },
+      "toggleRow": {
+        "label": "Toggle table row",
+        "description": "Select or deselect the active table row."
+      },
+      "visualRange": {
+        "label": "Visual row range",
+        "description": "Start or stop selecting a contiguous table row range."
+      },
+      "openRow": {
+        "label": "Open table row",
+        "description": "Open the active table row."
+      }
+    },
+    "repeat": {
+      "lastAction": {
+        "label": "Repeat last action",
+        "description": "Repeat the last Vim-style navigation action."
+      }
+    },
+    "macro": {
+      "record": {
+        "label": "Record macro",
+        "description": "Start or stop recording a Vim-style navigation macro."
+      },
+      "play": {
+        "label": "Play macro",
+        "description": "Play a recorded Vim-style navigation macro."
+      }
+    },
+    "linkhints": {
+      "show": {
+        "label": "Show link hints",
+        "description": "Show keyboard hints for visible links and controls."
+      },
+      "showNewTab": {
+        "label": "Show link hints in new tab",
+        "description": "Show keyboard hints and open links in a new tab when possible."
+      }
+    }
+  },
+  "platform": {
+    "modifiers": {
+      "meta": "Meta",
+      "ctrl": "Ctrl",
+      "alt": "Alt",
+      "shift": "Maiusc"
+    },
+    "keys": {
+      "space": "Spazio"
+    },
+    "aria": {
+      "control": "Control",
+      "meta": "Meta",
+      "alt": "Alt",
+      "shift": "Shift"
+    }
+  }
+}

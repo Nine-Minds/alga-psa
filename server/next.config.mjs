@@ -421,6 +421,7 @@ const nextConfig = {
     '@alga-psa/user-composition',
     '@alga-psa/projects',
     '@alga-psa/surveys',
+    '@alga-psa/tickets',
     // Product feature packages (only those needed in this app)
     '@product/extensions',
     '@product/settings-extensions',
