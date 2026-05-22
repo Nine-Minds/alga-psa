@@ -7,6 +7,7 @@ import {
   ActivityFilters,
   ActivitySortBy,
   ActivityType,
+  IClient,
   IPriority,
   IStatus,
   ITag,
@@ -159,6 +160,9 @@ function formatActivityPrintDate(dateString?: string): string {
   // Priorities for the filter dropdown
   const [priorities, setPriorities] = useState<IPriority[]>([]);
 
+  // Clients for the shared client filter
+  const [clients, setClients] = useState<IClient[]>([]);
+
   // Projects (with phases + statuses) for the filter tree-select
   const [projects, setProjects] = useState<ProjectWithPhases[]>([]);
 
@@ -228,6 +232,17 @@ function formatActivityPrintDate(dateString?: string): string {
     }
     setPriorities([]);
   }, [filters.types]);
+
+  // Load clients for the shared client filter on mount
+  useEffect(() => {
+    ctx.getAllClients(false)
+      .then((data: unknown) => {
+        if (!isActionPermissionError(data)) {
+          setClients(data as IClient[]);
+        }
+      })
+      .catch((err: unknown) => console.error('Error loading clients:', err));
+  }, [ctx]);
 
   // Load projects with phases + statuses for the filter tree on mount
   useEffect(() => {
@@ -457,6 +472,7 @@ function formatActivityPrintDate(dateString?: string): string {
           filters={filters}
           onChange={handleFilterChange}
           priorities={priorities}
+          clients={clients}
           projects={projects}
           boards={boards}
           ticketStatuses={ticketStatuses}

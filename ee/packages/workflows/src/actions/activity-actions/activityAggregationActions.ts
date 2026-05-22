@@ -74,6 +74,71 @@ function toPlainDate(isoString: string): string {
   return date.toISOString().split('T')[0];
 }
 
+type ScheduleEntryWorkItemLink = {
+  work_item_type?: string | null;
+  work_item_id?: string | null;
+};
+
+async function filterScheduleEntriesByClient<T extends ScheduleEntryWorkItemLink>(
+  knex: Knex,
+  tenant: string,
+  entries: T[],
+  clientId: string
+): Promise<T[]> {
+  const ticketIds = [
+    ...new Set(
+      entries
+        .filter((entry) => entry.work_item_type === 'ticket' && entry.work_item_id)
+        .map((entry) => entry.work_item_id)
+    ),
+  ];
+  const projectTaskIds = [
+    ...new Set(
+      entries
+        .filter((entry) => entry.work_item_type === 'project_task' && entry.work_item_id)
+        .map((entry) => entry.work_item_id)
+    ),
+  ];
+
+  const [matchingTicketIds, matchingProjectTaskIds] = await Promise.all([
+    ticketIds.length > 0
+      ? knex('tickets')
+          .where({ tenant, client_id: clientId })
+          .whereIn('ticket_id', ticketIds)
+          .pluck('ticket_id')
+      : Promise.resolve([]),
+    projectTaskIds.length > 0
+      ? knex('project_tasks')
+          .join('project_phases', function() {
+            this.on('project_tasks.phase_id', 'project_phases.phase_id')
+              .andOn('project_tasks.tenant', 'project_phases.tenant');
+          })
+          .join('projects', function() {
+            this.on('project_phases.project_id', 'projects.project_id')
+              .andOn('project_phases.tenant', 'projects.tenant');
+          })
+          .where('project_tasks.tenant', tenant)
+          .where('projects.client_id', clientId)
+          .whereIn('project_tasks.task_id', projectTaskIds)
+          .pluck('project_tasks.task_id')
+      : Promise.resolve([]),
+  ]);
+
+  const matchingTicketIdSet = new Set(matchingTicketIds);
+  const matchingProjectTaskIdSet = new Set(matchingProjectTaskIds);
+
+  return entries.filter((entry) => {
+    if (!entry.work_item_id) return false;
+    if (entry.work_item_type === 'ticket') {
+      return matchingTicketIdSet.has(entry.work_item_id);
+    }
+    if (entry.work_item_type === 'project_task') {
+      return matchingProjectTaskIdSet.has(entry.work_item_id);
+    }
+    return false;
+  });
+}
+
 /**
  * Fetch all activities for a user with optional filters and pagination
  */
@@ -203,6 +268,10 @@ export async function fetchScheduleActivities(
     
     if (filters.workItemType) {
       userEntries = userEntries.filter(entry => entry.work_item_type === filters.workItemType);
+    }
+
+    if (filters.clientId) {
+      userEntries = await filterScheduleEntriesByClient(knex, tenant, userEntries, filters.clientId);
     }
     
     if (filters.search) {
@@ -362,6 +431,11 @@ export async function fetchProjectActivities(
           });
         }
         
+        // Client filter
+        if (filters.clientId) {
+          queryBuilder.where("projects.client_id", filters.clientId);
+        }
+
         // Apply project and phase filters with OR semantics:
         // A task matches if its project is selected OR its phase is selected.
         const hasProjectIds = filters.projectIds && filters.projectIds.length > 0;
@@ -740,6 +814,38 @@ export async function fetchTimeEntryActivities(
         if (filters.status && filters.status.length > 0) {
           queryBuilder.whereIn("time_entries.approval_status", filters.status);
         }
+
+        if (filters.clientId) {
+          queryBuilder.where(function() {
+            this.where(function() {
+              this.where("time_entries.work_item_type", "ticket")
+                .whereExists(function() {
+                  this.select(db.raw(1))
+                    .from("tickets")
+                    .whereRaw("tickets.ticket_id = time_entries.work_item_id")
+                    .andWhere("tickets.tenant", tenant)
+                    .andWhere("tickets.client_id", filters.clientId);
+                });
+            }).orWhere(function() {
+              this.where("time_entries.work_item_type", "project_task")
+                .whereExists(function() {
+                  this.select(db.raw(1))
+                    .from("project_tasks")
+                    .join("project_phases", function() {
+                      this.on("project_tasks.phase_id", "project_phases.phase_id")
+                        .andOn("project_tasks.tenant", "project_phases.tenant");
+                    })
+                    .join("projects", function() {
+                      this.on("project_phases.project_id", "projects.project_id")
+                        .andOn("project_phases.tenant", "projects.tenant");
+                    })
+                    .whereRaw("project_tasks.task_id = time_entries.work_item_id")
+                    .andWhere("project_tasks.tenant", tenant)
+                    .andWhere("projects.client_id", filters.clientId);
+                });
+            });
+          });
+        }
       });
     });
 
@@ -801,6 +907,10 @@ export async function fetchWorkflowTaskActivities(
   filters: ActivityFilters
 ): Promise<Activity[]> {
   try {
+    if (filters.clientId) {
+      return [];
+    }
+
     const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error("Tenant is required");
@@ -1084,6 +1194,10 @@ export async function fetchNotificationActivities(
   filters: ActivityFilters
 ): Promise<Activity[]> {
   try {
+    if (filters.clientId) {
+      return [];
+    }
+
     const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) {
       throw new Error("Tenant is required");

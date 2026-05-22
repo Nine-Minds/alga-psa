@@ -14,32 +14,42 @@ interface DateRangePickerProps {
   label?: string;
   value: DateRange;
   onChange: (range: DateRange) => void;
+  containerClassName?: string;
+  rangeClassName?: string;
+  datePickerClassName?: string;
+  fromPlaceholder?: string;
+  toPlaceholder?: string;
 }
 
 export const DateRangePicker = ({
   id,
   label,
   value,
-  onChange
+  onChange,
+  containerClassName = 'space-y-2',
+  rangeClassName = 'flex gap-2',
+  datePickerClassName = 'min-w-[160px]',
+  fromPlaceholder,
+  toPlaceholder,
 }: DateRangePickerProps & AutomationProps) => {
   const { t } = useTranslation();
   return (
-    <div id={id} className="space-y-2">
+    <div id={id} className={containerClassName}>
       {label && <Label>{label}</Label>}
-      <div className="flex gap-2">
+      <div className={rangeClassName}>
         <DatePicker
           id={id ? `${id}-from` : undefined}
           value={value.from}
           onChange={(date) => onChange({ ...value, from: date })}
-          placeholder={t('form.fromDate', { defaultValue: 'From date' })}
-          className="min-w-[160px]"
+          placeholder={fromPlaceholder ?? t('form.fromDate', { defaultValue: 'From date' })}
+          className={datePickerClassName}
         />
         <DatePicker
           id={id ? `${id}-to` : undefined}
           value={value.to}
           onChange={(date) => onChange({ ...value, to: date })}
-          placeholder={t('form.toDate', { defaultValue: 'To date' })}
-          className="min-w-[160px]"
+          placeholder={toPlaceholder ?? t('form.toDate', { defaultValue: 'To date' })}
+          className={datePickerClassName}
         />
       </div>
     </div>
@@ -57,19 +67,29 @@ interface StringDateRangePickerProps {
   label?: string;
   value: StringDateRange;
   onChange: (range: StringDateRange) => void;
+  containerClassName?: string;
+  rangeClassName?: string;
+  datePickerClassName?: string;
+  fromPlaceholder?: string;
+  toPlaceholder?: string;
 }
 
 export const StringDateRangePicker = ({
   id,
   label,
   value,
-  onChange
+  onChange,
+  containerClassName = 'space-y-2',
+  rangeClassName = 'flex gap-2',
+  datePickerClassName = 'min-w-[160px]',
+  fromPlaceholder,
+  toPlaceholder,
 }: StringDateRangePickerProps & AutomationProps) => {
   const { t } = useTranslation();
   return (
-    <div id={id} className="space-y-2">
+    <div id={id} className={containerClassName}>
       {label && <Label>{label}</Label>}
-      <div className="flex gap-2">
+      <div className={rangeClassName}>
         <DatePicker
           id={id ? `${id}-from` : undefined}
           value={value.from ? new Date(value.from) : undefined}
@@ -77,8 +97,8 @@ export const StringDateRangePicker = ({
             ...value,
             from: date ? date.toISOString().split('T')[0] : ''
           })}
-          placeholder={t('form.fromDate', { defaultValue: 'From date' })}
-          className="min-w-[160px]"
+          placeholder={fromPlaceholder ?? t('form.fromDate', { defaultValue: 'From date' })}
+          className={datePickerClassName}
         />
         <DatePicker
           id={id ? `${id}-to` : undefined}
@@ -87,8 +107,8 @@ export const StringDateRangePicker = ({
             ...value,
             to: date ? date.toISOString().split('T')[0] : ''
           })}
-          placeholder={t('form.toDate', { defaultValue: 'To date' })}
-          className="min-w-[160px]"
+          placeholder={toPlaceholder ?? t('form.toDate', { defaultValue: 'To date' })}
+          className={datePickerClassName}
         />
       </div>
     </div>
