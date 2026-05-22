@@ -14,7 +14,7 @@ import {
   formatDate,
   formatTime
 } from '@alga-psa/scheduling/actions';
-import { resolveAppointmentApproverUserIds } from '@alga-psa/db/appointmentApprovers';
+import { resolveAppointmentApproverUserIds } from '@alga-psa/msp-composition/scheduling/appointmentApprovers';
 import logger from '@alga-psa/core/logger';
 import { z } from 'zod';
 

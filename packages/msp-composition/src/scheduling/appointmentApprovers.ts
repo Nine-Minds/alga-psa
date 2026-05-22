@@ -1,47 +1,16 @@
 import type { Knex } from 'knex';
+import {
+  readApproverIdsFromConfig,
+  type ApproverConfigJson,
+} from '@alga-psa/scheduling/lib/appointmentApprovers';
 
 /**
- * Shared helpers for resolving who should approve / be notified about appointment
- * requests. Appointment approvers are configured in `availability_settings.config_json`
- * and support multiple users plus teams (teams are expanded to their current members).
- *
- * Backwards compatibility: older configs stored a single `default_approver_id`. When the
- * new array fields are absent we fall back to that single value.
+ * Cross-feature resolution of who should approve / be notified about appointment
+ * requests. This lives in the composition layer because it joins the scheduling
+ * feature's approver config (`availability_settings`) with the teams and users
+ * features — composing across feature packages without creating feature-to-feature
+ * imports.
  */
-
-export interface ApproverConfigJson {
-  approver_user_ids?: string[];
-  approver_team_ids?: string[];
-  /** @deprecated legacy single-approver field, kept for backwards compatibility */
-  default_approver_id?: string;
-  [key: string]: unknown;
-}
-
-/**
- * Extract the configured approver user IDs and team IDs from a `config_json` blob,
- * falling back to the legacy single `default_approver_id` when the arrays are empty.
- */
-export function readApproverIdsFromConfig(
-  config: ApproverConfigJson | null | undefined
-): { userIds: string[]; teamIds: string[] } {
-  if (!config) {
-    return { userIds: [], teamIds: [] };
-  }
-
-  const userIds = Array.isArray(config.approver_user_ids)
-    ? config.approver_user_ids.filter((id): id is string => Boolean(id))
-    : [];
-  const teamIds = Array.isArray(config.approver_team_ids)
-    ? config.approver_team_ids.filter((id): id is string => Boolean(id))
-    : [];
-
-  // Legacy single-approver fallback (only when no multi-approver config is present)
-  if (userIds.length === 0 && teamIds.length === 0 && config.default_approver_id) {
-    userIds.push(config.default_approver_id);
-  }
-
-  return { userIds, teamIds };
-}
 
 /** Expand a set of team IDs into the user IDs of their current members. */
 export async function expandTeamsToUserIds(
