@@ -1288,113 +1288,149 @@ function applyTicketListIndexedSearchFilter(
       ? '(si.client_scope_id IS NULL OR si.client_scope_id = ?::uuid)'
       : 'si.client_scope_id IS NULL';
   const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
+  const ilikePattern = `%${rawSearch}%`;
 
-  return baseQuery.where(function(this: Knex.QueryBuilder) {
-    this.whereRaw(
-      `
-        EXISTS (
-          SELECT 1
-          FROM app_search_index si
-          CROSS JOIN (
-            SELECT
-              websearch_to_tsquery('english', ?) AS tsq,
-              CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
-              ?::text AS raw,
-              ?::text AS identifier
-          ) q
-          WHERE si.tenant = ?::uuid
-            AND si.object_type = ANY(?::text[])
-            AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
-            AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
-            AND (si.is_internal_only = false OR ?::boolean = true)
-            AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
-            AND ${clientScopePredicate}
-            AND (
-              (
-                si.object_type = 'ticket'
-                AND (
-                  si.object_id = t.ticket_id::text
-                  OR (
-                    ?::boolean = true
-                    AND EXISTS (
-                      SELECT 1
-                      FROM tickets child_ticket
-                      WHERE child_ticket.tenant = t.tenant
-                        AND child_ticket.master_ticket_id = t.ticket_id
-                        AND child_ticket.ticket_id::text = si.object_id
-                    )
-                  )
-                )
-              )
-              OR (
-                si.object_type = 'ticket_comment'
-                AND (
-                  si.parent_id = t.ticket_id::text
-                  OR (
-                    ?::boolean = true
-                    AND EXISTS (
-                      SELECT 1
-                      FROM tickets child_ticket
-                      WHERE child_ticket.tenant = t.tenant
-                        AND child_ticket.master_ticket_id = t.ticket_id
-                        AND child_ticket.ticket_id::text = si.parent_id
-                    )
-                  )
-                )
-              )
-            )
-            AND (
-              si.search_vector @@ q.tsq
-              OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
-              OR si.title ILIKE '%' || q.raw || '%'
-              OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
-              OR si.title % q.raw
-              OR coalesce(si.subtitle, '') % q.raw
-              OR (
-                q.identifier IS NOT NULL
-                AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier
-              )
-              OR (
-                q.identifier IS NOT NULL
-                AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%'
-              )
-            )
-        )
-      `,
-      [
-        rawSearch,
-        prefixTsquery,
-        prefixTsquery,
-        rawSearch,
-        identifier,
-        tenant,
-        ['ticket', 'ticket_comment'],
-        ['ticket:read'],
-        user.user_id,
-        isInternalUser,
-        user.user_id,
-        ...clientScopeBindings,
-        includeBundledChildren,
-        includeBundledChildren,
-      ]
-    ).orWhere(function(this: Knex.QueryBuilder) {
-      this.where('t.title', 'ilike', `%${rawSearch}%`)
-        .orWhere('t.ticket_number', 'ilike', `%${rawSearch}%`);
+  // Citus cannot push down an OR that mixes correlated EXISTS against two different
+  // distributed tables (app_search_index vs tickets). Rewrite as UNION ALL of
+  // single-table legs joined back on the distribution column (tenant) plus ticket_id;
+  // each leg is independently pushdown-safe and the outer join is co-located.
+  const legA = `
+        SELECT
+          CASE WHEN si.object_type = 'ticket_comment' THEN si.parent_id::uuid
+               ELSE si.object_id::uuid END AS ticket_id,
+          si.tenant
+        FROM app_search_index si
+        CROSS JOIN (
+          SELECT
+            websearch_to_tsquery('english', ?) AS tsq,
+            CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
+            ?::text AS raw,
+            ?::text AS identifier
+        ) q
+        WHERE si.tenant = ?::uuid
+          AND si.object_type = ANY(?::text[])
+          AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
+          AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+          AND (si.is_internal_only = false OR ?::boolean = true)
+          AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+          AND ${clientScopePredicate}
+          AND (
+            si.search_vector @@ q.tsq
+            OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
+            OR si.title ILIKE '%' || q.raw || '%'
+            OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
+            OR si.title % q.raw
+            OR coalesce(si.subtitle, '') % q.raw
+            OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier)
+            OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%')
+          )
+  `;
+  const legABindings: Knex.RawBinding[] = [
+    rawSearch,
+    prefixTsquery,
+    prefixTsquery,
+    rawSearch,
+    identifier,
+    tenant,
+    ['ticket', 'ticket_comment'],
+    ['ticket:read'],
+    user.user_id,
+    isInternalUser,
+    user.user_id,
+    ...clientScopeBindings,
+  ];
 
-      if (includeBundledChildren) {
-        this.orWhereExists(function(this: Knex.QueryBuilder) {
-          this.select('*')
-            .from('tickets as tc')
-            .whereRaw('tc.tenant = t.tenant')
-            .andWhereRaw('tc.master_ticket_id = t.ticket_id')
-            .andWhere(function(this: Knex.QueryBuilder) {
-              this.where('tc.title', 'ilike', `%${rawSearch}%`)
-                .orWhere('tc.ticket_number', 'ilike', `%${rawSearch}%`);
-            });
-        });
-      }
-    });
-  });
+  const legB = `
+        SELECT t2.ticket_id, t2.tenant
+        FROM tickets t2
+        WHERE t2.tenant = ?::uuid
+          AND (t2.title ILIKE ? OR t2.ticket_number ILIKE ?)
+  `;
+  const legBBindings: Knex.RawBinding[] = [tenant, ilikePattern, ilikePattern];
+
+  // Leg A also surfaces bundled-child matches under the master when bundleView='bundled':
+  // a search-index hit on a child ticket (or its comment) maps to the master ticket id.
+  let legD = '';
+  const legDBindings: Knex.RawBinding[] = [];
+  if (includeBundledChildren) {
+    legD = `
+        UNION ALL
+        SELECT child.master_ticket_id AS ticket_id, child.tenant
+        FROM app_search_index si
+        CROSS JOIN (
+          SELECT
+            websearch_to_tsquery('english', ?) AS tsq,
+            CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
+            ?::text AS raw,
+            ?::text AS identifier
+        ) q
+        JOIN tickets child
+          ON child.tenant = si.tenant
+         AND child.master_ticket_id IS NOT NULL
+         AND (
+           (si.object_type = 'ticket' AND child.ticket_id::text = si.object_id)
+           OR (si.object_type = 'ticket_comment' AND child.ticket_id::text = si.parent_id)
+         )
+        WHERE si.tenant = ?::uuid
+          AND si.object_type = ANY(?::text[])
+          AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
+          AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+          AND (si.is_internal_only = false OR ?::boolean = true)
+          AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+          AND ${clientScopePredicate}
+          AND (
+            si.search_vector @@ q.tsq
+            OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
+            OR si.title ILIKE '%' || q.raw || '%'
+            OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
+            OR si.title % q.raw
+            OR coalesce(si.subtitle, '') % q.raw
+            OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier)
+            OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%')
+          )
+
+        UNION ALL
+        SELECT tc.master_ticket_id AS ticket_id, tc.tenant
+        FROM tickets tc
+        WHERE tc.tenant = ?::uuid
+          AND tc.master_ticket_id IS NOT NULL
+          AND (tc.title ILIKE ? OR tc.ticket_number ILIKE ?)
+    `;
+    legDBindings.push(
+      rawSearch,
+      prefixTsquery,
+      prefixTsquery,
+      rawSearch,
+      identifier,
+      tenant,
+      ['ticket', 'ticket_comment'],
+      ['ticket:read'],
+      user.user_id,
+      isInternalUser,
+      user.user_id,
+      ...clientScopeBindings,
+      tenant,
+      ilikePattern,
+      ilikePattern,
+    );
+  }
+
+  const unionSql = `
+    INNER JOIN (
+      SELECT DISTINCT ticket_id, tenant FROM (
+        ${legA}
+        UNION ALL
+        ${legB}
+        ${legD}
+      ) u
+    ) as sm ON sm.ticket_id = t.ticket_id AND sm.tenant = t.tenant
+  `;
+
+  return baseQuery.joinRaw(unionSql, [
+    ...legABindings,
+    ...legBBindings,
+    ...legDBindings,
+  ] as unknown as Knex.Value[]);
 }
 
 /**
