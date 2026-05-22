@@ -1265,14 +1265,12 @@ export async function getUpgradePreviewAction(
   success: boolean;
   error?: string;
   currentMonthly?: number;
-  newBasePrice?: number;
   newUserPrice?: number;
   newMonthly?: number;
   userCount?: number;
   currency?: string;
   prorationAmount?: number;
   annualAvailable?: boolean;
-  annualBasePrice?: number;
   annualUserPrice?: number;
   annualTotal?: number;
 }> {
@@ -1340,7 +1338,6 @@ export async function getIntervalSwitchPreviewAction(
   currentInterval?: 'month' | 'year';
   currentTotal?: number;
   newTotal?: number;
-  newBasePrice?: number;
   newUserPrice?: number;
   userCount?: number;
   effectiveDate?: string;
