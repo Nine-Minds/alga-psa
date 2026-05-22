@@ -173,8 +173,8 @@ export function parseBinding(input: string): ShortcutParseResult<BindingDescript
   }
 
   const tokenResult = parseToken(input, rawKeyToken);
-  if (!tokenResult.ok) {
-    return tokenResult;
+  if (tokenResult.ok === false) {
+    return tokenResult as ShortcutParseResult<BindingDescriptor>;
   }
 
   const normalizedModifiers = normalizeModifiers(modifiers);
