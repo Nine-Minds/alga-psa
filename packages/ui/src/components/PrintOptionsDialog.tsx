@@ -41,6 +41,10 @@ type PrintOptionsDialogProps<T> = {
   isPrinting?: boolean;
   title?: string;
   description?: React.ReactNode;
+  /** Optional extra content rendered between column checkboxes and footer. */
+  children?: React.ReactNode;
+  /** Label for the extra section (rendered as a heading above children). */
+  childrenSectionLabel?: React.ReactNode;
 };
 
 export function getDefaultPrintColumnKeys<T>(columns: PrintColumnOption<T>[]): string[] {
@@ -196,6 +200,8 @@ export function PrintOptionsDialog<T>({
   isPrinting,
   title,
   description,
+  children,
+  childrenSectionLabel,
 }: PrintOptionsDialogProps<T>) {
   const { t } = useTranslation('common');
   const selectedKeySet = React.useMemo(() => new Set(selectedColumnKeys), [selectedColumnKeys]);
@@ -244,6 +250,15 @@ export function PrintOptionsDialog<T>({
               />
             </div>
           ))}
+          {children && (
+            <>
+              <hr className="my-3 border-[rgb(var(--color-border-200))]" />
+              {childrenSectionLabel && (
+                <p className="text-sm font-semibold text-[rgb(var(--color-text-700))] mb-2 px-1">{childrenSectionLabel}</p>
+              )}
+              {children}
+            </>
+          )}
         </div>
         <DialogFooter className="justify-between">
           <Button

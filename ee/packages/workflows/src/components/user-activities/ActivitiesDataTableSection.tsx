@@ -16,6 +16,7 @@ import {
   TaggedEntityType,
 } from '@alga-psa/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Button } from '@alga-psa/ui/components/Button';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
@@ -182,6 +183,40 @@ function formatActivityPrintDate(dateString?: string): string {
 
   // User-defined activity groups (shared between GroupedActivitiesView + PrintableActivitiesView)
   const [activityGroups, setActivityGroups] = useState<ActivityGroup[]>([]);
+
+  // Print section selection: which groups and whether to include ungrouped
+  const {
+    value: savedPrintGroupIds,
+    setValue: setSavedPrintGroupIds,
+  } = useUserPreference<string[] | null>(
+    'activitiesPrintGroupIds',
+    {
+      defaultValue: null,
+      localStorageKey: 'activitiesPrintGroupIds',
+      debounceMs: 500,
+    }
+  );
+  const {
+    value: savedPrintUngrouped,
+    setValue: setSavedPrintUngrouped,
+  } = useUserPreference<boolean | null>(
+    'activitiesPrintUngrouped',
+    {
+      defaultValue: null,
+      localStorageKey: 'activitiesPrintUngrouped',
+      debounceMs: 500,
+    }
+  );
+  const effectivePrintUngrouped = savedPrintUngrouped ?? !ungroupedCollapsed;
+  // Derive the effective selected group IDs, sanitized against current activityGroups
+  const selectedPrintGroupIds = useMemo(() => {
+    if (listViewMode !== 'grouped' || activityGroups.length === 0) return undefined;
+    const validIds = new Set(activityGroups.map((g) => g.groupId));
+    // Default: all non-collapsed groups. Once saved, preserve even an intentionally empty selection.
+    const defaults = activityGroups.filter((g) => !g.isCollapsed).map((g) => g.groupId);
+    const saved = savedPrintGroupIds?.filter((id) => validIds.has(id));
+    return new Set(savedPrintGroupIds === null ? defaults : saved);
+  }, [listViewMode, activityGroups, savedPrintGroupIds]);
   const [printActivities, setPrintActivities] = useState<Activity[] | null>(null);
 
   const loadActivityGroups = useCallback(async (): Promise<ActivityGroup[]> => {
@@ -417,6 +452,12 @@ function formatActivityPrintDate(dateString?: string): string {
 
   const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
 
+  const handleResetPrintOptions = useCallback(() => {
+    resetSelectedActivityPrintColumnKeys();
+    setSavedPrintGroupIds(null);
+    setSavedPrintUngrouped(null);
+  }, [resetSelectedActivityPrintColumnKeys, setSavedPrintGroupIds, setSavedPrintUngrouped]);
+
   const { triggerPrint: triggerPrintActivities, isPreparing: isPreparingActivityPrint } = usePrintAction({
     onBeforePrint: preparePrintActivities,
     onAfterPrint: cleanupPrintActivities,
@@ -527,6 +568,8 @@ function formatActivityPrintDate(dateString?: string): string {
       ungroupedCollapsed={ungroupedCollapsed}
       title={effectiveTitle}
       columns={selectedActivityPrintColumns}
+      selectedGroupIds={selectedPrintGroupIds}
+      printUngrouped={effectivePrintUngrouped}
     />
     <PrintOptionsDialog
       id={`${id}-print-options-dialog`}
@@ -539,10 +582,51 @@ function formatActivityPrintDate(dateString?: string): string {
       columns={activityPrintColumns}
       selectedColumnKeys={selectedActivityPrintColumnKeys}
       onSelectedColumnKeysChange={setSelectedActivityPrintColumnKeys}
-      onReset={resetSelectedActivityPrintColumnKeys}
+      onReset={handleResetPrintOptions}
       onPrint={() => triggerPrintActivities()}
       isPrinting={isPreparingActivityPrint}
-    />
+      childrenSectionLabel={listViewMode === 'grouped' && activityGroups.length > 0
+        ? t('table.print.optionsDialog.groupsLabel', { defaultValue: 'Sections to print' })
+        : undefined}
+    >
+      {listViewMode === 'grouped' && activityGroups.length > 0 && (
+        <div className="space-y-2 px-1">
+          <div className="space-y-1.5">
+            {activityGroups.map((group) => {
+              const checked = selectedPrintGroupIds?.has(group.groupId) ?? false;
+              return (
+                <Checkbox
+                  key={group.groupId}
+                  id={`${id}-print-group-${group.groupId}`}
+                  label={group.groupName}
+                  checked={checked}
+                  onChange={() => {
+                    const next = new Set(selectedPrintGroupIds);
+                    if (checked) {
+                      next.delete(group.groupId);
+                    } else {
+                      next.add(group.groupId);
+                    }
+                    setSavedPrintGroupIds(Array.from(next));
+                  }}
+                  containerClassName="mb-0"
+                  skipRegistration
+                />
+              );
+            })}
+          </div>
+          <hr className="border-[rgb(var(--color-border-200))]" />
+          <Checkbox
+            id={`${id}-print-ungrouped`}
+            label={t('table.print.optionsDialog.printUngrouped', { defaultValue: 'Ungrouped items' })}
+            checked={effectivePrintUngrouped}
+            onChange={() => setSavedPrintUngrouped(!effectivePrintUngrouped)}
+            containerClassName="mb-0"
+            skipRegistration
+          />
+        </div>
+      )}
+    </PrintOptionsDialog>
     </>
   );
 }

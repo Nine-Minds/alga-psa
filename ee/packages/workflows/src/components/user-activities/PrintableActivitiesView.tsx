@@ -17,6 +17,10 @@ interface PrintableActivitiesViewProps {
   /** Fallback title */
   title?: string;
   columns?: PrintableTableColumn<Activity>[];
+  /** When set, only render groups whose groupId is in this set. */
+  selectedGroupIds?: Set<string>;
+  /** When false, skip the ungrouped section (default true). */
+  printUngrouped?: boolean;
 }
 
 function formatDate(dateString?: string): string {
@@ -62,6 +66,8 @@ export function PrintableActivitiesView({
   ungroupedCollapsed = false,
   title,
   columns: providedColumns,
+  selectedGroupIds,
+  printUngrouped = true,
 }: PrintableActivitiesViewProps) {
   const { t } = useTranslation('msp/user-activities');
   const effectiveTitle = title ?? t('printable.defaultTitle', { defaultValue: 'Activities' });
@@ -124,22 +130,26 @@ export function PrintableActivitiesView({
       activityByKey.set(`${a.type}:${a.id}`, a);
     }
     const assignedKeys = new Set<string>();
-    groupedSections = serverGroups
-      .filter((sg) => !sg.isCollapsed)
-      .map((sg) => {
-        const sgActs: Activity[] = [];
-        for (const item of sg.items) {
-          const key = `${item.activityType}:${item.activityId}`;
-          const act = activityByKey.get(key);
-          if (act) {
-            sgActs.push(act);
-            assignedKeys.add(key);
-          }
+
+    // Filter serverGroups by selectedGroupIds (if provided) and isCollapsed
+    const effectiveGroups = selectedGroupIds
+      ? serverGroups.filter((sg) => selectedGroupIds.has(sg.groupId))
+      : serverGroups.filter((sg) => !sg.isCollapsed);
+
+    groupedSections = effectiveGroups.map((sg) => {
+      const sgActs: Activity[] = [];
+      for (const item of sg.items) {
+        const key = `${item.activityType}:${item.activityId}`;
+        const act = activityByKey.get(key);
+        if (act) {
+          sgActs.push(act);
+          assignedKeys.add(key);
         }
-        return { name: sg.groupName, activities: sgActs };
-      });
-    // Items in collapsed groups should also be excluded from ungrouped
-    for (const sg of serverGroups.filter((sg) => sg.isCollapsed)) {
+      }
+      return { name: sg.groupName, activities: sgActs };
+    });
+    // Items in non-selected or collapsed groups should be excluded from ungrouped
+    for (const sg of serverGroups.filter((sg) => !effectiveGroups.includes(sg))) {
       for (const item of sg.items) {
         assignedKeys.add(`${item.activityType}:${item.activityId}`);
       }
@@ -149,14 +159,14 @@ export function PrintableActivitiesView({
 
   return (
     <div className="app-print-root app-print-only ua-print-root ua-print-only">
-      {groupedSections.length > 0 ? (
+      {grouped && serverGroups.length > 0 ? (
         <>
           {groupedSections.map((g) => (
             <div key={g.name} className="ua-print-group">
               {renderTable(g.name, g.activities)}
             </div>
           ))}
-          {ungroupedActivities.length > 0 && !ungroupedCollapsed && (
+          {ungroupedActivities.length > 0 && (printUngrouped ?? !ungroupedCollapsed) && (
             <div className="ua-print-group">
               {renderTable(t('printable.ungroupedHeading', { defaultValue: 'Ungrouped' }), ungroupedActivities)}
             </div>
