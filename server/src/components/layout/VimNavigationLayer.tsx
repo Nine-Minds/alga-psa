@@ -298,6 +298,7 @@ export default function VimNavigationLayer({ onOpenHelp }: VimNavigationLayerPro
   const safeActionsRef = useRef<Record<string, () => void>>({});
   const hintInputRef = useRef("");
   const hintTargetsRef = useRef<Record<string, HTMLElement>>({});
+  const hintsActiveRef = useRef(false);
   const linkHintNewTabRef = useRef(false);
   const hintActivationTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [visualMode, setVisualMode] = useState(false);
@@ -391,6 +392,7 @@ export default function VimNavigationLayer({ onOpenHelp }: VimNavigationLayerPro
     }
     hintInputRef.current = "";
     hintTargetsRef.current = {};
+    hintsActiveRef.current = false;
     setHints([]);
   }, []);
 
@@ -409,6 +411,7 @@ export default function VimNavigationLayer({ onOpenHelp }: VimNavigationLayerPro
     linkHintNewTabRef.current = newTab;
     hintInputRef.current = "";
     hintTargetsRef.current = nextTargets;
+    hintsActiveRef.current = nextHints.length > 0;
     setHints(nextHints);
   }, []);
 
@@ -509,9 +512,10 @@ export default function VimNavigationLayer({ onOpenHelp }: VimNavigationLayerPro
         return;
       }
 
-      if (hints.length > 0) {
+      if (hintsActiveRef.current) {
         if (event.key === "Escape") {
           event.preventDefault();
+          event.stopImmediatePropagation();
           closeHints();
           return;
         }
@@ -521,7 +525,7 @@ export default function VimNavigationLayer({ onOpenHelp }: VimNavigationLayerPro
         }
 
         event.preventDefault();
-        event.stopPropagation();
+        event.stopImmediatePropagation();
         const nextInput = `${hintInputRef.current}${event.key.toLowerCase()}`;
         const labels = Object.keys(hintTargetsRef.current);
 
@@ -591,7 +595,7 @@ export default function VimNavigationLayer({ onOpenHelp }: VimNavigationLayerPro
 
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [activateHint, closeHints, hints.length, replayMacro]);
+  }, [activateHint, closeHints, replayMacro]);
 
   const repeatLastAction = useCallback(() => {
     const lastAction = lastActionRef.current;
