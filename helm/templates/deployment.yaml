@@ -820,21 +820,9 @@ spec:
           - name: MASTER_BILLING_TENANT_ID
             value: "{{ .Values.stripe.master_billing_tenant_id }}"
           {{- end }}
-          {{- if .Values.stripe.license_product_id }}
-          - name: STRIPE_LICENSE_PRODUCT_ID
-            value: "{{ .Values.stripe.license_product_id }}"
-          {{- end }}
-          {{- if .Values.stripe.license_price_id }}
-          - name: STRIPE_LICENSE_PRICE_ID
-            value: "{{ .Values.stripe.license_price_id }}"
-          {{- end }}
-          {{- if .Values.stripe.pro_base_price_id }}
-          - name: STRIPE_PRO_BASE_PRICE_ID
-            value: "{{ .Values.stripe.pro_base_price_id }}"
-          {{- end }}
-          {{- if .Values.stripe.pro_user_price_id }}
-          - name: STRIPE_PRO_USER_PRICE_ID
-            value: "{{ .Values.stripe.pro_user_price_id }}"
+          {{- if .Values.stripe.pro_price_id }}
+          - name: STRIPE_PRO_PRICE_ID
+            value: "{{ .Values.stripe.pro_price_id }}"
           {{- end }}
           {{- if .Values.stripe.premium_base_price_id }}
           - name: STRIPE_PREMIUM_BASE_PRICE_ID
@@ -844,13 +832,9 @@ spec:
           - name: STRIPE_PREMIUM_USER_PRICE_ID
             value: "{{ .Values.stripe.premium_user_price_id }}"
           {{- end }}
-          {{- if .Values.stripe.pro_base_annual_price_id }}
-          - name: STRIPE_PRO_BASE_ANNUAL_PRICE_ID
-            value: "{{ .Values.stripe.pro_base_annual_price_id }}"
-          {{- end }}
-          {{- if .Values.stripe.pro_user_annual_price_id }}
-          - name: STRIPE_PRO_USER_ANNUAL_PRICE_ID
-            value: "{{ .Values.stripe.pro_user_annual_price_id }}"
+          {{- if .Values.stripe.pro_annual_price_id }}
+          - name: STRIPE_PRO_ANNUAL_PRICE_ID
+            value: "{{ .Values.stripe.pro_annual_price_id }}"
           {{- end }}
           {{- if .Values.stripe.premium_base_annual_price_id }}
           - name: STRIPE_PREMIUM_BASE_ANNUAL_PRICE_ID
