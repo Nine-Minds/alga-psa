@@ -1005,23 +1005,11 @@ export class StripeService {
       logger.info(`[StripeService] Using AlgaDesk per-user-only checkout (interval: ${interval})`);
     } else {
       const perSeatPriceId = tenant?.plan ? this.getTierPerSeatPriceId(tenant.plan, interval) : null;
-      const tierPrices = !perSeatPriceId && tenant?.plan ? this.getTierPriceIds(tenant.plan, interval) : null;
-
-      if (perSeatPriceId) {
-        line_items = [{ price: perSeatPriceId, quantity }];
-        logger.info(`[StripeService] Using per-seat checkout (tier: ${tenant.plan}, interval: ${interval})`);
-      } else if (tierPrices) {
-        line_items = this.buildTierLineItems(
-          tierPrices,
-          quantity,
-          this.getIncludedUsersForTier(tenant.plan),
-        );
-        logger.info(
-          `[StripeService] Using ${tierPrices.userPriceId ? 'multi-item' : 'flat-rate'} checkout (tier: ${tenant.plan}, interval: ${interval})`
-        );
-      } else {
-        throw new Error(`Pricing not configured for ${tenant?.plan || 'unknown'} tier`);
+      if (!perSeatPriceId) {
+        throw new Error(`Per-seat pricing not configured for ${tenant?.plan || 'unknown'} tier (${interval})`);
       }
+      line_items = [{ price: perSeatPriceId, quantity }];
+      logger.info(`[StripeService] Using per-seat checkout (tier: ${tenant.plan}, interval: ${interval})`);
     }
 
     // Create checkout session in embedded mode
@@ -2249,23 +2237,20 @@ export class StripeService {
     success: boolean;
     error?: string;
     currentMonthly?: number;
-    newBasePrice?: number;
     newUserPrice?: number;
     newMonthly?: number;
     userCount?: number;
     currency?: string;
     prorationAmount?: number;
     annualAvailable?: boolean;
-    annualBasePrice?: number;
     annualUserPrice?: number;
     annualTotal?: number;
   }> {
     await this.ensureInitialized();
 
     const targetPerSeatPriceId = this.getTierPerSeatPriceId(targetTier, interval);
-    const tierPrices = targetPerSeatPriceId ? null : this.getTierPriceIds(targetTier, interval);
-    if (!targetPerSeatPriceId && !tierPrices) {
-      return { success: false, error: `Pricing not configured for ${targetTier} tier (${interval})` };
+    if (!targetPerSeatPriceId) {
+      return { success: false, error: `Per-seat pricing not configured for ${targetTier} tier (${interval})` };
     }
 
     try {
@@ -2286,27 +2271,11 @@ export class StripeService {
         .first();
 
       const userCount = existingSubscription?.quantity || 1;
-      const targetIncludedUsers = targetPerSeatPriceId ? 0 : this.getIncludedUsersForTier(targetTier);
-      const targetBillableUsers = targetPerSeatPriceId ? userCount : Math.max(userCount - targetIncludedUsers, 0);
 
-      let basePriceAmount = 0;
-      let userPriceAmount = 0;
-      let newMonthly = 0;
-      if (targetPerSeatPriceId) {
-        const userPrice = await this.stripe.prices.retrieve(targetPerSeatPriceId);
-        userPriceAmount = (userPrice.unit_amount || 0) / 100;
-        newMonthly = userPriceAmount * userCount;
-      } else if (tierPrices) {
-        // Fetch target tier prices from Stripe
-        const [basePrice, userPrice] = await Promise.all([
-          this.stripe.prices.retrieve(tierPrices.basePriceId),
-          tierPrices.userPriceId ? this.stripe.prices.retrieve(tierPrices.userPriceId) : Promise.resolve(null),
-        ]);
-
-        basePriceAmount = (basePrice.unit_amount || 0) / 100;
-        userPriceAmount = ((userPrice?.unit_amount) || 0) / 100;
-        newMonthly = basePriceAmount + (userPriceAmount * targetBillableUsers);
-      }
+      const userPrice = await this.stripe.prices.retrieve(targetPerSeatPriceId);
+      const userPriceAmount = (userPrice.unit_amount || 0) / 100;
+      const newMonthly = userPriceAmount * userCount;
+      const currency = userPrice.currency;
 
       // Calculate current monthly from existing subscription
       let currentMonthly = 0;
@@ -2355,9 +2324,7 @@ export class StripeService {
                 ...(existingSubscription.stripe_base_item_id
                   ? [{ id: existingSubscription.stripe_base_item_id, deleted: true as const }]
                   : []),
-                ...(targetPerSeatPriceId
-                  ? [{ price: targetPerSeatPriceId, quantity: userCount }]
-                  : this.buildTierLineItems(tierPrices!, userCount, targetIncludedUsers)),
+                { price: targetPerSeatPriceId, quantity: userCount },
               ],
               proration_behavior: 'always_invoice',
             },
@@ -2370,30 +2337,14 @@ export class StripeService {
 
       // Fetch annual pricing if available (for showing both options)
       let annualAvailable = false;
-      let annualBasePrice: number | undefined;
       let annualUserPrice: number | undefined;
       let annualTotal: number | undefined;
       const annualPerSeatPriceId = this.getTierPerSeatPriceId(targetTier, 'year');
-      const annualPrices = annualPerSeatPriceId ? null : this.getTierPriceIds(targetTier, 'year');
       if (annualPerSeatPriceId && annualPerSeatPriceId !== targetPerSeatPriceId) {
         try {
           const annualUser = await this.stripe.prices.retrieve(annualPerSeatPriceId);
-          annualBasePrice = 0;
           annualUserPrice = (annualUser.unit_amount || 0) / 100;
           annualTotal = annualUserPrice * userCount;
-          annualAvailable = true;
-        } catch (e) {
-          logger.warn('[StripeService] Could not fetch annual prices', { error: e });
-        }
-      } else if (annualPrices && (interval !== 'year' || annualPrices.basePriceId !== tierPrices?.basePriceId)) {
-        try {
-          const [annualBase, annualUser] = await Promise.all([
-            this.stripe.prices.retrieve(annualPrices.basePriceId),
-            annualPrices.userPriceId ? this.stripe.prices.retrieve(annualPrices.userPriceId) : Promise.resolve(null),
-          ]);
-          annualBasePrice = (annualBase.unit_amount || 0) / 100;
-          annualUserPrice = ((annualUser?.unit_amount) || 0) / 100;
-          annualTotal = annualBasePrice + (annualUserPrice * targetBillableUsers);
           annualAvailable = true;
         } catch (e) {
           logger.warn('[StripeService] Could not fetch annual prices', { error: e });
@@ -2403,14 +2354,12 @@ export class StripeService {
       return {
         success: true,
         currentMonthly,
-        newBasePrice: basePriceAmount,
         newUserPrice: userPriceAmount,
         newMonthly,
         userCount,
-        currency: basePrice.currency,
+        currency,
         prorationAmount,
         annualAvailable,
-        annualBasePrice,
         annualUserPrice,
         annualTotal,
       };
@@ -2532,7 +2481,6 @@ export class StripeService {
     currentInterval?: 'month' | 'year';
     currentTotal?: number;
     newTotal?: number;
-    newBasePrice?: number;
     newUserPrice?: number;
     userCount?: number;
     effectiveDate?: string;
@@ -2560,33 +2508,15 @@ export class StripeService {
     const newPerSeatPriceId = this.isEarlyAdoptersSubscription(existingSubscription)
       ? null
       : this.getTierPerSeatPriceId(currentTier, newInterval);
-    const newPrices = newPerSeatPriceId
-      ? null
-      : this.getSubscriptionPriceIds(existingSubscription, newInterval)
-        || this.getTierPriceIds(currentTier, newInterval);
-    if (!newPerSeatPriceId && !newPrices) {
-      return { success: false, error: `${newInterval === 'year' ? 'Annual' : 'Monthly'} pricing not configured for ${currentTier} tier` };
+    if (!newPerSeatPriceId) {
+      return { success: false, error: `${newInterval === 'year' ? 'Annual' : 'Monthly'} per-seat pricing not configured for ${currentTier} tier` };
     }
 
     try {
       const userCount = existingSubscription.quantity;
-      let newBaseAmount = 0;
-      let newUserAmount = 0;
-      let newTotal = 0;
-      if (newPerSeatPriceId) {
-        const newUser = await this.stripe.prices.retrieve(newPerSeatPriceId);
-        newUserAmount = (newUser.unit_amount || 0) / 100;
-        newTotal = newUserAmount * userCount;
-      } else if (newPrices) {
-        const [newBase, newUser] = await Promise.all([
-          this.stripe.prices.retrieve(newPrices.basePriceId),
-          newPrices.userPriceId ? this.stripe.prices.retrieve(newPrices.userPriceId) : Promise.resolve(null),
-        ]);
-
-        newBaseAmount = (newBase.unit_amount || 0) / 100;
-        newUserAmount = ((newUser?.unit_amount) || 0) / 100;
-        newTotal = newBaseAmount + (newUserAmount * userCount);
-      }
+      const newUser = await this.stripe.prices.retrieve(newPerSeatPriceId);
+      const newUserAmount = (newUser.unit_amount || 0) / 100;
+      const newTotal = newUserAmount * userCount;
 
       // Calculate current total
       let currentTotal = 0;
@@ -2625,7 +2555,6 @@ export class StripeService {
         currentInterval: existingSubscription.billing_interval || 'month',
         currentTotal,
         newTotal,
-        newBasePrice: newBaseAmount,
         newUserPrice: newUserAmount,
         userCount,
         effectiveDate: existingSubscription.current_period_end?.toISOString(),

@@ -327,7 +327,6 @@ export default function AccountManagement() {
   const [upgradePreview, setUpgradePreview] = useState<{
     currentMonthly?: number;
     newMonthly?: number;
-    newBasePrice?: number;
     newUserPrice?: number;
     userCount?: number;
     currency?: string;
@@ -350,7 +349,6 @@ export default function AccountManagement() {
     currentInterval?: 'month' | 'year';
     currentTotal?: number;
     newTotal?: number;
-    newBasePrice?: number;
     newUserPrice?: number;
     userCount?: number;
     effectiveDate?: string;
@@ -425,13 +423,11 @@ export default function AccountManagement() {
   const [confirmingPremium, setConfirmingPremium] = useState(false);
   const [showConfirmPremiumDialog, setShowConfirmPremiumDialog] = useState(false);
   const [confirmPremiumPreview, setConfirmPremiumPreview] = useState<{
-    newBasePrice?: number;
     newUserPrice?: number;
     newMonthly?: number;
     userCount?: number;
     currency?: string;
     annualAvailable?: boolean;
-    annualBasePrice?: number;
     annualUserPrice?: number;
     annualTotal?: number;
   } | null>(null);
@@ -2050,10 +2046,6 @@ export default function AccountManagement() {
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t('upgradeDialog.baseFee', { tier: TIER_LABELS[upgradeTargetTier] })}</span>
-                  <span>${upgradePreview.newBasePrice?.toFixed(2)}{t('upgradeDialog.perMonthSuffix')}</span>
-                </div>
-                <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t('upgradeDialog.perUserFee', { count: upgradePreview.userCount })}</span>
                   <span>{t('upgradeDialog.perUserFeeValue', {
                     unit: upgradePreview.newUserPrice?.toFixed(2),
@@ -2207,16 +2199,12 @@ export default function AccountManagement() {
 
               <div className="rounded-lg border p-4 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t('confirmPremiumDialog.baseFee')}</span>
-                  <span>${((confirmPremiumPreview.newBasePrice || 0) / 100).toFixed(2)}{t('confirmPremiumDialog.perMonthSuffix')}</span>
-                </div>
-                <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t('confirmPremiumDialog.perUserCount', { count: confirmPremiumPreview.userCount })}</span>
-                  <span>{t('confirmPremiumDialog.perUserRate', { amount: ((confirmPremiumPreview.newUserPrice || 0) / 100).toFixed(2) })}</span>
+                  <span>{t('confirmPremiumDialog.perUserRate', { amount: (confirmPremiumPreview.newUserPrice || 0).toFixed(2) })}</span>
                 </div>
                 <div className="flex justify-between text-sm font-semibold pt-2 border-t">
                   <span>{t('confirmPremiumDialog.newMonthlyTotal')}</span>
-                  <span>${((confirmPremiumPreview.newMonthly || 0) / 100).toFixed(2)}{t('confirmPremiumDialog.perMonthSuffix')}</span>
+                  <span>${(confirmPremiumPreview.newMonthly || 0).toFixed(2)}{t('confirmPremiumDialog.perMonthSuffix')}</span>
                 </div>
               </div>
 
