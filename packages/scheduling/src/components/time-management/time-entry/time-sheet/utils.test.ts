@@ -74,13 +74,26 @@ describe('time entry same-day duration helpers', () => {
     expect(isTimeEntryOnWorkDate(entry, '2026-04-01')).toBe(false);
   });
 
-  it('T008: falls back to start_time date when work_date is missing', () => {
+  it('normalizes serialized work_date values without falling back to start_time', () => {
+    expect(getTimeEntryWorkDate({
+      work_date: '2026-03-31T00:00:00.000Z',
+      start_time: '2026-04-01T00:00:00.000Z',
+    })).toBe('2026-03-31');
+
+    expect(getTimeEntryWorkDate({
+      work_date: new Date('2026-03-31T00:00:00.000Z'),
+      start_time: '2026-04-01T00:00:00.000Z',
+    })).toBe('2026-03-31');
+  });
+
+  it('T008: fails fast when work_date is missing after migration', () => {
     const entry = {
+      entry_id: 'entry-without-work-date',
       work_date: null,
       start_time: '2026-04-01T00:00:00.000Z',
     } as any;
 
-    expect(getTimeEntryWorkDate(entry)).toBe('2026-04-01');
-    expect(isTimeEntryOnWorkDate(entry, '2026-04-01')).toBe(true);
+    expect(() => getTimeEntryWorkDate(entry)).toThrow('entry-without-work-date');
+    expect(() => isTimeEntryOnWorkDate(entry, '2026-04-01')).toThrow('entry-without-work-date');
   });
 });

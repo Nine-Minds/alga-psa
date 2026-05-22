@@ -31,7 +31,7 @@
   },
   {
     "id": "T006",
-    "description": "Time approval display test: approval grouping/display uses work_date where present.",
+    "description": "Time approval display test: approval grouping/display uses required work_date.",
     "implemented": true,
     "featureIds": ["F006", "F009"]
   },
@@ -43,8 +43,14 @@
   },
   {
     "id": "T008",
-    "description": "Legacy fallback test: entries without work_date still group by start_time so older/incomplete records remain visible.",
+    "description": "Invariant test: persisted-style entries without work_date fail fast after migration rather than silently grouping by start_time.",
     "implemented": true,
-    "featureIds": ["F004", "F005", "F006", "F009"]
+    "featureIds": ["F004", "F005", "F006", "F009", "F011"]
+  },
+  {
+    "id": "T009",
+    "description": "Migration test: missing work_date/work_timezone rows are backfilled and both columns are enforced as NOT NULL.",
+    "implemented": false,
+    "featureIds": ["F011"]
   }
 ]

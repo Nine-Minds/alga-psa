@@ -90,7 +90,7 @@
   - Files:
     - `packages/scheduling/src/components/time-management/time-entry/time-sheet/TimeSheetTable.tsx`
     - `packages/scheduling/src/components/time-management/time-entry/time-sheet/TimeSheetListView.tsx`
-  - Rationale: boundary entries now render/group under `work_date` while preserving legacy fallback.
+  - Rationale: boundary entries now render/group under `work_date`; a later migration makes missing `work_date` invalid for persisted entries.
 
 - Completed `F007`: quick-add continuation now locates same-day existing entries by resolved work-date.
   - File: `packages/scheduling/src/components/time-management/time-entry/time-sheet/TimeSheet.tsx`

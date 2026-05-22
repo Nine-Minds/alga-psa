@@ -108,7 +108,7 @@ export function TimeSheetListView({
                 entries.push({
                     entry,
                     workItem,
-                    date: start,
+                    date: parseISO(entryWorkDate),
                     dateKey: entryWorkDate,
                     duration,
                     billabilityPercentage

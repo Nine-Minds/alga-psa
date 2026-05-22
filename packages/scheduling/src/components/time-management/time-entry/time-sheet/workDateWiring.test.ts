@@ -15,8 +15,9 @@ describe('work-date wiring for time sheet and approvals', () => {
     expect(tableSource).toContain('isTimeEntryOnWorkDate(entry, dateKey)');
   });
 
-  it('T005: time sheet list groups and filters using the resolved work-date key', () => {
+  it('T005: time sheet list groups, filters, and renders headers using the resolved work-date key', () => {
     expect(listSource).toContain('const entryWorkDate = getTimeEntryWorkDate(entry);');
+    expect(listSource).toContain('date: parseISO(entryWorkDate)');
     expect(listSource).toContain('dateKey: entryWorkDate');
   });
 
