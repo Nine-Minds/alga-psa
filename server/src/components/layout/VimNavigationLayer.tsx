@@ -16,7 +16,10 @@ interface LinkHint {
 
 type MacroAwaitMode = "record" | "play" | null;
 
-const HINT_ALPHABET = "asdfghjklqwertyuiopzxcvbnm";
+// Hint label alphabet — excludes "f" because it is the trigger key for opening
+// hints. If "f" were a valid label, pressing f to dismiss hints would activate
+// a hint instead.
+const HINT_ALPHABET = "asdghjklqwertyuiopzxcvbnm";
 
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
@@ -252,15 +255,30 @@ function getRowAction(row: HTMLTableRowElement): HTMLElement | null {
   }) ?? null;
 }
 
-function makeHintLabel(index: number): string {
-  if (index < HINT_ALPHABET.length) {
-    return HINT_ALPHABET[index] ?? "";
+// Generate labels of uniform length so a typed prefix is never ambiguous with
+// a complete label. If labels mixed lengths (e.g. "a" and "at"), typing "a"
+// would have an exact match AND a longer prefix, requiring a timeout to
+// disambiguate — and the timeout races the user's second keystroke.
+function generateHintLabels(count: number): string[] {
+  if (count <= 0) return [];
+
+  const base = HINT_ALPHABET.length;
+  let length = 1;
+  while (Math.pow(base, length) < count) {
+    length += 1;
   }
 
-  const adjusted = index - HINT_ALPHABET.length;
-  const first = HINT_ALPHABET[Math.floor(adjusted / HINT_ALPHABET.length)] ?? "";
-  const second = HINT_ALPHABET[adjusted % HINT_ALPHABET.length] ?? "";
-  return `${first}${second}`;
+  const labels: string[] = [];
+  for (let i = 0; i < count; i++) {
+    let label = "";
+    let n = i;
+    for (let pos = 0; pos < length; pos++) {
+      label = HINT_ALPHABET[n % base] + label;
+      n = Math.floor(n / base);
+    }
+    labels.push(label);
+  }
+  return labels;
 }
 
 function getHintTargets(): HTMLElement[] {
@@ -398,11 +416,13 @@ export default function VimNavigationLayer({ onOpenHelp }: VimNavigationLayerPro
 
   const openHints = useCallback((newTab: boolean) => {
     const targets = getHintTargets();
+    const labels = generateHintLabels(targets.length);
     const nextHints: LinkHint[] = [];
     const nextTargets: Record<string, HTMLElement> = {};
 
     targets.forEach((target, index) => {
-      const label = makeHintLabel(index);
+      const label = labels[index] ?? "";
+      if (!label) return;
       const rect = target.getBoundingClientRect();
       nextHints.push({ label, top: Math.max(4, rect.top), left: Math.max(4, rect.left) });
       nextTargets[label] = target;
