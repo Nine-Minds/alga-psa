@@ -28,7 +28,6 @@ import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/sha
 
 const CLIENT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
 const CLIENT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
-const CLIENT_LIST_SEARCH_TYPES = ['client', 'document', 'interaction'] as const;
 
 function maybeUserActor(currentUser: any) {
   const userId = currentUser?.user_id;
@@ -517,96 +516,144 @@ function applyClientListIndexedSearchFilter(
       ? '(si.client_scope_id IS NULL OR si.client_scope_id = ?::uuid)'
       : 'si.client_scope_id IS NULL';
   const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
+  const ilikePattern = `%${rawSearch}%`;
 
-  return baseQuery.where(function(this: Knex.QueryBuilder) {
-    this.whereRaw(
-      `
-        EXISTS (
-          SELECT 1
-          FROM app_search_index si
-          CROSS JOIN (
-            SELECT
-              websearch_to_tsquery('english', ?) AS tsq,
-              CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
-              ?::text AS raw,
-              ?::text AS identifier
-          ) q
-          LEFT JOIN interactions interaction_match
-            ON si.object_type = 'interaction'
-            AND interaction_match.tenant = si.tenant
-            AND interaction_match.interaction_id::text = si.object_id
-          LEFT JOIN document_associations document_client_match
-            ON si.object_type = 'document'
-            AND document_client_match.tenant = si.tenant
-            AND document_client_match.document_id::text = si.object_id
-            AND document_client_match.entity_type = 'client'
-          WHERE si.tenant = ?::uuid
-            AND si.object_type = ANY(?::text[])
-            AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
-            AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
-            AND (si.is_internal_only = false OR ?::boolean = true)
-            AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
-            AND ${clientScopePredicate}
-            AND (
-              (si.object_type = 'client' AND si.object_id = c.client_id::text)
-              OR (si.object_type = 'interaction' AND interaction_match.client_id::text = c.client_id::text)
-              OR (si.object_type = 'document' AND document_client_match.entity_id::text = c.client_id::text)
-            )
-            AND (
-              si.search_vector @@ q.tsq
-              OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
-              OR si.title ILIKE '%' || q.raw || '%'
-              OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
-              OR si.title % q.raw
-              OR coalesce(si.subtitle, '') % q.raw
-              OR (
-                q.identifier IS NOT NULL
-                AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier
-              )
-              OR (
-                q.identifier IS NOT NULL
-                AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%'
-              )
-            )
-        )
-      `,
-      [
-        rawSearch,
-        prefixTsquery,
-        prefixTsquery,
-        rawSearch,
-        identifier,
-        tenant,
-        [...CLIENT_LIST_SEARCH_TYPES],
-        permissions,
-        user.user_id,
-        isInternalUser,
-        user.user_id,
-        ...clientScopeBindings,
-      ]
-    ).orWhere(function(this: Knex.QueryBuilder) {
-      this.where('c.client_name', 'ilike', `%${rawSearch}%`)
-        .orWhere('c.billing_email', 'ilike', `%${rawSearch}%`)
-        .orWhere('c.url', 'ilike', `%${rawSearch}%`)
-        .orWhere('c.notes', 'ilike', `%${rawSearch}%`)
-        .orWhereExists(function(this: Knex.QueryBuilder) {
-          this.select('*')
-            .from('client_locations as cl_search')
-            .whereRaw('cl_search.tenant = c.tenant')
-            .andWhereRaw('cl_search.client_id = c.client_id')
-            .andWhere(function(this: Knex.QueryBuilder) {
-              this.where('cl_search.phone', 'ilike', `%${rawSearch}%`)
-                .orWhere('cl_search.email', 'ilike', `%${rawSearch}%`)
-                .orWhere('cl_search.address_line1', 'ilike', `%${rawSearch}%`)
-                .orWhere('cl_search.address_line2', 'ilike', `%${rawSearch}%`)
-                .orWhere('cl_search.city', 'ilike', `%${rawSearch}%`)
-                .orWhere('cl_search.state_province', 'ilike', `%${rawSearch}%`)
-                .orWhere('cl_search.postal_code', 'ilike', `%${rawSearch}%`)
-                .orWhere('cl_search.country_name', 'ilike', `%${rawSearch}%`);
-            });
-        });
-    });
-  });
+  // Citus cannot push down an OR that mixes correlated EXISTS across multiple
+  // distributed tables (app_search_index, interactions, document_associations,
+  // client_locations). Rewrite as UNION ALL of single-distributed-table legs
+  // producing (client_id, tenant); each leg is independently pushdown-safe and
+  // the outer INNER JOIN is co-located on the distribution column. Mirrors the
+  // ticket search rewrite in optimizedTicketActions.ts (PR #2547).
+  const qCte = `
+    CROSS JOIN (
+      SELECT
+        websearch_to_tsquery('english', ?) AS tsq,
+        CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
+        ?::text AS raw,
+        ?::text AS identifier
+    ) q
+  `;
+  const qBindings: Knex.RawBinding[] = [rawSearch, prefixTsquery, prefixTsquery, rawSearch, identifier];
+
+  const siFilters = `
+    AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
+    AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+    AND (si.is_internal_only = false OR ?::boolean = true)
+    AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+    AND ${clientScopePredicate}
+    AND (
+      si.search_vector @@ q.tsq
+      OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
+      OR si.title ILIKE '%' || q.raw || '%'
+      OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
+      OR si.title % q.raw
+      OR coalesce(si.subtitle, '') % q.raw
+      OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier)
+      OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%')
+    )
+  `;
+  const siFilterBindings: Knex.RawBinding[] = [
+    permissions,
+    user.user_id,
+    isInternalUser,
+    user.user_id,
+    ...clientScopeBindings,
+  ];
+
+  const legA = `
+    SELECT si.object_id::uuid AS client_id, si.tenant
+    FROM app_search_index si
+    ${qCte}
+    WHERE si.tenant = ?::uuid
+      AND si.object_type = 'client'
+      ${siFilters}
+  `;
+  const legABindings: Knex.RawBinding[] = [...qBindings, tenant, ...siFilterBindings];
+
+  const legB = `
+    SELECT im.client_id AS client_id, im.tenant
+    FROM app_search_index si
+    ${qCte}
+    JOIN interactions im
+      ON im.tenant = si.tenant
+     AND im.interaction_id::text = si.object_id
+    WHERE si.tenant = ?::uuid
+      AND si.object_type = 'interaction'
+      ${siFilters}
+  `;
+  const legBBindings: Knex.RawBinding[] = [...qBindings, tenant, ...siFilterBindings];
+
+  const legC = `
+    SELECT da.entity_id::uuid AS client_id, da.tenant
+    FROM app_search_index si
+    ${qCte}
+    JOIN document_associations da
+      ON da.tenant = si.tenant
+     AND da.document_id::text = si.object_id
+     AND da.entity_type = 'client'
+    WHERE si.tenant = ?::uuid
+      AND si.object_type = 'document'
+      ${siFilters}
+  `;
+  const legCBindings: Knex.RawBinding[] = [...qBindings, tenant, ...siFilterBindings];
+
+  const legD = `
+    SELECT c2.client_id, c2.tenant
+    FROM clients c2
+    WHERE c2.tenant = ?::uuid
+      AND (
+        c2.client_name ILIKE ?
+        OR c2.billing_email ILIKE ?
+        OR c2.url ILIKE ?
+        OR c2.notes ILIKE ?
+      )
+  `;
+  const legDBindings: Knex.RawBinding[] = [tenant, ilikePattern, ilikePattern, ilikePattern, ilikePattern];
+
+  const legE = `
+    SELECT cl_search.client_id, cl_search.tenant
+    FROM client_locations cl_search
+    WHERE cl_search.tenant = ?::uuid
+      AND (
+        cl_search.phone ILIKE ?
+        OR cl_search.email ILIKE ?
+        OR cl_search.address_line1 ILIKE ?
+        OR cl_search.address_line2 ILIKE ?
+        OR cl_search.city ILIKE ?
+        OR cl_search.state_province ILIKE ?
+        OR cl_search.postal_code ILIKE ?
+        OR cl_search.country_name ILIKE ?
+      )
+  `;
+  const legEBindings: Knex.RawBinding[] = [
+    tenant,
+    ilikePattern, ilikePattern, ilikePattern, ilikePattern,
+    ilikePattern, ilikePattern, ilikePattern, ilikePattern,
+  ];
+
+  const unionSql = `
+    INNER JOIN (
+      SELECT DISTINCT client_id, tenant FROM (
+        ${legA}
+        UNION ALL
+        ${legB}
+        UNION ALL
+        ${legC}
+        UNION ALL
+        ${legD}
+        UNION ALL
+        ${legE}
+      ) u
+    ) as sm ON sm.client_id = c.client_id AND sm.tenant = c.tenant
+  `;
+
+  return baseQuery.joinRaw(unionSql, [
+    ...legABindings,
+    ...legBBindings,
+    ...legCBindings,
+    ...legDBindings,
+    ...legEBindings,
+  ] as unknown as Knex.Value[]);
 }
 
 function buildDefaultClientLocationSubquery(trx: Knex.Transaction, tenant: string): Knex.QueryBuilder {
