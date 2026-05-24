@@ -276,7 +276,7 @@ export const searchContactListIds = withAuth(async (
             CASE
               WHEN si.object_type = 'contact' THEN si.object_id
               WHEN si.object_type = 'interaction' THEN interaction_match.contact_name_id::text
-              WHEN si.object_type = 'document' THEN coalesce(note_contact.contact_name_id::text, document_contact_match.entity_id)
+              WHEN si.object_type = 'document' THEN coalesce(note_contact.contact_name_id::text, document_contact_match.entity_id::text)
             END AS contact_id
           FROM app_search_index si
           CROSS JOIN q
