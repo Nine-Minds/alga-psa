@@ -131,7 +131,7 @@
   {
     "id": "F017",
     "description": "Implement writeTeamsDeliveryRow(input) helper in ee/packages/microsoft-teams/src/lib/notifications/teamsDeliveryRecorder.ts. Computes idempotency_key (SHA-256), inserts with ON CONFLICT DO NOTHING.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow A"
     ]
@@ -139,7 +139,7 @@
   {
     "id": "F018",
     "description": "Instrument deliverTeamsNotificationImpl() to call writeTeamsDeliveryRow() on 'skipped' return path with appropriate skip reason mapped to error_code enum.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow A"
     ]
@@ -147,7 +147,7 @@
   {
     "id": "F019",
     "description": "Instrument deliverTeamsNotificationImpl() to call writeTeamsDeliveryRow() on 'delivered' return path with provider_message_id.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow A"
     ]
@@ -155,7 +155,7 @@
   {
     "id": "F020",
     "description": "Instrument deliverTeamsNotificationImpl() to call writeTeamsDeliveryRow() on 'failed' return path with error_code mapped to enum (graph_throttled, graph_unauthorized, etc.).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow A",
       "Error code taxonomy"
@@ -164,7 +164,7 @@
   {
     "id": "F021",
     "description": "Map Graph HTTP status codes to error_code enum values: 401/403 -> graph_unauthorized; 404 -> graph_not_found; 429 -> graph_throttled; 5xx -> graph_server_error.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Error code taxonomy"
     ]
@@ -172,7 +172,7 @@
   {
     "id": "F022",
     "description": "Map non-Graph skip reasons to error_code enum: missing addon -> addon_inactive; integration inactive -> integration_inactive; user not mapped -> user_not_mapped; missing package metadata -> package_misconfigured.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Error code taxonomy"
     ]
@@ -180,7 +180,7 @@
   {
     "id": "F023",
     "description": "Capture provider_request_id from Graph response 'request-id' header when present and persist on delivery row.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data Model > teams_notification_deliveries"
     ]
@@ -188,7 +188,7 @@
   {
     "id": "F024",
     "description": "Truncate error_message to 1KB before persisting to prevent leaking long customer/Graph payloads.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Privacy / Security"
     ]

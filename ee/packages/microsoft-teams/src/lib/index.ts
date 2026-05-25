@@ -7,6 +7,7 @@ export * from './meetings/createTeamsMeeting';
 export * from './meetings/deleteTeamsMeeting';
 export * from './meetings/updateTeamsMeeting';
 export * from './meetings/verifyMeetingOrganizer';
+export * from './notifications/teamsDeliveryRecorder';
 export * from './notifications/teamsNotificationDelivery';
 export * from './teams/actions/teamsActionRegistry';
 export * from './teams/bot/teamsBotHandler';

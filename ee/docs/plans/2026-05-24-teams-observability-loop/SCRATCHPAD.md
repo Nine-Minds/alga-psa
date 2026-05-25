@@ -87,6 +87,24 @@ rg "deliverTeamsNotificationImpl|teamsActionRegistry" services/workflow-worker/
   These cover migration shape, partition creation, cleanup function presence, Citus hooks, CE-only migration placement, and tenant deletion ordering. Real DB migration/run tests still need the local test database or Citus environment.
 - Test command: `cd server && npx vitest run src/test/unit/migrations/teamsObservabilityMigrations.test.ts src/test/unit/temporal/teamsObservabilityTenantDeletionOrder.test.ts` → passed 9 tests. Root `npm run test:local -- ...` failed because the `dotenv` binary was not available in this checkout.
 
+## 2026-05-24 delivery recorder notes
+
+- Added `ee/packages/microsoft-teams/src/lib/notifications/teamsDeliveryRecorder.ts`.
+  - Computes idempotency key as SHA-256 over `internal_notification_id|tenant|destination_type|destination_id|attempt_number`.
+  - Reserves `(tenant, idempotency_key)` in `teams_notification_delivery_idempotency` and inserts into `teams_notification_deliveries` only when reservation succeeds.
+  - Truncates `error_message` to 1024 characters.
+  - Uses `createTenantKnex(input.tenant)` and logs/swallows persistence failures so notification delivery behavior is not blocked by observability writes.
+- Instrumented `deliverTeamsNotificationImpl()`:
+  - skipped paths write `status='skipped'` with mapped error codes where the taxonomy has one;
+  - delivered path writes `status='delivered'`, `sent_at`, `delivered_at`, `provider_message_id`, and `provider_request_id`;
+  - Graph failure path maps HTTP status to the delivery error taxonomy and persists `provider_request_id`;
+  - thrown/network failure path persists `error_code='transient'`.
+- Added tests:
+  - `server/src/test/unit/internal-notifications/teamsDeliveryRecorder.test.ts`
+  - `server/src/test/unit/internal-notifications/teamsNotificationDeliveryObservability.test.ts`
+- Test command: `cd server && npx vitest run src/test/unit/internal-notifications/teamsDeliveryRecorder.test.ts src/test/unit/internal-notifications/teamsNotificationDeliveryObservability.test.ts` → passed 6 tests.
+- Typecheck: `npm -w @alga-psa/ee-microsoft-teams run typecheck` → passed.
+
 ## Things explicitly out of scope (do not let scope creep in)
 
 - Channel mapping table (`teams_channel_mappings`) — Phase 2.

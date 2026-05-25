@@ -175,7 +175,7 @@
   {
     "id": "T022",
     "description": "writeTeamsDeliveryRow computes idempotency_key deterministically from (notification_id, tenant, destination_type, destination_id, attempt_number).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
@@ -183,7 +183,7 @@
   {
     "id": "T023",
     "description": "writeTeamsDeliveryRow truncates error_message to 1024 chars.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024"
     ]
@@ -296,7 +296,7 @@
   {
     "id": "T036",
     "description": "Calling deliverTeamsNotificationImpl twice with same input produces only one persisted row (idempotency).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F017"
@@ -588,7 +588,7 @@
   {
     "id": "T070",
     "description": "Negative test: instrumentation failure (e.g., DB unreachable during writeTeamsDeliveryRow) does NOT prevent the notification from being sent — error is logged and swallowed.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017"
     ]
