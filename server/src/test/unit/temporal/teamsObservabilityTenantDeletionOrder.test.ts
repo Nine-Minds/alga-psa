@@ -34,4 +34,12 @@ describe('teams observability tenant deletion ordering', () => {
     expect(source).toContain("'microsoft_profile_consumer_bindings'");
     expect(source).toContain("'microsoft_profiles'");
   });
+
+  it('deletes tenant-scoped tables through the parent table with an explicit tenant filter', () => {
+    expect(source).toContain('for (const tableName of TENANT_TABLES_DELETION_ORDER)');
+    expect(source).toContain('const tenantColumn = await getTableTenantColumn(adminKnex, tableName)');
+    expect(source).toContain('.where({ [tenantColumn]: tenantId })');
+    expect(source).toContain('if (count > 0)');
+    expect(source).toContain("(k) => k(tableName).where({ [tenantColumn]: tenantId }).delete()");
+  });
 });

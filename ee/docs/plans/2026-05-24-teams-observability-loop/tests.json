@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "Migration runs cleanly on a fresh CE database (no Citus).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F009",
@@ -12,7 +12,7 @@
   {
     "id": "T002",
     "description": "Migration runs cleanly on a Citus-enabled database and create_distributed_table succeeds for all three new tables.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F013",
@@ -30,7 +30,7 @@
   {
     "id": "T004",
     "description": "teams_notification_deliveries primary key is (tenant, delivery_id).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001"
     ]
@@ -38,7 +38,7 @@
   {
     "id": "T005",
     "description": "UNIQUE (tenant, idempotency_key) constraint exists on teams_notification_deliveries and rejects duplicate inserts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002"
     ]
@@ -46,7 +46,7 @@
   {
     "id": "T006",
     "description": "INSERT ... ON CONFLICT (tenant, idempotency_key) DO NOTHING is a safe no-op on duplicate and returns rowCount 0.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F017"
@@ -111,7 +111,7 @@
   {
     "id": "T014",
     "description": "Inserting a row with created_at in current month lands in the correct child partition.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006"
     ]
@@ -119,7 +119,7 @@
   {
     "id": "T015",
     "description": "cleanup_teams_notification_deliveries('30 days') drops partitions older than 30 days and leaves newer ones intact.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008"
     ]
@@ -151,7 +151,7 @@
   {
     "id": "T019",
     "description": "cleanup_teams_audit_events('365 days') deletes rows older than 365 days only.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F014"
     ]
@@ -191,7 +191,7 @@
   {
     "id": "T024",
     "description": "deliverTeamsNotificationImpl writes one row with status='skipped' and error_code='addon_inactive' when ADD_ONS.TEAMS is missing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F022"
@@ -200,7 +200,7 @@
   {
     "id": "T025",
     "description": "deliverTeamsNotificationImpl writes one row with status='skipped' and error_code='integration_inactive' when teams_integrations.install_status != 'active'.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F022"
@@ -209,7 +209,7 @@
   {
     "id": "T026",
     "description": "deliverTeamsNotificationImpl writes one row with status='skipped' and error_code='user_not_mapped' when the recipient has no Microsoft account binding.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F022"
@@ -218,7 +218,7 @@
   {
     "id": "T027",
     "description": "deliverTeamsNotificationImpl writes one row with status='skipped' and error_code='package_misconfigured' when package metadata baseUrl is missing.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F022"
@@ -227,7 +227,7 @@
   {
     "id": "T028",
     "description": "deliverTeamsNotificationImpl writes one row with status='delivered', provider_message_id, sent_at set, error fields NULL on Graph 200 response.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F019"
     ]
@@ -235,7 +235,7 @@
   {
     "id": "T029",
     "description": "deliverTeamsNotificationImpl writes status='failed' error_code='graph_throttled' retryable=true on Graph 429.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F021"
@@ -244,7 +244,7 @@
   {
     "id": "T030",
     "description": "deliverTeamsNotificationImpl writes status='failed' error_code='graph_unauthorized' retryable=false on Graph 401.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F021"
@@ -253,7 +253,7 @@
   {
     "id": "T031",
     "description": "deliverTeamsNotificationImpl writes status='failed' error_code='graph_unauthorized' on Graph 403.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F021"
@@ -262,7 +262,7 @@
   {
     "id": "T032",
     "description": "deliverTeamsNotificationImpl writes status='failed' error_code='graph_not_found' on Graph 404.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F021"
@@ -271,7 +271,7 @@
   {
     "id": "T033",
     "description": "deliverTeamsNotificationImpl writes status='failed' error_code='graph_server_error' retryable=true on Graph 5xx.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020",
       "F021"
@@ -280,7 +280,7 @@
   {
     "id": "T034",
     "description": "deliverTeamsNotificationImpl writes status='failed' error_code='transient' retryable=true on network/timeout error.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F020"
     ]
@@ -288,7 +288,7 @@
   {
     "id": "T035",
     "description": "deliverTeamsNotificationImpl populates provider_request_id when Graph response includes request-id header.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
@@ -429,7 +429,7 @@
   {
     "id": "T052",
     "description": "Tenant-scoped writes: inserting delivery row with tenant=A from a session scoped to tenant=B is impossible via the helper (helper always derives tenant from runWithTenant context).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F025",
@@ -439,7 +439,7 @@
   {
     "id": "T053",
     "description": "Tenant-scoped writes: every persisted row in teams_notification_deliveries, teams_audit_events, teams_conversation_references has tenant=<expected> for fixtures.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F025",
@@ -528,7 +528,7 @@
   {
     "id": "T063",
     "description": "CRITICAL: tenant deletion integration test seeds rows into all three new tables and verifies they are removed after the deletion workflow completes.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042",
       "F043"
@@ -545,7 +545,7 @@
   {
     "id": "T065",
     "description": "Tenant deletion test verifies DELETE on partitioned teams_notification_deliveries removes rows from all relevant partitions (not just current month).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F043"
     ]
@@ -553,7 +553,7 @@
   {
     "id": "T066",
     "description": "Tenant deletion test for a tenant that has zero rows in new tables completes without error (no-op deletes are safe).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F042"
     ]
@@ -561,7 +561,7 @@
   {
     "id": "T067",
     "description": "TypeScript build of @alga-psa/microsoft-teams succeeds with new helpers and server actions; tsup dist exports include the new types.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045",
       "F047"
@@ -578,7 +578,7 @@
   {
     "id": "T069",
     "description": "Performance smoke test: 100 sequential deliverTeamsNotificationImpl calls add < 200ms total overhead from instrumentation (rough budget).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F019",
@@ -604,7 +604,7 @@
   {
     "id": "T072",
     "description": "Workflow worker grep verification: confirmed whether services/workflow-worker imports deliverTeamsNotificationImpl, and deployment notes updated accordingly.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F046"
     ]

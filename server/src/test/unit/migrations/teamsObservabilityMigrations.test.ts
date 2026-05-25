@@ -40,6 +40,7 @@ describe('teams observability migrations', () => {
     expect(deliveriesMigration).toContain('CREATE TABLE IF NOT EXISTS teams_notification_delivery_idempotency');
     expect(deliveriesMigration).toContain('CONSTRAINT teams_notification_delivery_idempotency_pk PRIMARY KEY (tenant, idempotency_key)');
     expect(deliveriesMigration).toContain('teams_notification_deliveries_idempotency_lookup_idx');
+    expect(deliveriesMigration).toContain('CONSTRAINT teams_notification_deliveries_pk PRIMARY KEY (tenant, delivery_id, created_at)');
   });
 
   it('creates delivery indexes and Citus distribution hooks', () => {
@@ -50,6 +51,19 @@ describe('teams observability migrations', () => {
     expect(deliveriesMigration).toContain("create_distributed_table(?, 'tenant', colocate_with => 'teams_integrations')");
     expect(deliveriesMigration).toContain('Citus distribution smoke count');
     expect(deliveriesMigration).toContain('exports.config = { transaction: false }');
+  });
+
+  it('defines cleanup functions with safe retention cutoffs for deliveries and audit events', () => {
+    expect(deliveriesMigration).toContain("retention_interval interval DEFAULT interval '90 days'");
+    expect(deliveriesMigration).toContain('cutoff timestamptz := now() - retention_interval');
+    expect(deliveriesMigration).toContain('pg_inherits');
+    expect(deliveriesMigration).toContain("WHERE parent.relname = 'teams_notification_deliveries'");
+    expect(deliveriesMigration).toContain('DROP TABLE IF EXISTS %I');
+
+    expect(auditMigration).toContain("retention_interval interval DEFAULT interval '365 days'");
+    expect(auditMigration).toContain('DELETE FROM teams_audit_events');
+    expect(auditMigration).toContain('WHERE created_at < now() - retention_interval');
+    expect(auditMigration).toContain('GET DIAGNOSTICS deleted_count = ROW_COUNT');
   });
 
   it('creates the Teams audit events table with constrained surfaces, actions, statuses, indexes, and cleanup', () => {

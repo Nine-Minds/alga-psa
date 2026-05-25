@@ -343,7 +343,7 @@
   {
     "id": "F043",
     "description": "Verify partitioned table deletion behavior: DELETE FROM teams_notification_deliveries WHERE tenant=? prunes across all partitions (tested in tenant-deletion activity).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Tenant Deletion Integration"
     ]
@@ -359,7 +359,7 @@
   {
     "id": "F045",
     "description": "Rebuild @alga-psa/microsoft-teams package (tsup -> dist) so server picks up new exports and instrumentation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration"
     ]
@@ -367,7 +367,7 @@
   {
     "id": "F046",
     "description": "Grep services/workflow-worker for imports of deliverTeamsNotificationImpl / teamsActionRegistry. If present, document worker rebuild requirement in plan deployment notes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Risks"
     ]
@@ -383,7 +383,7 @@
   {
     "id": "F048",
     "description": "Document the new tables, instrumentation helpers, and tenant-deletion registration in a one-line CHANGELOG entry (internal — no marketing).",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration"
     ]

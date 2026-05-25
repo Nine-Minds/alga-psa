@@ -156,6 +156,28 @@ rg "deliverTeamsNotificationImpl|teamsActionRegistry" services/workflow-worker/
 - Test command: `cd server && npx vitest run src/test/unit/lib/teams/actions/teamsObservabilityActions.test.ts` -> passed 5 tests.
 - Typecheck: `npm -w @alga-psa/ee-microsoft-teams run typecheck` -> passed.
 
+## 2026-05-24 final verification batch
+
+- Added `server/src/test/unit/internal-notifications/teamsNotificationDeliveryImplObservability.test.ts`.
+  - Covers skipped rows for inactive add-on, inactive integration, unmapped user, and package misconfiguration.
+  - Covers delivered rows with `providerMessageId` and `providerRequestId` from Graph `request-id`.
+  - Covers Graph 429/401/403/404/500 mappings plus transient thrown errors.
+  - Test command: `cd server && npx vitest run src/test/unit/internal-notifications/teamsNotificationDeliveryImplObservability.test.ts` -> passed 11 tests.
+- Extended migration contract tests:
+  - Delivery partitioned PK is asserted as `(tenant, delivery_id, created_at)` with tenant-scoped idempotency sidecar `(tenant, idempotency_key)`.
+  - Delivery cleanup function assertions cover `pg_inherits`, parent table filtering, retention cutoff, and partition `DROP TABLE`.
+  - Audit cleanup function assertions cover range delete and returned row count.
+  - Test command: `cd server && npx vitest run src/test/unit/migrations/teamsObservabilityMigrations.test.ts src/test/unit/temporal/teamsObservabilityTenantDeletionOrder.test.ts` -> passed 11 tests.
+- Tenant deletion verification:
+  - Static contract confirms all observability tables are listed before `teams_integrations`.
+  - Static contract confirms the deletion loop resolves the tenant column and deletes every listed table via `.where({ [tenantColumn]: tenantId })`, which deletes from the partitioned parent table and lets Postgres prune child partitions.
+  - Zero-row safety is covered by the same deletion-loop contract: delete is skipped when `count === 0`, so empty observability tables are no-ops.
+- Migration syntax verification: `node -c` passed for all three observability migrations.
+- Package rebuild: `npm -w @alga-psa/ee-microsoft-teams run build` -> passed; dist outputs regenerated in ignored package build output.
+- Workflow worker grep: `rg "deliverTeamsNotificationImpl|teamsActionRegistry" services/workflow-worker -n` -> no matches. Deployment note: workflow-worker rebuild is not required by these imports.
+- Added `ee/packages/microsoft-teams/CHANGELOG.md` with the internal one-line observability entry.
+- Local environment note: live CE/Citus migration and tenant-deletion integration tests were not run against a database here; `.env.localtest` points at `/run/secrets/...` files that are not present in this checkout, and `pg_isready` is unavailable. Coverage for those checklist items is static contract/syntax verification in this workspace.
+
 ## Things explicitly out of scope (do not let scope creep in)
 
 - Channel mapping table (`teams_channel_mappings`) — Phase 2.
