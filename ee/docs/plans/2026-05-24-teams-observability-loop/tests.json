@@ -449,7 +449,7 @@
   {
     "id": "T054",
     "description": "Static check (grep-based) confirms every SQL statement against the three new tables in package code references 'tenant' in WHERE or PK insert columns.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F017",
       "F025",
@@ -461,7 +461,7 @@
   {
     "id": "T055",
     "description": "listTeamsDeliveries returns rows only for the authenticated tenant; cross-tenant rows are not visible even when filter parameters would otherwise match.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ]
@@ -469,7 +469,7 @@
   {
     "id": "T056",
     "description": "listTeamsDeliveries throws permission error when caller lacks teams_integration:read.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038",
       "F041"
@@ -478,7 +478,7 @@
   {
     "id": "T057",
     "description": "listTeamsDeliveries respects limit cap (passing limit=1000 is clamped to 200).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038"
     ]
@@ -486,7 +486,7 @@
   {
     "id": "T058",
     "description": "listTeamsDeliveries cursor pagination returns a stable second page with no overlap and no skipped rows under concurrent inserts.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F038",
       "F040"
@@ -495,7 +495,7 @@
   {
     "id": "T059",
     "description": "listTeamsDeliveries rejects malformed cursor with a clear error.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F040"
     ]
@@ -503,7 +503,7 @@
   {
     "id": "T060",
     "description": "listTeamsAuditEvents returns rows only for the authenticated tenant.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ]
@@ -511,7 +511,7 @@
   {
     "id": "T061",
     "description": "listTeamsAuditEvents filters by surface, action_id, actor_user_id, result_status as documented.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039"
     ]
@@ -519,7 +519,7 @@
   {
     "id": "T062",
     "description": "listTeamsAuditEvents throws permission error when caller lacks teams_integration:read.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039",
       "F041"
@@ -596,7 +596,7 @@
   {
     "id": "T071",
     "description": "Permission seeder grep: 'teams_integration' read permission is present after running seeders (either pre-existing or newly added in this PR).",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041"
     ]

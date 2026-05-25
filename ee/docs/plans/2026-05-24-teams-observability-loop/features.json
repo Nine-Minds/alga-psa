@@ -301,7 +301,7 @@
   {
     "id": "F038",
     "description": "Implement listTeamsDeliveries server action in teamsObservabilityActions.ts using withAuth + hasPermission('teams_integration','read'). Supports status/category/since filters, cursor pagination, limit cap 200.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow D",
       "API Surface"
@@ -310,7 +310,7 @@
   {
     "id": "F039",
     "description": "Implement listTeamsAuditEvents server action in teamsObservabilityActions.ts using withAuth + hasPermission('teams_integration','read'). Supports surface/action_id/actor/result filters, cursor pagination.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow D",
       "API Surface"
@@ -319,7 +319,7 @@
   {
     "id": "F040",
     "description": "Cursor encoding: opaque base64 of (created_at, id) tuple so pagination is stable under inserts. Decode/validate cursor server-side; reject malformed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API Surface"
     ]
@@ -327,7 +327,7 @@
   {
     "id": "F041",
     "description": "Add 'teams_integration:read' permission to permission seeder if absent. Verify by grepping existing permissions before adding.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Open Questions Q2"
     ]
@@ -375,7 +375,7 @@
   {
     "id": "F047",
     "description": "Export TeamsDeliveryRow and TeamsAuditEventRow TypeScript types from the package public API surface for the server actions to consume.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "API Surface"
     ]

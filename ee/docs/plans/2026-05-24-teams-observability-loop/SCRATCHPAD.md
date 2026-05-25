@@ -136,6 +136,26 @@ rg "deliverTeamsNotificationImpl|teamsActionRegistry" services/workflow-worker/
 - Test command: `cd server && npx vitest run src/test/unit/lib/teams/bot/teamsConversationReferences.test.ts` -> passed 3 tests.
 - Typecheck: `npm -w @alga-psa/ee-microsoft-teams run typecheck` -> passed.
 
+## 2026-05-24 server action notes
+
+- Added `ee/packages/microsoft-teams/src/lib/actions/integrations/teamsObservabilityActions.ts`.
+  - Exports `listTeamsDeliveries` and `listTeamsAuditEvents` wrapped in `withAuth`.
+  - Gates both reads through `hasPermission(user, 'teams_integration', 'read', knex)`.
+  - Uses `createTenantKnex(tenant)` and every query starts with `.where({ tenant })`.
+  - Supports documented filters plus stable descending cursor pagination over `(created_at, delivery_id)` / `(created_at, event_id)`.
+  - Cursor is opaque base64 JSON of `[created_at_iso, id]`; malformed cursors throw `Malformed Teams observability cursor`.
+  - Limit defaults to 50 and clamps to 200.
+- Exported observability actions through both `src/actions/index.ts` and `src/lib/index.ts`. Existing `TeamsDeliveryRow` and `TeamsAuditEventRow` types are public through the package index exports.
+- Added `teams_integration:read` to:
+  - `server/seeds/dev/47_permissions.cjs`
+  - `ee/server/seeds/onboarding/psa/02_permissions.cjs`
+  Admin role seed behavior grants all MSP permissions, so new PSA onboarding/dev admin roles receive it automatically.
+- Added `server/src/test/unit/lib/teams/actions/teamsObservabilityActions.test.ts` for tenant scoping, permission rejection, limit clamp, cursor validation/pagination, and audit filters.
+- Static grep: `rg "teams_notification_deliveries|teams_audit_events|teams_conversation_references|teams_notification_delivery_idempotency" ee/packages/microsoft-teams/src/lib -n` -> all package code paths include `tenant` in insert columns or query WHERE.
+- Permission grep: `rg "teams_integration.*read|resource: 'teams_integration'|teams_integration', action: 'read'" server/seeds ee/server/seeds ee/packages/microsoft-teams/src server/src/test/unit/lib/teams/actions/teamsObservabilityActions.test.ts -n` -> permission and gate present.
+- Test command: `cd server && npx vitest run src/test/unit/lib/teams/actions/teamsObservabilityActions.test.ts` -> passed 5 tests.
+- Typecheck: `npm -w @alga-psa/ee-microsoft-teams run typecheck` -> passed.
+
 ## Things explicitly out of scope (do not let scope creep in)
 
 - Channel mapping table (`teams_channel_mappings`) — Phase 2.
