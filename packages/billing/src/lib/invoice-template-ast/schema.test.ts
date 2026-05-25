@@ -48,6 +48,49 @@ describe('templateAstSchema', () => {
     );
   });
 
+  it('accepts field and totals labelStyle declarations', () => {
+    const validResult = validateTemplateAst({
+      kind: 'invoice-template-ast',
+      version: TEMPLATE_AST_VERSION,
+      bindings: {
+        values: {
+          invoiceNumber: { id: 'invoiceNumber', kind: 'value', path: 'invoiceNumber' },
+        },
+        collections: {
+          lineItems: { id: 'lineItems', kind: 'collection', path: 'items' },
+        },
+      },
+      layout: {
+        id: 'root',
+        type: 'document',
+        children: [
+          {
+            id: 'invoice-number',
+            type: 'field',
+            binding: { bindingId: 'invoiceNumber' },
+            label: 'Invoice #',
+            labelStyle: { inline: { fontWeight: '700', color: '#111827', fontStyle: 'italic' } },
+          },
+          {
+            id: 'totals',
+            type: 'totals',
+            sourceBinding: { bindingId: 'lineItems' },
+            rows: [
+              {
+                id: 'total',
+                label: 'Total',
+                labelStyle: { inline: { fontSize: '14px', color: '#111827' } },
+                value: { type: 'literal', value: 0 },
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    expect(validResult.success).toBe(true);
+  });
+
   it('accepts a stack node with an optional repeat region binding', () => {
     const validResult = validateTemplateAst({
       kind: 'invoice-template-ast',
