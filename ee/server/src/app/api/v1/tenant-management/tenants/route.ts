@@ -138,7 +138,7 @@ export async function GET(req: NextRequest) {
             'p.stripe_price_external_id',
             'p.unit_amount',
             'p.currency',
-            'p.billing_interval as price_billing_interval',
+            'p.recurring_interval as price_billing_interval',
             'pr.name as product_name',
             'pr.product_type',
           ])
