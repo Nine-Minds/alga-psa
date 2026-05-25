@@ -6,6 +6,7 @@ import { getTeamsRuntimeAvailability } from '../getTeamsRuntimeAvailability';
 import { buildTeamsAvailabilityJsonResponse } from '../teamsAvailabilityResponses';
 import { sendBotActivity, isBotConnectorConfigured } from './teamsBotConnector';
 import { verifyTeamsBotRequest } from './teamsBotJwtVerifier';
+import { upsertTeamsConversationReference } from './teamsConversationReferences';
 import {
   executeTeamsAction,
   listAvailableTeamsActions,
@@ -22,6 +23,7 @@ import { resolveTeamsTenantContext } from '../resolveTeamsTenantContext';
 export interface TeamsBotActivity {
   type?: string;
   id?: string | null;
+  channelId?: string | null;
   serviceUrl?: string | null;
   text?: string | null;
   from?: {
@@ -982,6 +984,11 @@ export async function handleTeamsBotActivity(
       metadata: baseMetadata,
     });
   }
+
+  await upsertTeamsConversationReference({
+    tenantId: tenantContext.tenantId,
+    activity,
+  });
 
   if (conversationType !== 'personal' && conversationType !== 'groupChat') {
     return buildMessageResponse('The Alga PSA Teams bot supports personal and group chats. Channel conversations are not supported yet.', {

@@ -167,7 +167,7 @@
   {
     "id": "T021",
     "description": "Upsert into teams_conversation_references updates service_url and last_activity_at without inserting a duplicate.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]
@@ -403,7 +403,7 @@
   {
     "id": "T049",
     "description": "First inbound activity from a (tenant, microsoft_user_id, conversation_id) inserts a teams_conversation_references row.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036",
       "F037"
@@ -412,7 +412,7 @@
   {
     "id": "T050",
     "description": "Subsequent activities update last_activity_at and service_url; no duplicate row inserted.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036",
       "F037"
@@ -421,7 +421,7 @@
   {
     "id": "T051",
     "description": "conversation_type is correctly inferred and persisted as personal/groupChat/channel based on turn context conversation.conversationType.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F036"
     ]

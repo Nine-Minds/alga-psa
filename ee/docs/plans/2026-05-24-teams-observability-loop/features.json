@@ -285,7 +285,7 @@
   {
     "id": "F036",
     "description": "Implement upsertTeamsConversationReference(turnContext) helper that writes/updates teams_conversation_references on every inbound bot activity.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow C"
     ]
@@ -293,7 +293,7 @@
   {
     "id": "F037",
     "description": "Call upsertTeamsConversationReference from the bot adapter's activity handler entry point so all inbound activities trigger capture.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow C"
     ]

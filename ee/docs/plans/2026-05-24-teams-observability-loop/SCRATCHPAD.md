@@ -123,6 +123,19 @@ rg "deliverTeamsNotificationImpl|teamsActionRegistry" services/workflow-worker/
 - Grep: `rg "raw_payload|payload_text|JSON\\.stringify.*payload" ee/packages/microsoft-teams/src/lib/teams/actions/teamsAuditRecorder.ts || true` → no matches.
 - Broader direct run attempted: `cd server && npx vitest run src/test/unit/lib/teams/actions/teamsAuditRecorder.test.ts src/test/unit/lib/teams/actions/teamsActionRegistry.test.ts src/test/unit/lib/teams/bot/teamsBotHandler.test.ts src/test/unit/lib/teams/messageExtension/teamsMessageExtensionHandler.test.ts src/test/unit/lib/teams/quickActions/teamsQuickActionHandler.test.ts`. Existing Teams handler/action tests failed on legacy/incomplete mocks and real tenant-resolution DB paths (e.g. `getTenantIdBySlug` missing from `@alga-psa/db` mock, invalid UUID `tenant-1` in a real query). Kept new coverage focused on recorder behavior and source-level instrumentation contracts.
 
+## 2026-05-24 conversation reference notes
+
+- Added `ee/packages/microsoft-teams/src/lib/teams/bot/teamsConversationReferences.ts`.
+  - Extracts Microsoft user id from `from.aadObjectId` with fallback to `from.id`.
+  - Requires `conversation.id` and `serviceUrl`; incomplete activities are skipped without opening a DB handle.
+  - Upserts into `teams_conversation_references` on `(tenant, microsoft_user_id, conversation_id)` and updates `service_url`, `conversation_type`, `tenant_id_aad`, `channel_id_bot_framework`, `last_activity_at`, and `updated_at`.
+  - Uses `createTenantKnex(input.tenantId)` and logs/swallows write failures so inbound bot handling remains unchanged if observability persistence fails.
+- Instrumented `handleTeamsBotActivity()` after tenant resolution so message, invoke, and conversationUpdate activities all pass through the capture helper before the existing conversation-type support gate.
+- Exported the helper from the microsoft-teams package index.
+- Added `server/src/test/unit/lib/teams/bot/teamsConversationReferences.test.ts` for insert/update/no-duplicate behavior, incomplete activity skips, and conversation type normalization.
+- Test command: `cd server && npx vitest run src/test/unit/lib/teams/bot/teamsConversationReferences.test.ts` -> passed 3 tests.
+- Typecheck: `npm -w @alga-psa/ee-microsoft-teams run typecheck` -> passed.
+
 ## Things explicitly out of scope (do not let scope creep in)
 
 - Channel mapping table (`teams_channel_mappings`) — Phase 2.
