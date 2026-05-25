@@ -39,7 +39,7 @@ The `BillingEngine` integrates closely with billing cycles to determine billing 
 - `calculateBucketPlanCharges(clientId, billingPeriod, contractLine)` - Bucket/retainer billing (line 1773)
 - `calculateProductCharges(...)` - Product passthrough charges (line 1619)
 - `calculateLicenseCharges(...)` - License passthrough charges
-- `rolloverUnapprovedTime(clientId, currentPeriodEnd, nextPeriodStart)` - Time entry rollover (line 2258)
+- Approval-blocker checks prevent recurring invoice generation when matching billable time is not approved.
 
 For example, the `calculateBilling` method orchestrates the entire billing calculation process:
 

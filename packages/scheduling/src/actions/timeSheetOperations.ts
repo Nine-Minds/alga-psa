@@ -228,8 +228,8 @@ export const fetchTimePeriods = withAuth(async (user, { tenant }, userId: string
     .leftJoin('time_entries as te', function() {
       this.on('summary_ts.id', '=', 'te.time_sheet_id')
           .andOn('summary_ts.tenant', '=', 'te.tenant')
-          .andOn(db.raw('COALESCE(te.work_date, DATE(te.start_time)) >= summary_tp.start_date'))
-          .andOn(db.raw('COALESCE(te.work_date, DATE(te.start_time)) < summary_tp.end_date'));
+          .andOn(db.raw('te.work_date >= summary_tp.start_date'))
+          .andOn(db.raw('te.work_date < summary_tp.end_date'));
     })
     .where({
       'summary_ts.tenant': tenant,
@@ -240,8 +240,8 @@ export const fetchTimePeriods = withAuth(async (user, { tenant }, userId: string
       'summary_ts.period_id',
       'summary_ts.tenant',
       db.raw('COALESCE(SUM(EXTRACT(EPOCH FROM (te.end_time - te.start_time)) / 3600.0), 0) as hours_entered'),
-      db.raw('COUNT(DISTINCT COALESCE(te.work_date, DATE(te.start_time))) as days_logged'),
-      db.raw('MAX(COALESCE(te.work_date, DATE(te.start_time))) as last_entry_date')
+      db.raw('COUNT(DISTINCT te.work_date) as days_logged'),
+      db.raw('MAX(te.work_date) as last_entry_date')
     )
     .as('tes');
 

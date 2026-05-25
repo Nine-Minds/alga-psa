@@ -1,0 +1,68 @@
+[
+  {
+    "id": "F001",
+    "description": "Remove, disable, or make unreachable the invoice-generation call to BillingEngine.rolloverUnapprovedTime().",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Product Decisions"]
+  },
+  {
+    "id": "F002",
+    "description": "Ensure no billing path mutates time_entries.start_time, end_time, work_date, or work_timezone for unapproved-time deferral.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F003",
+    "description": "Keep existing recurring approval blocker enforcement intact so matching unapproved time blocks invoice generation.",
+    "implemented": true,
+    "prdRefs": ["Product Decisions", "Functional Requirements"]
+  },
+  {
+    "id": "F004",
+    "description": "Update time sheet grid grouping to use entry.work_date as the required canonical display date.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F005",
+    "description": "Update time sheet list filtering and grouping to use entry.work_date as the required canonical display date.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F006",
+    "description": "Update time approval views to display/group entries by required work_date.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F007",
+    "description": "Update quick-add continuation logic to find existing entries by selected work_date rather than only by parsed start_time day.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F008",
+    "description": "Update time period summaries to consistently use work_date.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F009",
+    "description": "Add or reuse a shared helper for resolving a time entry's display/grouping date from required work_date and failing fast when it is missing.",
+    "implemented": true,
+    "prdRefs": ["Data / API Notes"]
+  },
+  {
+    "id": "F010",
+    "description": "Document the deferred read-only support/audit tool in the PRD without implementing it in this scope.",
+    "implemented": true,
+    "prdRefs": ["Future Support/Audit Tool — Documented but Deferred"]
+  },
+  {
+    "id": "F011",
+    "description": "Add an idempotent migration that backfills missing time_entries.work_date/work_timezone and enforces both columns as NOT NULL.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Rollout / Migration"]
+  }
+]
