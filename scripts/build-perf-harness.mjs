@@ -124,7 +124,6 @@ async function clearCache() {
 
 async function runBuild(cmd) {
   log(`build cmd: ${cmd}`);
-  const [bin, ...rest] = cmd.split(/\s+/);
   // Next's webpack build worker forks a TS type-check process that inherits
   // NODE_OPTIONS. The repo's 8 GB default OOMs on this monorepo. Always
   // override unless caller passed --node-options explicitly. Inheriting the
@@ -132,10 +131,12 @@ async function runBuild(cmd) {
   const nodeOptions = ARGS['node-options'] ?? '--max-old-space-size=16384';
   const buildEnv = { ...process.env, NODE_OPTIONS: nodeOptions };
   log(`NODE_OPTIONS=${buildEnv.NODE_OPTIONS}`);
-  const child = spawn(bin, rest, {
+  // Use shell mode so `--build-cmd` accepts chained commands (`a && b`).
+  const child = spawn(cmd, {
     cwd: REPO_ROOT,
     env: buildEnv,
     stdio: ['ignore', 'pipe', 'pipe'],
+    shell: true,
   });
 
   let out = '';
