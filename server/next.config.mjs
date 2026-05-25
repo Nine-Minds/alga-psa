@@ -4,7 +4,8 @@ import { createRequire } from 'module';
 import fs from 'fs';
 // build-trigger: update to force CI rebuild
 const require = createRequire(import.meta.url);
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const parsePositiveInt = (value) => {
   if (value == null) return undefined;
@@ -400,11 +401,10 @@ const nextConfig = {
     },
   },
   reactStrictMode: false, // Disabled to prevent double rendering in development
-  // Skip TS and ESLint at build time — both run as separate CI/dev steps
-  // (`tsc --noEmit` via `npm run typecheck`, ESLint via `npm run lint`).
-  // Saves ~60-90 s on cold build; bundle correctness still verified by SWC.
+  // Skip TS at build time — `tsc --noEmit` runs separately as `npm run typecheck`.
+  // Next 16 dropped the in-config `eslint` knob; lint is now run via `npm run lint`
+  // outside the build, so no equivalent setting needed.
   typescript: { ignoreBuildErrors: true },
-  eslint: { ignoreDuringBuilds: true },
   transpilePackages: [
     '@blocknote/core',
     '@blocknote/react',
@@ -457,8 +457,22 @@ const nextConfig = {
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
   webpack: (config, { isServer, dev }) => {
-    // Enable webpack cache for faster builds
-    config.cache = true;
+    // Filesystem cache: persists across builds (even after `rm -rf .next`)
+    // so the second cold build reuses module compilation work. Stored under
+    // node_modules/.cache/webpack so it survives `.next` clears.
+    config.cache = {
+      type: 'filesystem',
+      cacheDirectory: path.join(__dirname, 'node_modules/.cache/webpack'),
+      buildDependencies: {
+        config: [__filename],
+      },
+      // Snapshot all node_modules as immutable by mtime — avoids hash-stat on
+      // every file (huge in this monorepo).
+      managedPaths: [
+        path.resolve(__dirname, 'node_modules'),
+        path.resolve(__dirname, '../node_modules'),
+      ],
+    };
 
     // Add support for importing from ee/server/src using absolute paths
     // and ensure packages from root workspace are resolved
@@ -1047,6 +1061,9 @@ const nextConfig = {
     // In large repos, the default (often == host CPU count) can cause OOMs in CI.
     ...(buildCpus ? { cpus: buildCpus } : {}),
     ...(memoryBasedWorkersCount ? { memoryBasedWorkersCount: true } : {}),
+    // Tried optimizePackageImports (broad list, then just lucide-react) —
+    // both regressed cold builds by 20 s and 480 s respectively in this
+    // monorepo's webpack+SWC setup. Leaving it off.
   },
   // Externalize Node.js-only packages with native dependencies from server bundles.
   // This prevents Turbopack from bundling them with mangled names.
