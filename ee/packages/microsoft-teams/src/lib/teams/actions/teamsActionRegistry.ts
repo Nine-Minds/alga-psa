@@ -25,6 +25,10 @@ import {
   ValidationError,
 } from './teamsActionErrors';
 import {
+  writeTeamsAuditEvent,
+  type TeamsAuditActionId,
+} from './teamsAuditRecorder';
+import {
   addTeamsTicketComment,
   approveTeamsTimeSheet,
   createTeamsTimeEntry,
@@ -80,6 +84,7 @@ export interface TeamsActionRequest<TInput extends Record<string, unknown> = Rec
   input?: TInput;
   target?: TeamsActionEntityReference;
   idempotencyKey?: string;
+  microsoftUserId?: string | null;
 }
 
 export interface TeamsActionFieldDefinition {
@@ -254,6 +259,16 @@ type TeamsActionDefinition<TNormalized extends Record<string, unknown> = Record<
 
 const duplicateResults = new Map<string, TeamsActionResult>();
 const inFlightResults = new Map<string, Promise<TeamsActionResult>>();
+
+const AUDITED_MUTATION_ACTION_IDS = new Set<TeamsActionId>([
+  'assign_ticket',
+  'add_note',
+  'reply_to_contact',
+  'log_time',
+  'approval_response',
+  'create_ticket_from_message',
+  'update_from_message',
+]);
 
 const nonEmptyString = z.string().trim().min(1);
 const boundedText = (label: string) =>
@@ -829,6 +844,106 @@ function mapErrorToActionError(error: unknown): TeamsActionError {
     remediation: 'Try the action again or continue in the full PSA application.',
     retryable: true,
   };
+}
+
+function isAuditedMutationActionId(actionId: TeamsActionId): actionId is TeamsAuditActionId {
+  return AUDITED_MUTATION_ACTION_IDS.has(actionId);
+}
+
+function targetReferenceToAuditTarget(
+  target: TeamsActionEntityReference | undefined
+): { targetType: string | null; targetId: string | null } {
+  if (!target) {
+    return { targetType: null, targetId: null };
+  }
+
+  switch (target.entityType) {
+    case 'ticket':
+      return { targetType: 'ticket', targetId: target.ticketId };
+    case 'project_task':
+      return { targetType: 'project_task', targetId: target.taskId };
+    case 'approval':
+      return { targetType: 'approval', targetId: target.approvalId };
+    case 'time_entry':
+      return { targetType: 'time_entry', targetId: target.entryId };
+    case 'contact':
+      return { targetType: 'contact', targetId: target.contactId };
+  }
+}
+
+function normalizedInputToAuditTarget(
+  normalized: Record<string, unknown> | undefined
+): { targetType: string | null; targetId: string | null } {
+  if (!normalized) {
+    return { targetType: null, targetId: null };
+  }
+
+  const stringValue = (key: string): string | null => normalizeOptionalString(normalized[key]);
+  const entityType = stringValue('entityType') || stringValue('targetEntityType');
+  if (entityType === 'ticket') {
+    return { targetType: 'ticket', targetId: stringValue('ticketId') || stringValue('targetId') || stringValue('workItemId') };
+  }
+  if (entityType === 'project_task') {
+    return { targetType: 'project_task', targetId: stringValue('taskId') || stringValue('targetId') || stringValue('workItemId') };
+  }
+  if (stringValue('approvalId')) {
+    return { targetType: 'approval', targetId: stringValue('approvalId') };
+  }
+  if (stringValue('entryId')) {
+    return { targetType: 'time_entry', targetId: stringValue('entryId') };
+  }
+  if (stringValue('contactId')) {
+    return { targetType: 'contact', targetId: stringValue('contactId') };
+  }
+  if (stringValue('ticketId')) {
+    return { targetType: 'ticket', targetId: stringValue('ticketId') };
+  }
+
+  return { targetType: null, targetId: null };
+}
+
+async function recordTeamsMutationAudit(params: {
+  request: TeamsActionRequest;
+  resultStatus: 'success' | 'failure';
+  errorCode?: string | null;
+  normalizedInput?: Record<string, unknown>;
+  resolvedTarget?: TeamsResolvedTarget | null;
+  resultTarget?: TeamsActionSuccessResult['target'];
+}): Promise<void> {
+  if (!isAuditedMutationActionId(params.request.actionId)) {
+    return;
+  }
+
+  const resultTarget = params.resultTarget
+    ? { targetType: params.resultTarget.entityType, targetId: params.resultTarget.id }
+    : { targetType: null, targetId: null };
+  const resolvedTarget = params.resolvedTarget
+    ? { targetType: params.resolvedTarget.entityType, targetId: params.resolvedTarget.id }
+    : { targetType: null, targetId: null };
+  const requestTarget = targetReferenceToAuditTarget(params.request.target);
+  const normalizedTarget = normalizedInputToAuditTarget(params.normalizedInput);
+  const target =
+    resultTarget.targetId ? resultTarget
+      : resolvedTarget.targetId ? resolvedTarget
+        : requestTarget.targetId ? requestTarget
+          : normalizedTarget;
+
+  await writeTeamsAuditEvent({
+    tenant: params.request.tenantId,
+    actorUserId: params.request.user?.user_id ?? null,
+    microsoftUserId: params.request.microsoftUserId ?? null,
+    surface: params.request.surface,
+    actionId: params.request.actionId,
+    targetType: target.targetType,
+    targetId: target.targetId,
+    idempotencyKey: params.request.idempotencyKey ?? null,
+    payload: {
+      input: params.normalizedInput ?? params.request.input ?? null,
+      target: params.request.target ?? null,
+    },
+    resultStatus: params.resultStatus,
+    errorCode: params.errorCode ?? null,
+  });
 }
 
 function buildActionLinks(
@@ -1870,7 +1985,7 @@ async function executeTeamsActionInternal(request: TeamsActionRequest): Promise<
   const availability = await evaluateActionAvailability(definition, request, integration, request.target);
 
   if (!availability.available) {
-    return {
+    const result: TeamsActionFailureResult = {
       success: false,
       actionId: request.actionId,
       surface: request.surface,
@@ -1886,7 +2001,16 @@ async function executeTeamsActionInternal(request: TeamsActionRequest): Promise<
       warnings: [],
       metadata: buildResultMetadata(request, definition, false),
     };
+    await recordTeamsMutationAudit({
+      request,
+      resultStatus: 'failure',
+      errorCode: result.error.code,
+    });
+    return result;
   }
+
+  let normalizedForAudit: Record<string, unknown> | undefined;
+  let targetForAudit: TeamsResolvedTarget | null = null;
 
   try {
     if (!request.user?.user_id || request.user.tenant !== request.tenantId || request.user.user_type === 'client') {
@@ -1895,14 +2019,16 @@ async function executeTeamsActionInternal(request: TeamsActionRequest): Promise<
 
     const serviceContext = buildServiceContext(request);
     const normalized = definition.normalize(request);
+    normalizedForAudit = normalized;
     const target =
       definition.targetEntityTypes.length > 0
         ? await resolveTargetInternal(requireTargetReference({ ...request, input: normalized }), serviceContext)
         : null;
+    targetForAudit = target;
 
     const authorizationFailure = await definition.authorize(normalized, { integration, request, serviceContext }, target);
     if (authorizationFailure) {
-      return {
+      const result: TeamsActionFailureResult = {
         success: false,
         actionId: request.actionId,
         surface: request.surface,
@@ -1911,6 +2037,14 @@ async function executeTeamsActionInternal(request: TeamsActionRequest): Promise<
         warnings: [],
         metadata: buildResultMetadata(request, definition, false),
       };
+      await recordTeamsMutationAudit({
+        request,
+        resultStatus: 'failure',
+        errorCode: result.error.code,
+        normalizedInput: normalizedForAudit,
+        resolvedTarget: targetForAudit,
+      });
+      return result;
     }
 
     const executed = await definition.execute(normalized, { integration, request, serviceContext }, target);
@@ -1918,7 +2052,7 @@ async function executeTeamsActionInternal(request: TeamsActionRequest): Promise<
     const targetSummary = executed.target ?? target;
     const { links, warnings } = buildActionLinks(destination, integration, request.surface);
 
-    return {
+    const result: TeamsActionSuccessResult = {
       success: true,
       actionId: request.actionId,
       surface: request.surface,
@@ -1936,8 +2070,16 @@ async function executeTeamsActionInternal(request: TeamsActionRequest): Promise<
         : undefined,
       metadata: buildResultMetadata(request, definition, false),
     };
+    await recordTeamsMutationAudit({
+      request,
+      resultStatus: 'success',
+      normalizedInput: normalizedForAudit,
+      resolvedTarget: targetForAudit,
+      resultTarget: result.target,
+    });
+    return result;
   } catch (error) {
-    return {
+    const result: TeamsActionFailureResult = {
       success: false,
       actionId: request.actionId,
       surface: request.surface,
@@ -1946,6 +2088,14 @@ async function executeTeamsActionInternal(request: TeamsActionRequest): Promise<
       warnings: [],
       metadata: buildResultMetadata(request, definition, false),
     };
+    await recordTeamsMutationAudit({
+      request,
+      resultStatus: 'failure',
+      errorCode: result.error.code,
+      normalizedInput: normalizedForAudit,
+      resolvedTarget: targetForAudit,
+    });
+    return result;
   }
 }
 

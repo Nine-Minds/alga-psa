@@ -105,6 +105,24 @@ rg "deliverTeamsNotificationImpl|teamsActionRegistry" services/workflow-worker/
 - Test command: `cd server && npx vitest run src/test/unit/internal-notifications/teamsDeliveryRecorder.test.ts src/test/unit/internal-notifications/teamsNotificationDeliveryObservability.test.ts` → passed 6 tests.
 - Typecheck: `npm -w @alga-psa/ee-microsoft-teams run typecheck` → passed.
 
+## 2026-05-24 action audit notes
+
+- Added `ee/packages/microsoft-teams/src/lib/teams/actions/teamsAuditRecorder.ts`.
+  - Stores only metadata plus `payload_hash`; no raw action payload columns or text are persisted.
+  - `payload_hash` is SHA-256 over canonical JSON with sorted object keys.
+  - Persistence failures are logged and swallowed so Teams actions keep their existing behavior.
+- Instrumented `teamsActionRegistry.ts` at the mutation boundary:
+  - audited action set: `assign_ticket`, `add_note`, `reply_to_contact`, `log_time`, `approval_response`, `create_ticket_from_message`, `update_from_message`;
+  - success, availability failure, authorization failure, and caught execution failure paths call `recordTeamsMutationAudit`;
+  - target metadata is derived from result target, resolved target, request target, or normalized input.
+- Added `microsoftUserId?: string | null` to `TeamsActionRequest` and threaded it from bot, message-extension, and quick-action handlers via their Teams activity `from.aadObjectId`/`from.id` helpers.
+- Added tests:
+  - `server/src/test/unit/lib/teams/actions/teamsAuditRecorder.test.ts`
+  - `server/src/test/unit/lib/teams/actions/teamsAuditInstrumentation.contract.test.ts`
+- Test command: `cd server && npx vitest run src/test/unit/lib/teams/actions/teamsAuditRecorder.test.ts src/test/unit/lib/teams/actions/teamsAuditInstrumentation.contract.test.ts` → passed 5 tests.
+- Grep: `rg "raw_payload|payload_text|JSON\\.stringify.*payload" ee/packages/microsoft-teams/src/lib/teams/actions/teamsAuditRecorder.ts || true` → no matches.
+- Broader direct run attempted: `cd server && npx vitest run src/test/unit/lib/teams/actions/teamsAuditRecorder.test.ts src/test/unit/lib/teams/actions/teamsActionRegistry.test.ts src/test/unit/lib/teams/bot/teamsBotHandler.test.ts src/test/unit/lib/teams/messageExtension/teamsMessageExtensionHandler.test.ts src/test/unit/lib/teams/quickActions/teamsQuickActionHandler.test.ts`. Existing Teams handler/action tests failed on legacy/incomplete mocks and real tenant-resolution DB paths (e.g. `getTenantIdBySlug` missing from `@alga-psa/db` mock, invalid UUID `tenant-1` in a real query). Kept new coverage focused on recorder behavior and source-level instrumentation contracts.
+
 ## Things explicitly out of scope (do not let scope creep in)
 
 - Channel mapping table (`teams_channel_mappings`) — Phase 2.

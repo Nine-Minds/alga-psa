@@ -196,7 +196,7 @@
   {
     "id": "F025",
     "description": "Implement writeTeamsAuditEvent(input) helper in ee/packages/microsoft-teams/src/lib/teams/actions/teamsAuditRecorder.ts. Computes payload_hash (SHA-256 of canonicalized JSON), inserts row.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow B",
       "Privacy / Security"
@@ -205,7 +205,7 @@
   {
     "id": "F026",
     "description": "Canonicalize action payload via stable JSON.stringify with sorted keys before hashing so retried invokes produce the same payload_hash.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Privacy / Security"
     ]
@@ -213,7 +213,7 @@
   {
     "id": "F027",
     "description": "Instrument assign_ticket action in teamsActionRegistry.ts to call writeTeamsAuditEvent on success and on caught failure.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow B"
     ]
@@ -221,7 +221,7 @@
   {
     "id": "F028",
     "description": "Instrument add_note action in teamsActionRegistry.ts to call writeTeamsAuditEvent on success and on caught failure.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow B"
     ]
@@ -229,7 +229,7 @@
   {
     "id": "F029",
     "description": "Instrument reply_to_contact action in teamsActionRegistry.ts to call writeTeamsAuditEvent on success and on caught failure.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow B"
     ]
@@ -237,7 +237,7 @@
   {
     "id": "F030",
     "description": "Instrument log_time action in teamsActionRegistry.ts to call writeTeamsAuditEvent on success and on caught failure.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow B"
     ]
@@ -245,7 +245,7 @@
   {
     "id": "F031",
     "description": "Instrument approval_response action in teamsActionRegistry.ts to call writeTeamsAuditEvent on success and on caught failure.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow B"
     ]
@@ -253,7 +253,7 @@
   {
     "id": "F032",
     "description": "Instrument create_ticket_from_message action in teamsActionRegistry.ts to call writeTeamsAuditEvent on success and on caught failure.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow B"
     ]
@@ -261,7 +261,7 @@
   {
     "id": "F033",
     "description": "Instrument update_from_message action in teamsActionRegistry.ts to call writeTeamsAuditEvent on success and on caught failure.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Flow B"
     ]
@@ -269,7 +269,7 @@
   {
     "id": "F034",
     "description": "Resolve actor_user_id (PSA user) and microsoft_user_id (aadObjectId) from Teams turn context at audit recording time.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data Model > teams_audit_events"
     ]
@@ -277,7 +277,7 @@
   {
     "id": "F035",
     "description": "Map each action's source (bot turn / compose extension / quick action task module) to the correct surface enum value when recording audit events.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data Model > teams_audit_events"
     ]

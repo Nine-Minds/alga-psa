@@ -10,6 +10,7 @@ export * from './meetings/verifyMeetingOrganizer';
 export * from './notifications/teamsDeliveryRecorder';
 export * from './notifications/teamsNotificationDelivery';
 export * from './teams/actions/teamsActionRegistry';
+export * from './teams/actions/teamsAuditRecorder';
 export * from './teams/bot/teamsBotHandler';
 export * from './teams/buildTeamsFullPsaUrl';
 export * from './teams/buildTeamsReauthUrl';

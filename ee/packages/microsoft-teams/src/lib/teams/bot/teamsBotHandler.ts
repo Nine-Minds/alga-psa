@@ -605,6 +605,7 @@ async function handleAssignTicketCommand(params: {
   tenantId: string;
   user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
   metadata: TeamsBotResponseActivity['metadata'];
+  microsoftUserId?: string | null;
   ticketId?: string;
   assigneeReference?: string;
 }): Promise<TeamsBotResponseActivity> {
@@ -643,6 +644,7 @@ async function handleAssignTicketCommand(params: {
     surface: BOT_SURFACE,
     tenantId: params.tenantId,
     user: params.user,
+    microsoftUserId: params.microsoftUserId,
     target: {
       entityType: 'ticket',
       ticketId: params.ticketId,
@@ -684,6 +686,7 @@ async function handleAddNoteCommand(params: {
   tenantId: string;
   user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
   metadata: TeamsBotResponseActivity['metadata'];
+  microsoftUserId?: string | null;
   ticketId?: string;
   note?: string;
 }): Promise<TeamsBotResponseActivity> {
@@ -726,6 +729,7 @@ async function handleAddNoteCommand(params: {
       surface: BOT_SURFACE,
       tenantId: params.tenantId,
       user: params.user,
+      microsoftUserId: params.microsoftUserId,
       target: {
         entityType: 'ticket',
         ticketId: params.ticketId,
@@ -747,6 +751,7 @@ async function handleReplyToContactCommand(params: {
   tenantId: string;
   user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
   metadata: TeamsBotResponseActivity['metadata'];
+  microsoftUserId?: string | null;
   ticketId?: string;
   reply?: string;
 }): Promise<TeamsBotResponseActivity> {
@@ -792,6 +797,7 @@ async function handleReplyToContactCommand(params: {
       surface: BOT_SURFACE,
       tenantId: params.tenantId,
       user: params.user,
+      microsoftUserId: params.microsoftUserId,
       target: {
         entityType: 'ticket',
         ticketId: params.ticketId,
@@ -813,6 +819,7 @@ async function handleLogTimeCommand(params: {
   tenantId: string;
   user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
   metadata: TeamsBotResponseActivity['metadata'];
+  microsoftUserId?: string | null;
   targetType?: 'ticket' | 'project_task';
   targetId?: string;
   durationMinutes?: number;
@@ -861,6 +868,7 @@ async function handleLogTimeCommand(params: {
       surface: BOT_SURFACE,
       tenantId: params.tenantId,
       user: params.user,
+      microsoftUserId: params.microsoftUserId,
       target:
         params.targetType === 'project_task'
           ? { entityType: 'project_task', taskId: params.targetId }
@@ -886,6 +894,7 @@ async function handleApprovalResponseCommand(params: {
   tenantId: string;
   user: NonNullable<Awaited<ReturnType<typeof getUserWithRoles>>>;
   metadata: TeamsBotResponseActivity['metadata'];
+  microsoftUserId?: string | null;
   approvalId?: string;
   outcome: 'approve' | 'request_changes';
   comment?: string;
@@ -930,6 +939,7 @@ async function handleApprovalResponseCommand(params: {
       surface: BOT_SURFACE,
       tenantId: params.tenantId,
       user: params.user,
+      microsoftUserId: params.microsoftUserId,
       target: {
         entityType: 'approval',
         approvalId: params.approvalId,
@@ -1028,6 +1038,7 @@ export async function handleTeamsBotActivity(
     ...baseMetadata,
     userId: user.user_id,
   };
+  const microsoftUserId = getMicrosoftAccountId(activity);
 
   if (activity.type === 'conversationUpdate') {
     return buildHelpResponse(tenantContext.tenantId, metadata, 'Alga PSA is ready in your personal Teams bot.');
@@ -1101,6 +1112,7 @@ export async function handleTeamsBotActivity(
         tenantId: tenantContext.tenantId,
         user,
         metadata,
+        microsoftUserId,
         ticketId: parsed.ticketId,
         assigneeReference: parsed.assignee,
       });
@@ -1109,6 +1121,7 @@ export async function handleTeamsBotActivity(
         tenantId: tenantContext.tenantId,
         user,
         metadata,
+        microsoftUserId,
         ticketId: parsed.ticketId,
         note: parsed.note,
       });
@@ -1117,6 +1130,7 @@ export async function handleTeamsBotActivity(
         tenantId: tenantContext.tenantId,
         user,
         metadata,
+        microsoftUserId,
         ticketId: parsed.ticketId,
         reply: parsed.reply,
       });
@@ -1125,6 +1139,7 @@ export async function handleTeamsBotActivity(
         tenantId: tenantContext.tenantId,
         user,
         metadata,
+        microsoftUserId,
         approvalId: parsed.approvalId,
         outcome: parsed.outcome,
         comment: parsed.comment,
@@ -1134,6 +1149,7 @@ export async function handleTeamsBotActivity(
         tenantId: tenantContext.tenantId,
         user,
         metadata,
+        microsoftUserId,
         targetType: parsed.targetType,
         targetId: parsed.targetId,
         durationMinutes: parsed.durationMinutes,

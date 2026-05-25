@@ -305,7 +305,7 @@
   {
     "id": "T037",
     "description": "writeTeamsAuditEvent never persists raw payload string — only payload_hash.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025",
       "F026"
@@ -314,7 +314,7 @@
   {
     "id": "T038",
     "description": "writeTeamsAuditEvent canonicalizes JSON (sorted keys) so two equivalent payloads with different key order produce the same payload_hash.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F026"
     ]
@@ -322,7 +322,7 @@
   {
     "id": "T039",
     "description": "assign_ticket action writes audit row with surface='bot' (or message_extension/quick_action when invoked from those surfaces), result_status='success' on happy path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F035"
@@ -331,7 +331,7 @@
   {
     "id": "T040",
     "description": "assign_ticket action writes audit row with result_status='failure' and error_code populated when underlying mutation throws.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027"
     ]
@@ -339,7 +339,7 @@
   {
     "id": "T041",
     "description": "add_note action writes audit rows on success and failure.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F028"
     ]
@@ -347,7 +347,7 @@
   {
     "id": "T042",
     "description": "reply_to_contact action writes audit rows on success and failure.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F029"
     ]
@@ -355,7 +355,7 @@
   {
     "id": "T043",
     "description": "log_time action writes audit rows on success and failure.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
@@ -363,7 +363,7 @@
   {
     "id": "T044",
     "description": "approval_response action writes audit rows on success and failure.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031"
     ]
@@ -371,7 +371,7 @@
   {
     "id": "T045",
     "description": "create_ticket_from_message action writes audit rows on success and failure.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F032"
     ]
@@ -379,7 +379,7 @@
   {
     "id": "T046",
     "description": "update_from_message action writes audit rows on success and failure.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F033"
     ]
@@ -387,7 +387,7 @@
   {
     "id": "T047",
     "description": "Audit row actor_user_id matches the PSA user resolved from the Teams turn token.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
@@ -395,7 +395,7 @@
   {
     "id": "T048",
     "description": "Audit row microsoft_user_id matches aadObjectId from turn context when available; NULL otherwise.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034"
     ]
@@ -570,7 +570,7 @@
   {
     "id": "T068",
     "description": "No raw payload text grep: rg \"raw_payload|payload_text|JSON.stringify.*payload\" returns no matches inside the new audit recorder code path.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025"
     ]
