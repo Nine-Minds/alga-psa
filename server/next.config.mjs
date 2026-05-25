@@ -188,6 +188,11 @@ const nextConfig = {
       '@alga-psa/ui/': '../packages/ui/src/',
       '@alga-psa/clients': '../packages/clients/src',
       '@alga-psa/clients/': '../packages/clients/src/',
+      // NB: tried switching bare-name aliases to ../packages/<pkg>/dist when
+      // USE_PREBUILT=true. tsup bundles each package into a single
+      // dist/index.js and downstream consumers import many sub-paths
+      // (e.g. @alga-psa/ui/components/Button) which the dist doesn't expose.
+      // Result: module-not-found across the build. Keep src/ aliases.
       '@alga-psa/auth': '../packages/auth/src',
       '@alga-psa/auth/': '../packages/auth/src/',
       '@alga-psa/auth/getCurrentUser': '../packages/auth/src/lib/getCurrentUser.ts',
