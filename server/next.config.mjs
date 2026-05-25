@@ -1051,6 +1051,14 @@ const nextConfig = {
 
     return config;
   },
+  // Explicitly disable production browser source maps (default but be explicit).
+  // Eliminates source-map emit work for every client chunk.
+  productionBrowserSourceMaps: false,
+  // SWC compiler: strip console.* in production output (excluding error/warn).
+  // Cuts bytes; minify pass also has less to walk.
+  compiler: {
+    removeConsole: { exclude: ['error', 'warn'] },
+  },
   experimental: {
     // We alias certain EE-only modules directly into `../ee/server/src/**` (outside this Next.js app root).
     // Ensure Next is allowed to import/compile source files from outside `server/`.
@@ -1064,6 +1072,9 @@ const nextConfig = {
     // In large repos, the default (often == host CPU count) can cause OOMs in CI.
     ...(buildCpus ? { cpus: buildCpus } : {}),
     ...(memoryBasedWorkersCount ? { memoryBasedWorkersCount: true } : {}),
+    // Disable server source maps (RSC + server actions). Build-only — does
+    // not affect production error traces from Sentry or similar tools.
+    serverSourceMaps: false,
     // Tried optimizePackageImports (broad list, then just lucide-react) —
     // both regressed cold builds by 20 s and 480 s respectively in this
     // monorepo's webpack+SWC setup. Leaving it off.
@@ -1127,6 +1138,17 @@ const nextConfig = {
     '@azure/identity',
     '@azure/msal-node',
     '@microsoft/microsoft-graph-client',
+    // Round 3: more server-only/heavy libs
+    'posthog-node',
+    'bcryptjs',
+    'speakeasy',
+    'qrcode',
+    'pdf-lib',
+    'pdf2pic',
+    'marked',
+    '@faker-js/faker',
+    'moment',
+    'tinycolor2',
   ],
   // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {
