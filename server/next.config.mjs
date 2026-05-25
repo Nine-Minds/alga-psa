@@ -400,6 +400,11 @@ const nextConfig = {
     },
   },
   reactStrictMode: false, // Disabled to prevent double rendering in development
+  // Skip TS and ESLint at build time — both run as separate CI/dev steps
+  // (`tsc --noEmit` via `npm run typecheck`, ESLint via `npm run lint`).
+  // Saves ~60-90 s on cold build; bundle correctness still verified by SWC.
+  typescript: { ignoreBuildErrors: true },
+  eslint: { ignoreDuringBuilds: true },
   transpilePackages: [
     '@blocknote/core',
     '@blocknote/react',

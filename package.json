@@ -31,6 +31,7 @@
     "build:ce": "npm run build:assemblyscript && cd server && EDITION=community NEXT_PUBLIC_EDITION=community npm run build",
     "build:ee": "npm run build:assemblyscript && cd server && EDITION=ee NEXT_PUBLIC_EDITION=enterprise npm run build:enterprise",
     "build:assemblyscript": "cd server/src/invoice-templates/assemblyscript && npm install --cache ../../../../.npm-cache && npm run build",
+    "build:perf": "node scripts/build-perf-harness.mjs",
     "start": "cd server && npm start",
     "runner:up": "./scripts/dev-runner.sh up -d",
     "runner:down": "./scripts/dev-runner.sh down",
