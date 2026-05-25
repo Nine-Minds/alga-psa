@@ -1075,6 +1075,9 @@ const nextConfig = {
     // Disable server source maps (RSC + server actions). Build-only — does
     // not affect production error traces from Sentry or similar tools.
     serverSourceMaps: false,
+    // Tried turbopackPersistentCaching — Next 16.2 only supports
+    // turbopackFileSystemCacheForDev (dev mode), not production builds.
+    // Revisit when Next exposes persistent build cache.
     // Tried optimizePackageImports (broad list, then just lucide-react) —
     // both regressed cold builds by 20 s and 480 s respectively in this
     // monorepo's webpack+SWC setup. Leaving it off.
