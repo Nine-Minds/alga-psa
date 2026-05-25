@@ -436,6 +436,9 @@ const nextConfig = {
     '@alga-psa/product-extension-actions',
     '@alga-psa/product-auth-ee',
     '@alga-psa/product-extension-initialization'
+    // Tried trimming this list to only @blocknote/* under turbopack — it
+    // regressed cold builds by +21 s. transpilePackages stays as a hint
+    // that turbopack actually uses for fast-path resolution.
   ],
   // Rewrites required for PostHog
   async rewrites() {
@@ -1080,6 +1083,25 @@ const nextConfig = {
     '@opentelemetry/semantic-conventions',
     '@opentelemetry/api',
     'expo-server-sdk',
+    // Heavy Node-only deps — runtime requires `require()`, no need to bundle.
+    'knex',
+    'pg',
+    'pg-boss',
+    'pg-pool',
+    'pg-cursor',
+    'pg-protocol',
+    'redis',
+    'ioredis',
+    'stripe',
+    'openai',
+    '@google-cloud/aiplatform',
+    '@google-cloud/vertexai',
+    'handlebars',
+    'jsdom',
+    'monaco-editor',
+    '@js-temporal/polyfill',
+    'pdfkit',
+    'sharp',
   ],
   // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {
