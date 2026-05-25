@@ -67,6 +67,26 @@ rg "deliverTeamsNotificationImpl|teamsActionRegistry" services/workflow-worker/
 2. Cursor pagination encoding — confirm there isn't an existing cursor helper in the codebase to reuse rather than rolling our own base64 tuple.
 3. Should `cleanup_*` functions be called from anywhere in this PR (e.g., a workflow trigger), or is creating-the-function-only acceptable? PRD currently says function-only; reaffirm during review.
 
+## 2026-05-24 schema batch notes
+
+- Added migrations:
+  - `ee/server/migrations/20260524090000_create_teams_notification_deliveries.cjs`
+  - `ee/server/migrations/20260524090100_create_teams_audit_events.cjs`
+  - `ee/server/migrations/20260524090200_create_teams_conversation_references.cjs`
+- Important Postgres constraint: declarative `PARTITION BY RANGE (created_at)` cannot support a parent-level `PRIMARY KEY (tenant, delivery_id)` or `UNIQUE (tenant, idempotency_key)` because every unique constraint on a partitioned table must include the partition key (`created_at`). To keep monthly delivery partitions and still make idempotent inserts deterministic, the migration adds `teams_notification_delivery_idempotency` with `PRIMARY KEY (tenant, idempotency_key)`. `teams_notification_deliveries` therefore uses `PRIMARY KEY (tenant, delivery_id, created_at)` and the recorder will reserve the idempotency key before writing the partitioned row.
+- Tenant deletion registration includes the idempotency guard table before the Teams integration row:
+  - `teams_notification_delivery_idempotency`
+  - `teams_notification_deliveries`
+  - `teams_audit_events`
+  - `teams_conversation_references`
+- Migrations use `exports.config = { transaction: false }` and skip Citus distribution with a warning when `create_distributed_table` is unavailable, matching the existing Teams migration pattern.
+- `node -c` passes for all three new migrations.
+- Added static contract tests:
+  - `server/src/test/unit/migrations/teamsObservabilityMigrations.test.ts`
+  - `server/src/test/unit/temporal/teamsObservabilityTenantDeletionOrder.test.ts`
+  These cover migration shape, partition creation, cleanup function presence, Citus hooks, CE-only migration placement, and tenant deletion ordering. Real DB migration/run tests still need the local test database or Citus environment.
+- Test command: `cd server && npx vitest run src/test/unit/migrations/teamsObservabilityMigrations.test.ts src/test/unit/temporal/teamsObservabilityTenantDeletionOrder.test.ts` → passed 9 tests. Root `npm run test:local -- ...` failed because the `dotenv` binary was not available in this checkout.
+
 ## Things explicitly out of scope (do not let scope creep in)
 
 - Channel mapping table (`teams_channel_mappings`) — Phase 2.
