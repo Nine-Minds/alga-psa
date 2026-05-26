@@ -296,14 +296,23 @@ export default function AssetForm({ assetId }: AssetFormProps) {
 
         if (locations.length === 0) {
           setSelectedLocationId('custom');
+          // No active locations for this client — drop the link so we don't
+          // submit a stale UUID the server would reject on save.
+          setFormData(prev => prev.location_id ? { ...prev, location_id: null } : prev);
         } else {
+          let stillExists = true;
           setSelectedLocationId((current) => {
             if (!current || current === 'custom') {
               return current || '';
             }
-            const stillExists = locations.some(loc => loc.location_id === current);
+            stillExists = locations.some(loc => loc.location_id === current);
             return stillExists ? current : 'custom';
           });
+          if (!stillExists) {
+            // Saved location was deactivated/removed; clear the dangling id
+            // and preserve the prior free-text in the custom field.
+            setFormData(prev => prev.location_id ? { ...prev, location_id: null } : prev);
+          }
         }
       } catch (err) {
         console.error('Error loading client locations:', err);

@@ -15,7 +15,7 @@ describe('ticketing dashboard bulk move wiring contract', () => {
 
     expect(dashboard).toContain('<BulkTicketActionBar');
     expect(dashboard).toContain('showMove={canUpdateTickets}');
-    expect(bar).toContain('id={`${idPrefix}-move-button`}');
+    expect(bar).toContain("id: 'move'");
     expect(bar).toContain("'bulk.actionBar.move'");
   });
 
@@ -24,7 +24,7 @@ describe('ticketing dashboard bulk move wiring contract', () => {
     const bar = read('./BulkTicketActionBar.tsx');
 
     expect(dashboard).toContain('showMove={canUpdateTickets}');
-    expect(bar).toContain('{showMove && (');
+    expect(bar).toContain('if (showMove)');
   });
 
   it('T003: opens a bulk move dialog with destination board and status controls', () => {
@@ -92,7 +92,7 @@ describe('ticketing dashboard bulk move wiring contract', () => {
     const bar = read('./BulkTicketActionBar.tsx');
 
     // Trigger button now lives on the floating action bar.
-    expect(bar).toContain('id={`${idPrefix}-delete-button`}');
+    expect(bar).toContain("id: 'delete'");
     // Dialog and reset wiring remain on the dashboard.
     expect(dashboard).toContain('id={`${id}-bulk-delete-dialog`}');
     expect(dashboard).toContain('setBulkDeleteErrors([]);');

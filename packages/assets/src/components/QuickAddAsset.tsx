@@ -150,25 +150,29 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
   const effectiveClientId = clientId || selectedClientId;
 
   useEffect(() => {
-    const fetchLocations = async () => {
-      if (!open || !effectiveClientId) {
-        setClientLocations([]);
-        return;
-      }
+    if (!open || !effectiveClientId) {
+      setClientLocations([]);
+      return;
+    }
 
-      setLocationsLoading(true);
+    let isMounted = true;
+    setLocationsLoading(true);
+    (async () => {
       try {
         const locations = await getClientLocationsForAssets(effectiveClientId);
+        if (!isMounted) return;
         setClientLocations(locations);
       } catch (error) {
         console.error('Error fetching client locations:', error);
-        setClientLocations([]);
+        if (isMounted) setClientLocations([]);
       } finally {
-        setLocationsLoading(false);
+        if (isMounted) setLocationsLoading(false);
       }
-    };
+    })();
 
-    void fetchLocations();
+    return () => {
+      isMounted = false;
+    };
   }, [open, effectiveClientId]);
 
   const formatClientLocation = (location: IClientLocation) => [

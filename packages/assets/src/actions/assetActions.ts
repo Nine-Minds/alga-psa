@@ -788,7 +788,9 @@ export const createAsset = withAuth(async (user, { tenant }, data: CreateAssetRe
                 name: validatedData.name,
                 status: validatedData.status,
                 location_id: selectedLocation?.location_id ?? null,
-                location: selectedLocation?.location ?? (validatedData.location || ''),
+                location: validatedData.location !== undefined && validatedData.location !== ''
+                    ? validatedData.location
+                    : (selectedLocation?.location ?? ''),
                 serial_number: validatedData.serial_number || '',
                 created_at: now,
                 updated_at: now,
@@ -897,7 +899,13 @@ export const createAsset = withAuth(async (user, { tenant }, data: CreateAssetRe
     }
 });
 
-export const updateAsset = withAuth(async (user, { tenant }, asset_id: string, data: UpdateAssetRequest): Promise<Asset> => {
+export const updateAsset = withAuth(async (
+    user,
+    { tenant },
+    asset_id: string,
+    data: UpdateAssetRequest,
+    opts?: { suppressRevalidate?: boolean }
+): Promise<Asset> => {
     const { knex } = await createTenantKnex();
 
     // Check permission for asset updating
@@ -941,6 +949,7 @@ export const updateAsset = withAuth(async (user, { tenant }, asset_id: string, d
             }
 
             const locationIdWasProvided = Object.prototype.hasOwnProperty.call(baseCandidate, 'location_id');
+            const locationWasProvided = Object.prototype.hasOwnProperty.call(baseCandidate, 'location');
             if (locationIdWasProvided) {
                 const selectedLocation = await resolveValidatedAssetLocation(
                     trx,
@@ -951,10 +960,10 @@ export const updateAsset = withAuth(async (user, { tenant }, asset_id: string, d
 
                 if (selectedLocation) {
                     baseCandidate.location_id = selectedLocation.location_id;
-                    if (selectedLocation.location !== undefined) {
-                        baseCandidate.location = selectedLocation.location;
-                    } else if (!Object.prototype.hasOwnProperty.call(baseCandidate, 'location')) {
-                        baseCandidate.location = '';
+                    // Caller-supplied free-text wins over the resolved address
+                    // so a more specific in-room descriptor isn't overwritten.
+                    if (!locationWasProvided) {
+                        baseCandidate.location = selectedLocation.location ?? '';
                     }
                 }
             } else if (baseCandidate.client_id && baseCandidate.client_id !== asset.client_id && asset.location_id) {
@@ -1018,10 +1027,12 @@ export const updateAsset = withAuth(async (user, { tenant }, asset_id: string, d
             };
         });
 
-        revalidatePath('/assets');
-        revalidatePath(`/assets/${asset_id}`);
-        revalidatePath('/msp/assets');
-        revalidatePath(`/msp/assets/${asset_id}`);
+        if (!opts?.suppressRevalidate) {
+            revalidatePath('/assets');
+            revalidatePath(`/assets/${asset_id}`);
+            revalidatePath('/msp/assets');
+            revalidatePath(`/msp/assets/${asset_id}`);
+        }
 
         const updated = validateData(assetSchema, result.after) as Asset;
         const occurredAt = new Date().toISOString();
@@ -1114,7 +1125,8 @@ export const updateAsset = withAuth(async (user, { tenant }, asset_id: string, d
 export const deleteAsset = withAuth(async (
     user,
     { tenant },
-    asset_id: string
+    asset_id: string,
+    opts?: { suppressRevalidate?: boolean }
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean }> => {
     try {
         const { knex } = await createTenantKnex();
@@ -1192,10 +1204,12 @@ export const deleteAsset = withAuth(async (
         });
 
         if (result.deleted) {
-            revalidatePath('/assets');
-            revalidatePath('/msp/assets');
-            revalidatePath(`/assets/${asset_id}`);
-            revalidatePath(`/msp/assets/${asset_id}`);
+            if (!opts?.suppressRevalidate) {
+                revalidatePath('/assets');
+                revalidatePath('/msp/assets');
+                revalidatePath(`/assets/${asset_id}`);
+                revalidatePath(`/msp/assets/${asset_id}`);
+            }
 
             const occurredAt = new Date().toISOString();
             await publishWorkflowEvent({
@@ -1232,6 +1246,9 @@ export const deleteAsset = withAuth(async (
     }
 });
 
+// Each item in a bulk action commits independently so partial failures
+// still report per-id success/failure. Path revalidation is deferred until
+// the loop finishes so 100 updates produce 4 path invalidations, not 400.
 export const bulkUpdateAssets = withAuth(async (
     user,
     _ctx,
@@ -1243,14 +1260,14 @@ export const bulkUpdateAssets = withAuth(async (
     }
 
     const ids = normalizeBulkAssetIds(assetIds);
-    const normalizedData = sanitizeUpdatePayload(data);
-    validateData(updateAssetSchema, normalizedData);
 
     const results: BulkAssetActionResult[] = [];
+    let anySucceeded = false;
     for (const asset_id of ids) {
         try {
-            const asset = await updateAsset(asset_id, normalizedData);
+            const asset = await updateAsset(asset_id, data, { suppressRevalidate: true });
             results.push({ asset_id, success: true, asset });
+            anySucceeded = true;
         } catch (error) {
             results.push({
                 asset_id,
@@ -1258,6 +1275,11 @@ export const bulkUpdateAssets = withAuth(async (
                 error: error instanceof Error ? error.message : 'Failed to update asset',
             });
         }
+    }
+
+    if (anySucceeded) {
+        revalidatePath('/assets');
+        revalidatePath('/msp/assets');
     }
 
     return buildBulkAssetActionResponse(results);
@@ -1274,15 +1296,18 @@ export const bulkDeleteAssets = withAuth(async (
 
     const ids = normalizeBulkAssetIds(assetIds);
     const results: BulkAssetActionResult[] = [];
+    let anySucceeded = false;
 
     for (const asset_id of ids) {
         try {
-            const result = await deleteAsset(asset_id);
+            const result = await deleteAsset(asset_id, { suppressRevalidate: true });
+            const success = result.success === true;
             results.push({
                 asset_id,
-                success: result.success === true,
-                error: result.success === true ? undefined : result.message,
+                success,
+                error: success ? undefined : result.message,
             });
+            if (success) anySucceeded = true;
         } catch (error) {
             results.push({
                 asset_id,
@@ -1290,6 +1315,11 @@ export const bulkDeleteAssets = withAuth(async (
                 error: error instanceof Error ? error.message : 'Failed to delete asset',
             });
         }
+    }
+
+    if (anySucceeded) {
+        revalidatePath('/assets');
+        revalidatePath('/msp/assets');
     }
 
     return buildBulkAssetActionResponse(results);

@@ -274,23 +274,41 @@ export class AssetService extends BaseService<any> {
 
   async update(id: string, data: UpdateAssetData, context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
+    const updateData: Record<string, unknown> = { ...data };
+
+    const needsCurrent =
+      data.location_id !== undefined ||
+      data.client_id !== undefined;
+
+    const current = needsCurrent
+      ? await knex(this.tableName)
+          .where({ [this.primaryKey]: id, tenant: context.tenant })
+          .first('client_id', 'location_id')
+      : null;
+
+    if (needsCurrent && !current) {
+      throw new Error('Asset not found');
+    }
 
     if (data.location_id) {
-      const clientId = data.client_id || (await knex(this.tableName)
-        .where({ [this.primaryKey]: id, tenant: context.tenant })
-        .first('client_id'))?.client_id;
-
+      const clientId = data.client_id || current?.client_id;
       if (!clientId) {
         throw new Error('Asset not found');
       }
-
       await this.assertLocationBelongsToClient(knex, context.tenant, clientId, data.location_id);
+    } else if (
+      data.client_id &&
+      current?.client_id &&
+      data.client_id !== current.client_id &&
+      current.location_id &&
+      data.location_id === undefined
+    ) {
+      // Client changed without an explicit new location — clear the stale link
+      // so the asset doesn't keep pointing at the previous client's location.
+      updateData.location_id = null;
     }
 
-    const updateData = {
-      ...data,
-      updated_at: new Date()
-    };
+    updateData.updated_at = new Date();
 
     await knex(this.tableName)
       .where({ [this.primaryKey]: id, tenant: context.tenant })
