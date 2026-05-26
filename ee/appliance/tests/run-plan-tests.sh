@@ -79,7 +79,7 @@ bash "$ROOT/ee/appliance/scripts/reset-appliance-data.sh" --kubeconfig /tmp/exam
 dry_run_output="$(
   EE_APPLIANCE_SCHEMATIC_ID_OVERRIDE=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef \
   bash "$ROOT/ee/appliance/scripts/build-images.sh" \
-    --release-version 1.0-rc5 \
+    --release-version 1.0 \
     --talos-version v1.12.0 \
     --kubernetes-version v1.31.4 \
     --app-version 1.0-rc3 \
@@ -91,18 +91,16 @@ dry_run_output="$(
     --dry-run
 )"
 
-require_text "$dry_run_output" "\"releaseVersion\": \"1.0-rc5\""
-require_text "$dry_run_output" "\"schematicId\": \"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\""
-require_text "$dry_run_output" "https://factory.talos.dev/image/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef/v1.12.0/metal-amd64.iso"
-require_text "$dry_run_output" "factory.talos.dev/metal-installer/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef:v1.12.0"
-require_text "$dry_run_output" "\"valuesProfile\": \"talos-single-node\""
+require_text "$dry_run_output" "\"releaseVersion\": \"1.0\""
+require_text "$dry_run_output" "\"valuesProfile\": \"single-node\""
 require_text "$dry_run_output" "\"releaseBranch\": \"release/1.0-rc3\""
 require_text "$dry_run_output" "\"algaCore\": \"aaa111\""
 
 bootstrap_tmp="$(mktemp -d)"
+printf 'apiVersion: v1\nclusters: []\ncontexts: []\nusers: []\n' > "$bootstrap_tmp/reuse.kubeconfig"
 bootstrap_dry_run_output="$(
   bash "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh" \
-    --release-version 1.0-rc5 \
+    --release-version 1.0 \
     --bootstrap-mode fresh \
     --node-ip 192.0.2.10 \
     --hostname alga-appliance \
@@ -111,11 +109,10 @@ bootstrap_dry_run_output="$(
     --network-mode dhcp \
     --repo-url https://github.com/example/alga-psa.git \
     --repo-branch main \
+    --kubeconfig "$bootstrap_tmp/reuse.kubeconfig" \
     --config-dir "$bootstrap_tmp" \
     --dry-run
 )"
-
-require_text "$bootstrap_dry_run_output" "talosctl gen config"
 require_text "$bootstrap_dry_run_output" "reset-appliance-data.sh"
 require_text "$bootstrap_dry_run_output" "create source git alga-appliance"
 require_text "$bootstrap_dry_run_output" "install-storage.sh --kubeconfig"
@@ -129,11 +126,12 @@ require_text "$bootstrap_dry_run_output" "Token:"
 require_text "$(cat "$ROOT/ee/helm/temporal/templates/deployment.yaml")" 'entrypoint.sh autosetup'
 require_text "$(cat "$ROOT/ee/helm/temporal/templates/deployment.yaml")" 'enableServiceLinks: false'
 require_text "$(cat "$ROOT/ee/helm/temporal/templates/ui.yaml")" 'enableServiceLinks: false'
-require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'appUrl: "https://psa.example.test"'
-require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'host: "psa.example.test"'
-require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'domainSuffix: ""'
-require_text "$(cat "$bootstrap_tmp/values/alga-core.talos-single-node.yaml")" 'tag: "a2cbb430"'
-require_text "$(cat "$bootstrap_tmp/values/workflow-worker.talos-single-node.yaml")" 'tag: "a2cbb43"'
+require_text "$(cat "$bootstrap_tmp/values/alga-core.single-node.yaml")" 'appUrl: "https://psa.example.test"'
+require_text "$(cat "$bootstrap_tmp/values/alga-core.single-node.yaml")" 'host: "psa.example.test"'
+require_text "$(cat "$bootstrap_tmp/values/alga-core.single-node.yaml")" 'domainSuffix: ""'
+require_text "$(cat "$bootstrap_tmp/values/alga-core.single-node.yaml")" 'tag: "fe080102"'
+require_text "$(cat "$bootstrap_tmp/values/workflow-worker.single-node.yaml")" 'tag: "a2cbb43"'
+printf 'apiVersion: v1\nclusters: []\ncontexts: []\nusers: []\n' > /tmp/example.kubeconfig
 
 current_branch="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD)"
 branch_remote_tmp="$(mktemp -d)"
@@ -142,7 +140,7 @@ git -C "$ROOT" push "$branch_remote_tmp/alga-psa.git" "HEAD:refs/heads/$current_
 branch_test_tmp="$(mktemp -d)"
 branch_test_output="$({
   bash "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh" \
-    --release-version 1.0-rc5 \
+    --release-version 1.0 \
     --bootstrap-mode recover \
     --node-ip 192.0.2.10 \
     --app-url https://psa.example.test \
@@ -159,7 +157,7 @@ require_text "$branch_test_output" "local worktree has uncommitted changes"
 missing_branch_output="$({
   set +e
   bash "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh" \
-    --release-version 1.0-rc5 \
+    --release-version 1.0 \
     --bootstrap-mode recover \
     --node-ip 192.0.2.10 \
     --app-url https://psa.example.test \
@@ -174,31 +172,12 @@ missing_branch_output="$({
 require_text "$missing_branch_output" "Flux source branch is not available on the configured remote."
 require_text "$missing_branch_output" "exit_code:1"
 
-printf 'stale\n' > "$bootstrap_tmp/kubeconfig"
-stale_bootstrap_dry_run_output="$(
-  bash "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh" \
-    --release-version 1.0-rc5 \
-    --bootstrap-mode fresh \
-    --node-ip 192.0.2.10 \
-    --hostname alga-appliance \
-    --app-url https://psa.example.test \
-    --interface enp0s1 \
-    --network-mode dhcp \
-    --repo-url https://github.com/example/alga-psa.git \
-    --repo-branch main \
-    --config-dir "$bootstrap_tmp" \
-    --dry-run
-)"
-
-require_text "$stale_bootstrap_dry_run_output" "talosctl gen config"
-require_text "$stale_bootstrap_dry_run_output" "wait for Talos maintenance API on 192.0.2.10"
-
 explicit_cfg_tmp="$(mktemp -d)"
 printf 'apiVersion: v1\nclusters: []\ncontexts: []\nusers: []\n' > "$explicit_cfg_tmp/reuse.kubeconfig"
 printf 'context: appliance\n' > "$explicit_cfg_tmp/reuse.talosconfig"
 explicit_reuse_output="$(
   bash "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh" \
-    --release-version 1.0-rc5 \
+    --release-version 1.0 \
     --bootstrap-mode recover \
     --repo-url https://github.com/example/alga-psa.git \
     --repo-branch main \
@@ -255,7 +234,7 @@ export BOOTSTRAP_MOCK_LOG="$t013_tmp/mock.log"
 t013_output="$(
   PATH="$t013_fakebin:$PATH" \
   bash "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh" \
-    --release-version 1.0-rc5 \
+    --release-version 1.0 \
     --bootstrap-mode recover \
     --node-ip 192.0.2.77 \
     --repo-url https://github.com/example/alga-psa.git \
@@ -391,7 +370,7 @@ t018_output="$(
   set +e
   PATH="$t018_fakebin:$PATH" \
   bash "$ROOT/ee/appliance/scripts/bootstrap-appliance.sh" \
-    --release-version 1.0-rc5 \
+    --release-version 1.0 \
     --bootstrap-mode recover \
     --node-ip 192.0.2.77 \
     --repo-url https://github.com/example/alga-psa.git \
@@ -420,7 +399,7 @@ node --test "$ROOT/ee/appliance/operator/tests/status.test.mjs" --test-name-patt
 upgrade_tmp="$(mktemp -d)"
 upgrade_dry_run_output="$(
   bash "$ROOT/ee/appliance/scripts/upgrade-appliance.sh" \
-    --release-version 1.0-rc5 \
+    --release-version 1.0 \
     --kubeconfig /tmp/example.kubeconfig \
     --config-dir "$upgrade_tmp" \
     --dry-run
@@ -431,9 +410,9 @@ require_text "$upgrade_dry_run_output" "appliance-release-selection"
 require_text "$upgrade_dry_run_output" "reconcile helmrelease alga-core"
 require_text "$upgrade_dry_run_output" "annotate helmrelease workflow-worker"
 
-jq -e '.title == "Alga Talos Appliance Release Manifest"' "$ROOT/ee/appliance/releases/schema.json" >/dev/null
-jq -e '.channel == "stable" and .releaseVersion == "1.0-rc5.1"' "$ROOT/ee/appliance/releases/channels/stable.json" >/dev/null
-jq -e '.channel == "nightly" and .releaseVersion == "1.0-rc5.1" and .repoBranch == "main"' "$ROOT/ee/appliance/releases/channels/nightly.json" >/dev/null
+jq -e '.title == "Alga Appliance Release Manifest"' "$ROOT/ee/appliance/releases/schema.json" >/dev/null
+jq -e '.channel == "stable" and .releaseVersion == "1.0"' "$ROOT/ee/appliance/releases/channels/stable.json" >/dev/null
+jq -e '.channel == "nightly" and .releaseVersion == "1.0" and .repoBranch == "main"' "$ROOT/ee/appliance/releases/channels/nightly.json" >/dev/null
 jq -e '.app.releaseBranch == "release/1.0-rc5"' "$ROOT/ee/appliance/releases/1.0-rc5.1/release.json" >/dev/null
 jq -e '.app.images.algaCore == "a2cbb430"' "$ROOT/ee/appliance/releases/1.0-rc5.1/release.json" >/dev/null
 yq eval '.customization' "$ROOT/ee/appliance/schematics/metal-amd64.yaml" >/dev/null

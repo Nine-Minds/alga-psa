@@ -30,4 +30,4 @@ spec:
   valuesFrom:
     - kind: ConfigMap
       name: appliance-values-workflow-worker
-      valuesKey: workflow-worker.talos-single-node.yaml
+      valuesKey: workflow-worker.single-node.yaml

@@ -1107,7 +1107,7 @@ spec:
 
               async function applyRelease(channel) {
                 const { releaseVersion, release } = await resolveRelease(channel);
-                const profile = release?.app?.valuesProfile || 'talos-single-node';
+                const profile = release?.app?.valuesProfile || 'single-node';
                 const images = release?.app?.images || {};
                 console.log('applying channel:', channel, 'release:', releaseVersion, 'profile:', profile);
 

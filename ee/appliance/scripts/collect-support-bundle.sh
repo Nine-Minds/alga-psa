@@ -16,8 +16,8 @@ Usage:
 
 Options:
   --kubeconfig <path>        Kubeconfig path
-  --talosconfig <path>       Talosconfig path
-  --node-ip <ip>             Talos node IP for node-level collection
+  --talosconfig <path>       Optional legacy Talos config path for Talos-only diagnostics
+  --node-ip <ip>             Optional legacy Talos node IP for node-level collection
   --site-id <id>             Bundle identifier (default: appliance-single-node)
   --output-dir <path>        Directory for the .tar.gz bundle (default: current directory)
   --help                     Show this help
