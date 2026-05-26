@@ -92,8 +92,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Microsoft profile and Teams observability bindings (dependents before profile definitions)
   'microsoft_profile_consumer_bindings',
-  'teams_notification_delivery_idempotency', 'teams_notification_deliveries',
-  'teams_audit_events', 'teams_conversation_references',
+  'teams_notification_deliveries', 'teams_audit_events', 'teams_conversation_references',
   'teams_integrations', 'microsoft_profiles',
 
   // Authorization bundles

@@ -134,48 +134,33 @@ export async function writeTeamsDeliveryRow(input: WriteTeamsDeliveryRowInput): 
     const { knex, tenant } = await createTenantKnex(input.tenant);
     const scopedTenant = tenant || input.tenant;
 
-    const inserted = await knex.transaction(async (trx: any) => {
-      const reserved = await trx.raw(
-        `
-          INSERT INTO teams_notification_delivery_idempotency (
-            tenant,
-            idempotency_key,
-            delivery_id
-          )
-          VALUES (?, ?, ?)
-          ON CONFLICT (tenant, idempotency_key) DO NOTHING
-          RETURNING delivery_id;
-        `,
-        [scopedTenant, idempotencyKey, deliveryId]
-      );
+    const row: TeamsDeliveryRow = {
+      tenant: scopedTenant,
+      delivery_id: deliveryId,
+      internal_notification_id: input.internalNotificationId,
+      category: normalizeOptionalString(input.category ?? null),
+      destination_type: input.destinationType,
+      destination_id: input.destinationId,
+      attempt_number: attemptNumber,
+      idempotency_key: idempotencyKey,
+      provider_message_id: normalizeOptionalString(input.providerMessageId ?? null),
+      status: input.status,
+      error_code: input.errorCode ?? null,
+      error_message: truncateTeamsDeliveryErrorMessage(input.errorMessage ?? null),
+      retryable: typeof input.retryable === 'boolean' ? input.retryable : null,
+      provider_request_id: normalizeOptionalString(input.providerRequestId ?? null),
+      sent_at: normalizeTimestamp(input.sentAt ?? null),
+      delivered_at: normalizeTimestamp(input.deliveredAt ?? null),
+      responded_at: normalizeTimestamp(input.respondedAt ?? null),
+    };
 
-      if (!reserved.rows || reserved.rows.length === 0) {
-        return false;
-      }
+    const result = await knex('teams_notification_deliveries')
+      .insert(row)
+      .onConflict(['tenant', 'idempotency_key'])
+      .ignore()
+      .returning('delivery_id');
 
-      const row: TeamsDeliveryRow = {
-        tenant: scopedTenant,
-        delivery_id: deliveryId,
-        internal_notification_id: input.internalNotificationId,
-        category: normalizeOptionalString(input.category ?? null),
-        destination_type: input.destinationType,
-        destination_id: input.destinationId,
-        attempt_number: attemptNumber,
-        idempotency_key: idempotencyKey,
-        provider_message_id: normalizeOptionalString(input.providerMessageId ?? null),
-        status: input.status,
-        error_code: input.errorCode ?? null,
-        error_message: truncateTeamsDeliveryErrorMessage(input.errorMessage ?? null),
-        retryable: typeof input.retryable === 'boolean' ? input.retryable : null,
-        provider_request_id: normalizeOptionalString(input.providerRequestId ?? null),
-        sent_at: normalizeTimestamp(input.sentAt ?? null),
-        delivered_at: normalizeTimestamp(input.deliveredAt ?? null),
-        responded_at: normalizeTimestamp(input.respondedAt ?? null),
-      };
-
-      await trx('teams_notification_deliveries').insert(row);
-      return true;
-    });
+    const inserted = Array.isArray(result) && result.length > 0;
 
     return {
       inserted,

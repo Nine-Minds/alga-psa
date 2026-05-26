@@ -20,13 +20,13 @@ vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: unknown[]) => hoisted.createTenantKnexMock(...args),
 }));
 
+import { listTeamsDeliveries } from '@alga-psa/ee-microsoft-teams/lib/actions/integrations/teamsObservabilityActions';
 import {
   decodeTeamsObservabilityCursor,
   encodeTeamsObservabilityCursor,
   listTeamsAuditEventsImpl,
-  listTeamsDeliveries,
   listTeamsDeliveriesImpl,
-} from '@alga-psa/ee-microsoft-teams/lib/actions/integrations/teamsObservabilityActions';
+} from '@alga-psa/ee-microsoft-teams/lib/actions/integrations/teamsObservabilityTypes';
 
 type Predicate = (row: Record<string, any>) => boolean;
 

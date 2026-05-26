@@ -7,36 +7,38 @@ const hoisted = vi.hoisted(() => {
     failCreateTenantKnex: false,
   };
 
-  const trx = Object.assign(
+  function buildInsertChain(row: Record<string, unknown>) {
+    const chain: any = {
+      onConflict: () => chain,
+      ignore: () => chain,
+      returning: async () => {
+        const key = `${row.tenant as string}:${row.idempotency_key as string}`;
+        if (state.idempotencyKeys.has(key)) {
+          return [];
+        }
+        state.idempotencyKeys.add(key);
+        state.deliveries.push(row);
+        return [{ delivery_id: row.delivery_id }];
+      },
+    };
+    return chain;
+  }
+
+  const knex = Object.assign(
     (table: string) => ({
-      insert: vi.fn(async (row: Record<string, unknown>) => {
+      insert: (row: Record<string, unknown>) => {
         if (table !== 'teams_notification_deliveries') {
           throw new Error(`Unexpected insert table: ${table}`);
         }
-        state.deliveries.push(row);
-      }),
+        return buildInsertChain(row);
+      },
     }),
-    {
-      raw: vi.fn(async (_sql: string, bindings: string[]) => {
-        const [tenant, idempotencyKey, deliveryId] = bindings;
-        const key = `${tenant}:${idempotencyKey}`;
-        if (state.idempotencyKeys.has(key)) {
-          return { rows: [] };
-        }
-        state.idempotencyKeys.add(key);
-        return { rows: [{ delivery_id: deliveryId }] };
-      }),
-    }
+    {}
   );
-
-  const knex = {
-    transaction: vi.fn(async (callback: (trx: typeof trx) => Promise<unknown>) => callback(trx)),
-  };
 
   return {
     state,
     knex,
-    trx,
     warnMock: vi.fn(),
     createTenantKnexMock: vi.fn(async (tenant: string) => {
       if (state.failCreateTenantKnex) {
@@ -69,8 +71,6 @@ describe('Teams delivery recorder', () => {
     hoisted.state.deliveries.length = 0;
     hoisted.state.failCreateTenantKnex = false;
     hoisted.createTenantKnexMock.mockClear();
-    hoisted.knex.transaction.mockClear();
-    hoisted.trx.raw.mockClear();
     hoisted.warnMock.mockClear();
   });
 

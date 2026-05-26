@@ -12,7 +12,7 @@ describe('teams observability migrations', () => {
   const auditMigration = readRepoFile('ee/server/migrations/20260524090100_create_teams_audit_events.cjs');
   const conversationsMigration = readRepoFile('ee/server/migrations/20260524090200_create_teams_conversation_references.cjs');
 
-  it('creates the Teams notification deliveries table with the expected columns, partitioning, and constraints', () => {
+  it('creates the Teams notification deliveries table with the expected columns and constraints', () => {
     expect(deliveriesMigration).toContain('CREATE TABLE IF NOT EXISTS teams_notification_deliveries');
     expect(deliveriesMigration).toContain('tenant uuid NOT NULL');
     expect(deliveriesMigration).toContain('delivery_id uuid NOT NULL DEFAULT gen_random_uuid()');
@@ -26,21 +26,10 @@ describe('teams observability migrations', () => {
     expect(deliveriesMigration).toContain("status IN ('skipped', 'sent', 'delivered', 'failed')");
     expect(deliveriesMigration).toContain('CONSTRAINT teams_notification_deliveries_error_code_check');
     expect(deliveriesMigration).toContain('graph_throttled');
-    expect(deliveriesMigration).toContain('PARTITION BY RANGE (created_at)');
-  });
-
-  it('creates current and future monthly partitions plus cleanup for delivery retention', () => {
-    expect(deliveriesMigration).toContain('for (let offset = 0; offset < 3; offset += 1)');
-    expect(deliveriesMigration).toContain('PARTITION OF teams_notification_deliveries');
-    expect(deliveriesMigration).toContain("CREATE OR REPLACE FUNCTION cleanup_teams_notification_deliveries(retention_interval interval DEFAULT interval '90 days')");
-    expect(deliveriesMigration).toContain('DROP TABLE IF EXISTS %I');
-  });
-
-  it('uses a tenant-scoped idempotency guard because the delivery table is range-partitioned', () => {
-    expect(deliveriesMigration).toContain('CREATE TABLE IF NOT EXISTS teams_notification_delivery_idempotency');
-    expect(deliveriesMigration).toContain('CONSTRAINT teams_notification_delivery_idempotency_pk PRIMARY KEY (tenant, idempotency_key)');
-    expect(deliveriesMigration).toContain('teams_notification_deliveries_idempotency_lookup_idx');
-    expect(deliveriesMigration).toContain('CONSTRAINT teams_notification_deliveries_pk PRIMARY KEY (tenant, delivery_id, created_at)');
+    expect(deliveriesMigration).toContain('CONSTRAINT teams_notification_deliveries_pk PRIMARY KEY (tenant, delivery_id)');
+    expect(deliveriesMigration).toContain('CONSTRAINT teams_notification_deliveries_idempotency_uk UNIQUE (tenant, idempotency_key)');
+    expect(deliveriesMigration).not.toContain('PARTITION BY RANGE');
+    expect(deliveriesMigration).not.toContain('CREATE TABLE IF NOT EXISTS teams_notification_delivery_idempotency');
   });
 
   it('creates delivery indexes and Citus distribution hooks', () => {
@@ -54,11 +43,10 @@ describe('teams observability migrations', () => {
   });
 
   it('defines cleanup functions with safe retention cutoffs for deliveries and audit events', () => {
-    expect(deliveriesMigration).toContain("retention_interval interval DEFAULT interval '90 days'");
-    expect(deliveriesMigration).toContain('cutoff timestamptz := now() - retention_interval');
-    expect(deliveriesMigration).toContain('pg_inherits');
-    expect(deliveriesMigration).toContain("WHERE parent.relname = 'teams_notification_deliveries'");
-    expect(deliveriesMigration).toContain('DROP TABLE IF EXISTS %I');
+    expect(deliveriesMigration).toContain("cleanup_teams_notification_deliveries(retention_interval interval DEFAULT interval '90 days')");
+    expect(deliveriesMigration).toContain('DELETE FROM teams_notification_deliveries');
+    expect(deliveriesMigration).toContain('WHERE created_at < now() - retention_interval');
+    expect(deliveriesMigration).toContain('GET DIAGNOSTICS deleted_count = ROW_COUNT');
 
     expect(auditMigration).toContain("retention_interval interval DEFAULT interval '365 days'");
     expect(auditMigration).toContain('DELETE FROM teams_audit_events');

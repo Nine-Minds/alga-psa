@@ -11,24 +11,6 @@ const DELIVERY_ERROR_CODES = [
   'unknown',
 ];
 
-function monthStart(date) {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
-}
-
-function addMonths(date, months) {
-  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + months, 1));
-}
-
-function partitionName(start) {
-  const year = start.getUTCFullYear();
-  const month = String(start.getUTCMonth() + 1).padStart(2, '0');
-  return `teams_notification_deliveries_${year}_${month}`;
-}
-
-function sqlDate(date) {
-  return date.toISOString().slice(0, 10);
-}
-
 async function citusFunctionAvailable(knex) {
   const result = await knex.raw(`
     SELECT EXISTS (
@@ -71,16 +53,6 @@ exports.up = async function up(knex) {
   await knex.raw(`CREATE EXTENSION IF NOT EXISTS pgcrypto;`);
 
   await knex.raw(`
-    CREATE TABLE IF NOT EXISTS teams_notification_delivery_idempotency (
-      tenant uuid NOT NULL,
-      idempotency_key text NOT NULL,
-      delivery_id uuid NOT NULL DEFAULT gen_random_uuid(),
-      created_at timestamptz NOT NULL DEFAULT now(),
-      CONSTRAINT teams_notification_delivery_idempotency_pk PRIMARY KEY (tenant, idempotency_key)
-    );
-  `);
-
-  await knex.raw(`
     CREATE TABLE IF NOT EXISTS teams_notification_deliveries (
       tenant uuid NOT NULL,
       delivery_id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -100,24 +72,14 @@ exports.up = async function up(knex) {
       delivered_at timestamptz,
       responded_at timestamptz,
       created_at timestamptz NOT NULL DEFAULT now(),
-      CONSTRAINT teams_notification_deliveries_pk PRIMARY KEY (tenant, delivery_id, created_at),
+      CONSTRAINT teams_notification_deliveries_pk PRIMARY KEY (tenant, delivery_id),
+      CONSTRAINT teams_notification_deliveries_idempotency_uk UNIQUE (tenant, idempotency_key),
       CONSTRAINT teams_notification_deliveries_status_check
         CHECK (status IN ('skipped', 'sent', 'delivered', 'failed')),
       CONSTRAINT teams_notification_deliveries_error_code_check
         CHECK (error_code IS NULL OR error_code IN (${DELIVERY_ERROR_CODES.map((code) => `'${code}'`).join(', ')}))
-    ) PARTITION BY RANGE (created_at);
+    );
   `);
-
-  const current = monthStart(new Date());
-  for (let offset = 0; offset < 3; offset += 1) {
-    const start = addMonths(current, offset);
-    const end = addMonths(current, offset + 1);
-    await knex.raw(`
-      CREATE TABLE IF NOT EXISTS ${partitionName(start)}
-      PARTITION OF teams_notification_deliveries
-      FOR VALUES FROM ('${sqlDate(start)}') TO ('${sqlDate(end)}');
-    `);
-  }
 
   await knex.raw(`
     CREATE INDEX IF NOT EXISTS teams_notification_deliveries_internal_notification_idx
@@ -130,45 +92,21 @@ exports.up = async function up(knex) {
   `);
 
   await knex.raw(`
-    CREATE INDEX IF NOT EXISTS teams_notification_deliveries_idempotency_lookup_idx
-    ON teams_notification_deliveries (tenant, idempotency_key);
-  `);
-
-  await knex.raw(`
     CREATE OR REPLACE FUNCTION cleanup_teams_notification_deliveries(retention_interval interval DEFAULT interval '90 days')
     RETURNS integer
     LANGUAGE plpgsql
     AS $cleanup$
     DECLARE
-      partition_record record;
-      dropped_count integer := 0;
-      cutoff timestamptz := now() - retention_interval;
-      upper_bound timestamptz;
+      deleted_count integer;
     BEGIN
-      FOR partition_record IN
-        SELECT
-          child.relname AS partition_name,
-          pg_get_expr(child.relpartbound, child.oid) AS partition_bound
-        FROM pg_inherits
-        JOIN pg_class parent ON pg_inherits.inhparent = parent.oid
-        JOIN pg_class child ON pg_inherits.inhrelid = child.oid
-        WHERE parent.relname = 'teams_notification_deliveries'
-      LOOP
-        SELECT (regexp_match(partition_record.partition_bound, $$TO \('([^']+)'\)$$))[1]::timestamptz
-        INTO upper_bound;
-
-        IF upper_bound IS NOT NULL AND upper_bound < cutoff THEN
-          EXECUTE format('DROP TABLE IF EXISTS %I', partition_record.partition_name);
-          dropped_count := dropped_count + 1;
-        END IF;
-      END LOOP;
-
-      RETURN dropped_count;
+      DELETE FROM teams_notification_deliveries
+      WHERE created_at < now() - retention_interval;
+      GET DIAGNOSTICS deleted_count = ROW_COUNT;
+      RETURN deleted_count;
     END;
     $cleanup$;
   `);
 
-  await distributeIfNeeded(knex, 'teams_notification_delivery_idempotency');
   await distributeIfNeeded(knex, 'teams_notification_deliveries');
 
   if (await citusFunctionAvailable(knex)) {
