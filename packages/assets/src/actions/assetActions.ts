@@ -53,6 +53,7 @@ import {
     assetRelationshipSchema,
     createAssetRelationshipSchema
 } from '../lib/schemas/asset.schema';
+import { formatClientLocation, type ClientLocationLike } from '../lib/formatClientLocation';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -104,6 +105,29 @@ export interface BulkAssetActionResponse {
 }
 
 const BULK_ASSET_ACTION_LIMIT = 100;
+// Cap parallel per-asset work so a 100-item bulk doesn't seize the whole
+// connection pool. Each iteration still opens its own transaction so partial
+// failures stay isolated; this just bounds how many run at once.
+const BULK_ASSET_ACTION_CONCURRENCY = 5;
+
+async function mapWithConcurrency<T, R>(
+    items: readonly T[],
+    concurrency: number,
+    fn: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+    const results = new Array<R>(items.length);
+    let cursor = 0;
+    const workerCount = Math.max(1, Math.min(concurrency, items.length));
+    const workers = Array.from({ length: workerCount }, async () => {
+        while (true) {
+            const index = cursor++;
+            if (index >= items.length) return;
+            results[index] = await fn(items[index], index);
+        }
+    });
+    await Promise.all(workers);
+    return results;
+}
 
 const normalizeNullableString = (value: string | null | undefined) => (value ?? undefined);
 
@@ -184,28 +208,7 @@ function sanitizeUpdatePayload(data: UpdateAssetRequest): UpdateAssetRequest {
     return cleaned;
 }
 
-type AssetLocationRow = {
-    location_id: string;
-    location_name?: string | null;
-    address_line1?: string | null;
-    address_line2?: string | null;
-    city?: string | null;
-    state_province?: string | null;
-    postal_code?: string | null;
-    country_name?: string | null;
-};
-
-function formatAssetLocation(location: AssetLocationRow): string {
-    return [
-        location.location_name,
-        location.address_line1,
-        location.address_line2,
-        location.city,
-        location.state_province,
-        location.postal_code,
-        location.country_name,
-    ].filter(Boolean).join(', ');
-}
+type AssetLocationRow = ClientLocationLike & { location_id: string };
 
 async function resolveValidatedAssetLocation(
     trx: Knex.Transaction,
@@ -236,7 +239,7 @@ async function resolveValidatedAssetLocation(
 
     return {
         location_id: location.location_id,
-        location: formatAssetLocation(location),
+        location: formatClientLocation(location),
     };
 }
 
@@ -1261,23 +1264,24 @@ export const bulkUpdateAssets = withAuth(async (
 
     const ids = normalizeBulkAssetIds(assetIds);
 
-    const results: BulkAssetActionResult[] = [];
-    let anySucceeded = false;
-    for (const asset_id of ids) {
-        try {
-            const asset = await updateAsset(asset_id, data, { suppressRevalidate: true });
-            results.push({ asset_id, success: true, asset });
-            anySucceeded = true;
-        } catch (error) {
-            results.push({
-                asset_id,
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to update asset',
-            });
+    const results = await mapWithConcurrency<string, BulkAssetActionResult>(
+        ids,
+        BULK_ASSET_ACTION_CONCURRENCY,
+        async (asset_id) => {
+            try {
+                const asset = await updateAsset(asset_id, data, { suppressRevalidate: true });
+                return { asset_id, success: true, asset };
+            } catch (error) {
+                return {
+                    asset_id,
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to update asset',
+                };
+            }
         }
-    }
+    );
 
-    if (anySucceeded) {
+    if (results.some((result) => result.success)) {
         revalidatePath('/assets');
         revalidatePath('/msp/assets');
     }
@@ -1295,29 +1299,30 @@ export const bulkDeleteAssets = withAuth(async (
     }
 
     const ids = normalizeBulkAssetIds(assetIds);
-    const results: BulkAssetActionResult[] = [];
-    let anySucceeded = false;
 
-    for (const asset_id of ids) {
-        try {
-            const result = await deleteAsset(asset_id, { suppressRevalidate: true });
-            const success = result.success === true;
-            results.push({
-                asset_id,
-                success,
-                error: success ? undefined : result.message,
-            });
-            if (success) anySucceeded = true;
-        } catch (error) {
-            results.push({
-                asset_id,
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to delete asset',
-            });
+    const results = await mapWithConcurrency<string, BulkAssetActionResult>(
+        ids,
+        BULK_ASSET_ACTION_CONCURRENCY,
+        async (asset_id) => {
+            try {
+                const result = await deleteAsset(asset_id, { suppressRevalidate: true });
+                const success = result.success === true;
+                return {
+                    asset_id,
+                    success,
+                    error: success ? undefined : result.message,
+                };
+            } catch (error) {
+                return {
+                    asset_id,
+                    success: false,
+                    error: error instanceof Error ? error.message : 'Failed to delete asset',
+                };
+            }
         }
-    }
+    );
 
-    if (anySucceeded) {
+    if (results.some((result) => result.success)) {
         revalidatePath('/assets');
         revalidatePath('/msp/assets');
     }

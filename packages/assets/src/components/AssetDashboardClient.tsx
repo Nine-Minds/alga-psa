@@ -36,6 +36,7 @@ import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRangeSelection } from '@alga-psa/ui/hooks';
 import { toast } from 'react-hot-toast';
+import { formatClientLocation } from '../lib/formatClientLocation';
 import { QuickAddAsset } from './QuickAddAsset';
 import { AssetCommandPalette } from './AssetCommandPalette';
 import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
@@ -573,22 +574,12 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     setRmmManagedFilter([]);
   };
 
-  const formatClientLocation = useCallback((location: IClientLocation) => [
-    location.location_name,
-    location.address_line1,
-    location.address_line2,
-    location.city,
-    location.state_province,
-    location.postal_code,
-    location.country_name,
-  ].filter(Boolean).join(', '), []);
-
   const bulkLocationOptions = useMemo<SelectOption[]>(() => (
     bulkLocations.map((location) => ({
       value: location.location_id,
       label: location.location_name || formatClientLocation(location),
     }))
-  ), [bulkLocations, formatClientLocation]);
+  ), [bulkLocations]);
 
   useEffect(() => {
     if (!isBulkLocationOpen || !singleClientSelectionId) {

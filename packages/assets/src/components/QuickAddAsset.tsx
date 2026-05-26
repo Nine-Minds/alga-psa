@@ -7,6 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { createAsset } from '../actions/assetActions';
+import { formatClientLocation } from '../lib/formatClientLocation';
 import type { CreateAssetRequest, IClient, IClientLocation } from '@alga-psa/types';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
@@ -174,16 +175,6 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
       isMounted = false;
     };
   }, [open, effectiveClientId]);
-
-  const formatClientLocation = (location: IClientLocation) => [
-    location.location_name,
-    location.address_line1,
-    location.address_line2,
-    location.city,
-    location.state_province,
-    location.postal_code,
-    location.country_name,
-  ].filter(Boolean).join(', ');
 
   const locationOptions: SelectOption[] = [
     ...clientLocations.map((location) => ({

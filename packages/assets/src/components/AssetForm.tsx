@@ -23,6 +23,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getAsset, updateAsset } from '../actions/assetActions';
+import { formatClientLocation } from '../lib/formatClientLocation';
 import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
@@ -364,19 +365,6 @@ export default function AssetForm({ assetId }: AssetFormProps) {
   const selectedClient = useMemo(() => (
     clients.find(client => client.id === formData.client_id) || null
   ), [clients, formData.client_id]);
-
-  const formatClientLocation = (location: IClientLocation) => {
-    const parts = [
-      location.location_name,
-      location.address_line1,
-      location.address_line2,
-      location.city,
-      location.state_province,
-      location.postal_code,
-      location.country_name
-    ].filter(Boolean);
-    return parts.join(', ');
-  };
 
   const locationOptions = useMemo(() => {
     const options = clientLocations.map((location) => ({
