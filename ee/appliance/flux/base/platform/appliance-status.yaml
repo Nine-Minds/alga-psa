@@ -67,8 +67,7 @@ spec:
       labels:
         app.kubernetes.io/name: appliance-status
     spec:
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
+      dnsPolicy: ClusterFirst
       serviceAccountName: appliance-status
       automountServiceAccountToken: true
       containers:
