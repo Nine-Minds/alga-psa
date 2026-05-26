@@ -899,9 +899,9 @@ export const TicketResponseStateChangedPayloadSchema = BasePayloadSchema.extend(
 
 export const AppointmentRequestEventPayloadSchema = BasePayloadSchema.extend({
   appointmentRequestId: z.string().uuid(),
-  clientId: z.string().uuid().optional(),
-  contactId: z.string().uuid().optional(),
-  clientUserId: z.string().uuid().optional(),
+  clientId: z.string().uuid().nullable().optional(),
+  contactId: z.string().uuid().nullable().optional(),
+  clientUserId: z.string().uuid().nullable().optional(),
   serviceId: z.string().uuid(),
   serviceName: z.string(),
   requestedDate: z.string(),
