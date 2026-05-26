@@ -103,6 +103,8 @@
       "created": "Creato",
       "projectManager": "Responsabile progetto",
       "tags": "Tag",
+      "priority": "Priorità",
+      "taskType": "Tipo",
       "actions": "Azioni"
     },
     "unknownUser": "Sconosciuto"

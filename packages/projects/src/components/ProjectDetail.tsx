@@ -26,7 +26,7 @@ import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
 import TaskListView from './TaskListView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
-import { getProjectTaskStatuses, updatePhase, deletePhase, getProjectTreeData, reorderPhase } from '../actions/projectActions';
+import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deletePhase, getProjectTreeData, reorderPhase } from '../actions/projectActions';
 import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getProjectTaskData, assignTeamToProjectTask, removeTeamFromProjectTask } from '../actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { Toaster, toast } from 'react-hot-toast';
@@ -43,6 +43,7 @@ import PhaseTaskImportDialog from './PhaseTaskImportDialog';
 import KanbanBoard from './KanbanBoard';
 import { useKanbanPan } from './useKanbanPan';
 import KanbanZoomControl, { calculateColumnWidth } from './KanbanZoomControl';
+import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
@@ -64,6 +65,43 @@ const PROJECT_PHASES_PANEL_VISIBLE_SETTING = 'project_phases_panel_visible';
 const PROJECT_KANBAN_ZOOM_LEVEL_SETTING = 'project_kanban_zoom_level';
 const PROJECT_HEADER_PINNED_SETTING = 'project_header_pinned';
 const PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING = 'project_kanban_sticky_status_names';
+const PROJECT_LIST_DENSITY_LEVEL_SETTING = 'project_list_density_level';
+const PROJECT_LIST_COLUMN_WIDTHS_SETTING = 'project_list_column_widths';
+// Legacy localStorage key previously used by TaskListView; reused for one-time
+// hydration so existing per-project widths survive the move to server prefs.
+const projectListColumnWidthsLegacyKey = (projectId: string) =>
+  `tasklistview-column-sizing:${projectId}`;
+
+// Row density (zoom) presets for the list view, mirroring the tickets table.
+// Indexed by level/10 (0..10); each scales row vertical padding + font size,
+// plus the in-cell tag/picker/avatar sizes so those controls resize with zoom.
+// `[&>td_*]:!text-[Xpx]` forces descendant text to follow the row size.
+// The `row` strings MUST be literal so Tailwind's scanner emits the utilities.
+const PROJECT_LIST_DENSITY_STEP = 10;
+const PROJECT_LIST_DENSITY_DEFAULT = 50; // matches the tickets table default
+interface ProjectListDensityPreset {
+  /** Cell vertical padding + font size (px) for this level. */
+  cellPadding: string;
+  fontPx: number;
+  /** Column width multiplier — fewer columns fit as it grows. */
+  scale: number;
+  tagSize: 'sm' | 'md' | 'lg';
+  pickerSize: 'xs' | 'sm' | 'lg';
+  avatarSize: 'xs' | 'sm' | 'md';
+}
+const PROJECT_LIST_DENSITY_PRESETS: readonly ProjectListDensityPreset[] = [
+  { cellPadding: '2px',  fontPx: 11, scale: 0.79, tagSize: 'sm', pickerSize: 'xs', avatarSize: 'xs' },
+  { cellPadding: '4px',  fontPx: 12, scale: 0.86, tagSize: 'sm', pickerSize: 'xs', avatarSize: 'xs' },
+  { cellPadding: '6px',  fontPx: 12, scale: 0.86, tagSize: 'sm', pickerSize: 'xs', avatarSize: 'xs' },
+  { cellPadding: '8px',  fontPx: 13, scale: 0.93, tagSize: 'sm', pickerSize: 'sm', avatarSize: 'sm' },
+  { cellPadding: '10px', fontPx: 13, scale: 0.93, tagSize: 'sm', pickerSize: 'sm', avatarSize: 'sm' },
+  { cellPadding: '12px', fontPx: 14, scale: 1.0,  tagSize: 'md', pickerSize: 'sm', avatarSize: 'sm' },
+  { cellPadding: '14px', fontPx: 14, scale: 1.0,  tagSize: 'md', pickerSize: 'sm', avatarSize: 'sm' },
+  { cellPadding: '16px', fontPx: 15, scale: 1.07, tagSize: 'md', pickerSize: 'lg', avatarSize: 'md' },
+  { cellPadding: '20px', fontPx: 15, scale: 1.07, tagSize: 'md', pickerSize: 'lg', avatarSize: 'md' },
+  { cellPadding: '24px', fontPx: 16, scale: 1.14, tagSize: 'md', pickerSize: 'lg', avatarSize: 'md' },
+  { cellPadding: '28px', fontPx: 17, scale: 1.21, tagSize: 'md', pickerSize: 'lg', avatarSize: 'md' },
+];
 
 const STATUS_FALLBACK_BACKGROUNDS = ['#f3f4f6', '#e0e7ff', '#dcfce7', '#fef9c3'];
 const STATUS_FALLBACK_BADGES = ['#e5e7eb', '#c7d2fe', '#bbf7d0', '#fef08a'];
@@ -173,18 +211,37 @@ export default function ProjectDetail({
 
   // Batch-load all user preferences in a single server action (instead of 5 separate calls)
   type ProjectViewMode = 'kanban' | 'list';
+  // Column widths are scoped per project (each project can show different
+  // columns), so the preference key includes the project id.
+  const columnWidthsPrefKey = `${PROJECT_LIST_COLUMN_WIDTHS_SETTING}:${project.project_id}`;
   const prefs = useUserPreferencesBatch([
     { key: PROJECT_VIEW_MODE_SETTING, defaultValue: 'kanban' as ProjectViewMode, debounceMs: 300 },
     { key: PROJECT_PHASES_PANEL_VISIBLE_SETTING, defaultValue: true, debounceMs: 300 },
     { key: PROJECT_KANBAN_ZOOM_LEVEL_SETTING, defaultValue: 50, debounceMs: 300 },
     { key: PROJECT_HEADER_PINNED_SETTING, defaultValue: false, debounceMs: 300 },
     { key: PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING, defaultValue: false, debounceMs: 300 },
+    { key: PROJECT_LIST_DENSITY_LEVEL_SETTING, defaultValue: PROJECT_LIST_DENSITY_DEFAULT, debounceMs: 300 },
+    {
+      key: columnWidthsPrefKey,
+      defaultValue: {} as Record<string, number>,
+      localStorageKey: projectListColumnWidthsLegacyKey(project.project_id),
+      debounceMs: 500,
+    },
   ]);
   const { value: viewMode, setValue: setViewMode, isLoading: isViewModeLoading } = prefs[PROJECT_VIEW_MODE_SETTING];
   const { value: isPhasesPanelVisible, setValue: setIsPhasesPanelVisible } = prefs[PROJECT_PHASES_PANEL_VISIBLE_SETTING];
   const { value: kanbanZoomLevel, setValue: setKanbanZoomLevel } = prefs[PROJECT_KANBAN_ZOOM_LEVEL_SETTING];
   const { value: isHeaderPinned, setValue: setIsHeaderPinned } = prefs[PROJECT_HEADER_PINNED_SETTING];
   const { value: showStickyStatusNames, setValue: setShowStickyStatusNames } = prefs[PROJECT_KANBAN_STICKY_STATUS_NAMES_SETTING];
+  const { value: listDensityLevel, setValue: setListDensityLevel } = prefs[PROJECT_LIST_DENSITY_LEVEL_SETTING];
+  const { value: listColumnWidths, setValue: setListColumnWidths } = prefs[columnWidthsPrefKey];
+  const listDensity = useMemo(() => {
+    const index = Math.min(
+      PROJECT_LIST_DENSITY_PRESETS.length - 1,
+      Math.max(0, Math.round((listDensityLevel ?? PROJECT_LIST_DENSITY_DEFAULT) / PROJECT_LIST_DENSITY_STEP))
+    );
+    return PROJECT_LIST_DENSITY_PRESETS[index];
+  }, [listDensityLevel]);
 
   // Kanban view state (existing - phase-scoped)
   const [selectedTask, setSelectedTask] = useState<IProjectTask | null>(null);
@@ -268,6 +325,10 @@ export default function ProjectDetail({
   const [allProjectTaskTags, setAllProjectTaskTags] = useState<Record<string, ITag[]>>({});
   const [allChecklistItems, setAllChecklistItems] = useState<Record<string, any[]>>({});
   const [allTaskDependencies, setAllTaskDependencies] = useState<Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }>>({});
+  // Effective status mappings per phase — the list view renders every phase at
+  // once, and status mapping IDs are phase-specific, so a single phase's
+  // statuses cannot bucket tasks from other phases.
+  const [statusesByPhase, setStatusesByPhase] = useState<Record<string, ProjectStatus[]>>({});
 
   // Tag-related state
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
@@ -496,13 +557,17 @@ export default function ProjectDetail({
     let stale = false;
     const fetchAllTaskData = async () => {
       try {
-        const data = await getProjectTaskData(project.project_id);
+        const [data, phaseStatuses] = await Promise.all([
+          getProjectTaskData(project.project_id),
+          getProjectStatusesByPhase(project.project_id),
+        ]);
         if (stale) return;
         setAllProjectTasks(data.tasks);
         setAllProjectTaskResources(data.taskResources);
         setAllProjectTaskTags(data.taskTags);
         setAllChecklistItems(data.checklistItems);
         setAllTaskDependencies(data.taskDependencies);
+        setStatusesByPhase(phaseStatuses);
         setProjectTaskDataLoaded(true);
       } catch (error) {
         if (!stale) handleError(error, 'Failed to load project tasks');
@@ -2283,6 +2348,37 @@ export default function ProjectDetail({
     }
   };
 
+  // Generic inline-edit handler for the list view (status, priority, type,
+  // due date, hours). Mirrors handleAssigneeChange: spread the existing task,
+  // apply the partial, persist, then sync both task arrays.
+  const handleListTaskUpdate = async (taskId: string, updates: Partial<IProjectTask>) => {
+    try {
+      const task = projectTasks.find(t => t.task_id === taskId) || allProjectTasks.find(t => t.task_id === taskId);
+      if (!task) {
+        throw new Error('Task not found');
+      }
+
+      const updatedTask = await updateTaskWithChecklist(taskId, {
+        ...task,
+        estimated_hours: Number(task.estimated_hours) || 0,
+        actual_hours: Number(task.actual_hours) || 0,
+        checklist_items: task.checklist_items,
+        ...updates,
+      });
+
+      if (updatedTask) {
+        // Inline list edits (status, priority, due date, hours, etc.) never
+        // touch checklist items, so reuse the ones we already have instead of
+        // refetching them on every cell edit.
+        const taskWithChecklist = { ...updatedTask, checklist_items: task.checklist_items ?? [] };
+        setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
+        setAllProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
+      }
+    } catch (error) {
+      handleError(error, 'Failed to update task. Please try again.');
+    }
+  };
+
   const refreshTaskAfterTeamChange = async (taskId: string) => {
     const [updatedTask, resources] = await Promise.all([
       getTaskById(taskId),
@@ -2824,10 +2920,22 @@ export default function ProjectDetail({
     if (viewMode === 'list') {
       return (
         <div className="mb-4 space-y-3 flex-shrink-0">
-          {/* Top row: Title + Pin + View Switcher */}
+          {/* Top row: Title + Density + Pin + View Switcher */}
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold">{t('projectDetail.taskList', 'Task List')}</h2>
             <div className="flex items-center gap-4">
+              <ViewDensityControl
+                idPrefix="project-task-list-density"
+                value={listDensityLevel ?? PROJECT_LIST_DENSITY_DEFAULT}
+                onChange={setListDensityLevel}
+                step={PROJECT_LIST_DENSITY_STEP}
+                defaultValue={PROJECT_LIST_DENSITY_DEFAULT}
+                compactLabel={t('projectDetail.spacing.compact', 'Compact')}
+                spaciousLabel={t('projectDetail.spacing.spacious', 'Spacious')}
+                decreaseTitle={t('projectDetail.spacing.decrease', 'Decrease list spacing')}
+                increaseTitle={t('projectDetail.spacing.increase', 'Increase list spacing')}
+                resetTitle={t('projectDetail.spacing.reset', 'Reset list spacing')}
+              />
               <Tooltip content={isHeaderPinned ? t('projectDetail.unpinHeader', 'Unpin header') : t('projectDetail.pinHeader', 'Pin header to top')}>
                 <Button
                   id="pin-header-toggle-list"
@@ -3286,6 +3394,18 @@ export default function ProjectDetail({
           phases={projectPhases}
           tasks={allProjectTasks}
           statuses={projectStatuses}
+          statusesByPhase={statusesByPhase}
+          columnWidths={listColumnWidths}
+          onColumnWidthsChange={setListColumnWidths}
+          densityFontPx={listDensity.fontPx}
+          densityCellPadding={listDensity.cellPadding}
+          densityScale={listDensity.scale}
+          tagSize={listDensity.tagSize}
+          pickerSize={listDensity.pickerSize}
+          avatarSize={listDensity.avatarSize}
+          priorities={priorities}
+          taskTypes={taskTypes}
+          onTaskUpdate={handleListTaskUpdate}
           taskResources={allProjectTaskResources}
           taskTags={allProjectTaskTags}
           taskDependencies={allTaskDependencies}

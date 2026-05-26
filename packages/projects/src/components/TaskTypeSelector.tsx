@@ -33,14 +33,16 @@ export const TaskTypeSelector: React.FC<TaskTypeSelectorProps> = ({
     const Icon = taskTypeIcons[type.type_key] || ClipboardList;
     return {
       value: type.type_key,
+      // Inline icon + raw text so the consuming select's `truncate` span can
+      // ellipsize the name directly (a nested flex won't shrink/truncate).
       label: (
-        <div className="flex items-center gap-2">
-          <Icon 
-            className="w-4 h-4" 
+        <>
+          <Icon
+            className="inline-block w-4 h-4 mr-1.5 align-middle shrink-0"
             style={{ color: type.color || '#6B7280' }}
           />
-          <span>{type.type_name}</span>
-        </div>
+          {type.type_name}
+        </>
       )
     };
   });

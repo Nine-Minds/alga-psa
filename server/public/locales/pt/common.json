@@ -1171,10 +1171,10 @@
     }
   },
   "dataTable": {
-    "columnsHidden_one": "{{count}} column hidden due to limited space.",
-    "columnsHidden_other": "{{count}} columns hidden due to limited space.",
-    "showAll": "Show all",
-    "showingAllColumns": "Showing all columns; scroll horizontally to see them.",
-    "showLess": "Show less"
+    "columnsHidden_one": "{{count}} coluna oculta devido ao espaço limitado.",
+    "columnsHidden_other": "{{count}} colunas ocultas devido ao espaço limitado.",
+    "showAll": "Mostrar tudo",
+    "showingAllColumns": "Mostrando todas as colunas; role horizontalmente para vê-las.",
+    "showLess": "Mostrar menos"
   }
 }
