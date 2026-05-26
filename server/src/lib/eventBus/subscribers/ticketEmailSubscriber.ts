@@ -2293,13 +2293,13 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     let commentAuthorUserId: string | null = commentUserId || null;
     let commentAuthorContactId: string | null = null;
     let commentAuthorEmail = '';
-    let commentIsResolution = false;
+    let commentClosesTicket = false;
 
     if (payload.comment?.id) {
       const commentAuthor = await db('comments as cm')
         .select(
           'cm.user_id as comment_user_id',
-          'cm.is_resolution as comment_is_resolution',
+          'cm.metadata as comment_metadata',
           'cu.contact_id as comment_contact_id',
           'cu.email as comment_user_email',
           'cc.email as comment_contact_email'
@@ -2318,7 +2318,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         })
         .first<{
           comment_user_id?: string | null;
-          comment_is_resolution?: boolean | null;
+          comment_metadata?: Record<string, unknown> | null;
           comment_contact_id?: string | null;
           comment_user_email?: string | null;
           comment_contact_email?: string | null;
@@ -2330,33 +2330,22 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         commentAuthorEmail =
           safeString(commentAuthor.comment_user_email) ||
           safeString(commentAuthor.comment_contact_email);
-        commentIsResolution = Boolean(commentAuthor.comment_is_resolution);
+        commentClosesTicket = commentAuthor.comment_metadata?.closes_ticket === true;
       }
     }
 
-    // Resolution comments are typically followed by a status change to closed
-    // in the same user action; the ticket-closed email already embeds the
-    // resolution content. The comment handler can race ahead of the close
-    // handler (comment insert is published before the status update), so
-    // defer briefly and re-check ticket state. If the ticket was closed
-    // within the deferral window, skip — the close email covers it. If no
-    // close arrives (resolution comment without status change), send normally.
-    if (commentIsResolution) {
-      await new Promise(resolve => setTimeout(resolve, 5_000));
-      const refreshed = await fetchTicketForEmail(db, tenantId, payload.ticketId);
-      const closedAtRaw = refreshed?.closed_at;
-      const closedAtMs = closedAtRaw instanceof Date
-        ? closedAtRaw.getTime()
-        : closedAtRaw
-          ? new Date(closedAtRaw).getTime()
-          : NaN;
-      if (refreshed?.is_closed && Number.isFinite(closedAtMs) && Date.now() - closedAtMs <= 30_000) {
-        logger.info('[TicketEmailSubscriber] Skipping comment email for resolution comment on recently-closed ticket', {
-          ticketId: payload.ticketId,
-          commentId: payload.comment?.id,
-        });
-        return;
-      }
+    // When the caller knows the comment is paired with an immediate close
+    // (UI sets metadata.closes_ticket=true at insert), suppress the comment
+    // email — the ticket-closed email carries the resolution body. This is
+    // deterministic: no race with the close event, no per-message sleep.
+    // Resolution comments that are NOT paired with a close (no flag set)
+    // still send their email as normal.
+    if (commentClosesTicket) {
+      logger.info('[TicketEmailSubscriber] Skipping comment email; comment is paired with an immediate ticket close', {
+        ticketId: payload.ticketId,
+        commentId: payload.comment?.id,
+      });
+      return;
     }
 
     if (!commentAuthorEmail && payload.comment?.author && isValidEmail(payload.comment.author)) {

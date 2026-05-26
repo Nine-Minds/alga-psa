@@ -106,20 +106,32 @@ const RESOLUTION_TAB_ID = 'resolution';
 // suppresses the noise in the conversation view.
 const REPLY_TOKEN_ONLY_REGEX = /^\s*\[ALGA-REPLY-TOKEN [^\]]+\]\s*$/;
 
-function extractCommentText(note: string | undefined | null): string {
-  if (!note) return '';
-  const matches = note.match(/"text":"((?:[^"\\]|\\.)*)"/g);
-  if (!matches) return note.trim();
-  let result = '';
-  for (const match of matches) {
-    const inner = match.slice('"text":"'.length, -1);
-    try {
-      result += JSON.parse(`"${inner}"`);
-    } catch {
-      result += inner;
+function collectBlockNoteText(node: unknown): string {
+  if (typeof node === 'string') return node;
+  if (Array.isArray(node)) {
+    let out = '';
+    for (const item of node) out += collectBlockNoteText(item);
+    return out;
+  }
+  if (node && typeof node === 'object') {
+    const obj = node as Record<string, unknown>;
+    if (obj.type === 'text' && typeof obj.text === 'string') {
+      return obj.text;
+    }
+    if (Array.isArray(obj.content)) {
+      return collectBlockNoteText(obj.content);
     }
   }
-  return result.trim();
+  return '';
+}
+
+function extractCommentText(note: string | undefined | null): string {
+  if (!note) return '';
+  try {
+    return collectBlockNoteText(JSON.parse(note)).trim();
+  } catch {
+    return note.trim();
+  }
 }
 
 function isHiddenNoiseComment(comment: IComment): boolean {

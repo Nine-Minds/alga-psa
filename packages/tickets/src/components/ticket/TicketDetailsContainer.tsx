@@ -199,7 +199,12 @@ export default function TicketDetailsContainer({
     });
   }, [router, session?.user, t, ticketData.ticket.ticket_id, withSubmitting]);
 
-  const handleAddComment = async (content: string, isInternal: boolean, isResolution: boolean) => {
+  const handleAddComment = async (
+    content: string,
+    isInternal: boolean,
+    isResolution: boolean,
+    closesTicket: boolean = false
+  ) => {
     if (!session?.user) {
       toast.error(t('errors.authRequiredComment', 'You must be logged in to add comments'));
       return;
@@ -211,7 +216,8 @@ export default function TicketDetailsContainer({
         ticketData.ticket.ticket_id,
         content,
         isInternal,
-        isResolution
+        isResolution,
+        closesTicket
       );
 
       setComments(prev => [...prev, newComment]);

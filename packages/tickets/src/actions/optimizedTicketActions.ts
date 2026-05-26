@@ -2518,7 +2518,8 @@ export const addTicketCommentWithCache = withAuth(async (
   ticketId: string,
   content: string,
   isInternal: boolean,
-  isResolution: boolean
+  isResolution: boolean,
+  closesTicket: boolean = false
 ): Promise<IComment> => {
   const {knex: db} = await createTenantKnex();
 
@@ -2597,6 +2598,10 @@ export const addTicketCommentWithCache = withAuth(async (
       is_resolution: isResolution,
       markdown_content: markdownContent,
       created_at: nowIso,
+      // The email subscriber reads metadata.closes_ticket and skips the
+      // comment-added email so the close email is the single source of
+      // truth when the UI is closing the ticket immediately after.
+      ...(closesTicket ? { metadata: { closes_ticket: true } } : {}),
     }).returning('*');
 
     // Update ticket response state based on comment visibility and author (F005-F008)
@@ -2767,9 +2772,10 @@ export async function addTicketCommentWithCacheForCurrentUser(
   ticketId: string,
   content: string,
   isInternal: boolean,
-  isResolution: boolean
+  isResolution: boolean,
+  closesTicket: boolean = false
 ): Promise<IComment> {
-  return addTicketCommentWithCache(ticketId, content, isInternal, isResolution);
+  return addTicketCommentWithCache(ticketId, content, isInternal, isResolution, closesTicket);
 }
 
 /**
