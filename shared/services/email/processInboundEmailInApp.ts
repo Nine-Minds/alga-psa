@@ -436,8 +436,20 @@ async function applyInboundReplyReopenTransition(params: {
   updatedByUserId?: string;
 }): Promise<void> {
   const { withAdminTransaction } = await import('@alga-psa/db');
+  const {
+    writeTicketActivity,
+    TICKET_ACTIVITY_EVENT,
+    TICKET_ACTIVITY_ENTITY,
+    TICKET_ACTIVITY_ACTOR,
+    TICKET_ACTIVITY_SOURCE,
+  } = await import('../../lib/ticketActivity/index');
 
   await withAdminTransaction(async (trx: any) => {
+    const previous = await trx('tickets')
+      .select('status_id')
+      .where({ tenant: params.tenantId, ticket_id: params.ticketId })
+      .first();
+
     await trx('tickets')
       .where({
         tenant: params.tenantId,
@@ -451,6 +463,28 @@ async function applyInboundReplyReopenTransition(params: {
         updated_at: trx.fn.now(),
         updated_by: params.updatedByUserId ?? null,
       });
+
+    // Reopen activity row. Source is inbound_email even though we don't have
+    // an email contact_id here — the reopen was triggered by inbound mail.
+    await writeTicketActivity(trx, {
+      tenant: params.tenantId,
+      ticketId: params.ticketId,
+      eventType: TICKET_ACTIVITY_EVENT.REOPENED,
+      entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+      entityId: params.ticketId,
+      actor: {
+        actorType: TICKET_ACTIVITY_ACTOR.SYSTEM,
+        userId: params.updatedByUserId ?? null,
+      },
+      source: TICKET_ACTIVITY_SOURCE.INBOUND_EMAIL,
+      changes: {
+        status_id: { old: previous?.status_id ?? null, new: params.statusId },
+        closed_at: { old: null, new: null },
+      },
+      details: {
+        reopen_trigger: 'inbound_email_reply',
+      },
+    });
   });
 }
 

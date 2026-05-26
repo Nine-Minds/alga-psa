@@ -1,0 +1,109 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed migration sanity test verifies the ticket activity table exists with required columns and tenant/ticket/time index support.",
+    "implemented": true,
+    "featureIds": ["F001", "F002"],
+    "covers": ["server/src/test/integration/ticketActivityLog.integration.test.ts"]
+  },
+  {
+    "id": "T002",
+    "description": "DB-backed activity helper test writes an entry with explicit tenant inside a normal transaction and retrieves it by ticket.",
+    "implemented": true,
+    "featureIds": ["F003", "F004", "F005", "F006"],
+    "covers": ["server/src/test/integration/ticketActivityLog.integration.test.ts"]
+  },
+  {
+    "id": "T003",
+    "description": "DB-backed admin-transaction test writes inbound-email activity with explicit tenant and proves it does not depend on `app.current_tenant`.",
+    "implemented": true,
+    "featureIds": ["F005", "F022", "F023", "F024", "F039"],
+    "covers": ["server/src/test/integration/ticketActivityLog.integration.test.ts"]
+  },
+  {
+    "id": "T004",
+    "description": "Curated diff unit/integration test verifies meaningful ticket fields create structured changes while uncurated/no-op updates do not create noisy entries.",
+    "implemented": true,
+    "featureIds": ["F007", "F008", "F009"],
+    "covers": ["server/src/test/unit/ticketActivityCuratedDiff.test.ts"]
+  },
+  {
+    "id": "T005",
+    "description": "Ticket creation and update integration test verifies activity entries are created for create, status, priority, assignment, close/reopen, and response-state changes.",
+    "implemented": false,
+    "featureIds": ["F010", "F011", "F012", "F013", "F014", "F015", "F017"],
+    "notes": "Wiring is in place in optimizedTicketActions.updateTicketWithCache and ticketActions.addTicket; full event-by-event coverage deferred. Curated diff coverage is in T004."
+  },
+  {
+    "id": "T006",
+    "description": "Board/status move integration test verifies a board move creates an activity entry with previous/new structured data.",
+    "implemented": false,
+    "featureIds": ["F016"],
+    "notes": "moveTicketsToBoard delegates to updateTicketWithCache which uses the curated diff. Direct integration test deferred."
+  },
+  {
+    "id": "T007",
+    "description": "Comment timeline integration test verifies public comments, internal notes, and client portal replies create timeline entries and render in chronological order with ticket events.",
+    "implemented": true,
+    "featureIds": ["F018", "F019", "F021", "F027", "F028", "F033"],
+    "covers": ["server/src/test/integration/ticketActivityLog.integration.test.ts"],
+    "notes": "Unified merge (activity + comments) covered. Per-author-type comment write paths covered by code wiring; dedicated per-path integration test deferred."
+  },
+  {
+    "id": "T008",
+    "description": "Comment edit test verifies edit activity is metadata-only and does not persist full old/new comment body content in the activity row.",
+    "implemented": false,
+    "featureIds": ["F020", "F038"],
+    "notes": "Implementation enforces metadata-only payload in commentActions.updateComment. Dedicated test deferred."
+  },
+  {
+    "id": "T009",
+    "description": "Inbound email happy-path integration test verifies ticket creation, reply/comment creation, and reopen transitions produce safe source-specific timeline entries.",
+    "implemented": true,
+    "featureIds": ["F022", "F023", "F024", "F038", "F039"],
+    "covers": ["server/src/test/integration/ticketActivityLog.integration.test.ts"],
+    "notes": "Admin-transaction-style test asserts source=inbound_email and that no `body` field appears in details payload."
+  },
+  {
+    "id": "T010",
+    "description": "Bundle reopen integration test verifies master ticket reopen from child reply creates a system/source-aware activity entry.",
+    "implemented": false,
+    "featureIds": ["F025"],
+    "notes": "Wiring in ticketBundleUtils.maybeReopenBundleMasterFromChildReply emits BUNDLE_REOPENED with reopen_trigger=child_reply. Dedicated test deferred."
+  },
+  {
+    "id": "T011",
+    "description": "Document activity integration test verifies ticket document attachment/removal creates timeline entries where those flows are supported.",
+    "implemented": false,
+    "featureIds": ["F026"],
+    "notes": "Wiring in TicketService.uploadTicketDocument and deleteTicketDocument is in place. Dedicated test deferred."
+  },
+  {
+    "id": "T012",
+    "description": "Timeline read-model test verifies tenant isolation, permission enforcement, chronological ordering, and graceful empty state for tickets with no activity rows.",
+    "implemented": true,
+    "featureIds": ["F027", "F029", "F030", "F035"],
+    "covers": ["server/src/test/integration/ticketActivityLog.integration.test.ts"]
+  },
+  {
+    "id": "T013",
+    "description": "UI smoke/Playwright test verifies an internal user sees a unified ticket timeline with human-readable ticket events, comments, internal notes, actor/source context, and stable interactive element IDs.",
+    "implemented": false,
+    "featureIds": ["F031", "F032", "F033", "F034", "F036"],
+    "notes": "UI implemented with stable IDs (#ticket-activity-timeline, ticket-activity-entry-{key}, ticket-activity-entry-toggle-{key}, etc.). Playwright test deferred."
+  },
+  {
+    "id": "T014",
+    "description": "Client portal access test verifies portal users do not receive the internal unified timeline in v1 while existing public comment behavior remains available.",
+    "implemented": false,
+    "featureIds": ["F030"],
+    "notes": "Server action getTicketTimelineEntries throws for user_type='client' and TicketConversation excludes the Activity tab when hideInternalTab is true. Dedicated test deferred."
+  },
+  {
+    "id": "T015",
+    "description": "Developer documentation/test fixture check verifies payload conventions and safe metadata rules are documented for future ticket mutation paths.",
+    "implemented": true,
+    "featureIds": ["F037", "F040"],
+    "covers": ["ee/docs/plans/2026-05-25-ticket-audit-logs/conventions.md"]
+  }
+]
