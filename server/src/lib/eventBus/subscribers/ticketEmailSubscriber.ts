@@ -979,10 +979,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       const descriptionComment = await db('comments')
         .select('note')
         .where({ ticket_id: ticket.ticket_id, tenant: tenantId })
-        .orderBy([
-          { column: 'is_initial_description', order: 'desc' },
-          { column: 'created_at', order: 'asc' }
-        ])
+        .orderBy('created_at', 'asc')
         .first();
       if (descriptionComment?.note) {
         rawDescription = safeString(descriptionComment.note);
@@ -2296,11 +2293,13 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     let commentAuthorUserId: string | null = commentUserId || null;
     let commentAuthorContactId: string | null = null;
     let commentAuthorEmail = '';
+    let commentClosesTicket = false;
 
     if (payload.comment?.id) {
       const commentAuthor = await db('comments as cm')
         .select(
           'cm.user_id as comment_user_id',
+          'cm.metadata as comment_metadata',
           'cu.contact_id as comment_contact_id',
           'cu.email as comment_user_email',
           'cc.email as comment_contact_email'
@@ -2319,6 +2318,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         })
         .first<{
           comment_user_id?: string | null;
+          comment_metadata?: Record<string, unknown> | null;
           comment_contact_id?: string | null;
           comment_user_email?: string | null;
           comment_contact_email?: string | null;
@@ -2330,7 +2330,22 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         commentAuthorEmail =
           safeString(commentAuthor.comment_user_email) ||
           safeString(commentAuthor.comment_contact_email);
+        commentClosesTicket = commentAuthor.comment_metadata?.closes_ticket === true;
       }
+    }
+
+    // When the caller knows the comment is paired with an immediate close
+    // (UI sets metadata.closes_ticket=true at insert), suppress the comment
+    // email — the ticket-closed email carries the resolution body. This is
+    // deterministic: no race with the close event, no per-message sleep.
+    // Resolution comments that are NOT paired with a close (no flag set)
+    // still send their email as normal.
+    if (commentClosesTicket) {
+      logger.info('[TicketEmailSubscriber] Skipping comment email; comment is paired with an immediate ticket close', {
+        ticketId: payload.ticketId,
+        commentId: payload.comment?.id,
+      });
+      return;
     }
 
     if (!commentAuthorEmail && payload.comment?.author && isValidEmail(payload.comment.author)) {

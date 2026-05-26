@@ -55,7 +55,7 @@ export class PgBossSlaBackend implements ISlaBackend {
     });
   }
 
-  async cancelSla(_ticketId: string): Promise<void> {
+  async cancelSla(_tenantId: string, _ticketId: string): Promise<void> {
     // No-op placeholder; polling naturally excludes deleted tickets.
   }
 

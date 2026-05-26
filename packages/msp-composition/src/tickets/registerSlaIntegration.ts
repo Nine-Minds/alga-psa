@@ -16,9 +16,9 @@ export function registerSlaIntegration(): void {
   if (registered) return;
   registered = true;
 
-  registerSlaCancellation(async (ticketId: string) => {
+  registerSlaCancellation(async (tenantId: string, ticketId: string) => {
     const backend = await SlaBackendFactory.getBackend();
-    await backend.cancelSla(ticketId);
+    await backend.cancelSla(tenantId, ticketId);
   });
 
   registerItilSlaConfiguration(configureItilSlaForBoard);

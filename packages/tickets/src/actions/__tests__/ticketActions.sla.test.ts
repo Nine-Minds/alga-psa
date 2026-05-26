@@ -92,6 +92,6 @@ describe('ticketActions deleteTicket', () => {
       'ticket-1'
     );
 
-    expect(backend.cancelSla).toHaveBeenCalledWith('ticket-1');
+    expect(backend.cancelSla).toHaveBeenCalledWith('tenant-1', 'ticket-1');
   });
 });

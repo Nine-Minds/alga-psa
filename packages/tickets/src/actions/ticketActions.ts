@@ -70,9 +70,9 @@ import {
   shouldApplyOpenOnlyStatusFilter,
 } from '../lib/ticketStatusFilter';
 // SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
-let _cancelSlaFn: ((ticketId: string) => Promise<void>) | null = null;
+let _cancelSlaFn: ((tenantId: string, ticketId: string) => Promise<void>) | null = null;
 
-export async function registerSlaCancellation(fn: (ticketId: string) => Promise<void>): Promise<void> {
+export async function registerSlaCancellation(fn: (tenantId: string, ticketId: string) => Promise<void>): Promise<void> {
   _cancelSlaFn = fn;
 }
 
@@ -1571,7 +1571,7 @@ export const deleteTicket = withAuth(async (
     if (result.deleted) {
       try {
         if (_cancelSlaFn) {
-          await _cancelSlaFn(ticketId);
+          await _cancelSlaFn(tenant, ticketId);
         }
       } catch (error) {
         console.warn('[deleteTicket] Failed to cancel SLA backend workflow:', error);
@@ -1621,7 +1621,7 @@ export const deleteTickets = withAuth(async (user, { tenant }, ticketIds: string
       if (result.deleted) {
         try {
           if (_cancelSlaFn) {
-            await _cancelSlaFn(ticketId);
+            await _cancelSlaFn(tenant, ticketId);
           }
         } catch (error) {
           console.warn('[deleteTickets] Failed to cancel SLA backend workflow:', error);

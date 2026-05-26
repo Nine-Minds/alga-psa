@@ -134,7 +134,7 @@ interface TicketDetailsProps {
     // Optimized handlers
     onTicketUpdate?: (field: string, value: any) => Promise<void>;
     onBatchTicketUpdate?: (changes: Record<string, unknown>) => Promise<boolean>;
-    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean) => Promise<void>;
+    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     isSubmitting?: boolean;
     /**
@@ -1484,12 +1484,22 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             const markdownContent = await convertBlockNoteToMarkdown(newCommentContent);
             console.log("Converted markdown content:", markdownContent);
     
+            // The resolution toggle is paired with an immediate close when a
+            // close-status is selected and the ticket isn't already in that
+            // status. Surface that intent to the server so the email
+            // subscriber can suppress the duplicate comment email — the
+            // close email will carry the resolution body.
+            const willCloseTicket = Boolean(
+                isResolution && closeStatusId && ticket.status_id !== closeStatusId
+            );
+
             // Use the optimized handler if provided
             if (onAddComment) {
                 await onAddComment(
                     JSON.stringify(newCommentContent),
                     isInternal,
-                    isResolution
+                    isResolution,
+                    willCloseTicket
                 );
 
                 // Optimistically update the response state in UI to match server behavior:
@@ -1545,7 +1555,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         is_internal: isInternal,
                         is_resolution: isResolution,
                         user_id: userId,
-                        author_type: 'internal' // Will be overridden based on user type in the action
+                        author_type: 'internal', // Will be overridden based on user type in the action
+                        // See email-subscriber suppression note above.
+                        ...(willCloseTicket ? { metadata: { closes_ticket: true } } : {})
                     });
                     
                     if (newComment) {

@@ -81,7 +81,7 @@ describe('PgBossSlaBackend', () => {
 
   it('cancelSla returns without error', async () => {
     const backend = new PgBossSlaBackend();
-    await expect(backend.cancelSla('ticket-1')).resolves.toBeUndefined();
+    await expect(backend.cancelSla('tenant-1', 'ticket-1')).resolves.toBeUndefined();
   });
 
   it('getSlaStatus delegates to slaService.getSlaStatus()', async () => {

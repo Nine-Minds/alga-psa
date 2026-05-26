@@ -207,7 +207,7 @@ describe('SLA backend integration', () => {
 
     await handlePolicyChange(trx, 'tenant-1', 'ticket-1', 'policy-1');
 
-    expect(backendMock.cancelSla).toHaveBeenCalledWith('ticket-1');
+    expect(backendMock.cancelSla).toHaveBeenCalledWith('tenant-1', 'ticket-1');
     expect(backendMock.startSlaTracking).toHaveBeenCalled();
   });
 });
