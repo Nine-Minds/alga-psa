@@ -38,7 +38,6 @@ import {
 import { generateICSBuffer, generateICSFilename, ICSEventData } from '../utils/icsGenerator';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 import { resolveTeamsMeetingService } from '../lib/teamsMeetingService';
-import { readApproverIdsFromConfig } from '../lib/appointmentApprovers';
 
 export interface IAppointmentRequest {
   appointment_request_id: string;
@@ -84,6 +83,82 @@ export const getTeamsMeetingCapability = withAuth(async (
   const teamsMeetingService = await resolveTeamsMeetingService();
   return teamsMeetingService.getTeamsMeetingCapability(tenant);
 });
+
+/**
+ * Builds a knex `.where(...)` callback that matches `availability_settings` rows whose
+ * `config_json` configures `userId` (or one of `userTeamIds`) as an appointment approver.
+ *
+ * Mirrors `readApproverIdsFromConfig` semantics, including the legacy `default_approver_id`
+ * fallback that is honored only when both new arrays are empty/absent — preserved by the
+ * backfill migration as a compatibility shim for un-migrated rows.
+ *
+ * The modern-path clauses use `?` / `?|` against the extracted JSONB sub-arrays so the
+ * GIN expression indexes on `(config_json -> 'approver_user_ids')` and
+ * `(config_json -> 'approver_team_ids')` can be used. The legacy clause is rare and is
+ * scanned within the tenant/setting_type prune.
+ */
+function withApproverMatchClause(userId: string, userTeamIds: string[]) {
+  return function (this: any /* Knex.QueryBuilder */) {
+    this.whereRaw("config_json -> 'approver_user_ids' \\? ?", [userId]);
+    if (userTeamIds.length > 0) {
+      this.orWhereRaw(
+        "config_json -> 'approver_team_ids' \\?| ?::text[]",
+        [userTeamIds]
+      );
+    }
+    this.orWhere(function (this: any) {
+      // Legacy `default_approver_id` fallback — applied only when both new arrays are
+      // empty/absent, matching readApproverIdsFromConfig. The CASE/jsonb_typeof form
+      // tolerates absent keys, JSON null, and (defensively) non-array values without
+      // erroring like raw jsonb_array_length would.
+      this.whereRaw("(config_json ->> 'default_approver_id') = ?", [userId])
+        .whereRaw(
+          "CASE jsonb_typeof(config_json -> 'approver_user_ids') " +
+          "WHEN 'array' THEN jsonb_array_length(config_json -> 'approver_user_ids') = 0 " +
+          "ELSE TRUE END"
+        )
+        .whereRaw(
+          "CASE jsonb_typeof(config_json -> 'approver_team_ids') " +
+          "WHEN 'array' THEN jsonb_array_length(config_json -> 'approver_team_ids') = 0 " +
+          "ELSE TRUE END"
+        );
+    });
+  };
+}
+
+/**
+ * Returns true when `userId` is configured as an approver for the given request — either
+ * a company-wide approver (general_settings) or a per-technician approver whose
+ * user_hours row matches the request's preferred technician. Mirrors the visibility
+ * scoping in getAppointmentRequests so admins who configured an approver get the matching
+ * authority to act, without needing the broader user_schedule:update permission.
+ */
+async function isConfiguredApproverFor(
+  trx: Knex.Transaction,
+  tenant: string,
+  userId: string,
+  preferredAssignedUserId: string | null
+): Promise<boolean> {
+  const memberships = await trx('team_members')
+    .where({ tenant, user_id: userId })
+    .select('team_id');
+  const userTeamIds = memberships.map(m => m.team_id);
+
+  const rows = await trx('availability_settings')
+    .where({ tenant })
+    .whereIn('setting_type', ['general_settings', 'user_hours'])
+    .whereNotNull('config_json')
+    .where(withApproverMatchClause(userId, userTeamIds))
+    .select('setting_type', 'user_id');
+
+  return rows.some(row => {
+    if (row.setting_type === 'general_settings') return true;
+    if (row.setting_type === 'user_hours' && row.user_id && preferredAssignedUserId) {
+      return row.user_id === preferredAssignedUserId;
+    }
+    return false;
+  });
+}
 
 /**
  * Get a single appointment request by ID
@@ -213,23 +288,20 @@ export const getAppointmentRequests = withAuth(async (
         const memberships = await trx('team_members')
           .where({ tenant, user_id: user.user_id })
           .select('team_id');
-        const userTeamIds = new Set(memberships.map(m => m.team_id));
+        const userTeamIds = memberships.map(m => m.team_id);
 
-        // Inspect approver configuration across general + per-user availability settings.
+        // Pushed into SQL so PostgreSQL can index-prune via the GIN expression indexes
+        // on (config_json -> 'approver_user_ids') and (config_json -> 'approver_team_ids').
+        // Helper also includes the legacy `default_approver_id` fallback (used only when
+        // both arrays are empty/absent) to preserve compatibility with un-backfilled rows.
         const approverSettings = await trx('availability_settings')
           .where({ tenant })
           .whereIn('setting_type', ['general_settings', 'user_hours'])
           .whereNotNull('config_json')
-          .select('setting_type', 'user_id', 'config_json');
+          .where(withApproverMatchClause(user.user_id, userTeamIds))
+          .select('setting_type', 'user_id');
 
         for (const setting of approverSettings) {
-          const { userIds, teamIds } = readApproverIdsFromConfig(setting.config_json);
-          const isApprover =
-            userIds.includes(user.user_id) ||
-            teamIds.some(teamId => userTeamIds.has(teamId));
-
-          if (!isApprover) continue;
-
           if (setting.setting_type === 'general_settings') {
             // Company-wide approver: can review every request.
             canSeeAllRequests = true;
@@ -423,11 +495,10 @@ export const approveAppointmentRequest = withAuth(async (
 
     const { knex: db } = await createTenantKnex();
 
-    // Check permissions - use same permission as schedule actions
+    // Permission gate: either the global schedule perm, or being a configured approver
+    // for this specific request. The latter is checked inside the transaction so we can
+    // match against the request's preferred technician.
     const canUpdate = await hasPermission(user, 'user_schedule', 'update', db);
-    if (!canUpdate) {
-      return { success: false, error: 'Insufficient permissions to approve appointment requests' };
-    }
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get the appointment request
@@ -444,6 +515,18 @@ export const approveAppointmentRequest = withAuth(async (
 
       if (request.status !== 'pending') {
         throw new Error(`Cannot approve request with status: ${request.status}`);
+      }
+
+      if (!canUpdate) {
+        const isApprover = await isConfiguredApproverFor(
+          trx,
+          tenant,
+          user.user_id,
+          request.preferred_assigned_user_id ?? null
+        );
+        if (!isApprover) {
+          throw new Error('Insufficient permissions to approve appointment requests');
+        }
       }
 
       // Use final date/time if provided, otherwise use requested
@@ -930,11 +1013,10 @@ export const declineAppointmentRequest = withAuth(async (
 
     const { knex: db } = await createTenantKnex();
 
-    // Check permissions - use same permission as schedule actions
+    // Permission gate: either the global schedule perm, or being a configured approver
+    // for this specific request. The latter is checked inside the transaction so we can
+    // match against the request's preferred technician.
     const canUpdate = await hasPermission(user, 'user_schedule', 'update', db);
-    if (!canUpdate) {
-      return { success: false, error: 'Insufficient permissions to decline appointment requests' };
-    }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get the appointment request
@@ -951,6 +1033,18 @@ export const declineAppointmentRequest = withAuth(async (
 
       if (request.status !== 'pending') {
         throw new Error(`Cannot decline request with status: ${request.status}`);
+      }
+
+      if (!canUpdate) {
+        const isApprover = await isConfiguredApproverFor(
+          trx,
+          tenant,
+          user.user_id,
+          request.preferred_assigned_user_id ?? null
+        );
+        if (!isApprover) {
+          throw new Error('Insufficient permissions to decline appointment requests');
+        }
       }
 
       const now = new Date();
@@ -1111,11 +1205,9 @@ export const updateAppointmentRequestDateTime = withAuth(async (
 
     const { knex: db } = await createTenantKnex();
 
-    // Check permissions - use same permission as schedule actions
+    // Permission gate: either the global schedule perm, or being a configured approver
+    // for this specific request.
     const canUpdate = await hasPermission(user, 'user_schedule', 'update', db);
-    if (!canUpdate) {
-      return { success: false, error: 'Insufficient permissions to update appointment requests' };
-    }
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get the appointment request
@@ -1132,6 +1224,18 @@ export const updateAppointmentRequestDateTime = withAuth(async (
 
       if (!['pending', 'approved'].includes(request.status)) {
         throw new Error(`Cannot update request with status: ${request.status}`);
+      }
+
+      if (!canUpdate) {
+        const isApprover = await isConfiguredApproverFor(
+          trx,
+          tenant,
+          user.user_id,
+          request.preferred_assigned_user_id ?? null
+        );
+        if (!isApprover) {
+          throw new Error('Insufficient permissions to update appointment requests');
+        }
       }
 
       const now = new Date();
@@ -1269,11 +1373,9 @@ export const associateRequestToTicket = withAuth(async (
 
     const { knex: db } = await createTenantKnex();
 
-    // Check permissions - use same permission as schedule actions
+    // Permission gate: either the global schedule perm, or being a configured approver
+    // for this specific request.
     const canUpdate = await hasPermission(user, 'user_schedule', 'update', db);
-    if (!canUpdate) {
-      return { success: false, error: 'Insufficient permissions to update appointment requests' };
-    }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get the appointment request
@@ -1286,6 +1388,18 @@ export const associateRequestToTicket = withAuth(async (
 
       if (!request) {
         throw new Error('Appointment request not found');
+      }
+
+      if (!canUpdate) {
+        const isApprover = await isConfiguredApproverFor(
+          trx,
+          tenant,
+          user.user_id,
+          request.preferred_assigned_user_id ?? null
+        );
+        if (!isApprover) {
+          throw new Error('Insufficient permissions to update appointment requests');
+        }
       }
 
       // Verify ticket exists
