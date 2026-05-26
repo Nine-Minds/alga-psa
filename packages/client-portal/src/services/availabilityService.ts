@@ -50,13 +50,26 @@ function zonedTimeToUtc(
 }
 
 /**
+ * Look up the tenant's configured IANA timezone from tenant_settings.settings.timezone.
+ * Returns null if not set, so callers can fall back to UTC.
+ */
+async function getTenantTimezone(knex: Knex, tenantId: string): Promise<string | null> {
+  const row = await knex('tenant_settings')
+    .where({ tenant: tenantId })
+    .select('settings')
+    .first();
+  const tz = row?.settings?.timezone;
+  return typeof tz === 'string' && tz.length > 0 ? tz : null;
+}
+
+/**
  * Get available time slots for a specific date
  * @param tenantId - Tenant identifier
  * @param date - Target date in YYYY-MM-DD format
  * @param serviceId - Service being scheduled
  * @param duration - Appointment duration in minutes
  * @param userId - Optional specific user to check availability for
- * @param userTimezone - Optional IANA timezone (e.g., 'America/New_York') for calculating minimum notice
+ * @param userTimezone - Optional IANA timezone of the requester (used only for minimum-notice calculation; slot windows are anchored to the tenant's timezone)
  * @returns Array of available time slots
  */
 export async function getAvailableTimeSlots(
@@ -69,6 +82,7 @@ export async function getAvailableTimeSlots(
 ): Promise<ITimeSlot[]> {
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
+    const tenantTimezone = await getTenantTimezone(knex, tenantId);
 
     // Validate date is not in the past and within booking window
     // Parse date in UTC to avoid timezone issues
@@ -336,8 +350,10 @@ export async function getAvailableTimeSlots(
       const [startHour, startMinute] = userHours.start_time.split(':').map(Number);
       const [endHour, endMinute] = userHours.end_time.split(':').map(Number);
 
-      // Working hours are in local business time — convert to UTC using the provided timezone
-      const tz = userTimezone || 'UTC';
+      // Working hours are stored as wall-clock times in the tenant's local business timezone.
+      // Convert to UTC using the TENANT timezone — not the requester's — so the same
+      // company availability window resolves to the same UTC instants regardless of who is viewing.
+      const tz = tenantTimezone || 'UTC';
       let currentSlotTime = zonedTimeToUtc(date, startHour, startMinute, tz);
       const endTime = zonedTimeToUtc(date, endHour, endMinute, tz);
 
@@ -443,8 +459,12 @@ export async function isSlotAvailable(
   userId?: string,
   userTimezone?: string
 ): Promise<boolean> {
+  // userTimezone is retained for API compatibility but unused here; tenant
+  // timezone is authoritative for resolving working-hour windows.
+  void userTimezone;
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
+    const tenantTimezone = await getTenantTimezone(knex, tenantId);
 
     const start = new Date(startTime);
     const end = new Date(start);
@@ -545,11 +565,12 @@ export async function isSlotAvailable(
         continue;
       }
 
-      // Check if slot is within working hours (convert local business hours to UTC)
+      // Check if slot is within working hours (convert local business hours to UTC).
+      // Anchor the window to the tenant's timezone, not the requester's.
       const [whStartHour, whStartMinute] = userHours.start_time.split(':').map(Number);
       const [whEndHour, whEndMinute] = userHours.end_time.split(':').map(Number);
 
-      const tz = userTimezone || 'UTC';
+      const tz = tenantTimezone || 'UTC';
       const dateStr = start.toISOString().split('T')[0];
       const whStart = zonedTimeToUtc(dateStr, whStartHour, whStartMinute, tz);
       const whEnd = zonedTimeToUtc(dateStr, whEndHour, whEndMinute, tz);
