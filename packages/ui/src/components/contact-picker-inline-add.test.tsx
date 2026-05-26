@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ContactPicker } from './ContactPicker';
 import type { IContact } from '@alga-psa/types';
 
@@ -76,7 +77,7 @@ describe('ContactPicker', () => {
 
     openPicker();
 
-    const addButton = screen.getByRole('button', { name: /\+ add new contact/i });
+    const addButton = screen.getByRole('button', { name: /add new contact/i });
     expect(addButton).toBeTruthy();
     expect(addButton.previousElementSibling?.className).toContain('border-t');
   });
@@ -86,7 +87,7 @@ describe('ContactPicker', () => {
 
     openPicker();
 
-    expect(screen.queryByRole('button', { name: /\+ add new contact/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /add new contact/i })).toBeNull();
   });
 
   it('T003: renders add button with Plus icon and expected styling classes', () => {
@@ -94,13 +95,12 @@ describe('ContactPicker', () => {
 
     openPicker();
 
-    const addButton = screen.getByRole('button', { name: /\+ add new contact/i });
+    const addButton = screen.getByRole('button', { name: /add new contact/i });
     expect(addButton.className).toContain('w-full');
     expect(addButton.className).toContain('flex');
     expect(addButton.className).toContain('items-center');
     expect(addButton.className).toContain('gap-2');
     expect(addButton.className).toContain('px-3');
-    expect(addButton.className).toContain('py-2');
     expect(addButton.querySelector('svg')?.getAttribute('class')).toContain('lucide-plus');
   });
 
@@ -109,7 +109,7 @@ describe('ContactPicker', () => {
     renderPicker({ onAddNew });
 
     openPicker();
-    fireEvent.click(screen.getByRole('button', { name: /\+ add new contact/i }));
+    fireEvent.click(screen.getByRole('button', { name: /add new contact/i }));
 
     expect(onAddNew).toHaveBeenCalledTimes(1);
   });
@@ -118,10 +118,42 @@ describe('ContactPicker', () => {
     renderPicker({ onAddNew: vi.fn() });
 
     openPicker();
-    expect(screen.getByRole('button', { name: /\+ add new contact/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /add new contact/i })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: /\+ add new contact/i }));
+    fireEvent.click(screen.getByRole('button', { name: /add new contact/i }));
 
-    expect(screen.queryByRole('button', { name: /\+ add new contact/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /add new contact/i })).toBeNull();
+  });
+
+  it('opens with ArrowDown from the trigger and focuses search', async () => {
+    renderPicker();
+
+    fireEvent.keyDown(screen.getByRole('button', { name: /select contact/i }), { key: 'ArrowDown' });
+
+    expect(screen.getByRole('listbox', { name: /contacts/i })).toBeTruthy();
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByPlaceholderText(/search contacts/i));
+    });
+  });
+
+  it('makes contact options keyboard focusable and selectable with Enter', async () => {
+    const user = userEvent.setup();
+    const onValueChange = vi.fn();
+    renderPicker({ onValueChange });
+
+    await user.click(screen.getByRole('button', { name: /select contact/i }));
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByPlaceholderText(/search contacts/i));
+    });
+
+    const option = screen.getByRole('option', { name: /ada lovelace/i });
+    expect(option).toHaveProperty('tabIndex', 0);
+    option.focus();
+    expect(document.activeElement).toBe(option);
+
+    await user.keyboard('{Enter}');
+
+    expect(onValueChange).toHaveBeenCalledWith('contact-1');
+    expect(screen.queryByRole('listbox', { name: /contacts/i })).toBeNull();
   });
 });

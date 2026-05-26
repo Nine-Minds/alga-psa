@@ -1,0 +1,82 @@
+[
+  {
+    "id": "T001",
+    "description": "Build smoke: generate the ISO and verify the branded boot entry, ISO label, and bundled appliance overlay are present.",
+    "implemented": true,
+    "featureIds": [
+      "F001",
+      "F002",
+      "F011"
+    ]
+  },
+  {
+    "id": "T002",
+    "description": "Installer config sanity: verify the Ubuntu Server install path still preserves a user-confirmed storage flow before any wipe.",
+    "implemented": true,
+    "featureIds": [
+      "F003",
+      "F004"
+    ]
+  },
+  {
+    "id": "T003",
+    "description": "Offline bundle sanity: confirm the install flow can resolve the appliance payload from the ISO without network access.",
+    "implemented": true,
+    "featureIds": [
+      "F005",
+      "F006",
+      "F011"
+    ]
+  },
+  {
+    "id": "T004",
+    "description": "Post-install boot guard: verify a completed install boots the disk-first path when the completion marker is present.",
+    "implemented": true,
+    "featureIds": [
+      "F008",
+      "F009"
+    ]
+  },
+  {
+    "id": "T005",
+    "description": "End-to-end VM smoke: boot the ISO, confirm storage, complete installation, reboot, and verify the system lands on the installed disk and reaches appliance readiness.",
+    "implemented": true,
+    "featureIds": [
+      "F004",
+      "F006",
+      "F007",
+      "F008",
+      "F009",
+      "F010",
+      "F011"
+    ]
+  },
+  {
+    "id": "T006",
+    "description": "Host-service static UI smoke: setup page, setup config API, JSON setup submission, status page, and Next static assets are served successfully.",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F013",
+      "F014"
+    ]
+  },
+  {
+    "id": "T007",
+    "description": "Build staging verifies the packaged status UI includes both status and setup routes.",
+    "implemented": true,
+    "featureIds": [
+      "F012",
+      "F015"
+    ]
+  },
+  {
+    "id": "T008",
+    "description": "Installer config sanity verifies both network and storage are listed as interactive sections.",
+    "implemented": true,
+    "featureIds": [
+      "F016",
+      "F004"
+    ]
+  }
+]

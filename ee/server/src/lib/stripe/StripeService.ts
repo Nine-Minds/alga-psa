@@ -89,24 +89,24 @@ async function getStripeConfig() {
 
   // These are non-sensitive config, can come from env vars
   const masterTenantId = process.env.MASTER_BILLING_TENANT_ID;
-  const licenseProductId = process.env.STRIPE_LICENSE_PRODUCT_ID;
-  const licensePriceId = process.env.STRIPE_LICENSE_PRICE_ID;
 
-  // Tier-specific prices (optional — null means legacy single-item mode)
-  const proBasePriceId = process.env.STRIPE_PRO_BASE_PRICE_ID || null;
-  const proUserPriceId = process.env.STRIPE_PRO_USER_PRICE_ID || null;
+  // Tier-specific prices. Pro is single per-seat; Premium is base + per-user.
+  const proPriceId = process.env.STRIPE_PRO_PRICE_ID || null;
   const soloBasePriceId = process.env.STRIPE_SOLO_BASE_PRICE_ID || null;
   const premiumBasePriceId = process.env.STRIPE_PREMIUM_BASE_PRICE_ID || null;
   const premiumUserPriceId = process.env.STRIPE_PREMIUM_USER_PRICE_ID || null;
 
   // Annual prices (pay for 10 months, get 12 — ~17% discount)
-  const proBaseAnnualPriceId = process.env.STRIPE_PRO_BASE_ANNUAL_PRICE_ID || null;
-  const proUserAnnualPriceId = process.env.STRIPE_PRO_USER_ANNUAL_PRICE_ID || null;
+  const proAnnualPriceId = process.env.STRIPE_PRO_ANNUAL_PRICE_ID || null;
   const soloBaseAnnualPriceId = process.env.STRIPE_SOLO_BASE_ANNUAL_PRICE_ID || null;
   const premiumBaseAnnualPriceId = process.env.STRIPE_PREMIUM_BASE_ANNUAL_PRICE_ID || null;
   const premiumUserAnnualPriceId = process.env.STRIPE_PREMIUM_USER_ANNUAL_PRICE_ID || null;
   const aiAddOnPriceId = process.env.STRIPE_AI_ADDON_PRICE_ID || null;
   const aiAddOnAnnualPriceId = process.env.STRIPE_AI_ADDON_ANNUAL_PRICE_ID || null;
+  const teamsAddOnPriceId = process.env.STRIPE_TEAMS_ADDON_PRICE_ID || null;
+  const teamsAddOnAnnualPriceId = process.env.STRIPE_TEAMS_ADDON_ANNUAL_PRICE_ID || null;
+  const enterpriseAddOnPriceId = process.env.STRIPE_ENTERPRISE_ADDON_PRICE_ID || null;
+  const enterpriseAddOnAnnualPriceId = process.env.STRIPE_ENTERPRISE_ADDON_ANNUAL_PRICE_ID || null;
 
   // Early adopters prices (grandfathered customers migrated from preview)
   const earlyAdoptersBasePriceId = process.env.STRIPE_EARLY_ADOPTERS_BASE_PRICE_ID || null;
@@ -139,20 +139,20 @@ async function getStripeConfig() {
     webhookSecret,
     publishableKey,
     masterTenantId,
-    licenseProductId,
-    licensePriceId,
-    proBasePriceId,
-    proUserPriceId,
+    proPriceId,
     soloBasePriceId,
     premiumBasePriceId,
     premiumUserPriceId,
-    proBaseAnnualPriceId,
-    proUserAnnualPriceId,
+    proAnnualPriceId,
     soloBaseAnnualPriceId,
     premiumBaseAnnualPriceId,
     premiumUserAnnualPriceId,
     aiAddOnPriceId,
     aiAddOnAnnualPriceId,
+    teamsAddOnPriceId,
+    teamsAddOnAnnualPriceId,
+    enterpriseAddOnPriceId,
+    enterpriseAddOnAnnualPriceId,
     earlyAdoptersBasePriceId,
     earlyAdoptersUserPriceId,
     earlyAdoptersBaseAnnualPriceId,
@@ -228,6 +228,11 @@ interface StripeSubscription {
 type TierPriceIds = {
   basePriceId: string;
   userPriceId: string | null;
+};
+
+type StripeLineItem = {
+  price: string;
+  quantity: number;
 };
 
 export class StripeService {
@@ -410,6 +415,72 @@ export class StripeService {
     }
   }
 
+  private async ensureStripePriceRecord(
+    db: Knex,
+    tenantId: string,
+    stripePrice: Stripe.Price,
+  ): Promise<StripePrice | null> {
+    let product = stripePrice.product as Stripe.Product | string | null;
+    if (typeof product === 'string') {
+      product = await this.stripe.products.retrieve(product) as Stripe.Product;
+    }
+
+    if (!product || typeof product === 'string' || !product.id) {
+      return null;
+    }
+
+    let dbProduct = await db<StripeProduct>('stripe_products')
+      .where({
+        tenant: tenantId,
+        stripe_product_external_id: product.id,
+      })
+      .first();
+
+    if (!dbProduct) {
+      const [newProduct] = await db<StripeProduct>('stripe_products')
+        .insert({
+          tenant: tenantId,
+          stripe_product_external_id: product.id,
+          billing_tenant: this.config.masterTenantId,
+          name: product.name,
+          description: product.description,
+          product_type: 'license',
+          is_active: product.active,
+          metadata: product.metadata,
+        })
+        .returning('*');
+      dbProduct = newProduct;
+    }
+
+    let dbPrice = await db<StripePrice>('stripe_prices')
+      .where({
+        tenant: tenantId,
+        stripe_price_external_id: stripePrice.id,
+      })
+      .first();
+
+    if (!dbPrice) {
+      const interval = stripePrice.recurring?.interval;
+      const recurringInterval = (interval === 'month' || interval === 'year') ? interval : null;
+      const [newPrice] = await db<StripePrice>('stripe_prices')
+        .insert({
+          tenant: tenantId,
+          stripe_price_external_id: stripePrice.id,
+          stripe_product_id: dbProduct.stripe_product_id,
+          unit_amount: stripePrice.unit_amount || 0,
+          currency: stripePrice.currency,
+          recurring_interval: recurringInterval,
+          recurring_interval_count: stripePrice.recurring?.interval_count || 1,
+          is_active: stripePrice.active,
+          metadata: stripePrice.metadata,
+        })
+        .returning('*');
+      dbPrice = newPrice;
+    }
+
+    return dbPrice;
+  }
+
   /**
    * Import a single subscription into our database
    */
@@ -421,7 +492,7 @@ export class StripeService {
   ): Promise<void> {
     const db = knex || (await getConnection(tenantId));
 
-    // Find the per-user item (works for both 1-item legacy and 2-item multi-tier subscriptions)
+    // Find the billable user item (works for both 1-item per-seat and 2-item multi-tier subscriptions)
     const subscriptionItem = this.findUserItemFromStripe(subscription.items.data);
     if (!subscriptionItem) {
       logger.warn(`[StripeService] Subscription ${subscription.id} has no items, skipping`);
@@ -805,16 +876,23 @@ export class StripeService {
           throw new Error('Schedule has no phases');
         }
 
-        // Build phase items — include base fee item if this is a multi-item subscription
-        // Resolve price IDs based on the subscription's actual pricing level to preserve
-        // early adopters pricing. Falls back to standard tier pricing if not on early adopters.
-        const tenantTierPrices = this.getSubscriptionPriceIds(existingSubscription)
-          || (tenantRecord?.plan ? this.getTierPriceIds(tenantRecord.plan) : null);
+        // Build phase items. Single-item Pro subscriptions keep one per-seat
+        // line with quantity equal to the user-facing license count.
+        const tenantTier = tenantRecord?.plan as TenantTier | undefined;
+        const perSeatPriceId = tenantTier ? this.getTierPerSeatPriceId(tenantTier) : null;
+        const tenantTierPrices = !perSeatPriceId
+          ? this.getSubscriptionPriceIds(existingSubscription)
+            || (tenantTier ? this.getTierPriceIds(tenantTier) : null)
+          : null;
         const phaseIncludedUsers = this.isEarlyAdoptersSubscription(existingSubscription)
           ? 0
-          : this.getIncludedUsersForTier(tenantRecord?.plan);
+          : this.getIncludedUsersForTier(tenantTier);
 
         const buildPhaseItems = (qty: number): Stripe.SubscriptionScheduleUpdateParams.Phase.Item[] => {
+          if (perSeatPriceId) {
+            return [{ price: perSeatPriceId, quantity: qty }];
+          }
+
           if (existingSubscription.stripe_base_item_id && tenantTierPrices) {
             return this.buildTierLineItems(
               tenantTierPrices,
@@ -823,7 +901,7 @@ export class StripeService {
             ) as Stripe.SubscriptionScheduleUpdateParams.Phase.Item[];
           }
 
-          return [{ price: this.config.licensePriceId!, quantity: qty }];
+          throw new Error('Subscription pricing is not configured');
         };
 
         // Step 2: Update the schedule with metadata, end behavior, and phases
@@ -909,9 +987,8 @@ export class StripeService {
     // Get or import customer
     const customer = await this.getOrImportCustomer(tenantId);
 
-    // Resolve line items: AlgaDesk uses per-user-only pricing (no base fee);
-    // otherwise use tier-specific base+user pricing if configured,
-    // falling back to legacy single per-user price.
+    // Resolve line items: AlgaDesk and Pro use per-seat pricing (no base fee);
+    // other tiers can use tier-specific base/user pricing.
     const knex = await getConnection(tenantId);
     const tenant = await knex('tenants').where('tenant', tenantId).select('plan', 'product_code').first();
 
@@ -927,27 +1004,12 @@ export class StripeService {
       line_items = [{ price: algadeskPriceId, quantity }];
       logger.info(`[StripeService] Using AlgaDesk per-user-only checkout (interval: ${interval})`);
     } else {
-      const tierPrices = tenant?.plan ? this.getTierPriceIds(tenant.plan, interval) : null;
-
-      if (tierPrices) {
-        line_items = this.buildTierLineItems(
-          tierPrices,
-          quantity,
-          this.getIncludedUsersForTier(tenant.plan),
-        );
-        logger.info(
-          `[StripeService] Using ${tierPrices.userPriceId ? 'multi-item' : 'flat-rate'} checkout (tier: ${tenant.plan}, interval: ${interval})`
-        );
-      } else {
-        // Legacy single-item: per-user only
-        if (!this.config.licensePriceId) {
-          throw new Error('STRIPE_LICENSE_PRICE_ID environment variable is not configured');
-        }
-        line_items = [
-          { price: this.config.licensePriceId, quantity },
-        ];
-        logger.info(`[StripeService] Using legacy single-item checkout`);
+      const perSeatPriceId = tenant?.plan ? this.getTierPerSeatPriceId(tenant.plan, interval) : null;
+      if (!perSeatPriceId) {
+        throw new Error(`Per-seat pricing not configured for ${tenant?.plan || 'unknown'} tier (${interval})`);
       }
+      line_items = [{ price: perSeatPriceId, quantity }];
+      logger.info(`[StripeService] Using per-seat checkout (tier: ${tenant.plan}, interval: ${interval})`);
     }
 
     // Create checkout session in embedded mode
@@ -1117,8 +1179,8 @@ export class StripeService {
 
   private getAddOnKeyFromMetadata(metadata: Stripe.Metadata | null | undefined): AddOnKey | null {
     const addOnKey = metadata?.addon_key;
-    if (addOnKey === ADD_ONS.AI_ASSISTANT) {
-      return addOnKey;
+    if (Object.values(ADD_ONS).includes(addOnKey as ADD_ONS)) {
+      return addOnKey as AddOnKey;
     }
     return null;
   }
@@ -1316,10 +1378,12 @@ export class StripeService {
     // user math (and the scheduled-change comparison below) can add back any
     // seats included in the platform fee on multi-item subscriptions.
     let plan: TenantTier | undefined;
+    let resolvedSubscriptionItemPrice: Stripe.Price | undefined;
     try {
       const priceId = subscriptionItem?.price?.id;
       if (priceId) {
         const price = await this.stripe.prices.retrieve(priceId, { expand: ['product'] });
+        resolvedSubscriptionItemPrice = price;
         const product = price.product as Stripe.Product | undefined;
         plan = tierFromStripeProduct(product?.name);
       }
@@ -1358,23 +1422,50 @@ export class StripeService {
     // Derive billing interval from the subscription item's price
     const updatedInterval = subscriptionItem?.price?.recurring?.interval;
     const billingInterval: 'month' | 'year' = (updatedInterval === 'year') ? 'year' : 'month';
+    const baseItem = subscription.items.data.find(item => item.id !== subscriptionItem?.id);
+    const userPriceRecord = subscriptionItem
+      ? await this.ensureStripePriceRecord(
+        knex,
+        tenantId,
+        resolvedSubscriptionItemPrice || subscriptionItem.price,
+      )
+      : null;
+    const basePriceRecord = baseItem
+      ? await this.ensureStripePriceRecord(
+        knex,
+        tenantId,
+        (baseItem.price.product && typeof baseItem.price.product !== 'string')
+          ? baseItem.price
+          : await this.stripe.prices.retrieve(baseItem.price.id, { expand: ['product'] }),
+      )
+      : null;
+
+    const subscriptionUpdateData: Record<string, any> = {
+      stripe_subscription_item_id: subscriptionItem?.id || null,
+      stripe_base_item_id: baseItem?.id || null,
+      stripe_base_price_id: basePriceRecord?.stripe_price_id || null,
+      status: subscription.status as 'active' | 'canceled' | 'past_due',
+      quantity,
+      billing_interval: billingInterval,
+      current_period_start: new Date((subscription as any).current_period_start * 1000),
+      current_period_end: new Date((subscription as any).current_period_end * 1000),
+      cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : null,
+      canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
+      metadata: updatedMetadata,
+      updated_at: knex.fn.now(),
+    };
+
+    const stripePriceId = userPriceRecord?.stripe_price_id ?? existingSubscription?.stripe_price_id;
+    if (stripePriceId) {
+      subscriptionUpdateData.stripe_price_id = stripePriceId;
+    }
 
     await knex<StripeSubscription>('stripe_subscriptions')
       .where({
         tenant: tenantId,
         stripe_subscription_external_id: subscription.id,
       })
-      .update({
-        status: subscription.status as 'active' | 'canceled' | 'past_due',
-        quantity,
-        billing_interval: billingInterval,
-        current_period_start: new Date((subscription as any).current_period_start * 1000),
-        current_period_end: new Date((subscription as any).current_period_end * 1000),
-        cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : null,
-        canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
-        metadata: updatedMetadata,
-        updated_at: knex.fn.now(),
-      });
+      .update(subscriptionUpdateData);
 
     // Update tenant licensed_user_count and plan if subscription is active or trialing
     if (subscription.status === 'active' || subscription.status === 'trialing') {
@@ -1591,7 +1682,7 @@ export class StripeService {
 
   /**
    * Get the price IDs for a given tier and billing interval.
-   * Returns null if tier-specific pricing is not configured (legacy mode).
+   * Returns null if base/user pricing is not configured for the tier.
    *
    * NOTE: This returns STANDARD tier prices. For operations that should preserve
    * a subscription's current pricing level (e.g. early adopters), use
@@ -1608,9 +1699,6 @@ export class StripeService {
       if (tier === 'premium' && this.config.premiumBaseAnnualPriceId && this.config.premiumUserAnnualPriceId) {
         return { basePriceId: this.config.premiumBaseAnnualPriceId, userPriceId: this.config.premiumUserAnnualPriceId };
       }
-      if (tier === 'pro' && this.config.proBaseAnnualPriceId && this.config.proUserAnnualPriceId) {
-        return { basePriceId: this.config.proBaseAnnualPriceId, userPriceId: this.config.proUserAnnualPriceId };
-      }
       // Fall through to monthly if annual not configured
     }
     if (tier === 'solo' && this.config.soloBasePriceId) {
@@ -1619,10 +1707,48 @@ export class StripeService {
     if (tier === 'premium' && this.config.premiumBasePriceId && this.config.premiumUserPriceId) {
       return { basePriceId: this.config.premiumBasePriceId, userPriceId: this.config.premiumUserPriceId };
     }
-    if (tier === 'pro' && this.config.proBasePriceId && this.config.proUserPriceId) {
-      return { basePriceId: this.config.proBasePriceId, userPriceId: this.config.proUserPriceId };
-    }
     return null;
+  }
+
+  /**
+   * Per-seat tier prices. Pro intentionally uses this simpler model instead
+   * of the base + per-user shape used by Premium.
+   */
+  private getTierPerSeatPriceId(
+    tier: TenantTier,
+    interval: 'month' | 'year' = 'month'
+  ): string | null {
+    if (tier !== 'pro') {
+      return null;
+    }
+
+    if (interval === 'year') {
+      return this.config.proAnnualPriceId;
+    }
+
+    return this.config.proPriceId;
+  }
+
+  private buildSubscriptionLineItemsForTier(
+    tier: TenantTier,
+    totalQuantity: number,
+    interval: 'month' | 'year' = 'month',
+  ): StripeLineItem[] | null {
+    const perSeatPriceId = this.getTierPerSeatPriceId(tier, interval);
+    if (perSeatPriceId) {
+      return [{ price: perSeatPriceId, quantity: totalQuantity }];
+    }
+
+    const tierPrices = this.getTierPriceIds(tier, interval);
+    if (!tierPrices) {
+      return null;
+    }
+
+    return this.buildTierLineItems(
+      tierPrices,
+      totalQuantity,
+      this.getIncludedUsersForTier(tier),
+    );
   }
 
   /**
@@ -1643,15 +1769,31 @@ export class StripeService {
     addOn: AddOnKey,
     interval: 'month' | 'year' = 'month'
   ): string | null {
-    if (addOn !== ADD_ONS.AI_ASSISTANT) {
+    const priceIds: Record<AddOnKey, { monthly: string | null; annual: string | null }> = {
+      [ADD_ONS.AI_ASSISTANT]: {
+        monthly: this.config.aiAddOnPriceId,
+        annual: this.config.aiAddOnAnnualPriceId,
+      },
+      [ADD_ONS.TEAMS]: {
+        monthly: this.config.teamsAddOnPriceId,
+        annual: this.config.teamsAddOnAnnualPriceId,
+      },
+      [ADD_ONS.ENTERPRISE]: {
+        monthly: this.config.enterpriseAddOnPriceId,
+        annual: this.config.enterpriseAddOnAnnualPriceId,
+      },
+    };
+
+    const prices = priceIds[addOn];
+    if (!prices) {
       return null;
     }
 
-    if (interval === 'year' && this.config.aiAddOnAnnualPriceId) {
-      return this.config.aiAddOnAnnualPriceId;
+    if (interval === 'year' && prices.annual) {
+      return prices.annual;
     }
 
-    return this.config.aiAddOnPriceId;
+    return prices.monthly;
   }
 
   /**
@@ -1713,23 +1855,21 @@ export class StripeService {
    */
   private getIncludedUsersForTier(tier: TenantTier | null | undefined): number {
     if (tier === 'solo') return 1;
-    if (tier === 'pro') return 1;
     return 0;
   }
 
   /**
    * Build Stripe line items for a tier-based subscription.
    *
-   * `totalQuantity` is the user-facing total seat count (e.g. 6 for a Pro
+   * `totalQuantity` is the user-facing total seat count (e.g. 6 for a Premium
    * tenant that wants six licensed users). The per-user line item only
    * carries the *billable* portion — i.e. the total minus any seats already
-   * covered by the platform fee. `includedUsers` defaults to 0 so legacy
-   * call sites (early adopters, non-tiered) keep their existing behavior.
+   * covered by the platform fee. `includedUsers` defaults to 0 so non-tiered
+   * call sites keep their existing behavior.
    *
-   * When the billable portion is zero (e.g. a brand-new Pro subscription
-   * with one user, fully covered by the platform fee) the per-user item is
-   * omitted — Stripe rejects `quantity: 0` on checkout sessions and some
-   * subscription-schedule endpoints.
+   * When the billable portion is zero, the per-user item is omitted — Stripe
+   * rejects `quantity: 0` on checkout sessions and some subscription-schedule
+   * endpoints.
    */
   private buildTierLineItems(
     prices: TierPriceIds,
@@ -1753,8 +1893,8 @@ export class StripeService {
    */
   private getKnownUserPriceExternalIds(): string[] {
     const ids: string[] = [];
-    if (this.config.licensePriceId) ids.push(this.config.licensePriceId);
-    if (this.config.proUserPriceId) ids.push(this.config.proUserPriceId);
+    if (this.config.proPriceId) ids.push(this.config.proPriceId);
+    if (this.config.proAnnualPriceId) ids.push(this.config.proAnnualPriceId);
     if (this.config.premiumUserPriceId) ids.push(this.config.premiumUserPriceId);
     if (this.config.earlyAdoptersUserPriceId) ids.push(this.config.earlyAdoptersUserPriceId);
     if (this.config.earlyAdoptersUserAnnualPriceId) ids.push(this.config.earlyAdoptersUserAnnualPriceId);
@@ -1765,7 +1905,7 @@ export class StripeService {
 
   /**
    * Find the per-user item from a Stripe subscription's items.
-   * Works for both legacy (1-item) and multi-item (base + per-user) subscriptions.
+   * Works for both single-item per-seat and multi-item (base + per-user) subscriptions.
    */
   private findUserItemFromStripe(items: Stripe.SubscriptionItem[]): Stripe.SubscriptionItem | undefined {
     if (items.length === 1) return items[0];
@@ -1784,7 +1924,7 @@ export class StripeService {
     const userItem = this.findUserItemFromStripe(items);
     const perUserQuantity = userItem?.quantity || 1;
 
-    // Legacy single-item subscriptions store the total on the one item.
+    // Single-item subscriptions store the total on the one item.
     // Multi-item (base + per-user) subscriptions only store the billable
     // portion on the per-user item, so add back the seat covered by the
     // platform fee to arrive at the user-facing total.
@@ -1812,8 +1952,9 @@ export class StripeService {
   /**
    * Upgrade a tenant's subscription to a new tier.
    *
-   * Replaces subscription items with the target tier's prices (base + per-user),
-   * preserving the current user count. Stripe handles proration automatically.
+   * Replaces subscription items with the target tier's prices, preserving the
+   * current user count. Pro uses one per-seat price; Premium uses base + user.
+   * Stripe handles proration automatically.
    */
   async upgradeTier(
     tenantId: string,
@@ -1823,11 +1964,12 @@ export class StripeService {
     await this.ensureInitialized();
     logger.info(`[StripeService] Upgrading tenant ${tenantId} to ${targetTier} (${interval})`);
 
-    const tierPrices = this.getTierPriceIds(targetTier, interval);
-    if (!tierPrices) {
+    const targetPerSeatPriceId = this.getTierPerSeatPriceId(targetTier, interval);
+    const tierPrices = targetPerSeatPriceId ? null : this.getTierPriceIds(targetTier, interval);
+    if (!targetPerSeatPriceId && !tierPrices) {
       return { success: false, error: `Pricing not configured for ${targetTier} tier` };
     }
-    if (!tierPrices.userPriceId) {
+    if (tierPrices && !tierPrices.userPriceId) {
       return { success: false, error: `Per-user pricing is not configured for ${targetTier} tier` };
     }
 
@@ -1861,7 +2003,7 @@ export class StripeService {
     const itemUpdates: Stripe.SubscriptionUpdateParams.Item[] = [];
 
     // Remove the currently tracked primary item. For Solo this is the flat-rate base item;
-    // for legacy and multi-item subscriptions this is the per-user item.
+    // for single-item and multi-item subscriptions this is the per-user item.
     if (existingSubscription.stripe_subscription_item_id) {
       itemUpdates.push({
         id: existingSubscription.stripe_subscription_item_id,
@@ -1877,20 +2019,24 @@ export class StripeService {
       });
     }
 
-    // Add new tier items. `currentQuantity` is the user-facing total licensed
-    // seats — the per-user line item only bills the portion not already
-    // covered by the platform fee. We always include the per-user item even
-    // when the billable portion is zero so `stripe_subscription_item_id`
-    // continues to reference a real per-user line (required for future
-    // increases). Stripe's `subscriptions.update` endpoint accepts
-    // `quantity: 0` on line items; `checkout.sessions.create` does not, but
-    // this path only hits `subscriptions.update`.
-    const targetIncludedUsers = this.getIncludedUsersForTier(targetTier);
-    const upgradePerUserQuantity = Math.max(currentQuantity - targetIncludedUsers, 0);
-    itemUpdates.push(
-      { price: tierPrices.basePriceId, quantity: 1 },
-      { price: tierPrices.userPriceId, quantity: upgradePerUserQuantity },
-    );
+    if (targetPerSeatPriceId) {
+      itemUpdates.push({ price: targetPerSeatPriceId, quantity: currentQuantity });
+    } else if (tierPrices) {
+      // Add new tier items. `currentQuantity` is the user-facing total licensed
+      // seats — the per-user line item only bills the portion not already
+      // covered by the platform fee. We always include the per-user item even
+      // when the billable portion is zero so `stripe_subscription_item_id`
+      // continues to reference a real per-user line (required for future
+      // increases). Stripe's `subscriptions.update` endpoint accepts
+      // `quantity: 0` on line items; `checkout.sessions.create` does not, but
+      // this path only hits `subscriptions.update`.
+      const targetIncludedUsers = this.getIncludedUsersForTier(targetTier);
+      const upgradePerUserQuantity = Math.max(currentQuantity - targetIncludedUsers, 0);
+      itemUpdates.push(
+        { price: tierPrices.basePriceId, quantity: 1 },
+        { price: tierPrices.userPriceId, quantity: upgradePerUserQuantity },
+      );
+    }
 
     try {
       const updatedSubscription = await this.stripe.subscriptions.update(
@@ -1903,19 +2049,25 @@ export class StripeService {
         }
       );
 
-      // Find the new items
-      const newUserItem = this.findUserItemFromStripe(updatedSubscription.items.data);
-      const newBaseItem = updatedSubscription.items.data.find(
-        item => item.price.id === tierPrices.basePriceId
-      );
+      // Find the new items and internal price IDs.
+      const newUserItem = targetPerSeatPriceId
+        ? updatedSubscription.items.data.find(item => item.price.id === targetPerSeatPriceId)
+        : this.findUserItemFromStripe(updatedSubscription.items.data);
+      const newBaseItem = tierPrices
+        ? updatedSubscription.items.data.find(item => item.price.id === tierPrices.basePriceId)
+        : undefined;
 
-      // Look up internal price IDs
-      const userPriceRecord = await knex<StripePrice>('stripe_prices')
-        .where({ tenant: tenantId, stripe_price_external_id: tierPrices.userPriceId })
-        .first();
-      const basePriceRecord = await knex<StripePrice>('stripe_prices')
-        .where({ tenant: tenantId, stripe_price_external_id: tierPrices.basePriceId })
-        .first();
+      const userPriceExternalId = targetPerSeatPriceId || tierPrices?.userPriceId;
+      const userPriceRecord = userPriceExternalId
+        ? await knex<StripePrice>('stripe_prices')
+          .where({ tenant: tenantId, stripe_price_external_id: userPriceExternalId })
+          .first()
+        : null;
+      const basePriceRecord = tierPrices
+        ? await knex<StripePrice>('stripe_prices')
+          .where({ tenant: tenantId, stripe_price_external_id: tierPrices.basePriceId })
+          .first()
+        : null;
 
       // Update subscription record
       await knex<StripeSubscription>('stripe_subscriptions')
@@ -1938,7 +2090,7 @@ export class StripeService {
         });
 
       // Cancel any other active Stripe subscriptions for this customer
-      // (e.g. legacy subscription that wasn't updated in-place)
+      // (e.g. a stale subscription that wasn't updated in-place)
       try {
         const allStripeSubs = await this.stripe.subscriptions.list({
           customer: customer.stripe_customer_external_id,
@@ -2085,22 +2237,20 @@ export class StripeService {
     success: boolean;
     error?: string;
     currentMonthly?: number;
-    newBasePrice?: number;
     newUserPrice?: number;
     newMonthly?: number;
     userCount?: number;
     currency?: string;
     prorationAmount?: number;
     annualAvailable?: boolean;
-    annualBasePrice?: number;
     annualUserPrice?: number;
     annualTotal?: number;
   }> {
     await this.ensureInitialized();
 
-    const tierPrices = this.getTierPriceIds(targetTier, interval);
-    if (!tierPrices) {
-      return { success: false, error: `Pricing not configured for ${targetTier} tier (${interval})` };
+    const targetPerSeatPriceId = this.getTierPerSeatPriceId(targetTier, interval);
+    if (!targetPerSeatPriceId) {
+      return { success: false, error: `Per-seat pricing not configured for ${targetTier} tier (${interval})` };
     }
 
     try {
@@ -2121,18 +2271,11 @@ export class StripeService {
         .first();
 
       const userCount = existingSubscription?.quantity || 1;
-      const targetIncludedUsers = this.getIncludedUsersForTier(targetTier);
-      const targetBillableUsers = Math.max(userCount - targetIncludedUsers, 0);
 
-      // Fetch target tier prices from Stripe
-      const [basePrice, userPrice] = await Promise.all([
-        this.stripe.prices.retrieve(tierPrices.basePriceId),
-        tierPrices.userPriceId ? this.stripe.prices.retrieve(tierPrices.userPriceId) : Promise.resolve(null),
-      ]);
-
-      const basePriceAmount = (basePrice.unit_amount || 0) / 100;
-      const userPriceAmount = ((userPrice?.unit_amount) || 0) / 100;
-      const newMonthly = basePriceAmount + (userPriceAmount * targetBillableUsers);
+      const userPrice = await this.stripe.prices.retrieve(targetPerSeatPriceId);
+      const userPriceAmount = (userPrice.unit_amount || 0) / 100;
+      const newMonthly = userPriceAmount * userCount;
+      const currency = userPrice.currency;
 
       // Calculate current monthly from existing subscription
       let currentMonthly = 0;
@@ -2158,7 +2301,7 @@ export class StripeService {
             currentMonthly += ((currentUserPrice?.unit_amount || 0) / 100) * currentBillableUsers;
           }
         } else {
-          // Legacy single-price mode: price_id is the per-user price
+          // Single-price mode: price_id is the per-seat price
           const currentPrice = await knex<StripePrice>('stripe_prices')
             .where({ stripe_price_id: existingSubscription.stripe_price_id })
             .first();
@@ -2181,7 +2324,7 @@ export class StripeService {
                 ...(existingSubscription.stripe_base_item_id
                   ? [{ id: existingSubscription.stripe_base_item_id, deleted: true as const }]
                   : []),
-                ...this.buildTierLineItems(tierPrices, userCount, targetIncludedUsers),
+                { price: targetPerSeatPriceId, quantity: userCount },
               ],
               proration_behavior: 'always_invoice',
             },
@@ -2194,19 +2337,14 @@ export class StripeService {
 
       // Fetch annual pricing if available (for showing both options)
       let annualAvailable = false;
-      let annualBasePrice: number | undefined;
       let annualUserPrice: number | undefined;
       let annualTotal: number | undefined;
-      const annualPrices = this.getTierPriceIds(targetTier, 'year');
-      if (annualPrices && (interval !== 'year' || annualPrices.basePriceId !== tierPrices.basePriceId)) {
+      const annualPerSeatPriceId = this.getTierPerSeatPriceId(targetTier, 'year');
+      if (annualPerSeatPriceId && annualPerSeatPriceId !== targetPerSeatPriceId) {
         try {
-          const [annualBase, annualUser] = await Promise.all([
-            this.stripe.prices.retrieve(annualPrices.basePriceId),
-            annualPrices.userPriceId ? this.stripe.prices.retrieve(annualPrices.userPriceId) : Promise.resolve(null),
-          ]);
-          annualBasePrice = (annualBase.unit_amount || 0) / 100;
-          annualUserPrice = ((annualUser?.unit_amount) || 0) / 100;
-          annualTotal = annualBasePrice + (annualUserPrice * targetBillableUsers);
+          const annualUser = await this.stripe.prices.retrieve(annualPerSeatPriceId);
+          annualUserPrice = (annualUser.unit_amount || 0) / 100;
+          annualTotal = annualUserPrice * userCount;
           annualAvailable = true;
         } catch (e) {
           logger.warn('[StripeService] Could not fetch annual prices', { error: e });
@@ -2216,14 +2354,12 @@ export class StripeService {
       return {
         success: true,
         currentMonthly,
-        newBasePrice: basePriceAmount,
         newUserPrice: userPriceAmount,
         newMonthly,
         userCount,
-        currency: basePrice.currency,
+        currency,
         prorationAmount,
         annualAvailable,
-        annualBasePrice,
         annualUserPrice,
         annualTotal,
       };
@@ -2266,9 +2402,14 @@ export class StripeService {
     // Resolve the target interval's price IDs, preserving early adopters pricing
     const tenantRecord = await knex('tenants').where('tenant', tenantId).select('plan').first();
     const currentTier: TenantTier = tenantRecord?.plan || 'pro';
-    const newPrices = this.getSubscriptionPriceIds(existingSubscription, newInterval)
-      || this.getTierPriceIds(currentTier, newInterval);
-    if (!newPrices) {
+    const newPerSeatPriceId = this.isEarlyAdoptersSubscription(existingSubscription)
+      ? null
+      : this.getTierPerSeatPriceId(currentTier, newInterval);
+    const newPrices = newPerSeatPriceId
+      ? null
+      : this.getSubscriptionPriceIds(existingSubscription, newInterval)
+        || this.getTierPriceIds(currentTier, newInterval);
+    if (!newPerSeatPriceId && !newPrices) {
       return { success: false, error: `${newInterval === 'year' ? 'Annual' : 'Monthly'} pricing not configured for ${currentTier} tier` };
     }
 
@@ -2285,6 +2426,9 @@ export class StripeService {
       const intervalIncludedUsers = this.isEarlyAdoptersSubscription(existingSubscription)
         ? 0
         : this.getIncludedUsersForTier(currentTier);
+      const nextPhaseItems = newPerSeatPriceId
+        ? [{ price: newPerSeatPriceId, quantity: currentQuantity }]
+        : this.buildTierLineItems(newPrices!, currentQuantity, intervalIncludedUsers);
 
       await this.stripe.subscriptionSchedules.update(schedule.id, {
         phases: [
@@ -2297,7 +2441,7 @@ export class StripeService {
             })),
           },
           {
-            items: this.buildTierLineItems(newPrices, currentQuantity, intervalIncludedUsers),
+            items: nextPhaseItems,
           },
         ],
         end_behavior: 'release',
@@ -2337,7 +2481,6 @@ export class StripeService {
     currentInterval?: 'month' | 'year';
     currentTotal?: number;
     newTotal?: number;
-    newBasePrice?: number;
     newUserPrice?: number;
     userCount?: number;
     effectiveDate?: string;
@@ -2362,22 +2505,18 @@ export class StripeService {
 
     const tenantRecord = await knex('tenants').where('tenant', tenantId).select('plan').first();
     const currentTier: TenantTier = tenantRecord?.plan || 'pro';
-    const newPrices = this.getSubscriptionPriceIds(existingSubscription, newInterval)
-      || this.getTierPriceIds(currentTier, newInterval);
-    if (!newPrices) {
-      return { success: false, error: `${newInterval === 'year' ? 'Annual' : 'Monthly'} pricing not configured for ${currentTier} tier` };
+    const newPerSeatPriceId = this.isEarlyAdoptersSubscription(existingSubscription)
+      ? null
+      : this.getTierPerSeatPriceId(currentTier, newInterval);
+    if (!newPerSeatPriceId) {
+      return { success: false, error: `${newInterval === 'year' ? 'Annual' : 'Monthly'} per-seat pricing not configured for ${currentTier} tier` };
     }
 
     try {
-      const [newBase, newUser] = await Promise.all([
-        this.stripe.prices.retrieve(newPrices.basePriceId),
-        newPrices.userPriceId ? this.stripe.prices.retrieve(newPrices.userPriceId) : Promise.resolve(null),
-      ]);
-
       const userCount = existingSubscription.quantity;
-      const newBaseAmount = (newBase.unit_amount || 0) / 100;
-      const newUserAmount = ((newUser?.unit_amount) || 0) / 100;
-      const newTotal = newBaseAmount + (newUserAmount * userCount);
+      const newUser = await this.stripe.prices.retrieve(newPerSeatPriceId);
+      const newUserAmount = (newUser.unit_amount || 0) / 100;
+      const newTotal = newUserAmount * userCount;
 
       // Calculate current total
       let currentTotal = 0;
@@ -2395,7 +2534,7 @@ export class StripeService {
           currentTotal += ((currentUserPrice?.unit_amount || 0) / 100) * userCount;
         }
       } else {
-        // Legacy single-price mode
+        // Single-price mode
         const currentPrice = await knex<StripePrice>('stripe_prices')
           .where({ stripe_price_id: existingSubscription.stripe_price_id })
           .first();
@@ -2416,7 +2555,6 @@ export class StripeService {
         currentInterval: existingSubscription.billing_interval || 'month',
         currentTotal,
         newTotal,
-        newBasePrice: newBaseAmount,
         newUserPrice: newUserAmount,
         userCount,
         effectiveDate: existingSubscription.current_period_end?.toISOString(),
@@ -3140,21 +3278,12 @@ export class StripeService {
     }
 
     // Good to go: build the checkout session.
-    const tierPrices = this.getTierPriceIds(targetTier, interval);
-    if (!tierPrices) {
+    const lineItems = this.buildSubscriptionLineItemsForTier(targetTier, 1, interval);
+    if (!lineItems) {
       return { type: 'error', error: `Pricing not configured for ${targetTier} tier` };
-    }
-    if (!tierPrices.userPriceId) {
-      return { type: 'error', error: `Per-user pricing not configured for ${targetTier} tier` };
     }
 
     const customer = await this.getOrImportCustomer(tenantId);
-    // IAP tenants are single-seat Solo → quantity=1 with included-users applied.
-    const lineItems = this.buildTierLineItems(
-      tierPrices,
-      1,
-      this.getIncludedUsersForTier(targetTier),
-    );
 
     const trialEndUnix = Math.floor(expiresMs / 1000);
 

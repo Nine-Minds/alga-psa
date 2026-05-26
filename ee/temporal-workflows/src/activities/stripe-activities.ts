@@ -116,14 +116,14 @@ export async function fetchStripeDetailsFromCheckout(
       if (items.length === 0) {
         log.warn('Subscription has no items', { subscriptionId: subscription.id });
       } else if (items.length === 1) {
-        // Legacy single-item subscription (per-user only)
+        // Single-item subscription (per-seat or flat-rate)
         const subscriptionItem = items[0];
         result.stripeSubscriptionId = subscription.id;
         result.stripeSubscriptionItemId = subscriptionItem.id;
         result.stripePriceId = subscriptionItem.price.id;
         result.licenseCount = subscriptionItem.quantity || 1;
 
-        log.info('Legacy subscription details retrieved', {
+        log.info('Single-item subscription details retrieved', {
           subscriptionId: subscription.id,
           subscriptionItemId: subscriptionItem.id,
           priceId: subscriptionItem.price.id,
@@ -137,9 +137,10 @@ export async function fetchStripeDetailsFromCheckout(
 
         // Known per-user price IDs from env
         const knownUserPriceIds = [
-          process.env.STRIPE_LICENSE_PRICE_ID,
-          process.env.STRIPE_PRO_USER_PRICE_ID,
+          process.env.STRIPE_PRO_PRICE_ID,
+          process.env.STRIPE_PRO_ANNUAL_PRICE_ID,
           process.env.STRIPE_PREMIUM_USER_PRICE_ID,
+          process.env.STRIPE_PREMIUM_USER_ANNUAL_PRICE_ID,
         ].filter(Boolean);
 
         let userItem = items.find(item => knownUserPriceIds.includes(item.price.id));

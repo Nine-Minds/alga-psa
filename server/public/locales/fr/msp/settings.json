@@ -25,7 +25,8 @@
     "teamManagement": "Gestion d'équipe",
     "loadingTeam": "Chargement de la configuration de l'équipe...",
     "loadingExperimental": "Chargement de la configuration des fonctionnalités expérimentales...",
-    "loadingInteractions": "Chargement des paramètres d'interaction..."
+    "loadingInteractions": "Chargement des paramètres d'interaction...",
+    "keyboardShortcuts": "Raccourcis clavier"
   },
   "unsavedChanges": {
     "title": "Modifications non enregistrées",
@@ -90,10 +91,6 @@
         "name": "Assistant IA",
         "description": "Activez la fonction Question rapide et la barre latérale de discussion alimentées par l'IA.",
         "restriction": "Disponible uniquement pour le locataire de facturation principal."
-      },
-      "workflowAutomation": {
-        "name": "Automatisation des flux de travail",
-        "description": "Activez les fonctionnalités expérimentales d'automatisation des flux de travail dans le panneau de contrôle et l'éditeur de flux de travail."
       }
     },
     "actions": {

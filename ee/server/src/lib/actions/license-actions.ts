@@ -248,7 +248,7 @@ export async function createLicenseCheckoutSessionAction(
 /**
  * Server action to get license pricing information
  * Reads from the tenant's actual subscription in stripe_subscriptions + stripe_prices.
- * Falls back to the STRIPE_LICENSE_PRICE_ID env var for legacy tenants without a subscription row.
+ * Falls back to the STRIPE_PRO_PRICE_ID env var for tenants without a subscription row.
  * @returns License price information or error
  */
 export async function getLicensePricingAction(): Promise<{
@@ -299,10 +299,10 @@ export async function getLicensePricingAction(): Promise<{
       }
     }
 
-    // Fallback: fetch from Stripe API using legacy env var
-    const licensePriceId = process.env.STRIPE_LICENSE_PRICE_ID;
+    // Fallback: fetch from Stripe API using the current Pro per-seat price.
+    const proPriceId = process.env.STRIPE_PRO_PRICE_ID;
 
-    if (!licensePriceId) {
+    if (!proPriceId) {
       return { success: false, error: 'License pricing not configured' };
     }
 
@@ -311,7 +311,7 @@ export async function getLicensePricingAction(): Promise<{
       return { success: false, error: 'Stripe billing is not configured' };
     }
     const stripe = await stripeService.getStripeClient();
-    const price = await stripe.prices.retrieve(licensePriceId);
+    const price = await stripe.prices.retrieve(proPriceId);
 
     if (!price) {
       return { success: false, error: 'Failed to retrieve price from Stripe' };
@@ -1265,14 +1265,12 @@ export async function getUpgradePreviewAction(
   success: boolean;
   error?: string;
   currentMonthly?: number;
-  newBasePrice?: number;
   newUserPrice?: number;
   newMonthly?: number;
   userCount?: number;
   currency?: string;
   prorationAmount?: number;
   annualAvailable?: boolean;
-  annualBasePrice?: number;
   annualUserPrice?: number;
   annualTotal?: number;
 }> {
@@ -1340,7 +1338,6 @@ export async function getIntervalSwitchPreviewAction(
   currentInterval?: 'month' | 'year';
   currentTotal?: number;
   newTotal?: number;
-  newBasePrice?: number;
   newUserPrice?: number;
   userCount?: number;
   effectiveDate?: string;

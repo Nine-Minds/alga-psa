@@ -191,6 +191,76 @@ const resolveFontWeightStyle = (
   return fallback;
 };
 
+const normalizeFontWeightCssValue = (value: unknown): string | number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  if (trimmed === 'normal') return 400;
+  if (trimmed === 'medium') return 500;
+  if (trimmed === 'semibold') return 600;
+  if (trimmed === 'bold') return 700;
+  return trimmed;
+};
+
+const normalizeCssStringOrNumber = (value: unknown): string | number | undefined => {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const resolveLabelInlineStyle = (metadata: Record<string, unknown>): React.CSSProperties | undefined => {
+  const labelStyle = metadata.labelStyle;
+  const inline =
+    typeof labelStyle === 'object' && labelStyle !== null && !Array.isArray(labelStyle) &&
+    typeof (labelStyle as { inline?: unknown }).inline === 'object' &&
+    (labelStyle as { inline?: unknown }).inline !== null &&
+    !Array.isArray((labelStyle as { inline?: unknown }).inline)
+      ? ((labelStyle as { inline: Record<string, unknown> }).inline)
+      : null;
+
+  const resolved: React.CSSProperties = {};
+  if (inline) {
+    const color = typeof inline.color === 'string' && inline.color.trim().length > 0 ? inline.color.trim() : undefined;
+    const fontSize = typeof inline.fontSize === 'string' && inline.fontSize.trim().length > 0 ? inline.fontSize.trim() : undefined;
+    const fontFamily = typeof inline.fontFamily === 'string' && inline.fontFamily.trim().length > 0 ? inline.fontFamily.trim() : undefined;
+    const fontStyle = typeof inline.fontStyle === 'string' && inline.fontStyle.trim().length > 0 ? inline.fontStyle.trim() : undefined;
+    const lineHeight = normalizeCssStringOrNumber(inline.lineHeight);
+    const textAlign = typeof inline.textAlign === 'string' && inline.textAlign.trim().length > 0 ? inline.textAlign.trim() : undefined;
+    const fontWeight = normalizeFontWeightCssValue(inline.fontWeight);
+
+    if (color) resolved.color = color;
+    if (fontSize) resolved.fontSize = fontSize;
+    if (fontFamily) resolved.fontFamily = fontFamily;
+    if (fontStyle) resolved.fontStyle = fontStyle;
+    if (lineHeight !== undefined) resolved.lineHeight = lineHeight;
+    if (textAlign === 'left' || textAlign === 'center' || textAlign === 'right' || textAlign === 'justify') {
+      resolved.textAlign = textAlign;
+    }
+    if (fontWeight !== undefined) resolved.fontWeight = fontWeight;
+  }
+
+  if (resolved.fontWeight === undefined) {
+    const legacyFontWeight = normalizeFontWeightCssValue(metadata.labelFontWeight ?? metadata.fontWeight);
+    if (legacyFontWeight !== undefined) {
+      resolved.fontWeight = legacyFontWeight;
+    }
+  }
+
+  return Object.keys(resolved).length > 0 ? resolved : undefined;
+};
+
 const resolveTableBorderPreset = (metadata: Record<string, unknown>): TableBorderPreset => {
   const candidate = metadata.tableBorderPreset;
   if (candidate === 'list' || candidate === 'boxed' || candidate === 'grid' || candidate === 'none') {
@@ -707,6 +777,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
     case 'discount':
     case 'custom-total': {
       const totalsRow = resolveTotalsRowPreviewModel(node, previewData);
+      const labelInlineStyle = resolveLabelInlineStyle(metadata);
       return {
         content: (
           <div className="flex h-full flex-col justify-between gap-1">
@@ -721,6 +792,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
                   'min-w-0 truncate',
                   totalsRow.isGrandTotal ? 'text-[11px] font-semibold text-slate-800' : 'text-[11px] font-medium text-slate-600'
                 )}
+                style={labelInlineStyle}
                 title={totalsRow.label}
               >
                 {totalsRow.label}
@@ -925,6 +997,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   const isTextNode = node.type === 'text';
   const isFieldNode = node.type === 'field';
   const fieldDisplayLabel = isFieldNode ? asTrimmedString(metadata.label) : '';
+  const labelInlineStyle = isFieldNode ? resolveLabelInlineStyle(metadata) : undefined;
   const labelWeightClass = FONT_WEIGHT_CLASS[
     resolveFontWeightStyle(metadata.fontWeight ?? metadata.labelFontWeight, 'semibold')
   ];
@@ -1171,6 +1244,7 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
               {fieldDisplayLabel && (
                 <span
                   className="shrink-0 truncate text-[10px] font-medium text-slate-500"
+                  style={labelInlineStyle}
                   title={fieldDisplayLabel}
                 >
                   {fieldDisplayLabel}:

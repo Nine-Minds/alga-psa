@@ -38,6 +38,10 @@
       "import": "./src/handlers/*.ts",
       "types": "./src/handlers/*.ts"
     },
+    "./lib/collabPersistence": {
+      "import": "./src/lib/collabPersistence.ts",
+      "types": "./src/lib/collabPersistence.ts"
+    },
     "./lib/documentUtils": {
       "import": "./src/lib/documentUtils.ts",
       "types": "./src/lib/documentUtils.ts"

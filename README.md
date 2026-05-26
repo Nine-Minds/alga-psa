@@ -31,7 +31,7 @@ Community Edition is the self-hostable AGPL core. Enterprise Edition covers comm
 
 - Support ticketing for client requests, incidents, and follow-up work
 - Client, contact, and company management
-- Client portal support for separate MSP and client-facing access
+- Multilingual client portal support for separate MSP and client-facing access
 - Email notifications for tickets, invoices, and project updates
 - Document management with version control
 - Asset management for client equipment, maintenance schedules, and relationships
@@ -70,10 +70,12 @@ These images link directly to screenshots from the [Alga PSA feature tour](https
 | --- | --- |
 | <img src="https://www.nineminds.com/imported-media/Ticketing-1.gif" alt="Alga PSA ticketing screen" width="420"> | <img src="https://www.nineminds.com/imported-media/Billing%20dashboard.png" alt="Alga PSA billing dashboard" width="420"> |
 | Ticketing views for client requests, assignment, attachments, and follow-up. | Contracts, billing, and invoice-related workflows in one billing area. |
-| <img src="https://www.nineminds.com/imported-media/time%20entry%20select%20time%20period.png" alt="Alga PSA time entry screen" width="420"> | <img src="https://www.nineminds.com/imported-media/Schedule%20view.png" alt="Alga PSA schedule view" width="420"> |
-| Time entry views for recording and reviewing work before billing. | Schedule views for dispatch and calendar-based work planning. |
-| <img src="https://www.nineminds.com/docs-images/invoice-designer-workspace.png" alt="Alga PSA invoice and quote designer workspace" width="420"> | <img src="https://www.nineminds.com/docs-images/workflow-designer-ticket-triage.png" alt="Alga PSA visual workflow designer" width="420"> |
-| Drag-and-drop invoice and quote layout designer for branded PDFs. | Visual workflow designer for ticket triage, notifications, approvals, and other repeatable processes. |
+| <img src="https://www.nineminds.com/imported-media/Screenshot%202026-04-30%20at%2011.33.51%E2%80%AFAM.png" alt="Alga PSA multilingual client portal" width="420"> | <img src="https://www.nineminds.com/imported-media/Screenshot%202026-05-01%20at%201.35.35%20PM.png" alt="Alga PSA time approval screen" width="420"> |
+| Multilingual client portal views for client-facing requests and updates. | Time entry views for recording and reviewing work before billing. |
+| <img src="https://www.nineminds.com/imported-media/Schedule%20view.png" alt="Alga PSA schedule view" width="420"> | <img src="https://www.nineminds.com/docs-images/invoice-designer-workspace.png" alt="Alga PSA invoice and quote designer workspace" width="420"> |
+| Schedule views for dispatch and calendar-based work planning. | Drag-and-drop invoice and quote layout designer for branded PDFs. |
+| <img src="https://www.nineminds.com/docs-images/workflow-designer-ticket-triage.png" alt="Alga PSA visual workflow designer" width="420"> | <img src="https://www.nineminds.com/imported-media/Assets%20Asset%20workspace%20overview.png" alt="Alga PSA asset workspace overview" width="420"> |
+| Visual workflow designer for ticket triage, notifications, approvals, and other repeatable processes. | Asset views for client equipment and service context. |
 
 ## Quick start
 

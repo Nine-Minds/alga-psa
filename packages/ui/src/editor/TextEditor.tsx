@@ -22,6 +22,7 @@ import {
 import { TextSelection } from '@tiptap/pm/state';
 import { Mention } from './Mention';
 import { Emoticon } from './EmoticonExtension';
+import { useShortcutScope } from '../keyboard-shortcuts';
 
 // Debug flag
 const DEBUG = false;
@@ -80,6 +81,7 @@ interface TextEditorProps {
   searchMentions?: (query: string) => Promise<MentionUser[]>;
   placeholder?: string;
   uploadFile?: (file: File, blockId?: string) => Promise<string | Record<string, any>>;
+  autoFocus?: boolean;
 }
 
 export const DEFAULT_BLOCK: PartialBlock[] = [{
@@ -174,7 +176,9 @@ export default function TextEditor({
   searchMentions,
   placeholder,
   uploadFile,
+  autoFocus = false,
 }: TextEditorProps) {
+  useShortcutScope('editor');
   const { resolvedTheme } = useTheme();
   const blockNoteTheme = resolvedTheme === 'dark' ? 'dark' : 'light';
   // Parse initial content and remove empty trailing blocks
@@ -429,6 +433,22 @@ export default function TextEditor({
     };
   }, [editor, editorRef]);
 
+  useEffect(() => {
+    if (!autoFocus) return;
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      editor.focus();
+    });
+    const timeout = window.setTimeout(() => {
+      editor.focus();
+    }, 0);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.clearTimeout(timeout);
+    };
+  }, [autoFocus, editor]);
+
   // Handle content changes
   useEffect(() => {
     if (!editor) return;
@@ -450,7 +470,7 @@ export default function TextEditor({
   }, [editor, onContentChange]);
 
   return (
-    <div className="w-full h-full min-w-0">
+    <div className="w-full h-full min-w-0" data-keyboard-shortcuts-editor-root="true">
       {children}
       <div
         className="min-h-[100px] h-full w-full editor-paper border border-[#e5e7eb] dark:border-[rgb(var(--color-border-200))] rounded-lg p-4 overflow-auto min-w-0"

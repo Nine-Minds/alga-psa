@@ -48,7 +48,8 @@
       "servicePeriods": "Periodi di servizio",
       "usageTracking": "Monitoraggio dell'utilizzo",
       "reports": "Rapporti",
-      "serviceCatalog": "Catalogo dei servizi",
+      "serviceTypes": "Tipi di servizio",
+      "serviceCatalog": "Servizi",
       "products": "Prodotti"
     }
   },
@@ -437,7 +438,7 @@
     "contractLineGuidance": {
       "multipleLines": "Questo servizio appare in più righe di contratto. Seleziona la linea di contratto in base alla quale fatturare.",
       "tooltipNoClient": "Informazioni sul cliente non disponibili. L'utilizzo verrà indirizzato al contratto predefinito gestito dal sistema.",
-      "tooltipMultiple": "Questo servizio appare in più righe di contratto. Selezionare la riga di contratto da utilizzare. Le righe del contratto bucket vengono in genere utilizzate per prime fino all'esaurimento.",
+      "tooltipMultiple": "Questo servizio appare in più righe di contratto. Selezionare la riga di contratto da utilizzare. Quando solo una di esse è una riga del contratto bucket, viene selezionata per impostazione predefinita.",
       "tooltipSingle": "Questo utilizzo verrà fatturato nella riga di contratto \"{{name}}\".",
       "tooltipNone": "Nessuna riga di contratto idonea trovata per questo servizio.",
       "placeholderNoClient": "Utilizzo del contratto predefinito gestito dal sistema",

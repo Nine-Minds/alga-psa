@@ -8,6 +8,14 @@ import { useClientDrawer } from '@alga-psa/ui';
 import { Card } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
+import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
+import {
+  createPrintColumnsFromColumnDefinitions,
+  PrintOptionsDialog,
+  usePrintColumnSelection,
+} from '@alga-psa/ui/components/PrintOptionsDialog';
+import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
+import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -19,13 +27,15 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator
 } from '@alga-psa/ui/components/DropdownMenu';
-import type { Asset, AssetListResponse, ClientMaintenanceSummary, ColumnDefinition, IClient } from '@alga-psa/types';
+import type { Asset, AssetListResponse, AssetQueryParams, ClientMaintenanceSummary, ColumnDefinition, IClient } from '@alga-psa/types';
 import { getClientMaintenanceSummaries, listAssets } from '../actions/assetActions';
 import { loadAssetDetailDrawerData } from '../actions/assetDrawerActions';
 import { getAllClientsForAssets } from '../actions/clientLookupActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
 import { QuickAddAsset } from './QuickAddAsset';
 import { AssetCommandPalette } from './AssetCommandPalette';
+import { ShortcutActiveRegion, useCatalogShortcut, usePageCreateShortcut, useShortcutScope } from '@alga-psa/ui/keyboard-shortcuts';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
 import { RmmStatusIndicator } from './RmmStatusIndicator';
 import {
@@ -53,7 +63,8 @@ import {
   MoreVertical,
   ChevronDown,
   RefreshCw,
-  X
+  X,
+  Settings2,
 } from 'lucide-react';
 
 interface AssetDashboardClientProps {
@@ -74,6 +85,7 @@ type ColumnKey =
 
 const STATUS_OPTIONS: string[] = ['active', 'inactive', 'maintenance'];
 const TYPE_OPTIONS: string[] = ['workstation', 'server', 'network_device', 'mobile_device', 'printer'];
+const ASSETS_PRINT_PAGE_SIZE = 5000;
 
 export default function AssetDashboardClient({ initialAssets }: AssetDashboardClientProps) {
   const { t } = useTranslation('msp/assets');
@@ -132,6 +144,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     'actions'
   ]);
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
+  const [printAssets, setPrintAssets] = useState<Asset[]>([]);
   const [drawerAssetId, setDrawerAssetId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [activeDrawerTab, setActiveDrawerTab] = useState<AssetDrawerTab>(ASSET_DRAWER_TABS.OVERVIEW);
@@ -269,17 +282,13 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     }
   }, [activeDrawerTab, drawerAssetId, loadDrawerData]);
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        setIsCommandPaletteOpen(prev => !prev);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+  const assetCommandPaletteShortcut = useCallback(() => {
+    setIsCommandPaletteOpen(prev => !prev);
   }, []);
+
+  useShortcutScope('page');
+  usePageCreateShortcut(triggerQuickAdd);
+  useCatalogShortcut('assets.commandPalette', assetCommandPaletteShortcut);
 
   const assetsByClient = useMemo(() => {
     return assets.reduce((acc, asset) => {
@@ -351,6 +360,14 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
 
   const isAllSelected = filteredCount > 0 && assets.every(asset => selectedAssetIds.includes(asset.asset_id));
   const isIndeterminate = selectedAssetIds.length > 0 && !isAllSelected;
+  const selectedAssetIdSet = useMemo(() => new Set(selectedAssetIds), [selectedAssetIds]);
+
+  const rangeSelect = useRangeSelection<Asset>({
+    items: assets,
+    getId: (asset) => asset.asset_id,
+    selectedIds: selectedAssetIdSet,
+    onSelectedIdsChange: (next) => setSelectedAssetIds(Array.from(next)),
+  });
 
   const toggleSelectAll = useCallback(() => {
     setSelectedAssetIds(prev => {
@@ -370,6 +387,58 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     setSortBy(columnId);
     setSortDirection(direction);
   }, [sortBy, sortDirection]);
+
+  const getAssetListParams = useCallback((overrides: Partial<AssetQueryParams> = {}): AssetQueryParams => {
+    const rmmManaged =
+      rmmManagedFilter.length === 0
+        ? undefined
+        : rmmManagedFilter.includes('managed') && rmmManagedFilter.includes('unmanaged')
+          ? undefined
+          : rmmManagedFilter.includes('managed');
+
+    return {
+      search: debouncedSearchTerm || undefined,
+      status: statusFilters.length > 0 ? statusFilters[0] : undefined,
+      asset_type: typeFilters.length > 0 ? (typeFilters[0] as AssetQueryParams['asset_type']) : undefined,
+      client_id: clientFilters.length > 0 ? clientFilters[0] : undefined,
+      agent_status: agentStatusFilters.length > 0 ? (agentStatusFilters[0] as AssetQueryParams['agent_status']) : undefined,
+      rmm_managed: rmmManaged,
+      sort_by: sortBy,
+      sort_direction: sortDirection,
+      ...overrides,
+    };
+  }, [
+    agentStatusFilters,
+    clientFilters,
+    debouncedSearchTerm,
+    rmmManagedFilter,
+    sortBy,
+    sortDirection,
+    statusFilters,
+    typeFilters,
+  ]);
+
+  const preparePrintAssets = useCallback(async () => {
+    const selectedAssetSet = new Set(selectedAssetIds);
+
+    if (selectedAssetIds.length > 0) {
+      const loadedSelectedAssets = assets.filter((asset) => selectedAssetSet.has(asset.asset_id));
+
+      if (loadedSelectedAssets.length === selectedAssetIds.length) {
+        setPrintAssets(loadedSelectedAssets);
+        return;
+      }
+    }
+
+    const response = await listAssets(getAssetListParams({
+      page: 1,
+      limit: Math.max(totalAssets, pageSize, ASSETS_PRINT_PAGE_SIZE),
+    }));
+
+    setPrintAssets(selectedAssetIds.length > 0
+      ? response.assets.filter((asset) => selectedAssetSet.has(asset.asset_id))
+      : response.assets);
+  }, [assets, getAssetListParams, pageSize, selectedAssetIds, totalAssets]);
 
   const assetsQueryKey = useMemo(() => {
     return JSON.stringify({
@@ -401,25 +470,10 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     setAssetsLoading(true);
     (async () => {
       try {
-        const rmmManaged =
-          rmmManagedFilter.length === 0
-            ? undefined
-            : rmmManagedFilter.includes('managed') && rmmManagedFilter.includes('unmanaged')
-              ? undefined
-              : rmmManagedFilter.includes('managed');
-
-        const response = await listAssets({
+        const response = await listAssets(getAssetListParams({
           page: currentPage,
           limit: pageSize,
-          search: debouncedSearchTerm || undefined,
-          status: statusFilters.length > 0 ? (statusFilters[0] as any) : undefined,
-          asset_type: typeFilters.length > 0 ? (typeFilters[0] as any) : undefined,
-          client_id: clientFilters.length > 0 ? clientFilters[0] : undefined,
-          agent_status: agentStatusFilters.length > 0 ? (agentStatusFilters[0] as any) : undefined,
-          rmm_managed: rmmManaged,
-          sort_by: sortBy,
-          sort_direction: sortDirection,
-        });
+        }));
 
         if (lastAssetsRequestIdRef.current !== requestId) {
           return;
@@ -444,6 +498,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     currentPage,
     clientFilters,
     debouncedSearchTerm,
+    getAssetListParams,
     pageSize,
     rmmManagedFilter,
     sortBy,
@@ -534,12 +589,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     });
   }, []);
 
-  const toggleAssetSelection = useCallback((assetId: string) => {
-    setSelectedAssetIds(prev =>
-      prev.includes(assetId) ? prev.filter(id => id !== assetId) : [...prev, assetId]
-    );
-  }, []);
-
   const columnLibrary: Record<ColumnKey, ColumnDefinition<Asset>> = useMemo(() => ({
     select: {
       dataIndex: 'select',
@@ -560,14 +609,23 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       render: (_: unknown, record: Asset) => (
         <Checkbox
           id={`asset-select-${record.asset_id}`}
-          checked={selectedAssetIds.includes(record.asset_id)}
-          onChange={() => toggleAssetSelection(record.asset_id)}
+          checked={rangeSelect.isSelected(record.asset_id)}
+          onClick={(event: React.MouseEvent<HTMLInputElement>) => {
+            event.stopPropagation();
+            const isChecked = rangeSelect.isSelected(record.asset_id);
+            rangeSelect.handleSelect(record.asset_id, {
+              shiftKey: event.shiftKey,
+              selected: !isChecked,
+              preventDefault: () => event.preventDefault(),
+            });
+            event.preventDefault();
+          }}
+          onChange={() => { /* controlled via onClick for shift-range support */ }}
           aria-label={t('assetDashboardClient.selection.selectAsset', {
             defaultValue: 'Select asset {{name}}',
             name: record.name
           })}
           className="translate-y-0.5"
-          onClick={(event) => event.stopPropagation()}
           containerClassName="m-0 flex items-center justify-center"
         />
       ),
@@ -756,9 +814,8 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     t,
     isAllSelected,
     isIndeterminate,
-    selectedAssetIds,
+    rangeSelect,
     toggleSelectAll,
-    toggleAssetSelection,
     getAssetTypeIcon,
     renderAssetDetails,
     openAssetRecordPage,
@@ -770,6 +827,40 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const columns: ColumnDefinition<Asset>[] = useMemo(() => {
     return visibleColumnIds.map((key) => columnLibrary[key]);
   }, [visibleColumnIds, columnLibrary]);
+
+  const printColumns = useMemo(() => (
+    createPrintColumnsFromColumnDefinitions(Object.values(columnLibrary), {
+      excludeColumnKeys: ['select', 'actions'],
+      emptyValue: t('assetDashboardClient.print.emptyValue', { defaultValue: '-' }),
+      renderers: {
+        name: (asset) => asset.name,
+        asset_tag: (asset) => asset.asset_tag || t('assetDashboardClient.print.emptyValue', { defaultValue: '-' }),
+        asset_type: (asset) => getAssetTypeLabel(asset.asset_type),
+        details: (asset) => renderAssetDetails(asset),
+        status: (asset) => getAssetStatusLabel(asset.status),
+        agent_status: (asset) => asset.rmm_provider && asset.rmm_device_id
+          ? getAgentStatusLabel(asset.agent_status ?? 'unknown')
+          : t('common.states.none', { defaultValue: 'None' }),
+        client_name: (asset) => asset.client?.client_name
+          || clientNameById.get(asset.client_id)
+          || t('assetDashboardClient.details.unassigned', { defaultValue: 'Unassigned' }),
+        location: (asset) => asset.location || t('assetDashboardClient.print.emptyValue', { defaultValue: '-' }),
+      },
+    })
+  ), [clientNameById, columnLibrary, getAgentStatusLabel, getAssetStatusLabel, getAssetTypeLabel, renderAssetDetails, t]);
+  const {
+    selectedColumnKeys: selectedAssetPrintColumnKeys,
+    selectedColumns: selectedAssetPrintColumns,
+    setSelectedColumnKeys: setSelectedAssetPrintColumnKeys,
+    resetSelectedColumnKeys: resetSelectedAssetPrintColumnKeys,
+  } = usePrintColumnSelection('print-columns:assets-list', printColumns);
+
+  const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
+
+  const { triggerPrint: triggerPrintAssets, isPreparing: isPreparingAssetPrint } = usePrintAction({
+    onBeforePrint: preparePrintAssets,
+    onAfterPrint: () => setPrintAssets([]),
+  });
 
   return (
     <div className="relative p-6">
@@ -786,6 +877,31 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <ShareActionsMenu
+                id="assets-share-actions"
+                triggerSize="sm"
+                tooltip={t('actions.print', { defaultValue: 'Print' })}
+                actions={[
+                  {
+                    id: 'assets-share-print',
+                    icon: Printer,
+                    label: selectedAssetIds.length > 0
+                      ? t('actions.printSelected', {
+                          count: selectedAssetIds.length,
+                          defaultValue: 'Print selected ({{count}})',
+                        })
+                      : t('actions.print', { defaultValue: 'Print' }),
+                    onSelect: () => { void triggerPrintAssets(); },
+                    disabled: isPreparingAssetPrint,
+                  },
+                  {
+                    id: 'assets-share-print-options',
+                    icon: Settings2,
+                    label: t('actions.printOptions', { defaultValue: 'Print options' }),
+                    onSelect: () => setIsPrintOptionsOpen(true),
+                  },
+                ] satisfies ShareAction[]}
+              />
               <Button
                 id="refresh-assets-button"
               variant="ghost"
@@ -1201,24 +1317,66 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
               />
             </div>
 
-            <DataTable
-              id="asset-table"
-              data={assets}
-              columns={columns}
-              pagination
-              pageSize={pageSize}
-              currentPage={currentPage}
-              totalItems={totalAssets}
-              onPageChange={setCurrentPage}
-              onItemsPerPageChange={setPageSize}
-              onRowClick={(asset) => openAssetRecordPage(asset.asset_id)}
-              manualSorting={true}
-              sortBy={sortBy}
-              sortDirection={sortDirection}
-              onSortChange={handleTableSortChange}
-            />
+            <ShortcutActiveRegion id="assets-shortcut-region" className="outline-none">
+              <DataTable
+                id="asset-table"
+                data={assets}
+                columns={columns}
+                pagination
+                pageSize={pageSize}
+                currentPage={currentPage}
+                totalItems={totalAssets}
+                onPageChange={setCurrentPage}
+                onItemsPerPageChange={setPageSize}
+                onRowClick={(asset) => openAssetRecordPage(asset.asset_id)}
+                manualSorting={true}
+                sortBy={sortBy}
+                sortDirection={sortDirection}
+                onSortChange={handleTableSortChange}
+              />
+            </ShortcutActiveRegion>
+            <div className="app-print-root app-print-only">
+              <PrintableTable
+                title={selectedAssetIds.length > 0
+                  ? t('assetDashboardClient.print.selectedTitle', {
+                      count: selectedAssetIds.length,
+                      defaultValue: 'Selected Assets',
+                    })
+                  : t('assetDashboardClient.print.title', { defaultValue: 'Assets' })}
+                subtitle={t('assetDashboardClient.print.subtitle', {
+                  count: printAssets.length,
+                  defaultValue: '{{count}} assets',
+                })}
+                rows={printAssets}
+                columns={selectedAssetPrintColumns}
+                getRowKey={(asset) => asset.asset_id}
+                emptyMessage={t('assetDashboardClient.print.noAssets', { defaultValue: 'No assets to print' })}
+              />
+            </div>
           </Card>
       </div>
+      <PrintOptionsDialog
+        id="assets-print-options-dialog"
+        open={isPrintOptionsOpen}
+        onOpenChange={setIsPrintOptionsOpen}
+        title={t('assetDashboardClient.print.optionsDialog.title', { defaultValue: 'Print options' })}
+        description={t('assetDashboardClient.print.optionsDialog.description', {
+          defaultValue: 'Choose which columns to include when printing assets.',
+        })}
+        columns={printColumns}
+        selectedColumnKeys={selectedAssetPrintColumnKeys}
+        onSelectedColumnKeysChange={setSelectedAssetPrintColumnKeys}
+        onReset={resetSelectedAssetPrintColumnKeys}
+        onPrint={() => triggerPrintAssets()}
+        isPrinting={isPreparingAssetPrint}
+        printLabel={selectedAssetIds.length > 0
+          ? t('actions.printSelected', {
+              count: selectedAssetIds.length,
+              defaultValue: 'Print selected ({{count}})',
+            })
+          : t('actions.print', { defaultValue: 'Print' })
+        }
+      />
       <AssetCommandPalette
         isOpen={isCommandPaletteOpen}
         assets={assets}

@@ -34,8 +34,8 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
   const [showServiceTypes, setShowServiceTypes] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [standardTypes, setStandardTypes] = useState<Array<{ id: string; name: string; billing_method: string; display_order?: number }>>([]);
-  const [tenantTypes, setTenantTypes] = useState<Array<{ id: string; name: string; billing_method: string }>>([]);
+  const [standardTypes, setStandardTypes] = useState<Array<{ id: string; name: string; display_order?: number }>>([]);
+  const [tenantTypes, setTenantTypes] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(null);
@@ -45,7 +45,6 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
   const [serviceTypeForm, setServiceTypeForm] = useState({
     name: '',
     description: '',
-    billingMethod: 'fixed' as 'fixed' | 'hourly' | 'usage',
     isActive: true,
     displayOrder: 0
   });
@@ -114,18 +113,6 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
     value: type.id,
     label: type.name
   }));
-
-  const getBillingMethodLabel = (billingMethod: string) =>
-    t(`billingSetupStep.billingMethods.${billingMethod}`, {
-      defaultValue:
-        billingMethod === 'fixed'
-          ? 'Fixed'
-          : billingMethod === 'hourly'
-            ? 'Hourly'
-            : billingMethod === 'usage'
-              ? 'Usage'
-              : billingMethod
-    });
 
   const removeServiceType = async (typeId: string) => {
     try {
@@ -415,26 +402,6 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                   </div>
 
                   <div>
-                    <Label htmlFor="billingMethod">
-                      {t('billingSetupStep.serviceTypes.addForm.fields.billingMethod.label', {
-                        defaultValue: 'Billing Method *'
-                      })}
-                    </Label>
-                    <CustomSelect
-                      id="billingMethod"
-                      options={[
-                        { value: 'fixed', label: t('billingSetupStep.billingMethods.fixed', { defaultValue: 'Fixed' }) },
-                        { value: 'hourly', label: t('billingSetupStep.billingMethods.hourly', { defaultValue: 'Hourly' }) },
-                        { value: 'usage', label: t('billingSetupStep.billingMethods.usageBased', { defaultValue: 'Usage Based' }) },
-                      ]}
-                      value={serviceTypeForm.billingMethod}
-                      onValueChange={(value: string) => 
-                        setServiceTypeForm(prev => ({ ...prev, billingMethod: value as 'fixed' | 'hourly' | 'usage' }))
-                      }
-                    />
-                  </div>
-
-                  <div>
                     <Label htmlFor="displayOrder">
                       {t('billingSetupStep.serviceTypes.addForm.fields.displayOrder.label', {
                         defaultValue: 'Display Order'
@@ -468,7 +435,6 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                       setServiceTypeForm({
                         name: '',
                         description: '',
-                        billingMethod: 'fixed',
                         isActive: true,
                         displayOrder: 0
                       });
@@ -533,7 +499,6 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                         const created = await createTenantServiceType({
                           name: serviceTypeForm.name,
                           description: serviceTypeForm.description || null,
-                          billing_method: serviceTypeForm.billingMethod,
                           is_active: true,
                           order_number: finalOrder
                         });
@@ -550,7 +515,6 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                         setServiceTypeForm({
                           name: '',
                           description: '',
-                          billingMethod: 'fixed',
                           isActive: true,
                           displayOrder: 0
                         });
@@ -640,11 +604,6 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                       })}
                     </th>
                     <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
-                      {t('billingSetupStep.serviceTypes.table.headers.billingMethod', {
-                        defaultValue: 'Billing Method'
-                      })}
-                    </th>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
                       {t('billingSetupStep.serviceTypes.table.headers.order', {
                         defaultValue: 'Order'
                       })}
@@ -661,9 +620,6 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                         />
                       </td>
                       <td className="px-4 py-2 text-sm">{type.name}</td>
-                      <td className="px-4 py-2 text-sm text-gray-600">
-                        {getBillingMethodLabel(type.billing_method)}
-                      </td>
                       <td className="px-4 py-2 text-sm text-gray-600">{type.display_order || 0}</td>
                     </tr>
                   ))}
@@ -709,11 +665,6 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                           })}
                         </th>
                         <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
-                          {t('billingSetupStep.serviceTypes.table.headers.billingMethod', {
-                            defaultValue: 'Billing Method'
-                          })}
-                        </th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
                           {t('billingSetupStep.serviceTypes.table.headers.order', {
                             defaultValue: 'Order'
                           })}
@@ -729,9 +680,6 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                       {tenantTypes.map((type, idx) => (
                         <tr key={type.id}>
                           <td className="px-2 py-1 text-xs">{type.name}</td>
-                          <td className="px-2 py-1 text-center text-xs text-gray-600">
-                            {getBillingMethodLabel(type.billing_method)}
-                          </td>
                           <td className="px-2 py-1 text-center text-xs text-gray-600">
                             {(type as any).order_number || (type as any).display_order || '-'}
                           </td>

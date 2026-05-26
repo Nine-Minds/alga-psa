@@ -68,7 +68,25 @@
       "message": "55555 {{suffix}} 55555 {{labels}} 55555 {{definitionSuffix}} 55555",
       "deleteType": "55555",
       "keepType": "55555"
-    }
+    },
+    "print": {
+      "title": "55555",
+      "subtitle": "55555 {{count}} 55555",
+      "noContacts": "55555",
+      "emptyValue": "55555",
+      "columns": {
+        "name": "55555",
+        "email": "55555",
+        "phone": "55555",
+        "client": "55555",
+        "status": "55555"
+      },
+      "optionsDialog": {
+        "title": "55555",
+        "description": "55555"
+      }
+    },
+    "shareTooltip": "55555"
   },
   "contactDetails": {
     "title": "55555",
@@ -96,7 +114,8 @@
       "useClientDestination": "55555",
       "inboundTicketDestinationHelp": "55555",
       "tags": "55555",
-      "notes": "55555"
+      "notes": "55555",
+      "status": "55555"
     },
     "status": {
       "label": "55555",

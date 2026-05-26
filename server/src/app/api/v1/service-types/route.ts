@@ -30,7 +30,6 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get('limit') || '25', 10) || 25));
     const offset = (page - 1) * limit;
     const search = url.searchParams.get('search')?.trim() || '';
-    const billingMethod = url.searchParams.get('billing_method')?.trim() || '';
     const isActive = parseBooleanParam(url.searchParams.get('is_active'));
 
     const baseQuery = knex('service_types as st').where({ 'st.tenant': tenant });
@@ -38,9 +37,6 @@ export async function GET(request: NextRequest) {
     const applyFilters = (query: any) => {
       if (search) {
         query.whereILike('st.name', `%${search}%`);
-      }
-      if (billingMethod) {
-        query.where('st.billing_method', billingMethod);
       }
       if (isActive !== undefined) {
         query.where('st.is_active', isActive);
@@ -58,7 +54,6 @@ export async function GET(request: NextRequest) {
         'st.id',
         'st.tenant',
         'st.name',
-        'st.billing_method',
         'st.is_active',
         'st.description',
         'st.order_number',
@@ -75,7 +70,6 @@ export async function GET(request: NextRequest) {
       order: 'asc',
       filters: {
         ...(search ? { search } : {}),
-        ...(billingMethod ? { billing_method: billingMethod } : {}),
         ...(isActive !== undefined ? { is_active: isActive } : {}),
       },
     }, req);

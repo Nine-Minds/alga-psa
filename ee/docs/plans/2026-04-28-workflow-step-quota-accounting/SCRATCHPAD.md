@@ -144,3 +144,10 @@ Rolling notes for the workflow step quota accounting plan. Keep decisions, disco
   - Repeated scans do not resolve/execute the same wait twice once status has moved to `RESOLVED`.
 - Validation command run:
   - `cd server && npm test -- src/test/unit/jobs/workflowQuotaResumeScanHandler.unit.test.ts` (pass).
+- Added Workflow Control Panel quota usage surfacing:
+  - New read-only server action `getWorkflowStepQuotaSummaryAction()` returns current tenant period, limit, used count, remaining count, tier, and sources from `workflowStepQuotaService.resolveQuotaSummary()`.
+  - `ee/server/src/components/workflow-designer/WorkflowDesigner.tsx` fetches that action in control-panel mode and renders a compact "Workflow actions" summary with consumed/remaining values, finite-limit progress, and reset date.
+  - Added a source-level compatibility re-export at `packages/core/src/rateLimit/index.ts` because Next's dev import map resolves `@alga-psa/core/rateLimit` to `packages/core/src/rateLimit`, while the implementation lives under `packages/core/src/lib/rateLimit`.
+- Validation commands run:
+  - `cd ee/server && npm run typecheck` (pass).
+  - `cd ee/server && NODE_ENV=test npm run test -- src/components/workflow-designer/__tests__/WorkflowDesigner.smoke.test.tsx` (pass; running the same command without `NODE_ENV=test` loads React production test-utils in this workspace and fails before test execution).

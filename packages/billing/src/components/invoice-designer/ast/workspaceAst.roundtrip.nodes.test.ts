@@ -180,6 +180,7 @@ describe('workspaceAst roundtrip node/property matrix', () => {
               type: 'field',
               binding: { bindingId: 'tenantAddress' },
               label: 'From Address',
+              labelStyle: { inline: { fontWeight: '700', color: '#123456', fontSize: '13px' } },
               format: 'text',
               emptyValue: '-',
               placeholder: 'Company Address',
@@ -215,6 +216,7 @@ describe('workspaceAst roundtrip node/property matrix', () => {
     if (!explicitField || explicitField.type !== 'field') return;
     expect(explicitField.binding).toEqual({ bindingId: 'tenantAddress' });
     expect(explicitField.label).toBe('From Address');
+    expect(explicitField.labelStyle).toEqual({ inline: { fontWeight: '700', color: '#123456', fontSize: '13px' } });
     expect(explicitField.format).toBe('text');
     expect(explicitField.emptyValue).toBe('-');
     expect(explicitField.placeholder).toBe('Company Address');
@@ -397,7 +399,14 @@ describe('workspaceAst roundtrip node/property matrix', () => {
           rows: [
             { id: 'subtotal', label: 'Subtotal', value: { type: 'binding', bindingId: 'subtotal' }, format: 'currency' },
             { id: 'tax', label: 'Tax', value: { type: 'path', path: 'tax' }, format: 'currency' },
-            { id: 'total', label: 'Total', value: { type: 'literal', value: 123.45 }, format: 'number', emphasize: true },
+            {
+              id: 'total',
+              label: 'Total',
+              labelStyle: { inline: { fontWeight: 700, color: '#111827' } },
+              value: { type: 'literal', value: 123.45 },
+              format: 'number',
+              emphasize: true,
+            },
           ],
         },
       ],
@@ -423,7 +432,14 @@ describe('workspaceAst roundtrip node/property matrix', () => {
     expect(totals.rows).toEqual([
       { id: 'subtotal', label: 'Subtotal', value: { type: 'binding', bindingId: 'subtotal' }, format: 'currency' },
       { id: 'tax', label: 'Tax', value: { type: 'path', path: 'tax' }, format: 'currency' },
-      { id: 'total', label: 'Total', value: { type: 'literal', value: 123.45 }, format: 'number', emphasize: true },
+      {
+        id: 'total',
+        label: 'Total',
+        labelStyle: { inline: { fontWeight: 700, color: '#111827' } },
+        value: { type: 'literal', value: 123.45 },
+        format: 'number',
+        emphasize: true,
+      },
     ]);
   });
 

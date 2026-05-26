@@ -36,7 +36,7 @@
   "clientsPage": {
     "title": "Página de clientes",
     "description": "Página principal de administración de clientes con búsqueda, filtros y vista de lista/cuadrícula de clientes",
-    "searchPlaceholder": "Buscar clientes",
+    "searchPlaceholder": "Buscar clientes, notas, documentos e interacciones",
     "createClient": "Crear cliente",
     "createClientShort": "+ Crear cliente",
     "allClients": "Todos los clientes",
@@ -132,7 +132,34 @@
     },
     "deleteSelectedPrompt": "¿Está seguro de que desea eliminar {{count}} seleccionado {{clientsLabel}}? Esta acción no se puede deshacer.",
     "singleInactiveWithContactsSuccess_one": "{{name}} y {{count}} contacto han sido desactivados correctamente.",
-    "singleInactiveWithContactsSuccess_other": "{{name}} y {{count}} contactos han sido desactivados correctamente."
+    "singleInactiveWithContactsSuccess_other": "{{name}} y {{count}} contactos han sido desactivados correctamente.",
+    "clientTypes": {
+      "company": "Empresa",
+      "individual": "Persona"
+    },
+    "print": {
+      "title": "Clientes",
+      "selectedTitle": "Clientes seleccionados",
+      "subtitle": "{{count}} clientes",
+      "noClients": "No hay clientes para imprimir",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Cliente",
+        "type": "Tipo",
+        "phone": "Teléfono",
+        "address": "Dirección",
+        "status": "Estado"
+      },
+      "optionsDialog": {
+        "title": "Opciones de impresión",
+        "description": "Elige qué columnas incluir al imprimir los clientes."
+      }
+    },
+    "shareTooltip": "Imprimir, importar y exportar"
+    ,
+    "defaultClientDeleteError": "No se puede eliminar el cliente predeterminado. Primero establezca otro cliente como predeterminado en Configuración general.",
+    "clientNotFound": "Cliente no encontrado.",
+    "deletePermissionDenied": "Permiso denegado: no se pueden eliminar clientes."
   },
   "clientDetails": {
     "title": "Detalles del cliente",
@@ -216,7 +243,15 @@
     "inboundDomainAdded": "Dominio de correo entrante añadido",
     "inboundDomainAddFailed": "Error al añadir el dominio",
     "inboundDomainRemoved": "Dominio de correo entrante eliminado",
-    "inboundDomainRemoveFailed": "Error al eliminar el dominio"
+    "inboundDomainRemoveFailed": "Error al eliminar el dominio",
+    "fields": {
+      "accountManager": "Gestor de cuenta",
+      "url": "URL",
+      "status": "Estado"
+    }
+    ,
+    "deactivateClientDescription": "Desactiva el registro sin eliminar sus datos.",
+    "deactivateClientOnlyDescription": "Desactiva el cliente, pero deja activos sus contactos."
   },
   "quickAddClient": {
     "title": "Agregar nuevo cliente",
@@ -593,10 +628,10 @@
     "scenarios": {
       "description": "Estos ejemplos ilustran cómo funciona la desambiguación de líneas de contrato en escenarios comunes para este cliente.",
       "scenario1Description": "Cuando un servicio aparece tanto en una línea de contrato de bucket como en una línea de contrato estándar para este cliente:",
-      "scenario1Item1": "La línea de contrato del bucket tiene prioridad de forma predeterminada.",
-      "scenario1Item2": "Las entradas de tiempo y el uso se facturarán contra la línea de contrato del bucket hasta que se agote.",
-      "scenario1Item3": "Una vez agotado el bucket, la línea de contrato estándar se utilizará automáticamente",
-      "scenario1Item4": "Los usuarios pueden anular manualmente este comportamiento seleccionando explícitamente una línea de contrato durante el ingreso de tiempo.",
+      "scenario1Item1": "La línea de contrato del bucket se selecciona de forma predeterminada",
+      "scenario1Item2": "Las entradas de tiempo y el uso consumen la cantidad incluida del bucket y, a continuación, continúan en la misma línea de contrato del bucket como sobreuso a la tarifa de sobreuso configurada",
+      "scenario1Item3": "La facturación no cambia automáticamente a la línea de contrato estándar cuando el bucket se agota",
+      "scenario1Item4": "Los usuarios pueden anular manualmente este valor predeterminado seleccionando una línea de contrato diferente durante el ingreso de tiempo",
       "scenario1Title": "Escenario 1: Plan de bucket + Plan estándar",
       "scenario2Description": "Cuando un servicio aparece en varias líneas de contrato estándar para este cliente:",
       "scenario2Item1": "Se pedirá a los usuarios que seleccionen qué línea de contrato facturar durante el ingreso de tiempo.",

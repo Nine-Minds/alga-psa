@@ -152,9 +152,35 @@ export async function createTicketFromAlert(
       });
     }
 
-    // Add initial comment with alert details
+    // Add initial comment with alert details. comments.thread_id is NOT NULL —
+    // generate IDs and create the thread row first.
+    const ninjaCommentIds = await trx.raw(
+      'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
+    );
+    const ninjaGeneratedIds = ninjaCommentIds.rows?.[0] as
+      | { comment_id: string; thread_id: string }
+      | undefined;
+    if (!ninjaGeneratedIds?.comment_id || !ninjaGeneratedIds?.thread_id) {
+      throw new Error('Failed to generate comment/thread identifiers');
+    }
+
+    await trx('comment_threads').insert({
+      tenant: tenantId,
+      thread_id: ninjaGeneratedIds.thread_id,
+      ticket_id: ticket.ticket_id,
+      project_task_id: null,
+      root_comment_id: ninjaGeneratedIds.comment_id,
+      is_internal: true,
+      reply_count: 0,
+      last_activity_at: now,
+      created_at: now,
+      created_by: null,
+    });
+
     await trx('comments').insert({
       tenant: tenantId,
+      comment_id: ninjaGeneratedIds.comment_id,
+      thread_id: ninjaGeneratedIds.thread_id,
       ticket_id: ticket.ticket_id,
       user_id: null, // System comment
       comment_type: 'internal_note',

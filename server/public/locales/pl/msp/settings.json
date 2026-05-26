@@ -25,7 +25,8 @@
     "teamManagement": "Zarządzanie zespołem",
     "loadingTeam": "Ładowanie konfiguracji zespołu...",
     "loadingExperimental": "Ładowanie konfiguracji funkcji eksperymentalnych...",
-    "loadingInteractions": "Ładowanie ustawień interakcji..."
+    "loadingInteractions": "Ładowanie ustawień interakcji...",
+    "keyboardShortcuts": "Skróty klawiaturowe"
   },
   "unsavedChanges": {
     "title": "Niezapisane zmiany",
@@ -90,10 +91,6 @@
         "name": "Asystent AI",
         "description": "Włącz funkcje Szybkie pytanie i Czat na pasku bocznym, oparte na AI.",
         "restriction": "Dostępne tylko dla głównej organizacji rozliczeniowej."
-      },
-      "workflowAutomation": {
-        "name": "Automatyzacja przepływów pracy",
-        "description": "Włącz eksperymentalne funkcje automatyzacji przepływów pracy w panelu sterowania i edytorze przepływów pracy."
       }
     },
     "actions": {

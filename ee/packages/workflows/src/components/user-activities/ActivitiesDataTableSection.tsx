@@ -5,16 +5,26 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Activity,
   ActivityFilters,
+  ActivitySortBy,
   ActivityType,
-  ActivityResponse,
+  IClient,
   IPriority,
   IStatus,
   ITag,
+  ItemType,
   ProjectWithPhases,
+  TaggedEntityType,
 } from '@alga-psa/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
-import { RefreshCw, List, LayoutList, Printer } from 'lucide-react';
+import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
+import {
+  PrintOptionsDialog,
+  type PrintColumnOption,
+  usePrintColumnSelection,
+} from '@alga-psa/ui/components/PrintOptionsDialog';
+import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
+import { RefreshCw, List, LayoutList, Printer, Settings2 } from 'lucide-react';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
 import './userActivitiesPrint.css';
 import { fetchActivities, getUserActivityGroups, type ActivityGroup } from '@alga-psa/workflows/actions';
@@ -49,6 +59,32 @@ const DEFAULT_FILTERS: ActivityFilters = {
 
 type ListViewMode = 'flat' | 'grouped';
 
+const PRINT_FALLBACK_PAGE_SIZE = 500;
+
+function dedupeRecurringActivities(activities: Activity[]): Activity[] {
+  const uniqueUpcomingActivities: Activity[] = [];
+  const addedRecurringSeriesOnPage = new Set<string>();
+
+  for (const activity of activities) {
+    if (activity.type === ActivityType.SCHEDULE) {
+      const scheduleActivity = activity as ScheduleActivity;
+      if (scheduleActivity.isRecurring) {
+        const seriesIdentifier = `${scheduleActivity.title}-${scheduleActivity.workItemId || 'no-item'}-${scheduleActivity.workItemType || 'no-type'}`;
+        if (!addedRecurringSeriesOnPage.has(seriesIdentifier)) {
+          uniqueUpcomingActivities.push(scheduleActivity);
+          addedRecurringSeriesOnPage.add(seriesIdentifier);
+        }
+      } else {
+        uniqueUpcomingActivities.push(activity);
+      }
+    } else {
+      uniqueUpcomingActivities.push(activity);
+    }
+  }
+
+  return uniqueUpcomingActivities;
+}
+
 export function ActivitiesDataTableSection({
   title,
   initialFilters = {},
@@ -56,10 +92,17 @@ export function ActivitiesDataTableSection({
 }: ActivitiesDataTableSectionProps) {
   const { t } = useTranslation('msp/user-activities');
   const effectiveTitle = title ?? t('table.title.all', { defaultValue: 'All Activities' });
-  const LIST_VIEW_OPTIONS: ViewSwitcherOption<ListViewMode>[] = [
+const LIST_VIEW_OPTIONS: ViewSwitcherOption<ListViewMode>[] = [
     { value: 'flat', label: t('table.viewSwitcher.flat', { defaultValue: 'Flat' }), icon: List },
     { value: 'grouped', label: t('table.viewSwitcher.grouped', { defaultValue: 'Grouped' }), icon: LayoutList },
-  ];
+];
+
+function formatActivityPrintDate(dateString?: string): string {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString();
+}
   const [activities, setActivities] = useState<Activity[]>([]);
   const [error, setError] = useState<string | null>(null);
   const { openActivityDrawer } = useActivityDrawer();
@@ -110,13 +153,15 @@ export function ActivitiesDataTableSection({
   const {
     getActivities,
     invalidateCache,
-    getCacheStats,
     isLoading,
     isInitialLoad
   } = useActivitiesCache();
 
   // Priorities for the filter dropdown
   const [priorities, setPriorities] = useState<IPriority[]>([]);
+
+  // Clients for the shared client filter
+  const [clients, setClients] = useState<IClient[]>([]);
 
   // Projects (with phases + statuses) for the filter tree-select
   const [projects, setProjects] = useState<ProjectWithPhases[]>([]);
@@ -137,13 +182,16 @@ export function ActivitiesDataTableSection({
 
   // User-defined activity groups (shared between GroupedActivitiesView + PrintableActivitiesView)
   const [activityGroups, setActivityGroups] = useState<ActivityGroup[]>([]);
+  const [printActivities, setPrintActivities] = useState<Activity[] | null>(null);
 
-  const loadActivityGroups = useCallback(async () => {
+  const loadActivityGroups = useCallback(async (): Promise<ActivityGroup[]> => {
     try {
       const groups = await getUserActivityGroups();
       setActivityGroups(groups);
+      return groups;
     } catch (err) {
       console.error('Error loading activity groups:', err);
+      return [];
     }
   }, []);
 
@@ -160,11 +208,11 @@ export function ActivitiesDataTableSection({
   const [totalItems, setTotalItems] = useState(0);
 
   // Sort state (server-side)
-  const [sortBy, setSortBy] = useState<string | undefined>(undefined);
+  const [sortBy, setSortBy] = useState<ActivitySortBy | undefined>(undefined);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const handleSortChange = useCallback((nextSortBy: string, nextDirection: 'asc' | 'desc') => {
-    setSortBy(nextSortBy);
+    setSortBy(nextSortBy as ActivitySortBy);
     setSortDirection(nextDirection);
     setCurrentPage(1); // reset to first page on sort change
   }, []);
@@ -185,22 +233,33 @@ export function ActivitiesDataTableSection({
     setPriorities([]);
   }, [filters.types]);
 
+  // Load clients for the shared client filter on mount
+  useEffect(() => {
+    ctx.getAllClients(false)
+      .then((data: unknown) => {
+        if (!isActionPermissionError(data)) {
+          setClients(data as IClient[]);
+        }
+      })
+      .catch((err: unknown) => console.error('Error loading clients:', err));
+  }, [ctx]);
+
   // Load projects with phases + statuses for the filter tree on mount
   useEffect(() => {
     ctx.getProjectsWithPhases()
-      .then((data: any) => {
+      .then((data: unknown) => {
         if (!isActionPermissionError(data)) {
-          setProjects(data);
+          setProjects(data as ProjectWithPhases[]);
         }
       })
-      .catch((err: any) => console.error('Error loading projects with phases:', err));
+      .catch((err: unknown) => console.error('Error loading projects with phases:', err));
   }, [ctx]);
 
   // Load boards and ticket statuses on mount
   useEffect(() => {
     Promise.all([
       getAllBoards(true),
-      getStatuses('ticket' as any),
+      getStatuses('ticket' as ItemType),
     ])
       .then(([boardsData, statusesData]) => {
         setBoards(boardsData || []);
@@ -212,8 +271,8 @@ export function ActivitiesDataTableSection({
   // Load tags on mount (for both ticket and project task filters)
   useEffect(() => {
     Promise.all([
-      findAllTagsByType('ticket' as any),
-      findAllTagsByType('project_task' as any),
+      findAllTagsByType('ticket' as TaggedEntityType),
+      findAllTagsByType('project_task' as TaggedEntityType),
     ])
       .then(([tt, pt]) => {
         setTicketTags(tt || []);
@@ -225,16 +284,18 @@ export function ActivitiesDataTableSection({
   // Use useCallback to memoize loadActivities with cache.
   // In grouped mode, we load ALL activities (no pagination) so DnD works across
   // the full set. Uses a large page size as a practical upper bound.
+  const getEffectiveFilters = useCallback((): ActivityFilters => ({
+    ...filters,
+    types: filters.types && filters.types.length > 0
+      ? filters.types
+      : Object.values(ActivityType),
+    sortBy,
+    sortDirection,
+  }), [filters, sortBy, sortDirection]);
+
   const loadActivities = useCallback(async () => {
     try {
-      const effectiveFilters: ActivityFilters = {
-        ...filters,
-        types: filters.types && filters.types.length > 0
-          ? filters.types
-          : Object.values(ActivityType),
-        sortBy: sortBy as any,
-        sortDirection,
-      };
+      const effectiveFilters = getEffectiveFilters();
 
       const effectivePage = listViewMode === 'grouped' ? 1 : currentPage;
       const effectivePageSize = listViewMode === 'grouped' ? 500 : pageSize;
@@ -252,7 +313,7 @@ export function ActivitiesDataTableSection({
       console.error(`Error loading activities:`, err);
       setError(t('table.errors.loadFailed', { defaultValue: 'Failed to load activities. Please try again later.' }));
     }
-  }, [filters, currentPage, pageSize, getActivities, sortBy, sortDirection, listViewMode, t]);
+  }, [currentPage, pageSize, getActivities, getEffectiveFilters, listViewMode, t]);
 
   // useEffect to trigger loadActivities when filters or pagination changes
   useEffect(() => {
@@ -276,16 +337,25 @@ export function ActivitiesDataTableSection({
     setCurrentPage(1);
   }, [setSavedFilters]);
 
-  const handlePrint = useCallback(() => {
-    const html = document.documentElement;
-    html.classList.add('ua-print-mode');
-    const cleanup = () => {
-      html.classList.remove('ua-print-mode');
-      window.removeEventListener('afterprint', cleanup);
-    };
-    window.addEventListener('afterprint', cleanup);
-    // Give the browser a tick to apply the class before opening the dialog
-    setTimeout(() => window.print(), 50);
+  const preparePrintActivities = useCallback(async () => {
+    if (listViewMode === 'grouped') {
+      await loadActivityGroups();
+    }
+
+    const effectiveFilters = getEffectiveFilters();
+    const printPageSize = Math.max(
+      totalItems,
+      activities.length,
+      pageSize,
+      PRINT_FALLBACK_PAGE_SIZE
+    );
+
+    const result = await fetchActivities(effectiveFilters, 1, printPageSize);
+    setPrintActivities(dedupeRecurringActivities(result.activities));
+  }, [activities.length, getEffectiveFilters, listViewMode, loadActivityGroups, pageSize, totalItems]);
+
+  const cleanupPrintActivities = useCallback(() => {
+    setPrintActivities(null);
   }, []);
 
   const handlePageChange = useCallback((newPage: number) => {
@@ -297,29 +367,61 @@ export function ActivitiesDataTableSection({
     setCurrentPage(1); // Reset to first page when changing page size
   }, []);
 
-  const filteredActivitiesForTable = useMemo(() => {
-    const uniqueUpcomingActivities: Activity[] = [];
-    const addedRecurringSeriesOnPage = new Set<string>();
+  const filteredActivitiesForTable = useMemo(() => (
+    dedupeRecurringActivities(activities)
+  ), [activities]);
 
-    for (const activity of activities) {
-      if (activity.type === ActivityType.SCHEDULE) {
-        const scheduleActivity = activity as ScheduleActivity;
-        if (scheduleActivity.isRecurring) {
-          const seriesIdentifier = `${scheduleActivity.title}-${scheduleActivity.workItemId || 'no-item'}-${scheduleActivity.workItemType || 'no-type'}`;
-          if (!addedRecurringSeriesOnPage.has(seriesIdentifier)) {
-            uniqueUpcomingActivities.push(scheduleActivity);
-            addedRecurringSeriesOnPage.add(seriesIdentifier);
-          }
-        } else {
-          uniqueUpcomingActivities.push(scheduleActivity);
-        }
-      } else {
-        uniqueUpcomingActivities.push(activity);
-      }
-    }
-    return uniqueUpcomingActivities;
-  }, [activities]);
- 
+  const activityPrintColumns = useMemo<PrintColumnOption<Activity>[]>(() => [
+    {
+      key: 'type',
+      label: t('table.columns.type', { defaultValue: 'Type' }),
+      header: t('table.columns.type', { defaultValue: 'Type' }),
+      render: (activity) => t(`table.activityTypes.${activity.type}`, {
+        defaultValue: activity.type,
+      }),
+      className: 'ua-print-type-column',
+    },
+    {
+      key: 'title',
+      label: t('table.columns.title', { defaultValue: 'Title' }),
+      header: t('table.columns.title', { defaultValue: 'Title' }),
+      render: (activity) => activity.title,
+      className: 'ua-print-title-column',
+    },
+    {
+      key: 'status',
+      label: t('table.columns.status', { defaultValue: 'Status' }),
+      header: t('table.columns.status', { defaultValue: 'Status' }),
+      render: (activity) => activity.status || t('table.values.emDash', { defaultValue: '—' }),
+    },
+    {
+      key: 'priority',
+      label: t('table.columns.priority', { defaultValue: 'Priority' }),
+      header: t('table.columns.priority', { defaultValue: 'Priority' }),
+      render: (activity) => activity.priorityName || activity.priority || t('table.values.emDash', { defaultValue: '—' }),
+    },
+    {
+      key: 'dueDate',
+      label: t('table.columns.dueDate', { defaultValue: 'Due Date' }),
+      header: t('table.columns.dueDate', { defaultValue: 'Due Date' }),
+      render: (activity) => formatActivityPrintDate(activity.dueDate) || t('table.values.noDueDate', { defaultValue: 'No due date' }),
+      className: 'ua-print-date-column',
+    },
+  ], [t]);
+  const {
+    selectedColumnKeys: selectedActivityPrintColumnKeys,
+    selectedColumns: selectedActivityPrintColumns,
+    setSelectedColumnKeys: setSelectedActivityPrintColumnKeys,
+    resetSelectedColumnKeys: resetSelectedActivityPrintColumnKeys,
+  } = usePrintColumnSelection('print-columns:user-activities', activityPrintColumns);
+
+  const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
+
+  const { triggerPrint: triggerPrintActivities, isPreparing: isPreparingActivityPrint } = usePrintAction({
+    onBeforePrint: preparePrintActivities,
+    onAfterPrint: cleanupPrintActivities,
+  });
+
   return (
     <>
     <Card id={id} className="ua-print-hide">
@@ -342,16 +444,27 @@ export function ActivitiesDataTableSection({
             {t('table.actions.refresh', { defaultValue: 'Refresh' })}
           </Button>
           <div className="w-px h-6 bg-border" />
-          <Button
-            id={`${id}-print-button`}
-            variant="outline"
-            size="sm"
-            onClick={handlePrint}
+          <ShareActionsMenu
+            id={`${id}-share-actions`}
+            triggerSize="sm"
+            tooltip={t('actions.print', { defaultValue: 'Print' })}
             disabled={isLoading || activities.length === 0}
-          >
-            <Printer className="h-4 w-4 mr-2" />
-            {t('table.actions.print', { defaultValue: 'Print' })}
-          </Button>
+            actions={[
+              {
+                id: `${id}-share-print`,
+                icon: Printer,
+                label: t('table.actions.print', { defaultValue: 'Print' }),
+                onSelect: () => { void triggerPrintActivities(); },
+                disabled: isPreparingActivityPrint,
+              },
+              {
+                id: `${id}-share-print-options`,
+                icon: Settings2,
+                label: t('actions.printOptions', { defaultValue: 'Print options' }),
+                onSelect: () => setIsPrintOptionsOpen(true),
+              },
+            ] satisfies ShareAction[]}
+          />
         </div>
       </CardHeader>
       <CardContent>
@@ -359,6 +472,7 @@ export function ActivitiesDataTableSection({
           filters={filters}
           onChange={handleFilterChange}
           priorities={priorities}
+          clients={clients}
           projects={projects}
           boards={boards}
           ticketStatuses={ticketStatuses}
@@ -383,7 +497,9 @@ export function ActivitiesDataTableSection({
           <GroupedActivitiesView
             activities={filteredActivitiesForTable}
             serverGroups={activityGroups}
-            onGroupsChange={loadActivityGroups}
+            onGroupsChange={async () => {
+              await loadActivityGroups();
+            }}
             onActionComplete={handleRefresh}
           />
         ) : (
@@ -405,11 +521,27 @@ export function ActivitiesDataTableSection({
       </CardContent>
     </Card>
     <PrintableActivitiesView
-      activities={filteredActivitiesForTable}
+      activities={printActivities ?? filteredActivitiesForTable}
       grouped={listViewMode === 'grouped'}
       serverGroups={activityGroups}
       ungroupedCollapsed={ungroupedCollapsed}
       title={effectiveTitle}
+      columns={selectedActivityPrintColumns}
+    />
+    <PrintOptionsDialog
+      id={`${id}-print-options-dialog`}
+      open={isPrintOptionsOpen}
+      onOpenChange={setIsPrintOptionsOpen}
+      title={t('table.print.optionsDialog.title', { defaultValue: 'Print options' })}
+      description={t('table.print.optionsDialog.description', {
+        defaultValue: 'Choose which columns to include when printing activities.',
+      })}
+      columns={activityPrintColumns}
+      selectedColumnKeys={selectedActivityPrintColumnKeys}
+      onSelectedColumnKeysChange={setSelectedActivityPrintColumnKeys}
+      onReset={resetSelectedActivityPrintColumnKeys}
+      onPrint={() => triggerPrintActivities()}
+      isPrinting={isPreparingActivityPrint}
     />
     </>
   );

@@ -4,7 +4,8 @@ import { createRequire } from 'module';
 import fs from 'fs';
 // build-trigger: update to force CI rebuild
 const require = createRequire(import.meta.url);
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const parsePositiveInt = (value) => {
   if (value == null) return undefined;
@@ -187,6 +188,11 @@ const nextConfig = {
       '@alga-psa/ui/': '../packages/ui/src/',
       '@alga-psa/clients': '../packages/clients/src',
       '@alga-psa/clients/': '../packages/clients/src/',
+      // NB: tried switching bare-name aliases to ../packages/<pkg>/dist when
+      // USE_PREBUILT=true. tsup bundles each package into a single
+      // dist/index.js and downstream consumers import many sub-paths
+      // (e.g. @alga-psa/ui/components/Button) which the dist doesn't expose.
+      // Result: module-not-found across the build. Keep src/ aliases.
       '@alga-psa/auth': '../packages/auth/src',
       '@alga-psa/auth/': '../packages/auth/src/',
       '@alga-psa/auth/getCurrentUser': '../packages/auth/src/lib/getCurrentUser.ts',
@@ -230,6 +236,7 @@ const nextConfig = {
       '@alga-psa/types': '../packages/types/src',
       '@alga-psa/types/': '../packages/types/src/',
       '@alga-psa/core': '../packages/core/src',
+      '@alga-psa/core/rateLimit': '../packages/core/src/lib/rateLimit/index.ts',
       '@alga-psa/core/': '../packages/core/src/',
       '@alga-psa/validation': '../packages/validation/src',
       '@alga-psa/validation/': '../packages/validation/src/',
@@ -399,6 +406,10 @@ const nextConfig = {
     },
   },
   reactStrictMode: false, // Disabled to prevent double rendering in development
+  // Skip TS at build time — `tsc --noEmit` runs separately as `npm run typecheck`.
+  // Next 16 dropped the in-config `eslint` knob; lint is now run via `npm run lint`
+  // outside the build, so no equivalent setting needed.
+  typescript: { ignoreBuildErrors: true },
   transpilePackages: [
     '@blocknote/core',
     '@blocknote/react',
@@ -420,6 +431,7 @@ const nextConfig = {
     '@alga-psa/user-composition',
     '@alga-psa/projects',
     '@alga-psa/surveys',
+    '@alga-psa/tickets',
     // Product feature packages (only those needed in this app)
     '@product/extensions',
     '@product/settings-extensions',
@@ -429,6 +441,9 @@ const nextConfig = {
     '@alga-psa/product-extension-actions',
     '@alga-psa/product-auth-ee',
     '@alga-psa/product-extension-initialization'
+    // Tried trimming this list to only @blocknote/* under turbopack — it
+    // regressed cold builds by +21 s. transpilePackages stays as a hint
+    // that turbopack actually uses for fast-path resolution.
   ],
   // Rewrites required for PostHog
   async rewrites() {
@@ -450,8 +465,22 @@ const nextConfig = {
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
   webpack: (config, { isServer, dev }) => {
-    // Enable webpack cache for faster builds
-    config.cache = true;
+    // Filesystem cache: persists across builds (even after `rm -rf .next`)
+    // so the second cold build reuses module compilation work. Stored under
+    // node_modules/.cache/webpack so it survives `.next` clears.
+    config.cache = {
+      type: 'filesystem',
+      cacheDirectory: path.join(__dirname, 'node_modules/.cache/webpack'),
+      buildDependencies: {
+        config: [__filename],
+      },
+      // Snapshot all node_modules as immutable by mtime — avoids hash-stat on
+      // every file (huge in this monorepo).
+      managedPaths: [
+        path.resolve(__dirname, 'node_modules'),
+        path.resolve(__dirname, '../node_modules'),
+      ],
+    };
 
     // Add support for importing from ee/server/src using absolute paths
     // and ensure packages from root workspace are resolved
@@ -490,6 +519,9 @@ const nextConfig = {
       '@alga-psa/types': prebuiltDirAbs('types'),
       '@alga-psa/types/': `${prebuiltDirAbs('types')}/`,
       '@alga-psa/core': prebuiltDirAbs('core'),
+      '@alga-psa/core/rateLimit': usePrebuilt
+        ? path.join(prebuiltDirAbs('core'), 'lib/rateLimit/index.js')
+        : path.join(__dirname, '../packages/core/src/lib/rateLimit/index.ts'),
       '@alga-psa/core/': `${prebuiltDirAbs('core')}/`,
       '@alga-psa/validation': prebuiltDirAbs('validation'),
       '@alga-psa/validation/': `${prebuiltDirAbs('validation')}/`,
@@ -1024,6 +1056,14 @@ const nextConfig = {
 
     return config;
   },
+  // Explicitly disable production browser source maps (default but be explicit).
+  // Eliminates source-map emit work for every client chunk.
+  productionBrowserSourceMaps: false,
+  // SWC compiler: strip console.* in production output (excluding error/warn).
+  // Cuts bytes; minify pass also has less to walk.
+  compiler: {
+    removeConsole: { exclude: ['error', 'warn'] },
+  },
   experimental: {
     // We alias certain EE-only modules directly into `../ee/server/src/**` (outside this Next.js app root).
     // Ensure Next is allowed to import/compile source files from outside `server/`.
@@ -1037,6 +1077,15 @@ const nextConfig = {
     // In large repos, the default (often == host CPU count) can cause OOMs in CI.
     ...(buildCpus ? { cpus: buildCpus } : {}),
     ...(memoryBasedWorkersCount ? { memoryBasedWorkersCount: true } : {}),
+    // Disable server source maps (RSC + server actions). Build-only — does
+    // not affect production error traces from Sentry or similar tools.
+    serverSourceMaps: false,
+    // Tried turbopackPersistentCaching — Next 16.2 only supports
+    // turbopackFileSystemCacheForDev (dev mode), not production builds.
+    // Revisit when Next exposes persistent build cache.
+    // Tried optimizePackageImports (broad list, then just lucide-react) —
+    // both regressed cold builds by 20 s and 480 s respectively in this
+    // monorepo's webpack+SWC setup. Leaving it off.
   },
   // Externalize Node.js-only packages with native dependencies from server bundles.
   // This prevents Turbopack from bundling them with mangled names.
@@ -1053,6 +1102,61 @@ const nextConfig = {
     '@opentelemetry/semantic-conventions',
     '@opentelemetry/api',
     'expo-server-sdk',
+    // Heavy Node-only deps — runtime requires `require()`, no need to bundle.
+    'knex',
+    'pg',
+    'pg-boss',
+    'pg-pool',
+    'pg-cursor',
+    'pg-protocol',
+    'redis',
+    'ioredis',
+    'stripe',
+    'openai',
+    '@google-cloud/aiplatform',
+    '@google-cloud/vertexai',
+    'handlebars',
+    'jsdom',
+    'monaco-editor',
+    '@js-temporal/polyfill',
+    'pdfkit',
+    'sharp',
+    // Round 2: more Node-only deps
+    'axios',
+    'dotenv',
+    'jsonwebtoken',
+    'rate-limiter-flexible',
+    '@temporalio/client',
+    '@temporalio/common',
+    '@temporalio/worker',
+    'winston',
+    'pino',
+    'parsimmon',
+    'ajv',
+    '@aws-sdk/client-s3',
+    '@aws-sdk/client-sts',
+    '@aws-sdk/credential-providers',
+    'xlsx',
+    'archiver',
+    'unzipper',
+    '@grpc/grpc-js',
+    '@huggingface/inference',
+    'google-auth-library',
+    'googleapis',
+    '@azure/identity',
+    '@azure/msal-node',
+    '@microsoft/microsoft-graph-client',
+    // Round 3: more server-only/heavy libs
+    'posthog-node',
+    'bcryptjs',
+    'speakeasy',
+    'qrcode',
+    'pdf-lib',
+    'pdf2pic',
+    'marked',
+    '@faker-js/faker',
+    'moment',
+    'tinycolor2',
   ],
   // Note: output: 'standalone' was removed due to static page generation issues
   generateBuildId: async () => {

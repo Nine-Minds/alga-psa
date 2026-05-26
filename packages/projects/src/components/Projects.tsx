@@ -10,7 +10,7 @@ import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import ProjectQuickAdd from './ProjectQuickAdd';
-import { deleteProject } from '../actions/projectActions';
+import { deleteProject, searchProjectListIds } from '../actions/projectActions';
 import { findUserById } from '@alga-psa/user-composition/actions';
 import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
 import { TagFilter } from '@alga-psa/ui/components';
@@ -37,6 +37,7 @@ import Drawer from '@alga-psa/ui/components/Drawer';
 import { ApplyTemplateDialog } from './project-templates/ApplyTemplateDialog';
 import { useClientIntegration } from '../context/ClientIntegrationContext';
 import { useTranslation } from 'react-i18next';
+import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 export interface ProjectListFilters {
   searchQuery?: string;
@@ -154,6 +155,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
   activeFiltersRef.current = activeFilters;
 
   const [projects, setProjects] = useState<IProject[]>(initialProjects);
+  const [indexedSearchProjectIds, setIndexedSearchProjectIds] = useState<Set<string> | null>(null);
 
   // Sync state when initialProjects changes (e.g., from router.refresh())
   useEffect(() => {
@@ -161,6 +163,8 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
   }, [initialProjects]);
 
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const openProjectQuickAdd = useCallback(() => setShowQuickAdd(true), []);
+  usePageCreateShortcut(openProjectQuickAdd);
   const [showApplyTemplate, setShowApplyTemplate] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<IProject | null>(null);
   const [deleteValidation, setDeleteValidation] = useState<DeletionValidationResult | null>(null);
@@ -373,13 +377,48 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const query = activeFilters.searchQuery?.trim();
+    if (!query) {
+      setIndexedSearchProjectIds(null);
+      return;
+    }
+
+    setIndexedSearchProjectIds(null);
+    let isCancelled = false;
+    const timeout = setTimeout(() => {
+      searchProjectListIds(query)
+        .then((projectIds) => {
+          if (!isCancelled) {
+            setIndexedSearchProjectIds(new Set(projectIds));
+          }
+        })
+        .catch((error) => {
+          console.error('Error searching projects:', error);
+          if (!isCancelled) {
+            setIndexedSearchProjectIds(new Set());
+          }
+        });
+    }, 300);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [activeFilters.searchQuery]);
+
   const filteredProjects = useMemo(() => {
     const { searchQuery, status, tags, clientId, contactId, managerId } = activeFilters;
     const search = (searchQuery || '').toLowerCase();
 
     let filtered = projects.filter(project =>
-      (project.project_name.toLowerCase().includes(search) ||
-       project.project_number?.toLowerCase().includes(search)) &&
+      (!search ||
+       (indexedSearchProjectIds
+         ? (typeof project.project_id === 'string' && indexedSearchProjectIds.has(project.project_id)) ||
+           project.project_name.toLowerCase().includes(search) ||
+           project.project_number?.toLowerCase().includes(search)
+         : project.project_name.toLowerCase().includes(search) ||
+           project.project_number?.toLowerCase().includes(search))) &&
       (status === 'all' ||
        (status === 'active' && !project.is_inactive) ||
        (status === 'inactive' && project.is_inactive))
@@ -444,7 +483,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
 
     return filtered;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tagsVersion tracks projectTagsRef mutations
-  }, [projects, activeFilters, deadlineFilterValue, tagsVersion]);
+  }, [projects, activeFilters, deadlineFilterValue, tagsVersion, indexedSearchProjectIds]);
 
   const handleEditProject = (project: IProject) => {
     openDrawer(
@@ -775,7 +814,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
             <FileText className="h-4 w-4 mr-2" />
             {projectListT('createFromTemplate', 'Create from Template')}
           </Button>
-          <Button id='add-project-button' onClick={() => setShowQuickAdd(true)}>
+          <Button id='add-project-button' onClick={openProjectQuickAdd}>
             {projectListT('addProject', 'Add Project')}
           </Button>
         </div>
@@ -787,7 +826,7 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
           <div className="relative p-0.5 shrink-0">
             <Input
               type="text"
-              placeholder={projectListT('searchPlaceholder', 'Search projects')}
+              placeholder={projectListT('searchPlaceholder', 'Search projects, tasks, and comments')}
               className="pl-10 pr-4 py-2 w-64"
               value={activeFilters.searchQuery || ''}
               onChange={(e) => handleFilterChange({ searchQuery: e.target.value || undefined })}
@@ -927,18 +966,20 @@ export default function Projects({ initialProjects, clients, initialFilters, ini
       </div>
 
       <div className="bg-white shadow rounded-lg p-4">
-        <DataTable
-          key={`${activeFilters.page}-${activeFilters.pageSize}`}
-          id="projects-table"
-          data={filteredProjects}
-          columns={columns}
-          pagination={true}
-          currentPage={activeFilters.page || 1}
-          onPageChange={(page) => handleFilterChange({ page })}
-          pageSize={activeFilters.pageSize || 10}
-          onItemsPerPageChange={(pageSize) => handleFilterChange({ pageSize, page: 1 })}
-          initialSorting={[{ id: 'created_at', desc: true }]}
-        />
+        <ShortcutActiveRegion id="projects-shortcut-region" className="outline-none">
+          <DataTable
+            key={`${activeFilters.page}-${activeFilters.pageSize}`}
+            id="projects-table"
+            data={filteredProjects}
+            columns={columns}
+            pagination={true}
+            currentPage={activeFilters.page || 1}
+            onPageChange={(page) => handleFilterChange({ page })}
+            pageSize={activeFilters.pageSize || 10}
+            onItemsPerPageChange={(pageSize) => handleFilterChange({ pageSize, page: 1 })}
+            initialSorting={[{ id: 'created_at', desc: true }]}
+          />
+        </ShortcutActiveRegion>
       </div>
 
       {showQuickAdd && (

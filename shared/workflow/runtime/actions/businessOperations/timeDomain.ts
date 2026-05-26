@@ -248,6 +248,61 @@ async function isManagerOfSubject(
   return Boolean(reportsToRow);
 }
 
+async function hasAssignedNotSelfApproverBundleRuleForWorkflowTime(
+  trx: Knex.Transaction,
+  tenantId: string,
+  actorUserId: string
+): Promise<boolean> {
+  const [roleRows, teamRows] = await Promise.all([
+    trx('user_roles')
+      .where({ tenant: tenantId, user_id: actorUserId })
+      .select<Array<{ role_id: string }>>('role_id'),
+    trx('team_members')
+      .where({ tenant: tenantId, user_id: actorUserId })
+      .select<Array<{ team_id: string }>>('team_id'),
+  ]);
+
+  const roleIds = roleRows.map((row) => row.role_id).filter(Boolean);
+  const teamIds = teamRows.map((row) => row.team_id).filter(Boolean);
+
+  const rule = await trx('authorization_bundle_assignments as a')
+    .join('authorization_bundles as b', function joinBundles() {
+      this.on('b.tenant', '=', 'a.tenant').andOn('b.bundle_id', '=', 'a.bundle_id');
+    })
+    .join('authorization_bundle_rules as r', function joinRules() {
+      this.on('r.tenant', '=', 'b.tenant')
+        .andOn('r.bundle_id', '=', 'b.bundle_id')
+        .andOn('r.revision_id', '=', 'b.published_revision_id');
+    })
+    .where('a.tenant', tenantId)
+    .andWhere('a.status', 'active')
+    .andWhere('b.status', 'active')
+    .whereNotNull('b.published_revision_id')
+    .andWhere('r.resource_type', 'time_entry')
+    .andWhere('r.action', 'approve')
+    .andWhere('r.constraint_key', 'not_self_approver')
+    .andWhere((builder) => {
+      builder.orWhere((subBuilder) => {
+        subBuilder.where('a.target_type', 'user').where('a.target_id', actorUserId);
+      });
+
+      if (roleIds.length > 0) {
+        builder.orWhere((subBuilder) => {
+          subBuilder.where('a.target_type', 'role').whereIn('a.target_id', roleIds);
+        });
+      }
+
+      if (teamIds.length > 0) {
+        builder.orWhere((subBuilder) => {
+          subBuilder.where('a.target_type', 'team').whereIn('a.target_id', teamIds);
+        });
+      }
+    })
+    .first('r.rule_id');
+
+  return Boolean(rule);
+}
+
 async function assertCanActOnBehalfForWorkflowTime(
   trx: Knex.Transaction,
   tenantId: string,
@@ -291,7 +346,10 @@ async function assertCanApproveSubjectForWorkflowTime(
   actorUserId: string,
   subjectUserId: string
 ): Promise<void> {
-  if (actorUserId === subjectUserId) {
+  if (
+    actorUserId === subjectUserId &&
+    (await hasAssignedNotSelfApproverBundleRuleForWorkflowTime(trx, tenantId, actorUserId))
+  ) {
     throw new WorkflowTimeDomainError({
       category: 'ActionError',
       code: 'PERMISSION_DENIED',

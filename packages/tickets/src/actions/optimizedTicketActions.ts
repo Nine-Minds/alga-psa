@@ -78,6 +78,9 @@ function getEmailEventChannel(): string {
   return EMAIL_EVENT_CHANNEL;
 }
 
+const TICKET_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
+const TICKET_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
+
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into tickets.
 }
@@ -959,7 +962,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 async function buildTicketListBaseQuery(
   trx: Knex.Transaction,
   tenant: string,
-  user: { user_id: string },
+  user: { user_id: string; user_type?: string; clientId?: string | null },
   validatedFilters: ITicketListFilters
 ): Promise<{ builder: Knex.QueryBuilder }> {
     const parsedStatusFilter = parseTicketStatusFilterValue(validatedFilters.statusId);
@@ -1082,26 +1085,7 @@ async function buildTicketListBaseQuery(
       }
     }
 
-    if (validatedFilters.searchQuery) {
-      const searchTerm = `%${validatedFilters.searchQuery}%`;
-      baseQuery = baseQuery.where(function(this: any) {
-        this.where('t.title', 'ilike', searchTerm)
-          .orWhere('t.ticket_number', 'ilike', searchTerm);
-
-        if (validatedFilters.bundleView === 'bundled') {
-          this.orWhereExists(function(this: any) {
-            this.select('*')
-              .from('tickets as tc')
-              .whereRaw('tc.tenant = t.tenant')
-              .andWhereRaw('tc.master_ticket_id = t.ticket_id')
-              .andWhere(function(this: any) {
-                this.where('tc.title', 'ilike', searchTerm)
-                  .orWhere('tc.ticket_number', 'ilike', searchTerm);
-              });
-          });
-        }
-      });
-    }
+    baseQuery = applyTicketListIndexedSearchFilter(trx, baseQuery, tenant, user, validatedFilters);
 
     // Apply tag filter if provided
     if (validatedFilters.tags && validatedFilters.tags.length > 0) {
@@ -1275,6 +1259,188 @@ async function buildTicketListBaseQuery(
     // Knex query builders have .then(), so returning one from an async function
     // would execute the query instead of returning the builder.
     return { builder: baseQuery };
+}
+
+function buildTicketListSearchPrefixTsquery(raw: string): string | null {
+  const tokens = raw
+    .toLowerCase()
+    .replace(TICKET_LIST_SEARCH_TSQUERY_UNSAFE_RE, ' ')
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+
+  if (tokens.length === 0) {
+    return null;
+  }
+
+  return tokens.map((token) => `${token}:*`).join(' & ');
+}
+
+function applyTicketListIndexedSearchFilter(
+  trx: Knex.Transaction,
+  baseQuery: Knex.QueryBuilder,
+  tenant: string,
+  user: { user_id: string; user_type?: string; clientId?: string | null },
+  validatedFilters: ITicketListFilters
+): Knex.QueryBuilder {
+  const rawSearch = validatedFilters.searchQuery?.replace(/\s+/g, ' ').trim();
+  if (!rawSearch) {
+    return baseQuery;
+  }
+
+  const prefixTsquery = buildTicketListSearchPrefixTsquery(rawSearch);
+  const identifier = rawSearch.match(TICKET_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
+  const includeBundledChildren = validatedFilters.bundleView === 'bundled';
+  const isInternalUser = user.user_type !== 'client';
+  const clientScopePredicate = isInternalUser
+    ? 'TRUE'
+    : user.clientId
+      ? '(si.client_scope_id IS NULL OR si.client_scope_id = ?::uuid)'
+      : 'si.client_scope_id IS NULL';
+  const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
+  const ilikePattern = `%${rawSearch}%`;
+
+  // Citus cannot push down an OR that mixes correlated EXISTS against two different
+  // distributed tables (app_search_index vs tickets). Rewrite as UNION ALL of
+  // single-table legs joined back on the distribution column (tenant) plus ticket_id;
+  // each leg is independently pushdown-safe and the outer join is co-located.
+  const legA = `
+        SELECT
+          CASE WHEN si.object_type = 'ticket_comment' THEN si.parent_id::uuid
+               ELSE si.object_id::uuid END AS ticket_id,
+          si.tenant
+        FROM app_search_index si
+        CROSS JOIN (
+          SELECT
+            websearch_to_tsquery('english', ?) AS tsq,
+            CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
+            ?::text AS raw,
+            ?::text AS identifier
+        ) q
+        WHERE si.tenant = ?::uuid
+          AND si.object_type = ANY(?::text[])
+          AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
+          AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+          AND (si.is_internal_only = false OR ?::boolean = true)
+          AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+          AND ${clientScopePredicate}
+          AND (
+            si.search_vector @@ q.tsq
+            OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
+            OR si.title ILIKE '%' || q.raw || '%'
+            OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
+            OR si.title % q.raw
+            OR coalesce(si.subtitle, '') % q.raw
+            OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier)
+            OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%')
+          )
+  `;
+  const legABindings: Knex.RawBinding[] = [
+    rawSearch,
+    prefixTsquery,
+    prefixTsquery,
+    rawSearch,
+    identifier,
+    tenant,
+    ['ticket', 'ticket_comment'],
+    ['ticket:read'],
+    user.user_id,
+    isInternalUser,
+    user.user_id,
+    ...clientScopeBindings,
+  ];
+
+  const legB = `
+        SELECT t2.ticket_id, t2.tenant
+        FROM tickets t2
+        WHERE t2.tenant = ?::uuid
+          AND (t2.title ILIKE ? OR t2.ticket_number ILIKE ?)
+  `;
+  const legBBindings: Knex.RawBinding[] = [tenant, ilikePattern, ilikePattern];
+
+  // Leg A also surfaces bundled-child matches under the master when bundleView='bundled':
+  // a search-index hit on a child ticket (or its comment) maps to the master ticket id.
+  let legD = '';
+  const legDBindings: Knex.RawBinding[] = [];
+  if (includeBundledChildren) {
+    legD = `
+        UNION ALL
+        SELECT child.master_ticket_id AS ticket_id, child.tenant
+        FROM app_search_index si
+        CROSS JOIN (
+          SELECT
+            websearch_to_tsquery('english', ?) AS tsq,
+            CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
+            ?::text AS raw,
+            ?::text AS identifier
+        ) q
+        JOIN tickets child
+          ON child.tenant = si.tenant
+         AND child.master_ticket_id IS NOT NULL
+         AND (
+           (si.object_type = 'ticket' AND child.ticket_id::text = si.object_id)
+           OR (si.object_type = 'ticket_comment' AND child.ticket_id::text = si.parent_id)
+         )
+        WHERE si.tenant = ?::uuid
+          AND si.object_type = ANY(?::text[])
+          AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
+          AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+          AND (si.is_internal_only = false OR ?::boolean = true)
+          AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+          AND ${clientScopePredicate}
+          AND (
+            si.search_vector @@ q.tsq
+            OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
+            OR si.title ILIKE '%' || q.raw || '%'
+            OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
+            OR si.title % q.raw
+            OR coalesce(si.subtitle, '') % q.raw
+            OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier)
+            OR (q.identifier IS NOT NULL AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%')
+          )
+
+        UNION ALL
+        SELECT tc.master_ticket_id AS ticket_id, tc.tenant
+        FROM tickets tc
+        WHERE tc.tenant = ?::uuid
+          AND tc.master_ticket_id IS NOT NULL
+          AND (tc.title ILIKE ? OR tc.ticket_number ILIKE ?)
+    `;
+    legDBindings.push(
+      rawSearch,
+      prefixTsquery,
+      prefixTsquery,
+      rawSearch,
+      identifier,
+      tenant,
+      ['ticket', 'ticket_comment'],
+      ['ticket:read'],
+      user.user_id,
+      isInternalUser,
+      user.user_id,
+      ...clientScopeBindings,
+      tenant,
+      ilikePattern,
+      ilikePattern,
+    );
+  }
+
+  const unionSql = `
+    INNER JOIN (
+      SELECT DISTINCT ticket_id, tenant FROM (
+        ${legA}
+        UNION ALL
+        ${legB}
+        ${legD}
+      ) u
+    ) as sm ON sm.ticket_id = t.ticket_id AND sm.tenant = t.tenant
+  `;
+
+  return baseQuery.joinRaw(unionSql, [
+    ...legABindings,
+    ...legBBindings,
+    ...legDBindings,
+  ] as unknown as Knex.Value[]);
 }
 
 /**
@@ -1636,6 +1802,54 @@ export const getAllMatchingTicketIds = withAuth(async (
 });
 
 /**
+ * Resolve the board for a specific set of ticket ids, scoped to what the caller is
+ * authorized to see. Used by the list's bulk action bar to determine whether a
+ * selection that spans off-page rows (paginate-then-select or select-all-matching)
+ * shares a single board, so the Status action can stay enabled. Tickets the caller
+ * can't access are simply omitted from the result.
+ */
+export const getTicketBoardIds = withAuth(async (
+  user,
+  { tenant },
+  ticketIds: string[]
+): Promise<Array<{ ticket_id: string; board_id: string | null }>> => {
+  const uniqueIds = Array.from(
+    new Set(ticketIds.filter((id): id is string => typeof id === 'string' && id.length > 0))
+  );
+  if (uniqueIds.length === 0) {
+    return [];
+  }
+
+  const { knex: db } = await createTenantKnex();
+
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      throw new Error('Permission denied: Cannot view tickets');
+    }
+
+    const authorizationContext = await createTicketAuthorizationContext(
+      trx,
+      tenant,
+      user as IUserWithRoles
+    );
+
+    const rows = await trx('tickets as t')
+      .where('t.tenant', tenant)
+      .whereIn('t.ticket_id', uniqueIds)
+      .select('t.ticket_id', 't.entered_by', 't.assigned_to', 't.client_id', 't.board_id', 't.assigned_team_id');
+
+    const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, rows);
+    return authorizedRows
+      .filter((row: { ticket_id?: string | null }): row is { ticket_id: string; board_id?: string | null } =>
+        typeof row.ticket_id === 'string' && row.ticket_id.length > 0)
+      .map((row) => ({
+        ticket_id: row.ticket_id,
+        board_id: row.board_id ?? null,
+      }));
+  });
+});
+
+/**
  * Get all options needed for ticket forms and filters
  * This consolidates multiple API calls into a single request
  */
@@ -1785,14 +1999,20 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
 /**
  * Update ticket with proper caching
  */
-export const updateTicketWithCache = withAuth(async (user, { tenant }, id: string, data: Partial<ITicket>) => {
-  const {knex: db} = await createTenantKnex();
-
-  return withTransaction(db, async (trx) => {
-    if (!await hasPermission(user, 'ticket', 'update', trx)) {
-      throw new Error('Permission denied: Cannot update ticket');
-    }
-
+/**
+ * Core ticket-update logic, executed inside a caller-provided transaction.
+ *
+ * Intentionally does NOT check permissions — callers must authorize first. The public
+ * `updateTicketWithCache` wrapper performs the `ticket:update` check; bulk callers hoist
+ * a single check and reuse this core per ticket, avoiding one permission lookup per row.
+ */
+export async function updateTicketInTransaction(
+  trx: Knex.Transaction,
+  user: IUserWithRoles,
+  tenant: string,
+  id: string,
+  data: Partial<ITicket>,
+): Promise<'success'> {
     try {
       // Validate update data
       const validatedData = validateData(ticketUpdateSchema, data);
@@ -2330,6 +2550,17 @@ export const updateTicketWithCache = withAuth(async (user, { tenant }, id: strin
       }
       throw new Error('Failed to update ticket');
     }
+}
+
+export const updateTicketWithCache = withAuth(async (user, { tenant }, id: string, data: Partial<ITicket>) => {
+  const { knex: db } = await createTenantKnex();
+
+  return withTransaction(db, async (trx) => {
+    if (!await hasPermission(user, 'ticket', 'update', trx)) {
+      throw new Error('Permission denied: Cannot update ticket');
+    }
+
+    return updateTicketInTransaction(trx, user as IUserWithRoles, tenant, id, data);
   });
 });
 
@@ -2391,17 +2622,45 @@ export const addTicketCommentWithCache = withAuth(async (
       markdownContent = "[Error converting content to markdown]";
     }
     
-    // Insert comment with markdown_content
+    // Insert comment with markdown_content. comments.thread_id is NOT NULL, so
+    // create the thread row first using IDs generated up-front.
+    const idsResult = await trx.raw(
+      'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
+    );
+    const generatedIds = idsResult.rows?.[0] as { comment_id: string; thread_id: string } | undefined;
+    if (!generatedIds?.comment_id || !generatedIds?.thread_id) {
+      throw new Error('Failed to generate comment/thread identifiers');
+    }
+    const newCommentId = generatedIds.comment_id;
+    const threadId = generatedIds.thread_id;
+    const effectiveIsInternal = authorType === 'internal' ? isInternal : false;
+    const nowIso = new Date().toISOString();
+
+    await trx('comment_threads').insert({
+      tenant,
+      thread_id: threadId,
+      ticket_id: ticketId,
+      project_task_id: null,
+      root_comment_id: newCommentId,
+      is_internal: effectiveIsInternal,
+      reply_count: 0,
+      last_activity_at: nowIso,
+      created_at: nowIso,
+      created_by: user.user_id || null,
+    });
+
     const [newComment] = await trx('comments').insert({
       tenant,
+      comment_id: newCommentId,
+      thread_id: threadId,
       ticket_id: ticketId,
       user_id: user.user_id,
       author_type: authorType,
       note: content,
-      is_internal: authorType === 'internal' ? isInternal : false,
+      is_internal: effectiveIsInternal,
       is_resolution: isResolution,
-      markdown_content: markdownContent, // Add markdown content
-      created_at: new Date().toISOString()
+      markdown_content: markdownContent,
+      created_at: nowIso,
     }).returning('*');
 
     // Update ticket response state based on comment visibility and author (F005-F008)
@@ -2435,44 +2694,65 @@ export const addTicketCommentWithCache = withAuth(async (
 
         const now = new Date().toISOString();
         for (const child of children) {
-          await trx.raw(
-            `
-            WITH existing AS (
-              SELECT 1
-              FROM ticket_bundle_mirrors
-              WHERE tenant = ?
-                AND source_comment_id = ?
-                AND child_ticket_id = ?
-              LIMIT 1
-            ),
-            ins_comment AS (
-              INSERT INTO comments (
-                tenant,
-                ticket_id,
-                user_id,
-                author_type,
-                note,
-                is_internal,
-                is_resolution,
-                is_system_generated,
-                markdown_content,
-                created_at
-              )
-              SELECT ?, ?, NULL, 'unknown', ?, false, ?, true, ?, ?
-              WHERE NOT EXISTS (SELECT 1 FROM existing)
-              RETURNING comment_id
-            )
-            INSERT INTO ticket_bundle_mirrors (tenant, source_comment_id, child_ticket_id, child_comment_id)
-            SELECT ?, ?, ?, comment_id
-            FROM ins_comment
-            ON CONFLICT DO NOTHING;
-            `,
-            [
-              tenant, newComment.comment_id, child.ticket_id,
-              tenant, child.ticket_id, content, isResolution, markdownContent, now,
-              tenant, newComment.comment_id, child.ticket_id
-            ]
+          const existingMirror = await trx('ticket_bundle_mirrors')
+            .where({
+              tenant,
+              source_comment_id: newComment.comment_id,
+              child_ticket_id: child.ticket_id,
+            })
+            .first();
+
+          if (existingMirror) {
+            continue;
+          }
+
+          const childIds = await trx.raw(
+            'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
           );
+          const childGenerated = childIds.rows?.[0] as
+            | { comment_id: string; thread_id: string }
+            | undefined;
+          if (!childGenerated?.comment_id || !childGenerated?.thread_id) {
+            throw new Error('Failed to generate mirrored comment/thread identifiers');
+          }
+
+          await trx('comment_threads').insert({
+            tenant,
+            thread_id: childGenerated.thread_id,
+            ticket_id: child.ticket_id,
+            project_task_id: null,
+            root_comment_id: childGenerated.comment_id,
+            is_internal: false,
+            reply_count: 0,
+            last_activity_at: now,
+            created_at: now,
+            created_by: null,
+          });
+
+          await trx('comments').insert({
+            tenant,
+            comment_id: childGenerated.comment_id,
+            thread_id: childGenerated.thread_id,
+            ticket_id: child.ticket_id,
+            user_id: null,
+            author_type: 'unknown',
+            note: content,
+            is_internal: false,
+            is_resolution: isResolution,
+            is_system_generated: true,
+            markdown_content: markdownContent,
+            created_at: now,
+          });
+
+          await trx('ticket_bundle_mirrors')
+            .insert({
+              tenant,
+              source_comment_id: newComment.comment_id,
+              child_ticket_id: child.ticket_id,
+              child_comment_id: childGenerated.comment_id,
+            })
+            .onConflict()
+            .ignore();
         }
       }
     }

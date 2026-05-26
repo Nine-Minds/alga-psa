@@ -25,13 +25,13 @@ import {
   HelpCircle,
   Home,
   KeyRound,
-  Layers,
+  Layers3,
   LayoutDashboard,
   LayoutTemplate,
+  ListTodo,
   ListTree,
   Mail,
   MapPin,
-  MessageSquare,
   Monitor,
   Package,
   Percent,
@@ -43,11 +43,13 @@ import {
   Settings,
   Shield,
   SlidersHorizontal,
+  SquareDashedKanban,
   Timer,
   User,
   UserCog,
   Users,
-  Star
+  Star,
+  Ticket
 } from 'lucide-react';
 
 // Navigation modes for the unified sidebar
@@ -88,7 +90,7 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'Tickets',
         translationKey: 'nav.tickets',
-        icon: MessageSquare,
+        icon: Ticket,
         href: '/msp/tickets'
       },
       {
@@ -106,10 +108,10 @@ export const navigationSections: NavigationSection[] = [
       {
         name: 'Projects',
         translationKey: 'nav.projects',
-        icon: Layers,
+        icon: ListTodo,
         subItems: [
-          { name: 'All Projects', translationKey: 'nav.projectsAll', icon: Layers, href: '/msp/projects' },
-          { name: 'Templates', translationKey: 'nav.projectsTemplates', icon: FileText, href: '/msp/projects/templates' }
+          { name: 'All Projects', translationKey: 'nav.projectsAll', icon: ListTodo, href: '/msp/projects' },
+          { name: 'Templates', translationKey: 'nav.projectsTemplates', icon: SquareDashedKanban, href: '/msp/projects/templates' }
         ]
       },
       {
@@ -138,6 +140,12 @@ export const navigationSections: NavigationSection[] = [
         translationKey: 'nav.assets',
         icon: Monitor,
         href: '/msp/assets'
+      },
+      {
+        name: 'Reports',
+        translationKey: 'nav.billing.reports',
+        icon: FileBarChart,
+        href: '/msp/reports'
       },
       {
         name: 'Time Management',
@@ -234,10 +242,9 @@ export const settingsNavigationSections: NavigationSection[] = [
     title: 'Work Management',
     translationKey: 'settings.sections.workManagement',
     items: [
-      { name: 'Ticketing', translationKey: 'settings.tabs.ticketing', icon: MessageSquare, href: '/msp/settings?tab=ticketing' },
-      { name: 'Knowledge Base', translationKey: 'settings.tabs.knowledgeBase', icon: BookOpen, href: '/msp/settings?tab=knowledge-base' },
+      { name: 'Ticketing', translationKey: 'settings.tabs.ticketing', icon: Ticket, href: '/msp/settings?tab=ticketing' },
       { name: 'SLA', translationKey: 'settings.tabs.sla', icon: Timer, href: '/msp/settings/sla' },
-      { name: 'Projects', translationKey: 'settings.tabs.projects', icon: Layers, href: '/msp/settings?tab=projects' },
+      { name: 'Projects', translationKey: 'settings.tabs.projects', icon: ListTodo, href: '/msp/settings?tab=projects' },
       { name: 'Interactions', translationKey: 'settings.tabs.interactions', icon: Handshake, href: '/msp/settings?tab=interactions' },
     ]
   },
@@ -320,7 +327,8 @@ export const billingNavigationSections: NavigationSection[] = [
     title: 'Pricing',
     translationKey: 'nav.billing.sections.pricing',
     items: [
-      { name: 'Service Catalog', translationKey: 'nav.billing.serviceCatalog', icon: Package, href: '/msp/billing?tab=service-catalog' },
+      { name: 'Service Types', translationKey: 'nav.billing.serviceTypes', icon: Layers3, href: '/msp/billing?tab=service-types' },
+      { name: 'Services', translationKey: 'nav.billing.serviceCatalog', icon: Package, href: '/msp/billing?tab=service-catalog' },
       { name: 'Products', translationKey: 'nav.billing.products', icon: Package, href: '/msp/billing?tab=products' },
       { name: 'Tax Rates', translationKey: 'nav.billing.taxRates', icon: Percent, href: '/msp/billing?tab=tax-rates' },
     ]

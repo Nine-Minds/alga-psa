@@ -39,6 +39,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { resolveQuickAddBehavior } from './quickAddUtils';
+import { getTimeEntryWorkDate } from './utils';
 
 const TIMESHEET_VIEW_MODE_SETTING = 'timesheet_view_mode';
 
@@ -367,7 +368,7 @@ export function TimeSheet({
             }
 
             const matchingEntries = entries.filter((entry) => {
-                const entryDate = entry.work_date?.slice(0, 10) ?? toDateOnlyString(entry.start_time);
+                const entryDate = getTimeEntryWorkDate(entry);
                 return entry.work_item_id === currentFilter.workItemId &&
                     entryDate === currentFilter.date &&
                     typeof entry.entry_id === 'string' &&
@@ -509,9 +510,7 @@ export function TimeSheet({
         // Get entries for this date to check for overlaps
         const entriesForDate = (groupedTimeEntries[workItem.work_item_id] || [])
             .filter(entry => {
-                const entryWorkDate = entry.work_date?.slice(0, 10);
-                if (entryWorkDate) return entryWorkDate === workDate;
-                return parseISO(entry.start_time).toDateString() === startTime.toDateString();
+                return getTimeEntryWorkDate(entry) === workDate;
             });
 
         // If there are existing entries for this date, start after the last one

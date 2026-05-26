@@ -40,7 +40,14 @@
     "duplicate": "Duplica",
     "openMenu": "Apri menu",
     "confirmDeletion": "Conferma eliminazione",
-    "saving": "Salvataggio..."
+    "saving": "Salvataggio...",
+    "print": "Stampa",
+    "printSelected_one": "Stampa selezionato ({{count}})",
+    "printSelected_other": "Stampa selezionati ({{count}})",
+    "printOptions": "Opzioni di stampa",
+    "resetPrintOptions": "Reimposta opzioni di stampa",
+    "share": "Condividi",
+    "done": "Fatto"
   },
   "status": {
     "loading": "Caricamento...",
@@ -311,6 +318,13 @@
         "description": "Fai clic su \"Aggiungi sede\" per iniziare"
       }
     }
+  },
+  "commentThread": {
+    "replies_one": "{{count}} risposta",
+    "replies_other": "{{count}} risposte",
+    "collapse": "Comprimi",
+    "expand": "Espandi",
+    "showInDrawer": "Mostra nel pannello"
   },
   "pagination": {
     "previous": "Precedente",
@@ -1131,5 +1145,36 @@
       "keepYours": "Mantieni il tuo",
       "takeTheirs": "Usa quello remoto"
     }
+  },
+  "labels": {
+    "printColumns": "Colonne di stampa"
+  },
+  "deleteEntity": {
+    "checkingDependenciesTitle": "Verifica delle dipendenze",
+    "deleteTitle": "Elimina {{entityName}}",
+    "cannotDeleteTitle": "Impossibile eliminare",
+    "deleting": "Eliminazione...",
+    "checkingDependenciesMessage": "Verifica delle dipendenze...",
+    "fallbackBlockMessage": "Rimuovi o riassegna questi elementi prima di eliminare.",
+    "confirmationMessage": "Sei sicuro di voler eliminare \"{{entityName}}\"? Questa azione non può essere annullata.",
+    "alternatives": {
+      "deactivate": {
+        "label": "Segna come inattivo",
+        "description": "Disattiva il record senza eliminarne i dati.",
+        "warning": "I record inattivi non saranno più selezionabili nei nuovi flussi di lavoro."
+      },
+      "archive": {
+        "label": "Archivia",
+        "description": "Sposta il record fuori dall’uso attivo preservando la cronologia.",
+        "warning": "I record archiviati sono nascosti nelle viste predefinite."
+      }
+    }
+  },
+  "dataTable": {
+    "columnsHidden_one": "{{count}} colonna nascosta per spazio limitato.",
+    "columnsHidden_other": "{{count}} colonne nascoste per spazio limitato.",
+    "showAll": "Mostra tutto",
+    "showingAllColumns": "Vengono mostrate tutte le colonne; scorri orizzontalmente per vederle.",
+    "showLess": "Mostra meno"
   }
 }

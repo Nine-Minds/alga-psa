@@ -32,6 +32,144 @@
         "title": "55555",
         "placeholder": "55555"
       }
+    },
+    "description": "55555",
+    "categories": {
+      "helpdesk": "55555",
+      "operations": "55555",
+      "billing": "55555"
+    },
+    "badges": {
+      "planned": "55555"
+    },
+    "actions": {
+      "viewReport": "55555",
+      "openInBilling": "55555",
+      "requiresTier": "55555 {{tier}} 55555",
+      "comingSoon": "55555"
+    },
+    "errors": {
+      "loadReport": "55555"
+    },
+    "empty": {
+      "noData": "55555",
+      "noOpenTicketsInRange": "55555",
+      "noDate": "55555",
+      "notAvailable": "55555",
+      "noEmailChannels": "55555"
+    },
+    "fallbackTitle": "55555",
+    "dateRange": {
+      "lastDays": "55555 {{count}} 55555"
+    },
+    "units": {
+      "daysWithCount": "55555 {{count}} 55555"
+    },
+    "metrics": {
+      "created": "55555",
+      "closed": "55555",
+      "openNow": "55555",
+      "awaitingCustomer": "55555",
+      "awaitingInternal": "55555",
+      "under2Days": "55555",
+      "days2To7": "55555",
+      "days8To30": "55555",
+      "over30Days": "55555",
+      "activeChannels": "55555",
+      "healthyChannels": "55555",
+      "problemChannels": "55555",
+      "emailsProcessed": "55555",
+      "ticketsFromEmail": "55555",
+      "failedEmails": "55555",
+      "avgProcessingTime": "55555",
+      "avgTicketCreationTime": "55555",
+      "totalHours": "55555",
+      "billableHours": "55555",
+      "nonBillableHours": "55555",
+      "billablePercent": "55555",
+      "timeEntries": "55555",
+      "activeContracts": "55555",
+      "monthlyRecurring": "55555",
+      "renewalsDue": "55555",
+      "bucketUsedHours": "55555",
+      "bucketOverageHours": "55555",
+      "openAssigned": "55555",
+      "activeAssignees": "55555",
+      "avgResolutionTime": "55555"
+    },
+    "sections": {
+      "openByStatus": "55555",
+      "openByPriority": "55555",
+      "openByAssignee": "55555",
+      "ageDistribution": "55555",
+      "responseOwnership": "55555",
+      "oldestOpenTickets": "55555",
+      "emailProcessingStatus": "55555",
+      "emailChannels": "55555",
+      "timeByUser": "55555",
+      "billableHoursByService": "55555",
+      "entriesByWorkType": "55555",
+      "contractRevenue": "55555",
+      "upcomingRenewals": "55555",
+      "bucketUsage": "55555",
+      "performanceByAssignee": "55555",
+      "closedByAssignee": "55555"
+    },
+    "reportCatalog": {
+      "ticketWorkload": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "ticketAging": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "emailChannelHealth": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "timeUtilization": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "teamPerformance": {
+        "title": "55555",
+        "description": "55555"
+      },
+      "contractReports": {
+        "title": "55555",
+        "description": "55555"
+      }
+    },
+    "table": {
+      "channel": "55555",
+      "status": "55555",
+      "processed": "55555",
+      "tickets": "55555",
+      "avgEmailToTicket": "55555",
+      "assignee": "55555",
+      "created": "55555",
+      "closed": "55555",
+      "open": "55555",
+      "avgResolution": "55555",
+      "user": "55555",
+      "totalHours": "55555",
+      "billableHours": "55555",
+      "entries": "55555",
+      "ticket": "55555",
+      "entered": "55555",
+      "age": "55555"
+    },
+    "statusValues": {
+      "connected": "55555",
+      "disconnected": "55555",
+      "error": "55555",
+      "configuring": "55555",
+      "unknown": "55555",
+      "success": "55555",
+      "failed": "55555",
+      "partial": "55555",
+      "processing": "55555"
     }
   },
   "contractReports": {

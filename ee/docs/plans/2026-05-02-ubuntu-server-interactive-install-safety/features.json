@@ -1,0 +1,154 @@
+[
+  {
+    "id": "F001",
+    "description": "Brand the install media boot entry as AlgaPSA Install and keep the Ubuntu Server install path available.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "UX / UI Notes",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Label the ISO / install artifact so it is identifiable as an Alga PSA appliance image.",
+    "implemented": true,
+    "prdRefs": [
+      "Summary",
+      "UX / UI Notes",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Keep the installer on the Ubuntu Server/Subiquity path instead of switching to a desktop installer.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Non-goals",
+      "Users and Primary Flows"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Require explicit user confirmation before destructive disk operations during installation.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem",
+      "Goals",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Keep the bundled appliance payload on the ISO so installation works offline.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements",
+      "Data / API / Integration Notes"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Copy the bundled Alga appliance files into the target OS at install time.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Functional Requirements",
+      "Data / API / Integration Notes"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Enable the appliance systemd services and required persistence paths on the installed system.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data / API / Integration Notes"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Ensure a completed install boots the installed disk first even if the ISO remains attached.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements",
+      "Risks / Constraints"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Prevent the installer from looping back into a fresh install on subsequent boots after a successful install.",
+    "implemented": true,
+    "prdRefs": [
+      "Problem",
+      "Functional Requirements",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Preserve existing appliance setup/status behavior after installation completes.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Keep ISO generation and VM smoke build paths working for offline validation.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Rollout / Migration",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Serve the appliance setup/status experience from the packaged Next.js App Router UI instead of raw host-service HTML when the built UI is present.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "Load setup defaults, detected network data, and status diagnostics asynchronously with skeleton loading states.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Acceptance Criteria"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Expose JSON setup APIs for the React UI while preserving the existing host-service setup workflow.",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integration Notes"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Build and stage the status UI bundle during ISO artifact staging so the installed appliance serves the latest UI.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Make network configuration interactive in the Ubuntu Server installer in addition to storage confirmation.",
+    "implemented": true,
+    "prdRefs": [
+      "Goals",
+      "Functional Requirements"
+    ]
+  }
+]

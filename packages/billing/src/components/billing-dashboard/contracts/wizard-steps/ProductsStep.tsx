@@ -161,7 +161,7 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
                     />
                   </div>
 
-                  <div className="flex items-end gap-4 flex-wrap">
+                  <div className="flex items-start gap-4 flex-wrap">
                     <div className="space-y-2">
                       <Label htmlFor={`product-quantity-${index}`} className="text-sm">
                         {t('wizardProducts.labels.quantity', { defaultValue: 'Quantity' })}

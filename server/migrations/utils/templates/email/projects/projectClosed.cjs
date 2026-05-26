@@ -140,7 +140,7 @@ function buildBodyHtml(c) {
                 </table>
                 <div style="margin:28px 0 16px 0;padding:18px 20px;border-radius:12px;background:${INFO_BOX_BG};border:1px solid ${INFO_BOX_BORDER};">
                   <div style="font-weight:600;color:${BRAND_DARK};margin-bottom:8px;">${c.changes}</div>
-                  <div style="color:#475467;line-height:1.5;">{{project.changes}}</div>
+                  <div style="color:#475467;line-height:1.5;">{{{project.changes}}}</div>
                 </div>
                 <a href="{{project.url}}" style="display:inline-block;background:${BRAND_PRIMARY};color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">${c.viewButton}</a>`;
 }

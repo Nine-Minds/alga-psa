@@ -37,7 +37,7 @@
     "heading": "Contacten",
     "addContact": "+ Contact toevoegen",
     "actions": "Acties",
-    "searchPlaceholder": "Zoek contacten",
+    "searchPlaceholder": "Zoek contacten, notities en interacties",
     "resetFilters": "Opnieuw instellen",
     "unknownClient": "Onbekende klant",
     "noClient": "Geen klant",
@@ -68,7 +68,25 @@
       "message": "De volgende aangepaste telefoonsoort{{suffix}} wordt niet langer door een contact gebruikt: {{labels}}. Wil je de soortdefinitie verwijderen{{definitionSuffix}} of behouden voor toekomstig gebruik?",
       "deleteType": "Soort verwijderen",
       "keepType": "Soort behouden"
-    }
+    },
+    "print": {
+      "title": "Contacten",
+      "subtitle": "{{count}} contacten",
+      "noContacts": "Geen contacten om af te drukken",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Naam",
+        "email": "E-mail",
+        "phone": "Telefoon",
+        "client": "Klant",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Afdrukopties",
+        "description": "Kies welke kolommen worden opgenomen bij het afdrukken van contactpersonen."
+      }
+    },
+    "shareTooltip": "Afdrukken, importeren en exporteren"
   },
   "contactDetails": {
     "title": "Contactdetails",
@@ -96,7 +114,8 @@
       "useClientDestination": "Gebruik klantbestemming",
       "inboundTicketDestinationHelp": "Indien ingesteld, overschrijft dit de klantbestemming voor precies deze afzender. Voorrang: contactoverschrijving -> klantbestemming -> standaard van provider.",
       "tags": "Labels",
-      "notes": "Notities"
+      "notes": "Notities",
+      "status": "Status"
     },
     "status": {
       "label": "Status",

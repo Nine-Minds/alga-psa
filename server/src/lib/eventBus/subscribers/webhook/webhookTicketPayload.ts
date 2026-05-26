@@ -156,58 +156,6 @@ export function clearTicketWebhookPayloadCache(): void {
   ticketWebhookCache.clear();
 }
 
-/**
- * Per-entity always-required correlation keys. These never get stripped
- * regardless of the user's allowlist.
- */
-const ALWAYS_INCLUDED_KEYS_BY_ENTITY: Record<string, readonly string[]> = {
-  ticket: ['ticket_id'],
-};
-
-/**
- * Project a fully-built webhook payload down to a per-subscriber field
- * allowlist for the given entity. Returns the original payload unchanged
- * when `allowedFields` is null (the default — no filtering, full payload).
- *
- * The entity's correlation key (e.g. `ticket_id` for tickets) is always
- * retained regardless of whether the consumer included it in their
- * selection.
- */
-export function projectWebhookPayload<T extends Record<string, unknown>>(
-  entity: string,
-  payload: T,
-  allowedFields: string[] | null,
-): T {
-  if (allowedFields === null) {
-    return payload;
-  }
-
-  const allowed = new Set<string>(allowedFields);
-  for (const key of ALWAYS_INCLUDED_KEYS_BY_ENTITY[entity] ?? []) {
-    allowed.add(key);
-  }
-
-  const projected: Record<string, unknown> = {};
-  for (const key of Object.keys(payload)) {
-    if (allowed.has(key)) {
-      projected[key] = payload[key];
-    }
-  }
-
-  return projected as T;
-}
-
-/**
- * @deprecated Use `projectWebhookPayload('ticket', payload, allowedFields)`.
- * Kept as a thin shim so callers and tests can migrate without churn.
- */
-export function projectTicketWebhookPayload(
-  payload: TicketWebhookPayload,
-  allowedFields: string[] | null,
-): TicketWebhookPayload {
-  return projectWebhookPayload('ticket', payload, allowedFields);
-}
-
 async function getCachedTicketWebhookPayload(
   knex: Knex,
   tenantId: string,

@@ -27,6 +27,7 @@ import { resourceFromAttributes } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-grpc';
+import { Metadata } from '@grpc/grpc-js';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { getAppVersion } from '../utils/version';
 import { SpanProcessor, Span, BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
@@ -136,19 +137,19 @@ export async function initializeTelemetry(): Promise<void> {
 
     // Basic observability without complex permission management
 
-    // Create OTLP exporters for Grafana Alloy
+    const metadata = new Metadata();
+    if (process.env.DEPLOYMENT_ID) {
+      metadata.set('X-Deployment-Id', process.env.DEPLOYMENT_ID);
+    }
+
     const traceExporter = new OTLPTraceExporter({
-      url: `${endpoint}/v1/traces`,  // Add OTLP traces path
-      headers: process.env.DEPLOYMENT_ID ? {
-        'X-Deployment-Id': process.env.DEPLOYMENT_ID,
-      } : {},
+      url: `${endpoint}/v1/traces`,
+      metadata,
     });
 
     const metricExporter = new OTLPMetricExporter({
-      url: `${endpoint}/v1/metrics`,  // Add OTLP metrics path
-      headers: process.env.DEPLOYMENT_ID ? {
-        'X-Deployment-Id': process.env.DEPLOYMENT_ID,
-      } : {},
+      url: `${endpoint}/v1/metrics`,
+      metadata,
     });
 
     // Create resource with service information

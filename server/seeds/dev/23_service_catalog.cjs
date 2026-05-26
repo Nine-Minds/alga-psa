@@ -1,10 +1,3 @@
-const resolveBillingMethod = (typeName, fallbackMethod) => {
-    if (typeName === 'Hourly Time') return 'hourly';
-    if (typeName === 'Usage Based') return 'usage';
-    if (typeName === 'Fixed Price') return 'fixed';
-    return fallbackMethod || 'usage';
-};
-
 exports.seed = async function (knex) { // Changed to async function
     const tenantInfo = await knex('tenants').select('tenant').first();
     if (!tenantInfo) return;
@@ -32,10 +25,10 @@ exports.seed = async function (knex) { // Changed to async function
         console.warn(`[SEED 23_service_catalog] Tenant ${tenantId} is missing required service types: ${missingTypes.join(', ')}. Attempting to create them...`);
 
         try {
-            // Fetch the standard type IDs and billing_method for the missing types
+            // Fetch the standard type IDs for the missing types
             const standardTypesToCreate = await knex('standard_service_types')
                 .whereIn('name', missingTypes)
-                .select('id', 'name', 'billing_method');
+                .select('id', 'name');
 
             if (standardTypesToCreate.length !== missingTypes.length) {
                 const foundStdNames = standardTypesToCreate.map(st => st.name);
@@ -49,7 +42,6 @@ exports.seed = async function (knex) { // Changed to async function
                 name: stdType.name,
                 standard_service_type_id: stdType.id,
                 is_active: true,
-                billing_method: resolveBillingMethod(stdType.name, stdType.billing_method),
             }));
 
             // Insert missing types, ignoring conflicts just in case
@@ -64,7 +56,7 @@ exports.seed = async function (knex) { // Changed to async function
                 const updatedServiceTypes = await knex('service_types')
                     .where({ tenant: tenantId })
                     .whereIn('name', requiredTypes)
-                    .select('id', 'name', 'billing_method');
+                    .select('id', 'name');
 
                 // Re-populate the typeMap
                 typeMap = updatedServiceTypes.reduce((map, type) => {

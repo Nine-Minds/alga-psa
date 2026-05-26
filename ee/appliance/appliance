@@ -2,4 +2,20 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+
+if [[ "${ALGA_APPLIANCE_ALLOW_LEGACY_TALOS:-0}" != "1" ]]; then
+  cat >&2 <<'EOF'
+The Talos appliance operator is a legacy/internal path.
+Supported v1 customer appliance installs use the Ubuntu appliance setup/status service on port 8080.
+
+Use:
+  http://<node-ip>:8080/setup
+  http://<node-ip>:8080
+
+For support/engineering use of legacy Talos tooling, re-run with:
+  ALGA_APPLIANCE_ALLOW_LEGACY_TALOS=1 ee/appliance/appliance <command>
+EOF
+  exit 2
+fi
+
 exec node "$SCRIPT_DIR/operator/appliance.mjs" "$@"

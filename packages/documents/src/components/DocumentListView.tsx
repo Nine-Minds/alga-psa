@@ -6,6 +6,7 @@ import { formatBytes, formatDate } from '@alga-psa/core/formatters';
 import { FileIcon, Download, Trash2, Share2, Link2 } from 'lucide-react';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import VisibilityToggle from './VisibilityToggle';
 
@@ -37,16 +38,12 @@ export default function DocumentListView({
   documentsWithShareLinks
 }: DocumentListViewProps) {
   const { t } = useTranslation('common');
-
-  function toggleSelection(documentId: string) {
-    const newSelected = new Set(selectedDocuments);
-    if (newSelected.has(documentId)) {
-      newSelected.delete(documentId);
-    } else {
-      newSelected.add(documentId);
-    }
-    onSelectionChange(newSelected);
-  }
+  const rangeSelect = useRangeSelection<IDocument>({
+    items: documents,
+    getId: (document) => document.document_id,
+    selectedIds: selectedDocuments,
+    onSelectedIdsChange: onSelectionChange,
+  });
 
   function toggleSelectAll() {
     if (selectedDocuments.size === documents.length) {
@@ -100,8 +97,18 @@ export default function DocumentListView({
               <TableCell onClick={(e) => e.stopPropagation()}>
                 <Checkbox
                   id={`document-checkbox-${doc.document_id}`}
-                  checked={selectedDocuments.has(doc.document_id)}
-                  onChange={() => toggleSelection(doc.document_id)}
+                  checked={rangeSelect.isSelected(doc.document_id)}
+                  onClick={(event: React.MouseEvent<HTMLInputElement>) => {
+                    event.stopPropagation();
+                    const isChecked = rangeSelect.isSelected(doc.document_id);
+                    rangeSelect.handleSelect(doc.document_id, {
+                      shiftKey: event.shiftKey,
+                      selected: !isChecked,
+                      preventDefault: () => event.preventDefault(),
+                    });
+                    event.preventDefault();
+                  }}
+                  onChange={() => { /* controlled via onClick for shift-range support */ }}
                 />
               </TableCell>
               <TableCell>

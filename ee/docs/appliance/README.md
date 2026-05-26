@@ -1,34 +1,26 @@
 # Alga PSA Appliance Docs
 
-This section is the user-facing documentation set for operating the Alga PSA appliance.
+This section is the supported Ubuntu appliance documentation set.
 
-It is written for technical IT administrators and MSP technicians who need to install, operate, support, and understand the appliance without digging through internal repo structure first.
+Ubuntu Server 24.04 LTS is the supported appliance OS path for v1. Talos appliance artifacts remain legacy/internal and are not the default customer install path.
 
 ## Documents
 
 - `quick-start.md`
-  - Fast path from release artifact to first login.
+  - ISO boot to first login via host setup/status service on port `8080`.
 - `operators-manual.md`
-  - Day-2 operation: status, workloads, logs, upgrades, resets, and support bundles.
+  - Day-2 operation: status, diagnostics, support bundles, and app-channel updates.
 - `technical-reference.md`
-  - Appliance architecture, release model, storage, networking, Flux, and config layout.
+  - Architecture and deeper implementation details.
 
 ## Reading Order
 
-Use this order for most operators:
+1. Read `quick-start.md` for first install on VMware ESXi/cloud VM.
+2. Use `operators-manual.md` for support and updates.
+3. Use `technical-reference.md` for internals.
 
-1. Read `quick-start.md` for first install.
-2. Use `operators-manual.md` for normal operation and troubleshooting.
-3. Use `technical-reference.md` when you need to understand how the appliance is put together.
+## Support Boundary
 
-## Related Deeper Reference
-
-The docs in `ee/docs/premise/` remain the generic Talos appliance platform references. Use them when you need more detail on the underlying Talos and GitOps model.
-
-- `../premise/README.md`
-- `../premise/talos-release-model.md`
-- `../premise/talos-host-configuration.md`
-- `../premise/talos-gitops-bootstrap.md`
-- `../premise/talos-alga-bootstrap-and-persistence.md`
-- `../premise/talos-support-bundles.md`
-- `../premise/talos-operations-and-troubleshooting.md`
+- Supported v1 update automation: Alga app-channel updates (`stable`/`nightly`) through host status UI.
+- Not automated in v1: Ubuntu package updates and k3s version upgrades.
+- v2 direction: managed maintenance windows for OS/k3s upgrades, with preflight, history, and remediation guidance.

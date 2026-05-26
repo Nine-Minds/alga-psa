@@ -78,7 +78,12 @@ export async function enforceApiRateLimit(
   }
 
   const subjectId = context.rateLimitSubjectId ?? context.apiKeyId;
-  const bucketConfig = await apiRateLimitConfigGetter(context.tenant, subjectId);
+  // The config lookup keys off api_key_id (a uuid column). rateLimitSubjectId
+  // is a free-form bucket identity (e.g. 'nm_store' for the NM store global
+  // key) and is not a uuid, so only the real apiKeyId may drive the config
+  // lookup. When absent, resolveApiRateLimitConfig() falls back to the tenant
+  // default. subjectId remains the token-bucket identity string.
+  const bucketConfig = await apiRateLimitConfigGetter(context.tenant, context.apiKeyId);
   const result = await TokenBucketRateLimiter.getInstance().tryConsume('api', context.tenant, subjectId);
 
   const retryAfterMs = result.retryAfterMs;

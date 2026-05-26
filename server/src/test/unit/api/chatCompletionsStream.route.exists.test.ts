@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server';
 const isExperimentalFeatureEnabledMock = vi.hoisted(() =>
   vi.fn<(featureKey: string) => Promise<boolean>>(),
 );
+const getCurrentUserMock = vi.hoisted(() => vi.fn());
 
 const createStructuredCompletionStreamMock = vi.hoisted(() =>
   vi.fn<
@@ -18,6 +19,10 @@ vi.mock('@alga-psa/tenancy/actions', () => ({
   isExperimentalFeatureEnabled: isExperimentalFeatureEnabledMock,
 }));
 
+vi.mock('@alga-psa/user-composition/actions', () => ({
+  getCurrentUser: getCurrentUserMock,
+}));
+
 vi.mock('@product/chat/entry', () => ({
   ChatCompletionsService: {
     createStructuredCompletionStream: createStructuredCompletionStreamMock,
@@ -30,6 +35,8 @@ describe('POST /api/chat/v1/completions/stream', () => {
 
   beforeEach(() => {
     isExperimentalFeatureEnabledMock.mockReset();
+    getCurrentUserMock.mockReset();
+    getCurrentUserMock.mockResolvedValue({ tenant: 'tenant-1', user_id: 'user-1' });
     createStructuredCompletionStreamMock.mockReset();
     process.env.EDITION = 'ee';
     delete process.env.NEXT_PUBLIC_EDITION;

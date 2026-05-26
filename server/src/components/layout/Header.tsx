@@ -39,6 +39,9 @@ import { ThemeToggle } from '@alga-psa/ui/components/ThemeToggle';
 import { TrialBanner } from './TrialBanner';
 import { PaymentFailedBanner } from './PaymentFailedBanner';
 import { useQuickAsk } from './QuickAskContext';
+import { useCatalogShortcut, useShortcutScope } from '@alga-psa/ui/keyboard-shortcuts';
+
+export const QUICK_CREATE_OPEN_EVENT = 'alga:quick-create:open';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -190,6 +193,7 @@ const ALGADESK_QUICK_CREATE_TYPES: ReadonlySet<QuickCreateType> = new Set([
 
 const QuickCreateMenu: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
   const [activeQuickCreate, setActiveQuickCreate] = useState<QuickCreateType>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const { isAlgaDesk } = useProduct();
   const visibleOptions = isAlgaDesk
     ? quickCreateOptions.filter((option) => ALGADESK_QUICK_CREATE_TYPES.has(option.type))
@@ -202,12 +206,26 @@ const QuickCreateMenu: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
 
   const handleQuickCreateSelect = (type: QuickCreateType) => {
     analytics.capture('ui.quick_create.select', { target: type });
+    setMenuOpen(false);
     setActiveQuickCreate(type);
   };
 
+  useEffect(() => {
+    const openMenu = () => {
+      setMenuOpen(true);
+    };
+
+    window.addEventListener(QUICK_CREATE_OPEN_EVENT, openMenu);
+    return () => window.removeEventListener(QUICK_CREATE_OPEN_EVENT, openMenu);
+  }, []);
+  useShortcutScope('page');
+  useCatalogShortcut('global.quickCreate', () => {
+    setMenuOpen(true);
+  }, { enabled: translatedOptions.length > 0 });
+
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button
             id="global-quick-create-trigger"

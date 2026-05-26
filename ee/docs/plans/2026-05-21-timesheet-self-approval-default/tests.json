@@ -1,0 +1,26 @@
+[
+  {
+    "id": "T001",
+    "featureIds": ["F001", "F002"],
+    "description": "Unit coverage proves `assertCanApproveSubject` allows self-approval by default and denies it when a matching `not_self_approver` bundle rule is resolved.",
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "featureIds": ["F003"],
+    "description": "Static/contract coverage proves workflow approval no longer has an unconditional actor==subject denial and includes a direct `not_self_approver` bundle-rule check.",
+    "implemented": true
+  },
+  {
+    "id": "T003",
+    "featureIds": ["F004"],
+    "description": "Existing delegation tests continue to prove approval of other users requires existing approve/read_all or manager authorization.",
+    "implemented": true
+  },
+  {
+    "id": "T004",
+    "featureIds": ["F005"],
+    "description": "Static simulator coverage proves the built-in simulator self-approval guard remains billing-only and no longer emits timesheet self-approval denial reason codes.",
+    "implemented": true
+  }
+]

@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { ArrowUpDown, Lock } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import TaskComment from './TaskComment';
 import { TaskCommentForm } from './TaskCommentForm';
-import { getTaskComments } from '../actions/projectTaskCommentActions';
+import { createTaskComment, getTaskComments } from '../actions/projectTaskCommentActions';
 import { toggleTaskCommentReaction, getTaskCommentsReactionsBatch } from '../actions/projectTaskCommentReactionActions';
 import { IProjectTaskCommentWithUser, IAggregatedReaction } from '@alga-psa/types';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
@@ -13,6 +13,8 @@ import { getCurrentUser, getCurrentUserAvatarUrl } from '@alga-psa/user-composit
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from 'react-i18next';
+import { CommentThreadDrawer, CommentThreadList, HybridThreadNode, buildCommentThreadGroups } from '@alga-psa/ui/components';
+import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 interface TaskCommentThreadProps {
   taskId: string;
@@ -30,6 +32,8 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<{ user_id: string; name: string; avatarUrl: string | null } | null>(null);
   const [showEditor, setShowEditor] = useState(false);
+  const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
+  const [openPanelCommentId, setOpenPanelCommentId] = useState<string | null>(null);
   const [reverseOrder, setReverseOrder] = useState(false);
   const [reactionsMap, setReactionsMap] = useState<Record<string, IAggregatedReaction[]>>({});
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
@@ -83,6 +87,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   const handleCommentAdded = async () => {
     await loadComments();
     setShowEditor(false);
+    setReplyingToCommentId(null);
   };
 
   const handleCommentUpdated = async () => {
@@ -92,6 +97,8 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
   const handleCommentDeleted = async () => {
     await loadComments();
   };
+
+  usePageCreateShortcut(() => { setShowEditor(true); }, { enabled: !showEditor });
 
   const toggleCommentOrder = () => {
     setReverseOrder(!reverseOrder);
@@ -134,12 +141,65 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
     }
   }, [currentUser?.user_id, currentUser?.name]);
 
-  // Sort comments based on reverseOrder
-  const sortedComments = [...comments].sort((a, b) => {
-    const dateA = new Date(a.createdAt).getTime();
-    const dateB = new Date(b.createdAt).getTime();
-    return reverseOrder ? dateB - dateA : dateA - dateB;
-  });
+  const threadGroups = useMemo(
+    () => buildCommentThreadGroups<IProjectTaskCommentWithUser>({
+      comments,
+      getCommentId: (comment) => comment.taskCommentId,
+      getThreadId: (comment) => comment.threadId || comment.taskCommentId,
+      getParentCommentId: (comment) => comment.parentCommentId,
+      getCreatedAt: (comment) => comment.createdAt,
+    }),
+    [comments]
+  );
+
+  const openPanelThreadGroup = openPanelCommentId
+    ? threadGroups.find((group) =>
+      group.comments.some((comment) => comment.taskCommentId === openPanelCommentId)
+    ) ?? null
+    : null;
+  const openPanelComment = openPanelCommentId && openPanelThreadGroup
+    ? openPanelThreadGroup.comments.find((comment) => comment.taskCommentId === openPanelCommentId) ?? openPanelThreadGroup.root
+    : null;
+
+  const handleDrawerReplySubmit = async (params: {
+    parentCommentId: string;
+    content: any[];
+  }) => {
+    await createTaskComment({
+      taskId,
+      note: JSON.stringify(params.content),
+      parent_comment_id: params.parentCommentId,
+    });
+    await loadComments();
+    setOpenPanelCommentId(null);
+  };
+
+  const renderTaskComment = (comment: IProjectTaskCommentWithUser) => (
+    <>
+      <TaskComment
+        comment={comment}
+        onUpdate={handleCommentUpdated}
+        onDelete={handleCommentDeleted}
+        onReply={() => setReplyingToCommentId(comment.taskCommentId)}
+        currentUserId={currentUser?.user_id}
+        reactions={reactionsMap[comment.taskCommentId] || []}
+        onToggleReaction={handleToggleReaction}
+        userNames={reactionUserNames}
+      />
+      {replyingToCommentId === comment.taskCommentId && (
+        <div className="inline-reply-composer">
+          <TaskCommentForm
+            taskId={taskId}
+            projectId={projectId}
+            parentCommentId={comment.taskCommentId}
+            onCommentAdded={handleCommentAdded}
+            onCancel={() => setReplyingToCommentId(null)}
+            autoFocus
+          />
+        </div>
+      )}
+    </>
+  );
 
   return (
     <div
@@ -211,6 +271,7 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
                 projectId={projectId}
                 onCommentAdded={handleCommentAdded}
                 onCancel={() => setShowEditor(false)}
+                autoFocus
               />
             </div>
           </div>
@@ -243,20 +304,38 @@ export const TaskCommentThread: React.FC<TaskCommentThreadProps> = ({
           {...withDataAutomationId({ id: 'task-comments-list' })}
           className="space-y-3"
         >
-          {sortedComments.map((comment) => (
-            <TaskComment
-              key={comment.taskCommentId}
-              comment={comment}
-              onUpdate={handleCommentUpdated}
-              onDelete={handleCommentDeleted}
-              currentUserId={currentUser?.user_id}
-              reactions={reactionsMap[comment.taskCommentId] || []}
-              onToggleReaction={handleToggleReaction}
-              userNames={reactionUserNames}
-            />
-          ))}
+          <CommentThreadList<IProjectTaskCommentWithUser>
+            comments={comments}
+            newestFirst={reverseOrder}
+            getCommentId={(comment) => comment.taskCommentId}
+            getThreadId={(comment) => comment.threadId || comment.taskCommentId}
+            getParentCommentId={(comment) => comment.parentCommentId}
+            getCreatedAt={(comment) => comment.createdAt}
+            renderThreadGroup={(group) => (
+              <HybridThreadNode<IProjectTaskCommentWithUser>
+                group={group}
+                comment={group.root}
+                getCommentId={(comment) => comment.taskCommentId}
+                renderComment={(comment) => renderTaskComment(comment)}
+                onOpenPanel={(commentId) => setOpenPanelCommentId(commentId)}
+              />
+            )}
+          />
         </div>
       )}
+      <CommentThreadDrawer<IProjectTaskCommentWithUser>
+        id={`task-${taskId}-comment-thread-drawer`}
+        isOpen={Boolean(openPanelThreadGroup)}
+        onClose={() => setOpenPanelCommentId(null)}
+        group={openPanelThreadGroup}
+        getCommentId={(comment) => comment.taskCommentId}
+        renderComment={(comment) => renderTaskComment(comment)}
+        replyParentCommentId={openPanelComment?.taskCommentId ?? null}
+        replyRoomName={(parentCommentId) => `task-${taskId}-reply-${parentCommentId}`}
+        initialInternal={false}
+        showInternalToggle={false}
+        onSubmitReply={handleDrawerReplySubmit}
+      />
     </div>
   );
 };

@@ -197,6 +197,25 @@
       "client_name": "naam van de klant",
       "location": "locatie",
       "actions": "acties"
+    },
+    "print": {
+      "title": "Assets",
+      "selectedTitle": "Geselecteerde assets",
+      "subtitle": "{{count}} assets",
+      "noAssets": "Geen assets om af te drukken",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Naam",
+        "tag": "Tag",
+        "type": "Type",
+        "status": "Status",
+        "client": "Klant",
+        "location": "Locatie"
+      },
+      "optionsDialog": {
+        "title": "Afdrukopties",
+        "description": "Kies welke kolommen worden opgenomen bij het afdrukken van assets."
+      }
     }
   },
   "assetDashboardGrid": {
@@ -364,6 +383,14 @@
     "errors": {
       "title": "Fout",
       "notFound": "Item niet gevonden of u heeft geen toestemming om het te bekijken."
+    },
+    "fields": {
+      "assetTag": "Asset-tag",
+      "serialNumber": "Serienummer",
+      "assetType": "Type",
+      "client": "Klant",
+      "status": "Status",
+      "location": "Locatie"
     }
   },
   "assetDetails": {
@@ -672,7 +699,7 @@
     "pageTitle": "Item bewerken"
   },
   "associatedAssets": {
-    "title": "Bijbehorende activa",
+    "title": "Activa",
     "description": "Relatiebeheer van bovenliggende en onderliggende activa met gekoppelde activaacties",
     "loading": {
       "assets": "Activa laden..."

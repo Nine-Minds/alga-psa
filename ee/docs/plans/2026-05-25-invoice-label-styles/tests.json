@@ -1,0 +1,6 @@
+[
+  { "id": "T001", "description": "Schema validation accepts field and totals row labelStyle declarations.", "implemented": true, "featureIds": ["F001", "F002", "F003"] },
+  { "id": "T002", "description": "Renderer output applies labelStyle to field and totals labels only.", "implemented": true, "featureIds": ["F004"] },
+  { "id": "T003", "description": "Workspace AST round-trip preserves field and totals labelStyle.", "implemented": true, "featureIds": ["F007"] },
+  { "id": "T004", "description": "Component schema exposes label style controls for fields and totals rows.", "implemented": true, "featureIds": ["F005"] }
+]

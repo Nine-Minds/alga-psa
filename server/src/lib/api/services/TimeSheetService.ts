@@ -250,7 +250,7 @@ export class TimeSheetService extends BaseService<any> {
   async create(data: CreateTimeSheetData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      return withTransaction(knex, async (trx) => {
+      const created = await withTransaction(knex, async (trx) => {
         const timeSheetData = {
           ...data,
           user_id: data.user_id || context.userId,
@@ -259,32 +259,35 @@ export class TimeSheetService extends BaseService<any> {
           created_at: new Date(),
           updated_at: new Date()
         };
-  
+
         const [timeSheet] = await trx(this.tableName)
           .insert(timeSheetData)
           .returning('*');
-  
-        // Publish event
-        await publishEvent({
-          eventType: 'TIME_SHEET_CREATED',
-          payload: {
-            tenantId: context.tenant,
-            timeSheetId: timeSheet.id,
-            userId: context.userId,
-            periodId: timeSheet.period_id,
-            timestamp: new Date().toISOString()
-          }
-        });
-  
-        return this.getWithDetails(timeSheet.id, context);
+
+        return timeSheet;
       });
+
+      await publishEvent({
+        eventType: 'TIME_SHEET_CREATED',
+        payload: {
+          tenantId: context.tenant,
+          timeSheetId: created.id,
+          userId: context.userId,
+          periodId: created.period_id,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      // Re-fetch after commit: getWithDetails runs on a pooled
+      // (non-transaction) connection and must read the row post-commit.
+      return this.getWithDetails(created.id, context);
     }
 
 
   async update(id: string, data: UpdateTimeSheetData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      return withTransaction(knex, async (trx) => {
+      await withTransaction(knex, async (trx) => {
         const existing = await this.getById(id, context);
         if (!existing) {
           throw new Error('Time sheet not found');
@@ -309,27 +312,29 @@ export class TimeSheetService extends BaseService<any> {
           .where({ [this.primaryKey]: id, tenant: context.tenant })
           .update(updateData);
   
-        // Publish event
-        await publishEvent({
-          eventType: 'TIME_SHEET_UPDATED',
-          payload: {
-            tenantId: context.tenant,
-            timeSheetId: id,
-            userId: context.userId,
-            changes: data,
-            timestamp: new Date().toISOString()
-          }
-        });
-  
-        return this.getById(id, context);
       });
+
+      await publishEvent({
+        eventType: 'TIME_SHEET_UPDATED',
+        payload: {
+          tenantId: context.tenant,
+          timeSheetId: id,
+          userId: context.userId,
+          changes: data,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      // Re-fetch after commit: getById runs on a pooled (non-transaction)
+      // connection and must read the row post-commit.
+      return this.getById(id, context);
     }
 
 
   async delete(id: string, context: ServiceContext): Promise<void> {
       const { knex } = await this.getKnex();
       
-      return withTransaction(knex, async (trx) => {
+      await withTransaction(knex, async (trx) => {
         const existing = await this.getById(id, context);
         if (!existing) {
           throw new Error('Time sheet not found');
@@ -348,17 +353,16 @@ export class TimeSheetService extends BaseService<any> {
         await trx(this.tableName)
           .where({ [this.primaryKey]: id, tenant: context.tenant })
           .del();
-  
-        // Publish event
-        await publishEvent({
-          eventType: 'TIME_SHEET_DELETED',
-          payload: {
-            tenantId: context.tenant,
-            timeSheetId: id,
-            userId: context.userId,
-            timestamp: new Date().toISOString()
-          }
-        });
+      });
+
+      await publishEvent({
+        eventType: 'TIME_SHEET_DELETED',
+        payload: {
+          tenantId: context.tenant,
+          timeSheetId: id,
+          userId: context.userId,
+          timestamp: new Date().toISOString()
+        }
       });
     }
 
@@ -367,7 +371,7 @@ export class TimeSheetService extends BaseService<any> {
   async submitTimeSheet(id: string, data: SubmitTimeSheetData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      return withTransaction(knex, async (trx) => {
+      await withTransaction(knex, async (trx) => {
         const timeSheet = await this.getById(id, context);
         if (!timeSheet) {
           throw new Error('Time sheet not found');
@@ -398,26 +402,28 @@ export class TimeSheetService extends BaseService<any> {
             updated_at: new Date()
           });
   
-        // Publish event
-        await publishEvent({
-          eventType: 'TIME_SHEET_SUBMITTED',
-          payload: {
-            tenantId: context.tenant,
-            timeSheetId: id,
-            userId: context.userId,
-            timestamp: new Date().toISOString()
-          }
-        });
-  
-        return this.getById(id, context);
       });
+
+      await publishEvent({
+        eventType: 'TIME_SHEET_SUBMITTED',
+        payload: {
+          tenantId: context.tenant,
+          timeSheetId: id,
+          userId: context.userId,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      // Re-fetch after commit: getById runs on a pooled (non-transaction)
+      // connection and must read the row post-commit.
+      return this.getById(id, context);
     }
 
 
   async approveTimeSheet(id: string, data: ApproveTimeSheetData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      return withTransaction(knex, async (trx) => {
+      await withTransaction(knex, async (trx) => {
         const timeSheet = await this.getById(id, context);
         if (!timeSheet) {
           throw new Error('Time sheet not found');
@@ -453,26 +459,28 @@ export class TimeSheetService extends BaseService<any> {
             updated_at: new Date()
           });
   
-        // Publish event
-        await publishEvent({
-          eventType: 'TIME_SHEET_APPROVED',
-          payload: {
-            tenantId: context.tenant,
-            timeSheetId: id,
-            approvedBy: context.userId,
-            timestamp: new Date().toISOString()
-          }
-        });
-  
-        return this.getById(id, context);
       });
+
+      await publishEvent({
+        eventType: 'TIME_SHEET_APPROVED',
+        payload: {
+          tenantId: context.tenant,
+          timeSheetId: id,
+          approvedBy: context.userId,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      // Re-fetch after commit: getById runs on a pooled (non-transaction)
+      // connection and must read the row post-commit.
+      return this.getById(id, context);
     }
 
 
   async requestChanges(id: string, data: RequestChangesTimeSheetData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      return withTransaction(knex, async (trx) => {
+      await withTransaction(knex, async (trx) => {
         const timeSheet = await this.getById(id, context);
         if (!timeSheet) {
           throw new Error('Time sheet not found');
@@ -502,20 +510,22 @@ export class TimeSheetService extends BaseService<any> {
           comment_text: `Changes requested: ${data.change_reason}${data.detailed_feedback ? `\n\nDetails: ${data.detailed_feedback}` : ''}`
         }, context);
   
-        // Publish event
-        await publishEvent({
-          eventType: 'TIME_SHEET_CHANGES_REQUESTED',
-          payload: {
-            tenantId: context.tenant,
-            timeSheetId: id,
-            requestedBy: context.userId,
-            reason: data.change_reason,
-            timestamp: new Date().toISOString()
-          }
-        });
-  
-        return this.getById(id, context);
       });
+
+      await publishEvent({
+        eventType: 'TIME_SHEET_CHANGES_REQUESTED',
+        payload: {
+          tenantId: context.tenant,
+          timeSheetId: id,
+          requestedBy: context.userId,
+          reason: data.change_reason,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      // Re-fetch after commit: getById runs on a pooled (non-transaction)
+      // connection and must read the row post-commit.
+      return this.getById(id, context);
     }
 
 
@@ -539,7 +549,7 @@ export class TimeSheetService extends BaseService<any> {
   async reverseApproval(id: string, data: ReverseApprovalData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      return withTransaction(knex, async (trx) => {
+      await withTransaction(knex, async (trx) => {
         const timeSheet = await this.getById(id, context);
         if (!timeSheet) {
           throw new Error('Time sheet not found');
@@ -588,20 +598,22 @@ export class TimeSheetService extends BaseService<any> {
           comment_text: `Approval reversed: ${data.reversal_reason}`
         }, context);
   
-        // Publish event
-        await publishEvent({
-          eventType: 'TIME_SHEET_APPROVAL_REVERSED',
-          payload: {
-            tenantId: context.tenant,
-            timeSheetId: id,
-            reversedBy: context.userId,
-            reason: data.reversal_reason,
-            timestamp: new Date().toISOString()
-          }
-        });
-  
-        return this.getById(id, context);
       });
+
+      await publishEvent({
+        eventType: 'TIME_SHEET_APPROVAL_REVERSED',
+        payload: {
+          tenantId: context.tenant,
+          timeSheetId: id,
+          reversedBy: context.userId,
+          reason: data.reversal_reason,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      // Re-fetch after commit: getById runs on a pooled (non-transaction)
+      // connection and must read the row post-commit.
+      return this.getById(id, context);
     }
 
 
@@ -912,7 +924,7 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       const ScheduleEntry = (await import('@alga-psa/shared/models/scheduleEntry')).default;
 
-      return withTransaction(knex, async (trx) => {
+      const entry = await withTransaction(knex, async (trx) => {
         // Map work_item_type to valid WorkItemType or default
         let workItemType: 'ticket' | 'project_task' | 'non_billable_category' | 'ad_hoc' | 'interaction';
         if (data.work_item_type === 'ticket' || data.work_item_type === 'project_task') {
@@ -939,15 +951,32 @@ export class TimeSheetService extends BaseService<any> {
           assignedByUserId: context.userId
         });
 
-        return this.getScheduleEntry(entry.entry_id, context);
+        return entry;
       });
+
+      await publishEvent({
+        eventType: 'SCHEDULE_ENTRY_CREATED',
+        payload: {
+          tenantId: context.tenant,
+          userId: context.userId,
+          entryId: entry.entry_id,
+          changes: {
+            after: entry,
+            assignedUserIds: data.assigned_user_ids || [],
+          },
+        },
+      });
+
+      // Re-fetch after commit: getScheduleEntry runs on a pooled
+      // (non-transaction) connection and must read the row post-commit.
+      return this.getScheduleEntry(entry.entry_id, context);
     }
 
 
   async updateScheduleEntry(id: string, data: UpdateScheduleEntryData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      return withTransaction(knex, async (trx) => {
+      const result = await withTransaction(knex, async (trx) => {
         const existing = await knex('schedule_entries')
           .where({ entry_id: id, tenant: context.tenant })
           .first();
@@ -986,16 +1015,41 @@ export class TimeSheetService extends BaseService<any> {
             await trx('schedule_entry_assignees').insert(assigneeData);
           }
         }
-  
-        return this.getScheduleEntry(id, context);
+
+        const updated = await trx('schedule_entries')
+          .where({ entry_id: id, tenant: context.tenant })
+          .first();
+
+        return {
+          existing,
+          updated,
+        };
       });
+
+      await publishEvent({
+        eventType: 'SCHEDULE_ENTRY_UPDATED',
+        payload: {
+          tenantId: context.tenant,
+          userId: context.userId,
+          entryId: id,
+          changes: {
+            before: result.existing,
+            after: result.updated,
+            assignedUserIds: data.assigned_user_ids,
+          },
+        },
+      });
+
+      // Re-fetch after commit: getScheduleEntry runs on a pooled
+      // (non-transaction) connection and must read the row post-commit.
+      return this.getScheduleEntry(id, context);
     }
 
 
   async deleteScheduleEntry(id: string, context: ServiceContext): Promise<void> {
       const { knex } = await this.getKnex();
       
-      return withTransaction(knex, async (trx) => {
+      const existing = await withTransaction(knex, async (trx) => {
         const existing = await knex('schedule_entries')
           .where({ entry_id: id, tenant: context.tenant })
           .first();
@@ -1012,6 +1066,20 @@ export class TimeSheetService extends BaseService<any> {
         await trx('schedule_entries')
           .where({ entry_id: id, tenant: context.tenant })
           .del();
+
+        return existing;
+      });
+
+      await publishEvent({
+        eventType: 'SCHEDULE_ENTRY_DELETED',
+        payload: {
+          tenantId: context.tenant,
+          userId: context.userId,
+          entryId: id,
+          changes: {
+            before: existing,
+          },
+        },
       });
     }
 

@@ -53,6 +53,10 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 
+const PROJECT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
+const PROJECT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
+const PROJECT_LIST_SEARCH_TYPES = ['project', 'project_phase', 'project_task', 'project_task_comment'] as const;
+
 const extendedCreateProjectSchema = createProjectSchema.extend({
   assigned_to: z.string().nullable().optional(),
   contact_name_id: z.string().nullable().optional(),
@@ -306,6 +310,133 @@ export const getProjects = withAuth(async (user, { tenant }): Promise<IProject[]
         console.error('Error fetching projects:', error);
         throw error;
     }
+});
+
+function buildProjectListSearchPrefixTsquery(raw: string): string | null {
+  const tokens = raw
+    .toLowerCase()
+    .replace(PROJECT_LIST_SEARCH_TSQUERY_UNSAFE_RE, ' ')
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+
+  if (tokens.length === 0) {
+    return null;
+  }
+
+  return tokens.map((token) => `${token}:*`).join(' & ');
+}
+
+export const searchProjectListIds = withAuth(async (
+  user,
+  { tenant },
+  query: string
+): Promise<string[]> => {
+  const rawSearch = query.replace(/\s+/g, ' ').trim();
+  if (!rawSearch) {
+    return [];
+  }
+
+  const { knex } = await createTenantKnex();
+  const denied = await checkPermission(user, 'project', 'read', knex);
+  if (denied) {
+    return [];
+  }
+
+  const prefixTsquery = buildProjectListSearchPrefixTsquery(rawSearch);
+  const identifier = rawSearch.match(PROJECT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
+  const isInternalUser = user.user_type !== 'client';
+  const clientScopePredicate = isInternalUser
+    ? 'TRUE'
+    : user.clientId
+      ? '(si.client_scope_id IS NULL OR si.client_scope_id = ?::uuid)'
+      : 'si.client_scope_id IS NULL';
+  const clientScopeBindings = isInternalUser || !user.clientId ? [] : [user.clientId];
+
+  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const result = await trx.raw<{ rows: Array<{ project_id: string }> }>(
+      `
+        WITH q AS (
+          SELECT
+            websearch_to_tsquery('english', ?) AS tsq,
+            CASE WHEN ?::text IS NULL THEN NULL ELSE to_tsquery('english', ?::text) END AS prefix_tsq,
+            ?::text AS raw,
+            ?::text AS identifier
+        ),
+        matched AS (
+          SELECT DISTINCT
+            CASE
+              WHEN si.object_type = 'project' THEN si.object_id
+              WHEN si.object_type IN ('project_phase', 'project_task') THEN si.parent_id
+              WHEN si.object_type = 'project_task_comment' THEN ph.project_id::text
+            END AS project_id
+          FROM app_search_index si
+          CROSS JOIN q
+          LEFT JOIN project_tasks pt
+            ON si.object_type = 'project_task_comment'
+            AND pt.tenant = si.tenant
+            AND pt.task_id::text = si.parent_id
+          LEFT JOIN project_phases ph
+            ON ph.tenant = pt.tenant
+            AND ph.phase_id = pt.phase_id
+          WHERE si.tenant = ?::uuid
+            AND si.object_type = ANY(?::text[])
+            AND (si.required_permission IS NULL OR si.required_permission = ANY(?::text[]))
+            AND (cardinality(si.visible_to_user_ids) = 0 OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+            AND (si.is_internal_only = false OR ?::boolean = true)
+            AND (si.is_private = false OR si.visible_to_user_ids && ARRAY[?]::uuid[])
+            AND ${clientScopePredicate}
+            AND (
+              si.search_vector @@ q.tsq
+              OR (q.prefix_tsq IS NOT NULL AND si.search_vector @@ q.prefix_tsq)
+              OR si.title ILIKE '%' || q.raw || '%'
+              OR coalesce(si.subtitle, '') ILIKE '%' || q.raw || '%'
+              OR si.title % q.raw
+              OR coalesce(si.subtitle, '') % q.raw
+              OR (
+                q.identifier IS NOT NULL
+                AND lower(coalesce(si.metadata->>'identifier', '')) = q.identifier
+              )
+              OR (
+                q.identifier IS NOT NULL
+                AND lower(coalesce(si.metadata->>'identifier', '')) LIKE q.identifier || '%'
+              )
+            )
+        )
+        SELECT project_id
+        FROM matched
+        WHERE project_id IS NOT NULL
+      `,
+      [
+        rawSearch,
+        prefixTsquery,
+        prefixTsquery,
+        rawSearch,
+        identifier,
+        tenant,
+        [...PROJECT_LIST_SEARCH_TYPES],
+        ['project:read'],
+        user.user_id,
+        isInternalUser,
+        user.user_id,
+        ...clientScopeBindings,
+      ]
+    );
+
+    const projectIds = result.rows.map((row) => row.project_id);
+    if (projectIds.length === 0) {
+      return [];
+    }
+
+    const matchedProjects = await trx('projects')
+      .where({ tenant })
+      .whereIn('project_id', projectIds)
+      .select<IProject[]>('project_id', 'assigned_to', 'client_id');
+    const authorizedProjects = await filterAuthorizedProjects(trx, tenant, user as IUserWithRoles, matchedProjects);
+    const authorizedProjectIds = new Set(authorizedProjects.map((project) => project.project_id).filter(Boolean));
+
+    return projectIds.filter((projectId) => authorizedProjectIds.has(projectId));
+  });
 });
 
 /**
@@ -571,6 +702,18 @@ export const updatePhase = withAuth(async (user, { tenant }, phaseId: string, ph
             });
         });
 
+        await publishEvent({
+            eventType: 'PROJECT_PHASE_UPDATED',
+            payload: {
+                tenantId: tenant,
+                projectId: updatedPhase.project_id,
+                phaseId,
+                userId: user.user_id,
+                timestamp: new Date().toISOString(),
+                changes: phaseData as Record<string, unknown>,
+            }
+        });
+
         return updatedPhase;
     } catch (error) {
         console.error('Error updating project phase:', error);
@@ -590,14 +733,29 @@ export const deletePhase = withAuth(async (user, { tenant }, phaseId: string): P
         const denied = await checkPermission(user, 'project', 'delete', knex);
         if (denied) return denied;
 
+        let projectIdForEvent: string | null = null;
         await withTransaction(knex, async (trx: Knex.Transaction) => {
             const projectId = await resolveProjectIdForPhase(trx, tenant, phaseId);
             if (!projectId) {
                 throw new Error('Project phase not found');
             }
             await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+            projectIdForEvent = projectId;
             await ProjectModel.deletePhase(trx, tenant, phaseId);
         });
+
+        if (projectIdForEvent) {
+            await publishEvent({
+                eventType: 'PROJECT_PHASE_DELETED',
+                payload: {
+                    tenantId: tenant,
+                    projectId: projectIdForEvent,
+                    phaseId,
+                    userId: user.user_id,
+                    timestamp: new Date().toISOString(),
+                }
+            });
+        }
     } catch (error) {
         console.error('Error deleting project phase:', error);
         throw error;
@@ -619,7 +777,7 @@ export const addProjectPhase = withAuth(async (user, { tenant }, phaseData: Omit
         const denied = await checkPermission(user, 'project', 'update', knex);
         if (denied) return denied;
 
-        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const createdPhase = await withTransaction(knex, async (trx: Knex.Transaction) => {
             const project = await ProjectModel.getById(trx, tenant, phaseData.project_id);
             if (!project) {
                 throw new Error('Project not found');
@@ -668,6 +826,19 @@ export const addProjectPhase = withAuth(async (user, { tenant }, phaseData: Omit
 
             return await ProjectModel.addPhase(trx, tenant, phaseWithDefaults as Omit<IProjectPhase, 'phase_id' | 'created_at' | 'updated_at' | 'tenant'>);
         });
+
+        await publishEvent({
+            eventType: 'PROJECT_PHASE_CREATED',
+            payload: {
+                tenantId: tenant,
+                projectId: createdPhase.project_id,
+                phaseId: createdPhase.phase_id,
+                userId: user.user_id,
+                timestamp: new Date().toISOString(),
+            }
+        });
+
+        return createdPhase;
     } catch (error) {
         console.error('Error adding project phase:', error);
         throw error;
@@ -1154,11 +1325,25 @@ export const deleteProject = withAuth(async (
             await ProjectModel.delete(trx, tenantId, projectId);
         });
 
-        return {
+        const response = {
             ...result,
             success: result.deleted === true,
             deleted: result.deleted
         };
+
+        if (response.success) {
+            await publishEvent({
+                eventType: 'PROJECT_DELETED',
+                payload: {
+                    tenantId: tenant,
+                    projectId,
+                    userId: user.user_id,
+                    timestamp: new Date().toISOString(),
+                }
+            });
+        }
+
+        return response;
     } catch (error) {
         console.error('Error deleting project:', error);
         return {

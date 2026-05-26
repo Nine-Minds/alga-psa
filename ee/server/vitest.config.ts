@@ -37,7 +37,9 @@ export default defineConfig({
       { find: /^@enterprise\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/ee/src')}/$1` },
 
       // Match tsconfig-style subpath overrides before the generic `@/` mapping.
+      { find: /^@\/lib\/db\/db$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/db/db.tsx')}` },
       { find: /^@\/lib\/db\/index$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/db/index.ts')}` },
+      { find: /^@\/lib\/iap\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/iap')}/$1` },
       { find: /^@\/config\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/config')}/$1` },
       { find: /^@\/utils\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/utils')}/$1` },
       { find: /^@\/interfaces\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/interfaces')}/$1` },

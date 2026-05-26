@@ -54,6 +54,12 @@
       "notification": "Notification",
       "unknown": "Inconnu",
       "activity": "Activité"
+    },
+    "print": {
+      "optionsDialog": {
+        "title": "Options d'impression",
+        "description": "Choisissez les colonnes à inclure lors de l'impression des activités."
+      }
     }
   },
   "card": {

@@ -1,5 +1,5 @@
 import { Context } from '@temporalio/activity';
-import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { withAdminTransactionRetryReadOnly } from '@alga-psa/db/admin.js';
 import type { Knex } from 'knex';
 import * as path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
@@ -24,15 +24,18 @@ export async function runOnboardingSeeds(
   const seedsApplied: string[] = [];
   
   try {
-    // Get knex connection
-    const knex = await getAdminConnection();
-    
-    // Run all seeds in a single transaction to ensure consistency
-    await knex.transaction(async (trx: Knex.Transaction) => {
-      // Set tenant ID using PostgreSQL session variable for the entire transaction
-      // This is useful for any queries that might use current_setting('app.current_tenant')
-      // Note: SET LOCAL doesn't support parameterized queries, but this is safe since tenantId is a UUID
-      await trx.raw(`SET LOCAL app.current_tenant = '${tenantId}'`);
+    // Run all seeds in a single transaction to ensure consistency.
+    // withAdminTransactionRetryReadOnly refreshes the admin pool and retries once
+    // if Citus surfaces a stale "writing to worker nodes" / read-only error.
+    // Seeds are idempotent, so a retry replays them safely.
+    await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
+      // Reset accumulator so a retry doesn't double-count seeds from the
+      // failed first attempt (the transaction rollback discards their effects).
+      seedsApplied.length = 0;
+
+      // Set tenant ID using PostgreSQL session variable for the entire transaction.
+      // set_config(..., true) is transaction-local and safely accepts bind parameters.
+      await trx.raw(`SELECT set_config('app.current_tenant', ?, true)`, [tenantId]);
       
       // Get the onboarding seeds directory
       const currentFileUrl = import.meta.url;

@@ -19,6 +19,8 @@ import type { SupportedLocale } from "@alga-psa/core/i18n/config";
 import type { ProductCode } from '@alga-psa/types';
 import { resolveProductRouteBehavior } from '@/lib/productSurfaceRegistry';
 import { ProductRouteBoundary } from '@/components/product/ProductRouteBoundary';
+import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
+import { useKeyboardShortcutPreferenceStorage } from '@/hooks/useKeyboardShortcutPreferenceStorage';
 
 interface Props {
   children: React.ReactNode;
@@ -42,6 +44,7 @@ export function MspLayoutClient({
   const isOnboardingPage = pathname === "/msp/onboarding";
   const routeBehavior = resolveProductRouteBehavior(productCode, pathname);
   const sessionTenant = session?.user?.tenant;
+  const shortcutPreference = useKeyboardShortcutPreferenceStorage({ userId: session?.user?.id });
   const [clientNeedsOnboarding, setClientNeedsOnboarding] = useState(false);
   const shouldForceOnboarding = needsOnboarding || clientNeedsOnboarding;
 
@@ -106,21 +109,34 @@ export function MspLayoutClient({
               }}
             >
               {isOnboardingPage ? children : (
-                isAlgaDesk ? (
-                  routeBehavior === 'allowed' ? (
-                    <AlgaDeskMspShell initialSidebarCollapsed={initialSidebarCollapsed}>
-                      {children}
-                    </AlgaDeskMspShell>
+                <KeyboardShortcutsProvider
+                  routeKey={pathname ?? '/msp'}
+                  storage={shortcutPreference.storage}
+                  onConflict={({ binding, actionIds }) => {
+                    if (process.env.NODE_ENV !== 'production') {
+                      console.warn(
+                        `[keyboard-shortcuts] "${binding}" is bound to multiple actions and was ignored: ${actionIds.join(', ')}`,
+                      );
+                    }
+                  }}
+                >
+                  {isAlgaDesk ? (
+                    routeBehavior === 'allowed' ? (
+                      <AlgaDeskMspShell initialSidebarCollapsed={initialSidebarCollapsed}>
+                        {children}
+                      </AlgaDeskMspShell>
+                    ) : (
+                      <ProductRouteBoundary behavior={routeBehavior} scope="msp" />
+                    )
                   ) : (
-                    <ProductRouteBoundary behavior={routeBehavior} scope="msp" />
+                    <AIChatContextProvider>
+                      <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
+                        {children}
+                      </DefaultLayout>
+                    </AIChatContextProvider>
                   )
-                ) : (
-                  <AIChatContextProvider>
-                    <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
-                      {children}
-                    </DefaultLayout>
-                  </AIChatContextProvider>
-                )
+                  }
+                </KeyboardShortcutsProvider>
               )}
             </ClientUIStateProvider>
           </TagProvider>

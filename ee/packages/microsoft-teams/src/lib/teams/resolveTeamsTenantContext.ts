@@ -1,4 +1,5 @@
 import { getAdminConnection, getTenantIdBySlug } from '@alga-psa/db';
+import { ADD_ONS } from '@alga-psa/types';
 import {
   TEAMS_CAPABILITIES,
   type TeamsCapability,
@@ -12,6 +13,7 @@ interface TeamsTenantContextRow {
   app_id: string | null;
   bot_id: string | null;
   microsoft_tenant_id: string;
+  active_teams_addon?: string | null;
 }
 
 export type TeamsTenantContextResolution =
@@ -73,6 +75,10 @@ function mapRow(row: TeamsTenantContextRow): TeamsTenantContextResolution {
 }
 
 function isRowEligible(row: TeamsTenantContextRow, requiredCapability?: TeamsCapability): boolean {
+  if (row.active_teams_addon !== ADD_ONS.TEAMS) {
+    return false;
+  }
+
   if (row.install_status !== 'active') {
     return false;
   }
@@ -95,13 +101,19 @@ export async function resolveTeamsTenantContext(
     .join('microsoft_profiles as profiles', function joinSelectedProfile() {
       this.on('teams.tenant', '=', 'profiles.tenant').andOn('teams.selected_profile_id', '=', 'profiles.profile_id');
     })
+    .leftJoin('tenant_addons as addons', function joinTeamsAddOn() {
+      this.on('teams.tenant', '=', 'addons.tenant')
+        .andOn(db.raw('addons.addon_key = ?', [ADD_ONS.TEAMS]))
+        .andOn(db.raw('(addons.expires_at IS NULL OR addons.expires_at > now())'));
+    })
     .select(
       'teams.tenant',
       'teams.install_status',
       'teams.enabled_capabilities',
       'teams.app_id',
       'teams.bot_id',
-      'profiles.tenant_id as microsoft_tenant_id'
+      'profiles.tenant_id as microsoft_tenant_id',
+      'addons.addon_key as active_teams_addon'
     )
     .where('profiles.is_archived', false);
 

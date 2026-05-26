@@ -68,7 +68,25 @@
       "message": "11111 {{suffix}} 11111 {{labels}} 11111 {{definitionSuffix}} 11111",
       "deleteType": "11111",
       "keepType": "11111"
-    }
+    },
+    "print": {
+      "title": "11111",
+      "subtitle": "11111 {{count}} 11111",
+      "noContacts": "11111",
+      "emptyValue": "11111",
+      "columns": {
+        "name": "11111",
+        "email": "11111",
+        "phone": "11111",
+        "client": "11111",
+        "status": "11111"
+      },
+      "optionsDialog": {
+        "title": "11111",
+        "description": "11111"
+      }
+    },
+    "shareTooltip": "11111"
   },
   "contactDetails": {
     "title": "11111",
@@ -96,7 +114,8 @@
       "useClientDestination": "11111",
       "inboundTicketDestinationHelp": "11111",
       "tags": "11111",
-      "notes": "11111"
+      "notes": "11111",
+      "status": "11111"
     },
     "status": {
       "label": "11111",

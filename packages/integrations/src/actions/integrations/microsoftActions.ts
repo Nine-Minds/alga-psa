@@ -5,6 +5,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
+import { ADD_ONS } from '@alga-psa/types';
 import {
   getMicrosoftProfileReadiness,
   type ProviderReadinessResult,
@@ -281,6 +282,16 @@ async function getTeamsIntegrationSelectionRow(
     .first();
 
   return row || undefined;
+}
+
+async function tenantHasTeamsAddOn(knex: any, tenant: string): Promise<boolean> {
+  const row = await knex('tenant_addons')
+    .where({ tenant, addon_key: ADD_ONS.TEAMS })
+    .andWhere((builder: any) => {
+      builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
+    })
+    .first('addon_key');
+  return Boolean(row);
 }
 
 async function listBlockingMicrosoftProfileConsumers(
@@ -1116,6 +1127,10 @@ export const setMicrosoftConsumerBinding = withAuth(async (
     }
 
     const { knex } = await createTenantKnex();
+    if (input.consumerType === 'teams' && !(await tenantHasTeamsAddOn(knex, tenant))) {
+      return { success: false, error: 'Microsoft Teams integration requires the Teams add-on.' };
+    }
+
     const secretProvider = await getSecretProviderInstance();
 
     await ensureLegacyMicrosoftProfileBackfill(knex, tenant, secretProvider, (user as any)?.user_id);

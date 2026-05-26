@@ -92,6 +92,24 @@
         "future": "This and future events",
         "all": "All events"
       }
+    },
+    "print": {
+      "title": "Schedule Agenda",
+      "subtitle": "{{count}} scheduled entries",
+      "noEntries": "No scheduled entries to print",
+      "emptyValue": "-",
+      "columns": {
+        "title": "Title",
+        "type": "Type",
+        "start": "Start",
+        "end": "End",
+        "assigned": "Assigned",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Print options",
+        "description": "Choose which columns to include when printing the schedule."
+      }
     }
   },
   "weeklyEvent": {

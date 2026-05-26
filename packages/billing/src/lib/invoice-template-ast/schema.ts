@@ -279,6 +279,7 @@ type NodeInput =
       style?: z.infer<typeof nodeStyleRefSchema>;
       binding: z.infer<typeof bindingRefSchema>;
       label?: string;
+      labelStyle?: z.infer<typeof nodeStyleRefSchema>;
       emptyValue?: string;
       placeholder?: string;
       format?: z.infer<typeof valueFormatSchema>;
@@ -341,6 +342,7 @@ type NodeInput =
         value: ValueExpressionInput;
         format?: z.infer<typeof valueFormatSchema>;
         emphasize?: boolean;
+        labelStyle?: z.infer<typeof nodeStyleRefSchema>;
       }>;
     };
 
@@ -383,6 +385,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
       style: nodeStyleRefSchema.optional(),
       binding: bindingRefSchema,
       label: z.string().optional(),
+      labelStyle: nodeStyleRefSchema.optional(),
       emptyValue: z.string().optional(),
       placeholder: z.string().optional(),
       format: valueFormatSchema.optional(),
@@ -448,6 +451,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
         format: valueFormatSchema.optional(),
         emphasize: z.boolean().optional(),
         style: nodeStyleRefSchema.optional(),
+        labelStyle: nodeStyleRefSchema.optional(),
       }).strict()).min(1),
     }).strict(),
   ])

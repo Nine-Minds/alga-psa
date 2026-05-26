@@ -660,6 +660,9 @@ export const approveAppointmentRequest = withAuth(async (
             case 'ee_disabled':
               teamsMeetingWarning = 'Microsoft Teams meetings are only available in Enterprise Edition.';
               break;
+            case 'addon_required':
+              teamsMeetingWarning = 'Microsoft Teams meeting was not created because the Teams add-on is not active for this tenant.';
+              break;
             case 'not_configured':
             default:
               teamsMeetingWarning = 'Microsoft Teams meeting was not created because Teams is not configured for this tenant.';

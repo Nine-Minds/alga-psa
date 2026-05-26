@@ -34,7 +34,24 @@
       "minutesSeconds": "{{minutes}} m {{seconds}} s",
       "hoursMinutes": "{{hours}} u {{minutes}} m"
     },
-    "externalId": "ID: {{id}}…"
+    "externalId": "ID: {{id}}…",
+    "print": {
+      "title": "Recente jobs",
+      "subtitle": "{{count}} jobs",
+      "noJobs": "Geen jobs om af te drukken",
+      "columns": {
+        "jobName": "Jobnaam",
+        "runner": "Runner",
+        "status": "Status",
+        "duration": "Duur",
+        "started": "Gestart",
+        "completed": "Voltooid"
+      },
+      "optionsDialog": {
+        "title": "Afdrukopties",
+        "description": "Kies welke kolommen worden opgenomen bij het afdrukken van recente taken."
+      }
+    }
   },
   "metrics": {
     "labels": {

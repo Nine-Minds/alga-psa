@@ -54,6 +54,12 @@
       "notification": "55555",
       "unknown": "55555",
       "activity": "55555"
+    },
+    "print": {
+      "optionsDialog": {
+        "title": "55555",
+        "description": "55555"
+      }
     }
   },
   "card": {

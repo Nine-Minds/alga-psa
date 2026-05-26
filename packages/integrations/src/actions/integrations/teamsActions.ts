@@ -3,7 +3,7 @@
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { createTenantKnex } from '@alga-psa/db';
-import { getTeamsAvailability } from '../../lib/teamsAvailability';
+import { getTeamsAvailability, resolveTeamsAvailability } from '../../lib/teamsAvailability';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
 import {
   TEAMS_ALLOWED_ACTIONS,
@@ -69,12 +69,21 @@ function isTeamsInstallStatus(value: string): value is TeamsInstallStatus {
 }
 
 function normalizeEnumArray<T extends string>(values: unknown, supported: readonly T[]): T[] {
-  if (!Array.isArray(values)) {
+  let normalizedValues = values;
+  if (typeof normalizedValues === 'string') {
+    try {
+      normalizedValues = JSON.parse(normalizedValues);
+    } catch {
+      return [];
+    }
+  }
+
+  if (!Array.isArray(normalizedValues)) {
     return [];
   }
 
   const requested = new Set(
-    values.filter((value): value is T => typeof value === 'string' && supported.includes(value as T))
+    normalizedValues.filter((value): value is T => typeof value === 'string' && supported.includes(value as T))
   );
   return supported.filter((value) => requested.has(value));
 }
@@ -83,11 +92,19 @@ function toJsonbValue<T>(value: T): string {
   return JSON.stringify(value);
 }
 
+// Capabilities that default to disabled for new tenants. `group_chat_bot`
+// is opt-in because bot responses in group chats are visible to every
+// member of the chat regardless of their PSA permissions — admins must
+// consciously enable it.
+const TEAMS_CAPABILITIES_OPT_IN: readonly TeamsCapability[] = ['group_chat_bot'];
+
 function defaultTeamsIntegrationState() {
   return {
     selectedProfileId: null,
     installStatus: 'not_configured' as TeamsInstallStatus,
-    enabledCapabilities: [...TEAMS_CAPABILITIES] as TeamsCapability[],
+    enabledCapabilities: TEAMS_CAPABILITIES.filter(
+      (capability) => !TEAMS_CAPABILITIES_OPT_IN.includes(capability)
+    ) as TeamsCapability[],
     notificationCategories: [...TEAMS_NOTIFICATION_CATEGORIES] as TeamsNotificationCategory[],
     allowedActions: [...TEAMS_ALLOWED_ACTIONS] as TeamsAllowedAction[],
     appId: null as string | null,
@@ -181,6 +198,14 @@ async function getTeamsIntegrationStatusImpl(
     if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
     if (!(await canManageTeamsSettings(user))) return { success: false, error: 'Forbidden' };
 
+    const availability = await getTeamsAvailability({
+      tenantId: tenant,
+      userId: (user as any)?.user_id,
+    });
+    if (availability.enabled === false) {
+      return { success: false, error: availability.message };
+    }
+
     const { knex } = await createTenantKnex();
     const row = await getTeamsIntegrationRow(knex, tenant);
     return {
@@ -195,6 +220,11 @@ async function getTeamsIntegrationStatusImpl(
 async function getTeamsIntegrationExecutionStateImpl(
   tenant: string
 ): Promise<TeamsIntegrationExecutionState> {
+  const availability = await getTeamsAvailability({ tenantId: tenant });
+  if (availability.enabled === false) {
+    return DEFAULT_EXECUTION_STATE;
+  }
+
   const { knex } = await createTenantKnex();
   const row = await getTeamsIntegrationRow(knex, tenant);
   const integration = mapTeamsIntegrationRow(row);
@@ -217,6 +247,14 @@ async function saveTeamsIntegrationSettingsImpl(
   try {
     if (isClientPortalUser(user)) return { success: false, error: 'Forbidden' };
     if (!(await canManageTeamsSettings(user))) return { success: false, error: 'Forbidden' };
+
+    const availability = await getTeamsAvailability({
+      tenantId: tenant,
+      userId: (user as any)?.user_id,
+    });
+    if (availability.enabled === false) {
+      return { success: false, error: availability.message };
+    }
 
     const { knex } = await createTenantKnex();
 
@@ -308,10 +346,7 @@ export const getTeamsIntegrationStatus = withAuth(async (
   user,
   { tenant }
 ): Promise<TeamsIntegrationStatusResponse> => {
-  const availability = await getTeamsAvailability({
-    tenantId: tenant,
-    userId: (user as any)?.user_id,
-  });
+  const availability = resolveTeamsAvailability({ tenantId: tenant });
   if (availability.enabled === false) {
     return { success: false, error: availability.message };
   }
@@ -330,10 +365,7 @@ export const saveTeamsIntegrationSettings = withAuth(async (
   { tenant },
   input: TeamsIntegrationSettingsInput
 ): Promise<TeamsIntegrationStatusResponse> => {
-  const availability = await getTeamsAvailability({
-    tenantId: tenant,
-    userId: (user as any)?.user_id,
-  });
+  const availability = resolveTeamsAvailability({ tenantId: tenant });
   if (availability.enabled === false) {
     return { success: false, error: availability.message };
   }

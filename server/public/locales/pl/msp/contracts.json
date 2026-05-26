@@ -1463,12 +1463,16 @@
     "heading": "Usługi z opłatą stałą",
     "preview": {
       "labels": {
+        "alternateFrequency": "Alternatywna częstotliwość rozliczeń:",
         "billingTiming": "Termin rozliczeń:",
         "cadenceOwner": "Właściciel rytmu:",
         "invoiceWindow": "Okno fakturowania:",
         "recurringRate": "Stawka cykliczna:",
         "service": "Usługa:",
         "services": "Usługi:"
+      },
+      "materializedPeriods": {
+        "tooltip": "Podgląd kilku następnych okresów świadczenia usług i okien fakturowania, które zostałyby wygenerowane dla nich w oparciu o bieżące ustawienia. Pomaga zweryfikować cykl przed zapisaniem — rzeczywiste faktury są generowane później podczas uruchomienia rozliczeń."
       },
       "title": "Podgląd cyklu przed zapisaniem"
     },
@@ -1538,14 +1542,24 @@
     },
     "summary": {
       "labels": {
+        "alternateFrequency": "Alternatywna częstotliwość rozliczeń:",
+        "bucketsHeading": "Pakiety:",
+        "includedHours": "Godziny w pakiecie:",
         "minimumTime": "Minimalny czas:",
+        "overageRate": "Stawka za przekroczenie:",
+        "rollover": "Przeniesienie:",
         "roundUp": "Zaokrąglij w górę:",
+        "serviceFallback": "Usługa {{index}}",
         "services": "Usługi:"
       },
       "title": "Podsumowanie usług godzinowych",
       "values": {
         "everyMinutes": "Co {{count}} minut",
-        "minutes": "{{count}} min"
+        "hours": "{{count}} godz.",
+        "minutes": "{{count}} min",
+        "overageRatePerHour": "{{rate}}/godz.",
+        "rolloverDisabled": "Wyłączone",
+        "rolloverEnabled": "Włączone"
       }
     }
   },

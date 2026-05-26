@@ -21,9 +21,12 @@ const hoisted = vi.hoisted(() => {
     is_archived: boolean;
   };
 
+  const enterpriseState = { value: true };
+
   const state = {
     teamsIntegrations: [] as TeamsIntegrationRecord[],
     microsoftProfiles: [] as MicrosoftProfileRecord[],
+    tenantAddOns: [] as Array<{ tenant: string; addon_key: string; expires_at: string | null }>,
     tenantSecrets: new Map<string, string>(),
     accountLinks: [] as Array<{
       tenant: string;
@@ -53,6 +56,9 @@ const hoisted = vi.hoisted(() => {
       if (table === 'microsoft_profiles') {
         return state.microsoftProfiles;
       }
+      if (table === 'tenant_addons') {
+        return state.tenantAddOns;
+      }
       return [] as Array<Record<string, unknown>>;
     };
 
@@ -61,6 +67,12 @@ const hoisted = vi.hoisted(() => {
     return {
       where(conditions: Record<string, unknown>) {
         filters.push(conditions);
+        return this;
+      },
+      andWhere(callback: (builder: any) => void) {
+        callback({
+          whereNull: () => ({ orWhere: () => undefined }),
+        });
         return this;
       },
       async first() {
@@ -72,7 +84,10 @@ const hoisted = vi.hoisted(() => {
 
   return {
     state,
-    knexMock: ((table: string) => createQuery(table)) as any,
+    enterpriseState,
+    knexMock: Object.assign(((table: string) => createQuery(table)) as any, {
+      fn: { now: () => new Date('2026-03-07T12:00:00.000Z') },
+    }),
     getTenantSecretMock: vi.fn(async (tenant: string, key: string) => state.tenantSecrets.get(`${tenant}:${key}`) || null),
     listOAuthAccountLinksForUserMock: vi.fn(async (tenant: string, userId: string) =>
       state.accountLinks.filter((link) => link.tenant === tenant && link.user_id === userId).map((link) => clone(link))
@@ -91,6 +106,12 @@ const hoisted = vi.hoisted(() => {
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async () => ({ knex: hoisted.knexMock }),
+}));
+
+vi.mock('@alga-psa/core/features', () => ({
+  get isEnterprise() {
+    return hoisted.enterpriseState.value;
+  },
 }));
 
 vi.mock('@alga-psa/core/secrets', () => ({
@@ -156,11 +177,13 @@ describe('Teams notification delivery', () => {
   beforeEach(() => {
     hoisted.state.teamsIntegrations.length = 0;
     hoisted.state.microsoftProfiles.length = 0;
+    hoisted.state.tenantAddOns.length = 0;
     hoisted.state.accountLinks.length = 0;
     hoisted.state.tenantSecrets.clear();
     hoisted.getTenantSecretMock.mockClear();
     hoisted.listOAuthAccountLinksForUserMock.mockClear();
     hoisted.publishWorkflowEventMock.mockClear();
+    hoisted.enterpriseState.value = true;
     hoisted.getTeamsAvailabilityMock.mockClear();
     hoisted.buildTeamsPersonalTabDeepLinkFromPsaUrlMock.mockClear();
     fetchMock.mockReset();
@@ -190,6 +213,12 @@ describe('Teams notification delivery', () => {
       tenant_id: 'tenant-guid',
       client_secret_ref: 'teams-secret-ref',
       is_archived: false,
+    });
+
+    hoisted.state.tenantAddOns.push({
+      tenant: 'tenant-1',
+      addon_key: 'teams',
+      expires_at: null,
     });
 
     hoisted.state.tenantSecrets.set('tenant-1:teams-secret-ref', 'teams-secret');
@@ -267,11 +296,8 @@ describe('Teams notification delivery', () => {
       ],
     });
     expect(graphPayload.topic.webUrl).toContain('https://teams.microsoft.com/l/entity/teams-app-id/alga-psa-personal-tab');
-    expect(hoisted.buildTeamsPersonalTabDeepLinkFromPsaUrlMock).toHaveBeenCalledWith(
-      'https://tenant.example.com',
-      'teams-app-id',
-      '/msp/tickets/ticket-1'
-    );
+    expect(graphPayload.topic.webUrl).toContain(encodeURIComponent('https://tenant.example.com/msp/tickets/ticket-1'));
+    expect(graphPayload.topic.webUrl).toContain(encodeURIComponent(JSON.stringify({ page: 'ticket', ticketId: 'ticket-1', source: 'notification' })));
 
     expect(hoisted.publishWorkflowEventMock).toHaveBeenCalledTimes(2);
     expect(hoisted.publishWorkflowEventMock.mock.calls[0]?.[0]).toMatchObject({
@@ -433,12 +459,7 @@ describe('Teams notification delivery', () => {
   });
 
   it('T285/T286: skips Teams delivery before Graph/runtime work when the tenant is not in Enterprise Edition', async () => {
-    hoisted.getTeamsAvailabilityMock.mockResolvedValue({
-      enabled: false,
-      reason: 'ce_unavailable',
-      flagKey: 'teams-integration-ui',
-      message: 'Microsoft Teams integration is only available in Enterprise Edition.',
-    });
+    hoisted.enterpriseState.value = false;
 
     const result = await deliverTeamsNotification(makeNotification());
 

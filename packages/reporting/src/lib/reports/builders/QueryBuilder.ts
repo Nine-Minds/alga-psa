@@ -22,33 +22,15 @@ export class QueryBuilder {
   ): Knex.QueryBuilder {
 
     try {
-      // Handle raw SQL mode - when table is 'raw_sql', the SQL is in fields[0]
+      // Handle raw SQL mode - when table is 'raw_sql', the SQL is in fields[0].
+      // Placeholders must be written as {{paramName}} and are converted to bind parameters.
       if (queryDef.table === 'raw_sql') {
         const rawSql = queryDef.fields?.[0];
         if (!rawSql || typeof rawSql !== 'string') {
           throw new ReportExecutionError('Raw SQL mode requires SQL query in fields[0]');
         }
 
-        // Basic security check - only allow SELECT statements
-        const trimmedSql = rawSql.trim().toLowerCase();
-        if (!trimmedSql.startsWith('select')) {
-          throw new ReportExecutionError('Raw SQL mode only allows SELECT statements');
-        }
-
-        // Substitute parameters in the SQL
-        let processedSql = rawSql;
-        for (const [key, value] of Object.entries(parameters)) {
-          const placeholder = `{{${key}}}`;
-          if (processedSql.includes(placeholder)) {
-            // Escape the value to prevent SQL injection
-            const escapedValue = typeof value === 'string'
-              ? `'${value.replace(/'/g, "''")}'`
-              : String(value);
-            processedSql = processedSql.replace(new RegExp(placeholder.replace(/[{}]/g, '\\$&'), 'g'), escapedValue);
-          }
-        }
-
-        return trx.raw(processedSql) as unknown as Knex.QueryBuilder;
+        return this.buildParameterizedRawSql(trx, rawSql, parameters);
       }
 
       let query = trx(queryDef.table);
@@ -73,6 +55,7 @@ export class QueryBuilder {
           // Process fields - wrap SQL expressions with raw()
           const selectFields = queryDef.fields.map(field => {
             if (this.isSqlExpression(field)) {
+              this.assertSafeSqlExpression(field, 'report field expression');
               return trx.raw(field);
             }
             return field;
@@ -171,6 +154,10 @@ export class QueryBuilder {
     const value = this.resolveFilterValue(filter.value, parameters);
     const rawField = filter.field.startsWith('raw:') ? filter.field.slice(4) : null;
 
+    if (rawField) {
+      this.assertSafeSqlExpression(rawField, 'raw filter field');
+    }
+
     // Skip filters with empty/null/undefined values (except for is_null/is_not_null operators)
     if (filter.operator !== 'is_null' && filter.operator !== 'is_not_null') {
       if (value === null || value === undefined || value === '') {
@@ -242,6 +229,10 @@ export class QueryBuilder {
   private static buildAggregationField(aggregationType: string, field?: string): string {
     const targetField = field || '*';
 
+    if (targetField !== '*') {
+      this.assertSafeSqlExpression(targetField, 'aggregation field');
+    }
+
     switch (aggregationType) {
       case 'count':
         return `COUNT(${targetField}) as count`;
@@ -256,10 +247,78 @@ export class QueryBuilder {
       case 'max':
         return `MAX(${targetField}) as max`;
       default:
-        return `${aggregationType.toUpperCase()}(${targetField}) as ${aggregationType}`;
+        throw new ReportExecutionError(`Unsupported aggregation type: ${aggregationType}`);
     }
   }
-  
+
+  /**
+   * Build a parameterized raw SELECT query for internal report definitions.
+   */
+  private static buildParameterizedRawSql(
+    trx: Knex.Transaction,
+    rawSql: string,
+    parameters: ReportParameters
+  ): Knex.QueryBuilder {
+    this.assertSafeRawSelect(rawSql);
+
+    const bindings: unknown[] = [];
+    const processedSql = rawSql.replace(/\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g, (_match, key: string) => {
+      if (!(key in parameters)) {
+        throw new ReportExecutionError(`Parameter placeholder '${key}' not found in parameters`);
+      }
+
+      bindings.push(parameters[key]);
+      return '?';
+    });
+
+    if (/\{\{|\}\}/.test(processedSql)) {
+      throw new ReportExecutionError('Raw SQL contains an invalid or unresolved parameter placeholder');
+    }
+
+    return trx.raw(processedSql, bindings as Knex.RawBinding[]) as unknown as Knex.QueryBuilder;
+  }
+
+  /**
+   * Raw report SQL is intentionally limited to single SELECT statements.
+   */
+  private static assertSafeRawSelect(rawSql: string): void {
+    const trimmedSql = rawSql.trim();
+    const lowerSql = trimmedSql.toLowerCase();
+
+    if (!lowerSql.startsWith('select')) {
+      throw new ReportExecutionError('Raw SQL mode only allows SELECT statements');
+    }
+
+    this.assertNoSqlControlTokens(trimmedSql, 'raw SQL report query');
+
+    if (/\b(insert|update|delete|drop|alter|truncate|create|grant|revoke|execute|call|do|copy|merge|set)\b/i.test(trimmedSql)) {
+      throw new ReportExecutionError('Raw SQL report query contains a forbidden statement keyword');
+    }
+  }
+
+  /**
+   * SQL expressions in report definitions are trusted internal config, but still
+   * must be constrained to expression syntax to avoid future injection paths.
+   */
+  private static assertSafeSqlExpression(expression: string, context: string): void {
+    const trimmedExpression = expression.trim();
+
+    if (!trimmedExpression) {
+      throw new ReportExecutionError(`${context} cannot be empty`);
+    }
+
+    this.assertNoSqlControlTokens(trimmedExpression, context);
+
+    if (/\b(select|from|join|union|where|or|and|not|case|when|then|else|end|insert|update|delete|drop|alter|truncate|create|grant|revoke|execute|call|do|copy|merge|set|pg_sleep)\b|[=<>]/i.test(trimmedExpression)) {
+      throw new ReportExecutionError(`${context} contains a forbidden SQL token`);
+    }
+  }
+
+  private static assertNoSqlControlTokens(sql: string, context: string): void {
+    if (/;|--|\/\*|\*\/|\$\$/u.test(sql)) {
+      throw new ReportExecutionError(`${context} contains a forbidden SQL control token`);
+    }
+  }
   /**
    * Resolve filter values, handling parameter placeholders
    */

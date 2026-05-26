@@ -188,7 +188,7 @@ The billing engine lives in `server/src/lib/billing/billingEngine.ts`. It operat
 
 - Client overlap checks exist in both contract assignment (`ClientContract.assignContractToClient`) and contract updates (`updateClientContract`).
 - `clientContractLineActions` enforce that contract lines referenced by existing invoices cannot be removed without safe handling.
-- `BillingEngine.rolloverUnapprovedTime` aids operational workflows by moving DRAFT/SUBMITTED time into the next period when required.
+- Recurring invoice generation blocks matching unapproved billable time instead of moving time entries into a later billing period.
 
 ## Manual Invoicing
 

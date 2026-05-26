@@ -119,6 +119,7 @@ export interface DesignerNodeStyle {
   fontSize?: CssLength;
   fontWeight?: string | number;
   fontFamily?: string;
+  fontStyle?: string;
   lineHeight?: string | number;
   textAlign?: CssTextAlign;
 

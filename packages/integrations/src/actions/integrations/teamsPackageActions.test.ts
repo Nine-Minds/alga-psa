@@ -29,6 +29,7 @@ const hoisted = vi.hoisted(() => {
     appSecrets: new Map<string, string>(),
     microsoftProfiles: [] as MicrosoftProfileRecord[],
     teamsIntegrations: [] as TeamsIntegrationRecord[],
+    tenantAddOns: [] as Array<{ tenant: string; addon_key: string; expires_at: string | null }>,
   };
 
   const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
@@ -45,6 +46,9 @@ const hoisted = vi.hoisted(() => {
       if (table === 'teams_integrations') {
         return state.teamsIntegrations;
       }
+      if (table === 'tenant_addons') {
+        return state.tenantAddOns;
+      }
       return [] as Array<Record<string, unknown>>;
     };
 
@@ -53,6 +57,12 @@ const hoisted = vi.hoisted(() => {
     return {
       where(conditions: Record<string, unknown>) {
         filters.push(conditions);
+        return this;
+      },
+      andWhere(callback: (builder: any) => void) {
+        callback({
+          whereNull: () => ({ orWhere: () => undefined }),
+        });
         return this;
       },
       async first() {
@@ -71,6 +81,9 @@ const hoisted = vi.hoisted(() => {
   };
 
   const knexMock: any = ((table: string) => createQuery(table)) as any;
+  knexMock.fn = {
+    now: vi.fn(() => 'now()'),
+  };
 
   return {
     state,
@@ -81,7 +94,7 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
-const { microsoftProfiles, teamsIntegrations, tenantSecrets, appSecrets } = hoisted.state;
+const { microsoftProfiles, teamsIntegrations, tenantAddOns, tenantSecrets, appSecrets } = hoisted.state;
 const { hasPermissionMock, getTenantSecretMock, getAppSecretMock, knexMock } = hoisted;
 
 vi.mock('@alga-psa/auth/withAuth', () => ({
@@ -164,6 +177,8 @@ describe('Teams app package actions', () => {
     process.env.NEXT_PUBLIC_EDITION = 'enterprise';
     microsoftProfiles.length = 0;
     teamsIntegrations.length = 0;
+    tenantAddOns.length = 0;
+    tenantAddOns.push({ tenant: 'tenant-1', addon_key: 'teams', expires_at: null });
     tenantSecrets.clear();
     appSecrets.clear();
     hasPermissionMock.mockClear();
@@ -262,9 +277,11 @@ describe('Teams app package actions', () => {
       },
     });
     expect(JSON.stringify(result.package?.manifest)).not.toContain('channel-routing');
+    expect(result.package?.deepLinks.myWork).toContain(encodeURIComponent('https://tenant.example.com/msp/dashboard'));
     expect(result.package?.deepLinks.ticketTemplate).toContain(encodeURIComponent('https://tenant.example.com/msp/tickets/{ticketId}'));
-    expect(result.package?.deepLinks.projectTaskTemplate).toContain(encodeURIComponent('https://tenant.example.com/msp/projects/{projectId}?taskId=%7BtaskId%7D'));
-    expect(result.package?.deepLinks.approvalTemplate).toContain(encodeURIComponent('https://tenant.example.com/msp/approvals/{approvalId}'));
+    expect(result.package?.deepLinks.projectTaskTemplate).toContain(encodeURIComponent('https://tenant.example.com/msp/projects/{projectId}/tasks/{taskId}'));
+    expect(result.package?.deepLinks.approvalTemplate).toContain(encodeURIComponent('https://tenant.example.com/msp/time-sheet-approvals?approvalId=%7BapprovalId%7D'));
+    expect(result.package?.deepLinks.timeEntryTemplate).toContain(encodeURIComponent('https://tenant.example.com/msp/time-entry?entryId=%7BentryId%7D'));
     expect(teamsIntegrations[0]).toMatchObject({
       tenant: 'tenant-1',
       selected_profile_id: 'profile-1',
@@ -340,29 +357,33 @@ describe('Teams app package actions', () => {
   });
 
   it('T211/T301: converts notification-style PSA record URLs into Teams personal-tab deep links so activity-feed notifications can target the correct destination without duplicating record-link rules', () => {
-    expect(
-      buildTeamsPersonalTabDeepLinkFromPsaUrl(
-        'https://tenant.example.com',
-        'teams-client-id',
-        '/msp/tickets/ticket-123'
-      )
-    ).toContain(encodeURIComponent('{"page":"ticket","ticketId":"ticket-123"}'));
+    const ticketDeepLink = buildTeamsPersonalTabDeepLinkFromPsaUrl(
+      'https://tenant.example.com',
+      'teams-client-id',
+      '/msp/tickets/ticket-123'
+    );
 
-    expect(
-      buildTeamsPersonalTabDeepLinkFromPsaUrl(
-        'https://tenant.example.com',
-        'teams-client-id',
-        '/msp/projects/project-44?taskId=task-88'
-      )
-    ).toContain(encodeURIComponent('{"page":"project_task","projectId":"project-44","taskId":"task-88"}'));
+    expect(ticketDeepLink).toContain(encodeURIComponent('{"page":"ticket","ticketId":"ticket-123"}'));
+    expect(ticketDeepLink).toContain(encodeURIComponent('https://tenant.example.com/msp/tickets/ticket-123'));
+    expect(ticketDeepLink).not.toContain(encodeURIComponent('https://tenant.example.com/teams/tab?page=ticket'));
 
-    expect(
-      buildTeamsPersonalTabDeepLinkFromPsaUrl(
-        'https://tenant.example.com',
-        'teams-client-id',
-        '/msp/time-sheet-approvals?approvalId=approval-2'
-      )
-    ).toContain(encodeURIComponent('{"page":"approval","approvalId":"approval-2"}'));
+    const projectTaskDeepLink = buildTeamsPersonalTabDeepLinkFromPsaUrl(
+      'https://tenant.example.com',
+      'teams-client-id',
+      '/msp/projects/project-44?taskId=task-88'
+    );
+
+    expect(projectTaskDeepLink).toContain(encodeURIComponent('{"page":"project_task","projectId":"project-44","taskId":"task-88"}'));
+    expect(projectTaskDeepLink).toContain(encodeURIComponent('https://tenant.example.com/msp/projects/project-44/tasks/task-88'));
+
+    const approvalDeepLink = buildTeamsPersonalTabDeepLinkFromPsaUrl(
+      'https://tenant.example.com',
+      'teams-client-id',
+      '/msp/time-sheet-approvals?approvalId=approval-2'
+    );
+
+    expect(approvalDeepLink).toContain(encodeURIComponent('{"page":"approval","approvalId":"approval-2"}'));
+    expect(approvalDeepLink).toContain(encodeURIComponent('https://tenant.example.com/msp/time-sheet-approvals?approvalId=approval-2'));
   });
 
   it('T212/T302: falls back notification-style Teams deep links to my-work when the PSA URL is malformed or not a supported Teams destination', () => {

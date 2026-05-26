@@ -38,6 +38,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'sessions',
 
   // === LEVEL 1: Leaf tables with no dependencies ===
+  // Global search index (no FKs, denormalized projection)
+  'app_search_index',
+
   // Workflow task details
   'workflow_task_history', 'workflow_form_schemas',
 
@@ -77,7 +80,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Messages and comments
   // vectors and email_reply_tokens reference comments with NO ACTION, so they
   // must be deleted before comments to avoid FK violations.
-  'comment_reactions', 'vectors', 'email_reply_tokens', 'comments',
+  // comment_threads is the parent of comments.thread_id / project_task_comments.thread_id
+  // (both CASCADE) and email_sending_logs.comment_thread_id (SET NULL); it must be
+  // deleted AFTER comments and project_task_comments (which are removed above).
+  'comment_reactions', 'vectors', 'email_reply_tokens', 'comments', 'comment_threads',
   'gmail_processed_history', 'email_processed_attachments', 'email_processed_messages',
   'email_sending_logs', 'email_rate_limits',
 
@@ -143,6 +149,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Custom reports
   'custom_reports',
+
+  // Inbound webhooks
+  'inbound_webhook_deliveries', 'inbound_webhooks',
 
   // External entity mappings references assets and import_sources with NO ACTION,
   // so it must be deleted before both.

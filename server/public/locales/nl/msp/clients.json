@@ -36,7 +36,7 @@
   "clientsPage": {
     "title": "Klantenpagina",
     "description": "Hoofdbeheerpagina voor klanten met zoeken, filters en klantenraster/lijstweergave",
-    "searchPlaceholder": "Zoek klanten",
+    "searchPlaceholder": "Zoek klanten, notities, documenten en interacties",
     "createClient": "Klant aanmaken",
     "createClientShort": "+ Klant aanmaken",
     "allClients": "Alle klanten",
@@ -132,7 +132,34 @@
     },
     "deleteSelectedPrompt": "Weet u zeker dat u {{count}} geselecteerde {{clientsLabel}} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
     "singleInactiveWithContactsSuccess_one": "{{name}} en {{count}} contact zijn succesvol gedeactiveerd.",
-    "singleInactiveWithContactsSuccess_other": "{{name}} en {{count}} contacten zijn succesvol gedeactiveerd."
+    "singleInactiveWithContactsSuccess_other": "{{name}} en {{count}} contacten zijn succesvol gedeactiveerd.",
+    "clientTypes": {
+      "company": "Bedrijf",
+      "individual": "Persoon"
+    },
+    "print": {
+      "title": "Klanten",
+      "selectedTitle": "Geselecteerde klanten",
+      "subtitle": "{{count}} klanten",
+      "noClients": "Geen klanten om af te drukken",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Klant",
+        "type": "Type",
+        "phone": "Telefoon",
+        "address": "Adres",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Afdrukopties",
+        "description": "Kies welke kolommen worden opgenomen bij het afdrukken van klanten."
+      }
+    },
+    "shareTooltip": "Afdrukken, importeren en exporteren"
+    ,
+    "defaultClientDeleteError": "De standaardklant kan niet worden verwijderd. Stel eerst een andere klant als standaard in bij Algemene instellingen.",
+    "clientNotFound": "Klant niet gevonden.",
+    "deletePermissionDenied": "Toestemming geweigerd: klanten kunnen niet worden verwijderd."
   },
   "clientDetails": {
     "title": "Klantgegevens",
@@ -216,7 +243,15 @@
     "inboundDomainAdded": "Inkomend e-maildomein toegevoegd",
     "inboundDomainAddFailed": "Kan domein niet toevoegen",
     "inboundDomainRemoved": "Inkomend e-maildomein verwijderd",
-    "inboundDomainRemoveFailed": "Kan domein niet verwijderen"
+    "inboundDomainRemoveFailed": "Kan domein niet verwijderen",
+    "fields": {
+      "accountManager": "Accountmanager",
+      "url": "URL",
+      "status": "Status"
+    }
+    ,
+    "deactivateClientDescription": "Deactiveert de record zonder de gegevens te verwijderen.",
+    "deactivateClientOnlyDescription": "Deactiveer de klant maar laat de contacten actief."
   },
   "quickAddClient": {
     "title": "Nieuwe klant toevoegen",
@@ -593,10 +628,10 @@
     "scenarios": {
       "description": "Deze voorbeelden illustreren hoe het ondubbelzinnig maken van contractregels werkt in algemene scenario's voor deze klant.",
       "scenario1Description": "Wanneer een dienst voor deze klant zowel in een bucketcontractregel als in een standaardcontractregel verschijnt:",
-      "scenario1Item1": "De bucketcontractregel krijgt standaard prioriteit",
-      "scenario1Item2": "Tijdsinvoer en gebruik worden gefactureerd op de bucketcontractregel totdat deze op is",
-      "scenario1Item3": "Nadat de bucket is leeggemaakt, wordt automatisch de standaardcontractregel gebruikt",
-      "scenario1Item4": "Gebruikers kunnen dit gedrag handmatig overschrijven door tijdens de tijdinvoer expliciet een contractregel te selecteren",
+      "scenario1Item1": "De bucketcontractregel wordt standaard geselecteerd",
+      "scenario1Item2": "Tijdsinvoer en gebruik verbruiken het in de bucket inbegrepen tegoed en gaan vervolgens op dezelfde bucketcontractregel verder als overschrijding tegen het ingestelde overschrijdingstarief",
+      "scenario1Item3": "De facturatie schakelt niet automatisch over naar de standaardcontractregel wanneer de bucket op is",
+      "scenario1Item4": "Gebruikers kunnen deze standaard handmatig overschrijven door tijdens de tijdinvoer een andere contractregel te selecteren",
       "scenario1Title": "Scenario 1: Bucketplan + Standaardplan",
       "scenario2Description": "Wanneer een dienst voorkomt in meerdere standaardcontractregels voor deze klant:",
       "scenario2Item1": "Gebruikers worden tijdens de tijdinvoer gevraagd om te selecteren op welke contractregel ze willen factureren",

@@ -5,6 +5,11 @@ export * from './schemas/workflowClockTriggerSchema';
 export { SchemaRegistry, getSchemaRegistry } from './registries/schemaRegistry';
 export { ActionRegistry, getActionRegistryV2 } from './registries/actionRegistry';
 export { NodeTypeRegistry, getNodeTypeRegistry } from './registries/nodeTypeRegistry';
+export {
+  WorkflowIntegrationModuleRegistry,
+  getWorkflowIntegrationModuleRegistry,
+  type WorkflowIntegrationModuleDefinition
+} from './registries/integrationModuleRegistry';
 export { registerWorkflowEmailProvider, getWorkflowEmailProvider, resetWorkflowEmailProvider } from './registries/workflowEmailRegistry';
 export type { WorkflowEmailProvider } from './registries/workflowEmailRegistry';
 export { WorkflowRuntimeV2 } from './runtime/workflowRuntimeV2';

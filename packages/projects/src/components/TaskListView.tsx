@@ -8,6 +8,14 @@ import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, Ban, GitBranch,
 import { extractTaskDescriptionText } from '../lib/taskRichText';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Button } from '@alga-psa/ui/components/Button';
+import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
+import {
+  PrintOptionsDialog,
+  type PrintColumnOption,
+  usePrintColumnSelection,
+} from '@alga-psa/ui/components/PrintOptionsDialog';
+import { useRegisterTaskShareActions } from './TaskShareActionsContext';
+import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { format } from 'date-fns';
 import { TagList } from '@alga-psa/ui/components';
@@ -20,6 +28,8 @@ import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { highlightSearchMatch } from '../lib/searchUtils';
 import { useTranslation } from 'react-i18next';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { useTaskSelection } from './TaskSelectionContext';
 
 // Auto-scroll configuration for drag operations
 const SCROLL_THRESHOLD = 80; // Pixels from edge to start scrolling
@@ -80,6 +90,7 @@ interface TaskListViewProps {
   selectedPriorityFilter?: string;
   selectedTaskTags?: string[];
   selectedAgentFilter?: string[];
+  selectedTeamFilter?: string[];
   includeUnassignedAgents?: boolean;
   primaryAgentOnly?: boolean;
   searchQuery?: string;
@@ -120,6 +131,7 @@ export default function TaskListView({
   selectedPriorityFilter = 'all',
   selectedTaskTags = [],
   selectedAgentFilter = [],
+  selectedTeamFilter = [],
   includeUnassignedAgents = false,
   primaryAgentOnly = false,
   searchQuery = '',
@@ -127,6 +139,7 @@ export default function TaskListView({
   searchCaseSensitive = false
 }: TaskListViewProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const { isSelected, toggleTask, setTasksSelected, selectedTaskIds } = useTaskSelection();
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
   const [expandedTitles, setExpandedTitles] = useState<Set<string>>(new Set());
@@ -278,8 +291,8 @@ export default function TaskListView({
       });
     }
 
-    // Apply agent filter
-    if (selectedAgentFilter.length > 0 || includeUnassignedAgents) {
+    // Apply agent / team filter
+    if (selectedAgentFilter.length > 0 || selectedTeamFilter.length > 0 || includeUnassignedAgents) {
       filtered = filtered.filter(task => {
         // Check if task is unassigned (no primary assignee)
         const isUnassigned = !task.assigned_to;
@@ -309,12 +322,17 @@ export default function TaskListView({
           }
         }
 
+        // If specific teams are selected, match by the task's assigned team
+        if (selectedTeamFilter.length > 0 && task.assigned_team_id && selectedTeamFilter.includes(task.assigned_team_id)) {
+          return true;
+        }
+
         return false;
       });
     }
 
     return filtered;
-  }, [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, includeUnassignedAgents, primaryAgentOnly, taskResources, taskDescriptionTextMap]);
+  }, [tasks, searchQuery, searchWholeWord, searchCaseSensitive, selectedPriorityFilter, selectedTaskTags, taskTags, selectedAgentFilter, selectedTeamFilter, includeUnassignedAgents, primaryAgentOnly, taskResources, taskDescriptionTextMap]);
 
   // Group tasks by phase and status - include ALL phases and ALL statuses for drag-and-drop
   const phaseGroups = useMemo((): PhaseGroup[] => {
@@ -495,10 +513,19 @@ export default function TaskListView({
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', task.task_id);
     // Add a visual cue that we're dragging
-    if (e.currentTarget) {
+    const isBulkDrag = selectedTaskIds.has(task.task_id) && selectedTaskIds.size > 1;
+    if (isBulkDrag) {
+      // Dim every selected row so it's clear they all move together
+      document.querySelectorAll('[data-task-row-id]').forEach((el) => {
+        const id = el.getAttribute('data-task-row-id');
+        if (id && selectedTaskIds.has(id)) {
+          (el as HTMLElement).style.opacity = '0.5';
+        }
+      });
+    } else if (e.currentTarget) {
       e.currentTarget.style.opacity = '0.5';
     }
-  }, []);
+  }, [selectedTaskIds]);
 
   const handleDragEnd = useCallback((e: React.DragEvent<HTMLTableRowElement>) => {
     setDraggedTask(null);
@@ -508,6 +535,9 @@ export default function TaskListView({
     if (e.currentTarget) {
       e.currentTarget.style.opacity = '1';
     }
+    document.querySelectorAll('[data-task-row-id]').forEach((el) => {
+      (el as HTMLElement).style.opacity = '1';
+    });
     // Clear scroll interval
     scrollSpeedRef.current = 0;
     if (scrollIntervalRef.current) {
@@ -686,8 +716,175 @@ export default function TaskListView({
   // Calculate visible column count for colSpan
   const visibleColumnCount = COLUMN_CONFIG.filter(c => isColumnVisible(c.key ?? '')).length;
 
+  const printRows = useMemo(() => {
+    const rows = phaseGroups.flatMap((phaseGroup) =>
+      phaseGroup.statusGroups.flatMap((statusGroup) =>
+        statusGroup.tasks.map((task) => ({
+          task,
+          phaseName: phaseGroup.phase.phase_name,
+          statusName: statusGroup.status.custom_name || statusGroup.status.name,
+        }))
+      )
+    );
+    // When tasks are selected, scope the print to just those
+    if (selectedTaskIds.size > 0) {
+      return rows.filter((row) => selectedTaskIds.has(row.task.task_id));
+    }
+    return rows;
+  }, [phaseGroups, selectedTaskIds]);
+
+  const printColumns = useMemo<PrintColumnOption<typeof printRows[number]>[]>(() => [
+    {
+      key: 'task',
+      label: t('tasks.taskName', 'Name'),
+      header: t('tasks.taskName', 'Name'),
+      render: ({ task }) => task.task_name,
+    },
+    {
+      key: 'phase',
+      label: t('projectPrint.tasks.columns.phase', 'Phase'),
+      header: t('projectPrint.tasks.columns.phase', 'Phase'),
+      render: ({ phaseName }) => phaseName,
+    },
+    {
+      key: 'status',
+      label: t('projectPrint.tasks.columns.status', 'Status'),
+      header: t('projectPrint.tasks.columns.status', 'Status'),
+      render: ({ statusName }) => statusName,
+    },
+    {
+      key: 'deps',
+      label: t('tasks.dependencies', 'Deps'),
+      header: t('tasks.dependencies', 'Deps'),
+      render: ({ task }) => {
+        const deps = taskDependencies[task.task_id];
+        const dependencyCount = (deps?.predecessors.length ?? 0) + (deps?.successors.length ?? 0);
+        return dependencyCount > 0 ? String(dependencyCount) : t('projectPrint.tasks.emptyValue', '-');
+      },
+    },
+    {
+      key: 'checklist',
+      label: t('tasks.checklist', 'Checklist'),
+      header: t('tasks.checklist', 'Checklist'),
+      render: ({ task }) => {
+        const checklist = checklistItems[task.task_id];
+        return checklist && checklist.total > 0
+          ? t('projectDetail.checklistSummary', '{{completed}} of {{total}} complete', {
+              completed: checklist.completed,
+              total: checklist.total,
+            })
+          : t('projectPrint.tasks.emptyValue', '-');
+      },
+    },
+    {
+      key: 'tags',
+      label: t('projectList.columns.tags', 'Tags'),
+      header: t('projectList.columns.tags', 'Tags'),
+      render: ({ task }) => {
+        const tags = taskTags[task.task_id] ?? [];
+        return tags.length > 0
+          ? tags.map((tag) => tag.tag_text).join(', ')
+          : t('projectPrint.tasks.emptyValue', '-');
+      },
+    },
+    {
+      key: 'assignee',
+      label: t('tasks.assignee', 'Assignee'),
+      header: t('tasks.assignee', 'Assignee'),
+      render: ({ task }) => {
+        const primary = task.assigned_team_id && teamNames[task.assigned_team_id]
+          ? teamNames[task.assigned_team_id]
+          : getAssigneeName(task.assigned_to);
+        const additionalAssignees = (taskResources[task.task_id] ?? [])
+          .map((resource) => getAssigneeName(resource.additional_user_id))
+          .filter(Boolean);
+        return additionalAssignees.length > 0
+          ? `${primary}; +${additionalAssignees.length}: ${additionalAssignees.join(', ')}`
+          : primary;
+      },
+    },
+    {
+      key: 'est_hours',
+      label: t('tasks.estHours', 'Est. Hours'),
+      header: t('tasks.estHours', 'Est. Hours'),
+      render: ({ task }) => task.estimated_hours != null
+        ? (task.estimated_hours / 60).toFixed(1)
+        : t('projectPrint.tasks.emptyValue', '-'),
+    },
+    {
+      key: 'actual_hours',
+      label: t('tasks.actualHours', 'Actual Hours'),
+      header: t('tasks.actualHours', 'Actual Hours'),
+      render: ({ task }) => task.actual_hours != null
+        ? (task.actual_hours / 60).toFixed(1)
+        : t('projectPrint.tasks.emptyValue', '-'),
+    },
+    {
+      key: 'dueDate',
+      label: t('tasks.dueDate', 'Due Date'),
+      header: t('tasks.dueDate', 'Due Date'),
+      render: ({ task }) => task.due_date
+        ? format(new Date(task.due_date), 'PP')
+        : t('projectPrint.tasks.emptyValue', '-'),
+    },
+    {
+      key: 'attachments',
+      label: t('tasks.attachments', 'Attachments'),
+      header: t('tasks.attachments', 'Attachments'),
+      render: ({ task }) => documentCounts[task.task_id] || t('projectPrint.tasks.emptyValue', '-'),
+    },
+  ], [checklistItems, documentCounts, getAssigneeName, t, taskDependencies, taskResources, taskTags, teamNames]);
+  const {
+    selectedColumnKeys: selectedTaskPrintColumnKeys,
+    selectedColumns: selectedTaskPrintColumns,
+    setSelectedColumnKeys: setSelectedTaskPrintColumnKeys,
+    resetSelectedColumnKeys: resetSelectedTaskPrintColumnKeys,
+  } = usePrintColumnSelection('print-columns:project-tasks-list', printColumns);
+
+  const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
+
+  const { triggerPrint: triggerPrintTasks, isPreparing: isPreparingTaskPrint } = usePrintAction();
+
+  const shareRegistration = useMemo(() => ({
+    triggerPrint: triggerPrintTasks,
+    openPrintOptions: () => setIsPrintOptionsOpen(true),
+    isPrinting: isPreparingTaskPrint,
+  }), [triggerPrintTasks, isPreparingTaskPrint]);
+  useRegisterTaskShareActions(shareRegistration);
+
   return (
     <div ref={containerRef} className="flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden h-[calc(100vh-220px)] min-h-[400px]">
+      <div className="app-print-root app-print-only">
+        <PrintableTable
+          title={t('projectPrint.tasks.title', 'Project Tasks')}
+          subtitle={
+            selectedTaskIds.size > 0
+              ? t('projectPrint.tasks.subtitleSelected', '{{count}} selected tasks', {
+                  count: printRows.length,
+                })
+              : t('projectPrint.tasks.subtitle', '{{count}} tasks', {
+                  count: printRows.length,
+                })
+          }
+          rows={printRows}
+          columns={selectedTaskPrintColumns}
+          getRowKey={({ task }) => task.task_id}
+          emptyMessage={t('projectPrint.tasks.noTasks', 'No project tasks to print')}
+        />
+      </div>
+      <PrintOptionsDialog
+        id="project-tasks-print-options-dialog"
+        open={isPrintOptionsOpen}
+        onOpenChange={setIsPrintOptionsOpen}
+        title={t('projectPrint.tasks.optionsDialog.title', 'Print options')}
+        description={t('projectPrint.tasks.optionsDialog.description', 'Choose which columns to include when printing project tasks.')}
+        columns={printColumns}
+        selectedColumnKeys={selectedTaskPrintColumnKeys}
+        onSelectedColumnKeysChange={setSelectedTaskPrintColumnKeys}
+        onReset={resetSelectedTaskPrintColumnKeys}
+        onPrint={() => triggerPrintTasks()}
+        isPrinting={isPreparingTaskPrint}
+      />
       {/* Hidden columns alert */}
       {hiddenColumnCount > 0 && (
         <Alert variant="info" className="rounded-none border-x-0 border-t-0">
@@ -702,7 +899,7 @@ export default function TaskListView({
       {/* Column headers - sticky */}
       <div className="bg-white border-b border-gray-200 flex-shrink-0">
         <table className="w-full table-fixed">
-          <colgroup><col style={{ width: '40px' }} /><col />{isColumnVisible('deps') && <col style={{ width: '5%' }} />}{isColumnVisible('checklist') && <col style={{ width: '6%' }} />}{isColumnVisible('tags') && <col style={{ width: '10%' }} />}{isColumnVisible('assignee') && <col style={{ width: '17%' }} />}{isColumnVisible('est_hours') && <col style={{ width: '6%' }} />}{isColumnVisible('actual_hours') && <col style={{ width: '7%' }} />}{isColumnVisible('due_date') && <col style={{ width: '9%' }} />}{isColumnVisible('attachments') && <col style={{ width: '6%' }} />}<col style={{ width: '8%' }} /></colgroup>
+          <colgroup><col style={{ width: '64px' }} /><col />{isColumnVisible('deps') && <col style={{ width: '5%' }} />}{isColumnVisible('checklist') && <col style={{ width: '6%' }} />}{isColumnVisible('tags') && <col style={{ width: '10%' }} />}{isColumnVisible('assignee') && <col style={{ width: '17%' }} />}{isColumnVisible('est_hours') && <col style={{ width: '6%' }} />}{isColumnVisible('actual_hours') && <col style={{ width: '7%' }} />}{isColumnVisible('due_date') && <col style={{ width: '9%' }} />}{isColumnVisible('attachments') && <col style={{ width: '6%' }} />}<col style={{ width: '8%' }} /></colgroup>
           <thead>
             <tr>
               <th className="w-10 px-3 py-3" />
@@ -787,7 +984,7 @@ export default function TaskListView({
           return (
             <div key={phaseGroup.phase.phase_id}>
               <table className="w-full table-fixed">
-                <colgroup><col style={{ width: '40px' }} /><col />{isColumnVisible('deps') && <col style={{ width: '5%' }} />}{isColumnVisible('checklist') && <col style={{ width: '6%' }} />}{isColumnVisible('tags') && <col style={{ width: '10%' }} />}{isColumnVisible('assignee') && <col style={{ width: '17%' }} />}{isColumnVisible('est_hours') && <col style={{ width: '6%' }} />}{isColumnVisible('actual_hours') && <col style={{ width: '7%' }} />}{isColumnVisible('due_date') && <col style={{ width: '9%' }} />}{isColumnVisible('attachments') && <col style={{ width: '6%' }} />}<col style={{ width: '8%' }} /></colgroup>
+                <colgroup><col style={{ width: '64px' }} /><col />{isColumnVisible('deps') && <col style={{ width: '5%' }} />}{isColumnVisible('checklist') && <col style={{ width: '6%' }} />}{isColumnVisible('tags') && <col style={{ width: '10%' }} />}{isColumnVisible('assignee') && <col style={{ width: '17%' }} />}{isColumnVisible('est_hours') && <col style={{ width: '6%' }} />}{isColumnVisible('actual_hours') && <col style={{ width: '7%' }} />}{isColumnVisible('due_date') && <col style={{ width: '9%' }} />}{isColumnVisible('attachments') && <col style={{ width: '6%' }} />}<col style={{ width: '8%' }} /></colgroup>
 
                 {/* Phase header row */}
                 <thead>
@@ -887,6 +1084,9 @@ export default function TaskListView({
                     {phaseGroup.statusGroups.map(statusGroup => {
                       const statusKey = `${phaseGroup.phase.phase_id}:${statusGroup.status.project_status_mapping_id}`;
                       const isStatusExpanded = expandedStatuses.has(statusKey);
+                      const statusTaskIds = statusGroup.tasks.map(t => t.task_id);
+                      const allStatusSelected = statusTaskIds.length > 0 && statusTaskIds.every(id => isSelected(id));
+                      const someStatusSelected = statusTaskIds.some(id => isSelected(id));
                       const isDropTarget = draggedTask &&
                         dragOverStatus === statusGroup.status.project_status_mapping_id &&
                         dragOverPhase === phaseGroup.phase.phase_id;
@@ -916,6 +1116,19 @@ export default function TaskListView({
                                   <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
                                 ) : (
                                   <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
+                                )}
+                                {statusTaskIds.length > 0 && (
+                                  <div onClick={(e) => e.stopPropagation()}>
+                                    <Checkbox
+                                      id={`select-status-${statusKey}`}
+                                      checked={allStatusSelected}
+                                      indeterminate={someStatusSelected && !allStatusSelected}
+                                      onChange={() => setTasksSelected(statusTaskIds, !allStatusSelected)}
+                                      size="sm"
+                                      containerClassName="mb-0"
+                                      skipRegistration
+                                    />
+                                  </div>
                                 )}
                                 <span
                                   className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
@@ -960,6 +1173,7 @@ export default function TaskListView({
                                   </tr>
                                 )}
                                 <tr
+                                data-task-row-id={task.task_id}
                                 className={`${taskIndex % 2 === 0 ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-100))]' : 'bg-white dark:bg-[rgb(var(--color-card))]'} hover:bg-primary/10 group transition-colors ${
                                   isDragging ? 'opacity-50' : ''
                                 } ${showDropIndicator ? 'bg-primary-50' : ''}`}
@@ -970,11 +1184,23 @@ export default function TaskListView({
                                 onDragLeave={handleDragLeave}
                                 onDrop={(e) => handleDrop(e, statusGroup.status.project_status_mapping_id, phaseGroup.phase.phase_id, statusGroup.tasks, taskIndex)}
                               >
-                                {/* Drag handle and indent spacer */}
-                                <td className="py-3 px-3 w-10">
-                                  {onTaskMove && (
-                                    <GripVertical className="h-4 w-4 text-gray-400 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity" />
-                                  )}
+                                {/* Selection checkbox and drag handle */}
+                                <td className="py-3 px-3">
+                                  <div className="flex items-center gap-1">
+                                    <div onClick={(e) => e.stopPropagation()}>
+                                      <Checkbox
+                                        id={`select-task-${task.task_id}`}
+                                        checked={isSelected(task.task_id)}
+                                        onChange={() => toggleTask(task.task_id)}
+                                        size="sm"
+                                        containerClassName="mb-0"
+                                        skipRegistration
+                                      />
+                                    </div>
+                                    {onTaskMove && (
+                                      <GripVertical className="h-4 w-4 text-gray-400 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    )}
+                                  </div>
                                 </td>
 
                                 {/* Task Name */}

@@ -37,7 +37,7 @@
     "heading": "Contactos",
     "addContact": "+ Añadir contacto",
     "actions": "Acciones",
-    "searchPlaceholder": "Buscar contactos",
+    "searchPlaceholder": "Buscar contactos, notas e interacciones",
     "resetFilters": "Restablecer",
     "unknownClient": "Cliente desconocido",
     "noClient": "Sin cliente",
@@ -68,7 +68,25 @@
       "message": "El siguiente tipo de teléfono personalizado{{suffix}} ya no lo usa ningún contacto: {{labels}}. ¿Eliminar la definición del tipo{{definitionSuffix}} o conservarla para uso futuro?",
       "deleteType": "Eliminar tipo",
       "keepType": "Conservar tipo"
-    }
+    },
+    "print": {
+      "title": "Contactos",
+      "subtitle": "{{count}} contactos",
+      "noContacts": "No hay contactos para imprimir",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Nombre",
+        "email": "Correo electrónico",
+        "phone": "Teléfono",
+        "client": "Cliente",
+        "status": "Estado"
+      },
+      "optionsDialog": {
+        "title": "Opciones de impresión",
+        "description": "Elige qué columnas incluir al imprimir los contactos."
+      }
+    },
+    "shareTooltip": "Imprimir, importar y exportar"
   },
   "contactDetails": {
     "title": "Detalles del contacto",
@@ -96,7 +114,8 @@
       "useClientDestination": "Usar destino del cliente",
       "inboundTicketDestinationHelp": "Si se establece, esto sobrescribe el destino del cliente para este contacto remitente exacto. Prioridad: sobrescritura del contacto -> destino del cliente -> valor predeterminado del proveedor.",
       "tags": "Etiquetas",
-      "notes": "Notas"
+      "notes": "Notas",
+      "status": "Estado"
     },
     "status": {
       "label": "Estado",

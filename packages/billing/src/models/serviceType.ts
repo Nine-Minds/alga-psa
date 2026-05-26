@@ -56,16 +56,15 @@ export const ServiceTypeModel = {
   async findAllIncludingStandard(
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string
-  ): Promise<{ id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[]> {
+  ): Promise<{ id: string; name: string; is_standard: boolean }[]> {
     // Fetch all active tenant-specific service types
     const tenantTypes = await knexOrTrx<IServiceType>(TABLE_NAME)
       .where('tenant', tenant)
       .andWhere('is_active', true)
-      .select('id', 'name', 'billing_method')
+      .select('id', 'name')
       .then(types => types.map(type => ({
         id: type.id,
         name: type.name,
-        billing_method: type.billing_method,
         is_standard: false // All tenant-specific types are marked as non-standard
       })));
 
@@ -73,6 +72,6 @@ export const ServiceTypeModel = {
     tenantTypes.sort((a, b) => a.name.localeCompare(b.name));
 
     // Ensure the return type matches the promise signature
-    return tenantTypes as { id: string; name: string; billing_method: 'fixed' | 'hourly' | 'usage'; is_standard: boolean }[];
+    return tenantTypes as { id: string; name: string; is_standard: boolean }[];
   }
 };

@@ -25,7 +25,8 @@
     "teamManagement": "Team Management",
     "loadingTeam": "Loading team configuration...",
     "loadingExperimental": "Loading experimental feature configuration...",
-    "loadingInteractions": "Loading interaction settings..."
+    "loadingInteractions": "Loading interaction settings...",
+    "keyboardShortcuts": "Keyboard Shortcuts"
   },
   "unsavedChanges": {
     "title": "Unsaved Changes",
@@ -90,10 +91,6 @@
         "name": "AI Assistant",
         "description": "Enable AI-powered Quick Ask and Chat sidebar.",
         "restriction": "Only available for whitelisted tenants."
-      },
-      "workflowAutomation": {
-        "name": "Workflow Automation",
-        "description": "Enable experimental workflow automation features in the workflow control panel and editor."
       }
     },
     "actions": {

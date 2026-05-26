@@ -13,15 +13,15 @@ type TeamsDeepLinkSurface = 'tab' | 'notification' | 'bot' | 'message_extension'
 function buildTeamsTabWebUrl(baseUrl: string, destination: TeamsDeepLinkDestination): string {
   switch (destination.type) {
     case 'my_work':
-      return `${baseUrl}/teams/tab`;
+      return `${baseUrl}/msp/dashboard`;
     case 'ticket':
       return `${baseUrl}/msp/tickets/${destination.ticketId}`;
     case 'project_task':
-      return `${baseUrl}/msp/projects/${destination.projectId}?taskId=${encodeURIComponent(destination.taskId)}`;
+      return `${baseUrl}/msp/projects/${destination.projectId}/tasks/${destination.taskId}`;
     case 'approval':
-      return `${baseUrl}/msp/approvals/${destination.approvalId}`;
+      return `${baseUrl}/msp/time-sheet-approvals?approvalId=${encodeURIComponent(destination.approvalId)}`;
     case 'time_entry':
-      return `${baseUrl}/msp/time?entryId=${encodeURIComponent(destination.entryId)}`;
+      return `${baseUrl}/msp/time-entry?entryId=${encodeURIComponent(destination.entryId)}`;
     case 'contact':
       return `${baseUrl}/msp/contacts/${destination.contactId}`;
   }

@@ -1,0 +1,366 @@
+{
+  "settings": {
+    "title": "11111",
+    "description": "11111",
+    "loading": "11111",
+    "capturePrompt": "11111",
+    "columns": {
+      "action": "11111",
+      "scope": "11111",
+      "default": "11111",
+      "effective": "11111",
+      "enabled": "11111",
+      "reset": "11111"
+    },
+    "actions": {
+      "resetAll": "11111",
+      "replace": "11111",
+      "copyCheatsheet": "11111",
+      "printCheatsheet": "11111"
+    },
+    "messages": {
+      "bindingUpdated": "11111",
+      "enabledUpdated": "11111",
+      "resetOne": "11111",
+      "resetAll": "11111",
+      "cheatsheetCopied": "11111"
+    },
+    "errors": {
+      "saveFailed": "11111",
+      "copyFailed": "11111",
+      "printFailed": "11111"
+    },
+    "resetAll": {
+      "title": "11111",
+      "message": "11111"
+    },
+    "conflict": {
+      "title": "11111",
+      "message": "11111"
+    },
+    "advisory": {
+      "hostileCombo": "11111"
+    }
+  },
+  "help": {
+    "title": "11111",
+    "close": "11111",
+    "custom": "11111"
+  },
+  "commandPalette": {
+    "title": "11111",
+    "placeholder": "11111",
+    "placeholderFulltext": "11111",
+    "loading": "11111",
+    "resultCount": "11111",
+    "seeAll": "11111",
+    "fulltextHint": "11111",
+    "fulltextInlineHelp": "11111",
+    "modes": {
+      "ariaLabel": "11111",
+      "navigation": "11111",
+      "fulltext": "11111"
+    },
+    "syntax": {
+      "title": "11111",
+      "summary": "11111",
+      "inlineHelp": "11111"
+    },
+    "types": {
+      "nav": "11111",
+      "action": "11111",
+      "record": "11111",
+      "help": "11111"
+    }
+  },
+  "groups": {
+    "global": "11111",
+    "ai": "11111",
+    "page": "11111",
+    "selection": "11111",
+    "navigation": "11111",
+    "assets": "11111",
+    "dialog": "11111",
+    "panel": "11111",
+    "record": "11111",
+    "editor": "11111",
+    "scroll": "Scroll"
+  },
+  "actions": {
+    "global": {
+      "search": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "commandPalette": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "toggleChat": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "openShortcuts": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "quickCreate": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
+    "ai": {
+      "quickAsk": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
+    "page": {
+      "create": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "save": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
+    "selection": {
+      "previous": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "next": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "open": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
+    "navigation": {
+      "goTickets": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "goAssets": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "goClients": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "goDashboard": {
+        "label": "Go to dashboard",
+        "description": "Navigate to the dashboard."
+      },
+      "goProjects": {
+        "label": "Go to projects",
+        "description": "Navigate to the projects page."
+      },
+      "goBilling": {
+        "label": "Go to billing",
+        "description": "Navigate to billing."
+      },
+      "goSettings": {
+        "label": "Go to settings",
+        "description": "Navigate to settings."
+      },
+      "goSearch": {
+        "label": "Go to global search",
+        "description": "Focus the global search field."
+      },
+      "goHelp": {
+        "label": "Go to keyboard help",
+        "description": "Open the keyboard shortcuts reference."
+      },
+      "backToParent": {
+        "label": "Back to parent list",
+        "description": "Activate the page back navigation button when one is available."
+      }
+    },
+    "assets": {
+      "commandPalette": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
+    "dialog": {
+      "cancel": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "submit": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
+    "panel": {
+      "close": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
+    "drawer": {
+      "historyBack": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "historyForward": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
+    "record": {
+      "previous": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "next": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "addTime": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
+    "editor": {
+      "undo": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "redo": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "save": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "deleteSelection": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "cancel": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "moveUp": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "moveDown": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "moveLeft": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "moveRight": {
+        "label": "11111",
+        "description": "11111"
+      }
+    },
+    "scroll": {
+      "halfDown": {
+        "label": "Scroll half page down",
+        "description": "Scroll down by half a page."
+      },
+      "halfUp": {
+        "label": "Scroll half page up",
+        "description": "Scroll up by half a page."
+      },
+      "fullDown": {
+        "label": "Scroll full page down",
+        "description": "Scroll down by one full page."
+      },
+      "fullUp": {
+        "label": "Scroll full page up",
+        "description": "Scroll up by one full page."
+      },
+      "top": {
+        "label": "Scroll to top",
+        "description": "Scroll to the top of the current page or panel."
+      },
+      "bottom": {
+        "label": "Scroll to bottom",
+        "description": "Scroll to the bottom of the current page or panel."
+      }
+    },
+    "focus": {
+      "primarySearch": {
+        "label": "Focus page search",
+        "description": "Focus the primary search field on the current page."
+      }
+    },
+    "table": {
+      "nextRow": {
+        "label": "Next table row",
+        "description": "Move the active row marker to the next selectable table row."
+      },
+      "previousRow": {
+        "label": "Previous table row",
+        "description": "Move the active row marker to the previous selectable table row."
+      },
+      "toggleRow": {
+        "label": "Toggle table row",
+        "description": "Select or deselect the active table row."
+      },
+      "visualRange": {
+        "label": "Visual row range",
+        "description": "Start or stop selecting a contiguous table row range."
+      },
+      "openRow": {
+        "label": "Open table row",
+        "description": "Open the active table row."
+      }
+    },
+    "repeat": {
+      "lastAction": {
+        "label": "Repeat last action",
+        "description": "Repeat the last Vim-style navigation action."
+      }
+    },
+    "linkhints": {
+      "show": {
+        "label": "Show link hints",
+        "description": "Show keyboard hints for visible links and controls."
+      },
+      "showNewTab": {
+        "label": "Show link hints in new tab",
+        "description": "Show keyboard hints and open links in a new tab when possible."
+      }
+    },
+    "macro": {
+      "record": {
+        "label": "Record macro",
+        "description": "Start or stop recording a Vim-style navigation macro."
+      },
+      "play": {
+        "label": "Play macro",
+        "description": "Play a recorded Vim-style navigation macro."
+      }
+    }
+  },
+  "platform": {
+    "modifiers": {
+      "meta": "11111",
+      "ctrl": "11111",
+      "alt": "11111",
+      "shift": "11111"
+    },
+    "keys": {
+      "space": "11111"
+    },
+    "aria": {
+      "control": "11111",
+      "meta": "11111",
+      "alt": "11111",
+      "shift": "11111"
+    }
+  }
+}

@@ -3,6 +3,7 @@ import { getSession } from '@alga-psa/auth';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { observabilityLogger } from '@/lib/observability/logging';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
+import { ADD_ON_DESCRIPTIONS, ADD_ON_LABELS, ADD_ONS } from '@alga-psa/types';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
@@ -103,10 +104,6 @@ export async function GET(req: NextRequest) {
     const knex = await getAdminConnection();
 
     const tenants = await knex('tenants as t')
-      .leftJoin('stripe_subscriptions as s', function () {
-        this.on('t.tenant', '=', 's.tenant')
-          .andOnIn('s.status', ['active', 'trialing', 'past_due', 'unpaid']);
-      })
       .select([
         't.tenant',
         't.client_name',
@@ -114,11 +111,88 @@ export async function GET(req: NextRequest) {
         't.plan',
         't.product_code',
         't.created_at',
-        's.status as subscription_status',
       ])
       .orderBy('t.client_name', 'asc');
 
-    return NextResponse.json({ success: true, data: tenants });
+    const tenantIds = tenants.map((tenant) => tenant.tenant);
+
+    const subscriptionRows = tenantIds.length > 0
+      ? await knex('stripe_subscriptions as s')
+          .leftJoin('stripe_prices as p', function () {
+            this.on('s.tenant', '=', 'p.tenant')
+              .andOn('s.stripe_price_id', '=', 'p.stripe_price_id');
+          })
+          .leftJoin('stripe_products as pr', function () {
+            this.on('p.tenant', '=', 'pr.tenant')
+              .andOn('p.stripe_product_id', '=', 'pr.stripe_product_id');
+          })
+          .whereIn('s.tenant', tenantIds)
+          .whereIn('s.status', ['active', 'trialing', 'past_due', 'unpaid'])
+          .select([
+            's.tenant',
+            's.stripe_subscription_external_id',
+            's.status',
+            's.quantity',
+            's.current_period_end',
+            's.billing_interval',
+            'p.stripe_price_external_id',
+            'p.unit_amount',
+            'p.currency',
+            'p.recurring_interval as price_billing_interval',
+            'pr.name as product_name',
+            'pr.product_type',
+          ])
+          .orderBy('s.updated_at', 'desc')
+      : [];
+
+    const subscriptionByTenant = new Map<string, Record<string, unknown>>();
+    for (const subscription of subscriptionRows) {
+      if (!subscriptionByTenant.has(subscription.tenant)) {
+        subscriptionByTenant.set(subscription.tenant, subscription);
+      }
+    }
+
+    const addOnRows = tenantIds.length > 0
+      ? await knex('tenant_addons')
+          .whereIn('tenant', tenantIds)
+          .andWhere(function () {
+            this.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
+          })
+          .select(['tenant', 'addon_key', 'activated_at', 'expires_at', 'metadata'])
+      : [];
+
+    const addOnsByTenant = new Map<string, Array<Record<string, unknown>>>();
+    const validAddOns = new Set<string>(Object.values(ADD_ONS));
+
+    for (const addOn of addOnRows) {
+      if (!validAddOns.has(String(addOn.addon_key))) {
+        continue;
+      }
+
+      const list = addOnsByTenant.get(addOn.tenant) || [];
+      list.push({
+        addon_key: addOn.addon_key,
+        label: ADD_ON_LABELS[addOn.addon_key as ADD_ONS],
+        description: ADD_ON_DESCRIPTIONS[addOn.addon_key as ADD_ONS],
+        activated_at: addOn.activated_at,
+        expires_at: addOn.expires_at,
+        metadata: addOn.metadata,
+      });
+      addOnsByTenant.set(addOn.tenant, list);
+    }
+
+    const data = tenants.map((tenant) => {
+      const subscription = subscriptionByTenant.get(tenant.tenant) || null;
+
+      return {
+        ...tenant,
+        subscription_status: subscription?.status ?? null,
+        subscription,
+        addons: addOnsByTenant.get(tenant.tenant) || [],
+      };
+    });
+
+    return NextResponse.json({ success: true, data });
   } catch (error) {
     observabilityLogger.error('Failed to list tenants', error, {
       event_type: 'tenant_management_error',

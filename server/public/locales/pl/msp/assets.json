@@ -197,6 +197,25 @@
       "client_name": "nazwa klienta",
       "location": "lokalizacja",
       "actions": "działania"
+    },
+    "print": {
+      "title": "Zasoby",
+      "selectedTitle": "Wybrane zasoby",
+      "subtitle": "{{count}} zasobów",
+      "noAssets": "Brak zasobów do wydruku",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Nazwa",
+        "tag": "Tag",
+        "type": "Typ",
+        "status": "Status",
+        "client": "Klient",
+        "location": "Lokalizacja"
+      },
+      "optionsDialog": {
+        "title": "Opcje drukowania",
+        "description": "Wybierz, które kolumny dołączyć podczas drukowania zasobów."
+      }
     }
   },
   "assetDashboardGrid": {
@@ -364,6 +383,14 @@
     "errors": {
       "title": "Błąd",
       "notFound": "Nie znaleziono zasobu lub nie masz uprawnień, aby go wyświetlić."
+    },
+    "fields": {
+      "assetTag": "Etykieta zasobu",
+      "serialNumber": "Numer seryjny",
+      "assetType": "Typ",
+      "client": "Klient",
+      "status": "Status",
+      "location": "Lokalizacja"
     }
   },
   "assetDetails": {
@@ -672,7 +699,7 @@
     "pageTitle": "Edytuj zasób"
   },
   "associatedAssets": {
-    "title": "Powiązane zasoby",
+    "title": "Zasoby",
     "description": "Zarządzanie relacjami zasobów nadrzędnych i podrzędnych z połączonymi działaniami dotyczącymi zasobów",
     "loading": {
       "assets": "Ładowanie zasobów..."

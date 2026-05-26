@@ -4,7 +4,7 @@ import React from 'react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ITaskType } from '@alga-psa/types';
 import { useTranslation } from 'react-i18next';
-import { CheckSquare, Bug, Sparkles, TrendingUp, Flag, BookOpen, GitBranch } from 'lucide-react';
+import { ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, GitBranch } from 'lucide-react';
 
 interface TaskTypeSelectorProps {
   value: string;
@@ -14,7 +14,7 @@ interface TaskTypeSelectorProps {
 }
 
 const taskTypeIcons: Record<string, React.ComponentType<any>> = {
-  task: CheckSquare,
+  task: ClipboardList,
   bug: Bug,
   feature: Sparkles,
   improvement: TrendingUp,
@@ -30,7 +30,7 @@ export const TaskTypeSelector: React.FC<TaskTypeSelectorProps> = ({
 }) => {
   const { t } = useTranslation(['features/projects', 'common']);
   const options = taskTypes.map(type => {
-    const Icon = taskTypeIcons[type.type_key] || CheckSquare;
+    const Icon = taskTypeIcons[type.type_key] || ClipboardList;
     return {
       value: type.type_key,
       label: (

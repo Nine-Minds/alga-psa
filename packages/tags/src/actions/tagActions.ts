@@ -9,7 +9,7 @@ import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import { hasPermissionAsync, throwPermissionErrorAsync } from '../lib/authHelpers';
 import { generateEntityColorAsync } from '../lib/uiHelpers';
 import { Knex } from 'knex';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildTagAppliedPayload,
   buildTagDefinitionCreatedPayload,
@@ -25,6 +25,106 @@ const ENTITY_PERMISSION_MAP: Partial<Record<TaggedEntityType, string>> = {
 
 function getPermissionResource(taggedType: TaggedEntityType): string {
   return ENTITY_PERMISSION_MAP[taggedType] ?? taggedType;
+}
+
+type TagTextSnapshot = string[];
+
+type CreateTagOptions = {
+  suppressEntityUpdateEvent?: boolean;
+};
+
+async function getTagTextSnapshot(
+  trx: Knex.Transaction,
+  tenant: string,
+  taggedId: string,
+  taggedType: TaggedEntityType
+): Promise<TagTextSnapshot> {
+  const tags = await TagMapping.getByEntity(trx, tenant, taggedId, taggedType);
+  return Array.from(new Set(tags.map((tag) => tag.tag_text))).sort((a, b) => a.localeCompare(b));
+}
+
+function tagTextSnapshotsEqual(previous: TagTextSnapshot, next: TagTextSnapshot): boolean {
+  return previous.length === next.length && previous.every((tagText, index) => tagText === next[index]);
+}
+
+async function resolveProjectTaskTagContext(
+  trx: Knex.Transaction,
+  tenant: string,
+  taskId: string
+): Promise<{ projectId: string; phaseId: string } | null> {
+  const row = await trx('project_tasks as pt')
+    .join('project_phases as pp', function joinProjectPhases() {
+      this.on('pt.phase_id', '=', 'pp.phase_id')
+        .andOn('pt.tenant', '=', 'pp.tenant');
+    })
+    .where({ 'pt.tenant': tenant, 'pt.task_id': taskId })
+    .first<{ project_id: string; phase_id: string }>('pp.project_id', 'pt.phase_id');
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    projectId: row.project_id,
+    phaseId: row.phase_id,
+  };
+}
+
+async function publishEntityTagUpdateEvent(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  taggedId: string;
+  taggedType: TaggedEntityType;
+  userId: string;
+  occurredAt: string;
+  previousTags: TagTextSnapshot;
+  newTags: TagTextSnapshot;
+}): Promise<void> {
+  if (tagTextSnapshotsEqual(params.previousTags, params.newTags)) {
+    return;
+  }
+
+  const changes = {
+    tags: {
+      previous: params.previousTags,
+      new: params.newTags,
+    },
+  };
+
+  if (params.taggedType === 'project_task') {
+    const context = await resolveProjectTaskTagContext(params.trx, params.tenant, params.taggedId);
+    if (!context) {
+      return;
+    }
+
+    await publishEvent({
+      eventType: 'PROJECT_TASK_UPDATED',
+      payload: {
+        tenantId: params.tenant,
+        projectId: context.projectId,
+        // Canonical PROJECT_TASK_UPDATED shape (shared with search index):
+        // taskId/timestamp, not projectTaskId/occurredAt.
+        taskId: params.taggedId,
+        phaseId: context.phaseId,
+        userId: params.userId,
+        timestamp: params.occurredAt,
+        changes,
+      },
+    });
+    return;
+  }
+
+  if (params.taggedType === 'ticket') {
+    await publishEvent({
+      eventType: 'TICKET_UPDATED',
+      payload: {
+        tenantId: params.tenant,
+        ticketId: params.taggedId,
+        userId: params.userId,
+        changes,
+      },
+    });
+  }
 }
 
 export const findTagsByEntityId = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, entityId: string, entityType: string): Promise<ITag[]> => {
@@ -98,7 +198,12 @@ export const findTagById = withAuth(async (_user: IUserWithRoles, { tenant }: Au
   }
 });
 
-export const createTag = withAuth(async (currentUser: IUserWithRoles, { tenant }: AuthContext, tag: Omit<ITag, 'tag_id' | 'tenant'>): Promise<ITag> => {
+export const createTag = withAuth(async (
+  currentUser: IUserWithRoles,
+  { tenant }: AuthContext,
+  tag: Omit<ITag, 'tag_id' | 'tenant'>,
+  options: CreateTagOptions = {}
+): Promise<ITag> => {
   // Validate tag text
   if (!tag.tag_text || !tag.tag_text.trim()) {
     throw new Error('Tag text is required');
@@ -166,12 +271,25 @@ export const createTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
         }
       );
 
+      const previousTags = await getTagTextSnapshot(
+        trx,
+        tenant,
+        tagWithTenant.tagged_id,
+        tagWithTenant.tagged_type
+      );
+
       // Create mapping with user ID
       const mapping = await TagMapping.insert(trx, tenant, {
         tag_id: definition.tag_id,
         tagged_id: tagWithTenant.tagged_id,
         tagged_type: tagWithTenant.tagged_type
       }, userId);
+      const newTags = await getTagTextSnapshot(
+        trx,
+        tenant,
+        tagWithTenant.tagged_id,
+        tagWithTenant.tagged_type
+      );
 
       const occurredAt = new Date().toISOString();
       if (createdDefinition) {
@@ -206,6 +324,19 @@ export const createTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
           actor: { actorType: 'USER', actorUserId: userId },
         },
       });
+
+      if (!options.suppressEntityUpdateEvent) {
+        await publishEntityTagUpdateEvent({
+          trx,
+          tenant,
+          taggedId: tagWithTenant.tagged_id,
+          taggedType: tagWithTenant.tagged_type,
+          userId,
+          occurredAt,
+          previousTags,
+          newTags,
+        });
+      }
 
       const createdTag: ITag = {
         ...tagWithTenant,
@@ -277,24 +408,22 @@ export const updateTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
         board_id: tag.board_id
       });
 
-      if (nextTagText && nextTagText !== previousTagText) {
-        const occurredAt = new Date().toISOString();
-        await publishWorkflowEvent({
-          eventType: 'TAG_DEFINITION_UPDATED',
-          payload: buildTagDefinitionUpdatedPayload({
-            tagId: existingTag.definition_tag_id,
-            previousName: previousTagText,
-            newName: nextTagText,
-            updatedByUserId: currentUser.user_id,
-            updatedAt: occurredAt,
-          }),
-          ctx: {
-            tenantId: tenant,
-            occurredAt,
-            actor: { actorType: 'USER', actorUserId: currentUser.user_id },
-          },
-        });
-      }
+      const occurredAt = new Date().toISOString();
+      await publishWorkflowEvent({
+        eventType: 'TAG_DEFINITION_UPDATED',
+        payload: buildTagDefinitionUpdatedPayload({
+          tagId: existingTag.definition_tag_id,
+          previousName: previousTagText,
+          newName: nextTagText,
+          updatedByUserId: currentUser.user_id,
+          updatedAt: occurredAt,
+        }),
+        ctx: {
+          tenantId: tenant,
+          occurredAt,
+          actor: { actorType: 'USER', actorUserId: currentUser.user_id },
+        },
+      });
     } catch (error) {
       console.error(`Error updating tag with id ${id}:`, error);
       if (error instanceof Error && error.message.includes('Permission denied')) {
@@ -381,12 +510,36 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
         }
       }
 
+      const previousTags = await getTagTextSnapshot(
+        trx,
+        tenant,
+        existingTag.tagged_id,
+        existingTag.tagged_type
+      );
+
       // id is actually mapping_id - just delete the mapping
       await TagMapping.delete(trx, tenant, id);
+      const newTags = await getTagTextSnapshot(
+        trx,
+        tenant,
+        existingTag.tagged_id,
+        existingTag.tagged_type
+      );
 
       // If caller explicitly wants to delete the orphaned definition, do so
       if (deleteDefinition) {
-        await TagDefinition.deleteOrphaned(trx, tenant, [existingTag.definition_tag_id]);
+        const deletedDefinitions = await TagDefinition.deleteOrphaned(trx, tenant, [existingTag.definition_tag_id]);
+        if (deletedDefinitions > 0) {
+          await publishEvent({
+            eventType: 'TAG_DEFINITION_DELETED',
+            payload: {
+              tenantId: tenant,
+              tagId: existingTag.definition_tag_id,
+              userId: currentUser.user_id,
+              timestamp: new Date().toISOString(),
+            },
+          });
+        }
       }
 
       const occurredAt = new Date().toISOString();
@@ -404,6 +557,17 @@ export const deleteTag = withAuth(async (currentUser: IUserWithRoles, { tenant }
           occurredAt,
           actor: { actorType: 'USER', actorUserId: currentUser.user_id },
         },
+      });
+
+      await publishEntityTagUpdateEvent({
+        trx,
+        tenant,
+        taggedId: existingTag.tagged_id,
+        taggedType: existingTag.tagged_type,
+        userId: currentUser.user_id,
+        occurredAt,
+        previousTags,
+        newTags,
       });
     } catch (error) {
       console.error(`Error deleting tag with id ${id}:`, error);
@@ -546,7 +710,7 @@ export async function createTagsForEntity(
         tagged_type: entityType,
         background_color: tag.background_color,
         text_color: tag.text_color,
-      });
+      }, { suppressEntityUpdateEvent: true });
       createdTags.push(newTag);
     } catch (error) {
       console.error(`Failed to create tag "${tag.tag_text}" for ${entityType}:`, error);
@@ -728,6 +892,23 @@ export const updateTagColor = withAuth(async (currentUser: IUserWithRoles, { ten
         await TagDefinition.update(trx, tenant, definition.tag_id, {
           background_color: backgroundColor,
           text_color: textColor
+        });
+
+        const occurredAt = new Date().toISOString();
+        await publishWorkflowEvent({
+          eventType: 'TAG_DEFINITION_UPDATED',
+          payload: buildTagDefinitionUpdatedPayload({
+            tagId: definition.tag_id,
+            previousName: tag.tag_text,
+            newName: tag.tag_text,
+            updatedByUserId: currentUser.user_id,
+            updatedAt: occurredAt,
+          }),
+          ctx: {
+            tenantId: tenant,
+            occurredAt,
+            actor: { actorType: 'USER', actorUserId: currentUser.user_id },
+          },
         });
       }
       return {

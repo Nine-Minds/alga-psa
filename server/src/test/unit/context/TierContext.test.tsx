@@ -83,12 +83,14 @@ describe('TierContext', () => {
     useSession.mockReturnValue({
       status: 'authenticated',
       update: vi.fn(),
-      data: { user: { plan: 'solo', addons: [ADD_ONS.AI_ASSISTANT] } },
+      data: { user: { plan: 'solo', addons: [ADD_ONS.AI_ASSISTANT, ADD_ONS.TEAMS, ADD_ONS.ENTERPRISE] } },
     });
 
     const { result } = renderHook(() => useTier(), { wrapper });
 
     expect(result.current.hasAddOn(ADD_ONS.AI_ASSISTANT)).toBe(true);
+    expect(result.current.hasAddOn(ADD_ONS.TEAMS)).toBe(true);
+    expect(result.current.hasAddOn(ADD_ONS.ENTERPRISE)).toBe(true);
   });
 
   it('hasAddOn returns false when the add-on is missing', () => {
@@ -127,9 +129,8 @@ describe('TierContext', () => {
     const { result } = renderHook(() => useTier(), { wrapper });
 
     expect(result.current.isSoloProTrial).toBe(true);
-    // TEAMS_INTEGRATION is gated at Pro+, so the trial should unlock it
-    // for Solo tenants while the trial is active.
-    expect(result.current.hasFeature(TIER_FEATURES.TEAMS_INTEGRATION)).toBe(true);
+    // TEAMS_INTEGRATION is add-on-only, so a Solo -> Pro trial does not unlock it.
+    expect(result.current.hasFeature(TIER_FEATURES.TEAMS_INTEGRATION)).toBe(false);
   });
 
   it('reverts Solo -> Pro trial feature access after the trial end passes', () => {
@@ -148,8 +149,7 @@ describe('TierContext', () => {
     const { result } = renderHook(() => useTier(), { wrapper });
 
     expect(result.current.isSoloProTrial).toBe(false);
-    // Once the trial expires, Solo loses access to the still-gated
-    // TEAMS_INTEGRATION feature.
+    // TEAMS_INTEGRATION remains add-on-only after the trial expires.
     expect(result.current.hasFeature(TIER_FEATURES.TEAMS_INTEGRATION)).toBe(false);
   });
 });

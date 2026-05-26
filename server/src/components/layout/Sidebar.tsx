@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import * as Tooltip from '@radix-ui/react-tooltip';
-import { ChevronLeft, ExternalLink, Search } from 'lucide-react';
+import { ChevronLeft, ExternalLink } from 'lucide-react';
 import { getAppVersion } from '@alga-psa/core';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { DynamicNavigationSlot } from '@alga-psa/ui/components/extensions/DynamicNavigationSlot';
@@ -21,6 +21,7 @@ import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSubMenuItem from './SidebarSubMenuItem';
 import SidebarBottomMenuItem from './SidebarBottomMenuItem';
 import GitHubStarButton from './GitHubStarButton';
+import SearchPalette from '@/components/search/SearchPalette';
 import type { MenuItem } from '@/config/menuConfig';
 import { useUserPreference } from '@alga-psa/user-composition/hooks';
 
@@ -328,29 +329,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
       )}
 
-      {/* Temporarily hide the search bar since it is non-functional */}
-      {/*
-      <div className="px-3 py-4">
-        <div
-          className="relative w-full bg-white/10 text-gray-300 rounded-md"
-          onClick={() => !sidebarOpen && setSidebarOpen(true)}
-          style={{ cursor: sidebarOpen ? 'default' : 'pointer' }}
-        >
-          <Search className="absolute left-2 top-1/2 h-5 w-5 text-gray-500 transform -translate-y-1/2" />
-          {sidebarOpen ? (
-            <input
-              type="text"
-              placeholder="Search"
-              className="w-full py-2 pr-4 pl-8 bg-transparent rounded-md border border-gray-400"
-            />
-          ) : (
-            <div className="py-4 pr-1 pl-8 h-[38px] border border-gray-400 rounded-md" />
-          )}
-        </div>
-      </div>
-      */}
+      <SearchPalette
+        collapsed={!sidebarOpen}
+        onCollapsedClick={() => setSidebarOpen(true)}
+      />
 
-      <nav className={`${isSubMode ? 'mt-2' : 'mt-4'} flex-grow min-h-0 overflow-y-auto overscroll-contain sidebar-nav`}>
+      <nav className={`${isSubMode ? 'mt-0' : 'mt-1'} flex-grow min-h-0 overflow-y-auto overscroll-contain sidebar-nav`}>
         <div
           className={`transition-all duration-200 ease-out ${
             isTransitioning

@@ -47,7 +47,7 @@ import ReduceLicensesModal from '@ee/components/licensing/ReduceLicensesModal';
 import CancellationFeedbackModal from './CancellationFeedbackModal';
 import { signOut } from 'next-auth/react';
 import { useTier } from 'server/src/context/TierContext';
-import { ADD_ONS, ADD_ON_LABELS, TIER_LABELS, TIER_FEATURE_MAP, TIER_FEATURES } from '@alga-psa/types';
+import { ADD_ONS, ADD_ON_LABELS, TIER_LABELS, TIER_FEATURE_MAP, TIER_FEATURES, type AddOnKey } from '@alga-psa/types';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useFormatAddOnDescription } from '@alga-psa/ui/hooks/useAddOnEnumOptions';
 
@@ -327,7 +327,6 @@ export default function AccountManagement() {
   const [upgradePreview, setUpgradePreview] = useState<{
     currentMonthly?: number;
     newMonthly?: number;
-    newBasePrice?: number;
     newUserPrice?: number;
     userCount?: number;
     currency?: string;
@@ -336,12 +335,12 @@ export default function AccountManagement() {
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [showDowngradeConfirm, setShowDowngradeConfirm] = useState(false);
   const [downgrading, setDowngrading] = useState(false);
-  const [showAiCheckout, setShowAiCheckout] = useState(false);
-  const [aiCheckoutClientSecret, setAiCheckoutClientSecret] = useState<string | null>(null);
-  const [aiStripePromise, setAiStripePromise] = useState<Promise<Stripe | null> | null>(null);
-  const [purchasingAi, setPurchasingAi] = useState(false);
-  const [showCancelAiConfirm, setShowCancelAiConfirm] = useState(false);
-  const [cancelingAi, setCancelingAi] = useState(false);
+  const [checkoutAddOn, setCheckoutAddOn] = useState<AddOnKey | null>(null);
+  const [addOnCheckoutClientSecret, setAddOnCheckoutClientSecret] = useState<string | null>(null);
+  const [addOnStripePromise, setAddOnStripePromise] = useState<Promise<Stripe | null> | null>(null);
+  const [purchasingAddOn, setPurchasingAddOn] = useState<AddOnKey | null>(null);
+  const [cancelAddOnConfirm, setCancelAddOnConfirm] = useState<AddOnKey | null>(null);
+  const [cancelingAddOn, setCancelingAddOn] = useState<AddOnKey | null>(null);
 
   // Billing interval switch state
   const [showIntervalSwitch, setShowIntervalSwitch] = useState(false);
@@ -350,7 +349,6 @@ export default function AccountManagement() {
     currentInterval?: 'month' | 'year';
     currentTotal?: number;
     newTotal?: number;
-    newBasePrice?: number;
     newUserPrice?: number;
     userCount?: number;
     effectiveDate?: string;
@@ -425,13 +423,11 @@ export default function AccountManagement() {
   const [confirmingPremium, setConfirmingPremium] = useState(false);
   const [showConfirmPremiumDialog, setShowConfirmPremiumDialog] = useState(false);
   const [confirmPremiumPreview, setConfirmPremiumPreview] = useState<{
-    newBasePrice?: number;
     newUserPrice?: number;
     newMonthly?: number;
     userCount?: number;
     currency?: string;
     annualAvailable?: boolean;
-    annualBasePrice?: number;
     annualUserPrice?: number;
     annualTotal?: number;
   } | null>(null);
@@ -711,43 +707,43 @@ export default function AccountManagement() {
       setDowngrading(false);
     }
   };
-  const handlePurchaseAiAssistant = async () => {
-    setPurchasingAi(true);
+  const handlePurchaseAddOn = async (addOn: AddOnKey) => {
+    setPurchasingAddOn(addOn);
     try {
-      const result = await purchaseAddOnAction(ADD_ONS.AI_ASSISTANT);
+      const result = await purchaseAddOnAction(addOn);
       if (!result.success || !result.data) {
-        toast.error(result.error || t('messages.aiCheckoutFailed'));
+        toast.error(result.error || `Failed to start ${ADD_ON_LABELS[addOn]} checkout`);
         return;
       }
 
       const stripe = await loadStripe(result.data.publishableKey);
-      setAiStripePromise(Promise.resolve(stripe));
-      setAiCheckoutClientSecret(result.data.clientSecret);
-      setShowAiCheckout(true);
+      setAddOnStripePromise(Promise.resolve(stripe));
+      setAddOnCheckoutClientSecret(result.data.clientSecret);
+      setCheckoutAddOn(addOn);
     } catch (error) {
-      console.error('Error purchasing AI Assistant:', error);
-      toast.error(t('messages.aiCheckoutFailed'));
+      console.error(`Error purchasing ${ADD_ON_LABELS[addOn]} add-on:`, error);
+      toast.error(`Failed to start ${ADD_ON_LABELS[addOn]} checkout`);
     } finally {
-      setPurchasingAi(false);
+      setPurchasingAddOn(null);
     }
   };
 
-  const handleCancelAiAssistant = async () => {
-    setCancelingAi(true);
+  const handleCancelAddOn = async (addOn: AddOnKey) => {
+    setCancelingAddOn(addOn);
     try {
-      const result = await cancelAddOnAction(ADD_ONS.AI_ASSISTANT);
+      const result = await cancelAddOnAction(addOn);
       if (result.success) {
-        toast.success(t('messages.aiRemoved'));
-        setShowCancelAiConfirm(false);
+        toast.success(`${ADD_ON_LABELS[addOn]} add-on removed`);
+        setCancelAddOnConfirm(null);
         await refreshTier();
       } else {
-        toast.error(result.error || t('messages.aiCancelFailed'));
+        toast.error(result.error || `Failed to cancel ${ADD_ON_LABELS[addOn]} add-on`);
       }
     } catch (error) {
-      console.error('Error cancelling AI Assistant:', error);
-      toast.error(t('messages.aiCancelFailed'));
+      console.error(`Error cancelling ${ADD_ON_LABELS[addOn]} add-on:`, error);
+      toast.error(`Failed to cancel ${ADD_ON_LABELS[addOn]} add-on`);
     } finally {
-      setCancelingAi(false);
+      setCancelingAddOn(null);
     }
   };
 
@@ -764,9 +760,41 @@ export default function AccountManagement() {
     : 0;
   const canDowngradeToSolo = isPro && tierUpgradeFlowEnabled;
   const hasExtraUsersForDowngrade = (licenseInfo?.active_licenses ?? 0) > 1;
-  const hasAiAssistant = hasAddOn(ADD_ONS.AI_ASSISTANT);
   const canStartSoloProTrial = isSolo && tierUpgradeFlowEnabled && subscriptionStatus === 'active' && !isSoloProTrial;
   const displayedTierFeatures = isSoloProTrial ? TIER_FEATURE_MAP.pro : TIER_FEATURE_MAP[tier];
+  const addOnCards: Array<{
+    addOn: AddOnKey;
+    description: string;
+    addTitle: string;
+    addBody: string;
+    activeTitle: string;
+    activeBody: string;
+  }> = [
+    {
+      addOn: ADD_ONS.AI_ASSISTANT,
+      description: t('aiAssistant.description'),
+      addTitle: t('aiAssistant.addTitle'),
+      addBody: t('aiAssistant.addBody'),
+      activeTitle: t('aiAssistant.activeTitle'),
+      activeBody: t('aiAssistant.activeBody'),
+    },
+    {
+      addOn: ADD_ONS.TEAMS,
+      description: 'Connect Alga PSA to Microsoft Teams with the personal tab, bot, message extension, quick actions, and activity notifications.',
+      addTitle: 'Add Microsoft Teams',
+      addBody: 'Purchase the Teams add-on to activate Microsoft Teams integration for this tenant.',
+      activeTitle: 'Teams add-on active',
+      activeBody: 'Microsoft Teams integration is available for this tenant.',
+    },
+    {
+      addOn: ADD_ONS.ENTERPRISE,
+      description: 'Activate Microsoft Entra Sync for tenant discovery, client mapping, contact synchronization, field sync, and reconciliation workflows.',
+      addTitle: 'Add Enterprise',
+      addBody: 'Purchase the Enterprise add-on to activate Microsoft Entra Sync for this tenant.',
+      activeTitle: 'Enterprise add-on active',
+      activeBody: 'Microsoft Entra Sync is available for this tenant.',
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -1360,69 +1388,72 @@ export default function AccountManagement() {
         )}
       </Card>
 
-      {tierUpgradeFlowEnabled && (<Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <CardTitle>{ADD_ON_LABELS[ADD_ONS.AI_ASSISTANT]}</CardTitle>
-              <CardDescription>{formatAddOnDescription(ADD_ONS.AI_ASSISTANT)}</CardDescription>
-            </div>
-            <Badge variant={hasAiAssistant ? 'success' : 'default-muted'}>
-              {hasAiAssistant ? t('aiAssistant.statusActive') : t('aiAssistant.statusAvailable')}
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            {t('aiAssistant.description')}
-          </p>
-          {hasAiAssistant ? (
-            <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-4">
+      {tierUpgradeFlowEnabled && addOnCards.map((card) => {
+        const isActive = hasAddOn(card.addOn);
+        const isPurchasing = purchasingAddOn === card.addOn;
+        const isCanceling = cancelingAddOn === card.addOn;
+        const addOnSlug = card.addOn.replace(/_/g, '-');
+
+        return (
+          <Card key={card.addOn}>
+            <CardHeader>
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h4 className="font-semibold">{t('aiAssistant.activeTitle')}</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {t('aiAssistant.activeBody')}
+                  <CardTitle>{ADD_ON_LABELS[card.addOn]}</CardTitle>
+                  <CardDescription>{formatAddOnDescription(card.addOn)}</CardDescription>
+                </div>
+                <Badge variant={isActive ? 'success' : 'default-muted'}>
+                  {isActive ? t('aiAssistant.statusActive') : t('aiAssistant.statusAvailable')}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">{card.description}</p>
+              {isActive ? (
+                <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h4 className="font-semibold">{card.activeTitle}</h4>
+                      <p className="text-sm text-muted-foreground">{card.activeBody}</p>
+                    </div>
+                    <Button
+                      id={`cancel-${addOnSlug}-addon-btn`}
+                      variant="outline"
+                      onClick={() => setCancelAddOnConfirm(card.addOn)}
+                      disabled={isCanceling}
+                    >
+                      {isCanceling ? t('aiAssistant.cancelling') : t('aiAssistant.cancel')}
+                    </Button>
+                  </div>
+                </div>
+              ) : isIapTenant ? (
+                <div className="rounded-lg border border-muted bg-muted/30 p-4">
+                  <h4 className="font-semibold">{t('aiAssistant.iapUnavailableTitle')}</h4>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {t('aiAssistant.iapUnavailableBody')}
                   </p>
                 </div>
-                <Button
-                  id="cancel-ai-assistant-btn"
-                  variant="outline"
-                  onClick={() => setShowCancelAiConfirm(true)}
-                  disabled={cancelingAi}
-                >
-                  {cancelingAi ? t('aiAssistant.cancelling') : t('aiAssistant.cancel')}
-                </Button>
-              </div>
-            </div>
-          ) : isIapTenant ? (
-            <div className="rounded-lg border border-muted bg-muted/30 p-4">
-              <h4 className="font-semibold">{t('aiAssistant.iapUnavailableTitle')}</h4>
-              <p className="text-sm text-muted-foreground mt-1">
-                {t('aiAssistant.iapUnavailableBody')}
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <h4 className="font-semibold">{t('aiAssistant.addTitle')}</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {t('aiAssistant.addBody')}
-                  </p>
+              ) : (
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <h4 className="font-semibold">{card.addTitle}</h4>
+                      <p className="text-sm text-muted-foreground">{card.addBody}</p>
+                    </div>
+                    <Button
+                      id={`purchase-${addOnSlug}-addon-btn`}
+                      onClick={() => handlePurchaseAddOn(card.addOn)}
+                      disabled={isPurchasing}
+                    >
+                      {isPurchasing ? t('aiAssistant.startingCheckout') : t('aiAssistant.addButton')}
+                    </Button>
+                  </div>
                 </div>
-                <Button
-                  id="purchase-ai-assistant-btn"
-                  onClick={handlePurchaseAiAssistant}
-                  disabled={purchasingAi}
-                >
-                  {purchasingAi ? t('aiAssistant.startingCheckout') : t('aiAssistant.addButton')}
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>)}
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
 
       {/* Scheduled License Changes Alert */}
       {scheduledChanges && (
@@ -1795,19 +1826,20 @@ export default function AccountManagement() {
       />
 
       <Dialog
-        isOpen={showAiCheckout}
+        isOpen={checkoutAddOn !== null}
         onClose={() => {
-          setShowAiCheckout(false);
-          setAiCheckoutClientSecret(null);
+          setCheckoutAddOn(null);
+          setAddOnCheckoutClientSecret(null);
+          setAddOnStripePromise(null);
         }}
-        title={t('aiCheckoutDialog.title')}
+        title={checkoutAddOn ? `${ADD_ON_LABELS[checkoutAddOn]} checkout` : t('aiCheckoutDialog.title')}
       >
-        {aiCheckoutClientSecret && aiStripePromise ? (
+        {addOnCheckoutClientSecret && addOnStripePromise ? (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              {t('aiCheckoutDialog.body')}
+              Complete checkout to activate this add-on for your tenant.
             </p>
-            <EmbeddedCheckoutProvider stripe={aiStripePromise} options={{ clientSecret: aiCheckoutClientSecret }}>
+            <EmbeddedCheckoutProvider stripe={addOnStripePromise} options={{ clientSecret: addOnCheckoutClientSecret }}>
               <EmbeddedCheckout />
             </EmbeddedCheckoutProvider>
           </div>
@@ -1972,18 +2004,20 @@ export default function AccountManagement() {
       />
 
       <ConfirmationDialog
-        id="cancel-ai-assistant-confirm"
-        isOpen={showCancelAiConfirm}
-        onClose={() => setShowCancelAiConfirm(false)}
-        onConfirm={handleCancelAiAssistant}
-        title={t('cancelAiDialog.title')}
-        confirmLabel={cancelingAi ? t('cancelAiDialog.cancelling') : t('cancelAiDialog.confirm')}
-        isConfirming={cancelingAi}
+        id="cancel-addon-confirm"
+        isOpen={cancelAddOnConfirm !== null}
+        onClose={() => setCancelAddOnConfirm(null)}
+        onConfirm={() => cancelAddOnConfirm && handleCancelAddOn(cancelAddOnConfirm)}
+        title={cancelAddOnConfirm ? `Cancel ${ADD_ON_LABELS[cancelAddOnConfirm]} add-on?` : t('cancelAiDialog.title')}
+        confirmLabel={cancelingAddOn ? t('cancelAiDialog.cancelling') : t('cancelAiDialog.confirm')}
+        isConfirming={cancelingAddOn !== null}
         message={
           <div className="space-y-3">
-            <p><span dangerouslySetInnerHTML={{ __html: t('cancelAiDialog.body1') }} /></p>
+            <p>
+              This will cancel the {cancelAddOnConfirm ? ADD_ON_LABELS[cancelAddOnConfirm] : 'selected'} add-on subscription for this tenant.
+            </p>
             <p className="text-sm text-muted-foreground">
-              {t('cancelAiDialog.body2')}
+              Access remains controlled by the active add-on row and may end when Stripe confirms cancellation.
             </p>
           </div>
         }
@@ -2011,10 +2045,6 @@ export default function AccountManagement() {
                     <span>${upgradePreview.currentMonthly?.toFixed(2)}</span>
                   </div>
                 )}
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t('upgradeDialog.baseFee', { tier: TIER_LABELS[upgradeTargetTier] })}</span>
-                  <span>${upgradePreview.newBasePrice?.toFixed(2)}{t('upgradeDialog.perMonthSuffix')}</span>
-                </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t('upgradeDialog.perUserFee', { count: upgradePreview.userCount })}</span>
                   <span>{t('upgradeDialog.perUserFeeValue', {
@@ -2169,16 +2199,12 @@ export default function AccountManagement() {
 
               <div className="rounded-lg border p-4 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t('confirmPremiumDialog.baseFee')}</span>
-                  <span>${((confirmPremiumPreview.newBasePrice || 0) / 100).toFixed(2)}{t('confirmPremiumDialog.perMonthSuffix')}</span>
-                </div>
-                <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t('confirmPremiumDialog.perUserCount', { count: confirmPremiumPreview.userCount })}</span>
-                  <span>{t('confirmPremiumDialog.perUserRate', { amount: ((confirmPremiumPreview.newUserPrice || 0) / 100).toFixed(2) })}</span>
+                  <span>{t('confirmPremiumDialog.perUserRate', { amount: (confirmPremiumPreview.newUserPrice || 0).toFixed(2) })}</span>
                 </div>
                 <div className="flex justify-between text-sm font-semibold pt-2 border-t">
                   <span>{t('confirmPremiumDialog.newMonthlyTotal')}</span>
-                  <span>${((confirmPremiumPreview.newMonthly || 0) / 100).toFixed(2)}{t('confirmPremiumDialog.perMonthSuffix')}</span>
+                  <span>${(confirmPremiumPreview.newMonthly || 0).toFixed(2)}{t('confirmPremiumDialog.perMonthSuffix')}</span>
                 </div>
               </div>
 

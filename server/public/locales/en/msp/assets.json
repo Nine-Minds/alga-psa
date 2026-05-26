@@ -197,6 +197,25 @@
       "client_name": "client name",
       "location": "location",
       "actions": "actions"
+    },
+    "print": {
+      "title": "Assets",
+      "selectedTitle": "Selected Assets",
+      "subtitle": "{{count}} assets",
+      "noAssets": "No assets to print",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Name",
+        "tag": "Tag",
+        "type": "Type",
+        "status": "Status",
+        "client": "Client",
+        "location": "Location"
+      },
+      "optionsDialog": {
+        "title": "Print options",
+        "description": "Choose which columns to include when printing assets."
+      }
     }
   },
   "assetDashboardGrid": {
@@ -364,6 +383,14 @@
     "errors": {
       "title": "Error",
       "notFound": "Asset not found or you do not have permission to view it."
+    },
+    "fields": {
+      "assetTag": "Asset Tag",
+      "serialNumber": "Serial Number",
+      "assetType": "Type",
+      "client": "Client",
+      "status": "Status",
+      "location": "Location"
     }
   },
   "assetDetails": {
@@ -672,7 +699,7 @@
     "pageTitle": "Edit Asset"
   },
   "associatedAssets": {
-    "title": "Associated Assets",
+    "title": "Assets",
     "description": "Parent and child asset relationship management with linked asset actions",
     "loading": {
       "assets": "Loading assets..."

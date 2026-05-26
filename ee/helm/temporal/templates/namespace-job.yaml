@@ -1,0 +1,53 @@
+{{- if and .Values.enabled .Values.temporal.createDefaultNamespace }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "temporal.fullname" . }}-namespace-init
+  namespace: {{ include "temporal.namespace" . }}
+  labels:
+    {{- include "temporal.labels" . | nindent 4 }}
+    app.kubernetes.io/component: namespace-init
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 6
+  template:
+    metadata:
+      labels:
+        {{- include "temporal.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: namespace-init
+    spec:
+      restartPolicy: OnFailure
+      enableServiceLinks: false
+      containers:
+        - name: namespace-init
+          image: "{{ .Values.server.image.repository }}:{{ .Values.server.image.tag }}"
+          imagePullPolicy: {{ .Values.server.image.pullPolicy }}
+          env:
+            - name: TEMPORAL_ADDRESS
+              value: "{{ .Values.service.name }}:{{ .Values.service.port }}"
+            - name: DEFAULT_NAMESPACE
+              value: "{{ .Values.temporal.namespace }}"
+            - name: DEFAULT_NAMESPACE_RETENTION
+              value: "{{ .Values.temporal.namespaceRetention }}"
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              echo "Waiting for Temporal frontend at ${TEMPORAL_ADDRESS}..."
+              until temporal operator cluster health --address "${TEMPORAL_ADDRESS}" | grep -q SERVING; do
+                sleep 2
+              done
+
+              if temporal operator namespace describe "${DEFAULT_NAMESPACE}" --address "${TEMPORAL_ADDRESS}" >/dev/null 2>&1; then
+                echo "Temporal namespace ${DEFAULT_NAMESPACE} already exists."
+              else
+                temporal operator namespace create \
+                  --retention "${DEFAULT_NAMESPACE_RETENTION}" \
+                  --description "Default namespace for Alga PSA appliance workflows." \
+                  "${DEFAULT_NAMESPACE}" \
+                  --address "${TEMPORAL_ADDRESS}"
+              fi
+{{- end }}

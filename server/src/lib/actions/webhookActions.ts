@@ -8,18 +8,12 @@ import { z } from 'zod';
 
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { getUserRoles } from '@alga-psa/auth/actions';
-import type { TicketWebhookPayload } from '@/lib/eventBus/subscribers/webhook/webhookTicketPayload';
-import type { TicketWebhookPublicEvent } from '@/lib/eventBus/subscribers/webhook/webhookEventMap';
 import { buildSignedWebhookRequestHeaders, buildWebhookEnvelope } from '@/lib/webhooks/processWebhookDeliveryJob';
 import { performWebhookDeliveryRequest } from '@/lib/webhooks/delivery';
 import { signRequest } from '@/lib/webhooks/sign';
-import { WebhookDeliveryQueue } from '@/lib/webhooks/WebhookDeliveryQueue';
+import { WebhookDeliveryQueue, type WebhookDeliveryPayload } from '@/lib/webhooks/WebhookDeliveryQueue';
 import { webhookModel, type WebhookDeliveryRecord, type WebhookRecord } from '@/lib/webhooks/webhookModel';
-import { WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY } from './webhookPayloadFields';
-// Types and the registry constant live in ./webhookPayloadFields and must be
-// imported from there directly. This module is "use server" — Next's RSC
-// bundler rejects any non-async-function export, so we cannot re-export
-// types or the registry from here.
+import { payloadFieldsByEntitySchema } from '@/lib/webhooks/payloadFields';
 
 const SUPPORTED_WEBHOOK_EVENTS = [
   'ticket.created',
@@ -28,44 +22,18 @@ const SUPPORTED_WEBHOOK_EVENTS = [
   'ticket.status_changed',
   'ticket.closed',
   'ticket.comment.added',
+  'project.created',
+  'project.updated',
+  'project.status_changed',
+  'project.assigned',
+  'project.closed',
+  'project.completed',
+  'project.task.created',
+  'project.task.updated',
+  'project.task.status_changed',
+  'project.task.assigned',
+  'project.task.completed',
 ] as const;
-
-// Per-webhook allowlist:
-//   null              — full payload for every entity (default).
-//   {}                — same as null.
-//   { ticket: null }  — full payload for that entity (explicit).
-//   { ticket: [] }    — required-only for that entity.
-//   { ticket: [...] } — only these fields for that entity (plus required).
-// Entities not present in the map fall back to "full payload".
-const payloadFieldsByEntitySchema = z
-  .record(z.string(), z.array(z.string()).nullable())
-  .nullable()
-  .superRefine((value, ctx) => {
-    if (!value) return;
-    for (const [entity, fields] of Object.entries(value)) {
-      const allowed =
-        (WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY as Record<string, readonly string[]>)[entity];
-      if (!allowed) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: [entity],
-          message: `Unknown webhook entity "${entity}"`,
-        });
-        continue;
-      }
-      if (fields === null) continue;
-      const allowedSet = new Set(allowed);
-      for (const f of fields) {
-        if (!allowedSet.has(f)) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: [entity],
-            message: `Unknown field "${f}" for entity "${entity}"`,
-          });
-        }
-      }
-    }
-  });
 
 const webhookInputSchema = z.object({
   webhookId: z.string().uuid().optional(),
@@ -466,10 +434,10 @@ export const retryWebhookDelivery = withAuth(async (user, _ctx, webhookId: strin
   await queue.enqueue({
     webhookId,
     eventId: parsedEnvelope.data.event_id,
-    eventType: parsedEnvelope.data.event_type as TicketWebhookPublicEvent,
+    eventType: parsedEnvelope.data.event_type,
     occurredAt: parsedEnvelope.data.occurred_at,
     tenantId: user.tenant,
-    payload: parsedEnvelope.data.data as TicketWebhookPayload,
+    payload: parsedEnvelope.data.data as WebhookDeliveryPayload,
     attempt: 1,
     deliverAt: Date.now(),
   });

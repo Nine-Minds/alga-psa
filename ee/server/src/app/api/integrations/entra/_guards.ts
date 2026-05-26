@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import { TIER_FEATURES } from '@alga-psa/types';
+import { ADD_ONS, TIER_FEATURES } from '@alga-psa/types';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { featureFlags } from 'server/src/lib/feature-flags/featureFlags';
+import { AddOnAccessError, assertAddOnAccess } from 'server/src/lib/tier-gating/assertAddOnAccess';
 import { TierAccessError, assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 
 type EntraGuardPermission = 'read' | 'update';
@@ -45,8 +46,9 @@ export async function requireEntraUiFlagEnabled(
 
   try {
     await assertTierAccess(TIER_FEATURES.INTEGRATIONS);
+    await assertAddOnAccess(ADD_ONS.ENTERPRISE);
   } catch (error) {
-    if (error instanceof TierAccessError) {
+    if (error instanceof TierAccessError || error instanceof AddOnAccessError) {
       return NextResponse.json(
         {
           success: false,

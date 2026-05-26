@@ -4,6 +4,8 @@ export {
   WORKFLOW_RUNTIME_V2_QUOTA_RESUME_SIGNAL,
   WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE,
   WORKFLOW_RUNTIME_V2_TEMPORAL_WORKFLOW,
+  WORKFLOW_RUNTIME_V2_DEFAULT_EXECUTION_TIMEOUT,
+  WORKFLOW_RUNTIME_V2_DEFAULT_RUN_TIMEOUT,
   type WorkflowRuntimeV2TemporalRunInput,
 } from './workflowRuntimeV2TemporalContract';
 
@@ -13,11 +15,17 @@ import {
   WORKFLOW_RUNTIME_V2_QUOTA_RESUME_SIGNAL,
   WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE,
   WORKFLOW_RUNTIME_V2_TEMPORAL_WORKFLOW,
+  WORKFLOW_RUNTIME_V2_DEFAULT_EXECUTION_TIMEOUT,
+  WORKFLOW_RUNTIME_V2_DEFAULT_RUN_TIMEOUT,
   type WorkflowRuntimeV2TemporalRunInput,
 } from './workflowRuntimeV2TemporalContract';
 
 const DEFAULT_TEMPORAL_ADDRESS = 'temporal-frontend.temporal.svc.cluster.local:7233';
 const DEFAULT_TEMPORAL_NAMESPACE = 'default';
+
+const resolveWorkflowRuntimeV2TemporalTimeout = <T extends string>(value: string | undefined, fallback: T): T => {
+  return (value?.trim() || fallback) as T;
+};
 
 export async function startWorkflowRuntimeV2TemporalRun(
   input: WorkflowRuntimeV2TemporalRunInput
@@ -36,6 +44,14 @@ export async function startWorkflowRuntimeV2TemporalRun(
     const handle = await client.workflow.start(WORKFLOW_RUNTIME_V2_TEMPORAL_WORKFLOW, {
       taskQueue: WORKFLOW_RUNTIME_V2_TEMPORAL_TASK_QUEUE,
       workflowId: temporalWorkflowId,
+      workflowExecutionTimeout: resolveWorkflowRuntimeV2TemporalTimeout(
+        process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_EXECUTION_TIMEOUT,
+        WORKFLOW_RUNTIME_V2_DEFAULT_EXECUTION_TIMEOUT
+      ),
+      workflowRunTimeout: resolveWorkflowRuntimeV2TemporalTimeout(
+        process.env.WORKFLOW_RUNTIME_V2_TEMPORAL_RUN_TIMEOUT,
+        WORKFLOW_RUNTIME_V2_DEFAULT_RUN_TIMEOUT
+      ),
       args: [input],
     });
 

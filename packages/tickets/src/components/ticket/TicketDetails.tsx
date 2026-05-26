@@ -36,6 +36,7 @@ import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError, isActionMessageError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { useDrawer } from "@alga-psa/ui";
+import { useCatalogShortcut } from "@alga-psa/ui/keyboard-shortcuts";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { findUserById, getCurrentUser, getCurrentUserPermissions } from "@alga-psa/user-composition/actions";
 import { findBoardById } from "@alga-psa/tickets/actions";
@@ -1590,6 +1591,58 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             return false;
         }
     };
+
+    const handleAddReplyComment = async (
+        content: PartialBlock[],
+        parentCommentId: string,
+        isInternal: boolean
+    ): Promise<boolean> => {
+        const contentStr = JSON.stringify(content);
+        const hasContent = contentStr !== JSON.stringify([{
+            type: "paragraph",
+            props: {
+                textAlignment: "left",
+                backgroundColor: "default",
+                textColor: "default"
+            },
+            content: [{
+                type: "text",
+                text: "",
+                styles: {}
+            }]
+        }]);
+
+        if (!hasContent || !ticket.ticket_id || !userId) {
+            return false;
+        }
+
+        try {
+            await createComment({
+                ticket_id: ticket.ticket_id,
+                note: contentStr,
+                is_internal: isInternal,
+                is_resolution: false,
+                user_id: userId,
+                author_type: 'internal',
+                parent_comment_id: parentCommentId
+            });
+
+            const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
+            setConversations(updatedComments);
+
+            if (!isInternal && responseStateTrackingEnabled) {
+                setTicket((prev: any) => ({
+                    ...prev,
+                    response_state: 'awaiting_client'
+                }));
+            }
+
+            return true;
+        } catch (error) {
+            handleError(error, t('messages.addCommentFailed', 'Failed to add comment'));
+            return false;
+        }
+    };
     
     const handleEdit = (conversation: IComment) => {
         // Only allow users to edit their own comments
@@ -1802,6 +1855,8 @@ const handleClose = () => {
     const handleRequestDeleteTimeEntry = (entry: { entry_id: string; user_name: string | null }) => {
         setPendingDeleteTimeEntry(entry);
     };
+
+    useCatalogShortcut('record.addTime', () => { void handleAddTimeEntry(); });
 
     const handleConfirmDeleteTimeEntry = async () => {
         if (!pendingDeleteTimeEntry) return;
@@ -2723,6 +2778,7 @@ const handleClose = () => {
                                     editorKey={editorKey}
                                     onNewCommentContentChange={setNewCommentContent}
                                     onAddNewComment={handleAddNewComment}
+                                    onAddReplyComment={handleAddReplyComment}
                                     onTabChange={setActiveTab}
                                     onEdit={handleEdit}
                                     onSave={handleSave}

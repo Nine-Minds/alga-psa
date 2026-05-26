@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { dynamic, eeUnavailable } from '../../_ceStub';
+import { eeUnavailable } from '../../_ceStub';
 import { loadCalendarEeRoute } from '../../_eeDelegator';
 
 type EeRouteModule = {
@@ -8,7 +8,7 @@ type EeRouteModule = {
   OPTIONS?: (request: NextRequest) => Promise<Response>;
 };
 
-export { dynamic };
+export const dynamic = 'force-dynamic';
 
 async function loadRoute(): Promise<EeRouteModule | null> {
   return loadCalendarEeRoute<EeRouteModule>(

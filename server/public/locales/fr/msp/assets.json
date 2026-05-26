@@ -197,6 +197,25 @@
       "client_name": "nom du client",
       "location": "emplacement",
       "actions": "actes"
+    },
+    "print": {
+      "title": "Actifs",
+      "selectedTitle": "Actifs sélectionnés",
+      "subtitle": "{{count}} actifs",
+      "noAssets": "Aucun actif à imprimer",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Nom",
+        "tag": "Étiquette",
+        "type": "Type",
+        "status": "Statut",
+        "client": "Client",
+        "location": "Emplacement"
+      },
+      "optionsDialog": {
+        "title": "Options d'impression",
+        "description": "Choisissez les colonnes à inclure lors de l'impression des actifs."
+      }
     }
   },
   "assetDashboardGrid": {
@@ -364,6 +383,14 @@
     "errors": {
       "title": "Erreur",
       "notFound": "Actif introuvable ou vous n'êtes pas autorisé à l'afficher."
+    },
+    "fields": {
+      "assetTag": "Étiquette d'actif",
+      "serialNumber": "Numéro de série",
+      "assetType": "Type",
+      "client": "Client",
+      "status": "Statut",
+      "location": "Emplacement"
     }
   },
   "assetDetails": {
@@ -672,7 +699,7 @@
     "pageTitle": "Modifier l'actif"
   },
   "associatedAssets": {
-    "title": "Actifs associés",
+    "title": "Actifs",
     "description": "Gestion des relations entre les actifs parents et enfants avec des actions sur les actifs liés",
     "loading": {
       "assets": "Chargement des éléments..."

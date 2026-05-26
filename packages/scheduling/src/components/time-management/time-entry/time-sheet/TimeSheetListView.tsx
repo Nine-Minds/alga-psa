@@ -9,7 +9,7 @@ import { Plus, ClipboardList, ArrowRight, ChevronDown, ChevronRight, Copy, Exter
 import { ITimeEntryWithWorkItemString } from '@alga-psa/types';
 import { IExtendedWorkItem } from '@alga-psa/types';
 import { formatISO, parseISO, format } from 'date-fns';
-import { BillabilityPercentage, billabilityColorScheme, formatDuration, formatWorkItemType, formatTimeRange } from './utils';
+import { BillabilityPercentage, billabilityColorScheme, formatDuration, formatWorkItemType, formatTimeRange, getTimeEntryWorkDate } from './utils';
 import { TimeEntrySelectionRequest, TimeSheetListFocusFilter } from './types';
 import { BillableLegend } from './BillableLegend';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -89,10 +89,13 @@ export function TimeSheetListView({
 
             workItemEntries.forEach(entry => {
                 const start = parseISO(entry.start_time);
+                const entryWorkDate = getTimeEntryWorkDate(entry);
 
                 // Filter entries to only those within the time period
                 if (dateRange) {
-                    if (start < dateRange.startDate || start > dateRange.endDate) {
+                    const rangeStartDateKey = formatISO(dateRange.startDate, { representation: 'date' });
+                    const rangeEndDateKey = formatISO(dateRange.endDate, { representation: 'date' });
+                    if (entryWorkDate < rangeStartDateKey || entryWorkDate > rangeEndDateKey) {
                         return; // Skip entries outside the date range
                     }
                 }
@@ -105,8 +108,8 @@ export function TimeSheetListView({
                 entries.push({
                     entry,
                     workItem,
-                    date: start,
-                    dateKey: format(start, 'yyyy-MM-dd'),
+                    date: parseISO(entryWorkDate),
+                    dateKey: entryWorkDate,
                     duration,
                     billabilityPercentage
                 });
@@ -234,7 +237,7 @@ export function TimeSheetListView({
 
     const handleEntryClick = (flatEntry: FlattenedEntry) => {
         const { entry, workItem } = flatEntry;
-        const dateStr = entry.work_date || formatISO(parseISO(entry.start_time), { representation: 'date' });
+        const dateStr = getTimeEntryWorkDate(entry);
 
         onCellClick({
             workItem,

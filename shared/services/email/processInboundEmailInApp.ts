@@ -573,6 +573,148 @@ async function findExistingEmailTicket(params: {
   });
 }
 
+async function resolveReplyTargetFromComment(params: {
+  tenantId: string;
+  commentId: string;
+}): Promise<{ ticketId: string; threadId: string; parentCommentId: string } | null> {
+  const { withAdminTransaction } = await import('@alga-psa/db');
+  return withAdminTransaction(async (trx: any) => {
+    const source = await trx('comments')
+      .select('ticket_id as ticketId', 'thread_id as threadId')
+      .where({ tenant: params.tenantId, comment_id: params.commentId })
+      .first();
+
+    if (!source?.ticketId || !source?.threadId) {
+      return null;
+    }
+
+    const latest = await trx('comments')
+      .select('comment_id as parentCommentId')
+      .where({ tenant: params.tenantId, thread_id: source.threadId })
+      .orderBy('created_at', 'desc')
+      .orderBy('comment_id', 'desc')
+      .first();
+
+    return latest?.parentCommentId
+      ? {
+          ticketId: source.ticketId,
+          threadId: source.threadId,
+          parentCommentId: latest.parentCommentId,
+        }
+      : null;
+  });
+}
+
+async function resolveReplyTargetFromCommentThread(params: {
+  tenantId: string;
+  threadId: string;
+}): Promise<{ ticketId: string; threadId: string; parentCommentId: string } | null> {
+  const { withAdminTransaction } = await import('@alga-psa/db');
+  return withAdminTransaction(async (trx: any) => {
+    const thread = await trx('comment_threads')
+      .select('ticket_id as ticketId', 'thread_id as threadId')
+      .where({ tenant: params.tenantId, thread_id: params.threadId })
+      .first();
+
+    if (!thread?.ticketId || !thread?.threadId) {
+      return null;
+    }
+
+    const latest = await trx('comments')
+      .select('comment_id as parentCommentId')
+      .where({ tenant: params.tenantId, thread_id: thread.threadId })
+      .orderBy('created_at', 'desc')
+      .orderBy('comment_id', 'desc')
+      .first();
+
+    return latest?.parentCommentId
+      ? {
+          ticketId: thread.ticketId,
+          threadId: thread.threadId,
+          parentCommentId: latest.parentCommentId,
+        }
+      : null;
+  });
+}
+
+async function resolveReplyTargetFromOutboundMessageId(params: {
+  tenantId: string;
+  rfcMessageId: string;
+}): Promise<{ ticketId: string; threadId: string; parentCommentId: string } | null> {
+  const normalizedMessageId = params.rfcMessageId.trim();
+  if (!normalizedMessageId) {
+    return null;
+  }
+
+  const { withAdminTransaction } = await import('@alga-psa/db');
+  const row = await withAdminTransaction(async (trx: any) => {
+    return trx('email_sending_logs')
+      .select('comment_thread_id as threadId')
+      .where({ tenant: params.tenantId, rfc_message_id: normalizedMessageId })
+      .whereNotNull('comment_thread_id')
+      .orderBy('created_at', 'desc')
+      .first();
+  });
+
+  return row?.threadId
+    ? resolveReplyTargetFromCommentThread({
+        tenantId: params.tenantId,
+        threadId: row.threadId,
+      })
+    : null;
+}
+
+async function resolveReplyTargetFromReferences(params: {
+  tenantId: string;
+  references?: string[];
+}): Promise<{ ticketId: string; threadId: string; parentCommentId: string } | null> {
+  const references = (params.references ?? [])
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  for (let index = references.length - 1; index >= 0; index -= 1) {
+    const target = await resolveReplyTargetFromOutboundMessageId({
+      tenantId: params.tenantId,
+      rfcMessageId: references[index],
+    });
+    if (target) {
+      return target;
+    }
+  }
+
+  return null;
+}
+
+async function resolveReplyTargetFromProviderThreadId(params: {
+  tenantId: string;
+  providerThreadId?: string | null;
+}): Promise<{ ticketId: string; threadId: string; parentCommentId: string } | null> {
+  const providerThreadId = params.providerThreadId?.trim();
+  if (!providerThreadId) {
+    return null;
+  }
+
+  const { withAdminTransaction } = await import('@alga-psa/db');
+  const row = await withAdminTransaction(async (trx: any) => {
+    return trx('comment_threads')
+      .select('thread_id as threadId')
+      .where({
+        tenant: params.tenantId,
+        email_provider_thread_id: providerThreadId,
+      })
+      .whereNotNull('ticket_id')
+      .orderBy('last_activity_at', 'desc')
+      .first();
+  });
+
+  return row?.threadId
+    ? resolveReplyTargetFromCommentThread({
+        tenantId: params.tenantId,
+        threadId: row.threadId,
+      })
+    : null;
+}
+
 function normalizeEmbeddedContentId(value: string | undefined | null): string {
   if (!value) return '';
   return String(value).trim().replace(/^cid:/i, '').replace(/^<|>$/g, '').toLowerCase();
@@ -921,6 +1063,7 @@ export async function processInboundEmailInApp(
   const handleThreadedReply = async (params: {
     ticketId: string;
     matchedBy: 'reply_token' | 'thread_headers';
+    parentCommentId?: string | null;
   }): Promise<ProcessInboundEmailInAppResult | null> => {
     const existingCommentId = await findExistingEmailComment({
       tenantId,
@@ -1076,6 +1219,7 @@ export async function processInboundEmailInApp(
       {
         ticket_id: params.ticketId,
         content: serializedBlocks,
+        parent_comment_id: params.parentCommentId ?? undefined,
         source: 'email',
         author_type: matchedSenderIsInternalUser ? 'internal' : 'contact',
         author_id: matchedSenderContact?.user_id,
@@ -1150,16 +1294,26 @@ export async function processInboundEmailInApp(
     try {
       const match = await findTicketByReplyToken(String(token), tenantId);
       if (match?.ticketId) {
+        const replyTarget = match.commentId
+          ? await resolveReplyTargetFromComment({
+              tenantId,
+              commentId: match.commentId,
+            })
+          : null;
+        const ticketId = replyTarget?.ticketId ?? match.ticketId;
+
         if (diagnostics) {
           diagnostics.threading.tokenLookupMatched = true;
           diagnostics.threading.tokenLookupMissReason = null;
           diagnostics.threading.matchedBy = 'reply_token';
-          diagnostics.threading.matchedTicketId = match.ticketId;
+          diagnostics.threading.matchedTicketId = ticketId;
+          diagnostics.threading.matchedCommentId = match.commentId ?? null;
         }
 
         const handled = await handleThreadedReply({
-          ticketId: match.ticketId,
+          ticketId,
           matchedBy: 'reply_token',
+          parentCommentId: replyTarget?.parentCommentId ?? null,
         });
         if (handled) {
           return handled;
@@ -1184,31 +1338,62 @@ export async function processInboundEmailInApp(
 
   // Thread headers fallback.
   let threadedTicketId: string | null = null;
+  let threadedParentCommentId: string | null = null;
   if (!rerouteToNewTicket) {
     if (diagnostics) {
       diagnostics.threading.headerLookupAttempted = true;
     }
 
     try {
-      const ticket = await findTicketByEmailThread(
-        {
-          threadId: emailData.threadId,
-          inReplyTo: emailData.inReplyTo,
+      let threadTarget = emailData.inReplyTo
+        ? await resolveReplyTargetFromOutboundMessageId({
+            tenantId,
+            rfcMessageId: emailData.inReplyTo,
+          })
+        : null;
+      if (!threadTarget) {
+        threadTarget = await resolveReplyTargetFromReferences({
+          tenantId,
           references: emailData.references,
-          originalMessageId: emailData.inReplyTo ?? emailData.id,
-        },
-        tenantId
-      );
-      if (ticket?.ticketId) {
-        threadedTicketId = ticket.ticketId;
+        });
+      }
+      if (!threadTarget) {
+        threadTarget = await resolveReplyTargetFromProviderThreadId({
+          tenantId,
+          providerThreadId: emailData.threadId,
+        });
+      }
+
+      if (threadTarget) {
+        threadedTicketId = threadTarget.ticketId;
+        threadedParentCommentId = threadTarget.parentCommentId;
         if (diagnostics) {
           diagnostics.threading.headerLookupMatched = true;
           diagnostics.threading.headerLookupMissReason = null;
           diagnostics.threading.matchedBy = 'thread_headers';
-          diagnostics.threading.matchedTicketId = ticket.ticketId;
+          diagnostics.threading.matchedTicketId = threadTarget.ticketId;
         }
-      } else if (diagnostics) {
-        diagnostics.threading.headerLookupMissReason = 'header_no_match';
+      } else {
+        const ticket = await findTicketByEmailThread(
+          {
+            threadId: emailData.threadId,
+            inReplyTo: emailData.inReplyTo,
+            references: emailData.references,
+            originalMessageId: emailData.inReplyTo ?? emailData.id,
+          },
+          tenantId
+        );
+        if (ticket?.ticketId) {
+          threadedTicketId = ticket.ticketId;
+          if (diagnostics) {
+            diagnostics.threading.headerLookupMatched = true;
+            diagnostics.threading.headerLookupMissReason = null;
+            diagnostics.threading.matchedBy = 'thread_headers';
+            diagnostics.threading.matchedTicketId = ticket.ticketId;
+          }
+        } else if (diagnostics) {
+          diagnostics.threading.headerLookupMissReason = 'header_no_match';
+        }
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -1229,6 +1414,7 @@ export async function processInboundEmailInApp(
     const handled = await handleThreadedReply({
       ticketId: threadedTicketId,
       matchedBy: 'thread_headers',
+      parentCommentId: threadedParentCommentId,
     });
     if (handled) {
       return handled;

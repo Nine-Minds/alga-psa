@@ -37,7 +37,7 @@
     "heading": "Contacts",
     "addContact": "+ Add Contact",
     "actions": "Actions",
-    "searchPlaceholder": "Search contacts",
+    "searchPlaceholder": "Search contacts, notes, and interactions",
     "resetFilters": "Reset",
     "unknownClient": "Unknown Client",
     "noClient": "No Client",
@@ -68,7 +68,25 @@
       "message": "The following custom phone type{{suffix}} no longer used by any contact: {{labels}}. Delete the type definition{{definitionSuffix}}, or keep for future use?",
       "deleteType": "Delete Type",
       "keepType": "Keep Type"
-    }
+    },
+    "print": {
+      "title": "Contacts",
+      "subtitle": "{{count}} contacts",
+      "noContacts": "No contacts to print",
+      "emptyValue": "-",
+      "columns": {
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone",
+        "client": "Client",
+        "status": "Status"
+      },
+      "optionsDialog": {
+        "title": "Print options",
+        "description": "Choose which columns to include when printing contacts."
+      }
+    },
+    "shareTooltip": "Print, import and export"
   },
   "contactDetails": {
     "title": "Contact Details",
@@ -96,7 +114,8 @@
       "useClientDestination": "Use client destination",
       "inboundTicketDestinationHelp": "If set, this overrides the client destination for this exact sender contact. Precedence: Contact override -> Client destination -> Provider default.",
       "tags": "Tags",
-      "notes": "Notes"
+      "notes": "Notes",
+      "status": "Status"
     },
     "status": {
       "label": "Status",
