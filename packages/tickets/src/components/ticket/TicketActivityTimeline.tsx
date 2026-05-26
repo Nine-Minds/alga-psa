@@ -20,6 +20,9 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@alga-psa/ui/components/Button';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import type { ColumnDefinition } from '@alga-psa/types';
 import type {
   TicketActivityRow,
   TicketTimelineEntry,
@@ -42,6 +45,10 @@ interface FormattedEntry {
   source: string;
   actor: string;
   rawActivity?: TicketActivityRow;
+  // Indexable filter fields kept separately from the rendered cells.
+  entryType: 'activity' | 'comment';
+  eventType: string;
+  actorType: string;
 }
 
 function actorLabel(activity: TicketActivityRow): string {
@@ -254,6 +261,9 @@ function formatEntries(entries: TicketTimelineEntry[]): FormattedEntry[] {
         source: entry.activity.source,
         actor: actorLabel(entry.activity),
         rawActivity: entry.activity,
+        entryType: 'activity',
+        eventType: entry.activity.event_type,
+        actorType: entry.activity.actor_type,
       };
     }
 
@@ -279,6 +289,9 @@ function formatEntries(entries: TicketTimelineEntry[]): FormattedEntry[] {
       subtitle: undefined,
       source: responseSource ?? (isInternal ? 'internal' : 'ui'),
       actor: 'See conversation tab',
+      entryType: 'comment',
+      eventType: isInternal ? 'TICKET_INTERNAL_NOTE_ADDED' : 'TICKET_COMMENT_ADDED',
+      actorType: authorType === 'client' || authorType === 'contact' ? 'contact' : 'user',
     };
   });
 }
@@ -292,6 +305,58 @@ function formatTimestamp(value: string): string {
     return value;
   }
 }
+
+const ALL_FILTER_VALUE = '__all__';
+
+const EVENT_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: ALL_FILTER_VALUE, label: 'All events' },
+  { value: 'TICKET_CREATED', label: 'Ticket created' },
+  { value: 'TICKET_UPDATED', label: 'Ticket updated' },
+  { value: 'TICKET_STATUS_CHANGED', label: 'Status changed' },
+  { value: 'TICKET_CLOSED', label: 'Closed' },
+  { value: 'TICKET_REOPENED', label: 'Reopened' },
+  { value: 'TICKET_PRIORITY_CHANGED', label: 'Priority changed' },
+  { value: 'TICKET_ASSIGNED', label: 'Assigned' },
+  { value: 'TICKET_UNASSIGNED', label: 'Unassigned' },
+  { value: 'TICKET_BOARD_MOVED', label: 'Board moved' },
+  { value: 'TICKET_RESPONSE_STATE_CHANGED', label: 'Response state' },
+  { value: 'TICKET_MESSAGE_ADDED', label: 'Comment added' },
+  { value: 'TICKET_COMMENT_ADDED', label: 'Comment added' },
+  { value: 'TICKET_COMMENT_UPDATED', label: 'Comment edited' },
+  { value: 'TICKET_INTERNAL_NOTE_ADDED', label: 'Internal note' },
+  { value: 'TICKET_CUSTOMER_REPLIED', label: 'Customer reply' },
+  { value: 'TICKET_DOCUMENT_ATTACHED', label: 'Document attached' },
+  { value: 'TICKET_DOCUMENT_REMOVED', label: 'Document removed' },
+  { value: 'TICKET_INBOUND_EMAIL_RECEIVED', label: 'Inbound email' },
+  { value: 'TICKET_BUNDLE_REOPENED', label: 'Bundle reopened' },
+];
+
+const SOURCE_OPTIONS: { value: string; label: string }[] = [
+  { value: ALL_FILTER_VALUE, label: 'All sources' },
+  { value: 'ui', label: 'UI' },
+  { value: 'api', label: 'API' },
+  { value: 'client_portal', label: 'Client Portal' },
+  { value: 'inbound_email', label: 'Inbound Email' },
+  { value: 'workflow', label: 'Workflow' },
+  { value: 'system', label: 'System' },
+  { value: 'internal', label: 'Internal Note' },
+];
+
+const ACTOR_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: ALL_FILTER_VALUE, label: 'All actors' },
+  { value: 'user', label: 'User' },
+  { value: 'contact', label: 'Contact' },
+  { value: 'email_sender', label: 'Email sender' },
+  { value: 'api', label: 'API client' },
+  { value: 'workflow', label: 'Workflow' },
+  { value: 'system', label: 'System' },
+];
+
+const ENTRY_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: ALL_FILTER_VALUE, label: 'All entries' },
+  { value: 'activity', label: 'Activity only' },
+  { value: 'comment', label: 'Comments only' },
+];
 
 function sourceBadge(source: string): { label: string; className: string } {
   const map: Record<string, { label: string; className: string }> = {
@@ -316,6 +381,10 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [eventTypeFilter, setEventTypeFilter] = useState<string>(ALL_FILTER_VALUE);
+  const [sourceFilter, setSourceFilter] = useState<string>(ALL_FILTER_VALUE);
+  const [actorTypeFilter, setActorTypeFilter] = useState<string>(ALL_FILTER_VALUE);
+  const [entryTypeFilter, setEntryTypeFilter] = useState<string>(ALL_FILTER_VALUE);
 
   useEffect(() => {
     let cancelled = false;
@@ -338,7 +407,197 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
     };
   }, [ticketId, refreshKey]);
 
+  // All hooks must run unconditionally on every render — keep useMemo/etc.
+  // above the loading/error early returns to satisfy the rules of hooks.
   const formatted = useMemo(() => formatEntries(entries ?? []), [entries]);
+
+  const filtered = useMemo(() => {
+    return formatted.filter((entry) => {
+      if (entryTypeFilter !== ALL_FILTER_VALUE && entry.entryType !== entryTypeFilter) return false;
+      if (eventTypeFilter !== ALL_FILTER_VALUE && entry.eventType !== eventTypeFilter) return false;
+      if (sourceFilter !== ALL_FILTER_VALUE && entry.source !== sourceFilter) return false;
+      if (actorTypeFilter !== ALL_FILTER_VALUE && entry.actorType !== actorTypeFilter) return false;
+      return true;
+    });
+  }, [formatted, entryTypeFilter, eventTypeFilter, sourceFilter, actorTypeFilter]);
+
+  const selectedEntry = useMemo(
+    () => filtered.find((e) => e.key === expandedKey) ?? null,
+    [filtered, expandedKey],
+  );
+
+  const filtersDirty =
+    entryTypeFilter !== ALL_FILTER_VALUE ||
+    eventTypeFilter !== ALL_FILTER_VALUE ||
+    sourceFilter !== ALL_FILTER_VALUE ||
+    actorTypeFilter !== ALL_FILTER_VALUE;
+
+  const resetFilters = () => {
+    setEntryTypeFilter(ALL_FILTER_VALUE);
+    setEventTypeFilter(ALL_FILTER_VALUE);
+    setSourceFilter(ALL_FILTER_VALUE);
+    setActorTypeFilter(ALL_FILTER_VALUE);
+  };
+
+  const columns: ColumnDefinition<FormattedEntry>[] = useMemo(
+    () => [
+      {
+        title: 'When',
+        dataIndex: 'occurredAt',
+        width: '180px',
+        render: (value: unknown) => (
+          <time
+            className="whitespace-nowrap text-xs text-[rgb(var(--color-text-700))]"
+            dateTime={typeof value === 'string' ? value : undefined}
+            title={typeof value === 'string' ? value : undefined}
+          >
+            {formatTimestamp(String(value))}
+          </time>
+        ),
+      },
+      {
+        title: 'Event',
+        dataIndex: 'title',
+        render: (_value: unknown, record: FormattedEntry) => (
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-700))]">
+              {record.icon}
+            </span>
+            <div className="min-w-0">
+              <div className="font-medium text-[rgb(var(--color-text-900))]">{record.title}</div>
+              {record.subtitle ? (
+                <div className="text-xs text-[rgb(var(--color-text-700))]">{record.subtitle}</div>
+              ) : null}
+            </div>
+          </div>
+        ),
+      },
+      {
+        title: 'Source',
+        dataIndex: 'source',
+        width: '140px',
+        render: (value: unknown) => {
+          const badge = sourceBadge(String(value ?? ''));
+          return (
+            <span
+              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${badge.className}`}
+            >
+              {badge.label}
+            </span>
+          );
+        },
+      },
+      {
+        title: 'Actor',
+        dataIndex: 'actor',
+        width: '180px',
+        render: (value: unknown) => (
+          <span className="inline-flex items-center gap-1 text-xs text-[rgb(var(--color-text-700))]">
+            <User2 className="h-3 w-3" />
+            {String(value ?? '')}
+          </span>
+        ),
+      },
+      {
+        title: '',
+        dataIndex: 'key',
+        width: '120px',
+        render: (_value: unknown, record: FormattedEntry) => {
+          if (!record.rawActivity) return null;
+          const isOpen = expandedKey === record.key;
+          return (
+            <Button
+              id={`ticket-activity-entry-toggle-${record.key}`}
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpandedKey(isOpen ? null : record.key);
+              }}
+            >
+              {isOpen ? (
+                <>
+                  <ChevronDown className="mr-1 h-3 w-3" />
+                  Hide
+                </>
+              ) : (
+                <>
+                  <ChevronRight className="mr-1 h-3 w-3" />
+                  Details
+                </>
+              )}
+            </Button>
+          );
+        },
+      },
+    ],
+    [expandedKey],
+  );
+
+  const filterBar = (
+    <div
+      id="ticket-activity-timeline-filters"
+      className="flex flex-wrap items-end gap-2 border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-2"
+    >
+      <div className="flex flex-col">
+        <label className="mb-1 text-xs text-[rgb(var(--color-text-500))]" htmlFor="ticket-activity-filter-entry-type">
+          Type
+        </label>
+        <CustomSelect
+          id="ticket-activity-filter-entry-type"
+          value={entryTypeFilter}
+          options={ENTRY_TYPE_OPTIONS}
+          onValueChange={setEntryTypeFilter}
+        />
+      </div>
+      <div className="flex flex-col">
+        <label className="mb-1 text-xs text-[rgb(var(--color-text-500))]" htmlFor="ticket-activity-filter-event-type">
+          Event
+        </label>
+        <CustomSelect
+          id="ticket-activity-filter-event-type"
+          value={eventTypeFilter}
+          options={EVENT_TYPE_OPTIONS}
+          onValueChange={setEventTypeFilter}
+        />
+      </div>
+      <div className="flex flex-col">
+        <label className="mb-1 text-xs text-[rgb(var(--color-text-500))]" htmlFor="ticket-activity-filter-source">
+          Source
+        </label>
+        <CustomSelect
+          id="ticket-activity-filter-source"
+          value={sourceFilter}
+          options={SOURCE_OPTIONS}
+          onValueChange={setSourceFilter}
+        />
+      </div>
+      <div className="flex flex-col">
+        <label className="mb-1 text-xs text-[rgb(var(--color-text-500))]" htmlFor="ticket-activity-filter-actor-type">
+          Actor
+        </label>
+        <CustomSelect
+          id="ticket-activity-filter-actor-type"
+          value={actorTypeFilter}
+          options={ACTOR_TYPE_OPTIONS}
+          onValueChange={setActorTypeFilter}
+        />
+      </div>
+      <div className="ml-auto flex items-end">
+        <Button
+          id="ticket-activity-filter-reset"
+          variant="ghost"
+          size="sm"
+          className="h-9 px-3 text-xs"
+          disabled={!filtersDirty}
+          onClick={resetFilters}
+        >
+          Reset filters
+        </Button>
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -360,100 +619,76 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
     // Graceful empty state — tickets created before this feature have no
     // activity rows yet (no historical backfill, see PRD NFR-06/NFR-07).
     return (
-      <div
-        id="ticket-activity-timeline-empty"
-        className="p-4 text-sm text-[rgb(var(--color-text-500))]"
-      >
-        No activity yet. New events will appear here as the ticket changes.
+      <div className="flex h-full flex-col">
+        {filterBar}
+        <div
+          id="ticket-activity-timeline-empty"
+          className="p-4 text-sm text-[rgb(var(--color-text-500))]"
+        >
+          No activity yet. New events will appear here as the ticket changes.
+        </div>
       </div>
     );
   }
 
   return (
-    <ol id="ticket-activity-timeline" className="space-y-3 p-2">
-      {formatted.map((entry) => {
-        const badge = sourceBadge(entry.source);
-        const isExpanded = expandedKey === entry.key;
-        const expandable = !!entry.rawActivity;
-        return (
-          <li
-            key={entry.key}
-            id={`ticket-activity-entry-${entry.key}`}
-            data-event-type={entry.rawActivity?.event_type}
-            className="flex gap-3 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-3"
+    <div className="flex h-full flex-col">
+      {filterBar}
+      <div className="flex-1 overflow-auto p-2">
+        {filtered.length === 0 ? (
+          <div
+            id="ticket-activity-timeline-no-matches"
+            className="p-3 text-sm text-[rgb(var(--color-text-500))]"
           >
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-700))]">
-              {entry.icon}
+            No entries match the current filters.
+          </div>
+        ) : (
+          <div id="ticket-activity-timeline" data-row-count={filtered.length}>
+            <DataTable<FormattedEntry>
+              id="ticket-activity-timeline-table"
+              data={filtered}
+              columns={columns}
+              pagination={filtered.length > 25}
+              pageSize={25}
+            />
+          </div>
+        )}
+        {selectedEntry?.rawActivity ? (
+          <div
+            id={`ticket-activity-entry-details-${selectedEntry.key}`}
+            className="mt-3 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-2"
+          >
+            <div className="mb-1 flex items-center justify-between">
+              <span className="text-xs font-medium uppercase tracking-wide text-[rgb(var(--color-text-500))]">
+                {selectedEntry.rawActivity.event_type}
+              </span>
+              <Button
+                id="ticket-activity-entry-details-close"
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={() => setExpandedKey(null)}
+              >
+                Close
+              </Button>
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-                <div className="font-medium text-[rgb(var(--color-text-900))]">{entry.title}</div>
-                <time
-                  className="text-xs text-[rgb(var(--color-text-500))]"
-                  dateTime={entry.occurredAt}
-                  title={entry.occurredAt}
-                >
-                  {formatTimestamp(entry.occurredAt)}
-                </time>
-              </div>
-              {entry.subtitle ? (
-                <div className="mt-0.5 text-sm text-[rgb(var(--color-text-700))]">{entry.subtitle}</div>
-              ) : null}
-              <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                <span
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${badge.className}`}
-                >
-                  {badge.label}
-                </span>
-                <span className="inline-flex items-center gap-1 text-xs text-[rgb(var(--color-text-500))]">
-                  <User2 className="h-3 w-3" />
-                  {entry.actor}
-                </span>
-                {expandable && entry.rawActivity ? (
-                  <Button
-                    id={`ticket-activity-entry-toggle-${entry.key}`}
-                    variant="ghost"
-                    size="sm"
-                    className="ml-auto h-6 px-2 text-xs"
-                    onClick={() => setExpandedKey(isExpanded ? null : entry.key)}
-                  >
-                    {isExpanded ? (
-                      <>
-                        <ChevronDown className="mr-1 h-3 w-3" />
-                        Hide details
-                      </>
-                    ) : (
-                      <>
-                        <ChevronRight className="mr-1 h-3 w-3" />
-                        Show details
-                      </>
-                    )}
-                  </Button>
-                ) : null}
-              </div>
-              {isExpanded && entry.rawActivity ? (
-                <pre
-                  id={`ticket-activity-entry-details-${entry.key}`}
-                  className="mt-2 max-h-48 overflow-auto rounded-md bg-[rgb(var(--color-border-50))] p-2 text-xs text-[rgb(var(--color-text-700))]"
-                >
+            <pre className="max-h-64 overflow-auto text-xs text-[rgb(var(--color-text-700))]">
 {JSON.stringify(
   {
-    event_type: entry.rawActivity.event_type,
-    actor_type: entry.rawActivity.actor_type,
-    source: entry.rawActivity.source,
-    changes: entry.rawActivity.changes,
-    details: entry.rawActivity.details,
+    event_type: selectedEntry.rawActivity.event_type,
+    actor_type: selectedEntry.rawActivity.actor_type,
+    source: selectedEntry.rawActivity.source,
+    changes: selectedEntry.rawActivity.changes,
+    details: selectedEntry.rawActivity.details,
   },
   null,
   2,
 )}
-                </pre>
-              ) : null}
-            </div>
-          </li>
-        );
-      })}
-    </ol>
+            </pre>
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
