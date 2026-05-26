@@ -11,6 +11,10 @@ import {
 } from '@alga-psa/workflow-streams';
 import { fetchMicrosoftGraphAppToken } from '../graphAuth';
 import { buildTeamsPersonalTabDeepLinkFromPsaUrl } from '../teams/teamsDeepLinks';
+import {
+  writeTeamsDeliveryRow,
+  type TeamsDeliveryErrorCode,
+} from './teamsDeliveryRecorder';
 
 type TeamsNotificationCategory =
   | 'assignment'
@@ -119,6 +123,26 @@ function getNotificationSubtype(notification: TeamsNotificationInput): string {
   return normalizeString(notification.metadata.subtype);
 }
 
+function getNotificationAttemptNumber(notification: TeamsNotificationInput): number {
+  const metadata = notification.metadata && typeof notification.metadata === 'object'
+    ? notification.metadata
+    : {};
+  const rawAttemptNumber = metadata.attempt_number ?? metadata.attemptNumber;
+
+  if (typeof rawAttemptNumber === 'number' && Number.isInteger(rawAttemptNumber) && rawAttemptNumber > 0) {
+    return rawAttemptNumber;
+  }
+
+  if (typeof rawAttemptNumber === 'string' && rawAttemptNumber.trim()) {
+    const parsed = Number.parseInt(rawAttemptNumber, 10);
+    if (Number.isInteger(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  return 1;
+}
+
 export function classifyTeamsNotificationCategory(
   notification: TeamsNotificationInput
 ): TeamsNotificationCategory | null {
@@ -184,6 +208,87 @@ function safePublishNotificationWorkflowEvent(params: Parameters<typeof publishW
       eventType: params.eventType,
     });
   });
+}
+
+export function mapTeamsNotificationSkipReasonToDeliveryErrorCode(reason: string): TeamsDeliveryErrorCode {
+  switch (reason) {
+    case 'addon_inactive':
+      return 'addon_inactive';
+    case 'integration_inactive':
+      return 'integration_inactive';
+    case 'missing_user_linkage':
+      return 'user_not_mapped';
+    case 'delivery_prerequisites_missing':
+      return 'package_misconfigured';
+    default:
+      return 'unknown';
+  }
+}
+
+export function mapGraphStatusToTeamsDeliveryErrorCode(status: number): TeamsDeliveryErrorCode {
+  if (status === 401 || status === 403) {
+    return 'graph_unauthorized';
+  }
+  if (status === 404) {
+    return 'graph_not_found';
+  }
+  if (status === 429) {
+    return 'graph_throttled';
+  }
+  if (status >= 500 && status <= 599) {
+    return 'graph_server_error';
+  }
+  return 'unknown';
+}
+
+async function recordTeamsNotificationDelivery(params: {
+  notification: TeamsNotificationInput;
+  category?: TeamsNotificationCategory | null;
+  destinationId: string;
+  status: 'skipped' | 'delivered' | 'failed';
+  errorCode?: TeamsDeliveryErrorCode | null;
+  errorMessage?: string | null;
+  retryable?: boolean | null;
+  providerMessageId?: string | null;
+  providerRequestId?: string | null;
+  sentAt?: string | null;
+  deliveredAt?: string | null;
+}): Promise<void> {
+  await writeTeamsDeliveryRow({
+    tenant: params.notification.tenant,
+    internalNotificationId: params.notification.internal_notification_id,
+    category: params.category ?? null,
+    destinationType: 'user_activity',
+    destinationId: params.destinationId || params.notification.user_id,
+    attemptNumber: getNotificationAttemptNumber(params.notification),
+    status: params.status,
+    errorCode: params.errorCode ?? null,
+    errorMessage: params.errorMessage ?? null,
+    retryable: params.retryable ?? null,
+    providerMessageId: params.providerMessageId ?? null,
+    providerRequestId: params.providerRequestId ?? null,
+    sentAt: params.sentAt ?? null,
+    deliveredAt: params.deliveredAt ?? null,
+  });
+}
+
+async function recordSkippedTeamsNotification(params: {
+  notification: TeamsNotificationInput;
+  category?: TeamsNotificationCategory | null;
+  reason: string;
+  destinationId?: string | null;
+}): Promise<TeamsNotificationDeliveryResult> {
+  await recordTeamsNotificationDelivery({
+    notification: params.notification,
+    category: params.category ?? null,
+    destinationId: params.destinationId || params.notification.user_id,
+    status: 'skipped',
+    errorCode: mapTeamsNotificationSkipReasonToDeliveryErrorCode(params.reason),
+    errorMessage: params.reason,
+    retryable: false,
+  });
+
+  return { status: 'skipped', reason: params.reason };
 }
 
 async function getTeamsIntegrationRow(knex: any, tenant: string): Promise<TeamsIntegrationRow | undefined> {
@@ -253,50 +358,86 @@ export async function deliverTeamsNotificationImpl(
 ): Promise<TeamsNotificationDeliveryResult> {
   const category = classifyTeamsNotificationCategory(notification);
   if (!category) {
-    return { status: 'skipped', reason: 'unsupported_category' };
+    return recordSkippedTeamsNotification({
+      notification,
+      category: null,
+      reason: 'unsupported_category',
+    });
   }
 
   const link = normalizeString(notification.link);
   if (!link) {
-    return { status: 'skipped', reason: 'missing_link' };
+    return recordSkippedTeamsNotification({
+      notification,
+      category,
+      reason: 'missing_link',
+    });
   }
 
-  const { knex } = await createTenantKnex();
+  const { knex } = await createTenantKnex(notification.tenant);
   if (!(await tenantHasTeamsAddOn(knex, notification.tenant))) {
-    return { status: 'skipped', reason: 'addon_inactive' };
+    return recordSkippedTeamsNotification({
+      notification,
+      category,
+      reason: 'addon_inactive',
+    });
   }
 
   const integration = await getTeamsIntegrationRow(knex, notification.tenant);
 
   if (!integration || normalizeString(integration.install_status) !== 'active') {
-    return { status: 'skipped', reason: 'integration_inactive' };
+    return recordSkippedTeamsNotification({
+      notification,
+      category,
+      reason: 'integration_inactive',
+    });
   }
 
   const enabledCapabilities = normalizeStringArray(integration.enabled_capabilities);
   if (!enabledCapabilities.includes('activity_notifications')) {
-    return { status: 'skipped', reason: 'capability_disabled' };
+    return recordSkippedTeamsNotification({
+      notification,
+      category,
+      reason: 'capability_disabled',
+    });
   }
 
   const enabledCategories = normalizeStringArray(integration.notification_categories);
   if (!enabledCategories.includes(category)) {
-    return { status: 'skipped', reason: 'category_disabled' };
+    return recordSkippedTeamsNotification({
+      notification,
+      category,
+      reason: 'category_disabled',
+    });
   }
 
   const selectedProfileId = normalizeString(integration.selected_profile_id);
   const appId = normalizeString(integration.app_id);
   const baseUrl = getPackageBaseUrl(integration.package_metadata);
   if (!selectedProfileId || !appId || !baseUrl) {
-    return { status: 'skipped', reason: 'delivery_prerequisites_missing' };
+    return recordSkippedTeamsNotification({
+      notification,
+      category,
+      reason: 'delivery_prerequisites_missing',
+    });
   }
 
   const profile = await getMicrosoftProfileRow(knex, notification.tenant, selectedProfileId);
   if (!profile || profile.is_archived) {
-    return { status: 'skipped', reason: 'invalid_profile' };
+    return recordSkippedTeamsNotification({
+      notification,
+      category,
+      reason: 'invalid_profile',
+    });
   }
 
   const recipientLink = await resolveTeamsRecipientLink(notification.tenant, notification.user_id);
   if (!recipientLink) {
-    return { status: 'skipped', reason: 'missing_user_linkage' };
+    return recordSkippedTeamsNotification({
+      notification,
+      category,
+      reason: 'missing_user_linkage',
+    });
   }
 
   const teamsDeepLink = buildTeamsPersonalTabDeepLinkFromPsaUrl(baseUrl, appId, link);
@@ -358,8 +499,11 @@ export async function deliverTeamsNotificationImpl(
     );
 
     if (!response.ok) {
+      const providerRequestId = normalizeString(response.headers.get('request-id')) || null;
       const errorBody = await response.text();
       const errorMessage = `Teams activity notification delivery failed (${response.status}): ${errorBody || response.statusText}`;
+      const deliveryErrorCode = mapGraphStatusToTeamsDeliveryErrorCode(response.status);
+      const retryable = response.status >= 500 || response.status === 429;
 
       safePublishNotificationWorkflowEvent({
         eventType: 'NOTIFICATION_FAILED',
@@ -370,7 +514,7 @@ export async function deliverTeamsNotificationImpl(
           failedAt: new Date().toISOString(),
           errorCode: 'teams_delivery_failed',
           errorMessage,
-          retryable: response.status >= 500 || response.status === 429,
+          retryable,
         }),
         ctx: {
           tenantId: notification.tenant,
@@ -381,16 +525,30 @@ export async function deliverTeamsNotificationImpl(
         idempotencyKey: `notification:${notification.internal_notification_id}:teams:failed`,
       });
 
+      await recordTeamsNotificationDelivery({
+        notification,
+        category,
+        destinationId: recipientLink.providerAccountId,
+        status: 'failed',
+        errorCode: deliveryErrorCode,
+        errorMessage,
+        retryable,
+        providerRequestId,
+        sentAt: now,
+      });
+
       return {
         status: 'failed',
         category,
         errorCode: 'teams_delivery_failed',
         errorMessage,
-        retryable: response.status >= 500 || response.status === 429,
+        retryable,
       };
     }
 
-    const providerMessageId = normalizeString(response.headers.get('request-id')) || null;
+    const providerRequestId = normalizeString(response.headers.get('request-id')) || null;
+    const providerMessageId = providerRequestId;
+    const deliveredAt = new Date().toISOString();
 
     safePublishNotificationWorkflowEvent({
       eventType: 'NOTIFICATION_DELIVERED',
@@ -398,7 +556,7 @@ export async function deliverTeamsNotificationImpl(
         notificationId: notification.internal_notification_id,
         channel: 'teams',
         recipientId: notification.user_id,
-        deliveredAt: new Date().toISOString(),
+        deliveredAt,
         providerMessageId: providerMessageId || undefined,
       }),
       ctx: {
@@ -408,6 +566,17 @@ export async function deliverTeamsNotificationImpl(
         correlationId: notification.internal_notification_id,
       },
       idempotencyKey: `notification:${notification.internal_notification_id}:teams:delivered`,
+    });
+
+    await recordTeamsNotificationDelivery({
+      notification,
+      category,
+      destinationId: recipientLink.providerAccountId,
+      status: 'delivered',
+      providerMessageId,
+      providerRequestId,
+      sentAt: now,
+      deliveredAt,
     });
 
     return {
@@ -444,6 +613,17 @@ export async function deliverTeamsNotificationImpl(
       userId: notification.user_id,
       category,
       error: errorMessage,
+    });
+
+    await recordTeamsNotificationDelivery({
+      notification,
+      category,
+      destinationId: recipientLink.providerAccountId,
+      status: 'failed',
+      errorCode: 'transient',
+      errorMessage,
+      retryable: true,
+      sentAt: now,
     });
 
     return {

@@ -63,6 +63,9 @@ exports.seed = async function(knex, tenantId) {
         { resource: 'workflow', action: 'publish', msp: true, client: false, description: 'Publish workflows' },
         { resource: 'workflow', action: 'admin', msp: true, client: false, description: 'Administer workflows' },
 
+        // Teams integration permissions
+        { resource: 'teams_integration', action: 'read', msp: true, client: false, description: 'View Teams integration observability' },
+
         // Service permissions
         { resource: 'service', action: 'create', msp: true, client: false, description: 'Create services' },
         { resource: 'service', action: 'read', msp: true, client: false, description: 'View services' },

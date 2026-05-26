@@ -90,8 +90,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // MSP SSO domain claim lifecycle (dependent challenges before claim rows)
   'msp_sso_domain_verification_challenges', 'msp_sso_tenant_login_domains',
 
-  // Microsoft profile bindings (dependents before profile definitions)
-  'microsoft_profile_consumer_bindings', 'teams_integrations', 'microsoft_profiles',
+  // Microsoft profile and Teams observability bindings (dependents before profile definitions)
+  'microsoft_profile_consumer_bindings',
+  'teams_notification_deliveries', 'teams_audit_events', 'teams_conversation_references',
+  'teams_integrations', 'microsoft_profiles',
 
   // Authorization bundles
   // assignments/rules must be deleted before revisions and bundles; revisions and
