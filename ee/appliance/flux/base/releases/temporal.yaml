@@ -29,4 +29,4 @@ spec:
   valuesFrom:
     - kind: ConfigMap
       name: appliance-values-temporal
-      valuesKey: temporal.talos-single-node.yaml
+      valuesKey: temporal.single-node.yaml
