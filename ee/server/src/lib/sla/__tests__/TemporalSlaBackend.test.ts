@@ -98,7 +98,7 @@ describe('TemporalSlaBackend', () => {
 
   it('cancelSla sends cancel signal', async () => {
     const backend = new TemporalSlaBackend();
-    await backend.cancelSla('ticket-1');
+    await backend.cancelSla('tenant-1', 'ticket-1');
     expect(signalMock).toHaveBeenCalledWith('cancel');
   });
 
