@@ -14,8 +14,8 @@ const storageManifestPath = path.join(repoRoot, 'ee', 'appliance', 'manifests', 
 const algaCoreChartPath = path.join(repoRoot, 'helm');
 const temporalChartPath = path.join(repoRoot, 'ee', 'helm', 'temporal');
 const temporalWorkerChartPath = path.join(repoRoot, 'ee', 'helm', 'temporal-worker');
-const temporalProfileValuesPath = path.join(repoRoot, 'ee', 'appliance', 'flux', 'profiles', 'talos-single-node', 'values', 'temporal.talos-single-node.yaml');
-const temporalWorkerProfileValuesPath = path.join(repoRoot, 'ee', 'appliance', 'flux', 'profiles', 'talos-single-node', 'values', 'temporal-worker.talos-single-node.yaml');
+const temporalProfileValuesPath = path.join(repoRoot, 'ee', 'appliance', 'flux', 'profiles', 'single-node', 'values', 'temporal.single-node.yaml');
+const temporalWorkerProfileValuesPath = path.join(repoRoot, 'ee', 'appliance', 'flux', 'profiles', 'single-node', 'values', 'temporal-worker.single-node.yaml');
 const fluxReleaseDir = path.join(repoRoot, 'ee', 'appliance', 'flux', 'base', 'releases');
 const applianceStatusManifestPath = path.join(repoRoot, 'ee', 'appliance', 'flux', 'base', 'platform', 'appliance-status.yaml');
 
@@ -212,14 +212,14 @@ test('T005 temporal-worker profile injects NEXTAUTH_SECRET from alga-core secret
 });
 
 test('T006 alga-core appliance profile gives the app Deployment a first-install-safe progress deadline', () => {
-  const docs = helmTemplate(algaCoreChartPath, path.join(repoRoot, 'ee', 'appliance', 'flux', 'profiles', 'talos-single-node', 'values', 'alga-core.talos-single-node.yaml'));
+  const docs = helmTemplate(algaCoreChartPath, path.join(repoRoot, 'ee', 'appliance', 'flux', 'profiles', 'single-node', 'values', 'alga-core.single-node.yaml'));
   const deployment = docs.find((doc) => doc.kind === 'Deployment' && doc.metadata?.name === 'test-release-sebastian');
   assert.ok(deployment);
   assert.ok(deployment.spec.progressDeadlineSeconds >= 1800);
 });
 
 test('T006b alga-core appliance bootstrap is serialized and avoids duplicate first-boot app image pulls', () => {
-  const docs = helmTemplate(algaCoreChartPath, path.join(repoRoot, 'ee', 'appliance', 'flux', 'profiles', 'talos-single-node', 'values', 'alga-core.talos-single-node.yaml'));
+  const docs = helmTemplate(algaCoreChartPath, path.join(repoRoot, 'ee', 'appliance', 'flux', 'profiles', 'single-node', 'values', 'alga-core.single-node.yaml'));
   const job = docs.find((doc) => doc.kind === 'Job' && doc.metadata?.name === 'test-release-sebastian-bootstrap');
   const deployment = docs.find((doc) => doc.kind === 'Deployment' && doc.metadata?.name === 'test-release-sebastian');
   const configMap = docs.find((doc) => doc.kind === 'ConfigMap' && doc.metadata?.name === 'test-release-sebastian-appliance-bootstrap');

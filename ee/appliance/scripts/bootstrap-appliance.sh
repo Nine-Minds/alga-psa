@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SITE_ID="appliance-single-node"
-PROFILE="talos-single-node"
+PROFILE="single-node"
 RELEASE_VERSION=""
 CHANNEL=""
 BOOTSTRAP_MODE=""
@@ -56,11 +56,16 @@ usage() {
 Usage:
   bootstrap-appliance.sh [options]
 
+LEGACY TALOS ONLY:
+  This script is retained for internal/support fallback workflows. It is not the
+  supported customer Ubuntu appliance install path. New customer installs should
+  use the Ubuntu appliance setup/status service instead.
+
 Options:
   --site-id <id>                 Appliance/site identifier (default: appliance-single-node)
   --release-version <version>    Appliance release version from ee/appliance/releases/
   --channel <name>               Resolve release from ee/appliance/releases/channels/<name>.json
-  --profile <name>               Values profile name (default: talos-single-node)
+  --profile <name>               Values profile name (default: single-node)
   --bootstrap-mode <mode>        Bootstrap mode: fresh or recover
   --node-ip <ip>                 Talos node IP for first boot and ongoing access
   --hostname <name>              Appliance hostname
@@ -89,12 +94,16 @@ Options:
   --dry-run                      Print the planned commands without mutating cluster state
   --help                         Show this help
 
-If kubeconfig is not supplied, the script will generate Talos config, apply it to
-the node, bootstrap the cluster, persist talosconfig and kubeconfig under
-~/.alga-psa-appliance/<site-id>/ by default, install storage, install Flux, apply
-runtime values derived from the appliance release manifest, and wait for the
-first-run Alga bootstrap to complete. Set ALGA_APPLIANCE_HOME to override the
-default operator config root.
+If kubeconfig is not supplied, the script follows the legacy Talos first-boot
+path: generate Talos config, apply it to the node, bootstrap the cluster, persist
+talosconfig and kubeconfig under ~/.alga-psa-appliance/<site-id>/ by default,
+install storage, install Flux, apply runtime values derived from the appliance
+release manifest, and wait for the first-run Alga bootstrap to complete.
+
+Current Ubuntu appliance release manifests no longer carry Talos installer
+metadata, so the no-kubeconfig Talos first-boot path is only valid with legacy
+Talos release manifests. Set ALGA_APPLIANCE_HOME to override the default operator
+config root.
 
 Bootstrap modes:
   fresh    Wipes existing appliance namespaces and local-path data before reinstall

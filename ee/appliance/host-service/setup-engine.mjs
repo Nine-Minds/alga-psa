@@ -857,7 +857,7 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     return failure;
   }
 
-  const profile = releaseManifest.app?.valuesProfile || 'talos-single-node';
+  const profile = releaseManifest.app?.valuesProfile || 'single-node';
   const names = ['alga-core', 'pgbouncer', 'temporal', 'workflow-worker', 'email-service', 'temporal-worker'];
   const values = {};
 

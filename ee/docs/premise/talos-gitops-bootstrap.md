@@ -22,7 +22,7 @@ This should remain the default layout unless there is a strong need to change th
 The repo-owned GitOps input lives under:
 
 - `ee/appliance/flux/base/`
-- `ee/appliance/flux/profiles/talos-single-node/`
+- `ee/appliance/flux/profiles/single-node/`
 
 The base layer defines the `HelmRelease` objects. The profile layer supplies environment-specific values through `ConfigMap` generators.
 
@@ -86,7 +86,7 @@ That split is intentional:
 2. per-site release selection stays explicit and operator-chosen
 3. the appliance bootstrap path does not need to rewrite committed profile files
 
-The profile values under `ee/appliance/flux/profiles/talos-single-node/values/` remain the source templates for those generated runtime `ConfigMap`s.
+The profile values under `ee/appliance/flux/profiles/single-node/values/` remain the source templates for those generated runtime `ConfigMap`s.
 
 ## Explicit Image Tags
 

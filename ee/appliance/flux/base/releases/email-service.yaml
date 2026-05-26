@@ -30,4 +30,4 @@ spec:
   valuesFrom:
     - kind: ConfigMap
       name: appliance-values-email-service
-      valuesKey: email-service.talos-single-node.yaml
+      valuesKey: email-service.single-node.yaml
