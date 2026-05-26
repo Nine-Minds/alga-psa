@@ -27,4 +27,4 @@ spec:
   valuesFrom:
     - kind: ConfigMap
       name: appliance-values-alga-core
-      valuesKey: alga-core.talos-single-node.yaml
+      valuesKey: alga-core.single-node.yaml

@@ -198,21 +198,21 @@ test('applyRuntimeValuesAndReleaseSelection prefers packaged flux values before 
     app: {
       version: '1.2.3',
       releaseBranch: 'release/offline',
-      valuesProfile: 'talos-single-node',
+      valuesProfile: 'single-node',
       images: { algaCore: 'coretag', workflowWorker: 'workertag', emailService: 'emailtag', temporalWorker: 'twtag' }
     }
   }));
 
   const valueNames = ['alga-core', 'pgbouncer', 'temporal', 'workflow-worker', 'email-service', 'temporal-worker'];
-  const valuesDir = path.join(fluxDir, 'profiles', 'talos-single-node', 'values');
+  const valuesDir = path.join(fluxDir, 'profiles', 'single-node', 'values');
   fs.mkdirSync(valuesDir, { recursive: true });
   for (const name of valueNames) {
-    fs.writeFileSync(path.join(valuesDir, `${name}.talos-single-node.yaml`), `${name}: packaged\n`);
+    fs.writeFileSync(path.join(valuesDir, `${name}.single-node.yaml`), `${name}: packaged\n`);
   }
-  fs.writeFileSync(path.join(valuesDir, 'alga-core.talos-single-node.yaml'), 'appUrl: ""\nhost: ""\ndomainSuffix: ""\nbootstrap:\n  mode: fresh\nsetup:\n  image:\n    tag: old\nserver:\n  image:\n    tag: old\n');
-  fs.writeFileSync(path.join(valuesDir, 'workflow-worker.talos-single-node.yaml'), 'workflow-worker: packaged\nimage:\n  tag: old\nextraEnv:\n  - name: TEMPORAL_ADDRESS\n    value: temporal-frontend.msp.svc.cluster.local:7233\n');
-  fs.writeFileSync(path.join(valuesDir, 'email-service.talos-single-node.yaml'), 'email-service: packaged\nimage:\n  tag: old\n');
-  fs.writeFileSync(path.join(valuesDir, 'temporal-worker.talos-single-node.yaml'), 'temporal-worker: packaged\nimage:\n  tag: old\n');
+  fs.writeFileSync(path.join(valuesDir, 'alga-core.single-node.yaml'), 'appUrl: ""\nhost: ""\ndomainSuffix: ""\nbootstrap:\n  mode: fresh\nsetup:\n  image:\n    tag: old\nserver:\n  image:\n    tag: old\n');
+  fs.writeFileSync(path.join(valuesDir, 'workflow-worker.single-node.yaml'), 'workflow-worker: packaged\nimage:\n  tag: old\nextraEnv:\n  - name: TEMPORAL_ADDRESS\n    value: temporal-frontend.msp.svc.cluster.local:7233\n');
+  fs.writeFileSync(path.join(valuesDir, 'email-service.single-node.yaml'), 'email-service: packaged\nimage:\n  tag: old\n');
+  fs.writeFileSync(path.join(valuesDir, 'temporal-worker.single-node.yaml'), 'temporal-worker: packaged\nimage:\n  tag: old\n');
 
   fs.mkdirSync(binDir, { recursive: true });
   fs.writeFileSync(path.join(binDir, 'kubectl'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
@@ -238,7 +238,9 @@ test('applyRuntimeValuesAndReleaseSelection prefers packaged flux values before 
     });
 
     assert.equal(result.ok, true, JSON.stringify(result));
-    const renderedWorkflowValues = fs.readFileSync(path.join(runtimeValuesDir, 'values', 'workflow-worker.talos-single-node.yaml'), 'utf8');
+    const renderedKustomization = fs.readFileSync(path.join(runtimeValuesDir, 'kustomization.yaml'), 'utf8');
+    assert.match(renderedKustomization, /workflow-worker\.single-node\.yaml=values\/workflow-worker\.single-node\.yaml/);
+    const renderedWorkflowValues = fs.readFileSync(path.join(runtimeValuesDir, 'values', 'workflow-worker.single-node.yaml'), 'utf8');
     assert.match(renderedWorkflowValues, /workflow-worker: packaged/);
     assert.match(renderedWorkflowValues, /TEMPORAL_ADDRESS/);
   } finally {

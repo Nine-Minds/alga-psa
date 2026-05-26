@@ -155,7 +155,7 @@ function assertApplianceStatusNoHostNetwork(checks, root, label) {
 }
 
 function assertAlgaCoreProgressDeadline(checks, root, label) {
-  const valuesFile = path.join(root, 'ee', 'appliance', 'flux', 'profiles', 'talos-single-node', 'values', 'alga-core.talos-single-node.yaml');
+  const valuesFile = path.join(root, 'ee', 'appliance', 'flux', 'profiles', 'single-node', 'values', 'alga-core.single-node.yaml');
   const deploymentTemplate = path.join(root, 'helm', 'templates', 'deployment.yaml');
   const values = fs.existsSync(valuesFile) ? parseYamlFile(valuesFile) : null;
   const template = fs.existsSync(deploymentTemplate) ? readText(deploymentTemplate) : '';
@@ -284,7 +284,7 @@ function assertRemoteBranch(checks, args, selectedBranch) {
   const criticalFiles = [
     ...expectedHelmReleases.map((name) => `ee/appliance/flux/base/releases/${name}.yaml`),
     'ee/appliance/flux/base/platform/appliance-status.yaml',
-    'ee/appliance/flux/profiles/talos-single-node/values/alga-core.talos-single-node.yaml',
+    'ee/appliance/flux/profiles/single-node/values/alga-core.single-node.yaml',
     'ee/appliance/status-ui/app/setup/page.tsx',
     'ee/appliance/host-service/server.mjs',
     'ee/appliance/host-service/setup-engine.mjs',

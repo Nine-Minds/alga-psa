@@ -95,7 +95,7 @@ function healthyResponses() {
     },
     'kubectl --kubeconfig /tmp/kubeconfig -n alga-system get configmap/appliance-values-alga-core -o json': {
       ok: true,
-      output: JSON.stringify({ data: { 'alga-core.talos-single-node.yaml': 'appUrl: https://psa.example.com' } }),
+      output: JSON.stringify({ data: { 'alga-core.single-node.yaml': 'appUrl: https://psa.example.com' } }),
     },
     'kubectl --kubeconfig /tmp/kubeconfig -n msp get jobs.batch -o json': {
       ok: true,

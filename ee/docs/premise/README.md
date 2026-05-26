@@ -1,14 +1,16 @@
-# Talos Appliance Premises
+# Legacy Talos Appliance Premises
 
-This directory captures the stable operating model for running Alga PSA as a Talos-based appliance. The goal is to document the parts that should remain true across sites and releases, not the temporary details of one bootstrap session.
+> Legacy/internal only. Ubuntu Server 24.04 LTS with k3s is the supported customer appliance path for v1. These Talos docs are retained for historical context, support investigation of older internal environments, and engineering reference. Do not use this directory as the starting point for new customer installs.
 
-Use these docs for:
+This directory captures the historical operating model for running Alga PSA as a Talos-based appliance. The goal is to document the parts that were intended to remain true across Talos sites and releases, not the temporary details of one bootstrap session.
 
-- Talos image and release design
-- persistent machine configuration rules
-- single-node GitOps deployment structure
-- database bootstrap and persistence semantics
-- common recovery and troubleshooting patterns
+Use these docs only for:
+
+- legacy Talos image and release design
+- persistent Talos machine configuration rules
+- historical single-node GitOps deployment structure
+- database bootstrap and persistence semantics that may still inform Ubuntu/k3s support
+- legacy recovery and troubleshooting patterns
 
 Do not put site-specific details here:
 
@@ -22,19 +24,19 @@ That operational context belongs in a local `alga-talos` skill or local runbook 
 
 ## Documents
 
-- [talos-release-model.md](/Users/roberisaacs/alga-psa.worktrees/feature/on-prem-enterprise-helm-install/ee/docs/premise/talos-release-model.md): how Talos ISO and installer artifacts are defined and paired
-- [talos-host-configuration.md](/Users/roberisaacs/alga-psa.worktrees/feature/on-prem-enterprise-helm-install/ee/docs/premise/talos-host-configuration.md): what must live in Talos machine configuration for persistence across reboot
-- [talos-gitops-bootstrap.md](/Users/roberisaacs/alga-psa.worktrees/feature/on-prem-enterprise-helm-install/ee/docs/premise/talos-gitops-bootstrap.md): how Flux and the appliance profile install the Alga stack
-- [talos-alga-bootstrap-and-persistence.md](/Users/roberisaacs/alga-psa.worktrees/feature/on-prem-enterprise-helm-install/ee/docs/premise/talos-alga-bootstrap-and-persistence.md): first-run database setup, seed gating, and storage behavior
-- [talos-support-bundles.md](/Users/roberisaacs/alga-psa.worktrees/feature/on-prem-enterprise-helm-install/ee/docs/premise/talos-support-bundles.md): bundle-first support posture and the minimum diagnostic payload
-- [talos-operations-and-troubleshooting.md](/Users/roberisaacs/alga-psa.worktrees/feature/on-prem-enterprise-helm-install/ee/docs/premise/talos-operations-and-troubleshooting.md): layered checks and common failure modes
+- [talos-release-model.md](talos-release-model.md): historical Talos ISO and installer artifact model
+- [talos-host-configuration.md](talos-host-configuration.md): Talos machine configuration persistence rules
+- [talos-gitops-bootstrap.md](talos-gitops-bootstrap.md): historical Flux and appliance profile bootstrap model
+- [talos-alga-bootstrap-and-persistence.md](talos-alga-bootstrap-and-persistence.md): first-run database setup, seed gating, and storage behavior
+- [talos-support-bundles.md](talos-support-bundles.md): legacy bundle-first support posture
+- [talos-operations-and-troubleshooting.md](talos-operations-and-troubleshooting.md): layered checks and common Talos failure modes
 
-## Core Premises
+## Historical Premises
 
-The appliance path is built around these assumptions:
+The Talos appliance path was built around these assumptions:
 
 1. Talos OS artifacts are generated from an in-repo schematic and recorded in a release manifest.
-2. The release manifest is the contract that couples the boot ISO and installer image.
+2. The release manifest couples the boot ISO and installer image.
 3. Persistent host behavior belongs in Talos machine configuration, not temporary boot-time tweaks.
 4. Application installation is GitOps-driven from `ee/appliance/flux/`.
 5. Single-node appliance scheduling must be allowed on the control-plane node.
@@ -42,3 +44,5 @@ The appliance path is built around these assumptions:
 7. Database credentials and PVC-backed data must survive ordinary reconcile and restart cycles.
 8. Application image tags must be provided explicitly per service; the appliance flow should not drift by defaulting to `latest`.
 9. Support begins with an exportable bundle rather than a live support tunnel.
+
+For current supported appliance behavior, use `ee/docs/appliance/README.md` and related Ubuntu appliance docs instead.

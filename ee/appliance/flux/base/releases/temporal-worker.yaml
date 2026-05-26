@@ -31,4 +31,4 @@ spec:
   valuesFrom:
     - kind: ConfigMap
       name: appliance-values-temporal-worker
-      valuesKey: temporal-worker.talos-single-node.yaml
+      valuesKey: temporal-worker.single-node.yaml
