@@ -100,6 +100,34 @@ const CLIENT_TAB_ID = 'client';
 const INTERNAL_TAB_ID = 'internal';
 const RESOLUTION_TAB_ID = 'resolution';
 
+// Hides inbound-email comments whose body is empty or contains only a reply
+// token marker. The token data still lives in the saved comment row so email
+// threading (token + In-Reply-To/References fallback) stays intact; this just
+// suppresses the noise in the conversation view.
+const REPLY_TOKEN_ONLY_REGEX = /^\s*\[ALGA-REPLY-TOKEN [^\]]+\]\s*$/;
+
+function extractCommentText(note: string | undefined | null): string {
+  if (!note) return '';
+  const matches = note.match(/"text":"((?:[^"\\]|\\.)*)"/g);
+  if (!matches) return note.trim();
+  let result = '';
+  for (const match of matches) {
+    const inner = match.slice('"text":"'.length, -1);
+    try {
+      result += JSON.parse(`"${inner}"`);
+    } catch {
+      result += inner;
+    }
+  }
+  return result.trim();
+}
+
+function isHiddenNoiseComment(comment: IComment): boolean {
+  const text = extractCommentText(comment.note);
+  if (text === '') return true;
+  return REPLY_TOKEN_ONLY_REGEX.test(text);
+}
+
 const TicketConversation: React.FC<TicketConversationProps> = ({
   id,
   ticket,
@@ -500,15 +528,29 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     );
   };
 
+  const visibleConversations = useMemo(() => {
+    const parentIds = new Set<string>();
+    for (const comment of conversations) {
+      if (comment.parent_comment_id) {
+        parentIds.add(comment.parent_comment_id);
+      }
+    }
+    return conversations.filter((comment) => {
+      if (!isHiddenNoiseComment(comment)) return true;
+      // Keep noise comments that have descendants so children don't orphan.
+      return comment.comment_id ? parentIds.has(comment.comment_id) : true;
+    });
+  }, [conversations]);
+
   const threadGroups = useMemo(
     () => buildCommentThreadGroups<IComment>({
-      comments: conversations,
+      comments: visibleConversations,
       getCommentId: (comment) => comment.comment_id,
       getThreadId: (comment) => comment.thread_id || comment.comment_id,
       getParentCommentId: (comment) => comment.parent_comment_id,
       getCreatedAt: (comment) => comment.created_at,
     }),
-    [conversations]
+    [visibleConversations]
   );
 
   const threadTabState = useMemo(
