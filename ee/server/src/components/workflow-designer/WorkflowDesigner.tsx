@@ -5251,9 +5251,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
           {isControlPanelMode ? (
             workflowStepQuotaCard
           ) : isEditorDesignerMode ? (
-            <div className="flex flex-col items-end gap-3">
-              {workflowStepQuotaCard}
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
               {activeWorkflowRecord && (
                 <span
                   className={`inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-medium ${workflowValidationBadge.className}`}
@@ -5320,7 +5318,6 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                   {t('designer.toolbar.run', { defaultValue: 'Run' })}
                 </Button>
               )}
-              </div>
             </div>
           ) : isEditorListMode ? (
             workflowStepQuotaCard
