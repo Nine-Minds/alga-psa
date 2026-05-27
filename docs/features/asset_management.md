@@ -76,7 +76,7 @@ CREATE TABLE assets (
     tenant UUID NOT NULL REFERENCES tenants,
     asset_id UUID DEFAULT gen_random_uuid() NOT NULL,
     type_id UUID NOT NULL,
-    company_id UUID NOT NULL, -- Client association
+    client_id UUID NOT NULL, -- Client association
     asset_tag TEXT NOT NULL,
     serial_number TEXT,
     name TEXT NOT NULL,
@@ -89,7 +89,7 @@ CREATE TABLE assets (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (tenant, asset_id),
     FOREIGN KEY (tenant, type_id) REFERENCES asset_types(tenant, type_id),
-    FOREIGN KEY (tenant, company_id) REFERENCES companies(tenant, company_id),
+    FOREIGN KEY (tenant, client_id) REFERENCES clients(tenant, client_id),
     FOREIGN KEY (tenant, location_id) REFERENCES client_locations(tenant, location_id)
 );
 ```
