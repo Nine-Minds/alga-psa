@@ -60,6 +60,7 @@ export { getClientIp } from './lib/ipAddress';
 export { generateDeviceFingerprint, getDeviceInfo } from './lib/deviceFingerprint';
 export { getLocationFromIp } from './lib/geolocation';
 export { isTwoFactorEnabled, verifyTwoFactorCode } from './lib/twoFactorHelpers';
+export { verifyAuthenticator } from './lib/authenticator/authenticator';
 
 // NextAuth config
 export { getAuthOptions } from './lib/nextAuthOptions';

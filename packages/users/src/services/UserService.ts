@@ -26,6 +26,7 @@ import {
   UserPermissionsResponse
 } from '../schemas/userSchemas';
 import { hashPassword, verifyPassword } from '@alga-psa/core/encryption';
+import { verifyAuthenticator } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/user-composition/lib/permissions';
 import { validateSystemContext } from '@alga-psa/db';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
@@ -41,6 +42,25 @@ const generateResourceLinks = (...args: any[]) => ({}) as any;
 const NotFoundError = Error;
 const ForbiddenError = Error;
 const ValidationError = Error;
+
+function createValidationError(message: string): Error & { statusCode: number; code: string } {
+  const error = new Error(message) as Error & { statusCode: number; code: string };
+  error.name = 'ValidationError';
+  error.statusCode = 400;
+  error.code = 'VALIDATION_ERROR';
+  return error;
+}
+
+function toSafeBulkErrorData(userData: Partial<CreateUserData>): Pick<CreateUserData, 'email'> & {
+  username?: string;
+  user_type?: CreateUserData['user_type'];
+} {
+  return {
+    email: userData.email,
+    username: userData.username,
+    user_type: userData.user_type
+  };
+}
 
 // Extended interfaces for service operations
 export interface UserWithFullDetails extends IUserWithRoles {
@@ -473,6 +493,7 @@ export class UserService extends BaseService<IUser> {
       // Get user
       const user = await trx('users')
         .where({ user_id: targetUserId, tenant: context.tenant })
+        .select('user_id', 'hashed_password')
         .first();
 
       if (!user) {
@@ -536,8 +557,9 @@ export class UserService extends BaseService<IUser> {
         await this.ensurePermission(context, 'user', 'update');
       }
 
-      // TODO: Implement 2FA token verification logic here
-      // This would typically involve verifying the TOTP token against the secret
+      if (!verifyAuthenticator(token, secret)) {
+        throw createValidationError('Invalid two-factor authentication token');
+      }
 
       // Update user 2FA settings
       await trx('users')
@@ -951,7 +973,7 @@ export class UserService extends BaseService<IUser> {
           errors.push({
             index,
             error: error.message,
-            data: userData
+            data: toSafeBulkErrorData(userData)
           });
         }
       });
@@ -979,7 +1001,7 @@ export class UserService extends BaseService<IUser> {
           errors.push({
             index: i,
             error: error.message,
-            data: userData
+            data: toSafeBulkErrorData(userData)
           });
 
           if (!options.skip_invalid) {

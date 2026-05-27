@@ -5,7 +5,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiKeyServiceForApi } from '../../services/apiKeyServiceForApi';
-import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { runWithTenant } from '../../db';
 import { getTenantProduct, ProductAccessError } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
@@ -13,6 +12,7 @@ import {
   ApiRequest, 
   AuthenticatedApiRequest,
   UnauthorizedError,
+  buildAuthenticatedApiContext,
   handleApiError 
 } from './apiMiddleware';
 import { enforceApiRateLimit } from '../rateLimit/enforce';
@@ -72,18 +72,8 @@ export async function authenticateApiKeyRequest(
     throw new UnauthorizedError('Tenant ID not found');
   }
 
-  const user = await findUserByIdForApi(keyRecord.user_id, tenantId);
-  if (!user) {
-    throw new UnauthorizedError('User not found');
-  }
-
   const apiRequest = req as AuthenticatedApiRequest;
-  apiRequest.context = {
-    userId: keyRecord.user_id,
-    tenant: keyRecord.tenant,
-    user,
-    apiKeyId: keyRecord.api_key_id,
-  };
+  apiRequest.context = await buildAuthenticatedApiContext(keyRecord);
   apiRequest.context.rateLimit = await enforceApiRateLimit(apiRequest, apiRequest.context);
 
   return apiRequest;

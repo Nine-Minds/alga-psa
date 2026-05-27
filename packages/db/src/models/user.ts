@@ -257,13 +257,13 @@ const User = {
     return rows.map((row: { user_id: string }) => row.user_id);
   },
 
-  updatePassword: async (email: string, hashed_password: string): Promise<void> => {
+  updatePassword: async (user_id: string, tenant: string, hashed_password: string): Promise<void> => {
     const db = await getAdminConnection();
     try {
-      await db<IUser>('users').where({ email: email.toLowerCase() }).update({ hashed_password });
-      logger.system(`Password updated for user with email ${email}`);
+      await db<IUser>('users').where({ user_id, tenant }).update({ hashed_password });
+      logger.system(`Password updated for user ${user_id} in tenant ${tenant}`);
     } catch (error) {
-      logger.error(`Error updating password for user with email ${email}:`, error);
+      logger.error(`Error updating password for user ${user_id} in tenant ${tenant}:`, error);
       throw error;
     }
   },

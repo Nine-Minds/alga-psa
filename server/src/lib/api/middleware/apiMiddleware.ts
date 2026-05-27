@@ -14,6 +14,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { runAsSystem } from '@alga-psa/db';
 import type { RateLimitDecision } from '../rateLimit/enforce';
 import { enforceApiRateLimit } from '../rateLimit/enforce';
+import { redactSensitiveFields } from '../utils/redactSensitiveFields';
 
 export interface ApiContext {
   userId: string;
@@ -122,6 +123,25 @@ export class TooManyRequestsError extends Error implements ApiError {
   }
 }
 
+export async function buildAuthenticatedApiContext(keyRecord: {
+  user_id: string;
+  tenant: string;
+  api_key_id?: string;
+}): Promise<AuthenticatedApiContext> {
+  const user = await findUserByIdForApi(keyRecord.user_id, keyRecord.tenant);
+  if (!user) {
+    throw new UnauthorizedError('User not found');
+  }
+
+  return {
+    userId: keyRecord.user_id,
+    tenant: keyRecord.tenant,
+    apiKeyId: keyRecord.api_key_id,
+    user,
+    kind: 'user'
+  };
+}
+
 /**
  * API key authentication with NM Store support.
  * - When `allowNmStore` is true and `x-api-key` equals `nm_store_api_key`,
@@ -189,18 +209,7 @@ export function withApiKeyAuth(options: ApiKeyAuthOptions = {}) {
         if (!keyRecord) {
           throw new UnauthorizedError('Invalid API key');
         }
-        const user = await findUserByIdForApi(keyRecord.user_id, keyRecord.tenant);
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
-
-        req.context = {
-          userId: keyRecord.user_id,
-          tenant: keyRecord.tenant,
-          apiKeyId: keyRecord.api_key_id,
-          user,
-          kind: 'user'
-        };
+        req.context = await buildAuthenticatedApiContext(keyRecord);
         req.context.rateLimit = await enforceApiRateLimit(req, req.context);
 
         return await handler(req);
@@ -229,19 +238,7 @@ export async function withAuth(handler: (req: ApiRequest) => Promise<NextRespons
         throw new UnauthorizedError('Invalid API key');
       }
 
-      // Get only the allowlisted user fields needed by API authorization.
-      const user = await findUserByIdForApi(keyRecord.user_id, keyRecord.tenant);
-      if (!user) {
-        throw new UnauthorizedError('User not found');
-      }
-
-      // Set context
-      req.context = {
-        userId: keyRecord.user_id,
-        tenant: keyRecord.tenant,
-        apiKeyId: keyRecord.api_key_id,
-        user
-      };
+      req.context = await buildAuthenticatedApiContext(keyRecord);
       req.context.rateLimit = await enforceApiRateLimit(req, req.context);
 
       return await handler(req);
@@ -322,11 +319,14 @@ export function withQueryValidation(schema: ZodSchema) {
  * Error handling middleware
  */
 export function handleApiError(error: any): NextResponse {
+  const redactedDetails = redactSensitiveFields(error.details);
+  const redactedStack = process.env.NODE_ENV === 'development' ? error.stack : undefined;
+
   console.error('API Error:', {
     name: error.name,
     message: error.message,
-    details: error.details,
-    stack: error.stack,
+    details: redactedDetails,
+    stack: redactedStack,
     timestamp: new Date().toISOString()
   });
 
@@ -342,7 +342,7 @@ export function handleApiError(error: any): NextResponse {
       error: {
         code: error.code || 'UNKNOWN_ERROR',
         message: error.message,
-        details: error.details
+        details: redactedDetails
       }
     }, {
       status: explicitStatus,
@@ -356,7 +356,7 @@ export function handleApiError(error: any): NextResponse {
       error: {
         code: 'VALIDATION_ERROR',
         message: 'Validation failed',
-        details: error.errors
+        details: redactSensitiveFields(error.errors)
       }
     }, { status: 400 });
   }
@@ -367,7 +367,7 @@ export function handleApiError(error: any): NextResponse {
       error: {
         code: 'CONFLICT',
         message: 'Resource already exists',
-        details: error.detail
+        details: redactSensitiveFields(error.detail)
       }
     }, { status: 409 });
   }
@@ -377,7 +377,7 @@ export function handleApiError(error: any): NextResponse {
       error: {
         code: 'BAD_REQUEST',
         message: 'Invalid reference',
-        details: error.detail
+        details: redactSensitiveFields(error.detail)
       }
     }, { status: 400 });
   }

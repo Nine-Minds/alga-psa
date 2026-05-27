@@ -28,7 +28,16 @@ export const USER_RESPONSE_COLUMNS = USER_RESPONSE_FIELD_NAMES.map((column) => `
 export const SENSITIVE_USER_FIELDS = [
   'hashed_password',
   'password',
-  'two_factor_secret'
+  'two_factor_secret',
+  'mfa_secret',
+  'totp_secret',
+  'recovery_codes',
+  'backup_codes',
+  'password_reset_token',
+  'reset_token',
+  'verification_token',
+  'api_key',
+  'api_key_hash'
 ] as const;
 
 type SensitiveUserField = typeof SENSITIVE_USER_FIELDS[number];
