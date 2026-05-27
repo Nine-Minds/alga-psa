@@ -36,6 +36,7 @@ import { useUserPreference } from '@alga-psa/user-composition/hooks';
 import { getCurrentUser, searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { getExperimentalFeatures } from '@alga-psa/tenancy/actions';
 import {
+  getDocument,
   getDocumentsByEntity,
   getDocumentsByFolder,
   moveDocumentsToFolder,
@@ -1089,6 +1090,48 @@ const Documents = ({
     }
     return clickHandlersRef.current.get(key)!;
   };
+
+  // Auto-open a document when ?doc=<id> is present (e.g. from search results / notifications)
+  const autoOpenedDocRef = useRef<string | null>(null);
+  const handleDocumentClickRef = useRef(handleDocumentClick);
+  useEffect(() => {
+    handleDocumentClickRef.current = handleDocumentClick;
+  });
+  useEffect(() => {
+    if (!inFolderMode) return;
+    const docId = searchParams?.get('doc') ?? null;
+    if (!docId || autoOpenedDocRef.current === docId) return;
+    autoOpenedDocRef.current = docId;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const result = await getDocument(docId);
+        if (cancelled) return;
+        if (!result) return;
+        if (isActionPermissionError(result)) {
+          handleError(result.permissionError);
+          return;
+        }
+        await handleDocumentClickRef.current(result as IDocument);
+      } catch (err) {
+        if (!cancelled) {
+          handleError(err, 'Failed to open document');
+        }
+      } finally {
+        if (!cancelled) {
+          const params = new URLSearchParams(searchParams?.toString() ?? '');
+          params.delete('doc');
+          const query = params.toString();
+          router.replace(query ? `?${query}` : window.location.pathname);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, inFolderMode, router]);
 
   // Similarly for delete and disassociate handlers
   const deleteHandlersRef = useRef<Map<string, () => void>>(new Map());
