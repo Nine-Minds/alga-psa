@@ -1,4 +1,4 @@
-import type { IUserWithRoles } from '@alga-psa/types';
+import type { IRole, IUserWithRoles } from '@alga-psa/types';
 
 export const USER_RESPONSE_FIELD_NAMES = [
   'user_id',
@@ -21,7 +21,9 @@ export const USER_RESPONSE_FIELD_NAMES = [
   'reports_to',
   'last_login_at',
   'last_login_method'
-];
+] as const satisfies readonly (keyof IUserWithRoles)[];
+
+export type AllowlistedUserField = (typeof USER_RESPONSE_FIELD_NAMES)[number];
 
 export const USER_RESPONSE_COLUMNS = USER_RESPONSE_FIELD_NAMES.map((column) => `users.${column}`);
 
@@ -42,14 +44,16 @@ export const SENSITIVE_USER_FIELDS = [
 
 type SensitiveUserField = typeof SENSITIVE_USER_FIELDS[number];
 
-export type SafeApiUser = Omit<IUserWithRoles, SensitiveUserField> & {
+export type SafeApiUser = Pick<IUserWithRoles, AllowlistedUserField> & {
+  roles: IRole[];
   avatarUrl?: string | null;
+  clientId?: string;
 };
 
 export function sanitizeUserForResponse<T extends Record<string, any>>(
   user: T
-): Partial<Omit<T, SensitiveUserField>> {
-  const sanitized: Record<string, any> = {};
+): SafeApiUser {
+  const sanitized: Record<string, any> = { roles: [] };
 
   for (const field of USER_RESPONSE_FIELD_NAMES) {
     if (field in user) {
@@ -57,7 +61,7 @@ export function sanitizeUserForResponse<T extends Record<string, any>>(
     }
   }
 
-  if ('roles' in user) {
+  if ('roles' in user && Array.isArray(user.roles)) {
     sanitized.roles = user.roles;
   }
 
@@ -69,5 +73,7 @@ export function sanitizeUserForResponse<T extends Record<string, any>>(
     sanitized.clientId = user.clientId;
   }
 
-  return sanitized as Partial<Omit<T, SensitiveUserField>>;
+  return sanitized as SafeApiUser;
 }
+
+export type { SensitiveUserField };

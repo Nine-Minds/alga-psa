@@ -1,5 +1,5 @@
 const SENSITIVE_KEY_PATTERN =
-  /^(hashed_password|password|two_factor_secret|mfa_secret|totp_secret|recovery_codes|backup_codes|password_reset_token|reset_token|verification_token|api_key|api_key_hash)$/i;
+  /^(hashed_password|hashedPassword|password_hash|passwordHash|password|two_factor_secret|twoFactorSecret|mfa_secret|mfaSecret|totp_secret|totpSecret|recovery_codes|recoveryCodes|backup_codes|backupCodes|password_reset_token|passwordResetToken|reset_token|resetToken|verification_token|verificationToken|api_key|apiKey|api_key_hash|apiKeyHash)$/i;
 
 const MAX_REDACTION_DEPTH = 8;
 

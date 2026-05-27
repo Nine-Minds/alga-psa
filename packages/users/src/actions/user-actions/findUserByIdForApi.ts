@@ -41,7 +41,7 @@ export async function findUserByIdForApi(
       }
 
       // Get user roles
-      const roles = await User.getUserRoles(knex, userId);
+      const roles = await User.getUserRoles(knex, userId, tenantId);
 
       // Get avatar URL
       const avatarUrl = await getUserAvatarUrl(userId, tenantId);

@@ -303,12 +303,18 @@ const User = {
     }
   },
 
-  getUserRoles: async (knexOrTrx: Knex | Knex.Transaction, user_id: string): Promise<IRole[]> => {
-    const tenant = await requireTenantId(knexOrTrx);
+  getUserRoles: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    user_id: string,
+    tenantOverride?: string
+  ): Promise<IRole[]> => {
+    const tenant = tenantOverride ?? (await requireTenantId(knexOrTrx));
     try {
       const query = knexOrTrx<IRole>('roles')
         .join('user_roles', function () {
-          this.on('roles.role_id', '=', 'user_roles.role_id').andOn('roles.tenant', '=', 'user_roles.tenant');
+          this.on('roles.role_id', '=', 'user_roles.role_id')
+            .andOn('roles.tenant', '=', 'user_roles.tenant')
+            .andOnVal('user_roles.tenant', tenant);
         })
         .where('user_roles.user_id', user_id)
         .where('roles.tenant', tenant);

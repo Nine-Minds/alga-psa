@@ -82,10 +82,14 @@ function maybeUserActor(currentUser: any) {
 async function getSafeUserWithRoles(
   trx: Knex | Knex.Transaction,
   userId: string,
-  tenant: string | undefined
+  tenant: string
 ): Promise<SafeApiUser | null> {
+  if (!tenant) {
+    throw new Error('Tenant context is required for safe user lookup');
+  }
+
   const user = await trx('users')
-    .where({ user_id: userId, tenant: tenant || undefined })
+    .where({ user_id: userId, tenant })
     .select(USER_RESPONSE_FIELD_NAMES)
     .first();
 
@@ -93,8 +97,8 @@ async function getSafeUserWithRoles(
     return null;
   }
 
-  const roles = await User.getUserRoles(trx, userId);
-  return sanitizeUserForResponse({ ...user, roles }) as SafeApiUser;
+  const roles = await User.getUserRoles(trx, userId, tenant);
+  return sanitizeUserForResponse({ ...user, roles });
 }
 
 async function findExistingUserByEmailGlobally(
@@ -292,7 +296,7 @@ export const addUser = withAuth(async (
       const safeUser = await getSafeUserWithRoles(trx, newUser.user_id, tenant);
       return {
         success: true,
-        user: safeUser || (sanitizeUserForResponse({ ...newUser, roles: [] }) as SafeApiUser)
+        user: safeUser || sanitizeUserForResponse({ ...newUser, roles: [] })
       };
     });
 

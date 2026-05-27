@@ -59,7 +59,8 @@ describe('UserService API response sensitive field contract', () => {
       username: 'test-user',
       email: 'test@example.com',
       two_factor_enabled: true,
-      tenant: 'tenant-1'
+      tenant: 'tenant-1',
+      roles: []
     });
     expect(result).not.toHaveProperty('hashed_password');
     expect(result).not.toHaveProperty('password');
@@ -89,6 +90,43 @@ describe('UserService API response sensitive field contract', () => {
     expect(JSON.stringify(result)).not.toContain('totp-secret');
   });
 
+  it('redacts both snake_case and camelCase sensitive key aliases', () => {
+    const result = redactSensitiveFields({
+      hashedPassword: 'hash-camel',
+      passwordHash: 'another-hash',
+      twoFactorSecret: 'totp-camel',
+      mfaSecret: 'mfa-camel',
+      totpSecret: 'totp2-camel',
+      recoveryCodes: ['code-a'],
+      backupCodes: ['code-b'],
+      passwordResetToken: 'reset-camel',
+      resetToken: 'reset2-camel',
+      verificationToken: 'verify-camel',
+      apiKey: 'api-camel',
+      apiKeyHash: 'api-hash-camel',
+      safeField: 'visible-value'
+    });
+
+    const serialized = JSON.stringify(result);
+    for (const secret of [
+      'hash-camel',
+      'another-hash',
+      'totp-camel',
+      'mfa-camel',
+      'totp2-camel',
+      'code-a',
+      'code-b',
+      'reset-camel',
+      'reset2-camel',
+      'verify-camel',
+      'api-camel',
+      'api-hash-camel'
+    ]) {
+      expect(serialized).not.toContain(secret);
+    }
+    expect((result as Record<string, unknown>).safeField).toBe('visible-value');
+  });
+
   it('projects only allowlisted columns for enhanced user responses', () => {
     const source = readRepoFile('packages/users/src/services/UserService.ts');
     const sanitizerSource = readRepoFile('packages/users/src/services/userResponseSanitizer.ts');
@@ -115,6 +153,9 @@ describe('UserService API response sensitive field contract', () => {
     expect(source).not.toContain('User.getUserWithRoles(trx, userId)');
     expect(source).toContain('User.updatePassword(currentUser.user_id, currentUser.tenant, hashedPassword)');
     expect(source).toContain('User.updatePassword(targetUser.user_id, targetUser.tenant, hashedPassword)');
+    expect(source).toContain('tenant: string');
+    expect(source).toContain('Tenant context is required for safe user lookup');
+    expect(source).toContain('User.getUserRoles(trx, userId, tenant)');
   });
 
   it('does not load sensitive fields into API auth user context', () => {
