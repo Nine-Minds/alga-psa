@@ -101,26 +101,29 @@ export async function POST(request: NextRequest, context: RouteContext): Promise
       return NextResponse.json({ success: false, error: 'Tenant not found' }, { status: 404 });
     }
 
+    const nowIso = new Date().toISOString();
     const metadata = {
       source: 'nineminds_control_panel',
       action,
       user_id: userId,
       user_email: userEmail,
-      updated_at: new Date().toISOString(),
+      updated_at: nowIso,
     };
 
     if (action === 'grant') {
+      // Citus rejects STABLE functions (knex.fn.now() → CURRENT_TIMESTAMP) inside
+      // ON CONFLICT DO UPDATE SET on distributed tables — must pass a literal.
       await knex('tenant_addons')
         .insert({
           tenant: tenantId,
           addon_key: addonKey,
-          activated_at: knex.fn.now(),
+          activated_at: nowIso,
           expires_at: null,
           metadata: JSON.stringify(metadata),
         })
         .onConflict(['tenant', 'addon_key'])
         .merge({
-          activated_at: knex.fn.now(),
+          activated_at: nowIso,
           expires_at: null,
           metadata: JSON.stringify(metadata),
         });
@@ -128,7 +131,7 @@ export async function POST(request: NextRequest, context: RouteContext): Promise
       await knex('tenant_addons')
         .where({ tenant: tenantId, addon_key: addonKey })
         .update({
-          expires_at: knex.fn.now(),
+          expires_at: nowIso,
           metadata: JSON.stringify(metadata),
         });
     }
