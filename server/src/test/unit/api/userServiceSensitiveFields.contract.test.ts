@@ -131,8 +131,11 @@ describe('UserService API response sensitive field contract', () => {
     const source = readRepoFile('packages/users/src/services/UserService.ts');
     const sanitizerSource = readRepoFile('packages/users/src/services/userResponseSanitizer.ts');
 
-    expect(sanitizerSource).toContain('export const USER_RESPONSE_FIELD_NAMES = [');
-    expect(sanitizerSource).toContain('export const USER_RESPONSE_COLUMNS = USER_RESPONSE_FIELD_NAMES.map');
+    expect(sanitizerSource).toContain('USER_RESPONSE_FIELD_NAMES_TUPLE = [');
+    expect(sanitizerSource).toContain('export const USER_RESPONSE_FIELD_NAMES');
+    expect(sanitizerSource).toContain('export const USER_RESPONSE_COLUMNS');
+    expect(sanitizerSource).toContain('USER_RESPONSE_FIELD_NAMES.map');
+    expect(sanitizerSource).toContain('export const API_USER_CONTEXT_COLUMNS');
     expect(source).not.toContain(".select('users.*')");
     expect(source).not.toContain(".returning('*')");
     expect(sanitizerSource).toContain("'hashed_password'");
@@ -162,7 +165,8 @@ describe('UserService API response sensitive field contract', () => {
     const source = readRepoFile('packages/users/src/actions/user-actions/findUserByIdForApi.ts');
     const oldMiddlewareSource = readRepoFile('server/src/lib/api/middleware/apiMiddleware.ts');
 
-    expect(source).toContain('export const API_USER_CONTEXT_COLUMNS = USER_RESPONSE_FIELD_NAMES');
+    expect(source).toContain('API_USER_CONTEXT_COLUMNS');
+    expect(source).not.toContain("export const API_USER_CONTEXT_COLUMNS");
     expect(source).toContain('.select(API_USER_CONTEXT_COLUMNS)');
     expect(source).not.toContain('.select(\'*\')');
     expect(source).not.toContain('hashed_password');

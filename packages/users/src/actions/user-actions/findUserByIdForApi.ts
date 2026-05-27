@@ -9,9 +9,7 @@ import { Knex } from 'knex';
 import { getConnection, runWithTenant } from '@alga-psa/db';
 import User from '@alga-psa/db/models/user';
 import { getUserAvatarUrl } from '@alga-psa/user-composition/lib/avatarUtils';
-import { USER_RESPONSE_FIELD_NAMES, type SafeApiUser } from '../../services/userResponseSanitizer';
-
-export const API_USER_CONTEXT_COLUMNS = USER_RESPONSE_FIELD_NAMES;
+import { API_USER_CONTEXT_COLUMNS, type SafeApiUser } from '../../services/userResponseSanitizer';
 
 /**
  * Find a user by ID within a specific tenant context

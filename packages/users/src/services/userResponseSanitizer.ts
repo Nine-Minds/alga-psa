@@ -1,6 +1,6 @@
 import type { IRole, IUserWithRoles } from '@alga-psa/types';
 
-export const USER_RESPONSE_FIELD_NAMES = [
+const USER_RESPONSE_FIELD_NAMES_TUPLE = [
   'user_id',
   'username',
   'first_name',
@@ -23,9 +23,15 @@ export const USER_RESPONSE_FIELD_NAMES = [
   'last_login_method'
 ] as const satisfies readonly (keyof IUserWithRoles)[];
 
-export type AllowlistedUserField = (typeof USER_RESPONSE_FIELD_NAMES)[number];
+export type AllowlistedUserField = (typeof USER_RESPONSE_FIELD_NAMES_TUPLE)[number];
 
-export const USER_RESPONSE_COLUMNS = USER_RESPONSE_FIELD_NAMES.map((column) => `users.${column}`);
+export const USER_RESPONSE_FIELD_NAMES: AllowlistedUserField[] = [...USER_RESPONSE_FIELD_NAMES_TUPLE];
+
+export const USER_RESPONSE_COLUMNS: string[] = USER_RESPONSE_FIELD_NAMES.map(
+  (column) => `users.${column}`
+);
+
+export const API_USER_CONTEXT_COLUMNS: AllowlistedUserField[] = [...USER_RESPONSE_FIELD_NAMES];
 
 export const SENSITIVE_USER_FIELDS = [
   'hashed_password',
