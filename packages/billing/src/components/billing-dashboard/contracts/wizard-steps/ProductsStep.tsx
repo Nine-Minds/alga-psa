@@ -20,8 +20,10 @@ interface ProductsStepProps {
 export function ProductsStep({ data, updateData }: ProductsStepProps) {
   const { t } = useTranslation('msp/contracts');
   const [rateInputs, setRateInputs] = useState<Record<number, string>>({});
-  // Track default rates from catalog for display
-  const [catalogRates, setCatalogRates] = useState<Record<number, number>>({});
+  // Catalog price in the contract currency (from service_prices). null when no row exists for this currency.
+  const [currencyRates, setCurrencyRates] = useState<Record<number, number | null>>({});
+  // Legacy default_rate (untagged). Shown as a fallback hint only when no currency-specific price exists.
+  const [legacyDefaultRates, setLegacyDefaultRates] = useState<Record<number, number>>({});
 
   useEffect(() => {
     const next: Record<number, string> = {};
@@ -59,11 +61,9 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
     };
     updateData({ product_services: next });
 
-    // Store the catalog rate for display
-    setCatalogRates((prev) => ({
-      ...prev,
-      [index]: item.default_rate,
-    }));
+    const currencyRate = item.currency_rate ?? null;
+    setCurrencyRates((prev) => ({ ...prev, [index]: currencyRate }));
+    setLegacyDefaultRates((prev) => ({ ...prev, [index]: item.default_rate }));
 
     setRateInputs((prev) => {
       const { [index]: _, ...rest } = prev;
@@ -133,8 +133,11 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
           </Label>
 
           {data.product_services.map((line, index) => {
-            const catalogRate = catalogRates[index] ?? null;
-            const isMissingPrice = Boolean(line.service_id && catalogRate === null && line.custom_rate == null);
+            const currencyRate = currencyRates[index] ?? null;
+            const legacyDefaultRate = legacyDefaultRates[index] ?? null;
+            const isMissingPrice = Boolean(
+              line.service_id && currencyRate === null && line.custom_rate == null,
+            );
 
             return (
               <div
@@ -155,6 +158,7 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
                       selectedLabel={line.service_name}
                       onSelect={(item) => handleProductChange(index, item)}
                       itemKinds={['product']}
+                      currencyCode={data.currency_code}
                       placeholder={t('wizardProducts.labels.selectProductPlaceholder', {
                         defaultValue: 'Select a product',
                       })}
@@ -199,17 +203,29 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
                           className="pl-10"
                         />
                       </div>
-                      {catalogRate !== null && catalogRate > 0 ? (
+                      {currencyRate !== null && currencyRate > 0 ? (
                         <div className="text-xs text-muted-foreground">
-                          {t('wizardProducts.labels.defaultCatalogPrice', { defaultValue: 'Default catalog price:' })}{' '}
+                          {t('wizardProducts.labels.catalogPriceInCurrency', {
+                            defaultValue: 'Catalog price in {{currency}}:',
+                            currency: data.currency_code,
+                          })}{' '}
                           {currencySymbol}
-                          {(catalogRate / 100).toFixed(2)}
+                          {(currencyRate / 100).toFixed(2)}
                         </div>
                       ) : line.service_id ? (
                         <div className="text-xs text-amber-700">
-                          {t('wizardProducts.validation.noDefaultPriceEnterUnitPrice', {
-                            defaultValue: 'No default price set. Enter a unit price.',
-                          })}
+                          {legacyDefaultRate !== null && legacyDefaultRate > 0
+                            ? t('wizardProducts.validation.noCurrencyPriceWithLegacyHint', {
+                                defaultValue:
+                                  'No {{currency}} price in the catalog. Legacy default rate: {{rate}}. Enter a unit price in {{currency}}.',
+                                currency: data.currency_code,
+                                rate: (legacyDefaultRate / 100).toFixed(2),
+                              })
+                            : t('wizardProducts.validation.noCurrencyPriceEnterUnitPrice', {
+                                defaultValue:
+                                  'No {{currency}} price in the catalog. Enter a unit price.',
+                                currency: data.currency_code,
+                              })}
                         </div>
                       ) : null}
                     </div>
