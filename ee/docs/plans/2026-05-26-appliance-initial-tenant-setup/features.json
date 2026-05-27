@@ -1,0 +1,9 @@
+[
+  { "id": "F001", "description": "Setup UI collects required company and initial admin identity fields", "implemented": true },
+  { "id": "F002", "description": "Setup UI requires and confirms an initial admin password", "implemented": true },
+  { "id": "F003", "description": "Host service validates initial tenant/admin setup inputs", "implemented": true },
+  { "id": "F004", "description": "Host setup creates an appliance initial tenant Kubernetes Secret", "implemented": true },
+  { "id": "F005", "description": "Tenant creation utility accepts a supplied admin password", "implemented": true },
+  { "id": "F006", "description": "Appliance bootstrap creates initial tenant/admin before onboarding seeds when no users exist", "implemented": true },
+  { "id": "F007", "description": "Appliance bootstrap runs onboarding seeds after initial tenant creation", "implemented": true }
+]

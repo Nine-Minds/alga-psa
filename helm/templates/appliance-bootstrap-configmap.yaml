@@ -162,6 +162,47 @@ data:
       PGPASSWORD="${pg_password}" psql -h "${pg_admin_host}" -p "${pg_admin_port}" -U "${pg_admin_user}" -d "${DB_NAME_SERVER:-server}" -tAc "SELECT EXISTS (SELECT 1 FROM users LIMIT 1);" 2>/dev/null | grep -q '^t$'
     }
 
+    require_initial_tenant_value() {
+      local name="$1"
+      eval "value=\${${name}:-}"
+      if [ -z "${value}" ]; then
+        log "ERROR: ${name} is required to create the initial appliance tenant"
+        log "ERROR: Reopen appliance setup and provide the initial company/admin fields."
+        exit 1
+      fi
+    }
+
+    ensure_initial_tenant() {
+      if check_seeds_status; then
+        log "Initial user already exists; skipping initial tenant creation"
+        return 0
+      fi
+
+      require_initial_tenant_value INITIAL_TENANT_NAME
+      require_initial_tenant_value INITIAL_ADMIN_FIRST_NAME
+      require_initial_tenant_value INITIAL_ADMIN_LAST_NAME
+      require_initial_tenant_value INITIAL_ADMIN_EMAIL
+      require_initial_tenant_value INITIAL_ADMIN_PASSWORD
+
+      log "Creating initial appliance tenant and admin user"
+      INITIAL_ADMIN_PASSWORD="${INITIAL_ADMIN_PASSWORD}" npx tsx /app/server/scripts/create-tenant.ts \
+        --tenant "${INITIAL_TENANT_NAME}" \
+        --companyName "${INITIAL_TENANT_NAME}" \
+        --clientName "${INITIAL_TENANT_NAME}" \
+        --email "${INITIAL_ADMIN_EMAIL}" \
+        --firstName "${INITIAL_ADMIN_FIRST_NAME}" \
+        --lastName "${INITIAL_ADMIN_LAST_NAME}" \
+        --productCode psa
+      log "Initial appliance tenant and admin user created"
+    }
+
+    resolve_seeds_dir() {
+      if [ -n "${SEEDS_DIR:-}" ] && [ -d "${SEEDS_DIR}/psa" ] && ! find "${SEEDS_DIR}" -maxdepth 1 -name '*.cjs' -print -quit | grep -q .; then
+        SEEDS_DIR="${SEEDS_DIR}/psa"
+        export SEEDS_DIR
+      fi
+    }
+
     ensure_database() {
       local db_name="$1"
       psql_admin postgres -v db_name="${db_name}" <<'SQL'
@@ -271,15 +312,17 @@ data:
     fi
 
     if is_enabled "${SETUP_RUN_SEEDS:-true}"; then
-      if check_seeds_status; then
-        log "Seeds already exist; skipping"
-      else
-        if [ -n "${SEEDS_DIR:-}" ] && [ ! -d "${SEEDS_DIR}" ]; then
-          log "ERROR: Configured seed directory does not exist: ${SEEDS_DIR}"
-          exit 1
-        fi
-        log "Running seeds from ${SEEDS_DIR:-./seeds/dev}"
-        NODE_ENV=migration timeout 300 npx knex seed:run --knexfile /app/server/knexfile.cjs --verbose
+      ensure_initial_tenant
+      resolve_seeds_dir
+      if [ -n "${SEEDS_DIR:-}" ] && [ ! -d "${SEEDS_DIR}" ]; then
+        log "ERROR: Configured seed directory does not exist: ${SEEDS_DIR}"
+        exit 1
+      fi
+      log "Running seeds from ${SEEDS_DIR:-./seeds/dev}"
+      NODE_ENV=migration timeout 300 npx knex seed:run --knexfile /app/server/knexfile.cjs --verbose
+      if ! check_seeds_status; then
+        log "ERROR: Appliance bootstrap finished seed execution but no admin users exist"
+        exit 1
       fi
     else
       log "SETUP_RUN_SEEDS is disabled; skipping seeds"

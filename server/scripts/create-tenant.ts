@@ -57,8 +57,8 @@ async function main() {
   // Create database connection
   // For local development, use localhost instead of Docker service names
   const isDocker = process.env.DOCKER_ENV === 'true';
-  const dbHost = isDocker ? (process.env.PGBOUNCER_HOST || 'pgbouncer') : 'localhost';
-  const dbPort = isDocker ? (process.env.PGBOUNCER_PORT || '6432') : '5432';
+  const dbHost = process.env.DB_HOST || (isDocker ? (process.env.PGBOUNCER_HOST || 'pgbouncer') : 'localhost');
+  const dbPort = process.env.DB_PORT || (isDocker ? (process.env.PGBOUNCER_PORT || '6432') : '5432');
   
   const db = knex({
     client: 'pg',
@@ -66,8 +66,8 @@ async function main() {
       host: dbHost,
       port: parseInt(dbPort),
       database: process.env.DB_NAME_SERVER || 'server',
-      user: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD_ADMIN || process.env.POSTGRES_PASSWORD || 'abcd1234!'
+      user: process.env.DB_USER_ADMIN || process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD_ADMIN || process.env.DB_PASSWORD_SUPERUSER || process.env.POSTGRES_PASSWORD || 'abcd1234!'
     }
   });
 
@@ -83,12 +83,15 @@ async function main() {
       productCode = args.productCode;
     }
 
+    const suppliedPassword = args.password ?? process.env.INITIAL_ADMIN_PASSWORD;
+
     const result = await createTenantComplete(db, {
       tenantName: args.tenant,
       adminUser: {
         firstName: args.firstName || 'Admin',
         lastName: args.lastName || 'User',
-        email: args.email
+        email: args.email,
+        password: suppliedPassword
       },
       companyName: resolvedCompanyName,
       clientName: resolvedClientName,
@@ -101,7 +104,11 @@ async function main() {
     console.log(`Client ID: ${result.clientId}`);
     console.log(`Admin Email: ${args.email}`);
     console.log(`Product Code: ${productCode ?? '(default)'}`);
-    console.log(`Temporary Password: ${result.temporaryPassword}`);
+    if (suppliedPassword) {
+      console.log('Admin Password: [provided]');
+    } else {
+      console.log(`Temporary Password: ${result.temporaryPassword}`);
+    }
 
   } catch (error) {
     console.error('\n❌ Failed to create tenant:', error);

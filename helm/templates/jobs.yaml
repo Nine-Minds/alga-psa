@@ -375,6 +375,10 @@ spec:
             {{- end }}
             {{- end }}
           {{- if .Values.setup.applianceBootstrap.enabled }}
+          envFrom:
+            - secretRef:
+                name: appliance-initial-tenant
+                optional: true
           volumeMounts:
             - name: appliance-bootstrap
               mountPath: /bootstrap

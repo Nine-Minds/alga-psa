@@ -1,0 +1,5 @@
+[
+  { "id": "T001", "featureIds": ["F001", "F002", "F003"], "description": "Host setup input validation accepts complete initial tenant/admin inputs and rejects invalid password confirmation", "implemented": true },
+  { "id": "T002", "featureIds": ["F004"], "description": "Runtime values application writes the initial tenant Secret without leaking the password to install-state", "implemented": true },
+  { "id": "T003", "featureIds": ["F005", "F006", "F007"], "description": "Bootstrap path creates tenant/admin with supplied password before running onboarding seeds when the users table is empty", "implemented": true }
+]
