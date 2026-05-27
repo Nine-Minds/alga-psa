@@ -34,6 +34,7 @@ import User from '@alga-psa/db/models/user';
 import Team from '@alga-psa/teams/models/team';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { logger } from '@alga-psa/core';
+import { sanitizeUserForResponse, USER_RESPONSE_COLUMNS } from './userResponseSanitizer';
 
 // Stubs for missing imports that are still in server
 const generateResourceLinks = (...args: any[]) => ({}) as any;
@@ -1251,7 +1252,7 @@ export class UserService extends BaseService<IUser> {
   private buildEnhancedUserQuery(knex: Knex, context: ServiceContext): Knex.QueryBuilder {
     return knex('users')
       .where('tenant', context.tenant)
-      .select('users.*');
+      .select(USER_RESPONSE_COLUMNS);
   }
 
   /**
@@ -1381,7 +1382,7 @@ export class UserService extends BaseService<IUser> {
     const enhancedUsers: UserWithFullDetails[] = [];
 
     for (const user of users) {
-      let enhancedUser: UserWithFullDetails = { ...user, roles: [] };
+      let enhancedUser: UserWithFullDetails = { ...sanitizeUserForResponse(user), roles: [] };
 
       // Include roles
       if (options.includeRoles) {

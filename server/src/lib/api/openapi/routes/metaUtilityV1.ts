@@ -82,7 +82,7 @@ export function registerMetaUtilityV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/meta/sdk', summary: 'Generate SDK metadata payload', description: 'Generates SDK structure payload for selected language/format via generateSdk().', security: 'api-key' },
     { method: 'get', path: '/api/v1/meta/stats', summary: 'Get API stats metadata', description: 'Returns API usage stats for requested period via getStats().', security: 'api-key' },
 
-    { method: 'get', path: '/api/v1/test-auth', summary: 'Test API key auth', description: 'Debug endpoint wrapping withApiKeyAuth middleware; returns authenticated request context payload.', security: 'api-key' },
+    { method: 'get', path: '/api/v1/test-auth', summary: 'Test API key auth', description: 'Debug endpoint wrapping withApiKeyAuth middleware; returns only non-sensitive authenticated context identifiers.', security: 'api-key' },
 
     { method: 'get', path: '/api/v1/user/telemetry-decision', summary: 'Get telemetry decision', description: 'Returns telemetry enabled/disabled decision from environment for current session user.', security: 'mixed' },
     { method: 'get', path: '/api/v1/user/telemetry-preferences', summary: 'Get telemetry preferences', description: 'Returns telemetry preference view controlled by environment variable; requires session user.', security: 'mixed' },

@@ -11,6 +11,29 @@ import { IUserWithRoles } from '@alga-psa/types';
 import User from '@alga-psa/db/models/user';
 import { getUserAvatarUrl } from '@alga-psa/user-composition/lib/avatarUtils';
 
+const API_USER_CONTEXT_COLUMNS = [
+  'user_id',
+  'username',
+  'first_name',
+  'last_name',
+  'email',
+  'image',
+  'created_at',
+  'updated_at',
+  'two_factor_enabled',
+  'two_factor_required_new_device',
+  'is_google_user',
+  'is_inactive',
+  'tenant',
+  'user_type',
+  'reports_to',
+  'contact_id',
+  'phone',
+  'timezone',
+  'last_login_at',
+  'last_login_method'
+];
+
 /**
  * Find a user by ID within a specific tenant context
  * Used during API authentication where we don't have session context
@@ -30,6 +53,7 @@ export async function findUserByIdForApi(
           tenant: tenantId,
           is_inactive: false
         })
+        .select(API_USER_CONTEXT_COLUMNS)
         .first();
 
       if (!user) {
