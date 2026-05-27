@@ -127,6 +127,56 @@ async function publishEntityTagUpdateEvent(params: {
   }
 }
 
+/**
+ * Capture the current alphabetically-sorted tag-text snapshot for an entity.
+ * Use this before a bulk tag write (which goes through
+ * createTagsForEntityWithTransaction and deliberately suppresses the
+ * per-entity update event) to feed publishEntityTagBulkUpdate afterwards.
+ */
+export async function captureEntityTagTextSnapshot(
+  trx: Knex.Transaction,
+  tenant: string,
+  taggedId: string,
+  taggedType: TaggedEntityType,
+): Promise<string[]> {
+  return getTagTextSnapshot(trx, tenant, taggedId, taggedType);
+}
+
+/**
+ * Emit the per-entity update event (PROJECT_TASK_UPDATED / TICKET_UPDATED /…)
+ * that bulk callers must publish themselves — createTagsForEntityWithTransaction
+ * intentionally does not, so consumers like webhooks and search indexers
+ * still need a single update event per entity per bulk operation.
+ *
+ * No-ops if the tag-text set is unchanged.
+ */
+export async function publishEntityTagBulkUpdate(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  taggedId: string;
+  taggedType: TaggedEntityType;
+  userId: string;
+  previousTags: string[];
+  occurredAt?: string;
+}): Promise<void> {
+  const newTags = await getTagTextSnapshot(
+    params.trx,
+    params.tenant,
+    params.taggedId,
+    params.taggedType,
+  );
+  await publishEntityTagUpdateEvent({
+    trx: params.trx,
+    tenant: params.tenant,
+    taggedId: params.taggedId,
+    taggedType: params.taggedType,
+    userId: params.userId,
+    occurredAt: params.occurredAt ?? new Date().toISOString(),
+    previousTags: params.previousTags,
+    newTags,
+  });
+}
+
 export const findTagsByEntityId = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext, entityId: string, entityType: string): Promise<ITag[]> => {
   const { knex: db } = await createTenantKnex();
   try {
@@ -743,6 +793,10 @@ export const createTagsForEntityWithTransaction = withAuth(async (
 ): Promise<ITag[]> => {
   const userId = currentUser.user_id;
 
+  // Mirror createTag's gate: minting a brand-new tag definition requires
+  // tag:create permission. Resolved once per call since pendingTags is small.
+  const userHasTagCreate = await hasPermissionAsync(currentUser, 'tag', 'create', trx);
+
   const createdTags: ITag[] = [];
 
   for (const tag of pendingTags) {
@@ -754,6 +808,18 @@ export const createTagsForEntityWithTransaction = withAuth(async (
       if (tagText.length > 50) {
         console.warn(`Tag text "${tagText}" too long, skipping`);
         continue;
+      }
+
+      if (!userHasTagCreate) {
+        const existingDefinition = await TagDefinition.findByTextAndType(
+          trx,
+          tenant,
+          tagText,
+          entityType,
+        );
+        if (!existingDefinition) {
+          throw new Error(`Permission denied: cannot create new tag "${tagText}"`);
+        }
       }
 
       // Determine colors
@@ -830,7 +896,12 @@ export const createTagsForEntityWithTransaction = withAuth(async (
       });
     } catch (error) {
       console.error(`Failed to create tag "${tag.tag_text}" for ${entityType}:`, error);
-      // Continue with other tags - don't fail the entire operation
+      // Re-throw permission errors so the caller can attribute the failure
+      // to the right cause; other errors are swallowed so a single bad tag
+      // doesn't drop the rest.
+      if (error instanceof Error && error.message.includes('Permission denied')) {
+        throw error;
+      }
     }
   }
 

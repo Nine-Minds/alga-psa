@@ -1,17 +1,18 @@
 'use client';
 
 import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
-import { Move, UserPlus, Trash2 } from 'lucide-react';
+import { Move, Tag, UserPlus, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTaskSelection } from './TaskSelectionContext';
 
 interface BulkTaskActionBarProps {
   onMove: () => void;
   onAssign: () => void;
+  onTags: () => void;
   onDelete: () => void;
 }
 
-export default function BulkTaskActionBar({ onMove, onAssign, onDelete }: BulkTaskActionBarProps) {
+export default function BulkTaskActionBar({ onMove, onAssign, onTags, onDelete }: BulkTaskActionBarProps) {
   const { t } = useTranslation(['features/projects', 'common']);
   const { selectedTaskIds, clearSelection } = useTaskSelection();
   const count = selectedTaskIds.size;
@@ -33,6 +34,12 @@ export default function BulkTaskActionBar({ onMove, onAssign, onDelete }: BulkTa
           label: t('bulkActions.assign', 'Assign'),
           icon: <UserPlus className="h-4 w-4" />,
           onClick: onAssign,
+        },
+        {
+          id: 'tags',
+          label: t('bulkActions.tags', 'Tags'),
+          icon: <Tag className="h-4 w-4" />,
+          onClick: onTags,
         },
         {
           id: 'delete',

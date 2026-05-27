@@ -21,9 +21,16 @@ import type {
   ITaskType,
   IUser,
   IUserWithRoles,
+  PendingTag,
   ProjectStatus,
 } from '@alga-psa/types';
-import { findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { revalidatePath } from 'next/cache';
+import {
+  captureEntityTagTextSnapshot,
+  createTagsForEntityWithTransaction,
+  findTagsByEntityIds,
+  publishEntityTagBulkUpdate,
+} from '@alga-psa/tags/actions';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
@@ -2897,4 +2904,125 @@ export const getProjectTaskData = withAuth(async (
 
         return { tasks, taskResources, taskTags, checklistItems, taskDependencies };
     });
+});
+
+export const bulkAddTagsToTasks = withAuth(async (
+  user,
+  { tenant },
+  taskIds: string[],
+  tagTexts: string[],
+): Promise<{
+  updatedIds: string[];
+  failed: Array<{ taskId: string; message: string }>;
+}> => {
+  const uniqueIds = Array.from(new Set(taskIds.filter((id) => !!id)));
+  const normalizedTexts = Array.from(
+    new Set(tagTexts.map((t) => t.trim()).filter((t) => t.length > 0)),
+  );
+
+  const updatedIds: string[] = [];
+  const failed: Array<{ taskId: string; message: string }> = [];
+
+  if (uniqueIds.length === 0 || normalizedTexts.length === 0) {
+    return { updatedIds, failed };
+  }
+
+  const { knex } = await createTenantKnex();
+  if (!(await hasPermission(user, 'project', 'update', knex))) {
+    throw new Error('Permission denied: Cannot update project tasks');
+  }
+
+  // Filter to task IDs that actually exist in this tenant. tag_mappings.tagged_id
+  // has no FK to project_tasks, so without this we'd silently insert orphan
+  // mappings for any UUID a project:update holder submits.
+  const existingTaskRows = await knex('project_tasks')
+    .where('tenant', tenant)
+    .whereIn('task_id', uniqueIds)
+    .select<Array<{ task_id: string }>>('task_id');
+  const knownTaskIds = new Set<string>(existingTaskRows.map((row) => row.task_id));
+  const validIds: string[] = [];
+  for (const id of uniqueIds) {
+    if (knownTaskIds.has(id)) {
+      validIds.push(id);
+    } else {
+      failed.push({ taskId: id, message: 'Task not found' });
+    }
+  }
+
+  if (validIds.length === 0) {
+    return { updatedIds, failed };
+  }
+
+  const existingByTask = new Map<string, Set<string>>();
+  try {
+    const existing = await findTagsByEntityIds(validIds, 'project_task');
+    for (const tag of existing) {
+      const set = existingByTask.get(tag.tagged_id) ?? new Set<string>();
+      set.add(tag.tag_text.toLowerCase());
+      existingByTask.set(tag.tagged_id, set);
+    }
+  } catch (error) {
+    console.warn('[bulkAddTagsToTasks] Failed to load existing tags for dedupe:', error);
+  }
+
+  for (const taskId of validIds) {
+    try {
+      const alreadyOnTask = existingByTask.get(taskId) ?? new Set<string>();
+      const newTexts = normalizedTexts.filter((t) => !alreadyOnTask.has(t.toLowerCase()));
+      if (newTexts.length === 0) {
+        updatedIds.push(taskId);
+        continue;
+      }
+      const pendingTags: PendingTag[] = newTexts.map((text) => ({
+        tag_text: text,
+        background_color: null,
+        text_color: null,
+        isNew: true,
+      }));
+
+      let createdTexts: string[] = [];
+      await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const previousSnapshot = await captureEntityTagTextSnapshot(
+          trx, tenant, taskId, 'project_task',
+        );
+        const created = await createTagsForEntityWithTransaction(
+          trx, tenant, taskId, 'project_task', pendingTags,
+        );
+        createdTexts = created.map((tag) => tag.tag_text);
+        // createTagsForEntityWithTransaction intentionally suppresses the
+        // per-entity update event; emit it here so search/webhook consumers
+        // see one PROJECT_TASK_UPDATED per task that actually changed.
+        await publishEntityTagBulkUpdate({
+          trx,
+          tenant,
+          taggedId: taskId,
+          taggedType: 'project_task',
+          userId: user.user_id,
+          previousTags: previousSnapshot,
+        });
+      });
+
+      const createdLower = new Set(createdTexts.map((t) => t.toLowerCase()));
+      const dropped = newTexts.filter((t) => !createdLower.has(t.toLowerCase()));
+      if (dropped.length > 0) {
+        failed.push({
+          taskId,
+          message: `Could not add tag(s): ${dropped.join(', ')}`,
+        });
+      } else {
+        updatedIds.push(taskId);
+      }
+    } catch (error: unknown) {
+      failed.push({
+        taskId,
+        message: error instanceof Error ? error.message : 'Failed to add tags to task',
+      });
+    }
+  }
+
+  if (updatedIds.length > 0) {
+    revalidatePath('/msp/projects');
+  }
+
+  return { updatedIds, failed };
 });
