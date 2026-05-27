@@ -14,6 +14,15 @@ import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
+import {
+  TICKET_ACTIVITY_ACTOR,
+  TICKET_ACTIVITY_ENTITY,
+  TICKET_ACTIVITY_EVENT,
+  TICKET_ACTIVITY_SOURCE,
+  buildCuratedTicketDiffWithLabels,
+  hasCuratedChanges,
+  writeTicketActivity,
+} from '@alga-psa/shared/lib/ticketActivity';
 import { ServerAnalyticsTracker } from '@alga-psa/analytics';
 // Event types no longer needed as we create objects directly
 import {
@@ -450,6 +459,27 @@ export class TicketService extends BaseService<ITicket> {
         entity_type: 'ticket',
         tenant: context.tenant,
       });
+
+      // Activity-timeline entry for the document attachment. Stored inside
+      // the same transaction so the timeline row never appears unless the
+      // document and its association were also persisted.
+      await writeTicketActivity(trx, {
+        tenant: context.tenant,
+        ticketId,
+        eventType: TICKET_ACTIVITY_EVENT.DOCUMENT_ATTACHED,
+        entityType: TICKET_ACTIVITY_ENTITY.DOCUMENT,
+        entityId: documentId,
+        actor: {
+          actorType: TICKET_ACTIVITY_ACTOR.USER,
+          userId: context.userId,
+        },
+        source: TICKET_ACTIVITY_SOURCE.API,
+        details: {
+          document_name: file.name,
+          mime_type: mimeType,
+          file_size: file.size,
+        },
+      });
     });
 
     const createdDocument = await this.getDocumentById(documentId, context);
@@ -535,6 +565,22 @@ export class TicketService extends BaseService<ITicket> {
           .where({ document_id: documentId, tenant: context.tenant })
           .del();
       }
+
+      await writeTicketActivity(trx, {
+        tenant: context.tenant,
+        ticketId,
+        eventType: TICKET_ACTIVITY_EVENT.DOCUMENT_REMOVED,
+        entityType: TICKET_ACTIVITY_ENTITY.DOCUMENT,
+        entityId: documentId,
+        actor: {
+          actorType: TICKET_ACTIVITY_ACTOR.USER,
+          userId: context.userId,
+        },
+        source: TICKET_ACTIVITY_SOURCE.API,
+        details: {
+          association_id: doc.association_id,
+        },
+      });
     });
   }
 
@@ -838,6 +884,29 @@ export class TicketService extends BaseService<ITicket> {
           (fullTicket as any).tags = data.tags;
         }
 
+        // Activity-timeline row for REST API ticket creation.
+        await writeTicketActivity(trx, {
+          tenant: context.tenant,
+          ticketId: ticketResult.ticket_id,
+          eventType: TICKET_ACTIVITY_EVENT.CREATED,
+          entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+          entityId: ticketResult.ticket_id,
+          actor: {
+            actorType: TICKET_ACTIVITY_ACTOR.API,
+            userId: context.userId,
+          },
+          source: TICKET_ACTIVITY_SOURCE.API,
+          details: {
+            title: fullTicket.title,
+            board_id: fullTicket.board_id,
+            status_id: fullTicket.status_id,
+            priority_id: fullTicket.priority_id,
+            assigned_to: fullTicket.assigned_to,
+            client_id: fullTicket.client_id,
+            ticket_origin: TICKET_ORIGINS.API,
+          },
+        });
+
         return fullTicket as ITicket;
       });
 
@@ -993,6 +1062,46 @@ export class TicketService extends BaseService<ITicket> {
         updatedByUserId: context.userId,
         changes: structuredChanges,
       });
+
+      // Activity-timeline row for REST API updates. Uses curated diff so
+      // only user-meaningful field changes produce a timeline entry; no-op
+      // updates result in no row.
+      const curated = await buildCuratedTicketDiffWithLabels(
+        trx,
+        context.tenant,
+        currentTicket,
+        cleanedData as Record<string, unknown>,
+      );
+      if (hasCuratedChanges(curated)) {
+        const changedKeys = Object.keys(curated);
+        let activityEventType: string = TICKET_ACTIVITY_EVENT.UPDATED;
+        if (changedKeys.length === 1) {
+          const key = changedKeys[0];
+          if (key === 'status_id') activityEventType = TICKET_ACTIVITY_EVENT.STATUS_CHANGED;
+          else if (key === 'priority_id') activityEventType = TICKET_ACTIVITY_EVENT.PRIORITY_CHANGED;
+          else if (key === 'assigned_to') {
+            activityEventType =
+              (cleanedData as Record<string, unknown>).assigned_to == null
+                ? TICKET_ACTIVITY_EVENT.UNASSIGNED
+                : TICKET_ACTIVITY_EVENT.ASSIGNED;
+          } else if (key === 'board_id') activityEventType = TICKET_ACTIVITY_EVENT.BOARD_MOVED;
+          else if (key === 'response_state') activityEventType = TICKET_ACTIVITY_EVENT.RESPONSE_STATE_CHANGED;
+        }
+
+        await writeTicketActivity(trx, {
+          tenant: context.tenant,
+          ticketId: id,
+          eventType: activityEventType,
+          entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+          entityId: id,
+          actor: {
+            actorType: TICKET_ACTIVITY_ACTOR.USER,
+            userId: context.userId,
+          },
+          source: TICKET_ACTIVITY_SOURCE.API,
+          changes: curated,
+        });
+      }
 
       return this.withDescriptionHtml(ticket as ITicket);
     });

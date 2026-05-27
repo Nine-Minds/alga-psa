@@ -24,7 +24,7 @@ import { ResponseStateDisplay } from '../ResponseStateSelect';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from '@alga-psa/tickets/actions';
 import { ItilLabels, calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
-import { Pencil, Check, X, HelpCircle, Save, PauseCircle, Users, Mail } from 'lucide-react';
+import { Pencil, Check, X, HelpCircle, Save, PauseCircle, Users, Mail, History } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
@@ -92,6 +92,7 @@ interface TicketInfoProps {
   }) => Promise<{ deletedDocumentIds: string[]; failures: Array<{ documentId: string; reason: string }> }>;
   resolveTicketAttachmentViewUrl?: (document: { document_id?: string; file_id?: string }) => string;
   onOpenEmailNotificationLogs?: () => void;
+  onOpenActivityLog?: () => void;
   titleRef?: React.Ref<HTMLHeadingElement>;
   hideSlaStatus?: boolean;
   onLiveDirtyFieldsChange?: (fields: string[]) => void;
@@ -138,6 +139,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   deleteDraftTicketAttachmentImagesAction,
   resolveTicketAttachmentViewUrl,
   onOpenEmailNotificationLogs,
+  onOpenActivityLog,
   titleRef,
   hideSlaStatus = false,
   onLiveDirtyFieldsChange,
@@ -1968,6 +1970,21 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   className="h-9 w-9"
                 >
                   <Mail className="w-4 h-4" />
+                </Button>
+              </Tooltip>
+            ) : null}
+            {ticket.ticket_id && onOpenActivityLog ? (
+              <Tooltip content={t('info.openActivityLog', 'View activity log')}>
+                <Button
+                  id="ticket-activity-log-button"
+                  type="button"
+                  variant="soft"
+                  size="icon"
+                  onClick={onOpenActivityLog}
+                  aria-label={t('info.openActivityLog', 'View activity log')}
+                  className="h-9 w-9"
+                >
+                  <History className="w-4 h-4" />
                 </Button>
               </Tooltip>
             ) : null}

@@ -181,7 +181,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'appointment_requests',
 
   // SLA leaf tables (must be before tickets, statuses, priorities, boards)
-  'sla_notifications_sent', 'sla_audit_log',
+  // ticket_audit_logs sits with sla_audit_log: same shape, FKs to tickets/users,
+  // delete before ticket/user rows are removed.
+  'sla_notifications_sent', 'sla_audit_log', 'ticket_audit_logs',
   'sla_notification_thresholds', 'sla_policy_targets',
   'status_sla_pause_config',
   'business_hours_entries', 'holidays',

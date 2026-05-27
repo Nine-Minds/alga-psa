@@ -43,6 +43,13 @@ import {
 } from '@alga-psa/event-bus/events';
 
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
+import {
+  TICKET_ACTIVITY_ACTOR,
+  TICKET_ACTIVITY_ENTITY,
+  TICKET_ACTIVITY_EVENT,
+  TICKET_ACTIVITY_SOURCE,
+  writeTicketActivity,
+} from '@alga-psa/shared/lib/ticketActivity';
 import { TicketModelEventPublisher } from '../lib/adapters/TicketModelEventPublisher';
 import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalyticsTracker';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
@@ -481,6 +488,38 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       if (!fullTicket) {
         throw new Error('Failed to retrieve created ticket');
       }
+
+      // Write activity-timeline entry for ticket creation. The details
+      // capture a small snapshot of the create payload so the UI can show
+      // "Alex created the ticket on board X with status Y" without needing
+      // a separate join.
+      await writeTicketActivity(trx, {
+        tenant,
+        ticketId: ticketResult.ticket_id,
+        eventType: TICKET_ACTIVITY_EVENT.CREATED,
+        entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+        entityId: ticketResult.ticket_id,
+        actor: {
+          actorType: TICKET_ACTIVITY_ACTOR.USER,
+          userId: user.user_id,
+        },
+        source: TICKET_ACTIVITY_SOURCE.UI,
+        occurredAt:
+          typeof fullTicket.entered_at === 'string'
+            ? fullTicket.entered_at
+            : fullTicket.entered_at instanceof Date
+              ? fullTicket.entered_at.toISOString()
+              : new Date().toISOString(),
+        details: {
+          title: fullTicket.title,
+          board_id: fullTicket.board_id,
+          status_id: fullTicket.status_id,
+          priority_id: fullTicket.priority_id,
+          assigned_to: fullTicket.assigned_to,
+          client_id: fullTicket.client_id,
+          ticket_origin: fullTicket.ticket_origin ?? TICKET_ORIGINS.INTERNAL,
+        },
+      });
 
       const enteredSlaEvent = buildTicketResolutionSlaStageEnteredEvent({
         tenantId: tenant,

@@ -31,6 +31,7 @@ import TicketProperties from "./TicketProperties";
 import TicketDocumentsSection from "./TicketDocumentsSection";
 import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
+import { TicketActivityTimeline } from "./TicketActivityTimeline";
 import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionPermissionError, isActionMessageError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
@@ -53,7 +54,7 @@ import { Button } from "@alga-psa/ui/components/Button";
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Input } from "@alga-psa/ui/components/Input";
 import { PresenceBar } from '@alga-psa/ui/presence/PresenceBar';
-import { ExternalLink, Mail } from 'lucide-react';
+import { ExternalLink, Mail, History } from 'lucide-react';
 import { WorkItemType } from "@alga-psa/types";
 import { ReflectionContainer } from "@alga-psa/ui/ui-reflection/ReflectionContainer";
 import { PartialBlock, StyledText } from '@blocknote/core';
@@ -294,6 +295,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [cardTitleVisible, setCardTitleVisible] = useState(true);
     const cardTitleRef = useRef<HTMLHeadingElement>(null);
     const [isEmailNotificationLogsDrawerOpen, setIsEmailNotificationLogsDrawerOpen] = useState(false);
+    const [isActivityLogDrawerOpen, setIsActivityLogDrawerOpen] = useState(false);
+    const [activityLogRefreshKey, setActivityLogRefreshKey] = useState(0);
     const [conversations, setConversations] = useState<IComment[]>(initialComments);
     const [documents, setDocuments] = useState<any[]>(initialDocuments);
     const [client, setClient] = useState<IClient | null>(initialClient);
@@ -2748,6 +2751,10 @@ const handleClose = () => {
                                     deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
                                     resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
                                     onOpenEmailNotificationLogs={() => setIsEmailNotificationLogsDrawerOpen(true)}
+                                    onOpenActivityLog={() => {
+                                        setActivityLogRefreshKey((value) => value + 1);
+                                        setIsActivityLogDrawerOpen(true);
+                                    }}
                                     hideSlaStatus={hideSlaStatus}
                                     additionalAgents={additionalAgentsForInfo}
                                     onLiveDirtyFieldsChange={setTicketInfoDirtyFields}
@@ -2914,6 +2921,27 @@ const handleClose = () => {
                         ticketId={ticket.ticket_id || ''}
                         variant="flat"
                     />
+                </div>
+            </Drawer>
+            <Drawer
+                id="ticket-activity-log-drawer"
+                isOpen={isActivityLogDrawerOpen}
+                onClose={() => setIsActivityLogDrawerOpen(false)}
+                width="48rem"
+            >
+                <div className="space-y-4 pr-8">
+                    <div className="flex items-center gap-2">
+                        <History className="h-5 w-5 text-[rgb(var(--color-text-700))]" />
+                        <h2 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">
+                            Ticket Activity
+                        </h2>
+                    </div>
+                    {ticket.ticket_id ? (
+                        <TicketActivityTimeline
+                            ticketId={ticket.ticket_id}
+                            refreshKey={conversations.length + activityLogRefreshKey}
+                        />
+                    ) : null}
                 </div>
             </Drawer>
         </ReflectionContainer>

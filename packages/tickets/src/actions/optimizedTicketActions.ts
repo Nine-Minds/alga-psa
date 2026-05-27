@@ -41,6 +41,16 @@ import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import {
+  TICKET_ACTIVITY_ACTOR,
+  TICKET_ACTIVITY_ENTITY,
+  TICKET_ACTIVITY_EVENT,
+  TICKET_ACTIVITY_SOURCE,
+  buildCuratedTicketDiffWithLabels,
+  hasCuratedChanges,
+  writeTicketActivity,
+} from '@alga-psa/shared/lib/ticketActivity';
+import { maybeReopenBundleMasterFromChildReply } from './ticketBundleUtils';
+import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
   RequestLocalAuthorizationCache,
@@ -2408,6 +2418,60 @@ export async function updateTicketInTransaction(
       updatedAt: toIsoTimestamp(updatedTicket.updated_at, occurredAt),
     });
 
+    // Write a unified activity-timeline row for this update. We pick the
+    // most specific event type so the UI can render a tight, human-readable
+    // line ("Morgan changed status from New to In Progress") rather than a
+    // generic "ticket updated" entry. The curated diff includes resolved
+    // labels for IDs where possible.
+    const actorInfo = {
+      actorType: TICKET_ACTIVITY_ACTOR.USER,
+      userId: user.user_id,
+      displayName: formatLiveUpdateDisplayName(user),
+    };
+    const curated = await buildCuratedTicketDiffWithLabels(
+      trx,
+      tenant,
+      currentTicket,
+      { ...updateData, closed_at: updatedTicket.closed_at, closed_by: updatedTicket.closed_by },
+    );
+
+    if (hasCuratedChanges(curated)) {
+      const changedKeys = Object.keys(curated);
+      let activityEventType: string = TICKET_ACTIVITY_EVENT.UPDATED;
+      if (newStatus?.is_closed && !oldStatus?.is_closed) {
+        activityEventType = TICKET_ACTIVITY_EVENT.CLOSED;
+      } else if (!newStatus?.is_closed && oldStatus?.is_closed) {
+        activityEventType = TICKET_ACTIVITY_EVENT.REOPENED;
+      } else if (changedKeys.length === 1) {
+        if (changedKeys[0] === 'status_id') {
+          activityEventType = TICKET_ACTIVITY_EVENT.STATUS_CHANGED;
+        } else if (changedKeys[0] === 'priority_id') {
+          activityEventType = TICKET_ACTIVITY_EVENT.PRIORITY_CHANGED;
+        } else if (changedKeys[0] === 'assigned_to') {
+          activityEventType =
+            updateData.assigned_to == null
+              ? TICKET_ACTIVITY_EVENT.UNASSIGNED
+              : TICKET_ACTIVITY_EVENT.ASSIGNED;
+        } else if (changedKeys[0] === 'board_id') {
+          activityEventType = TICKET_ACTIVITY_EVENT.BOARD_MOVED;
+        } else if (changedKeys[0] === 'response_state') {
+          activityEventType = TICKET_ACTIVITY_EVENT.RESPONSE_STATE_CHANGED;
+        }
+      }
+
+      await writeTicketActivity(trx, {
+        tenant,
+        ticketId: id,
+        eventType: activityEventType,
+        entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+        entityId: id,
+        actor: actorInfo,
+        source: TICKET_ACTIVITY_SOURCE.UI,
+        occurredAt,
+        changes: curated,
+      });
+    }
+
     // Publish response state change event if response_state was explicitly changed
     if ('response_state' in updateData && updateData.response_state !== currentTicket.response_state) {
       try {
@@ -2614,6 +2678,14 @@ export const addTicketCommentWithCache = withAuth(async (
       user.user_id ?? null
     );
 
+    // Bundle child→master reopen: a public reply on a bundled child can
+    // reopen the closed master when reopen_on_child_reply is set. This
+    // mirrors the wiring in commentActions.createComment so the optimized
+    // MSP-side comment path doesn't silently skip the reopen.
+    if (!isInternal) {
+      await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, user.user_id ?? null);
+    }
+
     // If this is a bundle master in sync_updates mode, mirror public comments to children (idempotent).
     if (!isInternal) {
       const bundleSettings = await trx('ticket_bundle_settings')
@@ -2743,7 +2815,31 @@ export const addTicketCommentWithCache = withAuth(async (
       },
       updatedAt: toIsoTimestamp(newComment.created_at, new Date().toISOString()),
     });
-    
+
+    // Activity-timeline row for the MSP-side "add comment" flow. This path
+    // is hit by the ticket detail UI, so source is always 'ui'. Internal
+    // notes get a distinct event type for clearer rendering.
+    await writeTicketActivity(trx, {
+      tenant,
+      ticketId,
+      eventType: isInternal
+        ? TICKET_ACTIVITY_EVENT.INTERNAL_NOTE_ADDED
+        : TICKET_ACTIVITY_EVENT.MESSAGE_ADDED,
+      entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
+      entityId: newComment.comment_id,
+      actor: {
+        actorType: TICKET_ACTIVITY_ACTOR.USER,
+        userId: user.user_id,
+        displayName: formatLiveUpdateDisplayName(user),
+      },
+      source: TICKET_ACTIVITY_SOURCE.UI,
+      occurredAt: toIsoTimestamp(newComment.created_at, new Date().toISOString()),
+      details: {
+        is_internal: !!isInternal,
+        is_resolution: !!isResolution,
+      },
+    });
+
     // Track comment analytics
     captureAnalytics('ticket_comment_added', {
       is_internal: isInternal,

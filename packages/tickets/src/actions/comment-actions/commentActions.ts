@@ -15,6 +15,13 @@ import { withAuth } from '@alga-psa/auth';
 import { buildTicketCommunicationWorkflowEvents } from '../../lib/workflowTicketCommunicationEvents';
 import { isResponseStateTrackingEnabled } from '../../lib/responseStateSettings';
 import { publishTicketUpdate } from '../../lib/liveUpdates';
+import {
+  TICKET_ACTIVITY_ACTOR,
+  TICKET_ACTIVITY_ENTITY,
+  TICKET_ACTIVITY_EVENT,
+  TICKET_ACTIVITY_SOURCE,
+  writeTicketActivity,
+} from '@alga-psa/shared/lib/ticketActivity';
 
 function formatLiveUpdateDisplayName(user: any): string {
   return `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || 'Unknown User';
@@ -362,6 +369,62 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
         await maybeReopenBundleMasterFromChildReply(trx, commentTenant, comment.ticket_id!, comment.user_id ?? null);
       }
 
+      // Write a unified activity row so the timeline interleaves the comment
+      // with field-change events. We pick the most specific event type based
+      // on visibility + responseSource so the UI can render distinct phrasing
+      // for "internal note", "customer reply", and "public comment".
+      if (comment.ticket_id && commentTenant) {
+        const responseSource =
+          (comment.metadata && typeof comment.metadata === 'object'
+            ? (comment.metadata as { responseSource?: string }).responseSource
+            : undefined) ?? comment.response_source ?? undefined;
+
+        let activityEventType: string = TICKET_ACTIVITY_EVENT.COMMENT_ADDED;
+        let activitySource: string = TICKET_ACTIVITY_SOURCE.UI;
+        let actorType: string = TICKET_ACTIVITY_ACTOR.USER;
+
+        if (comment.is_internal) {
+          activityEventType = TICKET_ACTIVITY_EVENT.INTERNAL_NOTE_ADDED;
+        } else if (responseSource === 'client_portal' || comment.author_type === 'client' || comment.author_type === 'contact') {
+          activityEventType = TICKET_ACTIVITY_EVENT.CUSTOMER_REPLIED;
+          activitySource = TICKET_ACTIVITY_SOURCE.CLIENT_PORTAL;
+          actorType =
+            comment.author_type === 'contact'
+              ? TICKET_ACTIVITY_ACTOR.CONTACT
+              : TICKET_ACTIVITY_ACTOR.USER;
+        } else if (responseSource === 'inbound_email') {
+          activityEventType = TICKET_ACTIVITY_EVENT.CUSTOMER_REPLIED;
+          activitySource = TICKET_ACTIVITY_SOURCE.INBOUND_EMAIL;
+          actorType = TICKET_ACTIVITY_ACTOR.EMAIL_SENDER;
+        } else {
+          activityEventType = TICKET_ACTIVITY_EVENT.MESSAGE_ADDED;
+        }
+
+        await writeTicketActivity(trx, {
+          tenant: commentTenant,
+          ticketId: comment.ticket_id,
+          eventType: activityEventType,
+          entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
+          entityId: commentId,
+          actor: {
+            actorType: actorType as any,
+            userId: actorType === TICKET_ACTIVITY_ACTOR.USER ? (comment.user_id ?? null) : null,
+            contactId:
+              actorType === TICKET_ACTIVITY_ACTOR.CONTACT ||
+              actorType === TICKET_ACTIVITY_ACTOR.EMAIL_SENDER
+                ? (comment.contact_id ?? null)
+                : null,
+          },
+          source: activitySource,
+          details: {
+            is_internal: !!comment.is_internal,
+            is_resolution: !!comment.is_resolution,
+            author_type: comment.author_type,
+            response_source: responseSource ?? null,
+          },
+        });
+      }
+
       if (comment.ticket_id && commentTenant) {
         await publishTicketUpdate({
           tenantId: commentTenant,
@@ -555,6 +618,32 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
             displayName: formatLiveUpdateDisplayName(user),
           },
           updatedAt: new Date().toISOString(),
+        });
+      }
+
+      // Metadata-only edit activity row: by design, we do NOT store the
+      // full old/new comment bodies in the activity log (see PRD FR-24/25,
+      // FR-38). The UI surfaces "X edited a comment" and links to the
+      // current comment; if a content-diff feature is added later, it
+      // should live in a separate body-snapshot table, not here.
+      if (updatedComment?.ticket_id && commentTenant) {
+        const editorUserId = user?.user_id ?? comment.user_id ?? existingComment.user_id ?? null;
+        await writeTicketActivity(trx, {
+          tenant: commentTenant,
+          ticketId: updatedComment.ticket_id,
+          eventType: TICKET_ACTIVITY_EVENT.COMMENT_UPDATED,
+          entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
+          entityId: id,
+          actor: {
+            actorType: TICKET_ACTIVITY_ACTOR.USER,
+            userId: editorUserId,
+          },
+          source: TICKET_ACTIVITY_SOURCE.UI,
+          details: {
+            is_internal: !!updatedComment.is_internal,
+            was_internal: !!existingComment.is_internal,
+            edited: true,
+          },
         });
       }
     });

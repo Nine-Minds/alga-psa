@@ -1196,6 +1196,78 @@ export async function createTicketFromEmail(
         }
       }
 
+      // Write activity-timeline entry for the inbound-email ticket create.
+      // This runs inside the admin transaction, so we MUST pass explicit
+      // tenant — the helper does not depend on the `app.current_tenant`
+      // GUC (which is unset in admin transactions).
+      try {
+        const { writeTicketActivity, TICKET_ACTIVITY_EVENT, TICKET_ACTIVITY_ENTITY, TICKET_ACTIVITY_ACTOR, TICKET_ACTIVITY_SOURCE } =
+          await import('../../lib/ticketActivity/index');
+        const safeEmailMeta = ticketData.email_metadata
+          ? {
+              messageId: (ticketData.email_metadata as any)?.messageId ?? null,
+              threadId: (ticketData.email_metadata as any)?.threadId ?? null,
+              from: (ticketData.email_metadata as any)?.from ?? null,
+              subject: (ticketData.email_metadata as any)?.subject ?? null,
+              provider: (ticketData.email_metadata as any)?.provider ?? null,
+              receivedAt: (ticketData.email_metadata as any)?.receivedAt ?? null,
+            }
+          : undefined;
+
+        await writeTicketActivity(trx, {
+          tenant,
+          ticketId: result.ticket_id,
+          eventType: TICKET_ACTIVITY_EVENT.CREATED,
+          entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+          entityId: result.ticket_id,
+          actor: ticketData.contact_id
+            ? {
+                actorType: TICKET_ACTIVITY_ACTOR.EMAIL_SENDER,
+                contactId: ticketData.contact_id,
+                userId: userId ?? null,
+              }
+            : {
+                actorType: TICKET_ACTIVITY_ACTOR.SYSTEM,
+                userId: userId ?? null,
+              },
+          source: TICKET_ACTIVITY_SOURCE.INBOUND_EMAIL,
+          details: {
+            title: ticketData.title,
+            board_id: ticketData.board_id ?? null,
+            status_id: ticketData.status_id ?? null,
+            priority_id: ticketData.priority_id ?? null,
+            assigned_to: assignedTo ?? null,
+            client_id: ticketData.client_id ?? null,
+            ticket_origin: TICKET_ORIGINS.INBOUND_EMAIL,
+            email: safeEmailMeta,
+          },
+        });
+
+        // Distinct activity row for the inbound email itself; useful for
+        // the UI to surface a separate "Received inbound email" entry
+        // independent of the ticket-create line.
+        await writeTicketActivity(trx, {
+          tenant,
+          ticketId: result.ticket_id,
+          eventType: TICKET_ACTIVITY_EVENT.INBOUND_EMAIL_RECEIVED,
+          entityType: TICKET_ACTIVITY_ENTITY.EMAIL,
+          entityId: safeEmailMeta?.messageId ?? null,
+          actor: ticketData.contact_id
+            ? {
+                actorType: TICKET_ACTIVITY_ACTOR.EMAIL_SENDER,
+                contactId: ticketData.contact_id,
+              }
+            : { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM },
+          source: TICKET_ACTIVITY_SOURCE.INBOUND_EMAIL,
+          details: { email: safeEmailMeta },
+        });
+      } catch (activityError) {
+        // Activity write failure inside the admin transaction must fail
+        // fast (PRD NFR-03) so the inbound-email ticket creation is
+        // rolled back rather than persisted without a timeline entry.
+        throw activityError;
+      }
+
       return {
         ticket_id: result.ticket_id,
         ticket_number: result.ticket_number
@@ -1414,6 +1486,51 @@ export async function createCommentFromEmail(
             .update({ response_state: 'awaiting_client' });
         }
       }
+
+      // Activity row for the inbound-email comment. Source is always
+      // inbound_email here; actor classification depends on whether we
+      // resolved the sender to a contact.
+      const { writeTicketActivity, TICKET_ACTIVITY_EVENT, TICKET_ACTIVITY_ENTITY, TICKET_ACTIVITY_ACTOR, TICKET_ACTIVITY_SOURCE } =
+        await import('../../lib/ticketActivity/index');
+
+      const safeEmail = commentData.inboundReplyEvent
+        ? {
+            messageId: commentData.inboundReplyEvent.messageId,
+            threadId: commentData.inboundReplyEvent.threadId ?? null,
+            from: commentData.inboundReplyEvent.from,
+            subject: commentData.inboundReplyEvent.subject ?? null,
+            provider: commentData.inboundReplyEvent.provider,
+            matchedBy: commentData.inboundReplyEvent.matchedBy,
+            receivedAt: commentData.inboundReplyEvent.receivedAt ?? null,
+          }
+        : null;
+
+      await writeTicketActivity(trx, {
+        tenant,
+        ticketId: commentData.ticket_id,
+        eventType:
+          normalizedAuthorType === 'client'
+            ? TICKET_ACTIVITY_EVENT.CUSTOMER_REPLIED
+            : TICKET_ACTIVITY_EVENT.COMMENT_ADDED,
+        entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
+        entityId: result.comment_id,
+        actor: commentData.contact_id
+          ? {
+              actorType: TICKET_ACTIVITY_ACTOR.EMAIL_SENDER,
+              contactId: commentData.contact_id,
+              userId: userId ?? null,
+            }
+          : {
+              actorType: TICKET_ACTIVITY_ACTOR.SYSTEM,
+              userId: userId ?? null,
+            },
+        source: TICKET_ACTIVITY_SOURCE.INBOUND_EMAIL,
+        details: {
+          author_type: normalizedAuthorType,
+          // NEVER store full email body content here — see PRD FR-38.
+          email: safeEmail,
+        },
+      });
 
       return result.comment_id;
     });
