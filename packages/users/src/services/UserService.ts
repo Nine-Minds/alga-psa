@@ -34,7 +34,7 @@ import User from '@alga-psa/db/models/user';
 import Team from '@alga-psa/teams/models/team';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { logger } from '@alga-psa/core';
-import { sanitizeUserForResponse, USER_RESPONSE_COLUMNS } from './userResponseSanitizer';
+import { sanitizeUserForResponse, USER_RESPONSE_COLUMNS, USER_RESPONSE_FIELD_NAMES } from './userResponseSanitizer';
 
 // Stubs for missing imports that are still in server
 const generateResourceLinks = (...args: any[]) => ({}) as any;
@@ -172,6 +172,7 @@ export class UserService extends BaseService<IUser> {
 
     const user = await knex('users')
       .where({ user_id: id, tenant: context.tenant })
+      .select(USER_RESPONSE_COLUMNS)
       .first();
 
     if (!user) {
@@ -210,6 +211,7 @@ export class UserService extends BaseService<IUser> {
         .where('tenant', context.tenant)
         .andWhere('email', data.email.toLowerCase())
         .andWhere('user_type', targetUserType)
+        .select('user_id')
         .first();
 
       if (existingUserByEmail) {
@@ -221,6 +223,7 @@ export class UserService extends BaseService<IUser> {
         .where('tenant', context.tenant)
         .andWhere('username', data.username.toLowerCase())
         .andWhere('user_type', targetUserType)
+        .select('user_id')
         .first();
 
       if (existingUserByUsername) {
@@ -259,7 +262,7 @@ export class UserService extends BaseService<IUser> {
       };
 
       // Insert user
-      const [createdUser] = await trx('users').insert(userData).returning('*');
+      const [createdUser] = await trx('users').insert(userData).returning(USER_RESPONSE_FIELD_NAMES);
 
       // Assign roles
       if (data.role_ids && data.role_ids.length > 0) {
@@ -305,6 +308,7 @@ export class UserService extends BaseService<IUser> {
       // Verify user exists and belongs to tenant
       const existingUser = await trx('users')
         .where({ user_id: id, tenant: context.tenant })
+        .select('user_id', 'email', 'user_type')
         .first();
 
       if (!existingUser) {
@@ -318,6 +322,7 @@ export class UserService extends BaseService<IUser> {
           .where('email', data.email.toLowerCase())
           .andWhere('user_type', userTypeToCheck)
           .whereNot('user_id', id)
+          .select('user_id')
           .first();
 
         if (emailExists) {
@@ -344,7 +349,7 @@ export class UserService extends BaseService<IUser> {
       const [updatedUser] = await trx('users')
         .where({ user_id: id, tenant: context.tenant })
         .update(updateData)
-        .returning('*');
+        .returning(USER_RESPONSE_FIELD_NAMES);
 
       // Log user update activity
       await this.logUserActivity({
@@ -380,6 +385,7 @@ export class UserService extends BaseService<IUser> {
       // Verify user exists and belongs to tenant
       const existingUser = await trx('users')
         .where({ user_id: id, tenant: context.tenant })
+        .select('user_id')
         .first();
 
       if (!existingUser) {
@@ -617,6 +623,7 @@ export class UserService extends BaseService<IUser> {
       // Verify user exists
       const user = await trx('users')
         .where({ user_id: userId, tenant: context.tenant })
+        .select('user_id')
         .first();
 
       if (!user) {

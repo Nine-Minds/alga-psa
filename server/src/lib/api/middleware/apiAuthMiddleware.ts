@@ -11,6 +11,7 @@ import { getTenantProduct, ProductAccessError } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 import { 
   ApiRequest, 
+  AuthenticatedApiRequest,
   UnauthorizedError,
   handleApiError 
 } from './apiMiddleware';
@@ -44,7 +45,7 @@ function extractApiKeyFromRequest(
 export async function authenticateApiKeyRequest(
   req: NextRequest,
   options: AuthenticateApiKeyRequestOptions = {},
-): Promise<ApiRequest> {
+): Promise<AuthenticatedApiRequest> {
   const apiKey = extractApiKeyFromRequest(req, options);
 
   if (!apiKey) {
@@ -76,7 +77,7 @@ export async function authenticateApiKeyRequest(
     throw new UnauthorizedError('User not found');
   }
 
-  const apiRequest = req as ApiRequest;
+  const apiRequest = req as AuthenticatedApiRequest;
   apiRequest.context = {
     userId: keyRecord.user_id,
     tenant: keyRecord.tenant,

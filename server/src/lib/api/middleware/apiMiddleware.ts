@@ -8,7 +8,8 @@ import { applyFieldRangeRequests } from '../utils/fieldRange';
 import { ZodSchema, ZodError } from 'zod';
 import { ApiKeyService } from '@alga-psa/auth';
 import { hasPermission } from '../../auth/rbac';
-import { findUserById } from '@alga-psa/user-composition/actions';
+import { findUserByIdForApi } from '@alga-psa/users/actions';
+import type { SafeApiUser } from '@alga-psa/users';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { runAsSystem } from '@alga-psa/db';
 import type { RateLimitDecision } from '../rateLimit/enforce';
@@ -17,7 +18,7 @@ import { enforceApiRateLimit } from '../rateLimit/enforce';
 export interface ApiContext {
   userId: string;
   tenant: string;
-  user?: any;
+  user?: SafeApiUser | null;
   apiKeyId?: string;
   rateLimitSubjectId?: string;
   rateLimit?: RateLimitDecision | null;
@@ -29,8 +30,13 @@ export interface ApiRequest extends NextRequest {
   params?: any;
 }
 
+export interface AuthenticatedApiContext extends ApiContext {
+  user: SafeApiUser;
+  kind?: 'user';
+}
+
 export interface AuthenticatedApiRequest extends NextRequest {
-  context: ApiContext;
+  context: AuthenticatedApiContext;
   params?: any;
 }
 
@@ -183,7 +189,7 @@ export function withApiKeyAuth(options: ApiKeyAuthOptions = {}) {
         if (!keyRecord) {
           throw new UnauthorizedError('Invalid API key');
         }
-        const user = await findUserById(keyRecord.user_id);
+        const user = await findUserByIdForApi(keyRecord.user_id, keyRecord.tenant);
         if (!user) {
           throw new UnauthorizedError('User not found');
         }
@@ -223,8 +229,8 @@ export async function withAuth(handler: (req: ApiRequest) => Promise<NextRespons
         throw new UnauthorizedError('Invalid API key');
       }
 
-      // Get full user details
-      const user = await findUserById(keyRecord.user_id);
+      // Get only the allowlisted user fields needed by API authorization.
+      const user = await findUserByIdForApi(keyRecord.user_id, keyRecord.tenant);
       if (!user) {
         throw new UnauthorizedError('User not found');
       }

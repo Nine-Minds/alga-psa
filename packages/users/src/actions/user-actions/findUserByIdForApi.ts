@@ -7,32 +7,11 @@
 
 import { Knex } from 'knex';
 import { getConnection, runWithTenant } from '@alga-psa/db';
-import { IUserWithRoles } from '@alga-psa/types';
 import User from '@alga-psa/db/models/user';
 import { getUserAvatarUrl } from '@alga-psa/user-composition/lib/avatarUtils';
+import { USER_RESPONSE_FIELD_NAMES, type SafeApiUser } from '../../services/userResponseSanitizer';
 
-const API_USER_CONTEXT_COLUMNS = [
-  'user_id',
-  'username',
-  'first_name',
-  'last_name',
-  'email',
-  'image',
-  'created_at',
-  'updated_at',
-  'two_factor_enabled',
-  'two_factor_required_new_device',
-  'is_google_user',
-  'is_inactive',
-  'tenant',
-  'user_type',
-  'reports_to',
-  'contact_id',
-  'phone',
-  'timezone',
-  'last_login_at',
-  'last_login_method'
-];
+export const API_USER_CONTEXT_COLUMNS = USER_RESPONSE_FIELD_NAMES;
 
 /**
  * Find a user by ID within a specific tenant context
@@ -41,7 +20,7 @@ const API_USER_CONTEXT_COLUMNS = [
 export async function findUserByIdForApi(
   userId: string, 
   tenantId: string
-): Promise<IUserWithRoles | null> {
+): Promise<SafeApiUser | null> {
   try {
     return await runWithTenant(tenantId, async () => {
       const knex = await getConnection(tenantId);
