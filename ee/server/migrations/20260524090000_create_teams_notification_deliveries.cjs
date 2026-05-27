@@ -50,8 +50,6 @@ async function distributeIfNeeded(knex, tableName) {
 }
 
 exports.up = async function up(knex) {
-  await knex.raw(`CREATE EXTENSION IF NOT EXISTS pgcrypto;`);
-
   await knex.raw(`
     CREATE TABLE IF NOT EXISTS teams_notification_deliveries (
       tenant uuid NOT NULL,
