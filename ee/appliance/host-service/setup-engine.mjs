@@ -321,14 +321,14 @@ async function dnsLookup(hostname, servers) {
   return dns.promises.resolve4(hostname);
 }
 
-export function validateSetupInputs(raw) {
+export function validateSetupInputs(raw, options = {}) {
   const channel = String(raw.channel || 'stable').trim();
   const appHostname = String(raw.appHostname || '').trim();
   const dnsMode = String(raw.dnsMode || 'system').trim();
   const dnsServers = String(raw.dnsServers || '').trim();
   const repoUrl = String(raw.repoUrl || 'https://github.com/Nine-Minds/alga-psa.git').trim();
   const repoBranch = String(raw.repoBranch || '').trim();
-  const initialTenant = normalizeInitialTenant(raw);
+  const initialTenant = options.requireInitialTenant === false ? null : normalizeInitialTenant(raw);
 
   if (!['stable', 'nightly'].includes(channel)) {
     throw new Error('Invalid channel. Use stable or nightly.');
@@ -706,7 +706,7 @@ export function installFlux(options = {}) {
   const kubeconfigPath = options.kubeconfigPath || '/etc/rancher/k3s/k3s.yaml';
   const fluxInstallCommand = options.fluxInstallCommand || `flux install --namespace flux-system --kubeconfig ${kubeconfigPath}`;
 
-  const cli = ensureFluxCli(options);
+  const cli = options.fluxInstallCommand ? { ok: true, installed: false } : ensureFluxCli(options);
   if (!cli.ok) {
     const failure = preflightFailure(
       'flux',
@@ -972,25 +972,28 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
     ? fs.readFileSync(options.tokenFile || '/var/lib/alga-appliance/setup-token', 'utf8').trim()
     : crypto.randomBytes(24).toString('base64url');
   const initialTenantSecretPath = path.join(tempDir, 'initial-tenant-secret.yaml');
+  const hasInitialTenant = Boolean(inputs.initialTenant);
 
-  try {
-    fs.writeFileSync(initialTenantSecretPath, initialTenantSecretYaml(inputs.initialTenant), { mode: 0o600 });
-  } catch (error) {
-    const failure = preflightFailure(
-      'github-release-source',
-      'render-initial-tenant-secret',
-      'Unable to render initial tenant Secret for appliance bootstrap.',
-      error instanceof Error ? error.message : String(error)
-    );
-    writeInstallState({ status: 'runtime-values-blocked', phase: 'github-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
-    return failure;
+  if (hasInitialTenant) {
+    try {
+      fs.writeFileSync(initialTenantSecretPath, initialTenantSecretYaml(inputs.initialTenant), { mode: 0o600 });
+    } catch (error) {
+      const failure = preflightFailure(
+        'github-release-source',
+        'render-initial-tenant-secret',
+        'Unable to render initial tenant Secret for appliance bootstrap.',
+        error instanceof Error ? error.message : String(error)
+      );
+      writeInstallState({ status: 'runtime-values-blocked', phase: 'github-release-source', lastAction: failure.message, failure, updatedAt: nowIso() }, stateFile);
+      return failure;
+    }
   }
 
   const commands = [
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} create namespace msp --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} create namespace alga-system --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} create namespace appliance-system --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
-    `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f ${shellQuote(initialTenantSecretPath)}`,
+    ...(hasInitialTenant ? [`kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f ${shellQuote(initialTenantSecretPath)}`] : []),
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n msp create secret generic alga-psa-shared --from-literal=ALGA_AUTH_KEY=${shellQuote(authKey)} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} -n appliance-system create secret generic appliance-status-auth --from-literal=token=${shellQuote(statusToken)} --dry-run=client -o yaml | kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -f -`,
     `kubectl --kubeconfig ${shellQuote(kubeconfigPath)} apply -k ${shellQuote(tempDir)}`,
@@ -1172,22 +1175,21 @@ export async function runSetupWorkflow(inputs, options = {}) {
     return preflight;
   }
 
-  if (options.skipK3sInstall === true) {
-    return {
-      ok: true,
-      phase: 'preflight',
-      message: 'Preflight succeeded; k3s install skipped by option override.'
-    };
+  const skipK3sInstall = options.skipK3sInstall === true || process.env.ALGA_APPLIANCE_SKIP_K3S_INSTALL === '1';
+  const skipStorageInstall = options.skipStorageInstall === true || process.env.ALGA_APPLIANCE_SKIP_STORAGE_INSTALL === '1';
+
+  if (!skipK3sInstall) {
+    const k3sResult = installK3sSingleNode(options);
+    if (!k3sResult.ok) {
+      return k3sResult;
+    }
   }
 
-  const k3sResult = installK3sSingleNode(options);
-  if (!k3sResult.ok) {
-    return k3sResult;
-  }
-
-  const storageResult = ensureLocalPathStorage(options);
-  if (!storageResult.ok) {
-    return storageResult;
+  if (!skipStorageInstall) {
+    const storageResult = ensureLocalPathStorage(options);
+    if (!storageResult.ok) {
+      return storageResult;
+    }
   }
 
   const fluxResult = installFlux(options);
@@ -1239,6 +1241,10 @@ function parseCliArgs(argv) {
     } else if (arg === '--release-selection-file') {
       parsed.releaseSelectionFile = argv[i + 1];
       i += 1;
+    } else if (arg === '--skip-k3s-install') {
+      parsed.skipK3sInstall = true;
+    } else if (arg === '--skip-storage-install') {
+      parsed.skipStorageInstall = true;
     }
   }
   return parsed;

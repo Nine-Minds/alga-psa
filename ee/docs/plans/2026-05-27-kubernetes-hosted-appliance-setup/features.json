@@ -1,0 +1,122 @@
+[
+  {
+    "id": "F001",
+    "description": "Define the new-install bootstrap boundary: host bootstrap only installs/starts k3s, imports baked control-plane assets, applies local storage/control-plane manifests, exposes setup, and provides fallback commands.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Functional Requirements"]
+  },
+  {
+    "id": "F002",
+    "description": "Create a Kubernetes appliance control-plane manifest/chart that runs setup/status/update components in a dedicated namespace independent of the Alga PSA application namespace.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Functional Requirements"]
+  },
+  {
+    "id": "F003",
+    "description": "Package the current setup/status UI for Kubernetes-hosted delivery while preserving the existing user-facing setup and status experience.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes", "Functional Requirements"]
+  },
+  {
+    "id": "F004",
+    "description": "Package the setup/status API logic for Kubernetes-hosted execution, reusing current endpoint contracts where practical.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F005",
+    "description": "Provide Kubernetes RBAC/service account configuration that allows the control plane to perform setup operations with the narrowest practical permissions for v1.",
+    "implemented": true,
+    "prdRefs": ["Security / Permissions"]
+  },
+  {
+    "id": "F006",
+    "description": "Stage baked control-plane manifests and image archive(s) into the Ubuntu ISO build output so first setup works without registry pulls.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Rollout / Migration"]
+  },
+  {
+    "id": "F007",
+    "description": "Update host bootstrap scripts to install/start k3s with minimal options and wait for the Kubernetes API before applying control-plane assets.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F008",
+    "description": "Update host bootstrap scripts to import baked control-plane image archive(s) into k3s/containerd idempotently.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F009",
+    "description": "Update host bootstrap scripts to apply local storage and control-plane manifests from the ISO-staged filesystem path, not repository-relative paths.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  },
+  {
+    "id": "F010",
+    "description": "Expose the Kubernetes-hosted setup UI on the existing appliance setup port, currently 8080, without requiring external network access.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "UX / UI Notes"]
+  },
+  {
+    "id": "F011",
+    "description": "Preserve setup token generation and token enforcement for setup/status access in the Kubernetes-hosted control plane.",
+    "implemented": true,
+    "prdRefs": ["Security / Permissions", "Users and Primary Flows"]
+  },
+  {
+    "id": "F012",
+    "description": "Move or bridge setup state persistence so the Kubernetes-hosted control plane can resume setup and report progress across pod restarts.",
+    "implemented": true,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F013",
+    "description": "Ensure the control plane can validate setup inputs, persist release/runtime selection, configure Flux source, configure runtime values, and trigger application bootstrap.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Data / API / Integrations"]
+  },
+  {
+    "id": "F014",
+    "description": "Ensure the control plane creates and protects the initial tenant/admin setup Secret used by the bootstrap job.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Security / Permissions"]
+  },
+  {
+    "id": "F015",
+    "description": "Ensure status reporting remains available when the Alga PSA application namespace, HelmRelease, pods, or bootstrap job are unhealthy.",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements", "Observability"]
+  },
+  {
+    "id": "F016",
+    "description": "Add a tiny host fallback command or script that reapplies the baked control-plane bundle from local disk and reports basic host/k3s diagnostics.",
+    "implemented": true,
+    "prdRefs": ["Goals", "Functional Requirements"]
+  },
+  {
+    "id": "F017",
+    "description": "Update console output to describe substrate bootstrap, setup UI availability, and fallback recovery commands.",
+    "implemented": true,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F018",
+    "description": "Update support bundle collection to include host bootstrap logs, control-plane pod logs, control-plane resources, and application bootstrap resources.",
+    "implemented": true,
+    "prdRefs": ["Observability"]
+  },
+  {
+    "id": "F019",
+    "description": "Keep existing host-based setup behavior out of the new-install path except for fallback/recovery pieces, avoiding duplicate primary setup services.",
+    "implemented": true,
+    "prdRefs": ["Non-goals", "Acceptance Criteria"]
+  },
+  {
+    "id": "F020",
+    "description": "Document the new bootstrap architecture and new-install operational runbook for appliance support and development.",
+    "implemented": true,
+    "prdRefs": ["Rollout / Migration", "Acceptance Criteria"]
+  }
+]

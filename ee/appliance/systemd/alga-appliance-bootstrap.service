@@ -1,0 +1,26 @@
+[Unit]
+Description=Alga Appliance Kubernetes Control Plane Bootstrap
+After=network-online.target
+Wants=network-online.target
+Conflicts=alga-appliance.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+Environment=ALGA_APPLIANCE_ROOT=/opt/alga-appliance
+Environment=ALGA_APPLIANCE_PORT=8080
+Environment=ALGA_APPLIANCE_KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+Environment=ALGA_APPLIANCE_TOKEN_FILE=/var/lib/alga-appliance/setup-token
+Environment=ALGA_APPLIANCE_CONSOLE_TTYS=/dev/tty1,/dev/console
+ExecStartPre=/usr/bin/env node /opt/alga-appliance/host-service/init-token.mjs
+ExecStartPre=/usr/bin/env node /opt/alga-appliance/host-service/init-admin-credential.mjs
+ExecStart=/opt/alga-appliance/scripts/bootstrap-control-plane.sh
+ExecStartPost=/usr/bin/env node /opt/alga-appliance/host-service/console.mjs
+RemainAfterExit=yes
+WorkingDirectory=/opt/alga-appliance
+StandardOutput=journal+console
+StandardError=journal+console
+
+[Install]
+WantedBy=multi-user.target

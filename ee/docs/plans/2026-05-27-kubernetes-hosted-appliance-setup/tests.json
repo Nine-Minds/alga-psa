@@ -1,0 +1,56 @@
+[
+  {
+    "id": "T001",
+    "description": "Unit/integration test host bootstrap command planning: minimal k3s install/start, image import, storage apply, control-plane apply, and setup URL reporting happen in the expected order and are idempotent.",
+    "implemented": true,
+    "featureIds": ["F001", "F007", "F008", "F009", "F017"]
+  },
+  {
+    "id": "T002",
+    "description": "Manifest render test verifies the appliance control-plane namespace, workloads, service, exposure mechanism, RBAC, and required secrets/config are present and scoped as expected.",
+    "implemented": true,
+    "featureIds": ["F002", "F005", "F010", "F011"]
+  },
+  {
+    "id": "T003",
+    "description": "ISO staging test verifies baked control-plane manifests, image archive(s), local storage manifest, and fallback scripts are present at installed-appliance paths rather than repository-relative paths.",
+    "implemented": true,
+    "featureIds": ["F006", "F008", "F009", "F016"]
+  },
+  {
+    "id": "T004",
+    "description": "Control-plane API workflow test validates setup input submission, release/runtime selection persistence, initial tenant/admin Secret creation, Flux/app bootstrap configuration, and resumable state across a simulated pod restart.",
+    "implemented": true,
+    "featureIds": ["F004", "F012", "F013", "F014"]
+  },
+  {
+    "id": "T005",
+    "description": "Status resilience test verifies the Kubernetes-hosted status API remains reachable and reports actionable blockers when Alga PSA HelmRelease/pods/bootstrap job are missing or unhealthy.",
+    "implemented": true,
+    "featureIds": ["F004", "F015", "F018"]
+  },
+  {
+    "id": "T006",
+    "description": "UI build/smoke test verifies the setup and status pages render from the Kubernetes-packaged artifact and preserve the existing tokenized setup/status flow.",
+    "implemented": true,
+    "featureIds": ["F003", "F010", "F011"]
+  },
+  {
+    "id": "T007",
+    "description": "Host fallback test verifies reapplying the baked control-plane bundle is safe on an already bootstrapped new install and does not delete app data or secrets.",
+    "implemented": true,
+    "featureIds": ["F016", "F019"]
+  },
+  {
+    "id": "T008",
+    "description": "Fresh-install smoke test boots a newly built Ubuntu appliance ISO, reaches Kubernetes-hosted setup UI without registry/GitHub dependency, submits tenant/admin setup, and verifies login-ready status.",
+    "implemented": true,
+    "featureIds": ["F001", "F002", "F003", "F006", "F007", "F008", "F009", "F010", "F013", "F014", "F015"]
+  },
+  {
+    "id": "T009",
+    "description": "Documentation/runbook review test verifies support docs describe the new bootstrap layers, fallback command, logs to inspect, and new-install-only rollout boundary.",
+    "implemented": true,
+    "featureIds": ["F017", "F018", "F020"]
+  }
+]

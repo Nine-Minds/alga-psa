@@ -39,10 +39,14 @@ test('T003 first-boot smoke: console output and host web service health', async 
   const issueFile = path.join(tmp, 'issue');
   const motdFile = path.join(tmp, 'motd');
   const runBannerFile = path.join(tmp, 'run-banner');
+  const consoleTtyFile = path.join(tmp, 'tty1');
+  const buildInfoFile = path.join(tmp, 'build-info.json');
   const adminPasswordFile = path.join(tmp, 'admin-password');
   const adminPasswordStateFile = path.join(tmp, 'admin-password-state.json');
   fs.writeFileSync(tokenFile, 'token-123\n');
   fs.writeFileSync(adminPasswordFile, 'admin-temp-123\n');
+  fs.writeFileSync(consoleTtyFile, '');
+  fs.writeFileSync(buildInfoFile, JSON.stringify({ buildTimestamp: '2026-05-27T19:42:11Z' }));
   fs.writeFileSync(adminPasswordStateFile, JSON.stringify({ status: 'temporary', user: 'alga-admin', changeRequired: true }));
   fs.mkdirSync(path.join(staticUiDir, 'setup'), { recursive: true });
   fs.mkdirSync(path.join(staticUiDir, 'assets'), { recursive: true });
@@ -60,6 +64,8 @@ test('T003 first-boot smoke: console output and host web service health', async 
         ALGA_APPLIANCE_ISSUE_FILE: issueFile,
         ALGA_APPLIANCE_MOTD_FILE: motdFile,
         ALGA_APPLIANCE_RUN_BANNER_FILE: runBannerFile,
+        ALGA_APPLIANCE_CONSOLE_TTYS: consoleTtyFile,
+        ALGA_APPLIANCE_BUILD_INFO_FILE: buildInfoFile,
         ALGA_APPLIANCE_ADMIN_USER: 'alga-admin',
         ALGA_APPLIANCE_ADMIN_PASSWORD_FILE: adminPasswordFile,
         ALGA_APPLIANCE_ADMIN_PASSWORD_STATE_FILE: adminPasswordStateFile
@@ -74,15 +80,27 @@ test('T003 first-boot smoke: console output and host web service health', async 
   });
 
   assert.equal(consoleResult.code, 0, consoleResult.stderr);
+  assert.match(consoleResult.stdout, /Alga Appliance setup handoff/);
+  assert.match(consoleResult.stdout, /Build timestamp: 2026-05-27T19:42:11Z/);
+  assert.match(consoleResult.stdout, /Bootstrap layers:/);
+  assert.match(consoleResult.stdout, /k3s substrate/);
+  assert.match(consoleResult.stdout, /baked Kubernetes control plane/);
+  assert.match(consoleResult.stdout, /setup UI served by the Kubernetes-hosted control plane/);
   assert.match(consoleResult.stdout, /Setup URL:/);
   assert.match(consoleResult.stdout, /Setup token: token-123/);
   assert.match(consoleResult.stdout, /User: alga-admin/);
   assert.match(consoleResult.stdout, /Temporary password: admin-temp-123/);
   assert.match(consoleResult.stdout, /Password change required on first login/);
+  assert.match(consoleResult.stdout, /Control-plane recovery: sudo \/opt\/alga-appliance\/bin\/alga-control-plane-reapply/);
   assert.match(consoleResult.stdout, /Console setup fallback:/);
+  assert.match(consoleResult.stdout, /alga-host-agent\.service/);
+  assert.doesNotMatch(consoleResult.stdout, /-u alga-appliance\.service/);
   assert.match(fs.readFileSync(issueFile, 'utf8'), /Setup token: token-123/);
   assert.match(fs.readFileSync(motdFile, 'utf8'), /Setup URL: http:\/\/.+:18080\/setup\?token=token-123/);
-  assert.match(fs.readFileSync(runBannerFile, 'utf8'), /Alga Appliance setup is ready/);
+  assert.match(fs.readFileSync(runBannerFile, 'utf8'), /Alga Appliance setup handoff/);
+  assert.match(fs.readFileSync(consoleTtyFile, 'utf8'), /Setup token: token-123/);
+  assert.match(fs.readFileSync(issueFile, 'utf8'), /Build timestamp: 2026-05-27T19:42:11Z/);
+  assert.match(fs.readFileSync(motdFile, 'utf8'), /Build timestamp: 2026-05-27T19:42:11Z/);
 
   const server = spawn('node', [serverScript], {
     cwd: repoRoot,

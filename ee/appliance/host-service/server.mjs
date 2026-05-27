@@ -15,6 +15,7 @@ const port = Number(process.env.ALGA_APPLIANCE_PORT || 8080);
 const stateFile = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
 const tokenFile = process.env.ALGA_APPLIANCE_TOKEN_FILE || '/var/lib/alga-appliance/setup-token';
 const setupInputsFile = process.env.ALGA_APPLIANCE_SETUP_INPUTS_FILE || '/etc/alga-appliance/setup-inputs.json';
+const releaseSelectionFile = process.env.ALGA_APPLIANCE_RELEASE_SELECTION_FILE || '/etc/alga-appliance/release-selection.json';
 const kubeconfigPath = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3s/k3s.yaml';
 const staticUiDir = process.env.ALGA_APPLIANCE_STATUS_UI_DIR || '/opt/alga-appliance/status-ui/dist';
 const STATUS_CACHE_TTL_MS = Number(process.env.ALGA_APPLIANCE_STATUS_CACHE_TTL_MS || 10_000);
@@ -186,7 +187,8 @@ function queueSetupWorkflow() {
     new URL('./setup-engine.mjs', import.meta.url).pathname,
     'run',
     '--setup-inputs', setupInputsFile,
-    '--state-file', stateFile
+    '--state-file', stateFile,
+    '--release-selection-file', releaseSelectionFile
   ], {
     detached: true,
     stdio: 'ignore',
@@ -423,6 +425,8 @@ const server = http.createServer(async (req, res) => {
       ? cachedStatusSnapshot
       : await collectStatusSnapshotAsync({
         stateFile,
+        setupInputsFile,
+        releaseSelectionFile,
         includeDiagnostics,
         kubectlTimeoutMs: KUBECTL_STATUS_TIMEOUT_MS,
         kubectlRequestTimeoutMs: KUBECTL_REQUEST_TIMEOUT_MS,
@@ -553,7 +557,7 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    const result = generateSupportBundle();
+    const result = generateSupportBundle({ stateFile, setupInputsFile, releaseSelectionFile });
     res.writeHead(result.ok ? 200 : 500, { 'content-type': 'application/json' });
     res.end(JSON.stringify(result));
     return;
@@ -765,6 +769,8 @@ const server = http.createServer(async (req, res) => {
     const signal = requestAbortSignal(req, res);
     const snapshot = await collectStatusSnapshotAsync({
       stateFile,
+      setupInputsFile,
+      releaseSelectionFile,
       kubectlTimeoutMs: KUBECTL_STATUS_TIMEOUT_MS,
       kubectlRequestTimeoutMs: KUBECTL_REQUEST_TIMEOUT_MS,
       runCommand: (command, options = {}) => runQueuedKubectl(command, { timeoutMs: options.timeoutMs || KUBECTL_STATUS_TIMEOUT_MS, signal })

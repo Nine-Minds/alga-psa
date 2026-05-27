@@ -97,7 +97,7 @@ export async function runAppChannelUpdate(rawInputs, options = {}) {
     dnsServers: rawInputs.dnsServers || previousSelection.runtime?.dnsServers || '',
     repoUrl: rawInputs.repoUrl || previousSelection.repoUrl || 'https://github.com/Nine-Minds/alga-psa.git',
     repoBranch: rawInputs.repoBranch || previousSelection.repoBranch || 'main'
-  });
+  }, { requireInitialTenant: false });
 
   writeInstallState({
     status: 'update-running',

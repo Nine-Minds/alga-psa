@@ -1,0 +1,134 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: appliance-control-plane-config
+  namespace: alga-appliance-control-plane
+  labels:
+    app.kubernetes.io/name: appliance-control-plane
+    app.kubernetes.io/part-of: alga-appliance
+data:
+  ALGA_APPLIANCE_PORT: "8080"
+  ALGA_APPLIANCE_MODE: "kubernetes-control-plane"
+  ALGA_APPLIANCE_STATE_FILE: "/var/lib/alga-appliance/install-state.json"
+  ALGA_APPLIANCE_TOKEN_FILE: "/var/lib/alga-appliance-token/setup-token"
+  ALGA_APPLIANCE_KUBECONFIG: "/tmp/alga-appliance/kubeconfig"
+  ALGA_APPLIANCE_HOST_AGENT_SOCKET: "/run/alga-appliance/host-agent.sock"
+  ALGA_APPLIANCE_SETUP_INPUTS_FILE: "/var/lib/alga-appliance/setup-inputs.json"
+  ALGA_APPLIANCE_RELEASE_SELECTION_FILE: "/var/lib/alga-appliance/release-selection.json"
+  ALGA_APPLIANCE_BUNDLE_ORIGIN: "baked-iso"
+  ALGA_APPLIANCE_SKIP_K3S_INSTALL: "1"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: appliance-control-plane
+  namespace: alga-appliance-control-plane
+  labels:
+    app.kubernetes.io/name: appliance-control-plane
+    app.kubernetes.io/part-of: alga-appliance
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: appliance-control-plane
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: appliance-control-plane
+        app.kubernetes.io/part-of: alga-appliance
+    spec:
+      serviceAccountName: appliance-control-plane
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      initContainers:
+        - name: init-state-permissions
+          image: localhost/alga-appliance-control-plane:baked
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "mkdir -p /var/lib/alga-appliance && chown 10001:10001 /var/lib/alga-appliance"]
+          volumeMounts:
+            - name: state
+              mountPath: /var/lib/alga-appliance
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: false
+            runAsUser: 0
+            runAsGroup: 0
+            capabilities:
+              drop: ["ALL"]
+              add: ["CHOWN"]
+      containers:
+        - name: setup-api
+          image: localhost/alga-appliance-control-plane:baked
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: setup-http
+              containerPort: 8080
+              hostPort: 8080
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: appliance-control-plane-config
+          volumeMounts:
+            - name: state
+              mountPath: /var/lib/alga-appliance
+            - name: setup-token
+              mountPath: /var/lib/alga-appliance-token
+              readOnly: true
+            - name: host-agent-socket
+              mountPath: /run/alga-appliance
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: setup-http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: setup-http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 2
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: state
+          hostPath:
+            path: /var/lib/alga-appliance
+            type: DirectoryOrCreate
+        - name: setup-token
+          secret:
+            secretName: appliance-setup-token
+            defaultMode: 0444
+        - name: host-agent-socket
+          hostPath:
+            path: /run/alga-appliance
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: appliance-control-plane
+  namespace: alga-appliance-control-plane
+  labels:
+    app.kubernetes.io/name: appliance-control-plane
+    app.kubernetes.io/part-of: alga-appliance
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: appliance-control-plane
+  ports:
+    - name: setup-http
+      port: 8080
+      targetPort: setup-http
+      protocol: TCP

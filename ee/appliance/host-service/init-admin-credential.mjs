@@ -50,7 +50,7 @@ function run(command, args, input) {
   });
   return {
     ok: result.status === 0,
-    status: result.status ?? 1,
+    status: result.status === null ? 1 : result.status,
     stdout: result.stdout || '',
     stderr: result.stderr || ''
   };
@@ -64,11 +64,11 @@ function sleepMs(ms) {
 
 function credentialAlreadyInitialized() {
   const existingState = readJson(stateFile);
-  if (existingState?.status === 'configured') {
+  if (existingState && existingState.status === 'configured') {
     return true;
   }
 
-  if (existingState?.status === 'temporary' && fs.existsSync(passwordFile)) {
+  if (existingState && existingState.status === 'temporary' && fs.existsSync(passwordFile)) {
     return true;
   }
 
@@ -85,7 +85,7 @@ function acquireLock() {
         try { fs.rmdirSync(lockDir); } catch {}
       };
     } catch (error) {
-      if (error?.code !== 'EEXIST') {
+      if (!error || error.code !== 'EEXIST') {
         throw error;
       }
       if (Date.now() > deadline) {

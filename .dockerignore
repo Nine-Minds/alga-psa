@@ -10,6 +10,7 @@ npm-debug.log
 # Build outputs
 dist
 build
+ee/appliance/ubuntu-iso
 **/dist
 !shared/dist
 !shared/dist/**

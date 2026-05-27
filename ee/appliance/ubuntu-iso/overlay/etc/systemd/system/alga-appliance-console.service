@@ -1,0 +1,20 @@
+[Unit]
+Description=Alga Appliance Console Setup Banner
+After=local-fs.target cloud-final.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+Environment=ALGA_APPLIANCE_PORT=8080
+Environment=ALGA_APPLIANCE_TOKEN_FILE=/var/lib/alga-appliance/setup-token
+Environment=ALGA_APPLIANCE_CONSOLE_TTYS=/dev/tty1,/dev/console
+ExecStartPre=/usr/bin/env node /opt/alga-appliance/host-service/init-token.mjs
+ExecStartPre=/usr/bin/env node /opt/alga-appliance/host-service/init-admin-credential.mjs
+ExecStart=/usr/bin/env node /opt/alga-appliance/host-service/console.mjs
+StandardOutput=journal
+StandardError=journal
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
