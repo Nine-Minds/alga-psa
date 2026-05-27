@@ -8,6 +8,7 @@ import { useClientDrawer } from '@alga-psa/ui';
 import { Card } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
   createPrintColumnsFromColumnDefinitions,
@@ -20,6 +21,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -27,14 +29,17 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator
 } from '@alga-psa/ui/components/DropdownMenu';
-import type { Asset, AssetListResponse, AssetQueryParams, ClientMaintenanceSummary, ColumnDefinition, IClient } from '@alga-psa/types';
-import { getClientMaintenanceSummaries, listAssets } from '../actions/assetActions';
+import type { Asset, AssetListResponse, AssetQueryParams, ClientMaintenanceSummary, ColumnDefinition, IClient, IClientLocation } from '@alga-psa/types';
+import { bulkDeleteAssets, bulkUpdateAssets, getClientMaintenanceSummaries, listAssets } from '../actions/assetActions';
 import { loadAssetDetailDrawerData } from '../actions/assetDrawerActions';
-import { getAllClientsForAssets } from '../actions/clientLookupActions';
+import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRangeSelection } from '@alga-psa/ui/hooks';
+import { toast } from 'react-hot-toast';
+import { formatClientLocation } from '../lib/formatClientLocation';
 import { QuickAddAsset } from './QuickAddAsset';
 import { AssetCommandPalette } from './AssetCommandPalette';
+import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
 import { ShortcutActiveRegion, useCatalogShortcut, usePageCreateShortcut, useShortcutScope } from '@alga-psa/ui/keyboard-shortcuts';
 import { AssetDetailDrawerClient } from './AssetDetailDrawerClient';
 import { RmmStatusIndicator } from './RmmStatusIndicator';
@@ -65,6 +70,9 @@ import {
   RefreshCw,
   X,
   Settings2,
+  Trash2,
+  MapPin,
+  CircleDot,
 } from 'lucide-react';
 
 interface AssetDashboardClientProps {
@@ -144,6 +152,16 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     'actions'
   ]);
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
+  const [isBulkStatusOpen, setIsBulkStatusOpen] = useState(false);
+  const [isBulkLocationOpen, setIsBulkLocationOpen] = useState(false);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const [bulkStatusValue, setBulkStatusValue] = useState<string>('active');
+  const [bulkLocationMode, setBulkLocationMode] = useState<'saved' | 'custom' | 'clear'>('saved');
+  const [bulkLocationId, setBulkLocationId] = useState<string>('');
+  const [bulkCustomLocation, setBulkCustomLocation] = useState<string>('');
+  const [bulkLocations, setBulkLocations] = useState<IClientLocation[]>([]);
+  const [bulkLocationsLoading, setBulkLocationsLoading] = useState(false);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
   const [printAssets, setPrintAssets] = useState<Asset[]>([]);
   const [drawerAssetId, setDrawerAssetId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -368,6 +386,37 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     selectedIds: selectedAssetIdSet,
     onSelectedIdsChange: (next) => setSelectedAssetIds(Array.from(next)),
   });
+  // Remember each selected asset's client_id so the "single-client" check
+  // still works when selection spans pages (selectedAssetIds outlives the
+  // visible assets[]). Cleared when an id is deselected.
+  const [selectedAssetClientIds, setSelectedAssetClientIds] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setSelectedAssetClientIds((prev) => {
+      const next: Record<string, string> = {};
+      let changed = false;
+      for (const id of selectedAssetIds) {
+        const known = prev[id];
+        const loaded = assets.find((asset) => asset.asset_id === id);
+        const clientId = loaded?.client_id ?? known;
+        if (clientId) next[id] = clientId;
+        if (clientId !== known) changed = true;
+      }
+      if (!changed && Object.keys(prev).length === Object.keys(next).length) {
+        return prev;
+      }
+      return next;
+    });
+  }, [assets, selectedAssetIds]);
+
+  const singleClientSelectionId = useMemo(() => {
+    if (selectedAssetIds.length === 0) return null;
+    const known = selectedAssetIds.map((id) => selectedAssetClientIds[id]);
+    if (known.some((id) => !id)) return null;
+    const unique = new Set(known);
+    return unique.size === 1 ? known[0] : null;
+  }, [selectedAssetIds, selectedAssetClientIds]);
+  const canBulkAssignSavedLocation = Boolean(singleClientSelectionId);
 
   const toggleSelectAll = useCallback(() => {
     setSelectedAssetIds(prev => {
@@ -525,6 +574,146 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     setRmmManagedFilter([]);
   };
 
+  const bulkLocationOptions = useMemo<SelectOption[]>(() => (
+    bulkLocations.map((location) => ({
+      value: location.location_id,
+      label: location.location_name || formatClientLocation(location),
+    }))
+  ), [bulkLocations]);
+
+  useEffect(() => {
+    if (!isBulkLocationOpen || !singleClientSelectionId) {
+      setBulkLocations([]);
+      setBulkLocationId('');
+      return;
+    }
+
+    // Reset before fetching so a stale id from a different client (kept after
+    // close/reopen with new selection) can't be submitted while loading.
+    setBulkLocationId('');
+    let isMounted = true;
+    setBulkLocationsLoading(true);
+    (async () => {
+      try {
+        const locations = await getClientLocationsForAssets(singleClientSelectionId);
+        if (!isMounted) return;
+        setBulkLocations(locations);
+        setBulkLocationId(locations[0]?.location_id ?? '');
+      } catch (error) {
+        console.error('Failed to load locations for bulk asset action:', error);
+        if (isMounted) {
+          setBulkLocations([]);
+          setBulkLocationId('');
+        }
+      } finally {
+        if (isMounted) {
+          setBulkLocationsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isBulkLocationOpen, singleClientSelectionId]);
+
+  const summarizeBulkResult = useCallback((action: string, succeeded: number, failed: number) => {
+    if (failed > 0) {
+      toast.error(t('assetDashboardClient.bulk.partialFailure', {
+        defaultValue: '{{action}} completed for {{succeeded}} asset(s); {{failed}} failed.',
+        action,
+        succeeded,
+        failed,
+      }));
+      return;
+    }
+
+    toast.success(t('assetDashboardClient.bulk.success', {
+      defaultValue: '{{action}} completed for {{count}} asset(s).',
+      action,
+      count: succeeded,
+    }));
+  }, [t]);
+
+  const removeSucceededSelections = useCallback((results: Array<{ asset_id: string; success: boolean }>) => {
+    const succeededIds = new Set(results.filter((result) => result.success).map((result) => result.asset_id));
+    if (succeededIds.size === 0) return;
+    setSelectedAssetIds((current) => current.filter((id) => !succeededIds.has(id)));
+  }, []);
+
+  const handleBulkStatusUpdate = useCallback(async () => {
+    setBulkActionLoading(true);
+    try {
+      const response = await bulkUpdateAssets(selectedAssetIds, { status: bulkStatusValue });
+      summarizeBulkResult(
+        t('assetDashboardClient.bulk.actions.updateStatus', { defaultValue: 'Status update' }),
+        response.succeeded,
+        response.failed
+      );
+      removeSucceededSelections(response.results);
+      setIsBulkStatusOpen(false);
+      refreshAssets();
+    } catch (error) {
+      console.error('Failed to bulk update asset status:', error);
+      toast.error(t('assetDashboardClient.bulk.errors.updateStatusFailed', {
+        defaultValue: 'Unable to update selected assets.'
+      }));
+    } finally {
+      setBulkActionLoading(false);
+    }
+  }, [bulkStatusValue, refreshAssets, removeSucceededSelections, selectedAssetIds, summarizeBulkResult, t]);
+
+  const handleBulkLocationUpdate = useCallback(async () => {
+    setBulkActionLoading(true);
+    try {
+      const payload =
+        bulkLocationMode === 'saved'
+          ? { location_id: bulkLocationId }
+          : bulkLocationMode === 'clear'
+            ? { location_id: null, location: '' }
+            : { location_id: null, location: bulkCustomLocation.trim() };
+
+      const response = await bulkUpdateAssets(selectedAssetIds, payload);
+      summarizeBulkResult(
+        t('assetDashboardClient.bulk.actions.updateLocation', { defaultValue: 'Location update' }),
+        response.succeeded,
+        response.failed
+      );
+      removeSucceededSelections(response.results);
+      setIsBulkLocationOpen(false);
+      refreshAssets();
+    } catch (error) {
+      console.error('Failed to bulk update asset location:', error);
+      toast.error(t('assetDashboardClient.bulk.errors.updateLocationFailed', {
+        defaultValue: 'Unable to update selected asset locations.'
+      }));
+    } finally {
+      setBulkActionLoading(false);
+    }
+  }, [bulkCustomLocation, bulkLocationId, bulkLocationMode, refreshAssets, removeSucceededSelections, selectedAssetIds, summarizeBulkResult, t]);
+
+  const handleBulkDelete = useCallback(async () => {
+    setBulkActionLoading(true);
+    try {
+      const response = await bulkDeleteAssets(selectedAssetIds);
+      summarizeBulkResult(
+        t('assetDashboardClient.bulk.actions.deleteAssets', { defaultValue: 'Delete' }),
+        response.succeeded,
+        response.failed
+      );
+      removeSucceededSelections(response.results);
+      setIsBulkDeleteOpen(false);
+      refreshAssets();
+    } catch (error) {
+      console.error('Failed to bulk delete assets:', error);
+      toast.error(t('assetDashboardClient.bulk.errors.deleteFailed', {
+        defaultValue: 'Unable to delete selected assets.'
+      }));
+    } finally {
+      setBulkActionLoading(false);
+    }
+  }, [refreshAssets, removeSucceededSelections, selectedAssetIds, summarizeBulkResult, t]);
+
   const getAssetTypeIcon = useCallback((type: string) => {
     const iconProps = { className: 'h-4 w-4 text-gray-600' };
     switch (type.toLowerCase()) {
@@ -593,44 +782,68 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     select: {
       dataIndex: 'select',
       title: (
-        <Checkbox
-          id="asset-select-all"
-          checked={isAllSelected}
-          onChange={toggleSelectAll}
-          aria-label={t('assetDashboardClient.selection.selectAllVisibleAssets', {
-            defaultValue: 'Select all visible assets'
-          })}
-          className="translate-y-0.5"
-          indeterminate={isIndeterminate}
-          containerClassName="m-0 flex items-center justify-center"
-        />
+        <div
+          onClick={(event) => event.stopPropagation()}
+          onMouseDown={(event) => event.stopPropagation()}
+        >
+          <Checkbox
+            id="asset-select-all"
+            checked={isAllSelected}
+            onChange={toggleSelectAll}
+            aria-label={t('assetDashboardClient.selection.selectAllVisibleAssets', {
+              defaultValue: 'Select all visible assets'
+            })}
+            className="m-0"
+            indeterminate={isIndeterminate}
+            containerClassName="mb-0"
+            skipRegistration
+          />
+        </div>
       ),
       sortable: false,
-      render: (_: unknown, record: Asset) => (
-        <Checkbox
-          id={`asset-select-${record.asset_id}`}
-          checked={rangeSelect.isSelected(record.asset_id)}
-          onClick={(event: React.MouseEvent<HTMLInputElement>) => {
-            event.stopPropagation();
-            const isChecked = rangeSelect.isSelected(record.asset_id);
-            rangeSelect.handleSelect(record.asset_id, {
-              shiftKey: event.shiftKey,
-              selected: !isChecked,
-              preventDefault: () => event.preventDefault(),
-            });
-            event.preventDefault();
-          }}
-          onChange={() => { /* controlled via onClick for shift-range support */ }}
-          aria-label={t('assetDashboardClient.selection.selectAsset', {
-            defaultValue: 'Select asset {{name}}',
-            name: record.name
-          })}
-          className="translate-y-0.5"
-          containerClassName="m-0 flex items-center justify-center"
-        />
-      ),
-      width: '40px',
-      cellClassName: '!px-3'
+      render: (_: unknown, record: Asset) => {
+        const isChecked = rangeSelect.isSelected(record.asset_id);
+        return (
+          <div
+            className="absolute inset-0 flex items-center justify-center cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-0"
+            onClick={(event) => {
+              event.stopPropagation();
+              rangeSelect.handleSelect(record.asset_id, {
+                shiftKey: event.shiftKey,
+                selected: !isChecked,
+                preventDefault: () => event.preventDefault(),
+              });
+              event.preventDefault();
+            }}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <Checkbox
+              id={`asset-select-${record.asset_id}`}
+              checked={isChecked}
+              onClick={(event: React.MouseEvent<HTMLInputElement>) => {
+                event.stopPropagation();
+                rangeSelect.handleSelect(record.asset_id, {
+                  shiftKey: event.shiftKey,
+                  selected: !isChecked,
+                  preventDefault: () => event.preventDefault(),
+                });
+                event.preventDefault();
+              }}
+              onChange={() => { /* controlled via onClick for shift-range support */ }}
+              aria-label={t('assetDashboardClient.selection.selectAsset', {
+                defaultValue: 'Select asset {{name}}',
+                name: record.name
+              })}
+              className="m-0 pointer-events-none"
+              containerClassName="mb-0"
+              skipRegistration
+            />
+          </div>
+        );
+      },
+      width: '4%',
+      headerClassName: 'text-center px-4',
+      cellClassName: 'relative text-center px-4'
     },
     name: {
       dataIndex: 'name',
@@ -1244,41 +1457,6 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
                 })}
               </div>
             )}
-            {selectedAssetIds.length > 0 && (
-              <div
-                className="flex flex-col gap-2 rounded-lg border border-primary-200 bg-primary-50 p-3 text-sm text-primary-900 md:flex-row md:items-center md:justify-between"
-                {...withDataAutomationId({ id: 'bulk-selection-banner' })}
-              >
-                <span className="font-medium">
-                  {t('assetDashboardClient.selection.selectedAssets', {
-                    defaultValue: '{{count}} asset{{suffix}} selected',
-                    count: selectedAssetIds.length,
-                    suffix: selectedAssetIds.length === 1 ? '' : 's'
-                  })}
-                </span>
-                <div className="flex items-center gap-2">
-                  <Button
-                    id="bulk-selection-clear-button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedAssetIds([])}
-                  >
-                    {t('assetDashboardClient.selection.clearSelection', { defaultValue: 'Clear selection' })}
-                  </Button>
-                  <Button
-                    id="bulk-selection-placeholder-button"
-                    variant="secondary"
-                    size="sm"
-                    className="gap-2"
-                    disabled
-                  >
-                    {t('assetDashboardClient.selection.bulkActionsComingSoon', {
-                      defaultValue: 'Bulk actions coming soon'
-                    })}
-                  </Button>
-                </div>
-              </div>
-            )}
           </Card>
 
           <Card className="p-6 space-y-6">
@@ -1376,6 +1554,204 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
             })
           : t('actions.print', { defaultValue: 'Print' })
         }
+      />
+      <Dialog
+        id="bulk-status-assets"
+        isOpen={isBulkStatusOpen}
+        onClose={() => setIsBulkStatusOpen(false)}
+        title={t('assetDashboardClient.bulk.statusDialog.title', { defaultValue: 'Set asset status' })}
+        className="max-w-md"
+        disableFocusTrap
+        footer={(
+          <div className="flex justify-end gap-2">
+            <Button id="bulk-status-cancel" variant="outline" onClick={() => setIsBulkStatusOpen(false)}>
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button id="bulk-status-apply" onClick={() => { void handleBulkStatusUpdate(); }} disabled={bulkActionLoading}>
+              {bulkActionLoading
+                ? t('assetDashboardClient.bulk.actions.applying', { defaultValue: 'Applying...' })
+                : t('assetDashboardClient.bulk.actions.apply', { defaultValue: 'Apply' })}
+            </Button>
+          </div>
+        )}
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              {t('assetDashboardClient.bulk.statusDialog.description', {
+                defaultValue: 'Update {{count}} selected asset(s).',
+                count: selectedAssetIds.length,
+              })}
+            </p>
+            <CustomSelect
+              id="bulk-status-select"
+              value={bulkStatusValue}
+              onValueChange={setBulkStatusValue}
+              options={STATUS_OPTIONS.map((status) => ({
+                value: status,
+                label: getAssetStatusLabel(status),
+              }))}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        id="bulk-location-assets"
+        isOpen={isBulkLocationOpen}
+        onClose={() => setIsBulkLocationOpen(false)}
+        title={t('assetDashboardClient.bulk.locationDialog.title', { defaultValue: 'Set asset location' })}
+        className="max-w-lg"
+        disableFocusTrap
+        footer={(
+          <div className="flex justify-end gap-2">
+            <Button id="bulk-location-cancel" variant="outline" onClick={() => setIsBulkLocationOpen(false)}>
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+              id="bulk-location-apply"
+              onClick={() => { void handleBulkLocationUpdate(); }}
+              disabled={
+                bulkActionLoading ||
+                (bulkLocationMode === 'saved' && !bulkLocationId) ||
+                (bulkLocationMode === 'custom' && bulkCustomLocation.trim().length === 0)
+              }
+            >
+              {bulkActionLoading
+                ? t('assetDashboardClient.bulk.actions.applying', { defaultValue: 'Applying...' })
+                : t('assetDashboardClient.bulk.actions.apply', { defaultValue: 'Apply' })}
+            </Button>
+          </div>
+        )}
+      >
+        <DialogContent>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              {t('assetDashboardClient.bulk.locationDialog.description', {
+                defaultValue: 'Update {{count}} selected asset(s).',
+                count: selectedAssetIds.length,
+              })}
+            </p>
+            <CustomSelect
+              id="bulk-location-mode"
+              value={bulkLocationMode}
+              onValueChange={(value) => setBulkLocationMode(value as 'saved' | 'custom' | 'clear')}
+              options={[
+                {
+                  value: 'saved',
+                  label: t('assetDashboardClient.bulk.locationDialog.savedLocation', {
+                    defaultValue: 'Saved client location'
+                  }),
+                  disabled: !canBulkAssignSavedLocation,
+                } as SelectOption,
+                {
+                  value: 'custom',
+                  label: t('assetDashboardClient.bulk.locationDialog.customLocation', {
+                    defaultValue: 'Custom location'
+                  }),
+                },
+                {
+                  value: 'clear',
+                  label: t('assetDashboardClient.bulk.locationDialog.clearLocation', {
+                    defaultValue: 'Clear location'
+                  }),
+                },
+              ]}
+            />
+            {!canBulkAssignSavedLocation && (
+              <p className="text-xs text-gray-500">
+                {t('assetDashboardClient.bulk.locationDialog.savedDisabled', {
+                  defaultValue: 'Saved client locations are available only when all selected assets are visible and belong to one client.'
+                })}
+              </p>
+            )}
+            {bulkLocationMode === 'saved' && (
+              <CustomSelect
+                id="bulk-location-select"
+                value={bulkLocationId}
+                onValueChange={setBulkLocationId}
+                options={bulkLocationOptions}
+                placeholder={bulkLocationsLoading
+                  ? t('assetDashboardClient.bulk.locationDialog.loadingLocations', { defaultValue: 'Loading locations...' })
+                  : t('assetDashboardClient.bulk.locationDialog.selectLocation', { defaultValue: 'Select location' })}
+                disabled={!canBulkAssignSavedLocation || bulkLocationsLoading}
+              />
+            )}
+            {bulkLocationMode === 'custom' && (
+              <Input
+                id="bulk-custom-location"
+                value={bulkCustomLocation}
+                onChange={(event) => setBulkCustomLocation(event.target.value)}
+                placeholder={t('assetDashboardClient.bulk.locationDialog.customPlaceholder', {
+                  defaultValue: 'Enter a custom location or area'
+                })}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        id="bulk-delete-assets"
+        isOpen={isBulkDeleteOpen}
+        onClose={() => setIsBulkDeleteOpen(false)}
+        title={t('assetDashboardClient.bulk.deleteDialog.title', { defaultValue: 'Delete selected assets' })}
+        className="max-w-md"
+        footer={(
+          <div className="flex justify-end gap-2">
+            <Button id="bulk-delete-cancel" variant="outline" onClick={() => setIsBulkDeleteOpen(false)}>
+              {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button id="bulk-delete-confirm" variant="destructive" onClick={() => { void handleBulkDelete(); }} disabled={bulkActionLoading}>
+              {bulkActionLoading
+                ? t('assetDashboardClient.bulk.actions.deleting', { defaultValue: 'Deleting...' })
+                : t('common.actions.delete', { defaultValue: 'Delete' })}
+            </Button>
+          </div>
+        )}
+      >
+        <DialogContent>
+          <p className="text-sm text-gray-600">
+            {t('assetDashboardClient.bulk.deleteDialog.description', {
+              defaultValue: 'Delete {{count}} selected asset(s). Assets with dependencies may be skipped.',
+              count: selectedAssetIds.length,
+            })}
+          </p>
+        </DialogContent>
+      </Dialog>
+      <BulkActionBar
+        idPrefix="asset-bulk-action-bar"
+        count={selectedAssetIds.length}
+        selectedLabel={t('assetDashboardClient.bulk.actionBar.selectedCount', {
+          defaultValue: '{{count}} selected',
+          count: selectedAssetIds.length,
+        })}
+        actions={[
+          {
+            id: 'status',
+            label: t('assetDashboardClient.bulk.actionBar.setStatus', { defaultValue: 'Set status' }),
+            icon: <CircleDot className="h-4 w-4" />,
+            onClick: () => setIsBulkStatusOpen(true),
+          },
+          {
+            id: 'location',
+            label: t('assetDashboardClient.bulk.actionBar.setLocation', { defaultValue: 'Set location' }),
+            icon: <MapPin className="h-4 w-4" />,
+            onClick: () => {
+              setBulkLocationMode(canBulkAssignSavedLocation ? 'saved' : 'custom');
+              setIsBulkLocationOpen(true);
+            },
+          },
+          {
+            id: 'delete',
+            label: t('assetDashboardClient.bulk.actionBar.delete', { defaultValue: 'Delete' }),
+            icon: <Trash2 className="h-4 w-4" />,
+            onClick: () => setIsBulkDeleteOpen(true),
+            destructive: true,
+          },
+        ]}
+        onClear={() => setSelectedAssetIds([])}
+        clearLabel={t('assetDashboardClient.bulk.actionBar.clear', { defaultValue: 'Clear' })}
       />
       <AssetCommandPalette
         isOpen={isCommandPaletteOpen}

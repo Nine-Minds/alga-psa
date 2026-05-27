@@ -23,6 +23,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { getAsset, updateAsset } from '../actions/assetActions';
+import { formatClientLocation } from '../lib/formatClientLocation';
 import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
@@ -84,6 +85,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     asset_tag: '',
     serial_number: '',
     status: '',
+    location_id: null,
     location: '',
     purchase_date: '',
     warranty_end_date: ''
@@ -166,6 +168,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
           asset_tag: data.asset_tag || '',
           serial_number: data.serial_number || '',
           status: data.status || 'active',
+          location_id: data.location_id ?? null,
           location: data.location || '',
           purchase_date: purchaseDate,
           warranty_end_date: warrantyEndDate,
@@ -227,7 +230,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
           } : undefined
         });
         setCustomLocation(data.location || '');
-        setSelectedLocationId(data.location ? 'custom' : '');
+        setSelectedLocationId(data.location_id ?? (data.location ? 'custom' : ''));
       } catch (error) {
         console.error('Error loading asset:', error);
         setLoadError(t('assetForm.errors.loadFailed', { defaultValue: 'Failed to load asset details' }));
@@ -294,14 +297,23 @@ export default function AssetForm({ assetId }: AssetFormProps) {
 
         if (locations.length === 0) {
           setSelectedLocationId('custom');
+          // No active locations for this client — drop the link so we don't
+          // submit a stale UUID the server would reject on save.
+          setFormData(prev => prev.location_id ? { ...prev, location_id: null } : prev);
         } else {
+          let stillExists = true;
           setSelectedLocationId((current) => {
             if (!current || current === 'custom') {
               return current || '';
             }
-            const stillExists = locations.some(loc => loc.location_id === current);
+            stillExists = locations.some(loc => loc.location_id === current);
             return stillExists ? current : 'custom';
           });
+          if (!stillExists) {
+            // Saved location was deactivated/removed; clear the dangling id
+            // and preserve the prior free-text in the custom field.
+            setFormData(prev => prev.location_id ? { ...prev, location_id: null } : prev);
+          }
         }
       } catch (err) {
         console.error('Error loading client locations:', err);
@@ -354,19 +366,6 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     clients.find(client => client.id === formData.client_id) || null
   ), [clients, formData.client_id]);
 
-  const formatClientLocation = (location: IClientLocation) => {
-    const parts = [
-      location.location_name,
-      location.address_line1,
-      location.address_line2,
-      location.city,
-      location.state_province,
-      location.postal_code,
-      location.country_name
-    ].filter(Boolean);
-    return parts.join(', ');
-  };
-
   const locationOptions = useMemo(() => {
     const options = clientLocations.map((location) => ({
       value: location.location_id,
@@ -388,6 +387,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     setFormData(prev => ({
       ...prev,
       client_id: clientId,
+      location_id: null,
       location: ''
     }));
     setSelectedLocationId('custom');
@@ -400,6 +400,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
       setSelectedLocationId('custom');
       setFormData(prev => ({
         ...prev,
+        location_id: null,
         location: customLocation
       }));
       return;
@@ -410,6 +411,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     if (location) {
       setFormData(prev => ({
         ...prev,
+        location_id: location.location_id,
         location: formatClientLocation(location)
       }));
     }
@@ -420,6 +422,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
     setSelectedLocationId('custom');
     setFormData(prev => ({
       ...prev,
+      location_id: null,
       location: value
     }));
   };
