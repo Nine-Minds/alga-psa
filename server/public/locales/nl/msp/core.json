@@ -322,5 +322,10 @@
       "previous": "Previous",
       "next": "Next"
     }
+  },
+  "onboardingRedirect": {
+    "title": "We brengen je naar de configuratie",
+    "description": "Je werkruimte heeft een korte configuratie nodig voordat je het dashboard kunt gebruiken.",
+    "action": "Doorgaan naar configuratie"
   }
 }

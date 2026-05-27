@@ -322,5 +322,10 @@
       "previous": "Previous",
       "next": "Next"
     }
+  },
+  "onboardingRedirect": {
+    "title": "Taking you to setup",
+    "description": "Your workspace needs a quick setup before you can use the dashboard.",
+    "action": "Continue to setup"
   }
 }

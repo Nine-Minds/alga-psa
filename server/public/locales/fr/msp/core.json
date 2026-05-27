@@ -322,5 +322,10 @@
       "previous": "Previous",
       "next": "Next"
     }
+  },
+  "onboardingRedirect": {
+    "title": "Redirection vers la configuration",
+    "description": "Votre espace de travail nécessite une configuration rapide avant d’utiliser le tableau de bord.",
+    "action": "Continuer vers la configuration"
   }
 }

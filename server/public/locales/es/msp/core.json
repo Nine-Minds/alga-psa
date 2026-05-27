@@ -322,5 +322,10 @@
       "previous": "Previous",
       "next": "Next"
     }
+  },
+  "onboardingRedirect": {
+    "title": "Te llevamos a la configuración",
+    "description": "Tu espacio de trabajo necesita una configuración rápida antes de que puedas usar el panel.",
+    "action": "Continuar a la configuración"
   }
 }

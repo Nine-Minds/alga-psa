@@ -322,5 +322,10 @@
       "previous": "Previous",
       "next": "Next"
     }
+  },
+  "onboardingRedirect": {
+    "title": "Przenosimy do konfiguracji",
+    "description": "Twój obszar roboczy wymaga krótkiej konfiguracji, zanim będzie można używać pulpitu.",
+    "action": "Przejdź do konfiguracji"
   }
 }

@@ -37,12 +37,30 @@ vi.mock('@alga-psa/tenancy/actions', () => ({
   getTenantSettings: vi.fn(),
 }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => ({
+    t: (key: string) => ({
+      'onboardingRedirect.title': 'Taking you to setup',
+      'onboardingRedirect.description': 'Your workspace needs a quick setup before you can use the dashboard.',
+      'onboardingRedirect.action': 'Continue to setup',
+    }[key] ?? key),
+  }),
+}));
+
 vi.mock('@/context/TierContext', () => ({
   TierProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 vi.mock('@/context/ProductContext', () => ({
   ProductProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({
+  KeyboardShortcutsProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@/hooks/useKeyboardShortcutPreferenceStorage', () => ({
+  useKeyboardShortcutPreferenceStorage: () => ({ storage: undefined }),
 }));
 
 vi.mock('@/components/layout/DefaultLayout', () => ({
@@ -96,6 +114,23 @@ describe('MspLayoutClient product shell behavior', () => {
 
     expect(screen.getByTestId('psa-default-layout')).toBeInTheDocument();
     expect(screen.queryByTestId('algadesk-shell')).not.toBeInTheDocument();
+  });
+
+  it('RT006: renders an onboarding redirect fallback instead of a blank screen', () => {
+    render(
+      <MspLayoutClient
+        session={{ user: { tenant: 'tenant-1' } } as any}
+        productCode="psa"
+        needsOnboarding={true}
+        initialSidebarCollapsed={false}
+      >
+        <div>psa content</div>
+      </MspLayoutClient>,
+    );
+
+    expect(screen.getByText('Taking you to setup')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Continue to setup' })).toHaveAttribute('href', '/msp/onboarding');
+    expect(screen.queryByText('psa content')).not.toBeInTheDocument();
   });
 
   it('RT006: client fallback redirects AlgaDesk tenants when onboarding is incomplete', async () => {
