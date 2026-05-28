@@ -1178,6 +1178,8 @@ describe('search entity indexers', () => {
     expect(knex).toHaveBeenCalledWith('statuses');
     // Scoped to ticket statuses only (project/task/interaction excluded).
     expect(queryBuilder.andWhere).toHaveBeenCalledWith('status_type', 'ticket');
+    // Non-UUID id resolves via name column (reconcile delete-sweep path).
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith('name', 'status-1');
     expect(doc).toMatchObject({
       objectType: 'status',
       // Keyed by name, not status_id, so boards collapse to one result.
@@ -1188,6 +1190,20 @@ describe('search entity indexers', () => {
       metadata: { status_type: 'ticket', is_closed: false },
       acl: { requiredPermission: 'ticket:read' },
     });
+  });
+
+  it('T207b ticket status loadOne with a UUID id resolves via status_id column', async () => {
+    const { knex, queryBuilder } = createFirstRowKnex({
+      name: 'In Progress',
+      is_closed: false,
+      created_at: '2026-05-15T10:00:00.000Z',
+    });
+
+    const uuid = 'a1b2c3d4-e5f6-7788-99aa-bbccddeeff00';
+    await statusIndexer.loadOne(knex as never, 'tenant-1', uuid);
+
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith('status_id', uuid);
+    expect(queryBuilder.andWhere).not.toHaveBeenCalledWith('name', uuid);
   });
 
   it('T208 status loadBatch dedupes by name and only queries ticket statuses', async () => {
