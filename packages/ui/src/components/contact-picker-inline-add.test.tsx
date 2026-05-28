@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ContactPicker } from './ContactPicker';
+import { Dialog, DialogContent } from './Dialog';
 import type { IContact } from '@alga-psa/types';
 
 vi.mock('../ui-reflection/ReflectionContainer', () => ({
@@ -131,6 +132,27 @@ describe('ContactPicker', () => {
     fireEvent.keyDown(screen.getByRole('button', { name: /select contact/i }), { key: 'ArrowDown' });
 
     expect(screen.getByRole('listbox', { name: /contacts/i })).toBeTruthy();
+    await waitFor(() => {
+      expect(document.activeElement).toBe(screen.getByPlaceholderText(/search contacts/i));
+    });
+  });
+
+  it('focuses search when opened inside a modal dialog', async () => {
+    render(
+      <Dialog isOpen={true} onClose={vi.fn()} title="Contact picker dialog host">
+        <DialogContent>
+          <ContactPicker
+            contacts={contacts}
+            value=""
+            onValueChange={vi.fn()}
+            placeholder="Select Contact"
+          />
+        </DialogContent>
+      </Dialog>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /select contact/i }));
+
     await waitFor(() => {
       expect(document.activeElement).toBe(screen.getByPlaceholderText(/search contacts/i));
     });
