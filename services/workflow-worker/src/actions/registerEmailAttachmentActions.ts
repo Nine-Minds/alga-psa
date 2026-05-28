@@ -287,6 +287,114 @@ async function markProcessedAttachment(
     });
 }
 
+async function resolveTicketAttachmentFolder(
+  trx: any,
+  args: {
+    tenant: string;
+    ticketId: string;
+    createdByUserId: string;
+  }
+): Promise<{ folderPath: string | null; isClientVisible: boolean }> {
+  const existingFolders = await trx('document_folders')
+    .where({
+      tenant: args.tenant,
+      entity_id: args.ticketId,
+      entity_type: 'ticket',
+    })
+    .select('folder_id', 'folder_path', 'is_client_visible');
+
+  const existingAttachmentFolder = existingFolders.find(
+    (folder: { folder_path?: string }) => folder.folder_path === '/Tickets/Attachments'
+  );
+  if (existingAttachmentFolder) {
+    return {
+      folderPath: existingAttachmentFolder.folder_path,
+      isClientVisible: Boolean(existingAttachmentFolder.is_client_visible),
+    };
+  }
+
+  const defaultFolders = await trx('document_default_folders')
+    .where({
+      tenant: args.tenant,
+      entity_type: 'ticket',
+    })
+    .select('folder_name', 'folder_path', 'is_client_visible', 'sort_order')
+    .orderBy('sort_order', 'asc')
+    .orderBy('folder_path', 'asc');
+
+  if (defaultFolders.length > 0) {
+    const existingPaths = new Set(existingFolders.map((folder: { folder_path: string }) => folder.folder_path));
+    const pathToFolderId = new Map<string, string>();
+    for (const folder of existingFolders as Array<{ folder_id: string; folder_path: string }>) {
+      pathToFolderId.set(folder.folder_path, folder.folder_id);
+    }
+
+    const foldersToInsert = defaultFolders
+      .filter((folder: { folder_path: string }) => !existingPaths.has(folder.folder_path))
+      .map((folder: { folder_name: string; folder_path: string; is_client_visible: boolean }) => {
+        const folderId = uuidv4();
+        pathToFolderId.set(folder.folder_path, folderId);
+
+        const segments = folder.folder_path.split('/').filter(Boolean);
+        const parentPath = segments.length > 1 ? `/${segments.slice(0, -1).join('/')}` : null;
+
+        return {
+          tenant: args.tenant,
+          folder_id: folderId,
+          folder_path: folder.folder_path,
+          folder_name: folder.folder_name,
+          parent_folder_id: parentPath ? pathToFolderId.get(parentPath) ?? null : null,
+          entity_id: args.ticketId,
+          entity_type: 'ticket',
+          is_client_visible: folder.is_client_visible,
+          created_by: args.createdByUserId,
+        };
+      });
+
+    if (foldersToInsert.length > 0) {
+      try {
+        await trx('document_folders').insert(foldersToInsert);
+      } catch (error) {
+        if (!isUniqueViolation(error)) {
+          throw error;
+        }
+      }
+    }
+
+    const attachmentDefault = defaultFolders.find(
+      (folder: { folder_path?: string }) => folder.folder_path === '/Tickets/Attachments'
+    );
+    if (attachmentDefault) {
+      return {
+        folderPath: attachmentDefault.folder_path,
+        isClientVisible: Boolean(attachmentDefault.is_client_visible),
+      };
+    }
+  }
+
+  const refreshedAttachmentFolder = await trx('document_folders')
+    .where({
+      tenant: args.tenant,
+      entity_id: args.ticketId,
+      entity_type: 'ticket',
+      folder_path: '/Tickets/Attachments',
+    })
+    .select('folder_path', 'is_client_visible')
+    .first();
+
+  if (refreshedAttachmentFolder) {
+    return {
+      folderPath: refreshedAttachmentFolder.folder_path,
+      isClientVisible: Boolean(refreshedAttachmentFolder.is_client_visible),
+    };
+  }
+
+  return {
+    folderPath: null,
+    isClientVisible: false,
+  };
+}
+
 async function persistDocumentForBuffer(args: {
   knex: any;
   tenant: string;
@@ -298,6 +406,7 @@ async function persistDocumentForBuffer(args: {
   fileName: string;
   mimeType: string;
   buffer: Buffer;
+  clientVisibleOverride?: boolean;
 }): Promise<{
   success: boolean;
   message?: string;
@@ -333,6 +442,13 @@ async function persistDocumentForBuffer(args: {
 
   try {
     await args.knex.transaction(async (trx: any) => {
+      const ticketFolder = await resolveTicketAttachmentFolder(trx, {
+        tenant: args.tenant,
+        ticketId: args.ticketId,
+        createdByUserId: args.systemUserId,
+      });
+      const isClientVisible = args.clientVisibleOverride ?? ticketFolder.isClientVisible;
+
       await trx('external_files').insert({
         tenant: args.tenant,
         file_id: fileId,
@@ -360,6 +476,8 @@ async function persistDocumentForBuffer(args: {
         storage_path: uploadResult.path,
         mime_type: args.mimeType,
         file_size: args.buffer.length,
+        folder_path: ticketFolder.folderPath,
+        is_client_visible: isClientVisible,
       });
 
       await trx('document_associations').insert({

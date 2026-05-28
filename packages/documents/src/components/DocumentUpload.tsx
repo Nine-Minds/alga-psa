@@ -10,6 +10,7 @@ import Spinner from '@alga-psa/ui/components/Spinner';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import FolderSelectorModal from './FolderSelectorModal';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import AssociatedEntityPicker, { type PickerAssociationEntityType } from './AssociatedEntityPicker';
 
 interface DocumentUploadProps {
     id: string; // Made required since it's needed for reflection registration
@@ -43,6 +44,15 @@ interface FileUploadStatus {
     document?: IDocument;
 }
 
+const UPLOAD_ASSOCIATION_ENTITY_TYPES: PickerAssociationEntityType[] = [
+    'client',
+    'contact',
+    'ticket',
+    'asset',
+    'project_task',
+    'contract',
+];
+
 export default function DocumentUpload({
     id,
     userId,
@@ -59,6 +69,10 @@ export default function DocumentUpload({
     const [error, setError] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { t } = useTranslation('common');
+    const [selectedEntityType, setSelectedEntityType] = useState<string>('');
+    const [selectedEntityId, setSelectedEntityId] = useState<string>('');
+    const [selectedEntityLabel, setSelectedEntityLabel] = useState<string | undefined>();
+    const canSelectAssociation = !entityId && !entityType;
 
     // Folder selection state - only used if folderPath not provided
     const [showFolderModal, setShowFolderModal] = useState(false);
@@ -96,6 +110,11 @@ export default function DocumentUpload({
     };
 
     const handleFileSelection = async (files: File[]) => {
+        if (canSelectAssociation && selectedEntityType && !selectedEntityId) {
+            setError(t('documents.uploadSection.selectAssociatedEntityError', 'Select an associated entity before uploading.'));
+            return;
+        }
+
         // If folderPath is already provided (e.g., current folder in folder mode), upload directly
         if (folderPath !== undefined) {
             await startBulkUpload(files, folderPath);
@@ -150,26 +169,29 @@ export default function DocumentUpload({
                 folder_path: targetFolderPath ?? null
             };
 
+            const effectiveEntityType = entityType ?? selectedEntityType;
+            const effectiveEntityId = entityId ?? selectedEntityId;
+
             // Add the appropriate entity ID based on type if both are provided
-            if (entityId && entityType) {
-                switch (entityType) {
+            if (effectiveEntityId && effectiveEntityType) {
+                switch (effectiveEntityType) {
                     case 'ticket':
-                        options.ticketId = entityId;
+                        options.ticketId = effectiveEntityId;
                         break;
                     case 'client':
-                        options.clientId = entityId;
+                        options.clientId = effectiveEntityId;
                         break;
                     case 'contact':
-                        options.contactNameId = entityId;
+                        options.contactNameId = effectiveEntityId;
                         break;
                     case 'asset':
-                        options.assetId = entityId;
+                        options.assetId = effectiveEntityId;
                         break;
                     case 'project_task':
-                        options.projectTaskId = entityId;
+                        options.projectTaskId = effectiveEntityId;
                         break;
                     case 'contract':
-                        options.contractId = entityId;
+                        options.contractId = effectiveEntityId;
                         break;
                 }
             }
@@ -228,6 +250,24 @@ export default function DocumentUpload({
                 label={t('documents.uploadSection.reflectionLabel', 'Document Upload')}
             >
                 <div className="space-y-4">
+                    {canSelectAssociation && (
+                        <AssociatedEntityPicker
+                            id={`${id}-associated-entity`}
+                            entityType={selectedEntityType}
+                            entityId={selectedEntityId}
+                            selectedEntityLabel={selectedEntityLabel}
+                            allowedEntityTypes={UPLOAD_ASSOCIATION_ENTITY_TYPES}
+                            noEntityTypeLabel={t('documents.uploadSection.noAssociation', 'No association')}
+                            entityTypeLabel={t('documents.uploadSection.associatedEntityTypeLabel', 'Associate With')}
+                            disabled={isUploading}
+                            onEntityTypeChange={setSelectedEntityType}
+                            onEntityChange={(value: string, label?: string) => {
+                                setSelectedEntityId(value);
+                                setSelectedEntityLabel(label);
+                            }}
+                        />
+                    )}
+
                     <div
                     className={`border-2 border-dashed rounded-lg p-8 text-center ${
                         isDragging ? 'border-purple-500 bg-purple-50' : 'border-gray-300'
