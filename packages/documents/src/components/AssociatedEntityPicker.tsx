@@ -1,11 +1,17 @@
 'use client';
 
-import { useCallback, useMemo, type ReactNode } from 'react';
-import type { DocumentAssociationEntityType } from '@alga-psa/types';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import type { DocumentAssociationEntityType, IClient, IContact } from '@alga-psa/types';
 import SearchableSelect, { type SelectOption as SearchableSelectOption } from '@alga-psa/ui/components/SearchableSelect';
 import AsyncSearchableSelect, { type SelectOption as AsyncSelectOption } from '@alga-psa/ui/components/AsyncSearchableSelect';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { searchDocumentAssociationEntities } from '../actions/documentActions';
+import {
+  getDocumentAssociationClientsForPicker,
+  getDocumentAssociationContactsForPicker,
+  searchDocumentAssociationEntities,
+} from '../actions/documentActions';
 
 export type PickerAssociationEntityType = Extract<
   DocumentAssociationEntityType,
@@ -71,6 +77,12 @@ export default function AssociatedEntityPicker({
   disabled = false,
 }: AssociatedEntityPickerProps): React.JSX.Element {
   const { t } = useTranslation('common');
+  const [clients, setClients] = useState<IClient[]>([]);
+  const [contacts, setContacts] = useState<IContact[]>([]);
+  const [clientsLoading, setClientsLoading] = useState(false);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const allowedSet = useMemo(() => allowedEntityTypes ? new Set<string>(allowedEntityTypes) : null, [allowedEntityTypes]);
   const selectedEntityType = !allowedSet || allowedSet.has(entityType) ? entityType : '';
   const selectedSearchableEntityType = SEARCHABLE_ENTITY_TYPES.has(selectedEntityType)
@@ -106,6 +118,66 @@ export default function AssociatedEntityPicker({
     return searchDocumentAssociationEntities(selectedSearchableEntityType, search, page, limit);
   }, [selectedSearchableEntityType]);
 
+  useEffect(() => {
+    if (selectedEntityType !== 'client') {
+      return;
+    }
+
+    let cancelled = false;
+    setClientsLoading(true);
+    getDocumentAssociationClientsForPicker()
+      .then((rows) => {
+        if (!cancelled) {
+          setClients(rows);
+        }
+      })
+      .catch((error) => {
+        console.error('[AssociatedEntityPicker] Failed to load clients:', error);
+        if (!cancelled) {
+          setClients([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setClientsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedEntityType]);
+
+  useEffect(() => {
+    if (selectedEntityType !== 'contact') {
+      return;
+    }
+
+    let cancelled = false;
+    setContactsLoading(true);
+    getDocumentAssociationContactsForPicker()
+      .then((rows) => {
+        if (!cancelled) {
+          setContacts(rows);
+        }
+      })
+      .catch((error) => {
+        console.error('[AssociatedEntityPicker] Failed to load contacts:', error);
+        if (!cancelled) {
+          setContacts([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setContactsLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedEntityType]);
+
   const handleTypeChange = useCallback((value: string) => {
     onEntityChange('', undefined);
     onEntityTypeChange(value === noEntityTypeValue ? '' : value);
@@ -132,32 +204,90 @@ export default function AssociatedEntityPicker({
       />
 
       {selectedSearchableEntityType && (
-        <AsyncSearchableSelect
-          id={`${id}-entity`}
-          label={entityPickerLabel ?? t('documents.associatedEntityPicker.entityLabel', {
-            entityType: selectedEntityTypeLabel,
-            defaultValue: selectedEntityTypeLabel,
-          })}
-          value={entityId || ''}
-          selectedLabel={selectedEntityLabel}
-          onChange={handleEntityChange}
-          loadOptions={loadOptions}
-          placeholder={t('documents.associatedEntityPicker.entityPlaceholder', {
-            entityType: selectedEntityTypeLabel.toLowerCase(),
-            defaultValue: `Select ${selectedEntityTypeLabel.toLowerCase()}`,
-          })}
-          searchPlaceholder={t('documents.associatedEntityPicker.entitySearchPlaceholder', {
-            entityType: selectedEntityTypeLabel.toLowerCase(),
-            defaultValue: `Search ${selectedEntityTypeLabel.toLowerCase()}...`,
-          })}
-          emptyMessage={t('documents.associatedEntityPicker.noEntities', {
-            entityType: selectedEntityTypeLabel.toLowerCase(),
-            defaultValue: `No ${selectedEntityTypeLabel.toLowerCase()} found`,
-          })}
-          dropdownMode="overlay"
-          disabled={disabled}
-          className="w-full"
-        />
+        selectedSearchableEntityType === 'client' ? (
+          <div>
+            <label className="block text-sm font-medium text-[rgb(var(--color-text-600))] mb-1">
+              {entityPickerLabel ?? t('documents.associatedEntityPicker.entityLabel', {
+                entityType: selectedEntityTypeLabel,
+                defaultValue: selectedEntityTypeLabel,
+              })}
+            </label>
+            <ClientPicker
+              id={`${id}-entity`}
+              clients={clients}
+              selectedClientId={entityId || null}
+              onSelect={(clientId) => {
+                const selectedClient = clients.find((client) => client.client_id === clientId);
+                onEntityChange(clientId ?? '', selectedClient?.client_name);
+              }}
+              filterState={clientFilterState}
+              onFilterStateChange={setClientFilterState}
+              clientTypeFilter={clientTypeFilter}
+              onClientTypeFilterChange={setClientTypeFilter}
+              placeholder={clientsLoading
+                ? t('documents.associatedEntityPicker.loadingClients', 'Loading clients...')
+                : t('documents.associatedEntityPicker.entityPlaceholder', {
+                    entityType: selectedEntityTypeLabel.toLowerCase(),
+                    defaultValue: `Select ${selectedEntityTypeLabel.toLowerCase()}`,
+                  })}
+              disabled={disabled || clientsLoading}
+              className="w-full"
+            />
+          </div>
+        ) : selectedSearchableEntityType === 'contact' ? (
+          <div>
+            <label className="block text-sm font-medium text-[rgb(var(--color-text-600))] mb-1">
+              {entityPickerLabel ?? t('documents.associatedEntityPicker.entityLabel', {
+                entityType: selectedEntityTypeLabel,
+                defaultValue: selectedEntityTypeLabel,
+              })}
+            </label>
+            <ContactPicker
+              id={`${id}-entity`}
+              contacts={contacts}
+              value={entityId || ''}
+              onValueChange={(contactId) => {
+                const selectedContact = contacts.find((contact) => contact.contact_name_id === contactId);
+                onEntityChange(contactId, selectedContact?.full_name);
+              }}
+              placeholder={contactsLoading
+                ? t('documents.associatedEntityPicker.loadingContacts', 'Loading contacts...')
+                : t('documents.associatedEntityPicker.entityPlaceholder', {
+                    entityType: selectedEntityTypeLabel.toLowerCase(),
+                    defaultValue: `Select ${selectedEntityTypeLabel.toLowerCase()}`,
+                  })}
+              disabled={disabled || contactsLoading}
+              buttonWidth="full"
+            />
+          </div>
+        ) : (
+          <AsyncSearchableSelect
+            id={`${id}-entity`}
+            label={entityPickerLabel ?? t('documents.associatedEntityPicker.entityLabel', {
+              entityType: selectedEntityTypeLabel,
+              defaultValue: selectedEntityTypeLabel,
+            })}
+            value={entityId || ''}
+            selectedLabel={selectedEntityLabel}
+            onChange={handleEntityChange}
+            loadOptions={loadOptions}
+            placeholder={t('documents.associatedEntityPicker.entityPlaceholder', {
+              entityType: selectedEntityTypeLabel.toLowerCase(),
+              defaultValue: `Select ${selectedEntityTypeLabel.toLowerCase()}`,
+            })}
+            searchPlaceholder={t('documents.associatedEntityPicker.entitySearchPlaceholder', {
+              entityType: selectedEntityTypeLabel.toLowerCase(),
+              defaultValue: `Search ${selectedEntityTypeLabel.toLowerCase()}...`,
+            })}
+            emptyMessage={t('documents.associatedEntityPicker.noEntities', {
+              entityType: selectedEntityTypeLabel.toLowerCase(),
+              defaultValue: `No ${selectedEntityTypeLabel.toLowerCase()} found`,
+            })}
+            dropdownMode="overlay"
+            disabled={disabled}
+            className="w-full"
+          />
+        )
       )}
     </div>
   );
